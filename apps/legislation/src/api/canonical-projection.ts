@@ -226,6 +226,23 @@ export interface MeetingDetail extends MeetingSummary {
   childPageInfo: Record<"participants" | "agenda" | "documents" | "outcomes", ChildCollectionPageInfo>
 }
 
+export interface CalendarSummary extends CanonicalFields {
+  type: "calendar"
+  jurisdictionId: string
+  organizationId: string | null
+  name: string
+  classification: string
+  timezone: string | null
+  sourceUrl: string
+  isActive: boolean
+}
+
+export interface CalendarDetail extends CalendarSummary {
+  description: string | null
+  coverageFrom: string | null
+  coverageTo: string | null
+}
+
 export interface Sponsor {
   person: PersonSummary | null
   sourceName: string
@@ -519,6 +536,23 @@ export type MeetingSummaryProjectionInput = SourceRecord & {
   isRemote: boolean
 }
 
+export type CalendarSummaryProjectionInput = SourceRecord & {
+  jurisdictionId: string
+  organizationId: string | null
+  name: string
+  classification: string
+  timezone: string | null
+  sourceUrl: string
+  isActive: boolean
+}
+
+export interface CalendarDetailProjectionInput {
+  calendar: CalendarSummaryProjectionInput
+  description: string | null
+  coverageFrom: DateValue | null
+  coverageTo: DateValue | null
+}
+
 export interface MeetingDetailProjectionInput {
   meeting: MeetingSummaryProjectionInput
   organizations: readonly OrganizationSummary[]
@@ -576,6 +610,16 @@ export type BillSummaryProjectionInput = SourceRecord & {
   subjects: readonly string[]
   introducedDate: DateValue | null
   latestActionAt: DateValue | null
+}
+
+export type BillActionProjectionInput = SourceRecord & {
+  billId: string
+  description: string
+  date: DateValue
+  occurredAt: DateValue | null
+  sequence: number
+  classifications: readonly string[]
+  organization: OrganizationSummary | null
 }
 
 export interface BillDetailProjectionInput {
@@ -891,6 +935,40 @@ export function projectMeetingDetail(input: MeetingDetailProjectionInput, contex
   }
 }
 
+export function projectCalendarSummary(
+  input: CalendarSummaryProjectionInput,
+  context: ProjectionContext
+): CalendarSummary {
+  return {
+    ...canonical(input.id, `/api/calendars/${segment(input.id)}`, context),
+    type: "calendar",
+    jurisdictionId: required(input.jurisdictionId, "calendar jurisdictionId"),
+    organizationId: input.organizationId,
+    name: required(input.name, "calendar name"),
+    classification: required(input.classification, "calendar classification"),
+    timezone: input.timezone === null ? null : required(input.timezone, "calendar timezone"),
+    sourceUrl: absoluteUrl(input.sourceUrl, "calendar sourceUrl"),
+    isActive: input.isActive
+  }
+}
+
+export function projectCalendarDetail(
+  input: CalendarDetailProjectionInput,
+  context: ProjectionContext
+): CalendarDetail {
+  const coverageFrom = isoDate(input.coverageFrom, "calendar coverageFrom")
+  const coverageTo = isoDate(input.coverageTo, "calendar coverageTo")
+  if (coverageFrom !== null && coverageTo !== null && coverageFrom > coverageTo) {
+    throw new CanonicalProjectionError("calendar coverageTo must not precede coverageFrom")
+  }
+  return {
+    ...projectCalendarSummary(input.calendar, context),
+    description: input.description === null ? null : required(input.description, "calendar description"),
+    coverageFrom,
+    coverageTo
+  }
+}
+
 export function projectMeetingParticipant(
   input: MeetingParticipantProjectionInput,
   context: ProjectionContext
@@ -996,6 +1074,23 @@ export function projectBillDetail(input: BillDetailProjectionInput, context: Pro
       amendments: pageInfo(input.childPageInfo.amendments, "bill amendments"),
       votes: pageInfo(input.childPageInfo.votes, "bill votes")
     }
+  }
+}
+
+export function projectBillAction(input: BillActionProjectionInput, context: ProjectionContext): BillAction {
+  if (input.organization !== null) {
+    validateOrganizationSummary(input.organization)
+  }
+  return {
+    ...canonical(input.id, `/api/bills/${segment(input.billId)}/timeline#action-${segment(input.id)}`, context),
+    type: "bill-action",
+    billId: required(input.billId, "bill action billId"),
+    description: required(input.description, "bill action description"),
+    date: requiredIsoDate(input.date, "bill action date"),
+    occurredAt: isoTimestamp(input.occurredAt, "bill action occurredAt"),
+    sequence: nonnegativeInteger(input.sequence, "bill action sequence"),
+    classifications: [...input.classifications],
+    organization: input.organization === null ? null : structuredClone(input.organization)
   }
 }
 
@@ -1163,8 +1258,11 @@ export function projectSupportingMaterialSection(
   input: SupportingMaterialSectionProjectionInput,
   context: ProjectionContext
 ): SupportingMaterialSection {
-  const pageStart = nullableNonnegativeInteger(input.pageStart, "supporting material section pageStart")
-  const pageEnd = nullableNonnegativeInteger(input.pageEnd, "supporting material section pageEnd")
+  const pageStart = nullablePositiveInteger(input.pageStart, "supporting material section pageStart")
+  const pageEnd = nullablePositiveInteger(input.pageEnd, "supporting material section pageEnd")
+  if ((pageStart === null) !== (pageEnd === null)) {
+    throw new CanonicalProjectionError("supporting material section pages must both be null or both be present")
+  }
   if (pageStart !== null && pageEnd !== null && pageEnd < pageStart) {
     throw new CanonicalProjectionError("supporting material section pageEnd must not precede pageStart")
   }
@@ -1226,6 +1324,13 @@ function projectSource(input: ProjectionSourceInput): SourceReference {
 function projectSources(inputs: readonly [ProjectionSourceInput, ...ProjectionSourceInput[]]): SourceReferences {
   const [first, ...rest] = inputs
   return [projectSource(first), ...rest.map(projectSource)]
+}
+
+/** Projects persisted source facts for a nested canonical record. */
+export function projectSourceReferences(
+  inputs: readonly [ProjectionSourceInput, ...ProjectionSourceInput[]]
+): SourceReferences {
+  return projectSources(inputs)
 }
 
 function voteCounts(input: VoteCounts): VoteCounts {
@@ -1447,6 +1552,16 @@ function nonnegativeInteger(value: number, label: string): number {
 
 function nullableNonnegativeInteger(value: number | null, label: string): number | null {
   return value === null ? null : nonnegativeInteger(value, label)
+}
+
+function nullablePositiveInteger(value: number | null, label: string): number | null {
+  if (value === null) {
+    return null
+  }
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new CanonicalProjectionError(`${label} must be a positive safe integer`)
+  }
+  return value
 }
 
 function isoDate(value: DateValue | null, label: string): string | null {

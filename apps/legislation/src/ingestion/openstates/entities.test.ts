@@ -1,7 +1,26 @@
 import { describe, expect, it } from "vitest"
+import { isOrganizationCivicFoundationComplete } from "../civic-foundation.js"
 import { normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "./entities.js"
 
-const context = { jurisdictionCode: "ak" }
+function organizationFoundationComplete(
+  row: ReturnType<typeof normalizeOpenStatesCommittees>["organizations"][number]
+): boolean {
+  return isOrganizationCivicFoundationComplete({
+    chamber: row.chamber ?? null,
+    classification: row.classification ?? null,
+    isActive: row.isActive ?? null,
+    name: row.name,
+    parentOrganizationId: row.parentOrganizationId ?? null,
+    provenanceComplete: row.provenanceComplete ?? false,
+    sourceIsOfficial: row.sourceIsOfficial ?? null,
+    sourceProvider: row.sourceProvider ?? null,
+    sourceRetrievedAt: row.sourceRetrievedAt ?? null,
+    sourceUrl: row.sourceUrl ?? null,
+    upstreamIds: row.upstreamIds ?? {}
+  })
+}
+
+const context = { jurisdictionCode: "ak", retrievedAt: new Date("2026-08-24T12:00:00.000Z") }
 
 describe("Open States entity normalization", () => {
   it("normalizes current people and terms without inventing dates", () => {
@@ -35,6 +54,94 @@ describe("Open States entity normalization", () => {
     expect(result.terms[0]).toMatchObject({ chamber: "lower", district: "14", isActive: true })
     expect(result.terms[0]?.startDate).toBeUndefined()
     expect(result.terms[0]?.endDate).toBeUndefined()
+    expect(result.personAliases).toEqual([])
+  })
+
+  it("retains only source-declared aliases with retrieval provenance", () => {
+    const result = normalizeOpenStatesPeople(
+      [
+        {
+          id: "ocd-person/alias-example",
+          name: "Alexandra Example",
+          openstates_url: "https://openstates.org/person/alias-example/",
+          other_names: ["Alex Example", "Alex Example", "A. Example"],
+          updated_at: "2026-08-20T15:00:00Z"
+        },
+        {
+          id: "ocd-person/missing-source",
+          name: "No Source",
+          other_names: ["Unverified Alias"]
+        }
+      ],
+      context
+    )
+
+    expect(result.personAliases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Alex Example",
+          personId: "person:openstates:ocd-person-alias-example",
+          provenanceComplete: true,
+          sourceIdentity: "openstates:ocd-person/alias-example:other-name:Alex Example",
+          sourceProvider: "openstates",
+          sourceUrl: "https://openstates.org/person/alias-example/"
+        }),
+        expect.objectContaining({
+          name: "Unverified Alias",
+          personId: "person:openstates:ocd-person-missing-source",
+          provenanceComplete: false,
+          sourceUrl: undefined
+        })
+      ])
+    )
+    expect(result.personAliases.filter((alias) => alias.name === "Alex Example")).toHaveLength(1)
+    expect(result.personAliases.find((alias) => alias.name === "Alex Example")).toHaveProperty(
+      "sourceRetrievedAt",
+      context.retrievedAt
+    )
+    expect(result.personAliasPersonIds).toEqual([
+      "person:openstates:ocd-person-alias-example",
+      "person:openstates:ocd-person-missing-source"
+    ])
+  })
+
+  it("maps only source-backed person detail facts and identifier relationships", () => {
+    const result = normalizeOpenStatesPeople(
+      [
+        {
+          email: "representative@example.test",
+          id: "ocd-person/detail-example",
+          identifiers: [{ identifier: "A000001", scheme: "bioguide" }, { scheme: "missing-value" }],
+          image: "https://images.example.test/detail-example.jpg",
+          name: "Detail Example",
+          links: [{ note: "Official website", url: "https://detail-example.example.test" }],
+          openstates_url: "https://openstates.org/person/detail-example/",
+          sources: [{ url: "https://legislature.example.test/members/detail-example" }],
+          updated_at: "2026-08-20T15:00:00Z"
+        }
+      ],
+      context
+    )
+
+    expect(result.personDetails).toEqual([
+      expect.objectContaining({
+        imageUrl: "https://images.example.test/detail-example.jpg",
+        officialUrl: "https://detail-example.example.test",
+        personId: "person:openstates:ocd-person-detail-example",
+        provenanceComplete: true,
+        publicEmail: "representative@example.test",
+        sourceUrl: "https://legislature.example.test/members/detail-example"
+      })
+    ])
+    expect(result.personExternalIdentifiers).toEqual([
+      expect.objectContaining({ scheme: "bioguide", value: "A000001" })
+    ])
+    expect(result.personJurisdictions).toEqual([
+      expect.objectContaining({
+        jurisdictionId: "jurisdiction:ak",
+        personId: "person:openstates:ocd-person-detail-example"
+      })
+    ])
   })
 
   it("normalizes committee snapshots and retains unresolved parent identity", () => {
@@ -121,5 +228,57 @@ describe("Open States entity normalization", () => {
 
     expect(child).toMatchObject({ parentOrganizationId: "organization:openstates:ocd-organization-parent" })
     expect(child?.upstreamIds).not.toHaveProperty("openstatesParent")
+  })
+
+  it("persists only source-supplied organization detail facts and relationship completeness", () => {
+    const result = normalizeOpenStatesCommittees(
+      [
+        {
+          classification: "committee",
+          contact: { email: "committee@example.test", phone: "555-0100" },
+          description: "Reviews public safety proposals.",
+          id: "ocd-organization/detailed",
+          memberships: [],
+          name: "Public Safety",
+          sources: [{ url: "https://v3.openstates.org/organizations/ocd-organization/detailed" }],
+          terms_of_reference: "Standing rules section 4.",
+          website_url: "https://legislature.example.test/committees/public-safety"
+        },
+        {
+          classification: "committee",
+          id: "ocd-organization/summary-only",
+          links: [{ note: "committee listing", url: "https://legislature.example.test/committees/summary-only" }],
+          memberships: [],
+          name: "Summary only"
+        }
+      ],
+      context
+    )
+
+    const detailed = result.organizations.find((organization) => organization.sourceId === "ocd-organization/detailed")
+    const summaryOnly = result.organizations.find(
+      (organization) => organization.sourceId === "ocd-organization/summary-only"
+    )
+
+    expect(detailed).toMatchObject({
+      childRelationsComplete: true,
+      description: "Reviews public safety proposals.",
+      detailFactsComplete: true,
+      membershipRelationsComplete: true,
+      publicContactAddress: null,
+      publicContactEmail: "committee@example.test",
+      publicContactPhone: "555-0100",
+      termsOfReference: "Standing rules section 4.",
+      websiteUrl: "https://legislature.example.test/committees/public-safety"
+    })
+    expect(summaryOnly).toMatchObject({
+      detailFactsComplete: false,
+      membershipRelationsComplete: true,
+      websiteUrl: null
+    })
+    expect(detailed).toBeDefined()
+    expect(summaryOnly).toBeDefined()
+    expect(organizationFoundationComplete(detailed!)).toBe(true)
+    expect(organizationFoundationComplete(summaryOnly!)).toBe(false)
   })
 })

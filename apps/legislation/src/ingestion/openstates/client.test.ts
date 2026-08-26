@@ -68,4 +68,52 @@ describe("Open States entity client", () => {
     expect(new URL(requestUrls[0] ?? "").searchParams.get("per_page")).toBe("20")
     expect(new URL(requestUrls[2] ?? "").searchParams.get("include")).toBe("memberships")
   })
+
+  it("uses the documented people.geo coordinate route with the configured API key", async () => {
+    let request: Readonly<{ headers: Headers; url: URL }> | undefined
+    const client = new OpenStatesClient({
+      apiKey: "test-key",
+      baseUrl: new URL("https://openstates.test/v3/"),
+      http: new RetryingHttpClient({
+        fetch: async (input, init) => {
+          request = {
+            headers: new Headers(init?.headers),
+            url: new URL(input instanceof Request ? input.url : input.toString())
+          }
+          return Response.json({
+            pagination: { max_page: 1, page: 1 },
+            results: [
+              {
+                current_role: { district: 10, org_classification: "lower", title: "Representative" },
+                family_name: "Example",
+                given_name: "Alex",
+                id: "ocd-person/example",
+                image: null,
+                jurisdiction: { id: "ocd-jurisdiction/country:us/state:ca/government" },
+                name: "Alex Example",
+                openstates_url: "https://openstates.test/person/example",
+                party: "Independent",
+                updated_at: "2026-08-25T12:00:00.000Z"
+              }
+            ]
+          })
+        },
+        maxAttempts: 1,
+        requestTimeoutMs: 1_000
+      })
+    })
+
+    const people = await client.peopleAtCoordinates({
+      latitude: 38.5816,
+      longitude: -121.4944,
+      signal: new AbortController().signal
+    })
+
+    expect(people).toHaveLength(1)
+    expect(request).toMatchObject({ headers: expect.any(Headers) })
+    expect(request?.headers.get("x-api-key")).toBe("test-key")
+    expect(request?.url.pathname).toBe("/v3/people.geo")
+    expect(request?.url.searchParams.get("lat")).toBe("38.5816")
+    expect(request?.url.searchParams.get("lng")).toBe("-121.4944")
+  })
 })

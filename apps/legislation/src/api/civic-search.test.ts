@@ -1,5 +1,7 @@
 import { createServer, type Server } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
+import { encodeSupportingMaterialSearchCursor } from "../legislation/query-service.js"
+import { encodeSearchCursor } from "../search/search.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 
 const servers = new Set<Server>()
@@ -20,7 +22,7 @@ function createService(overrides: Partial<CivicSearchApi> = {}): CivicSearchApi 
   return {
     compareBillVersions: async () => ({ changes: [], truncated: false }),
     searchAmendments: async () => ({ items: [], truncated: false }),
-    searchBillText: async () => ({ items: [], truncated: false }),
+    searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
     searchBills: async () => ({ items: [], truncated: false }),
     searchSupportingMaterialHits: async () => ({
       items: [],
@@ -85,6 +87,8 @@ function materialSearchCandidate() {
       id: "material:fixture:section:0",
       materialId: "material:fixture",
       ordinal: 0,
+      pageEnd: null,
+      pageStart: null,
       searchVector: null,
       sectionIdentifier: null,
       sourceEndOffset: 32,
@@ -178,11 +182,20 @@ describe("civic and search HTTP API handler", () => {
 
   it("uses the documented lexical default without claiming unreported model execution", async () => {
     const observedModes: string[] = []
+    const observedLimits: number[] = []
     const baseUrl = await startApi(
       createService({
         searchBills: async (input) => {
           observedModes.push(input.mode ?? "missing")
-          return { items: [], truncated: false }
+          observedLimits.push(input.limit ?? 0)
+          return {
+            items: [],
+            search:
+              input.mode === "semantic"
+                ? { isReranked: false, models: [{ model: "voyageai/voyage-4", purpose: "embedding" as const }] }
+                : { isReranked: false, models: [] },
+            truncated: false
+          }
         }
       })
     )
@@ -199,6 +212,7 @@ describe("civic and search HTTP API handler", () => {
     })
 
     expect(observedModes).toEqual(["lexical", "semantic"])
+    expect(observedLimits).toEqual([20, 20])
     await expect(lexical.json()).resolves.toMatchObject({
       meta: { isReranked: false, mode: "lexical", models: [] }
     })
@@ -206,9 +220,91 @@ describe("civic and search HTTP API handler", () => {
       meta: {
         isReranked: false,
         mode: "semantic",
-        models: []
+        models: [
+          {
+            dimensions: 1024,
+            model: "voyageai/voyage-4",
+            provider: "voyageai",
+            purpose: "embedding"
+          }
+        ]
       }
     })
+  })
+
+  it("only exposes complete model metadata consistent with each search mode and product", async () => {
+    const baseUrl = await startApi(
+      createService({
+        searchBills: async (input) => ({
+          items: [],
+          search:
+            input.mode === "hybrid"
+              ? {
+                  isReranked: true,
+                  models: [
+                    { model: "voyageai/voyage-4", purpose: "embedding" as const },
+                    { model: "cohere/rerank-v3.5", purpose: "reranking" as const }
+                  ]
+                }
+              : { isReranked: true, models: [{ model: "cohere/rerank-v3.5", purpose: "reranking" as const }] },
+          truncated: false
+        }),
+        searchSupportingMaterialHits: async (input) => ({
+          items: [],
+          search:
+            input.mode === "semantic"
+              ? { isReranked: false, models: [{ model: "voyageai/voyage-4", purpose: "embedding" as const }] }
+              : JSON.parse('{"isReranked":true,"models":[{"model":"cohere/rerank-v3.5","purpose":"reranking"}]}'),
+          truncated: false,
+          warnings: []
+        })
+      })
+    )
+
+    const [hybridBills, semanticMaterials, lexicalBills, rerankedMaterials] = await Promise.all([
+      fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ mode: "hybrid", query: "housing" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ mode: "semantic", query: "housing" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ query: "housing" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ mode: "hybrid", query: "housing" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
+
+    expect(hybridBills.status).toBe(200)
+    await expect(hybridBills.json()).resolves.toMatchObject({
+      meta: {
+        isReranked: true,
+        models: [
+          { dimensions: 1024, model: "voyageai/voyage-4", provider: "voyageai", purpose: "embedding" },
+          { dimensions: null, model: "cohere/rerank-v3.5", provider: "cohere", purpose: "reranking" }
+        ]
+      }
+    })
+    expect(semanticMaterials.status).toBe(200)
+    await expect(semanticMaterials.json()).resolves.toMatchObject({
+      meta: {
+        isReranked: false,
+        models: [{ dimensions: 1024, model: "voyageai/voyage-4", provider: "voyageai", purpose: "embedding" }]
+      }
+    })
+    expect(lexicalBills.status).toBe(422)
+    await expect(lexicalBills.json()).resolves.toMatchObject({ error: { category: "unprocessable" } })
+    expect(rerankedMaterials.status).toBe(422)
+    await expect(rerankedMaterials.json()).resolves.toMatchObject({ error: { category: "unprocessable" } })
   })
 
   it("enforces the semantic candidate ceiling while retaining the lexical maximum", async () => {
@@ -250,16 +346,79 @@ describe("civic and search HTTP API handler", () => {
     expect(observedLimits).toEqual([100])
   })
 
+  it("binds semantic cursors to their original bill and material searches", async () => {
+    let billCalls = 0
+    let materialCalls = 0
+    const baseUrl = await startApi(
+      createService({
+        searchBills: async () => {
+          billCalls += 1
+          return {
+            items: [],
+            search: { isReranked: false, models: [{ model: "voyageai/voyage-4", purpose: "embedding" as const }] },
+            truncated: false
+          }
+        },
+        searchSupportingMaterialHits: async () => {
+          materialCalls += 1
+          return {
+            items: [],
+            search: { isReranked: false, models: [{ model: "voyageai/voyage-4", purpose: "embedding" as const }] },
+            truncated: false,
+            warnings: []
+          }
+        }
+      })
+    )
+    const billCursor = encodeSearchCursor(1, { mode: "semantic", query: "housing" })
+    const materialCursor = encodeSupportingMaterialSearchCursor(1, {
+      limit: 20,
+      mode: "semantic",
+      query: "housing"
+    })
+
+    const [bill, material] = await Promise.all([
+      fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ cursor: billCursor, mode: "semantic", query: "transport" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ cursor: materialCursor, mode: "semantic", query: "transport" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
+
+    expect([bill.status, material.status]).toEqual([400, 400])
+    expect(billCalls).toBe(0)
+    expect(materialCalls).toBe(0)
+  })
+
   it("projects canonical bill hits and forwards every BillSearchRequest control", async () => {
     let received: unknown
-    const cursor = Buffer.from(JSON.stringify({ offset: 20 })).toString("base64url")
+    const searchInput = {
+      classifications: ["bill"],
+      introducedFrom: "2026-01-01",
+      introducedTo: "2026-01-31",
+      jurisdictionIds: ["jurisdiction:fixture"],
+      query: "housing",
+      sessionIds: ["session:fixture"],
+      sponsorIds: ["person:fixture"],
+      statuses: ["introduced"],
+      subjects: ["housing"],
+      updatedFrom: new Date("2026-08-01T00:00:00.000Z"),
+      updatedTo: new Date("2026-08-24T01:00:00.000Z")
+    }
+    const cursor = encodeSearchCursor(20, searchInput)
+    const nextCursor = encodeSearchCursor(25, searchInput)
     const baseUrl = await startApi(
       createService({
         searchBills: async (input) => {
           received = input
           return {
             items: [billSearchCandidate()],
-            nextCursor: Buffer.from(JSON.stringify({ offset: 25 })).toString("base64url"),
+            nextCursor,
             search: {
               isReranked: false,
               models: []
@@ -330,7 +489,7 @@ describe("civic and search HTTP API handler", () => {
         limit: 5,
         mode: "lexical",
         models: [],
-        nextCursor: Buffer.from(JSON.stringify({ offset: 25 })).toString("base64url")
+        nextCursor
       }
     })
   })
@@ -372,6 +531,16 @@ describe("civic and search HTTP API handler", () => {
         body: JSON.stringify({ query: "housing", unsupported: true }),
         headers: { "content-type": "application/json" },
         method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/bills?unsupported=true`, {
+        body: JSON.stringify({ query: "housing" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ cursor: encodeSearchCursor(1, { query: "housing" }), query: "transport" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
       })
     ])
 
@@ -381,7 +550,7 @@ describe("civic and search HTTP API handler", () => {
       updatedTo: undefined,
       updatedToExclusive: new Date("2026-08-25T00:00:00.000Z")
     })
-    expect(invalid.map((response) => response.status)).toEqual([400, 400, 400, 400])
+    expect(invalid.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 400])
     expect(calls).toBe(1)
   })
 
@@ -416,7 +585,7 @@ describe("civic and search HTTP API handler", () => {
         },
         searchBillText: async () => {
           calls.push("searchBillText")
-          return { items: [], truncated: false }
+          return { items: [], search: { isReranked: false, models: [] }, truncated: false }
         }
       })
     )
@@ -449,15 +618,26 @@ describe("civic and search HTTP API handler", () => {
 
   it("rejects reversed document date bounds", async () => {
     const baseUrl = await startApi(createService())
-    const response = await fetch(`${baseUrl}/api/search/supporting-materials`, {
-      body: JSON.stringify({ documentFrom: "2026-08-24", documentTo: "2026-08-01", query: "budget" }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
+    const [response, unsupportedQuery] = await Promise.all([
+      fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ documentFrom: "2026-08-24", documentTo: "2026-08-01", query: "budget" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/supporting-materials?unexpected=true`, {
+        body: JSON.stringify({ query: "budget" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({
       error: { message: "documentFrom must not be after documentTo" }
+    })
+    expect(unsupportedQuery.status).toBe(400)
+    await expect(unsupportedQuery.json()).resolves.toMatchObject({
+      error: { category: "invalid_request", message: "Unsupported query parameter: unexpected" }
     })
   })
 

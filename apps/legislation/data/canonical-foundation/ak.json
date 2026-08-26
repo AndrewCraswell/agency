@@ -1,0 +1,80 @@
+[
+  {
+    "id": "jurisdiction:ak",
+    "isActive": true,
+    "kind": "jurisdiction",
+    "source": {
+      "isOfficial": true,
+      "provider": "Alaska State Legislature",
+      "retrievedAt": "2026-08-25T20:57:26.791Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.akleg.gov/"
+    },
+    "timezone": null
+  },
+  {
+    "classification": "legislature",
+    "id": "session:ak:30",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "Alaska State Legislature",
+      "retrievedAt": "2026-08-25T20:57:26.791Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.akleg.gov/basis/Home/Archive"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:ak:31",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "Alaska State Legislature",
+      "retrievedAt": "2026-08-25T20:57:26.791Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.akleg.gov/basis/Home/Archive"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:ak:32",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "Alaska State Legislature",
+      "retrievedAt": "2026-08-25T20:57:26.791Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.akleg.gov/basis/Home/Archive"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:ak:33",
+    "isActive": false,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "Alaska State Legislature",
+      "retrievedAt": "2026-08-25T20:57:26.791Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.akleg.gov/basis/Home/Archive"
+    }
+  },
+  {
+    "classification": "legislature",
+    "id": "session:ak:34",
+    "isActive": true,
+    "kind": "session",
+    "source": {
+      "isOfficial": true,
+      "provider": "Alaska State Legislature",
+      "retrievedAt": "2026-08-25T20:57:26.791Z",
+      "sourceUpdatedAt": null,
+      "url": "https://www.akleg.gov/"
+    }
+  }
+]

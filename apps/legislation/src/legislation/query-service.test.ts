@@ -3,14 +3,25 @@ import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
 import * as schema from "../db/schema/schema.js"
+import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
+  amendmentSearchPageState,
+  buildSemanticAmendmentCandidateQueries,
+  buildStructuredAmendmentLexicalQuery,
   buildLexicalSupportingMaterialCandidateQuery,
   buildBillBrowseQuery,
+  decodeBillBrowseCursor,
+  decodeSupportingMaterialCollectionCursor,
+  decodeSupportingMaterialSearchCursor,
   documentBackedAmendmentId,
+  encodeBillBrowseCursor,
+  encodeSupportingMaterialCollectionCursor,
+  encodeSupportingMaterialSearchCursor,
   lexicalSupportingMaterialCandidateLimit,
   lexicalSupportingMaterialCandidateWindowCapped,
   lexicalSupportingMaterialPageState,
+  LegislationQueryService,
   projectDocumentBackedAmendment
 } from "./query-service.js"
 
@@ -22,6 +33,35 @@ afterAll(async () => {
 })
 
 describe("bill browse query", () => {
+  it("binds bill browse cursors to the complete filter and sort scope", () => {
+    const input = {
+      classification: ["resolution", "bill"],
+      identifier: "HR",
+      introducedFrom: "2026-01-01",
+      introducedTo: "2026-01-31",
+      jurisdictionId: "jurisdiction:us",
+      limit: 25,
+      organizationId: "organization:us:house:rules",
+      sessionId: "session:us:119",
+      sort: "updated-desc" as const,
+      sponsorPersonId: "person:us:1",
+      status: ["referred", "introduced"],
+      subject: ["taxes", "budget"],
+      updatedFrom: new Date("2026-08-20T12:00:00.000Z")
+    }
+    const cursor = encodeBillBrowseCursor(25, input)
+
+    expect(decodeBillBrowseCursor(cursor, { ...input, classification: ["bill", "resolution"] })).toBe(25)
+    expect(() => decodeBillBrowseCursor(cursor, { ...input, sort: "identifier-asc" })).toThrow(LegislationError)
+    expect(() => decodeBillBrowseCursor(cursor, { ...input, status: ["introduced"] })).toThrow(LegislationError)
+    expect(() => decodeBillBrowseCursor(cursor, { ...input, jurisdictionId: "jurisdiction:ak" })).toThrow(
+      LegislationError
+    )
+    expect(() => decodeBillBrowseCursor(Buffer.from('{"offset":25}').toString("base64url"), input)).toThrow(
+      LegislationError
+    )
+  })
+
   it("computes latest action once and reuses it for latest-action-desc ordering", () => {
     const query = buildBillBrowseQuery(
       database,
@@ -73,6 +113,95 @@ describe("bill browse query", () => {
   })
 })
 
+describe("amendment lexical search query", () => {
+  it("uses full-text ranking and preserves every multi-value filter as bound parameters", () => {
+    const query = buildStructuredAmendmentLexicalQuery(
+      database,
+      {
+        billIds: ["bill:first", "bill:second"],
+        jurisdictionIds: ["jurisdiction:first", "jurisdiction:second"],
+        limit: 20,
+        mode: "lexical",
+        query: "housing & appropriations",
+        sessionIds: ["session:first", "session:second"],
+        sponsorPersonIds: ["person:first", "person:second"],
+        statuses: ["introduced", "adopted"],
+        submittedFrom: "2026-01-01",
+        submittedTo: "2026-01-31"
+      },
+      21
+    ).toSQL()
+
+    expect(query.sql).toContain("websearch_to_tsquery('english', $1)")
+    expect(query.sql).toContain("ts_rank_cd")
+    expect(query.sql).toContain("ts_headline")
+    expect(query.sql).not.toContain(" ilike ")
+    expect(query.params).toEqual(
+      expect.arrayContaining([
+        "housing & appropriations",
+        "bill:first",
+        "bill:second",
+        "jurisdiction:first",
+        "jurisdiction:second",
+        "session:first",
+        "session:second",
+        "person:first",
+        "person:second",
+        "introduced",
+        "adopted"
+      ])
+    )
+  })
+})
+
+describe("amendment semantic search query", () => {
+  it("binds each structured and document vector comparison as one typed pgvector parameter", () => {
+    const embedding = Array.from({ length: 1536 }, (_, index) => index / 1536)
+    const { documentQuery, structuredQuery } = buildSemanticAmendmentCandidateQueries(
+      database,
+      { limit: 20, mode: "semantic", query: "housing" },
+      embedding,
+      25
+    )
+    const structured = structuredQuery.toSQL()
+    const document = documentQuery.toSQL()
+
+    expect(structured.sql).toMatch(/1 - \("legislation"\."amendment_embeddings"\."embedding" <=> \$\d+::vector\)/)
+    expect(structured.sql).toMatch(/order by "legislation"\."amendment_embeddings"\."embedding" <=> \$\d+::vector/)
+    expect(document.sql).toMatch(
+      /"legislation"\."document_section_embeddings"\."embedding" <=> \$\d+::vector as "distance"/
+    )
+    expect(document.sql).toMatch(
+      /row_number\(\) over \(partition by .*"document_section_embeddings"\."embedding" <=> \$\d+::vector/
+    )
+    expect(typedVectorBindingCounts(structured, JSON.stringify(embedding))).toEqual({
+      embeddingParameters: 2,
+      typedVectorParameters: 2
+    })
+    expect(typedVectorBindingCounts(document, JSON.stringify(embedding))).toEqual({
+      embeddingParameters: 2,
+      typedVectorParameters: 2
+    })
+  })
+})
+
+describe("amendment capped page state", () => {
+  it("drains known candidates in a capped semantic window before retaining the cap signal", () => {
+    expect(amendmentSearchPageState(25, 0, 20, true)).toEqual({ nextOffset: 20, truncated: true })
+    expect(amendmentSearchPageState(25, 20, 20, true)).toEqual({ truncated: true })
+  })
+})
+
+function typedVectorBindingCounts(
+  rendered: Readonly<{ params: readonly unknown[]; sql: string }>,
+  embedding: string
+): Readonly<{ embeddingParameters: number; typedVectorParameters: number }> {
+  return {
+    embeddingParameters: rendered.params.filter((parameter) => parameter === embedding).length,
+    typedVectorParameters: rendered.sql.match(/\$\d+::vector/g)?.length ?? 0
+  }
+}
+
 describe("bill search execution metadata", () => {
   it("does not claim a reranker when semantic search has no candidates", () => {
     expect(billSearchExecution("voyageai/voyage-4", "cohere/rerank-v3.5", 0)).toEqual({
@@ -92,6 +221,20 @@ describe("bill search execution metadata", () => {
         { model: "voyageai/voyage-4", purpose: "embedding" },
         { model: "cohere/rerank-v3.5", purpose: "reranking" }
       ]
+    })
+  })
+
+  it("maps an embedding-provider failure to a safe typed dependency error", async () => {
+    const service = new LegislationQueryService(database, {
+      embed: async () => {
+        throw new Error("provider response must not reach callers")
+      },
+      rerank: async () => []
+    })
+
+    await expect(service.searchBills({ mode: "semantic", query: "housing" })).rejects.toMatchObject({
+      category: "dependency_unavailable",
+      message: "Semantic search is temporarily unavailable"
     })
   })
 })
@@ -183,6 +326,58 @@ describe("lexical supporting material candidate search", () => {
       truncated: true
     })
   })
+
+  it("binds cursors to the material filter scope and stops at the candidate cap", () => {
+    const input = {
+      billIds: ["bill:fixture"],
+      classifications: ["committee-report", "testimony"],
+      documentFrom: "2026-01-01",
+      documentTo: "2026-01-31",
+      jurisdictionIds: ["jurisdiction:fixture"],
+      mode: "lexical" as const,
+      query: "public data",
+      sessionIds: ["session:fixture"]
+    }
+    const cursor = encodeSupportingMaterialSearchCursor(25, input)
+
+    expect(
+      decodeSupportingMaterialSearchCursor(cursor, { ...input, classifications: ["testimony", "committee-report"] })
+    ).toBe(25)
+    expect(() => decodeSupportingMaterialSearchCursor(cursor, { ...input, query: "private data" })).toThrow(
+      LegislationError
+    )
+    expect(() =>
+      decodeSupportingMaterialSearchCursor(Buffer.from('{"offset":25}').toString("base64url"), input)
+    ).toThrow(LegislationError)
+    expect(lexicalSupportingMaterialPageState(200, 50, 50, true)).toEqual({
+      nextCursor: undefined,
+      truncated: true
+    })
+  })
+})
+
+describe("supporting material collection cursors", () => {
+  it("binds ordered traversal to filters and sort", () => {
+    const input = {
+      billId: "bill:fixture",
+      documentFrom: "2026-01-01",
+      mode: "lexical" as const,
+      processingStatus: "processed" as const,
+      sort: "document-desc" as const
+    }
+    const cursor = encodeSupportingMaterialCollectionCursor(20, input)
+
+    expect(decodeSupportingMaterialCollectionCursor(cursor, input)).toBe(20)
+    expect(() => decodeSupportingMaterialCollectionCursor(cursor, { ...input, sort: "title-asc" })).toThrow(
+      LegislationError
+    )
+    expect(() => decodeSupportingMaterialCollectionCursor(cursor, { ...input, billId: "bill:other" })).toThrow(
+      LegislationError
+    )
+    expect(() =>
+      decodeSupportingMaterialCollectionCursor(Buffer.from('{"offset":20}').toString("base64url"), input)
+    ).toThrow(LegislationError)
+  })
 })
 
 describe("document-backed amendments", () => {
@@ -220,14 +415,17 @@ describe("document-backed amendments", () => {
       )
     ).toEqual({
       billId: "bill:wa:2025-2026:sb:6027",
+      createdAt: new Date("2026-08-19T00:00:00.000Z"),
       documentId,
       id: `amendment:document:${documentId}`,
       jurisdictionId: "jurisdiction:wa",
       printedIdentifier: "Floor amendment 001",
       recordType: "document",
+      sourceUpdatedAt: null,
       sourceUrl: "https://leg.wa.gov/amendments/sb6027.pdf",
       submittedDate: "2026-02-01",
-      title: "Floor amendment 001"
+      title: "Floor amendment 001",
+      updatedAt: new Date("2026-08-19T00:00:00.000Z")
     })
   })
 })

@@ -8,6 +8,7 @@ import {
   personId
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
+import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const optionalString = z.preprocess(
   (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
@@ -42,7 +43,9 @@ const relatedBillSchema = z.object({
   congress: z.number().int().positive(),
   number: z.union([z.string().min(1), z.number().int().nonnegative()]).transform(String),
   relationshipDetails: relationshipDetailsSchema,
-  type: z.string().min(1)
+  type: z.string().min(1),
+  updateDate: optionalString,
+  url: optionalString
 })
 
 export const congressBillBundleSchema = z.object({
@@ -97,7 +100,14 @@ function dateOnly(value: string | undefined): string | undefined {
   return value?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
 }
 
-export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggregate {
+export interface CongressNormalizationContext {
+  retrievedAt?: Date
+}
+
+export function normalizeCongressBillBundle(
+  input: unknown,
+  context: CongressNormalizationContext = {}
+): CanonicalBillAggregate {
   const source = congressBillBundleSchema.parse(input)
   const canonicalBillId = federalBillId(source.bill.congress, source.bill.type, source.bill.number)
   const federalJurisdictionId = jurisdictionId("us")
@@ -172,12 +182,25 @@ export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggreg
             }
           ]
     ),
-    relations: source.relatedBills.map((relation) => ({
-      billId: canonicalBillId,
-      classification:
-        relation.relationshipDetails?.toLowerCase().includes("companion") === true ? "companion" : "related",
-      relatedBillId: federalBillId(relation.congress, relation.type, relation.number)
-    })),
+    relations: source.relatedBills.map((relation) => {
+      const sourceUpdatedAt =
+        relation.updateDate === undefined && source.bill.updateDate === undefined
+          ? undefined
+          : new Date(relation.updateDate ?? source.bill.updateDate ?? "")
+      return {
+        billId: canonicalBillId,
+        classification:
+          relation.relationshipDetails?.toLowerCase().includes("companion") === true ? "companion" : "related",
+        relatedBillId: federalBillId(relation.congress, relation.type, relation.number),
+        ...outgoingRelationProvenance({
+          sourceIsOfficial: true,
+          sourceProvider: "congress",
+          sourceRetrievedAt: context.retrievedAt,
+          sourceUpdatedAt,
+          sourceUrl: relation.url ?? source.bill.url
+        })
+      }
+    }),
     session: {
       id: sessionId,
       identifier: String(source.bill.congress),

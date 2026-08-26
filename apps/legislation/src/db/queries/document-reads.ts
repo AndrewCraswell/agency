@@ -36,6 +36,11 @@ export interface DocumentSectionListInput {
   pageTo?: number
 }
 
+export interface DocumentSectionDetailInput {
+  documentId: string
+  sectionId: string
+}
+
 export interface SupportingMaterialSectionListInput {
   cursor?: string
   heading?: string
@@ -151,8 +156,8 @@ export interface CanonicalSupportingMaterialSectionRead {
     heading: string | null
     id: string
     ordinal: number
-    pageEnd: null
-    pageStart: null
+    pageEnd: number | null
+    pageStart: number | null
     text: string
   }
 }
@@ -164,7 +169,7 @@ export type SupportingMaterialPersistenceRead = Pick<
 
 export type SupportingMaterialSectionPersistenceRead = Pick<
   typeof supportingMaterialSections.$inferSelect,
-  "contentHash" | "heading" | "id" | "ordinal" | "text"
+  "contentHash" | "heading" | "id" | "ordinal" | "pageEnd" | "pageStart" | "text"
 >
 
 type DocumentCursorScope = {
@@ -195,6 +200,8 @@ type SectionCursor = {
   scope: SectionCursorScope
   version: 1
 }
+
+type PageRangeInput = Pick<DocumentSectionListInput, "pageFrom" | "pageTo">
 
 /**
  * Parent-scoped document pages must distinguish an absent bill from a bill
@@ -296,6 +303,37 @@ export async function getDocumentDetail(
   }
 }
 
+/**
+ * Reads a section through both its opaque ID and its document parent. The
+ * parent predicate prevents a valid section ID from being exposed below an
+ * unrelated document URL.
+ */
+export function buildDocumentSectionDetailQuery(database: LegislationDatabase, input: DocumentSectionDetailInput) {
+  return database
+    .select({ document: billDocuments, section: documentSections })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+    .where(
+      and(
+        eq(documentSections.documentId, requiredInputText(input.documentId, "documentId")),
+        eq(documentSections.id, requiredInputText(input.sectionId, "sectionId"))
+      )
+    )
+    .limit(1)
+}
+
+export async function getDocumentSection(
+  database: LegislationDatabase,
+  input: DocumentSectionDetailInput
+): Promise<CanonicalDocumentSectionRead> {
+  const rows = await buildDocumentSectionDetailQuery(database, input)
+  const row = rows[0]
+  if (row === undefined) {
+    throw new LegislationError("not_found", `Document section ${input.sectionId} was not found`)
+  }
+  return documentSectionReadFromPersistence(row.document, row.section)
+}
+
 export function buildDocumentSectionListQuery(database: LegislationDatabase, input: DocumentSectionListInput) {
   const scope = sectionCursorScope(input.documentId, input)
   const cursor = decodeSectionCursor(input.cursor, scope)
@@ -338,21 +376,37 @@ export async function listDocumentSections(
   }
 }
 
-/**
- * Supporting-material sections currently have no persisted page mapping.
- * The traversal is still safe for ordinal and heading filters, but page
- * filters fail closed rather than pretending offsets are page numbers.
- */
 export function buildSupportingMaterialSectionListQuery(
   database: LegislationDatabase,
   input: SupportingMaterialSectionListInput
 ) {
-  assertPageFiltersUnavailable(input)
   const scope = sectionCursorScope(input.materialId, input)
   const cursor = decodeSectionCursor(input.cursor, scope)
+  const pagePredicate = pageRangePredicate(
+    supportingMaterialSections.pageStart,
+    supportingMaterialSections.pageEnd,
+    input
+  )
 
   return database
-    .select({ material: supportingMaterials, section: supportingMaterialSections })
+    .select({
+      material: {
+        createdAt: supportingMaterials.createdAt,
+        id: supportingMaterials.id,
+        sourceUpdatedAt: supportingMaterials.sourceUpdatedAt,
+        sourceUrl: supportingMaterials.sourceUrl,
+        updatedAt: supportingMaterials.updatedAt
+      },
+      section: {
+        contentHash: supportingMaterialSections.contentHash,
+        heading: supportingMaterialSections.heading,
+        id: supportingMaterialSections.id,
+        ordinal: supportingMaterialSections.ordinal,
+        pageEnd: supportingMaterialSections.pageEnd,
+        pageStart: supportingMaterialSections.pageStart,
+        text: supportingMaterialSections.text
+      }
+    })
     .from(supportingMaterialSections)
     .innerJoin(supportingMaterials, eq(supportingMaterials.id, supportingMaterialSections.materialId))
     .where(
@@ -361,6 +415,7 @@ export function buildSupportingMaterialSectionListQuery(
         input.heading === undefined
           ? undefined
           : eq(supportingMaterialSections.heading, requiredInputText(input.heading, "heading")),
+        pagePredicate,
         sectionCursorPredicate(supportingMaterialSections.ordinal, supportingMaterialSections.id, cursor)
       )
     )
@@ -386,6 +441,21 @@ export async function listSupportingMaterialSections(
         ? encodeSectionCursor(last.section, sectionCursorScope(input.materialId, input))
         : undefined,
     truncated
+  }
+}
+
+export function buildSupportingMaterialExistenceQuery(database: LegislationDatabase, materialId: string) {
+  return database
+    .select({ id: supportingMaterials.id })
+    .from(supportingMaterials)
+    .where(eq(supportingMaterials.id, requiredInputText(materialId, "materialId")))
+    .limit(1)
+}
+
+export async function assertSupportingMaterialExists(database: LegislationDatabase, materialId: string): Promise<void> {
+  const rows = await buildSupportingMaterialExistenceQuery(database, materialId)
+  if (rows[0] === undefined) {
+    throw new LegislationError("not_found", `Supporting material ${materialId} was not found`)
   }
 }
 
@@ -436,25 +506,12 @@ function sectionCursorPredicate(ordinal: PgColumn, id: PgColumn, cursor: Section
   return or(gt(ordinal, cursor.ordinal), and(eq(ordinal, cursor.ordinal), gt(id, cursor.id)))
 }
 
-function pageRangePredicate(
-  pageStart: PgColumn,
-  pageEnd: PgColumn,
-  input: Pick<DocumentSectionListInput, "pageFrom" | "pageTo">
-): SQL | undefined {
+function pageRangePredicate(pageStart: PgColumn, pageEnd: PgColumn, input: PageRangeInput): SQL | undefined {
   validatePageRange(input.pageFrom, input.pageTo)
   return and(
     input.pageFrom === undefined ? undefined : gte(pageEnd, input.pageFrom),
     input.pageTo === undefined ? undefined : lte(pageStart, input.pageTo)
   )
-}
-
-function assertPageFiltersUnavailable(input: SupportingMaterialSectionListInput): void {
-  if (input.pageFrom !== undefined || input.pageTo !== undefined) {
-    throw new LegislationError(
-      "unprocessable",
-      "Supporting material page filters are unavailable until source page mappings are persisted"
-    )
-  }
 }
 
 function encodeDocumentCursor(row: typeof billDocuments.$inferSelect, scope: DocumentCursorScope): string {
@@ -576,6 +633,7 @@ export function supportingMaterialSectionReadFromPersistence(
   material: SupportingMaterialPersistenceRead,
   section: SupportingMaterialSectionPersistenceRead
 ): CanonicalSupportingMaterialSectionRead {
+  validateSectionPages(section.pageStart, section.pageEnd, "supporting material section")
   return {
     material: {
       createdAt: material.createdAt,
@@ -589,8 +647,8 @@ export function supportingMaterialSectionReadFromPersistence(
       heading: section.heading,
       id: requiredId(section.id, "supporting material section ID"),
       ordinal: nonnegativeInteger(section.ordinal, "supporting material section ordinal"),
-      pageEnd: null,
-      pageStart: null,
+      pageEnd: section.pageEnd,
+      pageStart: section.pageStart,
       text: requiredText(section.text, "supporting material section text")
     }
   }

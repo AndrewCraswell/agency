@@ -2,10 +2,38 @@
 
 ## Status and boundary
 
-This is the approved public and first-party application contract. Implementation is underway and route readiness is
-tracked per endpoint in the [HTTP API implementation backlog](../http-api-implementation-backlog.md). The web
-application, public API, and MCP adapter share one application-service boundary so authorization, canonical identity,
-source attribution, and query behavior do not diverge.
+This is the approved public and first-party application contract. The approved runtime is the existing Next.js 16 App
+Router application in `apps/legislation-web`, with one explicit `route.ts` for every documented HTTP operation under
+`apps/legislation-web/app/api`. Route migration and staged Railway release readiness are tracked in the
+[Next.js API migration plan](../nextjs-api-migration-plan.md) and the
+[HTTP API implementation backlog](../http-api-implementation-backlog.md).
+
+The 87 existing standalone Node handlers are reusable domain implementation, not completed Next.js routes. The
+standalone server in `apps/legislation` is transitional source, not a live rollback service: the old Railway
+`legislation-api` service is deleted. The last verified `legislation-web` source deployment is
+`cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` from `5de0383` at
+`https://legislation-web-production-b024.up.railway.app`; it does not credit any public operation as complete.
+Authentication is added after all 87 Next.js routes pass deployed smoke, distributed rate limiting follows
+authentication, and MCP moves to the HTTP API last. The application, public API, and eventual MCP adapter share one
+application-service boundary so authorization, canonical identity, source attribution, and query behavior do not diverge.
+
+## Migration state ledger
+
+The domain state is 87/87 **Done**. The Next.js Route Handler release state is 11/87 **Done**, 18 **In progress**, 0
+**Ready**, and 58 **Blocked**; these states sum to 87. NX-02A's 11 committed and deployed jurisdiction/session handlers
+passed all deployed operation and rejection checks. The corrected Alaska snapshot uses publisher classification
+`legislature`; production import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6,
+and its idempotent rerun skipped 6. Production schema migrations through the current ledger are applied. The nationwide
+audit remains incomplete for 52 jurisdictions and 648 sessions.
+
+NX-02B's 18 bills, amendments, and votes handlers and composition artifacts are code **In progress** and have passed root
+review and local verification. Their release gate is unblocked; deployment and deployed smoke remain before any is **Done**. No NX-02B
+authentication, distributed-rate-limit, or MCP scope has begun.
+
+The operational liveness and readiness endpoints remain public `GET /health` and `GET /ready` contract paths. Their
+explicit Next.js handlers live at `apps/legislation-web/app/health/route.ts` and
+`apps/legislation-web/app/ready/route.ts`; documented `/api/**` operations remain under the `app/api` boundary. All
+must preserve the standalone response, status, content type, and correlation-ID behavior.
 
 The contract is split into focused pages:
 
@@ -14,7 +42,6 @@ The contract is split into focused pages:
 - [People, organizations, meetings, and calendars](civic-graph-and-events.md)
 - [Search, research answers, and document comparison](search-and-diffs.md)
 - [Subscriptions, deliveries, and webhooks](subscriptions-and-webhooks.md)
-- [MCP migration and parity map](mcp-migration.md)
 
 ## Design rules
 
@@ -33,8 +60,11 @@ The contract is split into focused pages:
 
 ## Authentication and access classes
 
-Bearer tokens use the same WorkOS issuer, audience, signature, expiry, subject, user, and optional organization checks as
-the MCP resource. Every operation declares one of these access classes:
+The HTTP API accepts configured WorkOS M2M bearer tokens and, for first-party browser clients, configured AuthKit
+user-session bearer tokens. M2M tokens are verified for issuer, signature, expiry, subject, optional organization, and
+either the API or MCP audience. AuthKit sessions are API-only and require the configured client ID, a nonempty session
+ID, and a maximum 30-day lifetime. The MCP resource accepts only M2M tokens for its configured resource audience. Every
+operation declares one of these access classes:
 
 | Access class  | Meaning                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------- |
@@ -175,8 +205,3 @@ schema are the only success response. This matrix plus endpoint-specific excepti
 
 The endpoint pages are the source contract for the future OpenAPI document; a generated specification must preserve
 the documented request type, response envelope, statuses, calculated operation ID, and examples exactly.
-
-## MCP migration
-
-See the [complete MCP parity map](mcp-migration.md). HTTP handlers and MCP tools call the same application-service
-methods. An in-process MCP server never makes loopback HTTP calls; a separately deployed adapter may use the HTTP API.

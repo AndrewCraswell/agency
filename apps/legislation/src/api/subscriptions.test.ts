@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import {
+  createAes256GcmWebhookSecretProtector,
   createWebhookSecretProtector,
   SubscriptionApiError,
   SubscriptionService,
@@ -64,7 +65,7 @@ function repository(): SubscriptionRepository & WebhookRepository {
           subscription.target.type === "record"
       ),
     getSubscription: async ({ id }) => subscriptions.get(id),
-    getWebhook: async (id) => webhooks.get(id),
+    getWebhook: async ({ id }) => webhooks.get(id),
     listDeliveries: noEvents,
     listSubscriptionEvents: noEvents,
     listSubscriptions: async ({ owner }) => ({
@@ -188,5 +189,12 @@ describe("subscription persistence constraints", () => {
   it("rejects a webhook secret protector that returns plaintext", async () => {
     const protector = createWebhookSecretProtector(async (plaintext) => plaintext)
     await expect(protector.protect("plaintext-secret")).rejects.toThrow("distinct from plaintext")
+  })
+
+  it("uses authenticated envelope protection for a one-time signing secret", async () => {
+    const protector = createAes256GcmWebhookSecretProtector(Buffer.alloc(32, 9))
+    const protectedSecret = await protector.protect("A".repeat(43))
+    expect(protectedSecret.unwrapForPersistence()).toMatch(/^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
+    await expect(protector.unprotect(protectedSecret)).resolves.toBe("A".repeat(43))
   })
 })

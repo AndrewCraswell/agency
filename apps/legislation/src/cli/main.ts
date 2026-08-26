@@ -4,10 +4,22 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { Command } from "commander"
 import { createLegislationApiHandler } from "../api/handlers.js"
-import { PostgresSubscriptionRepository } from "../api/subscription-repository.js"
+import { createRepresentativeLookupApi } from "../api/representative-lookup.js"
+import {
+  createCanonicalResearchEvidenceRetriever,
+  createOpenRouterResearchAnswerGenerator,
+  createResearchAnswerService
+} from "../api/research-answers.js"
+import {
+  createAes256GcmIdempotencyCipher,
+  PostgresSubscriptionRepository,
+  SubscriptionIdempotencyTransaction
+} from "../api/subscription-repository.js"
+import { createAes256GcmWebhookSecretProtector } from "../api/subscriptions.js"
+import { CensusAddressGeocoder, UsRepresentativeLookupProvider } from "../api/us-representative-lookup-provider.js"
 import { PostgresWebhookReadRepository } from "../api/webhook-read-repository.js"
 import { createWorkosAuthenticator } from "../auth/workos.js"
-import { loadConfig, type LegislationConfig } from "../config/config.js"
+import { decodeIdempotencyEncryptionKey, loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/report.js"
 import { createDatabase, databasePoolSnapshot, type LegislationDatabase } from "../db/database.js"
 import { migrateDatabase } from "../db/migrate.js"
@@ -76,7 +88,6 @@ import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
 import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
 import { LegislationQueryService } from "../legislation/query-service.js"
-import { createMcpQueryApi } from "../mcp/query-transport.js"
 import { close, createLegislationServer, listen } from "../mcp/server.js"
 import { createLegislationMcpHandler } from "../mcp/tools.js"
 import { embeddingRouteFor } from "../models/embedding-routing.js"
@@ -336,27 +347,75 @@ async function serve() {
       ? undefined
       : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
   const queryService = new LegislationQueryService(database, retrievalClient)
-  const mcp = createLegislationMcpHandler(createMcpQueryApi(config.mcp, queryService), logger, telemetry)
+  const representativeLookupApi =
+    config.ingestion.openStatesApiKey === undefined
+      ? undefined
+      : createRepresentativeLookupApi(
+          new UsRepresentativeLookupProvider({
+            apiBaseUrl: config.server.publicApiBaseUrl,
+            geocoder: new CensusAddressGeocoder({ timeoutMs: config.ingestion.requestTimeoutMs }),
+            openStates: new OpenStatesClient({
+              apiKey: config.ingestion.openStatesApiKey,
+              baseUrl: new URL(config.ingestion.openStatesApiUrl),
+              http: openStatesHttpClient(config)
+            })
+          })
+        )
+  const researchAnswerApi =
+    retrievalClient === undefined
+      ? undefined
+      : createResearchAnswerService(
+          createCanonicalResearchEvidenceRetriever(queryService, config.server.publicApiBaseUrl),
+          createOpenRouterResearchAnswerGenerator(retrievalClient, config.model.researchAnswerModel)
+        )
+  const mcp = createLegislationMcpHandler(queryService, logger, telemetry)
   const apiAuthenticate =
     config.auth.mode === "workos"
       ? createWorkosAuthenticator({
-          audience: [config.auth.apiAudience, config.auth.mcpAudience],
-          issuer: config.auth.issuer,
-          jwksUrl: config.auth.jwksUrl
+          m2m: {
+            audience: [config.auth.apiAudience, config.auth.mcpAudience],
+            issuer: config.auth.issuer,
+            jwksUrl: config.auth.jwksUrl
+          },
+          userSession: config.auth.userSession
         })
       : undefined
   const mcpAuthenticate =
     config.auth.mode === "workos"
       ? createWorkosAuthenticator({
-          audience: config.auth.mcpAudience,
-          issuer: config.auth.issuer,
-          jwksUrl: config.auth.jwksUrl
+          m2m: {
+            audience: config.auth.mcpAudience,
+            issuer: config.auth.issuer,
+            jwksUrl: config.auth.jwksUrl
+          }
         })
       : undefined
   const server = createLegislationServer({
     apiHandler: createLegislationApiHandler(queryService, {
       apiBaseUrl: config.server.publicApiBaseUrl,
       documentDatabase: database,
+      ...(representativeLookupApi === undefined ? {} : { representativeLookupApi }),
+      researchAnswerApi,
+      ...(config.security.idempotencyEncryptionKey === undefined
+        ? {}
+        : {
+            subscriptionMutationExecutor: new SubscriptionIdempotencyTransaction(
+              database,
+              createAes256GcmIdempotencyCipher(decodeIdempotencyEncryptionKey(config.security.idempotencyEncryptionKey))
+            )
+          }),
+      ...(config.security.idempotencyEncryptionKey === undefined ||
+      config.security.webhookSecretEncryptionKey === undefined
+        ? {}
+        : {
+            webhookMutationExecutor: new SubscriptionIdempotencyTransaction(
+              database,
+              createAes256GcmIdempotencyCipher(decodeIdempotencyEncryptionKey(config.security.idempotencyEncryptionKey))
+            ),
+            webhookSecretProtector: createAes256GcmWebhookSecretProtector(
+              decodeIdempotencyEncryptionKey(config.security.webhookSecretEncryptionKey)
+            )
+          }),
       subscriptionRepository: new PostgresSubscriptionRepository(database),
       webhookReadRepository: new PostgresWebhookReadRepository(database)
     }),
@@ -384,6 +443,7 @@ async function serve() {
             resource: config.auth.mcpAudience
           }
         : undefined,
+    rateLimit: config.server.rateLimit,
     readinessDetails: () => ({ databasePool: databasePoolSnapshot(pool) }),
     requestBodyBytes: config.server.requestBodyBytes
   })
@@ -641,8 +701,12 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
             for await (const page of client.committees({ jurisdictionId })) {
               rawCommittees.push(...page)
             }
-            const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: code })
-            const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, { jurisdictionCode: code })
+            const retrievedAt = new Date()
+            const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: code, retrievedAt })
+            const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, {
+              jurisdictionCode: code,
+              retrievedAt
+            })
             const peopleById = new Map(
               [...normalizedPeople.people, ...normalizedCommittees.people].map((person) => [person.id, person])
             )
@@ -652,6 +716,8 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
             await replaceEntitySnapshot(database, `jurisdiction:${code}`, {
               memberships: normalizedCommittees.memberships,
               organizations: normalizedCommittees.organizations,
+              personAliasPersonIds: normalizedPeople.personAliasPersonIds,
+              personAliases: normalizedPeople.personAliases,
               people: [...peopleById.values()],
               terms: [...termsById.values()]
             })
@@ -725,9 +791,10 @@ async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: str
               to
             })) {
               counts.discovered += page.length
+              const retrievedAt = new Date()
               const snapshots = page.flatMap((record) => {
                 try {
-                  return [normalizeOpenStatesEvent(record, { jurisdictionCode: code })]
+                  return [normalizeOpenStatesEvent(record, { jurisdictionCode: code, retrievedAt })]
                 } catch (error) {
                   counts.failed += 1
                   failures.push({
@@ -1028,7 +1095,7 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
           }
         }
         const memberSnapshots = rawMembers.map(({ congress, records }) => normalizeCongressMembers(records, congress))
-        const committeeSnapshot = normalizeCongressCommittees(rawCommittees)
+        const committeeSnapshot = normalizeCongressCommittees(rawCommittees, { retrievedAt: new Date() })
         const peopleById = new Map(
           memberSnapshots.flatMap((snapshot) => snapshot.people).map((person) => [person.id, person])
         )
@@ -1039,6 +1106,8 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
         await replaceEntitySnapshot(database, "jurisdiction:us", {
           memberships: [],
           organizations: [...organizationsById.values()],
+          personAliasPersonIds: [],
+          personAliases: [],
           people: [...peopleById.values()],
           terms: [...termsById.values()]
         })

@@ -56,8 +56,31 @@ describe("GovInfo normalization", () => {
       expect.objectContaining({ contentType: "application/xml", title: "Introduced in House", versionCode: "ih" })
     ])
     expect(aggregate.relations).toEqual([
-      { billId: "bill:us:119:hr:1234", classification: "related", relatedBillId: "bill:us:119:s:567" }
+      expect.objectContaining({
+        billId: "bill:us:119:hr:1234",
+        classification: "related",
+        direction: "outgoing",
+        relatedBillId: "bill:us:119:s:567"
+      })
     ])
+  })
+
+  it("persists source-declared relation direction and complete provenance when retrieved", () => {
+    const aggregate = normalizeGovInfoBillStatus(fixture, {
+      retrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.relations?.[0]).toMatchObject({
+      canonicalFactsComplete: true,
+      direction: "outgoing",
+      provenanceComplete: true,
+      sourceIsOfficial: true,
+      sourceProvider: "govinfo",
+      sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sourceUpdatedAt: new Date("2025-02-10T12:00:00.000Z"),
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
   })
 
   it("rejects status records without a title", () => {
@@ -98,7 +121,12 @@ describe("GovInfo normalization", () => {
 
     expect(aggregate.actions).toHaveLength(2)
     expect(aggregate.relations).toEqual([
-      { billId: "bill:us:119:hr:1234", classification: "related", relatedBillId: "bill:us:119:s:567" }
+      expect.objectContaining({
+        billId: "bill:us:119:hr:1234",
+        classification: "related",
+        direction: "outgoing",
+        relatedBillId: "bill:us:119:s:567"
+      })
     ])
   })
 

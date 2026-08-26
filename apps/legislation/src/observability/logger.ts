@@ -53,12 +53,23 @@ type LoggerOptions = Readonly<{
 export function errorContext(error: unknown): LogContext {
   if (error instanceof Error) {
     return {
+      ...errorCauseContext(error.cause),
       errorMessage: sanitizeValue(error.message, "errorMessage"),
       errorName: error.name
     }
   }
 
   return { errorType: typeof error }
+}
+
+function errorCauseContext(cause: unknown): LogContext {
+  if (cause instanceof Error) {
+    return {
+      causeMessage: sanitizeValue(cause.message, "causeMessage"),
+      causeName: cause.name
+    }
+  }
+  return cause === undefined ? {} : { causeType: typeof cause }
 }
 
 export function createLogger(options: LoggerOptions): Logger {

@@ -1,9 +1,12 @@
 # Authentication and MCP client setup
 
-The Azure development environment uses WorkOS's staging AuthKit domain and OAuth bearer tokens. Production WorkOS
-configuration is intentionally deferred. The protected resource is the public MCP endpoint, and the application
-validates the RS256 signature, issuer, audience, expiry, and subject against a bounded remote JWKS cache. Health and
-readiness remain public; `/mcp` is protected. Development may use
+The service uses WorkOS's staging AuthKit environment for user-session and OAuth bearer tokens. The API accepts either
+a WorkOS AuthKit user-session JWT or an M2M access token. User sessions are verified only with
+`https://api.workos.com` and the JWKS at
+`https://api.workos.com/sso/jwks/<WORKOS_CLIENT_ID>`; they must have the configured `client_id`, no `aud`, a nonempty
+session ID, and a maximum 30-day lifetime. M2M tokens are verified against the configured issuer, JWKS, and audience.
+The protected MCP resource accepts only the configured M2M resource audience. Health and readiness remain public;
+`/mcp` is protected. Development may use
 `AUTH_MODE=disabled` only on a loopback or otherwise isolated endpoint.
 
 Use the WorkOS staging application identified by `WORKOS_CLIENT_ID`. Register the exact remote MCP resource URL and only

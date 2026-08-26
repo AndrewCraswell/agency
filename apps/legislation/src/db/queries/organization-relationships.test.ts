@@ -17,6 +17,18 @@ import {
 const pool = new pg.Pool({ connectionString: "postgresql://organization-relationships-test.invalid/legislation" })
 const database = drizzle(pool, { schema })
 
+const organizationDetailDefaults = {
+  childRelationsComplete: false,
+  description: null,
+  detailFactsComplete: false,
+  membershipRelationsComplete: false,
+  publicContactAddress: null,
+  publicContactEmail: null,
+  publicContactPhone: null,
+  termsOfReference: null,
+  websiteUrl: null
+} as const
+
 afterAll(async () => {
   await pool.end()
 })
@@ -25,6 +37,7 @@ describe("organization collection queries", () => {
   it("scopes organizations to a jurisdiction and applies a strict name keyset", () => {
     const cursor = encodeOrganizationCursor(
       {
+        ...organizationDetailDefaults,
         id: "organization:ak:committee:1",
         jurisdictionId: "jurisdiction:ak",
         parentOrganizationId: null,
@@ -77,6 +90,54 @@ describe("organization collection queries", () => {
     )
     expect(generated).not.toContain(" offset ")
     expect(generated).toContain("limit $")
+  })
+
+  it("preserves multi-value universal filters and the canonical updated-at interval", () => {
+    const generated = buildOrganizationListQuery(database, {
+      classifications: ["committee", "commission"],
+      jurisdictionIds: ["jurisdiction:ca", "jurisdiction:ny"],
+      parentOrganizationIds: ["organization:ca:house", "organization:ny:senate"],
+      updatedFrom: new Date("2026-08-01T00:00:00.000Z"),
+      updatedToExclusive: new Date("2026-09-01T00:00:00.000Z")
+    }).toSQL().sql
+
+    expect(generated).toContain('"organizations"."jurisdiction_id" in')
+    expect(generated).toContain('"organizations"."classification" in')
+    expect(generated).toContain('"organizations"."parent_organization_id" in')
+    expect(generated).toContain('"organizations"."updated_at" >=')
+    expect(generated).toContain('"organizations"."updated_at" <')
+  })
+
+  it("binds updated-at bounds into the pagination cursor scope", () => {
+    const updatedFrom = new Date("2026-08-01T00:00:00.000Z")
+    const updatedToExclusive = new Date("2026-09-01T00:00:00.000Z")
+    const scope = {
+      chamber: null,
+      classification: null,
+      isActive: null,
+      jurisdictionId: null,
+      parentOrganizationId: null,
+      query: null,
+      sort: "updated-desc" as const,
+      updatedFrom: updatedFrom.toISOString(),
+      updatedTo: null,
+      updatedToExclusive: updatedToExclusive.toISOString()
+    }
+    const cursor = Buffer.from(
+      JSON.stringify({
+        id: "organization:ca:committee:1",
+        scope,
+        sort: "updated-desc",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        version: 1
+      })
+    ).toString("base64url")
+    const base = { cursor, sort: "updated-desc" as const, updatedFrom, updatedToExclusive }
+
+    expect(() => buildOrganizationListQuery(database, base)).not.toThrow()
+    expect(() =>
+      buildOrganizationListQuery(database, { ...base, updatedFrom: new Date("2026-08-02T00:00:00.000Z") })
+    ).toThrow("Invalid organization pagination cursor")
   })
 
   it("keeps commission and committee views as jurisdiction-scoped classification filters", () => {
@@ -154,6 +215,7 @@ describe("organization pagination validation", () => {
   it("rejects a cursor encoded for another organization sort or filter scope", async () => {
     const cursor = encodeOrganizationCursor(
       {
+        ...organizationDetailDefaults,
         id: "organization:ak:committee:1",
         jurisdictionId: "jurisdiction:ak",
         parentOrganizationId: null,
@@ -190,6 +252,7 @@ describe("organization pagination validation", () => {
 
     const scopedCursor = encodeOrganizationCursor(
       {
+        ...organizationDetailDefaults,
         id: "organization:ak:committee:1",
         jurisdictionId: "jurisdiction:ak",
         parentOrganizationId: null,
@@ -285,23 +348,23 @@ describe("organization pagination validation", () => {
         organizationId: "organization:ak:committee:1",
         to: "2026-02-28T23:59:59Z"
       })
-    ).toThrow("from must be less than or equal to to")
+    ).toThrow("from and to must use the same format")
   })
 
-  it("normalizes mixed date and timestamp bounds to the same inclusive day window", () => {
+  it("rejects mixed date and timestamp bounds", () => {
     expect(() =>
       buildOrganizationBillListQuery(database, {
         from: "2026-01-01T12:00:00Z",
         organizationId: "organization:ak:committee:1",
         to: "2026-01-01"
       }).toSQL()
-    ).not.toThrow()
+    ).toThrow("from and to must use the same format")
     expect(() =>
       buildOrganizationBillListQuery(database, {
         from: "2026-01-02T00:00:00Z",
         organizationId: "organization:ak:committee:1",
         to: "2026-01-01"
       })
-    ).toThrow("from must be less than or equal to to")
+    ).toThrow("from and to must use the same format")
   })
 })

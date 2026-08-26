@@ -273,6 +273,11 @@ function supportingMaterialDetailRead(value: unknown): SupportingMaterialDetailR
   return value
 }
 
+/** Reuses the core read validator and canonical projector for composed reads. */
+export function projectCoreSupportingMaterialDetailRead(value: unknown, apiBaseUrl: string) {
+  return projectSupportingMaterialDetailRead(supportingMaterialDetailRead(value), apiBaseUrl)
+}
+
 function isSupportingMaterialRead(value: unknown): value is SupportingMaterialRead {
   if (typeof value !== "object" || value === null) {
     return false

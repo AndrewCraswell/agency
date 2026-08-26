@@ -1,7 +1,16 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
 import type { OpenStatesEntitySnapshot } from "../../ingestion/openstates/entities.js"
 import type { LegislationDatabase } from "../database.js"
-import { legislativeTerms, organizationMemberships, organizations, people } from "../schema/schema.js"
+import {
+  legislativeTerms,
+  organizationMemberships,
+  organizations,
+  people,
+  personAliases,
+  personDetails,
+  personExternalIdentifiers,
+  personJurisdictions
+} from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
@@ -17,6 +26,12 @@ export async function replaceEntitySnapshot(
   const organizationValues = uniqueById(snapshot.organizations)
   const termValues = uniqueById(snapshot.terms)
   const membershipValues = uniqueById(snapshot.memberships)
+  const personAliasPersonIds = [...new Set(snapshot.personAliasPersonIds)]
+  const personAliasValues = snapshot.personAliases
+  const personDetailPersonIds = [...new Set(snapshot.personDetailPersonIds ?? [])]
+  const personDetailValues = snapshot.personDetails ?? []
+  const personExternalIdentifierValues = snapshot.personExternalIdentifiers ?? []
+  const personJurisdictionValues = snapshot.personJurisdictions ?? []
 
   await database.transaction(async (transaction) => {
     await transaction
@@ -53,6 +68,111 @@ export async function replaceEntitySnapshot(
           target: people.id
         })
     }
+    if (personAliasPersonIds.length > 0) {
+      await transaction
+        .delete(personAliases)
+        .where(
+          and(inArray(personAliases.personId, personAliasPersonIds), eq(personAliases.sourceProvider, "openstates"))
+        )
+    }
+    if (personAliasValues.length > 0) {
+      await transaction
+        .insert(personAliases)
+        .values(personAliasValues)
+        .onConflictDoUpdate({
+          set: {
+            name: sql`excluded.name`,
+            provenanceComplete: sql`excluded.provenance_complete`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date()
+          },
+          target: [personAliases.personId, personAliases.sourceIdentity]
+        })
+    }
+    if (personDetailPersonIds.length > 0) {
+      await transaction
+        .delete(personDetails)
+        .where(
+          and(inArray(personDetails.personId, personDetailPersonIds), eq(personDetails.sourceProvider, "openstates"))
+        )
+      await transaction
+        .delete(personExternalIdentifiers)
+        .where(
+          and(
+            inArray(personExternalIdentifiers.personId, personDetailPersonIds),
+            eq(personExternalIdentifiers.sourceProvider, "openstates")
+          )
+        )
+      await transaction
+        .delete(personJurisdictions)
+        .where(
+          and(
+            inArray(personJurisdictions.personId, personDetailPersonIds),
+            eq(personJurisdictions.sourceProvider, "openstates")
+          )
+        )
+    }
+    if (personDetailValues.length > 0) {
+      await transaction
+        .insert(personDetails)
+        .values(personDetailValues)
+        .onConflictDoUpdate({
+          set: {
+            imageUrl: sql`excluded.image_url`,
+            officialUrl: sql`excluded.official_url`,
+            provenanceComplete: sql`excluded.provenance_complete`,
+            publicEmail: sql`excluded.public_email`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date()
+          },
+          target: personDetails.personId,
+          where: eq(personDetails.sourceProvider, "openstates")
+        })
+    }
+    if (personExternalIdentifierValues.length > 0) {
+      await transaction
+        .insert(personExternalIdentifiers)
+        .values(personExternalIdentifierValues)
+        .onConflictDoUpdate({
+          set: {
+            provenanceComplete: sql`excluded.provenance_complete`,
+            scheme: sql`excluded.scheme`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date(),
+            value: sql`excluded.value`
+          },
+          target: [personExternalIdentifiers.personId, personExternalIdentifiers.sourceIdentity]
+        })
+    }
+    if (personJurisdictionValues.length > 0) {
+      await transaction
+        .insert(personJurisdictions)
+        .values(personJurisdictionValues)
+        .onConflictDoUpdate({
+          set: {
+            provenanceComplete: sql`excluded.provenance_complete`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date()
+          },
+          target: [personJurisdictions.personId, personJurisdictions.jurisdictionId, personJurisdictions.sourceIdentity]
+        })
+    }
     if (organizationValues.length > 0) {
       await transaction
         .insert(organizations)
@@ -60,19 +180,32 @@ export async function replaceEntitySnapshot(
         .onConflictDoUpdate({
           set: {
             chamber: sql`excluded.chamber`,
+            childRelationsComplete: sql`excluded.child_relations_complete`,
             classification: sql`excluded.classification`,
+            description: sql`excluded.description`,
+            detailFactsComplete: sql`excluded.detail_facts_complete`,
             isActive: sql`excluded.is_active`,
             jurisdictionId: sql`excluded.jurisdiction_id`,
+            membershipRelationsComplete: sql`excluded.membership_relations_complete`,
             name: sql`excluded.name`,
             parentOrganizationId: sql`excluded.parent_organization_id`,
+            publicContactAddress: sql`excluded.public_contact_address`,
+            publicContactEmail: sql`excluded.public_contact_email`,
+            publicContactPhone: sql`excluded.public_contact_phone`,
+            provenanceComplete: sql`excluded.provenance_complete`,
             sourceId: sql`excluded.source_id`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
             sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
+            termsOfReference: sql`excluded.terms_of_reference`,
             updatedAt: new Date(),
             // A full entity snapshot is authoritative for its Open States parent graph.
             // Replacing this object clears a now-resolved raw parent identity rather
             // than retaining it beside the canonical FK indefinitely.
-            upstreamIds: sql`excluded.upstream_ids`
+            upstreamIds: sql`excluded.upstream_ids`,
+            websiteUrl: sql`excluded.website_url`
           },
           target: organizations.id
         })
@@ -147,10 +280,19 @@ export async function replaceEntitySnapshot(
       await observeCanonicalRecord(transaction, {
         fields: {
           chamber: organization.chamber,
+          childRelationsComplete: organization.childRelationsComplete,
           classification: organization.classification,
+          description: organization.description,
+          detailFactsComplete: organization.detailFactsComplete,
           isActive: organization.isActive,
+          membershipRelationsComplete: organization.membershipRelationsComplete,
           name: organization.name,
-          parentOrganizationId: organization.parentOrganizationId
+          parentOrganizationId: organization.parentOrganizationId,
+          publicContactAddress: organization.publicContactAddress,
+          publicContactEmail: organization.publicContactEmail,
+          publicContactPhone: organization.publicContactPhone,
+          termsOfReference: organization.termsOfReference,
+          websiteUrl: organization.websiteUrl
         },
         jurisdictionId,
         organizationId: organization.id,

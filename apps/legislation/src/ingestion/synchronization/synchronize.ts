@@ -169,7 +169,8 @@ async function synchronizeOpenStatesBillsForScope(
       context.database,
       {
         jurisdictionCode: identity.scope,
-        jurisdictionName: openStatesJurisdictionNames[identity.scope]
+        jurisdictionName: openStatesJurisdictionNames[identity.scope],
+        retrievedAt: new Date()
       },
       records,
       {
@@ -205,8 +206,12 @@ async function synchronizeOpenStatesEntitiesForScope(
     for await (const page of client.committees({ jurisdictionId })) {
       rawCommittees.push(...page)
     }
-    const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: identity.scope })
-    const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, { jurisdictionCode: identity.scope })
+    const retrievedAt = new Date()
+    const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: identity.scope, retrievedAt })
+    const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, {
+      jurisdictionCode: identity.scope,
+      retrievedAt
+    })
     const peopleById = new Map(
       [...normalizedPeople.people, ...normalizedCommittees.people].map((person) => [person.id, person])
     )
@@ -214,6 +219,8 @@ async function synchronizeOpenStatesEntitiesForScope(
     await replaceEntitySnapshot(context.database, `jurisdiction:${identity.scope}`, {
       memberships: normalizedCommittees.memberships,
       organizations: normalizedCommittees.organizations,
+      personAliasPersonIds: normalizedPeople.personAliasPersonIds,
+      personAliases: normalizedPeople.personAliases,
       people: [...peopleById.values()],
       terms: [...termsById.values()]
     })
@@ -254,9 +261,10 @@ async function synchronizeOpenStatesEventsForScope(
       to
     })) {
       counts.discovered += page.length
+      const retrievedAt = new Date()
       const snapshots = page.flatMap((record) => {
         try {
-          return [normalizeOpenStatesEvent(record, { jurisdictionCode: identity.scope })]
+          return [normalizeOpenStatesEvent(record, { jurisdictionCode: identity.scope, retrievedAt })]
         } catch (error) {
           counts.failed += 1
           failures.push({
@@ -308,7 +316,7 @@ async function synchronizeCongressEntitiesForScope(
     committees.push(...page)
   }
   const memberSnapshot = normalizeCongressMembers(members, identity.scope)
-  const committeeSnapshot = normalizeCongressCommittees(committees)
+  const committeeSnapshot = normalizeCongressCommittees(committees, { retrievedAt: new Date() })
   const peopleById = new Map(memberSnapshot.people.map((person) => [person.id, person]))
   const termsById = new Map(memberSnapshot.terms.map((term) => [term.id, term]))
   const organizationsById = new Map(
@@ -317,6 +325,8 @@ async function synchronizeCongressEntitiesForScope(
   await replaceEntitySnapshot(context.database, "jurisdiction:us", {
     memberships: [],
     organizations: [...organizationsById.values()],
+    personAliasPersonIds: [],
+    personAliases: [],
     people: [...peopleById.values()],
     terms: [...termsById.values()]
   })

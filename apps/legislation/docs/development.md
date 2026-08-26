@@ -13,6 +13,17 @@ From the repository root:
 
 ```text
 pnpm install
+pnpm --filter legislation-web dev
+pnpm --filter legislation-web test
+pnpm --filter legislation-web check:types
+pnpm --filter legislation-web verify
+```
+
+The current public HTTP runtime is `apps/legislation-web` on Next.js 16.3.1. Its `app/api` Route Handlers are the
+deployment boundary. The following commands exercise reusable legislation domain and transitional standalone code; they
+do not start or deploy the deleted `legislation-api` Railway service:
+
+```text
 pnpm --filter legislation build
 pnpm --filter legislation test
 pnpm --filter legislation check:types
@@ -20,7 +31,7 @@ pnpm --filter legislation lint
 pnpm --filter legislation dev
 ```
 
-The development server listens on `127.0.0.1:3100` by default and exposes:
+The standalone development server listens on `127.0.0.1:3100` by default and exposes:
 
 - `GET /health` for process health.
 - `GET /ready` for dependency readiness.
@@ -64,7 +75,7 @@ unexplained one-off files:
 | Script group | Purpose | Retention rule |
 | --- | --- | --- |
 | `smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
-| `smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires `LEGISLATION_SMOKE_TOKEN` and never logs it. |
+| `smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires separate `LEGISLATION_SMOKE_TOKEN` (API) and `LEGISLATION_MCP_SMOKE_TOKEN` (MCP) credentials, a root HTTP(S) base URL, and never logs either token. |
 | `smoke-dependencies.mjs` | Verify production PostgreSQL, pgvector, managed identity, and Blob read/write behavior. | Permanent infrastructure check; packaged with the build intentionally. |
 | `build-embedding-*`, `run-embedding-*`, `evaluate-embedding-canary.ts`, `rerank-embedding-bakeoff.ts` | Rebuild frozen evaluation inputs, seed a bounded treatment, compare retrieval, and reproduce model or reranker decisions. | Keep as regression tooling; remove superseded generated outputs instead. |
 | `run-trigger-backfill.ts` | Plan or explicitly launch a resumable historical rebuild. | Permanent disaster-recovery and future-rebuild entry point. |
@@ -73,22 +84,27 @@ unexplained one-off files:
 
 ## Container and Railway build
 
-The API image uses the repository root as its Docker context so pnpm can resolve the root lockfile, catalog, and shared
-TypeScript package. The multi-stage Dockerfile installs the legislation workspace dependency closure, builds only the
-legislation service, and copies a production-only `pnpm deploy` output into the non-root runtime image.
+The current Railway runtime is `legislation-web`. Its image uses the repository root as Docker context so pnpm can
+resolve the root lockfile, catalog, and shared TypeScript package. The Dockerfile installs the web application and its
+legislation dependency closure, builds the Next.js application, and runs the standalone output as a non-root process.
 
 From the repository root:
 
 ```text
-docker build -f apps/legislation/Dockerfile -t legislation:local .
+docker build -f apps/legislation-web/Dockerfile -t legislation-web:local .
 ```
 
-Railway config-as-code lives at `apps/legislation/railway.json`. For `legislation-api`, keep the service root at the
-repository root and explicitly set Config File Path to `/apps/legislation/railway.json`; nested config is not discovered
-automatically. Before release, verify the effective service uses the Dockerfile builder,
-`apps/legislation/Dockerfile`, and `/ready` health check. Railway injects `PORT`; the service uses it and binds to
-`0.0.0.0`. The image command is only `node dist/cli/main.js serve`. Apply migrations as a separate, explicit release
-operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
+Railway config-as-code lives at `apps/legislation-web/railway.json`. Keep the service root at the repository root and
+explicitly set Config File Path to `/apps/legislation-web/railway.json`; nested config is not discovered automatically.
+Before release, verify the effective service uses the Dockerfile builder, `apps/legislation-web/Dockerfile`, and `/ready`
+health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
+release operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
+
+The current verified deployment is `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` from source commit `6afcf42` (including route
+commit `04ca95d`), with image
+`sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`. Rollback uses the prior successful
+`legislation-web` deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517`. The former `legislation-api` Railway service was
+deleted and must not be redeployed, described as current, or used as a rollback target.
 
 After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
 This required production variable is the trusted base for canonical API URLs; it must not be derived from request headers.

@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, errors, jwtVerify, type JWTVerifyGetKey } from "jose"
+import { createRemoteJWKSet, decodeJwt, errors, jwtVerify, type JWTVerifyGetKey } from "jose"
 import type { LegislationConfig } from "../config/config.js"
 import type { RequestIdentity } from "./request-context.js"
 
@@ -14,6 +14,26 @@ export class AuthenticationError extends Error {
   }
 }
 
+const MAXIMUM_AUTHKIT_SESSION_LIFETIME_SECONDS = 30 * 24 * 60 * 60
+
+export type WorkosAuthenticatorConfig = Readonly<{
+  m2m: Readonly<{
+    audience: string | string[]
+    issuer: Extract<LegislationConfig["auth"], { mode: "workos" }>["issuer"]
+    jwksUrl: Extract<LegislationConfig["auth"], { mode: "workos" }>["jwksUrl"]
+  }>
+  userSession?: Readonly<{
+    clientId: Extract<LegislationConfig["auth"], { mode: "workos" }>["userSession"]["clientId"]
+    issuer: Extract<LegislationConfig["auth"], { mode: "workos" }>["userSession"]["issuer"]
+    jwksUrl: Extract<LegislationConfig["auth"], { mode: "workos" }>["userSession"]["jwksUrl"]
+  }>
+}>
+
+export type WorkosAuthenticatorKeys = Readonly<{
+  m2m?: JWTVerifyGetKey
+  userSession?: JWTVerifyGetKey
+}>
+
 export function extractBearerToken(authorizationHeader: string | string[] | undefined): string {
   if (authorizationHeader === undefined) {
     throw new AuthenticationError("missing")
@@ -28,38 +48,36 @@ export function extractBearerToken(authorizationHeader: string | string[] | unde
   return match[1]
 }
 
-export function createWorkosAuthenticator(
-  config: Readonly<{
-    audience: string | string[]
-    issuer: Extract<LegislationConfig["auth"], { mode: "workos" }>["issuer"]
-    jwksUrl: Extract<LegislationConfig["auth"], { mode: "workos" }>["jwksUrl"]
-  }>,
-  getKey: JWTVerifyGetKey = createRemoteJWKSet(new URL(config.jwksUrl), {
-    cooldownDuration: 30_000,
-    timeoutDuration: 5000
-  })
-) {
+export function createWorkosAuthenticator(config: WorkosAuthenticatorConfig, keys: WorkosAuthenticatorKeys = {}) {
+  const m2mGetKey =
+    keys.m2m ??
+    createRemoteJWKSet(new URL(config.m2m.jwksUrl), {
+      cooldownDuration: 30_000,
+      timeoutDuration: 5000
+    })
+  const sessionGetKey =
+    config.userSession === undefined
+      ? undefined
+      : (keys.userSession ??
+        createRemoteJWKSet(new URL(config.userSession.jwksUrl), {
+          cooldownDuration: 30_000,
+          timeoutDuration: 5000
+        }))
+
   return async (authorizationHeader: string | string[] | undefined): Promise<RequestIdentity> => {
     const token = extractBearerToken(authorizationHeader)
     try {
-      const { payload } = await jwtVerify(token, getKey, {
-        algorithms: ["RS256"],
-        audience: config.audience,
-        clockTolerance: 30,
-        issuer: config.issuer,
-        maxTokenAge: "24h",
-        requiredClaims: ["exp", "iat", "sub"]
-      })
-      let organizationId: string | undefined
-      if (typeof payload.org_id === "string") {
-        organizationId = payload.org_id
-      } else if (typeof payload.organization_id === "string") {
-        organizationId = payload.organization_id
-      }
-      if (typeof payload.sub !== "string" || payload.sub.length === 0) {
-        throw new AuthenticationError("invalid")
-      }
-      return { organizationId, userId: payload.sub }
+      const unverifiedPayload = decodeJwt(token)
+      const isAuthKitSession =
+        config.userSession !== undefined &&
+        unverifiedPayload.aud === undefined &&
+        unverifiedPayload.client_id === config.userSession.clientId &&
+        typeof unverifiedPayload.sid === "string" &&
+        unverifiedPayload.sid.length > 0
+      const { payload } = isAuthKitSession
+        ? await verifyAuthKitSessionToken(token, config.userSession, sessionGetKey)
+        : await verifyM2mToken(token, config.m2m, m2mGetKey)
+      return identityFromPayload(payload)
     } catch (error) {
       if (error instanceof AuthenticationError) {
         throw error
@@ -76,4 +94,57 @@ export function createWorkosAuthenticator(
       throw new AuthenticationError("temporary")
     }
   }
+}
+
+async function verifyM2mToken(token: string, config: WorkosAuthenticatorConfig["m2m"], getKey: JWTVerifyGetKey) {
+  return await jwtVerify(token, getKey, {
+    algorithms: ["RS256"],
+    audience: config.audience,
+    clockTolerance: 30,
+    issuer: config.issuer,
+    maxTokenAge: "24h",
+    requiredClaims: ["exp", "iat", "sub"]
+  })
+}
+
+async function verifyAuthKitSessionToken(
+  token: string,
+  config: NonNullable<WorkosAuthenticatorConfig["userSession"]>,
+  getKey: JWTVerifyGetKey | undefined
+) {
+  if (getKey === undefined) {
+    throw new AuthenticationError("invalid")
+  }
+  const result = await jwtVerify(token, getKey, {
+    algorithms: ["RS256"],
+    clockTolerance: 30,
+    issuer: config.issuer,
+    maxTokenAge: "30d",
+    requiredClaims: ["client_id", "exp", "iat", "sid", "sub"]
+  })
+  if (
+    result.payload.aud !== undefined ||
+    result.payload.client_id !== config.clientId ||
+    typeof result.payload.sid !== "string" ||
+    result.payload.sid.length === 0 ||
+    typeof result.payload.exp !== "number" ||
+    typeof result.payload.iat !== "number" ||
+    result.payload.exp - result.payload.iat > MAXIMUM_AUTHKIT_SESSION_LIFETIME_SECONDS
+  ) {
+    throw new AuthenticationError("invalid")
+  }
+  return result
+}
+
+function identityFromPayload(payload: Awaited<ReturnType<typeof jwtVerify>>["payload"]): RequestIdentity {
+  let organizationId: string | undefined
+  if (typeof payload.org_id === "string") {
+    organizationId = payload.org_id
+  } else if (typeof payload.organization_id === "string") {
+    organizationId = payload.organization_id
+  }
+  if (typeof payload.sub !== "string" || payload.sub.length === 0) {
+    throw new AuthenticationError("invalid")
+  }
+  return { organizationId, userId: payload.sub }
 }

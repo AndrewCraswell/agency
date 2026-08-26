@@ -9,6 +9,7 @@ import {
   personId
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
+import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const safeArray = <T extends z.ZodType>(item: T) =>
   z.preprocess(
@@ -112,6 +113,7 @@ export const openStatesBillSchema = z
 export interface OpenStatesContext {
   jurisdictionCode: string
   jurisdictionName: string
+  retrievedAt?: Date
   sessionName?: string
 }
 
@@ -342,6 +344,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     printed.billNumber
   )
   const upstreamId = source.id ?? source._id
+  const billSourceUrl = sourceUrl(source.sources, source.openstates_url ?? providerBillUrl(upstreamId))
 
   const peopleById = new Map<string, NonNullable<CanonicalBillAggregate["people"]>[number]>()
   const sponsors = uniqueBy(
@@ -383,7 +386,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       counts.set(bucket, (counts.get(bucket) ?? 0) + count.value)
     }
     const positions = uniqueBy(
-      vote.votes.flatMap((position) => {
+      vote.votes.flatMap((position, sourceSequence) => {
         const providerPersonId = nonBlank(position.voter?.id ?? position.voter_id)
         const sourcePersonId = providerPersonId ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
         const canonicalPersonId = personId(
@@ -407,6 +410,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
             sourceIdentity: sourcePersonId,
             sourceName: position.voter_name,
             sourcePersonId,
+            sourceSequence,
             voteId: canonicalVoteId
           }
         ]
@@ -485,7 +489,14 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
             relatedSession,
             relatedPrinted.billType,
             relatedPrinted.billNumber
-          )
+          ),
+          ...outgoingRelationProvenance({
+            sourceIsOfficial: false,
+            sourceProvider: "openstates",
+            sourceRetrievedAt: context.retrievedAt,
+            sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
+            sourceUrl: billSourceUrl
+          })
         }
       })
       .filter((relation) => relation.relatedBillId !== canonicalBillId),
@@ -520,7 +531,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         jurisdictionId: jurisdiction,
         sessionId: session,
         sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
-        sourceUrl: sourceUrl(source.sources, source.openstates_url ?? providerBillUrl(upstreamId)),
+        sourceUrl: billSourceUrl,
         subjects: source.subject,
         summary: source.abstracts[0]?.abstract,
         title: source.title,

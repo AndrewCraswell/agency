@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { supportingMaterials, supportingMaterialSections } from "../../db/schema/schema.js"
 import { extractDocument } from "./extract.js"
+import { mapOcrPagesToDocumentSections, type OcrPageSpan } from "./ocr-page-mapping.js"
 import { boundedProcessingError, type DocumentFailureCategory } from "./process.js"
 
 export async function persistProcessedSupportingMaterial(
@@ -33,11 +34,16 @@ export async function persistOcrSupportingMaterial(
     blobPath: string
     contentType: string
     materialId: string
+    pages?: readonly OcrPageSpan[]
     sourceBytes: Uint8Array
     text: string
   }
 ): Promise<void> {
   const extractedText = await extractDocument(input.materialId, new TextEncoder().encode(input.text), "text/plain")
+  const pageRanges =
+    input.pages === undefined
+      ? new Map()
+      : mapOcrPagesToDocumentSections(input.text, extractedText.text, extractedText.sections, input.pages)
   await persistSupportingMaterialExtraction(database, {
     blobPath: input.blobPath,
     contentType: input.contentType,
@@ -45,7 +51,8 @@ export async function persistOcrSupportingMaterial(
       ...extractedText,
       contentHash: createHash("sha256").update(input.sourceBytes).digest("hex")
     },
-    materialId: input.materialId
+    materialId: input.materialId,
+    pageRanges
   })
 }
 
@@ -56,6 +63,7 @@ async function persistSupportingMaterialExtraction(
     contentType: string
     extraction: Awaited<ReturnType<typeof extractDocument>>
     materialId: string
+    pageRanges?: ReadonlyMap<string, Readonly<{ pageEnd: number; pageStart: number }>>
   }
 ): Promise<void> {
   await database.transaction(async (transaction) => {
@@ -84,6 +92,7 @@ async function persistSupportingMaterialExtraction(
           id: section.id,
           materialId: input.materialId,
           ordinal: section.ordinal,
+          ...input.pageRanges?.get(section.id),
           sectionIdentifier: section.identifier,
           sourceEndOffset: section.endOffset,
           sourceStartOffset: section.startOffset,

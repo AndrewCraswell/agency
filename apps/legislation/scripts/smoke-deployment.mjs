@@ -1,27 +1,52 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 
-const baseUrl = process.env.LEGISLATION_SMOKE_BASE_URL
-if (baseUrl === undefined) {
+const baseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim()
+if (baseUrl === undefined || baseUrl === "") {
   throw new Error("LEGISLATION_SMOKE_BASE_URL is required")
 }
-const token = process.env.LEGISLATION_SMOKE_TOKEN
+
+function smokeBaseUrl(value) {
+  let url
+  try {
+    url = new URL(value)
+  } catch {
+    throw new TypeError("LEGISLATION_SMOKE_BASE_URL must be a valid credential-free HTTP(S) origin at its root")
+  }
+  if (
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.pathname !== "/" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new TypeError("LEGISLATION_SMOKE_BASE_URL must be a credential-free HTTP(S) origin at its root")
+  }
+  return url
+}
+
+const apiToken = process.env.LEGISLATION_SMOKE_TOKEN?.trim()
+const mcpToken = process.env.LEGISLATION_MCP_SMOKE_TOKEN?.trim()
 const billId = process.env.LEGISLATION_SMOKE_BILL_ID
 const firstDocumentId = process.env.LEGISLATION_SMOKE_DOCUMENT_ID_A
 const secondDocumentId = process.env.LEGISLATION_SMOKE_DOCUMENT_ID_B
-if (token === undefined) {
+if (apiToken === undefined || apiToken === "") {
   throw new Error("LEGISLATION_SMOKE_TOKEN is required")
+}
+if (mcpToken === undefined || mcpToken === "") {
+  throw new Error("LEGISLATION_MCP_SMOKE_TOKEN is required for the MCP portion of deployment smoke")
 }
 if (billId === undefined || firstDocumentId === undefined || secondDocumentId === undefined) {
   throw new Error("LEGISLATION_SMOKE_BILL_ID and both LEGISLATION_SMOKE_DOCUMENT_ID values are required")
 }
-const root = new URL(baseUrl)
+const root = smokeBaseUrl(baseUrl)
 const health = await fetch(new URL("/health", root))
 const ready = await fetch(new URL("/ready", root))
 if (!health.ok || !ready.ok) {
   throw new Error(`Health smoke failed: health=${health.status}, ready=${ready.status}`)
 }
 const api = await fetch(new URL("/api/jurisdictions?limit=1", root), {
-  headers: { authorization: `Bearer ${token}` }
+  headers: { authorization: `Bearer ${apiToken}` }
 })
 if (!api.ok) {
   throw new Error(`Authenticated API smoke failed with status ${api.status}`)
@@ -59,7 +84,7 @@ if (apiItem !== undefined) {
 }
 
 const transport = new StreamableHTTPClientTransport(new URL("/mcp", root), {
-  authProvider: { token: async () => token }
+  authProvider: { token: async () => mcpToken }
 })
 const client = new Client(
   { name: "legislation-deployment-smoke", version: "1.0.0" },

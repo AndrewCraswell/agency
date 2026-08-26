@@ -18,6 +18,7 @@
     "**/drizzle/migrations/meta/**",
     "**/.trigger/**",
     "**/.data/**",
+    "**/next-env.d.ts",
     "**/*.shopify*.html",
     "**/fixtures/golden-vector-export.json",
     "pnpm-lock.yaml"

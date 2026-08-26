@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { resolve } from "node:path"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
@@ -5,12 +6,19 @@ import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import * as schema from "../db/schema/schema.js"
 import {
+  createAes256GcmIdempotencyCipher,
   principalScopeForSubscriptionOwner,
   createEncryptedIdempotencyCipher,
   PostgresSubscriptionRepository,
-  SubscriptionIdempotencyTransaction
+  SubscriptionIdempotencyTransaction,
+  type SubscriptionTransaction
 } from "./subscription-repository.js"
-import type { Subscription, SubscriptionOwner } from "./subscriptions.js"
+import {
+  createWebhookSecretProtector,
+  SubscriptionService,
+  type Subscription,
+  type SubscriptionOwner
+} from "./subscriptions.js"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe
@@ -58,6 +66,19 @@ describe("subscription repository primitives", () => {
       async (ciphertext) => ciphertext
     )
     await expect(cipher.encrypt("response")).rejects.toThrow("distinct from plaintext")
+  })
+
+  it("protects idempotency responses with versioned authenticated AES-256-GCM ciphertext", async () => {
+    const cipher = createAes256GcmIdempotencyCipher(Buffer.alloc(32, 7))
+    const encrypted = await cipher.encrypt('{"response":"protected"}')
+
+    expect(encrypted).toMatch(/^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
+    await expect(cipher.decrypt(encrypted)).resolves.toBe('{"response":"protected"}')
+    const replacement = encrypted.endsWith("A") ? "B" : "A"
+    await expect(cipher.decrypt(`${encrypted.slice(0, -1)}${replacement}`)).rejects.toMatchObject({
+      category: "invalid_persistence"
+    })
+    expect(() => createAes256GcmIdempotencyCipher(Buffer.alloc(31))).toThrow("exactly 32 bytes")
   })
 })
 
@@ -278,15 +299,98 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
         summary: "Subscription created",
         title: "Subscription created"
       })
-      return { body: { id: created.id }, headers: { etag: created.revision }, statusCode: 201 }
+      return {
+        body: { data: { id: created.id }, links: { self: "/api/subscriptions" } },
+        headers: {
+          etag: created.revision,
+          location: `/api/subscriptions/${encodeURIComponent(created.id)}`
+        },
+        statusCode: 201
+      }
     })
-    expect(first.replayed).toBe(false)
+    expect(first).toEqual({
+      replayed: false,
+      response: {
+        body: { data: { id: "subscription:replayed" }, links: { self: "/api/subscriptions" } },
+        headers: {
+          etag: "00000000-0000-0000-0000-000000000003",
+          location: "/api/subscriptions/subscription%3Areplayed"
+        },
+        statusCode: 201
+      }
+    })
 
     await expect(
       executor.execute(request, async () => {
         throw new Error("replay must not execute the mutation")
       })
-    ).resolves.toMatchObject({ replayed: true, response: { body: { id: "subscription:replayed" }, statusCode: 201 } })
+    ).resolves.toEqual({ ...first, replayed: true })
+
+    await expect(
+      executor.execute({ ...request, requestHash: "a".repeat(64) }, async () => {
+        throw new Error("conflicting idempotency key must not execute the mutation")
+      })
+    ).rejects.toMatchObject({
+      category: "idempotency_conflict",
+      details: { reason: "idempotency_key_reused" }
+    })
+
+    const isolatedOwner = owner("user:two", "org:one")
+    await expect(
+      executor.execute({ ...request, principalScope: principalScopeForSubscriptionOwner(isolatedOwner) }, async () => ({
+        body: { owner: isolatedOwner.userId },
+        headers: {},
+        statusCode: 201
+      }))
+    ).resolves.toEqual({
+      replayed: false,
+      response: { body: { owner: "user:two" }, headers: {}, statusCode: 201 }
+    })
+
+    const staleSubscription = await repository.createSubscription({
+      fingerprint: "9".repeat(64),
+      subscription: subscription(
+        "subscription:stale-revision",
+        owner("user:one", "org:one"),
+        "00000000-0000-0000-0000-000000000006"
+      )
+    })
+    const staleService = (transactionRepository: SubscriptionTransaction) =>
+      new SubscriptionService(
+        transactionRepository,
+        createWebhookSecretProtector(async (plaintext) => `encrypted:${plaintext}`),
+        () => fixedNow
+      )
+    const updateRequest = {
+      canonicalPath: `/api/subscriptions/${encodeURIComponent(staleSubscription.id)}`,
+      key: "current-revision-key",
+      method: "PATCH",
+      principalScope: principalScopeForSubscriptionOwner(staleSubscription.owner),
+      requestHash: "1".repeat(64)
+    }
+    await executor.execute(updateRequest, async (transactionRepository) => {
+      const updated = await staleService(transactionRepository).updateSubscription(
+        { organizationId: "org:one", userId: "user:one" },
+        staleSubscription.id,
+        staleSubscription.revision,
+        { name: "Current revision" }
+      )
+      return { body: { id: updated.id }, headers: { etag: updated.revision }, statusCode: 200 }
+    })
+    await expect(
+      executor.execute(
+        { ...updateRequest, key: "stale-revision-key", requestHash: "2".repeat(64) },
+        async (transactionRepository) => {
+          await staleService(transactionRepository).updateSubscription(
+            { organizationId: "org:one", userId: "user:one" },
+            staleSubscription.id,
+            staleSubscription.revision,
+            { name: "Stale revision" }
+          )
+          return { body: {}, headers: {}, statusCode: 200 }
+        }
+      )
+    ).rejects.toMatchObject({ category: "precondition_failed" })
 
     const failingRequest = { ...request, key: "rollback-key", requestHash: "e".repeat(64) }
     await expect(
@@ -305,5 +409,95 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
     await expect(
       repository.getSubscription({ id: "subscription:rolled-back", owner: owner("user:one", "org:one") })
     ).resolves.toBeUndefined()
+  })
+
+  it("checks durable idempotency before a verification preflight", async () => {
+    const cipher = createEncryptedIdempotencyCipher(
+      async (plaintext) => Buffer.from(plaintext, "utf8").toString("base64url"),
+      async (ciphertext) => Buffer.from(ciphertext, "base64url").toString("utf8")
+    )
+    const executor = new SubscriptionIdempotencyTransaction(database, cipher, () => fixedNow)
+    const requestForBody = (body: Readonly<Record<string, unknown>>) => ({
+      canonicalPath: "/api/webhooks/webhook%3Atest/verify",
+      key: "webhook-verify-key",
+      method: "POST",
+      principalScope: principalScopeForSubscriptionOwner(owner("user:one", "org:one")),
+      requestHash: createHash("sha256").update(JSON.stringify(body)).digest("hex")
+    })
+    const request = requestForBody({ proof: "first" })
+    let preflightCalls = 0
+    const preflight = async () => {
+      preflightCalls += 1
+      return { challenge: "verified" }
+    }
+    const response = { body: { verified: true }, headers: { etag: "revision" }, statusCode: 200 }
+
+    await expect(executor.executeWithPreflight(request, preflight, async () => response)).resolves.toEqual({
+      replayed: false,
+      response
+    })
+    await expect(
+      executor.executeWithPreflight(
+        request,
+        async () => {
+          throw new Error("a durable replay must not make a network preflight")
+        },
+        async () => {
+          throw new Error("a durable replay must not execute the mutation")
+        }
+      )
+    ).resolves.toEqual({ replayed: true, response })
+    await expect(
+      executor.executeWithPreflight(
+        requestForBody({ proof: "different" }),
+        async () => {
+          throw new Error("a same-key request conflict must not make a network preflight")
+        },
+        async () => {
+          throw new Error("a same-key request conflict must not execute the mutation")
+        }
+      )
+    ).rejects.toMatchObject({ category: "idempotency_conflict" })
+    expect(preflightCalls).toBe(1)
+  })
+
+  it("runs a same-key preflight exactly once for concurrent callers", async () => {
+    const cipher = createEncryptedIdempotencyCipher(
+      async (plaintext) => Buffer.from(plaintext, "utf8").toString("base64url"),
+      async (ciphertext) => Buffer.from(ciphertext, "base64url").toString("utf8")
+    )
+    const executor = new SubscriptionIdempotencyTransaction(database, cipher, () => fixedNow)
+    const request = {
+      canonicalPath: "/api/webhooks/webhook%3Atest/verify",
+      key: "concurrent-webhook-verify-key",
+      method: "POST",
+      principalScope: principalScopeForSubscriptionOwner(owner("user:one", "org:one")),
+      requestHash: "b".repeat(64)
+    }
+    let preflightCalls = 0
+    let releasePreflight: () => void = () => undefined
+    const preflightReleased = new Promise<void>((resolve) => {
+      releasePreflight = resolve
+    })
+    let signalPreflightStarted: () => void = () => undefined
+    const preflightStarted = new Promise<void>((resolve) => {
+      signalPreflightStarted = resolve
+    })
+    const response = { body: { verified: true }, headers: { etag: "revision" }, statusCode: 200 }
+    const preflight = async () => {
+      preflightCalls += 1
+      signalPreflightStarted()
+      await preflightReleased
+    }
+    const first = executor.executeWithPreflight(request, preflight, async () => response)
+    await preflightStarted
+    const second = executor.executeWithPreflight(request, preflight, async () => response)
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(preflightCalls).toBe(1)
+    releasePreflight()
+    const [firstResult, secondResult] = await Promise.all([first, second])
+    expect(firstResult.response).toEqual(response)
+    expect(secondResult.response).toEqual(response)
+    expect(preflightCalls).toBe(1)
   })
 })

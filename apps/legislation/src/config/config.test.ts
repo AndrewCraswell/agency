@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ConfigurationError, loadConfig } from "./config.js"
+import { ConfigurationError, decodeIdempotencyEncryptionKey, loadConfig } from "./config.js"
 
 describe("loadConfig", () => {
   it("provides safe local defaults", () => {
@@ -27,95 +27,29 @@ describe("loadConfig", () => {
         requestTimeoutMs: 30_000
       },
       logging: { level: "info" },
-      mcp: { transport: "in-process" },
       model: { baseUrl: "https://openrouter.ai/api/v1" },
       ocr: { maximumAttempts: 5 },
       server: {
         host: "127.0.0.1",
         port: 3100,
         publicApiBaseUrl: "http://127.0.0.1:3100",
+        rateLimit: {
+          enabled: true,
+          limit: 120,
+          maximumKeys: 10_000,
+          trustedProxyHops: 0,
+          windowMs: 60_000
+        },
         requestBodyBytes: 1_048_576
       }
     })
   })
 
-  it("requires complete bounded configuration when MCP HTTP transport is selected", () => {
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "https://legislation.example",
-        LEGISLATION_MCP_API_BEARER_TOKEN: "service-secret",
-        LEGISLATION_MCP_API_TIMEOUT_MS: "12000",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      }).mcp
-    ).toEqual({
-      apiBaseUrl: "https://legislation.example",
-      bearerToken: "service-secret",
-      timeoutMs: 12_000,
-      transport: "http"
-    })
-    expect(() => loadConfig({ LEGISLATION_MCP_TRANSPORT: "http" })).toThrow(ConfigurationError)
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "https://legislation.example/mcp",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      })
-    ).toThrow(ConfigurationError)
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "https://legislation.example",
-        LEGISLATION_MCP_API_TIMEOUT_MS: "60001",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      })
-    ).toThrow(ConfigurationError)
-    expect(() => loadConfig({ LEGISLATION_MCP_TRANSPORT: "sidecar" })).toThrow(ConfigurationError)
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      }).mcp
-    ).toMatchObject({ apiBaseUrl: "http://127.0.0.1:3100", transport: "http" })
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      }).mcp
-    ).toMatchObject({ apiBaseUrl: "http://127.0.0.1:3100", httpMethods: [], transport: "hybrid" })
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_HTTP_METHODS: "  ,  ",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      }).mcp
-    ).toMatchObject({ httpMethods: [], transport: "hybrid" })
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_HTTP_METHODS: "getBill,notAQueryMethod",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      })
-    ).toThrow(ConfigurationError)
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_HTTP_METHODS: "getBill,getBill",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      })
-    ).toThrow(ConfigurationError)
-  })
-
-  it("does not expose an HTTP transport bearer token in configuration errors", () => {
-    const secret = "do-not-log-this-token"
-    let thrown: unknown
-    try {
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "not-a-url",
-        LEGISLATION_MCP_API_BEARER_TOKEN: secret,
-        LEGISLATION_MCP_TRANSPORT: "http"
-      })
-    } catch (error) {
-      thrown = error
-    }
-    expect(String(thrown)).not.toContain(secret)
+  it("keeps the research generation model opt-in", () => {
+    expect(loadConfig({}).model.researchAnswerModel).toBeUndefined()
+    expect(loadConfig({ RESEARCH_ANSWER_MODEL: "openai/gpt-5-mini" }).model.researchAnswerModel).toBe(
+      "openai/gpt-5-mini"
+    )
   })
 
   it("parses configured values", () => {
@@ -128,12 +62,14 @@ describe("loadConfig", () => {
       GOVINFO_API_KEY: "govinfo-key",
       GOVINFO_API_URL: "https://govinfo.example/api/",
       LEGISLATION_HOST: "0.0.0.0",
+      LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       LEGISLATION_PORT: "8080",
       LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
       LOG_LEVEL: "debug",
       NODE_ENV: "production",
       OPENSTATES_API_KEY: "openstates-key",
       WORKOS_API_AUDIENCE: "client_environment",
+      WORKOS_CLIENT_ID: "client_test",
       WORKOS_ISSUER: "https://api.workos.com/user_management/client_test",
       WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
       WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
@@ -141,10 +77,16 @@ describe("loadConfig", () => {
 
     expect(config.auth).toEqual({
       apiAudience: "client_environment",
+      clientId: "client_test",
       issuer: "https://api.workos.com/user_management/client_test",
       jwksUrl: "https://api.workos.com/sso/jwks/client_test",
       mcpAudience: "https://legislation.example/mcp",
-      mode: "workos"
+      mode: "workos",
+      userSession: {
+        clientId: "client_test",
+        issuer: "https://api.workos.com",
+        jwksUrl: "https://api.workos.com/sso/jwks/client_test"
+      }
     })
     expect(config.database).toEqual({
       connectionTimeoutMs: 5000,
@@ -161,7 +103,8 @@ describe("loadConfig", () => {
     expect(config.server).toMatchObject({
       host: "0.0.0.0",
       port: 8080,
-      publicApiBaseUrl: "https://legislation.example"
+      publicApiBaseUrl: "https://legislation.example",
+      rateLimit: { enabled: true }
     })
   })
 
@@ -169,6 +112,20 @@ describe("loadConfig", () => {
     const config = loadConfig({ LEGISLATION_PORT: "3100", PORT: "4567" })
 
     expect(config.server).toMatchObject({ host: "0.0.0.0", port: 4567 })
+  })
+
+  it("parses bounded API rate limiting and rejects unsafe proxy settings", () => {
+    expect(
+      loadConfig({
+        LEGISLATION_RATE_LIMIT_ENABLED: "false",
+        LEGISLATION_RATE_LIMIT_LIMIT: "25",
+        LEGISLATION_RATE_LIMIT_MAXIMUM_KEYS: "500",
+        LEGISLATION_RATE_LIMIT_WINDOW_MS: "10000",
+        LEGISLATION_TRUSTED_PROXY_HOPS: "1"
+      }).server.rateLimit
+    ).toEqual({ enabled: false, limit: 25, maximumKeys: 500, trustedProxyHops: 1, windowMs: 10_000 })
+    expect(() => loadConfig({ LEGISLATION_RATE_LIMIT_ENABLED: "yes" })).toThrow(ConfigurationError)
+    expect(() => loadConfig({ LEGISLATION_TRUSTED_PROXY_HOPS: "5" })).toThrow(ConfigurationError)
   })
 
   it("requires an http or https public API URL in production", () => {
@@ -179,6 +136,28 @@ describe("loadConfig", () => {
     expect(loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "http://legislation.example" }).server.publicApiBaseUrl).toBe(
       "http://legislation.example"
     )
+  })
+
+  it("requires a valid 32-byte idempotency encryption key in production", () => {
+    const validKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    expect(() =>
+      loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example", NODE_ENV: "production" })
+    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production")
+    expect(() =>
+      loadConfig({
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "too-short",
+        LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+        NODE_ENV: "production"
+      })
+    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key")
+    expect(
+      loadConfig({
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: validKey,
+        LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+        NODE_ENV: "production"
+      }).security.idempotencyEncryptionKey
+    ).toBe(validKey)
+    expect(decodeIdempotencyEncryptionKey(validKey)).toHaveLength(32)
   })
 
   it.each(["0", "65536", "not-a-port"])('rejects invalid port "%s" without including secrets', (port) => {
@@ -200,11 +179,27 @@ describe("loadConfig", () => {
     )
   })
 
+  it("requires the AuthKit client ID used to derive the user-session JWKS", () => {
+    const configuration = {
+      AUTH_MODE: "workos",
+      WORKOS_API_AUDIENCE: "client_environment",
+      WORKOS_ISSUER: "https://issuer.example",
+      WORKOS_JWKS_URL: "https://issuer.example/jwks",
+      WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
+    }
+
+    expect(() => loadConfig(configuration)).toThrow(ConfigurationError)
+    expect(loadConfig({ ...configuration, WORKOS_CLIENT_ID: "client_test" }).auth).toMatchObject({
+      userSession: { jwksUrl: "https://api.workos.com/sso/jwks/client_test" }
+    })
+  })
+
   it("requires separate API and MCP audiences in WorkOS mode", () => {
     expect(() =>
       loadConfig({
         AUTH_MODE: "workos",
         WORKOS_API_AUDIENCE: "client_environment",
+        WORKOS_CLIENT_ID: "client_test",
         WORKOS_ISSUER: "https://issuer.example",
         WORKOS_JWKS_URL: "https://issuer.example/jwks"
       })
@@ -224,16 +219,23 @@ describe("loadConfig", () => {
       loadConfig({
         AUTH_MODE: "workos",
         WORKOS_API_AUDIENCE: "client_environment",
+        WORKOS_CLIENT_ID: "client_test",
         WORKOS_AUDIENCE: "https://legislation.example/mcp",
         WORKOS_ISSUER: "https://issuer.example",
         WORKOS_JWKS_URL: "https://issuer.example/jwks"
       }).auth
     ).toEqual({
       apiAudience: "client_environment",
+      clientId: "client_test",
       issuer: "https://issuer.example",
       jwksUrl: "https://issuer.example/jwks",
       mcpAudience: "https://legislation.example/mcp",
-      mode: "workos"
+      mode: "workos",
+      userSession: {
+        clientId: "client_test",
+        issuer: "https://api.workos.com",
+        jwksUrl: "https://api.workos.com/sso/jwks/client_test"
+      }
     })
   })
 

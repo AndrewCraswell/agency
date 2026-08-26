@@ -1,9 +1,9 @@
-import { queue, task } from "@trigger.dev/sdk"
+import { queue, task, type Queue } from "@trigger.dev/sdk"
 import { synchronizationQueues } from "../identities.js"
 import { executeSynchronizationTask } from "./synchronization-executor.js"
 import { executeSynchronizationWorker, type SynchronizationWorkerTaskPayload } from "./worker-contract.js"
 
-export const openStatesSynchronizationQueue = queue({
+export const openStatesSynchronizationQueue: Queue = queue({
   concurrencyLimit: synchronizationQueues.openstates.concurrencyLimit,
   name: synchronizationQueues.openstates.name
 })

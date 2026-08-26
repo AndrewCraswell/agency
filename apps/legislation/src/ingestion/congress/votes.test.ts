@@ -34,10 +34,14 @@ describe("Congress House vote normalization", () => {
       billId: "bill:us:119:hr:3424",
       id: "vote:congress:house-119-1-240",
       noCount: 1,
-      otherCount: 1,
+      notVotingCount: 1,
+      otherCount: 0,
+      result: "passed",
+      timelineComplete: true,
       yesCount: 1
     })
     expect(snapshot.positions.map((position) => position.option)).toEqual(["yes", "no", "not-voting"])
+    expect(snapshot.positions.map((position) => position.sourceSequence)).toEqual([0, 1, 2])
     expect(snapshot.positions[0]?.personId).toBe("person:congress:a000055")
   })
 
@@ -106,6 +110,7 @@ describe("Congress House vote normalization", () => {
     })
 
     expect(snapshot.positions).toHaveLength(1)
+    expect(snapshot.positions[0]?.sourceSequence).toBe(0)
     expect(snapshot.vote).toMatchObject({ noCount: 0, otherCount: 0, yesCount: 1 })
   })
 })

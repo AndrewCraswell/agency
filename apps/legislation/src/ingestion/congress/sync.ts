@@ -86,7 +86,7 @@ export async function synchronizeCongress(
       await options.sourceStore?.put("congress", stream, new TextEncoder().encode(JSON.stringify(bundle)), {
         sourceUrl: reference.url
       })
-      const aggregate = normalizeCongressBillBundle(bundle)
+      const aggregate = normalizeCongressBillBundle(bundle, { retrievedAt: new Date() })
       counts.read += 1
       if (options.dryRun !== true) {
         const existing = await getBillById(database, aggregate.bill.id)

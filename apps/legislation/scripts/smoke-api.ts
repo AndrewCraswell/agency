@@ -9,13 +9,44 @@ const appRoot = fileURLToPath(new URL("..", import.meta.url))
 const MAX_CAPTURED_OUTPUT = 8_000
 
 function smokeProfile(value: string | undefined): SmokeProfile {
-  if (value === undefined || value.trim() === "" || value === "full") {
+  const normalized = value?.trim()
+  if (normalized === undefined || normalized === "" || normalized === "full") {
     return "full"
   }
-  if (value === "scoped-bills") {
-    return value
+  if (normalized === "scoped-bills") {
+    return normalized
   }
   throw new Error("LEGISLATION_SMOKE_PROFILE must be full or scoped-bills")
+}
+
+function smokePort(value: string | undefined): number {
+  const port = Number(value ?? "3199")
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+    throw new RangeError("LEGISLATION_SMOKE_PORT must be an integer between 1 and 65535")
+  }
+  return port
+}
+
+function smokeRequestTimeout(value: string | undefined): number {
+  const requestTimeoutMs = Number(value ?? "30000")
+  if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > 60_000) {
+    throw new RangeError("LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS must be an integer between 1 and 60000")
+  }
+  return requestTimeoutMs
+}
+
+function smokeRequireAuth(environment: NodeJS.ProcessEnv): boolean {
+  const configured = environment.LEGISLATION_SMOKE_REQUIRE_AUTH?.trim().toLowerCase()
+  if (configured === "true") {
+    return true
+  }
+  if (configured === "false") {
+    return false
+  }
+  if (configured !== undefined && configured !== "") {
+    throw new Error("LEGISLATION_SMOKE_REQUIRE_AUTH must be true or false")
+  }
+  return environment.AUTH_MODE?.trim().toLowerCase() === "workos"
 }
 
 function smokeCanonicalApiBaseUrl(profile: SmokeProfile): URL | undefined {
@@ -137,19 +168,16 @@ function stopLocalServer(local: LocalServerProcess): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const port = Number(process.env.LEGISLATION_SMOKE_PORT ?? "3199")
-  const configuredBaseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim()
+  const port = smokePort(process.env.LEGISLATION_SMOKE_PORT)
+  const configuredBaseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim() || undefined
   const token = parseSmokeToken(process.env)
-  const requestTimeoutMs = Number(process.env.LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS ?? "30000")
+  const requestTimeoutMs = smokeRequestTimeout(process.env.LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS)
   const profile = smokeProfile(process.env.LEGISLATION_SMOKE_PROFILE)
   const canonicalApiBaseUrl = smokeCanonicalApiBaseUrl(profile)
-  const requireAuth =
-    process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === "true" ||
-    (process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === undefined && process.env.AUTH_MODE === "workos")
+  const baseUrl = canonicalSmokeApiBaseUrl(configuredBaseUrl ?? `http://127.0.0.1:${port}`)
+  const requireAuth = smokeRequireAuth(process.env)
   const local = configuredBaseUrl === undefined ? startLocalServer(token === undefined ? [] : [token], port) : undefined
-  let baseUrl: URL
   try {
-    baseUrl = new URL(configuredBaseUrl ?? `http://127.0.0.1:${port}`)
     if (local !== undefined) {
       await waitForReady(baseUrl, local)
     }

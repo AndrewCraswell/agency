@@ -8,6 +8,7 @@ const errorCategories = [
   "internal",
   "invalid_request",
   "not_found",
+  "payload_too_large",
   "precondition_failed",
   "rate_limited",
   "unprocessable",
@@ -42,6 +43,19 @@ const searchPageSchema = pageSchema.extend({
     isReranked: z.boolean(),
     mode: z.enum(["hybrid", "lexical", "semantic"]),
     models: z.array(z.json())
+  })
+})
+const universalSearchPageSchema = searchPageSchema.extend({
+  meta: searchPageSchema.shape.meta.extend({
+    groups: z.array(
+      z
+        .object({
+          nextCursor: z.string().min(1).nullable(),
+          recordType: z.string().min(1),
+          returned: z.number().int().nonnegative()
+        })
+        .strict()
+    )
   })
 })
 const batchSchema = z
@@ -86,10 +100,10 @@ const errorResponseSchema = z
 export type ResourceResponse = z.infer<typeof resourceSchema>
 export type PageResponse = z.infer<typeof pageSchema>
 export type SearchPageResponse = z.infer<typeof searchPageSchema>
+export type UniversalSearchPageResponse = z.infer<typeof universalSearchPageSchema>
 export type BatchResponse = z.infer<typeof batchSchema>
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
 export type ErrorCategory = ErrorResponse["error"]["category"]
-export type SearchMode = SearchPageResponse["meta"]["mode"]
 export type QueryValue = boolean | number | string | readonly (boolean | number | string)[] | undefined
 export type Query = Readonly<Record<string, QueryValue>>
 export type ApiRequestBody = Readonly<Record<string, unknown>>
@@ -101,6 +115,9 @@ export type ApiRequestOptions = Readonly<{
   timeoutMs?: number
 }>
 
+export type MutationRequestOptions = ApiRequestOptions & Readonly<{ idempotencyKey: string }>
+export type RevisionedMutationRequestOptions = MutationRequestOptions & Readonly<{ ifMatch: string }>
+
 export type LegislationApiClientOptions = Readonly<{
   baseUrl: string
   bearerToken?: string | (() => Promise<string | undefined> | string | undefined)
@@ -111,8 +128,10 @@ export type LegislationApiClientOptions = Readonly<{
 export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>
 
 type Request = Readonly<{
-  body?: ApiRequestBody
-  method: "GET" | "POST"
+  body?: object
+  contentType?: "application/json" | "application/merge-patch+json"
+  headers?: Readonly<Record<string, string>>
+  method: "DELETE" | "GET" | "PATCH" | "POST"
   path: string
   query?: Query
 }>
@@ -203,6 +222,10 @@ export class LegislationApiClient {
     return this.#page({ method: "GET", path: `/api/bills/${segment(id)}/changes`, query }, options)
   }
 
+  listBillDocuments(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/bills/${segment(id)}/documents`, query }, options)
+  }
+
   getAmendments(ids: readonly string[], options?: ApiRequestOptions): Promise<BatchResponse> {
     return this.#batch({ body: { ids }, method: "POST", path: "/api/amendments/batch" }, options)
   }
@@ -238,12 +261,36 @@ export class LegislationApiClient {
     return this.#batch({ body: { ids }, method: "POST", path: "/api/votes/batch" }, options)
   }
 
+  listVotePositions(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/votes/${segment(id)}/positions`, query }, options)
+  }
+
   listPeople(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: "/api/people", query }, options)
   }
 
   getPerson(id: string, query?: Query, options?: ApiRequestOptions): Promise<ResourceResponse> {
     return this.#resource({ method: "GET", path: `/api/people/${segment(id)}`, query }, options)
+  }
+
+  listPersonBills(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/people/${segment(id)}/bills`, query }, options)
+  }
+
+  listPersonAmendments(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/people/${segment(id)}/amendments`, query }, options)
+  }
+
+  listPersonVotes(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/people/${segment(id)}/votes`, query }, options)
+  }
+
+  listPersonMemberships(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/people/${segment(id)}/memberships`, query }, options)
+  }
+
+  getPersonTerm(personId: string, termId: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: `/api/people/${segment(personId)}/terms/${segment(termId)}` }, options)
   }
 
   listOrganizations(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
@@ -254,6 +301,36 @@ export class LegislationApiClient {
     return this.#resource({ method: "GET", path: `/api/organizations/${segment(id)}`, query }, options)
   }
 
+  listOrganizationMembers(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/organizations/${segment(id)}/members`, query }, options)
+  }
+
+  getOrganizationMembership(
+    organizationId: string,
+    membershipId: string,
+    options?: ApiRequestOptions
+  ): Promise<ResourceResponse> {
+    return this.#resource(
+      {
+        method: "GET",
+        path: `/api/organizations/${segment(organizationId)}/memberships/${segment(membershipId)}`
+      },
+      options
+    )
+  }
+
+  listOrganizationMeetings(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/organizations/${segment(id)}/meetings`, query }, options)
+  }
+
+  listOrganizationBills(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/organizations/${segment(id)}/bills`, query }, options)
+  }
+
+  listOrganizationCalendars(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/organizations/${segment(id)}/calendars`, query }, options)
+  }
+
   listMeetings(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: "/api/meetings", query }, options)
   }
@@ -262,12 +339,64 @@ export class LegislationApiClient {
     return this.#resource({ method: "GET", path: `/api/meetings/${segment(id)}` }, options)
   }
 
+  listMeetingAgenda(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/meetings/${segment(id)}/agenda`, query }, options)
+  }
+
+  getMeetingAgendaItem(meetingId: string, itemId: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { method: "GET", path: `/api/meetings/${segment(meetingId)}/agenda/${segment(itemId)}` },
+      options
+    )
+  }
+
+  listMeetingDocuments(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/meetings/${segment(id)}/documents`, query }, options)
+  }
+
+  getMeetingDocument(meetingId: string, documentId: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { method: "GET", path: `/api/meetings/${segment(meetingId)}/documents/${segment(documentId)}` },
+      options
+    )
+  }
+
+  listMeetingOutcomes(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/meetings/${segment(id)}/outcomes`, query }, options)
+  }
+
+  getMeetingOutcome(meetingId: string, outcomeId: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { method: "GET", path: `/api/meetings/${segment(meetingId)}/outcomes/${segment(outcomeId)}` },
+      options
+    )
+  }
+
+  listMeetingParticipants(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/meetings/${segment(id)}/participants`, query }, options)
+  }
+
+  getMeetingParticipant(
+    meetingId: string,
+    participantId: string,
+    options?: ApiRequestOptions
+  ): Promise<ResourceResponse> {
+    return this.#resource(
+      { method: "GET", path: `/api/meetings/${segment(meetingId)}/participants/${segment(participantId)}` },
+      options
+    )
+  }
+
   listSupportingMaterials(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: "/api/supporting-materials", query }, options)
   }
 
   getSupportingMaterial(id: string, query?: Query, options?: ApiRequestOptions): Promise<ResourceResponse> {
     return this.#resource({ method: "GET", path: `/api/supporting-materials/${segment(id)}`, query }, options)
+  }
+
+  listSupportingMaterialSections(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/supporting-materials/${segment(id)}/sections`, query }, options)
   }
 
   getSupportingMaterialSection(
@@ -312,6 +441,58 @@ export class LegislationApiClient {
     return this.#page({ method: "GET", path: `/api/jurisdictions/${segment(id)}/sessions`, query }, options)
   }
 
+  listJurisdictionBills(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/jurisdictions/${segment(id)}/bills`, query }, options)
+  }
+
+  listJurisdictionOrganizations(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/jurisdictions/${segment(id)}/organizations`, query }, options)
+  }
+
+  listJurisdictionCommissions(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/jurisdictions/${segment(id)}/commissions`, query }, options)
+  }
+
+  listJurisdictionCommittees(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/jurisdictions/${segment(id)}/committees`, query }, options)
+  }
+
+  listJurisdictionMeetings(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/jurisdictions/${segment(id)}/meetings`, query }, options)
+  }
+
+  getSession(id: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: `/api/sessions/${segment(id)}` }, options)
+  }
+
+  listSessionBills(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/sessions/${segment(id)}/bills`, query }, options)
+  }
+
+  listSessionMeetings(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/sessions/${segment(id)}/meetings`, query }, options)
+  }
+
+  listCalendars(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: "/api/calendars", query }, options)
+  }
+
+  getCalendar(id: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: `/api/calendars/${segment(id)}` }, options)
+  }
+
+  listCalendarMeetings(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/calendars/${segment(id)}/meetings`, query }, options)
+  }
+
+  lookupRepresentatives(body: ApiRequestBody, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ body, method: "POST", path: "/api/representative-lookups" }, options)
+  }
+
+  getResources(body: ApiRequestBody, options?: ApiRequestOptions): Promise<BatchResponse> {
+    return this.#batch({ body, method: "POST", path: "/api/resources/batch" }, options)
+  }
+
   searchBills(body: ApiRequestBody, options?: ApiRequestOptions): Promise<SearchPageResponse> {
     return this.#search({ body, method: "POST", path: "/api/search/bills" }, options)
   }
@@ -326,6 +507,14 @@ export class LegislationApiClient {
 
   searchSupportingMaterials(body: ApiRequestBody, options?: ApiRequestOptions): Promise<SearchPageResponse> {
     return this.#search({ body, method: "POST", path: "/api/search/supporting-materials" }, options)
+  }
+
+  searchAll(body: ApiRequestBody, options?: ApiRequestOptions): Promise<UniversalSearchPageResponse> {
+    return this.#universalSearch({ body, method: "POST", path: "/api/search/all" }, options)
+  }
+
+  answerLegislativeResearchQuestion(body: ApiRequestBody, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ body, method: "POST", path: "/api/research/answers" }, options)
   }
 
   compareBillVersions(
@@ -344,6 +533,120 @@ export class LegislationApiClient {
     )
   }
 
+  listSubscriptions(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: "/api/subscriptions", query }, options)
+  }
+
+  createSubscription(body: ApiRequestBody, options: MutationRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { body, headers: idempotencyHeaders(options), method: "POST", path: "/api/subscriptions" },
+      options
+    )
+  }
+
+  getSubscription(id: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: `/api/subscriptions/${segment(id)}` }, options)
+  }
+
+  updateSubscription(
+    id: string,
+    body: ApiRequestBody,
+    options: RevisionedMutationRequestOptions
+  ): Promise<ResourceResponse> {
+    return this.#resource(
+      {
+        body,
+        contentType: "application/merge-patch+json",
+        headers: revisionedMutationHeaders(options),
+        method: "PATCH",
+        path: `/api/subscriptions/${segment(id)}`
+      },
+      options
+    )
+  }
+
+  deleteSubscription(id: string, options: RevisionedMutationRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { headers: revisionedMutationHeaders(options), method: "DELETE", path: `/api/subscriptions/${segment(id)}` },
+      options
+    )
+  }
+
+  listSubscriptionEvents(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/subscriptions/${segment(id)}/events`, query }, options)
+  }
+
+  listSubscriptionDeliveries(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: `/api/subscriptions/${segment(id)}/deliveries`, query }, options)
+  }
+
+  listWebhooks(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
+    return this.#page({ method: "GET", path: "/api/webhooks", query }, options)
+  }
+
+  createWebhook(body: ApiRequestBody, options: MutationRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { body, headers: idempotencyHeaders(options), method: "POST", path: "/api/webhooks" },
+      options
+    )
+  }
+
+  getWebhook(id: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: `/api/webhooks/${segment(id)}` }, options)
+  }
+
+  updateWebhook(
+    id: string,
+    body: ApiRequestBody,
+    options: RevisionedMutationRequestOptions
+  ): Promise<ResourceResponse> {
+    return this.#resource(
+      {
+        body,
+        contentType: "application/merge-patch+json",
+        headers: revisionedMutationHeaders(options),
+        method: "PATCH",
+        path: `/api/webhooks/${segment(id)}`
+      },
+      options
+    )
+  }
+
+  deleteWebhook(id: string, options: RevisionedMutationRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      { headers: revisionedMutationHeaders(options), method: "DELETE", path: `/api/webhooks/${segment(id)}` },
+      options
+    )
+  }
+
+  rotateWebhookSecret(
+    id: string,
+    body: ApiRequestBody,
+    options: RevisionedMutationRequestOptions
+  ): Promise<ResourceResponse> {
+    return this.#resource(
+      {
+        body,
+        headers: revisionedMutationHeaders(options),
+        method: "POST",
+        path: `/api/webhooks/${segment(id)}/rotate-secret`
+      },
+      options
+    )
+  }
+
+  verifyWebhook(id: string, options: RevisionedMutationRequestOptions): Promise<ResourceResponse> {
+    return this.#resource(
+      {
+        body: {},
+        headers: revisionedMutationHeaders(options),
+        method: "POST",
+        path: `/api/webhooks/${segment(id)}/verify`
+      },
+      options
+    )
+  }
+
   async #resource(request: Request, options?: ApiRequestOptions): Promise<ResourceResponse> {
     return parseEnvelope(resourceSchema, await this.#request(request, options))
   }
@@ -354,6 +657,10 @@ export class LegislationApiClient {
 
   async #search(request: Request, options?: ApiRequestOptions): Promise<SearchPageResponse> {
     return parseEnvelope(searchPageSchema, await this.#request(request, options))
+  }
+
+  async #universalSearch(request: Request, options?: ApiRequestOptions): Promise<UniversalSearchPageResponse> {
+    return parseEnvelope(universalSearchPageSchema, await this.#request(request, options))
   }
 
   async #batch(request: Request, options?: ApiRequestOptions): Promise<BatchResponse> {
@@ -371,8 +678,11 @@ export class LegislationApiClient {
     if (token !== undefined && token.trim().length > 0) {
       headers.set("authorization", `Bearer ${token}`)
     }
+    for (const [name, value] of Object.entries(request.headers ?? {})) {
+      headers.set(name, value)
+    }
     if (request.body !== undefined) {
-      headers.set("content-type", "application/json")
+      headers.set("content-type", request.contentType ?? "application/json")
     }
 
     try {
@@ -439,6 +749,20 @@ function segment(value: string): string {
     throw new TypeError("Path identifiers must not be empty")
   }
   return encodeURIComponent(value)
+}
+
+function idempotencyHeaders(options: MutationRequestOptions): Readonly<Record<string, string>> {
+  if (!/^[\x20-\x7E]{8,128}$/.test(options.idempotencyKey)) {
+    throw new TypeError("idempotencyKey must be 8 to 128 printable ASCII characters")
+  }
+  return { "idempotency-key": options.idempotencyKey }
+}
+
+function revisionedMutationHeaders(options: RevisionedMutationRequestOptions): Readonly<Record<string, string>> {
+  if (options.ifMatch.trim().length === 0 || /[\r\n]/.test(options.ifMatch)) {
+    throw new TypeError("ifMatch must not be empty or contain a line break")
+  }
+  return { ...idempotencyHeaders(options), "if-match": options.ifMatch }
 }
 
 function urlFor(baseUrl: URL, path: string, query: Query | undefined): URL {

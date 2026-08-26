@@ -6,11 +6,18 @@ const optionalString = z.preprocess(
   (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
   z.string().trim().min(1).optional()
 )
+const optionalHttpsUrl = z.preprocess(
+  (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
+  z.url({ protocol: /^https$/ }).optional()
+)
 const optionalInteger = z.preprocess((value) => (value === null ? undefined : value), z.number().int().optional())
 const optionalDistrict = z.preprocess(
   (value) => (value === null ? undefined : value),
   z.union([z.number().int(), z.string()]).optional()
 )
+const publicContactSchema = z
+  .object({ address: optionalString, email: optionalString, phone: optionalString })
+  .passthrough()
 const termSchema = z
   .object({ chamber: z.string().trim().min(1), endYear: optionalInteger, startYear: z.number().int() })
   .passthrough()
@@ -26,17 +33,31 @@ const memberSchema = z
   })
   .passthrough()
 const subcommitteeSchema = z
-  .object({ name: z.string().trim().min(1), systemCode: z.string().trim().min(1), url: optionalString })
+  .object({
+    contact: publicContactSchema.optional(),
+    description: optionalString,
+    name: z.string().trim().min(1),
+    systemCode: z.string().trim().min(1),
+    termsOfReference: optionalString,
+    url: optionalString,
+    website: optionalHttpsUrl,
+    websiteUrl: optionalHttpsUrl
+  })
   .passthrough()
 const committeeSchema = z
   .object({
     chamber: z.string().trim().min(1),
     committeeTypeCode: optionalString,
+    contact: publicContactSchema.optional(),
+    description: optionalString,
     name: z.string().trim().min(1),
-    subcommittees: z.array(subcommitteeSchema).default([]),
+    subcommittees: z.array(subcommitteeSchema).optional(),
     systemCode: z.string().trim().min(1),
+    termsOfReference: optionalString,
     updateDate: optionalString,
-    url: optionalString
+    url: optionalString,
+    website: optionalHttpsUrl,
+    websiteUrl: optionalHttpsUrl
   })
   .passthrough()
 
@@ -50,6 +71,11 @@ export interface CongressEntitySnapshot {
   terms: TermInsert[]
 }
 
+export interface CongressEntityContext {
+  /** The time the official Congress.gov collection was successfully observed. */
+  retrievedAt: Date
+}
+
 function chamber(value: string): "lower" | "upper" | undefined {
   const normalized = value.toLowerCase()
   if (normalized.includes("house")) {
@@ -59,6 +85,47 @@ function chamber(value: string): "lower" | "upper" | undefined {
     return "upper"
   }
   return undefined
+}
+
+function rawObjectHasOwn(input: unknown, key: string): boolean {
+  return typeof input === "object" && input !== null && Object.hasOwn(input, key)
+}
+
+function profileFactsWereSupplied(input: unknown): boolean {
+  return ["contact", "description", "termsOfReference", "website", "websiteUrl"].some((key) =>
+    rawObjectHasOwn(input, key)
+  )
+}
+
+function profileFields(input: {
+  contact?: { address?: string; email?: string; phone?: string }
+  description?: string
+  termsOfReference?: string
+  website?: string
+  websiteUrl?: string
+}) {
+  return {
+    description: input.description ?? null,
+    publicContactAddress: input.contact?.address ?? null,
+    publicContactEmail: input.contact?.email ?? null,
+    publicContactPhone: input.contact?.phone ?? null,
+    termsOfReference: input.termsOfReference ?? null,
+    websiteUrl: input.websiteUrl ?? input.website ?? null
+  }
+}
+
+function isHttpsUrl(value: string | undefined): value is string {
+  return value !== undefined && value.startsWith("https://")
+}
+
+function congressProvenance(sourceUrl: string | undefined, retrievedAt: Date) {
+  return {
+    provenanceComplete: isHttpsUrl(sourceUrl),
+    sourceIsOfficial: true,
+    sourceProvider: "congress",
+    sourceRetrievedAt: retrievedAt,
+    sourceUrl
+  }
 }
 
 export function normalizeCongressMembers(
@@ -108,49 +175,68 @@ export function normalizeCongressMembers(
   }
 }
 
-export function normalizeCongressCommittees(inputs: readonly unknown[]): Pick<CongressEntitySnapshot, "organizations"> {
+export function normalizeCongressCommittees(
+  inputs: readonly unknown[],
+  context: CongressEntityContext
+): Pick<CongressEntitySnapshot, "organizations"> {
   const federalJurisdictionId = jurisdictionId("us")
   const legislatureId = organizationId("congress", "united-states-congress")
   const houseId = organizationId("congress", "house")
   const senateId = organizationId("congress", "senate")
   const fixedOrganizations: OrganizationInsert[] = [
     {
+      childRelationsComplete: true,
+      detailFactsComplete: false,
       classification: "legislature",
       id: legislatureId,
       isActive: true,
       jurisdictionId: federalJurisdictionId,
+      membershipRelationsComplete: false,
       name: "United States Congress",
       sourceId: "united-states-congress",
-      upstreamIds: { congress: "united-states-congress" }
+      upstreamIds: { congress: "united-states-congress" },
+      ...congressProvenance("https://api.congress.gov/committee", context.retrievedAt)
     },
     {
       chamber: "lower",
+      childRelationsComplete: true,
       classification: "chamber",
+      detailFactsComplete: false,
       id: houseId,
       isActive: true,
       jurisdictionId: federalJurisdictionId,
+      membershipRelationsComplete: false,
       name: "House of Representatives",
       parentOrganizationId: legislatureId,
       sourceId: "house",
-      upstreamIds: { congress: "house" }
+      upstreamIds: { congress: "house" },
+      ...congressProvenance("https://api.congress.gov/committee", context.retrievedAt)
     },
     {
       chamber: "upper",
+      childRelationsComplete: true,
       classification: "chamber",
+      detailFactsComplete: false,
       id: senateId,
       isActive: true,
       jurisdictionId: federalJurisdictionId,
+      membershipRelationsComplete: false,
       name: "Senate",
       parentOrganizationId: legislatureId,
       sourceId: "senate",
-      upstreamIds: { congress: "senate" }
+      upstreamIds: { congress: "senate" },
+      ...congressProvenance("https://api.congress.gov/committee", context.retrievedAt)
     }
   ]
-  const committees = inputs.map((input) => committeeSchema.parse(input))
+  const committees = inputs.map((input) => ({
+    detailFactsComplete: profileFactsWereSupplied(input),
+    record: committeeSchema.parse(input),
+    subcommitteesComplete: rawObjectHasOwn(input, "subcommittees")
+  }))
   return {
     organizations: [
       ...fixedOrganizations,
-      ...committees.flatMap((committee) => {
+      ...committees.flatMap(({ detailFactsComplete, record: committee, subcommitteesComplete }) => {
         const normalizedChamber = chamber(committee.chamber)
         const canonicalCommitteeId = organizationId("congress", committee.systemCode)
         let parentOrganizationId: string | null = null
@@ -161,29 +247,37 @@ export function normalizeCongressCommittees(inputs: readonly unknown[]): Pick<Co
         }
         return [
           {
+            childRelationsComplete: subcommitteesComplete,
             chamber: normalizedChamber ?? null,
             classification: "committee",
+            detailFactsComplete,
             id: canonicalCommitteeId,
             isActive: true,
             jurisdictionId: federalJurisdictionId,
+            membershipRelationsComplete: false,
             name: committee.name,
             parentOrganizationId,
             sourceId: committee.systemCode,
             sourceUpdatedAt: committee.updateDate === undefined ? undefined : new Date(committee.updateDate),
-            sourceUrl: committee.url,
-            upstreamIds: { congress: committee.systemCode, typeCode: committee.committeeTypeCode ?? "" }
+            upstreamIds: { congress: committee.systemCode, typeCode: committee.committeeTypeCode ?? "" },
+            ...profileFields(committee),
+            ...congressProvenance(committee.url, context.retrievedAt)
           } satisfies OrganizationInsert,
-          ...committee.subcommittees.map((subcommittee) => ({
+          ...(committee.subcommittees ?? []).map((subcommittee) => ({
+            childRelationsComplete: true,
             chamber: normalizedChamber ?? null,
             classification: "subcommittee" as const,
+            detailFactsComplete: profileFactsWereSupplied(subcommittee),
             id: organizationId("congress", subcommittee.systemCode),
             isActive: true,
             jurisdictionId: federalJurisdictionId,
+            membershipRelationsComplete: false,
             name: subcommittee.name,
             parentOrganizationId: canonicalCommitteeId,
             sourceId: subcommittee.systemCode,
-            sourceUrl: subcommittee.url,
-            upstreamIds: { congress: subcommittee.systemCode }
+            upstreamIds: { congress: subcommittee.systemCode },
+            ...profileFields(subcommittee),
+            ...congressProvenance(subcommittee.url ?? committee.url, context.retrievedAt)
           }))
         ]
       })

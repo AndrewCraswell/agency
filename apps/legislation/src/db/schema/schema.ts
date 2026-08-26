@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  bigserial,
   boolean,
   type AnyPgColumn,
   char,
@@ -22,6 +23,18 @@ import {
 const tsvector = customType<{ data: string }>({
   dataType: () => "tsvector"
 })
+
+/** Source-declared only; missing keys remain unknown rather than copied from a participant or venue label. */
+export interface EventLocationPayload {
+  address?: string
+  name?: string
+  room?: string
+}
+
+/** The provider may publish a stream or join URL without declaring the meeting remote. */
+export interface EventVirtualAccessPayload {
+  url: string
+}
 
 export const legislationSchema = pgSchema("legislation")
 
@@ -234,6 +247,139 @@ export const people = legislationSchema.table(
   ]
 )
 
+/**
+ * Source-declared alternate names. These are distinct from given/family names:
+ * the API searches them only when their source evidence is complete.
+ */
+export const personAliases = legislationSchema.table(
+  "person_aliases",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    sourceIdentity: text("source_identity").notNull(),
+    name: text("name").notNull(),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.personId, table.sourceIdentity] }),
+    check("person_aliases_name_check", sql`length(btrim(${table.name})) > 0`),
+    check("person_aliases_source_identity_check", sql`length(btrim(${table.sourceIdentity})) > 0`),
+    check(
+      "person_aliases_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    index("person_aliases_name_idx").on(table.name),
+    index("person_aliases_person_idx").on(table.personId)
+  ]
+)
+
+/**
+ * Source-backed profile facts for a person.  Optional fields remain null when
+ * an authoritative source did not publish them; the row itself distinguishes
+ * that from an uncollected profile.
+ */
+export const personDetails = legislationSchema.table(
+  "person_details",
+  {
+    personId: text("person_id")
+      .primaryKey()
+      .references(() => people.id, { onDelete: "cascade" }),
+    imageUrl: text("image_url"),
+    publicEmail: text("public_email"),
+    officialUrl: text("official_url"),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check(
+      "person_details_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    check("person_details_image_url_check", sql`${table.imageUrl} is null or ${table.imageUrl} ~ '^https://'`),
+    check("person_details_official_url_check", sql`${table.officialUrl} is null or ${table.officialUrl} ~ '^https://'`),
+    check(
+      "person_details_public_email_check",
+      sql`${table.publicEmail} is null or length(btrim(${table.publicEmail})) > 0`
+    )
+  ]
+)
+
+/** Individual provider identifiers retain their own source relationship. */
+export const personExternalIdentifiers = legislationSchema.table(
+  "person_external_identifiers",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    sourceIdentity: text("source_identity").notNull(),
+    scheme: text("scheme").notNull(),
+    value: text("value").notNull(),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.personId, table.sourceIdentity] }),
+    check("person_external_identifiers_scheme_check", sql`length(btrim(${table.scheme})) > 0`),
+    check("person_external_identifiers_value_check", sql`length(btrim(${table.value})) > 0`),
+    check(
+      "person_external_identifiers_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    index("person_external_identifiers_person_idx").on(table.personId)
+  ]
+)
+
+/** A person can be authoritatively associated with more than one jurisdiction. */
+export const personJurisdictions = legislationSchema.table(
+  "person_jurisdictions",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id, { onDelete: "restrict" }),
+    sourceIdentity: text("source_identity").notNull(),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.personId, table.jurisdictionId, table.sourceIdentity] }),
+    check("person_jurisdictions_source_identity_check", sql`length(btrim(${table.sourceIdentity})) > 0`),
+    check(
+      "person_jurisdictions_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    index("person_jurisdictions_person_idx").on(table.personId, table.jurisdictionId)
+  ]
+)
+
 export const organizations = legislationSchema.table(
   "organizations",
   {
@@ -251,6 +397,23 @@ export const organizations = legislationSchema.table(
     /** Canonical chamber vocabulary. Null means the provider value was not safely mappable. */
     chamber: text("chamber"),
     isActive: boolean("is_active"),
+    /** Source-supplied public organization profile. Null records an explicitly unavailable source fact. */
+    description: text("description"),
+    websiteUrl: text("website_url"),
+    publicContactAddress: text("public_contact_address"),
+    publicContactPhone: text("public_contact_phone"),
+    publicContactEmail: text("public_contact_email"),
+    termsOfReference: text("terms_of_reference"),
+    /**
+     * True only after an authoritative provider record supplied a detail
+     * profile. It prevents legacy summary-only rows from being projected as a
+     * detail with invented null fields.
+     */
+    detailFactsComplete: boolean("detail_facts_complete").notNull().default(false),
+    /** A source-complete snapshot established the complete direct-child set. */
+    childRelationsComplete: boolean("child_relations_complete").notNull().default(false),
+    /** A source-complete snapshot established the complete direct-membership set. */
+    membershipRelationsComplete: boolean("membership_relations_complete").notNull().default(false),
     sourceUrl: text("source_url"),
     sourceProvider: text("source_provider"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
@@ -276,6 +439,27 @@ export const organizations = legislationSchema.table(
     check(
       "organizations_parent_check",
       sql`${table.parentOrganizationId} is null or ${table.parentOrganizationId} <> ${table.id}`
+    ),
+    check(
+      "organizations_description_check",
+      sql`${table.description} is null or length(btrim(${table.description})) > 0`
+    ),
+    check("organizations_website_url_check", sql`${table.websiteUrl} is null or ${table.websiteUrl} ~ '^https://'`),
+    check(
+      "organizations_public_contact_address_check",
+      sql`${table.publicContactAddress} is null or length(btrim(${table.publicContactAddress})) > 0`
+    ),
+    check(
+      "organizations_public_contact_phone_check",
+      sql`${table.publicContactPhone} is null or length(btrim(${table.publicContactPhone})) > 0`
+    ),
+    check(
+      "organizations_public_contact_email_check",
+      sql`${table.publicContactEmail} is null or length(btrim(${table.publicContactEmail})) > 0`
+    ),
+    check(
+      "organizations_terms_of_reference_check",
+      sql`${table.termsOfReference} is null or length(btrim(${table.termsOfReference})) > 0`
     ),
     check(
       "organizations_provenance_complete_check",
@@ -397,6 +581,8 @@ export const legislativeEvents = legislationSchema.table(
       .notNull()
       .references(() => jurisdictions.id, { onDelete: "restrict" }),
     sourceId: text("source_id").notNull(),
+    /** The date published by the source, never calculated from an instant or jurisdiction. */
+    publisherLocalDate: date("publisher_local_date"),
     name: text("name").notNull(),
     classification: text("classification"),
     status: text("status").notNull(),
@@ -404,9 +590,22 @@ export const legislativeEvents = legislationSchema.table(
     endAt: timestamp("end_at", { withTimezone: true }),
     timezone: text("timezone"),
     allDay: boolean("all_day").notNull().default(false),
-    location: jsonb("location").$type<Record<string, unknown>>(),
-    virtualAccess: jsonb("virtual_access").$type<Record<string, unknown>>(),
+    location: jsonb("location").$type<EventLocationPayload>(),
+    virtualAccess: jsonb("virtual_access").$type<EventVirtualAccessPayload>(),
+    /** Null means the publisher has not declared whether this meeting is remote. */
+    isRemote: boolean("is_remote"),
     description: text("description"),
+    /** Source ordering is retained only where the publisher supplies it. */
+    sourceSequence: integer("source_sequence"),
+    sourceProvider: text("source_provider"),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    /** All summary facts are source-declared and validated for the public contract. */
+    canonicalFactsComplete: boolean("canonical_facts_complete").notNull().default(false),
+    /** Empty relationship sets are complete only when the source says so. */
+    sessionRelationsComplete: boolean("session_relations_complete").notNull().default(false),
+    organizationRelationsComplete: boolean("organization_relations_complete").notNull().default(false),
     isDeleted: boolean("is_deleted").notNull().default(false),
     sourceUrl: text("source_url"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
@@ -420,9 +619,63 @@ export const legislativeEvents = legislationSchema.table(
     check("legislative_events_name_check", sql`length(${table.name}) > 0`),
     check("legislative_events_status_check", sql`length(${table.status}) > 0`),
     check("legislative_events_dates_check", sql`${table.endAt} is null or ${table.startAt} <= ${table.endAt}`),
+    check(
+      "legislative_events_classification_vocabulary_check",
+      sql`${table.classification} is null or ${table.classification} in ('meeting', 'hearing', 'session', 'other')`
+    ),
+    check(
+      "legislative_events_status_vocabulary_check",
+      sql`${table.status} in ('scheduled', 'completed', 'cancelled', 'postponed', 'other')`
+    ),
+    check(
+      "legislative_events_source_sequence_check",
+      sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`
+    ),
+    check(
+      "legislative_events_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    check(
+      "legislative_events_canonical_facts_complete_check",
+      sql`not ${table.canonicalFactsComplete} or (${table.publisherLocalDate} is not null and ${table.classification} is not null and ${table.isRemote} is not null and ${table.provenanceComplete})`
+    ),
     uniqueIndex("legislative_events_jurisdiction_source_uidx").on(table.jurisdictionId, table.sourceId),
     index("legislative_events_schedule_idx").on(table.jurisdictionId, table.startAt, table.status),
     index("legislative_events_deleted_idx").on(table.jurisdictionId, table.isDeleted, table.startAt)
+  ]
+)
+
+/** Authoritative session links for a meeting. No date or jurisdiction matching is used to fabricate these rows. */
+export const eventSessions = legislationSchema.table(
+  "event_sessions",
+  {
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => legislativeSessions.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventId, table.sessionId] }),
+    index("event_sessions_session_idx").on(table.sessionId, table.eventId)
+  ]
+)
+
+/** Authoritative organization links for a meeting. Participant labels never create these rows. */
+export const eventOrganizations = legislationSchema.table(
+  "event_organizations",
+  {
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventId, table.organizationId] }),
+    index("event_organizations_organization_idx").on(table.organizationId, table.eventId)
   ]
 )
 
@@ -497,18 +750,74 @@ export const eventAgendaItems = legislationSchema.table(
       .notNull()
       .references(() => legislativeEvents.id, { onDelete: "cascade" }),
     ordinal: integer("ordinal").notNull(),
-    description: text("description").notNull(),
+    /** Published label. Null keeps legacy/source rows fail-closed. */
+    title: text("title"),
+    description: text("description"),
+    status: text("status"),
+    canonicalFactsComplete: boolean("canonical_facts_complete").notNull().default(false),
+    billRelationsComplete: boolean("bill_relations_complete").notNull().default(false),
+    amendmentRelationsComplete: boolean("amendment_relations_complete").notNull().default(false),
+    materialRelationsComplete: boolean("material_relations_complete").notNull().default(false),
     classification: text("classification"),
-    billId: text("bill_id").references(() => bills.id, { onDelete: "restrict" }),
     organizationId: text("organization_id").references(() => organizations.id, { onDelete: "restrict" }),
     documentId: text("document_id").references(() => eventDocuments.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     check("event_agenda_items_ordinal_check", sql`${table.ordinal} >= 0`),
-    check("event_agenda_items_description_check", sql`length(${table.description}) > 0`),
-    uniqueIndex("event_agenda_items_ordinal_uidx").on(table.eventId, table.ordinal),
-    index("event_agenda_items_bill_idx").on(table.billId, table.eventId)
+    check(
+      "event_agenda_items_canonical_facts_check",
+      sql`not ${table.canonicalFactsComplete} or (${table.title} is not null and length(btrim(${table.title})) > 0)`
+    ),
+    uniqueIndex("event_agenda_items_ordinal_uidx").on(table.eventId, table.ordinal)
+  ]
+)
+
+export const eventAgendaItemBills = legislationSchema.table(
+  "event_agenda_item_bills",
+  {
+    agendaItemId: text("agenda_item_id")
+      .notNull()
+      .references(() => eventAgendaItems.id, { onDelete: "cascade" }),
+    billId: text("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.agendaItemId, table.billId] }),
+    index("event_agenda_item_bills_bill_idx").on(table.billId, table.agendaItemId)
+  ]
+)
+
+export const eventAgendaItemAmendments = legislationSchema.table(
+  "event_agenda_item_amendments",
+  {
+    agendaItemId: text("agenda_item_id")
+      .notNull()
+      .references(() => eventAgendaItems.id, { onDelete: "cascade" }),
+    amendmentId: text("amendment_id")
+      .notNull()
+      .references(() => amendments.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.agendaItemId, table.amendmentId] }),
+    index("event_agenda_item_amendments_amendment_idx").on(table.amendmentId, table.agendaItemId)
+  ]
+)
+
+export const eventAgendaItemSupportingMaterials = legislationSchema.table(
+  "event_agenda_item_supporting_materials",
+  {
+    agendaItemId: text("agenda_item_id")
+      .notNull()
+      .references(() => eventAgendaItems.id, { onDelete: "cascade" }),
+    materialId: text("material_id")
+      .notNull()
+      .references(() => supportingMaterials.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.agendaItemId, table.materialId] }),
+    index("event_agenda_item_supporting_materials_material_idx").on(table.materialId, table.agendaItemId)
   ]
 )
 
@@ -565,6 +874,77 @@ export const calendarEntries = legislationSchema.table(
   ]
 )
 
+/** A publisher-owned durable calendar or schedule feed. Event groups are never inferred into this table. */
+export const calendars = legislationSchema.table(
+  "calendars",
+  {
+    id: text("id").primaryKey(),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id, { onDelete: "restrict" }),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "restrict" }),
+    sourceProvider: text("source_provider").notNull(),
+    sourceId: text("source_id").notNull(),
+    name: text("name").notNull(),
+    classification: text("classification").notNull(),
+    timezone: text("timezone"),
+    description: text("description"),
+    coverageFrom: date("coverage_from"),
+    coverageTo: date("coverage_to"),
+    sourceUrl: text("source_url").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }).notNull(),
+    sourceIsOfficial: boolean("source_is_official").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("calendars_id_check", sql`length(${table.id}) > 0`),
+    check("calendars_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    check("calendars_source_id_check", sql`length(btrim(${table.sourceId})) > 0`),
+    check("calendars_name_check", sql`length(btrim(${table.name})) > 0`),
+    check("calendars_classification_check", sql`length(btrim(${table.classification})) > 0`),
+    check("calendars_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
+    check(
+      "calendars_coverage_bounds_check",
+      sql`${table.coverageFrom} is null or ${table.coverageTo} is null or ${table.coverageFrom} <= ${table.coverageTo}`
+    ),
+    uniqueIndex("calendars_source_uidx").on(table.sourceProvider, table.sourceId),
+    index("calendars_name_idx").on(table.name, table.id),
+    index("calendars_browse_idx").on(table.jurisdictionId, table.organizationId, table.name, table.id),
+    index("calendars_organization_idx").on(table.organizationId, table.name, table.id)
+  ]
+)
+
+/** An explicit publisher-declared calendar membership; temporal proximity never creates this relationship. */
+export const calendarEvents = legislationSchema.table(
+  "calendar_events",
+  {
+    calendarId: text("calendar_id")
+      .notNull()
+      .references(() => calendars.id, { onDelete: "cascade" }),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    sourceProvider: text("source_provider").notNull(),
+    sourceId: text("source_id").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }).notNull(),
+    sourceIsOfficial: boolean("source_is_official").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.calendarId, table.eventId, table.sourceProvider, table.sourceId] }),
+    check("calendar_events_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    check("calendar_events_source_id_check", sql`length(btrim(${table.sourceId})) > 0`),
+    check("calendar_events_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
+    index("calendar_events_calendar_idx").on(table.calendarId, table.eventId),
+    index("calendar_events_event_idx").on(table.eventId, table.calendarId)
+  ]
+)
+
 export const billSponsors = legislationSchema.table(
   "bill_sponsors",
   {
@@ -577,14 +957,25 @@ export const billSponsors = legislationSchema.table(
     classification: text("classification").notNull(),
     isPrimary: boolean("is_primary").notNull().default(false),
     sourceUrl: text("source_url"),
+    /** First time this structured sponsorship relationship was observed locally. */
+    firstObservedAt: timestamp("first_observed_at", { withTimezone: true }),
+    /** Most recent successful observation of this structured sponsorship relationship. */
+    latestObservedAt: timestamp("latest_observed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     check("bill_sponsors_name_check", sql`length(${table.name}) > 0`),
+    check(
+      "bill_sponsors_observation_bounds_check",
+      sql`(${table.firstObservedAt} is null and ${table.latestObservedAt} is null) or (${table.firstObservedAt} is not null and ${table.latestObservedAt} is not null and ${table.firstObservedAt} <= ${table.latestObservedAt})`
+    ),
     uniqueIndex("bill_sponsors_person_uidx")
       .on(table.billId, table.personId, table.classification)
       .where(sql`${table.personId} is not null`),
-    index("bill_sponsors_bill_idx").on(table.billId, table.isPrimary)
+    index("bill_sponsors_bill_idx").on(table.billId, table.isPrimary),
+    index("bill_sponsors_person_activity_idx")
+      .on(table.personId, table.latestObservedAt, table.billId)
+      .where(sql`${table.personId} is not null and ${table.latestObservedAt} is not null`)
   ]
 )
 
@@ -757,6 +1148,8 @@ export const supportingMaterialSections = legislationSchema.table(
     heading: text("heading"),
     sourceStartOffset: integer("source_start_offset").notNull(),
     sourceEndOffset: integer("source_end_offset").notNull(),
+    pageStart: integer("page_start"),
+    pageEnd: integer("page_end"),
     text: text("text").notNull(),
     contentHash: char("content_hash", { length: 64 }).notNull(),
     searchVector: tsvector("search_vector"),
@@ -777,10 +1170,15 @@ export const supportingMaterialSections = legislationSchema.table(
       "supporting_material_sections_offsets_check",
       sql`${table.sourceStartOffset} >= 0 and ${table.sourceEndOffset} >= ${table.sourceStartOffset}`
     ),
+    check(
+      "supporting_material_sections_pages_check",
+      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} >= 1 and ${table.pageEnd} >= ${table.pageStart})`
+    ),
     check("supporting_material_sections_text_check", sql`length(${table.text}) > 0`),
     check("supporting_material_sections_hash_check", sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`),
     uniqueIndex("supporting_material_sections_ordinal_uidx").on(table.materialId, table.ordinal),
     index("supporting_material_sections_identifier_idx").on(table.materialId, table.sectionIdentifier),
+    index("supporting_material_sections_page_range_idx").on(table.materialId, table.pageStart, table.pageEnd),
     index("supporting_material_sections_search_vector_gin_idx").using("gin", table.searchVector),
     index("supporting_material_sections_embedding_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
   ]
@@ -839,8 +1237,21 @@ export const votes = legislationSchema.table(
     heldAt: timestamp("held_at", { withTimezone: true }),
     yesCount: integer("yes_count"),
     noCount: integer("no_count"),
+    absentCount: integer("absent_count"),
+    abstainCount: integer("abstain_count"),
+    notVotingCount: integer("not_voting_count"),
+    presentCount: integer("present_count"),
+    proxyCount: integer("proxy_count"),
+    pairedCount: integer("paired_count"),
     otherCount: integer("other_count"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    sourceSequence: integer("source_sequence"),
+    /** False preserves legacy and partial provider rows without inventing timeline facts. */
+    timelineComplete: boolean("timeline_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
@@ -851,8 +1262,20 @@ export const votes = legislationSchema.table(
     ),
     check("votes_yes_count_check", sql`${table.yesCount} is null or ${table.yesCount} >= 0`),
     check("votes_no_count_check", sql`${table.noCount} is null or ${table.noCount} >= 0`),
+    check("votes_absent_count_check", sql`${table.absentCount} is null or ${table.absentCount} >= 0`),
+    check("votes_abstain_count_check", sql`${table.abstainCount} is null or ${table.abstainCount} >= 0`),
+    check("votes_not_voting_count_check", sql`${table.notVotingCount} is null or ${table.notVotingCount} >= 0`),
+    check("votes_present_count_check", sql`${table.presentCount} is null or ${table.presentCount} >= 0`),
+    check("votes_proxy_count_check", sql`${table.proxyCount} is null or ${table.proxyCount} >= 0`),
+    check("votes_paired_count_check", sql`${table.pairedCount} is null or ${table.pairedCount} >= 0`),
     check("votes_other_count_check", sql`${table.otherCount} is null or ${table.otherCount} >= 0`),
+    check("votes_source_sequence_check", sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`),
+    check(
+      "votes_timeline_complete_check",
+      sql`not ${table.timelineComplete} or (${table.heldAt} is not null and ${table.result} in ('passed', 'failed', 'other') and ${table.yesCount} is not null and ${table.noCount} is not null and ${table.absentCount} is not null and ${table.abstainCount} is not null and ${table.notVotingCount} is not null and ${table.presentCount} is not null and ${table.proxyCount} is not null and ${table.pairedCount} is not null and ${table.otherCount} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null and ${table.sourceSequence} is not null)`
+    ),
     index("votes_bill_idx").on(table.billId, table.heldAt),
+    index("votes_bill_timeline_idx").on(table.billId, table.heldAt, table.sourceSequence, table.id),
     index("votes_amendment_idx").on(table.amendmentId, table.heldAt),
     index("votes_event_idx").on(table.eventId, table.heldAt),
     index("votes_organization_idx").on(table.organizationId, table.heldAt),
@@ -872,18 +1295,22 @@ export const votePositions = legislationSchema.table(
     personId: text("person_id").references(() => people.id, { onDelete: "restrict" }),
     sourcePersonId: text("source_person_id"),
     sourceName: text("source_name"),
+    /** Publisher-array ordinal preserves the authoritative position order. */
+    sourceSequence: integer("source_sequence"),
     option: text("option").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     primaryKey({ columns: [table.voteId, table.sourceIdentity] }),
     check("vote_positions_source_identity_check", sql`length(${table.sourceIdentity}) > 0`),
+    check("vote_positions_source_sequence_check", sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`),
     check("vote_positions_option_check", sql`length(${table.option}) > 0`),
     check(
       "vote_positions_normalized_option_check",
       sql`${table.option} in ('yes', 'no', 'absent', 'abstain', 'not-voting', 'present', 'proxy', 'paired', 'other')`
     ),
     index("vote_positions_person_idx").on(table.personId, table.option),
+    index("vote_positions_vote_sequence_idx").on(table.voteId, table.sourceSequence, table.sourceIdentity),
     index("vote_positions_source_person_idx").on(table.sourcePersonId, table.option)
   ]
 )
@@ -896,12 +1323,39 @@ export const billRelations = legislationSchema.table(
       .references(() => bills.id, { onDelete: "cascade" }),
     relatedBillId: text("related_bill_id").notNull(),
     classification: text("classification").notNull(),
+    /** Null means this legacy relation has not received a source-declared direction. */
+    direction: text("direction"),
+    /** Relation-level provenance is separate from the related bill's provenance. */
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    canonicalFactsComplete: boolean("canonical_facts_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     primaryKey({ columns: [table.billId, table.relatedBillId, table.classification] }),
     check("bill_relations_distinct_check", sql`${table.billId} <> ${table.relatedBillId}`),
-    index("bill_relations_related_idx").on(table.relatedBillId, table.classification)
+    check(
+      "bill_relations_classification_check",
+      sql`${table.classification} in ('companion', 'replacement', 'replaced-by', 'prior-session', 'related', 'other')`
+    ),
+    check(
+      "bill_relations_direction_check",
+      sql`${table.direction} is null or ${table.direction} in ('outgoing', 'incoming')`
+    ),
+    check(
+      "bill_relations_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    check(
+      "bill_relations_canonical_facts_complete_check",
+      sql`not ${table.canonicalFactsComplete} or (${table.direction} is not null and ${table.provenanceComplete} and ${table.sourceUpdatedAt} is not null)`
+    ),
+    index("bill_relations_related_idx").on(table.relatedBillId, table.classification),
+    index("bill_relations_lookup_idx").on(table.billId, table.direction, table.classification, table.relatedBillId)
   ]
 )
 
@@ -932,6 +1386,65 @@ export const eventOutcomeLinks = legislationSchema.table(
       .on(table.eventId, table.voteId)
       .where(sql`${table.voteId} is not null`),
     index("event_outcome_links_event_idx").on(table.eventId, table.createdAt)
+  ]
+)
+
+/**
+ * Canonical meeting outcomes are authoritative source facts, unlike
+ * eventOutcomeLinks which records relationship evidence only.
+ */
+export const eventOutcomes = legislationSchema.table(
+  "event_outcomes",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    agendaAssociation: text("agenda_association").notNull(),
+    agendaItemId: text("agenda_item_id").references(() => eventAgendaItems.id, { onDelete: "restrict" }),
+    classification: text("classification").notNull(),
+    description: text("description").notNull(),
+    actionId: text("action_id").references(() => billActions.id, { onDelete: "restrict" }),
+    voteId: text("vote_id").references(() => votes.id, { onDelete: "restrict" }),
+    linkMethod: text("link_method").notNull(),
+    sourceSequence: integer("source_sequence").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    occurredDate: date("occurred_date"),
+    /** Legacy outcomes remain excluded until their publisher declares an occurrence. */
+    timelineComplete: boolean("timeline_complete").notNull().default(false),
+    sourceUrl: text("source_url").notNull(),
+    sourceProvider: text("source_provider").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }).notNull(),
+    sourceIsOfficial: boolean("source_is_official").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("event_outcomes_description_check", sql`length(btrim(${table.description})) > 0`),
+    check("event_outcomes_source_sequence_check", sql`${table.sourceSequence} >= 0`),
+    check(
+      "event_outcomes_classification_check",
+      sql`${table.classification} in ('action', 'vote', 'disposition', 'note')`
+    ),
+    check(
+      "event_outcomes_agenda_association_check",
+      sql`(${table.agendaAssociation} = 'explicit' and ${table.agendaItemId} is not null) or (${table.agendaAssociation} = 'none' and ${table.agendaItemId} is null)`
+    ),
+    check(
+      "event_outcomes_target_check",
+      sql`(${table.classification} = 'action' and ${table.actionId} is not null and ${table.voteId} is null) or (${table.classification} = 'vote' and ${table.actionId} is null and ${table.voteId} is not null) or (${table.classification} in ('disposition', 'note') and ${table.actionId} is null and ${table.voteId} is null)`
+    ),
+    check("event_outcomes_link_method_check", sql`${table.linkMethod} in ('explicit', 'deterministic-id')`),
+    check("event_outcomes_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
+    check("event_outcomes_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    check(
+      "event_outcomes_timeline_complete_check",
+      sql`not ${table.timelineComplete} or (${table.occurredAt} is not null and ${table.occurredDate} is not null)`
+    ),
+    index("event_outcomes_event_idx").on(table.eventId, table.sourceSequence, table.id),
+    index("event_outcomes_timeline_idx").on(table.occurredAt, table.sourceSequence, table.id),
+    index("event_outcomes_agenda_idx").on(table.agendaItemId, table.eventId)
   ]
 )
 
@@ -1256,6 +1769,11 @@ export const changeEvents = legislationSchema.table(
     before: jsonb("before").$type<Record<string, unknown>>(),
     after: jsonb("after").$type<Record<string, unknown>>(),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    /** Immutable source reference captured with the observation, not resolved from the live record. */
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -1266,6 +1784,10 @@ export const changeEvents = legislationSchema.table(
     check(
       "change_events_change_type_check",
       sql`${table.changeType} in ('create', 'update', 'delete', 'cancel', 'reschedule', 'relationship-change')`
+    ),
+    check(
+      "change_events_source_snapshot_check",
+      sql`(${table.sourceUrl} is null and ${table.sourceProvider} is null and ${table.sourceRetrievedAt} is null and ${table.sourceIsOfficial} is null) or (${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
     index("change_events_record_idx").on(table.recordType, table.recordId, table.observedAt),
     index("change_events_jurisdiction_idx").on(table.jurisdictionId, table.observedAt),
@@ -1425,6 +1947,27 @@ export const webhookSigningKeys = legislationSchema.table(
   (table) => [
     check("webhook_signing_keys_ciphertext_check", sql`length(${table.secretCiphertext}) > 0`),
     index("webhook_signing_keys_active_idx").on(table.webhookId, table.isActive, table.expiresAt)
+  ]
+)
+
+/** Immutable, owner-attributed mutation trail. It never contains signing secrets. */
+export const webhookAuditRecords = legislationSchema.table(
+  "webhook_audit_records",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    webhookId: text("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    actorOrganizationId: text("actor_organization_id"),
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("webhook_audit_records_action_check", sql`length(${table.action}) > 0`),
+    check("webhook_audit_records_actor_check", sql`length(${table.actorUserId}) > 0`),
+    index("webhook_audit_records_webhook_occurred_idx").on(table.webhookId, table.occurredAt, table.id)
   ]
 )
 

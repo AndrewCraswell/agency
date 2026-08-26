@@ -54,6 +54,18 @@ describe("errorContext", () => {
     })
   })
 
+  it("includes a sanitized immediate error cause", () => {
+    const cause = new Error("connection failed for postgresql://user:password@example.test/legislation")
+    const error = new Error("query failed", { cause })
+
+    expect(errorContext(error)).toEqual({
+      causeMessage: "connection failed for postgresql://user:[REDACTED]@example.test/legislation",
+      causeName: "Error",
+      errorMessage: "query failed",
+      errorName: "Error"
+    })
+  })
+
   it("does not serialize unknown values", () => {
     expect(errorContext({ token: "secret" })).toEqual({ errorType: "object" })
   })

@@ -125,7 +125,7 @@ function pathId(rawValue: string): string {
   } catch {
     throw new LegislationError("invalid_request", "webhookId is invalid.")
   }
-  if (value.length === 0 || value.trim() !== value || value.includes("/")) {
+  if (value.length === 0 || value.trim() !== value || [...value].length > 256) {
     throw new LegislationError("invalid_request", "webhookId is invalid.")
   }
   return value

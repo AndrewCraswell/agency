@@ -39,7 +39,7 @@ describe("Congress event normalization", () => {
 
     expect(snapshot.event).toMatchObject({
       id: "event:congress:committee-meeting-119189",
-      status: "scheduled"
+      status: "other"
     })
     expect(snapshot.billIds).toEqual(["bill:us:119:hr:6336"])
     expect(snapshot.participants).toHaveLength(2)
@@ -71,9 +71,9 @@ describe("Congress event normalization", () => {
 
     expect(snapshot.event).toMatchObject({
       allDay: true,
-      classification: "published-hearing",
+      classification: "hearing",
       id: "event:congress:published-hearing-58978",
-      status: "published"
+      status: "other"
     })
     expect(snapshot.materials[0]?.material.classification).toBe("hearing-transcript")
   })

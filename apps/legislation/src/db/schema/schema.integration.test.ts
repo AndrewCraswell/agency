@@ -1,10 +1,15 @@
 import { readFile } from "node:fs/promises"
+import { createServer, type Server } from "node:http"
 import { resolve } from "node:path"
 import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { z } from "zod"
+import { createAmendmentReadRepository } from "../../api/amendment-read-repository.js"
+import { createBillDetailReadRepository } from "../../api/bill-detail-read-repository.js"
+import { createCivicSearchApiHandler } from "../../api/civic-search.js"
 import { generateCoverageReport } from "../../coverage/report.js"
 import {
   applyCanonicalFoundationRecord,
@@ -44,7 +49,7 @@ import { openStatesBillSchema } from "../../ingestion/openstates/normalize.js"
 import { withIngestionRun } from "../../ingestion/run-context.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
 import { embeddingRouteFor } from "../../models/embedding-routing.js"
-import { lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
+import { encodeSearchCursor, lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
 import { validateCorpus } from "../../validation/corpus.js"
 import { getBillById, upsertBillAggregate, upsertBillAggregates } from "../queries/bill-aggregates.js"
 import { linkEventOutcome } from "../queries/event-outcomes.js"
@@ -56,6 +61,84 @@ const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe
 const migrationsFolder = resolve(process.cwd(), "src/db/migrations")
 const contentHash = "a".repeat(64)
+const billSearchPageSchema = z.object({
+  data: z.array(
+    z.object({
+      match: z.object({
+        lexicalScore: z.number(),
+        mode: z.literal("lexical"),
+        rerankScore: z.null(),
+        semanticScore: z.null()
+      }),
+      rank: z.number().int().positive(),
+      record: z.object({ canonicalUrl: z.string().url(), id: z.string(), type: z.literal("bill") }),
+      recordId: z.string(),
+      recordType: z.literal("bill"),
+      score: z.number()
+    })
+  ),
+  links: z.object({ next: z.string().nullable(), self: z.literal("/api/search/bills") }),
+  meta: z.object({
+    correlationId: z.string().min(1),
+    isReranked: z.literal(false),
+    limit: z.number().int().positive(),
+    mode: z.literal("lexical"),
+    models: z.array(z.never()),
+    nextCursor: z.string().nullable(),
+    truncated: z.boolean(),
+    warnings: z.array(z.string())
+  })
+})
+const supportingMaterialSearchPageSchema = z.object({
+  data: z.array(
+    z.object({
+      match: z.object({
+        lexicalScore: z.number(),
+        matchedFields: z.array(z.enum(["sectionText", "title"])),
+        mode: z.literal("lexical"),
+        rerankScore: z.null(),
+        semanticScore: z.null()
+      }),
+      rank: z.number().int().positive(),
+      record: z.object({
+        material: z.object({
+          canonicalUrl: z.string().url(),
+          id: z.string(),
+          sourceUrl: z.string().url(),
+          type: z.literal("supporting-material")
+        }),
+        relatedRecordIds: z.array(z.string()),
+        section: z.object({
+          canonicalUrl: z.string().url(),
+          id: z.string(),
+          materialId: z.string(),
+          sourceUrl: z.string().url(),
+          type: z.literal("supporting-material-section")
+        })
+      }),
+      recordId: z.string(),
+      recordType: z.literal("supporting-material"),
+      score: z.number()
+    })
+  ),
+  links: z.object({ next: z.string().nullable(), self: z.literal("/api/search/supporting-materials") }),
+  meta: z.object({
+    correlationId: z.string().min(1),
+    isReranked: z.literal(false),
+    limit: z.number().int().positive(),
+    mode: z.literal("lexical"),
+    models: z.array(z.never()),
+    nextCursor: z.string().nullable(),
+    truncated: z.boolean(),
+    warnings: z.array(z.string())
+  })
+})
+
+async function closeServer(server: Server): Promise<void> {
+  await new Promise<void>((resolveClose, rejectClose) => {
+    server.close((error) => (error === undefined ? resolveClose() : rejectClose(error)))
+  })
+}
 
 if (databaseUrl !== undefined && new URL(databaseUrl).pathname !== "/legislation_test") {
   throw new Error("LEGISLATION_TEST_DATABASE_URL must target the legislation_test database")
@@ -691,6 +774,128 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(getBillById(database, billId)).resolves.toMatchObject({ title: "A stable aggregate" })
   })
 
+  it("preserves and advances sponsor observation bounds across aggregate refreshes", async () => {
+    const billId = "bill:wa:2025-2026:hb:2469"
+    const sponsorId = `${billId}:sponsor:example`
+    const aggregate = {
+      bill: {
+        id: billId,
+        identifier: "HB 2469",
+        jurisdictionId: "jurisdiction:wa",
+        sessionId: "session:wa:2025-2026",
+        sourceUrl: "https://example.test/hb-2469",
+        title: "An observed sponsor relationship"
+      },
+      jurisdiction: {
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:wa",
+        name: "Washington",
+        subdivisionCode: "WA"
+      },
+      people: [{ id: "person:wa:example", jurisdictionId: "jurisdiction:wa", name: "Representative Example" }],
+      session: {
+        id: "session:wa:2025-2026",
+        identifier: "2025-2026",
+        jurisdictionId: "jurisdiction:wa",
+        name: "2025-2026 Regular Session"
+      },
+      sponsors: [
+        {
+          billId,
+          classification: "primary",
+          id: sponsorId,
+          isPrimary: true,
+          name: "Representative Example",
+          personId: "person:wa:example"
+        }
+      ]
+    }
+
+    await upsertBillAggregate(database, aggregate)
+    const first = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 5))
+    await upsertBillAggregate(database, aggregate)
+    const refreshed = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+
+    if (
+      first === undefined ||
+      refreshed === undefined ||
+      first.latestObservedAt === null ||
+      refreshed.latestObservedAt === null
+    ) {
+      throw new Error("Expected sponsor observation to persist")
+    }
+    expect(first.firstObservedAt).toEqual(refreshed.firstObservedAt)
+    expect(refreshed.latestObservedAt.getTime()).toBeGreaterThan(first.latestObservedAt.getTime())
+
+    await upsertBillAggregate(database, { ...aggregate, sponsors: [] })
+    await expect(
+      database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    ).resolves.toBeUndefined()
+  })
+
+  it("preserves sponsor observation bounds during batch aggregate refreshes", async () => {
+    const billId = "bill:wa:2025-2026:hb:2470"
+    const sponsorId = `${billId}:sponsor:example`
+    const aggregate = {
+      bill: {
+        id: billId,
+        identifier: "HB 2470",
+        jurisdictionId: "jurisdiction:wa",
+        sessionId: "session:wa:2025-2026",
+        sourceUrl: "https://example.test/hb-2470",
+        title: "An observed batch sponsor relationship"
+      },
+      jurisdiction: {
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:wa",
+        name: "Washington",
+        subdivisionCode: "WA"
+      },
+      people: [{ id: "person:wa:batch-example", jurisdictionId: "jurisdiction:wa", name: "Representative Batch" }],
+      session: {
+        id: "session:wa:2025-2026",
+        identifier: "2025-2026",
+        jurisdictionId: "jurisdiction:wa",
+        name: "2025-2026 Regular Session"
+      },
+      sponsors: [
+        {
+          billId,
+          classification: "primary",
+          id: sponsorId,
+          isPrimary: true,
+          name: "Representative Batch",
+          personId: "person:wa:batch-example"
+        }
+      ]
+    }
+
+    await upsertBillAggregates(database, [aggregate])
+    const first = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 5))
+    await upsertBillAggregates(database, [aggregate])
+    const refreshed = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+
+    if (
+      first === undefined ||
+      refreshed === undefined ||
+      first.latestObservedAt === null ||
+      refreshed.latestObservedAt === null
+    ) {
+      throw new Error("Expected batch sponsor observation to persist")
+    }
+    expect(first.firstObservedAt).toEqual(refreshed.firstObservedAt)
+    expect(refreshed.latestObservedAt.getTime()).toBeGreaterThan(first.latestObservedAt.getTime())
+
+    await upsertBillAggregates(database, [{ ...aggregate, sponsors: [] }])
+    await expect(
+      database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    ).resolves.toBeUndefined()
+  })
+
   it("merges federal provenance and preserves GovInfo documents during a Congress.gov update", async () => {
     const billId = "bill:us:119:hr:1234"
     const base = {
@@ -992,9 +1197,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       truncated: false
     })
     await expect(
-      service.searchBillText({ billId: "bill:us:119:hr:1234", query: '"data shall be open"' })
+      service.searchBillText({ billIds: ["bill:us:119:hr:1234"], query: '"data shall be open"' })
     ).resolves.toMatchObject({
-      items: expect.arrayContaining([expect.objectContaining({ billId: "bill:us:119:hr:1234" })])
+      items: expect.arrayContaining([expect.objectContaining({ bill: { id: "bill:us:119:hr:1234" } })])
     })
     await expect(service.getBillText({ id: "bill:us:119:hr:1234", versionCode: "ih" })).resolves.toMatchObject({
       document: { id: documentId },
@@ -1011,6 +1216,418 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(service.findRelatedBills({ id: "bill:wa:2025-2026:sb:5678" })).resolves.toMatchObject({
       items: [{ bill: { id: "bill:us:119:hr:1234" }, classification: "related" }]
     })
+  })
+
+  it("serves bounded, filter-bound lexical bill pages from canonical database records", async () => {
+    const jurisdictionId = "jurisdiction:search"
+    const sessionId = "session:search:2026"
+    const query = "bounded public budget allocation"
+    const candidateId = (index: number) => `bill:search:2026:ab:${index.toString().padStart(4, "0")}`
+    const request = {
+      jurisdictionIds: [jurisdictionId],
+      query,
+      statuses: ["introduced"],
+      subjects: ["budget"]
+    }
+
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Search integration",
+      subdivisionCode: "SI"
+    })
+    await database.insert(schema.legislativeSessions).values({
+      id: sessionId,
+      identifier: "2026",
+      jurisdictionId,
+      name: "Search integration 2026"
+    })
+    await pool.query(
+      `insert into legislation.bills (
+        id, jurisdiction_id, session_id, identifier, title, classification, status, subjects, source_url, search_vector
+      )
+      select
+        'bill:search:2026:ab:' || lpad(candidate.index::text, 4, '0'),
+        $1,
+        $2,
+        'AB ' || candidate.index::text,
+        'Bounded public budget allocation',
+        array['bill']::text[],
+        'introduced',
+        array['budget']::text[],
+        'https://source.example.test/search/' || candidate.index::text,
+        to_tsvector('english', 'Bounded public budget allocation')
+      from generate_series(0, 1000) as candidate(index)`,
+      [jurisdictionId, sessionId]
+    )
+    await pool.query(
+      `insert into legislation.bills (
+        id, jurisdiction_id, session_id, identifier, title, classification, status, subjects, source_url, search_vector
+      ) values (
+        'bill:search:2026:ab:excluded',
+        $1,
+        $2,
+        'AB excluded',
+        'Bounded public budget allocation',
+        array['bill']::text[],
+        'withdrawn',
+        array['budget']::text[],
+        'https://source.example.test/search/excluded',
+        to_tsvector('english', 'Bounded public budget allocation')
+      )`,
+      [jurisdictionId, sessionId]
+    )
+
+    const handler = createCivicSearchApiHandler(new LegislationQueryService(database), {
+      apiBaseUrl: "https://api.example.test"
+    })
+    const server = createServer(async (requestMessage, response) => {
+      if (!(await handler(requestMessage, response))) {
+        response.writeHead(404)
+        response.end()
+      }
+    })
+    await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen))
+    const address = server.address()
+    if (address === null || typeof address === "string") {
+      await closeServer(server)
+      throw new Error("Expected a TCP server address")
+    }
+    const baseUrl = `http://127.0.0.1:${address.port}`
+
+    try {
+      const firstResponse = await fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ ...request, limit: 2 }),
+        headers: { "content-type": "application/json", "x-correlation-id": "search-db-integration" },
+        method: "POST"
+      })
+      expect(firstResponse.status).toBe(200)
+      const firstPage = billSearchPageSchema.parse(await firstResponse.json())
+      const firstCursor = encodeSearchCursor(2, request)
+      expect(firstPage).toMatchObject({
+        data: [
+          { rank: 1, record: { id: candidateId(0), type: "bill" }, recordId: candidateId(0) },
+          { rank: 2, record: { id: candidateId(1), type: "bill" }, recordId: candidateId(1) }
+        ],
+        links: { next: `/api/search/bills?cursor=${firstCursor}`, self: "/api/search/bills" },
+        meta: {
+          correlationId: "search-db-integration",
+          isReranked: false,
+          limit: 2,
+          mode: "lexical",
+          models: [],
+          nextCursor: firstCursor,
+          truncated: true,
+          warnings: []
+        }
+      })
+      expect(firstPage.data.map((item) => item.score)).toEqual(firstPage.data.map((item) => item.match.lexicalScore))
+
+      const secondResponse = await fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ ...request, cursor: firstCursor, limit: 2 }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(secondResponse.status).toBe(200)
+      expect(billSearchPageSchema.parse(await secondResponse.json()).data).toMatchObject([
+        { rank: 3, recordId: candidateId(2) },
+        { rank: 4, recordId: candidateId(3) }
+      ])
+
+      const boundaryCursor = encodeSearchCursor(900, request)
+      const boundaryResponse = await fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ ...request, cursor: boundaryCursor, limit: 100 }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(boundaryResponse.status).toBe(200)
+      const boundaryPage = billSearchPageSchema.parse(await boundaryResponse.json())
+      expect(boundaryPage.data.map((item) => item.recordId)).toEqual(
+        Array.from({ length: 100 }, (_, index) => candidateId(index + 900))
+      )
+      expect(boundaryPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 100 }, (_, index) => index + 901))
+      expect(boundaryPage).toMatchObject({
+        links: { next: null },
+        meta: { nextCursor: null, truncated: true }
+      })
+
+      const changedFilterResponse = await fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ ...request, cursor: boundaryCursor, statuses: ["withdrawn"] }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(changedFilterResponse.status).toBe(400)
+
+      const filteredResponse = await fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ ...request, limit: 5, statuses: ["withdrawn"] }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(filteredResponse.status).toBe(200)
+      const filteredPage = billSearchPageSchema.parse(await filteredResponse.json())
+      expect(filteredPage.data.map((item) => item.recordId)).toEqual(["bill:search:2026:ab:excluded"])
+      expect(filteredPage).toMatchObject({ links: { next: null }, meta: { nextCursor: null, truncated: false } })
+    } finally {
+      await closeServer(server)
+    }
+  })
+
+  it("serves bounded, filter-bound lexical supporting-material pages from canonical database records", async () => {
+    const jurisdictionId = "jurisdiction:material-search"
+    const sessionId = "session:material-search:2026"
+    const organizationId = "organization:material-search:committee"
+    const billId = "bill:material-search:2026:hb:1"
+    const amendmentId = "amendment:material-search:2026:hb:1:a"
+    const eventId = "event:material-search:2026:committee:1"
+    const query = "public data"
+    const candidateId = (index: number) =>
+      `material:material-search:2026:committee-report:${(index + 1_000).toString().padStart(4, "0")}`
+    const request = {
+      amendmentIds: [amendmentId],
+      billIds: [billId],
+      classifications: ["committee-report"],
+      documentFrom: "2026-03-15",
+      documentTo: "2026-03-15",
+      from: "2026-03-15",
+      jurisdictionIds: [jurisdictionId],
+      meetingIds: [eventId],
+      organizationIds: [organizationId],
+      query,
+      sessionIds: [sessionId],
+      to: "2026-03-15"
+    }
+
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Material search integration",
+      subdivisionCode: "MS"
+    })
+    await database.insert(schema.legislativeSessions).values({
+      id: sessionId,
+      identifier: "2026",
+      jurisdictionId,
+      name: "Material search integration 2026"
+    })
+    await database.insert(schema.organizations).values({
+      classification: "committee",
+      id: organizationId,
+      jurisdictionId,
+      name: "Material search committee",
+      sourceId: "material-search-committee"
+    })
+    await database.insert(schema.bills).values({
+      id: billId,
+      identifier: "HB 1",
+      jurisdictionId,
+      sessionId,
+      sourceUrl: "https://source.example.test/material-search/bills/1",
+      title: "Material search bill"
+    })
+    await database.insert(schema.amendments).values({
+      amendmentNumber: "A",
+      amendmentType: "committee",
+      billId,
+      id: amendmentId,
+      jurisdictionId,
+      printedIdentifier: "H.Amdt. 1",
+      sourceId: "material-search-amendment",
+      sourceUrl: "https://source.example.test/material-search/amendments/1"
+    })
+    await database.insert(schema.legislativeEvents).values({
+      id: eventId,
+      jurisdictionId,
+      name: "Material search hearing",
+      sourceId: "material-search-event",
+      startAt: new Date("2026-03-15T17:00:00.000Z"),
+      status: "scheduled"
+    })
+    await pool.query(
+      `insert into legislation.supporting_materials (
+        id, jurisdiction_id, source_id, classification, title, document_date, source_url, processing_status, updated_at
+      )
+      select
+        'material:material-search:2026:committee-report:' || lpad((candidate.index + 1000)::text, 4, '0'),
+        $1,
+        'material-search-' || candidate.index::text,
+        'committee-report',
+        'Evidence record ' || candidate.index::text,
+        '2026-03-15',
+        'https://source.example.test/material-search/materials/' || candidate.index::text,
+        'processed',
+        '2026-03-15T12:00:00.000Z'::timestamptz
+      from generate_series(0, 250) as candidate(index)`,
+      [jurisdictionId]
+    )
+    await pool.query(
+      `insert into legislation.supporting_material_sections (
+        id, material_id, ordinal, source_start_offset, source_end_offset, text, content_hash
+      )
+      select
+        'material-section:material-search:' || candidate.index::text,
+        'material:material-search:2026:committee-report:' || lpad((candidate.index + 1000)::text, 4, '0'),
+        0,
+        0,
+        28,
+        'Public data access evidence.',
+        repeat('b', 64)
+      from generate_series(0, 250) as candidate(index)`,
+      []
+    )
+    await pool.query(
+      `insert into legislation.supporting_material_links (
+        material_id, bill_id, amendment_id, event_id, organization_id, classification
+      )
+      select
+        'material:material-search:2026:committee-report:' || lpad((candidate.index + 1000)::text, 4, '0'),
+        $1,
+        $2,
+        $3,
+        $4,
+        'related'
+      from generate_series(0, 250) as candidate(index)`,
+      [billId, amendmentId, eventId, organizationId]
+    )
+    await database.insert(schema.supportingMaterials).values({
+      classification: "testimony",
+      documentDate: "2026-03-15",
+      id: "material:material-search:2026:committee-report:0000",
+      jurisdictionId,
+      processingStatus: "processed",
+      sourceId: "material-search-excluded",
+      sourceUrl: "https://source.example.test/material-search/materials/excluded",
+      title: "Excluded evidence",
+      updatedAt: new Date("2026-03-15T12:00:00.000Z")
+    })
+    await database.insert(schema.supportingMaterialSections).values({
+      contentHash: "b".repeat(64),
+      id: "material-section:material-search:excluded",
+      materialId: "material:material-search:2026:committee-report:0000",
+      ordinal: 0,
+      sourceEndOffset: 28,
+      sourceStartOffset: 0,
+      text: "Public data access evidence."
+    })
+    await database.insert(schema.supportingMaterialLinks).values({
+      amendmentId,
+      billId,
+      classification: "related",
+      eventId,
+      materialId: "material:material-search:2026:committee-report:0000",
+      organizationId
+    })
+
+    const handler = createCivicSearchApiHandler(new LegislationQueryService(database), {
+      apiBaseUrl: "https://api.example.test"
+    })
+    const server = createServer(async (requestMessage, response) => {
+      if (!(await handler(requestMessage, response))) {
+        response.writeHead(404)
+        response.end()
+      }
+    })
+    await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen))
+    const address = server.address()
+    if (address === null || typeof address === "string") {
+      await closeServer(server)
+      throw new Error("Expected a TCP server address")
+    }
+    const baseUrl = `http://127.0.0.1:${address.port}`
+
+    try {
+      const firstResponse = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ ...request, limit: 100 }),
+        headers: { "content-type": "application/json", "x-correlation-id": "material-search-db-integration" },
+        method: "POST"
+      })
+      expect(firstResponse.status).toBe(200)
+      const firstPage = supportingMaterialSearchPageSchema.parse(await firstResponse.json())
+      const firstCursor = firstPage.meta.nextCursor
+      if (firstCursor === null) {
+        throw new Error("Expected a cursor for the first bounded material search page")
+      }
+      expect(firstPage.data.map((item) => item.recordId)).toEqual(
+        Array.from({ length: 100 }, (_, index) => candidateId(index))
+      )
+      expect(firstPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 100 }, (_, index) => index + 1))
+      expect(firstPage).toMatchObject({
+        links: { next: `/api/search/supporting-materials?cursor=${firstCursor}` },
+        meta: {
+          correlationId: "material-search-db-integration",
+          isReranked: false,
+          limit: 100,
+          mode: "lexical",
+          models: [],
+          nextCursor: firstCursor,
+          truncated: true,
+          warnings: []
+        }
+      })
+      const firstHit = firstPage.data[0]
+      if (firstHit === undefined) {
+        throw new Error("Expected a material search hit")
+      }
+      expect(firstHit).toMatchObject({
+        match: { lexicalScore: firstHit.score, matchedFields: ["sectionText"], mode: "lexical" },
+        record: {
+          material: {
+            canonicalUrl: `https://api.example.test/api/supporting-materials/${encodeURIComponent(candidateId(0))}`,
+            id: candidateId(0),
+            sourceUrl: "https://source.example.test/material-search/materials/0"
+          },
+          relatedRecordIds: [amendmentId, billId, eventId, organizationId].sort(),
+          section: {
+            canonicalUrl:
+              "https://api.example.test/api/supporting-materials/material%3Amaterial-search%3A2026%3Acommittee-report%3A1000/sections/material-section%3Amaterial-search%3A0",
+            id: "material-section:material-search:0",
+            materialId: candidateId(0),
+            sourceUrl: "https://source.example.test/material-search/materials/0"
+          }
+        },
+        recordId: candidateId(0),
+        recordType: "supporting-material"
+      })
+
+      const secondResponse = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ ...request, cursor: firstCursor, limit: 100 }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(secondResponse.status).toBe(200)
+      const secondPage = supportingMaterialSearchPageSchema.parse(await secondResponse.json())
+      expect(secondPage.data.map((item) => item.recordId)).toEqual(
+        Array.from({ length: 100 }, (_, index) => candidateId(index + 100))
+      )
+      expect(secondPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 100 }, (_, index) => index + 101))
+      const secondCursor = secondPage.meta.nextCursor
+      if (secondCursor === null) {
+        throw new Error("Expected a cursor for the second bounded material search page")
+      }
+
+      const thirdResponse = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ ...request, cursor: secondCursor, limit: 100 }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(thirdResponse.status).toBe(200)
+      const thirdPage = supportingMaterialSearchPageSchema.parse(await thirdResponse.json())
+      expect(thirdPage.data.map((item) => item.recordId)).toEqual(
+        Array.from({ length: 50 }, (_, index) => candidateId(index + 200))
+      )
+      expect(thirdPage.data.map((item) => item.rank)).toEqual(Array.from({ length: 50 }, (_, index) => index + 201))
+      expect(thirdPage).toMatchObject({ links: { next: null }, meta: { nextCursor: null, truncated: true } })
+
+      const changedFilterResponse = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ ...request, classifications: ["testimony"], cursor: firstCursor, limit: 100 }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+      expect(changedFilterResponse.status).toBe(400)
+    } finally {
+      await closeServer(server)
+    }
   })
 
   it("persists only source-backed OCR status and page ranges", async () => {
@@ -2306,10 +2923,15 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
           {
             agendaItems: [
               {
-                description: "Invalid agenda item",
-                eventId: failedEvent.id,
-                id: `${failedEvent.id}:agenda:1`,
-                ordinal: -1
+                agendaItem: {
+                  description: "Invalid agenda item",
+                  eventId: failedEvent.id,
+                  id: `${failedEvent.id}:agenda:1`,
+                  ordinal: -1
+                },
+                amendmentIds: [],
+                billIds: [],
+                materialIds: []
               }
             ],
             documents: [],
@@ -2676,6 +3298,101 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     )
 
     await expect(validateCorpus(database)).resolves.toMatchObject({ criticalIssues: 0, valid: true })
+  })
+
+  it("round-trips a mixed bill-detail amendment cursor through the repository without skips or scope widening", async () => {
+    const jurisdictionId = "jurisdiction:cursor-contract"
+    const sessionId = "session:cursor-contract:2026"
+    const billId = "bill:us:119:hr:cursor"
+    const apiBaseUrl = "https://api.example.test"
+    const childLimit = 2
+
+    await database.insert(schema.jurisdictions).values({
+      classification: "country",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Cursor Contract"
+    })
+    await database.insert(schema.legislativeSessions).values({
+      id: sessionId,
+      identifier: "119",
+      jurisdictionId,
+      name: "119th Congress"
+    })
+    await database.insert(schema.bills).values({
+      id: billId,
+      identifier: "HR Cursor",
+      jurisdictionId,
+      sessionId,
+      sourceUrl: "https://source.example.test/bills/cursor",
+      title: "Cursor contract bill"
+    })
+    await database.insert(schema.amendments).values(
+      Array.from({ length: childLimit + 1 }, (_value, index) => ({
+        amendmentNumber: String(index + 1),
+        amendmentType: "floor",
+        billId,
+        id: `amendment:cursor:${index + 1}`,
+        jurisdictionId,
+        printedIdentifier: `Structured ${index + 1}`,
+        sourceId: `cursor:structured:${index + 1}`,
+        sourceUrl: `https://source.example.test/amendments/structured/${index + 1}`,
+        status: "introduced",
+        submittedDate: "2026-02-01"
+      }))
+    )
+    await database.insert(schema.billDocuments).values(
+      Array.from({ length: childLimit + 1 }, (_value, index) => ({
+        billId,
+        classification: "amendment",
+        documentDate: "2026-02-01",
+        id: `${billId}:document:amendment:${index + 1}`,
+        sourceUrl: `https://source.example.test/amendments/document/${index + 1}`,
+        title: `Document ${index + 1}`
+      }))
+    )
+
+    const billRepository = createBillDetailReadRepository(database, apiBaseUrl)
+    const amendmentRepository = createAmendmentReadRepository(database, apiBaseUrl)
+    const detail = await billRepository.getBillDetail({ childLimit, id: billId })
+    const firstCursor = detail.childPageInfo.amendments.nextCursor
+    expect(firstCursor).not.toBeNull()
+
+    const continuationItems: (typeof detail.amendments)[number][] = []
+    for (let cursor = firstCursor; cursor !== null; ) {
+      const page = await amendmentRepository.listAmendments({ billId, cursor, limit: childLimit })
+      continuationItems.push(...page.items)
+      cursor = page.nextCursor ?? null
+    }
+    const fullCollection = await amendmentRepository.listAmendments({ billId, limit: 100 })
+    const combinedIds = [...detail.amendments, ...continuationItems].map((item) => item.id)
+
+    expect(combinedIds).toEqual(fullCollection.items.map((item) => item.id))
+    expect(new Set(combinedIds).size).toBe(fullCollection.items.length)
+    await expect(
+      amendmentRepository.listAmendments({
+        billId,
+        cursor: firstCursor ?? undefined,
+        limit: childLimit,
+        recordTypes: ["document"]
+      })
+    ).rejects.toMatchObject({ category: "invalid_request" })
+    await expect(
+      amendmentRepository.listAmendments({
+        billId,
+        cursor: firstCursor ?? undefined,
+        limit: childLimit,
+        statuses: ["introduced"]
+      })
+    ).rejects.toMatchObject({ category: "invalid_request" })
+    await expect(
+      amendmentRepository.listAmendments({
+        billId,
+        cursor: firstCursor ?? undefined,
+        limit: childLimit,
+        submittedFrom: "2026-02-01"
+      })
+    ).rejects.toMatchObject({ category: "invalid_request" })
   })
 
   it("inspects representative structured, lexical, semantic, and passage query plans within the latency gate", async () => {

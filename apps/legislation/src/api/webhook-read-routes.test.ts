@@ -128,7 +128,7 @@ describe("createWebhookReadApiHandler", () => {
       "/api/webhooks/%2F"
     ]) {
       const response = await fetch(`${authenticatedBaseUrl}${path}`)
-      expect(response.status).toBe(path === "/api/webhooks/" ? 404 : 400)
+      expect(response.status).toBe(path === "/api/webhooks/" || path === "/api/webhooks/%2F" ? 404 : 400)
     }
     expect((await fetch(`${authenticatedBaseUrl}/api/webhooks`, { method: "POST" })).status).toBe(404)
   })
@@ -160,7 +160,9 @@ describe("createWebhookReadApiHandler", () => {
   })
 
   it("does not project a repository result that violates the persisted webhook contract", async () => {
-    const baseUrl = await start(repository({ getWebhook: async () => ({ ...webhook, eventTypes: [] }) }))
+    const baseUrl = await start(
+      repository({ getWebhook: async () => ({ ...webhook, eventTypes: ["status-changed", "status-changed"] }) })
+    )
 
     const response = await fetch(`${baseUrl}/api/webhooks/${encodeURIComponent(webhook.id)}`)
 

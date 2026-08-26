@@ -1,22 +1,8 @@
 import { z } from "zod"
-import { mcpHttpMethods } from "../mcp/http-methods.js"
 
 const optionalSecret = z.string().trim().min(1).optional()
-const mcpApiBaseUrl = z.url({ protocol: /^https?$/ }).refine((value) => {
-  const url = new URL(value)
-  return (
-    url.username.length === 0 &&
-    url.password.length === 0 &&
-    url.pathname === "/" &&
-    url.search.length === 0 &&
-    url.hash.length === 0
-  )
-}, "MCP API base URL must be an origin without credentials, a path, query, or hash")
-const mcpHttpMethodsSchema = z.array(z.enum(mcpHttpMethods)).superRefine((values, context) => {
-  if (new Set(values).size !== values.length) {
-    context.addIssue({ code: "custom", message: "MCP HTTP methods must be unique" })
-  }
-})
+const workosSessionIssuer = "https://api.workos.com"
+const environmentBoolean = z.preprocess(parseEnvironmentBoolean, z.boolean())
 
 const configSchema = z
   .object({
@@ -24,10 +10,16 @@ const configSchema = z
       z.object({ mode: z.literal("disabled") }),
       z.object({
         apiAudience: z.string().trim().min(1),
+        clientId: z.string().trim().min(1),
         issuer: z.url({ protocol: /^https$/ }),
         jwksUrl: z.url({ protocol: /^https$/ }),
         mcpAudience: z.string().trim().min(1),
-        mode: z.literal("workos")
+        mode: z.literal("workos"),
+        userSession: z.object({
+          clientId: z.string().trim().min(1),
+          issuer: z.literal(workosSessionIssuer),
+          jwksUrl: z.url({ protocol: /^https$/ })
+        })
       })
     ]),
     backfill: z.object({
@@ -70,25 +62,10 @@ const configSchema = z
     logging: z.object({
       level: z.enum(["debug", "info", "warn", "error"])
     }),
-    mcp: z.discriminatedUnion("transport", [
-      z.object({ transport: z.literal("in-process") }),
-      z.object({
-        apiBaseUrl: mcpApiBaseUrl,
-        bearerToken: optionalSecret,
-        timeoutMs: z.coerce.number().int().min(1).max(60_000),
-        transport: z.literal("http")
-      }),
-      z.object({
-        apiBaseUrl: mcpApiBaseUrl,
-        bearerToken: optionalSecret,
-        httpMethods: mcpHttpMethodsSchema,
-        timeoutMs: z.coerce.number().int().min(1).max(60_000),
-        transport: z.literal("hybrid")
-      })
-    ]),
     model: z.object({
       apiKey: optionalSecret,
-      baseUrl: z.url({ protocol: /^https$/ })
+      baseUrl: z.url({ protocol: /^https$/ }),
+      researchAnswerModel: optionalSecret
     }),
     observability: z.object({
       langfuseBaseUrl: z.url({ protocol: /^https$/ }),
@@ -102,10 +79,21 @@ const configSchema = z
         return Number.isFinite(parsed) ? Math.min(parsed, 5) : value
       }, z.number().int().min(1).max(5))
     }),
+    security: z.object({
+      idempotencyEncryptionKey: optionalSecret,
+      webhookSecretEncryptionKey: optionalSecret
+    }),
     server: z.object({
       host: z.string().trim().min(1),
       port: z.coerce.number().int().min(1).max(65_535),
       publicApiBaseUrl: z.url({ protocol: /^https?$/ }),
+      rateLimit: z.object({
+        enabled: environmentBoolean,
+        limit: z.coerce.number().int().min(1).max(10_000),
+        maximumKeys: z.coerce.number().int().min(1).max(100_000),
+        trustedProxyHops: z.coerce.number().int().min(0).max(4),
+        windowMs: z.coerce.number().int().min(1_000).max(3_600_000)
+      }),
       requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760),
       shutdownTimeoutMs: z.coerce.number().int().min(1000).max(120_000)
     })
@@ -125,6 +113,33 @@ const configSchema = z
         code: "custom",
         message: "Langfuse public and secret keys must be configured together",
         path: ["observability"]
+      })
+    }
+    if (config.environment === "production" && config.security.idempotencyEncryptionKey === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production",
+        path: ["security", "idempotencyEncryptionKey"]
+      })
+    }
+    if (
+      config.security.idempotencyEncryptionKey !== undefined &&
+      !isAes256Key(config.security.idempotencyEncryptionKey)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key",
+        path: ["security", "idempotencyEncryptionKey"]
+      })
+    }
+    if (
+      config.security.webhookSecretEncryptionKey !== undefined &&
+      !isAes256Key(config.security.webhookSecretEncryptionKey)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key",
+        path: ["security", "webhookSecretEncryptionKey"]
       })
     }
   })
@@ -147,10 +162,19 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
     (environment.AUTH_MODE ?? "disabled") === "workos"
       ? {
           apiAudience: environment.WORKOS_API_AUDIENCE,
+          clientId: environment.WORKOS_CLIENT_ID,
           issuer: environment.WORKOS_ISSUER,
           jwksUrl: environment.WORKOS_JWKS_URL,
           mcpAudience: environment.WORKOS_MCP_AUDIENCE ?? environment.WORKOS_AUDIENCE,
-          mode: "workos" as const
+          mode: "workos" as const,
+          userSession: {
+            clientId: environment.WORKOS_CLIENT_ID,
+            issuer: workosSessionIssuer,
+            jwksUrl: new URL(
+              `/sso/jwks/${encodeURIComponent(environment.WORKOS_CLIENT_ID ?? "")}`,
+              workosSessionIssuer
+            ).toString()
+          }
         }
       : { mode: environment.AUTH_MODE ?? "disabled" }
   const result = configSchema.safeParse({
@@ -190,20 +214,10 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
     },
     logging: { level: environment.LOG_LEVEL ?? "info" },
-    mcp: isMcpHttpTransport(environment.LEGISLATION_MCP_TRANSPORT)
-      ? {
-          apiBaseUrl: environment.LEGISLATION_MCP_API_BASE_URL,
-          bearerToken: environment.LEGISLATION_MCP_API_BEARER_TOKEN,
-          ...(environment.LEGISLATION_MCP_TRANSPORT === "hybrid"
-            ? { httpMethods: parseMcpHttpMethods(environment.LEGISLATION_MCP_HTTP_METHODS) }
-            : {}),
-          timeoutMs: environment.LEGISLATION_MCP_API_TIMEOUT_MS ?? "30000",
-          transport: environment.LEGISLATION_MCP_TRANSPORT
-        }
-      : { transport: environment.LEGISLATION_MCP_TRANSPORT ?? "in-process" },
     model: {
       apiKey: environment.OPENROUTER_API_KEY,
-      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1"
+      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+      researchAnswerModel: environment.RESEARCH_ANSWER_MODEL
     },
     observability: {
       langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",
@@ -214,12 +228,23 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       endpoint: environment.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT,
       maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
+    security: {
+      idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY,
+      webhookSecretEncryptionKey: environment.LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY
+    },
     server: {
       host: environment.LEGISLATION_HOST ?? (environment.PORT === undefined ? "127.0.0.1" : "0.0.0.0"),
       port: environment.PORT ?? environment.LEGISLATION_PORT ?? "3100",
       publicApiBaseUrl:
         environment.LEGISLATION_PUBLIC_API_BASE_URL ??
         (environment.NODE_ENV === "production" ? undefined : "http://127.0.0.1:3100"),
+      rateLimit: {
+        enabled: environment.LEGISLATION_RATE_LIMIT_ENABLED ?? "true",
+        limit: environment.LEGISLATION_RATE_LIMIT_LIMIT ?? "120",
+        maximumKeys: environment.LEGISLATION_RATE_LIMIT_MAXIMUM_KEYS ?? "10000",
+        trustedProxyHops: environment.LEGISLATION_TRUSTED_PROXY_HOPS ?? "0",
+        windowMs: environment.LEGISLATION_RATE_LIMIT_WINDOW_MS ?? "60000"
+      },
       requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576",
       shutdownTimeoutMs: environment.LEGISLATION_SHUTDOWN_TIMEOUT_MS ?? "30000"
     }
@@ -231,15 +256,40 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
   return result.data
 }
 
-function isMcpHttpTransport(value: string | undefined): value is "http" | "hybrid" {
-  return value === "http" || value === "hybrid"
+function parseEnvironmentBoolean(value: unknown): unknown {
+  if (value === "true" || value === true) {
+    return true
+  }
+  if (value === "false" || value === false) {
+    return false
+  }
+  return value
 }
 
-function parseMcpHttpMethods(value: string | undefined): string[] {
-  return value === undefined
-    ? []
-    : value
-        .split(",")
-        .map((method) => method.trim())
-        .filter((method) => method.length > 0)
+export function decodeIdempotencyEncryptionKey(value: string): Buffer {
+  const isBase64 = /^[A-Za-z0-9+/]{43}=?$/.test(value)
+  const isBase64Url = /^[A-Za-z0-9_-]{43}=?$/.test(value)
+  if (!isBase64 && !isBase64Url) {
+    throw new Error("Idempotency encryption key is not valid base64 or base64url.")
+  }
+  try {
+    const decoded = Buffer.from(value, isBase64Url ? "base64url" : "base64")
+    const supplied = value.endsWith("=") ? value.slice(0, -1) : value
+    const canonical = isBase64Url ? decoded.toString("base64url") : decoded.toString("base64").slice(0, -1)
+    if (decoded.byteLength !== 32 || canonical !== supplied) {
+      throw new Error("Idempotency encryption key must contain exactly 32 bytes.")
+    }
+    return decoded
+  } catch {
+    throw new Error("Idempotency encryption key is not valid base64 or base64url.")
+  }
+}
+
+function isAes256Key(value: string): boolean {
+  try {
+    decodeIdempotencyEncryptionKey(value)
+    return true
+  } catch {
+    return false
+  }
 }

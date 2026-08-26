@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, ilike, isNotNull, lt, lte, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, lt, lte, or, sql, type SQL } from "drizzle-orm"
 import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
@@ -11,7 +11,7 @@ import {
   people
 } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export type OrganizationSort = "name-asc" | "updated-desc"
@@ -19,13 +19,19 @@ export type OrganizationSort = "name-asc" | "updated-desc"
 export interface OrganizationListInput {
   chamber?: string
   classification?: string
+  classifications?: readonly string[]
   cursor?: string
   isActive?: boolean
   jurisdictionId?: string
+  jurisdictionIds?: readonly string[]
   limit?: number
   parentOrganizationId?: string
+  parentOrganizationIds?: readonly string[]
   query?: string
   sort?: OrganizationSort
+  updatedFrom?: Date
+  updatedTo?: Date
+  updatedToExclusive?: Date
 }
 
 export interface OrganizationMembershipListInput {
@@ -74,6 +80,12 @@ export type OrganizationCursorScope = {
   parentOrganizationId: string | null
   query: string | null
   sort: OrganizationSort
+  classifications?: readonly string[]
+  jurisdictionIds?: readonly string[]
+  parentOrganizationIds?: readonly string[]
+  updatedFrom?: string | null
+  updatedTo?: string | null
+  updatedToExclusive?: string | null
 }
 
 type OrganizationCursor =
@@ -110,14 +122,15 @@ export function buildOrganizationListQuery(database: LegislationDatabase, input:
     .from(organizations)
     .where(
       and(
-        input.jurisdictionId === undefined ? undefined : eq(organizations.jurisdictionId, input.jurisdictionId),
-        input.classification === undefined ? undefined : eq(organizations.classification, input.classification),
-        input.parentOrganizationId === undefined
-          ? undefined
-          : eq(organizations.parentOrganizationId, input.parentOrganizationId),
+        organizationJurisdictionPredicate(input, scope),
+        organizationClassificationPredicate(input, scope),
+        organizationParentPredicate(input, scope),
         input.chamber === undefined ? undefined : eq(organizations.chamber, input.chamber),
         input.isActive === undefined ? undefined : eq(organizations.isActive, input.isActive),
         input.query === undefined ? undefined : ilike(organizations.name, `%${input.query}%`),
+        updatedFromPredicate(scope),
+        updatedToPredicate(scope),
+        updatedToExclusivePredicate(scope),
         cursorPredicate
       )
     )
@@ -247,15 +260,6 @@ export async function listOrganizationMemberships(
   }
 }
 
-export async function findOrganizationMembership(
-  database: LegislationDatabase,
-  organizationId: string,
-  membershipId: string
-): Promise<OrganizationMembershipRow | undefined> {
-  const rows = await buildOrganizationMembershipLookupQuery(database, organizationId, membershipId)
-  return rows[0]
-}
-
 export function buildOrganizationMembershipLookupQuery(
   database: LegislationDatabase,
   organizationId: string,
@@ -373,15 +377,25 @@ function membershipRoleExpression(): SQL<string> {
 }
 
 function organizationCursorScope(input: OrganizationListInput): OrganizationCursorScope {
-  return {
+  const scope: OrganizationCursorScope = {
     chamber: input.chamber ?? null,
     classification: input.classification ?? null,
     isActive: input.isActive ?? null,
     jurisdictionId: input.jurisdictionId ?? null,
     parentOrganizationId: input.parentOrganizationId ?? null,
     query: input.query ?? null,
-    sort: input.sort ?? "name-asc"
+    sort: input.sort ?? "name-asc",
+    ...(input.classifications === undefined
+      ? {}
+      : { classifications: inputTexts(input.classifications, "classifications") }),
+    ...(input.jurisdictionIds === undefined
+      ? {}
+      : { jurisdictionIds: inputTexts(input.jurisdictionIds, "jurisdictionIds") }),
+    ...(input.parentOrganizationIds === undefined
+      ? {}
+      : { parentOrganizationIds: inputTexts(input.parentOrganizationIds, "parentOrganizationIds") })
   }
+  return { ...scope, ...updatedScope(input) }
 }
 
 function membershipCursorScope(input: OrganizationMembershipListInput): MembershipCursorScope {
@@ -422,6 +436,66 @@ function organizationCursorPredicate(cursor: OrganizationCursor | undefined): SQ
   )
 }
 
+function organizationJurisdictionPredicate(
+  input: OrganizationListInput,
+  scope: OrganizationCursorScope
+): SQL | undefined {
+  if (scope.jurisdictionIds !== undefined) {
+    return inArray(organizations.jurisdictionId, scope.jurisdictionIds)
+  }
+  return input.jurisdictionId === undefined ? undefined : eq(organizations.jurisdictionId, input.jurisdictionId)
+}
+
+function organizationClassificationPredicate(
+  input: OrganizationListInput,
+  scope: OrganizationCursorScope
+): SQL | undefined {
+  if (scope.classifications !== undefined) {
+    return inArray(organizations.classification, scope.classifications)
+  }
+  return input.classification === undefined ? undefined : eq(organizations.classification, input.classification)
+}
+
+function organizationParentPredicate(input: OrganizationListInput, scope: OrganizationCursorScope): SQL | undefined {
+  if (scope.parentOrganizationIds !== undefined) {
+    return inArray(organizations.parentOrganizationId, scope.parentOrganizationIds)
+  }
+  return input.parentOrganizationId === undefined
+    ? undefined
+    : eq(organizations.parentOrganizationId, input.parentOrganizationId)
+}
+
+function updatedScope(
+  input: OrganizationListInput
+): Pick<OrganizationCursorScope, "updatedFrom" | "updatedTo" | "updatedToExclusive"> {
+  if (input.updatedFrom === undefined && input.updatedTo === undefined && input.updatedToExclusive === undefined) {
+    return {}
+  }
+  return {
+    updatedFrom: input.updatedFrom?.toISOString() ?? null,
+    updatedTo: input.updatedTo?.toISOString() ?? null,
+    updatedToExclusive: input.updatedToExclusive?.toISOString() ?? null
+  }
+}
+
+function updatedFromPredicate(scope: OrganizationCursorScope): SQL | undefined {
+  return scope.updatedFrom === undefined || scope.updatedFrom === null
+    ? undefined
+    : gte(organizations.updatedAt, new Date(scope.updatedFrom))
+}
+
+function updatedToPredicate(scope: OrganizationCursorScope): SQL | undefined {
+  return scope.updatedTo === undefined || scope.updatedTo === null
+    ? undefined
+    : lte(organizations.updatedAt, new Date(scope.updatedTo))
+}
+
+function updatedToExclusivePredicate(scope: OrganizationCursorScope): SQL | undefined {
+  return scope.updatedToExclusive === undefined || scope.updatedToExclusive === null
+    ? undefined
+    : lt(organizations.updatedAt, new Date(scope.updatedToExclusive))
+}
+
 function membershipDateBounds(from: string | undefined, to: string | undefined): SQL | undefined {
   validateDateRange(from, to)
   return and(
@@ -447,6 +521,17 @@ function parseLimit(limit: number | undefined): number {
   return value
 }
 
+function inputTexts(values: readonly string[], name: string): readonly string[] {
+  const normalized = values.map((value) => value.trim())
+  if (normalized.length === 0 || normalized.length > 25 || normalized.some((value) => value.length === 0)) {
+    throw new LegislationError("invalid_request", `${name} must contain between 1 and 25 non-empty values`)
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    throw new LegislationError("invalid_request", `${name} must contain unique values`)
+  }
+  return normalized
+}
+
 function validateDateRange(from: string | undefined, to: string | undefined): void {
   if (from !== undefined && !validDateBound(from)) {
     throw new LegislationError("invalid_request", "from must be an ISO date or RFC3339 timestamp")
@@ -455,6 +540,9 @@ function validateDateRange(from: string | undefined, to: string | undefined): vo
     throw new LegislationError("invalid_request", "to must be an ISO date or RFC3339 timestamp")
   }
   if (from !== undefined && to !== undefined) {
+    if (isDateOnly(from) !== isDateOnly(to)) {
+      throw new LegislationError("invalid_request", "from and to must use the same format")
+    }
     const fromTimestamp = normalizedDateBound(from, "from")
     const toTimestamp = normalizedDateBound(to, "to")
     const inverted = isDateOnly(to) ? fromTimestamp >= toTimestamp : fromTimestamp > toTimestamp

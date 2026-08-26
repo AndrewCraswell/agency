@@ -1,11 +1,17 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
+import { createLogger, errorContext } from "../observability/logger.js"
+import { toPublicApiError } from "./error-mapping.js"
+
+const apiLogger = createLogger({ level: "error", service: "legislation-api" })
 
 export type HttpApiHandler = (request: IncomingMessage, response: ServerResponse) => Promise<boolean>
 
 export type JsonRecord = Readonly<Record<string, unknown>>
+
+const apiResponseRequests = new WeakMap<ServerResponse, IncomingMessage>()
 
 export function createCompositeHttpApiHandler(handlers: readonly HttpApiHandler[]): HttpApiHandler {
   return async (request, response) => {
@@ -18,8 +24,24 @@ export function createCompositeHttpApiHandler(handlers: readonly HttpApiHandler[
   }
 }
 
+export function prepareApiResponse(response: ServerResponse, request: IncomingMessage): void {
+  apiResponseRequests.set(response, request)
+}
+
 export function sendApiJson(response: ServerResponse, statusCode: number, body: unknown): void {
-  response.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" })
+  const request = apiResponseRequests.get(response)
+  const headers: Record<string, string> = { "content-type": "application/json; charset=utf-8" }
+  if (request?.method === "GET" && statusCode === 200) {
+    const configuredEtag = response.getHeader("etag")
+    const etag = typeof configuredEtag === "string" ? configuredEtag : weakEtag(body)
+    headers.etag = etag
+    if (ifNoneMatchMatches(request.headers["if-none-match"], etag)) {
+      response.writeHead(304, { etag })
+      response.end()
+      return
+    }
+  }
+  response.writeHead(statusCode, headers)
   response.end(JSON.stringify(body))
 }
 
@@ -88,13 +110,16 @@ export function apiSearchPage<T>(
 }
 
 export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
-  const category = error instanceof LegislationError ? error.category : "internal"
+  const publicError = toPublicApiError(error)
+  const category = publicError instanceof LegislationError ? publicError.category : "internal"
   const status = statusForError(category)
-  const message = error instanceof LegislationError ? error.message : "The request could not be completed"
+  const message = publicError instanceof LegislationError ? publicError.message : "The request could not be completed"
+  const details = publicError instanceof LegislationError ? publicError.details : undefined
   return {
     error: {
       category,
       correlationId: correlationId(request),
+      ...(details === undefined ? {} : { details }),
       message,
       retryable: category === "dependency_unavailable" || category === "rate_limited"
     },
@@ -103,9 +128,25 @@ export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
 }
 
 export function sendApiError(request: IncomingMessage, response: ServerResponse, error: unknown): void {
-  const body = apiError(request, error)
+  const publicError = toPublicApiError(error)
+  if (!(error instanceof LegislationError)) {
+    apiLogger.error("API request failed", {
+      correlationId: correlationId(request),
+      method: request.method ?? "UNKNOWN",
+      path: (request.url ?? "/").split("?", 1)[0] ?? "/",
+      ...errorContext(error)
+    })
+  }
+  const body = apiError(request, publicError)
   const status = body.status
   const { status: _status, ...errorBody } = body
+  if (
+    publicError instanceof LegislationError &&
+    (publicError.category === "dependency_unavailable" || publicError.category === "rate_limited") &&
+    !response.hasHeader("retry-after")
+  ) {
+    response.setHeader("retry-after", publicError.category === "dependency_unavailable" ? "30" : "1")
+  }
   sendApiJson(response, typeof status === "number" ? status : 500, errorBody)
 }
 
@@ -154,21 +195,38 @@ export function queryOptionalDate(url: URL, name: string): Date | undefined {
   return parseRfc3339Timestamp(value, name)
 }
 
-export function queryOptionalDateOrTimestamp(url: URL, name: string): Date | undefined {
+export function queryOptionalIsoDate(url: URL, name: string): string | undefined {
+  const value = querySingleValue(url, name)
+  return value === undefined ? undefined : parseIsoDate(value, name)
+}
+
+export function queryOptionalIsoDateOrRfc3339(url: URL, name: string): string | undefined {
   const value = querySingleValue(url, name)
   if (value === undefined) {
     return undefined
   }
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const date = parseIsoDate(value, name)
-    return new Date(`${date}T00:00:00.000Z`)
+    return parseIsoDate(value, name)
   }
-  return parseRfc3339Timestamp(value, name, "an ISO date or RFC 3339 timestamp")
+  parseRfc3339Timestamp(value, name, "an ISO date or RFC 3339 timestamp")
+  return value
 }
 
-export function queryOptionalIsoDate(url: URL, name: string): string | undefined {
-  const value = querySingleValue(url, name)
-  return value === undefined ? undefined : parseIsoDate(value, name)
+export function assertTemporalRange(
+  from: string | undefined,
+  to: string | undefined,
+  names: Readonly<{ from: string; to: string }> = { from: "from", to: "to" }
+): void {
+  if (from === undefined || to === undefined) {
+    return
+  }
+  const fromIsIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(from)
+  const toIsIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(to)
+  const fromValue = fromIsIsoDate ? Date.parse(`${from}T00:00:00.000Z`) : Date.parse(from)
+  const toValue = toIsIsoDate ? Date.parse(`${to}T00:00:00.000Z`) : Date.parse(to)
+  if (fromValue > toValue) {
+    throw new LegislationError("invalid_request", `${names.from} must not be after ${names.to}`)
+  }
 }
 
 function parseIsoDate(value: string, name: string): string {
@@ -249,14 +307,6 @@ function querySingleValue(url: URL, name: string): string | undefined {
   return values[0]?.trim() ?? ""
 }
 
-export function queryRepeatedStrings(url: URL, name: string): string[] | undefined {
-  const values = url.searchParams
-    .getAll(name)
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-  return values.length === 0 ? undefined : [...new Set(values)]
-}
-
 export function assertAllowedQueryParameters(url: URL, allowed: readonly string[]): void {
   const allowedParameters = new Set(allowed)
   for (const name of url.searchParams.keys()) {
@@ -273,7 +323,7 @@ export async function readJsonBody(request: IncomingMessage, maximumBytes = 1_04
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     bytes += buffer.byteLength
     if (bytes > maximumBytes) {
-      throw new LegislationError("invalid_request", "Request body exceeds the allowed size")
+      throw new LegislationError("payload_too_large", "Request body exceeds the allowed size")
     }
     chunks.push(buffer)
   }
@@ -291,19 +341,6 @@ export async function readJsonBody(request: IncomingMessage, maximumBytes = 1_04
   }
 }
 
-export function stringArrayBody(body: JsonRecord, name: string, maximum = 25): string[] {
-  const value = body[name]
-  if (
-    !Array.isArray(value) ||
-    value.length < 1 ||
-    value.length > maximum ||
-    value.some((item) => typeof item !== "string" || item.trim().length === 0)
-  ) {
-    throw new LegislationError("invalid_request", `${name} must contain between 1 and ${maximum} non-empty IDs`)
-  }
-  return [...new Set(value.map((item) => item.trim()))]
-}
-
 function statusForError(category: LegislationError["category"] | "internal"): number {
   switch (category) {
     case "invalid_request":
@@ -318,6 +355,8 @@ function statusForError(category: LegislationError["category"] | "internal"): nu
       return 409
     case "precondition_failed":
       return 412
+    case "payload_too_large":
+      return 413
     case "unprocessable":
       return 422
     case "rate_limited":
@@ -327,4 +366,27 @@ function statusForError(category: LegislationError["category"] | "internal"): nu
     case "internal":
       return 500
   }
+}
+
+function weakEtag(body: unknown): string {
+  // Correlation IDs identify an individual request and are intentionally not
+  // part of the semantic representation validator.
+  const representation = JSON.stringify(body, (key, value: unknown) => (key === "correlationId" ? undefined : value))
+  const digest = createHash("sha256").update(representation).digest("base64url")
+  return `W/"${digest}"`
+}
+
+function ifNoneMatchMatches(header: string | string[] | undefined, etag: string): boolean {
+  const value = Array.isArray(header) ? header.join(",") : header
+  if (value === undefined) {
+    return false
+  }
+  const normalizedEtag = normalizeEtag(etag)
+  return value
+    .split(",")
+    .some((candidate) => candidate.trim() === "*" || normalizeEtag(candidate.trim()) === normalizedEtag)
+}
+
+function normalizeEtag(value: string): string {
+  return value.startsWith("W/") || value.startsWith("w/") ? value.slice(2) : value
 }

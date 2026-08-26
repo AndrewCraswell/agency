@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest"
+import { isOrganizationCivicFoundationComplete } from "../civic-foundation.js"
 import { normalizeCongressCommittees, normalizeCongressMembers } from "./entities.js"
+
+function organizationFoundationComplete(
+  row: ReturnType<typeof normalizeCongressCommittees>["organizations"][number]
+): boolean {
+  return isOrganizationCivicFoundationComplete({
+    chamber: row.chamber ?? null,
+    classification: row.classification ?? null,
+    isActive: row.isActive ?? null,
+    name: row.name,
+    parentOrganizationId: row.parentOrganizationId ?? null,
+    provenanceComplete: row.provenanceComplete ?? false,
+    sourceIsOfficial: row.sourceIsOfficial ?? null,
+    sourceProvider: row.sourceProvider ?? null,
+    sourceRetrievedAt: row.sourceRetrievedAt ?? null,
+    sourceUrl: row.sourceUrl ?? null,
+    upstreamIds: row.upstreamIds ?? {}
+  })
+}
+
+const organizationContext = { retrievedAt: new Date("2026-08-20T15:00:00.000Z") }
 
 describe("Congress entity normalization", () => {
   it("normalizes member identities and year-granularity terms without fabricating dates", () => {
@@ -44,16 +65,19 @@ describe("Congress entity normalization", () => {
   })
 
   it("creates legislature, chamber, committee, and subcommittee hierarchy", () => {
-    const result = normalizeCongressCommittees([
-      {
-        chamber: "Senate",
-        committeeTypeCode: "Standing",
-        name: "Judiciary Committee",
-        subcommittees: [{ name: "Antitrust Subcommittee", systemCode: "ssju01" }],
-        systemCode: "ssju00",
-        updateDate: "2026-08-10T11:51:27Z"
-      }
-    ])
+    const result = normalizeCongressCommittees(
+      [
+        {
+          chamber: "Senate",
+          committeeTypeCode: "Standing",
+          name: "Judiciary Committee",
+          subcommittees: [{ name: "Antitrust Subcommittee", systemCode: "ssju01" }],
+          systemCode: "ssju00",
+          updateDate: "2026-08-10T11:51:27Z"
+        }
+      ],
+      organizationContext
+    )
 
     expect(result.organizations).toEqual(
       expect.arrayContaining([
@@ -69,15 +93,53 @@ describe("Congress entity normalization", () => {
   })
 
   it("does not invent a Senate parent for an unmappable committee chamber", () => {
-    const result = normalizeCongressCommittees([
-      {
-        chamber: "Joint",
-        name: "Joint Example Committee",
-        systemCode: "joint-example"
-      }
-    ])
+    const result = normalizeCongressCommittees(
+      [
+        {
+          chamber: "Joint",
+          name: "Joint Example Committee",
+          systemCode: "joint-example"
+        }
+      ],
+      organizationContext
+    )
     const committee = result.organizations.find((organization) => organization.sourceId === "joint-example")
 
     expect(committee).toMatchObject({ chamber: null, parentOrganizationId: null })
+  })
+
+  it("persists provider-supplied committee profile facts without treating the source URL as a website", () => {
+    const result = normalizeCongressCommittees(
+      [
+        {
+          chamber: "House",
+          contact: { address: "100 Capitol Way", email: "rules@example.test" },
+          description: "Considers House rules.",
+          name: "Rules Committee",
+          subcommittees: [],
+          systemCode: "hsru00",
+          termsOfReference: "House Rule X.",
+          url: "https://api.congress.gov/committee/house-rules/HSRU00",
+          website: "https://rules.house.gov/"
+        }
+      ],
+      organizationContext
+    )
+    const committee = result.organizations.find((organization) => organization.sourceId === "hsru00")
+
+    expect(committee).toMatchObject({
+      childRelationsComplete: true,
+      description: "Considers House rules.",
+      detailFactsComplete: true,
+      membershipRelationsComplete: false,
+      publicContactAddress: "100 Capitol Way",
+      publicContactEmail: "rules@example.test",
+      publicContactPhone: null,
+      sourceUrl: "https://api.congress.gov/committee/house-rules/HSRU00",
+      termsOfReference: "House Rule X.",
+      websiteUrl: "https://rules.house.gov/"
+    })
+    expect(committee).toBeDefined()
+    expect(organizationFoundationComplete(committee!)).toBe(true)
   })
 })

@@ -19,9 +19,8 @@ describe("Railway deployment contract", () => {
     expect(dockerfile).toContain("COPY packages ./packages")
     expect(dockerfile).toContain("COPY apps/legislation ./apps/legislation")
     expect(dockerfile).toContain("COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml")
-    expect(dockerfile).toContain(
-      "pnpm install --no-frozen-lockfile --trust-lockfile --update-checksums --ignore-scripts --filter legislation..."
-    )
+    expect(dockerfile).toContain("pnpm install --frozen-lockfile --ignore-scripts --filter legislation...")
+    expect(dockerfile).not.toMatch(/--no-frozen-lockfile|--update-checksums|--trust-lockfile/)
     expect(dockerfile).toContain("pnpm --filter legislation build")
     expect(dockerfile).not.toContain("pnpm --filter ./...")
     expect(dockerfile).toContain(
@@ -67,18 +66,20 @@ describe("Railway deployment contract", () => {
     expect(readFileSync(`${repositoryRoot}pnpm-workspace.yaml`, "utf8")).toContain('"apps/*"')
     expect(applicationFile("README.md")).toContain("Config File Path to `/apps/legislation/railway.json`")
     expect(applicationFile("docs/development.md")).toContain(
-      "explicitly set Config File Path to `/apps/legislation/railway.json`"
+      "explicitly set Config File Path to `/apps/legislation-web/railway.json`"
     )
   })
 
-  it("smokes public health and readiness plus a bearer-authenticated API page", () => {
+  it("smokes public health, readiness, and separately authenticated API and MCP surfaces", () => {
     const smoke = applicationFile("scripts/smoke-deployment.mjs")
 
     expect(smoke).toContain('new URL("/health", root)')
     expect(smoke).toContain('new URL("/ready", root)')
     expect(smoke).toContain('new URL("/api/jurisdictions?limit=1", root)')
     expect(smoke).toContain("LEGISLATION_SMOKE_TOKEN is required")
-    expect(smoke).toContain("authorization: `Bearer ${token}`")
+    expect(smoke).toContain("LEGISLATION_MCP_SMOKE_TOKEN is required")
+    expect(smoke).toContain("authorization: `Bearer ${apiToken}`")
+    expect(smoke).toContain("authProvider: { token: async () => mcpToken }")
     expect(smoke).toContain('api.headers.get("x-correlation-id")')
     expect(smoke).toContain("apiBody.meta?.correlationId !== apiCorrelationId")
     expect(smoke).toContain('typeof apiItem.canonicalUrl === "string"')

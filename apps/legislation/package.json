@@ -3,6 +3,44 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./api/next/http": {
+      "types": "./dist/api/next/http.d.ts",
+      "import": "./dist/api/next/http.js"
+    },
+    "./api/next/node-handler": {
+      "types": "./dist/api/next/node-handler.d.ts",
+      "import": "./dist/api/next/node-handler.js"
+    },
+    "./server/next": {
+      "types": "./dist/server/next/runtime.d.ts",
+      "import": "./dist/server/next/runtime.js"
+    },
+    "./server/next/nx02": {
+      "types": "./dist/server/next/nx02.d.ts",
+      "import": "./dist/server/next/nx02.js"
+    },
+    "./server/next/nx02b": {
+      "types": "./dist/server/next/nx02b.d.ts",
+      "import": "./dist/server/next/nx02b.js"
+    },
+    "./server/next/nx02c": {
+      "types": "./dist/server/next/nx02c.d.ts",
+      "import": "./dist/server/next/nx02c.js"
+    },
+    "./server/next/nx03a": {
+      "types": "./dist/server/next/nx03a.d.ts",
+      "import": "./dist/server/next/nx03a.js"
+    },
+    "./server/next/nx03b": {
+      "types": "./dist/server/next/nx03b.d.ts",
+      "import": "./dist/server/next/nx03b.js"
+    },
+    "./server/next/nx04": {
+      "types": "./dist/server/next/nx04.d.ts",
+      "import": "./dist/server/next/nx04.js"
+    }
+  },
   "files": [
     "dist",
     "scripts/smoke-dependencies.mjs"
@@ -13,7 +51,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
-    "canary:mcp-http-parity": "tsx scripts/canary-mcp-http-parity.ts",
+    "build:next": "tsc -p tsconfig.next.json",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "pnpm check:types:service",
@@ -37,6 +75,7 @@
     "eval:embeddings:rerank-bakeoff": "tsx scripts/rerank-embedding-bakeoff.ts",
     "eval:embeddings:seed": "tsx scripts/run-embedding-canary.ts",
     "docker:build": "docker build --file Dockerfile --tag legislation:local ../..",
+    "foundation:import": "tsx scripts/import-canonical-foundation.ts",
     "infra:build": "az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json",
     "infra:lint": "az bicep lint --file infra/bicep/main.bicep",
     "infra:what-if": "node scripts/infra-what-if.mjs",
@@ -74,8 +113,6 @@
     "jose": "^6.2.8",
     "pdfjs-dist": "^6.2.108",
     "pg": "^8.22.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -84,8 +121,6 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.9",
     "drizzle-kit": "^0.31.10",
     "oxlint": "^1.72.0",

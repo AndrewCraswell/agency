@@ -186,7 +186,7 @@ function toWebhook(
 }
 
 export function assertWebhookReadModel(webhook: Webhook): void {
-  if (webhook.id.length === 0 || webhook.id.trim() !== webhook.id) {
+  if (webhook.id.length === 0 || webhook.id.trim() !== webhook.id || [...webhook.id].length > 256) {
     throw invalidWebhook(webhook.id, "identifier")
   }
   if (webhook.owner.userId.length === 0 || webhook.owner.userId.trim() !== webhook.owner.userId) {
@@ -198,11 +198,11 @@ export function assertWebhookReadModel(webhook: Webhook): void {
   ) {
     throw invalidWebhook(webhook.id, "owner")
   }
-  if (webhook.name.length === 0 || webhook.name.trim() !== webhook.name || webhook.name.length > 120) {
+  if (webhook.name.length === 0 || webhook.name.trim() !== webhook.name || [...webhook.name].length > 120) {
     throw invalidWebhook(webhook.id, "name")
   }
   validateWebhookUrl(webhook)
-  if (webhook.eventTypes.length === 0 || new Set(webhook.eventTypes).size !== webhook.eventTypes.length) {
+  if (new Set(webhook.eventTypes).size !== webhook.eventTypes.length) {
     throw invalidWebhook(webhook.id, "event types")
   }
   for (const eventType of webhook.eventTypes) {

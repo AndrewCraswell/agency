@@ -61,7 +61,7 @@ export async function executeCongressEntityRangeBackfill(
           committees.push(...page)
         }
         const memberSnapshot = normalizeCongressMembers(members, congress)
-        const committeeSnapshot = normalizeCongressCommittees(committees)
+        const committeeSnapshot = normalizeCongressCommittees(committees, { retrievedAt: new Date() })
         for (const person of memberSnapshot.people) {
           peopleById.set(person.id, person)
         }
@@ -75,6 +75,8 @@ export async function executeCongressEntityRangeBackfill(
       await replaceSnapshot(input.database, "jurisdiction:us", {
         memberships: [],
         organizations: [...organizationsById.values()],
+        personAliasPersonIds: [],
+        personAliases: [],
         people: [...peopleById.values()],
         terms: [...termsById.values()]
       })

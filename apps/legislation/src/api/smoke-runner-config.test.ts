@@ -31,7 +31,9 @@ describe("smoke runner configuration", () => {
       LEGISLATION_SMOKE_BILL_SEARCH_QUERY: " housing ",
       LEGISLATION_SMOKE_MATERIAL_ID: " material:configured ",
       LEGISLATION_SMOKE_MATERIAL_SECTION_ID: " material-section:configured ",
-      LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY: " budget "
+      LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY: " budget ",
+      LEGISLATION_SMOKE_SUBSCRIPTION_ID: " subscription:configured ",
+      LEGISLATION_SMOKE_WEBHOOK_ID: " webhook:configured "
     })
 
     expect(fixtures).toMatchObject({
@@ -40,7 +42,9 @@ describe("smoke runner configuration", () => {
       billSearchQuery: "housing",
       materialId: "material:configured",
       materialSectionId: "material-section:configured",
-      materialSearchQuery: "budget"
+      materialSearchQuery: "budget",
+      subscriptionId: "subscription:configured",
+      webhookId: "webhook:configured"
     })
   })
 
@@ -99,6 +103,19 @@ describe("smoke runner configuration", () => {
         return new Response(JSON.stringify({ status: "ready" }), { headers, status: 200 })
       }
       if (url.pathname === "/api/search/bills") {
+        if (typeof init?.body === "string" && init.body.length > 1_048_576) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                category: "payload_too_large",
+                correlationId,
+                message: "Request body exceeds the allowed size",
+                retryable: false
+              }
+            }),
+            { headers, status: 413 }
+          )
+        }
         if (typeof init?.body === "string") {
           searchQueries.push(String((JSON.parse(init.body) as Record<string, unknown>).query))
         }

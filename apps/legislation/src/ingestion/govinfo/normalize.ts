@@ -8,6 +8,7 @@ import {
   personId
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
+import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const collection = <T extends z.ZodType>(item: T) =>
   z.preprocess((value) => {
@@ -112,6 +113,7 @@ export interface GovInfoDocumentInput {
 
 export interface GovInfoNormalizationContext {
   documents?: GovInfoDocumentInput[]
+  retrievedAt?: Date
   sourceUrl: string
 }
 
@@ -333,7 +335,14 @@ export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormaliz
       .map((relation) => ({
         billId: canonicalBillId,
         classification: relationType(relation.relationshipDetails),
-        relatedBillId: federalBillId(relation.congress, relation.type, relation.number)
+        relatedBillId: federalBillId(relation.congress, relation.type, relation.number),
+        ...outgoingRelationProvenance({
+          sourceIsOfficial: true,
+          sourceProvider: "govinfo",
+          sourceRetrievedAt: context.retrievedAt,
+          sourceUpdatedAt: source.updateDate === undefined ? undefined : new Date(source.updateDate),
+          sourceUrl: context.sourceUrl
+        })
       }))
       .filter(
         (relation, index, all) =>

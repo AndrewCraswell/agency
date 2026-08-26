@@ -86,7 +86,7 @@ export async function importGovInfoPackages(
           })
           let aggregate: CanonicalBillAggregate
           try {
-            aggregate = normalizeGovInfoBillStatus(xml, { sourceUrl: source.url.href })
+            aggregate = normalizeGovInfoBillStatus(xml, { retrievedAt: new Date(), sourceUrl: source.url.href })
           } catch {
             return { source, status: "skipped" }
           }

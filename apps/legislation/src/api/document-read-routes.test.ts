@@ -77,6 +77,7 @@ function service(): DocumentReadApi {
   return {
     assertBillExists: async () => undefined,
     getDocumentDetail: async (id) => ({ ...document(id), sectionCount: 1, textCharacterCount: 9 }),
+    getDocumentSection: async ({ documentId }) => documentSection(documentId),
     listBillDocuments: async () => ({ items: [document()], nextCursor: "document-cursor", truncated: true }),
     listDocumentSections: async () => ({ items: [documentSection()], nextCursor: "section-cursor", truncated: true })
   }
@@ -162,6 +163,31 @@ describe("document read API handler", () => {
     expect(documentReads).toBe(0)
   })
 
+  it("uses the shared default page limit for document collections", async () => {
+    let billDocumentsInput: unknown
+    let documentSectionsInput: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      listBillDocuments: async (input) => {
+        billDocumentsInput = input
+        return { items: [], truncated: false }
+      },
+      listDocumentSections: async (input) => {
+        documentSectionsInput = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const [billDocuments, documentSections] = await Promise.all([
+      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/documents`),
+      fetch(`${baseUrl}/api/documents/document%3Aus%3A119%3Ahr%3A1%3Aih/sections`)
+    ])
+
+    expect([billDocuments.status, documentSections.status]).toEqual([200, 200])
+    expect(billDocumentsInput).toMatchObject({ limit: 20 })
+    expect(documentSectionsInput).toMatchObject({ limit: 20 })
+  })
+
   it("projects persisted document section pages and preserves their page mapping", async () => {
     let received: unknown
     let detailReadId: string | undefined
@@ -205,6 +231,53 @@ describe("document read API handler", () => {
     })
   })
 
+  it("serves a canonical singular section only below its requested document parent", async () => {
+    const received: unknown[] = []
+    const baseUrl = await startServer({
+      ...service(),
+      getDocumentSection: async (input) => {
+        received.push(input)
+        if (input.documentId !== "document:us:119:hr:1:ih") {
+          throw new LegislationError("not_found", "Document section was not found")
+        }
+        return documentSection(input.documentId)
+      }
+    })
+    const path = "/api/documents/document%3Aus%3A119%3Ahr%3A1%3Aih/sections/section%3Aus%3A119%3Ahr%3A1%3Aih%3A1"
+    const response = await fetch(`${baseUrl}${path}`, { headers: { "x-correlation-id": "section-read-1" } })
+    const mismatch = await fetch(
+      `${baseUrl}/api/documents/document%3Aus%3A119%3Ahr%3A2%3Aih/sections/section%3Aus%3A119%3Ahr%3A1%3Aih%3A1`,
+      { headers: { "x-correlation-id": "section-missing-1" } }
+    )
+
+    expect(response.status).toBe(200)
+    expect(received).toEqual([
+      {
+        documentId: "document:us:119:hr:1:ih",
+        sectionId: "section:us:119:hr:1:ih:1"
+      },
+      {
+        documentId: "document:us:119:hr:2:ih",
+        sectionId: "section:us:119:hr:1:ih:1"
+      }
+    ])
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        canonicalUrl:
+          "https://api.example.test/api/documents/document%3Aus%3A119%3Ahr%3A1%3Aih/sections/section%3Aus%3A119%3Ahr%3A1%3Aih%3A1",
+        pageEnd: 2,
+        pageStart: 1,
+        type: "document-section"
+      },
+      links: { self: path },
+      meta: { correlationId: "section-read-1", warnings: [] }
+    })
+    expect(mismatch.status).toBe(404)
+    await expect(mismatch.json()).resolves.toMatchObject({
+      error: { category: "not_found", correlationId: "section-missing-1", retryable: false }
+    })
+  })
+
   it("rejects malformed documented controls and never handles the unsupported material section page", async () => {
     const baseUrl = await startServer(service())
     const responses = await Promise.all([
@@ -212,12 +285,14 @@ describe("document read API handler", () => {
       fetch(`${baseUrl}/api/documents/document%3A1?limit=1`),
       fetch(`${baseUrl}/api/documents/document%3A1/sections?pageFrom=2&pageTo=1`),
       fetch(`${baseUrl}/api/documents/document%3A1/sections?heading=a&heading=b`),
+      fetch(`${baseUrl}/api/documents/document%3A1/sections/section%3A1?limit=1`),
+      fetch(`${baseUrl}/api/documents/${"a".repeat(257)}/sections/section%3A1`),
       fetch(`${baseUrl}/api/supporting-materials/material%3A1/sections?pageFrom=1`),
       fetch(`${baseUrl}/api/documents/%ZZ`)
     ])
 
-    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 404, 400])
-    for (const response of [...responses.slice(0, 4), responses[5]]) {
+    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 400, 404, 400])
+    for (const response of [...responses.slice(0, 6), responses[7]]) {
       await expect(response.json()).resolves.toMatchObject({ error: { category: expect.any(String) } })
     }
   })
