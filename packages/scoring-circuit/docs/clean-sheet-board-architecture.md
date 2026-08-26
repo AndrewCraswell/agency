@@ -63,10 +63,10 @@ References:
 
 ## Layout and order standard
 
-Use the smallest practical four-layer carrier after the three module outlines and the custom acquisition section are
-placed; target no more than 200 mm by 140 mm. Layer 2 is a continuous ground plane. Do not delay the prototype for
-production impedance or stack-up optimization: follow the module vendors' carrier guidance, run the PCB editor's DRC,
-review Gerbers and drill files, and order a small batch.
+Start with a roomy 250 mm by 180 mm four-layer carrier so placement, routing, probing, and hand modifications remain
+easy. Layer 2 is a continuous ground plane. Board-area optimization is explicitly deferred. Do not delay the prototype
+for production impedance or stack-up optimization: follow the module vendors' carrier guidance, run the PCB editor's
+DRC, review Gerbers and drill files, and order a small batch.
 
 The previous 250-component, 708-connection integrated board is retired as the prototype implementation. Its scoring
 front end, ESP32 allocation, HUB75, IR, output, and direct-landing work remain reusable evidence.

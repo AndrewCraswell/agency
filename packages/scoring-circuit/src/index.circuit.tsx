@@ -1,7 +1,7 @@
 import { p0BoardPlacement } from "./board-placement.js"
 import { prototypeBoardRouting } from "./board-routing.js"
 import { Bp034DirectWireWeaponFootprint } from "./bp034-direct-wire-weapon-footprint.js"
-import { cleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
+import { prototypeCarrierArchitecture } from "./clean-sheet-board-architecture.js"
 import { P0DigitalPeripherals } from "./p0-digital-peripherals.circuit.js"
 import { P0DisplayPower } from "./p0-display-power.circuit.js"
 import { P0Esp32SupportCircuit } from "./p0-esp32-support.circuit.js"
@@ -12,16 +12,16 @@ import { P0SevenLineAcquisition } from "./p0-seven-line-acquisition.circuit.js"
 import P0UsbPower from "./p0-usb-power.circuit.js"
 
 function ScoringCircuit() {
-  const { board } = cleanSheetBoardArchitecture
-  const halfWidth = board.provisionalWidthMm / 2
-  const halfHeight = board.provisionalHeightMm / 2
+  const { board } = prototypeCarrierArchitecture
+  const halfWidth = board.widthMm / 2
+  const halfHeight = board.heightMm / 2
   const mountingInset = 6
 
   return (
     <board
-      title={`${board.title} ${cleanSheetBoardArchitecture.revision}`}
-      width={`${board.provisionalWidthMm}mm`}
-      height={`${board.provisionalHeightMm}mm`}
+      title={prototypeCarrierArchitecture.title}
+      width={`${board.widthMm}mm`}
+      height={`${board.heightMm}mm`}
       layers={board.layerCount}
       pcbPack={false}
       placementDrcChecksDisabled

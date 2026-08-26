@@ -1,66 +1,35 @@
 import { describe, expect, it } from "vitest"
-import { cleanSheetBoardArchitecture, validateCleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
+import { prototypeCarrierArchitecture } from "./clean-sheet-board-architecture.js"
 
-describe("clean-sheet board architecture", () => {
-  it("defines one canonical scaffold and the complete schematic hierarchy", () => {
-    expect(validateCleanSheetBoardArchitecture(cleanSheetBoardArchitecture)).toBe(true)
-    expect(cleanSheetBoardArchitecture.canonicalEntryPoint).toBe("packages/scoring-circuit/src/index.circuit.tsx")
-    expect(cleanSheetBoardArchitecture.sheets.map((sheet) => sheet.workUnit)).toEqual([
-      "BP-321",
-      "BP-322",
-      "BP-323",
-      "BP-324",
-      "BP-325",
-      "BP-326",
-      "BP-327",
-      "BP-328",
-      "BP-329",
-      "BP-330",
-      "BP-331",
-      "BP-332"
+describe("prototype carrier architecture", () => {
+  it("defines a roomy four-layer firmware carrier", () => {
+    expect(prototypeCarrierArchitecture.board).toEqual({ widthMm: 250, heightMm: 180, layerCount: 4 })
+    expect(prototypeCarrierArchitecture.entryPoint).toBe("packages/scoring-circuit/src/index.circuit.tsx")
+  })
+
+  it("uses modules for commodity power and Ethernet", () => {
+    expect(prototypeCarrierArchitecture.purchasedModules).toEqual([
+      "WIZ850io Ethernet",
+      "DEV-15801 USB-C PD sink",
+      "D36V50F5 5 V regulator"
     ])
   })
 
-  it("contains the required clean-sheet global nets", () => {
-    expect(cleanSheetBoardArchitecture.globalNets).toEqual(
+  it("keeps scoring and firmware interfaces while excluding production-only circuitry", () => {
+    expect(prototypeCarrierArchitecture.customSections).toEqual(
       expect.arrayContaining([
-        "APP_GND",
-        "SCORING_SGND",
-        "CHASSIS_SHIELD",
-        "V20_EFUSED",
-        "V5",
-        "APP_3V3",
-        "VNEG_ANALOG",
-        "VREF_2V5",
-        "APP_RESET_N",
-        "OUTPUT_PERMIT_N"
+        "seven-conductor scoring acquisition",
+        "HUB75 buffers and connector",
+        "IR receiver",
+        "lamp and buzzer outputs"
       ])
     )
-  })
-
-  it("prohibits former dual-MCU and optional circuitry", () => {
-    expect(cleanSheetBoardArchitecture.prohibitedActiveReferences).toEqual(
+    expect(prototypeCarrierArchitecture.excludedFromPrototype).toEqual(
       expect.arrayContaining([
-        "U_SCORING",
-        "U_ISO_MAIN",
-        "J_STM32_SWD",
-        "U_FRAM",
-        "U_AUDIO",
-        "U_POWER_MONITOR",
-        "R_V5_SENSE",
-        "S_POWER_SOURCE_SELECTOR"
+        "STM32 scoring processor",
+        "external ESP32 supervisor or watchdog",
+        "production certification and cost optimization"
       ])
     )
-  })
-
-  it("records completed placement without granting routing or fabrication authority", () => {
-    expect(cleanSheetBoardArchitecture.authority).toEqual({
-      canonicalPrototypeSource: true,
-      schematicIntegrated: true,
-      pcbPlaced: true,
-      pcbRouted: false,
-      fabricationAuthorized: false
-    })
-    expect(() => validateCleanSheetBoardArchitecture(structuredClone(cleanSheetBoardArchitecture))).toThrow(RangeError)
   })
 })

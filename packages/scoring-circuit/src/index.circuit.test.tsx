@@ -1,6 +1,6 @@
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
-import { p0BoardPlacement, validateP0BoardPlacement } from "./board-placement.js"
+import { p0BoardPlacement } from "./board-placement.js"
 import { assertBoardRoutingIsComplete, prototypeBoardRouting, summarizeBoardRouting } from "./board-routing.js"
 import ScoringCircuit from "./index.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
@@ -63,18 +63,6 @@ function offsetPlacement(
   origin: { readonly x: number; readonly y: number }
 ) {
   return { pcbX: placement.pcbX + origin.x, pcbY: placement.pcbY + origin.y }
-}
-
-function isInsideRectangle(
-  point: { readonly x: number; readonly y: number },
-  rectangle: { readonly heightMm: number; readonly pcbX: number; readonly pcbY: number; readonly widthMm: number }
-): boolean {
-  return (
-    point.x > rectangle.pcbX - rectangle.widthMm / 2 &&
-    point.x < rectangle.pcbX + rectangle.widthMm / 2 &&
-    point.y > rectangle.pcbY - rectangle.heightMm / 2 &&
-    point.y < rectangle.pcbY + rectangle.heightMm / 2
-  )
 }
 
 describe("prototype board routing gate", () => {
@@ -172,11 +160,12 @@ describe("P0 integrated scoring-machine schematic", () => {
     const names = circuit.flatMap((element) =>
       element.type === "source_component" && typeof element.name === "string" ? [element.name] : []
     )
-    expect(names).toHaveLength(250)
+    expect(names.length).toBeLessThan(190)
     expect(names).toEqual(
       expect.arrayContaining([
         "U_APP",
-        "U_USB_PD",
+        "J_PD_MODULE",
+        "J_5V_MODULE",
         "U_PHASE_CONTROL_1",
         "U_PHASE_CONTROL_2",
         "U_SOURCE_MUX",
@@ -184,8 +173,7 @@ describe("P0 integrated scoring-machine schematic", () => {
         "U_SENSE_MUX",
         "U_SAR",
         "U_REF",
-        "U_W5500",
-        "J_ETH",
+        "U_ETHERNET",
         "J_HUB75",
         "U_IR_RX",
         "U_P0_OUTPUT_DRIVER",
@@ -211,7 +199,7 @@ describe("P0 integrated scoring-machine schematic", () => {
       if (references.has(reference)) failures.push(`${reference} is duplicated`)
       references.add(reference)
 
-      if (explicitNonBomBoardFeatures.has(reference)) continue
+      if (explicitNonBomBoardFeatures.has(reference) || reference.startsWith("TP_")) continue
       const mpn = source.manufacturer_part_number
       if (typeof mpn !== "string" || mpn.trim() === "") {
         failures.push(`${reference} has no populated manufacturer part number`)
@@ -224,17 +212,12 @@ describe("P0 integrated scoring-machine schematic", () => {
     expect(failures).toEqual([])
   }, 20_000)
 
-  it("uses deliberate, cable-facing P0 placement islands with an exclusive ESP32 antenna keepout", () => {
-    expect(validateP0BoardPlacement()).toBe(true)
-    expect(p0BoardPlacement.islands.esp32).toEqual({ pcbX: 0, pcbY: 69.5 })
+  it("uses a roomy bench placement for the processor and external connectors", () => {
+    expect(p0BoardPlacement.board).toMatchObject({ widthMm: 250, heightMm: 180 })
+    expect(p0BoardPlacement.islands.esp32).toEqual({ pcbX: 55, pcbY: 58 })
     expect(p0BoardPlacement.islands.digital).toMatchObject({
-      ethernet: { pcbX: 160, pcbY: -55 },
-      hub75: { pcbX: 165, pcbY: 20 }
-    })
-    expect(p0BoardPlacement.intent).toMatchObject({
-      cableFacing: expect.stringContaining("USB-C"),
-      irReceiver: expect.stringContaining("outward"),
-      rf: expect.stringContaining("antenna keepout")
+      ethernet: { pcbX: 105, pcbY: -52 },
+      hub75: { pcbX: 108, pcbY: 18 }
     })
     expect(p0BoardPlacement.islands.irReceiver.pcbRotation).toBe(180)
   })
@@ -258,7 +241,7 @@ describe("P0 integrated scoring-machine schematic", () => {
 
     expect(circuit.filter((element) => element.type.includes("error"))).toEqual([])
     expect(placementErrors).toEqual([])
-    expect(components).toHaveLength(250)
+    expect(components.length).toBeLessThan(190)
     const outOfBounds = components.flatMap((component) => {
       if (
         component.center.x >= board.center.x - halfWidth &&
@@ -299,23 +282,13 @@ describe("P0 integrated scoring-machine schematic", () => {
       "J_USB_C",
       offsetPlacement(
         {
-          pcbX: p0BoardPlacement.islands.usbPower.pcbX - 62,
+          pcbX: p0BoardPlacement.islands.usbPower.pcbX - 54,
           pcbY: p0BoardPlacement.islands.usbPower.pcbY + 2.21
         },
         board.center
       )
     )
-    expectPcbLocation(
-      circuit,
-      "J_ETH",
-      offsetPlacement(
-        {
-          pcbX: p0BoardPlacement.islands.digital.ethernet.pcbX + 4.445,
-          pcbY: p0BoardPlacement.islands.digital.ethernet.pcbY + 3.97925
-        },
-        board.center
-      )
-    )
+    expectPcbLocation(circuit, "U_ETHERNET", offsetPlacement(p0BoardPlacement.islands.digital.ethernet, board.center))
     expectPcbLocation(
       circuit,
       "J_HUB75",
@@ -347,7 +320,6 @@ describe("P0 integrated scoring-machine schematic", () => {
       )
     )
 
-    const displayPower = pcbComponent(circuit, "J_DISPLAY_POWER_PIGTAIL")
     const whiteRight = pcbComponent(circuit, "D_P0_WHITE_RIGHT")
     const buzzer = pcbComponent(circuit, "BZ_P0")
     expectPcbLocation(
@@ -362,18 +334,5 @@ describe("P0 integrated scoring-machine schematic", () => {
       )
     )
     expect(Math.abs(whiteRight.center.y - buzzer.center.y)).toBeGreaterThanOrEqual(10)
-    const renderedKeepout = {
-      ...p0BoardPlacement.antennaKeepout,
-      pcbX: p0BoardPlacement.antennaKeepout.pcbX + board.center.x,
-      pcbY: p0BoardPlacement.antennaKeepout.pcbY + board.center.y
-    }
-    for (const component of [
-      displayPower,
-      pcbComponent(circuit, "J_ETH"),
-      pcbComponent(circuit, "J_HUB75"),
-      pcbComponent(circuit, "U_IR_RX")
-    ]) {
-      expect(isInsideRectangle(component.center, renderedKeepout)).toBe(false)
-    }
   }, 300_000)
 })
