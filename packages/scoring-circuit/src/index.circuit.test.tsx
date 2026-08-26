@@ -164,8 +164,8 @@ describe("P0 integrated scoring-machine schematic", () => {
     expect(names).toEqual(
       expect.arrayContaining([
         "U_APP",
-        "J_PD_MODULE",
-        "J_5V_MODULE",
+        "J_POWER_INPUT",
+        "F_MAIN_5V",
         "U_PHASE_CONTROL_1",
         "U_PHASE_CONTROL_2",
         "U_SOURCE_MUX",
@@ -282,7 +282,7 @@ describe("P0 integrated scoring-machine schematic", () => {
       "J_USB_C",
       offsetPlacement(
         {
-          pcbX: p0BoardPlacement.islands.usbPower.pcbX - 54,
+          pcbX: p0BoardPlacement.islands.usbPower.pcbX - 34,
           pcbY: p0BoardPlacement.islands.usbPower.pcbY + 2.21
         },
         board.center

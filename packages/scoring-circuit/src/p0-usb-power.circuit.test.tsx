@@ -6,6 +6,14 @@ function render() {
   return renderTestCircuit(<P0UsbPower pcbX={0} pcbY={0} />, { pcbEnabled: false })
 }
 
+function components() {
+  return new Map(
+    render()
+      .filter((element) => element.type === "source_component")
+      .map((element) => [element.name, element] as const)
+  )
+}
+
 function traceNames() {
   return render().flatMap((element) =>
     element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
@@ -15,70 +23,69 @@ function traceNames() {
 function traceWidths() {
   return new Map(
     render().flatMap((element) =>
-      element.type === "source_trace" && typeof element.display_name === "string"
-        ? element.min_trace_thickness === undefined
-          ? []
-          : [[element.display_name, element.min_trace_thickness] as const]
+      element.type === "source_trace" &&
+      typeof element.display_name === "string" &&
+      element.min_trace_thickness !== undefined
+        ? [[element.display_name, element.min_trace_thickness] as const]
         : []
     )
   )
 }
 
-describe("P0 USB-C power input", () => {
-  it("renders the selected input, protection, and regulator chain", () => {
-    const components = new Map<string, unknown>()
-    for (const element of render()) {
-      if (element.type === "source_component") components.set(element.name, element)
-    }
-
-    expect(components.get("J_USB_C")).toMatchObject({ manufacturer_part_number: "10177070-00011LF" })
-    expect(components.get("U_USB_PORT_PROTECT")).toMatchObject({
-      manufacturer_part_number: "TPD4S201TRGRRQ1"
+describe("P0 simplified wired power and USB data island", () => {
+  it("uses an off-board power assembly and keeps only carrier essentials", () => {
+    const rendered = components()
+    expect(rendered.get("J_POWER_INPUT")).toMatchObject({
+      manufacturer_part_number: "OSTVN02A150"
     })
-    expect(components.get("U_USB_DATA_PROTECT")).toMatchObject({ manufacturer_part_number: "TPD2EUSB30DRTR" })
-    expect(components.get("D_USB_PD_VBUS_TVS")).toMatchObject({ manufacturer_part_number: "TVS2200DRVR" })
-    expect(components.get("U_USB_PD")).toMatchObject({ manufacturer_part_number: "TPS25730ADREFR" })
-    expect(components.get("U_EFUSE")).toMatchObject({ manufacturer_part_number: "TPS259474ARPWR" })
-    expect(components.get("U_V5_BUCK")).toMatchObject({ manufacturer_part_number: "TPS56A37RPAR" })
-    expect(components.get("U_APP_REGULATOR")).toMatchObject({ manufacturer_part_number: "LMR43620MSC3RPERQ1" })
-    expect(render().filter((element) => element.type.endsWith("_error"))).toEqual([])
+    expect(rendered.get("F_MAIN_5V")).toMatchObject({ manufacturer_part_number: "0451003.NRL" })
+    expect(rendered.get("U_USB_DATA_PROTECT")).toMatchObject({
+      manufacturer_part_number: "TPD2EUSB30DRTR"
+    })
+    expect(rendered.get("U_APP_REGULATOR")).toMatchObject({ manufacturer_part_number: "LMR43620MSC3RPERQ1" })
+    expect(rendered.get("R_USB_CC1_RD")).toMatchObject({ resistance: 5100 })
+    expect(rendered.get("R_USB_CC2_RD")).toMatchObject({ resistance: 5100 })
+    expect(rendered.size).toBeLessThanOrEqual(22)
+    for (const retiredReference of ["J_PD_MODULE", "J_5V_MODULE", "U_USB_PD", "U_EFUSE", "U_V5_BUCK"]) {
+      expect(rendered.has(retiredReference)).toBe(false)
+    }
   })
 
-  it("keeps the named protected rails, diagnostic links, and probes connected", () => {
+  it("connects USB device termination, diagnostics, wired 5 V input, and application regulation", () => {
     expect(traceNames()).toEqual(
       expect.arrayContaining([
-        "U_USB_PD.20 to net.PD_PPHV_20V",
-        "U_EFUSE.IN to net.PD_PPHV_20V",
-        "U_EFUSE.pin1 to R_EFUSE_UVLO_UP.pin2",
-        "U_EFUSE.OUT to TP_PD_EFUSE_OUT.V20_TO_V5_BUCK",
-        "U_EFUSE.OUT to U_V5_BUCK.VIN",
-        "L_V5_BUCK.V5 to net.V5",
+        "U_USB_DATA_PROTECT.pin1 to net.USB_DP",
+        "U_USB_DATA_PROTECT.pin2 to net.USB_DN",
+        "J_USB_C.CC1 to R_USB_CC1_RD.pin1",
+        "R_USB_CC1_RD.pin2 to net.APP_GND",
+        "J_USB_C.CC2 to R_USB_CC2_RD.pin1",
+        "R_USB_CC2_RD.pin2 to net.APP_GND",
+        "J_POWER_INPUT.V5_INPUT to F_MAIN_5V.V5_INPUT",
+        "F_MAIN_5V.V5_FUSED to net.V5",
+        "TP_V5.V5 to net.V5",
         "U_APP_REGULATOR.VIN to net.V5",
         "L_APP_REGULATOR.APP_3V3 to net.APP_3V3",
-        "TP_V5.V5 to net.V5",
-        "TP_APP_3V3.APP_3V3 to net.APP_3V3",
-        "TP_SCORING_REFERENCE.V5_ANALOG to net.V5",
-        "R_USB_DP_SERIES.pin2 to net.USB_DP",
-        "R_USB_DN_SERIES.pin2 to net.USB_DN"
+        "TP_APP_3V3.APP_3V3 to net.APP_3V3"
       ])
     )
   })
 
-  it("uses fail-closed defaults for unsafe or unresolved controls", () => {
+  it("does not expose a second input, module control, or optional USB test wiring", () => {
     const names = traceNames()
-    expect(names.some((name) => name.includes("U_V5_BUCK.PG to"))).toBe(false)
-    expect(names.some((name) => name.includes("U_APP_REGULATOR.PGOOD"))).toBe(false)
-    expect(names.some((name) => name.includes("CHASSIS to net.APP_GND"))).toBe(false)
-    expect(names.some((name) => name.includes("SCORING_ISOLATOR"))).toBe(false)
-    expect(names.some((name) => name.includes("J_LINK_") || name.includes("J_USB2_SERVICE"))).toBe(false)
+    expect(names.some((name) => name.includes("J_PD_MODULE") || name.includes("J_5V_MODULE"))).toBe(false)
+    expect(names.some((name) => name.includes("S_POWER") || name.includes("J_LINK") || name.includes("LAB"))).toBe(
+      false
+    )
+    expect(names.some((name) => name.includes("TP_USB_") || name.includes("SBU"))).toBe(false)
+    expect(names.some((name) => name.includes("PD_SDA") || name.includes("PGOOD"))).toBe(false)
   })
 
-  it("keeps reviewed power trunks at their explicit outer-layer widths", () => {
+  it("keeps only the fused 5 V and retained application rail trunks wide", () => {
     expect(traceWidths()).toEqual(
       new Map([
-        ["U_EFUSE.IN to net.PD_PPHV_20V", 0.9],
-        ["U_EFUSE.OUT to U_V5_BUCK.VIN", 0.9],
-        ["L_V5_BUCK.V5 to net.V5", 3.4],
+        ["J_POWER_INPUT.V5_INPUT to F_MAIN_5V.V5_INPUT", 1.9],
+        ["F_MAIN_5V.V5_FUSED to net.V5", 1.9],
+        ["J_POWER_INPUT.APP_GND to net.APP_GND", 1.9],
         ["U_APP_REGULATOR.VIN to net.V5", 0.3],
         ["L_APP_REGULATOR.APP_3V3 to net.APP_3V3", 0.3]
       ])
