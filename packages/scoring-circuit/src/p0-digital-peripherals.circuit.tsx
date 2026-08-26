@@ -1,7 +1,13 @@
-import { Fragment, type ReactElement } from "react"
+import { type ReactElement } from "react"
 import { applicationDisplayHub75SupportPart } from "./application-display-carrier-support.js"
 import { Bp033W5500ProjectFootprint } from "./bp033-w5500-project-footprint.js"
-import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
+import {
+  P0EthernetMagJackFootprint,
+  P0Hub75Ahct245Footprint,
+  P0Hub75ConnectorFootprint,
+  P0Hub75EnableFetFootprint,
+  P0W5500CrystalFootprint
+} from "./p0-digital-peripheral-footprints.js"
 
 const hub75Signals = [
   ["HUB75_R1", "U_DISPLAY_BUFFER_A", "A1", "B1", "R1"],
@@ -21,78 +27,6 @@ const hub75Signals = [
 
 const w5500AvddPins = [4, 8, 11, 15, 17, 21] as const
 const w5500GroundPins = [3, 9, 14, 16, 19, 29, 48] as const
-const ethernetFootprintEvidence = findCommunicationsFootprintEvidence("7499011121A")
-
-if (ethernetFootprintEvidence === undefined || ethernetFootprintEvidence.exactPads.length !== 16) {
-  throw new RangeError("P0 requires the retained 7499011121A exact 16-hole footprint evidence")
-}
-
-const magJackPortHints: Record<string, readonly string[]> = {
-  "1": ["1", "pin1", "TD_P"],
-  "2": ["2", "pin2", "CTD"],
-  "3": ["3", "pin3", "TD_N"],
-  "4": ["4", "pin4", "RD_P"],
-  "5": ["5", "pin5", "CRD"],
-  "6": ["6", "pin6", "RD_N"],
-  "7": ["7"],
-  "8": ["8", "pin8", "CHASSIS_TERMINATION"],
-  "9": ["9", "pin9", "YELLOW_A"],
-  "10": ["10", "pin10", "YELLOW_K"],
-  "11": ["11", "pin11", "GREEN_A"],
-  "12": ["12", "pin12", "GREEN_K"],
-  S1: ["S1", "pin13", "SHIELD_A"],
-  S2: ["S2", "pin14", "SHIELD_B"]
-}
-
-const magJackFootprint = (
-  <footprint name="P0_WE_7499011121A_RETAINED_PROJECT_FOOTPRINT" originalLayer="top">
-    {ethernetFootprintEvidence.exactPads.map((pad) => (
-      <Fragment key={pad.id}>
-        {pad.kind === "plated-hole" ? (
-          <platedhole
-            name={pad.id}
-            shape="circular_hole_with_rect_pad"
-            pcbX={pad.xMm}
-            pcbY={pad.yMm}
-            holeDiameter={`${pad.drillMm}mm`}
-            rectPadWidth={`${pad.widthMm}mm`}
-            rectPadHeight={`${pad.heightMm}mm`}
-            rectBorderRadius={pad.shape === "circle" ? `${pad.widthMm / 2}mm` : "0mm"}
-            portHints={Array.from(magJackPortHints[pad.id] ?? [pad.id])}
-          />
-        ) : (
-          <hole name={pad.id} diameter={`${pad.drillMm}mm`} pcbX={pad.xMm} pcbY={pad.yMm} />
-        )}
-      </Fragment>
-    ))}
-  </footprint>
-)
-
-const crystalPads = [
-  { name: "1", pcbX: -1.15, pcbY: 0.95, portHint: "XI" },
-  { name: "2", pcbX: 1.15, pcbY: 0.95, portHint: "GND_2" },
-  { name: "3", pcbX: 1.15, pcbY: -0.95, portHint: "XO" },
-  { name: "4", pcbX: -1.15, pcbY: -0.95, portHint: "GND_4" }
-] as const
-
-const crystalFootprint = (
-  <footprint name="P0_ECS_33B_SUGGESTED_LAND_PATTERN" originalLayer="top">
-    {crystalPads.map((pad) => (
-      <Fragment key={pad.name}>
-        <smtpad
-          name={pad.name}
-          shape="rect"
-          pcbX={`${pad.pcbX}mm`}
-          pcbY={`${pad.pcbY}mm`}
-          width="1.3mm"
-          height="1.1mm"
-          portHints={[pad.name, `pin${pad.name}`, pad.portHint]}
-        />
-      </Fragment>
-    ))}
-  </footprint>
-)
-
 function hub75Part(reference: string) {
   return applicationDisplayHub75SupportPart(reference)
 }
@@ -105,35 +39,9 @@ function hub75Part(reference: string) {
 export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
   return (
     <group name="P0_DIGITAL_PERIPHERALS">
-      <Bp033W5500ProjectFootprint pcbX={pcbX - 35} pcbY={pcbY} />
-      <chip
-        name="J_ETH"
-        manufacturerPartNumber="7499011121A"
-        footprint={magJackFootprint}
-        pinLabels={{
-          pin1: "TD_P",
-          pin2: "CTD",
-          pin3: "TD_N",
-          pin4: "RD_P",
-          pin5: "CRD",
-          pin6: "RD_N",
-          pin8: "CHASSIS_TERMINATION",
-          pin9: "YELLOW_A",
-          pin10: "YELLOW_K",
-          pin11: "GREEN_A",
-          pin12: "GREEN_K",
-          pin13: "SHIELD_A",
-          pin14: "SHIELD_B"
-        }}
-        pcbX={pcbX - 5}
-        pcbY={pcbY}
-      />
-      <chip
-        name="Y_W5500"
-        manufacturerPartNumber="ECS-250-18-33B-JGN-TR"
-        footprint={crystalFootprint}
-        pinLabels={{ pin1: "XI", pin2: "GND_2", pin3: "XO", pin4: "GND_4" }}
-      />
+      <Bp033W5500ProjectFootprint name="U_W5500" pcbX={pcbX - 35} pcbY={pcbY} />
+      <P0EthernetMagJackFootprint pcbX={pcbX - 5} pcbY={pcbY} />
+      <P0W5500CrystalFootprint />
       <chip
         name="FB_W5500_AVDD"
         manufacturerPartNumber="BLM21PG221SN1D"
@@ -242,64 +150,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <capacitor name="C_ETH_RX_N" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
       <pinheader name="TP_W5500_INT_N" manufacturerPartNumber="5001" pinCount={1} pinLabels={["APP_W5500_INT_N"]} />
 
-      <chip
-        name="U_DISPLAY_BUFFER_A"
-        manufacturerPartNumber={hub75Part("U_DISPLAY_BUFFER_A").mpn}
-        footprint={hub75Part("U_DISPLAY_BUFFER_A").footprint}
-        pinLabels={{
-          pin1: "DIR",
-          pin2: "A1",
-          pin3: "A2",
-          pin4: "A3",
-          pin5: "A4",
-          pin6: "A5",
-          pin7: "A6",
-          pin8: "A7",
-          pin9: "A8",
-          pin10: "APP_GND",
-          pin11: "B8",
-          pin12: "B7",
-          pin13: "B6",
-          pin14: "B5",
-          pin15: "B4",
-          pin16: "B3",
-          pin17: "B2",
-          pin18: "B1",
-          pin19: "OE_N",
-          pin20: "V5_DISPLAY_LIMITED"
-        }}
-        pcbX={pcbX + 15}
-        pcbY={pcbY - 12}
-      />
-      <chip
-        name="U_DISPLAY_BUFFER_B"
-        manufacturerPartNumber={hub75Part("U_DISPLAY_BUFFER_B").mpn}
-        footprint={hub75Part("U_DISPLAY_BUFFER_B").footprint}
-        pinLabels={{
-          pin1: "DIR",
-          pin2: "A1",
-          pin3: "A2",
-          pin4: "A3",
-          pin5: "A4",
-          pin6: "A5",
-          pin7: "A6_UNUSED",
-          pin8: "A7_UNUSED",
-          pin9: "A8_UNUSED",
-          pin10: "APP_GND",
-          pin11: "B8_NC",
-          pin12: "B7_NC",
-          pin13: "B6_NC",
-          pin14: "B5",
-          pin15: "B4",
-          pin16: "B3",
-          pin17: "B2",
-          pin18: "B1",
-          pin19: "OE_N",
-          pin20: "V5_DISPLAY_LIMITED"
-        }}
-        pcbX={pcbX + 15}
-        pcbY={pcbY + 12}
-      />
+      <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_A" pcbX={pcbX + 15} pcbY={pcbY - 12} />
+      <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_B" pcbX={pcbX + 15} pcbY={pcbY + 12} />
       {hub75Signals.map(([signal]) => {
         const reference = signal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${signal}_PD`
         const part = hub75Part(reference)
@@ -344,12 +196,7 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
           footprint="0603"
         />
       ))}
-      <chip
-        name="Q_DISPLAY_ENABLE"
-        manufacturerPartNumber="BSS138AKA"
-        footprint="sot23"
-        pinLabels={{ pin1: "GATE", pin2: "SOURCE", pin3: "DRAIN" }}
-      />
+      <P0Hub75EnableFetFootprint />
       <resistor
         name="R_DISPLAY_ENABLE_PULLUP"
         manufacturerPartNumber="RC0603FR-0710KL"
@@ -371,26 +218,18 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
         tolerance="1%"
         footprint="0603"
       />
-      <pinheader
-        name="J_HUB75"
-        manufacturerPartNumber="TST-108-04-G-D-RA"
-        pinCount={16}
-        doubleRow
-        pinLabels={["R1", "G1", "B1", "GND1", "R2", "G2", "B2", "GND2", "A", "B", "C", "D", "CLK", "LAT", "OE", "GND3"]}
-        pcbX={pcbX + 42}
-        pcbY={pcbY}
-      />
+      <P0Hub75ConnectorFootprint pcbX={pcbX + 42} pcbY={pcbY} />
 
-      <trace from="net.APP_SPI_SCK" to="U_BP033_W5500.33" />
-      <trace from="net.APP_SPI_MOSI" to="U_BP033_W5500.35" />
-      <trace from="U_BP033_W5500.34" to="net.APP_SPI_MISO" />
-      <trace from="net.ETH_CS_N" to="U_BP033_W5500.32" />
-      <trace from="net.APP_RESET_N" to="U_BP033_W5500.37" />
-      <trace from="U_BP033_W5500.36" to="R_W5500_INT_BIAS.pin1" />
+      <trace from="net.APP_SPI_SCK" to="U_W5500.33" />
+      <trace from="net.APP_SPI_MOSI" to="U_W5500.35" />
+      <trace from="U_W5500.34" to="net.APP_SPI_MISO" />
+      <trace from="net.ETH_CS_N" to="U_W5500.32" />
+      <trace from="net.APP_RESET_N" to="U_W5500.37" />
+      <trace from="U_W5500.36" to="R_W5500_INT_BIAS.pin1" />
       <trace from="R_W5500_INT_BIAS.pin2" to="net.APP_3V3" />
-      <trace from="U_BP033_W5500.36" to="TP_W5500_INT_N.APP_W5500_INT_N" />
-      <trace from="U_BP033_W5500.28" to="net.APP_3V3" />
-      <trace from="U_BP033_W5500.28" to="C_W5500_VDD.pin1" />
+      <trace from="U_W5500.36" to="TP_W5500_INT_N.APP_W5500_INT_N" />
+      <trace from="U_W5500.28" to="net.APP_3V3" />
+      <trace from="U_W5500.28" to="C_W5500_VDD.pin1" />
       <trace from="C_W5500_VDD.pin2" to="net.APP_GND" />
       <trace from="net.APP_3V3" to="C_ETH_AVDD_FERRITE_INPUT.pin1" />
       <trace from="C_ETH_AVDD_FERRITE_INPUT.pin2" to="net.APP_GND" />
@@ -398,26 +237,26 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <trace from="FB_W5500_AVDD.ETH_AVDD" to="net.ETH_AVDD" />
       {w5500AvddPins.map((pin) => (
         <group key={pin}>
-          <trace from={`U_BP033_W5500.${pin}`} to="net.ETH_AVDD" />
+          <trace from={`U_W5500.${pin}`} to="net.ETH_AVDD" />
           <trace from="net.ETH_AVDD" to={`C_W5500_AVDD_${pin}.pin1`} />
           <trace from={`C_W5500_AVDD_${pin}.pin2`} to="net.APP_GND" />
         </group>
       ))}
       {w5500GroundPins.map((pin) => (
-        <trace key={String(pin)} from={`U_BP033_W5500.${pin}`} to="net.APP_GND" />
+        <trace key={String(pin)} from={`U_W5500.${pin}`} to="net.APP_GND" />
       ))}
       {[43, 44, 45].map((pin) => (
-        <trace key={String(pin)} from={`U_BP033_W5500.${pin}`} to="net.APP_3V3" />
+        <trace key={String(pin)} from={`U_W5500.${pin}`} to="net.APP_3V3" />
       ))}
-      <trace from="U_BP033_W5500.10" to="R_W5500_EXRES.pin1" />
+      <trace from="U_W5500.10" to="R_W5500_EXRES.pin1" />
       <trace from="R_W5500_EXRES.pin2" to="net.APP_GND" />
-      <trace from="U_BP033_W5500.20" to="C_W5500_TOCAP.pin1" />
+      <trace from="U_W5500.20" to="C_W5500_TOCAP.pin1" />
       <trace from="C_W5500_TOCAP.pin2" to="net.APP_GND" />
-      <trace from="U_BP033_W5500.22" to="C_W5500_1V2O.pin1" />
+      <trace from="U_W5500.22" to="C_W5500_1V2O.pin1" />
       <trace from="C_W5500_1V2O.pin2" to="net.APP_GND" />
-      <trace from="U_BP033_W5500.30" to="Y_W5500.XI" />
+      <trace from="U_W5500.30" to="Y_W5500.XI" />
       <trace from="Y_W5500.XO" to="R_W5500_XO.pin1" />
-      <trace from="R_W5500_XO.pin2" to="U_BP033_W5500.31" />
+      <trace from="R_W5500_XO.pin2" to="U_W5500.31" />
       <trace from="Y_W5500.XI" to="R_W5500_XTAL.pin1" />
       <trace from="R_W5500_XTAL.pin2" to="Y_W5500.XO" />
       <trace from="Y_W5500.XI" to="C_W5500_XI.pin1" />
@@ -427,18 +266,18 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <trace from="Y_W5500.GND_2" to="net.APP_GND" />
       <trace from="Y_W5500.GND_4" to="net.APP_GND" />
 
-      <trace from="U_BP033_W5500.2" to="J_ETH.TD_P" />
-      <trace from="U_BP033_W5500.1" to="J_ETH.TD_N" />
-      <trace from="U_BP033_W5500.6" to="C_ETH_RX_P.pin1" />
+      <trace from="U_W5500.2" to="J_ETH.TD_P" />
+      <trace from="U_W5500.1" to="J_ETH.TD_N" />
+      <trace from="U_W5500.6" to="C_ETH_RX_P.pin1" />
       <trace from="C_ETH_RX_P.pin2" to="J_ETH.RD_P" />
-      <trace from="U_BP033_W5500.5" to="C_ETH_RX_N.pin1" />
+      <trace from="U_W5500.5" to="C_ETH_RX_N.pin1" />
       <trace from="C_ETH_RX_N.pin2" to="J_ETH.RD_N" />
-      <trace from="U_BP033_W5500.2" to="R_ETH_TX_P_TERM.pin1" />
-      <trace from="U_BP033_W5500.1" to="R_ETH_TX_N_TERM.pin1" />
+      <trace from="U_W5500.2" to="R_ETH_TX_P_TERM.pin1" />
+      <trace from="U_W5500.1" to="R_ETH_TX_N_TERM.pin1" />
       <trace from="R_ETH_TX_P_TERM.pin2" to="net.ETH_AVDD" />
       <trace from="R_ETH_TX_N_TERM.pin2" to="net.ETH_AVDD" />
-      <trace from="U_BP033_W5500.6" to="R_ETH_RX_P_BIAS.pin1" />
-      <trace from="U_BP033_W5500.5" to="R_ETH_RX_N_BIAS.pin1" />
+      <trace from="U_W5500.6" to="R_ETH_RX_P_BIAS.pin1" />
+      <trace from="U_W5500.5" to="R_ETH_RX_N_BIAS.pin1" />
       <trace from="R_ETH_RX_P_BIAS.pin2" to="net.ETH_RX_BIAS" />
       <trace from="R_ETH_RX_N_BIAS.pin2" to="net.ETH_RX_BIAS" />
       <trace from="J_ETH.CRD" to="net.ETH_RX_BIAS" />
@@ -450,10 +289,10 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <trace from="C_ETH_TX_CT.pin2" to="net.APP_GND" />
       <trace from="net.APP_3V3" to="R_ETH_YELLOW.pin1" />
       <trace from="R_ETH_YELLOW.pin2" to="J_ETH.YELLOW_A" />
-      <trace from="J_ETH.YELLOW_K" to="U_BP033_W5500.27" />
+      <trace from="J_ETH.YELLOW_K" to="U_W5500.27" />
       <trace from="net.APP_3V3" to="R_ETH_GREEN.pin1" />
       <trace from="R_ETH_GREEN.pin2" to="J_ETH.GREEN_A" />
-      <trace from="J_ETH.GREEN_K" to="U_BP033_W5500.25" />
+      <trace from="J_ETH.GREEN_K" to="U_W5500.25" />
       <trace from="J_ETH.CHASSIS_TERMINATION" to="net.CHASSIS_ETHERNET" />
       <trace from="J_ETH.SHIELD_A" to="net.CHASSIS_ETHERNET" />
       <trace from="J_ETH.SHIELD_B" to="net.CHASSIS_ETHERNET" />

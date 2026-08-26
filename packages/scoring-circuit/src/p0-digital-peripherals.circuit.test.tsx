@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest"
 import P0DigitalPeripherals from "./p0-digital-peripherals.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
-function renderCircuit() {
-  return renderTestCircuit(
+type CircuitJson = ReturnType<typeof renderTestCircuit>
+
+let schematicCircuitJson: CircuitJson | undefined
+let pcbCircuitJson: CircuitJson | undefined
+
+function renderCircuit(): CircuitJson {
+  if (schematicCircuitJson !== undefined) return schematicCircuitJson
+  schematicCircuitJson = renderTestCircuit(
     <board width="120mm" height="80mm">
       <chip
         name="U_ESP32"
@@ -34,10 +40,12 @@ function renderCircuit() {
     </board>,
     { pcbEnabled: false }
   )
+  return schematicCircuitJson
 }
 
-function renderPcbCircuit() {
-  return renderTestCircuit(
+function renderPcbCircuit(): CircuitJson {
+  if (pcbCircuitJson !== undefined) return pcbCircuitJson
+  pcbCircuitJson = renderTestCircuit(
     <board width="120mm" height="80mm">
       <chip
         name="U_ESP32"
@@ -67,15 +75,16 @@ function renderPcbCircuit() {
       <P0DigitalPeripherals pcbX={0} pcbY={0} />
     </board>
   )
+  return pcbCircuitJson
 }
 
-function traces(circuitJson: ReturnType<typeof renderCircuit>) {
+function traces(circuitJson: CircuitJson) {
   return circuitJson.flatMap((element) =>
     element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
   )
 }
 
-function pcbArtifacts(circuitJson: ReturnType<typeof renderPcbCircuit>, reference: string) {
+function pcbArtifacts(circuitJson: CircuitJson, reference: string) {
   const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
   if (source?.type !== "source_component") throw new RangeError(`missing ${reference}`)
   const pcbComponent = circuitJson.find(
@@ -87,7 +96,7 @@ function pcbArtifacts(circuitJson: ReturnType<typeof renderPcbCircuit>, referenc
   )
 }
 
-type CircuitElement = ReturnType<typeof renderPcbCircuit>[number]
+type CircuitElement = CircuitJson[number]
 type PortedPlatedHole = Extract<CircuitElement, { readonly type: "pcb_plated_hole" }> & {
   readonly port_hints: readonly string[]
 }
@@ -118,7 +127,7 @@ describe("P0 digital peripherals", () => {
 
     expect(circuitJson.filter((element) => element.type.includes("error"))).toEqual([])
     expect(names).toEqual(
-      expect.arrayContaining(["U_BP033_W5500", "J_ETH", "U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B", "J_HUB75"])
+      expect.arrayContaining(["U_W5500", "J_ETH", "U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B", "J_HUB75"])
     )
     expect(JSON.stringify(sourceComponents)).toContain("W5500")
     expect(JSON.stringify(sourceComponents)).toContain("7499011121A")
@@ -131,14 +140,14 @@ describe("P0 digital peripherals", () => {
 
     expect(renderedTraces).toEqual(
       expect.arrayContaining([
-        "U_BP033_W5500.33 to net.APP_SPI_SCK",
-        "U_BP033_W5500.35 to net.APP_SPI_MOSI",
-        "U_BP033_W5500.34 to net.APP_SPI_MISO",
-        "U_BP033_W5500.32 to net.ETH_CS_N",
-        "U_BP033_W5500.37 to net.APP_RESET_N",
-        "U_BP033_W5500.36 to TP_W5500_INT_N.APP_W5500_INT_N",
-        "U_BP033_W5500.2 to J_ETH.TD_P",
-        "U_BP033_W5500.1 to J_ETH.TD_N",
+        "U_W5500.33 to net.APP_SPI_SCK",
+        "U_W5500.35 to net.APP_SPI_MOSI",
+        "U_W5500.34 to net.APP_SPI_MISO",
+        "U_W5500.32 to net.ETH_CS_N",
+        "U_W5500.37 to net.APP_RESET_N",
+        "U_W5500.36 to TP_W5500_INT_N.APP_W5500_INT_N",
+        "U_W5500.2 to J_ETH.TD_P",
+        "U_W5500.1 to J_ETH.TD_N",
         "C_ETH_RX_P.pin2 to J_ETH.RD_P",
         "C_ETH_RX_N.pin2 to J_ETH.RD_N"
       ])
