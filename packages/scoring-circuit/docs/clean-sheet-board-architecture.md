@@ -1,30 +1,72 @@
-# Integrated ESP32 prototype board
+# ESP32 firmware-development carrier
 
-`src/index.circuit.tsx` is the sole canonical P0 circuit entry point. It is no
-longer the former multi-assembly STM32/ESP32 connectivity model.
+## Purpose
 
-The architecture freezes:
+This board exists to let us write and test the scoring-machine firmware on real hardware. It is a bench prototype, not
+a production scoring box, a homologation sample, or a final cost-reduced design.
 
-- a provisional 360 mm by 200 mm, four-layer bench envelope;
-- one integrated schematic containing the power, acquisition, processor, Ethernet, display, IR, output, and direct-wire
-  sections;
-- the clean-sheet global rail, ground, shield, reset, and output-permit names;
-- explicit exclusion of STM32, processor isolation, SWD, optional persistence
-  and audio, permanent V5 telemetry, alternate input, and source selection; and
-- fail-closed release authority: schematic integration and PCB placement are complete, while routing and fabrication
-  authorization remain incomplete.
+The prototype succeeds when assembled hardware can:
 
-The canonical board now contains the integrated P0 power, phased weapon acquisition, ESP32, Ethernet, HUB75, IR,
-USB, output, and direct-wire blocks. The OpenPiste comparison corrected the acquisition model from seven independent
-ADC cells to named source/sink/sense phases with five protected sensed conductors and one shared ADC/reference chain.
-Board placement is complete. Routing is active and fabrication authority remains closed.
+- read the seven weapon and piste conductors through the custom scoring front end;
+- run the portable C17 scoring core on one ESP32-S3;
+- drive lamps, buzzer, a HUB75 display, and the encrypted-IR receiver;
+- communicate over Ethernet and USB diagnostics; and
+- survive normal bench mistakes well enough to continue firmware development.
 
-## Provisional fabrication stack
+Production certification, enclosure work, production test fixtures, long-term component sourcing, exact impedance
+coupons, redundant supervisors, and cost optimization are explicitly deferred.
 
-The current routing candidate is a 1.6 mm JLCPCB four-layer JLC3313 board with 2 oz outer copper, 1 oz inner copper,
-ENIG, `APP_GND` on layer 2, and power distribution on layer 3. High-current paths remain on broad outer-layer copper;
-USB and Ethernet pairs remain on one outer signal layer over the uninterrupted layer-2 ground plane.
+## Simplified hardware
 
-This is not order authority. JLCPCB's published impedance calculator supports 1 oz outer copper, not the proposed 2 oz
-signal layer. Final USB 90-ohm and Ethernet 100-ohm width, gap, solder-mask model, tolerance, and coupon geometry require
-the order-specific stack cross-section and supplier field-solver confirmation before manufacturing release.
+Only the scoring-specific electronics remain custom. Commodity functions use replaceable modules mounted on the
+carrier:
+
+| Function | Prototype choice | Carrier connection |
+| --- | --- | --- |
+| Processor | ESP32-S3-WROOM-1-N16R2 | Existing module footprint, native USB, EN, BOOT, UART, and GPIO |
+| Ethernet | WIZnet WIZ850io | Two 1x6 2.54 mm sockets carrying 3.3 V, ground, SPI, interrupt, and reset |
+| USB-C PD sink | SparkFun DEV-15801 STUSB4500 board | Headers for negotiated VBUS, ground, and optional I2C/status |
+| 20 V to 5 V conversion | Pololu D36V50F5 module | Header or soldered module for VIN, VOUT, ground, enable, and power-good |
+| Scoring acquisition | Existing phased source/sink/sense circuit | Custom muxes, protection, buffers, ADC, reference, and weapon landings |
+| Display | Existing reset-safe HUB75 buffers | Keyed HUB75 connector and fused 5 V branch |
+| Remote | TSOP38438 receiver | ESP32 RMT input with the existing small filter/protection network |
+| Outputs | Existing protected driver | Lamp and buzzer connector |
+
+The WIZ850io already contains the W5500, transformer, and RJ45, so the carrier does not reproduce its crystal,
+magnetics, termination, or PHY layout. The STUSB4500 board performs USB-C negotiation, and the Pololu module performs
+the high-current conversion. Their internal components are not part of the carrier BOM or carrier routing problem.
+
+References:
+
+- [WIZ850io product and pinout](https://wiznet.io/products/ethernet-modules/wiz850io)
+- [SparkFun STUSB4500 USB-C PD board](https://www.sparkfun.com/sparkfun-power-delivery-board-usb-c-qwiic.html)
+- [Pololu D36V50F5 regulator](https://www.pololu.com/product/4091/specs)
+
+## What is removed from this prototype
+
+- Discrete W5500, crystal, magnetics, termination, and Ethernet differential-pair layout.
+- Discrete USB-PD controller, CC network, eFuse, 20 V buck regulator, and their support networks.
+- External ESP32 supervisor and watchdog; the prototype uses ESP32 reset circuitry and its internal watchdogs.
+- Production telemetry, redundant testpoints, order-specific impedance coupons, and fabrication-evidence machinery.
+- Any requirement that the tscircuit autorouter complete the board. The schematic/netlist may remain code-generated,
+  but final placement and routing use a conventional PCB editor and its DRC.
+
+## What must remain
+
+- USB-C PD is the normal power input.
+- Ethernet, HUB75, encrypted IR, USB recovery, direct weapon-wire landings, and protected outputs remain available.
+- The portable C17 core is the only scoring authority.
+- The analog front end must support foil, epee, and sabre timing and resistance behavior. Public/open designs are prior
+  art only; bench measurements determine whether this prototype is suitable for further development.
+- The board must fail safe on reset: scoring excitation and primary outputs remain disabled until firmware explicitly
+  enables them.
+
+## Layout and order standard
+
+Use the smallest practical four-layer carrier after the three module outlines and the custom acquisition section are
+placed; target no more than 200 mm by 140 mm. Layer 2 is a continuous ground plane. Do not delay the prototype for
+production impedance or stack-up optimization: follow the module vendors' carrier guidance, run the PCB editor's DRC,
+review Gerbers and drill files, and order a small batch.
+
+The previous 250-component, 708-connection integrated board is retired as the prototype implementation. Its scoring
+front end, ESP32 allocation, HUB75, IR, output, and direct-landing work remain reusable evidence.
