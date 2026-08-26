@@ -6,7 +6,11 @@ export const prototypeCarrierArchitecture = {
     heightMm: 180,
     layerCount: 4
   },
-  purchasedModules: ["WIZ850io Ethernet", "DEV-15801 USB-C PD sink", "D36V50F5 5 V regulator"],
+  purchasedModules: [
+    "WIZ850io Ethernet socketed on the carrier",
+    "off-board DEV-15801 USB-C PD sink",
+    "off-board D36V50F5 5 V regulator"
+  ],
   customSections: [
     "ESP32-S3 and USB recovery",
     "seven-conductor scoring acquisition",

@@ -9,9 +9,9 @@ describe("prototype carrier architecture", () => {
 
   it("uses modules for commodity power and Ethernet", () => {
     expect(prototypeCarrierArchitecture.purchasedModules).toEqual([
-      "WIZ850io Ethernet",
-      "DEV-15801 USB-C PD sink",
-      "D36V50F5 5 V regulator"
+      "WIZ850io Ethernet socketed on the carrier",
+      "off-board DEV-15801 USB-C PD sink",
+      "off-board D36V50F5 5 V regulator"
     ])
   })
 

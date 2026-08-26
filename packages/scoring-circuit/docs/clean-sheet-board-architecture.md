@@ -18,15 +18,15 @@ coupons, redundant supervisors, and cost optimization are explicitly deferred.
 
 ## Simplified hardware
 
-Only the scoring-specific electronics remain custom. Commodity functions use replaceable modules mounted on the
-carrier:
+Only the scoring-specific electronics remain custom. Commodity functions use replaceable modules or a simple wired
+bench assembly:
 
 | Function | Prototype choice | Carrier connection |
 | --- | --- | --- |
 | Processor | ESP32-S3-WROOM-1-N16R2 | Existing module footprint, native USB, EN, BOOT, UART, and GPIO |
 | Ethernet | WIZnet WIZ850io | Two 1x6 2.54 mm sockets carrying 3.3 V, ground, SPI, interrupt, and reset |
-| USB-C PD sink | SparkFun DEV-15801 STUSB4500 board | Headers for negotiated VBUS, ground, and optional I2C/status |
-| 20 V to 5 V conversion | Pololu D36V50F5 module | Header or soldered module for VIN, VOUT, ground, enable, and power-good |
+| USB-C PD sink | SparkFun DEV-15801 STUSB4500 board | Off-board power assembly; USB-C is the normal system input |
+| 20 V to 5 V conversion | Pololu D36V50F5 module | Off-board power assembly feeding the carrier's fused 5 V/GND screw terminal |
 | Scoring acquisition | Existing phased source/sink/sense circuit | Custom muxes, protection, buffers, ADC, reference, and weapon landings |
 | Display | Existing reset-safe HUB75 buffers | Keyed HUB75 connector and fused 5 V branch |
 | Remote | TSOP38438 receiver | ESP32 RMT input with the existing small filter/protection network |
@@ -34,7 +34,8 @@ carrier:
 
 The WIZ850io already contains the W5500, transformer, and RJ45, so the carrier does not reproduce its crystal,
 magnetics, termination, or PHY layout. The STUSB4500 board performs USB-C negotiation, and the Pololu module performs
-the high-current conversion. Their internal components are not part of the carrier BOM or carrier routing problem.
+the high-current conversion. They are wired together off-board for the prototype, so neither their internal components
+nor their mechanical footprints are part of the carrier BOM or routing problem.
 
 References:
 
@@ -45,7 +46,7 @@ References:
 ## What is removed from this prototype
 
 - Discrete W5500, crystal, magnetics, termination, and Ethernet differential-pair layout.
-- Discrete USB-PD controller, CC network, eFuse, 20 V buck regulator, and their support networks.
+- Discrete USB-PD controller, eFuse, 20 V buck regulator, their support networks, and all 20 V carrier routing.
 - External ESP32 supervisor and watchdog; the prototype uses ESP32 reset circuitry and its internal watchdogs.
 - Production telemetry, redundant testpoints, order-specific impedance coupons, and fabrication-evidence machinery.
 - Any requirement that the tscircuit autorouter complete the board. The schematic/netlist may remain code-generated,
