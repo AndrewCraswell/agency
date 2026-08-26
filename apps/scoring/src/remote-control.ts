@@ -37,6 +37,7 @@ export const REMOTE_COMMAND_KEYS = [
   "score.clear.supervisor"
 ] as const
 export const REMOTE_PRESS_KINDS = ["direct", "modified", "held", "double"] as const
+/** `stm32-rejection` is a schema-v1 wire token for a scoring-core rejection. */
 export const REMOTE_COMMAND_REJECTION_REASONS = [
   "unauthenticated",
   "stale",
@@ -154,6 +155,7 @@ export type BoutWorkflowSnapshot = Readonly<{
   }>
   sourceCommandDisposition: "accepted" | "rejected"
   sourceCommandIdentity: SourceCommandIdentity
+  /** Schema-v1 wire field; it correlates a portable scoring-core record. */
   stm32RecordId: string | null
   timingConfigurationRevision: string
   weapon: Weapon
@@ -236,6 +238,7 @@ export type BoutStateEvent =
       resultingBoutState: BoutWorkflowSnapshot
       schemaVersion: typeof REMOTE_CONTROL_SCHEMA_VERSION
       sourceCommand: RemoteCommand
+      /** Schema-v1 wire field; it correlates a portable scoring-core record. */
       stm32RecordId: string | null
     }>
   | Readonly<{
@@ -258,7 +261,7 @@ const SUPERVISOR_COMMANDS = new Set<RemoteCommandKey>([
   "priority.assign.supervisor",
   "score.clear.supervisor"
 ])
-const STM32_CAUSES = new Set<BoutStateEventCause>([
+const SCORING_CORE_CAUSES = new Set<BoutStateEventCause>([
   "weapon.request.result",
   "scoring.rearm.result",
   "bout.reset.result"
@@ -587,7 +590,7 @@ export function isBoutStateEvent(value: unknown): value is BoutStateEvent {
       matches(value.resultingBoutState, value.sourceCommand) &&
       value.resultingBoutState.stm32RecordId === value.stm32RecordId &&
       (value.stm32RecordId === null || id(value.stm32RecordId)) &&
-      (!STM32_CAUSES.has(value.cause) || value.stm32RecordId !== null)
+      (!SCORING_CORE_CAUSES.has(value.cause) || value.stm32RecordId !== null)
     )
   return (
     value.disposition === "rejected" &&

@@ -3,10 +3,11 @@
  *
  * This module deliberately has no clock, scorer, transport, or decision-record
  * dependency. It accepts one active application-domain controller at a time and
- * turns the few requests that need scoring work into pending STM32 requests.
+ * turns the few requests that need scoring work into pending scoring-core requests.
  */
 
 import type { RemoteCommand } from "./remote-control.js"
+import { isRemoteIdentifier } from "./remote-identifier.js"
 
 export type ControllerKind = "paired-handheld" | "local-application" | "tournament-controller"
 
@@ -21,7 +22,7 @@ export type ControllerIdentity = Readonly<{
 export type AuthorityState = Readonly<{
   activeController: ControllerIdentity | null
   authorityRevision: number
-  pendingStm32RequestIds: readonly string[]
+  pendingScoringCoreRequestIds: readonly string[]
 }>
 
 export type AuthorityRequest =
@@ -57,7 +58,11 @@ export type AuthorityRequest =
       type: "authority-transfer-request"
     }>
 
-export type Stm32AuthorityResponse = Readonly<{
+/**
+ * The external authority token remains `stm32-scoring` for schema-v1 wire
+ * compatibility. It identifies the portable scoring core, not a processor.
+ */
+export type ScoringCoreAuthorityResponse = Readonly<{
   authority: "stm32-scoring"
   requestId: string
   result: "accepted" | "rejected"
@@ -71,10 +76,10 @@ export type AuthorityRejectionReason =
   | "malformed"
   | "no-active-controller"
   | "not-active-controller"
-  | "pending-stm32-request"
+  | "pending-scoring-core-request"
   | "request-history-full"
-  | "stm32-request-capacity"
-  | "unknown-stm32-request"
+  | "scoring-core-request-capacity"
+  | "unknown-scoring-core-request"
 
 export type AuthorityReceipt =
   | Readonly<{
@@ -83,12 +88,12 @@ export type AuthorityReceipt =
       state: AuthorityState
     }>
   | Readonly<{
-      disposition: "stm32-pending"
+      disposition: "scoring-core-pending"
       requestId: string
       state: AuthorityState
     }>
   | Readonly<{
-      disposition: "stm32-accepted" | "stm32-rejected"
+      disposition: "scoring-core-accepted" | "scoring-core-rejected"
       requestId: string
       state: AuthorityState
     }>
@@ -101,19 +106,18 @@ export type AuthorityReceipt =
 
 export type RemoteControlAuthority = Readonly<{
   receive: (request: unknown) => AuthorityReceipt
-  receiveStm32Response: (response: unknown) => AuthorityReceipt
+  receiveScoringCoreResponse: (response: unknown) => AuthorityReceipt
   readonly state: AuthorityState
 }>
 
 export type RemoteControlAuthorityOptions = Readonly<{
   activeController: ControllerIdentity | null
   authorityRevision: number
-  maxPendingStm32Requests?: number
+  maxPendingScoringCoreRequests?: number
   maxRememberedRequestIds?: number
 }>
 
-const MAX_IDENTIFIER_LENGTH = 128
-const MAX_PENDING_STM32_REQUESTS = 32
+const MAX_PENDING_SCORING_CORE_REQUESTS = 32
 const MAX_REMEMBERED_REQUEST_IDS = 256
 
 /** Verifies all own descriptors before a parser reads even a discriminant. */
@@ -142,12 +146,7 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[])
 }
 
 function assertIdentifier(value: unknown, name: string): asserts value is string {
-  if (
-    typeof value !== "string" ||
-    value.length === 0 ||
-    value.length > MAX_IDENTIFIER_LENGTH ||
-    !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(value)
-  ) {
+  if (!isRemoteIdentifier(value)) {
     throw new TypeError(`${name} must be a bounded opaque identifier`)
   }
 }
@@ -259,7 +258,7 @@ export function parseAuthorityRequest(value: unknown): AuthorityRequest {
 }
 
 /**
- * Maps only the workflow-approved weapon action from RC-02 into an STM32
+ * Maps only the workflow-approved weapon action from RC-02 into a scoring-core
  * request. The caller must run the normal bout-workflow guards first; this
  * function cannot turn the first standalone OPT press into a weapon change.
  */
@@ -280,13 +279,13 @@ export function mapApprovedWeaponCommand(command: RemoteCommand): AuthorityReque
   }
 }
 
-/** Strictly parses a result emitted by the STM32 scoring authority. */
-export function parseStm32AuthorityResponse(value: unknown): Stm32AuthorityResponse {
+/** Strictly parses a result emitted by the portable scoring authority. */
+export function parseScoringCoreAuthorityResponse(value: unknown): ScoringCoreAuthorityResponse {
   if (!isStrictPlainRecord(value) || !hasExactlyKeys(value, ["authority", "requestId", "result"])) {
-    throw new TypeError("STM32 authority responses have an invalid shape")
+    throw new TypeError("Scoring-core authority responses have an invalid shape")
   }
   if (value.authority !== "stm32-scoring" || (value.result !== "accepted" && value.result !== "rejected")) {
-    throw new TypeError("STM32 authority responses must identify a supported authority and result")
+    throw new TypeError("Scoring-core authority responses must identify a supported authority and result")
   }
   assertIdentifier(value.requestId, "Request id")
 
@@ -300,12 +299,12 @@ function sameController(left: ControllerIdentity, right: ControllerIdentity): bo
 function copyState(
   activeController: ControllerIdentity | null,
   authorityRevision: number,
-  pendingStm32RequestIds: readonly string[]
+  pendingScoringCoreRequestIds: readonly string[]
 ): AuthorityState {
   return {
     activeController: activeController === null ? null : { ...activeController },
     authorityRevision,
-    pendingStm32RequestIds: [...pendingStm32RequestIds]
+    pendingScoringCoreRequestIds: [...pendingScoringCoreRequestIds]
   }
 }
 
@@ -330,7 +329,7 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
     !hasOnlyKeys(options, [
       "activeController",
       "authorityRevision",
-      "maxPendingStm32Requests",
+      "maxPendingScoringCoreRequests",
       "maxRememberedRequestIds"
     ]) ||
     !Object.hasOwn(options, "activeController") ||
@@ -342,9 +341,9 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
   const activeController = options.activeController === null ? null : parseControllerIdentity(options.activeController)
   assertRevision(options.authorityRevision)
   const maxPending = assertPositiveBound(
-    options.maxPendingStm32Requests,
-    MAX_PENDING_STM32_REQUESTS,
-    "Maximum pending STM32 requests"
+    options.maxPendingScoringCoreRequests,
+    MAX_PENDING_SCORING_CORE_REQUESTS,
+    "Maximum pending scoring-core requests"
   )
   const maxRemembered = assertPositiveBound(
     options.maxRememberedRequestIds,
@@ -353,11 +352,11 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
   )
   let currentController = activeController
   let currentRevision = options.authorityRevision
-  const pendingStm32RequestIds: string[] = []
+  const pendingScoringCoreRequestIds: string[] = []
   const rememberedRequestIds = new Set<string>()
 
   function state(): AuthorityState {
-    return copyState(currentController, currentRevision, pendingStm32RequestIds)
+    return copyState(currentController, currentRevision, pendingScoringCoreRequestIds)
   }
 
   function reject(reason: AuthorityRejectionReason, requestId: string | null): AuthorityReceipt {
@@ -421,8 +420,8 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
       if (request.controller.permission !== "supervisor") {
         return reject("controller-permission-not-permitted", request.requestId)
       }
-      if (pendingStm32RequestIds.length > 0) {
-        return reject("pending-stm32-request", request.requestId)
+      if (pendingScoringCoreRequestIds.length > 0) {
+        return reject("pending-scoring-core-request", request.requestId)
       }
       if (sameController(request.controller, request.targetController)) {
         return reject("controller-kind-not-permitted", request.requestId)
@@ -446,12 +445,12 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
       case "scoring-reset-request":
       case "weapon-change-request":
       case "bout-reset-request":
-        if (pendingStm32RequestIds.length === maxPending) {
-          return reject("stm32-request-capacity", request.requestId)
+        if (pendingScoringCoreRequestIds.length === maxPending) {
+          return reject("scoring-core-request-capacity", request.requestId)
         }
         remember(request.requestId)
-        pendingStm32RequestIds.push(request.requestId)
-        return { disposition: "stm32-pending", requestId: request.requestId, state: state() }
+        pendingScoringCoreRequestIds.push(request.requestId)
+        return { disposition: "scoring-core-pending", requestId: request.requestId, state: state() }
       /* v8 ignore start -- every AuthorityRequest variant is handled above. */
       default:
         return reject("malformed", null)
@@ -459,21 +458,21 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
     }
   }
 
-  function receiveStm32Response(rawResponse: unknown): AuthorityReceipt {
-    let response: Stm32AuthorityResponse
+  function receiveScoringCoreResponse(rawResponse: unknown): AuthorityReceipt {
+    let response: ScoringCoreAuthorityResponse
     try {
-      response = parseStm32AuthorityResponse(rawResponse)
+      response = parseScoringCoreAuthorityResponse(rawResponse)
     } catch {
       return reject("malformed", null)
     }
 
-    const pendingIndex = pendingStm32RequestIds.indexOf(response.requestId)
+    const pendingIndex = pendingScoringCoreRequestIds.indexOf(response.requestId)
     if (pendingIndex === -1) {
-      return reject("unknown-stm32-request", response.requestId)
+      return reject("unknown-scoring-core-request", response.requestId)
     }
-    pendingStm32RequestIds.splice(pendingIndex, 1)
+    pendingScoringCoreRequestIds.splice(pendingIndex, 1)
     return {
-      disposition: response.result === "accepted" ? "stm32-accepted" : "stm32-rejected",
+      disposition: response.result === "accepted" ? "scoring-core-accepted" : "scoring-core-rejected",
       requestId: response.requestId,
       state: state()
     }
@@ -481,7 +480,7 @@ export function createRemoteControlAuthority(options: RemoteControlAuthorityOpti
 
   return {
     receive,
-    receiveStm32Response,
+    receiveScoringCoreResponse,
     get state() {
       return state()
     }

@@ -3,7 +3,7 @@ import {
   createRemoteControlAuthority,
   mapApprovedWeaponCommand,
   parseAuthorityRequest,
-  parseStm32AuthorityResponse,
+  parseScoringCoreAuthorityResponse,
   type ControllerIdentity
 } from "./remote-control-authority.js"
 import { parseRemoteCommand } from "./remote-control.js"
@@ -43,12 +43,12 @@ function workflowRequest(requestId: string, controller: ControllerIdentity = han
 }
 
 describe("RC-01 remote-control authority contract", () => {
-  it("keeps the countdown workflow separate from STM32 scoring work", () => {
+  it("keeps the countdown workflow separate from scoring-core work", () => {
     const authority = gate()
 
     expect(authority.receive(workflowRequest("clock-toggle"))).toMatchObject({
       disposition: "application-applied",
-      state: { activeController: handheldReferee, authorityRevision: 7, pendingStm32RequestIds: [] }
+      state: { activeController: handheldReferee, authorityRevision: 7, pendingScoringCoreRequestIds: [] }
     })
     expect(
       authority.receive({
@@ -57,13 +57,29 @@ describe("RC-01 remote-control authority contract", () => {
         requestId: "rearm",
         type: "scoring-rearm-request"
       })
-    ).toMatchObject({ disposition: "stm32-pending", state: { pendingStm32RequestIds: ["rearm"] } })
+    ).toMatchObject({ disposition: "scoring-core-pending", state: { pendingScoringCoreRequestIds: ["rearm"] } })
     expect(
-      authority.receiveStm32Response({ authority: "stm32-scoring", requestId: "rearm", result: "accepted" })
+      authority.receiveScoringCoreResponse({ authority: "stm32-scoring", requestId: "rearm", result: "accepted" })
     ).toMatchObject({
-      disposition: "stm32-accepted",
-      state: { pendingStm32RequestIds: [] }
+      disposition: "scoring-core-accepted",
+      state: { pendingScoringCoreRequestIds: [] }
     })
+  })
+
+  it("uses the remote command identity policy for controller and request identifiers", () => {
+    const validIdentifiers = ["a", "a".repeat(64), "Remote_Command.1:pair"]
+    const invalidIdentifiers = ["", "a".repeat(65), "remote id", " remote-1", "remote/1", "épee-1"]
+
+    for (const identifier of validIdentifiers) {
+      const controller = { ...handheldReferee, controllerId: identifier }
+      expect(gate(controller).state.activeController).toEqual(controller)
+      expect(() => parseAuthorityRequest(workflowRequest(identifier, controller))).not.toThrow()
+    }
+    for (const identifier of invalidIdentifiers) {
+      const controller = { ...handheldReferee, controllerId: identifier }
+      expect(() => gate(controller)).toThrow(TypeError)
+      expect(() => parseAuthorityRequest(workflowRequest(identifier, controller))).toThrow(TypeError)
+    }
   })
 
   it("allows exactly one current controller and transfers ownership atomically", () => {
@@ -109,7 +125,41 @@ describe("RC-01 remote-control authority contract", () => {
     })
   })
 
-  it("does not permit transfer while a scoring transition awaits the STM32", () => {
+  it("rejects an exact pre-transfer replay as a duplicate without changing authority state", () => {
+    const authority = gate(applicationSupervisor)
+    const acceptedRequest = workflowRequest("pre-transfer-workflow", applicationSupervisor, 7)
+
+    expect(authority.receive(acceptedRequest)).toMatchObject({ disposition: "application-applied" })
+    expect(
+      authority.receive({
+        controller: applicationSupervisor,
+        expectedAuthorityRevision: 7,
+        requestId: "transfer-to-tournament",
+        targetController: tournamentSupervisor,
+        type: "authority-transfer-request"
+      })
+    ).toMatchObject({
+      disposition: "application-applied",
+      state: { activeController: tournamentSupervisor, authorityRevision: 8, pendingScoringCoreRequestIds: [] }
+    })
+
+    const afterTransfer = authority.state
+    expect(authority.receive(acceptedRequest)).toEqual({
+      disposition: "rejected",
+      reason: "duplicate-request",
+      requestId: "pre-transfer-workflow",
+      state: afterTransfer
+    })
+    expect(authority.state).toEqual(afterTransfer)
+    expect(authority.receive(workflowRequest("new-stale-old-controller", applicationSupervisor, 7))).toMatchObject({
+      disposition: "rejected",
+      reason: "authority-revision-mismatch",
+      state: afterTransfer
+    })
+    expect(authority.state).toEqual(afterTransfer)
+  })
+
+  it("does not permit transfer while a scoring transition awaits the scoring core", () => {
     const authority = gate(applicationSupervisor)
     authority.receive({
       controller: applicationSupervisor,
@@ -126,15 +176,15 @@ describe("RC-01 remote-control authority contract", () => {
         targetController: tournamentSupervisor,
         type: "authority-transfer-request"
       })
-    ).toMatchObject({ disposition: "rejected", reason: "pending-stm32-request" })
+    ).toMatchObject({ disposition: "rejected", reason: "pending-scoring-core-request" })
     expect(
-      authority.receiveStm32Response({ authority: "stm32-scoring", requestId: "new-bout", result: "rejected" })
+      authority.receiveScoringCoreResponse({ authority: "stm32-scoring", requestId: "new-bout", result: "rejected" })
     ).toMatchObject({
-      disposition: "stm32-rejected"
+      disposition: "scoring-core-rejected"
     })
   })
 
-  it("requires supervisor permission before scoring reset or bout transitions become STM32 requests", () => {
+  it("requires supervisor permission before scoring reset or bout transitions become scoring-core requests", () => {
     const refereeAuthority = gate(handheldReferee)
     expect(
       refereeAuthority.receive({
@@ -154,18 +204,18 @@ describe("RC-01 remote-control authority contract", () => {
           requestId: `supervisor-${type}`,
           type
         })
-      ).toMatchObject({ disposition: "stm32-pending" })
+      ).toMatchObject({ disposition: "scoring-core-pending" })
       expect(
-        authority.receiveStm32Response({
+        authority.receiveScoringCoreResponse({
           authority: "stm32-scoring",
           requestId: `supervisor-${type}`,
           result: "rejected"
         })
-      ).toMatchObject({ disposition: "stm32-rejected" })
+      ).toMatchObject({ disposition: "scoring-core-rejected" })
     }
   })
 
-  it("maps a parsed referee weapon.showOrAdvance command to a pending STM32 request", () => {
+  it("maps a parsed referee weapon.showOrAdvance command to a pending scoring-core request", () => {
     const command = parseRemoteCommand({
       apparatusId: "apparatus-01",
       authority: { ...handheldReferee, authorityRevision: 7 },
@@ -186,13 +236,17 @@ describe("RC-01 remote-control authority contract", () => {
       requestId: "weapon-advance-01",
       type: "weapon-change-request"
     })
-    expect(authority.receive(request)).toMatchObject({ disposition: "stm32-pending" })
+    expect(authority.receive(request)).toMatchObject({ disposition: "scoring-core-pending" })
     expect(
-      authority.receiveStm32Response({ authority: "stm32-scoring", requestId: "weapon-advance-01", result: "accepted" })
-    ).toMatchObject({ disposition: "stm32-accepted" })
+      authority.receiveScoringCoreResponse({
+        authority: "stm32-scoring",
+        requestId: "weapon-advance-01",
+        result: "accepted"
+      })
+    ).toMatchObject({ disposition: "scoring-core-accepted" })
   })
 
-  it("rejects malformed, stale, replayed, unauthorized, and forged STM32 inputs without changing state", () => {
+  it("rejects malformed, stale, replayed, unauthorized, and forged scoring-core inputs without changing state", () => {
     const authority = gate()
     const before = authority.state
     expect(authority.receive({ ...workflowRequest("extra"), unexpected: true })).toMatchObject({
@@ -213,15 +267,15 @@ describe("RC-01 remote-control authority contract", () => {
       reason: "authority-revision-mismatch"
     })
     expect(
-      authority.receiveStm32Response({ authority: "application", requestId: "accepted-once", result: "accepted" })
+      authority.receiveScoringCoreResponse({ authority: "application", requestId: "accepted-once", result: "accepted" })
     ).toMatchObject({
       disposition: "rejected",
       reason: "malformed"
     })
-    expect(authority.state).toEqual({ ...before, pendingStm32RequestIds: [] })
+    expect(authority.state).toEqual({ ...before, pendingScoringCoreRequestIds: [] })
   })
 
-  it("keeps snapshot load off the handheld and limits STM32 replies to known pending requests", () => {
+  it("keeps snapshot load off the handheld and limits scoring-core replies to known pending requests", () => {
     const authority = gate(handheldSupervisor)
     expect(
       authority.receive({
@@ -248,33 +302,33 @@ describe("RC-01 remote-control authority contract", () => {
       })
     ).toMatchObject({ disposition: "application-applied" })
     expect(
-      authority.receiveStm32Response({ authority: "stm32-scoring", requestId: "invented", result: "accepted" })
+      authority.receiveScoringCoreResponse({ authority: "stm32-scoring", requestId: "invented", result: "accepted" })
     ).toMatchObject({
       disposition: "rejected",
-      reason: "unknown-stm32-request"
+      reason: "unknown-scoring-core-request"
     })
   })
 
-  it("fails closed at the bounded STM32 request queue without consuming the rejected request", () => {
+  it("fails closed at the bounded scoring-core request queue without consuming the rejected request", () => {
     const authority = createRemoteControlAuthority({
       activeController: handheldReferee,
       authorityRevision: 7,
-      maxPendingStm32Requests: 1
+      maxPendingScoringCoreRequests: 1
     })
     expect(authority.receive({ ...workflowRequest("first-rearm"), type: "scoring-rearm-request" })).toMatchObject({
-      disposition: "stm32-pending"
+      disposition: "scoring-core-pending"
     })
     expect(authority.receive({ ...workflowRequest("second-rearm"), type: "scoring-rearm-request" })).toMatchObject({
       disposition: "rejected",
-      reason: "stm32-request-capacity"
+      reason: "scoring-core-request-capacity"
     })
     expect(
-      authority.receiveStm32Response({ authority: "stm32-scoring", requestId: "first-rearm", result: "rejected" })
+      authority.receiveScoringCoreResponse({ authority: "stm32-scoring", requestId: "first-rearm", result: "rejected" })
     ).toMatchObject({
-      disposition: "stm32-rejected"
+      disposition: "scoring-core-rejected"
     })
     expect(authority.receive({ ...workflowRequest("second-rearm"), type: "scoring-rearm-request" })).toMatchObject({
-      disposition: "stm32-pending"
+      disposition: "scoring-core-pending"
     })
   })
 
@@ -294,7 +348,12 @@ describe("RC-01 remote-control authority contract", () => {
       expect(() => parseAuthorityRequest(value)).toThrow(TypeError)
     }
     expect(() =>
-      parseStm32AuthorityResponse({ authority: "stm32-scoring", requestId: "answer", result: "accepted", extra: true })
+      parseScoringCoreAuthorityResponse({
+        authority: "stm32-scoring",
+        requestId: "answer",
+        result: "accepted",
+        extra: true
+      })
     ).toThrow(TypeError)
   })
 })

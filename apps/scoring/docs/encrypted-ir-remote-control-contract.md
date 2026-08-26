@@ -9,13 +9,12 @@
 The product includes a handheld infrared referee remote and an apparatus-side IR receiver. Every operational IR
 command must be encrypted, authenticated, fresh, attributable to a paired remote, and accepted at most once. There is
 no plaintext operational mode, shared production default key, unauthenticated compatibility fallback, or command path
-that can create or alter an STM32 scoring decision.
+that can create or alter a portable scoring-core decision.
 
 This is a pre-prototype requirement. The active bench PCB may not be released for fabrication until the receiver
 architecture, ESP32 interface, optical placement, power/reset behavior, protocol, key-provisioning boundary, and
-manufacturing tests have converged. The existing ESP32 allocation has no spare raw GPIO, so the design must explicitly
-reallocate a reset-safe input or select a bounded receiver/decoder peripheral. A generic I2C GPIO expander is not
-credited with preserving IR pulse timing without measured evidence.
+manufacturing tests have converged. The clean-sheet allocation reserves ESP32 GPIO35/RMT RX for the apparatus-side IR
+receiver; a generic I2C GPIO expander is not credited with preserving IR pulse timing without measured evidence.
 
 The supplied Skewered Fencing remote photograph and the manufacturer's public manual were reviewed only to identify
 the required operator actions. The product must use its own industrial design, labels, command identifiers, encoding,
@@ -27,7 +26,7 @@ Functional reference evidence reviewed on 2026-08-23:
 - user-supplied photograph of the handheld control face;
 - [Skewered Fencing scoring-box manual](https://skewered-fencing.com/scoring-box-manual), including its interactive
   short/held button descriptions;
-- the official local [Favero FA-15 user manual](specifications/manuals/favero-fa15-user-manual-en.pdf), especially the remote-control
+- the official local [Favero FA-15 user manual](favero-fa15-user-manual-en.pdf), especially the remote-control
   descriptions on pp. 8-10 and pairing behavior on p. 14; and
 - the official [Favero FA-07 user manual](https://www.favero.com/get_file.php?id=160&lang=_en), especially its guarded
   remote mode and tournament-network bout-loading behavior.
@@ -65,22 +64,25 @@ SEMI interpretation. If it does not, an encrypted radio remote remains an additi
 
 - The ESP32 application domain owns IR reception, pairing, command authentication, operator controls, and the future
   authoritative bout-workflow service.
-- The STM32 remains the sole authority for electrical acquisition, hit qualification, lockout, scoring timestamps,
-  primary lamps, and the primary buzzer.
+- The portable C17 scoring core remains the sole authority for electrical acquisition, hit qualification, lockout,
+  scoring timestamps, primary lamps, and the primary buzzer. The ESP32 and remote are adapters, not scoring authorities.
 - A remote command is an operator intent. It changes state only after the owning state machine validates the current
   mode, authorization, bounds, and transition.
 - Exactly one controller holds write authority for a bout at a time. The paired handheld, local application, and
   tournament controller may all be known, but authority acquisition, transfer, expiry, and forced recovery are explicit
   applied events. A read-only client cannot become a writer merely by sending a valid command.
-- A command that requires an STM32 transition, including `bout-reset` or weapon selection, remains a request until the
-  STM32 accepts it. The ESP32 cannot infer acceptance from transmission or link delivery.
+- A command that requires a scoring-core transition, including `bout-reset` or weapon selection, remains a request until
+  the scoring core accepts it. The ESP32 cannot infer acceptance from transmission or link delivery.
 - Remote failure, IR jamming, ESP32 reset, or application unavailability cannot fabricate a touch, clear a primary
-  indication, reset the STM32 automatically, or prevent an otherwise healthy STM32 from scoring.
+  indication, reset the scoring core automatically, or prevent an otherwise healthy scoring core from scoring.
 
 The match-clock and full bout-state ownership decision is recorded in the
-[remote-control authority ADR](remote-control-authority-adr.md). It defines how an accepted referee command, STM32
-scoring record, countdown-clock transition, primary output, and replay event are correlated without treating the STM32
+[remote-control authority ADR](remote-control-authority-adr.md). It defines how an accepted referee command, scoring-core
+record, countdown-clock transition, primary output, and replay event are correlated without treating the scoring-core
 scoring timestamp as a countdown clock.
+
+Schema-v1 keeps `authority: "stm32-scoring"`, `stm32RecordId`, `stm32-*-result`, and `stm32-rejection` as exact wire
+tokens. They identify scoring-core correlation, not a processor, and must not change without a reviewed protocol version.
 
 ## Required operator actions
 
@@ -117,7 +119,7 @@ Required modified or guarded actions are:
 - `OPT` plus `Pause` starts the configured medical-intervention clock, with the FA-15-compatible preset of five minutes
   retained until the applicable rules/compliance review approves another value;
 - `OPT` plus `Back` atomically swaps every side-owned workflow value, including scores, penalty cards, P-cards, and
-  priority, without changing immutable STM32 records;
+  priority, without changing immutable scoring-core records;
 - `OPT` plus `Rearm` advances through the approved auto-rearm settings, initially manual, one, three, and five seconds;
 - `Reset Cards` clears penalty-card and P-card presentation without changing score, clock, match/period, priority, or
   `boutId`;
@@ -131,7 +133,7 @@ Required modified or guarded actions are:
 `New Bout/Reset All` is one atomic supervisor-owned operation. On acceptance it creates a new `boutId`, sets scores to
 zero, clears penalty cards, P-cards, priority, breaks, medical state, passivity state, review position, and reversible
 workflow history, sets the competition format to its initial match/period, loads the configured starting time, and asks
-the STM32 to clear candidates, lockout, and primary indications. It is not complete until the STM32 accepts its owned
+the scoring core to clear candidates, lockout, and primary indications. It is not complete until the scoring core accepts its owned
 transition. A rejection leaves the complete pre-command state unchanged.
 
 Loading a snapshot is a separate authenticated application/tournament-controller operation, not a handheld shortcut.
@@ -147,7 +149,7 @@ The implementation must separate three artifacts:
 1. `RemoteCommand`: authenticated operator intent received from IR.
 2. `BoutStateEvent`: the accepted or rejected application/supervisor transition, with ordered identity and the complete
    resulting authoritative bout state when accepted.
-3. `DecisionRecord`: an immutable STM32 scoring or diagnostic result. Remote input never creates one.
+3. `DecisionRecord`: an immutable scoring-core scoring or diagnostic result. Remote input never creates one.
 
 The bout snapshot must distinguish absent data from zero and contain at least:
 
@@ -158,7 +160,7 @@ The bout snapshot must distinguish absent data from zero and contain at least:
 - explicitly typed competition match/period value, priority, medical intervention state, passivity state/time,
   auto-rearm setting, and last-scored side when known;
 - active controller identity, controller kind, and authority revision; and
-- source command identity, applied/rejected disposition, and correlation to an STM32 record when applicable.
+- source command identity, applied/rejected disposition, and correlation to a scoring-core record when applicable.
 
 Required applied causes include new bout, loaded snapshot, score increment/decrement/clear, clock start/stop/set/adjust,
 break start, medical start/stop, overtime start, match/period change, priority assignment/clear, penalty-card award,
@@ -166,11 +168,29 @@ P-card award, manual/automatic rearm request result, side swap, reset cards, wea
 authority transfer, sleep request result, bout reset result, and command rejection. Rejection reasons must include at
 least unauthenticated, stale, replayed, wrong apparatus, wrong controller authority, unsupported command, invalid mode,
 clock running, out of bounds, incomplete snapshot, incompatible snapshot revision, entry timeout, owner unavailable,
-and STM32 rejection.
+and scoring-core rejection.
 
 Destructive configuration, weapon, new-bout, snapshot-load, clock-reset, and score-clear operations are rejected while
 the bout clock is running. Authentication success never overrides state-machine guards. Undo creates a new applied
-event restoring a prior reversible snapshot; it never deletes or rewrites history and cannot undo an STM32 decision.
+event restoring a prior reversible snapshot; it never deletes or rewrites history and cannot undo a scoring-core decision.
+
+### RC-10 compensating undo and writer arbitration
+
+The reducer retains a bounded stack of pre-transition snapshots only for accepted application-owned referee workflow
+actions. `workflow.undo` consumes the latest snapshot and appends its own `workflow.undo` applied event. The original
+event remains in the ordered event record. The compensating snapshot restores workflow fields, while the current
+`boutId`, bout revision, active controller, authority revision, command provenance, event revision, and scoring-core
+correlation remain owned by the current event. Scoring-core request results, authority transfer, snapshot load, and new-bout
+completion never enter that reversible stack; an accepted scoring-core result, snapshot load, and accepted new bout clear it.
+With no reversible action, undo is rejected without changing the authoritative bout snapshot.
+
+`controller.authority.transfer` is an accepted application event only after the current active controller has passed
+normal command authentication and exact authority matching. The command must be from a local-application or
+tournament-controller supervisor, as fixed by the canonical command schema, and its target must be a distinct known
+controller identity. The reducer derives the next authority revision from the active snapshot and does not trust the
+revision supplied in the target payload. A transfer never enters undo history. After it applies, every handheld,
+application, or tournament command must name that exact target identity and derived revision; all other contenders are
+rejected without mutation. Pending scoring-core work blocks transfer under the normal pending-workflow guard.
 
 ## Encrypted IR protocol requirements
 
@@ -191,7 +211,7 @@ release. The protocol must provide:
 - cryptographic agility through an explicit suite/version change, never algorithm guessing or silent downgrade.
 
 IR is line-of-sight and can be blocked or jammed. Encryption does not provide availability. Loss or interference must
-leave current bout/scoring state unchanged and expose a bounded diagnostic without blocking STM32 scoring.
+leave current bout/scoring state unchanged and expose a bounded diagnostic without blocking scoring-core scoring.
 
 The minimum design is a one-way optical command link with a persistent logical pairing, not a continuously connected
 session. If the selected hardware adds a return channel, its acknowledgement, timeout, retry, and security semantics
@@ -271,9 +291,9 @@ and unrestricted service authorization remain separated from ordinary assembly a
   rejected without state change.
 - Clock-running guards reject destructive operations while start/stop and explicitly allowed score/card operations
   remain deterministic.
-- Reset Cards, Reset All/New Bout, STM32 rearm/reset, processor reset, clock reset/load, loaded snapshot, and undo remain
+- Reset Cards, Reset All/New Bout, scoring-core rearm/reset, processor reset, clock reset/load, loaded snapshot, and undo remain
   distinct.
-- IR loss, continuous noise, ESP32 reset, receiver failure, and link loss never create a touch or clear STM32 outputs.
+- IR loss, continuous noise, ESP32 reset, receiver failure, and link loss never create a touch or clear scoring-core outputs.
 - Power loss during counter persistence, pairing, applied-event persistence, and firmware update recovers without nonce
   reuse, replay acceptance, duplicated state transition, or an unrecoverable universal-key fallback.
 
@@ -285,19 +305,19 @@ and unrestricted service authorization remain separated from ordinary assembly a
 
 | ID | Status | Latest state | Work unit | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| `RC-01` | done | Delivered: Approve match-clock, bout-state, scoring-rearm, and controller-authority ADR. | Approve match-clock, bout-state, scoring-rearm, and controller-authority ADR. | M0-04, M0-05, M0-10 | Every command and applied event has one owner; countdown and scoring time remain separate; handheld/app/tournament write authority and rearm/reset boundaries are unambiguous. |
-| `RC-02` | blocked | Blocked: Versioned schemas and adversarial tests cover all 32 command keys, but the acceptance-required immutable golden fixture set is missing. | Freeze remote-command, complete bout snapshot, controller-authority, and applied-event schemas. | `RC-01` | Versioned schemas and golden fixtures cover every command key in the button lookup, new bout, snapshot load, empty/invalid-state rejection, and authority transfer. |
+| `RC-01` | done | Delivered and root-approved authority ADR plus exact replay protection. Regression commit `6b61e46` proves a previously accepted request remains duplicate after controller ownership/revision transfer, leaves the complete authority state unchanged, and keeps a new old-controller request subject to revision mismatch; 11 focused tests plus app types, lint, and format pass. | Approve match-clock, bout-state, scoring-rearm, and controller-authority ADR. | M0-04, M0-05, M0-10 | Every command and applied event has one owner; countdown and scoring time remain separate; handheld/app/tournament write authority and rearm/reset boundaries are unambiguous. |
+| `RC-02` | done | Delivered and root-approved: versioned schemas plus a deeply frozen handwritten golden set cover all 32 commands, complete snapshots, authority transfer, applied/rejected events, empty/invalid state, bounded identities, canonical digest, and adversarial shape drift without importing RC-03 crypto fixtures. | Freeze remote-command, complete bout snapshot, controller-authority, and applied-event schemas. | `RC-01` | Versioned schemas and golden fixtures cover every command key in the button lookup, new bout, snapshot load, empty/invalid-state rejection, and authority transfer. |
 | `RC-03` | done | Delivered: root-approved AES-256-GCM wire profile, pairing/key-custody boundary, anti-replay/counter contract, canonical AAD codec, NIST known-answer and mutation gates, bounded ingress/replay state, and no-fallback rules; target adapters remain separately denied under `RC-13` through `RC-15`. | Select encrypted IR protocol, pairing, anti-replay, counter persistence, and key custody. | `RC-01` | Independent security review approves the suite, threat response, provisioning boundary, rotation/revocation, reset recovery, and no-fallback rules. |
 | `RC-04` | blocked | Root-approved partial hardware selection freezes the certified MCU module, 32-key matrix, IR emitter/driver, protected charging-only USB-C sink, fail-closed temperature inhibit, cell protection, 3.3 V rail, and headerless debug target. Closure remains blocked by BP-126, approved labels/ergonomics, released footprints/RF layout, pack/enclosure design, and physical range, battery, latency, thermal, reset, flood, and eye-safety evidence. Apparatus USB-C PD remains unchanged. | Select handheld electronics, button matrix, optical path, power system, and apparatus receiver architecture. | `RC-03`, BP-126 | Approved labels and ergonomics, exact parts/interfaces, at least 20 m frontal range target, 300-hour battery target, latency target, reset/fault behavior, and test access are ready for schematic and industrial design. |
-| `RC-05` | done | Delivered: Strict immutable bout reducer with complete fresh/load/new-bout invariants, authority/revision guards, correlated STM32 reset completion, bounded deduplication, and malformed-input rejection. | Implement the pure authoritative bout-workflow reducer and initialization invariants. | `RC-01`, `RC-02` | Fresh bout, new bout, complete snapshot load, incomplete-snapshot rejection, and every transition always produce a complete valid state with no empty score or timer representation. |
+| `RC-05` | done | Delivered: Strict immutable bout reducer with complete fresh/load/new-bout invariants, authority/revision guards, correlated scoring-core reset completion, bounded deduplication, and malformed-input rejection. | Implement the pure authoritative bout-workflow reducer and initialization invariants. | `RC-01`, `RC-02` | Fresh bout, new bout, complete snapshot load, incomplete-snapshot rejection, and every transition always produce a complete valid state with no empty score or timer representation. |
 | `RC-06` | done | Delivered: Direct score and clock operations with safe integer/floor bounds, stopped-clock guards, final-ten-second precision, preserved bout duration across breaks, passivity coupling, and non-evicting command identity. | Implement direct score, Start/Stop, load-time, final-ten-second correction, and one-minute-break commands. | `RC-05` | Symmetric boundary tests cover zero floors, stopped-clock guards, normal/final-ten-second increments, passivity-clock coupling, configured-time absence, and duplicate command IDs. |
-| `RC-07` | blocked | Root-approved partial direct yellow/red card scoring and card-reset work is ready to commit. Full closure is blocked by a named approved P-card rules table and `RC-10` undo semantics; unsupported P-card actions fail closed. Commit is also blocked by the unrelated legislation package/lock mismatch. | Implement penalty-card and P-card award semantics. | `RC-05`, approved rules revision | Tests prove yellow/red counts, atomic opponent scoring for red, rules-valid P-card progression, no cycle-to-none behavior, undo, and Reset Cards separation. |
-| `RC-08` | blocked | Root-approved partial medical isolation, frozen format registry, strict snapshot bounds, and full-action replay work is ready to commit. Overtime remains unavailable until a trusted entropy issuer and supervisor-override provenance are integrated. Commit is also blocked by the unrelated legislation package/lock mismatch. | Implement overtime, unbiased priority, medical intervention, and competition-format transitions. | `RC-05`, approved rules revision | Seeded priority tests, priority removal, five-minute preset/configuration review, break/medical/overtime clock isolation, and typed match-versus-period bounds pass. |
-| `RC-09` | backlog | Next after `RC-01`, `RC-05`, M1-06: Implement manual/automatic rearm, weapon request, side swap, Reset All/New Bout, and safe-idle sleep. | Implement manual/automatic rearm, weapon request, side swap, Reset All/New Bout, and safe-idle sleep. | `RC-01`, `RC-05`, M1-06 | STM32 request/accept/reject correlation passes; side swap is atomic; new bout changes `boutId`; sleep and destructive actions fail closed while unsafe. |
-| `RC-10` | backlog | Next after `RC-02`, `RC-05` through `RC-09`: Implement compensating-event undo and controller-authority arbitration. | Implement compensating-event undo and controller-authority arbitration. | `RC-02`, `RC-05` through `RC-09` | Undo scope is explicit and immutable decisions remain unchanged; handheld/app/tournament contention and transfer tests admit exactly one writer. |
+| `RC-07` | blocked | Root-approved partial direct yellow/red card scoring and card-reset work is retained. Full closure is blocked by a named approved P-card rules table; unsupported P-card actions fail closed, and compensating undo remains owned downstream by RC-10. | Implement penalty-card and P-card award semantics. | `RC-05`, approved rules revision | Tests prove yellow/red counts, atomic opponent scoring for red, rules-valid P-card progression, no cycle-to-none behavior, Reset Cards separation, and immutable card-event provenance compatible with RC-10 undo. |
+| `RC-08` | blocked | Root-approved partial now includes a hash-bound competition-format registry, strict snapshot bounds and transitions, plus an isolated five-minute medical clock with deterministic start, stop, and resume behavior that preserves elapsed time and never changes the bout clock. The medical/reducer suite passes 43 tests with app types, lint, and format clean. Overtime remains unavailable until a trusted entropy issuer, supervisor-override provenance, and the applicable approved rules revision are integrated. | Implement overtime, unbiased priority, medical intervention, and competition-format transitions. | `RC-05`, approved rules revision | Seeded priority tests, priority removal, five-minute preset/configuration review, break/medical/overtime clock isolation, and typed match-versus-period bounds pass. |
+| `RC-09` | done | Delivered and root-approved: strict scoring-core-correlated manual and automatic rearm, weapon requests, and safe-idle sleep fail closed on malformed, rejected, or mismatched responses; stopped-bout side swap is atomic; existing New Bout correlation still changes `boutId`; RC-08 entropy behavior is unchanged. The reducer and remote suites pass 38 tests with app TypeScript, lint, format, and whitespace checks clean. | Implement manual/automatic rearm, weapon request, side swap, Reset All/New Bout, and safe-idle sleep. | `RC-01`, `RC-05`, M1-06 | Scoring-core request/accept/reject correlation passes; side swap is atomic; new bout changes `boutId`; sleep and destructive actions fail closed while unsafe. |
+| `RC-10` | blocked | Root-approved implementation now provides bounded compensating undo and exact writer arbitration: original events remain immutable, scoring-core and snapshot/new-bout boundaries clear undo history, authority revisions are derived, and displaced writers fail closed. The focused suites pass 52 tests with app types, lint, and format clean. Final closure waits for blocked dependencies `RC-07` and `RC-08`, followed by undo coverage for their completed penalty and overtime transitions. | Implement compensating-event undo and controller-authority arbitration. | `RC-02`, `RC-05` through `RC-09` | Undo scope is explicit and immutable decisions remain unchanged; handheld/app/tournament contention and transfer tests admit exactly one writer. |
 | `RC-11` | backlog | Next after `RC-02`, `RC-06` through `RC-10`: Implement the simulator remote surface and command-level conformance suite. | Implement the simulator remote surface and command-level conformance suite. | `RC-02`, `RC-06` through `RC-10` | Every lookup row is executable by direct, modified, held, or double input; button-state fixtures prove no phantom standalone `OPT`, repeats, or empty initial displays. |
 | `RC-12` | backlog | Next after `RC-02`, `RC-05`, `RC-10`: Implement authenticated application/tournament new-bout, snapshot-load, and controller-transfer APIs. | Implement authenticated application/tournament new-bout, snapshot-load, and controller-transfer APIs. | `RC-02`, `RC-05`, `RC-10` | API contract, authorization, idempotency, full-state validation, running-clock policy, recovery, and loaded-running/stopped snapshot tests pass. |
-| `RC-13` | backlog | Next after `RC-02`, `RC-03`, `RC-05`: Implement and fuzz the apparatus IR receive, decrypt, authenticate, anti-replay, deduplicate, and dispatch service. | Implement and fuzz the apparatus IR receive, decrypt, authenticate, anti-replay, deduplicate, and dispatch service. | `RC-02`, `RC-03`, `RC-05` | Golden frames, malformed inputs, wrong identity/key/version, stale/reordered counters, flood bounds, reset persistence, and dispatch identity tests pass. |
+| `RC-13` | done | Root-approved apparatus receiver delivered in `81a7f37`: authenticated AES-GCM adapter boundary, strict pairing and command codec, replay commitment before dispatch, duplicate/replay rejection, bounded ingress, canonical reset restoration, revoked-pairing diagnostics, and fail-closed malformed/identity/key/version handling. Receiver plus security suites pass 23 tests with app types, lint, and format clean. | Implement and fuzz the apparatus IR receive, decrypt, authenticate, anti-replay, deduplicate, and dispatch service. | `RC-02`, `RC-03`, `RC-05` | Golden frames, malformed inputs, wrong identity/key/version, stale/reordered counters, flood bounds, reset persistence, and dispatch identity tests pass. |
 | `RC-14` | backlog | Next after `RC-03`, `RC-04`: Implement reproducible handheld button, modifier, hold/double, encrypted transmit, counter, battery, and LED firmware. | Implement reproducible handheld button, modifier, hold/double, encrypted transmit, counter, battery, and LED firmware. | `RC-03`, `RC-04` | Lookup conformance, one-command-per-gesture, signed build, counter power-loss safety, low-battery reporting, and recovery tests pass on target hardware. |
 | `RC-15` | backlog | Next after `RC-03`, `RC-13`, `RC-14`: Implement pairing, replacement, revocation, counter recovery, secure factory reset, and service tooling. | Implement pairing, replacement, revocation, counter recovery, secure factory reset, and service tooling. | `RC-03`, `RC-13`, `RC-14` | Per-pair identity, least-privilege flows, interrupted provisioning, lost-remote recovery, and secret-free audit outputs pass a controlled service rehearsal. |
 | `RC-16` | backlog | Next after `RC-04`, `RC-11` through `RC-15`, BP-506: Integrate and validate the paired system on the bench PCB and production-intent enclosure path. | Integrate and validate the paired system on the bench PCB and production-intent enclosure path. | `RC-04`, `RC-11` through `RC-15`, BP-506 | Every command/guard plus range, angle, adjacent-piste, venue light, latency, battery, interference/flood, reset, replay, and unavailable-owner case produces accepted evidence. |

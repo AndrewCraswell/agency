@@ -250,7 +250,7 @@ describe("RC-02 bout state event schema", () => {
     ])
       expect(() => parseBoutStateEvent(value)).toThrow(TypeError)
   })
-  it("requires matching non-null STM32 correlation for apparatus-owned results", () => {
+  it("requires matching non-null scoring-core correlation for apparatus-owned results", () => {
     const rearm = commandFor("scoring.rearm")
     const rearmSnapshot = {
       ...snapshot,
@@ -274,7 +274,7 @@ describe("RC-02 bout state event schema", () => {
     ])
       expect(() => parseBoutStateEvent(value)).toThrow(TypeError)
   })
-  it("requires new-bout completion to be the correlated STM32 reset result", () => {
+  it("requires new-bout completion to be the correlated scoring-core reset result", () => {
     const newBout = commandFor("bout.new")
     const resultingBoutState = {
       ...snapshot,
