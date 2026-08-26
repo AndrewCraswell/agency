@@ -8,27 +8,33 @@ application in `apps/legislation`, with one explicit `route.ts` for every docume
 [Next.js API migration plan](../nextjs-api-migration-plan.md) and the
 [HTTP API implementation backlog](../http-api-implementation-backlog.md).
 
-The 87 existing standalone Node handlers are reusable domain implementation, not completed Next.js routes. The
-standalone server in `apps/legislation` is transitional source, not a live rollback service: the old Railway
-`legislation-api` service is deleted. The last verified `legislation-web` source deployment is
-`cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` from `5de0383` at
-`https://legislation-web-production-b024.up.railway.app`; it does not credit any public operation as complete.
-Authentication is added after all 87 Next.js routes pass deployed smoke, distributed rate limiting follows
+The 87 existing domain handlers are reusable implementation, not completed Next.js routes. The standalone server path
+in `apps/legislation` is transitional source, not a live rollback service: the old Railway `legislation-api` service is
+deleted. The current unified `legislation-web` deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff` from source
+snapshot `3a498d1` at `https://legislation-web-production-b024.up.railway.app`; its successful verification, build, and
+foundation smoke do not promote routes whose endpoint smoke remains incomplete.
+Authentication follows NX-04 and enables functional NX-05 deployment smoke. Distributed rate limiting follows
 authentication, and MCP moves to the HTTP API last. The application, public API, and eventual MCP adapter share one
-application-service boundary so authorization, canonical identity, source attribution, and query behavior do not diverge.
+application-service boundary so authorization, canonical identity, source attribution, and query behavior do not
+diverge.
 
 ## Migration state ledger
 
-The domain state is 87/87 **Done**. The Next.js Route Handler release state is 11/87 **Done**, 18 **In progress**, 0
-**Ready**, and 58 **Blocked**; these states sum to 87. NX-02A's 11 committed and deployed jurisdiction/session handlers
-passed all deployed operation and rejection checks. The corrected Alaska snapshot uses publisher classification
+The domain state is 87/87 **Done**. Explicit Next.js handler coverage is 87/87 in reviewed source and 73/87 in the
+current production deployment. NX-05A/B route and composition code plus focused local tests exist, but production
+request identity remains intentionally absent and those handlers fail closed with `403`. The Next.js Route Handler
+release state is 40/87 **Done**, 7 **In progress** in NX-04, 0 **Ready**, and 40 **Blocked**; these states sum to 87. The
+Blocked total contains 26 routes with named production-data, canonical-fixture, or dependency prerequisites and 14
+subscription and webhook routes behind the NX-05 phase and authentication gates. NX-02A's 11 committed and deployed
+jurisdiction/session handlers passed all deployed operation and rejection checks. The corrected Alaska snapshot uses
+publisher classification
 `legislature`; production import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6,
 and its idempotent rerun skipped 6. Production schema migrations through the current ledger are applied. The nationwide
 audit remains incomplete for 52 jurisdictions and 648 sessions.
 
-NX-02B's 18 bills, amendments, and votes handlers and composition artifacts are code **In progress** and have passed root
-review and local verification. Their release gate is unblocked; deployment and deployed smoke remain before any is **Done**. No NX-02B
-authentication, distributed-rate-limit, or MCP scope has begun.
+NX-02B's 18 bills, amendments, and votes handlers are deployed. Fifteen have release **Done** credit; three vote
+operations remain **Blocked** by named production-data prerequisites. Authentication, distributed rate limiting, and
+MCP remain later gates.
 
 The operational liveness and readiness endpoints remain public `GET /health` and `GET /ready` contract paths. Their
 explicit Next.js handlers live at `apps/legislation/app/health/route.ts` and

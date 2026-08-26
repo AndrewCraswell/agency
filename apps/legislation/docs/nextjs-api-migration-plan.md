@@ -13,8 +13,8 @@ The required order is:
 
 1. Migrate the application runtime to Next.js and deploy the foundation.
 2. Migrate all 87 public endpoints to Next.js Route Handlers.
-3. Deploy and smoke-test Railway after every endpoint block.
-4. Add WorkOS authentication after every endpoint is migrated.
+3. Complete deployed smoke through NX-04.
+4. Add WorkOS request identity and the required NX-05 secrets, then deploy and functionally smoke NX-05.
 5. Add distributed API rate limiting after authentication.
 6. Migrate MCP to the authenticated, rate-limited HTTP API last.
 
@@ -25,11 +25,11 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5` and reached terminal `SUCCESS`; `/health` and `/ready` returned `200`. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot commit `3a498d1` deployed as `9de2719a-d34e-46ee-a86e-09768058d1ff` and reached terminal `SUCCESS`. Unified verification passed 221 test files with 2 skipped and 1,688 tests with 40 skipped; all 212 built-router acceptance tests and the Next.js build passed. Foundation health, readiness, and homepage smoke returned `200`; unknown-route and unsupported-method checks returned `404`. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | 73 of 87 explicit handlers are deployed: 40 Done, 26 Blocked by named production prerequisites, and 7 In progress in NX-04. The remaining 14 subscription/webhook routes are gated on NX-04. | 87 of 87 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `35cfc3bb-ea63-477c-b467-6bf84a4200c5` from `0a2748b` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. NX-04 production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
-| Authentication | WorkOS logic exists in the standalone composition | Added to the Next.js request boundary only after route migration |
+| Next.js Route Handlers | Reviewed source coverage is 87 of 87. The current production deployment contains 73 of 87: 40 Done, 26 Blocked by named production prerequisites, and 7 In progress in NX-04. NX-05A/B route and composition code plus local tests exist in source, but their 14 routes remain Blocked on NX-04, production request identity, required secrets, deployment, and functional smoke. | 87 of 87 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `9de2719a-d34e-46ee-a86e-09768058d1ff` from source snapshot `3a498d1` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The previous successful rollback deployment is `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. NX-04 production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
+| Authentication | WorkOS logic exists in the standalone composition; the Next.js production boundary intentionally installs no request identity, so NX-05 fails closed with `403` | Added after NX-04 and before functional NX-05 release smoke |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
 
@@ -97,7 +97,7 @@ State: **In progress**
 - Make this plan canonical and link it from the documentation index, API contract, implementation ledger, architecture
   decisions, and Railway release record.
 - Record 87 domain implementations as reusable input and 0 Next.js Route Handlers as complete.
-- Record the existing `legislation-web` scaffold, the approved `16.3.1` upgrade, and the parallel Railway-service
+- Record the `legislation-web` service identity, the approved `16.3.1` upgrade, and the unified application/runtime
   boundary.
 - Remove TanStack Start and premature MCP-cutover language from active planning.
 - Commit the documentation correction with normal hooks.
@@ -129,7 +129,7 @@ smoke passed, and the old `legislation-api` Railway service was deleted and reco
 State: **In progress**.
 
 Each sub-block requires explicit `route.ts` files under `apps/legislation/app/api`, focused adapter/contract tests,
-production build, reviewed commit, deployment of the parallel `legislation-web` Railway service, terminal `SUCCESS`,
+production build, reviewed commit, deployment of the `legislation-web` Railway service, terminal `SUCCESS`,
 remote smoke, and rollback evidence.
 
 Current deployment evidence: source commit `866eb6f` deployed as `168b7b40-3457-48e1-a470-a45cf5b112a9`, reached
@@ -242,10 +242,11 @@ classified four canonical-data responses as blocked; one synthetic membership lo
 Next route delivery/release state: **Complete**. Source commit `866eb6f` deployed as
 `168b7b40-3457-48e1-a470-a45cf5b112a9`, reached terminal `SUCCESS`, and produced image
 `sha256:2975fa98b4c408094ef66d80e0d3e07322a2e6cfe41fef6710815c1dae58b5a8`; the preceding successful deployment
-`1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` is the rollback target. `apps/legislation` verification passed 198 files with
-2 skipped and 1,036 tests with 40 skipped; `apps/legislation-web` verification passed 22 files and 571 tests; the
-Next.js `16.3.1` build and built router (173/173) passed. Production `/health` and `/ready` returned `200`, and the
-new block plus all earlier cumulative smoke profiles passed.
+`1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` is the rollback target. In that historical split-runtime release,
+`apps/legislation` verification passed 198 files with 2 skipped and 1,036 tests with 40 skipped; the former
+`apps/legislation-web` split app passed 22 files and 571 tests; the Next.js `16.3.1` build and built router (173/173)
+passed. Production `/health` and `/ready` returned `200`, and the new block plus all earlier cumulative smoke profiles
+passed.
 
 The eight operations below are **Done**:
 
@@ -280,6 +281,11 @@ commit `0a2748b`, deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5` with termin
 returned `200`. The remediation deployment does not complete the block: active HNSW index pressure still prevents the
 required production semantic/hybrid smoke from running safely.
 
+The unified application/runtime snapshot `3a498d1` subsequently deployed as
+`9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`, passed the unified verification and build gates, and
+passed foundation smoke. This superseding deployment retains the same seven-route **In progress** state because no
+NX-04 semantic or hybrid production smoke was run.
+
 - `POST /api/search/bills`
 - `POST /api/search/amendments`
 - `POST /api/search/passages`
@@ -298,7 +304,9 @@ Exit gate: all seven routes are **Done** and the NX-04 deployment passes cumulat
 
 #### NX-05A: Subscriptions (7 endpoints)
 
-Next route state for every operation in this block: **Blocked** on NX-04.
+Reviewed source state: explicit routes, production composition, and focused local tests exist. Next route release state
+for every operation in this block remains **Blocked**. The code is not present in the current production deployment,
+and the production composition intentionally has no request identity, so direct use fails closed with `403`.
 
 - `GET /api/subscriptions`
 - `POST /api/subscriptions`
@@ -310,7 +318,10 @@ Next route state for every operation in this block: **Blocked** on NX-04.
 
 #### NX-05B: Webhooks (7 endpoints)
 
-Next route state for every operation in this block: **Blocked** on NX-05A.
+Reviewed source state: explicit routes, production composition, and focused local tests exist. The composition reuses
+the durable repository, encrypted idempotency replay, webhook-secret protection, URL-safety checks, and pinned
+verification challenge transport. Next route release state for every operation remains **Blocked**; the code is not in
+the current production deployment and no production identity is installed.
 
 - `GET /api/webhooks`
 - `POST /api/webhooks`
@@ -320,16 +331,18 @@ Next route state for every operation in this block: **Blocked** on NX-05A.
 - `POST /api/webhooks/{webhookId}/rotate-secret`
 - `POST /api/webhooks/{webhookId}/verify`
 
-The remote profile must prove owner scoping in the transitional test identity, ETags and `If-Match`, idempotency,
-one-time secret handling, cancellation receipts, URL-safety checks, verification challenge behavior, and replay without
-printing secrets.
+After NX-04 passes, WorkOS request identity and the required idempotency and webhook-secret encryption keys must be
+configured before functional deployment smoke. The remote profile must prove owner scoping, fail-closed unauthenticated
+access, ETags and `If-Match`, idempotency, one-time secret handling, cancellation receipts, URL-safety checks,
+verification challenge behavior, and replay without printing secrets.
 
-Exit gate: all 14 routes are **Done**. The NX-05B deployment passes cumulative smoke for all 87 routes. Only at this
-point may authentication work begin.
+Exit gate: all 14 routes are **Done** after authenticated deployment and cumulative smoke for all 87 routes. Source
+coverage and local tests alone do not satisfy this gate.
 
 ### NX-06: WorkOS authentication
 
-State: **Blocked** until NX-02 through NX-05 are complete.
+State: **Blocked** until NX-04 is complete. Its production request identity is then required to functionally deploy and
+smoke NX-05.
 
 - Port WorkOS bearer verification and request identity into the shared Next.js API boundary.
 - Keep `/health` and `/ready` public; default `/api/**` to authenticated unless the contract says otherwise.
@@ -390,7 +403,7 @@ client boundary with complete release and rollback evidence.
 2. Review every explicit Route Handler and shared adapter change against the contract.
 3. Run focused route tests, composed service tests, type checking, formatting, linting, and a production Next.js build.
 4. Commit the reviewed block with normal hooks.
-5. Deploy that commit to the parallel Railway `legislation-web` service. Keep the last successful `legislation-web`
+5. Deploy that commit to the Railway `legislation-web` service. Keep the last successful `legislation-web`
    deployment as the rollback target; the old `legislation-api` service must already have been deleted at the NX-01
    teardown gate.
 6. Wait for the deployment to reach terminal `SUCCESS`; a build submission is not success.
@@ -405,14 +418,16 @@ client boundary with complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 87/87.
-- **Explicit Next.js handler coverage:** 73/87 deployed. This consists of 40 Done, 26 Blocked by named production
-  prerequisites, and 7 In progress in NX-04. The remaining 14 subscription/webhook routes are blocked on NX-04.
+- **Explicit Next.js handler coverage:** 87/87 in reviewed source; 73/87 in the current production deployment. The
+  deployed 73 consist of 40 Done, 26 Blocked by named production prerequisites, and 7 In progress in NX-04. The 14
+  source-only NX-05 subscription/webhook routes are blocked on NX-04, authentication and required secrets, deployment,
+  and functional smoke.
 - **Next.js Route Handler release state:** 40/87 Done; 7 In progress in NX-04; 0 Ready; 40 Blocked. The 40+7+40
   states sum to all 87 public API operations.
 - **Blocked-route accounting:** 26 routes are Blocked by named production-data, canonical-fixture, or dependency
   deficiencies (three vote operations, document detail, document sections, global changes, all 14 NX-03A
   people/organization operations, five NX-03B canonical-fixture operations, and representative lookup configuration);
-  the remaining 14 are blocked by the later NX-04 phase gate. The next explicit route count is seven NX-04 routes.
+  the remaining 14 are blocked by the NX-05 phase and authentication gates.
 
 Foundation, authentication, rate limiting, MCP cutover, and final cleanup are separate phase gates. None may be inferred
 from the endpoint count, and none may be moved earlier than the approved sequence.

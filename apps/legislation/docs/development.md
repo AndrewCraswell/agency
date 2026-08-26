@@ -99,11 +99,18 @@ Before release, verify the effective service uses the Dockerfile builder, `apps/
 health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
 release operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
 
-The current verified deployment is `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` from source commit `6afcf42` (including route
-commit `04ca95d`), with image
-`sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`. Rollback uses the prior successful
-`legislation-web` deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517`. The former `legislation-api` Railway service was
+The current verified unified deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff` from source snapshot commit
+`3a498d1`. It reached terminal `SUCCESS`; foundation health, readiness, and homepage smoke returned `200`, while
+unknown-route and unsupported-method checks returned `404`. Rollback uses the immediately preceding successful
+`legislation-web` deployment `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. The former `legislation-api` Railway service was
 deleted and must not be redeployed, described as current, or used as a rollback target.
+
+Reviewed source now contains explicit Next.js handlers and NX-05A/B compositions for all 87 public operations, but the
+current production deployment contains only 73. The 14 source-only subscription and webhook routes intentionally have
+no production request identity and therefore fail closed with `403`. Do not add a fixture or hard-coded principal.
+After NX-04 passes, configure WorkOS request identity plus the required idempotency and webhook-secret encryption keys
+before functional NX-05 deployment and smoke. Authentication must precede distributed rate limiting, and MCP migration
+remains last.
 
 After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
 This required production variable is the trusted base for canonical API URLs; it must not be derived from request headers.

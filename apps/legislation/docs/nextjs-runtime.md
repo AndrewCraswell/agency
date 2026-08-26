@@ -22,29 +22,40 @@ credentials.
 
 ## Current release boundary
 
-There are 73 explicit Next.js route handlers out of 87 public operations. Of those, 40 have release **Done** credit,
-26 remain blocked by named production data, fixture, or dependency prerequisites, and the seven NX-04 search, diff,
-and research routes are deployed but remain **In progress** until their production smoke passes. The remaining 14
-subscription and webhook routes are behind the NX-04 phase gate.
+Reviewed source now contains 87 of 87 explicit Next.js route handlers. The current production deployment contains 73 of
+87: 40 have release **Done** credit, 26 remain blocked by named production data, fixture, or dependency prerequisites,
+and the seven NX-04 search, diff, and research routes are deployed but remain **In progress** until their production
+smoke passes. The 14 NX-05 subscription and webhook handlers, compositions, and local tests exist only in the reviewed
+source change and are not part of the current production image.
 
-The current deployment is source commit `0a2748b`, deployed as Railway deployment
-`35cfc3bb-ea63-477c-b467-6bf84a4200c5` with terminal `SUCCESS`. Its `/health` and `/ready` checks returned `200`.
+NX-05 production identity is intentionally absent. Its handlers therefore fail closed with `403`; no production code
+installs a fixture or hard-coded identity. Functional NX-05 deployment and smoke require NX-04 completion, the WorkOS
+request-identity boundary, and the required idempotency and webhook-secret encryption keys. Until those gates pass,
+all 14 routes retain **Blocked** release state.
+
+The current unified deployment is source snapshot commit `3a498d1`, deployed as Railway deployment
+`9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`. Unified verification passed 221 test files with 2
+skipped and 1,688 tests with 40 skipped; all 212 built-router acceptance tests and the Next.js production build also
+passed. Foundation smoke returned `200` for health, readiness, and the homepage, and `404` for the unknown-route and
+unsupported-method checks. The immediately preceding successful rollback deployment is
+`35cfc3bb-ea63-477c-b467-6bf84a4200c5`.
+
 NX-04 production smoke is intentionally still pending: active HNSW index pressure must be relieved before exercising
-semantic and hybrid search in production. A successful deployment and health checks do not promote NX-04 routes to
-**Done** without that smoke evidence.
+semantic and hybrid search in production. A successful deployment, verification, build, and foundation smoke do not
+promote NX-04 routes to **Done** without that endpoint evidence.
 
-Authentication remains after all 87 routes complete deployed smoke. Distributed rate limiting follows authentication.
-MCP migration is last and remains blocked until both earlier gates are complete.
+Authentication follows NX-04 and enables functional NX-05 release verification. Distributed rate limiting follows
+authentication. MCP migration is last and remains blocked until both earlier gates are complete.
 
 ## Smoke procedure
 
-Run the deployed smoke only with an audited production origin and audited fixtures. The harness lives in
-`apps/legislation/scripts/smoke-deployment.mjs`; use its documented `LEGISLATION_SMOKE_*` environment variables. The
-profile is cumulative for every released route block.
+Run the deployed Next.js smoke only with an audited production origin and audited fixtures. The unified harness lives
+in `apps/legislation/scripts/smoke-foundation.mjs`; use its documented `LEGISLATION_WEB_SMOKE_*` environment variables.
+The profile is cumulative for every enabled route block.
 
 ```powershell
-$env:LEGISLATION_SMOKE_BASE_URL = 'https://legislation-web-production-b024.up.railway.app'
-pnpm --filter legislation smoke:deployment
+$env:LEGISLATION_WEB_SMOKE_BASE_URL = 'https://legislation-web-production-b024.up.railway.app'
+pnpm --filter legislation smoke:foundation
 ```
 
 For NX-04, configure its audited query, expected-outcome, bill, document, and research-fixture variables. Do not run
