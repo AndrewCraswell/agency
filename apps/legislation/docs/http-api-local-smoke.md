@@ -4,7 +4,7 @@
 
 Use this checklist to collect focused endpoint test/smoke evidence after an API product has passed code review. Endpoint
 **Done** requires exact contract implementation, applicable repository/query evidence, focused endpoint tests/smoke,
-root review, and a reviewed commit. Railway deployment, remote smoke, auth configuration, rate limiting, and other
+root review, and a reviewed commit. Railway deployment, remote smoke, auth configuration, and other
 release/operations concerns are tracked separately. This is an execution plan, not evidence that a smoke run has
 occurred. Record the date, commit, database snapshot, model routing configuration, commands, sanitized results, and
 reviewer in the run record.
@@ -91,10 +91,6 @@ Complete these assertions once per composed server build and repeat mutation ass
 - [ ] Batch reads reject more than 25 unique IDs, preserve request order, isolate item errors, and do not fail a valid
       outer request because one item is missing.
 - [ ] Cacheable reads return the documented validators; `If-None-Match` returns an empty `304` only when unchanged.
-- [ ] API requests return `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset`; exhausted quotas return the
-      normal safe `429 rate_limited` envelope with `Retry-After`. Confirm `LEGISLATION_TRUSTED_PROXY_HOPS=1` only when
-      deployed behind Railway's public proxy, verify its documented `X-Real-IP` client-address header, and retain a
-      shared edge limiter before adding replicas.
 - [ ] Logs and errors contain no SQL, stack, raw provider payload, token, address, or cross-tenant identifier.
 
 ## Canonical legislative-read product

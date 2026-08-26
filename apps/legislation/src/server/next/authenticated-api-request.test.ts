@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { HttpApiHandler } from "../../api/http.js"
 import type { NodeHttpApiHandlerOptions } from "../../api/next/node-handler.js"
 import { getRequestContext } from "../../auth/request-context.js"
-import { AuthenticationError } from "../../auth/workos.js"
+import { AuthenticationError, type WorkosIdentity } from "../../auth/workos.js"
 import {
   executeAuthenticatedApiRequest,
   type AuthenticatedApiRequestDependencies
@@ -30,10 +30,15 @@ describe("authenticated Next API request boundary", () => {
   })
 
   it("verifies the bearer token and passes only the derived identity into request context", async () => {
-    const identity = { organizationId: "organization:test", userId: "user:test" }
+    const identity = {
+      credentialType: "machine",
+      organizationId: "organization:test",
+      userId: "user:test"
+    } satisfies WorkosIdentity
+    const requestIdentity = { organizationId: identity.organizationId, userId: identity.userId }
     const authenticate = vi.fn<Authenticator>(async () => identity)
     const execute = vi.fn<Executor>(async (_request, apiHandler, options) => {
-      expect(options).toEqual({ requestContext: { identity } })
+      expect(options).toEqual({ requestContext: { identity: requestIdentity } })
       return new Response(String(await apiHandler({} as never, {} as never)))
     })
     const request = new Request("https://api.example.test/api/subscriptions", {
@@ -91,7 +96,7 @@ describe("authenticated Next API request boundary", () => {
   })
 
   it("makes verified identity available to the adapted Node handler", async () => {
-    const identity = { userId: "user:verified" }
+    const identity = { credentialType: "machine", userId: "user:verified" } satisfies WorkosIdentity
     const response = await executeAuthenticatedApiRequest(
       new Request("https://api.example.test/api/bills", { headers: { authorization: "Bearer signed-token" } }),
       async (_request, nodeResponse) => {
@@ -105,7 +110,73 @@ describe("authenticated Next API request boundary", () => {
     )
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual(identity)
+    await expect(response.json()).resolves.toEqual({ userId: identity.userId })
+  })
+
+  it("requires a verified first-party session for representative lookup", async () => {
+    const execute = vi.fn<Executor>()
+    const request = new Request("https://api.example.test/api/representative-lookups", {
+      headers: { authorization: "Bearer machine-token", "x-correlation-id": "first-party-test" },
+      method: "POST"
+    })
+
+    const response = await executeAuthenticatedApiRequest(request, handler, {
+      createAuthenticator: () => async () => ({ credentialType: "machine", userId: "machine:test" }),
+      execute,
+      getApplication: () => workosApplication()
+    })
+
+    expect(response.status).toBe(403)
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        category: "forbidden",
+        correlationId: "first-party-test",
+        message: "A first-party user session is required",
+        retryable: false
+      }
+    })
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it("does not bypass first-party authorization through a trailing slash", async () => {
+    const execute = vi.fn<Executor>()
+
+    const response = await executeAuthenticatedApiRequest(
+      new Request("https://api.example.test/api/representative-lookups/", {
+        headers: { authorization: "Bearer machine-token" },
+        method: "POST"
+      }),
+      handler,
+      {
+        createAuthenticator: () => async () => ({ credentialType: "machine", userId: "machine:test" }),
+        execute,
+        getApplication: () => workosApplication()
+      }
+    )
+
+    expect(response.status).toBe(403)
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it("allows a verified first-party session to perform representative lookup", async () => {
+    const execute = vi.fn<Executor>(async () => new Response("handled"))
+
+    const response = await executeAuthenticatedApiRequest(
+      new Request("https://api.example.test/api/representative-lookups", {
+        headers: { authorization: "Bearer session-token" },
+        method: "POST"
+      }),
+      handler,
+      {
+        createAuthenticator: () => async () => ({ credentialType: "user-session", userId: "user:test" }),
+        execute,
+        getApplication: () => workosApplication()
+      }
+    )
+
+    expect(response.status).toBe(200)
+    expect(execute).toHaveBeenCalledOnce()
   })
 })
 

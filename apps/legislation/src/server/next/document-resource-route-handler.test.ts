@@ -63,7 +63,7 @@ afterEach(() => {
 })
 
 describe("document resource route handler", () => {
-  it("composes exactly the nine operations with one handler owner each", async () => {
+  it("composes exactly the ten operations with one handler owner each", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
       const handled = await Reflect.apply(handler, undefined, [
@@ -115,6 +115,7 @@ describe("document resource route handler", () => {
       ["GET", "/api/supporting-materials/material-1/sections"],
       ["GET", "/api/supporting-materials/material-1/sections/section-1"],
       ["GET", "/api/changes"],
+      ["GET", "/api/changes/change-1"],
       ["POST", "/api/resources/batch"]
     ] as const
     for (const [method, url] of routes) {
@@ -125,7 +126,6 @@ describe("document resource route handler", () => {
       ["GET", "/api/bills/bill-1/documents"],
       ["GET", "/api/documents"],
       ["GET", "/api/bills/bill-1/changes"],
-      ["GET", "/api/changes/change-1"],
       ["GET", "/api/resources/batch"],
       ["POST", "/api/resources/batch/extra"],
       ["GET", "/api/documents/document-1/"],

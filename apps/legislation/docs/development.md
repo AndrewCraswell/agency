@@ -105,12 +105,12 @@ unknown-route and unsupported-method checks returned `404`. Rollback uses the im
 `legislation-web` deployment `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. The former `legislation-api` Railway service was
 deleted and must not be redeployed, described as current, or used as a rollback target.
 
-Reviewed source now contains explicit Next.js handlers and subscription/webhook compositions for all 87 public operations, but the
+Reviewed source now contains explicit Next.js handlers and subscription/webhook compositions for all 88 public operations, but the
 current production deployment contains only 73. The 14 source-only subscription and webhook routes intentionally have
 no production request identity and therefore fail closed with `403`. Do not add a fixture or hard-coded principal.
-After NX-04 passes, configure WorkOS request identity plus the required idempotency and webhook-secret encryption keys
-before functional NX-05 deployment and smoke. Authentication must precede distributed rate limiting, and MCP migration
-remains last.
+After search, document-difference, and research smoke passes, configure WorkOS request identity plus the required
+idempotency and webhook-secret encryption keys before functional subscription/webhook deployment and smoke.
+MCP migration remains deferred until after the authenticated API release.
 
 After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
 This required production variable is the trusted base for canonical API URLs; it must not be derived from request headers.

@@ -8,33 +8,33 @@ application in `apps/legislation`, with one explicit `route.ts` for every docume
 [Next.js API migration plan](../nextjs-api-migration-plan.md) and the
 [HTTP API implementation backlog](../http-api-implementation-backlog.md).
 
-The 87 existing domain handlers are reusable implementation, not completed Next.js routes. The standalone server path
+The 88 existing domain handlers are reusable implementation, not completed Next.js routes. The standalone server path
 in `apps/legislation` is transitional source, not a live rollback service: the old Railway `legislation-api` service is
 deleted. The current unified `legislation-web` deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff` from source
 snapshot `3a498d1` at `https://legislation-web-production-b024.up.railway.app`; its successful verification, build, and
 foundation smoke do not promote routes whose endpoint smoke remains incomplete.
-Authentication follows NX-04 and enables functional NX-05 deployment smoke. Distributed rate limiting follows
-authentication, and MCP moves to the HTTP API last. The application, public API, and eventual MCP adapter share one
+Authentication is implemented locally and awaits deployment and remote proof. MCP moves to the HTTP API last. The
+application, public API, and eventual MCP adapter share one
 application-service boundary so authorization, canonical identity, source attribution, and query behavior do not
 diverge.
 
 ## Migration state ledger
 
-The domain state is 87/87 **Done**. Explicit Next.js handler coverage is 87/87 in reviewed source and 73/87 in the
-current production deployment. Subscription and webhook route and composition code plus focused local tests exist, but production
-request identity remains intentionally absent and those handlers fail closed with `403`. The Next.js Route Handler
-release state is 40/87 **Done**, 7 **In progress** in NX-04, 0 **Ready**, and 40 **Blocked**; these states sum to 87. The
-Blocked total contains 26 routes with named production-data, canonical-fixture, or dependency prerequisites and 14
-subscription and webhook routes behind the NX-05 phase and authentication gates. NX-02A's 11 committed and deployed
-jurisdiction/session handlers passed all deployed operation and rejection checks. The corrected Alaska snapshot uses
+The domain state is 88/88 **Done**. Explicit Next.js handler coverage is 88/88 in reviewed source and 73/88 in the
+current production deployment. Subscription and webhook route and composition code plus focused local tests exist;
+Railway now has the public WorkOS verifier configuration and both application encryption secrets, while the deployed
+image remains unchanged until the authenticated release. The Next.js Route Handler release state is 40/88 **Done**, 23
+**In progress**, 0 **Ready**, and 25 **Blocked**; these states sum to 88. Every Blocked route has a named production-data,
+canonical-fixture, or dependency prerequisite. The 11 committed and deployed jurisdiction/session handlers passed all
+deployed operation and rejection checks. The corrected Alaska snapshot uses
 publisher classification
 `legislature`; production import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6,
 and its idempotent rerun skipped 6. Production schema migrations through the current ledger are applied. The nationwide
 audit remains incomplete for 52 jurisdictions and 648 sessions.
 
-NX-02B's 18 bills, amendments, and votes handlers are deployed. Fifteen have release **Done** credit; three vote
-operations remain **Blocked** by named production-data prerequisites. Authentication, distributed rate limiting, and
-MCP remain later gates.
+The 18 bills, amendments, and votes handlers are deployed. Fifteen have release **Done** credit; three vote
+operations remain **Blocked** by named production-data prerequisites. Authentication remains a later gate, and MCP is
+deferred until after the API release.
 
 The operational liveness and readiness endpoints remain public `GET /health` and `GET /ready` contract paths. Their
 explicit Next.js handlers live at `apps/legislation/app/health/route.ts` and
@@ -66,15 +66,16 @@ The contract is split into focused pages:
 
 ## Authentication and access classes
 
-The HTTP API accepts configured WorkOS M2M bearer tokens and, for first-party browser clients, configured AuthKit
-user-session bearer tokens. M2M tokens are verified for issuer, signature, expiry, subject, optional organization, and
-either the API or MCP audience. AuthKit sessions are API-only and require the configured client ID, a nonempty session
-ID, and a maximum 30-day lifetime. The MCP resource accepts only M2M tokens for its configured resource audience. Every
-operation declares one of these access classes:
+The HTTP API accepts configured WorkOS M2M bearer tokens for the API audience and, for first-party browser clients,
+configured AuthKit user-session bearer tokens. M2M tokens are verified for issuer, signature, expiry, subject, optional
+organization, and the exact audience of the receiving service. API and MCP credentials are not interchangeable.
+AuthKit sessions are API-only and require the configured client ID, a nonempty session ID, and a maximum 30-day
+lifetime. The MCP resource accepts only M2M tokens for its configured resource audience. Every operation declares one
+of these access classes:
 
 | Access class  | Meaning                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------- |
-| Public        | May be exposed without a user token after product approval and rate-limit configuration.         |
+| Public        | May be exposed without a user token after a separate product and security approval.             |
 | Authenticated | Requires a valid user token.                                                                     |
 | First-party   | Requires a valid user token and a first-party application client. Raw addresses use this boundary. |
 | Operator      | Requires an operator role and is never part of the public developer API.                          |
@@ -129,6 +130,7 @@ ordering rule, and exception.
 | GET    | `/api/supporting-materials/{materialId}/sections`        | Authenticated | `Page<SupportingMaterialSection>` |
 | GET    | `/api/supporting-materials/{materialId}/sections/{sectionId}` | Authenticated | `SupportingMaterialSection` |
 | GET    | `/api/changes`                                           | Authenticated | `Page<ChangeEvent>`             |
+| GET    | `/api/changes/{changeId}`                                | Authenticated | `ChangeEvent`                   |
 | POST   | `/api/resources/batch`                                  | Authenticated | `BatchResponse<CanonicalResource>` |
 
 ### Civic graph and events
@@ -203,7 +205,7 @@ slash, replacing each slash with `__`, replacing a literal hyphen with `_`, and 
 For example, `GET /api/bills/{billId}/votes` is `get__api__bills__by_billId__votes`. This deterministic rule covers every
 inventory row, is globally unique, and must not change after public release.
 
-The response set is also deterministic. Every authenticated operation declares `401`, `403`, `429`, and `500` with
+The response set is also deterministic. Every authenticated operation declares `401`, `403`, and `500` with
 `ErrorResponse`. Any operation accepting input declares `400` and `413`; a path-resource operation declares `404`;
 model-backed or provider-backed operations declare `422` and `503`; mutation operations declare `409`; mutations with
 `If-Match` also declare `412`; cacheable GET operations declare `304`. The endpoint's documented success status and

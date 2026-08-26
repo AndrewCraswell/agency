@@ -16,7 +16,7 @@ import { createSessionRepository } from "../../api/session-read-repository.js"
 import { createSupportingMaterialSectionReadApiHandler } from "../../api/supporting-material-section-read-routes.js"
 import { createVoteReadRepository } from "../../api/vote-read-repository.js"
 import type { LegislationDatabase } from "../../db/database.js"
-import { listChangeFeed } from "../../db/queries/change-feed-reads.js"
+import { getChangeEvent, listChangeFeed } from "../../db/queries/change-feed-reads.js"
 import {
   assertSupportingMaterialExists,
   getDocumentDetail,
@@ -94,6 +94,7 @@ export function createDocumentResourceHttpApiHandler(application: DocumentResour
         createChangeFeedApiHandler(
           {
             assertBillExists: unavailableBillRead,
+            getChange: async (changeId) => await getChangeEvent(application.database, changeId),
             listChanges: async (input) => await listChangeFeed(application.database, input)
           },
           options
@@ -214,7 +215,13 @@ function isSupportingMaterialSectionRoute(request: Readonly<{ method?: string; u
 }
 
 function isGlobalChangeRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
-  return request.method === "GET" && requestPathname(request) === "/api/changes"
+  const segments = requestPathSegments(request)
+  return (
+    request.method === "GET" &&
+    segments[1] === "api" &&
+    segments[2] === "changes" &&
+    (segments.length === 3 || (segments.length === 4 && hasDynamicRouteId(segments[3])))
+  )
 }
 
 function isResourceBatchRoute(request: Readonly<{ method?: string; url?: string }>): boolean {

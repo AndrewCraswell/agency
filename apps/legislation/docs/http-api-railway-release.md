@@ -1,6 +1,6 @@
 # Railway API release record
 
-## Historical pre-NX-01 release (deleted)
+## Historical pre-unified-runtime release (deleted)
 
 | Field | Recorded value |
 | --- | --- |
@@ -39,21 +39,21 @@ described as final API cutover until the remaining migration gates pass.
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
 | Unified verification | 221 test files passed with 2 skipped; 1,688 tests passed with 40 skipped; all 212 built-router acceptance tests passed; the Next.js production build succeeded |
 | Foundation smoke | Health, readiness, and homepage returned `200`; unknown-route and unsupported-method checks returned `404` |
-| Reviewed source handler coverage | 87 of 87 explicit Next.js handlers; subscription and webhook routes, composition, and local tests are present in reviewed source but are not in the current production deployment |
-| Current deployment handler coverage | 73 of 87 explicit Next.js handlers |
-| NX-04 production smoke | Pending: active HNSW index pressure must be relieved before semantic and hybrid search smoke |
+| Reviewed source handler coverage | 88 of 88 explicit Next.js handlers; subscription and webhook routes, composition, and local tests are present in reviewed source but are not in the current production deployment |
+| Current deployment handler coverage | 73 of 88 explicit Next.js handlers |
+| Search/diff/research production smoke | Pending: active HNSW index pressure must be relieved before semantic and hybrid search smoke |
 
 This is the current verified unified deployment from `apps/legislation`. The deleted `legislation-api` service is
 historical evidence only; it is not a current service or a rollback target. The successful unified verification,
 production build, and foundation smoke prove the consolidated runtime and operational boundary. They do not complete
-NX-04: the required production semantic and hybrid smoke remains pending.
+the required production semantic and hybrid smoke remains pending.
 
-The 14 NX-05 handlers are source implementation evidence only. The current production deployment still contains 73 of
-87 handlers. Production request identity is intentionally absent, so the reviewed subscription and webhook handlers
-fail closed with `403` rather than using a hard-coded principal. Functional NX-05 deployment and smoke remain blocked
-first on NX-04, then on WorkOS request identity and the required idempotency and webhook-secret configuration. The
-release ledger therefore remains 40 **Done**, 7 **In progress** in NX-04, and 40 **Blocked**: 26 by named production
-prerequisites and 14 by the NX-05 phase and authentication gates.
+The 14 subscription/webhook handlers are reviewed source implementation evidence only; the current production image
+still contains 73 of 88 handlers. Railway now has the public WorkOS verifier values and both application encryption
+secrets, but `AUTH_MODE` remains disabled until the reviewed image deploys. Across all 88 operations, release state is
+40 **Done**, 23 **In progress**, and 25 **Blocked** by named production prerequisites. The next release must deploy
+authentication, subscription/webhook handlers, and the provenance-complete change-feed rule, then retain remote smoke
+evidence before promoting any operation to Done.
 
 ## Next.js foundation deployment configuration
 
@@ -63,7 +63,7 @@ deploying, verify the effective service configuration uses the Dockerfile builde
 `/ready` as the health check. A deployment is not a foundation success if Railway used a different builder, Dockerfile,
 or health path.
 
-## Historical standalone checks (pre-NX-01)
+## Historical standalone checks (pre-unified-runtime)
 
 The following checks passed after the active deployment was healthy. These are deployment and release-preparation
 evidence; endpoint completion remains governed by the implementation backlog and local endpoint smoke checklist.
@@ -83,90 +83,90 @@ nonempty `Page<BillSummary>` responses for the jurisdiction- and session-scoped 
 server's health, readiness, and rejection-path behavior. Its scope remains intentionally narrower than the full API
 acceptance checklist.
 
-## Historical NX-02A remote deployment evidence
+## Historical jurisdiction and session remote deployment evidence
 
 | Check | Result |
 | --- | --- |
 | Deployment | `legislation-web` deployment `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` reached terminal `SUCCESS` from source commit `5de0383` |
 | Production migrations | Schema migrations through the current ledger are applied |
 | Alaska canonical foundation | Corrected publisher classification `legislature`; import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6; idempotent rerun skipped 6 |
-| NX-02A deployed smoke | All 11 jurisdiction/session operations plus rejection checks passed |
-| NX-02A release state | NX-02A's 11 operations are **Done**; the nationwide audit remains incomplete for 52 jurisdictions and 648 sessions |
+| Jurisdiction/session deployed smoke | All 11 jurisdiction/session operations plus rejection checks passed |
+| Jurisdiction/session release state | The 11 operations are **Done**; the nationwide audit remains incomplete for 52 jurisdictions and 648 sessions |
 | Old service teardown | `legislation-api` service `05eb1486-7775-4797-b1c4-1b4a3f31cd26` remains deleted |
 
-The deployed API catch-all remains outside the 87-route inventory. The scoped Alaska import closed NX-02A's data gate;
+The deployed API catch-all remains outside the 88-route inventory. The scoped Alaska import closed the jurisdiction/session data gate;
 the incomplete nationwide audit does not reduce the passed 11-operation deployed smoke evidence.
 
-## NX-02C deployed smoke
+## Documents and resources deployed smoke
 
 | Outcome | Result |
 | --- | --- |
-| **Done** | 6 NX-02C operations passed deployed smoke against the current `legislation-web` deployment. |
+| **Done** | 6 document/resource operations passed deployed smoke against the current `legislation-web` deployment. |
 | Production-data blocked | Document detail and document-section collection remain blocked because the production records have `NULL` OCR status. |
 | Production-data blocked | Global changes remains blocked because the production records lack source provenance. |
-| Next endpoint block | NX-03A and NX-03B subsequently completed their delivery/release blocks; their remaining operation-specific data gates are recorded below. |
+| Next endpoint block | People/organization and meeting/calendar delivery subsequently completed; their remaining operation-specific data gates are recorded below. |
 | MCP | MCP remains last. Its browser-consent canary is blocked until a live Next.js MCP route exists. |
 
 The three production-data-blocked operations are not **Done**. They require production data that satisfies their
 documented contract, followed by a fresh deployed smoke, rather than a route or deployment change.
 
-## NX-03A deployed smoke
+## People and organizations deployed smoke
 
 | Outcome | Result |
 | --- | --- |
 | Deployment | Source commit `6afcf42` (including route commit `04ca95d`) deployed as `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`; terminal `SUCCESS`; image `sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`. |
-| Cumulative smoke | NX-02A: 11 pass. NX-02B: 15 pass plus 3 vote-data skips. NX-02C: 6 pass plus 3 canonical-data skips. NX-03A: 9 pass, four canonical-data skips, and one expected synthetic membership `404`. Health/readiness and rejection checks passed. |
-| Route state | The 14 NX-03A routes are implemented and deployed, but remain data-blocked and receive no Next-route Done credit because production has zero canonical-ready civic fixtures. |
+| Cumulative smoke | Jurisdiction/session: 11 pass. Bills, amendments, and votes: 15 pass plus 3 vote-data skips. Documents/resources: 6 pass plus 3 canonical-data skips. People/organizations: 9 pass, four canonical-data skips, and one expected synthetic membership `404`. Health/readiness and rejection checks passed. |
+| Route state | The 14 people/organization routes are implemented and deployed, but remain data-blocked and receive no Next-route Done credit because production has zero canonical-ready civic fixtures. |
 | Rollback | Previous successful `legislation-web` deployment: `cc047806-27f7-4110-a6e0-7f27f4b4e517`. |
-| Next endpoint block | Historical evidence. NX-03B subsequently completed its delivery/release block. |
+| Next endpoint block | Historical evidence. Meeting/calendar delivery subsequently completed. |
 
 The four canonical-data skips cover person detail, term detail, organization collection, and organization detail. The
-remaining NX-03A smoke routes returned the documented empty-page, dependency, or expected-not-found outcomes. The
+remaining people/organization smoke routes returned the documented empty-page, dependency, or expected-not-found outcomes. The
 production fixture audit found no canonical-ready people, profiles, terms, organizations, memberships, calendars, or
 required civic relationships, so data remediation is required before promoting these routes to Done.
 
-## NX-03B deployed smoke
+## Meetings, calendars, and representative lookup deployed smoke
 
 | Outcome | Result |
 | --- | --- |
 | Deployment | Source commit `866eb6f` deployed as `168b7b40-3457-48e1-a470-a45cf5b112a9`; terminal `SUCCESS`; image `sha256:2975fa98b4c408094ef66d80e0d3e07322a2e6cfe41fef6710815c1dae58b5a8`. |
 | Historical split-runtime verification | `apps/legislation` verification passed 198 files with 2 skipped and 1,036 tests with 40 skipped. The former `apps/legislation-web` split app passed 22 files and 571 tests. Next.js `16.3.1` build and built router 173/173 passed. |
-| Cumulative smoke | Production `/health` and `/ready` returned `200`; the NX-03B profile and all prior release profiles passed. |
+| Cumulative smoke | Production `/health` and `/ready` returned `200`; the meeting/calendar profile and all prior release profiles passed. |
 | Done | Eight operations passed deployed smoke: meetings collection, meeting agenda list, meeting documents list and detail, meeting outcomes list, meeting participants list and detail, and calendars collection. |
 | Canonical-fixture blocked | Meeting detail, meeting agenda-item detail, meeting outcome detail, calendar detail, and calendar meetings remain blocked and receive no Done credit. |
 | Dependency-configuration blocked | Representative lookup is blocked because `OPENSTATES_API_KEY` is absent. The deployed route returned `503 dependency_unavailable`, `retryable: true`, and `Retry-After: 30`. |
 | Rollback | Previous successful `legislation-web` deployment: `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. |
-| Next endpoint block | NX-04 is In progress. |
+| Next endpoint block | Search, document-difference, and research delivery is **In progress**. |
 
-NX-03B is complete as a delivery/release block. Its six named blockers are independent promotion gates: do not mark
+The meeting/calendar delivery block is complete. Its six named blockers are independent promotion gates: do not mark
 them Done until the fixture or `OPENSTATES_API_KEY` prerequisite is resolved and deployed smoke is repeated.
 
-## NX-04 deployment history and current gate
+## Search, document-difference, and research deployment history and current gate
 
 | Outcome | Result |
 | --- | --- |
-| Handler coverage | 73 of 87 public operations have explicit deployed Next.js handlers. This includes 40 routes with Done release credit, 26 routes blocked by named production prerequisites, and the seven active NX-04 routes. |
+| Handler coverage | 73 of 88 public operations have explicit deployed Next.js handlers. This includes 40 routes with Done release credit, 26 routes blocked by named production prerequisites, and seven active search, document-difference, and research routes. |
 | Deployment | Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5`; terminal `SUCCESS`. |
 | Operational smoke | Production `GET /health` and `GET /ready` returned `200`. |
-| Production endpoint smoke | Pending. Active HNSW index pressure prevents safely running the NX-04 semantic and hybrid search probes. |
-| Route state | All seven NX-04 routes remain **In progress**. Do not mark them Done until cumulative production smoke passes after the index pressure is relieved. |
+| Production endpoint smoke | Pending. Active HNSW index pressure prevents safely running semantic and hybrid search probes. |
+| Route state | All seven routes remain **In progress**. Do not mark them Done until cumulative production smoke passes after the index pressure is relieved. |
 
 The subsequent unified-runtime source snapshot `3a498d1` deployed as
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`. Its unified verification and foundation smoke are
 recorded in the current production table above. That deployment supersedes `35cfc3bb-ea63-477c-b467-6bf84a4200c5`,
-which is now the immediately preceding successful rollback target, but it does not change the NX-04 route state.
+which is now the immediately preceding successful rollback target, but it does not change the route state.
 
 The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
-pressure, then run the complete NX-04 production smoke with audited fixtures and record the result here.
+pressure, then run the complete search, document-difference, and research production smoke with audited fixtures and record the result here.
 
 ## Next safe actions
 
-1. Relieve or schedule around active HNSW index pressure, then run the pending NX-04 production smoke without reopening
-   NX-03B. Keep every named NX-03B fixture and configuration blocker explicit until it passes a fresh deployed smoke.
-2. After NX-04 passes, add the production WorkOS request-identity boundary and required NX-05 secrets, then deploy and
-   functionally smoke all 14 NX-05 routes. Do not treat their reviewed source or fail-closed `403` behavior as release
+1. Relieve or schedule around active HNSW index pressure, then run the pending search, document-difference, and research
+   production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
+2. After that smoke passes, add the production WorkOS request-identity boundary and required subscription/webhook secrets,
+   then deploy and functionally smoke all 14 subscription/webhook routes. Do not treat their reviewed source or fail-closed `403` behavior as release
    completion.
-3. Add distributed rate limiting after authentication. Migrate MCP last, and run its canary only after a live Next.js
+3. Keep MCP migration deferred until after the authenticated API release, and run its canary only after a live Next.js
    MCP route exists.
 
 ## Rollback
@@ -174,6 +174,6 @@ pressure, then run the complete NX-04 production smoke with audited fixtures and
 The current deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff`; its immediately preceding known-good
 `legislation-web` rollback deployment is `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. After each subsequent
 `legislation-web` deployment, rollback uses only the newly recorded immediately preceding known-good deployment. The
-old `legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a rollback target.
+old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
 from process startup.

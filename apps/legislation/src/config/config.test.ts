@@ -43,13 +43,6 @@ describe("loadConfig", () => {
         host: "127.0.0.1",
         port: 3100,
         publicApiBaseUrl: "http://127.0.0.1:3100",
-        rateLimit: {
-          enabled: true,
-          limit: 120,
-          maximumKeys: 10_000,
-          trustedProxyHops: 0,
-          windowMs: 60_000
-        },
         requestBodyBytes: 1_048_576
       }
     })
@@ -72,7 +65,7 @@ describe("loadConfig", () => {
       GOVINFO_API_KEY: "govinfo-key",
       GOVINFO_API_URL: "https://govinfo.example/api/",
       LEGISLATION_HOST: "0.0.0.0",
-      LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: encryptionKey,
       LEGISLATION_PORT: "8080",
       LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
@@ -114,8 +107,7 @@ describe("loadConfig", () => {
     expect(config.server).toMatchObject({
       host: "0.0.0.0",
       port: 8080,
-      publicApiBaseUrl: "https://legislation.example",
-      rateLimit: { enabled: true }
+      publicApiBaseUrl: "https://legislation.example"
     })
   })
 
@@ -123,20 +115,6 @@ describe("loadConfig", () => {
     const config = loadConfig({ LEGISLATION_PORT: "3100", PORT: "4567" })
 
     expect(config.server).toMatchObject({ host: "0.0.0.0", port: 4567 })
-  })
-
-  it("parses bounded API rate limiting and rejects unsafe proxy settings", () => {
-    expect(
-      loadConfig({
-        LEGISLATION_RATE_LIMIT_ENABLED: "false",
-        LEGISLATION_RATE_LIMIT_LIMIT: "25",
-        LEGISLATION_RATE_LIMIT_MAXIMUM_KEYS: "500",
-        LEGISLATION_RATE_LIMIT_WINDOW_MS: "10000",
-        LEGISLATION_TRUSTED_PROXY_HOPS: "1"
-      }).server.rateLimit
-    ).toEqual({ enabled: false, limit: 25, maximumKeys: 500, trustedProxyHops: 1, windowMs: 10_000 })
-    expect(() => loadConfig({ LEGISLATION_RATE_LIMIT_ENABLED: "yes" })).toThrow(ConfigurationError)
-    expect(() => loadConfig({ LEGISLATION_TRUSTED_PROXY_HOPS: "5" })).toThrow(ConfigurationError)
   })
 
   it("requires an http or https public API URL in production", () => {
@@ -152,18 +130,18 @@ describe("loadConfig", () => {
   it("requires a valid 32-byte idempotency encryption key in production", () => {
     expect(() =>
       loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example", NODE_ENV: "production" })
-    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production")
+    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET is required in production")
     expect(() =>
       loadConfig({
-        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "too-short",
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET: "too-short",
         LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
         NODE_ENV: "production"
       })
-    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key")
+    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET must be a base64 or base64url-encoded 32-byte key")
     expect(
       loadConfig({
         ...workosEnvironment,
-        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: encryptionKey,
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET: encryptionKey,
         LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
         LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: encryptionKey,
         NODE_ENV: "production"
@@ -176,7 +154,7 @@ describe("loadConfig", () => {
     expect(() =>
       loadConfig({
         ...workosEnvironment,
-        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: encryptionKey,
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET: encryptionKey,
         LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
         NODE_ENV: "production"
       })

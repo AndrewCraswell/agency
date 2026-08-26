@@ -7,7 +7,6 @@ export type LegislationErrorCategory =
   | "not_found"
   | "payload_too_large"
   | "precondition_failed"
-  | "rate_limited"
   | "unprocessable"
   | "unauthorized"
 

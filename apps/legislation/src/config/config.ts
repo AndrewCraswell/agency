@@ -2,7 +2,6 @@ import { z } from "zod"
 
 const optionalSecret = z.string().trim().min(1).optional()
 const workosSessionIssuer = "https://api.workos.com"
-const environmentBoolean = z.preprocess(parseEnvironmentBoolean, z.boolean())
 
 const configSchema = z
   .object({
@@ -87,13 +86,6 @@ const configSchema = z
       host: z.string().trim().min(1),
       port: z.coerce.number().int().min(1).max(65_535),
       publicApiBaseUrl: z.url({ protocol: /^https?$/ }),
-      rateLimit: z.object({
-        enabled: environmentBoolean,
-        limit: z.coerce.number().int().min(1).max(10_000),
-        maximumKeys: z.coerce.number().int().min(1).max(100_000),
-        trustedProxyHops: z.coerce.number().int().min(0).max(4),
-        windowMs: z.coerce.number().int().min(1_000).max(3_600_000)
-      }),
       requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760),
       shutdownTimeoutMs: z.coerce.number().int().min(1000).max(120_000)
     })
@@ -118,7 +110,7 @@ const configSchema = z
     if (config.environment === "production" && config.security.idempotencyEncryptionKey === undefined) {
       context.addIssue({
         code: "custom",
-        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production",
+        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET is required in production",
         path: ["security", "idempotencyEncryptionKey"]
       })
     }
@@ -135,7 +127,7 @@ const configSchema = z
     ) {
       context.addIssue({
         code: "custom",
-        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key",
+        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET must be a base64 or base64url-encoded 32-byte key",
         path: ["security", "idempotencyEncryptionKey"]
       })
     }
@@ -236,7 +228,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
     security: {
-      idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY,
+      idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET,
       webhookSecretEncryptionKey: environment.LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY
     },
     server: {
@@ -245,13 +237,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       publicApiBaseUrl:
         environment.LEGISLATION_PUBLIC_API_BASE_URL ??
         (environment.NODE_ENV === "production" ? undefined : "http://127.0.0.1:3100"),
-      rateLimit: {
-        enabled: environment.LEGISLATION_RATE_LIMIT_ENABLED ?? "true",
-        limit: environment.LEGISLATION_RATE_LIMIT_LIMIT ?? "120",
-        maximumKeys: environment.LEGISLATION_RATE_LIMIT_MAXIMUM_KEYS ?? "10000",
-        trustedProxyHops: environment.LEGISLATION_TRUSTED_PROXY_HOPS ?? "0",
-        windowMs: environment.LEGISLATION_RATE_LIMIT_WINDOW_MS ?? "60000"
-      },
       requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576",
       shutdownTimeoutMs: environment.LEGISLATION_SHUTDOWN_TIMEOUT_MS ?? "30000"
     }
@@ -261,16 +246,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
     throw new ConfigurationError(result.error)
   }
   return result.data
-}
-
-function parseEnvironmentBoolean(value: unknown): unknown {
-  if (value === "true" || value === true) {
-    return true
-  }
-  if (value === "false" || value === false) {
-    return false
-  }
-  return value
 }
 
 export function decodeIdempotencyEncryptionKey(value: string): Buffer {

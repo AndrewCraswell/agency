@@ -10,7 +10,6 @@ const errorCategories = [
   "not_found",
   "payload_too_large",
   "precondition_failed",
-  "rate_limited",
   "unprocessable",
   "unauthorized"
 ] as const
@@ -427,6 +426,10 @@ export class LegislationApiClient {
 
   listChanges(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: "/api/changes", query }, options)
+  }
+
+  getChange(id: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ method: "GET", path: `/api/changes/${segment(id)}` }, options)
   }
 
   listJurisdictions(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {

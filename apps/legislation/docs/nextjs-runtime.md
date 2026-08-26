@@ -22,18 +22,23 @@ credentials.
 
 ## Current release boundary
 
-Reviewed source now contains 87 of 87 explicit Next.js route handlers. The current production deployment contains 73 of
-87: 40 have release **Done** credit, 26 remain blocked by named production data, fixture, or dependency prerequisites,
-and the seven NX-04 search, diff, and research routes are deployed but remain **In progress** until their production
-smoke passes. The 14 subscription and webhook handlers, compositions, and local tests exist only in reviewed source and
-are not part of the current production image.
+Reviewed source now contains 88 of 88 explicit Next.js route handlers. The current production deployment contains 73 of
+88: 40 have release **Done** credit, 26 remain blocked by named production data, fixture, or dependency prerequisites,
+and the seven search, document-difference, and research routes are deployed but remain **In progress** until their
+production smoke passes. The 14 subscription and webhook handlers, compositions, and local tests exist only in reviewed
+source and are not part of the current production image.
 
 The shared Next.js API boundary now authenticates supported and catch-all `/api/**` requests in WorkOS mode, installs
 only the verified user and optional organization identity in request context, and returns the canonical `401` challenge
 before endpoint handlers run. Health and readiness remain public. Production requires both encryption keys, while the
 release procedure separately requires `AUTH_MODE=workos` and the public WorkOS verifier values. Functional
-subscription/webhook deployment still requires NX-04, those Railway values, both keys, deployment, and cumulative
-authenticated smoke; until then all 14 routes retain **Blocked** release state.
+subscription/webhook deployment still requires the blocked search, document-difference, and research smoke, those
+Railway values, both keys, deployment, and cumulative authenticated smoke; until then all 14 routes remain **In
+progress**.
+
+Set `LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET` and `LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY` to independent
+base64 or base64url-encoded 32-byte values in production. The names are deployment configuration only and are never
+returned to clients or written to logs.
 
 The current unified deployment is source snapshot commit `3a498d1`, deployed as Railway deployment
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`. Unified verification passed 221 test files with 2
@@ -42,13 +47,12 @@ passed. Foundation smoke returned `200` for health, readiness, and the homepage,
 unsupported-method checks. The immediately preceding successful rollback deployment is
 `35cfc3bb-ea63-477c-b467-6bf84a4200c5`.
 
-NX-04 production smoke is intentionally still pending: active HNSW index pressure must be relieved before exercising
-semantic and hybrid search in production. A successful deployment, verification, build, and foundation smoke do not
-promote NX-04 routes to **Done** without that endpoint evidence.
+Search, document-difference, and research production smoke is intentionally still pending: active HNSW index pressure
+must be relieved before exercising semantic and hybrid search in production. A successful deployment, verification,
+build, and foundation smoke do not promote those routes to **Done** without endpoint evidence.
 
-Authentication implementation is in progress locally and will enable functional subscription/webhook release
-verification after NX-04. Distributed rate limiting follows authenticated deployment. MCP migration is last and remains
-blocked until both earlier gates are complete.
+Authentication enables functional subscription/webhook release verification after the blocked search,
+document-difference, and research smoke. MCP migration is deferred until after the authenticated API release.
 
 ## Smoke procedure
 
@@ -61,8 +65,8 @@ $env:LEGISLATION_WEB_SMOKE_BASE_URL = 'https://legislation-web-production-b024.u
 pnpm --filter legislation smoke:foundation
 ```
 
-For NX-04, configure its audited query, expected-outcome, bill, document, and research-fixture variables. Do not run
-that profile while HNSW index pressure is active. The harness keeps fixture
+For search, document-difference, and research smoke, configure the audited query, expected-outcome, bill, document,
+and research-fixture variables. Do not run that profile while HNSW index pressure is active. The harness keeps fixture
 identities, query text, coordinates, research prompts, tokens, and model errors out of its stable report.
 
 See the [migration plan](nextjs-api-migration-plan.md) for route-state accounting and the

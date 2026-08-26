@@ -4,6 +4,11 @@ import type { RequestIdentity } from "./request-context.js"
 
 export type AuthenticationErrorCategory = "expired" | "invalid" | "malformed" | "missing" | "temporary"
 
+export type WorkosIdentity = RequestIdentity &
+  Readonly<{
+    credentialType: "machine" | "user-session"
+  }>
+
 export class AuthenticationError extends Error {
   readonly category: AuthenticationErrorCategory
 
@@ -64,7 +69,7 @@ export function createWorkosAuthenticator(config: WorkosAuthenticatorConfig, key
           timeoutDuration: 5000
         }))
 
-  return async (authorizationHeader: string | string[] | undefined): Promise<RequestIdentity> => {
+  return async (authorizationHeader: string | string[] | undefined): Promise<WorkosIdentity> => {
     const token = extractBearerToken(authorizationHeader)
     try {
       const unverifiedPayload = decodeJwt(token)
@@ -77,7 +82,7 @@ export function createWorkosAuthenticator(config: WorkosAuthenticatorConfig, key
       const { payload } = isAuthKitSession
         ? await verifyAuthKitSessionToken(token, config.userSession, sessionGetKey)
         : await verifyM2mToken(token, config.m2m, m2mGetKey)
-      return identityFromPayload(payload)
+      return identityFromPayload(payload, isAuthKitSession ? "user-session" : "machine")
     } catch (error) {
       if (error instanceof AuthenticationError) {
         throw error
@@ -136,7 +141,10 @@ async function verifyAuthKitSessionToken(
   return result
 }
 
-function identityFromPayload(payload: Awaited<ReturnType<typeof jwtVerify>>["payload"]): RequestIdentity {
+function identityFromPayload(
+  payload: Awaited<ReturnType<typeof jwtVerify>>["payload"],
+  credentialType: WorkosIdentity["credentialType"]
+): WorkosIdentity {
   let organizationId: string | undefined
   if (typeof payload.org_id === "string") {
     organizationId = payload.org_id
@@ -146,5 +154,5 @@ function identityFromPayload(payload: Awaited<ReturnType<typeof jwtVerify>>["pay
   if (typeof payload.sub !== "string" || payload.sub.length === 0) {
     throw new AuthenticationError("invalid")
   }
-  return { organizationId, userId: payload.sub }
+  return { credentialType, organizationId, userId: payload.sub }
 }

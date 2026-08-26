@@ -121,7 +121,7 @@ export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
       correlationId: correlationId(request),
       ...(details === undefined ? {} : { details }),
       message,
-      retryable: category === "dependency_unavailable" || category === "rate_limited"
+      retryable: category === "dependency_unavailable"
     },
     status
   }
@@ -142,10 +142,10 @@ export function sendApiError(request: IncomingMessage, response: ServerResponse,
   const { status: _status, ...errorBody } = body
   if (
     publicError instanceof LegislationError &&
-    (publicError.category === "dependency_unavailable" || publicError.category === "rate_limited") &&
+    publicError.category === "dependency_unavailable" &&
     !response.hasHeader("retry-after")
   ) {
-    response.setHeader("retry-after", publicError.category === "dependency_unavailable" ? "30" : "1")
+    response.setHeader("retry-after", "30")
   }
   sendApiJson(response, typeof status === "number" ? status : 500, errorBody)
 }
@@ -359,8 +359,6 @@ function statusForError(category: LegislationError["category"] | "internal"): nu
       return 413
     case "unprocessable":
       return 422
-    case "rate_limited":
-      return 429
     case "dependency_unavailable":
       return 503
     case "internal":

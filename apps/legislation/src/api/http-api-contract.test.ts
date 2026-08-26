@@ -59,16 +59,16 @@ function operationId(operation: Pick<InventoryOperation, "method" | "path">): st
 }
 
 describe("HTTP API documentation contract", () => {
-  it("keeps all 87 inventory operations represented exactly once in their detailed contract pages", () => {
+  it("keeps all 88 inventory operations represented exactly once in their detailed contract pages", () => {
     const operations = inventory()
     const inventoryKeys = operations.map(({ method, path }) => `${method} ${path}`)
     const detailedKeys = contractPages.flatMap((page) =>
       [...document(page).matchAll(declaredOperation)].map((match) => match[1])
     )
 
-    expect(operations).toHaveLength(87)
-    expect(new Set(inventoryKeys)).toHaveProperty("size", 87)
-    expect(new Set(detailedKeys)).toHaveProperty("size", 87)
+    expect(operations).toHaveLength(88)
+    expect(new Set(inventoryKeys)).toHaveProperty("size", 88)
+    expect(new Set(detailedKeys)).toHaveProperty("size", 88)
     expect(new Set(detailedKeys)).toEqual(new Set(inventoryKeys))
   })
 
@@ -84,9 +84,8 @@ describe("HTTP API documentation contract", () => {
     expect(readme).toContain("The HTTP API accepts configured WorkOS M2M bearer tokens")
     expect(readme).toContain("AuthKit sessions are API-only")
     expect(readme).toContain("The MCP resource accepts only M2M tokens for its configured resource audience.")
-    expect(readme).toContain(
-      "Every authenticated operation declares `401`, `403`, `429`, and `500` with `ErrorResponse`."
-    )
+    expect(readme).toContain("Every authenticated operation declares `401`, `403`, and `500` with `ErrorResponse`.")
+    expect(readme).not.toContain("`429`")
     expect(readme).toContain("Any operation accepting input declares `400` and `413`;")
     expect(readme).toContain("a path-resource operation declares `404`;")
     expect(readme).toContain("model-backed or provider-backed operations declare `422` and `503`;")
@@ -98,12 +97,14 @@ describe("HTTP API documentation contract", () => {
     expect(schemas).toContain("type SearchPage<T> = Page<T>")
     expect(schemas).toContain("A cursor binds the caller, filters, fields, and sort.")
     expect(schemas).toContain("Changing them returns `400 invalid_request`.")
+    expect(schemas).not.toContain("`rate_limited`")
   })
 
   it("derives a unique stable OpenAPI operation ID for every documented operation", () => {
     const ids = inventory().map(operationId)
 
-    expect(new Set(ids)).toHaveProperty("size", 87)
+    expect(new Set(ids)).toHaveProperty("size", 88)
+    expect(ids).toContain("get__api__changes__by_changeId")
     expect(ids).toContain("get__api__bills__by_billId__votes")
     expect(ids).toContain("post__api__webhooks__by_webhookId__rotate_secret")
     expect(ids).toContain("delete__api__subscriptions__by_subscriptionId")

@@ -3,7 +3,7 @@ import type { LegislationDatabase } from "../db/database.js"
 import { assertBillRelatedParentExists, listBillRelatedBills } from "../db/queries/bill-related-read.js"
 import { listBillTextSections } from "../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../db/queries/bill-timeline-read.js"
-import { listChangeFeed } from "../db/queries/change-feed-reads.js"
+import { getChangeEvent, listChangeFeed } from "../db/queries/change-feed-reads.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
 import { readDocumentDiff } from "../db/queries/document-diff-read.js"
 import {
@@ -174,6 +174,7 @@ export function createLegislationApiHandler(
           createChangeFeedApiHandler(
             {
               assertBillExists: async (billId) => await assertBillExists(documentDatabase, billId),
+              getChange: async (changeId) => await getChangeEvent(documentDatabase, changeId),
               listChanges: async (input) => await listChangeFeed(documentDatabase, input)
             },
             options

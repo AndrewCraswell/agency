@@ -11,7 +11,7 @@ Responses include `truncated: true` and a continuation cursor whenever a configu
 Source-dependent expansion searches return a warning when no record matches; clients must not interpret an empty result
 as proof that the jurisdiction has no such people, committees, events, calendars, votes, amendments, or materials.
 
-Stable error categories are `invalid_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`,
+Stable error categories are `invalid_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`,
 `dependency_unavailable`, and `internal`. Errors include a safe message and correlation ID and never include SQL,
 credentials, stack traces, or provider secrets.
 

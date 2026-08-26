@@ -937,6 +937,7 @@ async function startComposedServer(): Promise<string> {
   }
   const changeFeedApi: ChangeFeedApi = {
     assertBillExists: async () => undefined,
+    getChange: async () => changeEvent(),
     listChanges: async (): Promise<{ items: ChangeEventRead[]; truncated: boolean }> => ({
       items: [changeEvent()],
       truncated: false
@@ -1121,7 +1122,8 @@ describe("composed server endpoint smoke coverage", () => {
       { path: `/api/calendars/${encodeURIComponent(CALENDAR_ID)}`, type: "calendar" },
       { path: `/api/people/${encodeURIComponent(PERSON_ID)}`, type: "person" },
       { path: `/api/organizations/${encodeURIComponent(ORGANIZATION_ID)}`, type: "organization" },
-      { path: `/api/amendments/${encodeURIComponent(AMENDMENT_ID)}`, type: "amendment" }
+      { path: `/api/amendments/${encodeURIComponent(AMENDMENT_ID)}`, type: "amendment" },
+      { path: `/api/changes/${encodeURIComponent("change:1")}`, type: "change" }
     ]
     for (const testCase of resources) {
       const response = await fetch(`${baseUrl}${testCase.path}`)
@@ -1322,6 +1324,7 @@ describe("composed server endpoint smoke coverage", () => {
     const apiAliases = [
       { method: "GET", path: "/api//jurisdictions" },
       { method: "GET", path: "/api/changes/" },
+      { method: "GET", path: `/api/changes/${encodeURIComponent("change:1")}/` },
       { method: "GET", path: `/api/bills/${encodeURIComponent(BILL_ID)}/related/` },
       { method: "GET", path: `/api/calendars/${encodeURIComponent(CALENDAR_ID)}/meetings/` },
       { method: "POST", path: "/api/document-diffs/" },

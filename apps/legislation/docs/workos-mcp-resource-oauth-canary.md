@@ -18,7 +18,7 @@ test a Resource Indicator against the deleted `legislation-api` service. That se
 neither current nor a rollback target.
 
 Resume this procedure only after the Next.js MCP route is deployed and its exact public `/mcp` URL is known. MCP remains
-last in the HTTP migration sequence, after API route migration, WorkOS authentication, and distributed rate limiting.
+last in the HTTP migration sequence, after API route migration and WorkOS authentication.
 
 ## Prerequisites
 

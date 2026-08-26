@@ -15,7 +15,7 @@ import type { LegislationDatabase } from "../../db/database.js"
 import { assertBillRelatedParentExists, listBillRelatedBills } from "../../db/queries/bill-related-read.js"
 import { listBillTextSections } from "../../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../../db/queries/bill-timeline-read.js"
-import { listChangeFeed } from "../../db/queries/change-feed-reads.js"
+import { getChangeEvent, listChangeFeed } from "../../db/queries/change-feed-reads.js"
 import { assertBillExists, listBillDocuments } from "../../db/queries/document-reads.js"
 import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
@@ -87,6 +87,7 @@ export function createBillAmendmentVoteHttpApiHandler(application: BillAmendment
         createChangeFeedApiHandler(
           {
             assertBillExists: async (billId) => await assertBillExists(database, billId),
+            getChange: async (changeId) => await getChangeEvent(database, changeId),
             listChanges: async (input) => await listChangeFeed(database, input)
           },
           options

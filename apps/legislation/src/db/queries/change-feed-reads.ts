@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, lte, or, sql, type SQL } from "drizzle-orm"
+import { and, desc, eq, gte, isNotNull, lt, lte, or, sql, type SQL } from "drizzle-orm"
 import { isRfc3339Timestamp, projectChangeEvent, type ChangeEvent } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
@@ -32,6 +32,30 @@ export interface ChangeFeedPage {
   truncated: boolean
 }
 
+export function buildChangeEventQuery(database: LegislationDatabase, changeId: string) {
+  return database
+    .select()
+    .from(changeEvents)
+    .where(
+      and(
+        eq(changeEvents.id, changeId),
+        isNotNull(changeEvents.sourceIsOfficial),
+        isNotNull(changeEvents.sourceProvider),
+        isNotNull(changeEvents.sourceRetrievedAt),
+        isNotNull(changeEvents.sourceUrl)
+      )
+    )
+    .limit(1)
+}
+
+export async function getChangeEvent(database: LegislationDatabase, changeId: string): Promise<ChangeEventRead> {
+  const [event] = await buildChangeEventQuery(database, changeId)
+  if (event === undefined) {
+    throw new LegislationError("not_found", "Change was not found")
+  }
+  return { event }
+}
+
 type ChangeFeedCursorScope = Readonly<{
   billId: string | null
   classification: CanonicalChangeType | null
@@ -57,6 +81,10 @@ export function buildChangeFeedQuery(database: LegislationDatabase, input: Chang
   const cursor = decodeCursor(input.cursor, scope)
   const conditions = [
     cursor === undefined ? undefined : afterCursor(cursor),
+    isNotNull(changeEvents.sourceIsOfficial),
+    isNotNull(changeEvents.sourceProvider),
+    isNotNull(changeEvents.sourceRetrievedAt),
+    isNotNull(changeEvents.sourceUrl),
     input.billId === undefined ? undefined : eq(changeEvents.recordType, "bill"),
     input.billId === undefined ? undefined : eq(changeEvents.recordId, input.billId),
     input.classification === undefined ? undefined : eq(changeEvents.changeType, input.classification),

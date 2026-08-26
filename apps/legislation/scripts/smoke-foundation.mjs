@@ -9,40 +9,60 @@ if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 30_000) {
   throw new TypeError("LEGISLATION_WEB_SMOKE_TIMEOUT_MS must be an integer between 1000 and 30000")
 }
 
-const configuredNx02a = process.env.LEGISLATION_WEB_SMOKE_NX_02A?.trim()
-if (configuredNx02a !== undefined && configuredNx02a !== "" && configuredNx02a !== "1") {
-  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02A must be 1 when it is set")
+const configuredJurisdictionSessions = process.env.LEGISLATION_WEB_SMOKE_JURISDICTION_SESSIONS?.trim()
+if (
+  configuredJurisdictionSessions !== undefined &&
+  configuredJurisdictionSessions !== "" &&
+  configuredJurisdictionSessions !== "1"
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_JURISDICTION_SESSIONS must be 1 when it is set")
 }
-const configuredNx02b = process.env.LEGISLATION_WEB_SMOKE_NX_02B?.trim()
-if (configuredNx02b !== undefined && configuredNx02b !== "" && configuredNx02b !== "1") {
-  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02B must be 1 when it is set")
+const configuredLegislativeRecords = process.env.LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS?.trim()
+if (
+  configuredLegislativeRecords !== undefined &&
+  configuredLegislativeRecords !== "" &&
+  configuredLegislativeRecords !== "1"
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS must be 1 when it is set")
 }
-const configuredNx02c = process.env.LEGISLATION_WEB_SMOKE_NX_02C?.trim()
-if (configuredNx02c !== undefined && configuredNx02c !== "" && configuredNx02c !== "1") {
-  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02C must be 1 when it is set")
+const configuredDocumentsResources = process.env.LEGISLATION_WEB_SMOKE_DOCUMENTS_RESOURCES?.trim()
+if (
+  configuredDocumentsResources !== undefined &&
+  configuredDocumentsResources !== "" &&
+  configuredDocumentsResources !== "1"
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_DOCUMENTS_RESOURCES must be 1 when it is set")
 }
-const configuredNx03a = process.env.LEGISLATION_WEB_SMOKE_NX_03A?.trim()
-if (configuredNx03a !== undefined && configuredNx03a !== "" && configuredNx03a !== "1") {
-  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_03A must be 1 when it is set")
+const configuredPeopleOrganizations = process.env.LEGISLATION_WEB_SMOKE_PEOPLE_ORGANIZATIONS?.trim()
+if (
+  configuredPeopleOrganizations !== undefined &&
+  configuredPeopleOrganizations !== "" &&
+  configuredPeopleOrganizations !== "1"
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_PEOPLE_ORGANIZATIONS must be 1 when it is set")
 }
-const configuredNx03b = process.env.LEGISLATION_WEB_SMOKE_NX_03B?.trim()
-if (configuredNx03b !== undefined && configuredNx03b !== "" && configuredNx03b !== "1") {
-  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_03B must be 1 when it is set")
+const configuredMeetingsCalendars = process.env.LEGISLATION_WEB_SMOKE_MEETINGS_CALENDARS?.trim()
+if (
+  configuredMeetingsCalendars !== undefined &&
+  configuredMeetingsCalendars !== "" &&
+  configuredMeetingsCalendars !== "1"
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_MEETINGS_CALENDARS must be 1 when it is set")
 }
-const configuredNx04 = process.env.LEGISLATION_WEB_SMOKE_NX_04?.trim()
-if (configuredNx04 !== undefined && configuredNx04 !== "" && configuredNx04 !== "1") {
-  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_04 must be 1 when it is set")
+const configuredSearchResearch = process.env.LEGISLATION_WEB_SMOKE_SEARCH_RESEARCH?.trim()
+if (configuredSearchResearch !== undefined && configuredSearchResearch !== "" && configuredSearchResearch !== "1") {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_SEARCH_RESEARCH must be 1 when it is set")
 }
-const smokeNx04 = configuredNx04 === "1"
-const smokeNx03b = configuredNx03b === "1"
-const smokeNx03a = configuredNx03a === "1"
-const smokeNx02c = configuredNx02c === "1"
-const smokeNx02b = configuredNx02b === "1"
-const smokeNx03bCumulative = smokeNx03b || smokeNx04
-const smokeNx03aCumulative = smokeNx03a || smokeNx03bCumulative
-const smokeNx02cCumulative = smokeNx02c || smokeNx03aCumulative
-const smokeNx02bCumulative = smokeNx02b || smokeNx02cCumulative
-const smokeNx02a = configuredNx02a === "1" || smokeNx02bCumulative
+const smokeSearchResearch = configuredSearchResearch === "1"
+const smokeMeetingsCalendars = configuredMeetingsCalendars === "1"
+const smokePeopleOrganizations = configuredPeopleOrganizations === "1"
+const smokeDocumentsResources = configuredDocumentsResources === "1"
+const smokeLegislativeRecords = configuredLegislativeRecords === "1"
+const smokeMeetingsCalendarsCumulative = smokeMeetingsCalendars || smokeSearchResearch
+const smokePeopleOrganizationsCumulative = smokePeopleOrganizations || smokeMeetingsCalendarsCumulative
+const smokeDocumentsResourcesCumulative = smokeDocumentsResources || smokePeopleOrganizationsCumulative
+const smokeLegislativeRecordsCumulative = smokeLegislativeRecords || smokeDocumentsResourcesCumulative
+const smokeJurisdictionSessions = configuredJurisdictionSessions === "1" || smokeLegislativeRecordsCumulative
 
 function fixtureEnvironmentValue(name) {
   const configured = process.env[name]
@@ -82,27 +102,27 @@ function expectedOutcomeEnvironmentValue(name, outcomes) {
   return value
 }
 
-const nx02bFixtures = {
+const legislativeRecordsFixtures = {
   amendmentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AMENDMENT_ID"),
   billId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_BILL_ID"),
   voteId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_VOTE_ID")
 }
 
-const nx02cFixtures = {
+const documentsResourcesFixtures = {
   documentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_ID"),
   documentSectionId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID"),
   supportingMaterialId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID"),
   supportingMaterialSectionId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID")
 }
 
-const nx03aFixtures = {
+const peopleOrganizationsFixtures = {
   membershipId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID"),
   organizationId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_ORGANIZATION_ID"),
   personId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PERSON_ID"),
   termId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_TERM_ID")
 }
 
-const nx03bFixtures = {
+const meetingsCalendarsFixtures = {
   agendaItemId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID"),
   agendaMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID"),
   calendarId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_CALENDAR_ID"),
@@ -116,7 +136,7 @@ const nx03bFixtures = {
   participantListMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID")
 }
 
-const nx04Fixtures = {
+const searchResearchFixtures = {
   allExpectedOutcome: expectedOutcomeEnvironmentValue("LEGISLATION_WEB_SMOKE_SEARCH_ALL_EXPECTED_OUTCOME", ["200"]),
   allQuery: safeEnvironmentText("LEGISLATION_WEB_SMOKE_SEARCH_ALL_QUERY", 500),
   amendmentExpectedOutcome: expectedOutcomeEnvironmentValue(
@@ -850,7 +870,7 @@ async function smokeConditionalGet(url, name, etag, correlationId) {
   }
 }
 
-async function smokeNx02aRoutes(root) {
+async function smokeJurisdictionSessionsRoutes(root) {
   const jurisdictionId = "jurisdiction:ak"
   const sessionId = "session:ak:30"
   const jurisdictionSegment = encodeURIComponent(jurisdictionId)
@@ -920,7 +940,7 @@ async function smokeNx02aRoutes(root) {
 
   for (const [index, route] of routes.entries()) {
     const url = new URL(route.path, root)
-    const correlationId = `nx-02a-smoke-${index + 1}`
+    const correlationId = `jurisdiction-sessions-smoke-${index + 1}`
     const name = requestName(url, "GET")
     const response = await smokeFetch(url, { headers: { "x-correlation-id": correlationId } })
     requireCorrelationId(response, name, correlationId)
@@ -952,14 +972,14 @@ async function smokeNx02aRoutes(root) {
   }
 
   await Promise.all([
-    smokeCanonicalApiNotFound(root, "/api/__deployment-smoke-missing__", "nx-02a-smoke-api-missing"),
-    smokeCanonicalApiNotFound(root, "/api/jurisdictions/", "nx-02a-smoke-api-trailing-slash")
+    smokeCanonicalApiNotFound(root, "/api/__deployment-smoke-missing__", "jurisdiction-sessions-smoke-api-missing"),
+    smokeCanonicalApiNotFound(root, "/api/jurisdictions/", "jurisdiction-sessions-smoke-api-trailing-slash")
   ])
 
   return { notFound: ["unknown_api_path", "trailing_slash_api_path"], passed, skipped }
 }
 
-async function smokeNx02bRoutes(root) {
+async function smokeLegislativeRecordsRoutes(root) {
   const routes = [
     {
       kind: "page",
@@ -1065,7 +1085,7 @@ async function smokeNx02bRoutes(root) {
   const skipped = []
 
   for (const [index, route] of routes.entries()) {
-    const fixtureId = route.fixture === undefined ? undefined : nx02bFixtures[route.fixture]
+    const fixtureId = route.fixture === undefined ? undefined : legislativeRecordsFixtures[route.fixture]
     if (route.fixture !== undefined && fixtureId === undefined) {
       skipped.push({ name: route.name, reason: `fixture_not_configured:${route.fixture}` })
       continue
@@ -1073,7 +1093,7 @@ async function smokeNx02bRoutes(root) {
     const path = typeof route.path === "function" ? route.path(fixtureId) : route.path
     const url = new URL(path, root)
     const method = route.method ?? "GET"
-    const correlationId = `nx-02b-smoke-${index + 1}`
+    const correlationId = `legislative-records-smoke-${index + 1}`
     const name = `${method} ${route.name}`
     const response = await smokeFetch(url, {
       ...(route.body === undefined ? {} : { body: JSON.stringify(route.body(fixtureId)) }),
@@ -1105,7 +1125,12 @@ async function smokeNx02bRoutes(root) {
     if (method === "GET") {
       requirePrivateNoStore(response, name)
       const etag = requireEtag(response, name)
-      await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-02b-smoke-conditional-${index + 1}`)
+      await smokeConditionalGet(
+        url,
+        `conditional GET ${route.name}`,
+        etag,
+        `legislative-records-smoke-conditional-${index + 1}`
+      )
     }
     if (route.kind === "page") {
       requirePageEnvelope(body, name, correlationId)
@@ -1121,19 +1146,19 @@ async function smokeNx02bRoutes(root) {
   }
 
   await Promise.all([
-    smokeCanonicalApiNotFound(root, "/api/bills/", "nx-02b-smoke-bills-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/amendments/", "nx-02b-smoke-amendments-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/votes/", "nx-02b-smoke-votes-trailing-slash")
+    smokeCanonicalApiNotFound(root, "/api/bills/", "legislative-records-smoke-bills-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/amendments/", "legislative-records-smoke-amendments-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/votes/", "legislative-records-smoke-votes-trailing-slash")
   ])
 
   return { notFound: ["bills_trailing_slash", "amendments_trailing_slash", "votes_trailing_slash"], passed, skipped }
 }
 
 function missingFixtureName(route) {
-  return route.fixtures.find((fixture) => nx02cFixtures[fixture] === undefined)
+  return route.fixtures.find((fixture) => documentsResourcesFixtures[fixture] === undefined)
 }
 
-async function smokeNx02cRoutes(root) {
+async function smokeDocumentsResourcesRoutes(root) {
   const routes = [
     {
       fixtures: ["documentId"],
@@ -1207,13 +1232,13 @@ async function smokeNx02cRoutes(root) {
       skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
       continue
     }
-    const path = typeof route.path === "function" ? route.path(nx02cFixtures) : route.path
+    const path = typeof route.path === "function" ? route.path(documentsResourcesFixtures) : route.path
     const url = new URL(path, root)
     const method = route.method ?? "GET"
-    const correlationId = `nx-02c-smoke-${index + 1}`
+    const correlationId = `documents-resources-smoke-${index + 1}`
     const name = `${method} ${route.name}`
     const response = await smokeFetch(url, {
-      ...(route.body === undefined ? {} : { body: JSON.stringify(route.body(nx02cFixtures)) }),
+      ...(route.body === undefined ? {} : { body: JSON.stringify(route.body(documentsResourcesFixtures)) }),
       diagnosticName: name,
       headers: {
         ...(route.body === undefined ? {} : { "content-type": "application/json" }),
@@ -1247,22 +1272,27 @@ async function smokeNx02cRoutes(root) {
     if (method === "GET") {
       requirePrivateNoStore(response, name)
       const etag = requireEtag(response, name)
-      await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-02c-smoke-conditional-${index + 1}`)
+      await smokeConditionalGet(
+        url,
+        `conditional GET ${route.name}`,
+        etag,
+        `documents-resources-smoke-conditional-${index + 1}`
+      )
     }
     if (route.kind === "page") {
       requirePageEnvelope(body, name, correlationId)
     } else if (route.kind === "resource") {
-      requireResourceEnvelope(body, name, correlationId, nx02cFixtures[route.fixtures.at(-1)])
+      requireResourceEnvelope(body, name, correlationId, documentsResourcesFixtures[route.fixtures.at(-1)])
     } else {
       requireResourceBatchEnvelope(body, name, correlationId, [
         {
           category: "dependency_unavailable",
-          id: nx02cFixtures.documentId,
+          id: documentsResourcesFixtures.documentId,
           retryable: true,
           status: "ok_or_error",
           type: "document"
         },
-        { id: nx02cFixtures.supportingMaterialId, status: "ok", type: "supporting-material" },
+        { id: documentsResourcesFixtures.supportingMaterialId, status: "ok", type: "supporting-material" },
         {
           category: "not_found",
           id: "document:__deployment-smoke-missing__",
@@ -1275,10 +1305,14 @@ async function smokeNx02cRoutes(root) {
   }
 
   await Promise.all([
-    smokeCanonicalApiNotFound(root, "/api/documents/", "nx-02c-smoke-documents-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/supporting-materials/", "nx-02c-smoke-supporting-materials-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/changes/", "nx-02c-smoke-changes-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/resources/batch/", "nx-02c-smoke-resource-batch-trailing-slash")
+    smokeCanonicalApiNotFound(root, "/api/documents/", "documents-resources-smoke-documents-trailing-slash"),
+    smokeCanonicalApiNotFound(
+      root,
+      "/api/supporting-materials/",
+      "documents-resources-smoke-supporting-materials-trailing-slash"
+    ),
+    smokeCanonicalApiNotFound(root, "/api/changes/", "documents-resources-smoke-changes-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/resources/batch/", "documents-resources-smoke-resource-batch-trailing-slash")
   ])
 
   return {
@@ -1293,11 +1327,11 @@ async function smokeNx02cRoutes(root) {
   }
 }
 
-function missingNx03aFixtureName(route) {
-  return route.fixtures.find((fixture) => nx03aFixtures[fixture] === undefined)
+function missingPeopleOrganizationsFixtureName(route) {
+  return route.fixtures.find((fixture) => peopleOrganizationsFixtures[fixture] === undefined)
 }
 
-async function smokeNx03aRoutes(root) {
+async function smokePeopleOrganizationsRoutes(root) {
   const canonicalDataIncompleteRoutes = new Set(["organization", "organizations", "person", "person term"])
   const routes = [
     { fixtures: [], kind: "page", name: "people", path: "/api/people?limit=1" },
@@ -1380,14 +1414,14 @@ async function smokeNx03aRoutes(root) {
   const skipped = []
 
   for (const [index, route] of routes.entries()) {
-    const missingFixture = missingNx03aFixtureName(route)
+    const missingFixture = missingPeopleOrganizationsFixtureName(route)
     if (missingFixture !== undefined) {
       skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
       continue
     }
-    const path = typeof route.path === "function" ? route.path(nx03aFixtures) : route.path
+    const path = typeof route.path === "function" ? route.path(peopleOrganizationsFixtures) : route.path
     const url = new URL(path, root)
-    const correlationId = `nx-03a-smoke-${index + 1}`
+    const correlationId = `people-organizations-smoke-${index + 1}`
     const name = `GET ${route.name}`
     const response = await smokeFetch(url, {
       diagnosticName: name,
@@ -1418,18 +1452,23 @@ async function smokeNx03aRoutes(root) {
     }
     requirePrivateNoStore(response, name)
     const etag = requireEtag(response, name)
-    await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-03a-smoke-conditional-${index + 1}`)
+    await smokeConditionalGet(
+      url,
+      `conditional GET ${route.name}`,
+      etag,
+      `people-organizations-smoke-conditional-${index + 1}`
+    )
     if (route.kind === "page") {
       requirePageEnvelope(body, name, correlationId)
     } else {
-      requireResourceEnvelope(body, name, correlationId, nx03aFixtures[route.fixtures.at(-1)])
+      requireResourceEnvelope(body, name, correlationId, peopleOrganizationsFixtures[route.fixtures.at(-1)])
     }
     passed.push(route.name)
   }
 
   await Promise.all([
-    smokeCanonicalApiNotFound(root, "/api/people/", "nx-03a-smoke-people-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/organizations/", "nx-03a-smoke-organizations-trailing-slash")
+    smokeCanonicalApiNotFound(root, "/api/people/", "people-organizations-smoke-people-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/organizations/", "people-organizations-smoke-organizations-trailing-slash")
   ])
 
   return {
@@ -1439,8 +1478,8 @@ async function smokeNx03aRoutes(root) {
   }
 }
 
-function missingNx03bFixtureName(route) {
-  return route.fixtures.find((fixture) => nx03bFixtures[fixture] === undefined)
+function missingMeetingsCalendarsFixtureName(route) {
+  return route.fixtures.find((fixture) => meetingsCalendarsFixtures[fixture] === undefined)
 }
 
 function requireRepresentativeLookupEnvelope(body, name, expectedCorrelationId) {
@@ -1476,7 +1515,7 @@ function requireRepresentativeLookupEnvelope(body, name, expectedCorrelationId) 
   requireNonEmptyString(body.data.expiresAt, `${name} data.expiresAt`)
 }
 
-async function smokeNx03bRoutes(root) {
+async function smokeMeetingsCalendarsRoutes(root) {
   const routes = [
     { fixtures: [], kind: "page", name: "meetings", path: "/api/meetings?limit=1" },
     {
@@ -1571,7 +1610,7 @@ async function smokeNx03bRoutes(root) {
   const skipped = []
 
   for (const [index, route] of routes.entries()) {
-    const missingFixture = missingNx03bFixtureName(route)
+    const missingFixture = missingMeetingsCalendarsFixtureName(route)
     if (missingFixture !== undefined) {
       skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
       continue
@@ -1584,10 +1623,10 @@ async function smokeNx03bRoutes(root) {
       skipped.push({ name: route.name, reason: "fixture_not_configured:representativeExpectedOutcome" })
       continue
     }
-    const path = typeof route.path === "function" ? route.path(nx03bFixtures) : route.path
+    const path = typeof route.path === "function" ? route.path(meetingsCalendarsFixtures) : route.path
     const url = new URL(path, root)
     const method = route.method ?? "GET"
-    const correlationId = `nx-03b-smoke-${index + 1}`
+    const correlationId = `meetings-calendars-smoke-${index + 1}`
     const name = `${method} ${route.name}`
     const response = await smokeFetch(url, {
       ...(route.body === undefined ? {} : { body: JSON.stringify(route.body()) }),
@@ -1633,12 +1672,17 @@ async function smokeNx03bRoutes(root) {
     requirePrivateNoStore(response, name)
     if (method === "GET") {
       const etag = requireEtag(response, name)
-      await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-03b-smoke-conditional-${index + 1}`)
+      await smokeConditionalGet(
+        url,
+        `conditional GET ${route.name}`,
+        etag,
+        `meetings-calendars-smoke-conditional-${index + 1}`
+      )
     }
     if (route.kind === "page") {
       requirePageEnvelope(body, name, correlationId)
     } else if (route.kind === "resource") {
-      requireResourceEnvelope(body, name, correlationId, nx03bFixtures[route.fixtures.at(-1)])
+      requireResourceEnvelope(body, name, correlationId, meetingsCalendarsFixtures[route.fixtures.at(-1)])
     } else {
       requireRepresentativeLookupEnvelope(body, name, correlationId)
     }
@@ -1646,12 +1690,12 @@ async function smokeNx03bRoutes(root) {
   }
 
   await Promise.all([
-    smokeCanonicalApiNotFound(root, "/api/meetings/", "nx-03b-smoke-meetings-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/calendars/", "nx-03b-smoke-calendars-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/meetings/", "meetings-calendars-smoke-meetings-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/calendars/", "meetings-calendars-smoke-calendars-trailing-slash"),
     smokeCanonicalApiNotFound(
       root,
       "/api/representative-lookups/",
-      "nx-03b-smoke-representative-lookups-trailing-slash"
+      "meetings-calendars-smoke-representative-lookups-trailing-slash"
     )
   ])
 
@@ -1662,19 +1706,19 @@ async function smokeNx03bRoutes(root) {
   }
 }
 
-function missingNx04FixtureName(route) {
-  return route.fixtures.find((fixture) => nx04Fixtures[fixture] === undefined)
+function missingSearchResearchFixtureName(route) {
+  return route.fixtures.find((fixture) => searchResearchFixtures[fixture] === undefined)
 }
 
-function nx04ExpectedStatus(route) {
-  const outcome = nx04Fixtures[route.expectedOutcome]
+function searchResearchExpectedStatus(route) {
+  const outcome = searchResearchFixtures[route.expectedOutcome]
   if (outcome === "200") {
     return 200
   }
   return outcome === "unprocessable" ? 422 : 503
 }
 
-async function smokeNx04Routes(root) {
+async function smokeSearchResearchRoutes(root) {
   const routes = [
     {
       body: ({ billQuery }) => ({ limit: 1, mode: "lexical", query: billQuery }),
@@ -1769,22 +1813,22 @@ async function smokeNx04Routes(root) {
   const skipped = []
 
   for (const [index, route] of routes.entries()) {
-    const missingFixture = missingNx04FixtureName(route)
+    const missingFixture = missingSearchResearchFixtureName(route)
     if (missingFixture !== undefined) {
       skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
       continue
     }
     const url = new URL(route.path, root)
-    const correlationId = `nx-04-smoke-${index + 1}`
+    const correlationId = `search-research-smoke-${index + 1}`
     const name = `POST ${route.name}`
     const response = await smokeFetch(url, {
-      body: JSON.stringify(route.body(nx04Fixtures)),
+      body: JSON.stringify(route.body(searchResearchFixtures)),
       diagnosticName: name,
       headers: { "content-type": "application/json", "x-correlation-id": correlationId },
       method: "POST"
     })
     requireCorrelationId(response, name, correlationId)
-    requireResponse(response, name, nx04ExpectedStatus(route), "application/json")
+    requireResponse(response, name, searchResearchExpectedStatus(route), "application/json")
     requirePrivateNoStore(response, name)
     let body
     try {
@@ -1792,7 +1836,7 @@ async function smokeNx04Routes(root) {
     } catch {
       throw new Error(`${name} did not return a JSON body`)
     }
-    if (nx04Fixtures[route.expectedOutcome] === "dependency_unavailable") {
+    if (searchResearchFixtures[route.expectedOutcome] === "dependency_unavailable") {
       if (response.headers.get("retry-after") !== "30") {
         throw new Error(`${name} did not return retry-after 30`)
       }
@@ -1800,7 +1844,7 @@ async function smokeNx04Routes(root) {
       skipped.push({ name: route.name, reason: "dependency_unavailable" })
       continue
     }
-    if (nx04Fixtures[route.expectedOutcome] === "unprocessable") {
+    if (searchResearchFixtures[route.expectedOutcome] === "unprocessable") {
       requireCanonicalDataIncomplete(body, name, correlationId)
       skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
       continue
@@ -1808,9 +1852,9 @@ async function smokeNx04Routes(root) {
     if (route.kind === "search") {
       requireSearchPageEnvelope(body, name, correlationId, route.mode, route.product, route.recordTypes)
     } else if (route.kind === "document-diff") {
-      requireDocumentDiffEnvelope(body, name, correlationId, nx04Fixtures)
+      requireDocumentDiffEnvelope(body, name, correlationId, searchResearchFixtures)
     } else {
-      requireResearchAnswerEnvelope(body, name, correlationId, nx04Fixtures.researchQuestion)
+      requireResearchAnswerEnvelope(body, name, correlationId, searchResearchFixtures.researchQuestion)
     }
     passed.push(route.name)
   }
@@ -1863,42 +1907,44 @@ if (!homepageMarkup.includes("<main")) {
   throw new Error("GET / did not render the foundation placeholder page")
 }
 
-const nx02a = smokeNx02a ? await smokeNx02aRoutes(root) : undefined
-const nx02b = smokeNx02bCumulative ? await smokeNx02bRoutes(root) : undefined
-const nx02c = smokeNx02cCumulative ? await smokeNx02cRoutes(root) : undefined
-const nx03a = smokeNx03aCumulative ? await smokeNx03aRoutes(root) : undefined
-const nx03b = smokeNx03bCumulative ? await smokeNx03bRoutes(root) : undefined
-const nx04 = smokeNx04 ? await smokeNx04Routes(root) : undefined
+const jurisdictionSessions = smokeJurisdictionSessions ? await smokeJurisdictionSessionsRoutes(root) : undefined
+const legislativeRecords = smokeLegislativeRecordsCumulative ? await smokeLegislativeRecordsRoutes(root) : undefined
+const documentsResources = smokeDocumentsResourcesCumulative ? await smokeDocumentsResourcesRoutes(root) : undefined
+const peopleOrganizations = smokePeopleOrganizationsCumulative ? await smokePeopleOrganizationsRoutes(root) : undefined
+const meetingsCalendars = smokeMeetingsCalendarsCumulative ? await smokeMeetingsCalendarsRoutes(root) : undefined
+const searchResearch = smokeSearchResearch ? await smokeSearchResearchRoutes(root) : undefined
 let profile = "foundation"
-if (smokeNx02a) {
-  profile = "foundation+nx-02a"
+if (smokeJurisdictionSessions) {
+  profile = "foundation+jurisdiction-sessions"
 }
-if (smokeNx02bCumulative) {
-  profile = "foundation+nx-02a+nx-02b"
+if (smokeLegislativeRecordsCumulative) {
+  profile = "foundation+jurisdiction-sessions+legislative-records"
 }
-if (smokeNx02c) {
-  profile = "foundation+nx-02a+nx-02b+nx-02c"
+if (smokeDocumentsResources) {
+  profile = "foundation+jurisdiction-sessions+legislative-records+documents-resources"
 }
-if (smokeNx03aCumulative) {
-  profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a"
+if (smokePeopleOrganizationsCumulative) {
+  profile = "foundation+jurisdiction-sessions+legislative-records+documents-resources+people-organizations"
 }
-if (smokeNx03bCumulative) {
-  profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b"
+if (smokeMeetingsCalendarsCumulative) {
+  profile =
+    "foundation+jurisdiction-sessions+legislative-records+documents-resources+people-organizations+meetings-calendars"
 }
-if (smokeNx04) {
-  profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b+nx-04"
+if (smokeSearchResearch) {
+  profile =
+    "foundation+jurisdiction-sessions+legislative-records+documents-resources+people-organizations+meetings-calendars+search-research"
 }
 
 process.stdout.write(
   `${JSON.stringify({
     health: health.status,
     homepage: homepage.status,
-    ...(nx02a === undefined ? {} : { nx02a }),
-    ...(nx02b === undefined ? {} : { nx02b }),
-    ...(nx02c === undefined ? {} : { nx02c }),
-    ...(nx03a === undefined ? {} : { nx03a }),
-    ...(nx03b === undefined ? {} : { nx03b }),
-    ...(nx04 === undefined ? {} : { nx04 }),
+    ...(jurisdictionSessions === undefined ? {} : { jurisdictionSessions }),
+    ...(legislativeRecords === undefined ? {} : { legislativeRecords }),
+    ...(documentsResources === undefined ? {} : { documentsResources }),
+    ...(peopleOrganizations === undefined ? {} : { peopleOrganizations }),
+    ...(meetingsCalendars === undefined ? {} : { meetingsCalendars }),
+    ...(searchResearch === undefined ? {} : { searchResearch }),
     profile,
     ready: ready.status,
     timeoutMs,

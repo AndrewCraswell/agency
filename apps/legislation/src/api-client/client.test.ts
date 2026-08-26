@@ -212,6 +212,17 @@ describe("LegislationApiClient", () => {
     ])
   })
 
+  it("maps a canonical change detail read to its encoded path", async () => {
+    const fetch = vi.fn<FetchLike>().mockResolvedValueOnce(resourceResponse())
+    const api = client(fetch)
+
+    await api.getChange("change:1", { correlationId })
+
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(new URL(String(fetch.mock.calls[0]?.[0])).pathname).toBe("/api/changes/change%3A1")
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe("GET")
+  })
+
   it("maps composed search, batch, representative, and research requests", async () => {
     const fetch = vi
       .fn<FetchLike>()

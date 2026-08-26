@@ -19,7 +19,7 @@ beforeAll(async () => {
   const getKey = createLocalJWKSet({ keys: [{ ...publicJwk, alg: "RS256", kid: "test" }] })
   apiAuthenticator = createWorkosAuthenticator(
     {
-      m2m: { audience: [apiAudience, mcpAudience], issuer, jwksUrl: "https://issuer.example/jwks" },
+      m2m: { audience: apiAudience, issuer, jwksUrl: "https://issuer.example/jwks" },
       userSession: {
         clientId: sessionClientId,
         issuer: sessionIssuer,
@@ -76,25 +76,29 @@ describe("WorkOS authentication", () => {
 
   it("validates identity and optional organization", async () => {
     await expect(mcpAuthenticator(`Bearer ${await token()}`)).resolves.toEqual({
+      credentialType: "machine",
       organizationId: "org_test",
       userId: "user_test"
     })
   })
 
-  it("allows API calls on behalf of an MCP caller without accepting M2M tokens on MCP", async () => {
+  it("keeps API and MCP machine credentials bound to their configured audiences", async () => {
     const apiToken = await token({ aud: apiAudience })
     const mcpToken = await token({ aud: mcpAudience })
 
     await expect(apiAuthenticator(`Bearer ${apiToken}`)).resolves.toMatchObject({ userId: "user_test" })
     await expect(mcpAuthenticator(`Bearer ${mcpToken}`)).resolves.toMatchObject({ userId: "user_test" })
-    await expect(apiAuthenticator(`Bearer ${mcpToken}`)).resolves.toMatchObject({ userId: "user_test" })
+    await expect(apiAuthenticator(`Bearer ${mcpToken}`)).rejects.toMatchObject({ category: "invalid" })
     await expect(mcpAuthenticator(`Bearer ${apiToken}`)).rejects.toMatchObject({ category: "invalid" })
   })
 
   it("accepts an AuthKit session whose expiry is exactly 30 days after issuance only for the API", async () => {
     const session = await sessionToken()
 
-    await expect(apiAuthenticator(`Bearer ${session}`)).resolves.toEqual({ userId: "user_test" })
+    await expect(apiAuthenticator(`Bearer ${session}`)).resolves.toEqual({
+      credentialType: "user-session",
+      userId: "user_test"
+    })
     await expect(mcpAuthenticator(`Bearer ${session}`)).rejects.toMatchObject({ category: "invalid" })
   })
 

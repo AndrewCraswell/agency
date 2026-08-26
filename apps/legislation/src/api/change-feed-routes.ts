@@ -1,10 +1,11 @@
-import type { ChangeFeedListInput, ChangeFeedPage } from "../db/queries/change-feed-reads.js"
+import type { ChangeEventRead, ChangeFeedListInput, ChangeFeedPage } from "../db/queries/change-feed-reads.js"
 import { projectChangeEventRead } from "../db/queries/change-feed-reads.js"
 import type { CanonicalChangeType } from "../db/queries/changes.js"
 import { LegislationError } from "../legislation/errors.js"
 import { toProjectionLegislationError } from "./canonical-read.js"
 import {
   apiPage,
+  apiResource,
   assertAllowedQueryParameters,
   queryInteger,
   queryOptionalDate,
@@ -31,6 +32,7 @@ const billAllowedQueryParameters = ["classification", "cursor", "limit", "observ
 
 export interface ChangeFeedApi {
   assertBillExists: (billId: string) => Promise<void>
+  getChange: (changeId: string) => Promise<ChangeEventRead>
   listChanges: (input: ChangeFeedListInput) => Promise<ChangeFeedPage>
 }
 
@@ -44,6 +46,12 @@ export function createChangeFeedApiHandler(
       const route = routeMatch(request.method, url.pathname)
       if (route === undefined) {
         return false
+      }
+      if (route.name === "detail") {
+        assertAllowedQueryParameters(url, [])
+        const change = await service.getChange(route.changeId)
+        sendApiJson(response, 200, apiResource(request, projectChangeEventRead(change, options.apiBaseUrl)))
+        return true
       }
       assertAllowedQueryParameters(
         url,
@@ -92,7 +100,9 @@ export function createChangeFeedApiHandler(
   }
 }
 
-type ChangeFeedRoute = Readonly<{ name: "bill"; billId: string } | { name: "global" }>
+type ChangeFeedRoute = Readonly<
+  { name: "bill"; billId: string } | { name: "detail"; changeId: string } | { name: "global" }
+>
 
 function routeMatch(method: string | undefined, pathname: string): ChangeFeedRoute | undefined {
   if (method !== "GET") {
@@ -101,20 +111,28 @@ function routeMatch(method: string | undefined, pathname: string): ChangeFeedRou
   if (pathname === "/api/changes") {
     return { name: "global" }
   }
+  const detail = /^\/api\/changes\/([^/]+)$/u.exec(pathname)
+  if (detail !== null) {
+    return { changeId: decodePathId(detail[1] ?? "", "changeId"), name: "detail" }
+  }
   const match = /^\/api\/bills\/([^/]+)\/changes$/u.exec(pathname)
   if (match === null) {
     return undefined
   }
-  let billId: string
+  return { billId: decodePathId(match[1] ?? "", "billId"), name: "bill" }
+}
+
+function decodePathId(value: string, name: "billId" | "changeId"): string {
+  let id: string
   try {
-    billId = decodeURIComponent(match[1] ?? "")
+    id = decodeURIComponent(value)
   } catch {
     throw new LegislationError("invalid_request", "Path contains invalid percent encoding")
   }
-  if (billId.length < 1 || billId.length > 256) {
-    throw new LegislationError("invalid_request", "billId must be between 1 and 256 characters")
+  if (id.length < 1 || id.length > 256) {
+    throw new LegislationError("invalid_request", `${name} must be between 1 and 256 characters`)
   }
-  return { billId, name: "bill" }
+  return id
 }
 
 function changeClassification(value: string | undefined): CanonicalChangeType | undefined {

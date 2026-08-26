@@ -41,5 +41,5 @@ and the command reports `processed_partial` until the global audit is complete.
 
 `provenance_complete` is guarded by a database constraint, but that flag alone is never the route gate. The audit also
 requires each jurisdiction's known active state and each session's known classification and active state. A complete
-authoritative snapshot can satisfy the gate for its explicit route scope, as the Alaska snapshot did for NX-02A; it does
+authoritative snapshot can satisfy the gate for its explicit route scope, as the Alaska jurisdiction/session release did; it does
 not imply that the nationwide audit is complete or that an unrelated route scope may register.

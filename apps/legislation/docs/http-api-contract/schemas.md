@@ -120,11 +120,10 @@ type ErrorResponse = {
 | `precondition_failed` | 412 | stale or missing required `If-Match` |
 | `payload_too_large` | 413 | request or response exceeds its ceiling |
 | `unprocessable` | 422 | valid JSON cannot be fulfilled |
-| `rate_limited` | 429 | caller quota exhausted |
 | `internal` | 500 | safe unexpected failure |
 | `dependency_unavailable` | 503 | required dependency unavailable |
 
-`429` and retryable `503` include `Retry-After`. Errors never expose SQL, stacks, provider payloads, credentials, raw
+Retryable `503` responses include `Retry-After`. Errors never expose SQL, stacks, provider payloads, credentials, raw
 addresses, or another tenant's identifiers.
 
 ## Caching, concurrency, idempotency, and limits

@@ -1359,7 +1359,6 @@ const SMOKE_ERROR_CATEGORIES = new Set([
   "not_found",
   "payload_too_large",
   "precondition_failed",
-  "rate_limited",
   "unauthorized",
   "unprocessable"
 ])

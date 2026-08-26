@@ -252,7 +252,17 @@ material; otherwise the response is `404 not_found`. This is the unique canonica
 
 Query parameters are `cursor`, `limit`, `recordType`, `recordId`, `jurisdictionId`, `organizationId`, `personId`,
 `classification`, `observedFrom`, and `observedTo`. Response is `Page<ChangeEvent>`, ordered by observation time then ID.
-The feed is bounded by the configured retention period and is not a complete provenance ledger.
+The feed is bounded by the configured retention period and is not a complete provenance ledger. It returns only events
+with a complete immutable source snapshot: source URL, provider, retrieval time, and official-source flag. Legacy events
+missing any of those fields remain retained in storage but are omitted from every page; the service never derives their
+historical provenance from mutable current records.
+
+### `GET /api/changes/{changeId}`
+
+Returns `ResourceResponse<ChangeEvent>` for the exact canonical change ID. No body or query parameters are accepted.
+The event must have the same complete immutable source snapshot required by the collection feed. A missing event and a
+legacy event missing any required provenance field both return `404 not_found`; incomplete historical rows are never
+exposed through the canonical URL.
 
 ## Heterogeneous resource batch
 
@@ -260,5 +270,5 @@ The feed is bounded by the configured retention period and is not a complete pro
 
 Uses the exact `ResourceBatchRequestItem`, `CanonicalResource`, and `BatchResponse` definitions in
 [shared schemas](schemas.md). It exists for clients resolving mixed search references; typed batch endpoints remain
-preferred. It returns `200` for a valid outer request and the standard `400`, `401`, `403`, `413`, `429`, `500`, and
+preferred. It returns `200` for a valid outer request and the standard `400`, `401`, `403`, `413`, `500`, and
 `503` errors.

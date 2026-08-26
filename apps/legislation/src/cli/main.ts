@@ -443,7 +443,6 @@ async function serve() {
             resource: config.auth.mcpAudience
           }
         : undefined,
-    rateLimit: config.server.rateLimit,
     readinessDetails: () => ({ databasePool: databasePoolSnapshot(pool) }),
     requestBodyBytes: config.server.requestBodyBytes
   })

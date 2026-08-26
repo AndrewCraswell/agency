@@ -9,8 +9,11 @@ const schema = readFileSync(new URL("../schema/schema.ts", import.meta.url), "ut
 
 describe("calendar foundation migration", () => {
   it("is registered immediately after the webhook audit migration", () => {
-    expect(journal.entries.at(-2)).toMatchObject({ idx: 40, tag: "0040_webhook-mutation-audit" })
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 41, tag: "0041_calendar-foundation" })
+    const calendarIndex = journal.entries.findIndex((entry) => entry.tag === "0041_calendar-foundation")
+
+    expect(calendarIndex).toBeGreaterThan(0)
+    expect(journal.entries.at(calendarIndex - 1)).toMatchObject({ idx: 40, tag: "0040_webhook-mutation-audit" })
+    expect(journal.entries.at(calendarIndex)).toMatchObject({ idx: 41, tag: "0041_calendar-foundation" })
   })
 
   it("matches the calendar schema's parents, provenance gates, and keyset indexes", () => {
