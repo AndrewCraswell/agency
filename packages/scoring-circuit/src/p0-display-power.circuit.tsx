@@ -55,7 +55,7 @@ const displayLimiterPcbPaths = {
   pgLower: localPcbPath(
     [-34, 0],
     [
-      [-38, -0.25],
+      [-38, -0.75],
       [-38, 3],
       [-4.51, 3]
     ]

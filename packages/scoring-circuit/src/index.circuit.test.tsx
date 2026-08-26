@@ -38,6 +38,26 @@ function renderPlacedP0Circuit(): CircuitJson {
   return placedP0Circuit
 }
 
+function expectIntegratedTraceIsOrthogonal(circuit: CircuitJson, displayName: string) {
+  const sourceTrace = circuit.find((element) => element.type === "source_trace" && element.display_name === displayName)
+  if (sourceTrace?.type !== "source_trace") throw new RangeError(`missing source trace ${displayName}`)
+  const pcbTrace = circuit.find(
+    (element) => element.type === "pcb_trace" && element.source_trace_id === sourceTrace.source_trace_id
+  )
+  if (pcbTrace?.type !== "pcb_trace") throw new RangeError(`missing PCB trace ${displayName}`)
+  const wirePoints = pcbTrace.route.filter((point) => point.route_type === "wire")
+  expect(wirePoints.length).toBeGreaterThan(3)
+  expect(
+    wirePoints.every(
+      (point, index) =>
+        index === 0 ||
+        Math.abs(point.x - (wirePoints[index - 1]?.x ?? point.x)) < 1e-9 ||
+        Math.abs(point.y - (wirePoints[index - 1]?.y ?? point.y)) < 1e-9
+    ),
+    `${displayName} should remain orthogonal on the integrated board`
+  ).toBe(true)
+}
+
 function pcbComponent(circuit: CircuitJson, reference: string) {
   const source = circuit.find((element) => element.type === "source_component" && element.name === reference)
   if (source?.type !== "source_component") throw new RangeError(`missing source component ${reference}`)
@@ -374,6 +394,21 @@ describe("P0 integrated scoring-machine schematic", () => {
       pcbComponent(circuit, "U_IR_RX")
     ]) {
       expect(isInsideRectangle(component.center, renderedKeepout)).toBe(false)
+    }
+  }, 300_000)
+
+  it("keeps the manually routed display support paths orthogonal on the integrated board", () => {
+    const circuit = renderPlacedP0Circuit()
+    for (const displayName of [
+      "U_DISPLAY_LIMITER.ILM to R_DISPLAY_ILM.pin1",
+      "U_DISPLAY_LIMITER.ITIMER to C_DISPLAY_ITIMER.pin1",
+      "R_DISPLAY_PG_UPPER.pin2 to U_DISPLAY_LIMITER.PGTH",
+      "U_DISPLAY_LIMITER.PGTH to R_DISPLAY_PG_LOWER.pin1",
+      "U_DISPLAY_BUFFER_A.A8 to R_HUB75_B_PD.pin1",
+      "U_DISPLAY_BUFFER_B.A6_UNUSED to R_HUB75_UNUSED_B_A6_PD.pin1",
+      "U_DISPLAY_BUFFER_B.A8_UNUSED to R_HUB75_UNUSED_B_A8_PD.pin1"
+    ]) {
+      expectIntegratedTraceIsOrthogonal(circuit, displayName)
     }
   }, 300_000)
 })
