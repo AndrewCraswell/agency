@@ -31,6 +31,44 @@ function hub75Part(reference: string) {
   return applicationDisplayHub75SupportPart(reference)
 }
 
+type PcbPoint = readonly [number, number]
+
+/** Convert readable support-group coordinates to the first buffer's frame. */
+function localPcbPath(origin: PcbPoint, points: readonly PcbPoint[]) {
+  return points.map(([x, y]) => ({ x: x - origin[0], y: y - origin[1] }))
+}
+
+const hub75BInputPcbPath = localPcbPath(
+  [30, 1],
+  [
+    [26.5, -1.275],
+    [26.5, 4],
+    [24.175, 4]
+  ]
+)
+const hub75UnusedA6PcbPath = localPcbPath(
+  [30, 13],
+  [
+    [26.5, 12.025],
+    [26.5, 14],
+    [20.175, 14]
+  ]
+)
+const hub75UnusedA8PcbPath = localPcbPath(
+  [30, 13],
+  [
+    [26.5, 10.725],
+    [26.5, 5],
+    [20.175, 5]
+  ]
+)
+
+function hub75UnusedPcbPath(input: "A6" | "A7" | "A8") {
+  if (input === "A6") return hub75UnusedA6PcbPath
+  if (input === "A8") return hub75UnusedA8PcbPath
+  return undefined
+}
+
 /**
  * P0's display and Ethernet peripherals. The parent circuit owns the ESP32 and
  * common reset: this block consumes their reviewed nets but creates
@@ -503,6 +541,7 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           key={`${signal}-default`}
           from={`${buffer}.${input}`}
           to={signal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP.pin1" : `R_${signal}_PD.pin1`}
+          pcbPath={signal === "HUB75_B" ? hub75BInputPcbPath : undefined}
         />,
         <trace
           key={`${signal}-return`}
@@ -520,9 +559,9 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
       <trace from="U_DISPLAY_BUFFER_B.V5_DISPLAY_LIMITED" to="C_HUB75_BUF_B_BYPASS.pin1" />
       <trace from="C_HUB75_BUF_A_BYPASS.pin2" to="net.APP_GND" />
       <trace from="C_HUB75_BUF_B_BYPASS.pin2" to="net.APP_GND" />
-      <trace from="U_DISPLAY_BUFFER_B.A6_UNUSED" to="R_HUB75_UNUSED_B_A6_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.A6_UNUSED" to="R_HUB75_UNUSED_B_A6_PD.pin1" pcbPath={hub75UnusedPcbPath("A6")} />
       <trace from="U_DISPLAY_BUFFER_B.A7_UNUSED" to="R_HUB75_UNUSED_B_A7_PD.pin1" />
-      <trace from="U_DISPLAY_BUFFER_B.A8_UNUSED" to="R_HUB75_UNUSED_B_A8_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.A8_UNUSED" to="R_HUB75_UNUSED_B_A8_PD.pin1" pcbPath={hub75UnusedPcbPath("A8")} />
       {(["A6", "A7", "A8"] as const).map((input) => (
         <trace key={input} from={`R_HUB75_UNUSED_B_${input}_PD.pin2`} to="net.APP_GND" />
       ))}

@@ -84,6 +84,36 @@ function traces(circuitJson: CircuitJson) {
   )
 }
 
+function pcbRouteFor(circuitJson: CircuitJson, displayName: string) {
+  const sourceTrace = circuitJson.find(
+    (element) => element.type === "source_trace" && element.display_name === displayName
+  )
+  if (sourceTrace?.type !== "source_trace") throw new RangeError(`missing source trace ${displayName}`)
+  const pcbTrace = circuitJson.find(
+    (element) => element.type === "pcb_trace" && element.source_trace_id === sourceTrace.source_trace_id
+  )
+  if (pcbTrace?.type !== "pcb_trace") throw new RangeError(`missing PCB trace ${displayName}`)
+  return pcbTrace.route
+}
+
+type PcbRoute = ReturnType<typeof pcbRouteFor>
+type PcbWirePoint = Extract<PcbRoute[number], { readonly route_type: "wire" }>
+
+function isPcbWirePoint(point: PcbRoute[number] | undefined): point is PcbWirePoint {
+  return point?.route_type === "wire"
+}
+
+function expectAxisAlignedRoute(route: ReturnType<typeof pcbRouteFor>) {
+  const interior = route.slice(1, -1)
+  expect(interior.length).toBeGreaterThan(1)
+  for (let index = 1; index < interior.length; index += 1) {
+    const previous = interior[index - 1]
+    const current = interior[index]
+    if (!isPcbWirePoint(previous) || !isPcbWirePoint(current)) continue
+    expect(Math.abs(current.x - previous.x) < 1e-9 || Math.abs(current.y - previous.y) < 1e-9).toBe(true)
+  }
+}
+
 function pcbArtifacts(circuitJson: CircuitJson, reference: string) {
   const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
   if (source?.type !== "source_component") throw new RangeError(`missing ${reference}`)
@@ -238,5 +268,16 @@ describe("P0 digital peripherals", () => {
       ])
     )
     expect(renderedTraces.some((trace) => trace.includes("DISPLAY_ENABLE") && trace.includes("U_ESP32"))).toBe(false)
+  })
+
+  it("keeps the remaining local HUB75 pulldown routes explicit and orthogonal", () => {
+    const circuitJson = renderPcbCircuit()
+    for (const displayName of [
+      "U_DISPLAY_BUFFER_A.A8 to R_HUB75_B_PD.pin1",
+      "U_DISPLAY_BUFFER_B.A6_UNUSED to R_HUB75_UNUSED_B_A6_PD.pin1",
+      "U_DISPLAY_BUFFER_B.A8_UNUSED to R_HUB75_UNUSED_B_A8_PD.pin1"
+    ]) {
+      expectAxisAlignedRoute(pcbRouteFor(circuitJson, displayName))
+    }
   })
 })
