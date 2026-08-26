@@ -5,8 +5,8 @@
     "dockerfilePath": "apps/legislation/Dockerfile",
     "watchPatterns": [
       "/apps/legislation/**",
-      "/packages/**",
-      "/package.json",
+      "/packages/oxlint-config/**",
+      "/packages/typescript-config/**",
       "/pnpm-lock.yaml",
       "/pnpm-workspace.yaml"
     ]

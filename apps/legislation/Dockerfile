@@ -13,39 +13,41 @@ RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 WORKDIR /workspace
 
-# Railway must keep the repository root as the Docker build context. The
-# legislation build extends workspace TypeScript configuration and relies on
-# the root lockfile/catalog even though only this application is compiled.
+# Railway retains the repository root as the build context because the app
+# extends shared workspace configuration and uses the committed lockfile.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages ./packages
+COPY packages/oxlint-config ./packages/oxlint-config
+COPY packages/typescript-config ./packages/typescript-config
 COPY apps/legislation ./apps/legislation
-# The application image has no dependency on the monorepo's other products.
-# Use an app-local workspace view so unrelated private packages and package
-# extensions cannot make this filtered, frozen install unreproducible.
 COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 
-# The public registry keeps this source build independent from the private
-# workstation feed. The isolated workspace installs only legislation's closure
-# from the committed lockfile.
-RUN pnpm install --frozen-lockfile --ignore-scripts --filter legislation...
+# The isolated workspace selects only legislation's dependency closure while
+# retaining frozen lockfile and integrity validation.
+RUN pnpm install --frozen-lockfile --trust-lockfile --ignore-scripts --filter legislation...
 RUN pnpm --filter legislation build
-RUN pnpm --filter legislation deploy --prod --legacy --force --ignore-scripts /opt/legislation
+# Next's standalone tracer can retain @swc/helpers' pnpm symlink while omitting
+# its versioned target. Copy that target into the traced production closure.
+RUN cp --parents -R node_modules/.pnpm/@swc+helpers@0.5.23/node_modules/@swc/helpers \
+      apps/legislation/.next/standalone/
+RUN test -f apps/legislation/.next/standalone/apps/legislation/server.js
+RUN test -f apps/legislation/.next/standalone/node_modules/.pnpm/@swc+helpers@0.5.23/node_modules/@swc/helpers/esm/_interop_require_default.js
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
-ENV LEGISLATION_HOST=0.0.0.0
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
 WORKDIR /app
 
 RUN groupadd --system --gid 10001 legislation \
   && useradd --system --uid 10001 --gid legislation legislation
 
-COPY --from=build --chown=legislation:legislation /opt/legislation/ ./
+COPY --from=build --chown=legislation:legislation /workspace/apps/legislation/.next/standalone/ ./
+COPY --from=build --chown=legislation:legislation /workspace/apps/legislation/.next/static/ ./apps/legislation/.next/static/
 
 USER 10001
-EXPOSE 3100
+WORKDIR /app/apps/legislation
+EXPOSE 3000
 
-# Migrations are an explicit release operation and are intentionally absent
-# from the API container startup path.
-CMD ["node", "dist/cli/main.js", "serve"]
+CMD ["node", "server.js"]

@@ -18,7 +18,7 @@
 - [MCP tool contracts](tool-contracts.md)
 - [HTTP API contract](http-api-contract/README.md)
 - [Next.js API migration and staged Railway release plan](nextjs-api-migration-plan.md)
-- [Next.js application boundary](../../legislation-web/README.md)
+- [Next.js runtime and smoke boundary](nextjs-runtime.md)
 - [HTTP API implementation backlog and endpoint states](http-api-implementation-backlog.md)
 - [HTTP API local smoke checklist](http-api-local-smoke.md)
 - [HTTP API Railway release record](http-api-railway-release.md)

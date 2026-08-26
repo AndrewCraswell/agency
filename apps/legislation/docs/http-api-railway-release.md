@@ -18,35 +18,37 @@ deployment `f7c855ed-9b81-482b-9def-d3b3d8b90255`. It is not a Next.js deploymen
 Next route state. The approved replacement sequence is the
 [Next.js API migration and staged release plan](nextjs-api-migration-plan.md).
 
-The old `legislation-api` service was deleted after the Next.js foundation teardown gate passed. The Next.js route source
-is the existing `apps/legislation-web/app/api` boundary, and its deployment is the current Railway service named
-`legislation-web`. The `apps/legislation` service remains reusable domain code plus transitional standalone source; it is
-not a live rollback service. Neither service should be described as final API cutover until the migration gates pass.
+The old `legislation-api` service was deleted after the Next.js foundation teardown gate passed. `apps/legislation` is
+the canonical application and release-record home. Railway retains the current service name `legislation-web`; it is
+not a second canonical application. The deleted service is not a live rollback service, and no deployment should be
+described as final API cutover until the remaining migration gates pass.
 
-## Current Next.js source deployment
+## Current production deployment
 
 | Field | Recorded value |
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
-| Source commit | `866eb6f` |
-| Deployment | `168b7b40-3457-48e1-a470-a45cf5b112a9` |
+| Canonical application | `apps/legislation` |
+| Source commit | `0a2748b` |
+| Deployment | `35cfc3bb-ea63-477c-b467-6bf84a4200c5` |
 | Deployment status | `SUCCESS` |
-| Image | `sha256:2975fa98b4c408094ef66d80e0d3e07322a2e6cfe41fef6710815c1dae58b5a8` |
-| Rollback deployment | `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
+| Operational smoke | `GET /health` and `GET /ready` returned `200` |
+| NX-04 production smoke | Pending: active HNSW index pressure must be relieved before semantic and hybrid search smoke |
 
-This is the current verified source deployment. The deleted `legislation-api` service is historical evidence only; it is
-not a current service or a rollback target.
+This is the current verified deployment. The deleted `legislation-api` service is historical evidence only; it is not a
+current service or a rollback target. The remediation deployment proves build and operational readiness, not NX-04
+completion: the required production smoke remains pending.
 
 ## Next.js foundation deployment configuration
 
-The new `legislation-web` service uses the repository root as its build context. Railway does not automatically discover
-nested config files, so set the service Config File Path explicitly to `/apps/legislation-web/railway.json`. Before
-deploying, verify the effective service configuration uses the Dockerfile builder, `apps/legislation-web/Dockerfile`,
-and `/ready` as the health check. A deployment is not a foundation success if Railway used a different builder, Dockerfile,
+The `legislation-web` service uses the repository root as its build context. Railway does not automatically discover
+nested config files, so set the service Config File Path explicitly to `/apps/legislation/railway.json`. Before
+deploying, verify the effective service configuration uses the Dockerfile builder, `apps/legislation/Dockerfile`, and
+`/ready` as the health check. A deployment is not a foundation success if Railway used a different builder, Dockerfile,
 or health path.
 
 ## Historical standalone checks (pre-NX-01)
@@ -127,10 +129,23 @@ required civic relationships, so data remediation is required before promoting t
 NX-03B is complete as a delivery/release block. Its six named blockers are independent promotion gates: do not mark
 them Done until the fixture or `OPENSTATES_API_KEY` prerequisite is resolved and deployed smoke is repeated.
 
+## NX-04 remediation deployment
+
+| Outcome | Result |
+| --- | --- |
+| Handler coverage | 73 of 87 public operations have explicit deployed Next.js handlers. This includes 40 routes with Done release credit, 26 routes blocked by named production prerequisites, and the seven active NX-04 routes. |
+| Deployment | Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5`; terminal `SUCCESS`. |
+| Operational smoke | Production `GET /health` and `GET /ready` returned `200`. |
+| Production endpoint smoke | Pending. Active HNSW index pressure prevents safely running the NX-04 semantic and hybrid search probes. |
+| Route state | All seven NX-04 routes remain **In progress**. Do not mark them Done until cumulative production smoke passes after the index pressure is relieved. |
+
+The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
+pressure, then run the complete NX-04 production smoke with audited fixtures and record the result here.
+
 ## Next safe actions
 
-1. Continue the active NX-04 search/diff/research block without reopening NX-03B. Keep every named NX-03B fixture and
-   configuration blocker explicit until it passes a fresh deployed smoke.
+1. Relieve or schedule around active HNSW index pressure, then run the pending NX-04 production smoke without reopening
+   NX-03B. Keep every named NX-03B fixture and configuration blocker explicit until it passes a fresh deployed smoke.
 2. Continue the migration plan's fixed endpoint-block order; do not begin authentication until all 87 routes pass
    deployed smoke.
 3. Add distributed rate limiting after authentication. Migrate MCP last, and run its canary only after a live Next.js
@@ -138,9 +153,9 @@ them Done until the fixture or `OPENSTATES_API_KEY` prerequisite is resolved and
 
 ## Rollback
 
-The current deployment is `168b7b40-3457-48e1-a470-a45cf5b112a9`; its rollback target is the prior successful
-`legislation-web` deployment `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. After each subsequent `legislation-web`
-deployment, rollback uses only the immediately preceding known-good `legislation-web` deployment. The old
+The current deployment is `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. Before any rollback action, identify the immediately
+preceding known-good `legislation-web` deployment in Railway and record it with the rollback evidence. After each
+subsequent `legislation-web` deployment, rollback uses only that immediately preceding known-good deployment. The old
 `legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
 from process startup.

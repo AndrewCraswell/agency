@@ -2,12 +2,12 @@
 
 ## Purpose
 
-This plan replaces the earlier TanStack Start and standalone HTTP-server delivery sequence. The approved application
-and API boundary is the existing Next.js App Router application in `apps/legislation-web`. Its scaffold landed in
-commit `03e1c7b` with Next.js `16.2.6`; the user-approved foundation upgrade is Next.js `16.3.1`. The existing 87
-endpoint implementations in `apps/legislation` remain useful domain, repository, projection, validation, and test code,
-but they are not counted as migrated until an explicit Route Handler exists under `apps/legislation-web/app/api` and its
-deployed Railway smoke gate passes.
+This plan replaces the earlier TanStack Start and standalone HTTP-server delivery sequence. `apps/legislation` is the
+canonical application, documentation home, and Next.js runtime. The deployed Railway service retains the
+`legislation-web` name. Its scaffold landed in commit `03e1c7b` with Next.js `16.2.6`; the user-approved foundation
+upgrade is Next.js `16.3.1`. The 87 endpoint implementations in
+`apps/legislation` remain useful domain, repository, projection, validation, and test code, but they are not counted as
+migrated until an explicit Route Handler and its deployed Railway smoke gate pass.
 
 The required order is:
 
@@ -25,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Next.js `16.3.1` App Router foundation through the NX-03B route block are deployed; source commit `866eb6f` deployed as `168b7b40-3457-48e1-a470-a45cf5b112a9` and reached terminal `SUCCESS` | Next.js App Router production server in `legislation-web` with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5` and reached terminal `SUCCESS`; `/health` and `/ready` returned `200`. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | 40 of 87 Done; 7 In progress in NX-04; 0 Ready; 40 Blocked (26 named production-data, canonical-fixture, or dependency blockers and 14 NX-04-gated routes) | 87 of 87 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; deployment `168b7b40-3457-48e1-a470-a45cf5b112a9` from source commit `866eb6f` reached `SUCCESS` with image `sha256:2975fa98b4c408094ef66d80e0d3e07322a2e6cfe41fef6710815c1dae58b5a8`; rollback deployment is `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; production schema migrations through the current ledger are applied; old `legislation-api` service is deleted | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
+| Next.js Route Handlers | 73 of 87 explicit handlers are deployed: 40 Done, 26 Blocked by named production prerequisites, and 7 In progress in NX-04. The remaining 14 subscription/webhook routes are gated on NX-04. | 87 of 87 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `35cfc3bb-ea63-477c-b467-6bf84a4200c5` from `0a2748b` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. NX-04 production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
 | Authentication | WorkOS logic exists in the standalone composition | Added to the Next.js request boundary only after route migration |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
@@ -39,10 +39,9 @@ two facts cannot be conflated again.
 
 ## Foundation version and dependency decision
 
-The Next.js scaffold already exists in `apps/legislation-web` from commit `03e1c7b` and was initially pinned to
-`next@16.2.6`. The user approved upgrading the foundation to exact `next@16.3.1`, with the matching React dependencies
-already used by the scaffold. The foundation gate is therefore implementation, build, and deployment evidence; it is
-not a missing-Next dependency gate.
+The Next.js scaffold landed in commit `03e1c7b` and was initially pinned to `next@16.2.6`. The user approved upgrading
+the foundation to exact `next@16.3.1`, with the matching React dependencies already used by the application. The
+foundation gate is therefore implementation, build, and deployment evidence; it is not a missing-Next dependency gate.
 
 Keep the approved Microsoft feed for workstation installs and preserve the committed frozen lockfile. Do not use a
 floating `latest` tag, change the hosts file, or replace the repository registry configuration to make an install pass.
@@ -54,10 +53,9 @@ all succeed from the committed lockfile.
 
 ## Target architecture
 
-- `apps/legislation-web/app/api/**` owns the explicit Next.js API Route Handlers for the documented `/api/**` operations.
-  The operational `/health` and `/ready` handlers remain at `apps/legislation-web/app/health/route.ts` and
-  `apps/legislation-web/app/ready/route.ts` so their root contract paths stay exact. `app/layout.tsx` and `app/page.tsx`
-  remain the existing non-product application shell.
+- `apps/legislation` owns the canonical application, Next.js route handlers, route inventory, documentation, and
+  release record. Its explicit handlers serve the documented `/api/**` operations. The operational `/health` and
+  `/ready` handlers retain their exact root paths; neither endpoint runs migrations.
 - Every documented HTTP operation has an explicit `route.ts`; a catch-all proxy does not count as migration.
 - Route Handlers export only documented methods. Undocumented methods and aliases retain the contract's rejection
   behavior.
@@ -71,11 +69,11 @@ all succeed from the committed lockfile.
   not Edge-runtime dependencies.
 - The adapter preserves exact status codes, error/resource/page/search/batch envelopes, correlation IDs, ETags,
   conditional requests, request-size bounds, cancellation, and safe error handling.
-- `/health` is liveness and `/ready` is database-backed readiness. Neither runs migrations.
-- Railway builds the new `legislation-web` service from the repository root. Because the config is nested, set the
-  Railway Config File Path explicitly to `/apps/legislation-web/railway.json`; nested config is not discovered
-  automatically. Before the first deployment and after config changes, verify the effective service uses the Dockerfile
-  builder, `apps/legislation-web/Dockerfile`, and `/ready` health check. The old `legislation-api` service was deleted
+- `/health` is liveness and `/ready` is database-backed readiness.
+- Railway builds the `legislation-web` service from the repository root. Because the config is nested, set the Railway
+  Config File Path explicitly to `/apps/legislation/railway.json`; nested config is not discovered automatically.
+  Before the first deployment and after config changes, verify the effective service uses the Dockerfile builder,
+  `apps/legislation/Dockerfile`, and `/ready` health check. The old `legislation-api` service was deleted
   after the new service reached terminal `SUCCESS` and remote `/health` and `/ready` smoke passed; rollback now uses the
   preceding successful `legislation-web` deployment.
 - The standalone `serve` command remains transitional only while block-by-block parity is being established. It is
@@ -130,7 +128,7 @@ smoke passed, and the old `legislation-api` Railway service was deleted and reco
 
 State: **In progress**.
 
-Each sub-block requires explicit `route.ts` files under `apps/legislation-web/app/api`, focused adapter/contract tests,
+Each sub-block requires explicit `route.ts` files under `apps/legislation/app/api`, focused adapter/contract tests,
 production build, reviewed commit, deployment of the parallel `legislation-web` Railway service, terminal `SUCCESS`,
 remote smoke, and rollback evidence.
 
@@ -277,7 +275,10 @@ start NX-04.
 
 ### NX-04: Search, differences, and research endpoint migration (7 endpoints)
 
-Next route state for every operation in this block: **In progress**. NX-04 is the active implementation and review block.
+Next route state for every operation in this block: **In progress**. All seven explicit handlers are deployed in source
+commit `0a2748b`, deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5` with terminal `SUCCESS`; `/health` and `/ready`
+returned `200`. The remediation deployment does not complete the block: active HNSW index pressure still prevents the
+required production semantic/hybrid smoke from running safely.
 
 - `POST /api/search/bills`
 - `POST /api/search/amendments`
@@ -404,8 +405,10 @@ client boundary with complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 87/87.
-- **Next.js Route Handler release state:** 40/87 Done; 7 In progress in NX-04; 0 Ready; 40 Blocked. The
-  40+7+40 states sum to all 87 public API operations.
+- **Explicit Next.js handler coverage:** 73/87 deployed. This consists of 40 Done, 26 Blocked by named production
+  prerequisites, and 7 In progress in NX-04. The remaining 14 subscription/webhook routes are blocked on NX-04.
+- **Next.js Route Handler release state:** 40/87 Done; 7 In progress in NX-04; 0 Ready; 40 Blocked. The 40+7+40
+  states sum to all 87 public API operations.
 - **Blocked-route accounting:** 26 routes are Blocked by named production-data, canonical-fixture, or dependency
   deficiencies (three vote operations, document detail, document sections, global changes, all 14 NX-03A
   people/organization operations, five NX-03B canonical-fixture operations, and representative lookup configuration);

@@ -11,10 +11,11 @@ The user completes consent in their own browser. The operator retains only sanit
 
 ## Current status
 
-The canary is deliberately blocked. The current `legislation-web` deployment is
-`cc047806-27f7-4110-a6e0-7f27f4b4e517` from commit `27fa397`, but it does not yet expose a live Next.js MCP route.
-Do not configure or test a Resource Indicator against the deleted `legislation-api` service. That service is historical
-evidence only and is neither current nor a rollback target.
+The canary is deliberately blocked. The current Railway `legislation-web` deployment is
+`35cfc3bb-ea63-477c-b467-6bf84a4200c5` from commit `0a2748b`; its health and readiness checks returned `200`, but it
+does not yet expose a live Next.js MCP route. `apps/legislation` is the canonical application home. Do not configure or
+test a Resource Indicator against the deleted `legislation-api` service. That service is historical evidence only and is
+neither current nor a rollback target.
 
 Resume this procedure only after the Next.js MCP route is deployed and its exact public `/mcp` URL is known. MCP remains
 last in the HTTP migration sequence, after API route migration, WorkOS authentication, and distributed rate limiting.
