@@ -12,6 +12,10 @@ function traceNames() {
   )
 }
 
+function renderPcb() {
+  return renderTestCircuit(<P0UsbPower pcbX={0} pcbY={0} />, { pcbEnabled: true })
+}
+
 describe("P0 USB-C power input", () => {
   it("renders the selected input, protection, and regulator chain", () => {
     const components = new Map<string, unknown>()
@@ -59,5 +63,54 @@ describe("P0 USB-C power input", () => {
     expect(names.some((name) => name.includes("CHASSIS to net.APP_GND"))).toBe(false)
     expect(names.some((name) => name.includes("SCORING_ISOLATOR"))).toBe(false)
     expect(names.some((name) => name.includes("J_LINK_") || name.includes("J_USB2_SERVICE"))).toBe(false)
+  })
+
+  it("uses axis-aligned manual routes for the local USB and ADC support", () => {
+    const elements = renderPcb()
+    const sourceTraceNames = new Map(
+      elements.flatMap((element) =>
+        element.type === "source_trace" &&
+        typeof element.source_trace_id === "string" &&
+        typeof element.display_name === "string"
+          ? [[element.source_trace_id, element.display_name] as const]
+          : []
+      )
+    )
+    const expectedNames = [
+      "U_USB_PORT_PROTECT.CC2 to U_USB_PD.29",
+      "U_USB_PD.4 to C_USB_PD_LDO_1V5.pin1",
+      "U_USB_PD.29 to C_USB_PD_CC2.pin1",
+      "U_USB_PD.2 to R_USB_PD_ADCIN1_UP.pin2",
+      "U_USB_PD.2 to R_USB_PD_ADCIN1_DOWN.pin1",
+      "U_USB_PD.3 to R_USB_PD_ADCIN2_UP.pin2",
+      "U_USB_PD.3 to R_USB_PD_ADCIN2_DOWN.pin1",
+      "U_USB_PD.4 to R_USB_PD_ADCIN3_UP.pin2",
+      "U_USB_PD.4 to R_USB_PD_ADCIN3_DOWN.pin1",
+      "U_USB_PD.5 to R_USB_PD_ADCIN4_UP.pin2",
+      "U_USB_PD.5 to R_USB_PD_ADCIN4_DOWN.pin1"
+    ]
+    const manualRoutes = new Map(
+      elements.flatMap((element) =>
+        element.type === "pcb_trace" && typeof element.source_trace_id === "string"
+          ? [[sourceTraceNames.get(element.source_trace_id), element.route] as const]
+          : []
+      )
+    )
+
+    for (const name of expectedNames) {
+      const route = manualRoutes.get(name)
+      expect(route, `${name} should have a manual PCB route`).toBeDefined()
+      if (route === undefined) continue
+      const wirePoints = route.filter((point) => point.route_type === "wire")
+      expect(
+        wirePoints.every(
+          (point, index) =>
+            index === 0 ||
+            Math.abs(point.x - (wirePoints[index - 1]?.x ?? point.x)) < 1e-9 ||
+            Math.abs(point.y - (wirePoints[index - 1]?.y ?? point.y)) < 1e-9
+        ),
+        `${name} should remain orthogonal`
+      ).toBe(true)
+    }
   })
 })
