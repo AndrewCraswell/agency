@@ -1,5 +1,4 @@
 #include "scoring_esp32_services.h"
-#include "scoring_esp32_identifier.h"
 
 #include <string.h>
 
@@ -35,6 +34,11 @@ static bool is_allowed_for_receiver(
   }
   return message_type == SCORING_ESP32_TRANSPORT_DECISION_RECORD || message_type == SCORING_ESP32_TRANSPORT_STATUS ||
          message_type == SCORING_ESP32_TRANSPORT_RESPONSE;
+}
+
+static bool is_valid_identifier(const scoring_esp32_identifier_t *identifier) {
+  return identifier != NULL && identifier->length <= SCORING_ESP32_MAX_IDENTIFIER_BYTES &&
+         identifier->bytes[identifier->length] == '\0';
 }
 
 static scoring_esp32_result_t unavailable_storage(
@@ -242,6 +246,49 @@ scoring_esp32_result_t scoring_esp32_app_init(scoring_esp32_app_t *app, const sc
   return SCORING_ESP32_RESULT_OK;
 }
 
+scoring_esp32_result_t scoring_esp32_receive_authoritative_record(
+  scoring_esp32_app_t *app,
+  scoring_esp32_authoritative_record_t *out_record
+) {
+  scoring_esp32_result_t result;
+  size_t frame_length = 0U;
+  scoring_esp32_transport_frame_t frame;
+  scoring_esp32_authoritative_record_t record;
+  if (app == NULL || out_record == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_record = (scoring_esp32_authoritative_record_t){0};
+  result = app->services.scoring_link.read_frame(
+    app->services.scoring_link.context,
+    (scoring_esp32_mutable_bytes_t){.data = app->scoring_link_buffer, .capacity = sizeof(app->scoring_link_buffer)},
+    &frame_length
+  );
+  if (result != SCORING_ESP32_RESULT_OK) {
+    return result;
+  }
+  if (frame_length > sizeof(app->scoring_link_buffer)) {
+    return SCORING_ESP32_RESULT_BUFFER_TOO_SMALL;
+  }
+  result = scoring_esp32_decode_transport_frame(
+    SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+    (scoring_esp32_bytes_t){.data = app->scoring_link_buffer, .length = frame_length},
+    &frame
+  );
+  if (result != SCORING_ESP32_RESULT_OK) {
+    return result;
+  }
+  if (frame.message_type != SCORING_ESP32_TRANSPORT_DECISION_RECORD) {
+    return SCORING_ESP32_RESULT_REJECTED;
+  }
+  record = (scoring_esp32_authoritative_record_t){.bytes = frame.payload, .transport_sequence = frame.sequence};
+  result = app->services.storage.append_authoritative_record(app->services.storage.context, &record);
+  if (result != SCORING_ESP32_RESULT_OK) {
+    return result;
+  }
+  *out_record = record;
+  return SCORING_ESP32_RESULT_OK;
+}
+
 scoring_esp32_result_t scoring_esp32_read_monotonic_us(const scoring_esp32_app_t *app, uint64_t *out_us) {
   if (app == NULL || out_us == NULL) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
@@ -265,7 +312,7 @@ scoring_esp32_result_t scoring_esp32_read_boot_id(const scoring_esp32_app_t *app
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
   result = app->services.identity.read_boot_id(app->services.identity.context, out_id);
-  if (result == SCORING_ESP32_RESULT_OK && !scoring_esp32_identifier_is_valid(out_id)) {
+  if (result == SCORING_ESP32_RESULT_OK && !is_valid_identifier(out_id)) {
     *out_id = (scoring_esp32_identifier_t){.bytes = {0}, .length = 0U};
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
@@ -278,7 +325,7 @@ scoring_esp32_result_t scoring_esp32_read_device_id(const scoring_esp32_app_t *a
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
   result = app->services.identity.read_device_id(app->services.identity.context, out_id);
-  if (result == SCORING_ESP32_RESULT_OK && !scoring_esp32_identifier_is_valid(out_id)) {
+  if (result == SCORING_ESP32_RESULT_OK && !is_valid_identifier(out_id)) {
     *out_id = (scoring_esp32_identifier_t){.bytes = {0}, .length = 0U};
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }

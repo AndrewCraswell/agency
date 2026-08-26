@@ -26,12 +26,8 @@ typedef struct scoring_golden_vector_fixture {
 
 #define SCORING_GOLDEN_VECTOR_FORMAT "scoring-firmware-golden-vectors"
 #define SCORING_GOLDEN_VECTOR_SCHEMA_VERSION "1.0.0"
-#define SCORING_GOLDEN_VECTOR_SOURCE "m1-08-runtime-boundary-vectors"
-#define SCORING_GOLDEN_VECTOR_ORDERING "m1-08-generation-order"
 #define SCORING_GOLDEN_VECTOR_RULE_SET_REVISION "rules-1"
 #define SCORING_GOLDEN_VECTOR_TIMING_TABLE_REVISION "timing-1"
-#define SCORING_GOLDEN_VECTOR_TIME_UNIT "us"
-#define SCORING_GOLDEN_VECTOR_RESISTANCE_UNIT "milliOhm"
 #define SCORING_GOLDEN_VECTOR_DIGEST "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63"
 #define SCORING_GOLDEN_VECTOR_COUNT 54U
 

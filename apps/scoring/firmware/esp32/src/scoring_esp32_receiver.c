@@ -1,5 +1,4 @@
 #include "scoring_esp32_receiver.h"
-#include "scoring_esp32_identifier.h"
 
 #include <string.h>
 
@@ -15,6 +14,21 @@ static void clear_receipt(scoring_esp32_receiver_receipt_t *receipt) {
 
 static void mark_degraded(scoring_esp32_receiver_t *receiver) {
   receiver->link_degraded = true;
+}
+
+static bool is_valid_boot_id(const scoring_esp32_identifier_t *identifier) {
+  size_t index;
+  if (identifier == NULL || identifier->length == 0U ||
+      identifier->length > SCORING_ESP32_MAX_IDENTIFIER_BYTES ||
+      identifier->bytes[identifier->length] != '\0') {
+    return false;
+  }
+  for (index = 0U; index < identifier->length; ++index) {
+    if (identifier->bytes[index] == '\0') {
+      return false;
+    }
+  }
+  return true;
 }
 
 static bool boot_ids_equal(
@@ -38,7 +52,7 @@ static scoring_esp32_result_t read_boot_id(
   if (result != SCORING_ESP32_RESULT_OK) {
     return result;
   }
-  if (!scoring_esp32_identifier_is_valid(out_id)) {
+  if (!is_valid_boot_id(out_id)) {
     *out_id = (scoring_esp32_identifier_t){0};
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
@@ -88,167 +102,6 @@ static scoring_esp32_result_t reject_receipt(
     mark_degraded(receiver);
   }
   return result;
-}
-
-static scoring_esp32_result_t accepted_receipt(
-  scoring_esp32_receiver_receipt_t *receipt,
-  const scoring_esp32_transport_frame_t *frame
-) {
-  receipt->outcome = SCORING_ESP32_RECEIVER_ACCEPTED;
-  receipt->result = SCORING_ESP32_RESULT_OK;
-  receipt->record = frame->payload;
-  return SCORING_ESP32_RESULT_OK;
-}
-
-static scoring_esp32_result_t ignored_frame_receipt(scoring_esp32_receiver_receipt_t *receipt) {
-  receipt->outcome = SCORING_ESP32_RECEIVER_IGNORED;
-  receipt->result = SCORING_ESP32_RESULT_IGNORED;
-  receipt->record = (scoring_esp32_bytes_t){.data = NULL, .length = 0U};
-  return SCORING_ESP32_RESULT_IGNORED;
-}
-
-static scoring_esp32_result_t duplicate_receipt(scoring_esp32_receiver_receipt_t *receipt) {
-  receipt->outcome = SCORING_ESP32_RECEIVER_REJECTED;
-  receipt->result = SCORING_ESP32_RESULT_DUPLICATE;
-  receipt->record = (scoring_esp32_bytes_t){.data = NULL, .length = 0U};
-  return SCORING_ESP32_RESULT_DUPLICATE;
-}
-
-/* Reads and decodes one complete frame without touching journal or receipt state. */
-static scoring_esp32_result_t receive_transport_frame(
-  scoring_esp32_receiver_t *receiver,
-  scoring_esp32_transport_frame_t *out_frame
-) {
-  scoring_esp32_result_t result;
-  size_t frame_length = 0U;
-  if (receiver == NULL || out_frame == NULL) {
-    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
-  }
-  *out_frame = (scoring_esp32_transport_frame_t){0};
-  result = receiver->ingress.services.scoring_link.read_frame(
-    receiver->ingress.services.scoring_link.context,
-    (scoring_esp32_mutable_bytes_t){
-      .data = receiver->ingress.scoring_link_buffer,
-      .capacity = sizeof(receiver->ingress.scoring_link_buffer)
-    },
-    &frame_length
-  );
-  if (result != SCORING_ESP32_RESULT_OK) {
-    return result;
-  }
-  if (frame_length == 0U) {
-    return SCORING_ESP32_RESULT_UNAVAILABLE;
-  }
-  if (frame_length > sizeof(receiver->ingress.scoring_link_buffer)) {
-    return SCORING_ESP32_RESULT_BUFFER_TOO_SMALL;
-  }
-  return scoring_esp32_decode_transport_frame(
-    SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
-    (scoring_esp32_bytes_t){.data = receiver->ingress.scoring_link_buffer, .length = frame_length},
-    out_frame
-  );
-}
-
-static scoring_esp32_result_t classify_sequence(
-  const scoring_esp32_receiver_t *receiver,
-  const scoring_esp32_transport_frame_t *frame
-) {
-  if (receiver == NULL || frame == NULL) {
-    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
-  }
-  if (!receiver->has_expected_sequence) {
-    return SCORING_ESP32_RESULT_OK;
-  }
-  if (frame->sequence < receiver->expected_sequence) {
-    return SCORING_ESP32_RESULT_DUPLICATE;
-  }
-  if (frame->sequence > receiver->expected_sequence) {
-    return SCORING_ESP32_RESULT_OUT_OF_ORDER;
-  }
-  return SCORING_ESP32_RESULT_OK;
-}
-
-typedef enum receiver_journal_projection {
-  RECEIVER_JOURNAL_REJECTED = 0,
-  RECEIVER_JOURNAL_IGNORED,
-  RECEIVER_JOURNAL_DUPLICATE,
-  RECEIVER_JOURNAL_ACCEPTED
-} receiver_journal_projection_t;
-
-typedef struct receiver_journal_transition {
-  scoring_esp32_result_t result;
-  receiver_journal_projection_t projection;
-} receiver_journal_transition_t;
-
-/* Applies an already-decoded frame to the journal without parsing transport bytes. */
-static receiver_journal_transition_t project_frame_to_journal(
-  scoring_esp32_receiver_t *receiver,
-  const scoring_esp32_transport_frame_t *frame
-) {
-  scoring_esp32_result_t result;
-  receiver_journal_transition_t transition = {
-    .result = SCORING_ESP32_RESULT_OK,
-    .projection = RECEIVER_JOURNAL_ACCEPTED
-  };
-  if (receiver == NULL || frame == NULL) {
-    return (receiver_journal_transition_t){
-      .result = SCORING_ESP32_RESULT_INVALID_ARGUMENT,
-      .projection = RECEIVER_JOURNAL_REJECTED
-    };
-  }
-  if (frame->message_type != SCORING_ESP32_TRANSPORT_DECISION_RECORD) {
-    result = scoring_esp32_journal_advance_cursor(&receiver->journal, frame->sequence);
-    if (result == SCORING_ESP32_RESULT_DUPLICATE) {
-      restore_cursor(receiver);
-      transition.result = SCORING_ESP32_RESULT_IGNORED;
-      transition.projection = RECEIVER_JOURNAL_IGNORED;
-      return transition;
-    }
-    if (result != SCORING_ESP32_RESULT_OK) {
-      transition.result = result;
-      transition.projection = RECEIVER_JOURNAL_REJECTED;
-      return transition;
-    }
-    restore_cursor(receiver);
-    transition.projection = RECEIVER_JOURNAL_IGNORED;
-    return transition;
-  }
-
-  result = scoring_esp32_journal_append(&receiver->journal, frame->sequence, frame->payload);
-  if (result == SCORING_ESP32_RESULT_DUPLICATE) {
-    result = scoring_esp32_journal_advance_cursor(&receiver->journal, frame->sequence);
-    if (result != SCORING_ESP32_RESULT_OK && result != SCORING_ESP32_RESULT_DUPLICATE) {
-      transition.result = result;
-      transition.projection = RECEIVER_JOURNAL_REJECTED;
-      return transition;
-    }
-    restore_cursor(receiver);
-    transition.result = SCORING_ESP32_RESULT_DUPLICATE;
-    transition.projection = RECEIVER_JOURNAL_DUPLICATE;
-    return transition;
-  }
-  if (result != SCORING_ESP32_RESULT_OK) {
-    transition.result = result;
-    transition.projection = RECEIVER_JOURNAL_REJECTED;
-    return transition;
-  }
-  restore_cursor(receiver);
-  return transition;
-}
-
-static scoring_esp32_result_t forward_authoritative_record(
-  const scoring_esp32_receiver_t *receiver,
-  const scoring_esp32_transport_frame_t *frame
-) {
-  scoring_esp32_authoritative_record_t record;
-  if (receiver->services.storage.append_authoritative_record == NULL) {
-    return SCORING_ESP32_RESULT_OK;
-  }
-  record = (scoring_esp32_authoritative_record_t){
-    .transport_sequence = frame->sequence,
-    .bytes = frame->payload
-  };
-  return receiver->services.storage.append_authoritative_record(receiver->services.storage.context, &record);
 }
 
 scoring_esp32_result_t scoring_esp32_receiver_init(
@@ -323,7 +176,7 @@ scoring_esp32_result_t scoring_esp32_receiver_receive(
 ) {
   scoring_esp32_result_t result;
   scoring_esp32_transport_frame_t frame;
-  receiver_journal_transition_t transition;
+  size_t frame_length = 0U;
   if (receiver == NULL || out_receipt == NULL) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
@@ -334,42 +187,79 @@ scoring_esp32_result_t scoring_esp32_receiver_receive(
   if (receiver->sequence_exhausted) {
     return reject_receipt(receiver, out_receipt, SCORING_ESP32_RESULT_SEQUENCE_EXHAUSTED, 0U, false, true);
   }
-  result = receive_transport_frame(receiver, &frame);
+  result = receiver->ingress.services.scoring_link.read_frame(
+    receiver->ingress.services.scoring_link.context,
+    (scoring_esp32_mutable_bytes_t){
+      .data = receiver->ingress.scoring_link_buffer,
+      .capacity = sizeof(receiver->ingress.scoring_link_buffer)
+    },
+    &frame_length
+  );
   if (result != SCORING_ESP32_RESULT_OK) {
     if (result == SCORING_ESP32_RESULT_UNAVAILABLE) {
       return ignore_receipt(out_receipt, result);
     }
     return reject_receipt(receiver, out_receipt, result, 0U, false, true);
   }
+  if (frame_length == 0U) {
+    return ignore_receipt(out_receipt, SCORING_ESP32_RESULT_UNAVAILABLE);
+  }
+  if (frame_length > sizeof(receiver->ingress.scoring_link_buffer)) {
+    return reject_receipt(receiver, out_receipt, SCORING_ESP32_RESULT_BUFFER_TOO_SMALL, 0U, false, true);
+  }
+  result = scoring_esp32_decode_transport_frame(
+    SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+    (scoring_esp32_bytes_t){.data = receiver->ingress.scoring_link_buffer, .length = frame_length},
+    &frame
+  );
+  if (result != SCORING_ESP32_RESULT_OK) {
+    return reject_receipt(receiver, out_receipt, result, 0U, false, true);
+  }
   out_receipt->has_sequence = true;
   out_receipt->sequence = frame.sequence;
-  result = classify_sequence(receiver, &frame);
+  if (receiver->has_expected_sequence) {
+    if (frame.sequence < receiver->expected_sequence) {
+      return reject_receipt(receiver, out_receipt, SCORING_ESP32_RESULT_DUPLICATE, frame.sequence, true, false);
+    }
+    if (frame.sequence > receiver->expected_sequence) {
+      return reject_receipt(receiver, out_receipt, SCORING_ESP32_RESULT_OUT_OF_ORDER, frame.sequence, true, true);
+    }
+  }
+  if (frame.message_type != SCORING_ESP32_TRANSPORT_DECISION_RECORD) {
+    result = scoring_esp32_journal_advance_cursor(&receiver->journal, frame.sequence);
+    if (result != SCORING_ESP32_RESULT_OK) {
+      if (result == SCORING_ESP32_RESULT_DUPLICATE) {
+        restore_cursor(receiver);
+        out_receipt->outcome = SCORING_ESP32_RECEIVER_IGNORED;
+        out_receipt->result = SCORING_ESP32_RESULT_IGNORED;
+        return SCORING_ESP32_RESULT_IGNORED;
+      }
+      return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
+    }
+    restore_cursor(receiver);
+    out_receipt->outcome = SCORING_ESP32_RECEIVER_IGNORED;
+    out_receipt->result = SCORING_ESP32_RESULT_IGNORED;
+    return SCORING_ESP32_RESULT_IGNORED;
+  }
+  result = scoring_esp32_journal_append(&receiver->journal, frame.sequence, frame.payload);
   if (result == SCORING_ESP32_RESULT_DUPLICATE) {
-    return reject_receipt(receiver, out_receipt, result, frame.sequence, true, false);
-  }
-  if (result == SCORING_ESP32_RESULT_OUT_OF_ORDER) {
-    return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
+    result = scoring_esp32_journal_advance_cursor(&receiver->journal, frame.sequence);
+    if (result != SCORING_ESP32_RESULT_OK && result != SCORING_ESP32_RESULT_DUPLICATE) {
+      return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
+    }
+    restore_cursor(receiver);
+    out_receipt->outcome = SCORING_ESP32_RECEIVER_REJECTED;
+    out_receipt->result = SCORING_ESP32_RESULT_DUPLICATE;
+    return SCORING_ESP32_RESULT_DUPLICATE;
   }
   if (result != SCORING_ESP32_RESULT_OK) {
     return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
   }
-  transition = project_frame_to_journal(receiver, &frame);
-  if (transition.result != SCORING_ESP32_RESULT_OK &&
-      transition.result != SCORING_ESP32_RESULT_IGNORED &&
-      transition.result != SCORING_ESP32_RESULT_DUPLICATE) {
-    return reject_receipt(receiver, out_receipt, transition.result, frame.sequence, true, true);
-  }
-  if (transition.projection == RECEIVER_JOURNAL_IGNORED) {
-    return ignored_frame_receipt(out_receipt);
-  }
-  if (transition.projection == RECEIVER_JOURNAL_DUPLICATE) {
-    return duplicate_receipt(out_receipt);
-  }
-  result = forward_authoritative_record(receiver, &frame);
-  if (result != SCORING_ESP32_RESULT_OK) {
-    return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
-  }
-  return accepted_receipt(out_receipt, &frame);
+  restore_cursor(receiver);
+  out_receipt->outcome = SCORING_ESP32_RECEIVER_ACCEPTED;
+  out_receipt->result = SCORING_ESP32_RESULT_OK;
+  out_receipt->record = frame.payload;
+  return SCORING_ESP32_RESULT_OK;
 }
 
 bool scoring_esp32_receiver_is_link_degraded(const scoring_esp32_receiver_t *receiver) {

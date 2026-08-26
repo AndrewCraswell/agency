@@ -383,12 +383,8 @@ static void test_checked_golden_fixture_translation(void) {
   size_t total_hits = 0U;
 
   CHECK(strcmp(SCORING_GOLDEN_VECTOR_FORMAT, "scoring-firmware-golden-vectors") == 0);
-  CHECK(strcmp(SCORING_GOLDEN_VECTOR_SOURCE, "m1-08-runtime-boundary-vectors") == 0);
-  CHECK(strcmp(SCORING_GOLDEN_VECTOR_ORDERING, "m1-08-generation-order") == 0);
   CHECK(strcmp(SCORING_GOLDEN_VECTOR_RULE_SET_REVISION, "rules-1") == 0);
   CHECK(strcmp(SCORING_GOLDEN_VECTOR_TIMING_TABLE_REVISION, "timing-1") == 0);
-  CHECK(strcmp(SCORING_GOLDEN_VECTOR_TIME_UNIT, "us") == 0);
-  CHECK(strcmp(SCORING_GOLDEN_VECTOR_RESISTANCE_UNIT, "milliOhm") == 0);
   CHECK(SCORING_GOLDEN_VECTOR_COUNT == 54U);
 
   for (index = 0U; index < SCORING_GOLDEN_VECTOR_COUNT; index += 1U) {

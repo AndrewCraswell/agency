@@ -57,16 +57,6 @@ The accepted receipt's `record` view is borrowed from the fixed ingress
 buffer and is valid only until the next receive or ESP32 application reset;
 the journal copy is the durable replay source.
 
-The optional `storage.append_authoritative_record` adapter is a forwarding
-observer, not the commit boundary. For a new decision frame, the receiver
-commits the opaque payload to the journal and advances its expected sequence
-before invoking that callback. A callback failure is returned in the receipt
-and marks the link degraded, but it does not roll back the committed journal
-record or cursor. Re-delivery is therefore a duplicate and does not invoke
-the callback a second time. When the callback is absent, the receiver still
-accepts through the canonical journal path. These host tests do not claim
-that an external adapter has durably persisted its copy.
-
 ## ESP32-only lifecycle
 
 `scoring_esp32_receiver_reset` requires a fresh, non-empty bounded boot ID
