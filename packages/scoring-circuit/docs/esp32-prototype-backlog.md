@@ -2,28 +2,33 @@
 
 ## Goal
 
-Order and bring up a simple module-based carrier so firmware development can proceed on real scoring hardware.
+Order a working ESP32-S3 carrier as quickly as practical so firmware can be written and tested on real scoring hardware.
+This is a hand-assembled development board, not a production design or an FIE homologation submission.
 
-`active` means work is underway. `ready` means it can start. `waiting` means a named dependency is incomplete. `done`
-requires implementation, focused verification, root review, and a commit.
+## Scope rule
 
-| Deliverable | Status | Depends on | Latest state |
-| --- | --- | --- | --- |
-| Simplified carrier definition | done | None | Commit `8a2937f` rewrites the root-reviewed prototype boundary around ESP32-S3, WIZ850io Ethernet, an STUSB4500 PD module, a 5 V regulator module, and the retained custom scoring front end. The previous production-style routing and release gates are retired. |
-| Portable scoring core | done | None | The C17 scoring core remains target-neutral and is covered at 100% line, function, and branch coverage; other first-party C/C++ meets the 80% gate. |
-| Minimal carrier schematic | done | Simplified carrier definition | Commits `214548c`, `c94df08`, `55f9a63`, and `6d19856` remove the external supervisor/watchdog, replace discrete Ethernet with WIZ850io, and reduce power to one fused 5 V input from an off-board PD/buck assembly. The integrated 162-component carrier renders without circuit or placement errors; 11 focused tests and package typecheck pass. |
-| Prototype PCB and order files | ready | Minimal carrier schematic | Use the roomy 250 mm by 180 mm four-layer starting outline; ease of routing, probing, and hand modification matters more than area. Route in a conventional PCB editor, clear its DRC, review Gerbers/drills/BOM/centroid, and order a small batch. Do not make completion depend on the tscircuit autorouter. |
-| ESP32 hardware adapters | waiting | Minimal carrier schematic | Bind acquisition timing, ADC transfers, Ethernet SPI, HUB75, IR RMT, USB diagnostics, lamps, buzzer, reset, and safe-enable behavior to the final carrier pins. No scoring rewrite is required. |
-| Board bring-up | waiting | Prototype PCB and order files, ESP32 hardware adapters | Verify rails, USB recovery, Ethernet, display, IR, outputs, reset-safe behavior, and basic acquisition on assembled boards. Record only failures that affect the next revision or firmware work. |
-| Scoring validation | waiting | Board bring-up | Run foil, epee, and sabre corpus/parity tests plus practical resistance, timing, simultaneous-hit, open/short, and recovery checks. This validates the development prototype; it is not FIE homologation. |
+A task belongs here only when it is required to make the first boards electrically functional, orderable, programmable,
+or useful for scoring development. Production qualification, certification, enclosure design, manufacturing fixtures,
+long-term sourcing, cost reduction, per-part evidence packages, backlog validators, and automated release gates are out
+of scope. A future production project may add them after this board proves the scoring architecture.
 
-## Immediate sequence
+`active` means work is underway. `waiting` means the named dependency is incomplete. `done` requires implementation,
+focused verification, root review, and a commit.
 
-1. Commit this simplified definition.
-2. Replace commodity discrete blocks with the three modules.
-3. Produce and order the carrier PCB.
-4. Finish firmware against the board that was actually ordered.
-5. Bring it up and validate scoring behavior.
+| Deliverable | Status | Latest state |
+| --- | --- | --- |
+| Close the carrier design | active | The module-based schematic exists. Connect the seven weapon/piste landings to acquisition, connect IR and the five primary outputs to the ESP32 nets, and explicitly feed the analog 5 V and ground domains. Correct the ESP32 paste apertures and choose ordinary 1x6 WIZ850io sockets or direct soldering. These are the only known schematic/assembly blockers. |
+| Produce and order the PCB | waiting | After carrier closure, export to a conventional PCB editor, place and route the roomy four-layer board, run ERC/DRC, inspect Gerbers and drills, generate the BOM and placement file, and order a small batch. Do not wait for the tscircuit autorouter or production layout optimization. |
+| Bind firmware to the ordered board | waiting | After the final pinout is known, connect the portable C17 scoring core to ESP32 acquisition, Ethernet, HUB75, IR, USB diagnostics, lamps, buzzer, and safe-enable adapters. Do not build firmware for hypothetical hardware. |
+| Bring up and validate scoring | waiting | On assembled boards, check rails and programming first, then interfaces and outputs, then foil/epee/sabre timing and resistance behavior. Record faults that require a board revision or firmware change; do not create a production qualification dossier. |
 
-Production design, certification, enclosure, automated fixtures, production sourcing, and cost reduction are a
-separate project after the prototype proves the architecture.
+## Already settled
+
+- One ESP32-S3 runs the firmware and the portable C17 scoring core.
+- WIZ850io provides Ethernet.
+- USB-C PD remains the normal input through an off-board SparkFun PD module and Pololu 5 V regulator.
+- The carrier retains the scoring front end, direct-wire weapon/piste landings, HUB75, encrypted IR, USB recovery,
+  lamps, and buzzer.
+- The prototype uses a roomy 250 mm by 180 mm four-layer outline so it is easy to route, probe, and modify.
+
+No additional architecture work is needed before closing the listed connections and producing the PCB.
