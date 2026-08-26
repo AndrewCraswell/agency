@@ -146,6 +146,13 @@ export const p0Esp32Wroom1FootprintMetadata = deepFreeze({
     preferredPlacement: "antenna area projects past the base-board edge",
     fallbackHostBoardClearanceMm: 15,
     fallbackHostBoardKeepoutMm: { width: 48, length: 36, centerYmm: 12.5 },
+    terminalEscapeCorridorMm: {
+      width: 19.5,
+      length: 15,
+      centerYmm: 2,
+      disposition:
+        "The terminal field is an intentional escape corridor below the antenna; only orthogonal top-layer fanout to an immediate inner2 via is permitted."
+    },
     fallbackProhibited: ["copper", "routing", "components"],
     enclosure: "keep metal away and verify finished-product throughput and range",
     source: "Espressif datasheet v1.8 Figure 11-1 and ESP32-S3 hardware design guidelines"
@@ -209,7 +216,16 @@ const footprint = (
         />
       </Fragment>
     ))}
-    <keepout shape="rect" pcbX={0} pcbY={12.5} width="48mm" height="36mm" layers={["top", "bottom"]} />
+    {/*
+      Preserve the 48 mm x 36 mm RF reserve without treating the module's
+      terminal field as antenna copper. The three rectangles are the outer
+      reserve minus its 19.5 mm terminal escape corridor. That permits an
+      orthogonal pad fanout to inner2 while keeping top and bottom copper away
+      from the antenna and its flanks.
+    */}
+    <keepout shape="rect" pcbX={0} pcbY={20} width="48mm" height="21mm" layers={["top", "bottom"]} />
+    <keepout shape="rect" pcbX={-16.875} pcbY={2} width="14.25mm" height="15mm" layers={["top", "bottom"]} />
+    <keepout shape="rect" pcbX={16.875} pcbY={2} width="14.25mm" height="15mm" layers={["top", "bottom"]} />
   </footprint>
 )
 

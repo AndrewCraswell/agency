@@ -131,6 +131,7 @@ describe("P0-06 ESP32-S3-WROOM-1-N16R2 official footprint reconciliation", () =>
       antenna: {
         areaMm: { width: 18, length: 6 },
         fallbackHostBoardClearanceMm: 15,
+        terminalEscapeCorridorMm: { width: 19.5, length: 15, centerYmm: 2 },
         fallbackProhibited: ["copper", "routing", "components"]
       },
       projectGeometry: {
@@ -196,14 +197,16 @@ describe("P0-06 ESP32-S3-WROOM-1-N16R2 official footprint reconciliation", () =>
     }
   })
 
-  it("renders the official 40-land topology, EPAD vias, and review-only keepout", () => {
+  it("renders the official 40-land topology, EPAD vias, and antenna keepout with a terminal escape corridor", () => {
     const { artifacts, json } = footprintArtifacts()
     expect(json.filter((element) => element.type.includes("error"))).toEqual([])
     expect(artifacts.filter((element) => element.type === "pcb_smtpad")).toHaveLength(49)
     expect(json.filter((element) => element.type === "pcb_via")).toHaveLength(9)
-    expect(json.filter((element) => element.type === "pcb_keepout")).toHaveLength(1)
+    expect(json.filter((element) => element.type === "pcb_keepout")).toHaveLength(3)
     expect(json.filter((element) => element.type === "pcb_keepout")).toEqual([
-      expect.objectContaining({ center: { x: 0, y: 12.5 }, width: 48, height: 36 })
+      expect.objectContaining({ center: { x: 0, y: 20 }, width: 48, height: 21 }),
+      expect.objectContaining({ center: { x: -16.875, y: 2 }, width: 14.25, height: 15 }),
+      expect.objectContaining({ center: { x: 16.875, y: 2 }, width: 14.25, height: 15 })
     ])
     const pads = artifacts.filter((element) => element.type === "pcb_smtpad")
     const vias = json.filter((element) => element.type === "pcb_via")
