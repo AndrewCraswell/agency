@@ -78,7 +78,7 @@ vi.mock("./representative-lookup-provider.js", () => ({
 }))
 vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
-    config: { ingestion: {}, server: { publicApiBaseUrl: "https://api.example.test" } },
+    config: { auth: { mode: "disabled" }, ingestion: {}, server: { publicApiBaseUrl: "https://api.example.test" } },
     database: {}
   }))
 }))

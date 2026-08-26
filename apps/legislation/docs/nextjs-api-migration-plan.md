@@ -27,9 +27,9 @@ placeholder needed to prove the application runtime.
 | --- | --- | --- |
 | Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot commit `3a498d1` deployed as `9de2719a-d34e-46ee-a86e-09768058d1ff` and reached terminal `SUCCESS`. Unified verification passed 221 test files with 2 skipped and 1,688 tests with 40 skipped; all 212 built-router acceptance tests and the Next.js build passed. Foundation health, readiness, and homepage smoke returned `200`; unknown-route and unsupported-method checks returned `404`. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | Reviewed source coverage is 87 of 87. The current production deployment contains 73 of 87: 40 Done, 26 Blocked by named production prerequisites, and 7 In progress in NX-04. NX-05A/B route and composition code plus local tests exist in source, but their 14 routes remain Blocked on NX-04, production request identity, required secrets, deployment, and functional smoke. | 87 of 87 deployed and remotely smoked |
+| Next.js Route Handlers | Reviewed source coverage is 87 of 87. The current production deployment contains 73 of 87: 40 Done, 26 Blocked by named production prerequisites, and 7 In progress in NX-04. Subscription/webhook route and composition code plus local tests exist in source, but their 14 routes remain Blocked on NX-04, Railway WorkOS values, required secrets, deployment, and functional smoke. | 87 of 87 deployed and remotely smoked |
 | Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `9de2719a-d34e-46ee-a86e-09768058d1ff` from source snapshot `3a498d1` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The previous successful rollback deployment is `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. NX-04 production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
-| Authentication | WorkOS logic exists in the standalone composition; the Next.js production boundary intentionally installs no request identity, so NX-05 fails closed with `403` | Added after NX-04 and before functional NX-05 release smoke |
+| Authentication | The shared Next.js API boundary now verifies WorkOS tokens, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public in reviewed local source. Railway WorkOS values, deployment, and authenticated remote smoke remain. | Deployed after NX-04 and before functional subscription/webhook release smoke |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
 
@@ -302,11 +302,12 @@ Exit gate: all seven routes are **Done** and the NX-04 deployment passes cumulat
 
 ### NX-05: Subscription and webhook endpoint migration
 
-#### NX-05A: Subscriptions (7 endpoints)
+#### Subscriptions (7 endpoints)
 
 Reviewed source state: explicit routes, production composition, and focused local tests exist. Next route release state
 for every operation in this block remains **Blocked**. The code is not present in the current production deployment,
-and the production composition intentionally has no request identity, so direct use fails closed with `403`.
+and the current production deployment has no WorkOS identity. Reviewed local source now supplies verified identity
+through the shared API boundary.
 
 - `GET /api/subscriptions`
 - `POST /api/subscriptions`
@@ -316,12 +317,12 @@ and the production composition intentionally has no request identity, so direct 
 - `GET /api/subscriptions/{subscriptionId}/events`
 - `GET /api/subscriptions/{subscriptionId}/deliveries`
 
-#### NX-05B: Webhooks (7 endpoints)
+#### Webhooks (7 endpoints)
 
 Reviewed source state: explicit routes, production composition, and focused local tests exist. The composition reuses
 the durable repository, encrypted idempotency replay, webhook-secret protection, URL-safety checks, and pinned
 verification challenge transport. Next route release state for every operation remains **Blocked**; the code is not in
-the current production deployment and no production identity is installed.
+the current production deployment. Reviewed local source now supplies verified identity through the shared API boundary.
 
 - `GET /api/webhooks`
 - `POST /api/webhooks`
@@ -341,15 +342,15 @@ coverage and local tests alone do not satisfy this gate.
 
 ### NX-06: WorkOS authentication
 
-State: **Blocked** until NX-04 is complete. Its production request identity is then required to functionally deploy and
-smoke NX-05.
+State: **In progress** in reviewed local source. Deployment and authenticated smoke remain blocked until NX-04 is
+complete and the Railway WorkOS variables are configured.
 
-- Port WorkOS bearer verification and request identity into the shared Next.js API boundary.
-- Keep `/health` and `/ready` public; default `/api/**` to authenticated unless the contract says otherwise.
+- WorkOS bearer verification and request identity now run in the shared Next.js API boundary.
+- `/health` and `/ready` remain public; supported and catch-all `/api/**` requests authenticate in WorkOS mode.
 - Enforce issuer, JWKS signature, audience, expiry, subject, client/session identity, organization scope, and access
   class.
 - Preserve exact `401` challenge and `403` authorization semantics and correlation IDs.
-- Store WorkOS secrets only in Railway variables; never commit or print them.
+- Store WorkOS configuration only in Railway variables; never commit or print credentials or tokens.
 - Add negative tests for missing, malformed, expired, wrong-issuer, wrong-audience, wrong-client, and wrong-organization
   tokens.
 - Deploy, wait for `SUCCESS`, run authenticated cumulative smoke for all endpoint blocks, and record rollback evidence.

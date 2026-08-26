@@ -25,13 +25,15 @@ credentials.
 Reviewed source now contains 87 of 87 explicit Next.js route handlers. The current production deployment contains 73 of
 87: 40 have release **Done** credit, 26 remain blocked by named production data, fixture, or dependency prerequisites,
 and the seven NX-04 search, diff, and research routes are deployed but remain **In progress** until their production
-smoke passes. The 14 NX-05 subscription and webhook handlers, compositions, and local tests exist only in the reviewed
-source change and are not part of the current production image.
+smoke passes. The 14 subscription and webhook handlers, compositions, and local tests exist only in reviewed source and
+are not part of the current production image.
 
-NX-05 production identity is intentionally absent. Its handlers therefore fail closed with `403`; no production code
-installs a fixture or hard-coded identity. Functional NX-05 deployment and smoke require NX-04 completion, the WorkOS
-request-identity boundary, and the required idempotency and webhook-secret encryption keys. Until those gates pass,
-all 14 routes retain **Blocked** release state.
+The shared Next.js API boundary now authenticates supported and catch-all `/api/**` requests in WorkOS mode, installs
+only the verified user and optional organization identity in request context, and returns the canonical `401` challenge
+before endpoint handlers run. Health and readiness remain public. Production requires both encryption keys, while the
+release procedure separately requires `AUTH_MODE=workos` and the public WorkOS verifier values. Functional
+subscription/webhook deployment still requires NX-04, those Railway values, both keys, deployment, and cumulative
+authenticated smoke; until then all 14 routes retain **Blocked** release state.
 
 The current unified deployment is source snapshot commit `3a498d1`, deployed as Railway deployment
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`. Unified verification passed 221 test files with 2
@@ -44,8 +46,9 @@ NX-04 production smoke is intentionally still pending: active HNSW index pressur
 semantic and hybrid search in production. A successful deployment, verification, build, and foundation smoke do not
 promote NX-04 routes to **Done** without that endpoint evidence.
 
-Authentication follows NX-04 and enables functional NX-05 release verification. Distributed rate limiting follows
-authentication. MCP migration is last and remains blocked until both earlier gates are complete.
+Authentication implementation is in progress locally and will enable functional subscription/webhook release
+verification after NX-04. Distributed rate limiting follows authenticated deployment. MCP migration is last and remains
+blocked until both earlier gates are complete.
 
 ## Smoke procedure
 

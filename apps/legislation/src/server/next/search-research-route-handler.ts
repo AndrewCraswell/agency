@@ -2,7 +2,6 @@ import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "../../
 import { createCivicSearchApiHandler, type CivicSearchApi } from "../../api/civic-search.js"
 import { createDocumentDiffApiHandler } from "../../api/document-diff-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import { createPassageSearchApiHandler, type PassageSearchApi } from "../../api/passage-search.js"
 import {
   createCanonicalResearchEvidenceRetriever,
@@ -17,6 +16,7 @@ import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { readDocumentDiff } from "../../db/queries/document-diff-read.js"
 import type { OpenRouterRetrievalClient } from "../../models/openrouter-retrieval.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type SearchResearchQueryService = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
@@ -40,7 +40,7 @@ let searchResearchHandler: HttpApiHandler | undefined
 /** Handles search, document-diff, and research-answer routes. */
 export async function handleSearchResearchRequest(request: Request): Promise<Response> {
   searchResearchHandler ??= createSearchResearchHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, searchResearchHandler)
+  return await executeAuthenticatedApiRequest(request, searchResearchHandler)
 }
 
 export function createSearchResearchRequestHandler(

@@ -9,6 +9,12 @@ The protected MCP resource accepts only the configured M2M resource audience. He
 `/mcp` is protected. Development may use
 `AUTH_MODE=disabled` only on a loopback or otherwise isolated endpoint.
 
+The unified Next.js runtime authenticates supported and catch-all `/api/**` requests before endpoint code runs. A valid
+token contributes only its verified user ID and optional organization ID to request context. Missing, malformed,
+expired, incorrectly signed, wrong-issuer, or wrong-audience tokens receive the same canonical `401` error envelope and
+`WWW-Authenticate: Bearer realm="legislation", error="invalid_token"` challenge. The production release gate requires
+`AUTH_MODE=workos`; production startup rejects missing idempotency or webhook-secret encryption keys.
+
 Use the WorkOS staging application identified by `WORKOS_CLIENT_ID`. Register the exact remote MCP resource URL and only
 approved redirect URIs for the target clients. Enable Client ID Metadata Document support and Dynamic Client
 Registration in WorkOS Connect, and configure the exact MCP endpoint as the default Resource Indicator. The resource

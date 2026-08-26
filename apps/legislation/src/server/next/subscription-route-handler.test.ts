@@ -155,7 +155,7 @@ describe("subscription route composition", () => {
     expect(executeHandler).toHaveBeenNthCalledWith(2, request, handler)
   })
 
-  it("keeps the production entry point on the identity-free Next bridge", async () => {
+  it("uses the shared API bridge when authentication is disabled", async () => {
     mocks.execute.mockResolvedValueOnce(new Response("handled"))
     const request = new Request("https://api.example.test/api/subscriptions")
 
@@ -169,6 +169,7 @@ describe("subscription route composition", () => {
 function application(idempotencyEncryptionKey: string | undefined) {
   return {
     config: {
+      auth: { mode: "disabled" },
       security: { idempotencyEncryptionKey },
       server: { publicApiBaseUrl: "https://api.example.test" }
     },

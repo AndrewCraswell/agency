@@ -1,5 +1,4 @@
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import {
   createAes256GcmIdempotencyCipher,
   PostgresSubscriptionRepository,
@@ -12,6 +11,7 @@ import { createWebhookReadApiHandler } from "../../api/webhook-read-routes.js"
 import { getRequestContext, runWithRequestContext, type RequestIdentity } from "../../auth/request-context.js"
 import { decodeIdempotencyEncryptionKey } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type WebhookRouteApplication = Readonly<{
@@ -41,7 +41,7 @@ let webhookHandler: HttpApiHandler | undefined
 /** Handles the public webhook API routes. */
 export async function handleWebhookRequest(request: Request): Promise<Response> {
   webhookHandler ??= createWebhookHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, webhookHandler)
+  return await executeAuthenticatedApiRequest(request, webhookHandler)
 }
 
 export function createWebhookRequestHandler(
