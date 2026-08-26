@@ -39,7 +39,7 @@ described as final API cutover until the remaining migration gates pass.
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
 | Unified verification | 221 test files passed with 2 skipped; 1,688 tests passed with 40 skipped; all 212 built-router acceptance tests passed; the Next.js production build succeeded |
 | Foundation smoke | Health, readiness, and homepage returned `200`; unknown-route and unsupported-method checks returned `404` |
-| Reviewed source handler coverage | 87 of 87 explicit Next.js handlers; NX-05A subscription and NX-05B webhook routes, composition, and local tests are present in reviewed source but are not in the current production deployment |
+| Reviewed source handler coverage | 87 of 87 explicit Next.js handlers; subscription and webhook routes, composition, and local tests are present in reviewed source but are not in the current production deployment |
 | Current deployment handler coverage | 73 of 87 explicit Next.js handlers |
 | NX-04 production smoke | Pending: active HNSW index pressure must be relieved before semantic and hybrid search smoke |
 
