@@ -9,14 +9,19 @@ import MinimalScoringPrototype, {
 } from "./index.circuit.js"
 import { prototypeIndicators } from "./prototype-indicators.circuit.js"
 import { prototypeSounder } from "./prototype-peripherals.circuit.js"
+import { prototypeRepeaterInterfaces } from "./prototype-repeater-interfaces.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
 
+let renderedPrototype: readonly Record<string, unknown>[] | undefined
+
 function renderPrototype() {
+  if (renderedPrototype) return renderedPrototype
   const circuit = new Circuit()
   circuit.add(<MinimalScoringPrototype />)
   circuit.render()
-  return circuit.getCircuitJson() as readonly Record<string, unknown>[]
+  renderedPrototype = circuit.getCircuitJson() as readonly Record<string, unknown>[]
+  return renderedPrototype
 }
 
 describe("minimal scoring prototype baseline", () => {
@@ -61,18 +66,21 @@ describe("minimal scoring prototype baseline", () => {
         "J_DISPLAY",
         "LED_LEFT_RED",
         "LED_RIGHT_GREEN",
+        "J_FPA_REPEATER_1",
+        "J_FPA_REPEATER_2",
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(38)
+    expect(references).toHaveLength(42)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
     expect(cadComponents.every(({ model_step_url: stepUrl }) => typeof stepUrl === "string")).toBe(true)
     expect(cadComponents.some(({ model_jscad: jscad }) => jscad !== undefined)).toBe(false)
     expect(prototypeInterfaces.powerInput).toEqual(["USB-C PD 20V", "V5", "APP_GND"])
+    expect(prototypeInterfaces.repeaterOutputs).toEqual(["RS422-FPA 1", "RS422-FPA 2"])
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
-  })
+  }, 15_000)
 
   it("drives one red and one green bench indicator from unused ESP32 GPIOs", () => {
     expect(prototypeIndicators).toEqual([
@@ -103,6 +111,21 @@ describe("minimal scoring prototype baseline", () => {
       manufacturer_part_number: "PS1240P02BT"
     })
     expect(components.some(({ name }) => name === "J_BUZZER")).toBe(false)
+  })
+
+  it("drives two identical transmit-only FPA repeater ports from one ESP32 UART", () => {
+    expect(prototypeRepeaterInterfaces).toEqual({
+      connectors: ["J_FPA_REPEATER_1", "J_FPA_REPEATER_2"],
+      driver: "AM26LV31EIPWR",
+      gpio: "GPIO43_UART_TX",
+      pinout: { 3: "Tx-", 4: "Tx+", 6: "GND", 7: "GND" },
+      protocol: "RS422-FPA 3.04a, 38400 baud, 8N1"
+    })
+    const components = renderPrototype().filter(({ type }) => type === "source_component")
+    expect(components.find(({ name }) => name === "U_FPA_DRIVER")).toMatchObject({
+      manufacturer_part_number: "AM26LV31EIPWR"
+    })
+    expect(components.filter(({ manufacturer_part_number: part }) => part === "182-009-113R161")).toHaveLength(2)
   })
 
   it("uses a module-level USB-C power chain with real assembly geometry", () => {

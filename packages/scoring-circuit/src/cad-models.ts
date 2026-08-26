@@ -1,5 +1,10 @@
+import { readFileSync } from "node:fs"
+
 const kicadModelRevision = "b8b3cfdfad88ba66f21002b3de51dc6f7d55ba5a"
 const kicadModelRoot = `https://github.com/KiCad/kicad-packages3D/raw/${kicadModelRevision}`
+const repeaterConnectorStepUrl = `data:model/step;base64,${readFileSync(
+  new URL("../assets/cad/norcomp-182-009-113.step", import.meta.url)
+).toString("base64")}`
 
 export const cadModels = {
   capacitor0603: {
@@ -51,8 +56,14 @@ export const cadModels = {
   resistor0805: {
     stepUrl: `${kicadModelRoot}/Resistor_SMD.3dshapes/R_0805_2012Metric.step`
   },
+  repeaterConnector: {
+    stepUrl: repeaterConnectorStepUrl
+  },
   scoringSounder: {
     stepUrl: `${kicadModelRoot}/Buzzer_Beeper.3dshapes/Buzzer_TDK_PS1240P02BT_D12.2mm_H6.5mm.step`
+  },
+  tssop16: {
+    stepUrl: `${kicadModelRoot}/Package_SO.3dshapes/TSSOP-16_4.4x5mm_P0.65mm.step`
   },
   sot23: {
     stepUrl: `${kicadModelRoot}/Package_TO_SOT_SMD.3dshapes/SOT-23.step`

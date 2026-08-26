@@ -4,6 +4,7 @@ import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
 import { PrototypeIndicators } from "./prototype-indicators.circuit.js"
 import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
+import { PrototypeRepeaterInterfaces } from "./prototype-repeater-interfaces.circuit.js"
 import { ScoringConductorInterface } from "./scoring-conductor-interface.circuit.js"
 import { UsbCPower } from "./usb-c-power.circuit.js"
 
@@ -68,7 +69,8 @@ export const prototypeInterfaces = {
   weaponLeft: ["LEFT_A", "LEFT_B", "LEFT_C"],
   weaponRight: ["RIGHT_A", "RIGHT_B", "RIGHT_C"],
   piste: ["PISTE"],
-  powerInput: ["USB-C PD 20V", "V5", "APP_GND"]
+  powerInput: ["USB-C PD 20V", "V5", "APP_GND"],
+  repeaterOutputs: ["RS422-FPA 1", "RS422-FPA 2"]
 } as const
 
 const controllerModuleFootprint = (
@@ -171,6 +173,7 @@ function MinimalScoringPrototype(): ReactElement {
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
       <PrototypeIndicators />
       <PrototypePeripherals />
+      <PrototypeRepeaterInterfaces />
 
       <trace from="J_CONTROLLER_LEFT.1" to="net.APP_3V3" />
       <trace from="J_CONTROLLER_LEFT.2" to="net.APP_3V3" />
@@ -226,6 +229,7 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="J_CONTROLLER_RIGHT.7" to="R_RIGHT_GREEN_LED.pin1" />
       <trace from="J_CONTROLLER_RIGHT.18" to="net.DISPLAY_DATA" />
       <trace from="J_CONTROLLER_RIGHT.9" to="net.BUZZER_DRIVE" />
+      <trace from="J_CONTROLLER_RIGHT.2" to="net.FPA_TX" />
     </board>
   )
 }

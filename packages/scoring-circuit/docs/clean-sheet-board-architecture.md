@@ -38,6 +38,9 @@ The initial schematic contains only these functional blocks:
   HUB75 is deferred behind the firmware display abstraction.
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
   omitted.
+- Two DB9 RS-422/FPA repeater outputs driven from the ESP32-S3 UART transmit signal by one AM26LV31E line driver. Both
+  ports carry the same read-only 38,400-baud 8N1 presentation stream on pins 3 (Tx-), 4 (Tx+), and 6/7 (ground). They
+  are not extra Ethernet ports and cannot affect scoring decisions.
 - An Adafruit 5991 USB-C PD daughterboard set to 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
   modules use their manufacturer circuits and protection instead of reproducing USB-C negotiation or conversion from
   discrete parts. The PD module mounts at the carrier edge; two short 18 AWG wires connect its output terminal to the
@@ -52,7 +55,8 @@ environmental qualification, homologation evidence, per-part evidence ledgers, b
 gates, or speculative expansion hardware.
 
 It does not include a production lamp engine or duplicate high-current indicator drivers. The two low-current on-board
-LEDs are only bench feedback; the display header remains the larger visual-output path.
+LEDs are only bench feedback; the display header remains the larger visual-output path. The two prototype FPA outputs
+are non-isolated; isolation and surge qualification remain production work.
 
 ## Complexity rules
 
