@@ -1,0 +1,17 @@
+/*
+!/.railwayignore
+!/package.json
+!/pnpm-lock.yaml
+!/pnpm-workspace.yaml
+
+!/apps/
+/apps/*
+!/apps/legislation/
+!/apps/legislation/**
+
+!/packages/
+/packages/*
+!/packages/oxlint-config/
+!/packages/oxlint-config/**
+!/packages/typescript-config/
+!/packages/typescript-config/**
