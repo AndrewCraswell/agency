@@ -21,7 +21,7 @@ diverge.
 ## Migration state ledger
 
 The domain state is 87/87 **Done**. Explicit Next.js handler coverage is 87/87 in reviewed source and 73/87 in the
-current production deployment. NX-05A/B route and composition code plus focused local tests exist, but production
+current production deployment. Subscription and webhook route and composition code plus focused local tests exist, but production
 request identity remains intentionally absent and those handlers fail closed with `403`. The Next.js Route Handler
 release state is 40/87 **Done**, 7 **In progress** in NX-04, 0 **Ready**, and 40 **Blocked**; these states sum to 87. The
 Blocked total contains 26 routes with named production-data, canonical-fixture, or dependency prerequisites and 14
