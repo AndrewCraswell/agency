@@ -61,7 +61,7 @@ vi.mock("../../api/session-read-repository.js", () => ({
 vi.mock("../../api/session-read-routes.js", () => ({ createSessionReadApiHandler: mocks.sessionHandler }))
 vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
-    config: { server: { publicApiBaseUrl: "https://api.example.test" } },
+    config: { auth: { mode: "disabled" }, server: { publicApiBaseUrl: "https://api.example.test" } },
     database: {},
     queryService: {}
   }))

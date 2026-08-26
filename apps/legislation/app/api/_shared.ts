@@ -1,5 +1,5 @@
-import { executeNextHttpApiHandler } from "../../src/api/next/node-handler"
+import { executeAuthenticatedApiRequest } from "../../src/server/next/authenticated-api-request"
 
 export async function notFoundResponse(request: Request): Promise<Response> {
-  return await executeNextHttpApiHandler(request, async () => false)
+  return await executeAuthenticatedApiRequest(request, async () => false)
 }

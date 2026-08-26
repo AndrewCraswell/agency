@@ -8,10 +8,10 @@ import { createJurisdictionReadRepository } from "../../api/jurisdiction-read-re
 import { createJurisdictionReadApiHandler } from "../../api/jurisdiction-read-routes.js"
 import { createMeetingReadRepository } from "../../api/meeting-read-repository.js"
 import { createMeetingReadApiHandler } from "../../api/meeting-read-routes.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import { createSessionRepository } from "../../api/session-read-repository.js"
 import { createSessionReadApiHandler } from "../../api/session-read-routes.js"
 import type { LegislationDatabase } from "../../db/database.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type JurisdictionRouteApplication = Readonly<{
@@ -35,7 +35,7 @@ let jurisdictionHandler: HttpApiHandler | undefined
  */
 export async function handleJurisdictionRequest(request: Request): Promise<Response> {
   jurisdictionHandler ??= createJurisdictionHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, jurisdictionHandler)
+  return await executeAuthenticatedApiRequest(request, jurisdictionHandler)
 }
 
 export function createJurisdictionRequestHandler(

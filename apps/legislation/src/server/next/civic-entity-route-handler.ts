@@ -4,7 +4,6 @@ import { createCivicScopedReadApiHandler } from "../../api/civic-scoped-read-rou
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
 import { createMeetingReadRepository } from "../../api/meeting-read-repository.js"
 import { createMeetingReadApiHandler } from "../../api/meeting-read-routes.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import { createOrganizationBillReadApiHandler } from "../../api/organization-bill-read-routes.js"
 import { createOrganizationDetailReadRepository } from "../../api/organization-detail-read-repository.js"
 import { createOrganizationDetailReadApiHandler } from "../../api/organization-detail-read-routes.js"
@@ -27,6 +26,7 @@ import { assertOrganizationExists, listOrganizationBillReads } from "../../db/qu
 import { listPeople } from "../../db/queries/people-read.js"
 import { listPersonAmendments } from "../../db/queries/person-amendments.js"
 import { assertPersonExists, listPersonBillActivity } from "../../db/queries/person-bill-activity.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type CivicEntityApplication = Readonly<{
@@ -46,7 +46,7 @@ let civicEntityHandler: HttpApiHandler | undefined
 /** Handles people and organization entity read routes. */
 export async function handleCivicEntityRequest(request: Request): Promise<Response> {
   civicEntityHandler ??= createCivicEntityHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, civicEntityHandler)
+  return await executeAuthenticatedApiRequest(request, civicEntityHandler)
 }
 
 export function createCivicEntityRequestHandler(

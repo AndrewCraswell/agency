@@ -8,7 +8,6 @@ import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/ht
 import { createJurisdictionReadRepository } from "../../api/jurisdiction-read-repository.js"
 import { createMeetingReadRepository } from "../../api/meeting-read-repository.js"
 import type { MeetingReadApi } from "../../api/meeting-read-routes.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import { createOrganizationDetailReadRepository } from "../../api/organization-detail-read-repository.js"
 import { createPersonDetailReadRepository } from "../../api/person-detail-read-repository.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "../../api/resource-batch-read-repository.js"
@@ -29,6 +28,7 @@ import { listMeetingAgenda } from "../../db/queries/meeting-agenda-read.js"
 import { listMeetingDocuments } from "../../db/queries/meeting-document-read.js"
 import { listMeetingOutcomes } from "../../db/queries/meeting-outcome-read.js"
 import { listMeetingParticipants } from "../../db/queries/meeting-participant-reads.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type DocumentResourceQueryService = CoreReadQueryApi & Required<Pick<CoreReadQueryApi, "getSupportingMaterialSection">>
@@ -54,7 +54,7 @@ let documentResourceHandler: HttpApiHandler | undefined
  */
 export async function handleDocumentResourceRequest(request: Request): Promise<Response> {
   documentResourceHandler ??= createDocumentResourceHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, documentResourceHandler)
+  return await executeAuthenticatedApiRequest(request, documentResourceHandler)
 }
 
 export function createDocumentResourceRequestHandler(

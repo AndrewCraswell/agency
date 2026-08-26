@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { getRequestContext } from "../../auth/request-context.js"
 import { LegislationError } from "../../legislation/errors.js"
 import { CanonicalProjectionError } from "../canonical-projection.js"
 import { readJsonBody, sendApiError, sendApiJson, type HttpApiHandler } from "../http.js"
@@ -24,6 +25,22 @@ describe("Next Node HTTP handler bridge", () => {
     expect(response.headers.get("x-correlation-id")).toBe("next-bridge")
     expect(response.headers.get("cache-control")).toBe("private, no-store")
     await expect(response.json()).resolves.toMatchObject({ data: { id: "bill-1" } })
+  })
+
+  it("installs a verified identity for the complete Node handler execution", async () => {
+    const identity = { organizationId: "organization:test", userId: "user:test" }
+    const handler: HttpApiHandler = async (_request, response) => {
+      sendApiJson(response, 200, { data: getRequestContext()?.identity })
+      return true
+    }
+
+    const response = await executeNextHttpApiHandler(
+      new Request("https://api.example.test/api/subscriptions"),
+      handler,
+      { requestContext: { identity } }
+    )
+
+    await expect(response.json()).resolves.toEqual({ data: identity })
   })
 
   it("preserves an ETag-driven 304 response", async () => {

@@ -167,7 +167,7 @@ describe("webhook route composition", () => {
     expect(executeHandler).toHaveBeenNthCalledWith(2, request, handler)
   })
 
-  it("keeps the production entry point on the identity-free Next bridge", async () => {
+  it("uses the shared API bridge when authentication is disabled", async () => {
     mocks.execute.mockResolvedValueOnce(new Response("handled"))
     const request = new Request("https://api.example.test/api/webhooks")
 
@@ -179,6 +179,7 @@ describe("webhook route composition", () => {
 function application(idempotencyKey: string | undefined, secretKey: string | undefined) {
   return {
     config: {
+      auth: { mode: "disabled" },
       security: { idempotencyEncryptionKey: idempotencyKey, webhookSecretEncryptionKey: secretKey },
       server: { publicApiBaseUrl: "https://api.example.test" }
     },
@@ -189,6 +190,7 @@ function application(idempotencyKey: string | undefined, secretKey: string | und
 function applicationWithoutPublicApiBaseUrl() {
   return {
     config: {
+      auth: { mode: "disabled" },
       security: { idempotencyEncryptionKey, webhookSecretEncryptionKey },
       server: { publicApiBaseUrl: undefined }
     },

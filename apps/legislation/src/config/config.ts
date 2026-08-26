@@ -122,6 +122,13 @@ const configSchema = z
         path: ["security", "idempotencyEncryptionKey"]
       })
     }
+    if (config.environment === "production" && config.security.webhookSecretEncryptionKey === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY is required in production",
+        path: ["security", "webhookSecretEncryptionKey"]
+      })
+    }
     if (
       config.security.idempotencyEncryptionKey !== undefined &&
       !isAes256Key(config.security.idempotencyEncryptionKey)

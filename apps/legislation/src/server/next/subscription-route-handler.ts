@@ -1,5 +1,4 @@
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import {
   createAes256GcmIdempotencyCipher,
   PostgresSubscriptionRepository,
@@ -13,6 +12,7 @@ import { createWebhookSecretProtector, SubscriptionService } from "../../api/sub
 import { getRequestContext, runWithRequestContext, type RequestIdentity } from "../../auth/request-context.js"
 import { decodeIdempotencyEncryptionKey } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type SubscriptionRouteApplication = Readonly<{
@@ -39,7 +39,7 @@ let subscriptionHandler: HttpApiHandler | undefined
 /** Handles the public subscription API routes. */
 export async function handleSubscriptionRequest(request: Request): Promise<Response> {
   subscriptionHandler ??= createSubscriptionHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, subscriptionHandler)
+  return await executeAuthenticatedApiRequest(request, subscriptionHandler)
 }
 
 export function createSubscriptionRequestHandler(

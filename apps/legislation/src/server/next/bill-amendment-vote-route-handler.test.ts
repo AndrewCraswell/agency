@@ -57,7 +57,7 @@ vi.mock("../../api/vote-read-repository.js", () => ({ createVoteReadRepository: 
 vi.mock("../../api/vote-read-routes.js", () => ({ createVoteReadApiHandler: mocks.voteHandler }))
 vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
-    config: { server: { publicApiBaseUrl: "https://api.example.test" } },
+    config: { auth: { mode: "disabled" }, server: { publicApiBaseUrl: "https://api.example.test" } },
     database: {},
     queryService: {}
   }))

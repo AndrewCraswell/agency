@@ -3,6 +3,7 @@
   "include": [
     "src/api/next/http.ts",
     "src/api/next/node-handler.ts",
+    "src/server/next/authenticated-api-request.ts",
     "src/server/next/jurisdiction-route-handler.ts",
     "src/server/next/bill-amendment-vote-route-handler.ts",
     "src/server/next/document-resource-route-handler.ts",

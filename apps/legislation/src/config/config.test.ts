@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest"
 import { ConfigurationError, decodeIdempotencyEncryptionKey, loadConfig } from "./config.js"
 
+const encryptionKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+const workosEnvironment = {
+  AUTH_MODE: "workos",
+  WORKOS_API_AUDIENCE: "client_environment",
+  WORKOS_CLIENT_ID: "client_test",
+  WORKOS_ISSUER: "https://api.workos.com/user_management/client_test",
+  WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
+  WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
+} as const
+
 describe("loadConfig", () => {
   it("provides safe local defaults", () => {
     const config = loadConfig({})
@@ -63,6 +73,7 @@ describe("loadConfig", () => {
       GOVINFO_API_URL: "https://govinfo.example/api/",
       LEGISLATION_HOST: "0.0.0.0",
       LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: encryptionKey,
       LEGISLATION_PORT: "8080",
       LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
       LOG_LEVEL: "debug",
@@ -139,7 +150,6 @@ describe("loadConfig", () => {
   })
 
   it("requires a valid 32-byte idempotency encryption key in production", () => {
-    const validKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     expect(() =>
       loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example", NODE_ENV: "production" })
     ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production")
@@ -152,12 +162,25 @@ describe("loadConfig", () => {
     ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key")
     expect(
       loadConfig({
-        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: validKey,
+        ...workosEnvironment,
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: encryptionKey,
         LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+        LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: encryptionKey,
         NODE_ENV: "production"
       }).security.idempotencyEncryptionKey
-    ).toBe(validKey)
-    expect(decodeIdempotencyEncryptionKey(validKey)).toHaveLength(32)
+    ).toBe(encryptionKey)
+    expect(decodeIdempotencyEncryptionKey(encryptionKey)).toHaveLength(32)
+  })
+
+  it("requires webhook secret protection in production", () => {
+    expect(() =>
+      loadConfig({
+        ...workosEnvironment,
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: encryptionKey,
+        LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+        NODE_ENV: "production"
+      })
+    ).toThrow("LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY is required in production")
   })
 
   it.each(["0", "65536", "not-a-port"])('rejects invalid port "%s" without including secrets', (port) => {

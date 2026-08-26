@@ -9,7 +9,6 @@ import { createChangeFeedApiHandler } from "../../api/change-feed-routes.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "../../api/core-read.js"
 import { createDocumentReadApiHandler } from "../../api/document-read-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import { createVoteReadRepository } from "../../api/vote-read-repository.js"
 import { createVoteReadApiHandler } from "../../api/vote-read-routes.js"
 import type { LegislationDatabase } from "../../db/database.js"
@@ -18,6 +17,7 @@ import { listBillTextSections } from "../../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../../db/queries/bill-timeline-read.js"
 import { listChangeFeed } from "../../db/queries/change-feed-reads.js"
 import { assertBillExists, listBillDocuments } from "../../db/queries/document-reads.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type BillAmendmentVoteRouteApplication = Readonly<{
@@ -41,7 +41,7 @@ let billAmendmentVoteHandler: HttpApiHandler | undefined
  */
 export async function handleBillAmendmentVoteRequest(request: Request): Promise<Response> {
   billAmendmentVoteHandler ??= createBillAmendmentVoteHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, billAmendmentVoteHandler)
+  return await executeAuthenticatedApiRequest(request, billAmendmentVoteHandler)
 }
 
 export function createBillAmendmentVoteRequestHandler(

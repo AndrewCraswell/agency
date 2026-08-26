@@ -9,7 +9,6 @@ import { createMeetingParticipantListApiHandler } from "../../api/meeting-partic
 import { createMeetingParticipantReadApiHandler } from "../../api/meeting-participant-read-routes.js"
 import { createMeetingReadRepository } from "../../api/meeting-read-repository.js"
 import { createMeetingReadApiHandler, type MeetingReadApi } from "../../api/meeting-read-routes.js"
-import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
 import { createRepresentativeLookupApi, createRepresentativeLookupApiHandler } from "../../api/representative-lookup.js"
 import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
@@ -33,6 +32,7 @@ import {
   assertMeetingExists as assertMeetingParticipantParentExists,
   listMeetingParticipants
 } from "../../db/queries/meeting-participant-reads.js"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { createNextRepresentativeLookupProvider } from "./representative-lookup-provider.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
@@ -53,7 +53,7 @@ let meetingCalendarHandler: HttpApiHandler | undefined
 /** Handles meeting, calendar, and representative lookup routes. */
 export async function handleMeetingCalendarRequest(request: Request): Promise<Response> {
   meetingCalendarHandler ??= createMeetingCalendarHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, meetingCalendarHandler)
+  return await executeAuthenticatedApiRequest(request, meetingCalendarHandler)
 }
 
 export function createMeetingCalendarRequestHandler(

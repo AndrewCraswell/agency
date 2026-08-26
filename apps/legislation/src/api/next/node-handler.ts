@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { once } from "node:events"
 import { IncomingMessage, ServerResponse, type IncomingHttpHeaders } from "node:http"
 import { Socket } from "node:net"
-import { runWithRequestContext } from "../../auth/request-context.js"
+import { runWithRequestContext, type RequestContext } from "../../auth/request-context.js"
 import { LegislationError } from "../../legislation/errors.js"
 import { prepareApiResponse, sendApiError, type HttpApiHandler } from "../http.js"
 
@@ -10,6 +10,7 @@ const DEFAULT_MAXIMUM_BODY_BYTES = 5 * 1024 * 1024
 
 export type NodeHttpApiHandlerOptions = Readonly<{
   maximumBodyBytes?: number
+  requestContext?: Omit<RequestContext, "correlationId">
 }>
 
 /**
@@ -32,6 +33,7 @@ export async function executeNextHttpApiHandler(
   const response = new ServerResponse(request)
   response.assignSocket(responseSocket)
   const correlationId = webRequest.headers.get("x-correlation-id") ?? randomUUID()
+  const requestContext = { ...options.requestContext, correlationId }
   response.setHeader("cache-control", "private, no-store")
   response.setHeader("x-correlation-id", correlationId)
   prepareApiResponse(response, request)
@@ -42,13 +44,13 @@ export async function executeNextHttpApiHandler(
   try {
     let handled = false
     try {
-      handled = await runWithRequestContext({ correlationId }, async () => await handler(request, response))
+      handled = await runWithRequestContext(requestContext, async () => await handler(request, response))
     } catch (error) {
       if (webRequest.signal.aborted) {
         throw abortError(webRequest.signal)
       }
       if (!response.writableEnded) {
-        runWithRequestContext({ correlationId }, () => sendApiError(request, response, error))
+        runWithRequestContext(requestContext, () => sendApiError(request, response, error))
       }
       handled = true
     }
@@ -56,11 +58,11 @@ export async function executeNextHttpApiHandler(
       throw abortError(webRequest.signal)
     }
     if (!handled) {
-      runWithRequestContext({ correlationId }, () =>
+      runWithRequestContext(requestContext, () =>
         sendApiError(request, response, new LegislationError("not_found", "API route was not found"))
       )
     } else if (!response.writableEnded) {
-      runWithRequestContext({ correlationId }, () =>
+      runWithRequestContext(requestContext, () =>
         sendApiError(request, response, new LegislationError("internal", "API handler completed without a response"))
       )
     }

@@ -47,7 +47,7 @@ vi.mock("../../api/supporting-material-section-read-routes.js", () => ({
 }))
 vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
-    config: { server: { publicApiBaseUrl: "https://api.example.test" } },
+    config: { auth: { mode: "disabled" }, server: { publicApiBaseUrl: "https://api.example.test" } },
     database: {},
     queryService: {}
   }))
