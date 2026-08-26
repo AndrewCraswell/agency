@@ -49,7 +49,6 @@ that the prototype is homologated.
 ## Product safety and recovery
 
 - [Product release manifest](product-release-manifest-contract.md)
-- [Encrypted IR security](encrypted-ir-security-contract.md)
 
 The retired dual-processor threat, reset, transport, and recovery documents were removed when the prototype moved to
 one ESP32-S3. Replacement security and recovery contracts must describe that architecture rather than preserving the
