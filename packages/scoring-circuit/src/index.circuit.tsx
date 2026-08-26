@@ -1,6 +1,8 @@
 import type { ReactElement } from "react"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
+import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
+import { ScoringConductorInterface } from "./scoring-conductor-interface.circuit.js"
 
 export const controllerLeftPins = [
   "APP_3V3",
@@ -52,15 +54,18 @@ export const controllerRightPins = [
   "APP_GND"
 ] as const
 
+export const controllerSocket = {
+  rowSpacingMm: 22.86,
+  outlineWidthMm: 25.4,
+  outlineHeightMm: 62.74,
+  center: { pcbX: 29.43, pcbY: 0 }
+} as const
+
 export const prototypeInterfaces = {
   weaponLeft: ["LEFT_A", "LEFT_B", "LEFT_C"],
   weaponRight: ["RIGHT_A", "RIGHT_B", "RIGHT_C"],
   piste: ["PISTE"],
-  ir: ["APP_3V3", "IR_RX", "APP_GND"],
-  buzzer: ["BUZZER_DRIVE", "APP_GND"],
-  displayPower: ["V5", "APP_GND"],
-  powerInput: ["V5", "APP_GND"],
-  hub75: ["R1", "G1", "B1", "APP_GND", "R2", "G2", "B2", "APP_GND", "A", "B", "C", "D", "CLK", "LAT", "OE_N", "APP_GND"]
+  powerInput: ["V5", "APP_GND"]
 } as const
 
 function MinimalScoringPrototype(): ReactElement {
@@ -83,11 +88,19 @@ function MinimalScoringPrototype(): ReactElement {
         pcbY={0}
         pcbRotation={90}
       />
+      <silkscreenrect
+        pcbX={controllerSocket.center.pcbX}
+        pcbY={controllerSocket.center.pcbY}
+        width={`${controllerSocket.outlineWidthMm}mm`}
+        height={`${controllerSocket.outlineHeightMm}mm`}
+        strokeWidth="0.2mm"
+        filled={false}
+      />
       <pinheader
         name="J_CONTROLLER_RIGHT"
         pinCount={22}
         pinLabels={[...controllerRightPins]}
-        pcbX={43.4}
+        pcbX={18 + controllerSocket.rowSpacingMm}
         pcbY={0}
         pcbRotation={90}
       />
@@ -114,17 +127,73 @@ function MinimalScoringPrototype(): ReactElement {
         pcbX={-55}
         pcbY={40}
       />
-      <pinheader
-        name="J_DISPLAY_POWER"
-        pinCount={2}
-        pinLabels={[...prototypeInterfaces.displayPower]}
-        pcbX={-20}
-        pcbY={40}
+      <EthernetModuleFootprint pcbX={-20} pcbY={-32} />
+      <resistor
+        name="R_ETH_CS_PULLUP"
+        manufacturerPartNumber="RC0603FR-0710KL"
+        resistance="10kohm"
+        tolerance="1%"
+        footprint="0603"
+        pcbX={-5}
+        pcbY={-12}
       />
-      <pinheader name="J_IR" pinCount={3} pinLabels={[...prototypeInterfaces.ir]} pcbX={65} pcbY={35} />
-      <pinheader name="J_BUZZER" pinCount={2} pinLabels={[...prototypeInterfaces.buzzer]} pcbX={65} pcbY={20} />
-      <pinheader name="J_HUB75" pinCount={16} doubleRow pinLabels={[...prototypeInterfaces.hub75]} pcbX={65} pcbY={0} />
-      <EthernetModuleFootprint pcbX={-25} pcbY={-25} />
+      <ScoringConductorInterface pcbX={-48} pcbY={0} />
+      <PrototypePeripherals />
+
+      <trace from="J_POWER_INPUT.V5" to="net.V5" />
+      <trace from="J_POWER_INPUT.APP_GND" to="net.APP_GND" />
+      <trace from="J_CONTROLLER_LEFT.1" to="net.APP_3V3" />
+      <trace from="J_CONTROLLER_LEFT.2" to="net.APP_3V3" />
+      <trace from="J_CONTROLLER_LEFT.3" to="net.APP_RESET_N" />
+      <trace from="J_CONTROLLER_LEFT.21" to="net.V5" />
+      <trace from="J_CONTROLLER_LEFT.22" to="net.APP_GND" />
+      <trace from="J_CONTROLLER_RIGHT.1" to="net.APP_GND" />
+      <trace from="J_CONTROLLER_RIGHT.21" to="net.APP_GND" />
+      <trace from="J_CONTROLLER_RIGHT.22" to="net.APP_GND" />
+
+      <trace from="J_WEAPON_LEFT.LEFT_A" to="net.LEFT_A" />
+      <trace from="J_WEAPON_LEFT.LEFT_B" to="net.LEFT_B" />
+      <trace from="J_WEAPON_LEFT.LEFT_C" to="net.LEFT_C" />
+      <trace from="J_WEAPON_RIGHT.RIGHT_A" to="net.RIGHT_A" />
+      <trace from="J_WEAPON_RIGHT.RIGHT_B" to="net.RIGHT_B" />
+      <trace from="J_WEAPON_RIGHT.RIGHT_C" to="net.RIGHT_C" />
+      <trace from="J_PISTE.PISTE" to="net.PISTE" />
+
+      <trace from="J_CONTROLLER_LEFT.6" to="net.DRIVE_LEFT_A" />
+      <trace from="J_CONTROLLER_LEFT.7" to="net.DRIVE_LEFT_B" />
+      <trace from="J_CONTROLLER_LEFT.12" to="net.DRIVE_LEFT_C" />
+      <trace from="J_CONTROLLER_LEFT.15" to="net.DRIVE_RIGHT_A" />
+      <trace from="J_CONTROLLER_LEFT.16" to="net.DRIVE_RIGHT_B" />
+      <trace from="J_CONTROLLER_LEFT.17" to="net.DRIVE_RIGHT_C" />
+      <trace from="J_CONTROLLER_LEFT.18" to="net.DRIVE_PISTE" />
+      <trace from="J_CONTROLLER_RIGHT.4" to="net.SENSE_LEFT_B" />
+      <trace from="J_CONTROLLER_RIGHT.5" to="net.SENSE_LEFT_C" />
+      <trace from="J_CONTROLLER_LEFT.13" to="net.SENSE_RIGHT_B" />
+      <trace from="J_CONTROLLER_LEFT.4" to="net.SENSE_RIGHT_C" />
+      <trace from="J_CONTROLLER_LEFT.5" to="net.SENSE_PISTE" />
+
+      <trace from="J_CONTROLLER_LEFT.19" to="net.APP_SPI_SCK" />
+      <trace from="J_CONTROLLER_LEFT.20" to="net.APP_SPI_MOSI" />
+      <trace from="J_CONTROLLER_LEFT.8" to="net.APP_SPI_MISO" />
+      <trace from="J_CONTROLLER_LEFT.9" to="net.ETH_CS_N" />
+      <trace from="J_CONTROLLER_LEFT.10" to="net.ETH_INT_N" />
+      <trace from="U_ETHERNET.4" to="net.APP_SPI_SCK" />
+      <trace from="U_ETHERNET.3" to="net.APP_SPI_MOSI" />
+      <trace from="U_ETHERNET.12" to="net.APP_SPI_MISO" />
+      <trace from="U_ETHERNET.5" to="net.ETH_CS_N" />
+      <trace from="net.ETH_CS_N" to="R_ETH_CS_PULLUP.pin1" />
+      <trace from="R_ETH_CS_PULLUP.pin2" to="net.APP_3V3" />
+      <trace from="U_ETHERNET.6" to="net.ETH_INT_N" />
+      <trace from="U_ETHERNET.11" to="net.APP_RESET_N" />
+      <trace from="U_ETHERNET.8" to="net.APP_3V3" />
+      <trace from="U_ETHERNET.9" to="net.APP_3V3" />
+      <trace from="U_ETHERNET.1" to="net.APP_GND" />
+      <trace from="U_ETHERNET.2" to="net.APP_GND" />
+      <trace from="U_ETHERNET.7" to="net.APP_GND" />
+
+      <trace from="J_CONTROLLER_LEFT.11" to="net.IR_RX" />
+      <trace from="J_CONTROLLER_RIGHT.18" to="net.DISPLAY_DATA" />
+      <trace from="J_CONTROLLER_RIGHT.9" to="net.BUZZER_DRIVE" />
     </board>
   )
 }

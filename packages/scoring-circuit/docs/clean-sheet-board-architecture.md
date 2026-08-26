@@ -32,9 +32,10 @@ The initial schematic contains only these functional blocks:
   negative rail only if measured scoring behavior demonstrates that the direct interface cannot meet a named threshold.
 - A socketed or directly soldered WIZ850io module for Ethernet.
 - One TSOP38438-compatible IR receiver input.
-- A HUB75 connector with two 74AHCT245 buffers because a 5 V panel cannot be assumed to accept 3.3 V logic reliably.
-- One transistor-driven buzzer. The HUB75 panel provides the prototype scoring lamps, so duplicate discrete lamp drivers
-  are omitted.
+- A three-wire WS2812 matrix connection. It provides the prototype scoring lamps with one GPIO and no parallel display
+  bus. HUB75 is deferred behind the firmware display abstraction.
+- One transistor-driven buzzer. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
+  omitted.
 - Fused 5 V input from the existing off-board USB-C PD and regulator modules, plus only the rails actually consumed by
   the board.
 - Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
@@ -72,10 +73,10 @@ either limit requires removing or moving functions off-board before layout; it i
 | ESP32-S3-DevKitC-1-N8R8 | Runs all firmware and already includes programming, reset, boot, USB, regulation, flash, and PSRAM. |
 | WIZ850io | Supplies required wired Ethernet without a custom PHY, magnetics, crystal, or RJ45 design. |
 | TSOP38438 | Receives the required infrared remote signal with one ESP32 input. |
-| Two 74AHCT245 buffers | Translate the thirteen HUB75 control signals from 3.3 V to reliable 5 V logic. |
+| WS2812 matrix | Provides all prototype scoring indications through one data signal and an off-board panel. |
 
 There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, isolation
-device, supervisor, or multi-channel output driver in the starting design.
+device, supervisor, display buffer, or multi-channel output driver in the starting design.
 
 ## Work ownership
 

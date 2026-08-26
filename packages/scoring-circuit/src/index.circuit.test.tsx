@@ -4,8 +4,10 @@ import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import MinimalScoringPrototype, {
   controllerLeftPins,
   controllerRightPins,
+  controllerSocket,
   prototypeInterfaces
 } from "./index.circuit.js"
+import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 
 function renderPrototype() {
   const circuit = new Circuit()
@@ -30,10 +32,12 @@ describe("minimal scoring prototype baseline", () => {
     expect(controllerLeftPins).toHaveLength(22)
     expect(controllerRightPins).toHaveLength(22)
     expect(controllerRightPins.slice(10, 13)).toEqual(["RESERVED_GPIO37", "RESERVED_GPIO36", "RESERVED_GPIO35"])
+    expect(controllerSocket).toMatchObject({ rowSpacingMm: 22.86, outlineWidthMm: 25.4, outlineHeightMm: 62.74 })
   })
 
-  it("contains only the required module sockets and external interfaces", () => {
+  it("contains only the required modules, interfaces, and simple support parts", () => {
     const circuit = renderPrototype()
+    expect(circuit.filter(({ type }) => typeof type === "string" && type.includes("error"))).toEqual([])
     const references = circuit
       .filter(({ type }) => type === "source_component")
       .map(({ name }) => name)
@@ -47,15 +51,29 @@ describe("minimal scoring prototype baseline", () => {
         "J_WEAPON_RIGHT",
         "J_PISTE",
         "J_POWER_INPUT",
-        "J_DISPLAY_POWER",
-        "J_IR",
+        "U_IR_RECEIVER",
         "J_BUZZER",
-        "J_HUB75",
+        "J_DISPLAY",
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(11)
+    expect(references).toHaveLength(32)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
-    expect(prototypeInterfaces.hub75).toHaveLength(16)
+    expect(prototypeInterfaces.powerInput).toEqual(["V5", "APP_GND"])
+    expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
+  })
+
+  it("uses seven current-limited drivers and only five direct ADC sense paths", () => {
+    expect(scoringConductorChannels).toHaveLength(7)
+    expect(scoringConductorChannels.filter((channel) => "sense" in channel).map(({ conductor }) => conductor)).toEqual([
+      "LEFT_B",
+      "LEFT_C",
+      "RIGHT_B",
+      "RIGHT_C",
+      "PISTE"
+    ])
+    expect(scoringConductorChannels.map(({ resistanceOhms }) => resistanceOhms)).toEqual([
+      33, 470, 470, 33, 470, 470, 470
+    ])
   })
 })
