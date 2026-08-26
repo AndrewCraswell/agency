@@ -69,12 +69,14 @@ describe("P0 ESP32 support circuit", () => {
   })
 
   it("connects bypass, reset, watchdog, USB, and recovery boundaries", () => {
-    const renderedTraces = traces(renderCircuit())
+    const circuit = renderCircuit()
+    const renderedTraces = traces(circuit)
     expect(renderedTraces).toEqual(
       expect.arrayContaining([
         "U_APP.APP_3V3 to C_ESP_3V3_HF.pin1",
         "C_ESP_3V3_HF.pin2 to net.APP_GND",
         "U_APP.EN_RESET to net.APP_RESET_N",
+        "U_APP_WATCHDOG.pin4 to net.APP_GND",
         "U_APP.APP_WD_KICK to U_APP_WATCHDOG.APP_WD_KICK",
         "U_APP.USB_DN to net.USB_DN",
         "U_APP.USB_DP to net.USB_DP",
@@ -83,6 +85,19 @@ describe("P0 ESP32 support circuit", () => {
         "U_APP.BOOT_N to TP_BOOT_N.pin1"
       ])
     )
+
+    const watchdog = circuit.find((element) => element.type === "source_component" && element.name === "U_APP_WATCHDOG")
+    if (watchdog?.type !== "source_component") throw new RangeError("missing watchdog source component")
+    const watchdogGround = circuit.find(
+      (element) =>
+        element.type === "source_port" &&
+        element.source_component_id === watchdog.source_component_id &&
+        element.pin_number === 4
+    )
+    if (watchdogGround?.type !== "source_port") throw new RangeError("missing watchdog ground source port")
+    expect(
+      circuit.find((element) => element.type === "pcb_port" && element.source_port_id === watchdogGround.source_port_id)
+    ).toMatchObject({ x: expect.any(Number), y: expect.any(Number) })
   })
 
   it("exports every assigned GPIO boundary while leaving the three spares and strap NC unconnected", () => {

@@ -349,7 +349,7 @@ const tps3431Footprint = (
       height="1.75mm"
       // TI publishes a split thermal-pad stencil example, not a single aperture. Suppress the inferred default paste artifact.
       solderPasteMargin="-1mm"
-      portHints={["EP", "GND", "thermal-pad"]}
+      portHints={["EP", "thermal-pad"]}
     />
     {tps3431ThermalVias.map((via, index) => (
       <Fragment key={`tps3431-via-${index + 1}`}>
@@ -362,7 +362,7 @@ const tps3431Footprint = (
           rectPadWidth="0.23mm"
           rectPadHeight="0.23mm"
           rectBorderRadius="0mm"
-          portHints={["EP", "GND", "thermal-via"]}
+          portHints={["EP", "thermal-via"]}
         />
       </Fragment>
     ))}

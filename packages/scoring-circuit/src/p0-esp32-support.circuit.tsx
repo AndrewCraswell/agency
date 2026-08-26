@@ -172,7 +172,7 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
       <trace from="U_APP_SUPERVISOR.CT" to="C_APP_SUPERVISOR_CT.pin1" />
       <trace from="C_APP_SUPERVISOR_CT.pin2" to="net.APP_GND" />
       <trace from="U_APP_WATCHDOG.APP_3V3" to="net.APP_3V3" />
-      <trace from="U_APP_WATCHDOG.APP_GND" to="net.APP_GND" />
+      <trace from="U_APP_WATCHDOG.pin4" to="net.APP_GND" />
       <trace from="U_APP_WATCHDOG.APP_RESET_N" to="net.APP_RESET_N" />
       <trace from="U_APP_WATCHDOG.CWD" to="R_APP_WD_CWD.pin1" />
       <trace from="R_APP_WD_CWD.pin2" to="net.APP_3V3" />
