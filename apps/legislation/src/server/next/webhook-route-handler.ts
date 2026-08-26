@@ -14,7 +14,7 @@ import { decodeIdempotencyEncryptionKey } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx05bApplication = Readonly<{
+type WebhookRouteApplication = Readonly<{
   config: Readonly<{
     security: Readonly<{
       idempotencyEncryptionKey?: string | undefined
@@ -27,25 +27,25 @@ type Nx05bApplication = Readonly<{
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx05bRequestHandlerDependencies = Readonly<{
+export type WebhookRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-export type Nx05bCompositionDependencies = Readonly<{
+export type WebhookCompositionDependencies = Readonly<{
   resolveRequestIdentity?: () => RequestIdentity | undefined
 }>
 
-let nx05bHandler: HttpApiHandler | undefined
+let webhookHandler: HttpApiHandler | undefined
 
-/** Handles only the seven NX-05B webhook routes. */
-export async function handleNx05bRequest(request: Request): Promise<Response> {
-  nx05bHandler ??= createNx05bHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx05bHandler)
+/** Handles the public webhook API routes. */
+export async function handleWebhookRequest(request: Request): Promise<Response> {
+  webhookHandler ??= createWebhookHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, webhookHandler)
 }
 
-export function createNx05bRequestHandler(
-  dependencies: Nx05bRequestHandlerDependencies
+export function createWebhookRequestHandler(
+  dependencies: WebhookRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -54,9 +54,9 @@ export function createNx05bRequestHandler(
   }
 }
 
-export function createNx05bHttpApiHandler(
-  application: Nx05bApplication,
-  dependencies: Nx05bCompositionDependencies = {}
+export function createWebhookHttpApiHandler(
+  application: WebhookRouteApplication,
+  dependencies: WebhookCompositionDependencies = {}
 ): HttpApiHandler {
   const apiBaseUrl = requiredPublicApiBaseUrl(application)
   const handlers: HttpApiHandler[] = [
@@ -108,7 +108,7 @@ function withRequestIdentity(
   }
 }
 
-function requiredPublicApiBaseUrl(application: Nx05bApplication): string {
+function requiredPublicApiBaseUrl(application: WebhookRouteApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")

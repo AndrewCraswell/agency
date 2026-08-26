@@ -1,4 +1,4 @@
-import { handleNx02cRequest } from "../../../../src/server/next/nx02c"
+import { handleDocumentResourceRequest } from "../../../../src/server/next/document-resource-route-handler"
 import { notFoundResponse } from "../../_shared"
 
 export const runtime = "nodejs"
@@ -24,7 +24,7 @@ export async function PATCH(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return await handleNx02cRequest(request)
+  return await handleDocumentResourceRequest(request)
 }
 
 export async function PUT(request: Request): Promise<Response> {

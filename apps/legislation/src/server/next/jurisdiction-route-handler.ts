@@ -14,7 +14,7 @@ import { createSessionReadApiHandler } from "../../api/session-read-routes.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx02Application = Readonly<{
+type JurisdictionRouteApplication = Readonly<{
   config: Readonly<{ server: Readonly<{ publicApiBaseUrl: string | undefined }> }>
   database: LegislationDatabase
   queryService: CoreReadQueryApi
@@ -22,24 +22,24 @@ type Nx02Application = Readonly<{
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx02RequestHandlerDependencies = Readonly<{
+export type JurisdictionRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-let nx02Handler: HttpApiHandler | undefined
+let jurisdictionHandler: HttpApiHandler | undefined
 
 /**
- * Handles only the NX-02A jurisdiction, session, scoped-bill, and scoped-meeting
- * routes. Other API routes remain unhandled until their migration slice owns them.
+ * Handles jurisdiction and session routes, including their scoped bill and meeting
+ * collections. Other API routes remain unhandled by this boundary.
  */
-export async function handleNx02Request(request: Request): Promise<Response> {
-  nx02Handler ??= createNx02HttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx02Handler)
+export async function handleJurisdictionRequest(request: Request): Promise<Response> {
+  jurisdictionHandler ??= createJurisdictionHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, jurisdictionHandler)
 }
 
-export function createNx02RequestHandler(
-  dependencies: Nx02RequestHandlerDependencies
+export function createJurisdictionRequestHandler(
+  dependencies: JurisdictionRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -48,7 +48,7 @@ export function createNx02RequestHandler(
   }
 }
 
-export function createNx02HttpApiHandler(application: Nx02Application): HttpApiHandler {
+export function createJurisdictionHttpApiHandler(application: JurisdictionRouteApplication): HttpApiHandler {
   const options = { apiBaseUrl: requiredPublicApiBaseUrl(application) }
   const database = application.database
   const meetingRepository = createMeetingReadRepository(database)
@@ -76,7 +76,7 @@ export function createNx02HttpApiHandler(application: Nx02Application): HttpApiH
   )
 }
 
-function requiredPublicApiBaseUrl(application: Nx02Application): string {
+function requiredPublicApiBaseUrl(application: JurisdictionRouteApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")
@@ -85,7 +85,7 @@ function requiredPublicApiBaseUrl(application: Nx02Application): string {
 }
 
 async function unavailableMeetingChild(): Promise<never> {
-  throw new Error("NX-02A does not compose meeting detail children")
+  throw new Error("Jurisdiction routes do not compose meeting detail children")
 }
 
 function restrictToScopedBills(handler: HttpApiHandler): HttpApiHandler {

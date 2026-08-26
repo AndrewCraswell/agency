@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx02cRequest } = vi.hoisted(() => ({
-  handleNx02cRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleDocumentResourceRequest } = vi.hoisted(() => ({
+  handleDocumentResourceRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx02c", () => ({ handleNx02cRequest }))
+vi.mock("../../../src/server/next/document-resource-route-handler", () => ({ handleDocumentResourceRequest }))
 
 import * as detail from "./[documentId]/route"
 import * as sectionDetail from "./[documentId]/sections/[sectionId]/route"
@@ -50,22 +50,22 @@ const routes: readonly RouteCase[] = [
 ]
 
 beforeEach(() => {
-  handleNx02cRequest.mockReset()
-  handleNx02cRequest.mockImplementation(
+  handleDocumentResourceRequest.mockReset()
+  handleDocumentResourceRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-02C document route handlers", () => {
+describe("document resource document route handlers", () => {
   it.each(routes)("delegates the $name URL and Request unchanged", async ({ route, url }) => {
     const request = new Request(url, { headers: { "x-correlation-id": "route-test" } })
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx02cRequest).toHaveBeenCalledOnce()
-    expect(handleNx02cRequest).toHaveBeenCalledWith(request)
-    expect(handleNx02cRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleDocumentResourceRequest).toHaveBeenCalledOnce()
+    expect(handleDocumentResourceRequest).toHaveBeenCalledWith(request)
+    expect(handleDocumentResourceRequest.mock.calls[0]?.[0]).toBe(request)
   })
 
   it.each(routes)("exports node runtime and the exact method surface for $name", ({ route }) => {
@@ -98,19 +98,22 @@ describe("NX-02C document route handlers", () => {
             }
           })
     await expect(response.text()).resolves.toBe(expectedBody)
-    expect(handleNx02cRequest).not.toHaveBeenCalled()
+    expect(handleDocumentResourceRequest).not.toHaveBeenCalled()
   })
 
-  it.each(routes)("passes a trailing slash unchanged to the NX-02C handler for $name", async ({ route, url }) => {
-    const queryStart = url.indexOf("?")
-    const trailingSlashUrl = queryStart === -1 ? `${url}/` : `${url.slice(0, queryStart)}/${url.slice(queryStart)}`
-    const request = new Request(trailingSlashUrl)
-    const response = await route.GET(request)
+  it.each(routes)(
+    "passes a trailing slash unchanged to the document resource handler for $name",
+    async ({ route, url }) => {
+      const queryStart = url.indexOf("?")
+      const trailingSlashUrl = queryStart === -1 ? `${url}/` : `${url.slice(0, queryStart)}/${url.slice(queryStart)}`
+      const request = new Request(trailingSlashUrl)
+      const response = await route.GET(request)
 
-    expect(response.status).toBe(200)
-    expect(handleNx02cRequest).toHaveBeenCalledOnce()
-    expect(handleNx02cRequest).toHaveBeenCalledWith(request)
-    expect(handleNx02cRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx02cRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
-  })
+      expect(response.status).toBe(200)
+      expect(handleDocumentResourceRequest).toHaveBeenCalledOnce()
+      expect(handleDocumentResourceRequest).toHaveBeenCalledWith(request)
+      expect(handleDocumentResourceRequest.mock.calls[0]?.[0]).toBe(request)
+      expect(handleDocumentResourceRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    }
+  )
 })

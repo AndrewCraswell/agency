@@ -57,14 +57,14 @@ vi.mock("./runtime.js", () => ({
   }))
 }))
 
-import { createNx04RequestHandler, handleNx04Request } from "./nx04.js"
+import { createSearchResearchRequestHandler, handleSearchResearchRequest } from "./search-research-route-handler.js"
 
 afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("NX-04 Next composition", () => {
-  it("composes exactly the seven NX-04 operations with one handler owner each", async () => {
+describe("search research Next composition", () => {
+  it("composes exactly the seven search and research operations with one handler owner each", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
       const handled = await Reflect.apply(handler, undefined, [
@@ -74,7 +74,7 @@ describe("NX-04 Next composition", () => {
       return new Response(JSON.stringify({ handled }))
     })
 
-    await handleNx04Request(new Request("https://api.example.test/api/search/bills", { method: "POST" }))
+    await handleSearchResearchRequest(new Request("https://api.example.test/api/search/bills", { method: "POST" }))
 
     const options = { apiBaseUrl: "https://api.example.test" }
     expect(mocks.civicHandler).toHaveBeenCalledWith(expect.any(Object), options)
@@ -88,7 +88,7 @@ describe("NX-04 Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-04 to create a composite handler")
+      throw new Error("Expected search and research routes to create a composite handler")
     }
     const handlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(handlers)) {
@@ -119,7 +119,7 @@ describe("NX-04 Next composition", () => {
     ] as const
     for (const [method, url] of excludedRoutes) {
       expect(await matchedHandlerCount(handlers, method, url)).toBe(0)
-      const response = await handleNx04Request(new Request(`https://api.example.test${url}`, { method }))
+      const response = await handleSearchResearchRequest(new Request(`https://api.example.test${url}`, { method }))
       await expect(response.json()).resolves.toEqual({ handled: false })
     }
   })
@@ -128,7 +128,7 @@ describe("NX-04 Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx04RequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createSearchResearchRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/search/bills", { method: "POST" })
 
     const first = await requestHandler(request)

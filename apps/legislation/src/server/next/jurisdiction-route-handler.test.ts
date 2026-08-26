@@ -67,13 +67,13 @@ vi.mock("./runtime.js", () => ({
   }))
 }))
 
-import { createNx02RequestHandler, handleNx02Request } from "./nx02.js"
+import { createJurisdictionRequestHandler, handleJurisdictionRequest } from "./jurisdiction-route-handler.js"
 
 afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("NX-02A Next composition", () => {
+describe("jurisdiction route composition", () => {
   it("composes only the six handler families needed by the eleven routes", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
@@ -83,7 +83,7 @@ describe("NX-02A Next composition", () => {
       ])
       return new Response(JSON.stringify({ handled }))
     })
-    await handleNx02Request(new Request("https://api.example.test/api/jurisdictions"))
+    await handleJurisdictionRequest(new Request("https://api.example.test/api/jurisdictions"))
 
     expect(mocks.jurisdictionCollectionHandler).toHaveBeenCalledWith("jurisdiction-collection-repository", {
       apiBaseUrl: "https://api.example.test"
@@ -111,7 +111,7 @@ describe("NX-02A Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-02A to create a composite handler")
+      throw new Error("Expected jurisdiction routes to create a composite handler")
     }
     const composedHandlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(composedHandlers)) {
@@ -141,7 +141,7 @@ describe("NX-02A Next composition", () => {
       "/api/sessions/ak-30/meetings/"
     ]
     for (const pathname of trailingSlashPaths) {
-      const response = await handleNx02Request(new Request(`https://api.example.test${pathname}`))
+      const response = await handleJurisdictionRequest(new Request(`https://api.example.test${pathname}`))
       await expect(response.json()).resolves.toEqual({ handled: false })
     }
   })
@@ -150,7 +150,7 @@ describe("NX-02A Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx02RequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createJurisdictionRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/jurisdictions")
 
     const first = await requestHandler(request)

@@ -83,14 +83,14 @@ vi.mock("./runtime.js", () => ({
   }))
 }))
 
-import { createNx03bRequestHandler, handleNx03bRequest } from "./nx03b.js"
+import { createMeetingCalendarRequestHandler, handleMeetingCalendarRequest } from "./meeting-calendar-route-handler.js"
 
 afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("NX-03B Next composition", () => {
-  it("composes exactly the fourteen NX-03B operations with one handler owner each", async () => {
+describe("meeting calendar Next composition", () => {
+  it("composes exactly the fourteen meeting calendar operations with one handler owner each", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
       const handled = await Reflect.apply(handler, undefined, [
@@ -100,7 +100,7 @@ describe("NX-03B Next composition", () => {
       return new Response(JSON.stringify({ handled }))
     })
 
-    await handleNx03bRequest(new Request("https://api.example.test/api/meetings"))
+    await handleMeetingCalendarRequest(new Request("https://api.example.test/api/meetings"))
 
     const options = { apiBaseUrl: "https://api.example.test" }
     for (const handler of [
@@ -121,7 +121,7 @@ describe("NX-03B Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-03B to create a composite handler")
+      throw new Error("Expected meeting calendar routes to create a composite handler")
     }
     const handlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(handlers)) {
@@ -159,7 +159,7 @@ describe("NX-03B Next composition", () => {
     ] as const
     for (const [method, url] of excludedRoutes) {
       expect(await matchedHandlerCount(handlers, method, url)).toBe(0)
-      const response = await handleNx03bRequest(new Request(`https://api.example.test${url}`, { method }))
+      const response = await handleMeetingCalendarRequest(new Request(`https://api.example.test${url}`, { method }))
       await expect(response.json()).resolves.toEqual({ handled: false })
     }
   })
@@ -168,7 +168,7 @@ describe("NX-03B Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx03bRequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createMeetingCalendarRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/meetings")
 
     const first = await requestHandler(request)

@@ -19,32 +19,32 @@ import { readDocumentDiff } from "../../db/queries/document-diff-read.js"
 import type { OpenRouterRetrievalClient } from "../../models/openrouter-retrieval.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx04QueryService = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
+type SearchResearchQueryService = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
 
-type Nx04Application = Readonly<{
+type SearchResearchApplication = Readonly<{
   config: Pick<LegislationConfig, "model" | "server">
   database: LegislationDatabase
-  queryService: Nx04QueryService
+  queryService: SearchResearchQueryService
   retrievalClient: OpenRouterRetrievalClient | undefined
 }>
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx04RequestHandlerDependencies = Readonly<{
+export type SearchResearchRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-let nx04Handler: HttpApiHandler | undefined
+let searchResearchHandler: HttpApiHandler | undefined
 
-/** Handles only the NX-04 search, document-diff, and research-answer routes. */
-export async function handleNx04Request(request: Request): Promise<Response> {
-  nx04Handler ??= createNx04HttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx04Handler)
+/** Handles search, document-diff, and research-answer routes. */
+export async function handleSearchResearchRequest(request: Request): Promise<Response> {
+  searchResearchHandler ??= createSearchResearchHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, searchResearchHandler)
 }
 
-export function createNx04RequestHandler(
-  dependencies: Nx04RequestHandlerDependencies
+export function createSearchResearchRequestHandler(
+  dependencies: SearchResearchRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -53,7 +53,7 @@ export function createNx04RequestHandler(
   }
 }
 
-export function createNx04HttpApiHandler(application: Nx04Application): HttpApiHandler {
+export function createSearchResearchHttpApiHandler(application: SearchResearchApplication): HttpApiHandler {
   const apiBaseUrl = requiredPublicApiBaseUrl(application)
   const options = { apiBaseUrl }
 
@@ -83,7 +83,7 @@ export function createNx04HttpApiHandler(application: Nx04Application): HttpApiH
   )
 }
 
-function createResearchAnswerApi(application: Nx04Application, apiBaseUrl: string) {
+function createResearchAnswerApi(application: SearchResearchApplication, apiBaseUrl: string) {
   const retrievalClient = application.retrievalClient
   if (retrievalClient === undefined) {
     return createUnavailableResearchAnswerApi()
@@ -94,7 +94,7 @@ function createResearchAnswerApi(application: Nx04Application, apiBaseUrl: strin
   )
 }
 
-function requiredPublicApiBaseUrl(application: Nx04Application): string {
+function requiredPublicApiBaseUrl(application: SearchResearchApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")

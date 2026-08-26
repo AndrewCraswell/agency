@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx02Request } = vi.hoisted(() => ({
-  handleNx02Request: vi.fn<(request: Request) => Promise<Response>>()
+const { handleJurisdictionRequest } = vi.hoisted(() => ({
+  handleJurisdictionRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx02", () => ({ handleNx02Request }))
+vi.mock("../../../src/server/next/jurisdiction-route-handler", () => ({ handleJurisdictionRequest }))
 
 import * as bills from "./[jurisdictionId]/bills/route"
 import * as commissions from "./[jurisdictionId]/commissions/route"
@@ -38,21 +38,21 @@ const routes: readonly [string, RouteModule, string][] = [
 ]
 
 beforeEach(() => {
-  handleNx02Request.mockReset()
-  handleNx02Request.mockImplementation(
+  handleJurisdictionRequest.mockReset()
+  handleJurisdictionRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-02A jurisdiction route handlers", () => {
+describe("jurisdiction route handlers", () => {
   it.each(routes)("delegates the %s dynamic URL unchanged", async (_name, route, url) => {
     const request = new Request(url, { headers: { "x-correlation-id": "route-test" } })
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx02Request).toHaveBeenCalledOnce()
-    expect(handleNx02Request).toHaveBeenCalledWith(request)
+    expect(handleJurisdictionRequest).toHaveBeenCalledOnce()
+    expect(handleJurisdictionRequest).toHaveBeenCalledWith(request)
   })
 
   it.each(routes)("exports node runtime and the exact documented method surface for %s", (_name, route) => {
@@ -76,6 +76,6 @@ describe("NX-02A jurisdiction route handlers", () => {
         retryable: false
       }
     })
-    expect(handleNx02Request).not.toHaveBeenCalled()
+    expect(handleJurisdictionRequest).not.toHaveBeenCalled()
   })
 })

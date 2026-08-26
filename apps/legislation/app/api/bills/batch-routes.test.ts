@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx02bRequest } = vi.hoisted(() => ({
-  handleNx02bRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleBillAmendmentVoteRequest } = vi.hoisted(() => ({
+  handleBillAmendmentVoteRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx02b", () => ({ handleNx02bRequest }))
+vi.mock("../../../src/server/next/bill-amendment-vote-route-handler", () => ({ handleBillAmendmentVoteRequest }))
 
 import * as amendmentBatch from "./amendments/batch/route"
 import * as billBatch from "./batch/route"
@@ -28,13 +28,13 @@ const routes: readonly [string, RouteModule, string][] = [
 const unsupportedBodyMethods = ["DELETE", "GET", "OPTIONS", "PATCH", "PUT"] as const
 
 beforeEach(() => {
-  handleNx02bRequest.mockReset()
-  handleNx02bRequest.mockImplementation(
+  handleBillAmendmentVoteRequest.mockReset()
+  handleBillAmendmentVoteRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-02B batch route handlers", () => {
+describe("bill, amendment, and vote batch route handlers", () => {
   it.each(routes)("delegates the %s POST URL unchanged", async (_name, route, url) => {
     const request = new Request(url, {
       body: JSON.stringify({ ids: ["bill:us:119:hr:1"] }),
@@ -45,8 +45,8 @@ describe("NX-02B batch route handlers", () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx02bRequest).toHaveBeenCalledOnce()
-    expect(handleNx02bRequest).toHaveBeenCalledWith(request)
+    expect(handleBillAmendmentVoteRequest).toHaveBeenCalledOnce()
+    expect(handleBillAmendmentVoteRequest).toHaveBeenCalledWith(request)
   })
 
   it.each(routes)("exports node runtime and the exact documented method surface for %s", (_name, route) => {
@@ -73,7 +73,7 @@ describe("NX-02B batch route handlers", () => {
       })
     }
 
-    expect(handleNx02bRequest).not.toHaveBeenCalled()
+    expect(handleBillAmendmentVoteRequest).not.toHaveBeenCalled()
   })
 
   it.each(routes)("returns the shared not-found response without a body for HEAD on %s", async (_name, route, url) => {
@@ -85,6 +85,6 @@ describe("NX-02B batch route handlers", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store")
     expect(response.headers.get("x-correlation-id")).toBe("unsupported-batch-head")
     await expect(response.text()).resolves.toBe("")
-    expect(handleNx02bRequest).not.toHaveBeenCalled()
+    expect(handleBillAmendmentVoteRequest).not.toHaveBeenCalled()
   })
 })

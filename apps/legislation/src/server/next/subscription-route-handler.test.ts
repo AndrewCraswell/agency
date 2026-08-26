@@ -45,16 +45,20 @@ vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => application(encryptionKey))
 }))
 
-import { createNx05aHttpApiHandler, createNx05aRequestHandler, handleNx05aRequest } from "./nx05a.js"
+import {
+  createSubscriptionHttpApiHandler,
+  createSubscriptionRequestHandler,
+  handleSubscriptionRequest
+} from "./subscription-route-handler.js"
 
 afterEach(() => {
   observedIdentities.length = 0
   vi.clearAllMocks()
 })
 
-describe("NX-05A Next composition", () => {
+describe("subscription route composition", () => {
   it("composes exactly the seven subscription operations with one handler owner each", async () => {
-    const handler = createNx05aHttpApiHandler(application(encryptionKey))
+    const handler = createSubscriptionHttpApiHandler(application(encryptionKey))
     const options = { apiBaseUrl: "https://api.example.test" }
 
     expect(mocks.readHandler).toHaveBeenCalledWith(expect.any(Object), options)
@@ -62,7 +66,7 @@ describe("NX-05A Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-05A to create a composite handler")
+      throw new Error("Expected subscription routes to create a composite handler")
     }
     const handlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(handlers)) {
@@ -100,7 +104,7 @@ describe("NX-05A Next composition", () => {
   })
 
   it("omits subscription mutations when encrypted idempotency replay is not configured", () => {
-    createNx05aHttpApiHandler(application(undefined))
+    createSubscriptionHttpApiHandler(application(undefined))
 
     expect(mocks.readHandler).toHaveBeenCalledOnce()
     expect(mocks.mutationHandler).not.toHaveBeenCalled()
@@ -110,8 +114,10 @@ describe("NX-05A Next composition", () => {
 
   it("injects an explicit test identity without installing a production identity", async () => {
     const identity = { organizationId: "organization:test", userId: "user:test" }
-    const injected = createNx05aHttpApiHandler(application(encryptionKey), { resolveRequestIdentity: () => identity })
-    const production = createNx05aHttpApiHandler(application(encryptionKey))
+    const injected = createSubscriptionHttpApiHandler(application(encryptionKey), {
+      resolveRequestIdentity: () => identity
+    })
+    const production = createSubscriptionHttpApiHandler(application(encryptionKey))
 
     await runWithRequestContext({ correlationId: "injected" }, async () => {
       expect(await invoke(injected, "GET", "/api/subscriptions")).toBe(true)
@@ -124,7 +130,7 @@ describe("NX-05A Next composition", () => {
   })
 
   it("does not inject identity outside the managed request context", async () => {
-    const handler = createNx05aHttpApiHandler(application(encryptionKey), {
+    const handler = createSubscriptionHttpApiHandler(application(encryptionKey), {
       resolveRequestIdentity: () => ({ userId: "user:test" })
     })
 
@@ -136,7 +142,7 @@ describe("NX-05A Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx05aRequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createSubscriptionRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/subscriptions")
 
     const first = await requestHandler(request)
@@ -153,7 +159,9 @@ describe("NX-05A Next composition", () => {
     mocks.execute.mockResolvedValueOnce(new Response("handled"))
     const request = new Request("https://api.example.test/api/subscriptions")
 
-    await expect(handleNx05aRequest(request).then(async (response) => await response.text())).resolves.toBe("handled")
+    await expect(handleSubscriptionRequest(request).then(async (response) => await response.text())).resolves.toBe(
+      "handled"
+    )
     expect(mocks.execute).toHaveBeenCalledWith(request, expect.any(Function))
   })
 })

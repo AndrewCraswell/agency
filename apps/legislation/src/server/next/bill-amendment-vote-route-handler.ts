@@ -20,7 +20,7 @@ import { listChangeFeed } from "../../db/queries/change-feed-reads.js"
 import { assertBillExists, listBillDocuments } from "../../db/queries/document-reads.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx02bApplication = Readonly<{
+type BillAmendmentVoteRouteApplication = Readonly<{
   config: Readonly<{ server: Readonly<{ publicApiBaseUrl: string | undefined }> }>
   database: LegislationDatabase
   queryService: CoreReadQueryApi
@@ -28,24 +28,24 @@ type Nx02bApplication = Readonly<{
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx02bRequestHandlerDependencies = Readonly<{
+export type BillAmendmentVoteRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-let nx02bHandler: HttpApiHandler | undefined
+let billAmendmentVoteHandler: HttpApiHandler | undefined
 
 /**
- * Handles only the NX-02B bills, amendments, and votes routes. Other API
- * routes remain unhandled until their migration slice owns them.
+ * Handles bills, amendments, and votes routes. Other API routes remain
+ * unhandled by this request handler.
  */
-export async function handleNx02bRequest(request: Request): Promise<Response> {
-  nx02bHandler ??= createNx02bHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx02bHandler)
+export async function handleBillAmendmentVoteRequest(request: Request): Promise<Response> {
+  billAmendmentVoteHandler ??= createBillAmendmentVoteHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, billAmendmentVoteHandler)
 }
 
-export function createNx02bRequestHandler(
-  dependencies: Nx02bRequestHandlerDependencies
+export function createBillAmendmentVoteRequestHandler(
+  dependencies: BillAmendmentVoteRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -54,7 +54,7 @@ export function createNx02bRequestHandler(
   }
 }
 
-export function createNx02bHttpApiHandler(application: Nx02bApplication): HttpApiHandler {
+export function createBillAmendmentVoteHttpApiHandler(application: BillAmendmentVoteRouteApplication): HttpApiHandler {
   const options = { apiBaseUrl: requiredPublicApiBaseUrl(application) }
   const database = application.database
 
@@ -127,7 +127,7 @@ export function createNx02bHttpApiHandler(application: Nx02bApplication): HttpAp
   )
 }
 
-function requiredPublicApiBaseUrl(application: Nx02bApplication): string {
+function requiredPublicApiBaseUrl(application: BillAmendmentVoteRouteApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")
@@ -136,7 +136,7 @@ function requiredPublicApiBaseUrl(application: Nx02bApplication): string {
 }
 
 async function unavailableDocumentRead(): Promise<never> {
-  throw new Error("NX-02B does not compose top-level document reads")
+  throw new Error("This handler does not compose top-level document reads")
 }
 
 function restrictToRoutes(

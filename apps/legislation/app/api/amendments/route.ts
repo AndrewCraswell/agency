@@ -1,10 +1,10 @@
-import { handleNx02bRequest } from "../../../src/server/next/nx02b"
+import { handleBillAmendmentVoteRequest } from "../../../src/server/next/bill-amendment-vote-route-handler"
 import { notFoundResponse } from "../_shared"
 
 export const runtime = "nodejs"
 
 export async function GET(request: Request): Promise<Response> {
-  return await handleNx02bRequest(request)
+  return await handleBillAmendmentVoteRequest(request)
 }
 
 export async function DELETE(request: Request): Promise<Response> {

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx03bRequest } = vi.hoisted(() => ({
-  handleNx03bRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleMeetingCalendarRequest } = vi.hoisted(() => ({
+  handleMeetingCalendarRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx03b", () => ({ handleNx03bRequest }))
+vi.mock("../../../src/server/next/meeting-calendar-route-handler", () => ({ handleMeetingCalendarRequest }))
 
 import * as route from "./route"
 
@@ -23,13 +23,13 @@ const unsupportedHandlers: Readonly<Record<UnsupportedMethod, (request: Request)
 }
 
 beforeEach(() => {
-  handleNx03bRequest.mockReset()
-  handleNx03bRequest.mockImplementation(
+  handleMeetingCalendarRequest.mockReset()
+  handleMeetingCalendarRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-03B representative lookup route handler", () => {
+describe("meeting calendar representative lookup route handler", () => {
   it("delegates the supported POST with the exact Request unchanged", async () => {
     const request = new Request("https://legislation.test/api/representative-lookups", {
       body: JSON.stringify({ address: { country: "US", postalCode: "94103" } }),
@@ -40,8 +40,8 @@ describe("NX-03B representative lookup route handler", () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: request.url })
-    expect(handleNx03bRequest).toHaveBeenCalledExactlyOnceWith(request)
-    expect(handleNx03bRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleMeetingCalendarRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleMeetingCalendarRequest.mock.calls[0]?.[0]).toBe(request)
   })
 
   it("exports node runtime and the exact documented method surface", () => {
@@ -73,7 +73,7 @@ describe("NX-03B representative lookup route handler", () => {
             }
           })
     await expect(response.text()).resolves.toBe(expectedBody)
-    expect(handleNx03bRequest).not.toHaveBeenCalled()
+    expect(handleMeetingCalendarRequest).not.toHaveBeenCalled()
   })
 
   it("passes the trailing slash unchanged to the shared POST boundary", async () => {
@@ -85,8 +85,8 @@ describe("NX-03B representative lookup route handler", () => {
     const response = await route.POST(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx03bRequest).toHaveBeenCalledExactlyOnceWith(request)
-    expect(handleNx03bRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx03bRequest.mock.calls[0]?.[0].url).toBe(request.url)
+    expect(handleMeetingCalendarRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleMeetingCalendarRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleMeetingCalendarRequest.mock.calls[0]?.[0].url).toBe(request.url)
   })
 })

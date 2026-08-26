@@ -29,28 +29,28 @@ import { listPersonAmendments } from "../../db/queries/person-amendments.js"
 import { assertPersonExists, listPersonBillActivity } from "../../db/queries/person-bill-activity.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx03aApplication = Readonly<{
+type CivicEntityApplication = Readonly<{
   config: Readonly<{ server: Readonly<{ publicApiBaseUrl: string | undefined }> }>
   database: LegislationDatabase
 }>
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx03aRequestHandlerDependencies = Readonly<{
+export type CivicEntityRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-let nx03aHandler: HttpApiHandler | undefined
+let civicEntityHandler: HttpApiHandler | undefined
 
-/** Handles only the NX-03A people and organization read routes. */
-export async function handleNx03aRequest(request: Request): Promise<Response> {
-  nx03aHandler ??= createNx03aHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx03aHandler)
+/** Handles people and organization entity read routes. */
+export async function handleCivicEntityRequest(request: Request): Promise<Response> {
+  civicEntityHandler ??= createCivicEntityHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, civicEntityHandler)
 }
 
-export function createNx03aRequestHandler(
-  dependencies: Nx03aRequestHandlerDependencies
+export function createCivicEntityRequestHandler(
+  dependencies: CivicEntityRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -59,7 +59,7 @@ export function createNx03aRequestHandler(
   }
 }
 
-export function createNx03aHttpApiHandler(application: Nx03aApplication): HttpApiHandler {
+export function createCivicEntityHttpApiHandler(application: CivicEntityApplication): HttpApiHandler {
   const options = { apiBaseUrl: requiredPublicApiBaseUrl(application) }
   const database = application.database
   const meetingRepository = createMeetingReadRepository(database)
@@ -153,7 +153,7 @@ export function createNx03aHttpApiHandler(application: Nx03aApplication): HttpAp
   )
 }
 
-function requiredPublicApiBaseUrl(application: Nx03aApplication): string {
+function requiredPublicApiBaseUrl(application: CivicEntityApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")
@@ -162,7 +162,7 @@ function requiredPublicApiBaseUrl(application: Nx03aApplication): string {
 }
 
 async function unavailableMeetingChild(): Promise<never> {
-  throw new Error("NX-03A does not compose meeting detail children")
+  throw new Error("Civic entity routes do not compose meeting detail children")
 }
 
 function restrictToRoutes(
