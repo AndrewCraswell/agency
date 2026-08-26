@@ -52,6 +52,9 @@ needs a human discussion**, not a silent add.
 - **Keep this file brief** — it's the entry point; link to `docs/` articles rather than duplicating detail.
 - **Prefer small, focused `docs/` pages**, and update them (and the [index](../docs/README.md)) in the same change as
   the behavior they describe.
+- Do not create executable validators or test suites for prose documentation, evidence ledgers, backlog/status tables,
+  or narrative part-selection records. Review those artifacts directly. Tests should cover executable code and generated
+  product artifacts whose correctness affects runtime behavior, fabrication, or an external interface.
 
 ## Product copy and UX acceptance
 

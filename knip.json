@@ -63,8 +63,8 @@
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "packages/scoring-circuit": {
-      "entry": ["src/index.circuit.tsx", "src/{clean-sheet-board-architecture,index.circuit,p0-*}.test.{ts,tsx}"],
-      "ignoreDependencies": ["@repo/oxlint-config", "@tscircuit/soup-util"]
+      "entry": ["src/*.test.{ts,tsx}"],
+      "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "packages/shopify-emails": {
       "ignoreDependencies": ["@repo/oxlint-config"]

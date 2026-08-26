@@ -8,48 +8,34 @@
     "pnpm": ">=11.0.0 <12.0.0"
   },
   "scripts": {
-    "analog:simulate": "node scripts/run-analog-sim.mjs",
-    "analog:simulate:reference-drive": "node scripts/run-reference-drive-sim.mjs",
     "build": "tsx src/build.ts",
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace packages/scoring-circuit",
     "dev": "tsx --watch src/build.ts",
     "pcb:export": "tsx src/export-pcb.ts",
     "pcb:route": "tsx src/export-pcb.ts --route",
-    "judge:manufacturability": "node scripts/run-judge.mjs manufacturability",
-    "judge:reliability": "node scripts/run-judge.mjs reliability",
     "lint": "oxlint --max-warnings=0",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@tscircuit/parts-engine": "0.0.28",
     "@tscircuit/simple-3d-svg": "0.0.41",
-    "@tscircuit/soup-util": "0.0.41",
     "circuit-json": "0.0.465",
     "circuit-json-to-gltf": "0.0.111",
     "circuit-json-to-simple-3d": "0.0.9",
     "circuit-to-svg": "0.0.400",
     "react": "^19.2.0",
     "three": "0.179.1",
-    "tscircuit": "0.0.2271",
-    "zod": "3.25.76"
+    "tscircuit": "0.0.2271"
   },
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@tscircuit/circuit-json-util": "0.0.104",
     "@types/node": "catalog:",
     "@types/react": "^19.2.0",
-    "@vitest/coverage-v8": "^4.1.9",
     "circuit-json-to-gerber": "0.0.94",
     "circuit-json-to-kicad": "0.0.173",
-    "earcut": "3.0.2",
     "esbuild": "0.28.1",
-    "kicadts": "0.0.49",
     "oxlint": "^1.72.0",
-    "polygon-clipping": "0.15.7",
-    "transformation-matrix": "3.1.0",
     "tsx": "^4.23.0",
     "typescript": "catalog:",
     "vitest": "^4.1.9"

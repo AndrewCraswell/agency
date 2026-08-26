@@ -51,13 +51,14 @@ describe("minimal scoring prototype baseline", () => {
         "J_WEAPON_RIGHT",
         "J_PISTE",
         "J_POWER_INPUT",
+        "U_CONTROLLER_MODULE",
         "U_IR_RECEIVER",
         "J_BUZZER",
         "J_DISPLAY",
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(32)
+    expect(references).toHaveLength(33)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     expect(prototypeInterfaces.powerInput).toEqual(["V5", "APP_GND"])
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)

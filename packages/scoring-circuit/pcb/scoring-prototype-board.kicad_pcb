@@ -333,9 +333,75 @@
     )
   )
   (footprint
+    "tscircuit:ESP32-S3-DevKitC-1-N8R8"
+    (layer F.Cu)
+    (uuid 0dd0fee0-5ddf-7360-3670-1a60354057e0)
+    (at 129.43 100 0)
+    (property "Reference" "U_CONTROLLER_MODULE"
+      (at 0 -3 0)
+      (layer F.SilkS)
+      (hide yes)
+      (uuid 3622a24a-777f-80aa-4723-a0f605c6c296)
+      (effects
+        (font
+          (size 1.27 1.27)
+          (thickness 0.15)
+        )
+      )
+    )
+    (property "Value" "ESP32-S3-DevKitC-1-N8R8"
+      (at 0 3 0)
+      (layer F.Fab)
+      (hide yes)
+      (uuid 74afc1fe-6847-401e-5bde-be3e4f763c5e)
+      (effects
+        (font
+          (size 1.27 1.27)
+          (thickness 0.15)
+        )
+      )
+    )
+    (property "Datasheet" ""
+      (at 0 0 0)
+      (layer F.Fab)
+      (hide yes)
+      (uuid 7deba076-40b7-812a-00a5-5d3642023b96)
+      (effects
+        (font
+          (size 1.27 1.27)
+          (thickness 0.15)
+        )
+      )
+    )
+    (property "Description" ""
+      (at 0 0 0)
+      (layer F.Fab)
+      (hide yes)
+      (uuid 0fe20758-4dbc-bb28-54a4-825808fa4028)
+      (effects
+        (font
+          (size 1.27 1.27)
+          (thickness 0.15)
+        )
+      )
+    )
+    (property "Supplier Part Number" ""
+      (at 0 0 0)
+      (layer F.Fab)
+      (hide yes)
+      (uuid 08242500-5d75-87ff-4d39-150208184dfd)
+      (effects
+        (font
+          (size 1.27 1.27)
+          (thickness 0.15)
+        )
+      )
+    )
+  )
+  (footprint
     "tscircuit:pin_header_pinrow22_nopinlabels"
     (layer F.Cu)
-    (uuid 4b2be7cc-4923-a5f4-228c-cc4c71c2c174)
+    (uuid 09afa08e-7560-12ce-1eef-7af24cc0f74e)
     (at 140.86 100 90)
     (property "Reference" "J_CONTROLLER_RIGHT"
       (at 0 -3 0)
@@ -425,21 +491,21 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 7f9477c6-2ef1-b446-21b1-0f3a7253d2ba)
+      (uuid 198c0738-6a2e-cab8-452e-71c80b7451b8)
     )
     (pad "2" thru_hole circle
       (at -24.130000000000003 1.4775363631712818e-15 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 5a728520-3794-8e81-3664-5dde5ba2b5c3)
+      (uuid 32995780-3b5f-94df-56a7-7ec217516d9d)
     )
     (pad "3" thru_hole circle
       (at -21.590000000000003 1.322006219679568e-15 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 49c5f6be-14ad-6afe-206b-20c25583ac82)
+      (uuid 0453ddc4-396c-6984-6e84-f5445c627efc)
     )
     (pad "4" thru_hole circle
       (at -19.05 1.166476076187854e-15 0)
@@ -447,7 +513,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 30 "SENSE_LEFT_B")
-      (uuid 46a777e0-2f8f-54a1-5a39-dede1bfceda3)
+      (uuid 3d5ec900-38d8-0381-50f1-2ffe25459c83)
     )
     (pad "5" thru_hole circle
       (at -16.51 1.0109459326961401e-15 0)
@@ -455,28 +521,28 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 33 "SENSE_LEFT_C")
-      (uuid 21128f78-71b5-52f8-3da7-e98812fad9f8)
+      (uuid 45ccf18a-0ad5-d1f6-5b78-957653e4a70a)
     )
     (pad "6" thru_hole circle
       (at -13.970000000000002 8.554157892044264e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 7740e1a0-53a6-92a0-1e8e-06e0168a84e0)
+      (uuid 3aa549de-058c-be1e-2f8b-cda264a45962)
     )
     (pad "7" thru_hole circle
       (at -11.430000000000001 6.998856457127125e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 7603e8e8-40eb-5d28-0bd2-d1682945ba58)
+      (uuid 27ea1466-0d2e-775a-4247-031a775f8eda)
     )
     (pad "8" thru_hole circle
       (at -8.89 5.443555022209985e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 0e2f3f6a-693d-dff6-1f55-00aa58181eb6)
+      (uuid 24fb8ad4-6397-55cc-13d5-c99474bd170c)
     )
     (pad "9" thru_hole circle
       (at -6.350000000000001 3.888253587292847e-16 0)
@@ -484,63 +550,63 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 21 "BUZZER_DRIVE")
-      (uuid 6dd205e0-2a0b-09a1-19bb-f29e5d82eedd)
+      (uuid 240201c0-67c8-fdff-5470-05c210a90983)
     )
     (pad "10" thru_hole circle
       (at -3.8100000000000023 2.332952152375709e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 146cb5e0-7d9a-5dc1-0fa1-71625e577afd)
+      (uuid 789f26c0-0aa6-3a61-6352-b1fe2eb461a3)
     )
     (pad "11" thru_hole circle
       (at -1.2700000000000031 7.776507174585713e-17 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 56c13120-1737-bb3f-7acf-58620cd66c03)
+      (uuid 1c32f240-75d4-2161-07db-3502661db75d)
     )
     (pad "12" thru_hole circle
       (at 1.2699999999999996 -7.77650717458569e-17 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 4435f7a8-0f1d-6be8-25fb-1fd85b13ab98)
+      (uuid 09e3dcda-3efc-689a-7414-f45a56d27fe6)
     )
     (pad "13" thru_hole circle
       (at 3.8099999999999987 -2.3329521523757073e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 3817dc64-76c3-83fc-259e-e45c2b85bb44)
+      (uuid 05bfd3da-4b64-cbc6-6376-949a1251f4fa)
     )
     (pad "14" thru_hole circle
       (at 6.350000000000001 -3.888253587292847e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 0b913642-2987-557e-5e9f-e13e6c479302)
+      (uuid 42889e40-77a1-2a00-5346-4a401e2dbe80)
     )
     (pad "15" thru_hole circle
       (at 8.89 -5.443555022209985e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 18ad4aa0-711b-e8df-051a-e3a27b51b023)
+      (uuid 21f5f980-67d3-39ff-0e63-92827b65a0fd)
     )
     (pad "16" thru_hole circle
       (at 11.43 -6.998856457127124e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 1b785f20-6c1b-22a0-4342-19e00d60a9a0)
+      (uuid 4b6721e2-053b-a19e-55de-651e597ed762)
     )
     (pad "17" thru_hole circle
       (at 13.969999999999999 -8.554157892044262e-16 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 4f2b7400-1ecd-785f-7339-9b420540aee3)
+      (uuid 23c8af60-6e3e-6441-0045-77e26db3747d)
     )
     (pad "18" thru_hole circle
       (at 16.509999999999998 -1.01094593269614e-15 0)
@@ -548,21 +614,21 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 18 "DISPLAY_DATA")
-      (uuid 689448f8-6253-2b48-2d3a-9f8807ddec38)
+      (uuid 4951e286-1439-56c6-20df-34fa55f7c0ba)
     )
     (pad "19" thru_hole circle
       (at 19.049999999999997 -1.1664760761878538e-15 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 6a5c1de0-1937-7e40-37ed-216076ee3f00)
+      (uuid 57cc31e2-570f-2e7e-05ea-8ede4b3a10c2)
     )
     (pad "20" thru_hole circle
       (at 21.589999999999996 -1.3220062196795675e-15 0)
       (size 1.5 1.5)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 0d8a5968-439a-4638-6b41-1a281a1c7a88)
+      (uuid 4b6209a6-05c2-95fa-56e7-359a57f42ac6)
     )
     (pad "21" thru_hole circle
       (at 24.129999999999995 -1.4775363631712814e-15 0)
@@ -570,7 +636,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 4965a812-07be-f78e-58e3-972e55f7c932)
+      (uuid 78c2a7b0-3618-b8b0-1b0b-e6f06c308690)
     )
     (pad "22" thru_hole circle
       (at 26.67 -1.6330665066629957e-15 0)
@@ -578,13 +644,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 31932a80-0ab7-291f-4701-7cbe7cb42fa3)
+      (uuid 2e48dda0-0e01-75ff-4a4b-c99e7969e2c3)
     )
   )
   (footprint
     "tscircuit:pin_header_pinrow3_nopinlabels"
     (layer F.Cu)
-    (uuid 32d261ba-64bd-a046-03b2-5dba6c225bba)
+    (uuid 0e2e8088-5a41-7d78-3d4e-84882b217978)
     (at 32 115 0)
     (property "Reference" "J_WEAPON_LEFT"
       (at 0 -3 0)
@@ -674,7 +740,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 2 "LEFT_A")
-      (uuid 34af4c06-7675-b6fa-219a-b9fa33404306)
+      (uuid 7feb8008-2b39-82f8-29a1-7a087e7c7708)
     )
     (pad "2" thru_hole circle
       (at 0 0 0)
@@ -682,7 +748,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 24 "LEFT_B")
-      (uuid 55be901e-47d9-6dc2-1a8e-945e7cf6967e)
+      (uuid 61b36120-00b4-a100-631c-a3203a7b5ac0)
     )
     (pad "3" thru_hole circle
       (at 2.5400000000000063 0 0)
@@ -690,13 +756,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 32 "LEFT_C")
-      (uuid 635b4c00-0e09-e901-4747-79fe63672303)
+      (uuid 7bd1f620-2edc-a6e1-2674-bc1e7bc61f1d)
     )
   )
   (footprint
     "tscircuit:pin_header_pinrow3_nopinlabels"
     (layer F.Cu)
-    (uuid 3f7b0f30-5814-f2d0-105b-0b3078cb0930)
+    (uuid 0185d312-66ea-2aee-30a5-d71237ca26ee)
     (at 32 100 0)
     (property "Reference" "J_WEAPON_RIGHT"
       (at 0 -3 0)
@@ -786,7 +852,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 35 "RIGHT_A")
-      (uuid 7feb8008-2b39-82f8-29a1-7a087e7c7708)
+      (uuid 34d84bf6-2002-b10a-74dd-ae0a364754f6)
     )
     (pad "2" thru_hole circle
       (at 0 0 0)
@@ -794,7 +860,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 4 "RIGHT_B")
-      (uuid 61b36120-00b4-a100-631c-a3203a7b5ac0)
+      (uuid 1925525e-4942-afc2-5455-4e1e0e12b402)
     )
     (pad "3" thru_hole circle
       (at 2.5400000000000063 0 0)
@@ -802,13 +868,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 7 "RIGHT_C")
-      (uuid 7bd1f620-2edc-a6e1-2674-bc1e7bc61f1d)
+      (uuid 5aff3840-4faf-64c1-05a1-fe3e5af3613d)
     )
   )
   (footprint
     "tscircuit:pin_header_pinrow1_nopinlabels"
     (layer F.Cu)
-    (uuid 6c7ec920-5717-0b1f-41af-4d1e2c478f1d)
+    (uuid 02b7a100-12b0-1d01-2817-db023d7f9903)
     (at 32 85 0)
     (property "Reference" "J_PISTE"
       (at 0 -3 0)
@@ -898,13 +964,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 10 "PISTE")
-      (uuid 7ff3d660-1da4-2780-44c3-daa058d42340)
+      (uuid 377e1ade-2ae9-e742-72ae-169e1046147e)
     )
   )
   (footprint
     "tscircuit:pin_header_pinrow2_nopinlabels"
     (layer F.Cu)
-    (uuid 06efd5a0-0e77-e861-23df-a66239476463)
+    (uuid 62d75280-783f-1081-7259-317e5cf1737d)
     (at 45 60 0)
     (property "Reference" "J_POWER_INPUT"
       (at 0 -3 0)
@@ -994,7 +1060,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 17 "V5")
-      (uuid 2f5596a4-2585-665c-7a60-635c30c49fa4)
+      (uuid 1be69d5e-70c1-9a5e-3a63-68a21a77945e)
     )
     (pad "2" thru_hole circle
       (at 1.2700000000000031 0 0)
@@ -1002,13 +1068,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 78d794c0-2386-31c1-31cb-313e78e36bc3)
+      (uuid 6655ad60-4458-efa1-10f8-735e6649d65d)
     )
   )
   (footprint
     "tscircuit:WIZ850io"
     (layer F.Cu)
-    (uuid 08bf5ea6-5fb0-9f5a-37df-62a630909b5a)
+    (uuid 49c040e8-1eaf-bd18-78e0-44e8107046e8)
     (at 80 132 0)
     (property "Reference" "U_ETHERNET"
       (at 0 -3 0)
@@ -1086,7 +1152,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 2c2c7c80-7444-2141-43a4-39fe04736ac3)
+      (uuid 343292e0-7c4a-37a1-3b9e-239e0c798123)
     )
     (pad "2" thru_hole rect
       (at -10.16 3.8100000000000023 0)
@@ -1094,7 +1160,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 21551cb2-6678-2972-5464-c9ce0f41bd0e)
+      (uuid 2b1e5734-7041-63f4-4a9b-8f4c0578828c)
     )
     (pad "3" thru_hole rect
       (at -10.16 1.2700000000000031 0)
@@ -1102,7 +1168,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 26 "APP_SPI_MOSI")
-      (uuid 4bc11376-069e-06b6-3e85-060a7c57ed36)
+      (uuid 41f7d8f4-032b-33cc-484e-408c728eb2b4)
     )
     (pad "4" thru_hole rect
       (at -10.16 -1.2699999999999996 0)
@@ -1110,7 +1176,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 25 "APP_SPI_SCK")
-      (uuid 71dcc2e0-129e-3781-4ca0-53de542120c3)
+      (uuid 364bc280-6a75-b221-0b37-26c25407649d)
     )
     (pad "5" thru_hole rect
       (at -10.16 -3.8099999999999987 0)
@@ -1118,7 +1184,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 28 "ETH_CS_N")
-      (uuid 34b3e900-2a8a-a25f-7636-d24216f846e3)
+      (uuid 73749c60-2d4c-d841-31f1-b31e6ecfc183)
     )
     (pad "6" thru_hole rect
       (at -10.16 -6.350000000000001 0)
@@ -1126,7 +1192,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 29 "ETH_INT_N")
-      (uuid 10c3bddc-345f-4ee4-7982-5ba4415a979c)
+      (uuid 06fa835a-3e28-8966-7cb4-69da37915d1a)
     )
     (pad "7" thru_hole rect
       (at 10.16 6.350000000000001 0)
@@ -1134,7 +1200,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 7a003b46-040f-fc26-71e0-42fa182f7de6)
+      (uuid 4be03578-3e2f-8b68-37c0-b3b8524f0d28)
     )
     (pad "8" thru_hole rect
       (at 10.16 3.8100000000000023 0)
@@ -1142,7 +1208,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 12 "APP_3V3")
-      (uuid 03a06500-4bb8-09c1-6c30-517e2418acbd)
+      (uuid 0ba67b60-53be-2021-642a-3b1e1c12965d)
     )
     (pad "9" thru_hole rect
       (at 10.16 1.2700000000000031 0)
@@ -1150,14 +1216,14 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 12 "APP_3V3")
-      (uuid 12e86540-5b00-0a01-5ce8-513e14d0ac7d)
+      (uuid 1aee7ba0-6306-2061-54e2-3ade0cca961d)
     )
     (pad "10" thru_hole rect
       (at 10.16 -1.2699999999999996 0)
       (size 1.7 1.7)
       (drill 1)
       (layers *.Cu *.Mask)
-      (uuid 594bc760-05f2-c3ff-6531-4f5e3b902543)
+      (uuid 4edcbe00-51e4-b6a1-0d59-d4be6c98601d)
     )
     (pad "11" thru_hole rect
       (at 10.16 -3.8099999999999987 0)
@@ -1165,7 +1231,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 23 "APP_RESET_N")
-      (uuid 29d72bc0-76ea-48e1-17ab-bd824792cddd)
+      (uuid 2e004ee0-313e-3c7f-6f83-38221044acc3)
     )
     (pad "12" thru_hole rect
       (at 10.16 -6.350000000000001 0)
@@ -1173,13 +1239,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 27 "APP_SPI_MISO")
-      (uuid 690a4d3c-23e7-407c-213b-cc44665ed904)
+      (uuid 5f4112ba-1a1e-05fa-2b05-06c670281386)
     )
   )
   (footprint
     "tscircuit:RC0603FR-0710KL"
     (layer F.Cu)
-    (uuid 019542e4-6a05-40e4-2d8a-c11c3ae53ce4)
+    (uuid 3f6b9f5e-2904-5ea2-6e8b-a35e061ba55e)
     (at 95 112 0)
     (property "Reference" "R_ETH_CS_PULLUP"
       (at 0 -3 0)
@@ -1286,20 +1352,20 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 28 "ETH_CS_N")
-      (uuid 0eed4560-60e1-901f-4d2a-252204ca259d)
+      (uuid 2f8b8ec0-7e80-2681-2c8b-dbc225686efd)
     )
     (pad "2" smd rect
       (at 0.8250000000000002 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 12 "APP_3V3")
-      (uuid 496cf046-459a-f11a-2b5d-2d8663aab3da)
+      (uuid 1cc426b8-5433-f7e8-3ad3-e97836243528)
     )
   )
   (footprint
     "tscircuit:RC0805FR-0733RL"
     (layer F.Cu)
-    (uuid 139ccd50-54d3-30b0-42bc-d15025b32cb0)
+    (uuid 549daf92-13d2-4e6e-7c42-4c6e1b4db592)
     (at 52 118 0)
     (property "Reference" "R_LEFT_A_DRIVE"
       (at 0 -3 0)
@@ -1406,20 +1472,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 1 "DRIVE_LEFT_A")
-      (uuid 149d53a0-3d56-f71f-70b4-be221ec07363)
+      (uuid 0c00f5c0-5df5-407f-5016-74c201ddd5fd)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 2 "LEFT_A")
-      (uuid 599be6ba-356b-faa6-3b8c-23fa537bbd66)
+      (uuid 0c953044-6462-ee5c-2aa4-f30446532b9c)
     )
   )
   (footprint
     "tscircuit:RC0805FR-07470RL"
     (layer F.Cu)
-    (uuid 47ac179e-20c3-e662-76cc-1b9e0e5c1d9e)
+    (uuid 5cdfe9e0-48af-d83f-11c0-65a26c30a383)
     (at 52 112 0)
     (property "Reference" "R_LEFT_B_DRIVE"
       (at 0 -3 0)
@@ -1526,20 +1592,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 13 "DRIVE_LEFT_B")
-      (uuid 0c00f5c0-5df5-407f-5016-74c201ddd5fd)
+      (uuid 15639f84-01f8-acc4-1172-45fc24dd38bc)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 24 "LEFT_B")
-      (uuid 0c953044-6462-ee5c-2aa4-f30446532b9c)
+      (uuid 5d6281c0-50a9-3381-014b-173e533f61fd)
     )
   )
   (footprint
     "tscircuit:RC0805FR-071KL"
     (layer F.Cu)
-    (uuid 6dd5e600-1365-a81f-470a-95c25e852c5d)
+    (uuid 62573de0-07e6-ffff-5289-3de25306843d)
     (at 62 112 0)
     (property "Reference" "R_LEFT_B_SENSE"
       (at 0 -3 0)
@@ -1646,20 +1712,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 24 "LEFT_B")
-      (uuid 15639f84-01f8-acc4-1172-45fc24dd38bc)
+      (uuid 751a83fa-777a-8946-640f-968650a4a3c6)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 30 "SENSE_LEFT_B")
-      (uuid 5d6281c0-50a9-3381-014b-173e533f61fd)
+      (uuid 35258c60-78e6-28e1-26f1-de222b026c9d)
     )
   )
   (footprint
     "tscircuit:RC0805FR-07470RL"
     (layer F.Cu)
-    (uuid 2547bea0-3528-7f41-7067-42de15f704fd)
+    (uuid 19c91680-40a7-2761-64e8-9abe0a785cdd)
     (at 52 106 0)
     (property "Reference" "R_LEFT_C_DRIVE"
       (at 0 -3 0)
@@ -1766,20 +1832,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 31 "DRIVE_LEFT_C")
-      (uuid 751a83fa-777a-8946-640f-968650a4a3c6)
+      (uuid 00675888-1303-9a38-266e-8cf839d97fb8)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 32 "LEFT_C")
-      (uuid 35258c60-78e6-28e1-26f1-de222b026c9d)
+      (uuid 0ce89700-5edc-e1bf-4f2e-d38202c5773d)
     )
   )
   (footprint
     "tscircuit:RC0805FR-071KL"
     (layer F.Cu)
-    (uuid 1b8119a0-75f1-5781-2f9e-6a9e2ad1d343)
+    (uuid 26ffc1c0-7e90-005f-241f-c27e36507b63)
     (at 62 106 0)
     (property "Reference" "R_LEFT_C_SENSE"
       (at 0 -3 0)
@@ -1886,20 +1952,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 32 "LEFT_C")
-      (uuid 00675888-1303-9a38-266e-8cf839d97fb8)
+      (uuid 75e9350a-627e-424a-4f13-4f8a3ba85cca)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 33 "SENSE_LEFT_C")
-      (uuid 0ce89700-5edc-e1bf-4f2e-d38202c5773d)
+      (uuid 1b545e60-369f-ec5f-776b-c8e225777e23)
     )
   )
   (footprint
     "tscircuit:RC0805FR-0733RL"
     (layer F.Cu)
-    (uuid 60742a60-451b-97bf-1554-a6226fc4e403)
+    (uuid 6bf2d280-399c-ef9f-20d3-4e427b438c23)
     (at 52 100 0)
     (property "Reference" "R_RIGHT_A_DRIVE"
       (at 0 -3 0)
@@ -2006,20 +2072,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 34 "DRIVE_RIGHT_A")
-      (uuid 75e9350a-627e-424a-4f13-4f8a3ba85cca)
+      (uuid 1494ee74-27ff-e134-3b6a-d3f44ed5c6b4)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 35 "RIGHT_A")
-      (uuid 1b545e60-369f-ec5f-776b-c8e225777e23)
+      (uuid 439153c0-0e62-f6ff-6057-41be4db47383)
     )
   )
   (footprint
     "tscircuit:RC0805FR-07470RL"
     (layer F.Cu)
-    (uuid 6cd95480-0469-5680-6406-a78033895a80)
+    (uuid 6ef221fe-0682-23fe-61ed-da0235a227fe)
     (at 52 94 0)
     (property "Reference" "R_RIGHT_B_DRIVE"
       (at 0 -3 0)
@@ -2126,20 +2192,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 3 "DRIVE_RIGHT_B")
-      (uuid 1494ee74-27ff-e134-3b6a-d3f44ed5c6b4)
+      (uuid 60ecee0e-4d81-fb4e-3a17-088e26ac15ce)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 4 "RIGHT_B")
-      (uuid 439153c0-0e62-f6ff-6057-41be4db47383)
+      (uuid 6bce4920-19d9-fe61-381a-4c5e75f168e3)
     )
   )
   (footprint
     "tscircuit:RC0805FR-071KL"
     (layer F.Cu)
-    (uuid 5b3c36fc-0d33-c704-75a3-c50421ec3cfc)
+    (uuid 5d55047a-0b1a-f986-738a-f78624050a7a)
     (at 62 94 0)
     (property "Reference" "R_RIGHT_B_SENSE"
       (at 0 -3 0)
@@ -2246,20 +2312,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 4 "RIGHT_B")
-      (uuid 60ecee0e-4d81-fb4e-3a17-088e26ac15ce)
+      (uuid 29913570-3cfc-2830-5067-1af063d20db0)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 5 "SENSE_RIGHT_B")
-      (uuid 6bce4920-19d9-fe61-381a-4c5e75f168e3)
+      (uuid 6bf4c180-4216-f3c1-0fdd-56fe61d1a1bd)
     )
   )
   (footprint
     "tscircuit:RC0805FR-07470RL"
     (layer F.Cu)
-    (uuid 49343c4e-4e5b-c5b2-1a14-384e7d7bc9b2)
+    (uuid 471b6ed0-5074-9330-17fb-6ad07f949730)
     (at 52 88 0)
     (property "Reference" "R_RIGHT_C_DRIVE"
       (at 0 -3 0)
@@ -2366,20 +2432,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 6 "DRIVE_RIGHT_C")
-      (uuid 29913570-3cfc-2830-5067-1af063d20db0)
+      (uuid 4bf0a712-3885-b452-251a-c19211afced2)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 7 "RIGHT_C")
-      (uuid 6bf4c180-4216-f3c1-0fdd-56fe61d1a1bd)
+      (uuid 43b7cc20-6a53-e921-185f-9e623994ac5d)
     )
   )
   (footprint
     "tscircuit:RC0805FR-071KL"
     (layer F.Cu)
-    (uuid 5ad159d2-3cbe-a82e-2bb1-55d26bdeac2e)
+    (uuid 58b88c54-3ed7-75ac-2998-88546df779ac)
     (at 62 88 0)
     (property "Reference" "R_RIGHT_C_SENSE"
       (at 0 -3 0)
@@ -2486,20 +2552,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 7 "RIGHT_C")
-      (uuid 4bf0a712-3885-b452-251a-c19211afced2)
+      (uuid 3e8d7c6c-51f8-6f2c-6563-61ec78ce54ac)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 8 "SENSE_RIGHT_C")
-      (uuid 43b7cc20-6a53-e921-185f-9e623994ac5d)
+      (uuid 1b7ad6c0-6d6f-217f-409c-93c21157b6fd)
     )
   )
   (footprint
     "tscircuit:RC0805FR-07470RL"
     (layer F.Cu)
-    (uuid 51f43946-459b-c8ba-22d4-354674bbccba)
+    (uuid 4fdb6bc8-47b4-9638-20bb-67c876d49a38)
     (at 52 82 0)
     (property "Reference" "R_PISTE_DRIVE"
       (at 0 -3 0)
@@ -2606,20 +2672,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 9 "DRIVE_PISTE")
-      (uuid 3e8d7c6c-51f8-6f2c-6563-61ec78ce54ac)
+      (uuid 36f46016-2389-6d56-101e-7a96034c782a)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 10 "PISTE")
-      (uuid 1b7ad6c0-6d6f-217f-409c-93c21157b6fd)
+      (uuid 0cc21ea0-4532-2c1f-68d9-892216e53e63)
     )
   )
   (footprint
     "tscircuit:RC0805FR-071KL"
     (layer F.Cu)
-    (uuid 639156ca-33fe-ab36-3471-52ca631eaf36)
+    (uuid 356fadf6-6220-540a-064f-a9f66ebfa7f6)
     (at 62 82 0)
     (property "Reference" "R_PISTE_SENSE"
       (at 0 -3 0)
@@ -2726,20 +2792,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 10 "PISTE")
-      (uuid 36f46016-2389-6d56-101e-7a96034c782a)
+      (uuid 501d5342-3cb2-6082-2947-6dc215dc7b02)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 11 "SENSE_PISTE")
-      (uuid 0cc21ea0-4532-2c1f-68d9-892216e53e63)
+      (uuid 7e00cb20-300a-ea21-21e9-609e73ddab5d)
     )
   )
   (footprint
     "tscircuit:TSOP38438"
     (layer F.Cu)
-    (uuid 57108320-4e7f-3eff-0bf0-fee266613cc3)
+    (uuid 628f2b40-4300-96df-176f-a70271dfe4e3)
     (at 167 64 180)
     (property "Reference" "U_IR_RECEIVER"
       (at 0 -3 0)
@@ -2817,7 +2883,7 @@
       (drill 1.1)
       (layers *.Cu *.Mask)
       (net 16 "IR_RX")
-      (uuid 20c17280-7145-a121-034c-b4c26aac379d)
+      (uuid 770b6320-1afb-b081-52fd-3bde3f09d7c3)
     )
     (pad "2" thru_hole rect
       (at 0 0 180)
@@ -2825,7 +2891,7 @@
       (drill 1.1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 360d10a0-4b74-cea1-60dc-8ca276444aa3)
+      (uuid 602bc740-4ac4-093f-355c-4b3e1ff48d3d)
     )
     (pad "3" thru_hole rect
       (at 2.5400000000000063 -3.110602869834285e-16 180)
@@ -2833,13 +2899,13 @@
       (drill 1.1)
       (layers *.Cu *.Mask)
       (net 14 "R_IR_SUPPLY.pin2 to U_IR_RECEIVER.VS")
-      (uuid 03b43880-71ad-24df-2059-eec24d9efd9d)
+      (uuid 59fe2920-3808-ea81-35f0-01de5c1711c3)
     )
   )
   (footprint
     "tscircuit:RC0603FR-07100RL"
     (layer F.Cu)
-    (uuid 4fb86880-0ab7-d561-6528-13424067aedd)
+    (uuid 4439c060-1636-7d81-70a6-bb6234e906bd)
     (at 158 64 0)
     (property "Reference" "R_IR_SUPPLY"
       (at 0 -3 0)
@@ -2946,20 +3012,20 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 12 "APP_3V3")
-      (uuid 298d037e-1622-10be-02b7-1dfe10b3d4c2)
+      (uuid 60f12000-745c-12c0-7838-fa8064ce07c0)
     )
     (pad "2" smd rect
       (at 0.8250000000000028 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 14 "R_IR_SUPPLY.pin2 to U_IR_RECEIVER.VS")
-      (uuid 2250aa60-2fa3-a05f-7e68-14e22c73ca23)
+      (uuid 4a8d9fc0-0766-aaff-595a-f5be54b0bf83)
     )
   )
   (footprint
     "tscircuit:C0603C104K3RACTU"
     (layer F.Cu)
-    (uuid 38b8d0e0-21b7-6d01-7c27-aae22968173d)
+    (uuid 2d3a28c0-2d36-1521-7859-acfe1de96f1d)
     (at 158 68 0)
     (property "Reference" "C_IR_SUPPLY"
       (at 0 -3 0)
@@ -3075,20 +3141,20 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 14 "R_IR_SUPPLY.pin2 to U_IR_RECEIVER.VS")
-      (uuid 60f12000-745c-12c0-7838-fa8064ce07c0)
+      (uuid 1490bc82-0125-c9c2-1245-28fe25b01bbe)
     )
     (pad "2" smd rect
       (at 0.8250000000000028 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 15 "APP_GND")
-      (uuid 4a8d9fc0-0766-aaff-595a-f5be54b0bf83)
+      (uuid 72ca9520-20d6-4a61-311e-005e7cedb4e3)
     )
   )
   (footprint
     "tscircuit:RC0603FR-0710KL"
     (layer F.Cu)
-    (uuid 3d369700-6859-2b1f-0de8-ed3e4c8750a3)
+    (uuid 48b53f20-5cda-82ff-026a-451e5805f8c3)
     (at 152 64 0)
     (property "Reference" "R_IR_PULLUP"
       (at 0 -3 0)
@@ -3195,20 +3261,20 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 16 "IR_RX")
-      (uuid 1490bc82-0125-c9c2-1245-28fe25b01bbe)
+      (uuid 75ed66fc-76a7-a644-633c-b3844fd1c0c4)
     )
     (pad "2" smd rect
       (at 0.8250000000000028 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 12 "APP_3V3")
-      (uuid 72ca9520-20d6-4a61-311e-005e7cedb4e3)
+      (uuid 64f87580-4913-3fc1-08e1-0afe5ad555bd)
     )
   )
   (footprint
     "tscircuit:pin_header_pinrow3_nopinlabels"
     (layer F.Cu)
-    (uuid 353f93c0-2530-aa21-7fa0-e80225eeda1d)
+    (uuid 29c0eba0-30af-5241-74e0-6fde1a7031fd)
     (at 167 92 0)
     (property "Reference" "J_DISPLAY"
       (at 0 -3 0)
@@ -3298,7 +3364,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 17 "V5")
-      (uuid 545509a0-6526-5341-1ea1-b02227e2f2fd)
+      (uuid 0d09b040-397a-f2df-7fff-95fe397bc6e3)
     )
     (pad "2" thru_hole circle
       (at 0 0 0)
@@ -3306,7 +3372,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 19 "R_DISPLAY_DATA.pin2 to J_DISPLAY.DISPLAY_DATA")
-      (uuid 22d64ee0-0d6e-90df-07f9-2d221d60eb23)
+      (uuid 46f0d940-5c58-9741-71c0-554278d7ecbd)
     )
     (pad "3" thru_hole circle
       (at 2.5400000000000063 0 0)
@@ -3314,13 +3380,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 15 "APP_GND")
-      (uuid 7fb49774-2ad9-9a74-2a01-628c7edc5f8c)
+      (uuid 016853b6-5372-a94a-57b2-59b602d75cb6)
     )
   )
   (footprint
     "tscircuit:RC0805FR-07330RL"
     (layer F.Cu)
-    (uuid 4b481060-5a47-b1bf-0028-8c225a98ca03)
+    (uuid 56c6b880-4ec9-099f-0ba7-344266177223)
     (at 156 92 0)
     (property "Reference" "R_DISPLAY_DATA"
       (at 0 -3 0)
@@ -3427,20 +3493,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 18 "DISPLAY_DATA")
-      (uuid 64595e34-77c4-50f4-74d0-bc4c6165c98c)
+      (uuid 11287e4e-0242-7472-15ad-6732291859f2)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 19 "R_DISPLAY_DATA.pin2 to J_DISPLAY.DISPLAY_DATA")
-      (uuid 4b2fffc0-06c4-4aff-58b8-95be55531f83)
+      (uuid 736cf520-2178-aa61-307b-a05e7d9014e3)
     )
   )
   (footprint
     "tscircuit:pin_header_pinrow2_nopinlabels"
     (layer F.Cu)
-    (uuid 1ac0021e-2728-83fe-3391-05de3ff987be)
+    (uuid 6bba2020-5f51-9e40-52e9-1c6046809a80)
     (at 167 112 0)
     (property "Reference" "J_BUZZER"
       (at 0 -3 0)
@@ -3530,7 +3596,7 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 17 "V5")
-      (uuid 64991654-0fbe-1954-451c-e3ac66081f54)
+      (uuid 19b32d6a-6e8e-2a6a-3c96-d8961844246a)
     )
     (pad "2" thru_hole circle
       (at 1.269999999999996 0 0)
@@ -3538,13 +3604,13 @@
       (drill 1)
       (layers *.Cu *.Mask)
       (net 20 "J_BUZZER.BUZZER_SWITCHED_GND to Q_BUZZER.DRAIN")
-      (uuid 03f48e00-5945-f0ff-5168-ac0203e8b6fd)
+      (uuid 78f97820-23a8-1521-31a9-4dde79054f23)
     )
   )
   (footprint
     "tscircuit:BSS138-7-F"
     (layer F.Cu)
-    (uuid 56ab0722-4a42-8542-3dda-036231718182)
+    (uuid 22dad6a0-2f43-5880-3bab-da6048145c40)
     (at 155 112 0)
     (property "Reference" "Q_BUZZER"
       (at 0 -3 0)
@@ -3650,27 +3716,27 @@
       (size 1.325 0.6)
       (layers F.Cu F.Paste F.Mask)
       (net 22 "R_BUZZER_GATE.pin2 to Q_BUZZER.GATE")
-      (uuid 73c0203e-0907-a05e-61b0-df823396a09e)
+      (uuid 5c893200-0e2f-4de0-78e7-cdc01c5fb260)
     )
     (pad "2" smd rect
       (at -1.1375000000000028 0.9499999999999993 0)
       (size 1.325 0.6)
       (layers F.Cu F.Paste F.Mask)
       (net 15 "APP_GND")
-      (uuid 5ab79720-4700-64bf-1747-9f62758fa383)
+      (uuid 0febf2c0-6e33-f6e1-3384-04fe2ac3ff23)
     )
     (pad "3" smd rect
       (at 1.1375000000000028 0 0)
       (size 1.325 0.6)
       (layers F.Cu F.Paste F.Mask)
       (net 20 "J_BUZZER.BUZZER_SWITCHED_GND to Q_BUZZER.DRAIN")
-      (uuid 2054ea40-319f-607f-7c6c-54c22a780a03)
+      (uuid 4891dfa0-0962-6b1f-5b56-b5de52b4ff63)
     )
   )
   (footprint
     "tscircuit:RC0603FR-071KL"
     (layer F.Cu)
-    (uuid 718b54de-6522-d2fe-58ba-511e4c51cf3e)
+    (uuid 07fa88e4-1463-0ac4-20cb-8ca42d340e84)
     (at 147 110 0)
     (property "Reference" "R_BUZZER_GATE"
       (at 0 -3 0)
@@ -3777,20 +3843,20 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 21 "BUZZER_DRIVE")
-      (uuid 601a0b0c-4caf-184c-3944-258c25d932cc)
+      (uuid 2a641872-3dcf-0b32-5139-fdf264a4f0b2)
     )
     (pad "2" smd rect
       (at 0.8250000000000028 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 22 "R_BUZZER_GATE.pin2 to Q_BUZZER.GATE")
-      (uuid 3bfb6000-15f8-eabf-67ed-357e461e7fc3)
+      (uuid 64385560-1244-0aa1-3fb0-401e6e5b7523)
     )
   )
   (footprint
     "tscircuit:RC0603FR-07100KL"
     (layer F.Cu)
-    (uuid 0a3647ae-169e-c98e-2307-4b6e2f6fcd4e)
+    (uuid 7bb7565a-77e0-27c6-6b77-a5e65f0f2406)
     (at 147 115 0)
     (property "Reference" "R_BUZZER_GATE_PULLDOWN"
       (at 0 -3 0)
@@ -3897,20 +3963,20 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 22 "R_BUZZER_GATE.pin2 to Q_BUZZER.GATE")
-      (uuid 2a641872-3dcf-0b32-5139-fdf264a4f0b2)
+      (uuid 113b2546-24a6-1806-3811-0ac64b7bfd86)
     )
     (pad "2" smd rect
       (at 0.8250000000000028 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 15 "APP_GND")
-      (uuid 64385560-1244-0aa1-3fb0-401e6e5b7523)
+      (uuid 268a9460-787e-df1f-358c-d6221c67749d)
     )
   )
   (footprint
     "tscircuit:C2012X5R0J226M125AC"
     (layer F.Cu)
-    (uuid 6228d03a-3567-31c6-3308-cc3a648735c6)
+    (uuid 601002bc-377f-ff44-30ef-febc66a00344)
     (at 52 64 0)
     (property "Reference" "C_V5_BULK"
       (at 0 -3 0)
@@ -4026,20 +4092,20 @@
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 17 "V5")
-      (uuid 7528f900-776c-1440-6401-218050962ec0)
+      (uuid 0058e382-1312-0f3e-267d-01fe39e7f4be)
     )
     (pad "2" smd rect
       (at 0.9125000000000014 0 0)
       (size 1.025 1.4)
       (layers F.Cu F.Paste F.Mask)
       (net 15 "APP_GND")
-      (uuid 6160eb80-0f6c-a0c1-4287-a9fe6b840b43)
+      (uuid 76621f20-37a9-9621-1a4a-b49e6c3eff5d)
     )
   )
   (footprint
     "tscircuit:C0603C104K3RACTU"
     (layer F.Cu)
-    (uuid 5ab19d8e-0dbe-6072-762e-5e722161a38e)
+    (uuid 5cca6b0c-0ba5-92f4-7415-90f4237a710c)
     (at 57 64 0)
     (property "Reference" "C_V5_BYPASS"
       (at 0 -3 0)
@@ -4155,14 +4221,14 @@
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 17 "V5")
-      (uuid 6446b73c-50db-c47c-3d70-d1bc2a05defc)
+      (uuid 26376c42-39a2-5f02-4d0d-51c260784482)
     )
     (pad "2" smd rect
       (at 0.8250000000000028 0 0)
       (size 0.8 0.95)
       (layers F.Cu F.Paste F.Mask)
       (net 15 "APP_GND")
-      (uuid 01b26100-5041-e9bf-5dc9-cb820bd580c3)
+      (uuid 29ef5660-2804-f45f-79f9-3f1e34127623)
     )
   )
   (footprint
@@ -4175,7 +4241,7 @@
       (size 3.2 3.2)
       (drill 3.2)
       (layers *.Cu *.Mask)
-      (uuid 7679595f-6560-4701-933b-cef76edca9b9)
+      (uuid 54c82caf-9ef7-4b85-9e66-5730788710c3)
     )
   )
   (footprint
@@ -4188,7 +4254,7 @@
       (size 3.2 3.2)
       (drill 3.2)
       (layers *.Cu *.Mask)
-      (uuid cfe70b7e-2964-4184-8c0d-a0f3a9672d96)
+      (uuid 87680a6d-d9cb-4e63-8f3b-43cb63b06953)
     )
   )
   (footprint
@@ -4201,7 +4267,7 @@
       (size 3.2 3.2)
       (drill 3.2)
       (layers *.Cu *.Mask)
-      (uuid 1a51eae9-d56e-4531-9b12-026b2103d587)
+      (uuid f1dc3e54-7a0f-45c2-847a-7b134d34a264)
     )
   )
   (footprint
@@ -4214,7 +4280,7 @@
       (size 3.2 3.2)
       (drill 3.2)
       (layers *.Cu *.Mask)
-      (uuid 26706f35-0413-4ba5-8cb1-cb357e8af65a)
+      (uuid 11e58b45-1adc-4223-9e4a-4a094b557288)
     )
   )
   (segment

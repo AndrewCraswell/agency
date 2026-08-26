@@ -68,6 +68,19 @@ export const prototypeInterfaces = {
   powerInput: ["V5", "APP_GND"]
 } as const
 
+const controllerModuleFootprint = (
+  <footprint name="ESP32_S3_DEVKITC_ASSEMBLY_OUTLINE" originalLayer="top">
+    <silkscreenrect
+      pcbX={0}
+      pcbY={0}
+      width={`${controllerSocket.outlineWidthMm}mm`}
+      height={`${controllerSocket.outlineHeightMm}mm`}
+      strokeWidth="0.2mm"
+      filled={false}
+    />
+  </footprint>
+)
+
 function MinimalScoringPrototype(): ReactElement {
   const { widthMm, heightMm, layerCount, title } = minimalPrototypeBoard
   const halfWidth = widthMm / 2
@@ -95,13 +108,26 @@ function MinimalScoringPrototype(): ReactElement {
         pcbY={0}
         pcbRotation={90}
       />
-      <silkscreenrect
+      <chip
+        name="U_CONTROLLER_MODULE"
+        manufacturerPartNumber="ESP32-S3-DevKitC-1-N8R8"
+        footprint={controllerModuleFootprint}
+        noSchematicRepresentation
+        obstructsWithinBounds={false}
         pcbX={controllerSocket.center.pcbX}
         pcbY={controllerSocket.center.pcbY}
-        width={`${controllerSocket.outlineWidthMm}mm`}
-        height={`${controllerSocket.outlineHeightMm}mm`}
-        strokeWidth="0.2mm"
-        filled={false}
+        cadModel={{
+          jscad: {
+            type: "colorize",
+            color: [0.06, 0.24, 0.14, 1],
+            shape: {
+              type: "cuboid",
+              size: [controllerSocket.outlineWidthMm, controllerSocket.outlineHeightMm, 1.6],
+              center: [0, 0, 0.8]
+            }
+          },
+          zOffsetFromSurface: "2.5mm"
+        }}
       />
       <pinheader
         name="J_CONTROLLER_RIGHT"

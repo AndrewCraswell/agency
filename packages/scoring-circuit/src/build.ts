@@ -7,7 +7,6 @@ import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "ci
 import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
-import { createReadinessReport, resolveSimulatorPresentationUrl } from "./board-artifact.js"
 import {
   isRoutingError,
   isSameFootprintClearanceError,
@@ -15,11 +14,12 @@ import {
   summarizeBoardRouting
 } from "./board-routing.js"
 import ScoringCircuit from "./index.circuit.js"
+import { createPrototypeOrderFiles } from "./prototype-order-files.js"
 
-const simulatorPresentationUrl = resolveSimulatorPresentationUrl(process.env)
+const simulatorPresentationUrl = process.env.SCORING_SIMULATOR_ORIGIN ?? "../simulator/"
 
 const circuit = new Circuit()
-circuit.pcbRoutingDisabled = true
+circuit.pcbRoutingDisabled = false
 circuit.setPlatform({
   ...prototypeBoardRouting,
   enablePartOrientationAnalysis: true,
@@ -84,23 +84,9 @@ if (routing.routingErrorCount > 0) {
 const sourceComponents = circuitJson
   .filter((element) => element.type === "source_component")
   .toSorted((left, right) => (left.name ?? "").localeCompare(right.name ?? ""))
-const resolvedSupplierPartCount = circuitJson.filter(
-  (element) =>
-    element.type === "source_component" &&
-    "supplier_part_numbers" in element &&
-    Object.values(element.supplier_part_numbers ?? {}).some(
-      (partNumbers) => Array.isArray(partNumbers) && partNumbers.length > 0
-    )
-).length
+const orderFiles = createPrototypeOrderFiles(circuitJson)
+const resolvedPartCount = orderFiles.bom.reduce((count, row) => count + row.quantity, 0)
 const renderedCadComponentCount = circuitJson.filter((element) => element.type === "cad_component").length
-const externallySourcedCadModelCount = circuitJson.filter(
-  (element) =>
-    element.type === "cad_component" &&
-    (element.model_obj_url !== undefined ||
-      element.model_stl_url !== undefined ||
-      element.model_gltf_url !== undefined ||
-      element.model_glb_url !== undefined)
-).length
 const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
   backgroundColor: "#101820",
   includeVersion: true,
@@ -135,52 +121,6 @@ const interactiveViewerBuild = await bundle({
 })
 const interactiveViewerModule = interactiveViewerBuild.outputFiles[0]?.text
 if (!interactiveViewerModule) throw new Error("Interactive 3D viewer bundle was not generated")
-const bomHeader = ["reference", "value", "supplier_part_numbers"]
-const quoteCsv = (value: string) => `"${value.replaceAll('"', '""')}"`
-const bomRows = sourceComponents.map((component) => ({
-  reference: component.name ?? component.source_component_id,
-  supplierPartNumbers: Object.entries(component.supplier_part_numbers ?? {})
-    .flatMap(([supplier, partNumbers]) =>
-      Array.isArray(partNumbers) ? partNumbers.map((partNumber) => `${supplier}:${partNumber}`) : []
-    )
-    .toSorted(),
-  value: typeof component.display_value === "string" ? component.display_value : ""
-}))
-const bomCsv = [
-  bomHeader.join(","),
-  ...bomRows.map((component) =>
-    [component.reference, component.value, component.supplierPartNumbers.join(";")].map(quoteCsv).join(",")
-  )
-].join("\n")
-const readiness = createReadinessReport({
-  circuitJson,
-  criticalPartReadiness: [],
-  readiness: {
-    canonicalCleanSheetPrototype: true,
-    fabricationReady: false,
-    modelAuthority: "canonical-clean-sheet-board",
-    modelPurpose:
-      "Canonical ESP32-S3 development-board netlist and placement preview; the checked-in KiCad project owns routing and fabrication output",
-    routing: {
-      connectionCount: routing.sourceConnectionCount,
-      routeCount: routing.routedConnectionCount,
-      unresolvedConnectionCount: routing.unroutedConnectionCount
-    },
-    partsResolution: {
-      engine: "Reviewed project footprints only; automatic supplier geometry substitution is disabled",
-      externallySourcedCadModelCount,
-      renderedCadComponentCount,
-      resolvedSupplierPartCount,
-      status: "Manufacturer CAD and supplier selection remain separate reviewed fabrication gates"
-    },
-    openGates: [
-      "Route every declared electrical connection in the checked-in KiCad board",
-      "Complete design-rule and manufacturability review",
-      "Generate and review fabrication outputs",
-      "Assemble and electrically validate the prototype"
-    ]
-  } as const
-})
 const previewHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -241,15 +181,15 @@ const previewHtml = `<!doctype html>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
-  <p class="warning"><strong>Placement exported; KiCad routing in progress.</strong> This page previews the verified netlist and placement. The checked-in KiCad project is the authority for routing and fabrication output.</p>
+  <p class="warning"><strong>Routed prototype preview.</strong> Review the checked-in KiCad board and fabrication plots before ordering. The assembled board still requires electrical validation.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
     <li><strong>${routing.routedConnectionCount}</strong> routed connections</li>
     <li><strong>${routing.unroutedConnectionCount}</strong> unresolved connections</li>
     <li><strong>${sourceComponents.length}</strong> placed source components</li>
-    <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
+    <li><strong>${resolvedPartCount}</strong> parts with manufacturer numbers</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
   </ul>
-  <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype backlog</a><a href="../docs/clean-sheet-board-architecture.md">Clean-sheet architecture</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Current rendered BOM</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
+  <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype checklist</a><a href="../docs/clean-sheet-board-architecture.md">Board architecture</a><a href="bom.csv">Prototype BOM</a><a href="placement.csv">Placement file</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
@@ -258,7 +198,7 @@ const previewHtml = `<!doctype html>
   </div>
   <main>
     <section id="view-pcb" role="tabpanel" aria-labelledby="tab-pcb">
-      <figure><figcaption>Component placement and unrouted connectivity preview. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="PCB component placement and unrouted connectivity preview"></a></figure>
+      <figure><figcaption>Routed component placement. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="Routed PCB component placement"></a></figure>
     </section>
     <section id="view-schematic" role="tabpanel" aria-labelledby="tab-schematic" hidden>
       <figure><figcaption>Logical schematic. Select the image to open it full size.</figcaption><a href="schematic.svg"><img src="schematic.svg" alt="Logical schematic model"></a></figure>
@@ -276,7 +216,7 @@ const previewHtml = `<!doctype html>
     </section>
     <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
       <figure>
-        <figcaption>Clean-sheet prototype external interfaces. P0 direct-wire landing, probe, and strain-relief geometry is placed; no production socket is selected.</figcaption>
+        <figcaption>Prototype external interfaces. Direct-wire landing, probe, and strain-relief geometry is placed; no production socket is selected.</figcaption>
         <div class="io-assembly">
           <article class="io-module">
             <h2>Left weapon cable</h2>
@@ -358,13 +298,13 @@ const previewHtml = `<!doctype html>
 await mkdir("dist", { recursive: true })
 await Promise.all([
   writeFile("dist/board.glb", new Uint8Array(boardGlb)),
-  writeFile("dist/bom.csv", `${bomCsv}\n`),
-  writeFile("dist/bom.json", `${JSON.stringify(bomRows, null, 2)}\n`),
+  writeFile("dist/bom.csv", `${orderFiles.bomCsv}\n`),
+  writeFile("dist/bom.json", `${JSON.stringify(orderFiles.bom, null, 2)}\n`),
   writeFile("dist/circuit.json", `${JSON.stringify(circuitJson, null, 2)}\n`),
   writeFile("dist/index.html", previewHtml),
   writeFile("dist/interactive-3d-viewer.js", interactiveViewerModule),
+  writeFile("dist/placement.csv", `${orderFiles.placementCsv}\n`),
   writeFile("dist/board-3d.svg", threeDimensionalSvg),
   writeFile("dist/pcb.svg", pcbSvg),
-  writeFile("dist/readiness-report.json", `${JSON.stringify(readiness, null, 2)}\n`),
   writeFile("dist/schematic.svg", schematicSvg)
 ])

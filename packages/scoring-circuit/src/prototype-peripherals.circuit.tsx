@@ -33,6 +33,13 @@ export function PrototypePeripherals(): ReactElement {
         pcbX={67}
         pcbY={36}
         pcbRotation={180}
+        cadModel={{
+          jscad: {
+            type: "colorize",
+            color: [0.08, 0.08, 0.08, 1],
+            shape: { type: "cuboid", size: [7, 4.8, 5], center: [0, 0, 2.5] }
+          }
+        }}
       />
       <resistor
         name="R_IR_SUPPLY"

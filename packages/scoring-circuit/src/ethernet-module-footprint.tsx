@@ -46,15 +46,6 @@ const ethernetModuleFootprint = (
   </footprint>
 )
 
-export const ethernetModule = {
-  manufacturer: "WIZnet",
-  manufacturerPartNumber: "WIZ850io",
-  sourceUrl: "https://docs.wiznet.io/Product/ioModule/WIZ850io",
-  moduleOutlineMm: { width: 23, height: 25 },
-  pinPitchMm: 2.54,
-  pinMap: ethernetModulePins
-} as const
-
 export interface EthernetModuleFootprintProps {
   readonly pcbX?: number
   readonly pcbY?: number
@@ -78,6 +69,14 @@ export function EthernetModuleFootprint({
       pcbY={pcbY}
       pcbRotation={pcbRotation}
       pcbPositionMode={pcbPositionMode}
+      cadModel={{
+        jscad: {
+          type: "colorize",
+          color: [0.05, 0.3, 0.18, 1],
+          shape: { type: "cuboid", size: [23, 25, 1.6], center: [0, 0, 0.8] }
+        },
+        zOffsetFromSurface: "2.5mm"
+      }}
     />
   )
 }
