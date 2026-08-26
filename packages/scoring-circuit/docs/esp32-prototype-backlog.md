@@ -36,11 +36,11 @@ The root agent alone approves, commits, and changes task status.
 | ID | Status | Deliverable | Dependencies | Latest state |
 | --- | --- | --- | --- | --- |
 | `P0-01` | done | Freeze the single-ESP32 prototype architecture and reusable foundations. | None | The clean-sheet board scaffold, minimal population policy, electrical rules, weapon/piste landings, encrypted-IR receiver, display-power contract, target-neutral HAL, and C/C++ coverage gate are committed. |
-| `P0-02` | done | Finish the complete power design. | `P0-01` | Commit `99a74c6` integrates the USB-C PD/eFuse/5 V/3.3 V chain, display branch, and corrected seven-channel analog/reference rail budget into the canonical schematic. Root review, focused circuit tests, types, lint, format, and the commit hook passed. |
-| `P0-03` | active | Finish the exact phased seven-conductor acquisition circuit. | `P0-01` | OpenPiste PCB/firmware prior art exposed that seven identical ADC cells were the wrong conductor model and that the previous high-impedance paths lacked a defined sink for resistance measurement. Root is replacing them with three 8:1 source/sink/sense muxes, five protected B/C/piste buffers, one ADC/reference chain, and reset-safe phase control. Specifications remain untouched. |
+| `P0-02` | done | Finish the complete power design. | `P0-01` | Commit `99a74c6` integrates the USB-C PD/eFuse/5 V/3.3 V chain and display branch. Commit `3cb9461` corrects the analog budget for one active phased source/sink path, one ADC/reference, five buffers, three muxes, and two control registers. Root review, focused tests, package types/lint/format, and both commit hooks passed. |
+| `P0-03` | done | Finish the exact phased seven-conductor acquisition circuit. | `P0-01` | Commit `3cb9461` replaces the incorrect seven-identical-ADC model with three 8:1 source/sink/sense muxes, five protected B/C/piste buffers, one ADS8881/reference chain, and reset-safe phase control. It also fixes the missing controlled sink needed for resistance measurement. The OpenPiste files remain read-only prior art and specifications were untouched. Root review passed 7 focused files and 26 tests plus package types, lint, and format. |
 | `P0-04` | done | Finish ESP32 support and all non-scoring peripherals. | `P0-01` | Commit `99a74c6` integrates the ESP32 support/reset/recovery block, W5500 with exact MagJack and crystal geometry, HUB75, IR, protected primary outputs, and simplified source driver. Root review and focused verification passed. Exact fabrication footprint overlay remains correctly scoped to `P0-06`. |
-| `P0-05` | waiting | Integrate one complete schematic. | `P0-02`, `P0-03`, `P0-04` | The earlier integration commit `99a74c6` is being corrected in place for the phased acquisition topology. Re-run the canonical zero-error render and component inventory after P0-03 passes root verification. |
-| `P0-06` | waiting | Reconcile BOM and footprints and clear schematic errors. | `P0-05` | Resume after the corrected integrated schematic is committed. The expected inventory is materially smaller because six ADCs, six references, two buffers, and their repeated support parts are being removed. |
+| `P0-05` | done | Integrate one complete schematic. | `P0-02`, `P0-03`, `P0-04` | Commits `99a74c6` and `3cb9461` integrate the complete corrected schematic. The canonical render contains 253 components, down from 321, and reports zero circuit errors. Root verification passed 7 focused files and 26 tests, package types, lint, and format. |
+| `P0-06` | ready | Reconcile BOM and footprints and clear schematic errors. | `P0-05` | Reconcile the 253-component integrated design. Bind the new TMUX1208PWR, verify the shared ADC/reference and phase-control footprints, remove remaining reference-only duplicates, overlay official WROOM-1 CAD, and clear every populated TBD or review-only disposition. |
 | `P0-07` | waiting | Place the complete PCB. | `P0-06` | Place connectors and strain relief first, then power, analog, ESP32/RF, Ethernet, HUB75, IR, outputs, probes, and mounting features with reviewed clearances. |
 | `P0-08` | waiting | Route and review the PCB. | `P0-07` | Route power/thermal paths, analog/reference returns, ADC timing, USB, Ethernet, clocks, RF keepout, and remaining digital signals; finish with zero unexplained DRC or unrouted nets. |
 | `P0-09` | waiting | Generate and approve the manufacturing package, then order boards. | `P0-08` | Review Gerbers and drills, IPC-356, BOM, centroid, assembly drawings, stack-up, board renders, digests, and supplier constraints before root grants prototype-order authority. |
@@ -57,8 +57,8 @@ P0-01 -> P0-02/P0-03/P0-04 -> P0-05 -> P0-06 -> P0-07 -> P0-08 -> P0-09
 P0-09 -> P0-10/P0-11 -> P0-12 -> P0-13 -> P0-14
 ```
 
-The next concrete milestone is the corrected `P0-03` phased acquisition circuit, followed immediately by the
-`P0-05` zero-error integrated schematic. `P0-06` then reconciles only the smaller topology that survives this review.
+The next concrete milestone is `P0-06`: reconcile the smaller 253-component integrated design into one exact BOM and
+placeable footprint set.
 
 ## Retired evidence identifiers
 
