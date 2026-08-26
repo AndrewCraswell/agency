@@ -27,36 +27,6 @@ export type P0UsbPowerProps = {
   readonly pcbY: number
 }
 
-type GlobalPcbPoint = readonly [number, number]
-
-/**
- * `pcbPath` point objects are local to the first component in a trace. Keep
- * the reviewed board-space waypoints readable here, then translate them to
- * that component frame for tscircuit.
- */
-function localPcbPath(origin: GlobalPcbPoint, points: readonly GlobalPcbPoint[]) {
-  return points.map(([x, y]) => ({ x: x - origin[0], y: y - origin[1] }))
-}
-
-const adcPcbRoute = {
-  1: { corridorX: -132.3, routeY: 21.8, sourceY: 35.6 },
-  2: { corridorX: -133, routeY: 28, sourceY: 35.2 },
-  3: { corridorX: -133.7, routeY: 41.8, sourceY: 34.8 },
-  4: { corridorX: -134.4, routeY: 45.8, sourceY: 34.4 }
-} as const
-
-function usbPdAdcPcbPath(channel: 1 | 2 | 3 | 4, targetX: number) {
-  const { corridorX, routeY, sourceY } = adcPcbRoute[channel]
-  return localPcbPath(
-    [-127, 35],
-    [
-      [corridorX, sourceY],
-      [corridorX, routeY],
-      [targetX, routeY]
-    ]
-  )
-}
-
 function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
   return (
     <group name="P0_USB_POWER" pcbX={0} pcbY={0} pcbRelative pcbPositionMode="relative_to_board_anchor" pcbPack={false}>
@@ -489,18 +459,7 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       <trace from="J_USB_C.SBU1" to="U_USB_PORT_PROTECT.C_SBU1" />
       <trace from="J_USB_C.SBU2" to="U_USB_PORT_PROTECT.C_SBU2" />
       <trace from="U_USB_PORT_PROTECT.CC1" to="U_USB_PD.28" />
-      <trace
-        from="U_USB_PORT_PROTECT.CC2"
-        to="U_USB_PD.29"
-        pcbPath={localPcbPath(
-          [-143, 35],
-          [
-            [-140.8, 34],
-            [-140.8, 38],
-            [-125.8, 38]
-          ]
-        )}
-      />
+      <trace from="U_USB_PORT_PROTECT.CC2" to="U_USB_PD.29" />
       <trace from="U_USB_PORT_PROTECT.RPD_G1" to="J_USB_C.CC1" />
       <trace from="U_USB_PORT_PROTECT.RPD_G2" to="J_USB_C.CC2" />
       <trace from="J_USB_C.Dp1" to="U_USB_DATA_PROTECT.pin1" />
@@ -542,35 +501,12 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       <trace from="C_USB_PD_LDO.GND" to="net.APP_GND" />
       <trace from="U_USB_PD.38" to="C_USB_PD_VIN_3V3.pin1" />
       <trace from="C_USB_PD_VIN_3V3.pin2" to="net.APP_GND" />
-      <trace
-        from="U_USB_PD.4"
-        to="C_USB_PD_LDO_1V5.pin1"
-        pcbPath={localPcbPath(
-          [-127, 35],
-          [
-            [-131, 34.8],
-            [-131, 41.8],
-            [-127.9125, 41.8]
-          ]
-        )}
-      />
+      <trace from="U_USB_PD.4" to="C_USB_PD_LDO_1V5.pin1" />
       <trace from="C_USB_PD_LDO_1V5.pin2" to="net.APP_GND" />
       <trace from="J_USB_C.VBUS" to="C_USB_PD_VBUS.pin1" />
       <trace from="C_USB_PD_VBUS.pin2" to="net.APP_GND" />
       <trace from="U_USB_PD.28" to="C_USB_PD_CC1.pin1" />
-      <trace
-        from="U_USB_PD.29"
-        to="C_USB_PD_CC2.pin1"
-        pcbPath={localPcbPath(
-          [-127, 35],
-          [
-            [-125.8, 38],
-            [-132.4, 38],
-            [-132.4, 21.8],
-            [-131.51, 21.8]
-          ]
-        )}
-      />
+      <trace from="U_USB_PD.29" to="C_USB_PD_CC2.pin1" />
       <trace from="C_USB_PD_CC1.pin2" to="net.APP_GND" />
       <trace from="C_USB_PD_CC2.pin2" to="net.APP_GND" />
       {(["20", "21", "22"] as const).map((pin) => (
@@ -587,16 +523,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       ))}
       {([1, 2, 3, 4] as const).map((channel) => (
         <group key={channel}>
-          <trace
-            from={`U_USB_PD.${channel + 1}`}
-            to={`R_USB_PD_ADCIN${channel}_UP.pin2`}
-            pcbPath={usbPdAdcPcbPath(channel, -110.49)}
-          />
-          <trace
-            from={`U_USB_PD.${channel + 1}`}
-            to={`R_USB_PD_ADCIN${channel}_DOWN.pin1`}
-            pcbPath={usbPdAdcPcbPath(channel, -105.51)}
-          />
+          <trace from={`U_USB_PD.${channel + 1}`} to={`R_USB_PD_ADCIN${channel}_UP.pin2`} />
+          <trace from={`U_USB_PD.${channel + 1}`} to={`R_USB_PD_ADCIN${channel}_DOWN.pin1`} />
           <trace from={`R_USB_PD_ADCIN${channel}_UP.pin1`} to="U_USB_PD.1" />
           <trace from={`R_USB_PD_ADCIN${channel}_DOWN.pin2`} to="net.APP_GND" />
         </group>
