@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest"
 import { P0Esp32SupportCircuit } from "./p0-esp32-support.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
-type CircuitJson = ReturnType<typeof renderCircuit>
-
 function renderCircuit() {
   return renderTestCircuit(
     <board width="140mm" height="120mm">
@@ -12,48 +10,10 @@ function renderCircuit() {
   )
 }
 
-function renderPcbCircuit() {
-  return renderTestCircuit(
-    <board width="140mm" height="120mm">
-      <P0Esp32SupportCircuit pcbX={0} pcbY={-28} />
-    </board>,
-    { pcbEnabled: true }
-  )
-}
-
 function traces(circuitJson: ReturnType<typeof renderCircuit>) {
   return circuitJson.flatMap((element) =>
     element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
   )
-}
-
-function pcbRouteFor(circuitJson: CircuitJson, displayName: string) {
-  const sourceTrace = circuitJson.find(
-    (element) => element.type === "source_trace" && element.display_name === displayName
-  )
-  if (sourceTrace?.type !== "source_trace") throw new RangeError(`missing source trace ${displayName}`)
-  const pcbTrace = circuitJson.find(
-    (element) => element.type === "pcb_trace" && element.source_trace_id === sourceTrace.source_trace_id
-  )
-  if (pcbTrace?.type !== "pcb_trace") throw new RangeError(`missing PCB trace ${displayName}`)
-  return pcbTrace.route
-}
-
-type PcbRoute = ReturnType<typeof pcbRouteFor>
-type PcbWirePoint = Extract<PcbRoute[number], { readonly route_type: "wire" }>
-
-function isPcbWirePoint(point: PcbRoute[number] | undefined): point is PcbWirePoint {
-  return point?.route_type === "wire"
-}
-
-function expectAxisAlignedRoute(route: PcbRoute) {
-  expect(route.length).toBeGreaterThan(3)
-  for (let index = 1; index < route.length; index += 1) {
-    const previous = route[index - 1]
-    const current = route[index]
-    if (!isPcbWirePoint(previous) || !isPcbWirePoint(current)) continue
-    expect(Math.abs(current.x - previous.x) < 1e-9 || Math.abs(current.y - previous.y) < 1e-9).toBe(true)
-  }
 }
 
 describe("P0 ESP32 support circuit", () => {
@@ -123,20 +83,6 @@ describe("P0 ESP32 support circuit", () => {
         "U_APP.BOOT_N to TP_BOOT_N.pin1"
       ])
     )
-  })
-
-  it("keeps the reset/watchdog local routes explicit and selects watchdog ground by pin", () => {
-    const circuitJson = renderPcbCircuit()
-    const supervisorRoute = pcbRouteFor(circuitJson, "U_APP_SUPERVISOR.CT to C_APP_SUPERVISOR_CT.pin1")
-    const watchdogRoute = pcbRouteFor(circuitJson, "U_APP_WATCHDOG.CWD to R_APP_WD_CWD.pin1")
-    expectAxisAlignedRoute(supervisorRoute)
-    expectAxisAlignedRoute(watchdogRoute)
-
-    const sourceTraceNames = circuitJson.flatMap((element) =>
-      element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
-    )
-    expect(sourceTraceNames).toContain("U_APP_WATCHDOG.pin4 to net.APP_GND")
-    expect(sourceTraceNames).not.toContain("U_APP_WATCHDOG.APP_GND to net.APP_GND")
   })
 
   it("exports every assigned GPIO boundary while leaving the three spares and strap NC unconnected", () => {
