@@ -30,5 +30,7 @@ export interface EntitySnapshot {
   personExternalIdentifiers?: PersonExternalIdentifierInsert[]
   personJurisdictions?: PersonJurisdictionInsert[]
   people: PersonInsert[]
+  termPersonIds?: string[]
+  termSourceProvider?: string
   terms: TermInsert[]
 }

@@ -101,7 +101,13 @@ type TermInsert = typeof legislativeTerms.$inferInsert
 
 export type CongressEntitySnapshot = Pick<
   EntitySnapshot,
-  "organizations" | "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "terms"
+  | "organizations"
+  | "personDetailPersonIds"
+  | "personDetails"
+  | "personJurisdictions"
+  | "people"
+  | "termPersonIds"
+  | "terms"
 >
 
 export interface CongressEntityContext {
@@ -234,7 +240,7 @@ export function normalizeCongressMemberDetails(
   context: CongressEntityContext
 ): Pick<
   CongressEntitySnapshot,
-  "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "terms"
+  "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
 > {
   const federalJurisdictionId = jurisdictionId("us")
   const normalized = inputs.map(({ detail, member }) => ({
@@ -284,7 +290,7 @@ export function normalizeCongressMemberDetails(
     for (const term of detail.terms.item) {
       const normalizedChamber = chamber(term.chamber)
       if (normalizedChamber === undefined) {
-        continue
+        throw new Error(`Congress member detail has an unmappable chamber for ${detail.bioguideId}`)
       }
       const sourceIdentity = `${term.congress}:${normalizedChamber}:${term.startYear}:${term.endYear ?? "current"}`
       terms.push({
@@ -308,6 +314,7 @@ export function normalizeCongressMemberDetails(
     personDetails,
     personJurisdictions,
     people,
+    termPersonIds: people.filter((person) => person.provenanceComplete).map((person) => person.id),
     terms
   }
 }

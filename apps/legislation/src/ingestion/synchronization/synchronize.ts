@@ -330,6 +330,8 @@ async function synchronizeCongressEntitiesForScope(
     personDetails: memberSnapshot.personDetails,
     personJurisdictions: memberSnapshot.personJurisdictions,
     people: [...peopleById.values()],
+    termPersonIds: memberSnapshot.termPersonIds,
+    termSourceProvider: "congress",
     terms: [...termsById.values()]
   })
   const records = peopleById.size + termsById.size + organizationsById.size

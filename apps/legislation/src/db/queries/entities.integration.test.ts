@@ -105,6 +105,43 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       sourceUrl: "https://api.congress.gov/member/detail-refresh"
     })
   })
+
+  it("replaces stale Congress terms only for the detail-hydrated person", async () => {
+    const congressPersonId = "person:congress:term-refresh"
+    const otherCongressPersonId = "person:congress:other-term-refresh"
+    const staleTermId = `${congressPersonId}:term:stale`
+    const currentTermId = `${congressPersonId}:term:current`
+    const nonCongressTermId = `${congressPersonId}:term:openstates`
+    const otherCongressTermId = `${otherCongressPersonId}:term:current`
+    await replaceEntitySnapshot(database, jurisdictionId, congressTermSnapshot(congressPersonId, staleTermId, "stale"))
+    await replaceEntitySnapshot(
+      database,
+      jurisdictionId,
+      congressTermSnapshot(otherCongressPersonId, otherCongressTermId, "current")
+    )
+    await replaceEntitySnapshot(database, jurisdictionId, nonCongressTermSnapshot(congressPersonId, nonCongressTermId))
+    await replaceEntitySnapshot(database, jurisdictionId, {
+      ...congressTermSnapshot(congressPersonId, currentTermId, "current"),
+      termPersonIds: [congressPersonId],
+      termSourceProvider: "congress"
+    })
+
+    const [refreshedPersonTerms, otherCongressPersonTerms] = await Promise.all([
+      database.select().from(schema.legislativeTerms).where(eq(schema.legislativeTerms.personId, congressPersonId)),
+      database.select().from(schema.legislativeTerms).where(eq(schema.legislativeTerms.personId, otherCongressPersonId))
+    ])
+
+    expect(refreshedPersonTerms.map((term) => term.id).sort()).toEqual([currentTermId, nonCongressTermId].sort())
+    expect(refreshedPersonTerms).toContainEqual(
+      expect.objectContaining({ id: currentTermId, officeTitle: "Representative", sourceProvider: "congress" })
+    )
+    expect(refreshedPersonTerms).toContainEqual(
+      expect.objectContaining({ id: nonCongressTermId, isActive: false, sourceProvider: "openstates" })
+    )
+    expect(otherCongressPersonTerms).toEqual([
+      expect.objectContaining({ id: otherCongressTermId, isActive: false, sourceProvider: "congress" })
+    ])
+  })
 })
 
 function congressDetailSnapshot(personId: string, imageName: string) {
@@ -152,6 +189,73 @@ function congressDetailSnapshot(personId: string, imageName: string) {
       }
     ],
     terms: []
+  }
+}
+
+function congressTermSnapshot(personId: string, termId: string, sourceId: string) {
+  const bioguideId = personId.slice("person:congress:".length)
+  const sourceUrl = `https://api.congress.gov/member/${bioguideId}`
+  const provenance = {
+    provenanceComplete: true,
+    sourceIsOfficial: true,
+    sourceProvider: "congress",
+    sourceRetrievedAt: retrievedAt,
+    sourceUrl
+  }
+  return {
+    memberships: [],
+    organizations: [],
+    people: [
+      {
+        ...provenance,
+        id: personId,
+        isActive: true,
+        jurisdictionId,
+        name: "Term Refresh",
+        sourceId: bioguideId,
+        upstreamIds: { bioguide: bioguideId }
+      }
+    ],
+    personAliasPersonIds: [],
+    personAliases: [],
+    terms: [
+      {
+        ...provenance,
+        id: termId,
+        isActive: true,
+        jurisdictionId,
+        officeTitle: sourceId === "current" ? "Representative" : undefined,
+        personId,
+        role: sourceId === "current" ? "Representative" : "House of Representatives",
+        sourceId
+      }
+    ]
+  }
+}
+
+function nonCongressTermSnapshot(personId: string, termId: string) {
+  return {
+    memberships: [],
+    organizations: [],
+    people: [],
+    personAliasPersonIds: [],
+    personAliases: [],
+    terms: [
+      {
+        id: termId,
+        isActive: true,
+        jurisdictionId,
+        officeTitle: "Representative",
+        personId,
+        provenanceComplete: true,
+        role: "Representative",
+        sourceId: "openstates-term-refresh",
+        sourceIsOfficial: false,
+        sourceProvider: "openstates",
+        sourceRetrievedAt: retrievedAt,
+        sourceUrl: "https://legislature.example.test/term-refresh"
+      }
+    ]
   }
 }
 

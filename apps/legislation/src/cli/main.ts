@@ -1131,6 +1131,8 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
           personDetails: [...personDetailsByPersonId.values()],
           personJurisdictions: [...personJurisdictionsByIdentity.values()],
           people: [...peopleById.values()],
+          termPersonIds: [...new Set(memberSnapshots.flatMap((snapshot) => snapshot.termPersonIds ?? []))],
+          termSourceProvider: "congress",
           terms: [...termsById.values()]
         })
         const records = peopleById.size + termsById.size + organizationsById.size

@@ -17,7 +17,10 @@ export async function hydrateCongressMemberSnapshot(
   client: CongressMemberDetailClient,
   detailCache = new Map<string, unknown>()
 ): Promise<
-  Pick<CongressEntitySnapshot, "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "terms">
+  Pick<
+    CongressEntitySnapshot,
+    "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
+  >
 > {
   const listed = normalizeCongressMembers(members, congress, context)
   const membersByBioguideId = new Map<string, unknown>()
@@ -39,6 +42,7 @@ export async function hydrateCongressMemberSnapshot(
     personDetails: detailed.personDetails,
     personJurisdictions: detailed.personJurisdictions,
     people: uniqueById([...listed.people, ...detailed.people]),
+    termPersonIds: detailed.termPersonIds,
     terms: uniqueById([...listed.terms, ...detailed.terms])
   }
 }

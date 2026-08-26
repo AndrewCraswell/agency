@@ -200,6 +200,7 @@ describe("Congress entity normalization", () => {
       ])
     )
     expect(result.terms.every((term) => term.startDate === undefined && term.endDate === undefined)).toBe(true)
+    expect(result.termPersonIds).toEqual(["person:congress:g000607"])
   })
 
   it("rejects a detail term that omits its published member type", () => {
@@ -224,6 +225,59 @@ describe("Congress entity normalization", () => {
         organizationContext
       )
     ).toThrow(/memberType/)
+  })
+
+  it("rejects a detail term whose chamber cannot be normalized", () => {
+    expect(() =>
+      normalizeCongressMemberDetails(
+        [
+          {
+            detail: {
+              bioguideId: "G000607",
+              currentMember: true,
+              terms: {
+                item: [{ chamber: "Joint", congress: 119, memberType: "Representative", startYear: 2025 }]
+              }
+            },
+            member: {
+              bioguideId: "G000607",
+              name: "Gallagher, James",
+              terms: { item: [] },
+              url: "https://api.congress.gov/member/G000607"
+            }
+          }
+        ],
+        119,
+        organizationContext
+      )
+    ).toThrow(/unmappable chamber/)
+  })
+
+  it("does not authorize term replacement from an untrusted member URL", () => {
+    const result = normalizeCongressMemberDetails(
+      [
+        {
+          detail: {
+            bioguideId: "G000607",
+            currentMember: true,
+            terms: {
+              item: [{ chamber: "House", congress: 119, memberType: "Representative", startYear: 2025 }]
+            }
+          },
+          member: {
+            bioguideId: "G000607",
+            name: "Gallagher, James",
+            terms: { item: [] },
+            url: "https://example.test/member/G000607"
+          }
+        }
+      ],
+      119,
+      organizationContext
+    )
+
+    expect(result.termPersonIds).toEqual([])
+    expect(result.terms[0]).toMatchObject({ provenanceComplete: false, sourceIsOfficial: false })
   })
 
   it("rejects a detail update timestamp that is not an ISO datetime", () => {

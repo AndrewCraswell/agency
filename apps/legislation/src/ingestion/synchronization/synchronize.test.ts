@@ -214,6 +214,8 @@ describe("executeSynchronization", () => {
         personDetailSourceProvider: "congress",
         personDetails: [expect.objectContaining({ personId: "person:congress:d000001" })],
         personJurisdictions: [expect.objectContaining({ personId: "person:congress:d000001" })],
+        termPersonIds: ["person:congress:d000001"],
+        termSourceProvider: "congress",
         terms: [expect.objectContaining({ officeTitle: "Representative", role: "Representative" })]
       })
     )

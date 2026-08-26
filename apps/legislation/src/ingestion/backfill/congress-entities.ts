@@ -94,6 +94,8 @@ export async function executeCongressEntityRangeBackfill(
         personDetails: memberDetailsByPersonId(memberSnapshots),
         personJurisdictions: memberJurisdictionsByPersonId(memberSnapshots),
         people: [...peopleById.values()],
+        termPersonIds: unique(memberSnapshots.flatMap((snapshot) => snapshot.termPersonIds ?? [])),
+        termSourceProvider: "congress",
         terms: [...termsById.values()]
       })
       const records = peopleById.size + termsById.size + organizationsById.size
@@ -120,6 +122,10 @@ function memberJurisdictionsByPersonId(
 
 function uniqueById<T>(values: readonly T[], identity: (value: T) => string): T[] {
   return [...new Map(values.map((value) => [identity(value), value])).values()]
+}
+
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values)]
 }
 
 function createClient(config: LegislationConfig): CongressEntityClient {

@@ -33,6 +33,8 @@ export async function replaceEntitySnapshot(
   const personDetailValues = snapshot.personDetails ?? []
   const personExternalIdentifierValues = snapshot.personExternalIdentifiers ?? []
   const personJurisdictionValues = snapshot.personJurisdictions ?? []
+  const termPersonIds = [...new Set(snapshot.termPersonIds ?? [])]
+  const termSourceProvider = snapshot.termSourceProvider
 
   await database.transaction(async (transaction) => {
     await transaction
@@ -180,6 +182,16 @@ export async function replaceEntitySnapshot(
           },
           target: [personJurisdictions.personId, personJurisdictions.jurisdictionId, personJurisdictions.sourceIdentity]
         })
+    }
+    if (termPersonIds.length > 0 && termSourceProvider !== undefined) {
+      await transaction
+        .delete(legislativeTerms)
+        .where(
+          and(
+            inArray(legislativeTerms.personId, termPersonIds),
+            eq(legislativeTerms.sourceProvider, termSourceProvider)
+          )
+        )
     }
     if (organizationValues.length > 0) {
       await transaction

@@ -110,7 +110,9 @@ describe("Congress entity range backfill", () => {
             sourceProvider: "congress",
             sourceRetrievedAt: expect.any(Date)
           })
-        ])
+        ]),
+        termPersonIds: ["person:congress:m000001"],
+        termSourceProvider: "congress"
       })
     )
     expect(getMember).toHaveBeenCalledOnce()
