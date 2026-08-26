@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
 
 export type SmokeCheckStatus = "blocked" | "failed" | "passed" | "skipped"
-export type SmokeProfile = "full" | "scoped-bills" | "subscription-lifecycle"
+export type SmokeProfile = "full" | "scoped-bills" | "subscription-lifecycle" | "webhook-lifecycle"
 
 export type SmokeFixture = Readonly<{
   amendmentId?: string
@@ -1696,6 +1696,7 @@ type LifecycleRequest = Readonly<{
   id: string
   method: "DELETE" | "GET" | "PATCH" | "POST"
   path: string
+  reportPath?: string
   validate: (body: unknown, response: Response) => boolean
 }>
 
@@ -1713,6 +1714,7 @@ async function executeLifecycleRequest(
   requestTimeoutMs: number,
   callerSignal: AbortSignal | undefined
 ): Promise<LifecycleRequestResult> {
+  const reportPath = request.reportPath ?? request.path
   const headers: Record<string, string> = {
     accept: "application/json",
     authorization: `Bearer ${token}`,
@@ -1751,7 +1753,7 @@ async function executeLifecycleRequest(
         detail,
         id: request.id,
         method: request.method,
-        path: request.path,
+        path: reportPath,
         status: "failed"
       },
       response: undefined
@@ -1774,7 +1776,7 @@ async function executeLifecycleRequest(
       detail,
       id: request.id,
       method: request.method,
-      path: request.path,
+      path: reportPath,
       status: valid ? "passed" : "failed",
       statusCode: response.status
     },
@@ -1820,6 +1822,32 @@ function subscriptionData(body: unknown): Record<string, unknown> | undefined {
     return undefined
   }
   return body.data
+}
+
+function webhookData(body: unknown): Record<string, unknown> | undefined {
+  if (!isRecord(body) || !isRecord(body.data)) {
+    return undefined
+  }
+  return body.data
+}
+
+function webhookWithSecretData(
+  body: unknown,
+  canonicalApiBaseUrl: URL | undefined
+): Readonly<{ keyId: string; secret: string; webhook: Record<string, unknown> }> | undefined {
+  const data = webhookData(body)
+  if (
+    data === undefined ||
+    typeof data.keyId !== "string" ||
+    data.keyId.trim() === "" ||
+    typeof data.secret !== "string" ||
+    !/^[A-Za-z0-9_-]{43}$/.test(data.secret) ||
+    !isRecord(data.webhook) ||
+    !hasWebhook(data.webhook, canonicalApiBaseUrl)
+  ) {
+    return undefined
+  }
+  return { keyId: data.keyId, secret: data.secret, webhook: data.webhook }
 }
 
 function isCancellationReceipt(value: unknown, id: string, revision: string): boolean {
@@ -2216,6 +2244,533 @@ async function runSubscriptionLifecycleSmoke(input: {
   return checks
 }
 
+const WEBHOOK_LIFECYCLE_DETAIL_PATH = "/api/webhooks/{webhookId}"
+const WEBHOOK_LIFECYCLE_ROTATE_PATH = "/api/webhooks/{webhookId}/rotate-secret"
+
+function hasWebhookWithSecretResource(
+  body: unknown,
+  response: Response,
+  correlation: string,
+  expectedPath: string,
+  canonicalApiBaseUrl: URL
+): boolean {
+  return (
+    lifecycleResource(body, response, correlation, expectedPath, () => true) &&
+    webhookWithSecretData(body, canonicalApiBaseUrl) !== undefined
+  )
+}
+
+async function cancelLifecycleWebhook(
+  input: Readonly<{
+    baseUrl: URL
+    canonicalApiBaseUrl: URL
+    callerSignal: AbortSignal | undefined
+    fetchImpl: FetchLike
+    requestTimeoutMs: number
+    token: string
+  }>,
+  id: string,
+  path: string
+): Promise<readonly SmokeCheck[]> {
+  const read = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "webhook-lifecycle-cleanup-read",
+      method: "GET",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-webhook-lifecycle-cleanup-read", path, (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        )
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  const webhook = webhookData(read.body)
+  if (read.check.status !== "passed" || webhook === undefined || typeof webhook.revision !== "string") {
+    return [
+      read.check,
+      lifecycleCheckBlocked(
+        "webhook-lifecycle-cleanup",
+        "blocked: the generated webhook revision could not be read for cancellation"
+      )
+    ]
+  }
+  if (webhook.status === "cancelled") {
+    return [read.check]
+  }
+  const revision = webhook.revision
+  const cancellation = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      headers: { "idempotency-key": randomUUID(), "if-match": revision },
+      id: "webhook-lifecycle-cleanup",
+      method: "DELETE",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) => {
+        const finalRevision = response.headers.get("etag")
+        return (
+          typeof finalRevision === "string" &&
+          lifecycleResource(body, response, "smoke-webhook-lifecycle-cleanup", path, (value) =>
+            isCancellationReceipt(value, id, finalRevision)
+          )
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  return [read.check, cancellation.check]
+}
+
+async function runWebhookLifecycleSmoke(input: {
+  baseUrl: URL
+  canonicalApiBaseUrl: URL
+  callerSignal: AbortSignal | undefined
+  fetchImpl: FetchLike
+  requestTimeoutMs: number
+  token: string
+}): Promise<readonly SmokeCheck[]> {
+  if (input.canonicalApiBaseUrl.protocol !== "https:") {
+    return [
+      lifecycleCheckBlocked(
+        "webhook-lifecycle-target",
+        "blocked: webhook-lifecycle requires a public HTTPS canonical API origin"
+      )
+    ]
+  }
+  const checks: SmokeCheck[] = []
+  const targetUrl = new URL("/health", input.canonicalApiBaseUrl).toString()
+  const createKey = randomUUID()
+  const patchKey = randomUUID()
+  const staleKey = randomUUID()
+  const rotateKey = randomUUID()
+  const deleteKey = randomUUID()
+  const name = `API webhook lifecycle smoke ${randomUUID()}`
+  const createBody = { eventTypes: ["query-match"], name, url: targetUrl }
+  const list = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "webhook-lifecycle-list",
+      method: "GET",
+      path: "/api/webhooks?limit=1",
+      validate: (body, response) =>
+        lifecyclePage(body, response, "smoke-webhook-lifecycle-list", "/api/webhooks?limit=1", (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        )
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(list.check)
+  const created = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: createBody,
+      expectedStatus: 201,
+      headers: { "idempotency-key": createKey },
+      id: "webhook-lifecycle-create",
+      method: "POST",
+      path: "/api/webhooks",
+      validate: (body, response) => {
+        const data = webhookWithSecretData(body, input.canonicalApiBaseUrl)
+        return (
+          hasWebhookWithSecretResource(
+            body,
+            response,
+            "smoke-webhook-lifecycle-create",
+            "/api/webhooks",
+            input.canonicalApiBaseUrl
+          ) &&
+          data !== undefined &&
+          response.headers.get("etag") === data.webhook.revision &&
+          response.headers.get("location") === `/api/webhooks/${encoded(String(data.webhook.id))}`
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(created.check)
+  const createdData = webhookWithSecretData(created.body, input.canonicalApiBaseUrl)
+  if (
+    createdData === undefined ||
+    typeof createdData.webhook.id !== "string" ||
+    typeof createdData.webhook.revision !== "string"
+  ) {
+    checks.push(
+      lifecycleCheckBlocked(
+        "webhook-lifecycle-dependent-checks",
+        "blocked: webhook creation did not produce a usable fixture"
+      )
+    )
+    return checks
+  }
+  const id = createdData.webhook.id
+  const path = `/api/webhooks/${encoded(id)}`
+  if (created.check.status !== "passed") {
+    checks.push(...(await cancelLifecycleWebhook(input, id, path)))
+    return checks
+  }
+  const createReplay = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: createBody,
+      expectedStatus: 201,
+      headers: { "idempotency-key": createKey },
+      id: "webhook-lifecycle-create-replay",
+      method: "POST",
+      path: "/api/webhooks",
+      validate: (body, response) => {
+        const data = webhookWithSecretData(body, input.canonicalApiBaseUrl)
+        return (
+          hasWebhookWithSecretResource(
+            body,
+            response,
+            "smoke-webhook-lifecycle-create-replay",
+            "/api/webhooks",
+            input.canonicalApiBaseUrl
+          ) &&
+          data?.webhook.id === id &&
+          data.webhook.revision === createdData.webhook.revision &&
+          data.keyId === createdData.keyId &&
+          data.secret === createdData.secret
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(createReplay.check)
+  const filteredPath = "/api/webhooks?status=pending-verification&eventType=query-match&limit=100"
+  const filtered = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "webhook-lifecycle-pending-list",
+      method: "GET",
+      path: filteredPath,
+      validate: (body, response) =>
+        lifecyclePage(body, response, "smoke-webhook-lifecycle-pending-list", filteredPath, (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        ) &&
+        isRecord(body) &&
+        Array.isArray(body.data) &&
+        body.data.some((value) => isRecord(value) && value.id === id)
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(filtered.check)
+  const detail = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "webhook-lifecycle-detail",
+      method: "GET",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-webhook-lifecycle-detail", path, (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        ) &&
+        webhookData(body)?.id === id &&
+        response.headers.get("etag") === createdData.webhook.revision
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(detail.check)
+  const updatedName = `${name} updated`
+  const patch = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { name: updatedName },
+      expectedStatus: 200,
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": patchKey,
+        "if-match": createdData.webhook.revision
+      },
+      id: "webhook-lifecycle-patch",
+      method: "PATCH",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) => {
+        const data = webhookData(body)
+        return (
+          lifecycleResource(body, response, "smoke-webhook-lifecycle-patch", path, (value) =>
+            hasWebhook(value, input.canonicalApiBaseUrl)
+          ) &&
+          data?.id === id &&
+          data.name === updatedName &&
+          typeof data.revision === "string" &&
+          data.revision !== createdData.webhook.revision &&
+          response.headers.get("etag") === data.revision
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(patch.check)
+  const patchedData = webhookData(patch.body)
+  const patchedRevision = patchedData?.revision
+  if (patch.check.status !== "passed" || typeof patchedRevision !== "string") {
+    checks.push(...(await cancelLifecycleWebhook(input, id, path)))
+    return checks
+  }
+  const patchReplay = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { name: updatedName },
+      expectedStatus: 200,
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": patchKey,
+        "if-match": createdData.webhook.revision
+      },
+      id: "webhook-lifecycle-patch-replay",
+      method: "PATCH",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-webhook-lifecycle-patch-replay", path, (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        ) &&
+        webhookData(body)?.id === id &&
+        webhookData(body)?.revision === patchedRevision &&
+        response.headers.get("etag") === patchedRevision
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(patchReplay.check)
+  const stale = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { status: "paused" },
+      expectedStatus: 412,
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": staleKey,
+        "if-match": createdData.webhook.revision
+      },
+      id: "webhook-lifecycle-stale-revision",
+      method: "PATCH",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) =>
+        hasErrorEnvelope(body, response.headers.get("x-correlation-id"), "precondition_failed") &&
+        response.headers.get("x-correlation-id") === "smoke-webhook-lifecycle-stale-revision"
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(stale.check)
+  const rotatePath = `${path}/rotate-secret`
+  const rotate = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { overlapSeconds: 0 },
+      expectedStatus: 200,
+      headers: { "idempotency-key": rotateKey, "if-match": patchedRevision },
+      id: "webhook-lifecycle-rotate-secret",
+      method: "POST",
+      path: rotatePath,
+      reportPath: WEBHOOK_LIFECYCLE_ROTATE_PATH,
+      validate: (body, response) => {
+        const data = webhookWithSecretData(body, input.canonicalApiBaseUrl)
+        return (
+          hasWebhookWithSecretResource(
+            body,
+            response,
+            "smoke-webhook-lifecycle-rotate-secret",
+            rotatePath,
+            input.canonicalApiBaseUrl
+          ) &&
+          data?.webhook.id === id &&
+          data.webhook.revision !== patchedRevision &&
+          data.secret !== createdData.secret &&
+          data.keyId !== createdData.keyId &&
+          Array.isArray(data.webhook.activeKeyIds) &&
+          data.webhook.activeKeyIds.length === 1 &&
+          data.webhook.activeKeyIds[0] === data.keyId &&
+          data.webhook.overlapEndsAt === null &&
+          response.headers.get("etag") === data.webhook.revision
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(rotate.check)
+  const rotatedData = webhookWithSecretData(rotate.body, input.canonicalApiBaseUrl)
+  const rotatedRevision = rotatedData?.webhook.revision
+  if (rotate.check.status !== "passed" || rotatedData === undefined || typeof rotatedRevision !== "string") {
+    checks.push(...(await cancelLifecycleWebhook(input, id, path)))
+    return checks
+  }
+  const rotateReplay = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { overlapSeconds: 0 },
+      expectedStatus: 200,
+      headers: { "idempotency-key": rotateKey, "if-match": patchedRevision },
+      id: "webhook-lifecycle-rotate-secret-replay",
+      method: "POST",
+      path: rotatePath,
+      reportPath: WEBHOOK_LIFECYCLE_ROTATE_PATH,
+      validate: (body, response) => {
+        const data = webhookWithSecretData(body, input.canonicalApiBaseUrl)
+        return (
+          hasWebhookWithSecretResource(
+            body,
+            response,
+            "smoke-webhook-lifecycle-rotate-secret-replay",
+            rotatePath,
+            input.canonicalApiBaseUrl
+          ) &&
+          data?.webhook.id === id &&
+          data.webhook.revision === rotatedRevision &&
+          data.keyId === rotatedData.keyId &&
+          data.secret === rotatedData.secret
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(rotateReplay.check)
+  const postRotateDetail = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "webhook-lifecycle-post-rotate-detail",
+      method: "GET",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-webhook-lifecycle-post-rotate-detail", path, (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        ) &&
+        webhookData(body)?.id === id &&
+        webhookData(body)?.revision === rotatedRevision &&
+        response.headers.get("etag") === rotatedRevision
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(postRotateDetail.check)
+  const cancellation = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      headers: { "idempotency-key": deleteKey, "if-match": rotatedRevision },
+      id: "webhook-lifecycle-delete",
+      method: "DELETE",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) => {
+        const finalRevision = response.headers.get("etag")
+        return (
+          typeof finalRevision === "string" &&
+          lifecycleResource(body, response, "smoke-webhook-lifecycle-delete", path, (value) =>
+            isCancellationReceipt(value, id, finalRevision)
+          )
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(cancellation.check)
+  const cancellationReplay = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      headers: { "idempotency-key": deleteKey, "if-match": rotatedRevision },
+      id: "webhook-lifecycle-delete-replay",
+      method: "DELETE",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) => {
+        const finalRevision = response.headers.get("etag")
+        return (
+          typeof finalRevision === "string" &&
+          lifecycleResource(body, response, "smoke-webhook-lifecycle-delete-replay", path, (value) =>
+            isCancellationReceipt(value, id, finalRevision)
+          )
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(cancellationReplay.check)
+  const cancelled = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "webhook-lifecycle-cancelled-visibility",
+      method: "GET",
+      path,
+      reportPath: WEBHOOK_LIFECYCLE_DETAIL_PATH,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-webhook-lifecycle-cancelled-visibility", path, (value) =>
+          hasWebhook(value, input.canonicalApiBaseUrl)
+        ) &&
+        webhookData(body)?.id === id &&
+        webhookData(body)?.status === "cancelled" &&
+        isRfc3339(webhookData(body)?.cancelledAt)
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(cancelled.check)
+  if (checks.slice(1).some((check) => check.status !== "passed")) {
+    checks.push(...(await cancelLifecycleWebhook(input, id, path)))
+  }
+  return checks
+}
+
 export async function runApiSmoke(options: {
   baseUrl: string | URL
   canonicalApiBaseUrl?: string | URL
@@ -2230,7 +2785,7 @@ export async function runApiSmoke(options: {
   const baseUrl = canonicalSmokeApiBaseUrl(options.baseUrl)
   const profile = options.profile ?? "full"
   if (
-    (profile === "scoped-bills" || profile === "subscription-lifecycle") &&
+    (profile === "scoped-bills" || profile === "subscription-lifecycle" || profile === "webhook-lifecycle") &&
     options.canonicalApiBaseUrl === undefined
   ) {
     throw new TypeError(`canonicalApiBaseUrl is required for the ${profile} smoke profile`)
@@ -2243,11 +2798,13 @@ export async function runApiSmoke(options: {
   if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > 60_000) {
     throw new RangeError("requestTimeoutMs must be an integer between 1 and 60000")
   }
-  if (profile === "subscription-lifecycle") {
+  if (profile === "subscription-lifecycle" || profile === "webhook-lifecycle") {
     if (!requireAuth || options.token === undefined) {
-      throw new Error("subscription-lifecycle smoke requires authenticated mode and an explicit token")
+      throw new Error(`${profile} smoke requires authenticated mode and an explicit token`)
     }
-    const checks = await runSubscriptionLifecycleSmoke({
+    const checks = await (
+      profile === "subscription-lifecycle" ? runSubscriptionLifecycleSmoke : runWebhookLifecycleSmoke
+    )({
       baseUrl,
       canonicalApiBaseUrl: canonicalApiBaseUrl!,
       callerSignal: options.signal,

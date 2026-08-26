@@ -1360,6 +1360,216 @@ describe("local API smoke harness", () => {
     expect(keys).toHaveLength(2)
   })
 
+  it("runs the opt-in authenticated webhook lifecycle without exposing response identifiers or secrets", async () => {
+    const token = "webhook-lifecycle-token-must-not-leak"
+    const id = "webhook:lifecycle"
+    const createSecret = "a".repeat(43)
+    const rotatedSecret = "b".repeat(43)
+    const createKeyId = "webhook-key:create"
+    const rotatedKeyId = "webhook-key:rotated"
+    const idempotencyKeys: string[] = []
+    const requestErrors: string[] = []
+    let name = ""
+    let revision = "revision:create"
+    let status: "pending-verification" | "cancelled" = "pending-verification"
+    const webhook = () => ({
+      activeKeyIds: [revision === "revision:rotated" || revision === "revision:cancelled" ? rotatedKeyId : createKeyId],
+      cancelledAt: status === "cancelled" ? "2026-08-26T00:00:00.000Z" : null,
+      canonicalUrl: `https://legislation.example.test/api/webhooks/${encodeURIComponent(id)}`,
+      createdAt: "2026-08-26T00:00:00.000Z",
+      eventTypes: ["query-match"],
+      id,
+      lastFailedAt: null,
+      lastSucceededAt: null,
+      name,
+      overlapEndsAt: null,
+      owner: { organizationId: null, userId: "smoke-user" },
+      revision,
+      secretLastFour: "aaaa",
+      status,
+      updatedAt: "2026-08-26T00:00:00.000Z",
+      url: "https://legislation.example.test/health"
+    })
+    const response = (
+      body: unknown,
+      statusCode: number,
+      correlationId: string,
+      headers: Readonly<Record<string, string>> = {}
+    ) =>
+      new Response(JSON.stringify(body), {
+        headers: { "content-type": "application/json", "x-correlation-id": correlationId, ...headers },
+        status: statusCode
+      })
+    const resource = (value: unknown, path: string, correlationId: string, statusCode = 200, location = path) =>
+      response(
+        { data: value, links: { self: path }, meta: { correlationId, warnings: [] } },
+        statusCode,
+        correlationId,
+        { etag: revision, ...(statusCode === 201 ? { location } : {}) }
+      )
+    const page = (values: readonly unknown[], path: string, correlationId: string) =>
+      response(
+        {
+          data: values,
+          links: { next: null, self: path },
+          meta: { correlationId, limit: 100, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    const fetchImpl = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const url = new URL(input)
+      const headers = new Headers(init?.headers)
+      const correlationId = headers.get("x-correlation-id") ?? "missing-correlation"
+      if (headers.get("authorization") !== `Bearer ${token}`) {
+        requestErrors.push("missing bearer authorization")
+      }
+      const idempotencyKey = headers.get("idempotency-key")
+      if (idempotencyKey !== null) {
+        idempotencyKeys.push(idempotencyKey)
+      }
+      const detailPath = `/api/webhooks/${encodeURIComponent(id)}`
+      if (url.pathname === "/api/webhooks" && init?.method === "GET") {
+        return page(url.searchParams.has("status") ? [webhook()] : [], `${url.pathname}${url.search}`, correlationId)
+      }
+      if (url.pathname === "/api/webhooks" && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { name: string; url: string }
+        if (body.url !== "https://legislation.example.test/health") {
+          requestErrors.push("create did not use canonical health target")
+        }
+        name = body.name
+        return resource(
+          { keyId: createKeyId, secret: createSecret, webhook: webhook() },
+          "/api/webhooks",
+          correlationId,
+          201,
+          detailPath
+        )
+      }
+      if (url.pathname === detailPath && init?.method === "GET") {
+        return resource(webhook(), detailPath, correlationId)
+      }
+      if (url.pathname === detailPath && init?.method === "PATCH") {
+        const body = JSON.parse(String(init.body)) as { name?: string; status?: string }
+        if (body.status === "paused") {
+          return response(
+            { error: { category: "precondition_failed", correlationId, message: "stale revision", retryable: false } },
+            412,
+            correlationId
+          )
+        }
+        if (headers.get("if-match") !== "revision:create") {
+          requestErrors.push("patch did not use create revision")
+        }
+        name = body.name ?? name
+        revision = "revision:patched"
+        return resource(webhook(), detailPath, correlationId)
+      }
+      if (url.pathname === `${detailPath}/rotate-secret` && init?.method === "POST") {
+        if (headers.get("if-match") !== "revision:patched") {
+          requestErrors.push("rotate did not use patched revision")
+        }
+        if (JSON.stringify(JSON.parse(String(init.body))) !== JSON.stringify({ overlapSeconds: 0 })) {
+          requestErrors.push("rotate did not use zero overlap")
+        }
+        revision = "revision:rotated"
+        return resource(
+          { keyId: rotatedKeyId, secret: rotatedSecret, webhook: webhook() },
+          `${detailPath}/rotate-secret`,
+          correlationId
+        )
+      }
+      if (url.pathname === detailPath && init?.method === "DELETE") {
+        if (!["revision:rotated", "revision:cancelled", "revision:create"].includes(headers.get("if-match") ?? "")) {
+          requestErrors.push("delete did not use an available revision")
+        }
+        status = "cancelled"
+        revision = "revision:cancelled"
+        return resource(
+          { cancelledAt: "2026-08-26T00:00:00.000Z", finalRevision: revision, id },
+          detailPath,
+          correlationId
+        )
+      }
+      throw new Error(`Unexpected webhook lifecycle request ${init?.method ?? "GET"} ${url.pathname}`)
+    }
+
+    const report = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "webhook-lifecycle",
+      requireAuth: true,
+      token
+    })
+
+    expect(report.status).toBe("passed")
+    expect(requestErrors).toEqual([])
+    expect(report.passed.map((check) => check.id)).toEqual([
+      "webhook-lifecycle-list",
+      "webhook-lifecycle-create",
+      "webhook-lifecycle-create-replay",
+      "webhook-lifecycle-pending-list",
+      "webhook-lifecycle-detail",
+      "webhook-lifecycle-patch",
+      "webhook-lifecycle-patch-replay",
+      "webhook-lifecycle-stale-revision",
+      "webhook-lifecycle-rotate-secret",
+      "webhook-lifecycle-rotate-secret-replay",
+      "webhook-lifecycle-post-rotate-detail",
+      "webhook-lifecycle-delete",
+      "webhook-lifecycle-delete-replay",
+      "webhook-lifecycle-cancelled-visibility"
+    ])
+    expect(status).toBe("cancelled")
+    const serialized = JSON.stringify(report)
+    for (const value of [token, id, createSecret, rotatedSecret, createKeyId, rotatedKeyId, ...idempotencyKeys]) {
+      expect(serialized).not.toContain(value)
+    }
+
+    name = ""
+    revision = "revision:create"
+    status = "pending-verification"
+    const malformedCreateLocation = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const original = await fetchImpl(input, init)
+      if (new URL(input).pathname !== "/api/webhooks" || init?.method !== "POST") {
+        return original
+      }
+      const headers = new Headers(original.headers)
+      headers.set("location", "/api/webhooks/unexpected")
+      return new Response(await original.arrayBuffer(), { headers, status: original.status })
+    }
+    const malformedCreateReport = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl: malformedCreateLocation,
+      profile: "webhook-lifecycle",
+      requireAuth: true,
+      token
+    })
+    expect(malformedCreateReport.failed.map((check) => check.id)).toContain("webhook-lifecycle-create")
+    expect(malformedCreateReport.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["webhook-lifecycle-cleanup-read", "webhook-lifecycle-cleanup"])
+    )
+    expect(status).toBe("cancelled")
+  })
+
+  it("blocks webhook lifecycle smoke unless its canonical origin is public HTTPS", async () => {
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "http://localhost:3199",
+      fetchImpl: async () => {
+        throw new Error("fetch must not run")
+      },
+      profile: "webhook-lifecycle",
+      requireAuth: true,
+      token: "webhook-lifecycle-token"
+    })
+
+    expect(report.status).toBe("blocked")
+    expect(report.blocked).toEqual([expect.objectContaining({ id: "webhook-lifecycle-target", status: "blocked" })])
+  })
+
   it("requires an explicit authenticated opt-in before a subscription lifecycle smoke can mutate", async () => {
     await expect(
       runApiSmoke({

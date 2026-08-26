@@ -13,10 +13,10 @@ function smokeProfile(value: string | undefined): SmokeProfile {
   if (normalized === undefined || normalized === "" || normalized === "full") {
     return "full"
   }
-  if (normalized === "scoped-bills" || normalized === "subscription-lifecycle") {
+  if (normalized === "scoped-bills" || normalized === "subscription-lifecycle" || normalized === "webhook-lifecycle") {
     return normalized
   }
-  throw new Error("LEGISLATION_SMOKE_PROFILE must be full, scoped-bills, or subscription-lifecycle")
+  throw new Error("LEGISLATION_SMOKE_PROFILE must be full, scoped-bills, subscription-lifecycle, or webhook-lifecycle")
 }
 
 function smokePort(value: string | undefined): number {
@@ -53,7 +53,7 @@ function smokeCanonicalApiBaseUrl(profile: SmokeProfile): URL | undefined {
   const value =
     process.env.LEGISLATION_SMOKE_CANONICAL_API_BASE_URL?.trim() || process.env.LEGISLATION_PUBLIC_API_BASE_URL?.trim()
   if (value === undefined || value === "") {
-    if (profile === "scoped-bills" || profile === "subscription-lifecycle") {
+    if (profile === "scoped-bills" || profile === "subscription-lifecycle" || profile === "webhook-lifecycle") {
       throw new Error(
         `LEGISLATION_SMOKE_CANONICAL_API_BASE_URL or LEGISLATION_PUBLIC_API_BASE_URL is required for ${profile}`
       )

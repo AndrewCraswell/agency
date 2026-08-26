@@ -175,8 +175,10 @@ async function start(
     ...options
   })
   const server = createServer(async (request, response) => {
+    const requestCorrelationId = request.headers["x-correlation-id"]
+    const correlationId = Array.isArray(requestCorrelationId) ? requestCorrelationId[0] : requestCorrelationId
     const handled = await runWithRequestContext(
-      { correlationId: "webhook-test", identity: { userId: "user:test" } },
+      { correlationId: correlationId ?? "webhook-test", identity: { userId: "user:test" } },
       async () => await handler(request, response)
     )
     if (!handled) {
@@ -193,12 +195,18 @@ async function start(
 }
 
 async function call(baseUrl: string, path: string, method: string, body: string, headers: Record<string, string>) {
-  return await new Promise<Readonly<{ body: string; statusCode: number }>>((resolve, reject) => {
+  return await new Promise<
+    Readonly<{ body: string; headers: Readonly<Record<string, string | string[] | undefined>>; statusCode: number }>
+  >((resolve, reject) => {
     const request = sendRequest(`${baseUrl}${path}`, { headers, method }, (response) => {
       const chunks: Buffer[] = []
       response.on("data", (chunk: Buffer) => chunks.push(chunk))
       response.on("end", () =>
-        resolve({ body: Buffer.concat(chunks).toString("utf8"), statusCode: response.statusCode ?? 0 })
+        resolve({
+          body: Buffer.concat(chunks).toString("utf8"),
+          headers: response.headers,
+          statusCode: response.statusCode ?? 0
+        })
       )
     })
     request.on("error", reject)
@@ -207,15 +215,28 @@ async function call(baseUrl: string, path: string, method: string, body: string,
 }
 
 describe("webhook mutation routes", () => {
-  it("creates a pending webhook and replays its one-time secret exactly", async () => {
+  it("creates a pending webhook and replays its one-time secret with the current correlation", async () => {
     const baseUrl = await start()
     const headers = { "content-type": "application/json", "idempotency-key": "webhook-create-key" }
     const body = JSON.stringify({ eventTypes: ["vote-added"], name: "Pipeline", url: "https://8.8.8.8/hooks" })
-    const first = await call(baseUrl, "/api/webhooks", "POST", body, headers)
-    const replay = await call(baseUrl, "/api/webhooks", "POST", body, headers)
+    const first = await call(baseUrl, "/api/webhooks", "POST", body, {
+      ...headers,
+      "x-correlation-id": "webhook-create-first"
+    })
+    const replay = await call(baseUrl, "/api/webhooks", "POST", body, {
+      ...headers,
+      "x-correlation-id": "webhook-create-replay"
+    })
     expect(first.statusCode).toBe(201)
-    expect(replay).toEqual(first)
-    expect(JSON.parse(first.body).data.webhook.status).toBe("pending-verification")
+    expect(replay.statusCode).toBe(201)
+    const firstBody = JSON.parse(first.body)
+    const replayBody = JSON.parse(replay.body)
+    expect(firstBody.data.webhook.status).toBe("pending-verification")
+    expect(replayBody.data).toEqual(firstBody.data)
+    expect(first.headers["x-correlation-id"]).toBe("webhook-create-first")
+    expect(replay.headers["x-correlation-id"]).toBe("webhook-create-replay")
+    expect(firstBody.meta.correlationId).toBe("webhook-create-first")
+    expect(replayBody.meta.correlationId).toBe("webhook-create-replay")
   })
 
   it("rejects request query parameters before mutation work", async () => {

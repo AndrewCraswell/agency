@@ -5,6 +5,7 @@ import { LegislationError } from "../legislation/errors.js"
 import {
   assertAllowedQueryParameters,
   apiResource,
+  correlationId,
   readJsonBody,
   requestUrl,
   sendApiError,
@@ -103,7 +104,7 @@ export function createWebhookMutationApiHandler(
             })
           }
         )
-        sendStored(response, result.response)
+        sendStored(request, response, result.response)
         return true
       }
       const id = webhookId(match![1]!)
@@ -137,7 +138,7 @@ export function createWebhookMutationApiHandler(
             }
           }
         )
-        sendStored(response, result.response)
+        sendStored(request, response, result.response)
         return true
       }
       if (isUpdate) {
@@ -161,7 +162,7 @@ export function createWebhookMutationApiHandler(
               return resourceResponse(request, options, webhook, 200, { etag: webhook.revision })
             }
           )
-          sendStored(response, result.response)
+          sendStored(request, response, result.response)
           return true
         }
         const result = await execute(
@@ -176,7 +177,7 @@ export function createWebhookMutationApiHandler(
             return resourceResponse(request, options, webhook, 200, { etag: webhook.revision })
           }
         )
-        sendStored(response, result.response)
+        sendStored(request, response, result.response)
         return true
       }
       requireJsonContentType(request)
@@ -197,7 +198,7 @@ export function createWebhookMutationApiHandler(
             return resourceResponse(request, options, rotated, 200, { etag: rotated.webhook.revision })
           }
         )
-        sendStored(response, result.response)
+        sendStored(request, response, result.response)
         return true
       }
       assertEmptyObject(body)
@@ -229,7 +230,7 @@ export function createWebhookMutationApiHandler(
           return resourceResponse(request, options, activated, 200, { etag: activated.revision })
         }
       )
-      sendStored(response, result.response)
+      sendStored(request, response, result.response)
       return true
     } catch (error) {
       sendApiError(request, response, safeError(error))
@@ -509,11 +510,24 @@ function canonicalJson(value: unknown): string {
   return result
 }
 
-function sendStored(response: ServerResponse, result: IdempotentResponse<unknown>): void {
+function isJsonRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function withCurrentCorrelation(value: unknown, currentCorrelationId: string): unknown {
+  if (!isJsonRecord(value) || !isJsonRecord(value.meta)) {
+    return value
+  }
+  return { ...value, meta: { ...value.meta, correlationId: currentCorrelationId } }
+}
+
+function sendStored(request: IncomingMessage, response: ServerResponse, result: IdempotentResponse<unknown>): void {
   for (const [name, value] of Object.entries(result.headers)) {
     response.setHeader(name, value)
   }
-  sendApiJson(response, result.statusCode, result.body)
+  const currentCorrelationId = correlationId(request)
+  response.setHeader("x-correlation-id", currentCorrelationId)
+  sendApiJson(response, result.statusCode, withCurrentCorrelation(result.body, currentCorrelationId))
 }
 
 function safeError(error: unknown): LegislationError {
