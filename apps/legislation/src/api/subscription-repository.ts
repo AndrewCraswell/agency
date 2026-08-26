@@ -368,12 +368,12 @@ export class PostgresSubscriptionRepository
                 lt(schema.subscriptions.updatedAt, new Date(cursor.timestamp)),
                 and(
                   eq(schema.subscriptions.updatedAt, new Date(cursor.timestamp)),
-                  lt(schema.subscriptions.id, cursor.id)
+                  gt(schema.subscriptions.id, cursor.id)
                 )
               )
         )
       )
-      .orderBy(desc(schema.subscriptions.updatedAt), desc(schema.subscriptions.id))
+      .orderBy(desc(schema.subscriptions.updatedAt), asc(schema.subscriptions.id))
       .limit(limit + 1)
     const page = rows.slice(0, limit).map(toSubscription)
     const hasMore = rows.length > limit

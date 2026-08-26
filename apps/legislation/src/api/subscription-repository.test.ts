@@ -133,7 +133,7 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
     ).resolves.toBeUndefined()
 
     const firstPage = await repository.listSubscriptions({ owner: owner("user:two", "org:one"), limit: 1 })
-    expect(firstPage.items).toHaveLength(1)
+    expect(firstPage.items).toMatchObject([{ id: "subscription:shared" }])
     expect(firstPage.nextCursor).toBeDefined()
     await expect(
       repository.listSubscriptions({ cursor: firstPage.nextCursor, owner: owner("user:two", "org:one"), limit: 1 })
