@@ -19,49 +19,149 @@ function ipv4Parts(address: string): readonly number[] | undefined {
   return numbers.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) ? numbers : undefined
 }
 
-function isPrivateIpv4(address: string): boolean {
-  const parts = ipv4Parts(address)
-  if (parts === undefined) {
-    return true
+type Ipv4Range = Readonly<{ network: number; prefixLength: number }>
+type Ipv6Range = Readonly<{ network: bigint; prefixLength: number }>
+
+/**
+ * IANA special-purpose blocks which must never be reachable from a webhook.
+ * This is deliberately a deny-list of non-global ranges rather than a list of
+ * private RFC1918 space, because a webhook may run from infrastructure whose
+ * egress can reach other special-purpose networks.
+ */
+const nonPublicIpv4Ranges: readonly Ipv4Range[] = [
+  ipv4Range("0.0.0.0", 8),
+  ipv4Range("10.0.0.0", 8),
+  ipv4Range("100.64.0.0", 10),
+  ipv4Range("127.0.0.0", 8),
+  ipv4Range("169.254.0.0", 16),
+  ipv4Range("172.16.0.0", 12),
+  ipv4Range("192.0.0.0", 24),
+  ipv4Range("192.0.2.0", 24),
+  ipv4Range("192.31.196.0", 24),
+  ipv4Range("192.52.193.0", 24),
+  ipv4Range("192.88.99.0", 24),
+  ipv4Range("192.168.0.0", 16),
+  ipv4Range("192.175.48.0", 24),
+  ipv4Range("198.18.0.0", 15),
+  ipv4Range("198.51.100.0", 24),
+  ipv4Range("203.0.113.0", 24),
+  ipv4Range("224.0.0.0", 4),
+  ipv4Range("240.0.0.0", 4)
+]
+
+const ipv4MappedIpv6 = ipv6Range("::ffff:0:0", 96)
+const globalUnicastIpv6 = ipv6Range("2000::", 3)
+const nonPublicIpv6Ranges: readonly Ipv6Range[] = [
+  ipv6Range("::", 128),
+  ipv6Range("::1", 128),
+  ipv6Range("100::", 64),
+  ipv6Range("2001::", 23),
+  ipv6Range("2001:2::", 48),
+  ipv6Range("2001:db8::", 32),
+  ipv6Range("2002::", 16),
+  ipv6Range("3fff::", 20),
+  ipv6Range("fc00::", 7),
+  ipv6Range("fe80::", 10),
+  ipv6Range("ff00::", 8)
+]
+
+function ipv4Range(network: string, prefixLength: number): Ipv4Range {
+  const value = ipv4Value(network)
+  if (value === undefined) {
+    throw new Error(`Invalid IPv4 special-purpose range: ${network}`)
   }
-  const [first, second] = parts
-  return (
-    first === 0 ||
-    first === 10 ||
-    first === 127 ||
-    first >= 224 ||
-    (first === 100 && second !== undefined && second >= 64 && second <= 127) ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second !== undefined && second >= 16 && second <= 31) ||
-    (first === 192 && second === 0) ||
-    (first === 192 && second === 168) ||
-    (first === 198 && (second === 18 || second === 19))
-  )
+  return { network: value, prefixLength }
 }
 
-function isPrivateIpv6(address: string): boolean {
-  const normalized = address.toLowerCase()
-  return (
-    normalized === "::" ||
-    normalized === "::1" ||
-    normalized.startsWith("fe80:") ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd") ||
-    normalized.startsWith("::ffff:127.") ||
-    normalized.startsWith("::ffff:10.") ||
-    normalized.startsWith("::ffff:169.254.") ||
-    normalized.startsWith("::ffff:192.168.") ||
-    normalized.startsWith("::ffff:172.")
-  )
+function ipv6Range(network: string, prefixLength: number): Ipv6Range {
+  const value = ipv6Value(network)
+  if (value === undefined) {
+    throw new Error(`Invalid IPv6 special-purpose range: ${network}`)
+  }
+  return { network: value, prefixLength }
+}
+
+function ipv4Value(address: string): number | undefined {
+  const parts = ipv4Parts(address)
+  if (parts === undefined) {
+    return undefined
+  }
+  const [first, second, third, fourth] = parts
+  if (first === undefined || second === undefined || third === undefined || fourth === undefined) {
+    return undefined
+  }
+  return first * 16_777_216 + second * 65_536 + third * 256 + fourth
+}
+
+function ipv6Value(address: string): bigint | undefined {
+  let normalized = address.toLowerCase()
+  const finalColon = normalized.lastIndexOf(":")
+  const lastPart = normalized.slice(finalColon + 1)
+  if (lastPart.includes(".")) {
+    const embeddedIpv4 = ipv4Value(lastPart)
+    if (embeddedIpv4 === undefined || finalColon < 0) {
+      return undefined
+    }
+    normalized = `${normalized.slice(0, finalColon)}:${Math.floor(embeddedIpv4 / 65_536).toString(16)}:${(
+      embeddedIpv4 % 65_536
+    ).toString(16)}`
+  }
+  const compression = normalized.split("::")
+  if (compression.length > 2) {
+    return undefined
+  }
+  const leftPart = compression[0]
+  const rightPart = compression[1]
+  if (leftPart === undefined || (compression.length === 2 && rightPart === undefined)) {
+    return undefined
+  }
+  const left = leftPart === "" ? [] : leftPart.split(":")
+  const right = compression.length === 1 || rightPart === "" ? [] : rightPart.split(":")
+  const zeroCount = 8 - left.length - right.length
+  if ((compression.length === 1 && zeroCount !== 0) || (compression.length === 2 && zeroCount < 1)) {
+    return undefined
+  }
+  const groups = compression.length === 1 ? left : [...left, ...Array.from({ length: zeroCount }, () => "0"), ...right]
+  if (groups.length !== 8 || groups.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) {
+    return undefined
+  }
+  let result = 0n
+  for (const group of groups) {
+    result = result * 65_536n + BigInt(`0x${group}`)
+  }
+  return result
+}
+
+function isNonPublicIpv4(value: number): boolean {
+  return nonPublicIpv4Ranges.some((range) => isInIpv4Range(value, range))
+}
+
+function isNonPublicIpv6(value: bigint): boolean {
+  if (isInIpv6Range(value, ipv4MappedIpv6)) {
+    return isNonPublicIpv4(Number(value % 4_294_967_296n))
+  }
+  return !isInIpv6Range(value, globalUnicastIpv6) || nonPublicIpv6Ranges.some((range) => isInIpv6Range(value, range))
+}
+
+function isInIpv4Range(value: number, range: Ipv4Range): boolean {
+  const divisor = 2 ** (32 - range.prefixLength)
+  return Math.floor(value / divisor) === Math.floor(range.network / divisor)
+}
+
+function isInIpv6Range(value: bigint, range: Ipv6Range): boolean {
+  const divisor = 2n ** BigInt(128 - range.prefixLength)
+  return value / divisor === range.network / divisor
 }
 
 export function isPublicWebhookAddress(address: string): boolean {
   const family = isIP(address)
   if (family === 4) {
-    return !isPrivateIpv4(address)
+    const value = ipv4Value(address)
+    return value !== undefined && !isNonPublicIpv4(value)
   }
   if (family === 6) {
-    return !isPrivateIpv6(address)
+    const value = ipv6Value(address)
+    return value !== undefined && !isNonPublicIpv6(value)
   }
   return false
 }
@@ -102,8 +202,11 @@ export class ApprovedWebhookDestination {
     } catch {
       throw new UnsafeWebhookUrlError("Webhook URL must be absolute.")
     }
-    if (url.protocol !== "https:" || url.username.length > 0 || url.password.length > 0 || url.port === "443") {
-      throw new UnsafeWebhookUrlError("Webhook URL must be credential-free HTTPS without an explicit default port.")
+    if (url.protocol !== "https:" || url.username.length > 0 || url.password.length > 0) {
+      throw new UnsafeWebhookUrlError("Webhook URL must be credential-free HTTPS.")
+    }
+    if (url.port === "0") {
+      throw new UnsafeWebhookUrlError("Webhook URL port must be from 1 through 65535.")
     }
 
     const addresses = await resolve(url.hostname)
