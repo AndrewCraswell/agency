@@ -1,4 +1,5 @@
 import type { ReactElement } from "react"
+import { cadModels } from "./cad-models.js"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
 import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
@@ -107,6 +108,7 @@ function MinimalScoringPrototype(): ReactElement {
         pcbX={18}
         pcbY={0}
         pcbRotation={90}
+        cadModel={cadModels.pinSocket1x22}
       />
       <chip
         name="U_CONTROLLER_MODULE"
@@ -116,18 +118,7 @@ function MinimalScoringPrototype(): ReactElement {
         obstructsWithinBounds={false}
         pcbX={controllerSocket.center.pcbX}
         pcbY={controllerSocket.center.pcbY}
-        cadModel={{
-          jscad: {
-            type: "colorize",
-            color: [0.06, 0.24, 0.14, 1],
-            shape: {
-              type: "cuboid",
-              size: [controllerSocket.outlineWidthMm, controllerSocket.outlineHeightMm, 1.6],
-              center: [0, 0, 0.8]
-            }
-          },
-          zOffsetFromSurface: "2.5mm"
-        }}
+        cadModel={cadModels.controllerModule}
       />
       <pinheader
         name="J_CONTROLLER_RIGHT"
@@ -136,6 +127,7 @@ function MinimalScoringPrototype(): ReactElement {
         pcbX={18 + controllerSocket.rowSpacingMm}
         pcbY={0}
         pcbRotation={90}
+        cadModel={cadModels.pinSocket1x22}
       />
 
       <pinheader
@@ -144,6 +136,7 @@ function MinimalScoringPrototype(): ReactElement {
         pinLabels={[...prototypeInterfaces.weaponLeft]}
         pcbX={-68}
         pcbY={-15}
+        cadModel={cadModels.pinHeader1x03}
       />
       <pinheader
         name="J_WEAPON_RIGHT"
@@ -151,14 +144,23 @@ function MinimalScoringPrototype(): ReactElement {
         pinLabels={[...prototypeInterfaces.weaponRight]}
         pcbX={-68}
         pcbY={0}
+        cadModel={cadModels.pinHeader1x03}
       />
-      <pinheader name="J_PISTE" pinCount={1} pinLabels={[...prototypeInterfaces.piste]} pcbX={-68} pcbY={15} />
+      <pinheader
+        name="J_PISTE"
+        pinCount={1}
+        pinLabels={[...prototypeInterfaces.piste]}
+        pcbX={-68}
+        pcbY={15}
+        cadModel={cadModels.pinHeader1x01}
+      />
       <pinheader
         name="J_POWER_INPUT"
         pinCount={2}
         pinLabels={[...prototypeInterfaces.powerInput]}
         pcbX={-55}
         pcbY={40}
+        cadModel={cadModels.pinHeader1x02}
       />
       <EthernetModuleFootprint pcbX={-20} pcbY={-32} />
       <resistor
@@ -169,6 +171,7 @@ function MinimalScoringPrototype(): ReactElement {
         footprint="0603"
         pcbX={-5}
         pcbY={-12}
+        cadModel={cadModels.resistor0603}
       />
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
       <PrototypePeripherals />

@@ -1,4 +1,5 @@
 import { Fragment, type ReactElement } from "react"
+import { cadModels } from "./cad-models.js"
 
 /**
  * WIZ850io carrier pin map from the manufacturer's J1/J2 pin tables.
@@ -69,14 +70,7 @@ export function EthernetModuleFootprint({
       pcbY={pcbY}
       pcbRotation={pcbRotation}
       pcbPositionMode={pcbPositionMode}
-      cadModel={{
-        jscad: {
-          type: "colorize",
-          color: [0.05, 0.3, 0.18, 1],
-          shape: { type: "cuboid", size: [23, 25, 1.6], center: [0, 0, 0.8] }
-        },
-        zOffsetFromSurface: "2.5mm"
-      }}
+      cadModel={cadModels.ethernetModule}
     />
   )
 }

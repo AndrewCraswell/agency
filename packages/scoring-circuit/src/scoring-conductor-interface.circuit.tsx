@@ -1,4 +1,5 @@
 import { Fragment, type ReactElement } from "react"
+import { cadModels } from "./cad-models.js"
 
 export const scoringConductorChannels = [
   { conductor: "LEFT_A", driver: "DRIVE_LEFT_A", resistanceOhms: 33 },
@@ -29,6 +30,7 @@ export function ScoringConductorInterface({
             footprint="0805"
             pcbX={0}
             pcbY={-18 + index * 6}
+            cadModel={cadModels.resistor0805}
           />
           <trace from={`net.${channel.driver}`} to={`R_${channel.conductor}_DRIVE.pin1`} />
           <trace from={`R_${channel.conductor}_DRIVE.pin2`} to={`net.${channel.conductor}`} />
@@ -42,6 +44,7 @@ export function ScoringConductorInterface({
                 footprint="0805"
                 pcbX={10}
                 pcbY={-18 + index * 6}
+                cadModel={cadModels.resistor0805}
               />
               <trace from={`net.${channel.conductor}`} to={`R_${channel.conductor}_SENSE.pin1`} />
               <trace from={`R_${channel.conductor}_SENSE.pin2`} to={`net.${channel.sense}`} />

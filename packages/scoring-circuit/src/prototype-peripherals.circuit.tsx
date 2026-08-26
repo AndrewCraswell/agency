@@ -1,4 +1,5 @@
 import { Fragment, type ReactElement } from "react"
+import { cadModels } from "./cad-models.js"
 
 const irReceiverFootprint = (
   <footprint name="TSOP38438_INLINE_FOOTPRINT" originalLayer="top">
@@ -33,13 +34,7 @@ export function PrototypePeripherals(): ReactElement {
         pcbX={67}
         pcbY={36}
         pcbRotation={180}
-        cadModel={{
-          jscad: {
-            type: "colorize",
-            color: [0.08, 0.08, 0.08, 1],
-            shape: { type: "cuboid", size: [7, 4.8, 5], center: [0, 0, 2.5] }
-          }
-        }}
+        cadModel={cadModels.irReceiver}
       />
       <resistor
         name="R_IR_SUPPLY"
@@ -49,6 +44,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0603"
         pcbX={58}
         pcbY={36}
+        cadModel={cadModels.resistor0603}
       />
       <capacitor
         name="C_IR_SUPPLY"
@@ -57,6 +53,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0603"
         pcbX={58}
         pcbY={32}
+        cadModel={cadModels.capacitor0603}
       />
       <resistor
         name="R_IR_PULLUP"
@@ -66,9 +63,17 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0603"
         pcbX={52}
         pcbY={36}
+        cadModel={cadModels.resistor0603}
       />
 
-      <pinheader name="J_DISPLAY" pinCount={3} pinLabels={["V5", "DISPLAY_DATA", "APP_GND"]} pcbX={67} pcbY={8} />
+      <pinheader
+        name="J_DISPLAY"
+        pinCount={3}
+        pinLabels={["V5", "DISPLAY_DATA", "APP_GND"]}
+        pcbX={67}
+        pcbY={8}
+        cadModel={cadModels.pinHeader1x03}
+      />
       <resistor
         name="R_DISPLAY_DATA"
         manufacturerPartNumber="RC0805FR-07330RL"
@@ -77,9 +82,17 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0805"
         pcbX={56}
         pcbY={8}
+        cadModel={cadModels.resistor0805}
       />
 
-      <pinheader name="J_BUZZER" pinCount={2} pinLabels={["V5", "BUZZER_SWITCHED_GND"]} pcbX={67} pcbY={-12} />
+      <pinheader
+        name="J_BUZZER"
+        pinCount={2}
+        pinLabels={["V5", "BUZZER_SWITCHED_GND"]}
+        pcbX={67}
+        pcbY={-12}
+        cadModel={cadModels.pinHeader1x02}
+      />
       <chip
         name="Q_BUZZER"
         manufacturerPartNumber="BSS138-7-F"
@@ -87,6 +100,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="sot23"
         pcbX={55}
         pcbY={-12}
+        cadModel={cadModels.sot23}
       />
       <resistor
         name="R_BUZZER_GATE"
@@ -96,6 +110,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0603"
         pcbX={47}
         pcbY={-10}
+        cadModel={cadModels.resistor0603}
       />
       <resistor
         name="R_BUZZER_GATE_PULLDOWN"
@@ -105,6 +120,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0603"
         pcbX={47}
         pcbY={-15}
+        cadModel={cadModels.resistor0603}
       />
 
       <capacitor
@@ -114,6 +130,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0805"
         pcbX={-48}
         pcbY={36}
+        cadModel={cadModels.capacitor0805}
       />
       <capacitor
         name="C_V5_BYPASS"
@@ -122,6 +139,7 @@ export function PrototypePeripherals(): ReactElement {
         footprint="0603"
         pcbX={-43}
         pcbY={36}
+        cadModel={cadModels.capacitor0603}
       />
 
       <trace from="net.APP_3V3" to="R_IR_SUPPLY.pin1" />
