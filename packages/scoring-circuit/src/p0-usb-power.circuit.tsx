@@ -22,7 +22,7 @@ import {
  * manufacturer footprints remain explicitly non-placeable through their
  * existing project components or the footprint adapter.
  */
-export function P0UsbPower(): ReactElement {
+function P0UsbPower(): ReactElement {
   return (
     <group name="P0_USB_POWER">
       <Bp033UsbCProjectFootprint name="J_USB_C" pcbX={-62} pcbY={0} />

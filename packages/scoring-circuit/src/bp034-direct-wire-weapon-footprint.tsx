@@ -174,7 +174,7 @@ export const bp034DirectWireWeaponFootprint = {
     perSide: sideCourtyards
   },
   constraints: {
-    projectMinimumFinishedHoleMm: pcbFabricationContract.designRules.minimumFinishedHoleMm,
+    projectMinimumDrillMm: pcbFabricationContract.designRules.minimumViaDrillMm,
     projectMinimumComponentAnnularRingMm: pcbFabricationContract.designRules.minimumComponentAnnularRingMm,
     projectMinimumSolderMaskBridgeMm: pcbFabricationContract.designRules.minimumSoldermaskBridgeMm,
     projectMountingHoleCopperKeepoutMm: pcbFabricationContract.designRules.mountingHoleCopperKeepoutMm,
@@ -353,5 +353,3 @@ export function Bp034DirectWireWeaponFootprint({
 }
 
 validateBp034DirectWireWeaponFootprint()
-
-export default Bp034DirectWireWeaponFootprint

@@ -497,5 +497,3 @@ export function Bp033UsbCProjectFootprint({
     />
   )
 }
-
-export default Bp033UsbCProjectFootprint

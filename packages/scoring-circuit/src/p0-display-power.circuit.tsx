@@ -216,5 +216,3 @@ export function P0DisplayPowerCircuit(): ReactElement {
     </board>
   )
 }
-
-export default P0DisplayPowerCircuit

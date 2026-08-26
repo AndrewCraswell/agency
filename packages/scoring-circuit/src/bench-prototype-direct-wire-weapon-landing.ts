@@ -8,16 +8,18 @@ import {
   validateBenchPrototypeWeaponPanelHarness
 } from "./bench-prototype-connector-preorder.js"
 import { benchPrototypeContract, validateBenchPrototypeContract } from "./bench-prototype-contract.js"
-import {
-  benchPrototypeFixtureHarness,
-  benchPrototypeContinuityThresholds,
-  validateBenchPrototypeFixtureHarness
-} from "./bench-prototype-fixture-harness.js"
 import { weaponInputTopology } from "./weapon-input-topology.js"
 
 type DataRecord = Record<PropertyKey, unknown>
 type WeaponSide = "left" | "right"
 type WeaponConductor = "A" | "B" | "C"
+
+const directWireContinuityThresholds = {
+  maxEndToEndResistanceOhms: 2,
+  maximumLeadCompensationOhms: 0.2,
+  minimumIsolationResistanceOhms: 10_000_000,
+  isolationTestVoltageV: 5
+} as const
 
 function isPlainRecord(value: unknown): value is DataRecord {
   return (
@@ -205,10 +207,10 @@ export const benchPrototypeDirectWireWeaponLanding = deepFreeze({
       "Inspect insulation, labels, clamp engagement, and separation from any conductive panel hardware before continuity testing."
   },
   evidenceThresholds: {
-    maximumEndToEndResistanceOhms: benchPrototypeContinuityThresholds.maxEndToEndResistanceOhms,
-    maximumCompensatedLeadResidualOhms: benchPrototypeContinuityThresholds.maximumLeadCompensationOhms,
-    minimumIsolationResistanceOhms: benchPrototypeContinuityThresholds.minimumIsolationResistanceOhms,
-    isolationTestVoltageV: benchPrototypeContinuityThresholds.isolationTestVoltageV
+    maximumEndToEndResistanceOhms: directWireContinuityThresholds.maxEndToEndResistanceOhms,
+    maximumCompensatedLeadResidualOhms: directWireContinuityThresholds.maximumLeadCompensationOhms,
+    minimumIsolationResistanceOhms: directWireContinuityThresholds.minimumIsolationResistanceOhms,
+    isolationTestVoltageV: directWireContinuityThresholds.isolationTestVoltageV
   },
   negativeTestIds,
   productionSocket: {
@@ -434,7 +436,6 @@ export function validateBenchPrototypeDirectWireWeaponLanding(
   value: unknown = benchPrototypeDirectWireWeaponLanding
 ): true {
   validateBenchPrototypeContract(benchPrototypeContract)
-  validateBenchPrototypeFixtureHarness(benchPrototypeFixtureHarness)
   validateBenchPrototypeWeaponPanelHarness(benchPrototypeWeaponPanelHarness)
   if (!sameCanonicalData(value, benchPrototypeDirectWireWeaponLanding)) {
     throw new RangeError(

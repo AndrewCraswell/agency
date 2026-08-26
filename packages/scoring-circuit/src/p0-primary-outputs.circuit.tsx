@@ -238,5 +238,3 @@ export function P0PrimaryOutputsCircuit(): ReactElement {
     </board>
   )
 }
-
-export default P0PrimaryOutputsCircuit

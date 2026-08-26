@@ -42,5 +42,3 @@ export function P0PisteLanding({ pcbX, pcbY }: { readonly pcbX: number; readonly
     />
   )
 }
-
-export default P0PisteLanding

@@ -5,7 +5,8 @@ import {
   validateBenchPrototypeDisplayPowerBranch
 } from "./bench-prototype-display-power-branch.js"
 import { p0DisplayPowerFootprintMetadata } from "./p0-display-power-footprints.js"
-import P0DisplayPowerCircuit, {
+import {
+  P0DisplayPowerCircuit,
   p0DisplayPowerCircuitContract,
   validateP0DisplayPowerCircuitContract
 } from "./p0-display-power.circuit.js"

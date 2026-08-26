@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import P0Esp32SupportCircuit from "./p0-esp32-support.circuit.js"
+import { P0Esp32SupportCircuit } from "./p0-esp32-support.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 function renderCircuit() {

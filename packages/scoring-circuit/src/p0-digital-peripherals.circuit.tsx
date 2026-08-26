@@ -345,5 +345,3 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
     </group>
   )
 }
-
-export default P0DigitalPeripherals

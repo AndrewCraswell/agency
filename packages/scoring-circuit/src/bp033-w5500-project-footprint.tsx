@@ -287,5 +287,3 @@ export function Bp033W5500ProjectFootprint({
     />
   )
 }
-
-export default Bp033W5500ProjectFootprint

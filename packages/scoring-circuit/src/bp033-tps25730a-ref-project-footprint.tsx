@@ -164,5 +164,3 @@ export function Bp033Tps25730aRefProjectFootprint({
     />
   )
 }
-
-export default Bp033Tps25730aRefProjectFootprint

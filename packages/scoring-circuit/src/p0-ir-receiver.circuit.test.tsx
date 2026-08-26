@@ -1,7 +1,7 @@
 import { createElement } from "react"
 import { describe, expect, it } from "vitest"
 import { p0IrReceiverFootprintMetadata } from "./p0-ir-receiver-footprints.js"
-import P0IrReceiver from "./p0-ir-receiver.circuit.js"
+import { P0IrReceiver } from "./p0-ir-receiver.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 function renderCircuit() {

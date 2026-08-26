@@ -6,6 +6,7 @@
   "tags": ["-vendored"],
   "workspaces": {
     "apps/scoring": {
+      "entry": ["simulator/src/**/*.test.{ts,tsx}"],
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "apps/legislation": {
@@ -62,7 +63,7 @@
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "packages/scoring-circuit": {
-      "entry": ["src/index.circuit.tsx"],
+      "entry": ["src/index.circuit.tsx", "src/{clean-sheet-board-architecture,index.circuit,p0-*}.test.{ts,tsx}"],
       "ignoreDependencies": ["@repo/oxlint-config", "@tscircuit/soup-util"]
     },
     "packages/shopify-emails": {

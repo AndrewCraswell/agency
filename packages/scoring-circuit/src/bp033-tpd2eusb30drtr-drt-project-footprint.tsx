@@ -362,5 +362,3 @@ export function Bp033Tpd2eusb30drtrDrtProjectFootprint({
 }
 
 validateBp033Tpd2eusb30drtrDrtProjectFootprint()
-
-export default Bp033Tpd2eusb30drtrDrtProjectFootprint

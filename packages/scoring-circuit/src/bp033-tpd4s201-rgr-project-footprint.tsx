@@ -682,5 +682,3 @@ export function validateBp033Tpd4s201RgrProjectFootprintGeometry(
   }
   return errors
 }
-
-export default Bp033Tpd4s201RgrProjectFootprint

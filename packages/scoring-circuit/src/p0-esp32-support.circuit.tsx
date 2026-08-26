@@ -201,5 +201,3 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
     </group>
   )
 }
-
-export default P0Esp32SupportCircuit

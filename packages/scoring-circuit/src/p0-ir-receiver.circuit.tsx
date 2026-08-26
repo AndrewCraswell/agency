@@ -61,5 +61,3 @@ export function P0IrReceiver({ pcbX, pcbY }: { readonly pcbX: number; readonly p
     </group>
   )
 }
-
-export default P0IrReceiver

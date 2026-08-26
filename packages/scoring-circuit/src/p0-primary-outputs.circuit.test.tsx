@@ -1,7 +1,7 @@
 import { createElement } from "react"
 import { describe, expect, it } from "vitest"
 import { p0PrimaryOutputsFootprintMetadata } from "./p0-primary-outputs-footprints.js"
-import P0PrimaryOutputsCircuit, { p0PrimaryOutputsCircuitContract } from "./p0-primary-outputs.circuit.js"
+import { P0PrimaryOutputsCircuit, p0PrimaryOutputsCircuitContract } from "./p0-primary-outputs.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 function renderCircuit() {

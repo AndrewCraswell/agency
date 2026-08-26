@@ -211,7 +211,7 @@ export type P0Esp32Wroom1FootprintProps = {
 }
 
 /** Review-only WROOM-1 renderer with the official land pattern and antenna keepout. */
-export function P0Esp32Wroom1Footprint({ pcbX, pcbY }: P0Esp32Wroom1FootprintProps): ReactElement {
+function P0Esp32Wroom1Footprint({ pcbX, pcbY }: P0Esp32Wroom1FootprintProps): ReactElement {
   return (
     <chip
       name="U_APP"

@@ -518,8 +518,3 @@ export function Bp033Tvs2200ProjectFootprint({
     />
   )
 }
-
-export const bp033Tvs2200FootprintGeometry = bp033Tvs2200ProjectFootprintGeometry
-export const Bp033Tvs2200DrvrProjectFootprint = Bp033Tvs2200ProjectFootprint
-
-export default Bp033Tvs2200ProjectFootprint

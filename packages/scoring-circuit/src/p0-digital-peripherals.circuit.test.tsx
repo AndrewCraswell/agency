@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import P0DigitalPeripherals from "./p0-digital-peripherals.circuit.js"
+import { P0DigitalPeripherals } from "./p0-digital-peripherals.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 type CircuitJson = ReturnType<typeof renderTestCircuit>
