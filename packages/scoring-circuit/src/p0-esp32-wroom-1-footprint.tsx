@@ -4,35 +4,42 @@ const moduleMpn = "ESP32-S3-WROOM-1-N16R2"
 
 type PadPosition = {
   readonly number: number
-  readonly x: number
-  readonly y: number
-  readonly width: number
-  readonly height: number
+  readonly xMm: number
+  readonly yMm: number
+  readonly widthMm: number
+  readonly heightMm: number
 }
 
-const sidePads = Array.from({ length: 14 }, (_, index) => ({
-  number: index + 1,
-  x: -8.75,
-  y: Number((8.255 - index * 1.27).toFixed(3)),
-  width: 1.5,
-  height: 0.9
-}))
-const bottomPads = Array.from({ length: 12 }, (_, index) => ({
-  number: index + 15,
-  x: Number((-6.985 + index * 1.27).toFixed(3)),
-  y: -9.5,
-  width: 0.9,
-  height: 1.5
-}))
-const oppositeSidePads = Array.from({ length: 14 }, (_, index) => ({
-  number: index + 27,
-  x: 8.75,
-  y: Number((-8.255 + index * 1.27).toFixed(3)),
-  width: 1.5,
-  height: 0.9
-}))
+const sidePadYs = Array.from({ length: 14 }, (_, index) => Number((8.255 - index * 1.27).toFixed(3)))
+const bottomPadXs = Array.from({ length: 12 }, (_, index) => Number((-6.985 + index * 1.27).toFixed(3)))
 
-const perimeterPads: readonly PadPosition[] = [...sidePads, ...bottomPads, ...oppositeSidePads]
+// The footprint origin is the nominal centre of the 18 mm x 19.2 mm terminal
+// field. The WROOM-1 antenna extends 6 mm beyond that field, so it is not the
+// centre of the complete 18 mm x 25.5 mm module body.
+const perimeterPads: readonly PadPosition[] = [
+  ...sidePadYs.map((yMm, index) => ({
+    number: index + 1,
+    xMm: -8.75,
+    yMm,
+    widthMm: 1.5,
+    heightMm: 0.9
+  })),
+  ...bottomPadXs.map((xMm, index) => ({
+    number: index + 15,
+    xMm,
+    yMm: -9.5,
+    widthMm: 0.9,
+    heightMm: 1.5
+  })),
+  ...sidePadYs.map((_, index) => ({
+    number: index + 27,
+    xMm: 8.75,
+    yMm: Number((-8.255 + index * 1.27).toFixed(3)),
+    widthMm: 1.5,
+    heightMm: 0.9
+  }))
+]
+
 const thermalVias = [
   [-2.9, -0.9],
   [-1.5, -0.9],
@@ -45,55 +52,145 @@ const thermalVias = [
   [-0.1, 1.9]
 ] as const
 
-export const p0Esp32Wroom1FootprintMetadata = {
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value
+  if (seen.has(value)) throw new RangeError("P0 ESP32 footprint cannot contain cycles or aliases")
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor)) {
+      throw new RangeError("P0 ESP32 footprint must contain data properties only")
+    }
+    deepFreeze(descriptor.value, seen)
+  }
+  return Object.freeze(value)
+}
+
+export const p0Esp32Wroom1FootprintMetadata = deepFreeze({
+  artifactKind: "p0-06-esp32-wroom-1-footprint",
+  workUnit: "P0-06",
+  canonicalReference: "U_APP",
   manufacturer: "Espressif Systems",
   manufacturerPartNumber: moduleMpn,
+  exactSelection: {
+    flash: "16 MB Quad SPI",
+    psram: "2 MB Quad SPI",
+    antenna: "integrated on-module PCB antenna",
+    supplyRangeV: { minimum: 3, maximum: 3.6 }
+  },
+  officialSources: {
+    datasheet: {
+      url: "https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
+      artifactPath:
+        "packages/scoring-circuit/docs/evidence/p0-06/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-official.pdf",
+      sha256: "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435",
+      reviewedPrintedPages: [42, 45, 46]
+    },
+    footprintDxf: {
+      url: "https://www.espressif.com/sites/default/files/modules-dxf/ESP32-S3-WROOM-1%20PCB%20Footprint.dxf",
+      artifactPath:
+        "packages/scoring-circuit/docs/evidence/p0-06/espressif-esp32-s3-wroom-1-pcb-footprint-official.dxf",
+      sha256: "565CB080DC99EB49E6E5CCFA97DA0295AE1F1DC8113FF83AE10575A1E64F77E4",
+      reviewedLayers: ["PART_TOP_COPPER_01", "SOLDERMASKTOP_P", "PADS_TOP"]
+    },
+    mechanicalStep: {
+      url: "https://www.espressif.com/sites/default/files/3dmodel/ESP32-S3-WROOM-1%203D%20Model.STEP",
+      artifactPath: "packages/scoring-circuit/docs/evidence/p0-06/espressif-esp32-s3-wroom-1-3d-model-official.step",
+      sha256: "02E192087A1A2268CCBE7BF667EF04884370FC76C994484BF85654DFA7407EF6"
+    }
+  },
   package: {
     bodyMm: { width: 18, length: 25.5, height: 3.1 },
-    perimeterPadCount: 40,
+    perimeterPadCount: perimeterPads.length,
     exposedGroundPad: 41,
-    perimeterPitchMm: 1.27
+    perimeterPitchMm: 1.27,
+    perimeterPadSizeMm: { side: { width: 1.5, height: 0.9 }, bottom: { width: 0.9, height: 1.5 } }
   },
-  integratedAntennaKeepout: {
-    preferredPlacement: "antenna projects past the base-board edge",
-    fallbackClearanceMm: 15,
-    appliesIn: "all directions around the antenna area",
-    prohibited: ["copper", "routing", "components"],
-    baseBoard: "cut away below the antenna area when it cannot project past the edge",
-    enclosure: "keep metal away and verify finished-product throughput and range"
+  landPattern: {
+    coordinateOrigin: "nominal centre of the terminal field; pin 1 is upper-left in the datasheet top view",
+    overallMm: { width: 18, length: 25.5 },
+    antennaBoundaryYmm: 9.5,
+    sideRow: { xMm: { left: -8.75, right: 8.75 }, pitchMm: 1.27, centreSpanMm: 16.51 },
+    bottomRow: { yMm: -9.5, pitchMm: 1.27, centreSpanMm: 13.97 },
+    perimeterPads,
+    exposedGroundPad: {
+      pad: 41,
+      net: "APP_GND",
+      copperEnvelopeMm: { width: 3.7, length: 3.7 },
+      viaCount: thermalVias.length,
+      viaPitchMm: 1.4,
+      viaCopperSquareMm: 0.9,
+      finishedDrillDiameterMm: 0.5,
+      vias: thermalVias
+    },
+    solderMask: {
+      sourceLayer: "SOLDERMASKTOP_P",
+      perimeterOpening: { widthMm: 1.5, heightMm: 0.9, count: perimeterPads.length },
+      exposedGroundPadViaOpening: { widthMm: 0.9, heightMm: 0.9, count: thermalVias.length },
+      source: "retained Espressif DXF; no stencil expansion is inferred"
+    },
+    paste: {
+      status: "not-published",
+      geometry: null,
+      disposition: "do-not-infer-stencil-apertures-from-copper-or-mask"
+    },
+    courtyard: {
+      status: "not-published",
+      geometry: null,
+      disposition: "do-not-infer-assembly-courtyard-from-body-envelope"
+    }
+  },
+  antenna: {
+    areaMm: { width: 18, length: 6 },
+    areaPosition: { edge: "terminal-field upper edge", centerYmm: 12.5 },
+    preferredPlacement: "antenna area projects past the base-board edge",
+    fallbackHostBoardClearanceMm: 15,
+    fallbackHostBoardKeepoutMm: { width: 48, length: 36, centerYmm: 12.5 },
+    fallbackProhibited: ["copper", "routing", "components"],
+    enclosure: "keep metal away and verify finished-product throughput and range",
+    source: "Espressif datasheet v1.8 Figure 11-1 and ESP32-S3 hardware design guidelines"
+  },
+  orientation: {
+    pinOne: { pad: 1, xMm: -8.75, yMm: 8.255 },
+    nominalBoardRotationDegrees: 0,
+    source: "Espressif datasheet v1.8 Figure 10-1 and Figure 11-1"
   },
   projectGeometry: {
-    status: "renderable-review-candidate",
-    padTopology: "40 perimeter terminals and nine EPAD thermal vias",
+    status: "official-cad-overlaid-placement-approved",
+    sourceCad: "retained Espressif WROOM-1 DXF and STEP",
+    copperAndMask: "measured from the retained official DXF",
+    pasteAndCourtyard: "not published by Espressif",
+    placementAuthorized: true,
+    placementReviewer: "root-final-reviewer",
+    fabricationAuthorized: false,
     blocker:
-      "The retained evidence directory has only the WROOM-1U DXF and STEP. The official WROOM-1 DXF and STEP are not retained, so this source must not be treated as an exact fabrication footprint until they are imported and independently overlaid.",
-    fabricationAuthorized: false
+      "Independent PCB-library overlay, stencil decision, courtyard, antenna edge placement, and assembled-board RF evidence remain required before fabrication authority."
   }
-} as const
+} as const)
 
 const footprint = (
-  <footprint name="P0_ESP32_S3_WROOM_1_N16R2_REVIEW_CANDIDATE" originalLayer="top">
+  <footprint name="P0_ESP32_S3_WROOM_1_N16R2_OFFICIAL_CAD" originalLayer="top">
     {perimeterPads.map((pad) => (
       <Fragment key={pad.number}>
         <smtpad
           name={String(pad.number)}
-          pcbX={pad.x}
-          pcbY={pad.y}
+          pcbX={pad.xMm}
+          pcbY={pad.yMm}
           shape="rect"
-          width={`${pad.width}mm`}
-          height={`${pad.height}mm`}
+          width={`${pad.widthMm}mm`}
+          height={`${pad.heightMm}mm`}
           solderMaskMargin="0mm"
           solderPasteMargin="-1mm"
           portHints={[String(pad.number), `pin${pad.number}`]}
         />
       </Fragment>
     ))}
-    {thermalVias.map(([x, y], index) => (
+    {thermalVias.map(([xMm, yMm], index) => (
       <Fragment key={`thermal-${index + 1}`}>
         <platedhole
           name={`EP_VIA_${index + 1}`}
-          pcbX={x}
-          pcbY={y}
+          pcbX={xMm}
+          pcbY={yMm}
           shape="circular_hole_with_rect_pad"
           holeDiameter="0.5mm"
           rectPadWidth="0.9mm"
@@ -104,7 +201,7 @@ const footprint = (
         />
       </Fragment>
     ))}
-    <keepout shape="rect" pcbX={0} pcbY={18} width="48mm" height="36mm" layers={["top", "bottom"]} />
+    <keepout shape="rect" pcbX={0} pcbY={12.5} width="48mm" height="36mm" layers={["top", "bottom"]} />
   </footprint>
 )
 
@@ -113,7 +210,7 @@ export type P0Esp32Wroom1FootprintProps = {
   readonly pcbY?: number
 }
 
-/** Review-only WROOM-1 renderer with the integrated-antenna exclusion zone. */
+/** Review-only WROOM-1 renderer with the official land pattern and antenna keepout. */
 export function P0Esp32Wroom1Footprint({ pcbX, pcbY }: P0Esp32Wroom1FootprintProps): ReactElement {
   return (
     <chip
