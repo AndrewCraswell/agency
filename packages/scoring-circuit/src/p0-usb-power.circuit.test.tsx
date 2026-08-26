@@ -19,14 +19,14 @@ describe("P0 USB-C power input", () => {
       if (element.type === "source_component") components.set(element.name, element)
     }
 
-    expect(components.get("J_BP033_USB_C")).toMatchObject({ manufacturer_part_number: "10177070-00011LF" })
-    expect(components.get("U_BP033_TPD4S201TRGRRQ1")).toMatchObject({
+    expect(components.get("J_USB_C")).toMatchObject({ manufacturer_part_number: "10177070-00011LF" })
+    expect(components.get("U_USB_PORT_PROTECT")).toMatchObject({
       manufacturer_part_number: "TPD4S201TRGRRQ1"
     })
-    expect(components.get("U_BP033_TPD2EUSB30DRTR")).toMatchObject({ manufacturer_part_number: "TPD2EUSB30DRTR" })
-    expect(components.get("D_BP033_VBUS_TVS")).toMatchObject({ manufacturer_part_number: "TVS2200DRVR" })
-    expect(components.get("U_BP033_USB_PD")).toMatchObject({ manufacturer_part_number: "TPS25730ADREFR" })
-    expect(components.get("BP033_TPS25947_REVIEW_ONLY")).toMatchObject({ manufacturer_part_number: "TPS259474ARPWR" })
+    expect(components.get("U_USB_DATA_PROTECT")).toMatchObject({ manufacturer_part_number: "TPD2EUSB30DRTR" })
+    expect(components.get("D_USB_PD_VBUS_TVS")).toMatchObject({ manufacturer_part_number: "TVS2200DRVR" })
+    expect(components.get("U_USB_PD")).toMatchObject({ manufacturer_part_number: "TPS25730ADREFR" })
+    expect(components.get("U_EFUSE")).toMatchObject({ manufacturer_part_number: "TPS259474ARPWR" })
     expect(components.get("U_V5_BUCK")).toMatchObject({ manufacturer_part_number: "TPS56A37RPAR" })
     expect(components.get("U_APP_REGULATOR")).toMatchObject({ manufacturer_part_number: "LMR43620MSC3RPERQ1" })
     expect(render().filter((element) => element.type.endsWith("_error"))).toEqual([])
@@ -35,18 +35,19 @@ describe("P0 USB-C power input", () => {
   it("keeps the named protected rails, diagnostic links, and probes connected", () => {
     expect(traceNames()).toEqual(
       expect.arrayContaining([
-        "U_BP033_USB_PD.20 to net.PD_PPHV_20V",
-        "BP033_TPS25947_REVIEW_ONLY.IN to net.PD_PPHV_20V",
-        "BP033_TPS25947_REVIEW_ONLY.pin1 to R_EFUSE_UVLO_UP.pin2",
-        "BP033_TPS25947_REVIEW_ONLY.OUT to J_LINK_INPUT.V20_TO_V5_BUCK",
-        "J_LINK_INPUT.V20_BUCK_INPUT to U_V5_BUCK.VIN",
+        "U_USB_PD.20 to net.PD_PPHV_20V",
+        "U_EFUSE.IN to net.PD_PPHV_20V",
+        "U_EFUSE.pin1 to R_EFUSE_UVLO_UP.pin2",
+        "U_EFUSE.OUT to TP_PD_EFUSE_OUT.V20_TO_V5_BUCK",
+        "U_EFUSE.OUT to U_V5_BUCK.VIN",
         "L_V5_BUCK.V5 to net.V5",
-        "J_LINK_APPLICATION.V5_APPLICATION to U_APP_REGULATOR.VIN",
+        "U_APP_REGULATOR.VIN to net.V5",
         "L_APP_REGULATOR.APP_3V3 to net.APP_3V3",
         "TP_V5.V5 to net.V5",
         "TP_APP_3V3.APP_3V3 to net.APP_3V3",
-        "J_LINK_SCORING.V5_ANALOG to net.V5_ANALOG",
-        "J_LINK_SCORING.V5_ANALOG to TP_SCORING_REFERENCE.V5_ANALOG"
+        "TP_SCORING_REFERENCE.V5_ANALOG to net.V5",
+        "R_USB_DP_SERIES.pin2 to net.USB_DP",
+        "R_USB_DN_SERIES.pin2 to net.USB_DN"
       ])
     )
   })
@@ -57,6 +58,6 @@ describe("P0 USB-C power input", () => {
     expect(names.some((name) => name.includes("U_APP_REGULATOR.PGOOD"))).toBe(false)
     expect(names.some((name) => name.includes("CHASSIS to net.APP_GND"))).toBe(false)
     expect(names.some((name) => name.includes("SCORING_ISOLATOR"))).toBe(false)
-    expect(names).toContain("J_USB2_SERVICE.CHASSIS to net.CHASSIS_SHIELD")
+    expect(names.some((name) => name.includes("J_LINK_") || name.includes("J_USB2_SERVICE"))).toBe(false)
   })
 })

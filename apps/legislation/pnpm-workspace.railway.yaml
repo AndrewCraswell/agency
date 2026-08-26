@@ -3,9 +3,13 @@ packages:
   - "packages/oxlint-config"
   - "packages/typescript-config"
 
-# Keep the install model and locked versions identical to the repository while
-# excluding unrelated application-only package extensions and workspace roots.
+# Keep the install model and lockfile-affecting configuration identical to the
+# repository while excluding unrelated workspace roots.
 nodeLinker: isolated
+packageExtensions:
+  "circuit-json@0.0.465":
+    dependencies:
+      zod: 3.25.76
 catalog:
   "@types/node": 24.13.2
   typescript: 7.0.1-rc
