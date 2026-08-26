@@ -1081,20 +1081,30 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       order by title_score desc, material_id asc
       limit ${candidateLimit}
     ),
-    section_candidate_probe as (
+    section_candidate_scores as (
       select
         ${supportingMaterialSections.materialId} as material_id,
-        ${supportingMaterialSections.id} as section_id
+        max(${sectionRank}) as section_score
       from ${supportingMaterialSections}
       ${sectionMaterialJoin}
       where ${sectionMatches} and ${sectionScope}
-      order by ${sectionRank} desc, ${supportingMaterialSections.id} asc
+      group by ${supportingMaterialSections.materialId}
+    ),
+    section_candidate_probe as (
+      select material_id
+      from section_candidate_scores
+      order by section_score desc, material_id asc
       limit ${candidateProbeLimit}
+    ),
+    section_candidate_materials as (
+      select material_id
+      from section_candidate_probe
+      limit ${candidateLimit}
     ),
     candidate_materials as (
       select material_id from title_candidates
       union
-      select material_id from section_candidate_probe
+      select material_id from section_candidate_materials
     ),
     section_ranked_candidates as (
       select
@@ -1162,13 +1172,13 @@ export function buildLexicalSupportingMaterialCandidateQuery(
     )
     select
       ranked_candidates.material_id as id,
-      ranked_candidates.lexical_score as lexical_score,
-      ranked_candidates.title_score as title_score,
-      ranked_candidates.section_score as section_score,
-      ranked_candidates.matched_section_id as matched_section_id,
-      coalesce(ranked_candidates.matched_section_id, fallback_section.id) as section_id,
+      ranked_candidates.lexical_score as "lexicalScore",
+      ranked_candidates.title_score as "titleScore",
+      ranked_candidates.section_score as "sectionScore",
+      ranked_candidates.matched_section_id as "matchedSectionId",
+      coalesce(ranked_candidates.matched_section_id, fallback_section.id) as "sectionId",
       ranked_candidates.section_snippet as snippet,
-      candidate_window.capped as candidate_window_capped
+      candidate_window.capped as "candidateWindowCapped"
     from ranked_candidates
     inner join lateral (
       select ${supportingMaterialSections.id}

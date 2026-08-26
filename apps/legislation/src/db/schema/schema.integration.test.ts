@@ -218,7 +218,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
         sourceUrl: "https://legislature.example.test/invalid"
       })
-    ).rejects.toThrow("jurisdictions_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "jurisdictions_provenance_complete_check" })
+    })
     await expect(
       database.insert(schema.legislativeSessions).values({
         classification: "regular",
@@ -233,7 +235,12 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
         sourceUrl: "http://legislature.example.test/invalid"
       })
-    ).rejects.toThrow("legislative_sessions_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: "23514",
+        constraint: "legislative_sessions_provenance_complete_check"
+      })
+    })
 
     await expect(
       applyCanonicalFoundationRecord(database, {
@@ -486,49 +493,71 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         .update(schema.people)
         .set({ ...completeProvenance, sourceUrl: null })
         .where(eq(schema.people.id, personId))
-    ).rejects.toThrow("people_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "people_provenance_complete_check" })
+    })
     await expect(
       database
         .update(schema.people)
         .set({ ...completeProvenance, sourceProvider: null })
         .where(eq(schema.people.id, personId))
-    ).rejects.toThrow("people_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "people_provenance_complete_check" })
+    })
     await expect(
       database
         .update(schema.organizations)
         .set({ ...completeProvenance, sourceUrl: null })
         .where(eq(schema.organizations.id, organizationId))
-    ).rejects.toThrow("organizations_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "organizations_provenance_complete_check" })
+    })
     await expect(
       database
         .update(schema.organizations)
         .set({ ...completeProvenance, sourceProvider: null })
         .where(eq(schema.organizations.id, organizationId))
-    ).rejects.toThrow("organizations_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "organizations_provenance_complete_check" })
+    })
     await expect(
       database
         .update(schema.legislativeTerms)
         .set({ ...completeProvenance, sourceUrl: null })
         .where(eq(schema.legislativeTerms.id, termId))
-    ).rejects.toThrow("legislative_terms_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "legislative_terms_provenance_complete_check" })
+    })
     await expect(
       database
         .update(schema.legislativeTerms)
         .set({ ...completeProvenance, sourceProvider: null })
         .where(eq(schema.legislativeTerms.id, termId))
-    ).rejects.toThrow("legislative_terms_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "legislative_terms_provenance_complete_check" })
+    })
     await expect(
       database
         .update(schema.organizationMemberships)
         .set({ ...completeProvenance, sourceUrl: null })
         .where(eq(schema.organizationMemberships.id, membershipId))
-    ).rejects.toThrow("organization_memberships_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: "23514",
+        constraint: "organization_memberships_provenance_complete_check"
+      })
+    })
     await expect(
       database
         .update(schema.organizationMemberships)
         .set({ ...completeProvenance, sourceProvider: null })
         .where(eq(schema.organizationMemberships.id, membershipId))
-    ).rejects.toThrow("organization_memberships_provenance_complete_check")
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: "23514",
+        constraint: "organization_memberships_provenance_complete_check"
+      })
+    })
   })
 
   it("records a budget handoff as deferred without advancing a generic checkpoint or retaining the lease", async () => {
@@ -1052,7 +1081,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       lexicalBillSearch(database, { jurisdictionIds: ["jurisdiction:us"], query: '"Federal data"' })
     ).resolves.toMatchObject({ items: [{ id: "bill:us:119:hr:1234" }] })
     await expect(lexicalPassageSearch(database, { query: '"data shall be open"' })).resolves.toMatchObject({
-      items: [{ billId: "bill:us:119:hr:1234", documentId }]
+      items: [{ bill: { id: "bill:us:119:hr:1234" }, document: { id: documentId } }]
     })
 
     const billRoute = embeddingRouteFor("bill")
@@ -1068,19 +1097,28 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(
       embedBills(database, billEmbeddingClient, { billId: "bill:us:119:hr:1234", rolloutId: "test" })
     ).resolves.toEqual({
+      complete: true,
+      cursor: "",
       embedded: 1,
+      scanned: 1,
       skipped: 0
     })
     await expect(
       embedDocumentSections(database, sectionEmbeddingClient, { documentId, rolloutId: "test" })
     ).resolves.toEqual({
+      complete: true,
+      cursor: "",
       embedded: 2,
+      scanned: 2,
       skipped: 0
     })
     await expect(
       embedDocumentSections(database, sectionEmbeddingClient, { documentId, rolloutId: "test" })
     ).resolves.toEqual({
+      complete: true,
+      cursor: "",
       embedded: 0,
+      scanned: 2,
       skipped: 2
     })
     await expect(semanticBillSearch(database, { embedding: billEmbedding })).resolves.toMatchObject({
@@ -1196,11 +1234,11 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       ],
       truncated: false
     })
-    await expect(
-      service.searchBillText({ billIds: ["bill:us:119:hr:1234"], query: '"data shall be open"' })
-    ).resolves.toMatchObject({
-      items: expect.arrayContaining([expect.objectContaining({ bill: { id: "bill:us:119:hr:1234" } })])
+    const billText = await service.searchBillText({
+      billIds: ["bill:us:119:hr:1234"],
+      query: '"data shall be open"'
     })
+    expect(billText.items.some((item) => item.bill.id === "bill:us:119:hr:1234")).toBe(true)
     await expect(service.getBillText({ id: "bill:us:119:hr:1234", versionCode: "ih" })).resolves.toMatchObject({
       document: { id: documentId },
       sections: expect.any(Array)
@@ -1817,7 +1855,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         sourceStartOffset: 0,
         text: "x"
       })
-    ).rejects.toThrow(/document_sections_page_range_check/)
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "document_sections_page_range_check" })
+    })
   })
 
   it("clears successful OCR metadata across every non-processed lifecycle state", async () => {
@@ -1834,7 +1874,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         .update(schema.billDocuments)
         .set({ ocrProvider: "azure-document-intelligence" })
         .where(eq(schema.billDocuments.id, documentId))
-    ).rejects.toThrow(/bill_documents_ocr_metadata_status_check/)
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "bill_documents_ocr_metadata_status_check" })
+    })
     await persistOcrDocument(database, {
       blobPath: "documents/ocr-lifecycle.pdf",
       contentType: "application/pdf",
@@ -2770,13 +2812,19 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(
       embedSupportingMaterialSections(database, embeddingClient, { materialId, rolloutId: "test" })
     ).resolves.toEqual({
+      complete: true,
+      cursor: "",
       embedded: 1,
+      scanned: 1,
       skipped: 0
     })
     await expect(
       embedSupportingMaterialSections(database, embeddingClient, { materialId, rolloutId: "test" })
     ).resolves.toEqual({
+      complete: true,
+      cursor: "",
       embedded: 0,
+      scanned: 1,
       skipped: 1
     })
 
@@ -3429,7 +3477,24 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       expect.arrayContaining([expect.objectContaining({ billType: "hr", congress: "119" })])
     )
 
-    await expect(validateCorpus(database)).resolves.toMatchObject({ criticalIssues: 0, valid: true })
+    const validation = await validateCorpus(database)
+    expect(validation).toMatchObject({
+      criticalIssues: expect.any(Number),
+      metrics: {
+        missingAmendmentEmbeddings: expect.any(Number),
+        missingBillEmbeddings: expect.any(Number),
+        missingDocumentSectionEmbeddings: expect.any(Number),
+        missingSupportingMaterialSectionEmbeddings: expect.any(Number)
+      },
+      valid: false
+    })
+    expect(validation.criticalIssues).toBeGreaterThan(0)
+    expect(
+      validation.metrics.missingAmendmentEmbeddings +
+        validation.metrics.missingBillEmbeddings +
+        validation.metrics.missingDocumentSectionEmbeddings +
+        validation.metrics.missingSupportingMaterialSectionEmbeddings
+    ).toBeGreaterThan(0)
   })
 
   it("round-trips a mixed bill-detail amendment cursor through the repository without skips or scope widening", async () => {
@@ -3479,6 +3544,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         classification: "amendment",
         documentDate: "2026-02-01",
         id: `${billId}:document:amendment:${index + 1}`,
+        ocrStatus: "not-required",
+        processingStatus: "processed",
         sourceUrl: `https://source.example.test/amendments/document/${index + 1}`,
         title: `Document ${index + 1}`
       }))

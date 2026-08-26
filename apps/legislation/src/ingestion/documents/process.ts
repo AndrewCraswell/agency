@@ -271,7 +271,7 @@ export async function markDocumentProcessingFailure(
     .set({
       ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
       ...(input.contentType === undefined ? {} : { contentType: input.contentType }),
-      ...(ocrStatus === undefined ? undefined : { ocrStatus }),
+      ocrStatus: ocrStatus ?? null,
       ocrCompletedAt: null,
       ocrPageCount: null,
       ocrProvider: null,

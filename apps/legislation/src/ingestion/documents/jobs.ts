@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, bills } from "../../db/schema/schema.js"
 import { jurisdictionId } from "../../legislation/identifiers.js"
@@ -1306,7 +1306,12 @@ export async function processPendingDocuments(
   const claimStartedAt = new Date()
   let processingSelection = inArray(billDocuments.processingStatus, ["pending", "failed"])
   if (options.documentId !== undefined) {
-    processingSelection = eq(billDocuments.id, options.documentId)
+    processingSelection = and(
+      eq(billDocuments.id, options.documentId),
+      options.force === true
+        ? ne(billDocuments.processingStatus, "processing")
+        : inArray(billDocuments.processingStatus, ["pending", "failed"])
+    )!
   } else if (options.status !== undefined) {
     processingSelection = eq(billDocuments.processingStatus, options.status)
   }

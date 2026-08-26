@@ -1577,7 +1577,7 @@ export const documentSections = legislationSchema.table(
     ),
     check(
       "document_sections_page_range_check",
-      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} > 0 and ${table.pageEnd} >= ${table.pageStart})`
+      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} is not null and ${table.pageEnd} is not null and ${table.pageStart} > 0 and ${table.pageEnd} >= ${table.pageStart})`
     ),
     check("document_sections_text_check", sql`length(${table.text}) > 0`),
     check("document_sections_hash_check", sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`),

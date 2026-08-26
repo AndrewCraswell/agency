@@ -26,6 +26,7 @@ describePostgres.sequential("PostgresWebhookReadRepository", () => {
     })
     await database.insert(schema.webhooks).values([
       {
+        createdAt: now,
         eventTypes: ["vote-added"],
         id: "webhook:organization",
         name: "Organization webhook",
@@ -38,6 +39,7 @@ describePostgres.sequential("PostgresWebhookReadRepository", () => {
         url: "https://one.example.test/hook"
       },
       {
+        createdAt: new Date("2026-08-24T10:00:00.000Z"),
         eventTypes: ["status-changed"],
         id: "webhook:organization-two",
         name: "Second organization webhook",
@@ -50,6 +52,7 @@ describePostgres.sequential("PostgresWebhookReadRepository", () => {
         url: "https://two.example.test/hook"
       },
       {
+        createdAt: new Date("2026-08-24T11:00:00.000Z"),
         eventTypes: ["status-changed"],
         id: "webhook:personal",
         name: "Personal webhook",
