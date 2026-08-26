@@ -82,12 +82,20 @@ function createIncomingRequest(webRequest: Request, socket: Socket): IncomingMes
   const url = new URL(webRequest.url)
   const request = new IncomingMessage(socket)
   const headers: IncomingHttpHeaders = {}
+  const headersDistinct: Record<string, string[]> = {}
   const rawHeaders: string[] = []
   webRequest.headers.forEach((value, name) => {
     headers[name] = value
+    const values = headersDistinct[name]
+    if (values === undefined) {
+      headersDistinct[name] = [value]
+    } else {
+      values.push(value)
+    }
     rawHeaders.push(name, value)
   })
   request.headers = headers
+  request.headersDistinct = headersDistinct
   request.rawHeaders = rawHeaders
   request.method = webRequest.method
   request.url = `${url.pathname}${url.search}`

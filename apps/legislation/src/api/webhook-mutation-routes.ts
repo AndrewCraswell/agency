@@ -447,12 +447,10 @@ function requireIdempotencyKey(request: IncomingMessage): string {
 
 function requireIfMatch(request: IncomingMessage): string {
   const value = request.headers["if-match"]
-  if (
-    Array.isArray(value) ||
-    request.headersDistinct["if-match"]?.length !== 1 ||
-    value === undefined ||
-    value.length === 0
-  ) {
+  if (Array.isArray(value) || request.headersDistinct["if-match"]?.length !== 1) {
+    throw new SubscriptionApiError("invalid_request", "If-Match must appear once.")
+  }
+  if (value === undefined || value.length === 0) {
     throw new SubscriptionApiError("precondition_failed", "If-Match is required for this mutation.")
   }
   return value

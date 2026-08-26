@@ -1850,6 +1850,17 @@ function webhookWithSecretData(
   return { keyId: data.keyId, secret: data.secret, webhook: data.webhook }
 }
 
+function webhookFixtureIdentity(body: unknown): Readonly<{ id: string; revision: string }> | undefined {
+  const data = webhookData(body)
+  if (!isRecord(data?.webhook) || typeof data.webhook.id !== "string" || typeof data.webhook.revision !== "string") {
+    return undefined
+  }
+  if (data.webhook.id.trim() === "" || data.webhook.revision.trim() === "") {
+    return undefined
+  }
+  return { id: data.webhook.id, revision: data.webhook.revision }
+}
+
 function isCancellationReceipt(value: unknown, id: string, revision: string): boolean {
   return isRecord(value) && value.id === id && isRfc3339(value.cancelledAt) && value.finalRevision === revision
 }
@@ -2291,7 +2302,12 @@ async function cancelLifecycleWebhook(
     input.callerSignal
   )
   const webhook = webhookData(read.body)
-  if (read.check.status !== "passed" || webhook === undefined || typeof webhook.revision !== "string") {
+  if (
+    read.check.status !== "passed" ||
+    webhook === undefined ||
+    webhook.id !== id ||
+    typeof webhook.revision !== "string"
+  ) {
     return [
       read.check,
       lifecycleCheckBlocked(
@@ -2405,12 +2421,37 @@ async function runWebhookLifecycleSmoke(input: {
     input.callerSignal
   )
   checks.push(created.check)
-  const createdData = webhookWithSecretData(created.body, input.canonicalApiBaseUrl)
-  if (
-    createdData === undefined ||
-    typeof createdData.webhook.id !== "string" ||
-    typeof createdData.webhook.revision !== "string"
-  ) {
+  let createdData = webhookWithSecretData(created.body, input.canonicalApiBaseUrl)
+  let fixtureIdentity = webhookFixtureIdentity(created.body)
+  if (fixtureIdentity === undefined) {
+    const recoveryReplay = await executeLifecycleRequest(
+      input.baseUrl,
+      input.fetchImpl,
+      {
+        body: createBody,
+        expectedStatus: 201,
+        headers: { "idempotency-key": createKey },
+        id: "webhook-lifecycle-create-recovery-replay",
+        method: "POST",
+        path: "/api/webhooks",
+        validate: (body, response) =>
+          hasWebhookWithSecretResource(
+            body,
+            response,
+            "smoke-webhook-lifecycle-create-recovery-replay",
+            "/api/webhooks",
+            input.canonicalApiBaseUrl
+          )
+      },
+      input.token,
+      input.requestTimeoutMs,
+      input.callerSignal
+    )
+    checks.push(recoveryReplay.check)
+    fixtureIdentity = webhookFixtureIdentity(recoveryReplay.body)
+    createdData = webhookWithSecretData(recoveryReplay.body, input.canonicalApiBaseUrl)
+  }
+  if (fixtureIdentity === undefined) {
     checks.push(
       lifecycleCheckBlocked(
         "webhook-lifecycle-dependent-checks",
@@ -2419,12 +2460,17 @@ async function runWebhookLifecycleSmoke(input: {
     )
     return checks
   }
-  const id = createdData.webhook.id
+  const id = fixtureIdentity.id
   const path = `/api/webhooks/${encoded(id)}`
-  if (created.check.status !== "passed") {
+  if (
+    created.check.status !== "passed" ||
+    createdData === undefined ||
+    typeof createdData.webhook.revision !== "string"
+  ) {
     checks.push(...(await cancelLifecycleWebhook(input, id, path)))
     return checks
   }
+  const createdRevision = createdData.webhook.revision
   const createReplay = await executeLifecycleRequest(
     input.baseUrl,
     input.fetchImpl,
@@ -2510,7 +2556,7 @@ async function runWebhookLifecycleSmoke(input: {
       headers: {
         "content-type": "application/merge-patch+json",
         "idempotency-key": patchKey,
-        "if-match": createdData.webhook.revision
+        "if-match": createdRevision
       },
       id: "webhook-lifecycle-patch",
       method: "PATCH",
@@ -2525,7 +2571,7 @@ async function runWebhookLifecycleSmoke(input: {
           data?.id === id &&
           data.name === updatedName &&
           typeof data.revision === "string" &&
-          data.revision !== createdData.webhook.revision &&
+          data.revision !== createdRevision &&
           response.headers.get("etag") === data.revision
         )
       }
@@ -2550,7 +2596,7 @@ async function runWebhookLifecycleSmoke(input: {
       headers: {
         "content-type": "application/merge-patch+json",
         "idempotency-key": patchKey,
-        "if-match": createdData.webhook.revision
+        "if-match": createdRevision
       },
       id: "webhook-lifecycle-patch-replay",
       method: "PATCH",
@@ -2578,7 +2624,7 @@ async function runWebhookLifecycleSmoke(input: {
       headers: {
         "content-type": "application/merge-patch+json",
         "idempotency-key": staleKey,
-        "if-match": createdData.webhook.revision
+        "if-match": createdRevision
       },
       id: "webhook-lifecycle-stale-revision",
       method: "PATCH",

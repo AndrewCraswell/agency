@@ -1,6 +1,7 @@
 import { createServer, request as sendRequest } from "node:http"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { runWithRequestContext } from "../auth/request-context.js"
+import { executeNextHttpApiHandler } from "./next/node-handler.js"
 import type {
   IdempotentResponse,
   IdempotencyRequest,
@@ -215,6 +216,80 @@ async function call(baseUrl: string, path: string, method: string, body: string,
 }
 
 describe("webhook mutation routes", () => {
+  it("preserves single mutation headers and rejects duplicate raw headers through the Next bridge", async () => {
+    const repository = mutationRepository()
+    const service = new SubscriptionService(
+      repository as SubscriptionRepository & WebhookRepository,
+      createWebhookSecretProtector(
+        async (secret) => `cipher:${secret}`,
+        async (ciphertext) => ciphertext.slice("cipher:".length)
+      ),
+      () => new Date("2026-08-25T12:00:00.000Z"),
+      webhookIdentifiers()
+    )
+    const handler = createWebhookMutationApiHandler(service, executor(repository), {
+      apiBaseUrl: "https://api.example.test",
+      resolvePublicUrl: async (url) =>
+        await resolvePublicWebhookUrl(url, async () => [{ address: "8.8.8.8", family: 4 }])
+    })
+    const execute = async (request: Request) =>
+      await executeNextHttpApiHandler(request, handler, { requestContext: { identity: { userId: "user:test" } } })
+    const createRequest = new Request("https://api.example.test/api/webhooks", {
+      body: JSON.stringify({ eventTypes: [], name: "Pipeline", url: "https://webhooks.example.test/hooks" }),
+      headers: { "content-type": "application/json", "idempotency-key": "webhook-create-key" },
+      method: "POST"
+    })
+    const created = await execute(createRequest)
+    expect(created.status).toBe(201)
+    const createdBody = (await created.json()) as { data: { webhook: { id: string; revision: string } } }
+    const path = `https://api.example.test/api/webhooks/${encodeURIComponent(createdBody.data.webhook.id)}`
+    const patch = await execute(
+      new Request(path, {
+        body: JSON.stringify({ name: "Updated Pipeline" }),
+        headers: {
+          "content-type": "application/merge-patch+json",
+          "idempotency-key": "webhook-patch-key",
+          "if-match": createdBody.data.webhook.revision
+        },
+        method: "PATCH"
+      })
+    )
+    expect(patch.status).toBe(200)
+    const patchedBody = (await patch.json()) as { data: { revision: string } }
+
+    const duplicateCreate = new Request("https://api.example.test/api/webhooks", {
+      body: JSON.stringify({ eventTypes: [], name: "Duplicate", url: "https://webhooks.example.test/hooks" }),
+      headers: { "content-type": "application/json", "idempotency-key": "webhook-duplicate-key" },
+      method: "POST"
+    })
+    const createForEach = duplicateCreate.headers.forEach
+    vi.spyOn(duplicateCreate.headers, "forEach").mockImplementation((callback, thisArg) => {
+      createForEach.call(duplicateCreate.headers, callback, thisArg)
+      callback("webhook-duplicate-key-second", "idempotency-key", duplicateCreate.headers)
+    })
+    const duplicateCreateResponse = await execute(duplicateCreate)
+    expect(duplicateCreateResponse.status).toBe(400)
+    await expect(duplicateCreateResponse.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
+
+    const duplicatePatch = new Request(path, {
+      body: JSON.stringify({ name: "Duplicate patch" }),
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": "webhook-duplicate-patch-key",
+        "if-match": patchedBody.data.revision
+      },
+      method: "PATCH"
+    })
+    const patchForEach = duplicatePatch.headers.forEach
+    vi.spyOn(duplicatePatch.headers, "forEach").mockImplementation((callback, thisArg) => {
+      patchForEach.call(duplicatePatch.headers, callback, thisArg)
+      callback("revision:duplicate", "if-match", duplicatePatch.headers)
+    })
+    const duplicatePatchResponse = await execute(duplicatePatch)
+    expect(duplicatePatchResponse.status).toBe(400)
+    await expect(duplicatePatchResponse.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
+  })
+
   it("creates a pending webhook and replays its one-time secret with the current correlation", async () => {
     const baseUrl = await start()
     const headers = { "content-type": "application/json", "idempotency-key": "webhook-create-key" }

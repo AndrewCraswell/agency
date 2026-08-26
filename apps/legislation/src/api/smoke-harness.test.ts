@@ -1369,6 +1369,11 @@ describe("local API smoke harness", () => {
     const rotatedKeyId = "webhook-key:rotated"
     const idempotencyKeys: string[] = []
     const requestErrors: string[] = []
+    let ambiguousCreateFailure = false
+    let createResponseDropped = false
+    let deleteRequests = 0
+    let malformedCreateSecret = false
+    let mismatchedCleanupIdentity = false
     let name = ""
     let revision = "revision:create"
     let status: "pending-verification" | "cancelled" = "pending-verification"
@@ -1438,8 +1443,12 @@ describe("local API smoke harness", () => {
           requestErrors.push("create did not use canonical health target")
         }
         name = body.name
+        if (ambiguousCreateFailure && !createResponseDropped) {
+          createResponseDropped = true
+          throw new Error("response was lost after creation")
+        }
         return resource(
-          { keyId: createKeyId, secret: createSecret, webhook: webhook() },
+          { keyId: createKeyId, secret: malformedCreateSecret ? "invalid" : createSecret, webhook: webhook() },
           "/api/webhooks",
           correlationId,
           201,
@@ -1447,6 +1456,17 @@ describe("local API smoke harness", () => {
         )
       }
       if (url.pathname === detailPath && init?.method === "GET") {
+        if (mismatchedCleanupIdentity) {
+          return resource(
+            {
+              ...webhook(),
+              canonicalUrl: "https://legislation.example.test/api/webhooks/webhook%3Aother",
+              id: "webhook:other"
+            },
+            detailPath,
+            correlationId
+          )
+        }
         return resource(webhook(), detailPath, correlationId)
       }
       if (url.pathname === detailPath && init?.method === "PATCH") {
@@ -1480,6 +1500,7 @@ describe("local API smoke harness", () => {
         )
       }
       if (url.pathname === detailPath && init?.method === "DELETE") {
+        deleteRequests += 1
         if (!["revision:rotated", "revision:cancelled", "revision:create"].includes(headers.get("if-match") ?? "")) {
           requestErrors.push("delete did not use an available revision")
         }
@@ -1552,6 +1573,67 @@ describe("local API smoke harness", () => {
       expect.arrayContaining(["webhook-lifecycle-cleanup-read", "webhook-lifecycle-cleanup"])
     )
     expect(status).toBe("cancelled")
+
+    name = ""
+    revision = "revision:create"
+    status = "pending-verification"
+    malformedCreateSecret = true
+    const malformedSecretReport = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "webhook-lifecycle",
+      requireAuth: true,
+      token
+    })
+    expect(malformedSecretReport.failed.map((check) => check.id)).toContain("webhook-lifecycle-create")
+    expect(malformedSecretReport.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["webhook-lifecycle-cleanup-read", "webhook-lifecycle-cleanup"])
+    )
+    expect(status).toBe("cancelled")
+    malformedCreateSecret = false
+
+    name = ""
+    revision = "revision:create"
+    status = "pending-verification"
+    ambiguousCreateFailure = true
+    createResponseDropped = false
+    const ambiguousCreateReport = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "webhook-lifecycle",
+      requireAuth: true,
+      token
+    })
+    expect(ambiguousCreateReport.failed.map((check) => check.id)).toContain("webhook-lifecycle-create")
+    expect(ambiguousCreateReport.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining([
+        "webhook-lifecycle-create-recovery-replay",
+        "webhook-lifecycle-cleanup-read",
+        "webhook-lifecycle-cleanup"
+      ])
+    )
+    expect(status).toBe("cancelled")
+    ambiguousCreateFailure = false
+
+    name = ""
+    revision = "revision:create"
+    status = "pending-verification"
+    malformedCreateSecret = true
+    mismatchedCleanupIdentity = true
+    deleteRequests = 0
+    const mismatchedCleanupReport = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "webhook-lifecycle",
+      requireAuth: true,
+      token
+    })
+    expect(mismatchedCleanupReport.blocked.map((check) => check.id)).toContain("webhook-lifecycle-cleanup")
+    expect(deleteRequests).toBe(0)
+    expect(status).toBe("pending-verification")
   })
 
   it("blocks webhook lifecycle smoke unless its canonical origin is public HTTPS", async () => {
