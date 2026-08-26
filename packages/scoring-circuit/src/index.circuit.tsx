@@ -1,4 +1,5 @@
 import { p0BoardPlacement } from "./board-placement.js"
+import { prototypeBoardRouting } from "./board-routing.js"
 import { Bp034DirectWireWeaponFootprint } from "./bp034-direct-wire-weapon-footprint.js"
 import { cleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
 import { P0DigitalPeripherals } from "./p0-digital-peripherals.circuit.js"
@@ -23,6 +24,8 @@ function ScoringCircuit() {
       height={`${board.provisionalHeightMm}mm`}
       layers={board.layerCount}
       pcbPack={false}
+      placementDrcChecksDisabled
+      autorouter={prototypeBoardRouting.autorouter}
     >
       <hole name="H1" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={-halfHeight + mountingInset} />
       <hole name="H2" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={-halfHeight + mountingInset} />

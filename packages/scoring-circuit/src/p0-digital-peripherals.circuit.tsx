@@ -56,14 +56,22 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
       <P0EthernetMagJackFootprint {...ethernet} pcbPositionMode="relative_to_board_anchor" />
       <P0Hub75ConnectorFootprint {...hub75} pcbPositionMode="relative_to_board_anchor" />
 
-      <group name="ETHERNET_SUPPORT" pcbX={pcbX} pcbY={pcbY} pcbGrid pcbGridCols={7} pcbGridGap="1mm">
-        <Bp033W5500ProjectFootprint name="U_W5500" />
-        <P0W5500CrystalFootprint />
+      {/*
+       * Keep the W5500, clock, MDI conditioning, and RJ45-facing passives as
+       * one explicit placement island. The old grid put electrically related
+       * parts on opposite sides of the board; these coordinates are local to
+       * the Ethernet support anchor in millimetres.
+       */}
+      <group name="ETHERNET_SUPPORT" pcbX={pcbX} pcbY={pcbY} pcbPack={false}>
+        <Bp033W5500ProjectFootprint name="U_W5500" pcbX={20} pcbY={5} />
+        <P0W5500CrystalFootprint pcbX={28} pcbY={5} />
         <chip
           name="FB_W5500_AVDD"
           manufacturerPartNumber="BLM21PG221SN1D"
           footprint="0805"
           pinLabels={{ pin1: "APP_3V3", pin2: "ETH_AVDD" }}
+          pcbX={4}
+          pcbY={-6}
         />
         <resistor
           name="R_W5500_XTAL"
@@ -71,14 +79,25 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="1M"
           tolerance="1%"
           footprint="0603"
+          pcbX={28}
+          pcbY={10}
         />
-        <resistor name="R_W5500_XO" manufacturerPartNumber="ERJ3GEY0R00V" resistance="0" footprint="0603" />
+        <resistor
+          name="R_W5500_XO"
+          manufacturerPartNumber="ERJ3GEY0R00V"
+          resistance="0"
+          footprint="0603"
+          pcbX={28}
+          pcbY={0}
+        />
         <resistor
           name="R_W5500_EXRES"
           manufacturerPartNumber="ERJ3EKF1242V"
           resistance="12.4k"
           tolerance="1%"
           footprint="0603"
+          pcbX={9}
+          pcbY={-6}
         />
         <resistor
           name="R_W5500_INT_BIAS"
@@ -86,58 +105,113 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="100k"
           tolerance="1%"
           footprint="0603"
+          pcbX={32}
+          pcbY={14}
         />
         <capacitor
           name="C_W5500_XI"
           manufacturerPartNumber="CGA3E2C0G1H180J080AA"
           capacitance="18pF"
           footprint="0603"
+          pcbX={32}
+          pcbY={10}
         />
         <capacitor
           name="C_W5500_XO"
           manufacturerPartNumber="CGA3E2C0G1H180J080AA"
           capacitance="18pF"
           footprint="0603"
+          pcbX={32}
+          pcbY={0}
         />
         <capacitor
           name="C_W5500_TOCAP"
           manufacturerPartNumber="GRM21BR71C475KA73L"
           capacitance="4.7uF"
           footprint="0805"
+          pcbX={12}
+          pcbY={13}
         />
         <capacitor
           name="C_W5500_1V2O"
           manufacturerPartNumber="GRM188R71H103KA01D"
           capacitance="10nF"
           footprint="0603"
+          pcbX={13}
+          pcbY={18}
         />
         <capacitor
           name="C_W5500_VDD"
           manufacturerPartNumber="GRM188R71C104KA01D"
           capacitance="100nF"
           footprint="0603"
+          pcbX={23}
+          pcbY={14}
         />
         <capacitor
           name="C_ETH_AVDD_FERRITE_INPUT"
           manufacturerPartNumber="GRM188R71C104KA01D"
           capacitance="100nF"
           footprint="0603"
+          pcbX={0}
+          pcbY={-6}
         />
-        {w5500AvddPins.map((pin) => (
-          <capacitor
-            key={pin}
-            name={`C_W5500_AVDD_${pin}`}
-            manufacturerPartNumber="GRM188R71C104KA01D"
-            capacitance="100nF"
-            footprint="0603"
-          />
-        ))}
+        <capacitor
+          name="C_W5500_AVDD_4"
+          manufacturerPartNumber="GRM188R71C104KA01D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={13}
+          pcbY={8}
+        />
+        <capacitor
+          name="C_W5500_AVDD_8"
+          manufacturerPartNumber="GRM188R71C104KA01D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={13}
+          pcbY={4}
+        />
+        <capacitor
+          name="C_W5500_AVDD_11"
+          manufacturerPartNumber="GRM188R71C104KA01D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={13}
+          pcbY={0}
+        />
+        <capacitor
+          name="C_W5500_AVDD_15"
+          manufacturerPartNumber="GRM188R71C104KA01D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={18}
+          pcbY={14}
+        />
+        <capacitor
+          name="C_W5500_AVDD_17"
+          manufacturerPartNumber="GRM188R71C104KA01D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={23}
+          pcbY={18}
+        />
+        <capacitor
+          name="C_W5500_AVDD_21"
+          manufacturerPartNumber="GRM188R71C104KA01D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={27}
+          pcbY={18}
+        />
         <resistor
           name="R_ETH_TX_P_TERM"
           manufacturerPartNumber="RC0603FR-0749R9L"
           resistance="49.9"
           tolerance="1%"
           footprint="0603"
+          pcbX={9}
+          pcbY={9}
         />
         <resistor
           name="R_ETH_TX_N_TERM"
@@ -145,6 +219,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="49.9"
           tolerance="1%"
           footprint="0603"
+          pcbX={9}
+          pcbY={6}
         />
         <resistor
           name="R_ETH_RX_P_BIAS"
@@ -152,6 +228,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="49.9"
           tolerance="1%"
           footprint="0603"
+          pcbX={9}
+          pcbY={2}
         />
         <resistor
           name="R_ETH_RX_N_BIAS"
@@ -159,6 +237,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="49.9"
           tolerance="1%"
           footprint="0603"
+          pcbX={9}
+          pcbY={-2}
         />
         <resistor
           name="R_ETH_TX_CT"
@@ -166,6 +246,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="10"
           tolerance="1%"
           footprint="0603"
+          pcbX={34}
+          pcbY={9}
         />
         <resistor
           name="R_ETH_YELLOW"
@@ -173,6 +255,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="330"
           tolerance="1%"
           footprint="0603"
+          pcbX={34}
+          pcbY={19}
         />
         <resistor
           name="R_ETH_GREEN"
@@ -180,20 +264,81 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="330"
           tolerance="1%"
           footprint="0603"
+          pcbX={38}
+          pcbY={19}
         />
-        <capacitor name="C_ETH_TX_CT" manufacturerPartNumber="C0603C223K5RACTU" capacitance="22nF" footprint="0603" />
-        <capacitor name="C_ETH_RX_BIAS" manufacturerPartNumber="C0603C103K5RACTU" capacitance="10nF" footprint="0603" />
-        <capacitor name="C_ETH_RX_P" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
-        <capacitor name="C_ETH_RX_N" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
-        <pinheader name="TP_W5500_INT_N" manufacturerPartNumber="5001" pinCount={1} pinLabels={["APP_W5500_INT_N"]} />
+        <capacitor
+          name="C_ETH_TX_CT"
+          manufacturerPartNumber="C0603C223K5RACTU"
+          capacitance="22nF"
+          footprint="0603"
+          pcbX={34}
+          pcbY={6}
+        />
+        <capacitor
+          name="C_ETH_RX_BIAS"
+          manufacturerPartNumber="C0603C103K5RACTU"
+          capacitance="10nF"
+          footprint="0603"
+          pcbX={35}
+          pcbY={2}
+        />
+        <capacitor
+          name="C_ETH_RX_P"
+          manufacturerPartNumber="C0603C682J5RACTU"
+          capacitance="6.8nF"
+          footprint="0603"
+          pcbX={29}
+          pcbY={9}
+        />
+        <capacitor
+          name="C_ETH_RX_N"
+          manufacturerPartNumber="C0603C682J5RACTU"
+          capacitance="6.8nF"
+          footprint="0603"
+          pcbX={29}
+          pcbY={1}
+        />
+        <pinheader
+          name="TP_W5500_INT_N"
+          manufacturerPartNumber="5001"
+          pinCount={1}
+          pinLabels={["APP_W5500_INT_N"]}
+          pcbX={37}
+          pcbY={14}
+        />
       </group>
 
-      <group name="HUB75_SUPPORT" pcbX={pcbX} pcbY={pcbY + 85} pcbGrid pcbGridCols={6} pcbGridGap="1mm">
-        <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_A" />
-        <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_B" />
+      {/*
+       * The buffers sit between the ESP32-side signals and the right-edge
+       * HUB75 header. Pulls are on the input side of their matching buffer;
+       * OE protection and bypass parts stay at the local buffer edge.
+       */}
+      <group name="HUB75_SUPPORT" pcbX={pcbX} pcbY={pcbY + 85} pcbPack={false}>
+        <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_A" pcbX={30} pcbY={1} />
+        <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_B" pcbX={30} pcbY={13} />
         {hub75Signals.map(([signal]) => {
           const reference = signal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${signal}_PD`
           const part = hub75Part(reference)
+          const placement: Record<string, readonly [number, number]> = {
+            R_HUB75_R1_PD: [21, 5],
+            R_HUB75_G1_PD: [21, 3.4],
+            R_HUB75_B1_PD: [21, 1.8],
+            R_HUB75_R2_PD: [21, 0.2],
+            R_HUB75_G2_PD: [21, -1.4],
+            R_HUB75_B2_PD: [21, -3],
+            R_HUB75_A_PD: [25, 5],
+            R_HUB75_B_PD: [25, 1.8],
+            R_HUB75_C_PD: [21, 17],
+            R_HUB75_D_PD: [21, 15.4],
+            R_HUB75_CLK_PD: [21, 13.8],
+            R_HUB75_LAT_PD: [21, 12.2],
+            R_HUB75_OE_PULLUP: [25, 16]
+          }
+          const [placementX, placementY] = placement[reference] ?? []
+          if (placementX === undefined || placementY === undefined) {
+            throw new RangeError(`missing explicit HUB75 placement for ${reference}`)
+          }
           return (
             <resistor
               key={signal}
@@ -202,12 +347,15 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
               resistance="10k"
               tolerance="1%"
               footprint={part.footprint}
+              pcbX={placementX}
+              pcbY={placementY}
             />
           )
         })}
         {(["A6", "A7", "A8"] as const).map((input) => {
           const reference = `R_HUB75_UNUSED_B_${input}_PD`
           const part = hub75Part(reference)
+          const placement = { A6: [21, 10.5], A7: [21, 8.9], A8: [21, 7.3] }[input]
           return (
             <resistor
               key={input}
@@ -216,6 +364,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
               resistance="10k"
               tolerance="1%"
               footprint={part.footprint}
+              pcbX={placement[0]}
+              pcbY={placement[1]}
             />
           )
         })}
@@ -225,6 +375,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="10k"
           tolerance="1%"
           footprint="0603"
+          pcbX={37}
+          pcbY={13}
         />
         {(["A", "B"] as const).map((bank) => (
           <capacitor
@@ -233,15 +385,19 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
             manufacturerPartNumber={hub75Part(`C_HUB75_BUF_${bank}_BYPASS`).mpn}
             capacitance="100nF"
             footprint="0603"
+            pcbX={30}
+            pcbY={bank === "A" ? -6 : 20}
           />
         ))}
-        <P0Hub75EnableFetFootprint />
+        <P0Hub75EnableFetFootprint pcbX={26} pcbY={24} />
         <resistor
           name="R_DISPLAY_ENABLE_PULLUP"
           manufacturerPartNumber="RC0603FR-0710KL"
           resistance="10k"
           tolerance="1%"
           footprint="0603"
+          pcbX={31}
+          pcbY={24}
         />
         <resistor
           name="R_DISPLAY_ENABLE_GATE"
@@ -249,6 +405,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="10k"
           tolerance="1%"
           footprint="0603"
+          pcbX={31}
+          pcbY={28}
         />
         <resistor
           name="R_DISPLAY_ENABLE_GATE_PD"
@@ -256,6 +414,8 @@ export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalP
           resistance="100k"
           tolerance="1%"
           footprint="0603"
+          pcbX={36}
+          pcbY={24}
         />
       </group>
 

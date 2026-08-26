@@ -36,85 +36,117 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
         pcbY={pcbY}
         pcbPositionMode="relative_to_board_anchor"
       />
-      <group name="POWER_SUPPORT" pcbX={pcbX + 15} pcbY={pcbY} pcbGrid pcbGridCols={9} pcbGridGap="1mm">
-        <Bp033Tpd4s201RgrProjectFootprint name="U_USB_PORT_PROTECT" pcbX={-47} pcbY={0} />
-        <Bp033Tpd2eusb30drtrDrtProjectFootprint name="U_USB_DATA_PROTECT" pcbX={-47} pcbY={-12} />
-        <Bp033Tvs2200ProjectFootprint name="D_USB_PD_VBUS_TVS" pcbX={-52} pcbY={-20} />
-        <Bp033Tps25730aRefProjectFootprint name="U_USB_PD" pcbX={-28} pcbY={0} />
-        <Bp033Tps25947ProjectFootprint name="U_EFUSE" pcbX={-5} pcbY={0} />
+      <group name="POWER_SUPPORT" pcbX={pcbX + 15} pcbY={pcbY} pcbPack={false}>
+        {/* The source traces leave this island in the same order as the power path: */}
+        {/* USB entry/protection, PD contract, reverse blocking, V5, then APP_3V3. */}
+        <Bp033Tpd4s201RgrProjectFootprint name="U_USB_PORT_PROTECT" pcbX={-54} pcbY={0} />
+        <Bp033Tpd2eusb30drtrDrtProjectFootprint name="U_USB_DATA_PROTECT" pcbX={-54} pcbY={-8} />
+        <Bp033Tvs2200ProjectFootprint name="D_USB_PD_VBUS_TVS" pcbX={-54} pcbY={8} />
+        <Bp033Tps25730aRefProjectFootprint name="U_USB_PD" pcbX={-38} pcbY={0} />
+        <Bp033Tps25947ProjectFootprint name="U_EFUSE" pcbX={-8} pcbY={0} />
 
-        <P0B340aFootprint />
-        <P0Tps56a37Footprint />
-        <P0V5InductorFootprint />
-        <P0Lmr43620Footprint />
-        <P0ApplicationInductorFootprint />
+        <P0B340aFootprint pcbX={-54} pcbY={16} />
+        <P0Tps56a37Footprint pcbX={24} pcbY={0} />
+        <P0V5InductorFootprint pcbX={31} pcbY={0} />
+        <P0Lmr43620Footprint pcbX={57} pcbY={0} />
+        <P0ApplicationInductorFootprint pcbX={65} pcbY={0} />
 
         <capacitor
           name="C_USB_PORT_PROTECT_BIAS"
           manufacturerPartNumber="GCM188R71H104KA57D"
           capacitance="100nF"
           footprint="0603"
+          pcbX={-47}
+          pcbY={-5}
         />
         <capacitor
           name="C_USB_PORT_PROTECT_VPWR"
           manufacturerPartNumber="GCM188R71H105KA64D"
           capacitance="1uF"
           footprint="0603"
+          pcbX={-47}
+          pcbY={5}
         />
         <capacitor
           name="C_USB_PD_LDO_1V5"
           manufacturerPartNumber="GRM21BR71A106KA73K"
           capacitance="10uF"
           footprint="0805"
+          pcbX={-38}
+          pcbY={8}
         />
         <capacitor
           name="C_USB_PD_VIN_3V3"
           manufacturerPartNumber="GRM21BR71A106KA73K"
           capacitance="10uF"
           footprint="0805"
+          pcbX={-30}
+          pcbY={-8}
         />
         <capacitor
           name="C_USB_PD_VBUS"
           manufacturerPartNumber="GRM21BR71H475KA73L"
           capacitance="4.7uF"
           footprint="0805"
+          pcbX={-30}
+          pcbY={8}
         />
-        <P0T55A106Footprint />
-        <P0T523H107Footprint />
+        <P0T55A106Footprint pcbX={-46} pcbY={12} />
+        <P0T523H107Footprint pcbX={-29} pcbY={15} />
         <capacitor
           name="C_USB_PD_CC1"
           manufacturerPartNumber="GCM1555C1H331JA16D"
           capacitance="330pF"
           footprint="0402"
+          pcbX={-47}
+          pcbY={-12}
         />
         <capacitor
           name="C_USB_PD_CC2"
           manufacturerPartNumber="GCM1555C1H331JA16D"
           capacitance="330pF"
           footprint="0402"
+          pcbX={-42}
+          pcbY={-12}
         />
-        <capacitor name="C_EFUSE_IN" manufacturerPartNumber="GCM188R71H104KA57D" capacitance="100nF" footprint="0603" />
+        <capacitor
+          name="C_EFUSE_IN"
+          manufacturerPartNumber="GCM188R71H104KA57D"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={-2}
+          pcbY={-5}
+        />
         <capacitor
           name="C_EFUSE_ITIMER"
           manufacturerPartNumber="C0603C222K5RACTU"
           capacitance="2.2nF"
           footprint="0603"
+          pcbX={-2}
+          pcbY={5}
         />
-        <capacitor name="C_EFUSE_DVDT" manufacturerPartNumber="C0603C222K5RACTU" capacitance="2.2nF" footprint="0603" />
-        <P0T523H107EfuseOutputFootprint />
+        <capacitor
+          name="C_EFUSE_DVDT"
+          manufacturerPartNumber="C0603C222K5RACTU"
+          capacitance="2.2nF"
+          footprint="0603"
+          pcbX={5}
+          pcbY={5}
+        />
+        <P0T523H107EfuseOutputFootprint pcbX={5} pcbY={-5} />
 
         {(
           [
-            ["R_USB_PD_ADCIN1_UP", "RC0402FR-0724K9L", 24_900],
-            ["R_USB_PD_ADCIN1_DOWN", "RC0402FR-0710KL", 10_000],
-            ["R_USB_PD_ADCIN2_UP", "RC0402FR-0710KL", 10_000],
-            ["R_USB_PD_ADCIN2_DOWN", "RC0402FR-0768K1L", 68_100],
-            ["R_USB_PD_ADCIN3_UP", "RC0402FR-07162KL", 162_000],
-            ["R_USB_PD_ADCIN3_DOWN", "RC0402FR-0738K3L", 38_300],
-            ["R_USB_PD_ADCIN4_UP", "RC0402FR-07191KL", 191_000],
-            ["R_USB_PD_ADCIN4_DOWN", "RC0402FR-079K53L", 9_530]
+            ["R_USB_PD_ADCIN1_UP", "RC0402FR-0724K9L", 24_900, -22, -12],
+            ["R_USB_PD_ADCIN1_DOWN", "RC0402FR-0710KL", 10_000, -16, -12],
+            ["R_USB_PD_ADCIN2_UP", "RC0402FR-0710KL", 10_000, -22, -8],
+            ["R_USB_PD_ADCIN2_DOWN", "RC0402FR-0768K1L", 68_100, -16, -8],
+            ["R_USB_PD_ADCIN3_UP", "RC0402FR-07162KL", 162_000, -22, 8],
+            ["R_USB_PD_ADCIN3_DOWN", "RC0402FR-0738K3L", 38_300, -16, 8],
+            ["R_USB_PD_ADCIN4_UP", "RC0402FR-07191KL", 191_000, -22, 12],
+            ["R_USB_PD_ADCIN4_DOWN", "RC0402FR-079K53L", 9_530, -16, 12]
           ] as const
-        ).map(([name, manufacturerPartNumber, resistance]) => (
+        ).map(([name, manufacturerPartNumber, resistance, pcbX, pcbY]) => (
           <resistor
             key={name}
             name={name}
@@ -122,6 +154,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
             resistance={resistance}
             tolerance="1%"
             footprint="0402"
+            pcbX={pcbX}
+            pcbY={pcbY}
           />
         ))}
         <resistor
@@ -130,6 +164,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="10k"
           tolerance="1%"
           footprint="0402"
+          pcbX={-22}
+          pcbY={16}
         />
         <resistor
           name="R_USB_PD_RESERVED_26"
@@ -137,6 +173,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="10k"
           tolerance="1%"
           footprint="0402"
+          pcbX={-16}
+          pcbY={16}
         />
         <resistor
           name="R_USB_PD_RESERVED_36"
@@ -144,6 +182,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="10k"
           tolerance="1%"
           footprint="0402"
+          pcbX={-10}
+          pcbY={16}
         />
         <resistor
           name="R_USB_PORT_PROTECT_FLT_PULLUP"
@@ -151,6 +191,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="10k"
           tolerance="1%"
           footprint="0402"
+          pcbX={-47}
+          pcbY={-16}
         />
         <resistor
           name="R_USB_DN_SERIES"
@@ -158,6 +200,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="22"
           tolerance="1%"
           footprint="0402"
+          pcbX={-61}
+          pcbY={-8}
         />
         <resistor
           name="R_USB_DP_SERIES"
@@ -165,6 +209,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="22"
           tolerance="1%"
           footprint="0402"
+          pcbX={-61}
+          pcbY={-14}
         />
         <resistor
           name="R_EFUSE_UVLO_UP"
@@ -172,6 +218,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="475k"
           tolerance="1%"
           footprint="0603"
+          pcbX={-2}
+          pcbY={-12}
         />
         <resistor
           name="R_EFUSE_UVLO_DOWN"
@@ -179,6 +227,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="38.3k"
           tolerance="1%"
           footprint="0603"
+          pcbX={5}
+          pcbY={-12}
         />
         <resistor
           name="R_EFUSE_OVLO_UP"
@@ -186,6 +236,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="499k"
           tolerance="1%"
           footprint="0603"
+          pcbX={-2}
+          pcbY={12}
         />
         <resistor
           name="R_EFUSE_OVLO_DOWN"
@@ -193,6 +245,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="28.7k"
           tolerance="1%"
           footprint="0603"
+          pcbX={5}
+          pcbY={12}
         />
         <resistor
           name="R_EFUSE_ILM"
@@ -200,6 +254,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="1.24k"
           tolerance="1%"
           footprint="0603"
+          pcbX={10}
+          pcbY={0}
         />
 
         <capacitor
@@ -207,32 +263,56 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           manufacturerPartNumber="GRM32ER7YA106KA12L"
           capacitance="10uF"
           footprint="1210"
+          pcbX={13}
+          pcbY={-7}
         />
         <capacitor
           name="C_V5_BUCK_IN_B"
           manufacturerPartNumber="GRM32ER7YA106KA12L"
           capacitance="10uF"
           footprint="1210"
+          pcbX={19}
+          pcbY={-7}
         />
-        <capacitor name="C_V5_BUCK_IN_HF" manufacturerPartNumber="885012206095" capacitance="100nF" footprint="0603" />
-        <capacitor name="C_V5_BUCK_BOOT" manufacturerPartNumber="885012206095" capacitance="100nF" footprint="0603" />
+        <capacitor
+          name="C_V5_BUCK_IN_HF"
+          manufacturerPartNumber="885012206095"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={25}
+          pcbY={-7}
+        />
+        <capacitor
+          name="C_V5_BUCK_BOOT"
+          manufacturerPartNumber="885012206095"
+          capacitance="100nF"
+          footprint="0603"
+          pcbX={31}
+          pcbY={7}
+        />
         <capacitor
           name="C_V5_BUCK_OUT_A"
           manufacturerPartNumber="GRM32ER71E226KE15L"
           capacitance="22uF"
           footprint="1210"
+          pcbX={37}
+          pcbY={-7}
         />
         <capacitor
           name="C_V5_BUCK_OUT_B"
           manufacturerPartNumber="GRM32ER71E226KE15L"
           capacitance="22uF"
           footprint="1210"
+          pcbX={44}
+          pcbY={-7}
         />
         <capacitor
           name="C_V5_BUCK_FF"
           manufacturerPartNumber="GRM1885C1H151JA01D"
           capacitance="150pF"
           footprint="0603"
+          pcbX={49}
+          pcbY={7}
         />
         <resistor
           name="R_V5_BUCK_MODE"
@@ -240,6 +320,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="52.3k"
           tolerance="0.5%"
           footprint="0603"
+          pcbX={19}
+          pcbY={7}
         />
         <resistor
           name="R_V5_BUCK_FB_TOP"
@@ -247,6 +329,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="73.2k"
           tolerance="0.5%"
           footprint="0603"
+          pcbX={37}
+          pcbY={7}
         />
         <resistor
           name="R_V5_BUCK_FB_BOTTOM"
@@ -254,6 +338,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="10k"
           tolerance="0.5%"
           footprint="0603"
+          pcbX={43}
+          pcbY={7}
         />
         <resistor
           name="R_V5_BUCK_FF"
@@ -261,6 +347,8 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="49.9"
           tolerance="0.5%"
           footprint="0603"
+          pcbX={55}
+          pcbY={7}
         />
 
         <capacitor
@@ -268,37 +356,56 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           manufacturerPartNumber="C2012X7R1E475K125AB"
           capacitance="4.7uF"
           footprint="0805"
+          pcbX={51}
+          pcbY={-7}
         />
         <capacitor
           name="C_APP_REG_IN_HF"
           manufacturerPartNumber="C0603C104K3RACTU"
           capacitance="100nF"
           footprint="0603"
+          pcbX={57}
+          pcbY={-7}
         />
         <capacitor
           name="C_APP_REG_BOOT"
           manufacturerPartNumber="C0603C104K3RACTU"
           capacitance="100nF"
           footprint="0603"
+          pcbX={63}
+          pcbY={-7}
         />
-        <capacitor name="C_APP_REG_VCC" manufacturerPartNumber="885012206052" capacitance="1uF" footprint="0603" />
+        <capacitor
+          name="C_APP_REG_VCC"
+          manufacturerPartNumber="885012206052"
+          capacitance="1uF"
+          footprint="0603"
+          pcbX={63}
+          pcbY={7}
+        />
         <capacitor
           name="C_APP_REG_OUT_A"
           manufacturerPartNumber="C2012X7S1A226M125AC"
           capacitance="22uF"
           footprint="0805"
+          pcbX={51}
+          pcbY={-13}
         />
         <capacitor
           name="C_APP_REG_OUT_B"
           manufacturerPartNumber="C2012X7S1A226M125AC"
           capacitance="22uF"
           footprint="0805"
+          pcbX={57}
+          pcbY={-13}
         />
         <capacitor
           name="C_APP_REG_OUT_C"
           manufacturerPartNumber="C2012X7S1A226M125AC"
           capacitance="22uF"
           footprint="0805"
+          pcbX={63}
+          pcbY={-13}
         />
         <resistor
           name="R_APP_REG_DISCHARGE"
@@ -306,10 +413,12 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
           resistance="1k"
           tolerance="1%"
           footprint="0603"
+          pcbX={69}
+          pcbY={7}
         />
 
-        <pinheader name="TP_USB_VBUS_PORT" pinCount={1} pinLabels={["VBUS_PORT"]} />
-        <pinheader name="TP_PD_PPHV" pinCount={1} pinLabels={["PD_PPHV_20V"]} />
+        <pinheader name="TP_USB_VBUS_PORT" pinCount={1} pinLabels={["VBUS_PORT"]} pcbX={-61} pcbY={2} />
+        <pinheader name="TP_PD_PPHV" pinCount={1} pinLabels={["PD_PPHV_20V"]} pcbX={-29} pcbY={21} />
       </group>
 
       <pinheader

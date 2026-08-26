@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { p0BoardPlacement, validateP0BoardPlacement } from "./board-placement.js"
+import { assertBoardRoutingIsComplete, summarizeBoardRouting } from "./board-routing.js"
 import ScoringCircuit from "./index.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
@@ -74,6 +75,42 @@ function isInsideRectangle(
     point.y < rectangle.pcbY + rectangle.heightMm / 2
   )
 }
+
+describe("prototype board routing gate", () => {
+  it("reports routed and unresolved connections without waiving routing or DRC errors", () => {
+    const complete = summarizeBoardRouting([
+      { source_trace_id: "source_trace_1", type: "source_trace" },
+      { source_trace_id: "source_trace_2", type: "source_trace" },
+      { source_trace_id: "source_trace_1", type: "pcb_trace" },
+      { source_trace_id: "source_trace_2", type: "pcb_trace" }
+    ])
+    expect(complete).toMatchObject({
+      pcbTraceCount: 2,
+      routedConnectionCount: 2,
+      sourceConnectionCount: 2,
+      unroutedConnectionCount: 0,
+      routingErrorCount: 0
+    })
+    expect(() => assertBoardRoutingIsComplete(complete)).not.toThrow()
+
+    const incomplete = summarizeBoardRouting([
+      { source_trace_id: "source_trace_1", type: "source_trace" },
+      { source_trace_id: "source_trace_2", type: "source_trace" },
+      { source_trace_id: "source_trace_1", type: "pcb_trace" },
+      { type: "pcb_trace_missing_error" },
+      { type: "pcb_trace_error" }
+    ])
+    expect(incomplete).toMatchObject({
+      routedConnectionCount: 1,
+      missingConnectionCount: 1,
+      routingErrorCount: 2,
+      unroutedConnectionCount: 1
+    })
+    expect(() => assertBoardRoutingIsComplete(incomplete)).toThrow(
+      "PCB routing is incomplete: 1/2 connections routed; 1 unresolved; 2 routing/DRC errors"
+    )
+  })
+})
 
 describe("P0 integrated scoring-machine schematic", () => {
   it("distinguishes actual manufacturer part numbers from placeholder forms", () => {
@@ -173,7 +210,12 @@ describe("P0 integrated scoring-machine schematic", () => {
       (element) =>
         element.type.includes("error") && /(?:keepout|outside|overlap|placement|pcb)/iu.test(JSON.stringify(element))
     )
-    const components = circuit.filter((element) => element.type === "pcb_component")
+    const sourceComponentIds = new Set(
+      circuit.flatMap((element) => (element.type === "source_component" ? [element.source_component_id] : []))
+    )
+    const components = circuit
+      .filter((element) => element.type === "pcb_component")
+      .filter((component) => sourceComponentIds.has(component.source_component_id))
 
     expect(circuit.filter((element) => element.type.includes("error"))).toEqual([])
     expect(placementErrors).toEqual([])

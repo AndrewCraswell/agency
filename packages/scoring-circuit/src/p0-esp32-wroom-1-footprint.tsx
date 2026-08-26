@@ -187,17 +187,25 @@ const footprint = (
     ))}
     {thermalVias.map(([xMm, yMm], index) => (
       <Fragment key={`thermal-${index + 1}`}>
-        <platedhole
+        <smtpad
+          name={`EP_PAD_${index + 1}`}
+          pcbX={xMm}
+          pcbY={yMm}
+          shape="rect"
+          width="0.9mm"
+          height="0.9mm"
+          solderMaskMargin="0mm"
+          solderPasteMargin="-0.45mm"
+          portHints={["41", "GND_EP", "thermal-via"]}
+        />
+        <via
           name={`EP_VIA_${index + 1}`}
           pcbX={xMm}
           pcbY={yMm}
-          shape="circular_hole_with_rect_pad"
           holeDiameter="0.5mm"
-          rectPadWidth="0.9mm"
-          rectPadHeight="0.9mm"
-          rectBorderRadius="0mm"
-          solderMaskMargin="0mm"
-          portHints={["41", "GND_EP", "thermal-via"]}
+          outerDiameter="0.9mm"
+          fromLayer="top"
+          toLayer="bottom"
         />
       </Fragment>
     ))}
@@ -219,6 +227,7 @@ function P0Esp32Wroom1Footprint({ pcbX, pcbY }: P0Esp32Wroom1FootprintProps): Re
       pcbX={pcbX}
       pcbY={pcbY}
       pcbPositionMode="relative_to_board_anchor"
+      obstructsWithinBounds={false}
       pinLabels={{
         pin1: "APP_GND",
         pin2: "APP_3V3",

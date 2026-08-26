@@ -115,16 +115,20 @@ describe("BP-034 direct-wire weapon footprint", () => {
         expect.objectContaining({ hole_diameter: 3.2 })
       ])
     )
-    expect(json.filter((element) => element.type === "source_port")).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ port_hints: expect.arrayContaining(["TP_WEAPON_L_A", "LEFT WEAPON A TEST"]) }),
-        expect.objectContaining({ port_hints: expect.arrayContaining(["TP_WEAPON_L_B", "LEFT WEAPON B TEST"]) }),
-        expect.objectContaining({ port_hints: expect.arrayContaining(["TP_WEAPON_L_C", "LEFT WEAPON C TEST"]) }),
-        expect.objectContaining({ port_hints: expect.arrayContaining(["TP_WEAPON_R_A", "RIGHT WEAPON A TEST"]) }),
-        expect.objectContaining({ port_hints: expect.arrayContaining(["TP_WEAPON_R_B", "RIGHT WEAPON B TEST"]) }),
-        expect.objectContaining({ port_hints: expect.arrayContaining(["TP_WEAPON_R_C", "RIGHT WEAPON C TEST"]) })
-      ])
-    )
+    expect(
+      json
+        .filter((element) => element.type === "source_port")
+        .filter((port) => port.name.endsWith("_TEST"))
+        .map((port) => port.name)
+        .toSorted()
+    ).toEqual([
+      "LEFT_WEAPON_A_TEST",
+      "LEFT_WEAPON_B_TEST",
+      "LEFT_WEAPON_C_TEST",
+      "RIGHT_WEAPON_A_TEST",
+      "RIGHT_WEAPON_B_TEST",
+      "RIGHT_WEAPON_C_TEST"
+    ])
   })
 
   it("keeps project-derived wire, copper, probe, and anchor geometry conservative", () => {

@@ -8,13 +8,21 @@ import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
 import { createReadinessReport, resolveSimulatorPresentationUrl } from "./board-artifact.js"
+import {
+  assertBoardRoutingIsComplete,
+  isRoutingError,
+  isSameFootprintClearanceError,
+  prototypeBoardRouting,
+  summarizeBoardRouting
+} from "./board-routing.js"
 import ScoringCircuit from "./index.circuit.js"
 
 const simulatorPresentationUrl = resolveSimulatorPresentationUrl(process.env)
 
 const circuit = new Circuit()
-circuit.pcbRoutingDisabled = true
+circuit.pcbRoutingDisabled = false
 circuit.setPlatform({
+  ...prototypeBoardRouting,
   enablePartOrientationAnalysis: true,
   printBoardInformationToSilkscreen: true,
   projectName: "Competition scoring apparatus",
@@ -42,8 +50,7 @@ const placementErrorTypes = new Set([
 const placementErrors = circuitJson.filter((element) => {
   if (!placementErrorTypes.has(element.type)) return false
   if (element.type !== "pcb_pad_pad_clearance_error") return true
-  const componentIds = element.pcb_pad_ids.map((padId) => pcbPadComponentById.get(padId))
-  return componentIds.some((componentId) => componentId === undefined) || new Set(componentIds).size !== 1
+  return !isSameFootprintClearanceError(element, pcbPadComponentById)
 })
 if (placementErrors.length > 0) {
   const counts = Object.entries(Object.groupBy(placementErrors, (element) => element.type))
@@ -55,15 +62,30 @@ if (placementErrors.length > 0) {
     .join("\n")
   throw new Error(`PCB placement validation failed (${counts})\n${examples}`)
 }
+const routing = summarizeBoardRouting(circuitJson)
+console.info(
+  `PCB routing: ${routing.routedConnectionCount}/${routing.sourceConnectionCount} connections routed; ` +
+    `${routing.unroutedConnectionCount} unresolved; ${routing.routingErrorCount} routing/DRC errors`
+)
+if (routing.routingErrorCount > 0) {
+  await mkdir("dist", { recursive: true })
+  await writeFile("dist/routing-diagnostic.json", JSON.stringify(circuitJson, null, 2))
+  const examples = circuitJson
+    .filter(isRoutingError)
+    .slice(0, 30)
+    .map((element) => {
+      const sourceTraceId = "source_trace_id" in element ? element.source_trace_id : undefined
+      const message = "message" in element ? element.message : undefined
+      return `${element.type}${sourceTraceId === undefined ? "" : ` ${sourceTraceId}`}: ${message ?? "no message"}`
+    })
+    .join("\n")
+  console.info(`PCB routing error examples:\n${examples}`)
+  console.info("Incomplete routing snapshot: dist/routing-diagnostic.json")
+}
+assertBoardRoutingIsComplete(routing)
 const sourceComponents = circuitJson
   .filter((element) => element.type === "source_component")
   .toSorted((left, right) => (left.name ?? "").localeCompare(right.name ?? ""))
-const routeCount = circuitJson.filter((element) => element.type === "pcb_trace").length
-const connectionCount = circuitJson.filter((element) => element.type === "source_trace").length
-const unresolvedConnectionCount = Math.max(
-  connectionCount - routeCount,
-  circuitJson.filter((element) => element.type === "pcb_trace_missing_error").length
-)
 const resolvedSupplierPartCount = circuitJson.filter(
   (element) =>
     element.type === "source_component" &&
@@ -142,9 +164,9 @@ const readiness = createReadinessReport({
     modelPurpose:
       "Canonical clean-sheet ESP32-S3 prototype board with all selected electrical subsystems placed; routing and fabrication review remain open",
     routing: {
-      connectionCount,
-      routeCount,
-      unresolvedConnectionCount
+      connectionCount: routing.sourceConnectionCount,
+      routeCount: routing.routedConnectionCount,
+      unresolvedConnectionCount: routing.unroutedConnectionCount
     },
     partsResolution: {
       engine: "Reviewed project footprints only; automatic supplier geometry substitution is disabled",
@@ -223,8 +245,8 @@ const previewHtml = `<!doctype html>
   <h1>Competition scoring apparatus board model</h1>
   <p class="warning"><strong>Placement complete; routing in progress.</strong> The canonical board contains the direct-wire weapon and piste interfaces, power, ESP32-S3, Ethernet, display, IR, primary outputs, and seven-line acquisition circuits. It is not ready for fabrication until routing and design-rule review pass.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
-    <li><strong>${routeCount}</strong> routed connections</li>
-    <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
+    <li><strong>${routing.routedConnectionCount}</strong> routed connections</li>
+    <li><strong>${routing.unroutedConnectionCount}</strong> unresolved connections</li>
     <li><strong>${sourceComponents.length}</strong> placed source components</li>
     <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>

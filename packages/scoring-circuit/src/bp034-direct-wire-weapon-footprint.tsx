@@ -274,7 +274,7 @@ const footprint = (
           rectPadHeight={`${solderLandingPadMm}mm`}
           rectBorderRadius={`${solderLandingPadMm / 2}mm`}
           solderMaskMargin={`${solderMaskMarginMm}mm`}
-          portHints={[landing.landingPadReference, landing.boardNet, landing.boardLabel]}
+          portHints={[landing.landingPadReference, landing.boardLabel]}
         />
       </Fragment>
     ))}
@@ -290,7 +290,7 @@ const footprint = (
           rectPadHeight={`${testPointPadMm}mm`}
           rectBorderRadius={`${testPointPadMm / 2}mm`}
           solderMaskMargin={`${solderMaskMarginMm}mm`}
-          portHints={[landing.testPadReference, landing.boardNet, `${landing.boardLabel} TEST`]}
+          portHints={[landing.testPadReference, `${landing.boardLabel} TEST`]}
         />
       </Fragment>
     ))}

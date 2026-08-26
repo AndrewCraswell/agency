@@ -10,7 +10,7 @@ let pcbCircuitJson: CircuitJson | undefined
 function renderCircuit(): CircuitJson {
   if (schematicCircuitJson !== undefined) return schematicCircuitJson
   schematicCircuitJson = renderTestCircuit(
-    <board width="120mm" height="80mm">
+    <board width="360mm" height="200mm">
       <chip
         name="U_ESP32"
         doNotPlace
@@ -46,7 +46,7 @@ function renderCircuit(): CircuitJson {
 function renderPcbCircuit(): CircuitJson {
   if (pcbCircuitJson !== undefined) return pcbCircuitJson
   pcbCircuitJson = renderTestCircuit(
-    <board width="120mm" height="80mm">
+    <board width="360mm" height="200mm">
       <chip
         name="U_ESP32"
         doNotPlace

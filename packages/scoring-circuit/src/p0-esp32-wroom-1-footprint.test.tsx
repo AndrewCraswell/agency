@@ -199,14 +199,14 @@ describe("P0-06 ESP32-S3-WROOM-1-N16R2 official footprint reconciliation", () =>
   it("renders the official 40-land topology, EPAD vias, and review-only keepout", () => {
     const { artifacts, json } = footprintArtifacts()
     expect(json.filter((element) => element.type.includes("error"))).toEqual([])
-    expect(artifacts.filter((element) => element.type === "pcb_smtpad")).toHaveLength(40)
-    expect(artifacts.filter((element) => element.type === "pcb_plated_hole")).toHaveLength(9)
+    expect(artifacts.filter((element) => element.type === "pcb_smtpad")).toHaveLength(49)
+    expect(json.filter((element) => element.type === "pcb_via")).toHaveLength(9)
     expect(json.filter((element) => element.type === "pcb_keepout")).toHaveLength(1)
     expect(json.filter((element) => element.type === "pcb_keepout")).toEqual([
       expect.objectContaining({ center: { x: 0, y: 12.5 }, width: 48, height: 36 })
     ])
     const pads = artifacts.filter((element) => element.type === "pcb_smtpad")
-    const vias = artifacts.filter((element) => element.type === "pcb_plated_hole")
+    const vias = json.filter((element) => element.type === "pcb_via")
     expect(pads[0]).toMatchObject({ x: -8.75, y: 8.255, width: 1.5, height: 0.9 })
     expect(pads[14]).toMatchObject({ x: -6.985, y: -9.5, width: 0.9, height: 1.5 })
     expect(vias[4]).toMatchObject({ x: -1.5, y: 0.5 })
