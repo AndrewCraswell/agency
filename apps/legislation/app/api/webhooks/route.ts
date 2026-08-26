@@ -1,4 +1,4 @@
-import { handleNx05bRequest } from "../../../src/server/next/nx05b"
+import { handleWebhookRequest } from "../../../src/server/next/webhook-route-handler"
 import { notFoundResponse } from "../_shared"
 
 export const runtime = "nodejs"
@@ -8,7 +8,7 @@ export async function DELETE(request: Request): Promise<Response> {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return await handleNx05bRequest(request)
+  return await handleWebhookRequest(request)
 }
 
 export async function HEAD(request: Request): Promise<Response> {
@@ -24,7 +24,7 @@ export async function PATCH(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return await handleNx05bRequest(request)
+  return await handleWebhookRequest(request)
 }
 
 export async function PUT(request: Request): Promise<Response> {

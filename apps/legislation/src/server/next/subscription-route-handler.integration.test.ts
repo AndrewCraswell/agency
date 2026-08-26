@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { executeNextHttpApiHandler } from "../../api/next/node-handler.js"
-import { createNx05aHttpApiHandler } from "./nx05a.js"
+import { createSubscriptionHttpApiHandler } from "./subscription-route-handler.js"
 
-describe("NX-05A production identity boundary", () => {
+describe("subscription route production identity boundary", () => {
   it("returns forbidden without a resolver before accessing the subscription database", async () => {
     let databaseAccesses = 0
     const database = new Proxy(
@@ -14,7 +14,7 @@ describe("NX-05A production identity boundary", () => {
         }
       }
     )
-    const handler = createNx05aHttpApiHandler({
+    const handler = createSubscriptionHttpApiHandler({
       config: {
         security: {},
         server: { publicApiBaseUrl: "https://api.example.test" }
@@ -22,17 +22,17 @@ describe("NX-05A production identity boundary", () => {
       database: database as never
     })
     const request = new Request("https://api.example.test/api/subscriptions", {
-      headers: { "x-correlation-id": "nx05a-fail-closed" }
+      headers: { "x-correlation-id": "subscription-fail-closed" }
     })
 
     const response = await executeNextHttpApiHandler(request, handler)
 
     expect(response.status).toBe(403)
-    expect(response.headers.get("x-correlation-id")).toBe("nx05a-fail-closed")
+    expect(response.headers.get("x-correlation-id")).toBe("subscription-fail-closed")
     await expect(response.json()).resolves.toEqual({
       error: {
         category: "forbidden",
-        correlationId: "nx05a-fail-closed",
+        correlationId: "subscription-fail-closed",
         message: "An authenticated identity is required.",
         retryable: false
       }

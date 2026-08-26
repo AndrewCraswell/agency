@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx03aRequest } = vi.hoisted(() => ({
-  handleNx03aRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleCivicEntityRequest } = vi.hoisted(() => ({
+  handleCivicEntityRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx03a", () => ({ handleNx03aRequest }))
+vi.mock("../../../src/server/next/civic-entity-route-handler", () => ({ handleCivicEntityRequest }))
 
 import * as amendments from "./[personId]/amendments/route"
 import * as bills from "./[personId]/bills/route"
@@ -74,22 +74,22 @@ const routes: readonly RouteCase[] = [
 ]
 
 beforeEach(() => {
-  handleNx03aRequest.mockReset()
-  handleNx03aRequest.mockImplementation(
+  handleCivicEntityRequest.mockReset()
+  handleCivicEntityRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-03A people route handlers", () => {
+describe("people civic entity route handlers", () => {
   it.each(routes)("delegates the $name URL and exact Request unchanged", async ({ route, url }) => {
     const request = new Request(url, { headers: { "x-correlation-id": "route-test" } })
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx03aRequest).toHaveBeenCalledOnce()
-    expect(handleNx03aRequest).toHaveBeenCalledWith(request)
-    expect(handleNx03aRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleCivicEntityRequest).toHaveBeenCalledOnce()
+    expect(handleCivicEntityRequest).toHaveBeenCalledWith(request)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0]).toBe(request)
   })
 
   it("keeps the static people collection distinct from the dynamic person route", async () => {
@@ -99,11 +99,11 @@ describe("NX-03A people route handlers", () => {
     await collection.GET(collectionRequest)
     await detail.GET(detailRequest)
 
-    expect(handleNx03aRequest).toHaveBeenCalledTimes(2)
-    expect(handleNx03aRequest.mock.calls[0]?.[0]).toBe(collectionRequest)
-    expect(handleNx03aRequest.mock.calls[0]?.[0].url).toBe(collectionRequest.url)
-    expect(handleNx03aRequest.mock.calls[1]?.[0]).toBe(detailRequest)
-    expect(handleNx03aRequest.mock.calls[1]?.[0].url).toBe(detailRequest.url)
+    expect(handleCivicEntityRequest).toHaveBeenCalledTimes(2)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0]).toBe(collectionRequest)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0].url).toBe(collectionRequest.url)
+    expect(handleCivicEntityRequest.mock.calls[1]?.[0]).toBe(detailRequest)
+    expect(handleCivicEntityRequest.mock.calls[1]?.[0].url).toBe(detailRequest.url)
   })
 
   it.each(routes)("exports node runtime and the exact method surface for $name", ({ route }) => {
@@ -136,19 +136,19 @@ describe("NX-03A people route handlers", () => {
             }
           })
     await expect(response.text()).resolves.toBe(expectedBody)
-    expect(handleNx03aRequest).not.toHaveBeenCalled()
+    expect(handleCivicEntityRequest).not.toHaveBeenCalled()
   })
 
-  it.each(routes)("passes a trailing slash unchanged to NX-03A for $name", async ({ route, url }) => {
+  it.each(routes)("passes a trailing slash unchanged to civic entity routes for $name", async ({ route, url }) => {
     const queryStart = url.indexOf("?")
     const trailingSlashUrl = queryStart === -1 ? `${url}/` : `${url.slice(0, queryStart)}/${url.slice(queryStart)}`
     const request = new Request(trailingSlashUrl)
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx03aRequest).toHaveBeenCalledOnce()
-    expect(handleNx03aRequest).toHaveBeenCalledWith(request)
-    expect(handleNx03aRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx03aRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleCivicEntityRequest).toHaveBeenCalledOnce()
+    expect(handleCivicEntityRequest).toHaveBeenCalledWith(request)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 })

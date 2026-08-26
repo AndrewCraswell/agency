@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx04Request } = vi.hoisted(() => ({
-  handleNx04Request: vi.fn<(request: Request) => Promise<Response>>()
+const { handleSearchResearchRequest } = vi.hoisted(() => ({
+  handleSearchResearchRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../src/server/next/nx04", () => ({ handleNx04Request }))
+vi.mock("../../src/server/next/search-research-route-handler", () => ({ handleSearchResearchRequest }))
 
 import * as documentDiffs from "./document-diffs/route"
 import * as researchAnswers from "./research/answers/route"
@@ -39,13 +39,13 @@ const routes: readonly [string, RouteModule, string][] = [
 ]
 
 beforeEach(() => {
-  handleNx04Request.mockReset()
-  handleNx04Request.mockImplementation(
+  handleSearchResearchRequest.mockReset()
+  handleSearchResearchRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-04 route handlers", () => {
+describe("search and research route handlers", () => {
   it.each(routes)("delegates the exact %s Request unchanged to POST", async (_name, route, url) => {
     const request = new Request(url, {
       body: JSON.stringify({ query: "fixture" }),
@@ -56,9 +56,9 @@ describe("NX-04 route handlers", () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx04Request).toHaveBeenCalledOnce()
-    expect(handleNx04Request).toHaveBeenCalledWith(request)
-    expect(handleNx04Request.mock.calls[0]?.[0]).toBe(request)
+    expect(handleSearchResearchRequest).toHaveBeenCalledOnce()
+    expect(handleSearchResearchRequest).toHaveBeenCalledWith(request)
+    expect(handleSearchResearchRequest.mock.calls[0]?.[0]).toBe(request)
   })
 
   it.each(routes)("exports node runtime and exact documented method surface for %s", (_name, route) => {
@@ -89,7 +89,7 @@ describe("NX-04 route handlers", () => {
             })
       await expect(response.text()).resolves.toBe(expectedBody)
     }
-    expect(handleNx04Request).not.toHaveBeenCalled()
+    expect(handleSearchResearchRequest).not.toHaveBeenCalled()
   })
 
   it.each(routes)("passes a trailing slash unchanged to the shared boundary for %s", async (_name, route, url) => {
@@ -101,8 +101,8 @@ describe("NX-04 route handlers", () => {
     const response = await route.POST(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx04Request).toHaveBeenCalledWith(request)
-    expect(handleNx04Request.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx04Request.mock.calls[0]?.[0].url).toBe(`${url}/`)
+    expect(handleSearchResearchRequest).toHaveBeenCalledWith(request)
+    expect(handleSearchResearchRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleSearchResearchRequest.mock.calls[0]?.[0].url).toBe(`${url}/`)
   })
 })

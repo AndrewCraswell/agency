@@ -76,14 +76,14 @@ vi.mock("./runtime.js", () => ({
   }))
 }))
 
-import { createNx03aRequestHandler, handleNx03aRequest } from "./nx03a.js"
+import { createCivicEntityRequestHandler, handleCivicEntityRequest } from "./civic-entity-route-handler.js"
 
 afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("NX-03A Next composition", () => {
-  it("composes exactly the fourteen NX-03A operations with one handler owner each", async () => {
+describe("civic entity Next composition", () => {
+  it("composes exactly the fourteen civic entity operations with one handler owner each", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
       const handled = await Reflect.apply(handler, undefined, [
@@ -93,7 +93,7 @@ describe("NX-03A Next composition", () => {
       return new Response(JSON.stringify({ handled }))
     })
 
-    await handleNx03aRequest(new Request("https://api.example.test/api/people"))
+    await handleCivicEntityRequest(new Request("https://api.example.test/api/people"))
 
     const options = { apiBaseUrl: "https://api.example.test" }
     for (const handler of [
@@ -116,7 +116,7 @@ describe("NX-03A Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-03A to create a composite handler")
+      throw new Error("Expected civic entity routes to create a composite handler")
     }
     const handlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(handlers)) {
@@ -156,7 +156,7 @@ describe("NX-03A Next composition", () => {
     ] as const
     for (const [method, url] of excludedRoutes) {
       expect(await matchedHandlerCount(handlers, method, url)).toBe(0)
-      const response = await handleNx03aRequest(new Request(`https://api.example.test${url}`, { method }))
+      const response = await handleCivicEntityRequest(new Request(`https://api.example.test${url}`, { method }))
       await expect(response.json()).resolves.toEqual({ handled: false })
     }
   })
@@ -165,7 +165,7 @@ describe("NX-03A Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx03aRequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createCivicEntityRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/people")
 
     const first = await requestHandler(request)

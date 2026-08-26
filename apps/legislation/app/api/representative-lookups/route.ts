@@ -1,4 +1,4 @@
-import { handleNx03bRequest } from "../../../src/server/next/nx03b"
+import { handleMeetingCalendarRequest } from "../../../src/server/next/meeting-calendar-route-handler"
 import { notFoundResponse } from "../_shared"
 
 export const runtime = "nodejs"
@@ -24,7 +24,7 @@ export async function PATCH(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return await handleNx03bRequest(request)
+  return await handleMeetingCalendarRequest(request)
 }
 
 export async function PUT(request: Request): Promise<Response> {

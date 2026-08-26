@@ -63,13 +63,16 @@ vi.mock("./runtime.js", () => ({
   }))
 }))
 
-import { createNx02bRequestHandler, handleNx02bRequest } from "./nx02b.js"
+import {
+  createBillAmendmentVoteRequestHandler,
+  handleBillAmendmentVoteRequest
+} from "./bill-amendment-vote-route-handler.js"
 
 afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("NX-02B Next composition", () => {
+describe("bill, amendment, and vote route handler", () => {
   it("composes only the nine handler families needed by the eighteen routes", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
@@ -80,7 +83,7 @@ describe("NX-02B Next composition", () => {
       return new Response(JSON.stringify({ handled }))
     })
 
-    await handleNx02bRequest(new Request("https://api.example.test/api/bills"))
+    await handleBillAmendmentVoteRequest(new Request("https://api.example.test/api/bills"))
 
     const options = { apiBaseUrl: "https://api.example.test" }
     expect(mocks.coreHandler).toHaveBeenCalledWith({}, options)
@@ -98,7 +101,7 @@ describe("NX-02B Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-02B to create a composite handler")
+      throw new Error("Expected the handler to create a composite handler")
     }
     const handlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(handlers)) {
@@ -150,7 +153,7 @@ describe("NX-02B Next composition", () => {
     ] as const
     for (const [method, url] of excludedRoutes) {
       expect(await matchedHandlerCount(handlers, method, url)).toBe(0)
-      const response = await handleNx02bRequest(new Request(`https://api.example.test${url}`, { method }))
+      const response = await handleBillAmendmentVoteRequest(new Request(`https://api.example.test${url}`, { method }))
       await expect(response.json()).resolves.toEqual({ handled: false })
     }
 
@@ -168,7 +171,7 @@ describe("NX-02B Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx02bRequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createBillAmendmentVoteRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/bills")
 
     const first = await requestHandler(request)

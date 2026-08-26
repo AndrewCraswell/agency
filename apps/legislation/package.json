@@ -16,37 +16,37 @@
       "types": "./dist/server/next/runtime.d.ts",
       "import": "./dist/server/next/runtime.js"
     },
-    "./server/next/nx02": {
-      "types": "./dist/server/next/nx02.d.ts",
-      "import": "./dist/server/next/nx02.js"
+    "./server/next/jurisdiction-route-handler": {
+      "types": "./dist/server/next/jurisdiction-route-handler.d.ts",
+      "import": "./dist/server/next/jurisdiction-route-handler.js"
     },
-    "./server/next/nx02b": {
-      "types": "./dist/server/next/nx02b.d.ts",
-      "import": "./dist/server/next/nx02b.js"
+    "./server/next/bill-amendment-vote-route-handler": {
+      "types": "./dist/server/next/bill-amendment-vote-route-handler.d.ts",
+      "import": "./dist/server/next/bill-amendment-vote-route-handler.js"
     },
-    "./server/next/nx02c": {
-      "types": "./dist/server/next/nx02c.d.ts",
-      "import": "./dist/server/next/nx02c.js"
+    "./server/next/document-resource-route-handler": {
+      "types": "./dist/server/next/document-resource-route-handler.d.ts",
+      "import": "./dist/server/next/document-resource-route-handler.js"
     },
-    "./server/next/nx03a": {
-      "types": "./dist/server/next/nx03a.d.ts",
-      "import": "./dist/server/next/nx03a.js"
+    "./server/next/civic-entity-route-handler": {
+      "types": "./dist/server/next/civic-entity-route-handler.d.ts",
+      "import": "./dist/server/next/civic-entity-route-handler.js"
     },
-    "./server/next/nx03b": {
-      "types": "./dist/server/next/nx03b.d.ts",
-      "import": "./dist/server/next/nx03b.js"
+    "./server/next/meeting-calendar-route-handler": {
+      "types": "./dist/server/next/meeting-calendar-route-handler.d.ts",
+      "import": "./dist/server/next/meeting-calendar-route-handler.js"
     },
-    "./server/next/nx04": {
-      "types": "./dist/server/next/nx04.d.ts",
-      "import": "./dist/server/next/nx04.js"
+    "./server/next/search-research-route-handler": {
+      "types": "./dist/server/next/search-research-route-handler.d.ts",
+      "import": "./dist/server/next/search-research-route-handler.js"
     },
-    "./server/next/nx05a": {
-      "types": "./dist/server/next/nx05a.d.ts",
-      "import": "./dist/server/next/nx05a.js"
+    "./server/next/subscription-route-handler": {
+      "types": "./dist/server/next/subscription-route-handler.d.ts",
+      "import": "./dist/server/next/subscription-route-handler.js"
     },
-    "./server/next/nx05b": {
-      "types": "./dist/server/next/nx05b.d.ts",
-      "import": "./dist/server/next/nx05b.js"
+    "./server/next/webhook-route-handler": {
+      "types": "./dist/server/next/webhook-route-handler.d.ts",
+      "import": "./dist/server/next/webhook-route-handler.js"
     }
   },
   "files": [

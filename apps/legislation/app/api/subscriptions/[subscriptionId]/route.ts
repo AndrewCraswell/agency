@@ -1,14 +1,14 @@
-import { handleNx05aRequest } from "../../../../src/server/next/nx05a"
+import { handleSubscriptionRequest } from "../../../../src/server/next/subscription-route-handler"
 import { notFoundResponse } from "../../_shared"
 
 export const runtime = "nodejs"
 
 export async function DELETE(request: Request): Promise<Response> {
-  return await handleNx05aRequest(request)
+  return await handleSubscriptionRequest(request)
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return await handleNx05aRequest(request)
+  return await handleSubscriptionRequest(request)
 }
 
 export async function HEAD(request: Request): Promise<Response> {
@@ -20,7 +20,7 @@ export async function OPTIONS(request: Request): Promise<Response> {
 }
 
 export async function PATCH(request: Request): Promise<Response> {
-  return await handleNx05aRequest(request)
+  return await handleSubscriptionRequest(request)
 }
 
 export async function POST(request: Request): Promise<Response> {

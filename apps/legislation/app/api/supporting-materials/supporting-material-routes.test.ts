@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx02cRequest } = vi.hoisted(() => ({
-  handleNx02cRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleDocumentResourceRequest } = vi.hoisted(() => ({
+  handleDocumentResourceRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx02c", () => ({ handleNx02cRequest }))
+vi.mock("../../../src/server/next/document-resource-route-handler", () => ({ handleDocumentResourceRequest }))
 
 import * as detail from "./[materialId]/route"
 import * as section from "./[materialId]/sections/[sectionId]/route"
@@ -37,21 +37,21 @@ const routes: readonly [string, RouteModule, string][] = [
 ]
 
 beforeEach(() => {
-  handleNx02cRequest.mockReset()
-  handleNx02cRequest.mockImplementation(
+  handleDocumentResourceRequest.mockReset()
+  handleDocumentResourceRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-02C supporting-material route handlers", () => {
+describe("document resource supporting-material route handlers", () => {
   it.each(routes)("delegates the %s URL unchanged", async (_name, route, url) => {
     const request = new Request(url, { headers: { "x-correlation-id": "route-test" } })
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx02cRequest).toHaveBeenCalledOnce()
-    expect(handleNx02cRequest).toHaveBeenCalledWith(request)
+    expect(handleDocumentResourceRequest).toHaveBeenCalledOnce()
+    expect(handleDocumentResourceRequest).toHaveBeenCalledWith(request)
   })
 
   it.each(routes)("exports node runtime and the exact documented method surface for %s", (_name, route) => {
@@ -84,7 +84,7 @@ describe("NX-02C supporting-material route handlers", () => {
               })
         await expect(response.text()).resolves.toBe(expectedBody)
       }
-      expect(handleNx02cRequest).not.toHaveBeenCalled()
+      expect(handleDocumentResourceRequest).not.toHaveBeenCalled()
     }
   )
 
@@ -95,7 +95,7 @@ describe("NX-02C supporting-material route handlers", () => {
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx02cRequest).toHaveBeenCalledWith(request)
-    expect(handleNx02cRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleDocumentResourceRequest).toHaveBeenCalledWith(request)
+    expect(handleDocumentResourceRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 })

@@ -1,10 +1,10 @@
-import { handleNx03aRequest } from "../../../../src/server/next/nx03a"
+import { handleCivicEntityRequest } from "../../../../src/server/next/civic-entity-route-handler"
 import { notFoundResponse } from "../../_shared"
 
 export const runtime = "nodejs"
 
 export async function GET(request: Request): Promise<Response> {
-  return await handleNx03aRequest(request)
+  return await handleCivicEntityRequest(request)
 }
 
 export async function DELETE(request: Request): Promise<Response> {

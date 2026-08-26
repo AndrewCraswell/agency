@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx03aRequest } = vi.hoisted(() => ({
-  handleNx03aRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleCivicEntityRequest } = vi.hoisted(() => ({
+  handleCivicEntityRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx03a", () => ({ handleNx03aRequest }))
+vi.mock("../../../src/server/next/civic-entity-route-handler", () => ({ handleCivicEntityRequest }))
 
 import * as bills from "./[organizationId]/bills/route"
 import * as calendars from "./[organizationId]/calendars/route"
@@ -44,22 +44,22 @@ const routes: readonly [string, RouteModule, string][] = [
 ]
 
 beforeEach(() => {
-  handleNx03aRequest.mockReset()
-  handleNx03aRequest.mockImplementation(
+  handleCivicEntityRequest.mockReset()
+  handleCivicEntityRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-03A organization route handlers", () => {
+describe("organization civic entity route handlers", () => {
   it.each(routes)("delegates the exact %s Request unchanged", async (_name, route, url) => {
     const request = new Request(url, { headers: { "x-correlation-id": "route-test" } })
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx03aRequest).toHaveBeenCalledOnce()
-    expect(handleNx03aRequest).toHaveBeenCalledWith(request)
-    expect(handleNx03aRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleCivicEntityRequest).toHaveBeenCalledOnce()
+    expect(handleCivicEntityRequest).toHaveBeenCalledWith(request)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0]).toBe(request)
   })
 
   it.each(routes)("exports node runtime and the exact documented method surface for %s", (_name, route) => {
@@ -92,7 +92,7 @@ describe("NX-03A organization route handlers", () => {
               })
         await expect(response.text()).resolves.toBe(expectedBody)
       }
-      expect(handleNx03aRequest).not.toHaveBeenCalled()
+      expect(handleCivicEntityRequest).not.toHaveBeenCalled()
     }
   )
 
@@ -103,9 +103,9 @@ describe("NX-03A organization route handlers", () => {
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx03aRequest).toHaveBeenCalledWith(request)
-    expect(handleNx03aRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx03aRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleCivicEntityRequest).toHaveBeenCalledWith(request)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleCivicEntityRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 
   it("delegates the membership static-child path only through its explicit nested route", async () => {
@@ -115,6 +115,6 @@ describe("NX-03A organization route handlers", () => {
     const response = await membership.GET(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx03aRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleCivicEntityRequest).toHaveBeenCalledExactlyOnceWith(request)
   })
 })

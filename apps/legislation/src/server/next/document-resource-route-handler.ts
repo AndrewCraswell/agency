@@ -31,34 +31,34 @@ import { listMeetingOutcomes } from "../../db/queries/meeting-outcome-read.js"
 import { listMeetingParticipants } from "../../db/queries/meeting-participant-reads.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx02cQueryService = CoreReadQueryApi & Required<Pick<CoreReadQueryApi, "getSupportingMaterialSection">>
+type DocumentResourceQueryService = CoreReadQueryApi & Required<Pick<CoreReadQueryApi, "getSupportingMaterialSection">>
 
-type Nx02cApplication = Readonly<{
+type DocumentResourceRouteApplication = Readonly<{
   config: Readonly<{ server: Readonly<{ publicApiBaseUrl: string | undefined }> }>
   database: LegislationDatabase
-  queryService: Nx02cQueryService
+  queryService: DocumentResourceQueryService
 }>
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx02cRequestHandlerDependencies = Readonly<{
+export type DocumentResourceRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-let nx02cHandler: HttpApiHandler | undefined
+let documentResourceHandler: HttpApiHandler | undefined
 
 /**
- * Handles only the NX-02C top-level document, supporting-material, global
- * change-feed, and canonical-resource batch routes.
+ * Handles top-level document, supporting-material, global change-feed, and
+ * canonical-resource batch routes.
  */
-export async function handleNx02cRequest(request: Request): Promise<Response> {
-  nx02cHandler ??= createNx02cHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx02cHandler)
+export async function handleDocumentResourceRequest(request: Request): Promise<Response> {
+  documentResourceHandler ??= createDocumentResourceHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, documentResourceHandler)
 }
 
-export function createNx02cRequestHandler(
-  dependencies: Nx02cRequestHandlerDependencies
+export function createDocumentResourceRequestHandler(
+  dependencies: DocumentResourceRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -67,7 +67,7 @@ export function createNx02cRequestHandler(
   }
 }
 
-export function createNx02cHttpApiHandler(application: Nx02cApplication): HttpApiHandler {
+export function createDocumentResourceHttpApiHandler(application: DocumentResourceRouteApplication): HttpApiHandler {
   const options = { apiBaseUrl: requiredPublicApiBaseUrl(application) }
   const documentReadApi = createTopLevelDocumentReadApi(application.database)
   const database = application.database
@@ -155,7 +155,7 @@ function createMeetingDetailReadApi(
   }
 }
 
-function requiredPublicApiBaseUrl(application: Nx02cApplication): string {
+function requiredPublicApiBaseUrl(application: DocumentResourceRouteApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")
@@ -164,7 +164,7 @@ function requiredPublicApiBaseUrl(application: Nx02cApplication): string {
 }
 
 async function unavailableBillRead(): Promise<never> {
-  throw new Error("NX-02C does not compose bill-child reads")
+  throw new Error("This handler does not compose bill-child reads")
 }
 
 function restrictToRoutes(

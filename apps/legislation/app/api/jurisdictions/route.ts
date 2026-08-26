@@ -1,10 +1,10 @@
-import { handleNx02Request } from "../../../src/server/next/nx02"
+import { handleJurisdictionRequest } from "../../../src/server/next/jurisdiction-route-handler"
 import { notFoundResponse } from "../_shared"
 
 export const runtime = "nodejs"
 
 export async function GET(request: Request): Promise<Response> {
-  return await handleNx02Request(request)
+  return await handleJurisdictionRequest(request)
 }
 
 export async function DELETE(request: Request): Promise<Response> {

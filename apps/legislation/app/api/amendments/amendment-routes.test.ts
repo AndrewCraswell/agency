@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx02bRequest } = vi.hoisted(() => ({
-  handleNx02bRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleBillAmendmentVoteRequest } = vi.hoisted(() => ({
+  handleBillAmendmentVoteRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx02b", () => ({ handleNx02bRequest }))
+vi.mock("../../../src/server/next/bill-amendment-vote-route-handler", () => ({ handleBillAmendmentVoteRequest }))
 
 import * as detail from "./[amendmentId]/route"
 import * as batch from "./batch/route"
@@ -54,13 +54,13 @@ const routes: readonly RouteCase[] = [
 const methods: readonly Method[] = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
 
 beforeEach(() => {
-  handleNx02bRequest.mockReset()
-  handleNx02bRequest.mockImplementation(
+  handleBillAmendmentVoteRequest.mockReset()
+  handleBillAmendmentVoteRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-02B amendment route handlers", () => {
+describe("bill, amendment, and vote amendment route handlers", () => {
   it.each(routes)(
     "delegates the supported method for the $name route unchanged",
     async ({ route, supportedMethod, url }) => {
@@ -69,8 +69,8 @@ describe("NX-02B amendment route handlers", () => {
 
       expect(response.status).toBe(200)
       await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-      expect(handleNx02bRequest).toHaveBeenCalledOnce()
-      expect(handleNx02bRequest).toHaveBeenCalledWith(request)
+      expect(handleBillAmendmentVoteRequest).toHaveBeenCalledOnce()
+      expect(handleBillAmendmentVoteRequest).toHaveBeenCalledWith(request)
     }
   )
 
@@ -103,6 +103,6 @@ describe("NX-02B amendment route handlers", () => {
             }
           })
     await expect(response.text()).resolves.toBe(expectedBody)
-    expect(handleNx02bRequest).not.toHaveBeenCalled()
+    expect(handleBillAmendmentVoteRequest).not.toHaveBeenCalled()
   })
 })

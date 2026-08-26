@@ -1,4 +1,4 @@
-import { handleNx04Request } from "../../../src/server/next/nx04"
+import { handleSearchResearchRequest } from "../../../src/server/next/search-research-route-handler"
 import { notFoundResponse } from "../_shared"
 
 export const runtime = "nodejs"
@@ -24,7 +24,7 @@ export async function PATCH(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return await handleNx04Request(request)
+  return await handleSearchResearchRequest(request)
 }
 
 export async function PUT(request: Request): Promise<Response> {

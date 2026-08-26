@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx03bRequest } = vi.hoisted(() => ({
-  handleNx03bRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleMeetingCalendarRequest } = vi.hoisted(() => ({
+  handleMeetingCalendarRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../src/server/next/nx03b", () => ({ handleNx03bRequest }))
+vi.mock("../../../src/server/next/meeting-calendar-route-handler", () => ({ handleMeetingCalendarRequest }))
 
 import * as meetings from "./[calendarId]/meetings/route"
 import * as detail from "./[calendarId]/route"
@@ -35,21 +35,21 @@ const routes: readonly [string, RouteModule, string][] = [
 ]
 
 beforeEach(() => {
-  handleNx03bRequest.mockReset()
-  handleNx03bRequest.mockImplementation(
+  handleMeetingCalendarRequest.mockReset()
+  handleMeetingCalendarRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-03B calendar route handlers", () => {
+describe("meeting calendar route handlers", () => {
   it.each(routes)("delegates the exact %s Request unchanged", async (_name, route, url) => {
     const request = new Request(url, { headers: { "x-correlation-id": "route-test" } })
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: url })
-    expect(handleNx03bRequest).toHaveBeenCalledExactlyOnceWith(request)
-    expect(handleNx03bRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleMeetingCalendarRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleMeetingCalendarRequest.mock.calls[0]?.[0]).toBe(request)
   })
 
   it.each(routes)("exports node runtime and the exact documented method surface for %s", (_name, route) => {
@@ -82,7 +82,7 @@ describe("NX-03B calendar route handlers", () => {
               })
         await expect(response.text()).resolves.toBe(expectedBody)
       }
-      expect(handleNx03bRequest).not.toHaveBeenCalled()
+      expect(handleMeetingCalendarRequest).not.toHaveBeenCalled()
     }
   )
 
@@ -93,9 +93,9 @@ describe("NX-03B calendar route handlers", () => {
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx03bRequest).toHaveBeenCalledExactlyOnceWith(request)
-    expect(handleNx03bRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx03bRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleMeetingCalendarRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleMeetingCalendarRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleMeetingCalendarRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 
   it("keeps the static collection distinct from the calendar detail and meetings paths", async () => {
@@ -109,10 +109,10 @@ describe("NX-03B calendar route handlers", () => {
     await detail.GET(requests[1])
     await meetings.GET(requests[2])
 
-    expect(handleNx03bRequest).toHaveBeenCalledTimes(3)
+    expect(handleMeetingCalendarRequest).toHaveBeenCalledTimes(3)
     for (const [index, request] of requests.entries()) {
-      expect(handleNx03bRequest.mock.calls[index]?.[0]).toBe(request)
-      expect(handleNx03bRequest.mock.calls[index]?.[0].url).toBe(request.url)
+      expect(handleMeetingCalendarRequest.mock.calls[index]?.[0]).toBe(request)
+      expect(handleMeetingCalendarRequest.mock.calls[index]?.[0].url).toBe(request.url)
     }
   })
 })

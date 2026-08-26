@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx02cRequest } = vi.hoisted(() => ({
-  handleNx02cRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleDocumentResourceRequest } = vi.hoisted(() => ({
+  handleDocumentResourceRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../../../src/server/next/nx02c", () => ({ handleNx02cRequest }))
+vi.mock("../../../../src/server/next/document-resource-route-handler", () => ({ handleDocumentResourceRequest }))
 
 import * as route from "./route"
 
@@ -25,13 +25,13 @@ const methods: readonly Method[] = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH",
 const staticUrl = "https://legislation.test/api/resources/batch"
 
 beforeEach(() => {
-  handleNx02cRequest.mockReset()
-  handleNx02cRequest.mockImplementation(
+  handleDocumentResourceRequest.mockReset()
+  handleDocumentResourceRequest.mockImplementation(
     async (request) => new Response(JSON.stringify({ delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-02C resource batch route handler", () => {
+describe("document resource resource batch route handler", () => {
   it("delegates the documented static POST path and Request unchanged", async () => {
     const request = new Request(staticUrl, {
       body: JSON.stringify({ items: [{ id: "bill:ak:30:hb1", type: "bill" }] }),
@@ -42,8 +42,8 @@ describe("NX-02C resource batch route handler", () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ delegatedUrl: staticUrl })
-    expect(handleNx02cRequest).toHaveBeenCalledOnce()
-    expect(handleNx02cRequest).toHaveBeenCalledWith(request)
+    expect(handleDocumentResourceRequest).toHaveBeenCalledOnce()
+    expect(handleDocumentResourceRequest).toHaveBeenCalledWith(request)
   })
 
   it("exports node runtime and the exact documented method surface", () => {
@@ -75,18 +75,18 @@ describe("NX-02C resource batch route handler", () => {
               }
             })
       await expect(response.text()).resolves.toBe(expectedBody)
-      expect(handleNx02cRequest).not.toHaveBeenCalled()
+      expect(handleDocumentResourceRequest).not.toHaveBeenCalled()
     }
   )
 
-  it("passes a trailing slash on the static path unchanged to the NX-02C handler", async () => {
+  it("passes a trailing slash on the static path unchanged to the document resource handler", async () => {
     const trailingSlashUrl = `${staticUrl}/?limit=25`
     const request = new Request(trailingSlashUrl, { method: "POST" })
     const response = await (route as RouteModule).POST(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx02cRequest).toHaveBeenCalledOnce()
-    expect(handleNx02cRequest).toHaveBeenCalledWith(request)
-    expect(handleNx02cRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleDocumentResourceRequest).toHaveBeenCalledOnce()
+    expect(handleDocumentResourceRequest).toHaveBeenCalledWith(request)
+    expect(handleDocumentResourceRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 })

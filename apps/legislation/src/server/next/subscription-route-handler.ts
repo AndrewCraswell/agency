@@ -15,7 +15,7 @@ import { decodeIdempotencyEncryptionKey } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx05aApplication = Readonly<{
+type SubscriptionRouteApplication = Readonly<{
   config: Readonly<{
     security: Readonly<{ idempotencyEncryptionKey?: string | undefined }>
     server: Readonly<{ publicApiBaseUrl: string | undefined }>
@@ -25,25 +25,25 @@ type Nx05aApplication = Readonly<{
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx05aRequestHandlerDependencies = Readonly<{
+export type SubscriptionRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-export type Nx05aCompositionDependencies = Readonly<{
+export type SubscriptionCompositionDependencies = Readonly<{
   resolveRequestIdentity?: () => RequestIdentity | undefined
 }>
 
-let nx05aHandler: HttpApiHandler | undefined
+let subscriptionHandler: HttpApiHandler | undefined
 
-/** Handles only the seven NX-05A subscription routes. */
-export async function handleNx05aRequest(request: Request): Promise<Response> {
-  nx05aHandler ??= createNx05aHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx05aHandler)
+/** Handles the public subscription API routes. */
+export async function handleSubscriptionRequest(request: Request): Promise<Response> {
+  subscriptionHandler ??= createSubscriptionHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, subscriptionHandler)
 }
 
-export function createNx05aRequestHandler(
-  dependencies: Nx05aRequestHandlerDependencies
+export function createSubscriptionRequestHandler(
+  dependencies: SubscriptionRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -52,16 +52,16 @@ export function createNx05aRequestHandler(
   }
 }
 
-export function createNx05aHttpApiHandler(
-  application: Nx05aApplication,
-  dependencies: Nx05aCompositionDependencies = {}
+export function createSubscriptionHttpApiHandler(
+  application: SubscriptionRouteApplication,
+  dependencies: SubscriptionCompositionDependencies = {}
 ): HttpApiHandler {
   const apiBaseUrl = requiredPublicApiBaseUrl(application)
   const repository = new PostgresSubscriptionRepository(application.database)
   const service = new SubscriptionService(
     repository,
     createWebhookSecretProtector(async () => {
-      throw new Error("Webhook secret protection is not configured for NX-05A.")
+      throw new Error("Webhook secret protection is not configured for subscription routes.")
     })
   )
   const handlers: HttpApiHandler[] = [
@@ -105,7 +105,7 @@ function withRequestIdentity(
   }
 }
 
-function requiredPublicApiBaseUrl(application: Nx05aApplication): string {
+function requiredPublicApiBaseUrl(application: SubscriptionRouteApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")

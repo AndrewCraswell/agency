@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx05bRequest } = vi.hoisted(() => ({
-  handleNx05bRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleWebhookRequest } = vi.hoisted(() => ({
+  handleWebhookRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../src/server/next/nx05b", () => ({ handleNx05bRequest }))
+vi.mock("../../src/server/next/webhook-route-handler", () => ({ handleWebhookRequest }))
 
 import * as rotateSecret from "./webhooks/[webhookId]/rotate-secret/route"
 import * as detail from "./webhooks/[webhookId]/route"
@@ -66,14 +66,14 @@ function requestMethod(routeCase: RouteCase): Method {
 }
 
 beforeEach(() => {
-  handleNx05bRequest.mockReset()
-  handleNx05bRequest.mockImplementation(
+  handleWebhookRequest.mockReset()
+  handleWebhookRequest.mockImplementation(
     async (request) =>
       new Response(JSON.stringify({ delegatedMethod: request.method, delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-05B webhook route handlers", () => {
+describe("webhook Route Handlers", () => {
   for (const routeCase of routes) {
     it.each(routeCase.documentedMethods)(
       `delegates the exact ${routeCase.name} %s Request unchanged`,
@@ -89,8 +89,8 @@ describe("NX-05B webhook route handlers", () => {
           delegatedMethod: method,
           delegatedUrl: routeCase.url
         })
-        expect(handleNx05bRequest).toHaveBeenCalledExactlyOnceWith(request)
-        expect(handleNx05bRequest.mock.calls[0]?.[0]).toBe(request)
+        expect(handleWebhookRequest).toHaveBeenCalledExactlyOnceWith(request)
+        expect(handleWebhookRequest.mock.calls[0]?.[0]).toBe(request)
       }
     )
   }
@@ -129,7 +129,7 @@ describe("NX-05B webhook route handlers", () => {
                 }
               })
         await expect(response.text()).resolves.toBe(expectedBody)
-        expect(handleNx05bRequest).not.toHaveBeenCalled()
+        expect(handleWebhookRequest).not.toHaveBeenCalled()
       }
     )
   }
@@ -145,9 +145,9 @@ describe("NX-05B webhook route handlers", () => {
     const response = await routeCase.route[method](request)
 
     expect(response.status).toBe(200)
-    expect(handleNx05bRequest).toHaveBeenCalledExactlyOnceWith(request)
-    expect(handleNx05bRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx05bRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleWebhookRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleWebhookRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleWebhookRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 
   it("keeps the collection, detail, rotate-secret, and verify paths distinct", async () => {
@@ -163,10 +163,10 @@ describe("NX-05B webhook route handlers", () => {
       await routeCase.route[method](request)
     }
 
-    expect(handleNx05bRequest).toHaveBeenCalledTimes(routes.length)
+    expect(handleWebhookRequest).toHaveBeenCalledTimes(routes.length)
     for (const [index, { request }] of routeRequests.entries()) {
-      expect(handleNx05bRequest.mock.calls[index]?.[0]).toBe(request)
-      expect(handleNx05bRequest.mock.calls[index]?.[0].url).toBe(request.url)
+      expect(handleWebhookRequest.mock.calls[index]?.[0]).toBe(request)
+      expect(handleWebhookRequest.mock.calls[index]?.[0].url).toBe(request.url)
     }
   })
 })

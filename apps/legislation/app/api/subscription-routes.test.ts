@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { handleNx05aRequest } = vi.hoisted(() => ({
-  handleNx05aRequest: vi.fn<(request: Request) => Promise<Response>>()
+const { handleSubscriptionRequest } = vi.hoisted(() => ({
+  handleSubscriptionRequest: vi.fn<(request: Request) => Promise<Response>>()
 }))
 
-vi.mock("../../src/server/next/nx05a", () => ({ handleNx05aRequest }))
+vi.mock("../../src/server/next/subscription-route-handler", () => ({ handleSubscriptionRequest }))
 
 import * as deliveries from "./subscriptions/[subscriptionId]/deliveries/route"
 import * as events from "./subscriptions/[subscriptionId]/events/route"
@@ -62,14 +62,14 @@ const routes: readonly RouteCase[] = [
 ]
 
 beforeEach(() => {
-  handleNx05aRequest.mockReset()
-  handleNx05aRequest.mockImplementation(
+  handleSubscriptionRequest.mockReset()
+  handleSubscriptionRequest.mockImplementation(
     async (request) =>
       new Response(JSON.stringify({ delegatedMethod: request.method, delegatedUrl: request.url }), { status: 200 })
   )
 })
 
-describe("NX-05A subscription route handlers", () => {
+describe("subscription Route Handlers", () => {
   for (const routeCase of routes) {
     it.each(routeCase.documentedMethods)(
       `delegates the exact ${routeCase.name} %s Request unchanged`,
@@ -85,8 +85,8 @@ describe("NX-05A subscription route handlers", () => {
           delegatedMethod: method,
           delegatedUrl: routeCase.url
         })
-        expect(handleNx05aRequest).toHaveBeenCalledExactlyOnceWith(request)
-        expect(handleNx05aRequest.mock.calls[0]?.[0]).toBe(request)
+        expect(handleSubscriptionRequest).toHaveBeenCalledExactlyOnceWith(request)
+        expect(handleSubscriptionRequest.mock.calls[0]?.[0]).toBe(request)
       }
     )
   }
@@ -125,7 +125,7 @@ describe("NX-05A subscription route handlers", () => {
                 }
               })
         await expect(response.text()).resolves.toBe(expectedBody)
-        expect(handleNx05aRequest).not.toHaveBeenCalled()
+        expect(handleSubscriptionRequest).not.toHaveBeenCalled()
       }
     )
   }
@@ -137,9 +137,9 @@ describe("NX-05A subscription route handlers", () => {
     const response = await route.GET(request)
 
     expect(response.status).toBe(200)
-    expect(handleNx05aRequest).toHaveBeenCalledExactlyOnceWith(request)
-    expect(handleNx05aRequest.mock.calls[0]?.[0]).toBe(request)
-    expect(handleNx05aRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
+    expect(handleSubscriptionRequest).toHaveBeenCalledExactlyOnceWith(request)
+    expect(handleSubscriptionRequest.mock.calls[0]?.[0]).toBe(request)
+    expect(handleSubscriptionRequest.mock.calls[0]?.[0].url).toBe(trailingSlashUrl)
   })
 
   it("keeps the collection, detail, events, and deliveries paths distinct", async () => {
@@ -149,10 +149,10 @@ describe("NX-05A subscription route handlers", () => {
       await routeCase.route.GET(request)
     }
 
-    expect(handleNx05aRequest).toHaveBeenCalledTimes(routes.length)
+    expect(handleSubscriptionRequest).toHaveBeenCalledTimes(routes.length)
     for (const [index, { request }] of routeRequests.entries()) {
-      expect(handleNx05aRequest.mock.calls[index]?.[0]).toBe(request)
-      expect(handleNx05aRequest.mock.calls[index]?.[0].url).toBe(request.url)
+      expect(handleSubscriptionRequest.mock.calls[index]?.[0]).toBe(request)
+      expect(handleSubscriptionRequest.mock.calls[index]?.[0].url).toBe(request.url)
     }
   })
 })

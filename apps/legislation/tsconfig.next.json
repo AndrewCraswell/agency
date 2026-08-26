@@ -3,14 +3,14 @@
   "include": [
     "src/api/next/http.ts",
     "src/api/next/node-handler.ts",
-    "src/server/next/nx02.ts",
-    "src/server/next/nx02b.ts",
-    "src/server/next/nx02c.ts",
-    "src/server/next/nx03a.ts",
-    "src/server/next/nx03b.ts",
-    "src/server/next/nx04.ts",
-    "src/server/next/nx05a.ts",
-    "src/server/next/nx05b.ts",
+    "src/server/next/jurisdiction-route-handler.ts",
+    "src/server/next/bill-amendment-vote-route-handler.ts",
+    "src/server/next/document-resource-route-handler.ts",
+    "src/server/next/civic-entity-route-handler.ts",
+    "src/server/next/meeting-calendar-route-handler.ts",
+    "src/server/next/search-research-route-handler.ts",
+    "src/server/next/subscription-route-handler.ts",
+    "src/server/next/webhook-route-handler.ts",
     "src/server/next/representative-lookup-provider.ts"
   ],
   "exclude": ["dist", "node_modules", "src/**/*.test.ts"]

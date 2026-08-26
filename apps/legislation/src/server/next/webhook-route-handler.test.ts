@@ -48,16 +48,20 @@ vi.mock("./runtime.js", () => ({
   )
 }))
 
-import { createNx05bHttpApiHandler, createNx05bRequestHandler, handleNx05bRequest } from "./nx05b.js"
+import {
+  createWebhookHttpApiHandler,
+  createWebhookRequestHandler,
+  handleWebhookRequest
+} from "./webhook-route-handler.js"
 
 afterEach(() => {
   observedIdentities.length = 0
   vi.clearAllMocks()
 })
 
-describe("NX-05B Next composition", () => {
+describe("webhook route composition", () => {
   it("composes exactly the seven webhook operations with one handler owner each", async () => {
-    const handler = createNx05bHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey))
+    const handler = createWebhookHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey))
     const options = { apiBaseUrl: "https://api.example.test" }
 
     expect(mocks.readHandler).toHaveBeenCalledWith(expect.any(Object), options)
@@ -65,7 +69,7 @@ describe("NX-05B Next composition", () => {
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
-      throw new Error("Expected NX-05B to create a composite handler")
+      throw new Error("Expected webhook routes to create a composite handler")
     }
     const handlers = Reflect.get(composition, "handlers")
     if (!Array.isArray(handlers)) {
@@ -106,7 +110,7 @@ describe("NX-05B Next composition", () => {
     [idempotencyEncryptionKey, undefined],
     [undefined, undefined]
   ])("omits webhook mutations unless both encryption keys are configured", (idempotencyKey, secretKey) => {
-    createNx05bHttpApiHandler(application(idempotencyKey, secretKey))
+    createWebhookHttpApiHandler(application(idempotencyKey, secretKey))
 
     expect(mocks.readHandler).toHaveBeenCalledOnce()
     expect(mocks.mutationHandler).not.toHaveBeenCalled()
@@ -116,10 +120,10 @@ describe("NX-05B Next composition", () => {
 
   it("injects an explicit test identity without installing a production identity", async () => {
     const identity = { organizationId: "organization:test", userId: "user:test" }
-    const injected = createNx05bHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey), {
+    const injected = createWebhookHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey), {
       resolveRequestIdentity: () => identity
     })
-    const production = createNx05bHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey))
+    const production = createWebhookHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey))
 
     await runWithRequestContext({ correlationId: "injected" }, async () => {
       expect(await invoke(injected, "GET", "/api/webhooks")).toBe(true)
@@ -132,7 +136,7 @@ describe("NX-05B Next composition", () => {
   })
 
   it("does not inject identity outside the managed request context", async () => {
-    const handler = createNx05bHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey), {
+    const handler = createWebhookHttpApiHandler(application(idempotencyEncryptionKey, webhookSecretEncryptionKey), {
       resolveRequestIdentity: () => ({ userId: "user:test" })
     })
 
@@ -141,7 +145,7 @@ describe("NX-05B Next composition", () => {
   })
 
   it("requires the canonical public API base URL", () => {
-    expect(() => createNx05bHttpApiHandler(applicationWithoutPublicApiBaseUrl())).toThrow(
+    expect(() => createWebhookHttpApiHandler(applicationWithoutPublicApiBaseUrl())).toThrow(
       "LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes"
     )
   })
@@ -150,7 +154,7 @@ describe("NX-05B Next composition", () => {
     const handler = vi.fn<HttpApiHandler>()
     const executeHandler = vi.fn<NextHttpApiExecutor>(async () => new Response("handled"))
     const createHandler = vi.fn<() => HttpApiHandler>(() => handler)
-    const requestHandler = createNx05bRequestHandler({ createHandler, execute: executeHandler })
+    const requestHandler = createWebhookRequestHandler({ createHandler, execute: executeHandler })
     const request = new Request("https://api.example.test/api/webhooks")
 
     const first = await requestHandler(request)
@@ -167,7 +171,7 @@ describe("NX-05B Next composition", () => {
     mocks.execute.mockResolvedValueOnce(new Response("handled"))
     const request = new Request("https://api.example.test/api/webhooks")
 
-    await expect(handleNx05bRequest(request).then(async (response) => await response.text())).resolves.toBe("handled")
+    await expect(handleWebhookRequest(request).then(async (response) => await response.text())).resolves.toBe("handled")
     expect(mocks.execute).toHaveBeenCalledWith(request, expect.any(Function))
   })
 })

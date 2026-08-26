@@ -36,28 +36,28 @@ import {
 import { createNextRepresentativeLookupProvider } from "./representative-lookup-provider.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
-type Nx03bApplication = Readonly<{
+type MeetingCalendarApplication = Readonly<{
   config: Pick<LegislationConfig, "ingestion" | "server">
   database: LegislationDatabase
 }>
 
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
 
-export type Nx03bRequestHandlerDependencies = Readonly<{
+export type MeetingCalendarRequestHandlerDependencies = Readonly<{
   createHandler: () => HttpApiHandler
   execute: NextHttpApiExecutor
 }>
 
-let nx03bHandler: HttpApiHandler | undefined
+let meetingCalendarHandler: HttpApiHandler | undefined
 
-/** Handles only the NX-03B meeting, calendar, and representative lookup routes. */
-export async function handleNx03bRequest(request: Request): Promise<Response> {
-  nx03bHandler ??= createNx03bHttpApiHandler(getNextLegislationApplication())
-  return await executeNextHttpApiHandler(request, nx03bHandler)
+/** Handles meeting, calendar, and representative lookup routes. */
+export async function handleMeetingCalendarRequest(request: Request): Promise<Response> {
+  meetingCalendarHandler ??= createMeetingCalendarHttpApiHandler(getNextLegislationApplication())
+  return await executeNextHttpApiHandler(request, meetingCalendarHandler)
 }
 
-export function createNx03bRequestHandler(
-  dependencies: Nx03bRequestHandlerDependencies
+export function createMeetingCalendarRequestHandler(
+  dependencies: MeetingCalendarRequestHandlerDependencies
 ): (request: Request) => Promise<Response> {
   let handler: HttpApiHandler | undefined
   return async (request) => {
@@ -66,7 +66,7 @@ export function createNx03bRequestHandler(
   }
 }
 
-export function createNx03bHttpApiHandler(application: Nx03bApplication): HttpApiHandler {
+export function createMeetingCalendarHttpApiHandler(application: MeetingCalendarApplication): HttpApiHandler {
   const options = { apiBaseUrl: requiredPublicApiBaseUrl(application) }
   const database = application.database
 
@@ -152,7 +152,7 @@ function createMeetingDetailReadApi(database: LegislationDatabase): MeetingReadA
   }
 }
 
-function requiredPublicApiBaseUrl(application: Nx03bApplication): string {
+function requiredPublicApiBaseUrl(application: MeetingCalendarApplication): string {
   const value = application.config.server.publicApiBaseUrl
   if (value === undefined) {
     throw new Error("LEGISLATION_PUBLIC_API_BASE_URL is required for Next API routes")
