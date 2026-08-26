@@ -169,12 +169,28 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
       <trace from="U_APP_SUPERVISOR.APP_3V3" to="net.APP_3V3" />
       <trace from="U_APP_SUPERVISOR.APP_GND" to="net.APP_GND" />
       <trace from="U_APP_SUPERVISOR.APP_RESET_N" to="net.APP_RESET_N" />
-      <trace from="U_APP_SUPERVISOR.CT" to="C_APP_SUPERVISOR_CT.pin1" />
+      <trace
+        from="U_APP_SUPERVISOR.CT"
+        to="C_APP_SUPERVISOR_CT.pin1"
+        pcbPath={[
+          { x: 0.6, y: 2 },
+          { x: 20.175, y: 2 }
+        ]}
+      />
       <trace from="C_APP_SUPERVISOR_CT.pin2" to="net.APP_GND" />
       <trace from="U_APP_WATCHDOG.APP_3V3" to="net.APP_3V3" />
-      <trace from="U_APP_WATCHDOG.APP_GND" to="net.APP_GND" />
+      <trace from="U_APP_WATCHDOG.pin4" to="net.APP_GND" />
       <trace from="U_APP_WATCHDOG.APP_RESET_N" to="net.APP_RESET_N" />
-      <trace from="U_APP_WATCHDOG.CWD" to="R_APP_WD_CWD.pin1" />
+      <trace
+        from="U_APP_WATCHDOG.CWD"
+        to="R_APP_WD_CWD.pin1"
+        pcbPath={[
+          { x: -2, y: 0.325 },
+          { x: -2, y: 2 },
+          { x: -10.825, y: 2 },
+          { x: -10.825, y: 0 }
+        ]}
+      />
       <trace from="R_APP_WD_CWD.pin2" to="net.APP_3V3" />
       <trace from="U_APP.APP_WD_KICK" to="U_APP_WATCHDOG.APP_WD_KICK" />
       <trace from="U_APP.APP_WD_KICK" to="R_APP_WDI_PULLUP.pin1" />
