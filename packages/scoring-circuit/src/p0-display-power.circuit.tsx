@@ -1,105 +1,21 @@
 /* oxlint-disable react/no-unknown-property */
 
-import { Fragment, type ReactElement } from "react"
+import type { ReactElement } from "react"
 import {
   benchPrototypeDisplayPowerBranch,
   validateBenchPrototypeDisplayPowerBranch
 } from "./bench-prototype-display-power-branch.js"
-import { bp033Littelfuse0451FuseFootprintEvidence } from "./bp033-littelfuse-0451-fuses.js"
-import { bp033MolexLinksProjectFootprintGeometry } from "./bp033-molex-links-project-footprint.js"
-import { bp033Tps25947ProjectFootprintGeometry } from "./bp033-tps25947-project-footprint.js"
-
-const limiterFootprint = (
-  <footprint name="BP055_TPS25947_RPW0010A_REVIEW_INPUT" originalLayer="top">
-    {bp033Tps25947ProjectFootprintGeometry.projectFootprint.pads.map((pad) => (
-      <Fragment key={pad.pin}>
-        <smtpad
-          name={String(pad.pin)}
-          pcbX={pad.xMm}
-          pcbY={pad.yMm}
-          shape="rect"
-          solderMaskMargin="0.05mm"
-          width={`${pad.widthMm}mm`}
-          height={`${pad.heightMm}mm`}
-          portHints={[String(pad.pin), pad.role, `pin${pad.pin}`]}
-        />
-      </Fragment>
-    ))}
-  </footprint>
-)
-
-const fuseFootprint = (
-  <footprint name="BP055_LITTELFUSE_451_REVIEW_INPUT" originalLayer="top">
-    {bp033Littelfuse0451FuseFootprintEvidence.projectFootprint.pads.map((pad) => (
-      <Fragment key={pad.pad}>
-        <smtpad
-          name={pad.pad}
-          pcbX={pad.xMm}
-          pcbY={pad.yMm}
-          shape="rect"
-          solderPasteMargin="-1mm"
-          width={`${pad.widthMm}mm`}
-          height={`${pad.heightMm}mm`}
-          portHints={[pad.pad, pad.terminal, "non-polar"]}
-        />
-      </Fragment>
-    ))}
-  </footprint>
-)
-
-const measurementLinkFootprint = (
-  <footprint name="BP055_MOLEX_39281023_REVIEW_INPUT" originalLayer="top">
-    {bp033MolexLinksProjectFootprintGeometry.candidateGeometry.pins.map((pin) => (
-      <Fragment key={pin.number}>
-        <platedhole
-          name={`PIN_${pin.number}`}
-          shape="circular_hole_with_rect_pad"
-          pcbX={pin.xMm}
-          pcbY={pin.yMm}
-          holeDiameter="1.4mm"
-          rectPadWidth="2.4mm"
-          rectPadHeight="2.4mm"
-          rectBorderRadius="1.2mm"
-          portHints={[`pin${pin.number}`, `circuit${pin.circuit}`]}
-        />
-      </Fragment>
-    ))}
-  </footprint>
-)
-
-/**
- * The BP-055 output is an eight-contact pigtail boundary rather than a panel
- * receptacle. The Adafruit 4767 cable is a cable assembly, so the generic
- * plated pin header is only a board-side review landing; received cable
- * mating, sharing, and thermal evidence remain denied by the contract.
- */
-const displayPowerPigtailFootprint = (
-  <footprint name="BP055_ADAFRUIT_4767_CABLE_BOUNDARY_REVIEW" originalLayer="top">
-    {Array.from({ length: 8 }, (_, index) => (
-      <Fragment key={index + 1}>
-        <platedhole
-          name={String(index + 1)}
-          shape="circular_hole_with_rect_pad"
-          pcbX={0}
-          pcbY={(index - 3.5) * 3}
-          holeDiameter="1.1mm"
-          rectPadWidth="2.2mm"
-          rectPadHeight="2.2mm"
-          rectBorderRadius="1.1mm"
-          portHints={[String(index + 1), `pin${index + 1}`]}
-        />
-      </Fragment>
-    ))}
-  </footprint>
-)
+import {
+  p0DisplayFuseFootprint,
+  p0DisplayLimiterFootprint,
+  p0DisplayPowerPigtailFootprint
+} from "./p0-display-power-footprints.js"
 
 const safeOffCircuitState = Object.freeze({
   state: "safe-off",
   releaseState: "deny",
   fabricationAuthorized: false,
-  disconnect: "J_DISPLAY_DISCONNECT open",
-  measurementLink: "J_LINK_DISPLAY removed or open; never a power-injection point",
-  output: "J_DISPLAY_POWER_PIGTAIL disconnected from the panel",
+  output: "display panel wires disconnected from the eight board landings",
   signal: "HUB75 buffers disabled, outputs high impedance, and panel OE inactive/high"
 })
 
@@ -124,21 +40,14 @@ export function validateP0DisplayPowerCircuitContract(value: unknown = p0Display
  * Placeable tscircuit review block for the protected HUB75 display branch.
  *
  * The board-side electrical path is rendered for connectivity review. The
- * service disconnect, measurement link, and panel cable remain physically
- * open in the default safe-off procedure; this block does not authorize
+ * prototype uses direct V5 protection and eight solder-wire display landings;
+ * service disconnect and measurement-link connectors were intentionally
+ * removed from the clean-sheet prototype. This block does not authorize
  * assembly, panel connection, layout, or fabrication.
  */
 export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
   return (
     <group name="P0_DISPLAY_POWER" pcbX={pcbX} pcbY={pcbY}>
-      <pinheader
-        name="J_DISPLAY_DISCONNECT"
-        manufacturerPartNumber="43650-0200"
-        pinCount={2}
-        pinLabels={["V5_SOURCE", "V5_DISPLAY_IN"]}
-        pcbX={-51}
-        pcbY={0}
-      />
       <chip
         name="U_DISPLAY_LIMITER"
         manufacturerPartNumber="TPS259474ARPWR"
@@ -154,7 +63,7 @@ export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly
           pin9: "ILM",
           pin10: "ITIMER"
         }}
-        footprint={limiterFootprint}
+        footprint={p0DisplayLimiterFootprint}
         pcbX={-34}
         pcbY={0}
       />
@@ -238,22 +147,13 @@ export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly
         name="F_DISPLAY"
         manufacturerPartNumber="045106.3MRL"
         pinLabels={{ pin1: "FUSED_IN", pin2: "FUSED_OUT" }}
-        footprint={fuseFootprint}
+        footprint={p0DisplayFuseFootprint}
         pcbX={7}
-        pcbY={0}
-      />
-      <pinheader
-        name="J_LINK_DISPLAY"
-        manufacturerPartNumber="39-28-1023"
-        pinCount={2}
-        pinLabels={["V5_DISPLAY_LIMITED", "V5_DISPLAY_LOAD"]}
-        footprint={measurementLinkFootprint}
-        pcbX={18}
         pcbY={0}
       />
       <chip
         name="J_DISPLAY_POWER_PIGTAIL"
-        manufacturerPartNumber="4767"
+        kicadSymbolMetadata={{ inBom: false, onBoard: true }}
         pinLabels={{
           pin1: "V5_DISPLAY_BRANCH_1_A",
           pin2: "V5_DISPLAY_BRANCH_1_B",
@@ -264,25 +164,22 @@ export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly
           pin7: "APP_GND_BRANCH_2_A",
           pin8: "APP_GND_BRANCH_2_B"
         }}
-        footprint={displayPowerPigtailFootprint}
+        footprint={p0DisplayPowerPigtailFootprint}
         pcbX={37}
         pcbY={0}
       />
 
-      <trace from="net.V5" to="J_DISPLAY_DISCONNECT.V5_SOURCE" />
-      <trace from="J_DISPLAY_DISCONNECT.V5_DISPLAY_IN" to="U_DISPLAY_LIMITER.IN" />
+      <trace from="net.V5" to="U_DISPLAY_LIMITER.IN" />
       <trace from="U_DISPLAY_LIMITER.IN" to="U_DISPLAY_LIMITER.EN_UVLO" />
       <trace from="U_DISPLAY_LIMITER.IN" to="C_DISPLAY_BYPASS.pin1" />
       <trace from="U_DISPLAY_LIMITER.IN" to="C_DISPLAY_IN.pin1" />
-      <trace from="U_DISPLAY_LIMITER.IN" to="net.V5_DISPLAY_IN" />
       <trace from="U_DISPLAY_LIMITER.OUT" to="net.V5_DISPLAY_LIMITED" />
       <trace from="U_DISPLAY_LIMITER.OUT" to="F_DISPLAY.FUSED_IN" />
-      <trace from="F_DISPLAY.FUSED_OUT" to="J_LINK_DISPLAY.V5_DISPLAY_LIMITED" />
-      <trace from="J_LINK_DISPLAY.V5_DISPLAY_LOAD" to="net.V5_DISPLAY_LOAD" />
-      <trace from="J_LINK_DISPLAY.V5_DISPLAY_LOAD" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_A" />
-      <trace from="J_LINK_DISPLAY.V5_DISPLAY_LOAD" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_B" />
-      <trace from="J_LINK_DISPLAY.V5_DISPLAY_LOAD" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_A" />
-      <trace from="J_LINK_DISPLAY.V5_DISPLAY_LOAD" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_B" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="net.V5_DISPLAY_LOAD" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_A" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_B" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_A" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_B" />
 
       <trace from="U_DISPLAY_LIMITER.OUT" to="C_DISPLAY_OUT.pin1" />
       <trace from="C_DISPLAY_BYPASS.pin2" to="net.APP_GND" />

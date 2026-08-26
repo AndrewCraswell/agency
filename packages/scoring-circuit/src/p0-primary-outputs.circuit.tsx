@@ -1,7 +1,13 @@
 /* oxlint-disable react/no-unknown-property */
 
 import { Fragment, type ReactElement } from "react"
-
+import {
+  p0BuzzerFootprint,
+  p0EsdProtectionFootprint,
+  p0LampFootprint,
+  p0PrimaryConnectorFootprint,
+  p0SourceDriverFootprint
+} from "./p0-primary-outputs-footprints.js"
 const outputChannels = [
   {
     signal: "ESP32_GPIO7_PRIMARY_LAMP_RED",
@@ -55,126 +61,6 @@ const outputChannels = [
   }
 ] as const
 
-const sourceDriverFootprint = (
-  <footprint name="P0_TBD62783AFWG_TSSOP18" originalLayer="top">
-    {Array.from({ length: 18 }, (_, index) => {
-      const pin = index + 1
-      const leftSide = pin <= 9
-      return (
-        <Fragment key={pin}>
-          <smtpad
-            name={`pin${pin}`}
-            pcbX={leftSide ? -2.8 : 2.8}
-            pcbY={`${(leftSide ? pin - 5 : 14 - pin) * 0.65}mm`}
-            shape="rect"
-            width="1.5mm"
-            height="0.35mm"
-            portHints={[`pin${pin}`]}
-          />
-        </Fragment>
-      )
-    })}
-  </footprint>
-)
-
-const esdFootprint = (
-  <footprint name="P0_TPD6E05U06RVZR_DQA" originalLayer="top">
-    {Array.from({ length: 7 }, (_, index) => {
-      const pin = index + 1
-      return (
-        <Fragment key={pin}>
-          <smtpad
-            name={`pin${pin}`}
-            pcbX={pin <= 3 ? -1.4 : 1.4}
-            pcbY={`${(pin <= 3 ? pin - 2 : 5 - pin) * 0.65}mm`}
-            shape="rect"
-            width="0.9mm"
-            height="0.35mm"
-            portHints={[`pin${pin}`]}
-          />
-        </Fragment>
-      )
-    })}
-  </footprint>
-)
-
-const ledFootprint = (
-  <footprint name="P0_T1_3_4_LED" originalLayer="top">
-    <platedhole
-      name="pin1"
-      shape="circular_hole_with_rect_pad"
-      pcbX="-1.27mm"
-      pcbY={0}
-      holeDiameter="0.9mm"
-      rectPadWidth="1.8mm"
-      rectPadHeight="1.8mm"
-      rectBorderRadius="0.25mm"
-      portHints={["pin1"]}
-    />
-    <platedhole
-      name="pin2"
-      shape="circular_hole_with_rect_pad"
-      pcbX="1.27mm"
-      pcbY={0}
-      holeDiameter="0.9mm"
-      rectPadWidth="1.8mm"
-      rectPadHeight="1.8mm"
-      rectBorderRadius="0.25mm"
-      portHints={["pin2"]}
-    />
-  </footprint>
-)
-
-const buzzerFootprint = (
-  <footprint name="P0_CMI_9605_TH" originalLayer="top">
-    <platedhole
-      name="pin1"
-      shape="circular_hole_with_rect_pad"
-      pcbX="-2mm"
-      pcbY={0}
-      holeDiameter="0.9mm"
-      rectPadWidth="1.8mm"
-      rectPadHeight="1.8mm"
-      rectBorderRadius="0.25mm"
-      portHints={["pin1"]}
-    />
-    <platedhole
-      name="pin2"
-      shape="circular_hole_with_rect_pad"
-      pcbX="2mm"
-      pcbY={0}
-      holeDiameter="0.9mm"
-      rectPadWidth="1.8mm"
-      rectPadHeight="1.8mm"
-      rectBorderRadius="0.25mm"
-      portHints={["pin2"]}
-    />
-  </footprint>
-)
-
-const connectorFootprint = (
-  <footprint name="P0_MOLEX_39_29_1067_MINI_FIT_JR_2X3" originalLayer="top">
-    {Array.from({ length: 6 }, (_, index) => {
-      const pin = index + 1
-      return (
-        <Fragment key={pin}>
-          <platedhole
-            name={`pin${pin}`}
-            shape="circular_hole_with_rect_pad"
-            pcbX={`${(index % 2) * 4.2 - 2.1}mm`}
-            pcbY={`${Math.floor(index / 2) * 4.2 - 4.2}mm`}
-            holeDiameter="1.4mm"
-            rectPadWidth="2.4mm"
-            rectPadHeight="2.4mm"
-            rectBorderRadius="0.35mm"
-            portHints={[`pin${pin}`]}
-          />
-        </Fragment>
-      )
-    })}
-  </footprint>
-)
-
 export const p0PrimaryOutputsCircuitContract = Object.freeze({
   sourceDriver: "TBD62783AFWG",
   branchPptc: "1206L020YR",
@@ -192,7 +78,7 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
       <chip
         name="U_P0_OUTPUT_DRIVER"
         manufacturerPartNumber="TBD62783AFWG"
-        footprint={sourceDriverFootprint}
+        footprint={p0SourceDriverFootprint}
         pinLabels={{
           pin1: "IN1",
           pin2: "IN2",
@@ -202,16 +88,16 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
           pin6: "IN6_NC",
           pin7: "IN7_NC",
           pin8: "IN8_NC",
-          pin9: "APP_GND",
-          pin10: "OUT8_NC",
-          pin11: "OUT7_NC",
-          pin12: "OUT6_NC",
-          pin13: "OUT5",
-          pin14: "OUT4",
-          pin15: "OUT3",
-          pin16: "OUT2",
-          pin17: "OUT1",
-          pin18: "V5_PRIMARY_OUTPUTS"
+          pin9: "V5_PRIMARY_OUTPUTS",
+          pin10: "APP_GND",
+          pin11: "OUT8_NC",
+          pin12: "OUT7_NC",
+          pin13: "OUT6_NC",
+          pin14: "OUT5",
+          pin15: "OUT4",
+          pin16: "OUT3",
+          pin17: "OUT2",
+          pin18: "OUT1"
         }}
         pcbX={-40}
         pcbY={0}
@@ -227,15 +113,22 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
       <chip
         name="U_P0_OUTPUT_ESD"
         manufacturerPartNumber="TPD6E05U06RVZR"
-        footprint={esdFootprint}
+        footprint={p0EsdProtectionFootprint}
         pinLabels={{
-          pin1: "CH1_RED",
-          pin2: "CH2_GREEN",
-          pin3: "CH3_WHITE_LEFT",
-          pin4: "APP_GND",
-          pin5: "CH4_WHITE_RIGHT",
-          pin6: "CH5_BUZZER",
-          pin7: "CH6_NC"
+          pin1: "NC1",
+          pin2: "NC2",
+          pin3: "NC3",
+          pin4: "NC4",
+          pin5: "APP_GND",
+          pin6: "NC6",
+          pin7: "NC7",
+          pin8: "NC8",
+          pin9: "CH5_BUZZER",
+          pin10: "APP_GND",
+          pin11: "CH4_WHITE_RIGHT",
+          pin12: "CH3_WHITE_LEFT",
+          pin13: "CH2_GREEN",
+          pin14: "CH1_RED"
         }}
         pcbX={0}
         pcbY={0}
@@ -245,7 +138,7 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
         manufacturerPartNumber="39-29-1067"
         pinCount={6}
         doubleRow
-        footprint={connectorFootprint}
+        footprint={p0PrimaryConnectorFootprint}
         pinLabels={{
           pin1: "CIRCUIT_1_RED",
           pin2: "CIRCUIT_2_GREEN",
@@ -273,7 +166,7 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
             <chip
               name={channel.load}
               manufacturerPartNumber={channel.loadMpn}
-              footprint={buzzerFootprint}
+              footprint={p0BuzzerFootprint}
               pinLabels={{ pin1: "POSITIVE", pin2: "APP_GND" }}
               pcbX={59}
               pcbY={12}
@@ -292,7 +185,7 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
               <chip
                 name={channel.load}
                 manufacturerPartNumber={channel.loadMpn}
-                footprint={ledFootprint}
+                footprint={p0LampFootprint}
                 pinLabels={{ pin1: "ANODE", pin2: "CATHODE" }}
                 pcbX={59}
                 pcbY={-18 + index * 10}

@@ -1,5 +1,6 @@
 import { createElement } from "react"
 import { describe, expect, it } from "vitest"
+import { p0PrimaryOutputsFootprintMetadata } from "./p0-primary-outputs-footprints.js"
 import P0PrimaryOutputsCircuit, { p0PrimaryOutputsCircuitContract } from "./p0-primary-outputs.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
@@ -20,6 +21,21 @@ function component(name: string) {
 function traces() {
   return renderCircuit().flatMap((element) =>
     element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
+  )
+}
+
+function pcbFootprintElements(name: string) {
+  const circuit = renderCircuit()
+  const source = circuit.find((element) => element.type === "source_component" && element.name === name)
+  if (source?.type !== "source_component") return []
+  const pcbComponent = circuit.find(
+    (element) => element.type === "pcb_component" && element.source_component_id === source.source_component_id
+  )
+  if (pcbComponent?.type !== "pcb_component") return []
+  return circuit.filter(
+    (element) =>
+      (element.type === "pcb_smtpad" || element.type === "pcb_plated_hole") &&
+      element.pcb_component_id === pcbComponent.pcb_component_id
   )
 }
 
@@ -92,5 +108,73 @@ describe("P0 primary lamp and buzzer outputs", () => {
       "OUT8_NC"
     ])
     expect(traces().filter((trace) => trace.includes("_NC"))).toEqual([])
+  })
+
+  it("reconciles the placeable review pad counts and exact polarity/orientation inputs", () => {
+    expect(pcbFootprintElements("U_P0_OUTPUT_DRIVER").filter((element) => element.type === "pcb_smtpad")).toHaveLength(
+      18
+    )
+    expect(pcbFootprintElements("U_P0_OUTPUT_ESD").filter((element) => element.type === "pcb_smtpad")).toHaveLength(14)
+    expect(
+      pcbFootprintElements("J_PRIMARY_OUTPUTS").filter((element) => element.type === "pcb_plated_hole")
+    ).toHaveLength(6)
+    expect(pcbFootprintElements("BZ_P0").filter((element) => element.type === "pcb_plated_hole")).toHaveLength(2)
+    expect(p0PrimaryOutputsFootprintMetadata.sourceDriver).toMatchObject({
+      package: "P-SOP18-0812-1.27-001 (SOL18)",
+      pitchMm: 1.27,
+      evidenceState: "evidence-complete-pending-root-placement-approval",
+      exactVariantBinding: expect.stringContaining("TBD62783AFWG"),
+      evidenceArtifact: "docs/evidence/p0-06/toshiba-tbd62783a-family-datasheet.pdf",
+      evidenceSha256: "CA6F02A615FE6A1713BF98373B72B77B98B3F78D8F7F673277CBCA8EB1922C79",
+      releaseState: "deny"
+    })
+    expect(p0PrimaryOutputsFootprintMetadata.esdProtection).toMatchObject({
+      package: "USON RVZ, 14-pin",
+      pinCount: 14,
+      evidenceState: "evidence-complete-pending-root-placement-approval",
+      evidenceArtifact: "docs/evidence/p0-06/ti-tpd6e05u06-datasheet.pdf",
+      evidenceSha256: "C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6",
+      releaseState: "deny"
+    })
+    expect(p0PrimaryOutputsFootprintMetadata.buzzer.orientation).toContain("positive terminal")
+    expect(p0PrimaryOutputsFootprintMetadata.lamp).toMatchObject({
+      evidenceState: "evidence-complete-pending-root-placement-approval",
+      padGeometry: { holeDiameterMm: 0.9, padDiameterMm: 1.8, leadPitchMm: 2.54 },
+      evidenceArtifacts: expect.arrayContaining([
+        expect.objectContaining({ manufacturerPartNumber: "WP7113ID" }),
+        expect.objectContaining({ manufacturerPartNumber: "WP7113SGD" }),
+        expect.objectContaining({ manufacturerPartNumber: "WP7113QWC/D" })
+      ])
+    })
+    expect(p0PrimaryOutputsFootprintMetadata.buzzer).toMatchObject({
+      evidenceState: "evidence-complete-pending-root-placement-approval",
+      evidenceArtifact: "docs/evidence/p0-06/samesky-cmi-9605-0580t-datasheet.pdf",
+      evidenceSha256: "857ED0E1055FFEEFAE4B48757042574BE86C80B878F396DA62168232BF08C6DB",
+      padGeometry: { holeDiameterMm: 0.8, padDiameterMm: 2, leadPitchMm: 5 }
+    })
+    expect(p0PrimaryOutputsFootprintMetadata.primaryConnector).toMatchObject({
+      manufacturerPartNumber: "39-29-1067",
+      pitchMm: 4.2,
+      sourceState: "official-drawing-retained; exact-six-contact-grid",
+      padGeometry: {
+        contactCoordinatesMm: [
+          [0, 0],
+          [0, 4.2],
+          [4.2, 0],
+          [4.2, 4.2],
+          [8.4, 0],
+          [8.4, 4.2]
+        ]
+      },
+      evidenceArtifact: "docs/evidence/p0-06/molex-39-29-1067-drawing.pdf",
+      evidenceSha256: "5F1CF7BA17009329350D2EAC32CDEDDCDB002F90B1E4563BDE13362A04EC6EFB"
+    })
+    expect(p0PrimaryOutputsFootprintMetadata.supportPassives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ manufacturerPartNumber: "RC0603FR-07100KL", package: "0603" }),
+        expect.objectContaining({ manufacturerPartNumber: "RC1206FR-07180RL", package: "1206" }),
+        expect.objectContaining({ manufacturerPartNumber: "1206L020YR", package: "1206" })
+      ])
+    )
   })
 })
