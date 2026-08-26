@@ -6,8 +6,10 @@ const workosEnvironment = {
   AUTH_MODE: "workos",
   WORKOS_API_AUDIENCE: "client_environment",
   WORKOS_CLIENT_ID: "client_test",
-  WORKOS_ISSUER: "https://api.workos.com/user_management/client_test",
-  WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
+  WORKOS_ISSUER: "https://authkit.example",
+  WORKOS_JWKS_URL: "https://authkit.example/oauth2/jwks",
+  WORKOS_SESSION_ISSUER: "https://api.workos.com",
+  WORKOS_SESSION_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
   WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
 } as const
 
@@ -24,6 +26,7 @@ describe("loadConfig", () => {
         documentHostLeaseMs: 90_000
       },
       database: {
+        apiReadStatementTimeoutMs: 15_000,
         connectionTimeoutMs: 10_000,
         idleTimeoutMs: 30_000,
         maxConnections: 10,
@@ -74,16 +77,18 @@ describe("loadConfig", () => {
       OPENSTATES_API_KEY: "openstates-key",
       WORKOS_API_AUDIENCE: "client_environment",
       WORKOS_CLIENT_ID: "client_test",
-      WORKOS_ISSUER: "https://api.workos.com/user_management/client_test",
-      WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
+      WORKOS_ISSUER: "https://authkit.example",
+      WORKOS_JWKS_URL: "https://authkit.example/oauth2/jwks",
+      WORKOS_SESSION_ISSUER: "https://api.workos.com",
+      WORKOS_SESSION_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
       WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
     })
 
     expect(config.auth).toEqual({
       apiAudience: "client_environment",
       clientId: "client_test",
-      issuer: "https://api.workos.com/user_management/client_test",
-      jwksUrl: "https://api.workos.com/sso/jwks/client_test",
+      issuer: "https://authkit.example",
+      jwksUrl: "https://authkit.example/oauth2/jwks",
       mcpAudience: "https://legislation.example/mcp",
       mode: "workos",
       userSession: {
@@ -93,6 +98,7 @@ describe("loadConfig", () => {
       }
     })
     expect(config.database).toEqual({
+      apiReadStatementTimeoutMs: 15_000,
       connectionTimeoutMs: 5000,
       idleTimeoutMs: 15_000,
       maxConnections: 20,
@@ -180,18 +186,23 @@ describe("loadConfig", () => {
     )
   })
 
-  it("requires the AuthKit client ID used to derive the user-session JWKS", () => {
+  it("requires the AuthKit client ID used to validate user-session client_id", () => {
     const configuration = {
       AUTH_MODE: "workos",
       WORKOS_API_AUDIENCE: "client_environment",
       WORKOS_ISSUER: "https://issuer.example",
       WORKOS_JWKS_URL: "https://issuer.example/jwks",
-      WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
+      WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp",
+      WORKOS_SESSION_ISSUER: "https://api.workos.com",
+      WORKOS_SESSION_JWKS_URL: "https://api.workos.com/sso/jwks/client_test"
     }
 
     expect(() => loadConfig(configuration)).toThrow(ConfigurationError)
     expect(loadConfig({ ...configuration, WORKOS_CLIENT_ID: "client_test" }).auth).toMatchObject({
-      userSession: { jwksUrl: "https://api.workos.com/sso/jwks/client_test" }
+      userSession: {
+        issuer: "https://api.workos.com",
+        jwksUrl: "https://api.workos.com/sso/jwks/client_test"
+      }
     })
   })
 
@@ -202,7 +213,9 @@ describe("loadConfig", () => {
         WORKOS_API_AUDIENCE: "client_environment",
         WORKOS_CLIENT_ID: "client_test",
         WORKOS_ISSUER: "https://issuer.example",
-        WORKOS_JWKS_URL: "https://issuer.example/jwks"
+        WORKOS_JWKS_URL: "https://issuer.example/jwks",
+        WORKOS_SESSION_ISSUER: "https://api.workos.com",
+        WORKOS_SESSION_JWKS_URL: "https://api.workos.com/sso/jwks/client_test"
       })
     ).toThrow(ConfigurationError)
     expect(() =>
@@ -210,34 +223,26 @@ describe("loadConfig", () => {
         AUTH_MODE: "workos",
         WORKOS_ISSUER: "https://issuer.example",
         WORKOS_JWKS_URL: "https://issuer.example/jwks",
-        WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
+        WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp",
+        WORKOS_SESSION_ISSUER: "https://api.workos.com",
+        WORKOS_SESSION_JWKS_URL: "https://api.workos.com/sso/jwks/client_test"
       })
     ).toThrow(ConfigurationError)
   })
 
-  it("uses the existing MCP audience variable during the Railway configuration rollout", () => {
-    expect(
+  it("requires an independent user-session issuer and JWKS", () => {
+    expect(() =>
       loadConfig({
-        AUTH_MODE: "workos",
-        WORKOS_API_AUDIENCE: "client_environment",
-        WORKOS_CLIENT_ID: "client_test",
-        WORKOS_AUDIENCE: "https://legislation.example/mcp",
-        WORKOS_ISSUER: "https://issuer.example",
-        WORKOS_JWKS_URL: "https://issuer.example/jwks"
-      }).auth
-    ).toEqual({
-      apiAudience: "client_environment",
-      clientId: "client_test",
-      issuer: "https://issuer.example",
-      jwksUrl: "https://issuer.example/jwks",
-      mcpAudience: "https://legislation.example/mcp",
-      mode: "workos",
-      userSession: {
-        clientId: "client_test",
-        issuer: "https://api.workos.com",
-        jwksUrl: "https://api.workos.com/sso/jwks/client_test"
-      }
-    })
+        ...workosEnvironment,
+        WORKOS_SESSION_ISSUER: undefined
+      })
+    ).toThrow(ConfigurationError)
+    expect(() =>
+      loadConfig({
+        ...workosEnvironment,
+        WORKOS_SESSION_JWKS_URL: undefined
+      })
+    ).toThrow(ConfigurationError)
   })
 
   it("rejects an inverted federal range", () => {

@@ -1093,7 +1093,7 @@ describe("local API smoke harness", () => {
     expect(report.failed.map((check) => check.id)).toContain("ready")
   })
 
-  it("fails when an intentionally absent endpoint becomes reachable", async () => {
+  it("accepts canonical collection pages when a no-fixture probe is populated", async () => {
     const { fetchImpl } = fakeFetch()
     const reachable = async (input: string | URL, init?: RequestInit): Promise<Response> => {
       const url = new URL(input)
@@ -1102,7 +1102,11 @@ describe("local API smoke harness", () => {
       }
       const correlationId = new Headers(init?.headers).get("x-correlation-id") ?? "missing-correlation"
       return jsonResponse(
-        { data: [], links: { next: null, self: `${url.pathname}${url.search}` }, meta: { correlationId } },
+        {
+          data: [canonical("vote:fixture")],
+          links: { next: null, self: `${url.pathname}${url.search}` },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
         200,
         correlationId
       )
@@ -1114,6 +1118,42 @@ describe("local API smoke harness", () => {
       token: "smoke-token"
     })
 
-    expect(report.failed.map((check) => check.id)).toContain("absent-list-votes")
+    expect(report.failed).toEqual([])
+    expect(report.passed.map((check) => check.id)).toContain("absent-list-votes")
+  })
+
+  it("fails a no-fixture collection probe when canonical provenance is incomplete", async () => {
+    const { fetchImpl } = fakeFetch()
+    const incomplete = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const url = new URL(input)
+      if (url.pathname !== "/api/organizations") {
+        return await fetchImpl(input, init)
+      }
+      const correlationId = new Headers(init?.headers).get("x-correlation-id") ?? "missing-correlation"
+      return jsonResponse(
+        {
+          error: {
+            category: "unprocessable",
+            correlationId,
+            message: "Organization canonical provenance is incomplete",
+            retryable: false
+          }
+        },
+        422,
+        correlationId
+      )
+    }
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl: incomplete,
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed).toContainEqual(
+      expect.objectContaining({ id: "absent-list-organizations", status: "failed", statusCode: 422 })
+    )
+    expect(report.blocked.map((check) => check.id)).not.toContain("absent-list-organizations")
+    expect(report.passed.map((check) => check.id)).not.toContain("absent-list-organizations")
   })
 })

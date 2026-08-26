@@ -2,11 +2,11 @@ import { generateKeyPair, exportJWK, createLocalJWKSet, SignJWT } from "jose"
 import { beforeAll, describe, expect, it } from "vitest"
 import { AuthenticationError, createWorkosAuthenticator, extractBearerToken } from "./workos.js"
 
-const issuer = "https://api.workos.com/user_management/client_test"
+const issuer = "https://authkit.example"
 const apiAudience = "client_environment"
 const mcpAudience = "https://legislation.example/mcp"
 const sessionClientId = "client_01M05XW4MQ47YR95CNJWNQ9XDA"
-const sessionIssuer = "https://api.workos.com"
+const sessionIssuer = issuer
 const sessionLifetimeSeconds = 30 * 24 * 60 * 60
 let privateKey: Awaited<ReturnType<typeof generateKeyPair>>["privateKey"]
 let apiAuthenticator: ReturnType<typeof createWorkosAuthenticator>
@@ -23,7 +23,7 @@ beforeAll(async () => {
       userSession: {
         clientId: sessionClientId,
         issuer: sessionIssuer,
-        jwksUrl: `https://api.workos.com/sso/jwks/${sessionClientId}`
+        jwksUrl: "https://authkit.example/oauth2/jwks"
       }
     },
     { m2m: getKey, userSession: getKey }

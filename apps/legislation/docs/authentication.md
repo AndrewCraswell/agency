@@ -1,10 +1,10 @@
 # Authentication and MCP client setup
 
 The service uses WorkOS's staging AuthKit environment for user-session and OAuth bearer tokens. The API accepts either
-a WorkOS AuthKit user-session JWT or an M2M access token. User sessions are verified only with
-`https://api.workos.com` and the JWKS at
-`https://api.workos.com/sso/jwks/<WORKOS_CLIENT_ID>`; they must have the configured `client_id`, no `aud`, a nonempty
-session ID, and a maximum 30-day lifetime. M2M tokens are verified against the configured issuer, JWKS, and audience.
+a WorkOS AuthKit user-session JWT or an M2M access token. M2M tokens are verified against `WORKOS_ISSUER` and
+`WORKOS_JWKS_URL`; user sessions are independently verified against `WORKOS_SESSION_ISSUER` and
+`WORKOS_SESSION_JWKS_URL`. User sessions must have the configured `client_id`, no `aud`, a nonempty session ID, and a
+maximum 30-day lifetime. M2M tokens must also have the configured audience.
 The protected MCP resource accepts only the configured M2M resource audience. Health and readiness remain public;
 `/mcp` is protected. Development may use
 `AUTH_MODE=disabled` only on a loopback or otherwise isolated endpoint.

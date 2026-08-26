@@ -186,14 +186,14 @@ function workosApplication() {
       auth: {
         apiAudience: "https://api.example.test",
         clientId: "client_test",
-        issuer: "https://api.workos.com/user_management/client_test",
-        jwksUrl: "https://api.workos.com/sso/jwks/client_test",
+        issuer: "https://authkit.example",
+        jwksUrl: "https://authkit.example/oauth2/jwks",
         mcpAudience: "https://api.example.test/mcp",
         mode: "workos" as const,
         userSession: {
           clientId: "client_test",
-          issuer: "https://api.workos.com" as const,
-          jwksUrl: "https://api.workos.com/sso/jwks/client_test"
+          issuer: "https://authkit.example",
+          jwksUrl: "https://authkit.example/oauth2/jwks"
         }
       }
     }

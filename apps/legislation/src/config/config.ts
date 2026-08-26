@@ -1,8 +1,6 @@
 import { z } from "zod"
 
 const optionalSecret = z.string().trim().min(1).optional()
-const workosSessionIssuer = "https://api.workos.com"
-
 const configSchema = z
   .object({
     auth: z.discriminatedUnion("mode", [
@@ -16,7 +14,7 @@ const configSchema = z
         mode: z.literal("workos"),
         userSession: z.object({
           clientId: z.string().trim().min(1),
-          issuer: z.literal(workosSessionIssuer),
+          issuer: z.url({ protocol: /^https$/ }),
           jwksUrl: z.url({ protocol: /^https$/ })
         })
       })
@@ -38,6 +36,7 @@ const configSchema = z
       storageAccount: z.string().trim().min(1).optional()
     }),
     database: z.object({
+      apiReadStatementTimeoutMs: z.coerce.number().int().min(1_000).max(60_000),
       connectionTimeoutMs: z.coerce.number().int().positive(),
       idleTimeoutMs: z.coerce.number().int().positive(),
       maxConnections: z.coerce.number().int().positive(),
@@ -164,15 +163,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
           clientId: environment.WORKOS_CLIENT_ID,
           issuer: environment.WORKOS_ISSUER,
           jwksUrl: environment.WORKOS_JWKS_URL,
-          mcpAudience: environment.WORKOS_MCP_AUDIENCE ?? environment.WORKOS_AUDIENCE,
+          mcpAudience: environment.WORKOS_MCP_AUDIENCE,
           mode: "workos" as const,
           userSession: {
             clientId: environment.WORKOS_CLIENT_ID,
-            issuer: workosSessionIssuer,
-            jwksUrl: new URL(
-              `/sso/jwks/${encodeURIComponent(environment.WORKOS_CLIENT_ID ?? "")}`,
-              workosSessionIssuer
-            ).toString()
+            issuer: environment.WORKOS_SESSION_ISSUER,
+            jwksUrl: environment.WORKOS_SESSION_JWKS_URL
           }
         }
       : { mode: environment.AUTH_MODE ?? "disabled" }
@@ -192,6 +188,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       storageAccount: environment.AZURE_STORAGE_ACCOUNT
     },
     database: {
+      apiReadStatementTimeoutMs: environment.DATABASE_API_READ_STATEMENT_TIMEOUT_MS ?? "15000",
       connectionTimeoutMs: environment.DATABASE_CONNECTION_TIMEOUT_MS ?? "10000",
       idleTimeoutMs: environment.DATABASE_IDLE_TIMEOUT_MS ?? "30000",
       maxConnections: environment.DATABASE_MAX_CONNECTIONS ?? "10",

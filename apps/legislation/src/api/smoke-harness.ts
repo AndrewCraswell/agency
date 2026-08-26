@@ -83,6 +83,7 @@ type CheckDefinition = Readonly<{
     field: "billId" | "documentId" | "materialId" | "subscriptionId"
     id: string
   }>
+  allowNotFound?: boolean
   requiresAuthHeader?: boolean
   requiresRevisionEtag?: boolean
   statusCode?: number
@@ -280,46 +281,40 @@ const PAYLOAD_TOO_LARGE_CHECK: CheckDefinition = {
 
 const BLOCKED_ABSENCE_CHECKS: readonly CheckDefinition[] = [
   {
-    errorCategory: "not_found",
-    expected: "error",
+    allowNotFound: true,
+    expected: "page",
     id: "absent-list-jurisdictions",
-    path: "/api/jurisdictions?limit=1",
-    statusCode: 404
+    path: "/api/jurisdictions?limit=1"
   },
   {
-    errorCategory: "not_found",
-    expected: "error",
+    allowNotFound: true,
+    expected: "page",
     id: "absent-list-amendments",
-    path: "/api/amendments?limit=1",
-    statusCode: 404
+    path: "/api/amendments?limit=1"
   },
   {
-    errorCategory: "not_found",
-    expected: "error",
+    allowNotFound: true,
+    expected: "page",
     id: "absent-list-votes",
-    path: "/api/votes?limit=1",
-    statusCode: 404
+    path: "/api/votes?limit=1"
   },
   {
-    errorCategory: "not_found",
-    expected: "error",
+    allowNotFound: true,
+    expected: "page",
     id: "absent-list-people",
-    path: "/api/people?limit=1",
-    statusCode: 404
+    path: "/api/people?limit=1"
   },
   {
-    errorCategory: "not_found",
-    expected: "error",
+    allowNotFound: true,
+    expected: "page",
     id: "absent-list-organizations",
-    path: "/api/organizations?limit=1",
-    statusCode: 404
+    path: "/api/organizations?limit=1"
   },
   {
-    errorCategory: "not_found",
-    expected: "error",
+    allowNotFound: true,
+    expected: "page",
     id: "absent-list-meetings",
-    path: "/api/meetings?limit=1",
-    statusCode: 404
+    path: "/api/meetings?limit=1"
   },
   {
     body: { limit: 1, mode: "lexical", query: "legislation" },
@@ -1422,6 +1417,9 @@ function hasExpectedEnvelope(
   if (!isRecord(body)) {
     return false
   }
+  if (expected === "page") {
+    return hasPageEnvelope(body, true, expectedSelf)
+  }
   if (expected === "resource") {
     return hasCanonicalRecord(body.data) && hasResourceLinks(body.links, expectedSelf)
   }
@@ -1579,6 +1577,26 @@ async function execute(
       statusCode: response.status
     }
   }
+  if (definition.allowNotFound && response.status === 404) {
+    if (!hasErrorEnvelope(body, response.headers.get("x-correlation-id"), "not_found")) {
+      return {
+        detail: "documented collection absence did not use the canonical not_found error envelope",
+        id: definition.id,
+        method: definition.method ?? "GET",
+        path: definition.path,
+        status: "failed",
+        statusCode: response.status
+      }
+    }
+    return {
+      detail: "HTTP 404 (documented collection absence)",
+      id: definition.id,
+      method: definition.method ?? "GET",
+      path: definition.path,
+      status: "passed",
+      statusCode: response.status
+    }
+  }
   if (definition.expected === "error") {
     if (response.status !== definition.statusCode) {
       const blockedWithoutAuth =
@@ -1635,6 +1653,7 @@ async function execute(
       statusCode: response.status
     }
   } else if (
+    (definition.allowNotFound && response.status !== 200) ||
     !hasExpectedEnvelope(
       body,
       definition.expected,

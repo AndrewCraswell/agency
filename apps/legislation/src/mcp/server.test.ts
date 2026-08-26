@@ -264,7 +264,7 @@ describe("createLegislationServer", () => {
         throw new AuthenticationError("invalid")
       },
       protectedResourceMetadata: {
-        authorizationServer: "https://api.workos.com",
+        authorizationServer: "https://authkit.example",
         resource
       }
     })
@@ -326,7 +326,7 @@ describe("createLegislationServer", () => {
       },
       mcpHandler: async () => undefined,
       protectedResourceMetadata: {
-        authorizationServer: "https://api.workos.com",
+        authorizationServer: "https://authkit.example",
         resource
       }
     })
@@ -346,7 +346,7 @@ describe("createLegislationServer", () => {
     const metadata = await fetch(`${baseUrl}/.well-known/oauth-protected-resource/mcp`)
     expect(metadata.status).toBe(200)
     await expect(metadata.json()).resolves.toEqual({
-      authorization_servers: ["https://api.workos.com"],
+      authorization_servers: ["https://authkit.example"],
       resource
     })
   })

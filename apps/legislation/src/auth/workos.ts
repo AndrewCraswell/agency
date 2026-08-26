@@ -74,11 +74,7 @@ export function createWorkosAuthenticator(config: WorkosAuthenticatorConfig, key
     try {
       const unverifiedPayload = decodeJwt(token)
       const isAuthKitSession =
-        config.userSession !== undefined &&
-        unverifiedPayload.aud === undefined &&
-        unverifiedPayload.client_id === config.userSession.clientId &&
-        typeof unverifiedPayload.sid === "string" &&
-        unverifiedPayload.sid.length > 0
+        config.userSession !== undefined && unverifiedPayload.client_id === config.userSession.clientId
       const { payload } = isAuthKitSession
         ? await verifyAuthKitSessionToken(token, config.userSession, sessionGetKey)
         : await verifyM2mToken(token, config.m2m, m2mGetKey)
