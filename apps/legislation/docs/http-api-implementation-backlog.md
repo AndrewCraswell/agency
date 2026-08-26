@@ -21,16 +21,18 @@ release gate also requires block-by-block deployed Railway smoke.
 This ledger was updated on 2026-08-26 after the authenticated Next.js release was verified. `apps/legislation` is the canonical
 application and documentation home; Railway retains the `legislation-web` service name. All 88 rows have reviewed
 domain/query/projection evidence, so the **Domain state** is 88 **Done**. Reviewed source now has 88/88 explicit Next.js
-handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 40
-**Done**, 25 **Blocked** by named production prerequisites, and 23 **In progress**. The shared Next.js API boundary now verifies WorkOS bearer tokens and
+handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 47
+**Done**, 25 **Blocked** by named production prerequisites, and 16 **In progress**. The shared Next.js API boundary now verifies WorkOS bearer tokens and
 installs the derived request identity in reviewed local source. The deployed release records separate WorkOS authorities for
 M2M API tokens and AuthKit user-session tokens, plus both required encryption secrets. The 14 subscription/webhook
-operations are deployed and await functional authenticated smoke. Reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf` are
-part of the release lineage; source snapshot `f517021` is deployed as `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` with
-terminal `SUCCESS`. Bounded remote probes returned health `200` in `275ms` with `status`, readiness `200` in `181ms` with
-`databasePool/status`, authenticated organizations `200` in `813ms` with a canonical Page, authenticated supporting
-materials `200` in `3977ms` with a canonical Page, and authenticated bills `200` in `6691ms` with a canonical Page;
-correlation-ID echo was observed. The Next API database session `statement_timeout` is `15s`. Full expensive smoke is
+operations are deployed; the seven subscription operations passed opt-in authenticated lifecycle smoke and the seven
+webhook operations remain In progress. Source snapshot `400edaf` is deployed as
+`7922630a-2ef5-4da2-90c5-57ed0451b902` with terminal `SUCCESS`, following closure commits `20c6ab0`, `014ea3b`, and
+`400edaf`. The prior deployment `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` is superseded and `REMOVED`. The subscription
+smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch
+`200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`,
+and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API database session
+`statement_timeout` is `15s`. Full expensive smoke is
 deliberately paused while HNSW index construction is actively consuming database I/O; semantic/hybrid and other
 expensive probes remain pending.
 The old Railway `legislation-api` service is deleted and is not a rollback target. Authentication enforcement is live;
@@ -43,10 +45,10 @@ authenticated functional smoke is the remaining global API gate. MCP cutover is 
 | Delivery record correction | Done | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS`; this remains historical foundation evidence, while the current unified deployment is recorded above. |
 | Legislative routes | In progress | 32 routes are Done: 11 jurisdiction/session routes, 15 non-data-blocked bills, amendments, and vote routes, and six document/resource routes. Five remain Blocked by production data: three vote operations and document detail and section collection because every section-bearing production `bill_documents` row has `ocr_status = NULL`. The deployed global change collection and canonical change detail are In progress pending authenticated smoke of their provenance-complete visibility rule. This block now contains 39 explicit routes. |
-| Civic routes | Complete | People and organizations (14) has complete route implementation, deployment, and smoke evidence, but all 14 operations remain blocked by missing canonical production fixtures. The meeting/calendar release completed: eight operations are Done; five await canonical fixtures and representative lookup awaits its configured OpenStates dependency to reach production. |
-| Search, document-difference, and research routes | In progress | All seven handlers are included in the reviewed release lineage and source snapshot `f517021`, deployed as `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` with terminal `SUCCESS`, and passed build/foundation gates. Full expensive lexical, semantic, hybrid, diff, and cited-answer smoke is deliberately paused while active HNSW construction consumes database I/O. |
-| Subscription and webhook routes | In progress | All 14 explicit routes, domain compositions, and focused local tests are deployed. Authenticated `GET /api/subscriptions` returned a valid empty `200` page; ownership, concurrency, idempotency, secret rotation, cancellation, verification, and replay smoke remains. |
-| WorkOS authentication | In progress | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Deployment with `AUTH_MODE=workos` is live; health/readiness, anonymous `401`, authenticated organizations `200` empty-page, and subscriptions `200` empty-page probes passed. The full authenticated cumulative gate remains. |
+| Civic routes | Complete | People and organizations (14) has complete route implementation, deployment, and smoke evidence, but all 14 operations remain blocked by missing canonical production fixtures. The meeting/calendar release completed: eight operations are Done; five await canonical fixtures, and the OpenStates civic repair is committed but its production canary is pending. Do not promote blocked civic routes. |
+| Search, document-difference, and research routes | In progress | All seven handlers are included in the reviewed current deployment source snapshot `400edaf`, deployed as `7922630a-2ef5-4da2-90c5-57ed0451b902` with terminal `SUCCESS`, and passed build/foundation gates. Full expensive lexical, semantic, hybrid, diff, and cited-answer smoke is deliberately paused while active HNSW construction consumes database I/O. |
+| Subscription and webhook routes | In progress | All 14 explicit routes, domain compositions, and focused local tests are deployed. The seven subscription operations are Done after opt-in authenticated lifecycle smoke in deployment `7922630a-2ef5-4da2-90c5-57ed0451b902` from source `400edaf` passed all 12 checks; the seven webhook operations remain In progress pending their own functional smoke. |
+| WorkOS authentication | In progress | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Deployment with `AUTH_MODE=workos` is live; health/readiness, anonymous `401`, authenticated organizations, and the seven-operation subscription lifecycle smoke passed. The full authenticated cumulative gate remains. |
 | MCP HTTP migration | Deferred | Begin only after the authenticated API release; cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence. |
 | Final runtime cleanup | Blocked | Remove duplicate standalone production serving code, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
 
@@ -65,15 +67,15 @@ For each deliverable:
 
 The endpoint rows below record reusable domain implementation only. The current Next.js route release state is tracked
 separately until each explicit handler passes deployment smoke. All 88 explicit handlers are deployed; the release ledger
-remains 40 Done, 23 In progress, and 25 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
+is 47 Done, 16 In progress, and 25 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
 the 88 public API endpoint count.
 
 ### Current Next.js route release state
 
 | State | Count | Scope |
 | --- | ---: | --- |
-| Done | 40 | Eleven jurisdiction/session routes, 15 bills, amendments, and vote routes, six document/resource routes, and eight meeting/calendar operations passed their deployed smoke. |
-| In progress | 23 | Seven search/diff/research routes, the global change collection and detail, and 14 subscription/webhook routes await their required remote functional smoke evidence. |
+| Done | 47 | Eleven jurisdiction/session routes, 15 bills, amendments, and vote routes, six document/resource routes, eight meeting/calendar operations, and seven subscription operations passed their deployed smoke. |
+| In progress | 16 | Seven search/diff/research routes, the global change collection and detail, and seven webhook routes await their required remote functional smoke evidence. |
 | Ready | 0 | Every non-blocked route has either completed remote smoke or has active deployment/smoke work. |
 | Blocked | 25 | These routes have named production-data, canonical-fixture, or dependency-configuration blockers. |
 
@@ -83,9 +85,10 @@ section-bearing production `bill_documents` rows have `ocr_status = NULL`; three
 production data; and all 14 people/organization
 operations lack canonical-ready civic fixtures (people, person profiles, terms, organizations, memberships, calendars,
 and required relationships). The meeting/calendar release additionally has five canonical-fixture blockers (meeting detail, agenda-item
-detail, outcome detail, calendar detail, and calendar meetings) and one dependency-configuration blocker:
-representative lookup returns `503 dependency_unavailable` with `retryable: true` and `Retry-After: 30` until
-`OPENSTATES_API_KEY` is configured. This work has no authentication or MCP scope. The API catch-all is
+detail, outcome detail, calendar detail, and calendar meetings) and one representative-lookup blocker. The OpenStates civic repair is
+committed, but Trigger production currently has the unused singular `OPENSTATE_API_KEY` while the application requires
+`OPENSTATES_API_KEY`; its production canary therefore remains pending. Do not promote the blocked civic routes until the
+plural secret is configured and a fresh deployed canary passes. This work has no authentication or MCP scope. The API catch-all is
 outside the 88-route inventory.
 
 The global change collection and canonical detail route publish only records with complete immutable source snapshots.
@@ -208,11 +211,18 @@ handlers.
 | POST   | `/api/webhooks/{webhookId}/rotate-secret`        | Done  | Encrypted rotation, overlap/key expiry, bounded webhook IDs, exact idempotent replay, revision protection, security tests, and composed mutation coverage are evidenced by `e927e38` and `1194e89`.                                            |
 | POST   | `/api/webhooks/{webhookId}/verify`               | Done  | Pinned DNS-revalidated challenge transport, signed challenge response, bounded timeout, durable activation, exact replay/conflict handling, and composed mutation coverage are evidenced by `e927e38` and `1194e89`.                           |
 
+The seven subscription operations are **Done** in the current Next.js release. Deployment `7922630a-2ef5-4da2-90c5-57ed0451b902`
+from source `400edaf` reached terminal `SUCCESS`; closure commits are `20c6ab0`, `014ea3b`, and `400edaf`. Opt-in
+authenticated lifecycle smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`,
+detail `200`, patch `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`,
+delete replay `200`, and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The seven
+webhook operations remain **In progress** pending their own functional smoke.
+
 The current release evidence is recorded in the [Railway API release record](http-api-railway-release.md). Progress
 reports must state all three totals: reusable domain implementation is 88/88 **Done**; explicit Next.js handler coverage
 is 88/88 in reviewed source and the current production deployment; and Next.js Route Handler release state is
-40/88 **Done**, 23 **In progress**, 0 **Ready**, and 25
+47/88 **Done**, 16 **In progress**, 0 **Ready**, and 25
 **Blocked**. The states sum to 88. The 25 Blocked routes have named production-data, canonical-fixture, or
-dependency-configuration deficiencies. The 14 subscription/webhook operations are In progress pending authenticated
-authenticated smoke. The root operational `/health` and
+dependency-configuration deficiencies. The seven subscription operations are Done; the seven webhook operations remain
+In progress pending authenticated smoke. The root operational `/health` and
 `/ready` handlers and the API catch-all are outside the 88-route count.
