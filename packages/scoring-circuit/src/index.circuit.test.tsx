@@ -68,6 +68,42 @@ describe("minimal scoring prototype baseline", () => {
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
   })
 
+  it("applies the vendor STEP coordinate transforms used by the assembled board", () => {
+    const circuit = renderPrototype()
+    const sourceNames = new Map(
+      circuit
+        .filter(({ type }) => type === "source_component")
+        .map(({ source_component_id: sourceComponentId, name }) => [sourceComponentId, name])
+    )
+    const cadByReference = new Map(
+      circuit
+        .filter(({ type }) => type === "cad_component")
+        .map((component) => [sourceNames.get(component.source_component_id), component])
+    )
+
+    expect(cadByReference.get("J_CONTROLLER_LEFT")).toMatchObject({
+      position: { x: 18, y: 0, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 0 }
+    })
+    expect(cadByReference.get("U_CONTROLLER_MODULE")).toMatchObject({
+      position: { x: 29.43, y: 18.62, z: 8.7 },
+      model_origin_position: { x: 9, y: 12.75, z: 0 }
+    })
+    expect(cadByReference.get("U_ETHERNET")).toMatchObject({
+      position: { x: -20, y: -32, z: 0.7 },
+      model_board_normal_direction: "y+"
+    })
+    expect(cadByReference.get("U_IR_RECEIVER")).toMatchObject({
+      position: { x: 67, y: 34.55, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 180 },
+      model_board_normal_direction: "y+"
+    })
+    expect(cadByReference.get("J_WEAPON_LEFT")).toMatchObject({
+      position: { x: -68, y: -15, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 270 }
+    })
+  })
+
   it("uses seven current-limited drivers and only five direct ADC sense paths", () => {
     expect(scoringConductorChannels).toHaveLength(7)
     expect(scoringConductorChannels.filter((channel) => "sense" in channel).map(({ conductor }) => conductor)).toEqual([
