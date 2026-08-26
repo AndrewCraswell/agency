@@ -63,6 +63,7 @@ import {
   embedSupportingMaterialSections
 } from "../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
+import { executeGovInfoCommitteeSynchronization } from "../ingestion/govinfo/committee-directory-sync.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
 import {
@@ -184,6 +185,14 @@ program
   .option("--force", "restart the configured range")
   .option("--start-congress <number>")
   .action(importGovInfo)
+
+program
+  .command("govinfo:committees")
+  .description("Import federal committees, subcommittees, and memberships from GovInfo Congressional Directories")
+  .option("--end-congress <number>")
+  .option("--restart", "replay all discovered directory editions in issue order")
+  .option("--start-congress <number>")
+  .action(syncGovInfoCommittees)
 
 program
   .command("congress:sync")
@@ -951,6 +960,33 @@ async function importGovInfo(options: {
     printJobResult(result)
   }, config)
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "govinfo" })
+}
+
+async function syncGovInfoCommittees(options: { endCongress?: string; restart?: boolean; startCongress?: string }) {
+  const config = loadConfig()
+  if (config.ingestion.govInfoApiKey === undefined) {
+    throw new InvalidJobInput("GOVINFO_API_KEY is required for govinfo:committees")
+  }
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalEndCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  await withDatabase(async (database) => {
+    for (let congress = start; congress <= end; congress += 1) {
+      const result = await executeGovInfoCommitteeSynchronization({
+        config,
+        congress,
+        ...jobExecutionContext(),
+        database,
+        restart: options.restart
+      })
+      printJobResult(result)
+      if (result.status !== "succeeded") {
+        break
+      }
+    }
+  }, config)
 }
 
 async function discoverGovInfo(options: {

@@ -18,8 +18,9 @@ Provider contracts were checked on 2026-08-18 against the official
 [GovInfo API documentation](https://github.com/usgpo/api), and
 [BILLSTATUS XML user guide](https://github.com/usgpo/bill-status/blob/main/BILLSTATUS-XML_User_User-Guide.md).
 The source contracts describe availability; the checked-in importers and database schema determine the ingestion status.
-Federal committee, subcommittee, and membership materialization is pending and may use GovInfo only. State committee,
-subcommittee, and membership materialization may use OpenStates only. No other provider is a committee-data fallback.
+Federal committee, subcommittee, and membership materialization is implemented from GovInfo Congressional Directory
+text renditions only. State committee, subcommittee, and membership materialization may use OpenStates only. No other
+provider is a committee-data fallback.
 
 This catalog inventories provider-defined fields, not merely the fields the product already uses. A row may group a
 small set of sibling fields only when they share one source type, ingestion decision, destination, and cadence; each
@@ -60,7 +61,7 @@ schedule; the live Trigger.dev project is the source of truth for a schedule's a
 | Congress.gov | Committee reports and text formats, not committee organization or membership data | `congress-wave-child` | Configured current Congress | Hourly wave | Offset checkpoint per Congress |
 | Congress.gov | Members and terms | `congress-wave-child` | Configured current Congress | Hourly wave | Complete current snapshot |
 | GovInfo | Current-Congress BILLSTATUS XML | `govinfo-bill-status-sync` | Configured Congress and bill-type policy | Daily at 11:45 UTC | Collections API `lastModified` window with 24-hour replay; XML payload from bulk repository |
-| GovInfo | Federal committees, subcommittees, memberships | Pending; no task | Current federal catalog | Not scheduled | GovInfo is the sole approved federal committee-data source. Do not materialize or replace a cohort until a complete canonical ingestion is implemented and validated. |
+| GovInfo | Federal committees, subcommittees, memberships | CLI `govinfo:committees` | One or more explicit Congresses | Manual until the production canary passes | Discover CDIR editions through the JSON API, parse bounded plain-text renditions, apply complete provider-scoped organization snapshots in issue order, and checkpoint the last edition. No XML committee input is accepted. |
 | Open States, GovInfo, and Congress.gov non-committee domains | Historical rebuild | `legislation-backfill` | Explicit rebuild ID and bounded historical ranges | Manual only | Existing archive, package, and domain checkpoints; deterministic child idempotency keys |
 
 The manifest creates 163 desired recurring schedules: 156 Open States jurisdiction schedules, six Congress.gov
@@ -511,7 +512,7 @@ fresh comparison; they are not hard-coded as product guarantees.
 | `BILLS` Congressional Bills | Official bill text versions and package metadata | Partial through URLs embedded in BILLSTATUS; standalone collection metadata and all representations are not traversed. | No standalone Trigger task. | If enabled, daily after GPO’s release window with `lastModified` and a 48-hour replay. |
 | `BILLSUM` Congressional Bill Summaries | Bulk structured bill summaries | Summary text is ingested from BILLSTATUS and Congress.gov; standalone collection is not. | No Trigger task. | If enabled, poll changed packages/feed with a 24-hour overlap. |
 | `CCAL` Congressional Calendars | House and Senate calendar editions with package/granule content | Not ingested. | No Trigger task. | If enabled, daily `lastModified` discovery with seven-day replay. |
-| `CDIR` Congressional Directory | Congress/member/committee directory volumes and member/state granules | Not ingested. | No Trigger task. | Periodic edition discovery; directory data is not a live roster substitute. |
+| `CDIR` Congressional Directory | Congress/member/committee directory volumes and member/state granules | Committee, subcommittee, and membership rosters are ingested from official plain-text editions; member identities must match an existing Congress.gov person and term. | Manual `govinfo:committees`; no recurring Trigger task until canary acceptance. | Editions are applied chronologically as complete GovInfo organization snapshots. Continuous assignments retain one tenure; disappearance and later return create another tenure. |
 | `CDOC` Congressional Documents | House and Senate documents and treaty documents | Not ingested. | No Trigger task. | If enabled, 12-hour discovery with seven-day replay. |
 | `CHRG` Congressional Hearings | Published hearing packages, transcripts, parts/errata and granules | Congress.gov hearing metadata/formats are ingested; GovInfo packages/granules are not. | No GovInfo Trigger task. | If enabled, six-hour discovery, granule enumeration, seven-day replay. |
 | `CMR` Congressionally Mandated Reports | Reports submitted pursuant to statutory mandates | Not ingested. | No Trigger task. | Event-driven package discovery by `lastModified`. |

@@ -237,6 +237,10 @@ Estimate: 5 to 8 working days.
 Tasks:
 
 - Implement bills/votes, events, and people/committees adapters and normalizers against the source-lane table.
+- Implement the state committee lane only after the self-hosted scraper runtime is available. Consume pinned OpenStates
+  scraper or people-repository output as a complete jurisdiction snapshot, and reconcile each return after an absence as
+  a new membership tenure rather than reactivating an old tenure. OpenStates remains the only approved state committee
+  source; adding another source requires explicit product approval.
 - Add a deterministic comparison harness that contrasts a scraper run with retained session archives and the frozen
   pre-cutover API snapshot. It reports counts and object-level differences for bills, actions, votes, documents,
   people, committees, memberships, and events.

@@ -80,17 +80,48 @@ export async function replaceEntitySnapshot(
   database: LegislationDatabase,
   jurisdictionId: string,
   snapshot: EntitySnapshot,
-  options: Readonly<{ replaceOrganizations?: boolean }> = {}
+  options: Readonly<{
+    membershipObservedAt?: string
+    organizationSourceProvider?: string
+    replaceOrganizations?: boolean
+    replacePeople?: boolean
+  }> = {}
 ): Promise<void> {
   const personValues = uniqueById(snapshot.people)
   const organizationValues = uniqueById(snapshot.organizations)
   const termValues = uniqueById(snapshot.terms)
   const incomingMembershipValues = uniqueById(snapshot.memberships)
+  if (options.membershipObservedAt !== undefined && !isIsoDate(options.membershipObservedAt)) {
+    throw new Error("Membership observation date must use YYYY-MM-DD")
+  }
+  if (options.organizationSourceProvider?.trim().length === 0) {
+    throw new Error("Organization source provider must not be empty")
+  }
+  if (
+    options.organizationSourceProvider !== undefined &&
+    organizationValues.some((organization) => organization.sourceProvider !== options.organizationSourceProvider)
+  ) {
+    throw new Error("Provider-scoped organization replacement cannot contain another provider")
+  }
   if (
     options.replaceOrganizations === false &&
     (organizationValues.length > 0 || incomingMembershipValues.length > 0)
   ) {
     throw new Error("A people-only entity snapshot cannot contain organizations or memberships")
+  }
+  if (
+    options.replacePeople === false &&
+    (personValues.length > 0 ||
+      termValues.length > 0 ||
+      snapshot.personAliases.length > 0 ||
+      snapshot.personAliasPersonIds.length > 0 ||
+      (snapshot.personDetails?.length ?? 0) > 0 ||
+      (snapshot.personDetailPersonIds?.length ?? 0) > 0 ||
+      (snapshot.personExternalIdentifiers?.length ?? 0) > 0 ||
+      (snapshot.personJurisdictions?.length ?? 0) > 0 ||
+      (snapshot.termPersonIds?.length ?? 0) > 0)
+  ) {
+    throw new Error("An organization-only entity snapshot cannot contain people or terms")
   }
   const personAliasPersonIds = [...new Set(snapshot.personAliasPersonIds)]
   const personAliasValues = snapshot.personAliases
@@ -103,19 +134,42 @@ export async function replaceEntitySnapshot(
   const termSourceProvider = snapshot.termSourceProvider
 
   await database.transaction(async (transaction) => {
-    await transaction
-      .update(people)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(and(eq(people.jurisdictionId, jurisdictionId), sql`${people.sourceId} is not null`))
-    await transaction
-      .update(legislativeTerms)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(legislativeTerms.jurisdictionId, jurisdictionId))
+    const replacedOrganizationIds =
+      options.replaceOrganizations === false
+        ? []
+        : await transaction
+            .select({ id: organizations.id })
+            .from(organizations)
+            .where(
+              options.organizationSourceProvider === undefined
+                ? eq(organizations.jurisdictionId, jurisdictionId)
+                : and(
+                    eq(organizations.jurisdictionId, jurisdictionId),
+                    eq(organizations.sourceProvider, options.organizationSourceProvider)
+                  )
+            )
+    if (options.replacePeople !== false) {
+      await transaction
+        .update(people)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(and(eq(people.jurisdictionId, jurisdictionId), sql`${people.sourceId} is not null`))
+      await transaction
+        .update(legislativeTerms)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(legislativeTerms.jurisdictionId, jurisdictionId))
+    }
     if (options.replaceOrganizations !== false) {
       await transaction
         .update(organizations)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(organizations.jurisdictionId, jurisdictionId))
+        .where(
+          options.organizationSourceProvider === undefined
+            ? eq(organizations.jurisdictionId, jurisdictionId)
+            : and(
+                eq(organizations.jurisdictionId, jurisdictionId),
+                eq(organizations.sourceProvider, options.organizationSourceProvider)
+              )
+        )
     }
 
     if (personValues.length > 0) {
@@ -327,9 +381,14 @@ export async function replaceEntitySnapshot(
     }
 
     const organizationIds = organizationValues.map((organization) => organization.id)
-    const completeMembershipOrganizationIds = organizationValues
-      .filter((organization) => organization.membershipRelationsComplete === true)
-      .map((organization) => organization.id)
+    const completeMembershipOrganizationIds = [
+      ...new Set([
+        ...organizationValues
+          .filter((organization) => organization.membershipRelationsComplete === true)
+          .map((organization) => organization.id),
+        ...(options.organizationSourceProvider === undefined ? [] : replacedOrganizationIds.map(({ id }) => id))
+      ])
+    ]
     let membershipValues = incomingMembershipValues
     if (organizationIds.length > 0) {
       await transaction
@@ -346,7 +405,13 @@ export async function replaceEntitySnapshot(
     if (completeMembershipOrganizationIds.length > 0) {
       await transaction
         .update(organizationMemberships)
-        .set({ isActive: false, updatedAt: new Date() })
+        .set({
+          ...(options.membershipObservedAt === undefined
+            ? {}
+            : { endDate: sql`coalesce(${organizationMemberships.endDate}, ${options.membershipObservedAt})` }),
+          isActive: false,
+          updatedAt: new Date()
+        })
         .where(inArray(organizationMemberships.organizationId, completeMembershipOrganizationIds))
     }
     if (membershipValues.length > 0) {
@@ -451,4 +516,12 @@ function groupedBySourceProvider<T extends { sourceProvider?: string | null }>(v
     groups.set(sourceProvider, group)
   }
   return groups
+}
+
+function isIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false
+  }
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
 }

@@ -148,6 +148,34 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     ).rejects.toThrow("people-only entity snapshot cannot contain organizations or memberships")
   })
 
+  it("keeps people active during a provider-scoped organization-only replacement", async () => {
+    const fixture = tenureFixture("organization-only")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+
+    await replaceEntitySnapshot(
+      database,
+      jurisdictionId,
+      organizationOnlyTenureSnapshot(fixture, [fixture.sourceMembershipId]),
+      {
+        organizationSourceProvider: "openstates",
+        replacePeople: false
+      }
+    )
+
+    await expect(database.select().from(schema.people).where(eq(schema.people.id, fixture.personId))).resolves.toEqual([
+      expect.objectContaining({ id: fixture.personId, isActive: true })
+    ])
+  })
+
+  it("rejects an organization-only snapshot that contains people or terms", async () => {
+    const fixture = tenureFixture("invalid-organization-only")
+    await expect(
+      replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]), {
+        replacePeople: false
+      })
+    ).rejects.toThrow("organization-only entity snapshot cannot contain people or terms")
+  })
+
   it("replaces stale Congress terms only for the detail-hydrated person", async () => {
     const congressPersonId = "person:congress:term-refresh"
     const otherCongressPersonId = "person:congress:other-term-refresh"
@@ -227,6 +255,20 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
         isActive: false,
         tenureOrdinal: 1
       })
+    ])
+  })
+
+  it("records the observation date when a complete source snapshot ends a tenure", async () => {
+    const fixture = tenureFixture("observed-departure")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    await replaceEntitySnapshot(database, jurisdictionId, organizationOnlyTenureSnapshot(fixture, []), {
+      membershipObservedAt: "2026-08-27",
+      organizationSourceProvider: "openstates",
+      replacePeople: false
+    })
+
+    expect(await membershipsForTenure(fixture.organizationId)).toEqual([
+      expect.objectContaining({ endDate: "2026-08-27", isActive: false, tenureOrdinal: 1 })
     ])
   })
 
@@ -364,6 +406,15 @@ function tenureSnapshot(
     ],
     personAliasPersonIds: [],
     personAliases: [],
+    terms: []
+  }
+}
+
+function organizationOnlyTenureSnapshot(fixture: TenureFixture, membershipIds: readonly string[]) {
+  const snapshot = tenureSnapshot(fixture, membershipIds)
+  return {
+    ...snapshot,
+    people: [],
     terms: []
   }
 }
