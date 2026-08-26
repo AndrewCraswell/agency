@@ -7,7 +7,6 @@
  */
 
 import { createHash } from "node:crypto"
-import { calculateCrc32c } from "./crc32c.js"
 import { parseDecisionRecord, type DecisionRecord } from "./decision-record.js"
 
 export const DEFAULT_EVENT_JOURNAL_MAX_RECORDS = 32
@@ -156,7 +155,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 function cloneRecord(value: unknown): DecisionRecord {
-  return parseDecisionRecord(value)
+  return deepFreeze(structuredClone(parseDecisionRecord(value)))
 }
 
 /**
@@ -253,11 +252,22 @@ function canonicalTransactionContent(header: EventJournalHeader, records: readon
   return canonicalValue({ generation: header.generation, records }, { bytes: 0, entries: 0 })
 }
 
+function calculateCrc32c(content: string): number {
+  let crc = 0xffff_ffff
+  for (const byte of new TextEncoder().encode(content)) {
+    crc ^= byte
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0x82f6_3b78 : 0)
+    }
+  }
+  return (crc ^ 0xffff_ffff) >>> 0
+}
+
 function integrityFor(header: EventJournalHeader, records: readonly DecisionRecord[]): EventJournalIntegrity {
   const content = canonicalTransactionContent(header, records)
   return Object.freeze({
     contentDigest: `sha256:${createHash("sha256").update(content).digest("hex")}`,
-    crc32c: calculateCrc32c(new TextEncoder().encode(content))
+    crc32c: calculateCrc32c(content)
   })
 }
 

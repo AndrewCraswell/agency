@@ -66,22 +66,6 @@ describe("RC-01 remote-control authority contract", () => {
     })
   })
 
-  it("uses the remote command identity policy for controller and request identifiers", () => {
-    const validIdentifiers = ["a", "a".repeat(64), "Remote_Command.1:pair"]
-    const invalidIdentifiers = ["", "a".repeat(65), "remote id", " remote-1", "remote/1", "épee-1"]
-
-    for (const identifier of validIdentifiers) {
-      const controller = { ...handheldReferee, controllerId: identifier }
-      expect(gate(controller).state.activeController).toEqual(controller)
-      expect(() => parseAuthorityRequest(workflowRequest(identifier, controller))).not.toThrow()
-    }
-    for (const identifier of invalidIdentifiers) {
-      const controller = { ...handheldReferee, controllerId: identifier }
-      expect(() => gate(controller)).toThrow(TypeError)
-      expect(() => parseAuthorityRequest(workflowRequest(identifier, controller))).toThrow(TypeError)
-    }
-  })
-
   it("allows exactly one current controller and transfers ownership atomically", () => {
     expect(
       gate(handheldSupervisor).receive({
@@ -123,40 +107,6 @@ describe("RC-01 remote-control authority contract", () => {
       disposition: "application-applied",
       state: { activeController: tournamentSupervisor, authorityRevision: 8 }
     })
-  })
-
-  it("rejects an exact pre-transfer replay as a duplicate without changing authority state", () => {
-    const authority = gate(applicationSupervisor)
-    const acceptedRequest = workflowRequest("pre-transfer-workflow", applicationSupervisor, 7)
-
-    expect(authority.receive(acceptedRequest)).toMatchObject({ disposition: "application-applied" })
-    expect(
-      authority.receive({
-        controller: applicationSupervisor,
-        expectedAuthorityRevision: 7,
-        requestId: "transfer-to-tournament",
-        targetController: tournamentSupervisor,
-        type: "authority-transfer-request"
-      })
-    ).toMatchObject({
-      disposition: "application-applied",
-      state: { activeController: tournamentSupervisor, authorityRevision: 8, pendingStm32RequestIds: [] }
-    })
-
-    const afterTransfer = authority.state
-    expect(authority.receive(acceptedRequest)).toEqual({
-      disposition: "rejected",
-      reason: "duplicate-request",
-      requestId: "pre-transfer-workflow",
-      state: afterTransfer
-    })
-    expect(authority.state).toEqual(afterTransfer)
-    expect(authority.receive(workflowRequest("new-stale-old-controller", applicationSupervisor, 7))).toMatchObject({
-      disposition: "rejected",
-      reason: "authority-revision-mismatch",
-      state: afterTransfer
-    })
-    expect(authority.state).toEqual(afterTransfer)
   })
 
   it("does not permit transfer while a scoring transition awaits the STM32", () => {

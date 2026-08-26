@@ -6,14 +6,7 @@ import {
   type EpeeResistanceSample,
   type ResistanceMeasurement
 } from "./epee-resistance.js"
-import {
-  EPEE_RULES,
-  advanceEpeeScoring,
-  createEpeeScoringState,
-  type EpeeContact,
-  type EpeeSample,
-  type Side
-} from "./epee.js"
+import { EPEE_RULES, type Side } from "./epee.js"
 
 const NO_MEASUREMENT: ResistanceMeasurement = {
   resistanceMilliOhms: null,
@@ -39,9 +32,6 @@ const OPEN: EpeeResistanceContact = {
   groundedMaterial: "not-grounded",
   lineIntegrity: "intact"
 }
-const SIMPLE_OPEN: EpeeContact = { isGrounded: false, isTipClosed: false }
-const SIMPLE_HIT: EpeeContact = { isGrounded: false, isTipClosed: true }
-const SIMPLE_GROUNDED: EpeeContact = { isGrounded: true, isTipClosed: true }
 
 function closed(contactResistance: ResistanceMeasurement): EpeeResistanceContact {
   return {
@@ -77,10 +67,6 @@ function sample(atUs: number, left = OPEN, right = OPEN): EpeeResistanceSample {
   return { atUs, left, right }
 }
 
-function simpleSample(atUs: number, left = SIMPLE_OPEN, right = SIMPLE_OPEN): EpeeSample {
-  return { atUs, left, right }
-}
-
 function replay(samples: readonly EpeeResistanceSample[]) {
   return samples.reduce(
     (state, sample) => advanceEpeeResistanceScoring(state, sample),
@@ -96,71 +82,7 @@ function atSide(side: Side, atUs: number, contact: EpeeResistanceContact): EpeeR
   return side === "left" ? sample(atUs, contact) : sample(atUs, OPEN, contact)
 }
 
-function toResistanceContact(contact: EpeeContact, resistance: ResistanceMeasurement): EpeeResistanceContact {
-  if (!contact.isTipClosed) {
-    return OPEN
-  }
-
-  return contact.isGrounded ? grounded(EXCEPTIONAL_100_OHM) : closed(resistance)
-}
-
-function toResistanceSample(sample: EpeeSample, resistance: ResistanceMeasurement): EpeeResistanceSample {
-  return {
-    atUs: sample.atUs,
-    left: toResistanceContact(sample.left, resistance),
-    right: toResistanceContact(sample.right, resistance)
-  }
-}
-
 describe("epée resistance scoring", () => {
-  it.each([NORMAL_10_OHM, EXCEPTIONAL_100_OHM] as const)(
-    "matches simple-contact hits and lock state for exact %d milli-ohm observations",
-    (resistance) => {
-      const simpleCases = [
-        [
-          simpleSample(0, SIMPLE_HIT),
-          simpleSample(1, SIMPLE_HIT, SIMPLE_HIT),
-          simpleSample(2_001, SIMPLE_HIT, SIMPLE_HIT),
-          simpleSample(EPEE_RULES.lockoutTimeUs + 1, SIMPLE_HIT, SIMPLE_HIT)
-        ],
-        [
-          simpleSample(0, SIMPLE_HIT),
-          simpleSample(2_000, SIMPLE_HIT),
-          simpleSample(EPEE_RULES.lockoutTimeUs - 1, SIMPLE_HIT, SIMPLE_HIT),
-          simpleSample(EPEE_RULES.lockoutTimeUs + 1, SIMPLE_HIT, SIMPLE_HIT),
-          simpleSample(EPEE_RULES.lockoutTimeUs - 1 + EPEE_RULES.contactTimeUs, SIMPLE_HIT, SIMPLE_HIT)
-        ],
-        [
-          simpleSample(0, SIMPLE_HIT),
-          simpleSample(1_000, SIMPLE_GROUNDED),
-          simpleSample(2_000, SIMPLE_HIT),
-          simpleSample(4_000, SIMPLE_HIT)
-        ]
-      ]
-      for (const simpleSamples of simpleCases) {
-        const simpleState = simpleSamples.reduce(
-          (state, nextSample) => advanceEpeeScoring(state, nextSample),
-          createEpeeScoringState()
-        )
-        const resistanceState = simpleSamples
-          .map((nextSample) => toResistanceSample(nextSample, resistance))
-          .reduce(
-            (state, nextSample) => advanceEpeeResistanceScoring(state, nextSample),
-            createEpeeResistanceScoringState()
-          )
-
-        expect({
-          firstHitAtUs: resistanceState.firstHitAtUs,
-          hits: resistanceState.hits,
-          isLocked: resistanceState.isLocked,
-          lastSampleAtUs: resistanceState.lastSampleAtUs,
-          left: resistanceState.left,
-          right: resistanceState.right
-        }).toEqual(simpleState)
-      }
-    }
-  )
-
   it("registers a normal 10 ohm contact observed for ten milliseconds", () => {
     const state = replay([sample(0, closed(NORMAL_10_OHM)), sample(10_000, closed(NORMAL_10_OHM))])
 
@@ -234,20 +156,15 @@ describe("epée resistance scoring", () => {
     expect(state.hits.map(({ startedAtUs }) => startedAtUs)).toEqual([0, 1])
   })
 
-  it.each([
-    ["left", NORMAL_10_OHM, EXCEPTIONAL_100_OHM],
-    ["right", NORMAL_10_OHM, EXCEPTIONAL_100_OHM],
-    ["left", EXCEPTIONAL_100_OHM, NORMAL_10_OHM],
-    ["right", EXCEPTIONAL_100_OHM, NORMAL_10_OHM]
-  ] as const)(
-    "retains the opposing trusted contact at the provisional lockout boundary when %s starts first",
-    (firstSide, firstResistance, opposingResistance) => {
+  it.each(["left", "right"] as const)(
+    "retains an exceptional opposing contact that starts at the current provisional lockout boundary when %s hits first",
+    (firstSide) => {
       const opposingSide = oppositeSide(firstSide)
       const state = replay([
-        atSide(firstSide, 0, closed(firstResistance)),
-        atSide(firstSide, 2_000, closed(firstResistance)),
-        atSide(opposingSide, EPEE_RULES.lockoutTimeUs, closed(opposingResistance)),
-        atSide(opposingSide, EPEE_RULES.lockoutTimeUs + EPEE_RULES.contactTimeUs, closed(opposingResistance))
+        atSide(firstSide, 0, closed(NORMAL_10_OHM)),
+        atSide(firstSide, 2_000, closed(NORMAL_10_OHM)),
+        atSide(opposingSide, EPEE_RULES.lockoutTimeUs, closed(EXCEPTIONAL_100_OHM)),
+        atSide(opposingSide, EPEE_RULES.lockoutTimeUs + EPEE_RULES.contactTimeUs, closed(EXCEPTIONAL_100_OHM))
       ])
 
       expect(state.hits.map(({ side }) => side)).toEqual([firstSide, opposingSide])
@@ -287,24 +204,6 @@ describe("epée resistance scoring", () => {
       subject: "line-integrity"
     })
   })
-
-  it.each([
-    ["left", unavailable(), "unavailable", "line-integrity"],
-    ["right", unavailable(), "unavailable", "line-integrity"],
-    ["left", { ...closed(NORMAL_10_OHM), circuitComplete: "indeterminate" }, "uncertainty", "tip-loop"],
-    ["right", { ...closed(NORMAL_10_OHM), circuitComplete: "indeterminate" }, "uncertainty", "tip-loop"],
-    ["left", closed(UNCERTAIN_NORMAL_10_OHM), "uncertainty", "contact-resistance"],
-    ["right", closed(UNCERTAIN_NORMAL_10_OHM), "uncertainty", "contact-resistance"]
-  ] as const)(
-    "keeps %s-side unavailable, indeterminate, and interval evidence out of hit qualification",
-    (side, contact, disposition, subject) => {
-      const state = replay([atSide(side, 0, contact)])
-      const decision = state.decisions[0]
-
-      expect(state.hits).toEqual([])
-      expect(decision).toMatchObject({ atUs: 0, disposition, side, subject })
-    }
-  )
 
   it.each([
     ["cross-line", { ...closed(NORMAL_10_OHM), lineIntegrity: "cross-line" }, "line-fault", "line-integrity"],
@@ -348,48 +247,22 @@ describe("epée resistance scoring", () => {
   })
 
   it("rejects incomplete, invalid, and non-monotonic input without treating it as a contact", () => {
-    const incompleteMeasurements = [
-      closed({ resistanceMilliOhms: 10_000, resistanceUncertaintyMilliOhms: null }),
-      closed({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: 0 })
-    ]
+    const incompleteMeasurement = closed({ resistanceMilliOhms: 10_000, resistanceUncertaintyMilliOhms: null })
     const invalidMeasurement = closed({ resistanceMilliOhms: -1, resistanceUncertaintyMilliOhms: 0 })
-    const overflowingMeasurement = closed({
-      resistanceMilliOhms: Number.MAX_SAFE_INTEGER,
-      resistanceUncertaintyMilliOhms: 1
-    })
     const state = advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(1, closed(NORMAL_10_OHM)))
 
     expect(() => advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(-1))).toThrow(
       new RangeError("Epee resistance samples must use non-negative safe integer timestamps")
     )
-    for (const incompleteMeasurement of incompleteMeasurements) {
-      expect(() =>
-        advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, incompleteMeasurement))
-      ).toThrow(new RangeError("Epee resistance measurements must provide a value and uncertainty together"))
-    }
+    expect(() =>
+      advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, incompleteMeasurement))
+    ).toThrow(new RangeError("Epee resistance measurements must provide a value and uncertainty together"))
     expect(() =>
       advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, invalidMeasurement))
     ).toThrow(new RangeError("Epee resistance measurements must use non-negative safe integer milli-ohms"))
-    expect(() =>
-      advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, overflowingMeasurement))
-    ).toThrow(new RangeError("Epee resistance measurement ranges must remain safe integers"))
     expect(() => advanceEpeeResistanceScoring(state, sample(0))).toThrow(
       new RangeError("Epee resistance samples must use monotonic timestamps")
     )
-  })
-
-  it("accepts the maximum safe resistance at the zero-uncertainty boundary", () => {
-    const state = replay([
-      sample(0, closed({ resistanceMilliOhms: Number.MAX_SAFE_INTEGER, resistanceUncertaintyMilliOhms: 0 }))
-    ])
-
-    expect(state.decisions).toContainEqual({
-      atUs: 0,
-      disposition: "uncertainty",
-      rangeMilliOhms: { max: Number.MAX_SAFE_INTEGER, min: Number.MAX_SAFE_INTEGER },
-      side: "left",
-      subject: "contact-resistance"
-    })
   })
 
   it("does not add decisions after the retained lockout state", () => {

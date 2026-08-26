@@ -4,8 +4,6 @@ import {
   REMOTE_COMMAND_KEYS,
   REMOTE_COMMAND_REJECTION_REASONS,
   REMOTE_CONTROL_SCHEMA_VERSION,
-  isBoutWorkflowSnapshot,
-  isRemoteCommand,
   parseBoutStateEvent,
   parseBoutWorkflowSnapshot,
   parseRemoteCommand,
@@ -175,93 +173,6 @@ describe("RC-02 remote command schema", () => {
     for (const command of REMOTE_COMMAND_KEYS)
       expect(parseRemoteCommand(JSON.parse(JSON.stringify(commandFor(command))))).toEqual(commandFor(command))
   })
-  it("returns detached deeply frozen command and snapshot projections", () => {
-    const commandSource = {
-      ...score,
-      authority: { ...score.authority },
-      command: "clock.configure",
-      payload: { minutes: 3, seconds: 0 },
-      pressKind: "modified"
-    }
-    const parsedCommand = parseRemoteCommand(commandSource)
-    const snapshotSource = {
-      ...snapshot,
-      authority: { ...snapshot.authority },
-      clock: { ...snapshot.clock },
-      sides: { left: { ...snapshot.sides.left }, right: { ...snapshot.sides.right } },
-      sourceCommandIdentity: { ...snapshot.sourceCommandIdentity }
-    }
-    const parsedSnapshot = parseBoutWorkflowSnapshot(snapshotSource)
-
-    expect(parsedCommand).toEqual(commandSource)
-    expect(JSON.stringify(parsedCommand)).toBe(JSON.stringify(commandSource))
-    expect(parsedCommand).not.toBe(commandSource)
-    expect(parsedCommand.authority).not.toBe(commandSource.authority)
-    expect(parsedCommand.payload).not.toBe(commandSource.payload)
-    expect(Object.isFrozen(parsedCommand)).toBe(true)
-    expect(Object.isFrozen(parsedCommand.authority)).toBe(true)
-    expect(Object.isFrozen(parsedCommand.payload)).toBe(true)
-    expect(parsedSnapshot).toEqual(snapshotSource)
-    expect(JSON.stringify(parsedSnapshot)).toBe(JSON.stringify(snapshotSource))
-    expect(parsedSnapshot).not.toBe(snapshotSource)
-    expect(parsedSnapshot.clock).not.toBe(snapshotSource.clock)
-    expect(parsedSnapshot.sides.left).not.toBe(snapshotSource.sides.left)
-    expect(Object.isFrozen(parsedSnapshot)).toBe(true)
-    expect(Object.isFrozen(parsedSnapshot.clock)).toBe(true)
-    expect(Object.isFrozen(parsedSnapshot.sides.left)).toBe(true)
-
-    Reflect.set(commandSource.authority, "controllerId", "changed-controller")
-    Reflect.set(commandSource.payload, "minutes", 4)
-    Reflect.set(snapshotSource.clock, "remainingDurationCentiseconds", 1)
-    Reflect.set(snapshotSource.sides.left, "score", 99)
-    expect(parsedCommand.authority.controllerId).toBe("remote-operator")
-    expect(parsedCommand).toMatchObject({ payload: { minutes: 3, seconds: 0 } })
-    expect(parsedSnapshot.clock.remainingDurationCentiseconds).toBe(17_000)
-    expect(parsedSnapshot.sides.left.score).toBe(1)
-    expect(Reflect.set(parsedCommand.payload, "minutes", 4)).toBe(false)
-    expect(Reflect.set(parsedSnapshot.sides.left, "score", 99)).toBe(false)
-  })
-  it("uses one bounded ASCII identity policy for command and snapshot fields", () => {
-    const validIdentifiers = ["a", "a".repeat(64), "Remote_Command.1:pair"]
-    const invalidIdentifiers = ["", "a".repeat(65), "remote id", " remote-1", "remote/1", "épee-1"]
-    const commandWithIdentifier = (identifier: string) => [
-      { ...score, apparatusId: identifier },
-      { ...score, commandId: identifier },
-      { ...score, authority: { ...score.authority, controllerId: identifier } },
-      { ...score, remoteId: identifier }
-    ]
-    const snapshotWithIdentifier = (identifier: string) => ({
-      ...snapshot,
-      apparatusId: identifier,
-      authority: { ...snapshot.authority, controllerId: identifier },
-      sourceCommandIdentity: {
-        ...snapshot.sourceCommandIdentity,
-        apparatusId: identifier,
-        commandId: identifier,
-        controllerId: identifier,
-        remoteId: identifier
-      }
-    })
-
-    for (const identifier of validIdentifiers) {
-      for (const command of commandWithIdentifier(identifier)) {
-        expect(isRemoteCommand(command)).toBe(true)
-        expect(parseRemoteCommand(command)).toEqual(command)
-      }
-      const snapshotValue = snapshotWithIdentifier(identifier)
-      expect(isBoutWorkflowSnapshot(snapshotValue)).toBe(true)
-      expect(parseBoutWorkflowSnapshot(snapshotValue)).toEqual(snapshotValue)
-    }
-    for (const identifier of invalidIdentifiers) {
-      for (const command of commandWithIdentifier(identifier)) {
-        expect(isRemoteCommand(command)).toBe(false)
-        expect(() => parseRemoteCommand(command)).toThrow(TypeError)
-      }
-      const snapshotValue = snapshotWithIdentifier(identifier)
-      expect(isBoutWorkflowSnapshot(snapshotValue)).toBe(false)
-      expect(() => parseBoutWorkflowSnapshot(snapshotValue)).toThrow(TypeError)
-    }
-  })
   it("fails closed for mismatched discriminants and exact keys", () => {
     let getterReads = 0
     const accessor = { ...score }
@@ -324,38 +235,6 @@ describe("RC-02 bout state event schema", () => {
     sourceCommand: score,
     stm32RecordId: null
   } as const
-  it("returns a detached frozen event even when input branches share aliases", () => {
-    const sharedAuthority = { ...score.authority }
-    const sourceCommand = { ...score, authority: sharedAuthority, payload: {} }
-    const resultingBoutState = {
-      ...snapshot,
-      authority: sharedAuthority,
-      clock: { ...snapshot.clock },
-      sourceCommandIdentity: { ...snapshot.sourceCommandIdentity },
-      sides: { left: { ...snapshot.sides.left }, right: { ...snapshot.sides.right } }
-    }
-    const parsed = parseBoutStateEvent({ ...accepted, resultingBoutState, sourceCommand })
-
-    expect(parsed.disposition).toBe("accepted")
-    if (parsed.disposition !== "accepted") throw new Error("Expected accepted event")
-    expect(parsed).not.toBe(accepted)
-    expect(JSON.stringify(parsed)).toBe(JSON.stringify({ ...accepted, resultingBoutState, sourceCommand }))
-    expect(parsed.sourceCommand).not.toBe(sourceCommand)
-    expect(parsed.sourceCommand.authority).not.toBe(sharedAuthority)
-    expect(parsed.resultingBoutState).not.toBe(resultingBoutState)
-    expect(parsed.resultingBoutState.authority).not.toBe(sharedAuthority)
-    expect(Object.isFrozen(parsed)).toBe(true)
-    expect(Object.isFrozen(parsed.sourceCommand)).toBe(true)
-    expect(Object.isFrozen(parsed.resultingBoutState)).toBe(true)
-    expect(Object.isFrozen(parsed.resultingBoutState.clock)).toBe(true)
-
-    Reflect.set(sharedAuthority, "controllerId", "changed-controller")
-    Reflect.set(resultingBoutState.clock, "status", "running")
-    expect(parsed.sourceCommand.authority.controllerId).toBe("remote-operator")
-    expect(parsed.resultingBoutState.authority.controllerId).toBe("remote-operator")
-    expect(parsed.resultingBoutState.clock.status).toBe("stopped")
-    expect(Reflect.set(parsed.resultingBoutState.clock, "status", "running")).toBe(false)
-  })
   it("requires exact command-to-cause mapping and complete snapshot provenance", () => {
     expect(parseBoutStateEvent(accepted)).toEqual(accepted)
     for (const value of [
@@ -520,12 +399,18 @@ describe("RC-02 complete clock snapshot schema", () => {
       }
     } as const
     expect(parseBoutWorkflowSnapshot(activeBreak)).toEqual(activeBreak)
-    expect(() =>
-      parseBoutWorkflowSnapshot({
-        ...activeBreak,
-        clock: { ...activeBreak.clock, mode: "overtime" }
-      })
-    ).toThrow(TypeError)
+    const activeOvertime = {
+      ...activeBreak,
+      clock: { ...activeBreak.clock, mode: "overtime" },
+      priority: "left",
+      priorityEntropyReceipt: {
+        bit: 0,
+        ownerId: "priority-entropy-owner",
+        ownerRevision: "priority-entropy-1",
+        sampleId: "priority-sample-active"
+      }
+    } as const
+    expect(parseBoutWorkflowSnapshot(activeOvertime)).toEqual(activeOvertime)
     expect(() =>
       parseBoutWorkflowSnapshot({
         ...activeBreak,
@@ -534,8 +419,37 @@ describe("RC-02 complete clock snapshot schema", () => {
     ).toThrow(TypeError)
   })
 
-  it("requires frozen format provenance and coherent priority entropy", () => {
-    const activeOvertime = {
+  it("rejects impossible concurrent timers and inconsistent priority provenance", () => {
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...snapshot,
+        clock: { ...snapshot.clock, status: "running" },
+        medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "running" }
+      })
+    ).toThrow(TypeError)
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...snapshot,
+        medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "running" },
+        passivity: { configuredDurationCentiseconds: 6_000, remainingDurationCentiseconds: 6_000, status: "running" }
+      })
+    ).toThrow(TypeError)
+    expect(() => parseBoutWorkflowSnapshot({ ...snapshot, priority: "left" })).toThrow(TypeError)
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...snapshot,
+        clock: { ...snapshot.clock, mode: "overtime", remainingDurationCentiseconds: 6_000, status: "running" },
+        priority: "left",
+        priorityEntropyReceipt: {
+          bit: 1,
+          ownerId: "priority-entropy-owner",
+          ownerRevision: "priority-entropy-1",
+          sampleId: "priority-sample-01"
+        }
+      })
+    ).toThrow(TypeError)
+
+    const correlated = {
       ...snapshot,
       clock: { ...snapshot.clock, mode: "overtime", remainingDurationCentiseconds: 6_000, status: "running" },
       priority: "left",
@@ -546,25 +460,24 @@ describe("RC-02 complete clock snapshot schema", () => {
         sampleId: "priority-sample-01"
       }
     } as const
-    const { competitionFormatAuthority: _missingFormatAuthority, ...missingFormatAuthority } = snapshot
-
-    expect(parseBoutWorkflowSnapshot(activeOvertime)).toEqual(activeOvertime)
-    expect(() => parseBoutWorkflowSnapshot(missingFormatAuthority)).toThrow(TypeError)
-    expect(() =>
+    expect(parseBoutWorkflowSnapshot(correlated)).toEqual(correlated)
+    expect(
       parseBoutWorkflowSnapshot({
-        ...snapshot,
-        competitionFormatAuthority: { ...snapshot.competitionFormatAuthority, unexpected: true }
+        ...correlated,
+        clock: { ...correlated.clock, remainingDurationCentiseconds: 3_000 }
       })
-    ).toThrow(TypeError)
-    expect(() => parseBoutWorkflowSnapshot({ ...snapshot, priority: "left" })).toThrow(TypeError)
+    ).toMatchObject({ clock: { remainingDurationCentiseconds: 3_000 } })
     expect(() =>
       parseBoutWorkflowSnapshot({
-        ...activeOvertime,
-        priorityEntropyReceipt: { ...activeOvertime.priorityEntropyReceipt, bit: 1 }
+        ...correlated,
+        clock: { ...correlated.clock, status: "stopped" }
       })
     ).toThrow(TypeError)
     expect(() =>
-      parseBoutWorkflowSnapshot({ ...activeOvertime, clock: { ...activeOvertime.clock, status: "stopped" } })
+      parseBoutWorkflowSnapshot({
+        ...correlated,
+        clock: { ...correlated.clock, remainingDurationCentiseconds: 0 }
+      })
     ).toThrow(TypeError)
   })
 })

@@ -1,8 +1,3 @@
-import {
-  isScenarioDisplayDecision as isScenarioDisplayDecisionRecord,
-  isScenarioDisplayDiagnostic as isScenarioDisplayDiagnosticRecord
-} from "./scenario-display-schema.js"
-
 export type DisplayWeapon = "epee" | "foil" | "sabre"
 export type DisplaySide = "left" | "right"
 export type DisplayLamp = "off" | "off-target" | "valid-hit"
@@ -311,12 +306,58 @@ function lampForDecision(decision: ScenarioDisplayDecision | undefined): Display
   return visual === "off-target" || visual === "valid-hit" ? visual : "off"
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
 export function isScenarioDisplayDecision(value: unknown): value is ScenarioDisplayDecision {
-  return isScenarioDisplayDecisionRecord(value)
+  return (
+    isRecord(value) &&
+    isNonnegativeSafeInteger(value.decisionAtUs) &&
+    typeof value.disposition === "string" &&
+    value.disposition.length > 0 &&
+    (value.side === undefined || value.side === "left" || value.side === "right") &&
+    isRecord(value.signal) &&
+    isOneOf(value.signal.audible, ["none", "requested"]) &&
+    typeof value.signal.latched === "boolean" &&
+    isOneOf(value.signal.visual, ["diagnostic", "none", "off-target", "valid-hit"])
+  )
+}
+
+function isOneOf<T extends string>(value: unknown, choices: readonly T[]): value is T {
+  return typeof value === "string" && choices.some((choice) => choice === value)
+}
+
+function isNonnegativeSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
 }
 
 export function isScenarioDisplayDiagnostic(value: unknown): value is ScenarioDisplayDiagnostic {
-  return isScenarioDisplayDiagnosticRecord(value)
+  return (
+    isRecord(value) &&
+    isNonnegativeSafeInteger(value.atUs) &&
+    isOneOf(value.audible, ["none", "requested"]) &&
+    isOneOf(value.indication, ["white-on", "yellow-off", "yellow-on"]) &&
+    typeof value.latched === "boolean" &&
+    isOneOf(value.reason, [
+      "circuit-bc-abnormal-change",
+      "control-break-qualified",
+      "own-equipment-clear",
+      "own-equipment-fault"
+    ]) &&
+    isOneOf(value.side, ["left", "right"]) &&
+    Array.isArray(value.sourceInputIds) &&
+    value.sourceInputIds.length >= 1 &&
+    value.sourceInputIds.length <= 2 &&
+    value.sourceInputIds.every((id) => typeof id === "string" && id.length > 0 && id.length <= 128) &&
+    new Set(value.sourceInputIds).size === value.sourceInputIds.length &&
+    ((value.indication === "white-on" && value.latched && value.audible === "requested") ||
+      (value.indication !== "white-on" && !value.latched && value.audible === "none")) &&
+    ((value.indication === "yellow-on" && value.reason === "own-equipment-fault") ||
+      (value.indication === "yellow-off" && value.reason === "own-equipment-clear") ||
+      (value.indication === "white-on" &&
+        (value.reason === "circuit-bc-abnormal-change" || value.reason === "control-break-qualified")))
+  )
 }
 
 function buildAccessibleLabel(projection: Omit<ScenarioDisplayProjection, "accessibleLabel">): string {

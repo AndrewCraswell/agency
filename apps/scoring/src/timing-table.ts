@@ -27,128 +27,6 @@ export type TimingTable = {
   }
 }
 
-/**
- * Published FIE timing bands are evidence constraints, not alternate runtime
- * settings. `endpointUncertainty` names where the rule text does not itself
- * choose one executable endpoint.
- */
-export type FieTimingBand = {
-  readonly earliestUs: number
-  readonly endpointUncertainty:
-    | "exact-published-endpoint"
-    | "fie-tolerance-requires-product-selection"
-    | "published-endpoint-needs-product-policy"
-  readonly latestUs: number | null
-}
-
-export type FieTimingBandEndpoint = "earliest" | "latest"
-
-export type FieTimingBands = {
-  readonly epee: {
-    readonly contactMinimumUs: FieTimingBand
-    readonly doubleHitWindowUs: FieTimingBand
-  }
-  readonly foil: {
-    readonly contactBreakMinimumUs: FieTimingBand
-    readonly lockoutUs: FieTimingBand
-  }
-  readonly sabre: {
-    readonly bladeRecoveryUs: FieTimingBand
-    readonly bladeRegistrationLatestUs: FieTimingBand
-    readonly controlBreakUs: FieTimingBand
-    readonly lockoutUs: FieTimingBand
-    readonly minimumContactUs: FieTimingBand
-    readonly sensitivityTestPointUs: FieTimingBand
-  }
-}
-
-function deepFreeze<const Value>(value: Value): Value {
-  if (typeof value === "object" && value !== null) {
-    for (const nestedValue of Object.values(value)) {
-      deepFreeze(nestedValue)
-    }
-
-    Object.freeze(value)
-  }
-
-  return value
-}
-
-/**
- * The sole machine-readable source for FIE timing tolerances and endpoint
- * uncertainty. Boundary generation consumes this record; no consumer carries
- * a second set of tolerance literals.
- */
-export const FIE_TIMING_BANDS: FieTimingBands = deepFreeze({
-  epee: {
-    contactMinimumUs: {
-      earliestUs: 2_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 10_000
-    },
-    doubleHitWindowUs: {
-      earliestUs: 40_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 50_000
-    }
-  },
-  foil: {
-    contactBreakMinimumUs: {
-      earliestUs: 13_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 15_000
-    },
-    lockoutUs: {
-      earliestUs: 275_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 325_000
-    }
-  },
-  sabre: {
-    bladeRecoveryUs: {
-      earliestUs: 10_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 20_000
-    },
-    bladeRegistrationLatestUs: {
-      earliestUs: 0,
-      endpointUncertainty: "published-endpoint-needs-product-policy",
-      latestUs: 5_000
-    },
-    controlBreakUs: {
-      earliestUs: 1_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 5_000
-    },
-    lockoutUs: {
-      earliestUs: 160_000,
-      endpointUncertainty: "fie-tolerance-requires-product-selection",
-      latestUs: 180_000
-    },
-    minimumContactUs: {
-      earliestUs: 100,
-      endpointUncertainty: "published-endpoint-needs-product-policy",
-      latestUs: null
-    },
-    sensitivityTestPointUs: {
-      earliestUs: 1_000,
-      endpointUncertainty: "exact-published-endpoint",
-      latestUs: 1_000
-    }
-  }
-})
-
-/** Returns a published finite endpoint, rejecting an unbounded request. */
-export function getFieTimingBandEndpointUs(band: FieTimingBand, endpoint: FieTimingBandEndpoint): number {
-  const value = endpoint === "earliest" ? band.earliestUs : band.latestUs
-
-  if (value === null) {
-    throw new RangeError("Requested FIE timing endpoint is unbounded")
-  }
-
-  return value
-}
-
 const TIMING_TABLE_1: TimingTable = deepFreeze({
   revision: "timing-1",
   epee: {
@@ -173,6 +51,18 @@ const TIMING_TABLE_1: TimingTable = deepFreeze({
 const TIMING_TABLES: Readonly<Record<TimingTableRevision, TimingTable>> = Object.freeze({
   "timing-1": TIMING_TABLE_1
 })
+
+function deepFreeze<const Value>(value: Value): Value {
+  if (typeof value === "object" && value !== null) {
+    for (const nestedValue of Object.values(value)) {
+      deepFreeze(nestedValue)
+    }
+
+    Object.freeze(value)
+  }
+
+  return value
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -200,12 +90,11 @@ function requireSafeInteger(value: unknown, path: string, unit: "count" | "micro
   return value
 }
 
-function requireWithinFieBand(value: unknown, band: FieTimingBand, path: string): number {
+function requireWithin(value: unknown, min: number, max: number, path: string): number {
   const timing = requireSafeInteger(value, path, "microsecond")
 
-  if (timing < band.earliestUs || (band.latestUs !== null && timing > band.latestUs)) {
-    const upperBound = band.latestUs === null ? "unbounded" : band.latestUs
-    throw new RangeError(`${path} must be within ${band.earliestUs}..${upperBound} microseconds`)
+  if (timing < min || timing > max) {
+    throw new RangeError(`${path} must be within ${min}..${max} microseconds`)
   }
 
   return timing
@@ -247,44 +136,23 @@ export function validateTimingTable(candidate: unknown): asserts candidate is Ti
     "Timing table sabre"
   )
 
-  requireWithinFieBand(
-    epee.contactMinimumUs,
-    FIE_TIMING_BANDS.epee.contactMinimumUs,
-    "Timing table epee.contactMinimumUs"
-  )
-  requireWithinFieBand(
-    epee.doubleHitWindowUs,
-    FIE_TIMING_BANDS.epee.doubleHitWindowUs,
-    "Timing table epee.doubleHitWindowUs"
-  )
-  requireWithinFieBand(
-    foil.contactBreakMinimumUs,
-    FIE_TIMING_BANDS.foil.contactBreakMinimumUs,
-    "Timing table foil.contactBreakMinimumUs"
-  )
-  requireWithinFieBand(foil.lockoutUs, FIE_TIMING_BANDS.foil.lockoutUs, "Timing table foil.lockoutUs")
-  requireWithinFieBand(
+  requireWithin(epee.contactMinimumUs, 2_000, 10_000, "Timing table epee.contactMinimumUs")
+  requireWithin(epee.doubleHitWindowUs, 40_000, 50_000, "Timing table epee.doubleHitWindowUs")
+  requireWithin(foil.contactBreakMinimumUs, 13_000, 15_000, "Timing table foil.contactBreakMinimumUs")
+  requireWithin(foil.lockoutUs, 275_000, 325_000, "Timing table foil.lockoutUs")
+  const sabreMinimumContactUs = requireSafeInteger(
     sabre.minimumContactUs,
-    FIE_TIMING_BANDS.sabre.minimumContactUs,
-    "Timing table sabre.minimumContactUs"
+    "Timing table sabre.minimumContactUs",
+    "microsecond"
   )
-  requireWithinFieBand(
-    sabre.sensitivityTestPointUs,
-    FIE_TIMING_BANDS.sabre.sensitivityTestPointUs,
-    "Timing table sabre.sensitivityTestPointUs"
-  )
-  requireWithinFieBand(sabre.controlBreakUs, FIE_TIMING_BANDS.sabre.controlBreakUs, "Timing table sabre.controlBreakUs")
-  requireWithinFieBand(
-    sabre.bladeRegistrationLatestUs,
-    FIE_TIMING_BANDS.sabre.bladeRegistrationLatestUs,
-    "Timing table sabre.bladeRegistrationLatestUs"
-  )
-  requireWithinFieBand(
-    sabre.bladeRecoveryUs,
-    FIE_TIMING_BANDS.sabre.bladeRecoveryUs,
-    "Timing table sabre.bladeRecoveryUs"
-  )
-  requireWithinFieBand(sabre.lockoutUs, FIE_TIMING_BANDS.sabre.lockoutUs, "Timing table sabre.lockoutUs")
+  if (sabreMinimumContactUs < 100) {
+    throw new RangeError("Timing table sabre.minimumContactUs must be at least 100 microseconds")
+  }
+  requireWithin(sabre.sensitivityTestPointUs, 1_000, 1_000, "Timing table sabre.sensitivityTestPointUs")
+  requireWithin(sabre.controlBreakUs, 1_000, 5_000, "Timing table sabre.controlBreakUs")
+  requireSafeInteger(sabre.bladeRegistrationLatestUs, "Timing table sabre.bladeRegistrationLatestUs", "microsecond")
+  requireSafeInteger(sabre.bladeRecoveryUs, "Timing table sabre.bladeRecoveryUs", "microsecond")
+  requireWithin(sabre.lockoutUs, 160_000, 180_000, "Timing table sabre.lockoutUs")
   requireSafeInteger(
     sabre.maximumBladeContactInterruptions,
     "Timing table sabre.maximumBladeContactInterruptions",
@@ -347,5 +215,5 @@ export function resolveTimingTable(argument: TimingTable | undefined): TimingTab
   }
 
   validateTimingTable(argument)
-  return loadTimingTable(argument.revision)
+  return argument
 }

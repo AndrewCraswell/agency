@@ -1,11 +1,13 @@
 import type { FoilSide } from "./foil.js"
-import { getResistanceRange, type ResistanceMeasurement } from "./resistance-range.js"
 
 /**
  * A calibrated host-side resistance result. Both fields are null only when no
  * trusted measurement is available; zero is a measured value, not absence.
  */
-export type FoilInsulationResistanceMeasurement = ResistanceMeasurement
+export type FoilInsulationResistanceMeasurement = {
+  resistanceMilliOhms: number | null
+  resistanceUncertaintyMilliOhms: number | null
+}
 
 export type FoilInsulationObservation = {
   /** Resistance in the acting fencer's opposing target-return circuit. */
@@ -60,22 +62,44 @@ export const FOIL_ANTI_BLOCKING_RESISTANCE_MILLIOHMS = {
   yellowOffAbove: 475_000
 } as const
 
+function isNonNegativeSafeInteger(value: number) {
+  return Number.isSafeInteger(value) && value >= 0
+}
+
 export function validateFoilResistanceMeasurement(measurement: FoilInsulationResistanceMeasurement) {
-  getResistanceRange(measurement, {
-    incomplete: () => new RangeError("Foil insulation measurements must provide a value and uncertainty together"),
-    invalid: () => new RangeError("Foil insulation measurements must use non-negative safe integer milli-ohms"),
-    overflow: () => new RangeError("Foil insulation measurement ranges must remain safe integers")
-  })
+  const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
+
+  if (resistanceMilliOhms === null && resistanceUncertaintyMilliOhms === null) {
+    return
+  }
+
+  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
+    throw new RangeError("Foil insulation measurements must provide a value and uncertainty together")
+  }
+
+  if (!isNonNegativeSafeInteger(resistanceMilliOhms) || !isNonNegativeSafeInteger(resistanceUncertaintyMilliOhms)) {
+    throw new RangeError("Foil insulation measurements must use non-negative safe integer milli-ohms")
+  }
+
+  if (resistanceMilliOhms > Number.MAX_SAFE_INTEGER - resistanceUncertaintyMilliOhms) {
+    throw new RangeError("Foil insulation measurement ranges must remain safe integers")
+  }
 }
 
 export function foilResistanceRange(
   measurement: FoilInsulationResistanceMeasurement
 ): FoilInsulationResistanceRange | null {
-  return getResistanceRange(measurement, {
-    incomplete: () => new RangeError("Foil insulation measurements must provide a value and uncertainty together"),
-    invalid: () => new RangeError("Foil insulation measurements must use non-negative safe integer milli-ohms"),
-    overflow: () => new RangeError("Foil insulation measurement ranges must remain safe integers")
-  })
+  validateFoilResistanceMeasurement(measurement)
+  const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
+
+  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
+    return null
+  }
+
+  return {
+    max: resistanceMilliOhms + resistanceUncertaintyMilliOhms,
+    min: Math.max(0, resistanceMilliOhms - resistanceUncertaintyMilliOhms)
+  }
 }
 
 function decideReturnCircuit(measurement: FoilInsulationResistanceMeasurement): FoilInsulationDecision["scoring"] {
@@ -129,7 +153,7 @@ function decideSide(side: FoilSide, observation: FoilInsulationObservation): Foi
  * It cannot create, suppress, or reclassify a foil contact-break hit.
  */
 export function evaluateFoilAntiBlockingInsulation(sample: FoilInsulationSample): FoilInsulationEvaluation {
-  if (!Number.isSafeInteger(sample.atUs) || sample.atUs < 0) {
+  if (!isNonNegativeSafeInteger(sample.atUs)) {
     throw new RangeError("Foil insulation samples must use non-negative safe integer timestamps")
   }
 

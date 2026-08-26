@@ -6,7 +6,6 @@ import {
   createVirtualFrontEndState,
   validateVirtualFrontEndSnapshot,
   VIRTUAL_FRONT_END_CONDUCTOR_IDS,
-  VIRTUAL_FRONT_END_PHASE_IDS,
   VIRTUAL_FRONT_END_PHASE_PROFILES,
   type VirtualFrontEndFrame,
   type VirtualFrontEndPhase,
@@ -555,9 +554,6 @@ describe("virtual front-end", () => {
   })
 
   it("derives a weapon from each phase profile and keeps BP-103 labels out of logical relations", () => {
-    expect(VIRTUAL_FRONT_END_PHASE_IDS).toHaveLength(10)
-    expect(new Set(VIRTUAL_FRONT_END_PHASE_IDS)).toHaveLength(VIRTUAL_FRONT_END_PHASE_IDS.length)
-    expect(VIRTUAL_FRONT_END_PHASE_IDS).toEqual(VIRTUAL_FRONT_END_PHASE_PROFILES.map((profile) => profile.id))
     expect(VIRTUAL_FRONT_END_PHASE_PROFILES.map((profile) => [profile.id, profile.weapon])).toEqual([
       ["foil-circuit-integrity", "foil"],
       ["foil-target-context", "foil"],

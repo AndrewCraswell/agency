@@ -70,15 +70,6 @@ describe("sabre scoring state machine", () => {
     )
   })
 
-  it("accepts the maximum safe resistance at the zero-uncertainty boundary", () => {
-    expect(
-      classifySabreExternalPath({
-        resistanceMilliOhms: Number.MAX_SAFE_INTEGER,
-        resistanceUncertaintyMilliOhms: 0
-      })
-    ).toBe("ineligible")
-  })
-
   it("rejects incomplete or invalid external-path resistance measurements", () => {
     expect(() => classifySabreExternalPath({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: 0 })).toThrow(
       TypeError

@@ -103,13 +103,13 @@ describe("RC-04 handheld hardware selection", () => {
         },
         chargeEnableClamp: { mpn: "BZT52-C3V3", nominalVoltageV: 3.3 }
       },
-      failClosedTopology: expect.stringContaining("holds CE high")
+      failClosedTopology: expect.stringContaining("hold CE high")
     })
     expect(electronics.charger).toMatchObject({
       progResistor: { mpn: "RC0603FR-074KL", valueOhm: 4000, tolerancePercent: 1 },
       inputCapacitor: { mpn: "GRM188R61C475KE11D", valueUf: 4.7 },
       outputCapacitor: { mpn: "GRM188R61C475KE11D", valueUf: 4.7 },
-      topology: expect.stringContaining("BQ24314 OUT supplies MCP73831 VDD")
+      thermalAssumptions: { allowedCellTemperatureC: { minimum: 10, maximum: 45 }, sot23ThetaJaCPerW: 230 }
     })
     expect(electronics.regulator).toMatchObject({
       inductor: { mpn: "LQH2MCN2R2M52L", valueUh: 2.2 },

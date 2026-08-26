@@ -7,7 +7,6 @@
  */
 
 import type { RemoteCommand } from "./remote-control.js"
-import { isRemoteIdentifier } from "./remote-identifier.js"
 
 export type ControllerKind = "paired-handheld" | "local-application" | "tournament-controller"
 
@@ -113,6 +112,7 @@ export type RemoteControlAuthorityOptions = Readonly<{
   maxRememberedRequestIds?: number
 }>
 
+const MAX_IDENTIFIER_LENGTH = 128
 const MAX_PENDING_STM32_REQUESTS = 32
 const MAX_REMEMBERED_REQUEST_IDS = 256
 
@@ -142,7 +142,12 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[])
 }
 
 function assertIdentifier(value: unknown, name: string): asserts value is string {
-  if (!isRemoteIdentifier(value)) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > MAX_IDENTIFIER_LENGTH ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(value)
+  ) {
     throw new TypeError(`${name} must be a bounded opaque identifier`)
   }
 }

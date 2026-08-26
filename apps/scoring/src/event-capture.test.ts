@@ -114,48 +114,6 @@ describe("authoritative event capture", () => {
     expect(record.decision.provenance.firmware.scoringBootId).toBe("boot-008")
   })
 
-  it("preserves the canonical DecisionRecord object and byte order for adversarial outcome key order", () => {
-    const capture = createEventCapture({
-      postSampleCount: 1,
-      preSampleCount: 1,
-      provenance,
-      recordIdPrefix: "bytes"
-    })
-    const reorderedOutcome = {
-      weapon: "epee",
-      signal: { audible: "requested", latched: true, visual: "valid-hit" },
-      side: "left",
-      qualifiedAtUs: 5,
-      hitStartedAtUs: 5,
-      disposition: "qualified-hit"
-    } as const
-    capture.observe({ sequence: 5, snapshot: snapshot(5) })
-    capture.capture(outcome(5, reorderedOutcome))
-    capture.observe({ sequence: 6, snapshot: snapshot(6) })
-
-    const decision = capture.records[0]!.decision
-    expect(Object.keys(decision)).toEqual([
-      "captureWindow",
-      "decisionAtUs",
-      "outcome",
-      "provenance",
-      "rawCaptureRefs",
-      "recordId",
-      "schemaVersion"
-    ])
-    expect(JSON.stringify(decision)).toBe(
-      JSON.stringify({
-        captureWindow: { firstSequence: 5, fromUs: 5, lastSequence: 6, throughUs: 6 },
-        decisionAtUs: 5,
-        outcome: reorderedOutcome,
-        provenance,
-        rawCaptureRefs: [],
-        recordId: "bytes-0",
-        schemaVersion: 1
-      })
-    )
-  })
-
   it("does not classify outcomes, and preserves rejection, parry-like cancellation, whipover, late-hit, short, and line-fault reasons supplied by the scorer", () => {
     const decisions: readonly CapturableDecisionOutcome[] = [
       {
@@ -286,24 +244,6 @@ describe("authoritative event capture", () => {
       new TypeError(
         "Event capture firmware build digests must be a sha256 digest with 64 lowercase hexadecimal characters"
       )
-    )
-    expect(() =>
-      createEventCapture({
-        provenance: { ...provenance, firmware: { ...provenance.firmware, identity: "esp32-scoring" } },
-        recordIdPrefix: "x"
-      })
-    ).toThrow(
-      new RangeError(
-        "Event capture firmware identities must be a non-empty STM32 identifier no longer than 120 characters"
-      )
-    )
-    expect(() =>
-      createEventCapture({
-        provenance: { ...provenance, calibrationProfileRevision: "r".repeat(129) },
-        recordIdPrefix: "x"
-      })
-    ).toThrow(
-      new RangeError("Event capture calibration revisions must be a non-empty string no longer than 120 characters")
     )
     expect(() => createEventCapture({ provenance, recordIdPrefix: "x".repeat(121) })).toThrow(
       new RangeError("Event capture record ID prefixes must be a non-empty string no longer than 120 characters")

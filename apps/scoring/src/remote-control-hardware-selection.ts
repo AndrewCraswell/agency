@@ -288,7 +288,7 @@ const definition = {
           "10 kohm from connector VBUS to BQ24314 CE and 10 kohm from CE to PACK-, with BZT52-C3V3 cathode at CE and anode at PACK-; the divider holds CE high at normal USB voltage, the Zener limits connector overvoltage, and the open-drain NAND may only pull CE low"
       },
       failClosedTopology:
-        "The SN74LVC1G38 open-drain output can pull active-low BQ24314 CE low only when both TMP390 outputs are released in the configured temperature window. The connector-VBUS divider otherwise holds CE high, which disables BQ24314 OUT. Temperature thresholds, sensor coupling, and fault coverage require hardware validation and remain DENY.",
+        "TMP390 hot and cold outputs must both be high before SN74LVC1G38 can pull active-low BQ24314 CE low. The connector-VBUS pullup and 3.3 V clamp hold CE high during startup, invalid threshold resistance, temperature fault, lost TEMP_3V3, or logic disconnection, so BQ24314 OUT remains disconnected from the charger.",
       physicalPlacement: "TMP390 must be thermally bonded to the protected cell pack, not placed beside the charger",
       state: "exact hardware inhibit selected; threshold accuracy, thermal coupling, and trip testing remain DENY"
     },
@@ -301,10 +301,15 @@ const definition = {
       inputCapacitor: { manufacturer: "Murata", mpn: "GRM188R61C475KE11D", valueUf: 4.7 },
       outputCapacitor: { manufacturer: "Murata", mpn: "GRM188R61C475KE11D", valueUf: 4.7 },
       programmingCalculation: "1000 V / 4.000 kohm = 250 mA nominal fast-charge target",
-      topology:
-        "BQ24314 OUT supplies MCP73831 VDD. A 4.000 kohm resistor from PROG to PACK- sets the nominal 250 mA fast-charge target; VDD and VBAT each use a 4.7 uF capacitor to PACK-.",
-      state:
-        "The USB-powered temperature gate cannot be overridden by firmware. Charger dissipation, copper area, threshold accuracy, sensor coupling, regulation, and charge time require measurement and remain DENY."
+      thermalAssumptions: {
+        allowedCellTemperatureC: { minimum: 10, maximum: 45 },
+        chargerSpecifiedAmbientC: { minimum: -40, maximum: 85 },
+        sot23ThetaJaCPerW: 230,
+        usbInputVoltageV: { minimum: 4.75, nominal: 5, maximum: 5.25 },
+        policy:
+          "The USB-powered TMP390 and fail-closed BQ24314 enable path inhibits charging outside a conservative nominal 15 C to 42 C window even when the cell rail is depleted. Firmware cannot override the hardware inhibit; depleted-cell dissipation, copper area, threshold accuracy, thermal coupling, and regulation require measurement."
+      },
+      basis: "Single-cell 4.20 V Li-ion controller; exact 250 mA network is a candidate pending thermal and pack tests."
     },
     regulator: {
       manufacturer: "Texas Instruments",
@@ -442,6 +447,75 @@ export const remoteControlHardwareSelection = deepFreeze(definition)
 export function validateRemoteControlHardwareSelection(value: unknown): true {
   if (!sameDataGraph(value, remoteControlHardwareSelection)) {
     throw new RangeError("RC-04 must exactly match the reviewed handheld hardware-selection contract")
+  }
+  const contract = remoteControlHardwareSelection
+  if (
+    contract.workUnit !== "RC-04" ||
+    contract.releaseState !== "deny" ||
+    contract.handheldElectronics.mcuModule.mpn !== "MDBT50Q-1MV2" ||
+    contract.handheldElectronics.mcuModule.soc !== "Nordic Semiconductor nRF52840 revision 2" ||
+    contract.handheldElectronics.mcuModule.antennaAndRf.topology.includes("integrated") === false ||
+    contract.handheldElectronics.mcuModule.clocks.lowFrequency.includes("internal") === false ||
+    contract.handheldElectronics.mcuModule.power.mode !== "LDO mode" ||
+    contract.handheldElectronics.mcuModule.power.hostDecoupling.length !== 2 ||
+    contract.handheldElectronics.mcuModule.power.dnp.length !== 3 ||
+    contract.handheldElectronics.irEmitter.wavelengthNm !== 940 ||
+    contract.handheldElectronics.irEmitter.carrierKHz !== 38 ||
+    contract.handheldElectronics.emitterDriver.supportNetwork.length !== 3 ||
+    contract.handheldElectronics.buttonMatrix.keys !== 32 ||
+    contract.handheldElectronics.buttonMatrix.antiGhostDiode.quantity !== 32 ||
+    contract.handheldElectronics.buttonMatrix.antiGhostDiode.mpn !== "1N4148W-E3-08" ||
+    contract.handheldElectronics.buttonMatrix.rows.length * contract.handheldElectronics.buttonMatrix.columns.length !==
+      32 ||
+    contract.handheldElectronics.debugAndTest.debugCableMpn !== "TC2050-IDC-NL-050-ALL" ||
+    contract.handheldElectronics.debugAndTest.targetInterface.populatedHeader ||
+    contract.handheldElectronics.debugAndTest.targetInterface.manufacturerFootprintId !== "TC2050-IDC-NL-FP" ||
+    contract.handheldElectronics.debugAndTest.targetInterface.conductivePads.count !== 10 ||
+    contract.handheldElectronics.debugAndTest.targetInterface.nonPlatedAlignmentHoles.count !== 3 ||
+    contract.handheldElectronics.remoteUsbCSink.receptacle.mpn !== "USB4105-GF-A" ||
+    contract.handheldElectronics.remoteUsbCSink.ccPulldowns.quantity !== 2 ||
+    contract.handheldElectronics.remoteUsbCSink.inputProtection.mpn !== "BQ24314DSGR" ||
+    contract.handheldElectronics.remoteUsbCSink.inputProtection.connectorEsd.vbus.mpn !== "TPD1E10B06DPYR" ||
+    contract.handheldElectronics.remoteUsbCSink.inputProtection.connectorEsd.cc.mpn !== "TPD4S012DRYR" ||
+    contract.handheldElectronics.remoteUsbCSink.inputProtection.currentLimit.resistor.valueOhm !== 50000 ||
+    contract.handheldElectronics.remoteUsbCSink.inputProtection.batterySenseResistor.valueOhm !== 100000 ||
+    contract.handheldElectronics.remoteUsbCSink.inputProtection.faultOutput.pullup.mpn !== "RC0603FR-0710KL" ||
+    contract.handheldElectronics.chargeTemperatureInhibit.sensor.mpn !== "TMP390A2DRLR" ||
+    contract.handheldElectronics.chargeTemperatureInhibit.usbPoweredRail.regulator.mpn !== "TPS70933DBVR" ||
+    contract.handheldElectronics.chargeTemperatureInhibit.thresholds.hot.nominalTripC !== 42 ||
+    contract.handheldElectronics.chargeTemperatureInhibit.thresholds.cold.nominalTripC !== 15 ||
+    contract.handheldElectronics.chargeTemperatureInhibit.support.validWindowNand.mpn !== "SN74LVC1G38DCKR" ||
+    contract.handheldElectronics.chargeTemperatureInhibit.support.bypass.quantity !== 2 ||
+    contract.handheldElectronics.chargeTemperatureInhibit.support.chargeEnableBias.upper.valueOhm !== 10000 ||
+    contract.handheldElectronics.chargeTemperatureInhibit.support.chargeEnableBias.lower.valueOhm !== 10000 ||
+    contract.handheldElectronics.chargeTemperatureInhibit.support.chargeEnableClamp.mpn !== "BZT52-C3V3" ||
+    contract.handheldElectronics.chargeTemperatureInhibit.failClosedTopology.includes("hold CE high") === false ||
+    contract.handheldElectronics.charger.progResistor.valueOhm !== 4000 ||
+    contract.handheldElectronics.charger.chargeCurrentMa !== 250 ||
+    contract.handheldElectronics.cellProtection.protector.mpn !== "BQ29700DSER" ||
+    contract.handheldElectronics.cellProtection.backToBackFets.mpn !== "CSD85301Q2" ||
+    contract.handheldElectronics.regulator.inductor.mpn !== "LQH2MCN2R2M52L" ||
+    contract.architecture.apparatusPowerInput !== "USB-C PD remains the normal apparatus power input" ||
+    contract.architecture.remoteChargeInput.includes("remote charging only") === false ||
+    contract.calculatedTargets.operatingRange.frontalM !== 20 ||
+    contract.calculatedTargets.batteryLife.targetHours !== 300 ||
+    contract.calculatedTargets.batteryLife.manufacturerMinimumCapacityMah !== 3250 ||
+    contract.calculatedTargets.batteryLife.maximumAverageCurrentMa !== 8.667 ||
+    contract.calculatedTargets.latency.endToEndMsMaximum !== 70 ||
+    contract.calculatedTargets.resetAndFault.invalidOrFloodedInputAcceptedCommands !== 0 ||
+    contract.physicalEvidence.range20mMeasured ||
+    contract.physicalEvidence.moduleRfLayoutApproved ||
+    contract.physicalEvidence.moduleClockAndPowerMeasured ||
+    contract.physicalEvidence.temperatureInhibitMeasured ||
+    contract.physicalEvidence.usbInputProtectionMeasured ||
+    contract.physicalEvidence.chargerThermalMeasured ||
+    contract.physicalEvidence.cellProtectionValidated ||
+    contract.physicalEvidence.batteryProfileMeasured ||
+    contract.physicalEvidence.latencyMeasured ||
+    contract.physicalEvidence.resetAndFloodMeasured ||
+    contract.physicalEvidence.fabricationAuthorized
+  ) {
+    throw new RangeError("RC-04 must retain exact candidates, numeric targets, and denied physical-release gates")
   }
   return true
 }

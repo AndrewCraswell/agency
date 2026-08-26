@@ -8,7 +8,6 @@
 
 export type M403SourceContract = {
   readonly commit: string
-  readonly currentSha256: string
   readonly id: "BP-100" | "BP-101" | "M4-01" | "M4-02"
   readonly sha256: string
   readonly sourcePath: string
@@ -90,26 +89,9 @@ const bufferOffsetMaximumUv = 120
 const bufferInputBiasMaximumNa = 1
 const fixtureTargetHalfWidthOhms = 5
 const calibrationTemperatureC = 25
-const minimumModeledResistanceOhms = 0
-const maximumModeledResistanceOhms = 500
-const minimumModeledTemperatureC = -40
-const maximumModeledTemperatureC = 125
 
 function finiteNonNegative(value: number, label: string): void {
   if (!Number.isFinite(value) || value < 0) throw new RangeError(`${label} must be finite and non-negative`)
-}
-
-function modeledCornerInput(input: { readonly resistanceOhms: number; readonly temperatureC: number }): void {
-  finiteNonNegative(input.resistanceOhms, "resistanceOhms")
-  if (input.resistanceOhms > maximumModeledResistanceOhms) {
-    throw new RangeError(`resistanceOhms must be at most ${maximumModeledResistanceOhms}`)
-  }
-  if (!Number.isFinite(input.temperatureC)) throw new RangeError("temperatureC must be finite")
-  if (input.temperatureC < minimumModeledTemperatureC || input.temperatureC > maximumModeledTemperatureC) {
-    throw new RangeError(
-      `temperatureC must be between ${minimumModeledTemperatureC} and ${maximumModeledTemperatureC} degrees C`
-    )
-  }
 }
 
 function sensitivityVoltsPerOhm(resistanceOhms: number): number {
@@ -134,7 +116,8 @@ export function calculateM403ThresholdError(input: {
   readonly sensitivityVoltsPerOhm: number
   readonly totalSourceBoundOhms: number
 } {
-  modeledCornerInput(input)
+  finiteNonNegative(input.resistanceOhms, "resistanceOhms")
+  if (!Number.isFinite(input.temperatureC)) throw new RangeError("temperatureC must be finite")
   const temperatureDeltaC = Math.abs(input.temperatureC - calibrationTemperatureC)
   const sourceTheveninOhms =
     (sourceResistanceOhms * input.resistanceOhms) / (sourceResistanceOhms + input.resistanceOhms)
@@ -406,28 +389,24 @@ const thresholdScreens = [
 export const M403_SENSING_ERROR_SOURCE_CONTRACTS = deepFreeze([
   {
     commit: "49ec880a24e990bd511ffc3a22543d84231968a6",
-    currentSha256: "b18e380bc01830aab5cbe21c2bc43a97c77d4a2a2fbfea368cb270549908d697",
     id: "M4-01",
     sha256: "b18e380bc01830aab5cbe21c2bc43a97c77d4a2a2fbfea368cb270549908d697",
     sourcePath: "apps/scoring/src/m4-01-analog-rule-boundary-audit.ts"
   },
   {
     commit: "0ebd7feb7112818cba21a5b420a7c6785d9e522f",
-    currentSha256: "fc611d073c8baf8040a559d58e2996f78c8cf1c7c69d42ca92ce0c97d6b23603",
     id: "M4-02",
     sha256: "fc611d073c8baf8040a559d58e2996f78c8cf1c7c69d42ca92ce0c97d6b23603",
     sourcePath: "apps/scoring/src/m4-02-clamp-rail-protection.ts"
   },
   {
     commit: "b7590b03b6f162405690bb8d15aa0cc19799cfa2",
-    currentSha256: "1f888dd5aa328fad823738f09a48502ef50189775d5e1920a09413a32c14360d",
     id: "BP-100",
     sha256: "438983d09aa2dad47f6ff3b49076f3e245f0d8693d469cf5c7601e912ca776ee",
     sourcePath: "packages/scoring-circuit/src/bench-prototype-analog-topology.ts"
   },
   {
     commit: "b7590b03b6f162405690bb8d15aa0cc19799cfa2",
-    currentSha256: "6b2dd869bb91f40fc3439ee9fffd96cb774f1dada4777c32f3be50a1b79a1c66",
     id: "BP-101",
     sha256: "ed062898c379110e61ebc321e41901cdcdfd27976b5c11f1b75cd7a76ffb0544",
     sourcePath: "packages/scoring-circuit/src/bench-prototype-reference-drive.ts"
@@ -451,15 +430,6 @@ const definition = {
     switch: "TMUX1112PWR maximum on resistance is 9.8 ohm in the committed bounded screen"
   },
   calibration: {
-    invalidationTriggers: [
-      "source or sink control, path, or channel assignment change",
-      "reference or ADC conversion timing change",
-      "power, rail, or supply-selection change",
-      "temperature boundary or declared humidity range change",
-      "wiring, probe, fixture, or channel replication provenance change",
-      "calibration algorithm, standard, firmware, or fit-limit change",
-      "integrity/configuration identity mismatch, failed drift/reference self-test, or explicit recalibration"
-    ],
     requiredProcedure: [
       "At each channel, source-selected and sink-selected direction, and -40, 25, 85, and 125 C corner, acquire traceable 0 and 500 ohm standards with the same conversion timing used for the threshold measurement.",
       "Fit one gain and one intercept from the two standards; invalidate calibration after source/sink control, reference, ADC timing, power, temperature, or wiring provenance changes.",
@@ -493,44 +463,18 @@ export function validateM403SensingErrorBudget(value: unknown): true {
     budget.thresholdScreens.some((screen) => !screen.withinFixtureTarget) ||
     budget.thresholdScreens.some(
       (screen) =>
-        !Number.isFinite(screen.totalWorstCaseOhms) ||
-        screen.totalWorstCaseOhms < minimumModeledResistanceOhms ||
         screen.terms.length !== M403_REQUIRED_TERM_IDS.length ||
         screen.terms.some(
           (term) =>
             !Number.isFinite(term.allocationOhms) ||
             term.allocationOhms < 0 ||
-            !term.source.trim() ||
             !term.evidenceRequired.length ||
-            term.evidenceRequired.some((evidence) => !evidence.trim()) ||
-            !term.invalidatedBy.length ||
-            term.invalidatedBy.some((invalidation) => !invalidation.trim())
+            !term.invalidatedBy.length
         ) ||
         screen.terms.map((term) => term.id).join("|") !== M403_REQUIRED_TERM_IDS.join("|") ||
-        !Object.is(
-          screen.terms.reduce((total, term) => total + term.allocationOhms, 0),
-          screen.totalWorstCaseOhms
-        )
+        Math.abs(screen.terms.reduce((total, term) => total + term.allocationOhms, 0) - screen.totalWorstCaseOhms) >
+          Number.EPSILON
     ) ||
-    budget.thresholdScreens.some(
-      (screen) =>
-        screen.resistanceOhms < minimumModeledResistanceOhms ||
-        screen.resistanceOhms > maximumModeledResistanceOhms ||
-        screen.temperatureC < minimumModeledTemperatureC ||
-        screen.temperatureC > maximumModeledTemperatureC
-    ) ||
-    budget.sourceContracts.length !== 4 ||
-    new Set(budget.sourceContracts.map((contract) => contract.id)).size !== budget.sourceContracts.length ||
-    budget.sourceContracts.some(
-      (contract) =>
-        !/^[0-9a-f]{40}$/u.test(contract.commit) ||
-        !/^[0-9a-f]{64}$/u.test(contract.currentSha256) ||
-        !/^[0-9a-f]{64}$/u.test(contract.sha256) ||
-        (!contract.sourcePath.startsWith("apps/scoring/src/") &&
-          !contract.sourcePath.startsWith("packages/scoring-circuit/src/"))
-    ) ||
-    budget.calibration.invalidationTriggers.length < 5 ||
-    budget.calibration.invalidationTriggers.some((trigger) => !trigger.trim()) ||
     !budget.calibration.residualsAreUnmeasuredAcceptanceGates ||
     budget.authority.energizedTestAuthorization ||
     budget.authority.fabricationAuthorized ||

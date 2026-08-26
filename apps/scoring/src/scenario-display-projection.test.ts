@@ -4,8 +4,6 @@ import { describe, expect, it } from "vitest"
 import {
   createScenarioDisplayTimeline,
   isActualAcceptedScenarioDisplay,
-  isScenarioDisplayDecision,
-  isScenarioDisplayDiagnostic,
   projectScenarioDisplay,
   projectScenarioLines,
   type ScenarioDisplayCase,
@@ -603,11 +601,6 @@ describe("scenario report display projection", () => {
       leftLamp: "off",
       rightLamp: "off"
     })
-  })
-
-  it("rejects arrays through the shared display record predicates", () => {
-    expect(isScenarioDisplayDecision([])).toBe(false)
-    expect(isScenarioDisplayDiagnostic([])).toBe(false)
   })
 
   it("fails closed for an invalid event index", () => {

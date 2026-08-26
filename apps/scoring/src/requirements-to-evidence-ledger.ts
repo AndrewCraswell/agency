@@ -109,8 +109,8 @@ const definition = {
   sourceBindings: [
     {
       sourceId: "fie",
-      path: "apps/scoring/docs/fie-traceability-matrix.md",
-      requirementProjectionSha256: "sha256:828aa63814beb33c8f1fdf11733af54ddd86e8d1ab00e81321bd686d27b0377c",
+      path: "apps/scoring/docs/specifications/fie-traceability-matrix.md",
+      requirementProjectionSha256: "sha256:aa85fe07c5d6a24a600296fd3aa7b216b0ccb8f90111f47888dc8a9be5afb4a5",
       routes: [
         {
           destinationStableId: "REQ-NORM-GENERAL",

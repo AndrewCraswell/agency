@@ -1,6 +1,5 @@
 /** RC-02 logical remote-command and bout-event contracts; not a crypto or reducer implementation. */
 import type { Weapon } from "./bout-state.js"
-import { isRemoteIdentifier } from "./remote-identifier.js"
 
 export const REMOTE_CONTROL_SCHEMA_VERSION = 1
 export const REMOTE_COMMAND_KEYS = [
@@ -319,15 +318,12 @@ function integer(value: unknown): value is number {
 function id(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= ID_MAX && value === value.trim()
 }
-function remoteIdentifier(value: unknown): value is string {
-  return isRemoteIdentifier(value)
-}
 function authority(value: unknown): value is ControllerAuthority {
   return (
     record(value) &&
     keys(value, ["authorityRevision", "controllerId", "kind", "permission"]) &&
     integer(value.authorityRevision) &&
-    remoteIdentifier(value.controllerId) &&
+    id(value.controllerId) &&
     oneOf(value.kind, ["local-application", "paired-handheld", "tournament-controller"]) &&
     oneOf(value.permission, ["referee", "supervisor"])
   )
@@ -336,11 +332,11 @@ function sourceIdentity(value: unknown): value is SourceCommandIdentity {
   return (
     record(value) &&
     keys(value, ["apparatusId", "commandId", "controllerId", "counter", "remoteId"]) &&
-    remoteIdentifier(value.apparatusId) &&
-    remoteIdentifier(value.commandId) &&
-    remoteIdentifier(value.controllerId) &&
+    id(value.apparatusId) &&
+    id(value.commandId) &&
+    id(value.controllerId) &&
     integer(value.counter) &&
-    (value.remoteId === null || remoteIdentifier(value.remoteId))
+    (value.remoteId === null || id(value.remoteId))
   )
 }
 function timed(value: unknown): value is TimedWorkflowState {
@@ -409,7 +405,7 @@ export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSna
       "timingConfigurationRevision",
       "weapon"
     ]) ||
-    !remoteIdentifier(value.apparatusId) ||
+    !id(value.apparatusId) ||
     !authority(value.authority) ||
     !oneOf(value.autoRearm, ["manual", "one-second", "three-seconds", "five-seconds"]) ||
     !id(value.boutId) ||
@@ -532,34 +528,21 @@ export function isRemoteCommand(value: unknown): value is RemoteCommand {
       "schemaVersion"
     ]) &&
     value.schemaVersion === REMOTE_CONTROL_SCHEMA_VERSION &&
-    remoteIdentifier(value.apparatusId) &&
+    id(value.apparatusId) &&
     authority(value.authority) &&
     oneOf(value.command, REMOTE_COMMAND_KEYS) &&
-    remoteIdentifier(value.commandId) &&
+    id(value.commandId) &&
     integer(value.counter) &&
-    (value.remoteId === null || remoteIdentifier(value.remoteId)) &&
+    (value.remoteId === null || id(value.remoteId)) &&
     (value.authority.kind === "paired-handheld" ? value.remoteId !== null : value.remoteId === null) &&
     permitted(value.command, value.authority) &&
     press(value.command, value.pressKind) &&
     payload(value.command, value.payload)
   )
 }
-
-function deepFreeze<T>(value: T): T {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const nestedValue of Object.values(value)) deepFreeze(nestedValue)
-    Object.freeze(value)
-  }
-  return value
-}
-
-function cloneParsed<T>(value: T): T {
-  return deepFreeze(structuredClone(value))
-}
-
 export function parseRemoteCommand(value: unknown): RemoteCommand {
   if (!isRemoteCommand(value)) throw new TypeError("Unsupported or invalid remote command")
-  return cloneParsed(value)
+  return value
 }
 function matches(snapshotValue: BoutWorkflowSnapshot, command: RemoteCommand): boolean {
   const source = snapshotValue.sourceCommandIdentity
@@ -617,9 +600,9 @@ export function isBoutStateEvent(value: unknown): value is BoutStateEvent {
 /** Rejects incomplete or incompatible persisted snapshot shapes before a load can begin. */
 export function parseBoutWorkflowSnapshot(value: unknown): BoutWorkflowSnapshot {
   if (!isBoutWorkflowSnapshot(value)) throw new TypeError("Unsupported or invalid bout workflow snapshot")
-  return cloneParsed(value)
+  return value
 }
 export function parseBoutStateEvent(value: unknown): BoutStateEvent {
   if (!isBoutStateEvent(value)) throw new TypeError("Unsupported or invalid bout state event")
-  return cloneParsed(value)
+  return value
 }

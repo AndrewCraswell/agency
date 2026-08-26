@@ -81,27 +81,6 @@ export type RecordProvenance = Readonly<{
   timingTableRevision: string
 }>
 
-export type RecordProvenanceValidationIssue =
-  | "shape"
-  | "calibration-profile-revision"
-  | "firmware-build-digest"
-  | "firmware-identity"
-  | "scoring-boot-id"
-  | "hardware-revision"
-  | "line-contract-revision"
-  | "rule-set-revision"
-  | "timing-table-revision"
-
-export class RecordProvenanceValidationError extends TypeError {
-  readonly issue: RecordProvenanceValidationIssue
-
-  constructor(issue: RecordProvenanceValidationIssue) {
-    super("Unsupported or invalid decision-record provenance")
-    this.name = "RecordProvenanceValidationError"
-    this.issue = issue
-  }
-}
-
 type SignalSnapshot = Readonly<{
   audible: "none" | "requested"
   latched: boolean
@@ -320,84 +299,30 @@ function isRawCaptureReference(value: unknown): value is RawCaptureReference {
   )
 }
 
-function isStrictPlainRecordData(value: unknown, seen = new WeakSet<object>()): value is Record<string, unknown> {
-  if (!isRecord(value) || seen.has(value)) return false
-  seen.add(value)
-  for (const key of Reflect.ownKeys(value)) {
-    if (typeof key !== "string") return false
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) return false
-    if (
-      typeof descriptor.value === "object" &&
-      descriptor.value !== null &&
-      !isStrictPlainRecordData(descriptor.value, seen)
-    ) {
-      return false
-    }
+function isProvenance(value: unknown): value is RecordProvenance {
+  if (!isRecord(value) || !isRecord(value.firmware)) {
+    return false
   }
-  return true
-}
 
-function assertRecordProvenance(value: unknown): asserts value is RecordProvenance {
-  if (!isStrictPlainRecordData(value) || !isRecord(value.firmware)) {
-    throw new RecordProvenanceValidationError("shape")
-  }
-  if (
-    !hasExactKeys(value, [
+  return (
+    hasExactKeys(value, [
       "calibrationProfileRevision",
       "firmware",
       "hardwareRevision",
       "lineContractRevision",
       "ruleSetRevision",
       "timingTableRevision"
-    ]) ||
-    !hasExactKeys(value.firmware, ["buildDigest", "identity", "scoringBootId"])
-  ) {
-    throw new RecordProvenanceValidationError("shape")
-  }
-  if (!isIdentifier(value.calibrationProfileRevision)) {
-    throw new RecordProvenanceValidationError("calibration-profile-revision")
-  }
-  if (!isDigest(value.firmware.buildDigest)) {
-    throw new RecordProvenanceValidationError("firmware-build-digest")
-  }
-  if (!isStm32FirmwareIdentity(value.firmware.identity)) {
-    throw new RecordProvenanceValidationError("firmware-identity")
-  }
-  if (!isIdentifier(value.firmware.scoringBootId)) {
-    throw new RecordProvenanceValidationError("scoring-boot-id")
-  }
-  if (!isIdentifier(value.hardwareRevision)) {
-    throw new RecordProvenanceValidationError("hardware-revision")
-  }
-  if (!isIdentifier(value.lineContractRevision)) {
-    throw new RecordProvenanceValidationError("line-contract-revision")
-  }
-  if (!isIdentifier(value.ruleSetRevision)) {
-    throw new RecordProvenanceValidationError("rule-set-revision")
-  }
-  if (!isIdentifier(value.timingTableRevision)) {
-    throw new RecordProvenanceValidationError("timing-table-revision")
-  }
-}
-
-function isProvenance(value: unknown): value is RecordProvenance {
-  try {
-    assertRecordProvenance(value)
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function isRecordProvenance(value: unknown): value is RecordProvenance {
-  return isProvenance(value)
-}
-
-/** Parse one bounded, STM32-owned provenance object for every decision-record consumer. */
-export function parseRecordProvenance(value: unknown): RecordProvenance {
-  assertRecordProvenance(value)
-  return deepFreeze(structuredClone(value))
+    ]) &&
+    hasExactKeys(value.firmware, ["buildDigest", "identity", "scoringBootId"]) &&
+    isIdentifier(value.calibrationProfileRevision) &&
+    isDigest(value.firmware.buildDigest) &&
+    isStm32FirmwareIdentity(value.firmware.identity) &&
+    isIdentifier(value.firmware.scoringBootId) &&
+    isIdentifier(value.hardwareRevision) &&
+    isIdentifier(value.lineContractRevision) &&
+    isIdentifier(value.ruleSetRevision) &&
+    isIdentifier(value.timingTableRevision)
+  )
 }
 
 function isDecisionRecordOutcome(value: unknown): value is DecisionRecordOutcome {

@@ -1,5 +1,4 @@
 import type { RemoteCommandKey, RemotePressKind } from "./remote-control.js"
-import { assertIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 
 /** Physical controls understood by the referee handheld. Digits are only active in clock-entry mode. */
 export const REMOTE_BUTTONS = [
@@ -32,18 +31,18 @@ export const REMOTE_BUTTONS = [
 export type RemoteButton = (typeof REMOTE_BUTTONS)[number]
 
 export const DEFAULT_REMOTE_GESTURE_TIMINGS = {
-  doubleWindowUs: 350_000,
-  entryTimeoutUs: 5_000_000,
-  holdUs: 750_000
+  doubleWindowMs: 350,
+  entryTimeoutMs: 5_000,
+  holdMs: 750
 } as const
 export type RemoteGestureTimings = Readonly<{
-  doubleWindowUs: number
-  entryTimeoutUs: number
-  holdUs: number
+  doubleWindowMs: number
+  entryTimeoutMs: number
+  holdMs: number
 }>
 
 export type RemoteButtonSignal = Readonly<
-  { atUs: number; button: string; kind: "down" | "up" } | { atUs: number; kind: "advance-time" }
+  { atMs: number; button: string; kind: "down" | "up" } | { atMs: number; kind: "advance-time" }
 >
 export type RemoteCommandIntent = Readonly<{
   kind: "command"
@@ -80,18 +79,18 @@ export type RemoteGestureRejection = Readonly<{
 export type RemoteGestureIntent = RemoteCommandIntent | ClockEntryIntent | RemoteLocalIntent | RemoteGestureRejection
 
 type Press = Readonly<{
-  atUs: number
+  atMs: number
   button: RemoteButton
   blockedByOptHold: boolean
   chorded: boolean
   doubleCandidate: boolean
   holdEmitted: boolean
 }>
-type ClockEntry = Readonly<{ digits: string; expiresAtUs: number }>
+type ClockEntry = Readonly<{ digits: string; expiresAtMs: number }>
 export type RemoteGestureState = Readonly<{
   clockEntry: ClockEntry | null
-  lastAtUs: number
-  pendingLoadTimeReleaseAtUs: number | null
+  lastAtMs: number
+  pendingLoadTimeReleaseAtMs: number | null
   pressed: readonly Press[]
 }>
 export type RemoteGestureReduction = Readonly<{
@@ -101,8 +100,8 @@ export type RemoteGestureReduction = Readonly<{
 
 export const INITIAL_REMOTE_GESTURE_STATE: RemoteGestureState = Object.freeze({
   clockEntry: null,
-  lastAtUs: 0,
-  pendingLoadTimeReleaseAtUs: null,
+  lastAtMs: 0,
+  pendingLoadTimeReleaseAtMs: null,
   pressed: []
 })
 
@@ -177,23 +176,18 @@ function held(button: RemoteButton): RemoteCommandIntent | null {
   return null
 }
 
-function isValidMicroseconds(value: unknown, fieldName: string): value is number {
-  try {
-    assertIntegerMicroseconds(value, fieldName)
-    return true
-  } catch {
-    return false
-  }
+function isValidTime(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0
 }
 
 function validTimings(timings: RemoteGestureTimings): boolean {
   return (
-    isValidMicroseconds(timings.doubleWindowUs, "Remote gesture double window") &&
-    timings.doubleWindowUs > 0 &&
-    isValidMicroseconds(timings.entryTimeoutUs, "Remote gesture entry timeout") &&
-    timings.entryTimeoutUs > 0 &&
-    isValidMicroseconds(timings.holdUs, "Remote gesture hold threshold") &&
-    timings.holdUs > 0
+    isValidTime(timings.doubleWindowMs) &&
+    timings.doubleWindowMs > 0 &&
+    isValidTime(timings.entryTimeoutMs) &&
+    timings.entryTimeoutMs > 0 &&
+    isValidTime(timings.holdMs) &&
+    timings.holdMs > 0
   )
 }
 
@@ -229,25 +223,25 @@ function updatePressed(state: RemoteGestureState, pressed: readonly Press[]): Re
   return { ...state, pressed }
 }
 
-function expireEntry(state: RemoteGestureState, atUs: number): RemoteGestureState {
-  return state.clockEntry !== null && atUs >= state.clockEntry.expiresAtUs ? { ...state, clockEntry: null } : state
+function expireEntry(state: RemoteGestureState, atMs: number): RemoteGestureState {
+  return state.clockEntry !== null && atMs >= state.clockEntry.expiresAtMs ? { ...state, clockEntry: null } : state
 }
 
 function expirePendingLoadTime(
   state: RemoteGestureState,
-  atUs: number,
+  atMs: number,
   timings: RemoteGestureTimings
 ): RemoteGestureReduction {
-  const releaseAt = state.pendingLoadTimeReleaseAtUs
-  if (releaseAt === null || atUs - releaseAt <= timings.doubleWindowUs) return { intents: [], state }
+  const releaseAt = state.pendingLoadTimeReleaseAtMs
+  if (releaseAt === null || atMs <= releaseAt + timings.doubleWindowMs) return { intents: [], state }
   return {
     intents: [command("clock.loadConfigured", "direct")],
-    state: { ...state, pendingLoadTimeReleaseAtUs: null }
+    state: { ...state, pendingLoadTimeReleaseAtMs: null }
   }
 }
 
-function withTimestamp(state: RemoteGestureState, atUs: number): RemoteGestureState {
-  return { ...state, lastAtUs: atUs }
+function withTimestamp(state: RemoteGestureState, atMs: number): RemoteGestureState {
+  return { ...state, lastAtMs: atMs }
 }
 
 /**
@@ -260,20 +254,18 @@ export function reduceRemoteButtonSignal(
   inputTimings: RemoteGestureTimings = DEFAULT_REMOTE_GESTURE_TIMINGS
 ): RemoteGestureReduction {
   if (!validTimings(inputTimings)) return { intents: [rejection("invalid-time")], state: inputState }
-  if (!isValidMicroseconds(signal.atUs, "Remote gesture signal timestamp")) {
-    return { intents: [rejection("invalid-time")], state: inputState }
-  }
-  if (signal.atUs < inputState.lastAtUs) return { intents: [rejection("non-monotonic-time")], state: inputState }
+  if (!isValidTime(signal.atMs)) return { intents: [rejection("invalid-time")], state: inputState }
+  if (signal.atMs < inputState.lastAtMs) return { intents: [rejection("non-monotonic-time")], state: inputState }
 
-  const pending = expirePendingLoadTime(inputState, signal.atUs, inputTimings)
-  let state = expireEntry(withTimestamp(expireEntry(pending.state, signal.atUs), signal.atUs), signal.atUs)
+  const pending = expirePendingLoadTime(inputState, signal.atMs, inputTimings)
+  let state = expireEntry(withTimestamp(expireEntry(pending.state, signal.atMs), signal.atMs), signal.atMs)
   const intents: RemoteGestureIntent[] = [...pending.intents]
 
   if (signal.kind === "advance-time") {
     const presses = [...state.pressed]
     for (let index = 0; index < presses.length; index += 1) {
       const press = presses[index]
-      if (press.holdEmitted || signal.atUs - press.atUs < inputTimings.holdUs) continue
+      if (press.holdEmitted || signal.atMs - press.atMs < inputTimings.holdMs) continue
       const result =
         press.button === "opt" && !press.chorded
           ? ({ action: "open-configuration", kind: "local" } as const)
@@ -294,12 +286,12 @@ export function reduceRemoteButtonSignal(
 
   if (signal.kind === "down") {
     if (index !== -1) return { intents: [...intents, rejection("repeat")], state }
-    const pendingRelease = state.pendingLoadTimeReleaseAtUs
+    const pendingRelease = state.pendingLoadTimeReleaseAtMs
     const pendingDouble = button === "loadTime" && pendingRelease !== null
-    const withinDoubleWindow = pendingDouble && signal.atUs - pendingRelease <= inputTimings.doubleWindowUs
+    const withinDoubleWindow = pendingDouble && signal.atMs <= pendingRelease + inputTimings.doubleWindowMs
     if (pendingDouble && !withinDoubleWindow) {
       intents.push(command("clock.loadConfigured", "direct"))
-      state = { ...state, pendingLoadTimeReleaseAtUs: null }
+      state = { ...state, pendingLoadTimeReleaseAtMs: null }
     }
     const optIndex = state.pressed.findIndex((press) => press.button === "opt")
     const optPress = optIndex === -1 ? undefined : state.pressed[optIndex]
@@ -308,7 +300,7 @@ export function reduceRemoteButtonSignal(
     const presses = [
       ...state.pressed,
       {
-        atUs: signal.atUs,
+        atMs: signal.atMs,
         blockedByOptHold: blockedByOptHold ?? false,
         button,
         chorded,
@@ -322,7 +314,7 @@ export function reduceRemoteButtonSignal(
       state: updatePressed(
         {
           ...state,
-          pendingLoadTimeReleaseAtUs: pendingDouble && withinDoubleWindow ? null : state.pendingLoadTimeReleaseAtUs
+          pendingLoadTimeReleaseAtMs: pendingDouble && withinDoubleWindow ? null : state.pendingLoadTimeReleaseAtMs
         },
         presses
       )
@@ -350,7 +342,7 @@ export function reduceRemoteButtonSignal(
   const holdResult = press.chorded ? null : held(button)
   if (holdResult !== null) {
     if (press.holdEmitted) return { intents, state }
-    if (signal.atUs - press.atUs >= inputTimings.holdUs) return { intents: [...intents, holdResult], state }
+    if (signal.atMs - press.atMs >= inputTimings.holdMs) return { intents: [...intents, holdResult], state }
   }
   if (button === "opt") {
     if (press.chorded || press.holdEmitted) return { intents, state }
@@ -360,18 +352,14 @@ export function reduceRemoteButtonSignal(
     const result = modified(button)
     if (result === null) return { intents: [...intents, rejection("reserved-button")], state }
     if (result.kind === "payload-entry") {
-      const expiresAtUs = signal.atUs + inputTimings.entryTimeoutUs
-      if (!isValidMicroseconds(expiresAtUs, "Remote gesture entry expiry")) {
-        return { intents: [...intents, rejection("invalid-time")], state }
-      }
-      const entry = { digits: "", expiresAtUs }
+      const entry = { digits: "", expiresAtMs: signal.atMs + inputTimings.entryTimeoutMs }
       return { intents: [...intents, result], state: { ...state, clockEntry: entry } }
     }
     return { intents: [...intents, result], state }
   }
   if (button === "loadTime") {
     if (press.doubleCandidate) return { intents: [...intents, command("clock.loadOneMinute", "double")], state }
-    return { intents, state: { ...state, pendingLoadTimeReleaseAtUs: signal.atUs } }
+    return { intents, state: { ...state, pendingLoadTimeReleaseAtMs: signal.atMs } }
   }
   const result = direct(button)
   return result === null

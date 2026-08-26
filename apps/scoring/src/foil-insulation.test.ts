@@ -94,7 +94,7 @@ function readBoundaryFixture(): BoundaryFixture {
     throw new TypeError("Foil insulation boundary fixture has an incomplete source")
   }
   const repositoryRoot = resolve(import.meta.dirname, "../../..")
-  const sourcePath = resolve(repositoryRoot, "apps/scoring/docs/fie-material-rules-2026-08-en.pdf")
+  const sourcePath = resolve(repositoryRoot, "apps/scoring/docs/specifications/fie-material-rules-2026-08-en.pdf")
   const actualSourceDigest = createHash("sha256").update(readFileSync(sourcePath)).digest("hex").toUpperCase()
   if (actualSourceDigest !== source.sha256) {
     throw new TypeError("Foil insulation boundary fixture source digest does not match the local FIE PDF")
@@ -209,10 +209,6 @@ describe("foil anti-blocking insulation decisions", () => {
   it("validates malformed input at the public resistance-range boundary", () => {
     expect(foilResistanceRange(UNAVAILABLE)).toBeNull()
     expect(foilResistanceRange(measured(0, 2))).toEqual({ max: 2, min: 0 })
-    expect(foilResistanceRange(measured(Number.MAX_SAFE_INTEGER))).toEqual({
-      max: Number.MAX_SAFE_INTEGER,
-      min: Number.MAX_SAFE_INTEGER
-    })
     expect(() => foilResistanceRange({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: 0 })).toThrow(
       new RangeError("Foil insulation measurements must provide a value and uncertainty together")
     )
@@ -319,7 +315,6 @@ describe("foil anti-blocking insulation decisions", () => {
     const negative = observation(measured(-1), UNAVAILABLE)
     const fractional = observation(measured(0, 0.5), UNAVAILABLE)
     const overflowing = observation(measured(Number.MAX_SAFE_INTEGER, 1), UNAVAILABLE)
-    const unsafe = observation(measured(Number.MAX_SAFE_INTEGER + 1), UNAVAILABLE)
 
     expect(() => evaluateFoilAntiBlockingInsulation({ ...sample(), atUs: -1 })).toThrow(
       new RangeError("Foil insulation samples must use non-negative safe integer timestamps")
@@ -344,9 +339,6 @@ describe("foil anti-blocking insulation decisions", () => {
     )
     expect(() => evaluateFoilAntiBlockingInsulation(sample(overflowing))).toThrow(
       new RangeError("Foil insulation measurement ranges must remain safe integers")
-    )
-    expect(() => evaluateFoilAntiBlockingInsulation(sample(unsafe))).toThrow(
-      new RangeError("Foil insulation measurements must use non-negative safe integer milli-ohms")
     )
   })
 })

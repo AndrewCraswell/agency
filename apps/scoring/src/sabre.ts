@@ -1,12 +1,4 @@
-import { getResistanceRange, type ResistanceMeasurement } from "./resistance-range.js"
-import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
-import {
-  FIE_TIMING_BANDS,
-  getFieTimingBandEndpointUs,
-  loadTimingTable,
-  resolveTimingTable,
-  type TimingTable
-} from "./timing-table.js"
+import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
 
 export type SabreSide = "left" | "right"
 
@@ -19,7 +11,10 @@ export type SabreTargetContact = "target" | "nonConductiveSurface" | "indetermin
  */
 export type SabreExternalPathEligibility = "eligible" | "ineligible" | "indeterminate" | "unavailable"
 
-export type SabreExternalPathMeasurement = ResistanceMeasurement
+export type SabreExternalPathMeasurement = {
+  resistanceMilliOhms: number | null
+  resistanceUncertaintyMilliOhms: number | null
+}
 
 export type SabreOwnEquipmentFault = "present" | "absent" | "indeterminate" | "unavailable"
 
@@ -116,8 +111,8 @@ export const SABRE_RULES = {
   /** SABRE-06's stated maximum number of blade-contact interruptions. */
   maximumBladeContactInterruptions: DEFAULT_TIMING_TABLE.sabre.maximumBladeContactInterruptions,
   /** FIE SABRE-05 tolerance references, not active product endpoints. */
-  eventWindowEarliestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.lockoutUs, "earliest"),
-  eventWindowLatestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.lockoutUs, "latest"),
+  eventWindowEarliestUs: 160_000,
+  eventWindowLatestUs: 180_000,
   /** Selected endpoint inside FIE SABRE-05's 170 ms +/- 10 ms band. */
   provisionalLockoutUs: DEFAULT_TIMING_TABLE.sabre.lockoutUs
 } as const
@@ -153,18 +148,28 @@ export function createSabreScoringState(): SabreScoringState {
  * acquisition path.
  */
 export function classifySabreExternalPath(measurement: SabreExternalPathMeasurement): SabreExternalPathEligibility {
-  const range = getResistanceRange(measurement, {
-    incomplete: () =>
-      new TypeError("Sabre external-path resistance and uncertainty must both be present or both be null"),
-    invalid: () => new RangeError("Sabre external-path resistance values must be non-negative safe integers"),
-    overflow: () => new RangeError("Sabre external-path resistance values must be non-negative safe integers")
-  })
+  const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
 
-  if (range === null) {
+  if (resistanceMilliOhms === null && resistanceUncertaintyMilliOhms === null) {
     return "unavailable"
   }
 
-  const { min: lowerBound, max: upperBound } = range
+  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
+    throw new TypeError("Sabre external-path resistance and uncertainty must both be present or both be null")
+  }
+
+  if (
+    !Number.isSafeInteger(resistanceMilliOhms) ||
+    resistanceMilliOhms < 0 ||
+    !Number.isSafeInteger(resistanceUncertaintyMilliOhms) ||
+    resistanceUncertaintyMilliOhms < 0 ||
+    resistanceMilliOhms + resistanceUncertaintyMilliOhms > Number.MAX_SAFE_INTEGER
+  ) {
+    throw new RangeError("Sabre external-path resistance values must be non-negative safe integers")
+  }
+
+  const lowerBound = Math.max(0, resistanceMilliOhms - resistanceUncertaintyMilliOhms)
+  const upperBound = resistanceMilliOhms + resistanceUncertaintyMilliOhms
 
   if (upperBound <= SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS) {
     return "eligible"
@@ -430,6 +435,10 @@ function appendDiagnostics(
   return [...existing, ...additions].sort(compareDiagnostics)
 }
 
+function isValidAtUs(atUs: number) {
+  return Number.isSafeInteger(atUs) && atUs >= 0
+}
+
 export function advanceSabreScoring(
   state: SabreScoringState,
   sample: SabreSample,
@@ -437,7 +446,7 @@ export function advanceSabreScoring(
 ): SabreScoringState {
   const resolvedTimingTable = resolveTimingTable(timingTable)
 
-  if (!isIntegerMicroseconds(sample.atUs)) {
+  if (!isValidAtUs(sample.atUs)) {
     throw new RangeError("Sabre samples must use non-negative safe integer timestamps")
   }
 

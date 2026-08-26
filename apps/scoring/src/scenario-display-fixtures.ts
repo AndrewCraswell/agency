@@ -1,10 +1,10 @@
 import {
   createScenarioDisplayTimeline,
+  isScenarioDisplayDiagnostic,
   type DisplayDiagnosticChannel,
   type DisplayLamp,
   type ScenarioDisplayCase
 } from "./scenario-display-projection.js"
-import { isScenarioDisplayDecision, isScenarioDisplayDiagnostic } from "./scenario-display-schema.js"
 
 export const MAX_DISPLAY_FIXTURE_CASES = 128
 export const MAX_DISPLAY_FIXTURE_EVENTS = 4_096
@@ -72,9 +72,21 @@ function boundedArray(value: unknown): value is unknown[] {
   return Array.isArray(value) && value.length <= MAX_DISPLAY_FIXTURE_EVENTS
 }
 
+function validateSignal(value: unknown): void {
+  if (
+    !isRecord(value) ||
+    !isOneOf(value.audible, ["none", "requested"]) ||
+    typeof value.latched !== "boolean" ||
+    !isOneOf(value.visual, ["diagnostic", "none", "off-target", "valid-hit"])
+  )
+    fail()
+}
+
 function validateDecision(value: unknown, expected: boolean): void {
-  if (!isScenarioDisplayDecision(value) || !isString(value.disposition)) fail()
+  if (!isRecord(value) || !isInteger(value.decisionAtUs) || !isString(value.disposition)) fail()
   if (expected && !isString(value.id, MAX_DISPLAY_FIXTURE_ID_LENGTH)) fail()
+  if (value.side !== undefined && !isOneOf(value.side, ["left", "right"])) fail()
+  validateSignal(value.signal)
 }
 
 function validateUncertainty(value: unknown): void {

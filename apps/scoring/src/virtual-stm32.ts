@@ -1,4 +1,3 @@
-import { cloneCanonicalData } from "./canonical-data-clone.js"
 import { loadTimingTable, type TimingTable, type TimingTableRevision } from "./timing-table.js"
 import type { VirtualClock } from "./virtual-clock.js"
 import { createVirtualClock } from "./virtual-clock.js"
@@ -180,6 +179,113 @@ function assertAdvance<State, Outcome>(value: unknown): asserts value is Virtual
   }
 }
 
+type OutcomeCloneContext = {
+  entries: number
+  seen: WeakSet<object>
+}
+
+function cloneAuthoritativeOutcomeValue(value: unknown, context: OutcomeCloneContext, depth: number): unknown {
+  if (value === null || typeof value === "boolean") {
+    return value
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new TypeError("Virtual STM32 authoritative outcomes cannot contain non-finite numbers")
+    }
+    return value
+  }
+
+  if (typeof value === "string") {
+    if (value.length > MAX_AUTHORITATIVE_OUTCOME_STRING_LENGTH) {
+      throw new RangeError(
+        `Virtual STM32 authoritative outcome strings cannot exceed ${MAX_AUTHORITATIVE_OUTCOME_STRING_LENGTH} characters`
+      )
+    }
+    return value
+  }
+
+  if (typeof value !== "object" || value === null) {
+    throw new TypeError("Virtual STM32 authoritative outcomes must contain only plain data")
+  }
+
+  if (depth === MAX_AUTHORITATIVE_OUTCOME_DEPTH || context.seen.has(value)) {
+    throw new RangeError("Virtual STM32 authoritative outcomes exceed the supported depth or contain a cycle")
+  }
+
+  context.seen.add(value)
+  try {
+    if (Array.isArray(value)) {
+      if (value.length > MAX_AUTHORITATIVE_OUTCOME_ENTRIES - context.entries) {
+        throw new RangeError(
+          `Virtual STM32 authoritative outcomes cannot exceed ${MAX_AUTHORITATIVE_OUTCOME_ENTRIES} values`
+        )
+      }
+
+      const keys = Reflect.ownKeys(value)
+      if (keys.length !== value.length + 1 || !keys.includes("length")) {
+        throw new TypeError("Virtual STM32 authoritative outcome arrays must use canonical data indices only")
+      }
+
+      const cloned: unknown[] = []
+      for (let index = 0; index < value.length; index += 1) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+        if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
+          throw new TypeError("Virtual STM32 authoritative outcome arrays must use canonical data indices only")
+        }
+
+        context.entries += 1
+        cloned.push(cloneAuthoritativeOutcomeValue(descriptor.value, context, depth + 1))
+      }
+
+      return Object.freeze(cloned)
+    }
+
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      throw new TypeError("Virtual STM32 authoritative outcomes must contain only plain objects and arrays")
+    }
+
+    const keys = Reflect.ownKeys(value)
+    if (
+      keys.length > MAX_AUTHORITATIVE_OUTCOME_ENTRIES - context.entries ||
+      keys.some(
+        (key) => typeof key === "string" && (key.length === 0 || key.length > MAX_AUTHORITATIVE_OUTCOME_STRING_LENGTH)
+      )
+    ) {
+      throw new RangeError(
+        `Virtual STM32 authoritative outcomes cannot exceed ${MAX_AUTHORITATIVE_OUTCOME_ENTRIES} values`
+      )
+    }
+    context.entries += keys.length
+
+    const cloned: Record<string, unknown> = {}
+    for (const key of keys) {
+      if (typeof key !== "string") {
+        throw new TypeError("Virtual STM32 authoritative outcomes must use string keys")
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)
+      if (descriptor === undefined || !("value" in descriptor)) {
+        throw new TypeError("Virtual STM32 authoritative outcomes cannot contain accessors")
+      }
+      Object.defineProperty(cloned, key, {
+        configurable: true,
+        enumerable: descriptor.enumerable,
+        value: cloneAuthoritativeOutcomeValue(descriptor.value, context, depth + 1),
+        writable: true
+      })
+    }
+
+    return Object.freeze(cloned)
+  } finally {
+    context.seen.delete(value)
+  }
+}
+
+function cloneAuthoritativeOutcome<Outcome>(outcome: Outcome): Outcome {
+  return cloneAuthoritativeOutcomeValue(outcome, { entries: 1, seen: new WeakSet() }, 0) as Outcome
+}
+
 /**
  * Creates a bounded, host-only STM32 scoring shell. It advances the supplied
  * virtual clock to each canonical snapshot and exposes outcomes only after the
@@ -229,7 +335,7 @@ export function createVirtualStm32<State, Outcome>(
   function ingestSnapshot(snapshot: VirtualFrontEndSnapshot): VirtualStm32SnapshotReceipt<Outcome> {
     assertCanonicalSnapshot(snapshot)
     if (isUnavailable) {
-      throw new RangeError("Virtual STM32 is unavailable after an authoritative scoring pipeline failure")
+      throw new RangeError("Virtual STM32 is unavailable after an authoritative outcome observer failure")
     }
     if (isScoring) {
       throw new RangeError("Virtual STM32 cannot accept a snapshot while scoring")
@@ -267,37 +373,21 @@ export function createVirtualStm32<State, Outcome>(
           return
         }
 
-        let advanced: VirtualStm32ScorerAdvance<State, Outcome>
-        let nextScoringState: State
-        let outcome: VirtualStm32AuthoritativeOutcome<Outcome> | null
-        try {
-          const scorerResult = options.scorer.advance(scoringState, snapshot, { ...configuration, atUs })
-          assertSynchronousResult(scorerResult, "Virtual STM32 scorers")
-          assertAdvance<State, Outcome>(scorerResult)
-          advanced = scorerResult
-          nextScoringState = advanced.state
-          outcome =
-            advanced.outcome === null
-              ? null
-              : Object.freeze({
-                  atUs,
-                  outcome: cloneCanonicalData(advanced.outcome, {
-                    errorLabel: "Virtual STM32 authoritative outcome",
-                    maxDepth: MAX_AUTHORITATIVE_OUTCOME_DEPTH,
-                    maxEntries: MAX_AUTHORITATIVE_OUTCOME_ENTRIES,
-                    maxStringLength: MAX_AUTHORITATIVE_OUTCOME_STRING_LENGTH,
-                    symbolKeyError: "type"
-                  }),
-                  source: "weapon-scorer" as const,
-                  timingTableRevision: timingTable.revision,
-                  weapon: options.weapon
-                })
-        } catch (error) {
-          isUnavailable = true
-          throw error
-        }
+        const advanced = options.scorer.advance(scoringState, snapshot, { ...configuration, atUs })
+        assertSynchronousResult(advanced, "Virtual STM32 scorers")
+        assertAdvance<State, Outcome>(advanced)
+        const outcome =
+          advanced.outcome === null
+            ? null
+            : Object.freeze({
+                atUs,
+                outcome: cloneAuthoritativeOutcome(advanced.outcome),
+                source: "weapon-scorer" as const,
+                timingTableRevision: timingTable.revision,
+                weapon: options.weapon
+              })
         receipt = Object.freeze({ atUs, outcome, status: "scored" as const })
-        scoringState = nextScoringState
+        scoringState = advanced.state
         lastReceipt = receipt
         lastSnapshotAtUs = atUs
         processedSnapshotCount += 1

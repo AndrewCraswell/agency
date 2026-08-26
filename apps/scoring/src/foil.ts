@@ -1,11 +1,4 @@
-import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
-import {
-  FIE_TIMING_BANDS,
-  getFieTimingBandEndpointUs,
-  loadTimingTable,
-  resolveTimingTable,
-  type TimingTable
-} from "./timing-table.js"
+import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
 
 export type FoilSide = "left" | "right"
 
@@ -82,8 +75,8 @@ export const FOIL_RULES = {
   /** Conservative product floor at the start of FIE FOIL-02's guaranteed registration band. */
   minimumBreakUs: DEFAULT_TIMING_TABLE.foil.contactBreakMinimumUs,
   /** FIE FOIL-05 tolerance band, retained as references rather than active endpoints. */
-  eventWindowEarliestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.lockoutUs, "earliest"),
-  eventWindowLatestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.lockoutUs, "latest"),
+  eventWindowEarliestUs: 275_000,
+  eventWindowLatestUs: 325_000,
   /** Selected endpoint inside FIE's 300 ms +/- 25 ms tolerance. */
   provisionalLockoutUs: DEFAULT_TIMING_TABLE.foil.lockoutUs
 } as const
@@ -189,6 +182,10 @@ function compareHits(left: FoilHit, right: FoilHit) {
   return left.side.localeCompare(right.side)
 }
 
+function isValidAtUs(atUs: number) {
+  return Number.isSafeInteger(atUs) && atUs >= 0
+}
+
 export function advanceFoilScoring(
   state: FoilScoringState,
   sample: FoilSample,
@@ -196,7 +193,7 @@ export function advanceFoilScoring(
 ): FoilScoringState {
   const resolvedTimingTable = resolveTimingTable(timingTable)
 
-  if (!isIntegerMicroseconds(sample.atUs)) {
+  if (!isValidAtUs(sample.atUs)) {
     throw new RangeError("Foil samples must use non-negative safe integer timestamps")
   }
 

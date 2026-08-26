@@ -54,7 +54,7 @@ describe("observatory identity projection", () => {
   it("uses the separately validated planned traceability ID", () => {
     expect(
       projectObservatoryIdentity({
-        status: "skipped",
+        status: "planned-requirement",
         scenario: { ruleRevision: " ", scenarioId: "wrong-field", traceabilityId: "  SABRE-07 " }
       })
     ).toEqual({
@@ -67,7 +67,7 @@ describe("observatory identity projection", () => {
   })
 
   it.each([undefined, "", " ", false, 7])("fails closed for malformed planned ID %j", (traceabilityId) => {
-    expect(projectObservatoryIdentity({ status: "skipped", scenario: { traceabilityId } })).toMatchObject({
+    expect(projectObservatoryIdentity({ status: "planned-requirement", scenario: { traceabilityId } })).toMatchObject({
       canRun: false,
       id: "unavailable",
       idLabel: "Requirement ID",

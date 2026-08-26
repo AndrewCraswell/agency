@@ -65,7 +65,7 @@ export const RULES_ONE_RELEASE = {
       id: "traceability",
       milestone: "M1-01",
       path: "apps/scoring/docs/fie-traceability-matrix.md",
-      sourceDigest: "sha256:aac131bc88fefd0fc03ca03f0955a62110090b50d56030c8612c56e061d5858e"
+      sourceDigest: "sha256:42fd5faca39faace4010e5af7af9d0942dd0e47ef396a84ab75b85bc76e15d62"
     },
     {
       id: "epee-audit-contract",
@@ -303,7 +303,7 @@ export const RULES_ONE_RELEASE = {
     reviewer: "root-independent-reviewer"
   },
   schemaVersion: 1,
-  sourceRevision: "afc7e6d44dc80e1147e9990931dafe78271f6cfc",
+  sourceRevision: "8e4681d604468cf51b470c35a9908ed9f5061e74",
   traceabilityIds: REQUIRED_TRACEABILITY_IDS,
   verification: [
     { command: focusedRuleTests, id: "focused-rule-tests", requiredResult: "pass" },

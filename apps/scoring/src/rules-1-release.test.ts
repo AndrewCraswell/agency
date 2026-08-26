@@ -89,7 +89,7 @@ describe("rules-1 release record", () => {
     )
   })
 
-  it("enforces the root handoff state and never embeds timing values", () => {
+  it("requires the root handoff and never embeds timing values", () => {
     const invalidHandoff = releaseCopy()
     if (
       typeof invalidHandoff === "object" &&
@@ -97,10 +97,8 @@ describe("rules-1 release record", () => {
       "review" in invalidHandoff &&
       typeof invalidHandoff.review === "object" &&
       invalidHandoff.review !== null &&
-      "reviewer" in invalidHandoff.review &&
-      "approvalStatus" in invalidHandoff.review
+      "reviewer" in invalidHandoff.review
     ) {
-      invalidHandoff.review.approvalStatus = "approved-root"
       invalidHandoff.review.reviewer = null
     }
     expect(() => validateRulesOneRelease(invalidHandoff)).toThrow(new RangeError("Invalid rules-1 review handoff"))

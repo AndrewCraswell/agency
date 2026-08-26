@@ -1,14 +1,10 @@
 /**
- * M0-06/M2-05 canonical binary envelope validation and encoding.
+ * M0-06 binary envelope validation and encoding.
  *
  * This module transports opaque, already-authoritative payload bytes. It does
  * not parse decision records, retain frames, or make sequence-acceptance
  * decisions for a receiver.
  */
-
-import { calculateCrc32c } from "./crc32c.js"
-
-export { calculateCrc32c } from "./crc32c.js"
 
 export const TRANSPORT_FRAME_MAGIC = new Uint8Array([0x53, 0x43])
 export const TRANSPORT_FRAME_VERSION = 1
@@ -130,6 +126,20 @@ function readUint16(bytes: Uint8Array, offset: number): number {
 
 function readUint32(bytes: Uint8Array, offset: number): number {
   return bytes[offset]! * 0x1_000000 + bytes[offset + 1]! * 0x1_0000 + bytes[offset + 2]! * 0x100 + bytes[offset + 3]!
+}
+
+/** Calculates the reflected Castagnoli CRC, without the frame's CRC field. */
+export function calculateCrc32c(bytes: Uint8Array): number {
+  let crc = 0xffff_ffff
+
+  for (const byte of bytes) {
+    crc ^= byte
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0x82f6_3b78 : 0)
+    }
+  }
+
+  return (crc ^ 0xffff_ffff) >>> 0
 }
 
 /** Encodes one complete, unfragmented frame in canonical big-endian byte order. */

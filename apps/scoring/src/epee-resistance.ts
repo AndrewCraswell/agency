@@ -1,12 +1,4 @@
-import {
-  advanceEpeeLifecycle,
-  createEpeeLifecycleState,
-  type EpeeContactClassification,
-  type EpeeContactLifecycleState
-} from "./epee-contact-kernel.js"
 import { type EpeeHit, type Side } from "./epee.js"
-import { getResistanceRange, type ResistanceMeasurement } from "./resistance-range.js"
-import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import { resolveTimingTable, type TimingTable } from "./timing-table.js"
 
 export type EpeeCircuitComplete = "closed" | "indeterminate" | "open" | "unavailable"
@@ -15,7 +7,10 @@ export type EpeeGroundedMaterial = "grounded" | "indeterminate" | "not-grounded"
 
 export type EpeeLineIntegrity = "cross-line" | "indeterminate" | "intact" | "out-of-range" | "unavailable"
 
-export type { ResistanceMeasurement } from "./resistance-range.js"
+export type ResistanceMeasurement = {
+  resistanceMilliOhms: number | null
+  resistanceUncertaintyMilliOhms: number | null
+}
 
 export type EpeeResistanceContact = {
   circuitComplete: EpeeCircuitComplete
@@ -65,7 +60,10 @@ export type EpeeResistanceDecision =
       subject: "contact-resistance" | "ground-reference" | "line-integrity" | "tip-loop"
     }
 
-type ResistanceContactState = EpeeContactLifecycleState
+type ResistanceContactState = {
+  candidateSinceUs: number | null
+  isRegistered: boolean
+}
 
 export type EpeeResistanceScoringState = {
   decisions: readonly EpeeResistanceDecision[]
@@ -80,24 +78,63 @@ export type EpeeResistanceScoringState = {
 const EXCEPTIONAL_CONTACT_RESISTANCE_MILLIOHMS = 100_000
 const NORMAL_CONTACT_RESISTANCE_MILLIOHMS = 10_000
 
-type ContactClassification = EpeeContactClassification<
-  EpeeResistanceClass,
-  Exclude<EpeeResistanceDecision, { disposition: "qualified-hit" }>
->
+const INITIAL_CONTACT_STATE: ResistanceContactState = {
+  candidateSinceUs: null,
+  isRegistered: false
+}
+
+type ContactClassification =
+  | { resistanceClass: EpeeResistanceClass; type: "candidate" }
+  | { type: "open" }
+  | {
+      decision: Exclude<EpeeResistanceDecision, { disposition: "qualified-hit" }>
+      type: "decision"
+    }
+
+type ContactAdvance = {
+  contact: ResistanceContactState
+  decisions: readonly EpeeResistanceDecision[]
+  hit: { hit: EpeeHit; resistanceClass: EpeeResistanceClass } | null
+}
 
 export function createEpeeResistanceScoringState(): EpeeResistanceScoringState {
   return {
     decisions: [],
-    ...createEpeeLifecycleState()
+    firstHitAtUs: null,
+    hits: [],
+    isLocked: false,
+    lastSampleAtUs: null,
+    left: INITIAL_CONTACT_STATE,
+    right: INITIAL_CONTACT_STATE
   }
 }
 
 function getMeasurementRange(measurement: ResistanceMeasurement) {
-  return getResistanceRange(measurement, {
-    incomplete: () => new RangeError("Epee resistance measurements must provide a value and uncertainty together"),
-    invalid: () => new RangeError("Epee resistance measurements must use non-negative safe integer milli-ohms"),
-    overflow: () => new RangeError("Epee resistance measurement ranges must remain safe integers")
-  })
+  const resistanceMilliOhms = measurement.resistanceMilliOhms
+  const resistanceUncertaintyMilliOhms = measurement.resistanceUncertaintyMilliOhms
+
+  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
+    return null
+  }
+
+  return {
+    max: resistanceMilliOhms + resistanceUncertaintyMilliOhms,
+    min: Math.max(0, resistanceMilliOhms - resistanceUncertaintyMilliOhms)
+  }
+}
+
+function validateMeasurement(measurement: ResistanceMeasurement) {
+  const values = [measurement.resistanceMilliOhms, measurement.resistanceUncertaintyMilliOhms]
+  const hasKnownMeasurement = values.every((value) => value !== null)
+  const hasNoMeasurement = values.every((value) => value === null)
+
+  if (!hasKnownMeasurement && !hasNoMeasurement) {
+    throw new RangeError("Epee resistance measurements must provide a value and uncertainty together")
+  }
+
+  if (hasKnownMeasurement && values.some((value) => !Number.isSafeInteger(value) || value < 0 || value === null)) {
+    throw new RangeError("Epee resistance measurements must use non-negative safe integer milli-ohms")
+  }
 }
 
 function classifyContactResistance(
@@ -115,14 +152,14 @@ function classifyContactResistance(
   }
 
   if (range.min === NORMAL_CONTACT_RESISTANCE_MILLIOHMS && range.max === NORMAL_CONTACT_RESISTANCE_MILLIOHMS) {
-    return { candidate: "normal-10-ohm", type: "candidate" }
+    return { resistanceClass: "normal-10-ohm", type: "candidate" }
   }
 
   if (
     range.min === EXCEPTIONAL_CONTACT_RESISTANCE_MILLIOHMS &&
     range.max === EXCEPTIONAL_CONTACT_RESISTANCE_MILLIOHMS
   ) {
-    return { candidate: "exceptional-100-ohm", type: "candidate" }
+    return { resistanceClass: "exceptional-100-ohm", type: "candidate" }
   }
 
   return {
@@ -200,14 +237,76 @@ function classifyContact(side: Side, contact: EpeeResistanceContact, atUs: numbe
   return classifyContactResistance(side, atUs, contact.contactResistance)
 }
 
+function advanceContact(
+  side: Side,
+  state: ResistanceContactState,
+  contact: EpeeResistanceContact,
+  atUs: number,
+  contactMinimumUs: number
+): ContactAdvance {
+  const classification = classifyContact(side, contact, atUs)
+
+  if (classification.type === "decision") {
+    return {
+      contact: state.isRegistered ? state : INITIAL_CONTACT_STATE,
+      decisions: [classification.decision],
+      hit: null
+    }
+  }
+
+  if (classification.type === "open") {
+    return { contact: state.isRegistered ? state : INITIAL_CONTACT_STATE, decisions: [], hit: null }
+  }
+
+  if (state.isRegistered) {
+    return { contact: state, decisions: [], hit: null }
+  }
+
+  if (state.candidateSinceUs === null) {
+    return {
+      contact: { candidateSinceUs: atUs, isRegistered: false },
+      decisions: [],
+      hit: null
+    }
+  }
+
+  if (atUs - state.candidateSinceUs < contactMinimumUs) {
+    return { contact: state, decisions: [], hit: null }
+  }
+
+  return {
+    contact: { candidateSinceUs: null, isRegistered: true },
+    decisions: [],
+    hit: {
+      hit: { qualifiedAtUs: atUs, side, startedAtUs: state.candidateSinceUs },
+      resistanceClass: classification.resistanceClass
+    }
+  }
+}
+
+function compareHits(
+  left: { hit: EpeeHit; resistanceClass: EpeeResistanceClass },
+  right: { hit: EpeeHit; resistanceClass: EpeeResistanceClass }
+) {
+  if (left.hit.startedAtUs !== right.hit.startedAtUs) {
+    return left.hit.startedAtUs - right.hit.startedAtUs
+  }
+
+  return left.hit.side.localeCompare(right.hit.side)
+}
+
+function isPendingInsideLockout(contact: ResistanceContactState, firstHitAtUs: number, doubleHitWindowUs: number) {
+  return contact.candidateSinceUs !== null && contact.candidateSinceUs - firstHitAtUs <= doubleHitWindowUs
+}
+
 function validateSample(sample: EpeeResistanceSample) {
-  if (!isIntegerMicroseconds(sample.atUs)) {
+  if (!Number.isSafeInteger(sample.atUs) || sample.atUs < 0) {
     throw new RangeError("Epee resistance samples must use non-negative safe integer timestamps")
   }
 
   for (const contact of [sample.left, sample.right]) {
-    getMeasurementRange(contact.contactResistance)
-    getMeasurementRange(contact.groundPathResistance)
+    validateMeasurement(contact.contactResistance)
+    validateMeasurement(contact.groundPathResistance)
   }
 }
 
@@ -220,31 +319,64 @@ export function advanceEpeeResistanceScoring(
 
   validateSample(sample)
 
-  const lifecycle = advanceEpeeLifecycle(state, {
-    atUs: sample.atUs,
-    classifyLeft: () => classifyContact("left", sample.left, sample.atUs),
-    classifyRight: () => classifyContact("right", sample.right, sample.atUs),
-    contactMinimumUs: resolvedTimingTable.epee.contactMinimumUs,
-    doubleHitWindowUs: resolvedTimingTable.epee.doubleHitWindowUs,
-    monotonicTimestampError: "Epee resistance samples must use monotonic timestamps"
-  })
-  const decisions: EpeeResistanceDecision[] = [...state.decisions, ...lifecycle.decisions]
-
-  for (const qualified of lifecycle.qualifiedHits) {
-    decisions.push({
-      disposition: "qualified-hit",
-      hit: qualified.hit,
-      resistanceClass: qualified.candidate
-    })
+  if (state.lastSampleAtUs !== null && sample.atUs < state.lastSampleAtUs) {
+    throw new RangeError("Epee resistance samples must use monotonic timestamps")
   }
+
+  if (state.isLocked) {
+    return { ...state, lastSampleAtUs: sample.atUs }
+  }
+
+  const leftAdvance = advanceContact(
+    "left",
+    state.left,
+    sample.left,
+    sample.atUs,
+    resolvedTimingTable.epee.contactMinimumUs
+  )
+  const rightAdvance = advanceContact(
+    "right",
+    state.right,
+    sample.right,
+    sample.atUs,
+    resolvedTimingTable.epee.contactMinimumUs
+  )
+  const newHits = [leftAdvance.hit, rightAdvance.hit]
+    .filter((hit): hit is { hit: EpeeHit; resistanceClass: EpeeResistanceClass } => hit !== null)
+    .sort(compareHits)
+
+  let firstHitAtUs = state.firstHitAtUs
+  const hits = [...state.hits]
+  const decisions = [...state.decisions, ...leftAdvance.decisions, ...rightAdvance.decisions]
+
+  for (const qualified of newHits) {
+    if (firstHitAtUs === null) {
+      firstHitAtUs = qualified.hit.startedAtUs
+      hits.push(qualified.hit)
+      decisions.push({ disposition: "qualified-hit", hit: qualified.hit, resistanceClass: qualified.resistanceClass })
+      continue
+    }
+
+    if (qualified.hit.startedAtUs - firstHitAtUs <= resolvedTimingTable.epee.doubleHitWindowUs) {
+      hits.push(qualified.hit)
+      decisions.push({ disposition: "qualified-hit", hit: qualified.hit, resistanceClass: qualified.resistanceClass })
+    }
+  }
+
+  const hasPendingHit =
+    firstHitAtUs !== null &&
+    (isPendingInsideLockout(leftAdvance.contact, firstHitAtUs, resolvedTimingTable.epee.doubleHitWindowUs) ||
+      isPendingInsideLockout(rightAdvance.contact, firstHitAtUs, resolvedTimingTable.epee.doubleHitWindowUs))
+  const isLocked =
+    firstHitAtUs !== null && sample.atUs - firstHitAtUs > resolvedTimingTable.epee.doubleHitWindowUs && !hasPendingHit
 
   return {
     decisions,
-    firstHitAtUs: lifecycle.firstHitAtUs,
-    hits: lifecycle.hits,
-    isLocked: lifecycle.isLocked,
-    lastSampleAtUs: lifecycle.lastSampleAtUs,
-    left: lifecycle.left,
-    right: lifecycle.right
+    firstHitAtUs,
+    hits,
+    isLocked,
+    lastSampleAtUs: sample.atUs,
+    left: leftAdvance.contact,
+    right: rightAdvance.contact
   }
 }

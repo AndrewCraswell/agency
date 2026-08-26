@@ -22,7 +22,7 @@ function normalizedNonemptyString(value: unknown): string | null {
 }
 
 export function projectObservatoryIdentity(testCase: ObservatoryIdentityInput): ObservatoryIdentity {
-  const planned = testCase.status === "skipped"
+  const planned = testCase.status === "planned-requirement"
   const executableStatus = testCase.status === "failed" || testCase.status === "passed"
   const kind = planned ? "requirement" : "scenario"
   const id = normalizedNonemptyString(planned ? testCase.scenario?.traceabilityId : testCase.scenario?.scenarioId)

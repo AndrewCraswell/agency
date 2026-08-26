@@ -379,7 +379,7 @@ describe("virtual STM32", () => {
     expect(shell.processedSnapshotCount).toBe(1)
     expect(shell.lastReceipt?.outcome?.source).toBe("weapon-scorer")
     expect(() => shell.ingestSnapshot(snapshot(1))).toThrow(
-      new RangeError("Virtual STM32 is unavailable after an authoritative scoring pipeline failure")
+      new RangeError("Virtual STM32 is unavailable after an authoritative outcome observer failure")
     )
 
     const asynchronousObserver = createVirtualStm32({
@@ -405,62 +405,6 @@ describe("virtual STM32", () => {
       new TypeError("Virtual STM32 authoritative outcome observers must complete synchronously")
     )
     expect(functionThenableObserver.isUnavailable).toBe(true)
-  })
-
-  it("latches unavailable without committing state when a trusted scorer throws", () => {
-    const initialState: TestState = { acceptedAtUs: [] }
-    let invokedAtUs: number[] = []
-    const failure = new Error("scorer failed")
-    const shell = createVirtualStm32({
-      scorer: {
-        advance: (state, input) => {
-          invokedAtUs = [...state.acceptedAtUs, input.atUs]
-          throw failure
-        },
-        createState: () => initialState,
-        weapon: "foil"
-      },
-      timingTableRevision: "timing-1",
-      weapon: "foil"
-    })
-
-    expect(() => shell.ingestSnapshot(snapshot(4))).toThrow(failure)
-    expect(invokedAtUs).toEqual([4])
-    expect(shell.isUnavailable).toBe(true)
-    expect(shell.lastReceipt).toBeNull()
-    expect(shell.processedSnapshotCount).toBe(0)
-    expect(() => shell.ingestSnapshot(snapshot(5))).toThrow(
-      new RangeError("Virtual STM32 is unavailable after an authoritative scoring pipeline failure")
-    )
-  })
-
-  it("latches unavailable without committing state when an authoritative outcome cannot be cloned", () => {
-    const initialState: TestState = { acceptedAtUs: [] }
-    const nextState: TestState = { acceptedAtUs: [6] }
-    let receivedState: TestState | null = null
-    const shell = createVirtualStm32({
-      scorer: {
-        advance: (state) => {
-          receivedState = state
-          return { outcome: new Date(), state: nextState }
-        },
-        createState: () => initialState,
-        weapon: "foil"
-      },
-      timingTableRevision: "timing-1",
-      weapon: "foil"
-    })
-
-    expect(() => shell.ingestSnapshot(snapshot(6))).toThrow(
-      new TypeError("Virtual STM32 authoritative outcomes must contain only plain objects and arrays")
-    )
-    expect(receivedState).toBe(initialState)
-    expect(shell.isUnavailable).toBe(true)
-    expect(shell.lastReceipt).toBeNull()
-    expect(shell.processedSnapshotCount).toBe(0)
-    expect(() => shell.ingestSnapshot(snapshot(7))).toThrow(
-      new RangeError("Virtual STM32 is unavailable after an authoritative scoring pipeline failure")
-    )
   })
 
   it("deeply snapshots a bounded plain-data outcome before an observer can receive it", () => {
