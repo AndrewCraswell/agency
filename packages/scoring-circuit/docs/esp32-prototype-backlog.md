@@ -1,34 +1,37 @@
-# ESP32 scoring prototype backlog
+# ESP32 scoring prototype work
 
 ## Goal
 
-Order a working ESP32-S3 carrier as quickly as practical so firmware can be written and tested on real scoring hardware.
-This is a hand-assembled development board, not a production design or an FIE homologation submission.
+Order a deliberately simple ESP32-S3 scoring board that unlocks firmware development. The board is a hand-built
+prototype, not a production design.
 
-## Scope rule
+The retired 164-component carrier is not the implementation baseline. Its generated PCB, routing, BOM, and placement
+outputs must not be advanced or ordered. Useful verified knowledge may be reused selectively in the replacement.
 
-A task belongs here only when it is required to make the first boards electrically functional, orderable, programmable,
-or useful for scoring development. Production qualification, certification, enclosure design, manufacturing fixtures,
-long-term sourcing, cost reduction, per-part evidence packages, backlog validators, and automated release gates are out
-of scope. A future production project may add them after this board proves the scoring architecture.
+## Working rules
 
-`active` means work is underway. `waiting` means the named dependency is incomplete. `done` requires implementation,
-focused verification, root review, and a commit.
+- The root agent performs all work; do not delegate prototype tasks to subagents.
+- Start from a blank schematic and add only hardware required by
+  [Minimal ESP32 scoring prototype](./clean-sheet-board-architecture.md).
+- Do not route until every active IC and connector has a concrete prototype justification.
+- Prefer modules, headers, solder pads, jumpers, and off-board power assemblies.
+- Do not create validators, evidence packages, qualification artifacts, or production processes.
+- Keep `Latest state` accurate whenever work is reviewed or committed.
+- `done` requires implementation, focused verification, root review, and a commit.
+
+## Remaining work
 
 | Deliverable | Status | Latest state |
 | --- | --- | --- |
-| Close the carrier design | done | Commit `c9f3659` connects all seven weapon/piste landings, IR, and the five primary outputs; adds simple zero-ohm analog power/ground links; and restores usable ESP32 paste apertures. Root review, 18 focused tests, package typecheck, lint, and formatting passed. The WIZ850io may be directly soldered for this hand-built prototype. |
-| Produce and order the PCB | active | Commit `0071570` adds the editable four-layer KiCad project and repeatable placement/netlist export; connectivity review confirmed all 164 components and 135 logical nets survived conversion. Commit `87530b5` adds the 59-line order BOM and 153 populated placements. Routing the 489 declared connections is active. Next: finish copper, run basic ERC/DRC, inspect Gerbers and drills, and order a small batch. No production optimization gates apply. |
-| Bind firmware to the ordered board | waiting | After the final pinout is known, connect the portable C17 scoring core to ESP32 acquisition, Ethernet, HUB75, IR, USB diagnostics, lamps, buzzer, and safe-enable adapters. Do not build firmware for hypothetical hardware. |
-| Bring up and validate scoring | waiting | On assembled boards, check rails and programming first, then interfaces and outputs, then foil/epee/sabre timing and resistance behavior. Record faults that require a board revision or firmware change; do not create a production qualification dossier. |
+| Replace the oversized carrier | active | The previous 164-component design is retired. Redraw a blank-sheet schematic containing one ESP32-S3, direct weapon and piste connections, the minimum seven-conductor analog interface, WIZ850io, IR, HUB75, simple outputs, and off-board power input. First produce an IC/connector list with a one-line justification for each item. |
+| Produce the prototype PCB | waiting | Starts only after root simplicity review of the replacement schematic. Place and route the smallest practical board, run basic ERC/DRC, inspect Gerbers and drills, and order a small batch. Delete or replace obsolete generated outputs from the retired carrier. |
+| Bind firmware to the ordered board | waiting | After the final pinout is fixed, connect the portable C17 scoring core to the real ESP32 acquisition and interface adapters. Avoid firmware for hypothetical hardware. |
+| Bring up scoring behavior | waiting | Verify rails and programming, then Ethernet, IR, display, outputs, and all seven conductors. Exercise foil, epee, and sabre timing and resistance behavior and record only faults that require a board or firmware revision. |
 
-## Already settled
+## Fixed decisions
 
-- One ESP32-S3 runs the firmware and the portable C17 scoring core.
-- WIZ850io provides Ethernet.
-- USB-C PD remains the normal input through an off-board SparkFun PD module and Pololu 5 V regulator.
-- The carrier retains the scoring front end, direct-wire weapon/piste landings, HUB75, encrypted IR, USB recovery,
-  lamps, and buzzer.
-- The prototype uses a roomy 250 mm by 180 mm four-layer outline so it is easy to route, probe, and modify.
-
-No additional architecture work is needed before closing the listed connections and producing the PCB.
+- One ESP32-S3 runs the prototype and portable C17 scoring core; there is no STM32 on this board.
+- WIZ850io supplies Ethernet.
+- USB-C PD remains the normal input through off-board SparkFun and Pololu modules.
+- Ok Fencing weapon cables are already accepted; the prototype uses direct solder pads or simple board-side connections.
+- Firmware follows the ordered hardware, except for continued development of the hardware-independent scoring logic.

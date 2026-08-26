@@ -1,49 +1,78 @@
-# ESP32 scoring development board
+# Minimal ESP32 scoring prototype
 
 ## Purpose
 
-Build one simple carrier that lets us write and test scoring firmware on real hardware. It is deliberately oversized,
-module-based, and suitable for hand modification. Success means the first boards can be powered, programmed, connected
-to fencing conductors, and used to exercise scoring behavior.
+Build the smallest practical board that lets us connect fencing conductors to an ESP32-S3 and develop scoring firmware
+on real hardware. This board is a disposable, hand-assembled engineering prototype. It is not a production scoring
+machine, certification sample, manufacturing reference, or enclosure-ready product.
 
-This is not a production scoring machine, a certification sample, an enclosure design, or a cost-optimized PCB.
+The prototype succeeds when it can be powered and programmed, observe and stimulate the seven scoring conductors,
+drive the basic scoring indications, and exercise the portable C17 scoring logic. Anything that does not directly help
+that first firmware-development loop is deferred.
 
-## Hardware boundary
+## Restart decision
 
-| Function | Prototype implementation |
-| --- | --- |
-| Processor and scoring | ESP32-S3-WROOM-1-N16R2 running the portable C17 scoring core |
-| Ethernet | Socketed or directly soldered WIZ850io module |
-| Power | USB-C into an off-board SparkFun DEV-15801 PD board and Pololu D36V50F5 regulator; fused 5 V enters the carrier |
-| Scoring inputs | Existing seven-line source, sink, protection, mux, ADC, and reference circuit |
-| Weapon connection | Large solder landings for the validated Ok Fencing cable/socket wires; a custom production connector is deferred |
-| Display | Buffered HUB75 connector with a fused 5 V branch |
-| Remote | TSOP38438 receiver connected to an ESP32 RMT input |
-| Local outputs | Protected lamp and buzzer drivers |
-| Development access | ESP32 native USB, EN, BOOT, UART, and useful test points |
+The previous 164-component, 489-connection carrier is retired as the active prototype design. Continuing to route or
+incrementally simplify it would preserve assumptions that no longer match this goal. The replacement starts from a blank
+schematic and may reuse verified pinouts, footprints, module choices, specifications, and scoring code only after each is
+shown to serve the minimal prototype.
 
-USB-C PD remains the normal system power input. The PD and high-current conversion boards are wired off-carrier because
-putting their circuitry on this prototype would add layout work without improving firmware development. WIZ850io avoids
-rebuilding the Ethernet PHY, transformer, crystal, and RJ45 interface.
+Do not preserve a circuit merely because it has already been designed, documented, or tested. Previous implementation
+effort is not a reason to include hardware.
 
-## Design rules
+## Required hardware
 
-- Add a component only when the first prototype needs it to function or survive ordinary bench handling.
-- Prefer modules, common connectors, direct soldering, and bodge-wire repair over custom production circuitry.
-- Keep one ESP32. Preserve logical firmware boundaries so a later product may split scoring onto another MCU.
-- Keep the C17 core hardware-independent and make it the only scoring authority.
-- Keep outputs disabled during reset until firmware explicitly enables them.
-- Use a roomy 250 mm by 180 mm four-layer board with a continuous ground plane. Do not optimize board area yet.
-- Use a conventional PCB editor for final placement, routing, ERC/DRC, Gerbers, drills, BOM, and placement output.
-- Do not create per-part qualification records, evidence ledgers, validators, routing-parity gates, production test
-  fixtures, environmental tests, or homologation paperwork for this board.
+The initial schematic contains only these functional blocks:
 
-## First-board acceptance
+- An ESP32-S3 development module or module-plus-minimum-support circuit with USB programming, reset, and boot access.
+- Direct solder pads or simple headers for the six weapon wires and piste conductor.
+- The smallest analog interface that can safely stimulate and measure those seven conductors well enough to develop and
+  validate foil, epee, and sabre scoring behavior.
+- A socketed or directly soldered WIZ850io module for Ethernet.
+- One TSOP38438-compatible IR receiver input.
+- A HUB75 connector and only the level shifting or buffering proven necessary for the selected panel.
+- Simple lamp and buzzer outputs suitable for bench development.
+- Fused 5 V input from the existing off-board USB-C PD and regulator modules, plus only the rails actually consumed by
+  the board.
+- Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
 
-The board is ready to order when the schematic is electrically connected, footprints are usable for the intended
-hand/prototype assembly, the PCB editor reports no blocking ERC/DRC errors, and the order files have been visually
-checked. It does not need production certification or proof that every possible operating condition is covered.
+## Explicitly deferred
 
-After assembly, bring-up is intentionally short: verify power and USB programming, verify Ethernet/display/IR/outputs,
-exercise all seven scoring conductors, and run the foil/epee/sabre corpus plus practical timing and resistance checks.
-Anything beyond that belongs to the later production design.
+The first board does not include custom production connectors, on-board USB-C PD negotiation, on-board high-current
+conversion, an STM32, processor isolation, redundant supervisors, manufacturing fixtures, production service headers,
+environmental qualification, homologation evidence, per-part evidence ledgers, backlog validators, automated release
+gates, or speculative expansion hardware.
+
+It also does not include duplicate indicator loads when a header to the intended external lamp, buzzer, or display is
+sufficient for firmware development.
+
+## Complexity rules
+
+Before adding any component, answer all three questions:
+
+1. Which required prototype behavior fails without it?
+2. Why can that behavior not be provided by the selected module, a direct connection, firmware, or an off-board bench
+   assembly?
+3. What is the simplest safe substitute?
+
+If those answers are not concrete, omit the component. Prefer modules, direct soldering, headers, jumpers, and bodge-wire
+repair. Do not add circuitry solely for a possible production revision.
+
+The schematic must remain understandable as a small number of functional blocks. Before PCB layout begins, the root
+agent must publish a one-line justification for every active IC and connector and review the total component count. A
+large or difficult-to-explain count is an architecture failure, not a routing problem.
+
+## Work ownership
+
+The root agent performs all prototype architecture, schematic, PCB, documentation, verification, and commit work.
+Subagents are not used for this work. This avoids locally correct tasks preserving an architecture that has not passed a
+single-owner simplicity review.
+
+## Order gate
+
+Do not start placement or routing until the root agent has reviewed the complete minimal schematic against this document.
+The board is ready to order after basic electrical review, footprint inspection, PCB ERC/DRC, and visual inspection of
+Gerbers and drill files. Production qualification is not part of this gate.
+
+Firmware hardware bindings begin only after the ordered schematic and pinout are fixed. The portable C17 core remains
+hardware-independent and the sole scoring authority.
