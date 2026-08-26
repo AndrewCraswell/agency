@@ -1,5 +1,4 @@
 import { calculateRailBudget, type RailBudgetResult } from "./power-budget.js"
-import { assertFinitePositive } from "./power-validation.js"
 
 export const v5PowerStage = {
   controller: {
@@ -78,6 +77,10 @@ type V5LoadPoint = {
 
 const minimumEfuseCurrentLimitA = (3_334 / (1_240 * 1.01)) * 0.9
 const minimumHighSidePeakLimitA = 12.75
+
+function assertFinitePositive(name: string, value: number): void {
+  if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} must be finite and greater than zero`)
+}
 
 function assertRailBudget(result: RailBudgetResult): void {
   if (result === null || typeof result !== "object") throw new RangeError("railBudget must be an object")

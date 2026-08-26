@@ -1,16 +1,47 @@
-import {
-  ApplicationDisplayComponents,
-  ApplicationDisplayEnableTraces,
-  ApplicationDisplayTraces
-} from "./application-display-domain.circuit.js"
-import { IsolationComponents, IsolationTraces } from "./isolation-domain.circuit.js"
-import { LogicalBoardScoringDomain } from "./logical-board-scoring-domain.circuit.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
-import {
-  ServiceSupportComponents,
-  ServiceSupportFramTraces,
-  ServiceSupportI2cTraces
-} from "./service-support-domain.circuit.js"
+import { weaponInputTopology, WeaponInputTraces } from "./weapon-input-topology.js"
+
+const weaponConnectorPins = { pin1: "A", pin2: "B", pin3: "C" } as const
+const weaponConnectorEndpointLabels = { a: "A", b: "B", c: "C" } as const
+
+function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
+  const topology = weaponInputTopology({
+    connectorReference: `J_${side}`,
+    connectorEndpointLabels: weaponConnectorEndpointLabels
+  })
+  return (
+    <group name={`G_WEAPON_${side}`} pcbX={x} pcbY={35}>
+      <pinheader
+        name={`J_${side}`}
+        pinCount={3}
+        pinLabels={weaponConnectorPins}
+        gender="female"
+        pcbX={0}
+        pcbY={0}
+        pcbRotation={90}
+        showSilkscreenPinLabels
+      />
+      <chip
+        name={topology.esd.name}
+        manufacturerPartNumber={topology.esd.manufacturerPartNumber}
+        doNotPlace
+        pinLabels={topology.esd.pinLabels}
+        pcbX={0}
+        pcbY={-6}
+      />
+      <chip
+        name={topology.frontend.name}
+        manufacturerPartNumber={topology.frontend.manufacturerPartNumber}
+        doNotPlace
+        footprint={[]}
+        pinLabels={topology.frontend.pinLabels}
+        pcbX={0}
+        pcbY={-13}
+      />
+      <WeaponInputTraces topology={topology} />
+    </group>
+  )
+}
 
 /**
  * Canonical end-to-end connectivity model. This is intentionally not one PCB:
@@ -20,9 +51,182 @@ import {
 function ScoringCircuit() {
   return (
     <board title="Competition scoring apparatus logical connectivity" width="160mm" height="100mm" layers={4}>
-      <LogicalBoardScoringDomain />
+      <WeaponInput side="L" x={-68} />
+      <WeaponInput side="R" x={-48} />
+      <pinheader
+        name="J_PISTE"
+        pinCount={2}
+        pinLabels={{ pin1: "PISTE", pin2: "SHIELD" }}
+        gender="female"
+        pcbX={-28}
+        pcbY={36}
+      />
+      <chip
+        name="U_PISTE_FRONTEND"
+        manufacturerPartNumber="PISTE-PROTECTION-TBD"
+        doNotPlace
+        footprint="soic8"
+        pinLabels={{ pin1: "RAW_PISTE", pin2: "SHIELD", pin3: "SGND", pin4: "S3_3", pin5: "SENSE_PISTE" }}
+        pcbX={-28}
+        pcbY={25}
+      />
 
-      <IsolationComponents />
+      <chip
+        name="U_STM32"
+        manufacturerPartNumber="STM32G474RET3TR"
+        footprint="lqfp64"
+        pinLabels={{
+          pin1: "S3_3",
+          pin2: "SGND",
+          pin3: "LEFT_A",
+          pin4: "LEFT_B",
+          pin5: "LEFT_C",
+          pin6: "RIGHT_A",
+          pin7: "RIGHT_B",
+          pin8: "RIGHT_C",
+          pin9: "PISTE",
+          pin10: "SPI_SCK",
+          pin11: "SPI_MOSI",
+          pin12: "SPI_MISO",
+          pin13: "SPI_CS",
+          pin14: "EVENT_IRQ",
+          pin15: "HEARTBEAT",
+          pin16: "ESP_RESET",
+          pin17: "LAMP_RED",
+          pin18: "LAMP_GREEN",
+          pin19: "LAMP_WHITE_L",
+          pin20: "LAMP_WHITE_R",
+          pin21: "BUZZER",
+          pin22: "WD_KICK",
+          pin23: "VREF",
+          pin24: "NRST",
+          pin25: "ESP_HEARTBEAT"
+        }}
+        pcbX={-45}
+        pcbY={0}
+      />
+      <chip
+        name="U_VREF"
+        manufacturerPartNumber="REF5025AQDRQ1"
+        footprint="soic8"
+        pinLabels={{ pin1: "VIN", pin2: "SGND", pin6: "VOUT" }}
+        pcbX={-67}
+        pcbY={2}
+      />
+      <chip
+        name="U_STM_WATCHDOG"
+        manufacturerPartNumber="TPS3431SDRBR"
+        footprint="qfn8"
+        pinLabels={{
+          pin1: "S3_3",
+          pin2: "CWD",
+          pin3: "EN",
+          pin4: "SGND",
+          pin5: "SET1",
+          pin6: "WDI",
+          pin7: "RESET",
+          pin8: "ENOUT"
+        }}
+        pcbX={-66}
+        pcbY={-12}
+      />
+      <chip
+        name="U_STM_SUPERVISOR"
+        manufacturerPartNumber="TPS389033DSER"
+        footprint="wson6"
+        pinLabels={{ pin1: "SENSE", pin2: "SGND", pin3: "MR", pin4: "S3_3", pin5: "CT", pin6: "RESET" }}
+        pcbX={-66}
+        pcbY={-22}
+      />
+      <resistor name="R_STM_WD_CWD" resistance="10k" tolerance="1%" footprint="0603" pcbX={-72} pcbY={-12} />
+      <capacitor name="C_STM_WD_BYPASS" capacitance="100nF" footprint="0603" pcbX={-75} pcbY={-12} />
+      <capacitor
+        name="C_STM_SUPERVISOR_CT"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        capacitance="100nF"
+        footprint="0603"
+        pcbX={-72}
+        pcbY={-22}
+      />
+      <capacitor
+        name="C_STM_SUPERVISOR_BYPASS"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        capacitance="100nF"
+        footprint="0603"
+        pcbX={-75}
+        pcbY={-22}
+      />
+      <chip
+        name="U_ISOLATED_POWER"
+        manufacturerPartNumber="NXE1S0505MC"
+        footprint="dip6"
+        pinLabels={{ pin1: "V5", pin2: "GND", pin4: "SGND", pin6: "S5" }}
+        pcbX={-25}
+        pcbY={-36}
+      />
+      <chip
+        name="U_SCORING_LDO"
+        manufacturerPartNumber="LOW-NOISE-LDO-TBD"
+        doNotPlace
+        footprint="sot23_5"
+        pinLabels={{ pin1: "S5", pin2: "SGND", pin3: "ENABLE", pin5: "S3_3" }}
+        pcbX={-42}
+        pcbY={-36}
+      />
+      {(["SOURCE_A", "SOURCE_B", "SINK_A", "SINK_B"] as const).map((bank, index) => (
+        <chip
+          key={bank}
+          name={`U_LINE_${bank}`}
+          manufacturerPartNumber="TMUX1112PWR"
+          footprint="tssop16"
+          pinLabels={{ pin1: "S3_3", pin2: "SGND", pin3: "CH1", pin4: "CH2", pin5: "CH3", pin6: "CH4" }}
+          pcbX={-63 + index * 11}
+          pcbY={-29}
+        />
+      ))}
+
+      <chip
+        name="U_ISO_MAIN"
+        manufacturerPartNumber="ISO7762FDWR"
+        footprint="soic16_w10.3mm"
+        pinLabels={{
+          pin1: "S3_3",
+          pin2: "S_SCK",
+          pin3: "S_MOSI",
+          pin4: "S_CS",
+          pin5: "S_ESP_RESET_ASSERT",
+          pin6: "S_MISO",
+          pin7: "S_ESP_HEARTBEAT",
+          pin8: "SGND",
+          pin9: "GND",
+          pin10: "A_ESP_HEARTBEAT",
+          pin11: "A_MISO",
+          pin12: "A_ESP_RESET_ASSERT",
+          pin13: "A_CS",
+          pin14: "A_MOSI",
+          pin15: "A_SCK",
+          pin16: "V3_3"
+        }}
+        pcbX={-10}
+        pcbY={0}
+      />
+      <chip
+        name="U_ISO_AUX"
+        manufacturerPartNumber="ISO7721FDR"
+        footprint="soic8"
+        pinLabels={{
+          pin1: "S3_3",
+          pin2: "S_HEARTBEAT",
+          pin3: "S_SPARE_IN",
+          pin4: "SGND",
+          pin5: "GND",
+          pin6: "A_SPARE_OUT",
+          pin7: "A_HEARTBEAT",
+          pin8: "V3_3"
+        }}
+        pcbX={-10}
+        pcbY={17}
+      />
 
       <chip
         name="U_ESP32"
@@ -229,8 +433,131 @@ function ScoringCircuit() {
       <resistor name="R_COMM_INT_N_IDLE_PULLUP" resistance="100k" tolerance="1%" footprint="0603" pcbX={68} pcbY={19} />
       <pinheader name="TP_COMM_PRESENT_N" pinCount={1} pinLabels={["COMM_PRESENT_N"]} pcbX={67} pcbY={14} />
       <pinheader name="TP_COMM_INT_N" pinCount={1} pinLabels={["W5500_INT_N_POLLING_ONLY"]} pcbX={72} pcbY={14} />
-      <ServiceSupportComponents />
-      <ApplicationDisplayComponents />
+      <chip
+        name="U_FIELD_SERIAL"
+        manufacturerPartNumber="ISO1410BDWR"
+        footprint="soic16_w10.3mm"
+        pinLabels={{
+          pin1: "V3_3",
+          pin2: "TX",
+          pin3: "RX",
+          pin4: "GND",
+          pin9: "FIELD_GND",
+          pin10: "B",
+          pin11: "A",
+          pin16: "FIELD_VCC"
+        }}
+        pcbX={50}
+        pcbY={8}
+      />
+      <pinheader name="J_FIELD_SERIAL" pinCount={4} pinLabels={["A", "B", "FIELD_GND", "SHIELD"]} pcbX={70} pcbY={8} />
+      <chip
+        name="U_FRAM"
+        manufacturerPartNumber="CY15B104Q-LHXIT"
+        footprint="qfn8"
+        pinLabels={{
+          pin1: "CS",
+          pin2: "MISO",
+          pin3: "WP",
+          pin4: "GND",
+          pin5: "MOSI",
+          pin6: "SCK",
+          pin7: "HOLD",
+          pin8: "V3_3"
+        }}
+        pcbX={40}
+        pcbY={-5}
+      />
+      <chip
+        name="U_RTC"
+        manufacturerPartNumber="RV-3028-C7"
+        footprint="qfn8"
+        pinLabels={{ pin1: "CLKOUT", pin2: "INT", pin3: "SCL", pin4: "SDA", pin5: "GND", pin8: "V3_3" }}
+        pcbX={51}
+        pcbY={-5}
+      />
+      <chip
+        name="U_SECURE_ELEMENT"
+        manufacturerPartNumber="STSAFE-A110"
+        footprint="qfn8"
+        pinLabels={{ pin1: "SDA", pin2: "SCL", pin3: "GND", pin4: "V3_3" }}
+        pcbX={62}
+        pcbY={-5}
+      />
+      <chip
+        name="U_DISPLAY_BUFFER_A"
+        manufacturerPartNumber="SN74AHCT245PWR"
+        footprint="tssop20"
+        pinLabels={{
+          pin1: "DIR_TO_PANEL",
+          pin2: "R1_IN",
+          pin3: "G1_IN",
+          pin4: "B1_IN",
+          pin5: "R2_IN",
+          pin6: "G2_IN",
+          pin7: "B2_IN",
+          pin8: "A_IN",
+          pin9: "B_IN",
+          pin10: "GND",
+          pin11: "B_OUT",
+          pin12: "A_OUT",
+          pin13: "B2_OUT",
+          pin14: "G2_OUT",
+          pin15: "R2_OUT",
+          pin16: "B1_OUT",
+          pin17: "G1_OUT",
+          pin18: "R1_OUT",
+          pin19: "BUFFER_ENABLE_N",
+          pin20: "V5"
+        }}
+        pcbX={15}
+        pcbY={29}
+      />
+      <chip
+        name="U_DISPLAY_BUFFER_B"
+        manufacturerPartNumber="SN74AHCT245PWR"
+        footprint="tssop20"
+        pinLabels={{
+          pin1: "DIR_TO_PANEL",
+          pin2: "C_IN",
+          pin3: "D_IN",
+          pin4: "CLK_IN",
+          pin5: "LAT_IN",
+          pin6: "OE_N_IN",
+          pin10: "GND",
+          pin14: "OE_N_OUT",
+          pin15: "LAT_OUT",
+          pin16: "CLK_OUT",
+          pin17: "D_OUT",
+          pin18: "C_OUT",
+          pin19: "BUFFER_ENABLE_N",
+          pin20: "V5"
+        }}
+        pcbX={28}
+        pcbY={29}
+      />
+      <resistor name="R_HUB75_R1_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={8} pcbY={34} />
+      <resistor name="R_HUB75_G1_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={11} pcbY={34} />
+      <resistor name="R_HUB75_B1_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={14} pcbY={34} />
+      <resistor name="R_HUB75_R2_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={17} pcbY={34} />
+      <resistor name="R_HUB75_G2_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={20} pcbY={34} />
+      <resistor name="R_HUB75_B2_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={23} pcbY={34} />
+      <resistor name="R_HUB75_A_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={26} pcbY={34} />
+      <resistor name="R_HUB75_B_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={29} pcbY={34} />
+      <resistor name="R_HUB75_C_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={32} pcbY={34} />
+      <resistor name="R_HUB75_D_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={35} pcbY={34} />
+      <resistor name="R_HUB75_CLK_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={38} pcbY={34} />
+      <resistor name="R_HUB75_LAT_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={41} pcbY={34} />
+      <resistor name="R_HUB75_OE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={44} pcbY={34} />
+      <resistor name="R_HUB75_PANEL_OE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={47} pcbY={34} />
+      <pinheader
+        name="J_HUB75"
+        pinCount={16}
+        doubleRow
+        pinLabels={["R1", "G1", "B1", "GND1", "R2", "G2", "B2", "GND2", "A", "B", "C", "D", "CLK", "LAT", "OE", "GND3"]}
+        pcbX={3}
+        pcbY={39}
+      />
       <chip
         name="U_AUDIO"
         manufacturerPartNumber="TAS2505TRGERQ1"
@@ -561,7 +888,27 @@ function ScoringCircuit() {
       <trace from="U_STM_SUPERVISOR.RESET" to="U_STM32.NRST" />
       <trace from="J_STM_SWD.NRST" to="U_STM32.NRST" />
 
-      <IsolationTraces />
+      <trace from="U_STM32.SPI_SCK" to="U_ISO_MAIN.S_SCK" />
+      <trace from="U_STM32.SPI_MOSI" to="U_ISO_MAIN.S_MOSI" />
+      <trace from="U_STM32.SPI_CS" to="U_ISO_MAIN.S_CS" />
+      <trace from="U_STM32.SPI_MISO" to="U_ISO_MAIN.S_MISO" />
+      <trace from="U_STM32.ESP_RESET" to="R_STM_RESET_ISO_SERIES.pin1" />
+      <trace from="R_STM_RESET_ISO_SERIES.pin2" to="U_ISO_MAIN.S_ESP_RESET_ASSERT" />
+      <trace from="U_ISO_MAIN.S_ESP_RESET_ASSERT" to="R_STM_RESET_ISO_PD.pin1" />
+      <trace from="R_STM_RESET_ISO_PD.pin2" to="net.SGND" />
+      <trace from="U_STM32.HEARTBEAT" to="U_ISO_AUX.S_HEARTBEAT" />
+      <trace from="U_ISO_MAIN.A_SCK" to="U_ESP32.SCORE_SCK" />
+      <trace from="U_ISO_MAIN.A_MOSI" to="U_ESP32.SCORE_MOSI" />
+      <trace from="U_ISO_MAIN.A_CS" to="U_ESP32.SCORE_CS" />
+      <trace from="U_ISO_MAIN.A_MISO" to="U_ESP32.SCORE_MISO" />
+      <trace from="U_ISO_MAIN.A_ESP_RESET_ASSERT" to="TP_ESP_RESET_REQUEST.RESET_REQUEST" />
+      <trace from="U_ISO_MAIN.A_ESP_RESET_ASSERT" to="R_STM_RESET_GATE.pin1" />
+      <trace from="R_STM_RESET_GATE.pin2" to="Q_ESP_RESET_STM.G" />
+      <trace from="Q_ESP_RESET_STM.G" to="R_STM_RESET_GATE_PD.pin1" />
+      <trace from="R_STM_RESET_GATE_PD.pin2" to="net.GND" />
+      <trace from="U_ISO_AUX.A_HEARTBEAT" to="U_ESP32.STM_HEARTBEAT" />
+      <trace from="U_ESP32.ESP_HEARTBEAT" to="U_ISO_MAIN.A_ESP_HEARTBEAT" />
+      <trace from="U_ISO_MAIN.S_ESP_HEARTBEAT" to="U_STM32.ESP_HEARTBEAT" />
 
       <trace from="J_USB2_CARRIER.USB_DN" to="R_USB_DN_CARRIER.USB_DN_FROM_COMM" />
       <trace from="J_USB2_CARRIER.USB_DP" to="R_USB_DP_CARRIER.USB_DP_FROM_COMM" />
@@ -664,8 +1011,66 @@ function ScoringCircuit() {
       <trace from="J_CTRL_CARRIER.W5500_INT_N" to="R_COMM_INT_N_IDLE_PULLUP.pin1" />
       <trace from="R_COMM_INT_N_IDLE_PULLUP.pin2" to="net.V3_3" />
       <trace from="J_CTRL_CARRIER.W5500_INT_N" to="TP_COMM_INT_N.W5500_INT_N_POLLING_ONLY" />
-      <ApplicationDisplayTraces />
-      <ApplicationDisplayEnableTraces />
+      <trace from="U_ESP32.HUB75_R1" to="U_DISPLAY_BUFFER_A.R1_IN" />
+      <trace from="U_ESP32.HUB75_G1" to="U_DISPLAY_BUFFER_A.G1_IN" />
+      <trace from="U_ESP32.HUB75_B1" to="U_DISPLAY_BUFFER_A.B1_IN" />
+      <trace from="U_ESP32.HUB75_R2" to="U_DISPLAY_BUFFER_A.R2_IN" />
+      <trace from="U_ESP32.HUB75_G2" to="U_DISPLAY_BUFFER_A.G2_IN" />
+      <trace from="U_ESP32.HUB75_B2" to="U_DISPLAY_BUFFER_A.B2_IN" />
+      <trace from="U_ESP32.HUB75_A" to="U_DISPLAY_BUFFER_A.A_IN" />
+      <trace from="U_ESP32.HUB75_B" to="U_DISPLAY_BUFFER_A.B_IN" />
+      <trace from="U_ESP32.HUB75_C" to="U_DISPLAY_BUFFER_B.C_IN" />
+      <trace from="U_ESP32.HUB75_D" to="U_DISPLAY_BUFFER_B.D_IN" />
+      <trace from="U_ESP32.HUB75_CLK" to="U_DISPLAY_BUFFER_B.CLK_IN" />
+      <trace from="U_ESP32.HUB75_LAT" to="U_DISPLAY_BUFFER_B.LAT_IN" />
+      <trace from="U_ESP32.HUB75_OE_N" to="U_DISPLAY_BUFFER_B.OE_N_IN" />
+      <trace from="U_DISPLAY_BUFFER_A.R1_OUT" to="J_HUB75.R1" />
+      <trace from="U_DISPLAY_BUFFER_A.G1_OUT" to="J_HUB75.G1" />
+      <trace from="U_DISPLAY_BUFFER_A.B1_OUT" to="J_HUB75.B1" />
+      <trace from="U_DISPLAY_BUFFER_A.R2_OUT" to="J_HUB75.R2" />
+      <trace from="U_DISPLAY_BUFFER_A.G2_OUT" to="J_HUB75.G2" />
+      <trace from="U_DISPLAY_BUFFER_A.B2_OUT" to="J_HUB75.B2" />
+      <trace from="U_DISPLAY_BUFFER_A.A_OUT" to="J_HUB75.A" />
+      <trace from="U_DISPLAY_BUFFER_A.B_OUT" to="J_HUB75.B" />
+      <trace from="U_DISPLAY_BUFFER_B.C_OUT" to="J_HUB75.C" />
+      <trace from="U_DISPLAY_BUFFER_B.D_OUT" to="J_HUB75.D" />
+      <trace from="U_DISPLAY_BUFFER_B.CLK_OUT" to="J_HUB75.CLK" />
+      <trace from="U_DISPLAY_BUFFER_B.LAT_OUT" to="J_HUB75.LAT" />
+      <trace from="U_DISPLAY_BUFFER_B.OE_N_OUT" to="J_HUB75.OE" />
+      <trace from="U_DISPLAY_BUFFER_A.R1_IN" to="R_HUB75_R1_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.G1_IN" to="R_HUB75_G1_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.B1_IN" to="R_HUB75_B1_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.R2_IN" to="R_HUB75_R2_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.G2_IN" to="R_HUB75_G2_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.B2_IN" to="R_HUB75_B2_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.A_IN" to="R_HUB75_A_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.B_IN" to="R_HUB75_B_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.C_IN" to="R_HUB75_C_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.D_IN" to="R_HUB75_D_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.CLK_IN" to="R_HUB75_CLK_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.LAT_IN" to="R_HUB75_LAT_PD.pin1" />
+      <trace from="R_HUB75_R1_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_G1_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_B1_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_R2_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_G2_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_B2_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_A_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_B_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_C_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_D_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_CLK_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_LAT_PD.pin2" to="net.GND" />
+      <trace from="U_DISPLAY_BUFFER_B.OE_N_IN" to="R_HUB75_OE_PULLUP.pin1" />
+      <trace from="R_HUB75_OE_PULLUP.pin2" to="net.V3_3" />
+      <trace from="U_DISPLAY_BUFFER_B.OE_N_OUT" to="R_HUB75_PANEL_OE_PULLUP.pin1" />
+      <trace from="R_HUB75_PANEL_OE_PULLUP.pin2" to="net.V5" />
+      <trace from="U_DISPLAY_BUFFER_A.DIR_TO_PANEL" to="net.V5" />
+      <trace from="U_DISPLAY_BUFFER_B.DIR_TO_PANEL" to="net.V5" />
+      <trace from="U_DISPLAY_BUFFER_A.BUFFER_ENABLE_N" to="R_BUFFER_A_ENABLE_PULLUP.pin1" />
+      <trace from="R_BUFFER_A_ENABLE_PULLUP.pin2" to="net.V5" />
+      <trace from="U_DISPLAY_BUFFER_B.BUFFER_ENABLE_N" to="R_BUFFER_B_ENABLE_PULLUP.pin1" />
+      <trace from="R_BUFFER_B_ENABLE_PULLUP.pin2" to="net.V5" />
       <trace from="U_ESP32.EN_RESET" to="R_ESP_EN_PULLUP.pin1" />
       <trace from="R_ESP_EN_PULLUP.pin2" to="net.V3_3" />
       <trace from="U_ESP32.EN_RESET" to="C_ESP_EN_DELAY.pin1" />
@@ -709,7 +1114,10 @@ function ScoringCircuit() {
       <trace from="C_ESP_SUPERVISOR_BYPASS.pin2" to="net.GND" />
       <trace from="U_ESP_WATCHDOG.RESET" to="U_ESP32.EN_RESET" />
       <trace from="U_ESP_SUPERVISOR.RESET" to="U_ESP32.EN_RESET" />
-      <ServiceSupportI2cTraces />
+      <trace from="U_ESP32.I2C_SDA" to="U_RTC.SDA" />
+      <trace from="U_ESP32.I2C_SCL" to="U_RTC.SCL" />
+      <trace from="U_ESP32.I2C_SDA" to="U_SECURE_ELEMENT.SDA" />
+      <trace from="U_ESP32.I2C_SCL" to="U_SECURE_ELEMENT.SCL" />
       <trace from="U_ESP32.I2C_SDA" to="U_POWER_MONITOR.SDA" />
       <trace from="U_ESP32.I2C_SCL" to="U_POWER_MONITOR.SCL" />
       <trace from="U_ESP32.I2C_SDA" to="U_AUDIO.I2C_SDA" />
@@ -717,7 +1125,10 @@ function ScoringCircuit() {
       <trace from="U_ESP32.I2S_BCLK" to="U_AUDIO.I2S_BCLK" />
       <trace from="U_ESP32.I2S_WCLK" to="U_AUDIO.I2S_WCLK" />
       <trace from="U_ESP32.I2S_DIN" to="U_AUDIO.I2S_DIN" />
-      <ServiceSupportFramTraces />
+      <trace from="U_ESP32.APP_SPI_SCK" to="U_FRAM.SCK" />
+      <trace from="U_ESP32.APP_SPI_MOSI" to="U_FRAM.MOSI" />
+      <trace from="U_ESP32.APP_SPI_MISO" to="U_FRAM.MISO" />
+      <trace from="U_ESP32.FRAM_CS" to="U_FRAM.CS" />
       <trace from="U_ESP_SUPERVISOR.RESET" to="U_AUDIO.RESET_N" />
 
       <trace from="U_ISOLATED_POWER.GND" to="net.GND" />

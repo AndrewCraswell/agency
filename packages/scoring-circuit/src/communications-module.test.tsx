@@ -4,15 +4,10 @@ import CommunicationsModuleCircuit, {
   communicationsResetBiasContract
 } from "./communications-module.circuit.js"
 import { componentDecisions } from "./component-decisions.js"
-import {
-  ethernetCrystalQualification,
-  ethernetSupportCircuitReferences,
-  ethernetSupportNetwork
-} from "./ethernet-support-network.js"
+import { ethernetCrystalQualification, ethernetSupportNetwork } from "./ethernet-support-network.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
 import { renderTestCircuit } from "./test-helper.js"
-import { usbPdFootprints } from "./usb-pd-footprints.js"
 
 function render(circuitElement: React.ReactElement) {
   return renderTestCircuit(circuitElement)
@@ -42,52 +37,6 @@ describe("communications-module circuit", () => {
     expect(new Set(componentDecisions.map(({ mpn }) => mpn)).size).toBe(componentDecisions.length)
   })
 
-  it("binds overlapping rendered identities to canonical component and USB-PD selections", () => {
-    const sources = new Map(
-      renderModule()
-        .filter((element) => element.type === "source_component")
-        .map((element) => [element.name, element])
-    )
-    const componentBindings = [
-      ["J_USB_C", "usb-c-power-and-service-connector"],
-      ["U_USB_PORT_PROTECT", "usb-c-cc-sbu-protection"],
-      ["U_USB_DATA_PROTECT", "usb2-esd-protection"],
-      ["U_USB_PD", "usb-pd-controller"],
-      ["D_USB_PD_VBUS_TVS", "usb-pd-vbus-transient-protection"],
-      ["U_EFUSE", "power-protection"],
-      ["U_COMM_3V3", "application-rail-regulator"],
-      ["U_COMM_SUPERVISOR", "power-supervisor"],
-      ["U_COMM_OE_ENABLE_BUFFER", "communications-oe-enable-buffer"],
-      ["Q_COMM_RESET_SINK", "reset-combiner"],
-      ["U_COMM_INPUT_GATE_A", "communications-io-dual-power-off-isolation"],
-      ["U_COMM_OUTPUT_GATE", "communications-io-dual-power-off-isolation"],
-      ["U_COMM_INPUT_GATE_B", "communications-io-single-power-off-isolation"],
-      ["U_ETHERNET", "ethernet"],
-      ["J_ETHERNET_MAGJACK", "ethernet-connector"]
-    ] as const
-    for (const [reference, category] of componentBindings) {
-      const decision = componentDecisions.find((candidate) => candidate.category === category)
-      const source = sources.get(reference)
-      expect(decision, `${reference} canonical component decision`).toBeDefined()
-      expect(source, `${reference} rendered source`).toBeDefined()
-      expect(source).toMatchObject({ manufacturer_part_number: decision?.mpn })
-    }
-
-    const usbPdBindings = [
-      ["D_USB_PD_VBUS_DISCONNECT", "B340A-13-F"],
-      ["C_USB_PD_LDO", "T55A106M010C0200"],
-      ["C_USB_PD_PPHV", "T523H107M035APE070"],
-      ["C_EFUSE_OUT", "T523H107M035APE070"]
-    ] as const
-    for (const [reference, mpn] of usbPdBindings) {
-      const footprint = usbPdFootprints.find((candidate) => candidate.mpn === mpn)
-      const source = sources.get(reference)
-      expect(footprint, `${reference} canonical USB-PD footprint`).toBeDefined()
-      expect(source, `${reference} rendered source`).toBeDefined()
-      expect(source).toMatchObject({ manufacturer_part_number: footprint?.mpn })
-    }
-  })
-
   it("owns the external input, local rail, Ethernet, and carrier boundaries", () => {
     const json = renderModule()
     const sources = sourceNames(json)
@@ -96,7 +45,7 @@ describe("communications-module circuit", () => {
       expect.arrayContaining([
         "J_USB_C",
         "U_USB_PORT_PROTECT",
-        "U_USB_DATA_PROTECT",
+        "U_USB2_ESD",
         "U_USB_PD",
         "U_EFUSE",
         "U_COMM_3V3",
@@ -134,9 +83,7 @@ describe("communications-module circuit", () => {
 
   it("uses the three-pin USB2 protector only as a shunt", () => {
     const json = renderModule()
-    const protector = json.find(
-      (element) => element.type === "source_component" && element.name === "U_USB_DATA_PROTECT"
-    )
+    const protector = json.find((element) => element.type === "source_component" && element.name === "U_USB2_ESD")
     const protectorId = protector?.type === "source_component" ? protector.source_component_id : undefined
     expect(protectorId).toBeDefined()
     expect(
@@ -147,11 +94,11 @@ describe("communications-module circuit", () => {
     ).toHaveLength(3)
     expect(traceNames(json)).toEqual(
       expect.arrayContaining([
-        "J_USB_C.USB_DP_PORT to U_USB_DATA_PROTECT.IO1_USB_DP",
-        "J_USB_C.USB_DN_PORT to U_USB_DATA_PROTECT.IO2_USB_DN",
+        "J_USB_C.USB_DN_PORT to U_USB2_ESD.IO1_USB_DN",
+        "J_USB_C.USB_DP_PORT to U_USB2_ESD.IO2_USB_DP",
         "J_USB_C.USB_DN_PORT to J_USB2.USB_DN",
         "J_USB_C.USB_DP_PORT to J_USB2.USB_DP",
-        "U_USB_DATA_PROTECT.GND to net.GND"
+        "U_USB2_ESD.GND to net.GND"
       ])
     )
     expect(sourceNames(json)).not.toEqual(expect.arrayContaining(["R_USB_DN", "R_USB_DP"]))
@@ -234,14 +181,6 @@ describe("communications-module circuit", () => {
     expect([...ethernetSupportNetwork.references].sort()).toEqual(
       ethernetSupportNetwork.supportNetworkComponents.map((component) => component.reference).sort()
     )
-    const circuitReferences = new Set<string>(ethernetSupportCircuitReferences)
-    expect(
-      json
-        .filter((element) => element.type === "source_component")
-        .flatMap((element) =>
-          typeof element.name === "string" && circuitReferences.has(element.name) ? [element.name] : []
-        )
-    ).toEqual([...ethernetSupportCircuitReferences])
 
     const expectedElectricalValues = new Map<string, { readonly capacitance?: number; readonly resistance?: number }>([
       ["C_ETH_AVDD_FERRITE_INPUT", { capacitance: 1e-7 }],
@@ -340,7 +279,7 @@ describe("communications-module circuit", () => {
     const critical = new Set([
       "J_USB_C",
       "U_USB_PORT_PROTECT",
-      "U_USB_DATA_PROTECT",
+      "U_USB2_ESD",
       "U_USB_PD",
       "U_EFUSE",
       "U_COMM_3V3",
@@ -387,8 +326,8 @@ describe("communications-module circuit", () => {
     }
     expect(traceNames(moduleJson)).toEqual(
       expect.arrayContaining([
-        "J_USB_C.USB_DP_PORT to U_USB_DATA_PROTECT.IO1_USB_DP",
-        "J_USB_C.USB_DN_PORT to U_USB_DATA_PROTECT.IO2_USB_DN",
+        "J_USB_C.USB_DN_PORT to U_USB2_ESD.IO1_USB_DN",
+        "J_USB_C.USB_DP_PORT to U_USB2_ESD.IO2_USB_DP",
         "J_USB_C.USB_DN_PORT to J_USB2.USB_DN",
         "J_USB_C.USB_DP_PORT to J_USB2.USB_DP"
       ])

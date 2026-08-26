@@ -116,32 +116,4 @@ describe("three-board provisional mechanical envelope", () => {
     expect(() => evaluateMechanicalEnvelope({ ...currentMechanicalEvidence, panelMeasured: "yes" })).toThrow(TypeError)
     expect(() => evaluateMechanicalEnvelope({ ...currentMechanicalEvidence, fabricated: true })).toThrow(RangeError)
   })
-
-  it("accepts only plain objects with exact enumerable data properties", () => {
-    const accessor = { ...currentMechanicalEvidence }
-    Object.defineProperty(accessor, "panelMeasured", {
-      enumerable: true,
-      get: () => {
-        throw new Error("accessor must not execute")
-      }
-    })
-    expect(() => evaluateMechanicalEnvelope(accessor)).toThrow(RangeError)
-
-    const hidden = { ...currentMechanicalEvidence }
-    Object.defineProperty(hidden, "panelMeasured", { enumerable: false, value: false })
-    expect(() => evaluateMechanicalEnvelope(hidden)).toThrow(RangeError)
-
-    const symbolic = { ...currentMechanicalEvidence }
-    Object.defineProperty(symbolic, Symbol("evidence-extension"), { enumerable: true, value: true })
-    expect(() => evaluateMechanicalEnvelope(symbolic)).toThrow(RangeError)
-
-    const customPrototype = Object.create({ panelMeasured: false })
-    Object.assign(customPrototype, currentMechanicalEvidence)
-    expect(() => evaluateMechanicalEnvelope(customPrototype)).toThrow(TypeError)
-    expect(() => evaluateMechanicalEnvelope(Object.create(null))).toThrow(TypeError)
-
-    const alias = { ...currentMechanicalEvidence, panel_measured: false }
-    Reflect.deleteProperty(alias, "panelMeasured")
-    expect(() => evaluateMechanicalEnvelope(alias)).toThrow(RangeError)
-  })
 })

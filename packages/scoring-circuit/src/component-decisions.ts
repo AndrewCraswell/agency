@@ -309,7 +309,7 @@ export const componentDecisions = [
     mpn: "TPD2EUSB30DRTR",
     purpose: "Three-pin low-capacitance shunt protection for native USB 2.0 D-minus and D-plus",
     qualification:
-      "SOT-9X3 (DRT), 3-pin SOT: pin 1 D1+ / D+, pin 2 D1- / D-, and pin 3 GND; both connector data nets continue unchanged through J_USB2 to the only 22 ohm series resistors on the carrier; footprint, USB eye, and IEC ESD tests remain release gates"
+      "DRT SOT-3 pin 1 IO1, pin 2 ground, and pin 3 IO2; both connector data nets continue unchanged through J_USB2 to the only 22 ohm series resistors on the carrier; footprint, USB eye, and IEC ESD tests remain release gates"
   },
   {
     category: "usb-pd-vbus-transient-protection",

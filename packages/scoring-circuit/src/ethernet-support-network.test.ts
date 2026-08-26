@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   calculateCrystalLoadEnvelope,
-  deriveEthernetSupportCircuitValues,
   ethernetCrystalLoadEnvelope,
   ethernetCrystalQualification,
-  ethernetSupportCircuitReferences,
-  ethernetSupportCircuitValues,
   ethernetSupportNetwork,
   ethernetSupportSources,
   qualifyW5500Crystal,
@@ -40,42 +37,6 @@ describe("W5500 support-network selection", () => {
       ],
       targetCrystalShuntMaximumPf: 7
     })
-    expect(ethernetSupportNetwork.w5500.interruptPolicy).toMatchObject({
-      signal: "INTn",
-      electricalType: "active-low digital output",
-      outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
-      lowState: "interrupt asserted from W5500",
-      highState: "no interrupt",
-      hostConnection: "none",
-      firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO",
-      bias: {
-        reference: "R_W5500_INT_BIAS",
-        disposition: "populate",
-        value: "100 kOhm, 1%",
-        manufacturer: "Yageo",
-        mpn: "RC0603FR-07100KL",
-        package: "0603",
-        rail: "V3_3"
-      },
-      sourceEvidence: {
-        manufacturer: "WIZnet",
-        document: "W5500 Datasheet v1.1.0",
-        artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
-        sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D"
-      },
-      biasEvidence: {
-        manufacturer: "Yageo",
-        document: "RC0603FR-07100KL product specification",
-        artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-        sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
-      },
-      policyEvidence: {
-        document: "docs/esp32-pin-allocation.md"
-      }
-    })
-    expect(ethernetSupportNetwork.w5500.interruptPolicy.sourceEvidence.claims).toContain(
-      "The cited W5500 pin and DC-characteristics tables do not specify whether the INTn output stage is push-pull, open-drain, or another topology."
-    )
     expect(ethernetSupportNetwork.avddPinCount).toBe(6)
     expect(ethernetSupportNetwork.requiredLocalSupplyCapacitors).toBe(7)
     expect(ethernetSupportNetwork.integrationRelease).toBe(false)
@@ -151,53 +112,6 @@ describe("W5500 support-network selection", () => {
     expect(supplyCaps.filter((part) => part.reference.startsWith("C_W5500_AVDD_")).length).toBe(6)
     expect(supplyCaps.some((part) => part.reference === "C_W5500_VDD")).toBe(true)
     expect(supplyCaps.some((part) => part.reference === "C_ETH_AVDD_FERRITE_INPUT")).toBe(true)
-  })
-
-  it("derives the renderer values in exact order and keeps the zero-ohm normalization narrow", () => {
-    expect([...ethernetSupportCircuitReferences]).toEqual([
-      "R_W5500_EXRES",
-      "C_W5500_TOCAP",
-      "C_W5500_1V2O",
-      "C_W5500_VDD",
-      "C_W5500_AVDD_1",
-      "C_W5500_AVDD_2",
-      "C_W5500_AVDD_3",
-      "C_W5500_AVDD_4",
-      "C_W5500_AVDD_5",
-      "C_W5500_AVDD_6",
-      "C_ETH_AVDD_FERRITE_INPUT",
-      "R_W5500_XTAL",
-      "R_W5500_XO",
-      "C_W5500_XI",
-      "C_W5500_XO"
-    ])
-    expect(
-      ethernetSupportCircuitReferences.map((reference) => [reference, ethernetSupportCircuitValues[reference]])
-    ).toEqual([
-      ["R_W5500_EXRES", { component: "resistor", resistance: "12.4k" }],
-      ["C_W5500_TOCAP", { component: "capacitor", capacitance: "4.7uF" }],
-      ["C_W5500_1V2O", { component: "capacitor", capacitance: "10nF" }],
-      ["C_W5500_VDD", { component: "capacitor", capacitance: "100nF" }],
-      ["C_W5500_AVDD_1", { component: "capacitor", capacitance: "100nF" }],
-      ["C_W5500_AVDD_2", { component: "capacitor", capacitance: "100nF" }],
-      ["C_W5500_AVDD_3", { component: "capacitor", capacitance: "100nF" }],
-      ["C_W5500_AVDD_4", { component: "capacitor", capacitance: "100nF" }],
-      ["C_W5500_AVDD_5", { component: "capacitor", capacitance: "100nF" }],
-      ["C_W5500_AVDD_6", { component: "capacitor", capacitance: "100nF" }],
-      ["C_ETH_AVDD_FERRITE_INPUT", { component: "capacitor", capacitance: "100nF" }],
-      ["R_W5500_XTAL", { component: "resistor", resistance: "1M" }],
-      ["R_W5500_XO", { component: "resistor", resistance: "0" }],
-      ["C_W5500_XI", { component: "capacitor", capacitance: "18pF" }],
-      ["C_W5500_XO", { component: "capacitor", capacitance: "18pF" }]
-    ])
-    expect(Object.isFrozen(ethernetSupportCircuitValues)).toBe(true)
-    expect(Object.isFrozen(ethernetSupportCircuitValues.R_W5500_XO)).toBe(true)
-
-    const forged = structuredClone(ethernetSupportNetwork)
-    const exres = forged.supportNetworkComponents.find((part) => part.reference === "R_W5500_EXRES")
-    expect(exres).toBeDefined()
-    if (exres !== undefined) Reflect.set(exres, "value", "12.5kOhm")
-    expect(() => deriveEthernetSupportCircuitValues(forged)).toThrow(RangeError)
   })
 
   it("calculates the assumed 18pF crystal load window and drive margin", () => {

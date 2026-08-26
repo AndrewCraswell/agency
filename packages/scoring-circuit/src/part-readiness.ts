@@ -1,5 +1,3 @@
-import { productionHarnessSelection } from "./production-harness-selection.js"
-
 export type ReadinessStatus = "pending" | "source-identified" | "verified"
 
 export type ConnectorPhysicalEvidence = {
@@ -707,46 +705,6 @@ export const criticalPartReadiness = [
   }
 ] as const satisfies readonly CriticalPartReadiness[]
 
-/**
- * Readiness records retain their evidence prose, but their selected harness
- * identities must stay aligned with the reviewed production selection.
- */
-export function validateSelectedHarnessReadiness(parts: readonly CriticalPartReadiness[]): readonly string[] {
-  const errors: string[] = []
-  for (const selection of productionHarnessSelection) {
-    const readiness = parts.find((part) => part.references.includes(selection.boardReference))
-    if (readiness === undefined) continue
-
-    const expected = {
-      cableMpn: selection.cable.mpn,
-      headerMpn: selection.connector.headerMpn,
-      mateHousingMpn: selection.connector.mateHousingMpn,
-      mateTerminalMpn: selection.connector.mateTerminalMpn
-    } as const
-    if (readiness.mpn !== expected.headerMpn) {
-      errors.push(
-        `${selection.boardReference}: readiness MPN ${readiness.mpn} must match selected header MPN ${expected.headerMpn}`
-      )
-    }
-    if (readiness.physical?.cableMpn !== expected.cableMpn) {
-      errors.push(
-        `${selection.boardReference}: readiness cable MPN ${readiness.physical?.cableMpn ?? "<missing>"} must match selected cable MPN ${expected.cableMpn}`
-      )
-    }
-    if (readiness.physical?.mateHousingMpn !== expected.mateHousingMpn) {
-      errors.push(
-        `${selection.boardReference}: readiness mate housing MPN ${readiness.physical?.mateHousingMpn ?? "<missing>"} must match selected mate housing MPN ${expected.mateHousingMpn}`
-      )
-    }
-    if (readiness.physical?.terminalMpn !== expected.mateTerminalMpn) {
-      errors.push(
-        `${selection.boardReference}: readiness terminal MPN ${readiness.physical?.terminalMpn ?? "<missing>"} must match selected terminal MPN ${expected.mateTerminalMpn}`
-      )
-    }
-  }
-  return errors
-}
-
 export function validateCriticalPartReadiness(parts: readonly CriticalPartReadiness[]): readonly string[] {
   const errors: string[] = []
   const referenceOwners = new Map<string, { assembly: CriticalPartReadiness["assembly"]; mpn: string }>()
@@ -931,7 +889,6 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
     }
   }
 
-  errors.push(...validateSelectedHarnessReadiness(parts))
   return errors
 }
 

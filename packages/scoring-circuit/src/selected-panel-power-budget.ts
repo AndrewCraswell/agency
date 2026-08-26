@@ -1,7 +1,7 @@
 import { calculateApplicationRail, defaultApplicationRailInputs } from "./application-rail.js"
 import {
-  assertDisplayPanelReadiness,
   displayPanelReadiness,
+  validateDisplayPanelReadiness,
   type DisplayPanelReadiness
 } from "./display-panel-readiness.js"
 import { calculateRailBudget, defaultRailBudgetInputs, type PowerPair } from "./power-budget.js"
@@ -72,6 +72,65 @@ export type SelectedPanelPowerBudget = {
 
 function sumPowerPairs(pairs: readonly PowerPair[], mode: "continuous" | "peak"): number {
   return pairs.reduce((sum, pair) => sum + pair[`${mode}W`], 0)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+}
+
+function assertRecord(name: string, value: unknown): asserts value is Record<string, unknown> {
+  if (!isRecord(value)) throw new RangeError(`${name} must be an object`)
+}
+
+function assertString(name: string, value: unknown): asserts value is string {
+  if (typeof value !== "string") throw new RangeError(`${name} must be a string`)
+}
+
+function assertFiniteNumber(name: string, value: unknown): asserts value is number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new RangeError(`${name} must be a finite number`)
+  }
+}
+
+function assertStringArray(name: string, value: unknown): asserts value is string[] {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new RangeError(`${name} must be an array of strings`)
+  }
+}
+
+function assertPanelShape(panel: unknown): asserts panel is DisplayPanelReadiness {
+  assertRecord("display panel", panel)
+  assertStringArray("display panel blockers", panel.blockers)
+  assertRecord("display panel declaredLoad", panel.declaredLoad)
+  assertFiniteNumber("display panel declaredLoad.continuousW", panel.declaredLoad.continuousW)
+  assertFiniteNumber("display panel declaredLoad.peakW", panel.declaredLoad.peakW)
+  assertRecord("display panel dimensionsMm", panel.dimensionsMm)
+  assertFiniteNumber("display panel dimensionsMm.height", panel.dimensionsMm.height)
+  assertFiniteNumber("display panel dimensionsMm.width", panel.dimensionsMm.width)
+  assertStringArray("display panel evidenceUrls", panel.evidenceUrls)
+  assertStringArray("display panel headerPins", panel.headerPins)
+  assertString("display panel manufacturer", panel.manufacturer)
+  assertString("display panel model", panel.model)
+  assertFiniteNumber("display panel pixelPitchMm", panel.pixelPitchMm)
+  if (typeof panel.productionApproved !== "boolean") {
+    throw new RangeError("display panel productionApproved must be a boolean")
+  }
+  assertRecord("display panel resolution", panel.resolution)
+  assertFiniteNumber("display panel resolution.height", panel.resolution.height)
+  assertFiniteNumber("display panel resolution.width", panel.resolution.width)
+  assertString("display panel scanRatio", panel.scanRatio)
+  if (panel.selectionStatus !== "candidate" && panel.selectionStatus !== "selected") {
+    throw new RangeError("display panel selectionStatus must be candidate or selected")
+  }
+  assertString("display panel sku", panel.sku)
+  assertFiniteNumber("display panel supplyCurrentA", panel.supplyCurrentA)
+  assertFiniteNumber("display panel supplyVoltageV", panel.supplyVoltageV)
+}
+
+function assertPanel(panel: unknown): asserts panel is DisplayPanelReadiness {
+  assertPanelShape(panel)
+  const errors = validateDisplayPanelReadiness(panel)
+  if (errors.length > 0) throw new RangeError(errors.join("; "))
 }
 
 function selectedApplicationLoad(mode: "continuous" | "peak"): number {
@@ -152,7 +211,7 @@ function pointFor(
 }
 
 export function calculateSelectedPanelPowerBudget(panel: unknown = displayPanelReadiness): SelectedPanelPowerBudget {
-  assertDisplayPanelReadiness(panel)
+  assertPanel(panel)
 
   const genericBudget = calculateRailBudget()
   const genericV5Assessment = assessV5PowerStage(genericBudget)

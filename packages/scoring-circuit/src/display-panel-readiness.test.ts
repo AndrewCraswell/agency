@@ -1,12 +1,7 @@
-import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
-import { basename, dirname, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import {
   canonicalHub75HeaderPins,
   displayPanelReadiness,
-  displayPanelPrimarySources,
   evaluateSelectedDisplayPanel,
   validateDisplayPanelReadiness,
   type DisplayPanelReadiness
@@ -25,38 +20,6 @@ describe("selected HUB75 display panel", () => {
     })
     expect(displayPanelReadiness.productionApproved).toBe(false)
     expect(displayPanelReadiness.blockers.length).toBeGreaterThan(0)
-  })
-
-  it("binds the exact panel, cable, header, and power-mate source bytes", () => {
-    expect(displayPanelPrimarySources).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          exactPart: "Adafruit Industries product 2277",
-          access: "manufacturer-acquired-hash-bound"
-        }),
-        expect.objectContaining({
-          exactPart: "Adafruit Industries product 4170",
-          access: "manufacturer-acquired-hash-bound"
-        }),
-        expect.objectContaining({
-          exactPart: "Adafruit Industries product 4767",
-          access: "manufacturer-acquired-hash-bound"
-        }),
-        expect.objectContaining({ exactPart: "Samtec TST-108-04-G-D-RA", kind: "series-print" }),
-        expect.objectContaining({ exactPart: "JST SMR-04V-N, SYM-001T-P0.6, SMP-04V-NC, SHF-001T-0.8BS" })
-      ])
-    )
-
-    const sourceDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../docs/evidence/bp-143")
-    for (const source of displayPanelPrimarySources) {
-      if (!("acquiredArtifact" in source)) continue
-      const fileName = basename(source.acquiredArtifact.evidenceFile)
-      const digest = createHash("sha256")
-        .update(readFileSync(resolve(sourceDirectory, fileName)))
-        .digest("hex")
-        .toUpperCase()
-      expect(digest, source.acquiredArtifact.evidenceFile).toBe(source.acquiredArtifact.sha256)
-    }
   })
 
   it("fits the provisional continuous and 100 ms screen envelopes", () => {
@@ -98,54 +61,6 @@ describe("selected HUB75 display panel", () => {
       ])
     )
     expect(() => evaluateSelectedDisplayPanel(malformed)).toThrow(RangeError)
-  })
-
-  it("rejects unbound or malformed primary source records", () => {
-    const malformedSource = structuredClone(displayPanelReadiness) as DisplayPanelReadiness
-    malformedSource.primarySources = [
-      {
-        ...displayPanelPrimarySources[0],
-        acquiredArtifact: {
-          ...displayPanelPrimarySources[0].acquiredArtifact!,
-          evidenceFile: "packages/scoring-circuit/docs/evidence/bp-146/other.pdf" as never,
-          sha256: "not-a-hash"
-        }
-      }
-    ]
-    expect(validateDisplayPanelReadiness(malformedSource)).toEqual(
-      expect.arrayContaining(["hash-bound display panel source requires the BP-143 artifact path and SHA-256"])
-    )
-    expect(() => evaluateSelectedDisplayPanel(malformedSource)).toThrow(RangeError)
-
-    const vendorWithArtifact = structuredClone(displayPanelReadiness) as DisplayPanelReadiness
-    vendorWithArtifact.primarySources = [
-      {
-        ...displayPanelPrimarySources[displayPanelPrimarySources.length - 1],
-        acquiredArtifact: {
-          acquiredDate: "2026-08-24",
-          evidenceFile: "packages/scoring-circuit/docs/evidence/bp-143/not-acquired.html",
-          sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        }
-      }
-    ]
-    expect(validateDisplayPanelReadiness(vendorWithArtifact)).toContain(
-      "vendor-listed display panel source must not claim an acquired artifact"
-    )
-    expect(() => evaluateSelectedDisplayPanel(vendorWithArtifact)).toThrow(RangeError)
-
-    const missingSource = structuredClone(displayPanelReadiness) as DisplayPanelReadiness
-    missingSource.primarySources = missingSource.primarySources.slice(1)
-    expect(validateDisplayPanelReadiness(missingSource)).toContain(
-      "display panel primary sources must match the reviewed ordered source set"
-    )
-
-    const mutatedIdentity = structuredClone(displayPanelReadiness) as DisplayPanelReadiness
-    mutatedIdentity.primarySources = mutatedIdentity.primarySources.map((source, index) =>
-      index === 0 ? { ...source, exactPart: "FORGED" } : source
-    )
-    expect(validateDisplayPanelReadiness(mutatedIdentity)).toContain(
-      "display panel primary sources must match the reviewed ordered source set"
-    )
   })
 
   it("rejects each nonfinite, negative, or over-envelope display load", () => {

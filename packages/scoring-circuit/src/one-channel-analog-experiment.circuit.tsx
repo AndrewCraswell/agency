@@ -63,14 +63,8 @@ export default function OneChannelAnalogExperimentCircuit() {
       <chip
         name="U_ISO"
         manufacturerPartNumber="NXE1S0505MC"
-        footprint={[]}
-        pinLabels={{
-          pin1: "SYSTEM_GND",
-          pin3: "SYSTEM_5V",
-          pin7: "SGND",
-          pin8: "S5V_ISO",
-          pin14: "NC"
-        }}
+        footprint="sip7"
+        pinLabels={{ pin1: "SYSTEM_5V", pin2: "SYSTEM_GND", pin6: "S5V_ISO", pin7: "SGND" }}
         pcbX={-16}
         pcbY={0}
       />
@@ -116,7 +110,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_REF_IN"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={1}
@@ -203,7 +197,7 @@ export default function OneChannelAnalogExperimentCircuit() {
 
       <chip
         name="U_OVP_BUFFER"
-        manufacturerPartNumber="ADA4177-1ARZ"
+        manufacturerPartNumber="ADA4177-1BRZ"
         footprint="soic8"
         pinLabels={{
           pin2: "BUFFER_INVERTING",
@@ -285,7 +279,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_SAR_AVDD"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={43}
@@ -293,7 +287,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_SAR_DVDD"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={43}
@@ -309,7 +303,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_NEG_FLY"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={-10}
@@ -317,7 +311,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_NEG_IN"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={-10}
@@ -325,7 +319,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_NEG_OUT"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={-10}
@@ -333,7 +327,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_3V3_IN"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={-4}
@@ -341,7 +335,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_3V3_OUT"
-        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
+        manufacturerPartNumber="GRM188R71A105KA12D"
         capacitance="1uF"
         footprint="0603"
         pcbX={4}

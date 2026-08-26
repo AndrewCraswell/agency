@@ -37,17 +37,7 @@ export const oneChannelAnalogExperiment = {
     adcIntegralLinearityMaximumLsb: 3,
     adcOffsetDriftMaximumUvPerC: 1.5,
     adcReferenceVolts: 2.5,
-    buffer: "ADA4177-1ARZ",
-    bufferManufacturerEvidence: {
-      dataSheetRevision: "Rev. E",
-      dataSheetUrl: "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf",
-      exactOrderable: "ADA4177-1ARZ",
-      manufacturerProductUrl: "https://www.analog.com/en/products/ADA4177-1.html",
-      package: "R SOIC-8",
-      retainedArtifactPath: null,
-      sha256: null,
-      state: "exact-orderable-identified-not-hash-acquired" as const
-    },
+    buffer: "ADA4177-1BRZ",
     bufferGainBandwidthTypicalMhz: 3.5,
     bufferInputBiasMaximumNa: 1,
     bufferOffsetMaximumUvAtFullTemperature: 120,

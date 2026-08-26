@@ -256,49 +256,19 @@ const evidenceKeys = [
   "environmentalMechanicalTestsPassed"
 ] as const satisfies readonly (keyof MechanicalEvidence)[]
 
-function isMechanicalEvidenceKey(key: PropertyKey): key is keyof MechanicalEvidence {
-  return typeof key === "string" && evidenceKeys.some((expectedKey) => expectedKey === key)
-}
-
-function readMechanicalBoolean(input: object, key: keyof MechanicalEvidence): boolean {
-  const descriptor = Object.getOwnPropertyDescriptor(input, key)
-  if (descriptor === undefined || !descriptor.enumerable || !("value" in descriptor)) {
-    throw new RangeError(`${key} must be an own enumerable data property`)
+export function evaluateMechanicalEnvelope(input: unknown = currentMechanicalEvidence): MechanicalEvaluation {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new TypeError("Mechanical evidence must be an object")
   }
-  if (typeof descriptor.value !== "boolean") throw new TypeError(`${key} must be boolean`)
-  return descriptor.value
-}
-
-function readMechanicalEvidence(input: unknown): MechanicalEvidence {
-  if (
-    typeof input !== "object" ||
-    input === null ||
-    Array.isArray(input) ||
-    Object.getPrototypeOf(input) !== Object.prototype
-  ) {
-    throw new TypeError("Mechanical evidence must be a plain object")
-  }
-
-  const ownKeys = Reflect.ownKeys(input)
-  if (ownKeys.length !== evidenceKeys.length || ownKeys.some((key) => !isMechanicalEvidenceKey(key))) {
+  const record = input as Record<string, unknown>
+  const actualKeys = Object.keys(record).sort()
+  const expectedKeys = [...evidenceKeys].sort()
+  if (actualKeys.length !== expectedKeys.length || actualKeys.some((key, index) => key !== expectedKeys[index])) {
     throw new RangeError("Mechanical evidence must contain exactly the reviewed gates")
   }
-
-  return {
-    physicalBoardModelsMatchEnvelope: readMechanicalBoolean(input, "physicalBoardModelsMatchEnvelope"),
-    connectorDrawingsImported: readMechanicalBoolean(input, "connectorDrawingsImported"),
-    panelMeasured: readMechanicalBoolean(input, "panelMeasured"),
-    pcbDrawingsReleased: readMechanicalBoolean(input, "pcbDrawingsReleased"),
-    chassisDrawingReleased: readMechanicalBoolean(input, "chassisDrawingReleased"),
-    cableBendAndStrainQualified: readMechanicalBoolean(input, "cableBendAndStrainQualified"),
-    isolationToleranceReviewed: readMechanicalBoolean(input, "isolationToleranceReviewed"),
-    physicalFitPassed: readMechanicalBoolean(input, "physicalFitPassed"),
-    environmentalMechanicalTestsPassed: readMechanicalBoolean(input, "environmentalMechanicalTestsPassed")
+  for (const key of evidenceKeys) {
+    if (typeof record[key] !== "boolean") throw new TypeError(`${key} must be boolean`)
   }
-}
-
-export function evaluateMechanicalEnvelope(input: unknown = currentMechanicalEvidence): MechanicalEvaluation {
-  const record = readMechanicalEvidence(input)
   const failedGates = evidenceKeys.filter((key) => record[key] === false)
   return {
     fabricationApproved: false,

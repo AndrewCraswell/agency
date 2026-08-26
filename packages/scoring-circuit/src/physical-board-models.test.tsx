@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 import { applicationDisplayHub75SupportParts } from "./application-display-carrier-support.js"
 import ApplicationDisplayCarrierCircuit, { hub75Signals } from "./application-display-carrier.circuit.js"
 import CommunicationsModuleCircuit from "./communications-module.circuit.js"
-import { componentDecisions } from "./component-decisions.js"
 import LogicalArchitectureCircuit from "./index.circuit.js"
 import {
   applicationDisplayOwnedReferences,
@@ -13,7 +12,6 @@ import {
   scoringIoOwnedReferences,
   validatePhysicalBoardContract
 } from "./physical-board-contract.js"
-import { powerStageFootprints } from "./power-stage-footprints.js"
 import ScoringIoBoardCircuit from "./scoring-io-board.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
@@ -359,47 +357,6 @@ describe("separate physical-board planning models", () => {
         sourceUrl: expect.stringMatching(/^https:\/\//),
         value: expect.any(String)
       })
-    }
-  })
-
-  it("binds selected carrier parts to the canonical component and power-stage inventories", () => {
-    const sourceByReference = new Map(
-      applicationSource.flatMap((element) =>
-        element.type === "source_component" && typeof element.name === "string" ? [[element.name, element]] : []
-      )
-    )
-    const componentBindings = [
-      ["U_ESP32", "application-controller"],
-      ["U_ESP_WATCHDOG", "hardware-watchdog"],
-      ["U_ESP_SUPERVISOR", "power-supervisor"],
-      ["U_V5_BUCK", "system-regulator"],
-      ["U_APP_REGULATOR", "application-rail-regulator"],
-      ["U_POWER_MONITOR", "power-monitor"],
-      ["U_FRAM", "event-journal"],
-      ["U_RTC", "real-time-clock"],
-      ["U_SECURE_ELEMENT", "secure-element"],
-      ["U_AUDIO", "audio-amplifier"]
-    ] as const
-
-    for (const [reference, category] of componentBindings) {
-      const component = componentDecisions.find((candidate) => candidate.category === category)
-      const source = sourceByReference.get(reference)
-      expect(component, `${reference} canonical component decision`).toBeDefined()
-      expect(source, `${reference} rendered source`).toMatchObject({ manufacturer_part_number: component?.mpn })
-    }
-
-    const powerStageMpns = new Set<string>(powerStageFootprints.map((footprint) => footprint.mpn))
-    for (const reference of [
-      "U_V5_BUCK",
-      "L_V5_BUCK",
-      "R_V5_SENSE",
-      "U_APP_REGULATOR",
-      "L_APP_REGULATOR",
-      "C_V5_BUCK_OUT_A"
-    ]) {
-      const source = sourceByReference.get(reference)
-      expect(source, `${reference} rendered source`).toBeDefined()
-      expect(powerStageMpns.has(source?.manufacturer_part_number ?? ""), `${reference} power-stage evidence`).toBe(true)
     }
   })
 

@@ -26,53 +26,6 @@ export type EthernetSupportSource = {
   readonly url: string
 }
 
-const W5500_INTERRUPT_POLICY = {
-  signal: "INTn",
-  electricalType: "active-low digital output",
-  outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
-  lowState: "interrupt asserted from W5500",
-  highState: "no interrupt",
-  hostConnection: "none",
-  firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO",
-  bias: {
-    reference: "R_W5500_INT_BIAS",
-    disposition: "populate",
-    value: "100 kOhm, 1%",
-    manufacturer: "Yageo",
-    mpn: "RC0603FR-07100KL",
-    package: "0603",
-    rail: "V3_3",
-    reason:
-      "The canonical ESP32 allocation requires INTn to be pulled inactive locally for a defined high state while firmware polls over SPI; the 100 kOhm pull-up is a weak status bias and does not allocate an ESP32 GPIO."
-  },
-  sourceEvidence: {
-    manufacturer: "WIZnet",
-    document: "W5500 Datasheet v1.1.0",
-    url: "https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf",
-    artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
-    sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D",
-    claims: [
-      "W5500 pin 36 INTn is an output: Low means interrupt asserted from W5500 and High means no interrupt.",
-      "The W5500 DC-characteristics pull-up list names SCSn, RSTn, and PMODE[2:0], not INTn.",
-      "The cited W5500 pin and DC-characteristics tables do not specify whether the INTn output stage is push-pull, open-drain, or another topology."
-    ]
-  },
-  biasEvidence: {
-    manufacturer: "Yageo",
-    document: "RC0603FR-07100KL product specification",
-    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
-    artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-    sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054",
-    claims: ["RC0603FR-07100KL is a 100 kOhm, 1%, 0603 / 1608 thick-film resistor."]
-  },
-  policyEvidence: {
-    document: "docs/esp32-pin-allocation.md",
-    claims: [
-      "INTn is intentionally not connected to an ESP32 GPIO; the application polls W5500 status and socket state over SPI while a local pull-up defines the inactive high state."
-    ]
-  }
-} as const
-
 export type CrystalLoadInput = {
   readonly capacitorPf: number
   readonly capacitorTolerancePercent: number
@@ -295,8 +248,7 @@ export const ethernetSupportSources: readonly EthernetSupportSource[] = [
       "W5500 crystal requirement is 25MHz, 18pF load capacitance, 59.12uW drive level, and 7pF maximum shunt capacitance",
       "W5500 crystal aging requirement is ±3ppm per year maximum at 25°C",
       "W5500 reference circuit uses 18pF crystal capacitors, 1MOhm feedback, and a 0Ohm series link",
-      "W5500 supply range is 2.97V to 3.63V and normal-operation current is 132mA at 3.3V",
-      "W5500 pin 36 INTn is an active-low digital output; the DC pull-up table does not list INTn, and the cited pin/DC tables do not specify its output-stage topology"
+      "W5500 supply range is 2.97V to 3.63V and normal-operation current is 132mA at 3.3V"
     ],
     manufacturer: "WIZnet",
     revisionOrAccessDate: "W5500 Datasheet v1.1.0, accessed 2026-08-23",
@@ -399,44 +351,9 @@ export const ethernetSupportNetwork = {
       "released-layout"
     ] satisfies readonly NegativeResistanceVerificationCorner[],
     targetCrystalShuntMaximumPf: 7,
-    targetCrystalDriveLevelUw: 59.12,
-    interruptPolicy: W5500_INTERRUPT_POLICY
+    targetCrystalDriveLevelUw: 59.12
   }
 } as const
-
-/**
- * The subset of the selected support network that is rendered as passive
- * circuit values. Keep this order aligned with the W5500 support declarations
- * in the communications-module circuit so a review can compare both records
- * without reconstructing the selection.
- */
-export const ethernetSupportCircuitReferences = [
-  "R_W5500_EXRES",
-  "C_W5500_TOCAP",
-  "C_W5500_1V2O",
-  "C_W5500_VDD",
-  "C_W5500_AVDD_1",
-  "C_W5500_AVDD_2",
-  "C_W5500_AVDD_3",
-  "C_W5500_AVDD_4",
-  "C_W5500_AVDD_5",
-  "C_W5500_AVDD_6",
-  "C_ETH_AVDD_FERRITE_INPUT",
-  "R_W5500_XTAL",
-  "R_W5500_XO",
-  "C_W5500_XI",
-  "C_W5500_XO"
-] as const
-
-export type EthernetSupportCircuitReference = (typeof ethernetSupportCircuitReferences)[number]
-
-export type EthernetSupportCircuitValue =
-  | { readonly component: "capacitor"; readonly capacitance: string }
-  | { readonly component: "resistor"; readonly resistance: string }
-
-export type EthernetSupportCircuitValues = Readonly<{
-  readonly [reference in EthernetSupportCircuitReference]: EthernetSupportCircuitValue
-}>
 
 function assertFinitePositive(name: string, value: unknown): asserts value is number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -652,7 +569,7 @@ function assertCanonicalValue(value: unknown, expected: unknown, path: string, s
   }
 }
 
-export function validateEthernetSupportNetwork(value: unknown): value is typeof ethernetSupportNetwork {
+export function validateEthernetSupportNetwork(value: unknown): true {
   try {
     assertCanonicalValue(value, ethernetSupportNetwork, "ethernetSupportNetwork", new WeakSet<object>())
     return true
@@ -663,43 +580,6 @@ export function validateEthernetSupportNetwork(value: unknown): value is typeof 
     throw new RangeError("ethernetSupportNetwork could not be validated safely")
   }
 }
-
-function toEthernetSupportCircuitValue(part: EthernetSupportComponent): EthernetSupportCircuitValue {
-  if (part.component === "capacitor") {
-    return Object.freeze({ component: "capacitor", capacitance: part.value })
-  }
-  if (part.component === "resistor") {
-    if (part.value === "0Ohm jumper") {
-      return Object.freeze({ component: "resistor", resistance: "0" })
-    }
-    if (!part.value.endsWith("Ohm")) {
-      throw new RangeError(`${part.reference} must use an Ohm value for circuit rendering`)
-    }
-    return Object.freeze({ component: "resistor", resistance: part.value.slice(0, -3) })
-  }
-  throw new RangeError(`${part.reference} is not a renderable passive support component`)
-}
-
-export function deriveEthernetSupportCircuitValues(
-  value: unknown = ethernetSupportNetwork
-): EthernetSupportCircuitValues {
-  if (!validateEthernetSupportNetwork(value)) {
-    throw new RangeError("ethernetSupportNetwork could not be validated safely")
-  }
-  const circuitValues = {} as {
-    -readonly [reference in EthernetSupportCircuitReference]: EthernetSupportCircuitValue
-  }
-  for (const reference of ethernetSupportCircuitReferences) {
-    const part = value.supportNetworkComponents.find((candidate) => candidate.reference === reference)
-    if (part === undefined) {
-      throw new RangeError(`Missing selected W5500 support part for ${reference}`)
-    }
-    circuitValues[reference] = toEthernetSupportCircuitValue(part)
-  }
-  return Object.freeze(circuitValues)
-}
-
-export const ethernetSupportCircuitValues = deriveEthernetSupportCircuitValues()
 
 export const ethernetCrystalQualification = qualifyW5500Crystal({
   agingMaximumPpmPerYear: 2,

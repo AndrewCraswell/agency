@@ -1,50 +1,8 @@
-import { componentDecisions } from "./component-decisions.js"
-import {
-  ethernetSupportCircuitValues,
-  ethernetSupportNetwork,
-  type EthernetSupportCircuitReference
-} from "./ethernet-support-network.js"
+import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 import { physicalBoardContract } from "./physical-board-contract.js"
-import { usbPdFootprints } from "./usb-pd-footprints.js"
 
 const communicationsPhysicalBoard = physicalBoardContract.communicationsModule
-
-function componentDecisionMpn(category: string): string {
-  const decision = componentDecisions.find((candidate) => candidate.category === category)
-  if (decision === undefined) throw new Error(`Missing canonical component decision for ${category}`)
-  return decision.mpn
-}
-
-function usbPdFootprintMpn(mpn: string): string {
-  const footprint = usbPdFootprints.find((candidate) => candidate.mpn === mpn)
-  if (footprint === undefined) throw new Error(`Missing canonical USB-PD footprint for ${mpn}`)
-  return footprint.mpn
-}
-
-function usbPdComponentMpn(category: string): string {
-  return usbPdFootprintMpn(componentDecisionMpn(category))
-}
-
-const selectedMpn = {
-  usbConnector: usbPdComponentMpn("usb-c-power-and-service-connector"),
-  ccAndSbuProtection: usbPdComponentMpn("usb-c-cc-sbu-protection"),
-  usb2Protection: componentDecisionMpn("usb2-esd-protection"),
-  pdController: usbPdComponentMpn("usb-pd-controller"),
-  vbusTvs: usbPdComponentMpn("usb-pd-vbus-transient-protection"),
-  disconnectSurgeDiode: usbPdFootprintMpn("B340A-13-F"),
-  pdLdoCapacitor: usbPdFootprintMpn("T55A106M010C0200"),
-  pdPphvCapacitor: usbPdFootprintMpn("T523H107M035APE070"),
-  efuse: usbPdComponentMpn("power-protection"),
-  communicationsRegulator: componentDecisionMpn("application-rail-regulator"),
-  communicationsSupervisor: componentDecisionMpn("power-supervisor"),
-  communicationsOeEnableBuffer: componentDecisionMpn("communications-oe-enable-buffer"),
-  resetSink: componentDecisionMpn("reset-combiner"),
-  communicationsInputGate: componentDecisionMpn("communications-io-dual-power-off-isolation"),
-  communicationsOutputGate: componentDecisionMpn("communications-io-single-power-off-isolation"),
-  ethernet: componentDecisionMpn("ethernet"),
-  ethernetConnector: componentDecisionMpn("ethernet-connector")
-} as const
 
 function unreleasedFootprintProps(mpn: string) {
   return { ...manufacturerFootprintProps(mpn), footprint: [] as [] }
@@ -64,20 +22,6 @@ function ethernetSupportPart(reference: string) {
   const part = ethernetSupportNetwork.supportNetworkComponents.find((candidate) => candidate.reference === reference)
   if (part === undefined) throw new Error(`Missing selected W5500 support part for ${reference}`)
   return part
-}
-
-function ethernetSupportCircuitValue(reference: EthernetSupportCircuitReference, component: "capacitor" | "resistor") {
-  const value = ethernetSupportCircuitValues[reference]
-  if (component === "capacitor") {
-    if (value.component !== "capacitor") {
-      throw new Error(`Selected W5500 support part ${reference} is not a capacitor`)
-    }
-    return value.capacitance
-  }
-  if (value.component !== "resistor") {
-    throw new Error(`Selected W5500 support part ${reference} is not a resistor`)
-  }
-  return value.resistance
 }
 
 export const communicationsResetBiasContract = {
@@ -115,8 +59,8 @@ export default function CommunicationsModuleCircuit() {
     >
       <chip
         name="J_USB_C"
-        manufacturerPartNumber={selectedMpn.usbConnector}
-        {...unreleasedFootprintProps(selectedMpn.usbConnector)}
+        manufacturerPartNumber="10177070-00011LF"
+        {...unreleasedFootprintProps("10177070-00011LF")}
         pinLabels={{
           pin1: "USB_DN_PORT",
           pin2: "USB_DP_PORT",
@@ -133,8 +77,8 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="U_USB_PORT_PROTECT"
-        manufacturerPartNumber={selectedMpn.ccAndSbuProtection}
-        {...unreleasedFootprintProps(selectedMpn.ccAndSbuProtection)}
+        manufacturerPartNumber="TPD4S201TRGRRQ1"
+        {...unreleasedFootprintProps("TPD4S201TRGRRQ1")}
         pinLabels={{
           pin1: "C_SBU1",
           pin2: "C_SBU2",
@@ -162,16 +106,16 @@ export default function CommunicationsModuleCircuit() {
         pcbY={0}
       />
       <chip
-        name="U_USB_DATA_PROTECT"
-        manufacturerPartNumber={selectedMpn.usb2Protection}
+        name="U_USB2_ESD"
+        manufacturerPartNumber="TPD2EUSB30DRTR"
         doNotPlace
         footprint={[]}
-        pinLabels={{ pin1: "IO1_USB_DP", pin2: "IO2_USB_DN", pin3: "GND" }}
+        pinLabels={{ pin1: "IO1_USB_DN", pin2: "GND", pin3: "IO2_USB_DP" }}
       />
       <chip
         name="U_USB_PD"
-        manufacturerPartNumber={selectedMpn.pdController}
-        {...unreleasedFootprintProps(selectedMpn.pdController)}
+        manufacturerPartNumber="TPS25730ADREFR"
+        {...unreleasedFootprintProps("TPS25730ADREFR")}
         pinLabels={{
           pin1: "LDO_3V3",
           pin2: "ADCIN1",
@@ -219,16 +163,16 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="D_USB_PD_VBUS_TVS"
-        manufacturerPartNumber={selectedMpn.vbusTvs}
-        {...unreleasedFootprintProps(selectedMpn.vbusTvs)}
+        manufacturerPartNumber="TVS2200DRVR"
+        {...unreleasedFootprintProps("TVS2200DRVR")}
         pinLabels={{ pin1: "VBUS_PORT", pin2: "CHASSIS" }}
         pcbX={-36}
         pcbY={-10}
       />
       <chip
         name="D_USB_PD_VBUS_DISCONNECT"
-        manufacturerPartNumber={selectedMpn.disconnectSurgeDiode}
-        {...unreleasedFootprintProps(selectedMpn.disconnectSurgeDiode)}
+        manufacturerPartNumber="B340A-13-F"
+        {...unreleasedFootprintProps("B340A-13-F")}
         pinLabels={{ pin1: "ANODE_GND", pin2: "CATHODE_VBUS" }}
         pcbX={-28}
         pcbY={-10}
@@ -247,8 +191,8 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="C_USB_PD_LDO"
-        manufacturerPartNumber={selectedMpn.pdLdoCapacitor}
-        {...unreleasedFootprintProps(selectedMpn.pdLdoCapacitor)}
+        manufacturerPartNumber="T55A106M010C0200"
+        {...unreleasedFootprintProps("T55A106M010C0200")}
         pinLabels={{ pin1: "LDO_3V3", pin2: "GND" }}
         pcbX={-14}
         pcbY={-10}
@@ -273,8 +217,8 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="C_USB_PD_PPHV"
-        manufacturerPartNumber={selectedMpn.pdPphvCapacitor}
-        {...unreleasedFootprintProps(selectedMpn.pdPphvCapacitor)}
+        manufacturerPartNumber="T523H107M035APE070"
+        {...unreleasedFootprintProps("T523H107M035APE070")}
         pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
         pcbX={-6}
         pcbY={-10}
@@ -305,8 +249,8 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_USB_PORT_PROTECT_FLT_PULLUP" resistance={10000} footprint="0402" />
       <chip
         name="U_EFUSE"
-        manufacturerPartNumber={selectedMpn.efuse}
-        {...unreleasedFootprintProps(selectedMpn.efuse)}
+        manufacturerPartNumber="TPS259474ARPWR"
+        {...unreleasedFootprintProps("TPS259474ARPWR")}
         pinLabels={{
           pin1: "EN_UVLO",
           pin2: "OVLO",
@@ -334,16 +278,16 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_EFUSE_PG_PULLUP" resistance={10000} footprint="0402" />
       <chip
         name="C_EFUSE_OUT"
-        manufacturerPartNumber={selectedMpn.pdPphvCapacitor}
-        {...unreleasedFootprintProps(selectedMpn.pdPphvCapacitor)}
+        manufacturerPartNumber="T523H107M035APE070"
+        {...unreleasedFootprintProps("T523H107M035APE070")}
         pinLabels={{ pin1: "VOUT", pin2: "GND" }}
         pcbX={8}
         pcbY={-10}
       />
       <chip
         name="U_COMM_3V3"
-        manufacturerPartNumber={selectedMpn.communicationsRegulator}
-        {...unreleasedFootprintProps(selectedMpn.communicationsRegulator)}
+        manufacturerPartNumber="LMR43620MSC3RPERQ1"
+        {...unreleasedFootprintProps("LMR43620MSC3RPERQ1")}
         pinLabels={{
           pin1: "MODE_SYNC",
           pin2: "PGOOD",
@@ -399,7 +343,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_REG_PGOOD" resistance="10k" tolerance="1%" footprint="0603" />
       <chip
         name="U_COMM_SUPERVISOR"
-        manufacturerPartNumber={selectedMpn.communicationsSupervisor}
+        manufacturerPartNumber="TPS389033DSER"
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "SENSE", pin2: "GND", pin3: "MR", pin4: "VDD", pin5: "CT", pin6: "RESET_N" }}
@@ -409,7 +353,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_RESET_PULLUP" resistance="10k" tolerance="1%" footprint="0603" />
       <chip
         name="U_COMM_OE_ENABLE_BUFFER"
-        manufacturerPartNumber={selectedMpn.communicationsOeEnableBuffer}
+        manufacturerPartNumber="SN74LVC1G34DCKR"
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "NC", pin2: "A", pin3: "GND", pin4: "Y", pin5: "VCC" }}
@@ -417,7 +361,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_OE_INPUT_PD" resistance="1M" tolerance="1%" footprint="0603" />
       <chip
         name="Q_COMM_RESET_SINK"
-        manufacturerPartNumber={selectedMpn.resetSink}
+        manufacturerPartNumber="BSS138AKA"
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
@@ -425,7 +369,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_RESET_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" />
       <chip
         name="U_COMM_INPUT_GATE_A"
-        manufacturerPartNumber={selectedMpn.communicationsInputGate}
+        manufacturerPartNumber="SN74LVC2G126DCUR"
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -441,14 +385,14 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="U_COMM_INPUT_GATE_B"
-        manufacturerPartNumber={selectedMpn.communicationsOutputGate}
+        manufacturerPartNumber="SN74LVC1G126DCKR"
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "OE", pin2: "A_CS_N", pin3: "GND", pin4: "Y_CS_N", pin5: "VCC" }}
       />
       <chip
         name="U_COMM_OUTPUT_GATE"
-        manufacturerPartNumber={selectedMpn.communicationsInputGate}
+        manufacturerPartNumber="SN74LVC2G126DCUR"
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -469,7 +413,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_PRESENT_TIE" resistance="1k" tolerance="1%" footprint="0603" />
       <chip
         name="U_ETHERNET"
-        manufacturerPartNumber={selectedMpn.ethernet}
+        manufacturerPartNumber="W5500"
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -526,26 +470,26 @@ export default function CommunicationsModuleCircuit() {
       <resistor
         name="R_W5500_EXRES"
         manufacturerPartNumber={ethernetSupportPart("R_W5500_EXRES").mpn}
-        resistance={ethernetSupportCircuitValue("R_W5500_EXRES", "resistor")}
+        resistance="12.4k"
         tolerance="1%"
         {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_EXRES").mpn)}
       />
       <capacitor
         name="C_W5500_TOCAP"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_TOCAP").mpn}
-        capacitance={ethernetSupportCircuitValue("C_W5500_TOCAP", "capacitor")}
+        capacitance="4.7uF"
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_TOCAP").mpn)}
       />
       <capacitor
         name="C_W5500_1V2O"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_1V2O").mpn}
-        capacitance={ethernetSupportCircuitValue("C_W5500_1V2O", "capacitor")}
+        capacitance="10nF"
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_1V2O").mpn)}
       />
       <capacitor
         name="C_W5500_VDD"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_VDD").mpn}
-        capacitance={ethernetSupportCircuitValue("C_W5500_VDD", "capacitor")}
+        capacitance="100nF"
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_VDD").mpn)}
       />
       {(["1", "2", "3", "4", "5", "6"] as const).map((suffix) => (
@@ -553,14 +497,14 @@ export default function CommunicationsModuleCircuit() {
           key={suffix}
           name={`C_W5500_AVDD_${suffix}`}
           manufacturerPartNumber={ethernetSupportPart(`C_W5500_AVDD_${suffix}`).mpn}
-          capacitance={ethernetSupportCircuitValue(`C_W5500_AVDD_${suffix}`, "capacitor")}
+          capacitance="100nF"
           {...unreleasedFootprintProps(ethernetSupportPart(`C_W5500_AVDD_${suffix}`).mpn)}
         />
       ))}
       <capacitor
         name="C_ETH_AVDD_FERRITE_INPUT"
         manufacturerPartNumber={ethernetSupportPart("C_ETH_AVDD_FERRITE_INPUT").mpn}
-        capacitance={ethernetSupportCircuitValue("C_ETH_AVDD_FERRITE_INPUT", "capacitor")}
+        capacitance="100nF"
         {...unreleasedFootprintProps(ethernetSupportPart("C_ETH_AVDD_FERRITE_INPUT").mpn)}
       />
       <chip
@@ -572,25 +516,25 @@ export default function CommunicationsModuleCircuit() {
       <resistor
         name="R_W5500_XTAL"
         manufacturerPartNumber={ethernetSupportPart("R_W5500_XTAL").mpn}
-        resistance={ethernetSupportCircuitValue("R_W5500_XTAL", "resistor")}
+        resistance="1M"
         {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_XTAL").mpn)}
       />
       <resistor
         name="R_W5500_XO"
         manufacturerPartNumber={ethernetSupportPart("R_W5500_XO").mpn}
-        resistance={ethernetSupportCircuitValue("R_W5500_XO", "resistor")}
+        resistance="0"
         {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_XO").mpn)}
       />
       <capacitor
         name="C_W5500_XI"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_XI").mpn}
-        capacitance={ethernetSupportCircuitValue("C_W5500_XI", "capacitor")}
+        capacitance="18pF"
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_XI").mpn)}
       />
       <capacitor
         name="C_W5500_XO"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_XO").mpn}
-        capacitance={ethernetSupportCircuitValue("C_W5500_XO", "capacitor")}
+        capacitance="18pF"
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_XO").mpn)}
       />
       <chip
@@ -601,7 +545,7 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="J_ETHERNET_MAGJACK"
-        manufacturerPartNumber={selectedMpn.ethernetConnector}
+        manufacturerPartNumber="7499011121A"
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -664,11 +608,11 @@ export default function CommunicationsModuleCircuit() {
       <trace from="U_USB_PORT_PROTECT.CC2" to="U_USB_PD.CC2" />
       <trace from="U_USB_PORT_PROTECT.RPD_G1" to="J_USB_C.CC1_PORT" />
       <trace from="U_USB_PORT_PROTECT.RPD_G2" to="J_USB_C.CC2_PORT" />
-      <trace from="J_USB_C.USB_DP_PORT" to="U_USB_DATA_PROTECT.IO1_USB_DP" />
-      <trace from="J_USB_C.USB_DN_PORT" to="U_USB_DATA_PROTECT.IO2_USB_DN" />
+      <trace from="J_USB_C.USB_DN_PORT" to="U_USB2_ESD.IO1_USB_DN" />
+      <trace from="J_USB_C.USB_DP_PORT" to="U_USB2_ESD.IO2_USB_DP" />
       <trace from="J_USB_C.USB_DN_PORT" to="J_USB2.USB_DN" />
       <trace from="J_USB_C.USB_DP_PORT" to="J_USB2.USB_DP" />
-      <trace from="U_USB_DATA_PROTECT.GND" to="net.GND" />
+      <trace from="U_USB2_ESD.GND" to="net.GND" />
       <trace from="J_USB2.SHIELD" to="net.CHASSIS" />
       {(["VBUS_32", "VBUS_33", "VBUS_IN_23", "VBUS_IN_24", "VBUS_IN_25"] as const).map((pin) => (
         <trace key={pin} from="J_USB_C.VBUS_PORT" to={`U_USB_PD.${pin}`} />

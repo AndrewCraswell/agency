@@ -25,14 +25,8 @@ const prompt = `You are the ${role} judge for a premium competition fencing scor
 Review these repository files in read-only mode:
 - packages/scoring-circuit/docs/bench-prototype-plan.md
 - packages/scoring-circuit/src/component-decisions.ts
-- apps/scoring/src/decision-record.ts
-- apps/scoring/src/transport-frame.ts
-- apps/scoring/src/virtual-stm32.ts
-- apps/scoring/src/virtual-stm32.test.ts
-- apps/scoring/src/virtual-processor-link.ts
-- apps/scoring/src/virtual-processor-link.test.ts
-- apps/scoring/src/virtual-esp32.ts
-- apps/scoring/src/virtual-esp32.test.ts
+- apps/scoring/src/device.ts
+- apps/scoring/src/device.test.ts
 
 ${roleRubric}
 

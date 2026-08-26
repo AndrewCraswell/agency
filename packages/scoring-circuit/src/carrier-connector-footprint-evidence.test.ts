@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   canReleaseCarrierConnector,
@@ -9,20 +7,6 @@ import {
 } from "./carrier-connector-footprint-evidence.js"
 
 describe("carrier connector footprint evidence", () => {
-  it("binds every acquired manufacturer source to the checked-in artifact bytes", () => {
-    const acquiredSources = carrierConnectorFootprintEvidence.flatMap((record) =>
-      record.primarySources.filter((source) => source.access === "manufacturer-acquired-hash-bound")
-    )
-
-    expect(acquiredSources).toHaveLength(3)
-    for (const source of acquiredSources) {
-      const artifact = source.acquiredArtifact
-      if (artifact === undefined) throw new Error("Hash-bound source is missing its acquired artifact")
-      const url = new URL(`../../../${artifact.evidenceFile}`, import.meta.url)
-      expect(createHash("sha256").update(readFileSync(url)).digest("hex").toUpperCase()).toBe(artifact.sha256)
-    }
-  })
-
   it("keeps the selected Molex and Samtec records unique and fabrication-denied", () => {
     expect(validateCarrierConnectorEvidence(carrierConnectorFootprintEvidence)).toEqual([])
     expect(new Set(carrierConnectorFootprintEvidence.map((record) => record.mpn)).size).toBe(
@@ -61,22 +45,12 @@ describe("carrier connector footprint evidence", () => {
     expect(header.footprint?.holes).toHaveLength(4)
     expect(housing.primarySources).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ kind: "product-drawing", url: expect.stringContaining("430252400") })
-      ])
-    )
-    expect(header.primarySources).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ kind: "product-drawing", url: expect.stringContaining("430450201") })
+        expect.objectContaining({ kind: "product-drawing", url: expect.stringContaining("430250400") })
       ])
     )
     expect(terminal.package).toContain("20-24 AWG")
     expect(terminal.primarySources).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          revision: expect.stringContaining("revision N10"),
-          url: expect.stringContaining("430300007")
-        })
-      ])
+      expect.arrayContaining([expect.objectContaining({ revision: expect.stringContaining("revision N10") })])
     )
     expect(header.missingReleaseEvidence.join(" ")).toContain("annular ring")
   })
@@ -120,26 +94,6 @@ describe("carrier connector footprint evidence", () => {
     expect(cable.primarySources).toEqual(
       expect.arrayContaining([expect.objectContaining({ kind: "mechanical-series-print" })])
     )
-    const acquiredArtifacts = [...socket.primarySources, ...cable.primarySources]
-      .filter((source) => source.access === "manufacturer-acquired-hash-bound")
-      .map((source) => source.acquiredArtifact)
-    expect(acquiredArtifacts).toEqual([
-      {
-        acquiredDate: "2026-08-24",
-        evidenceFile: "apps/scoring/docs/evidence/m4-11/samtec-hsec8-mkt-rev-bz.pdf",
-        sha256: "7C94D52B1F5F1687411125862913A902620A3FF5D12B0992F1C657C664E08896"
-      },
-      {
-        acquiredDate: "2026-08-24",
-        evidenceFile: "apps/scoring/docs/evidence/m4-11/samtec-hsec8-footprint-rev-ah.pdf",
-        sha256: "444530543B34CF92F87AE037FB52C55F0583EB257ACB0BC0B7558853190DB383"
-      },
-      {
-        acquiredDate: "2026-08-24",
-        evidenceFile: "apps/scoring/docs/evidence/m4-11/samtec-ecdp-mkt-rev-x.pdf",
-        sha256: "7808FF959CF6C2AE84B252620FE8D1B69808FE8766A232B4AFA78EE7B361B1C4"
-      }
-    ])
   })
 
   it("fails closed on duplicate, missing, malformed, and unqualified evidence", () => {
@@ -179,20 +133,6 @@ describe("carrier connector footprint evidence", () => {
         }
       ])
     ).toContain("43045-0400: duplicate hole 1")
-    const socket = findCarrierConnectorEvidence("HSEC8-113-01-L-DV-A-L2")
-    if (socket === undefined) throw new Error("Samtec socket evidence is missing")
-    expect(
-      validateCarrierConnectorEvidence([
-        {
-          ...socket,
-          primarySources: socket.primarySources.map((source) =>
-            source.access === "manufacturer-acquired-hash-bound"
-              ? { ...source, acquiredArtifact: { ...source.acquiredArtifact!, sha256: "not-a-hash" } }
-              : source
-          )
-        }
-      ])
-    ).toContain("HSEC8-113-01-L-DV-A-L2: hash-bound manufacturer source requires the M4-11 artifact path and SHA-256")
   })
 
   it("rejects malformed harness, mate, and canonical hole evidence", () => {

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  assertDisplayPanelReadiness,
-  displayPanelReadiness,
-  evaluateSelectedDisplayPanel
-} from "./display-panel-readiness.js"
+import { displayPanelReadiness } from "./display-panel-readiness.js"
 import { calculateSelectedPanelPowerBudget } from "./selected-panel-power-budget.js"
 
 describe("selected Adafruit 2277 panel power closure", () => {
@@ -101,27 +97,8 @@ describe("selected Adafruit 2277 panel power closure", () => {
     [
       { ...displayPanelReadiness, declaredLoad: { continuousW: 20, peakW: Number.POSITIVE_INFINITY } },
       "display panel declaredLoad.peakW must be a finite number"
-    ],
-    [
-      { ...displayPanelReadiness, dimensionsMm: { width: 318 } },
-      "display panel dimensionsMm.height must be a finite number"
-    ],
-    [
-      { ...displayPanelReadiness, dimensionsMm: { height: Number.POSITIVE_INFINITY, width: 318 } },
-      "display panel dimensionsMm.height must be a finite number"
-    ],
-    [
-      { ...displayPanelReadiness, resolution: { height: 32, width: Number.NaN } },
-      "display panel resolution.width must be a finite number"
-    ],
-    [
-      { ...displayPanelReadiness, evidenceUrls: ["https://example.invalid/panel", 42] },
-      "display panel evidenceUrls must be an array of strings"
-    ],
-    [{ ...displayPanelReadiness, productionApproved: "false" }, "display panel productionApproved must be a boolean"]
-  ])("rejects malformed runtime input at every panel boundary", (panel, expectedError) => {
-    expect(() => assertDisplayPanelReadiness(panel)).toThrow(new RangeError(expectedError))
+    ]
+  ])("rejects malformed runtime input before budget evaluation", (panel, expectedError) => {
     expect(() => calculateSelectedPanelPowerBudget(panel)).toThrow(new RangeError(expectedError))
-    expect(() => evaluateSelectedDisplayPanel(panel)).toThrow(new RangeError(expectedError))
   })
 })

@@ -6,8 +6,6 @@
  * remaining V5 capacity after fixed system loads and declared deratings.
  */
 
-import { assertFinitePositive } from "./power-validation.js"
-
 export type PowerPair = {
   continuousW: number
   peakW: number
@@ -103,6 +101,12 @@ export const defaultRailBudgetInputs = {
     }
   }
 } as const satisfies RailBudgetInputs
+
+function assertFinitePositive(name: string, value: number): void {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`${name} must be finite and greater than zero`)
+  }
+}
 
 function assertFiniteNonNegative(name: string, value: number): void {
   if (!Number.isFinite(value) || value < 0) {

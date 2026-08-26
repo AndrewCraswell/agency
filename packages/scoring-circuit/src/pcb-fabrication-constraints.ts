@@ -1,4 +1,3 @@
-import { sixLayerBoardReleaseRequirements } from "./pcb-stackup-release.js"
 import { physicalBoardContract } from "./physical-board-contract.js"
 
 export type PcbLayer = "L1" | "L2" | "L3" | "L4" | "L5" | "L6"
@@ -72,48 +71,27 @@ export const pcbFabricationContract = {
     ]
   },
   board: {
-    outerCopperOz: sixLayerBoardReleaseRequirements.outerCopperOz,
-    innerCopperOz: sixLayerBoardReleaseRequirements.innerCopperOz,
+    outerCopperOz: 2,
+    innerCopperOz: 1,
     laminate: "High-Tg FR-4, manufacturer-qualified for the declared operating temperature",
     finish: "ENIG on connector/contact geometry; surface finish elsewhere per assembly and corrosion review"
   },
   stackups: {
     scoringIoBoard: [
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[0],
-        role: "scoring components, connector entry, analog and short scoring signals"
-      },
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[1],
-        role: "SCORING_SGND reference with isolated APP_GND boundary island"
-      },
-      { ...sixLayerBoardReleaseRequirements.layerOrder[2], role: "S3_3/S5 and scoring-domain power distribution" },
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[3],
-        role: "low-noise acquisition, scoring digital, and isolated-link escape"
-      },
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[4],
-        role: "SCORING_SGND reference with no copper across the approved barrier"
-      },
-      { ...sixLayerBoardReleaseRequirements.layerOrder[5], role: "secondary scoring signals and service/test access" }
+      { layer: "L1", role: "scoring components, connector entry, analog and short scoring signals", copperOz: 2 },
+      { layer: "L2", role: "SCORING_SGND reference with isolated APP_GND boundary island", copperOz: 1 },
+      { layer: "L3", role: "S3_3/S5 and scoring-domain power distribution", copperOz: 1 },
+      { layer: "L4", role: "low-noise acquisition, scoring digital, and isolated-link escape", copperOz: 1 },
+      { layer: "L5", role: "SCORING_SGND reference with no copper across the approved barrier", copperOz: 1 },
+      { layer: "L6", role: "secondary scoring signals and service/test access", copperOz: 2 }
     ],
     applicationDisplayCarrier: [
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[0],
-        role: "application components, short signals, and high-current V5/GND copper"
-      },
-      { ...sixLayerBoardReleaseRequirements.layerOrder[1], role: "continuous APP_GND reference" },
-      { ...sixLayerBoardReleaseRequirements.layerOrder[2], role: "V5, V3_3, and local power distribution" },
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[3],
-        role: "controlled signals and application-peripheral escape"
-      },
-      { ...sixLayerBoardReleaseRequirements.layerOrder[4], role: "continuous APP_GND reference" },
-      {
-        ...sixLayerBoardReleaseRequirements.layerOrder[5],
-        role: "secondary signals, test access, and local high-current copper"
-      }
+      { layer: "L1", role: "application components, short signals, and high-current V5/GND copper", copperOz: 2 },
+      { layer: "L2", role: "continuous APP_GND reference", copperOz: 1 },
+      { layer: "L3", role: "V5, V3_3, and local power distribution", copperOz: 1 },
+      { layer: "L4", role: "controlled signals and application-peripheral escape", copperOz: 1 },
+      { layer: "L5", role: "continuous APP_GND reference", copperOz: 1 },
+      { layer: "L6", role: "secondary signals, test access, and local high-current copper", copperOz: 2 }
     ],
     communicationsModule: [
       { layer: "L1", role: "USB-C/RJ45/field connectors, protection, and controlled signals", copperOz: 2 },
@@ -137,46 +115,48 @@ export const pcbFabricationContract = {
   designRules: {
     // Cross-vendor 6-layer 2 oz outer/1 oz inner floors.  These sit above
     // the published minima and are the only geometry this project should route.
-    minimumTrackWidthMm: sixLayerBoardReleaseRequirements.minimumTraceWidthMm,
-    minimumClearanceMm: sixLayerBoardReleaseRequirements.minimumClearanceMm,
+    minimumTrackWidthMm: 0.25,
+    minimumClearanceMm: 0.25,
     powerEntryClearanceMm: 0.3,
-    minimumViaDrillMm: sixLayerBoardReleaseRequirements.minimumViaDrillMm,
-    minimumFinishedHoleMm: sixLayerBoardReleaseRequirements.minimumFinishedHoleMm,
-    minimumFinishedAnnularRingMm: sixLayerBoardReleaseRequirements.minimumFinishedAnnularRingMm,
-    minimumComponentAnnularRingMm: sixLayerBoardReleaseRequirements.minimumComponentAnnularRingMm,
-    minimumPlatedSlotWidthMm: sixLayerBoardReleaseRequirements.minimumPlatedSlotWidthMm,
-    minimumNonPlatedSlotWidthMm: sixLayerBoardReleaseRequirements.minimumNonPlatedSlotWidthMm,
-    minimumCopperToRoutedEdgeMm: sixLayerBoardReleaseRequirements.minimumCopperToRoutedEdgeMm,
-    minimumSoldermaskBridgeMm: sixLayerBoardReleaseRequirements.minimumSoldermaskBridgeMm,
-    maximumTraceWidthTolerancePercent: sixLayerBoardReleaseRequirements.maximumTraceWidthTolerancePercent,
-    maximumFinishedPthHoleTolerancePositiveMm:
-      sixLayerBoardReleaseRequirements.maximumFinishedPthHoleTolerancePositiveMm,
-    maximumFinishedPthHoleToleranceNegativeMm:
-      sixLayerBoardReleaseRequirements.maximumFinishedPthHoleToleranceNegativeMm,
-    maximumHolePositionToleranceMm: sixLayerBoardReleaseRequirements.maximumHolePositionToleranceMm,
-    maximumBoardOutlineToleranceMm: sixLayerBoardReleaseRequirements.maximumBoardOutlineToleranceMm,
+    minimumViaDrillMm: 0.3,
+    minimumFinishedAnnularRingMm: 0.3,
+    minimumComponentAnnularRingMm: 0.35,
+    minimumPlatedSlotWidthMm: 0.75,
+    minimumNonPlatedSlotWidthMm: 1.5,
+    minimumCopperToRoutedEdgeMm: 0.3,
+    minimumSoldermaskBridgeMm: 0.25,
+    maximumTraceWidthTolerancePercent: 20,
+    maximumFinishedPthHoleTolerancePositiveMm: 0.13,
+    maximumFinishedPthHoleToleranceNegativeMm: 0.08,
+    maximumHolePositionToleranceMm: 0.1,
+    maximumBoardOutlineToleranceMm: 0.2,
     componentToBoardEdgeMm: 1.0,
     mountingHoleCopperKeepoutMm: 1.0,
     mountingHoleCourtyardKeepoutMm: 3.0,
     testPointProbeKeepoutMm: 2.0,
-    projectIsolationSlotWidthTargetMm: sixLayerBoardReleaseRequirements.isolation.slotWidthTargetMm,
-    projectIsolationSlotWidthToleranceMm: sixLayerBoardReleaseRequirements.isolation.slotWidthToleranceMm,
-    projectIsolationCreepageTargetMm: sixLayerBoardReleaseRequirements.isolation.creepageTargetMm,
-    projectIsolationClearanceTargetMm: sixLayerBoardReleaseRequirements.isolation.clearanceTargetMm,
-    projectIsolationCopperKeepoutTargetMm: sixLayerBoardReleaseRequirements.isolation.copperKeepoutTargetMm,
+    projectIsolationSlotWidthTargetMm: 4.0,
+    projectIsolationCreepageTargetMm: 8.0,
+    projectIsolationClearanceTargetMm: 4.0,
+    projectIsolationCopperKeepoutTargetMm: 4.0,
     switchNodeToQuietCopperKeepoutMm: 2.0
   },
   impedanceTargets: [
     {
-      ...sixLayerBoardReleaseRequirements.controlledImpedance[0],
+      netClass: "USB2_HIGH_SPEED",
+      targetOhms: 90,
+      tolerancePercent: 10,
       routing: "D+ and D- as one same-layer pair over an uninterrupted reference plane; no stubs"
     },
     {
-      ...sixLayerBoardReleaseRequirements.controlledImpedance[1],
+      netClass: "ETHERNET_PHY",
+      targetOhms: 100,
+      tolerancePercent: 10,
       routing: "TX/RX pairs from W5500 to the magnetics connector with matched pair geometry"
     },
     {
-      ...sixLayerBoardReleaseRequirements.controlledImpedance[2],
+      netClass: "LOCAL_FAST_SINGLE_ENDED",
+      targetOhms: 50,
+      tolerancePercent: 15,
       routing:
         "Use only where the stackup solver confirms the geometry; short HUB75 and SPI runs may be length-limited instead"
     }
