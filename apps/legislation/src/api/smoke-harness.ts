@@ -101,19 +101,21 @@ export type SmokeManifestEntry = Readonly<{
   fixture?: keyof SmokeFixture
   fixtures?: readonly (keyof SmokeFixture)[]
   id: string
-  lifecycle: "done" | "in-progress"
+  lifecycle: "blocked" | "done" | "in-progress"
   method: "GET" | "POST"
   path: string
 }>
 
 /**
- * The endpoint inventory covered by the full smoke profile. Fixture-backed
- * entries are represented here even when their checks are skipped, so a
- * report can distinguish missing evidence from an endpoint that is absent or
- * unavailable in the target deployment.
+ * The endpoint inventory covered by the full smoke profile. Lifecycle mirrors
+ * the authoritative deployed endpoint ledger; a blocked entry can still pass
+ * against a complete local fixture. Fixture-backed entries are represented
+ * here even when their checks are skipped, so a report can distinguish missing
+ * evidence from an endpoint that is absent or unavailable in the target
+ * deployment.
  */
 export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
-  { expected: "bill-page", id: "list-bills", lifecycle: "in-progress", method: "GET", path: "/api/bills" },
+  { expected: "bill-page", id: "list-bills", lifecycle: "done", method: "GET", path: "/api/bills" },
   {
     expected: "bill-page",
     fixtures: ["jurisdictionId"],
@@ -134,7 +136,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "document-page",
     fixture: "billId",
     id: "list-bill-documents",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/bills/{billId}/documents"
   },
@@ -142,7 +144,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "document-resource",
     fixture: "documentId",
     id: "get-document",
-    lifecycle: "in-progress",
+    lifecycle: "blocked",
     method: "GET",
     path: "/api/documents/{documentId}"
   },
@@ -150,7 +152,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "document-section-page",
     fixture: "documentId",
     id: "list-document-sections",
-    lifecycle: "in-progress",
+    lifecycle: "blocked",
     method: "GET",
     path: "/api/documents/{documentId}/sections"
   },
@@ -158,14 +160,14 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "document-section-resource",
     fixtures: ["documentId", "documentSectionId"],
     id: "get-document-section",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/documents/{documentId}/sections/{sectionId}"
   },
   {
     expected: "material-page",
     id: "list-supporting-materials",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/supporting-materials"
   },
@@ -173,7 +175,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "material-resource",
     fixture: "materialId",
     id: "get-supporting-material",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/supporting-materials/{materialId}"
   },
@@ -181,7 +183,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "material-section-resource",
     fixtures: ["materialId", "materialSectionId"],
     id: "get-supporting-material-section",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/supporting-materials/{materialId}/sections/{sectionId}"
   },
@@ -204,7 +206,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
   {
     expected: "subscription-page",
     id: "list-subscriptions",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/subscriptions"
   },
@@ -212,7 +214,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "subscription-resource",
     fixture: "subscriptionId",
     id: "get-subscription",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/subscriptions/{subscriptionId}"
   },
@@ -220,7 +222,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "subscription-event-page",
     fixture: "subscriptionId",
     id: "list-subscription-events",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/subscriptions/{subscriptionId}/events"
   },
@@ -228,14 +230,14 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "delivery-page",
     fixture: "subscriptionId",
     id: "list-subscription-deliveries",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/subscriptions/{subscriptionId}/deliveries"
   },
   {
     expected: "webhook-page",
     id: "list-webhooks",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/webhooks"
   },
@@ -243,7 +245,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "webhook-resource",
     fixture: "webhookId",
     id: "get-webhook",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/webhooks/{webhookId}"
   },
@@ -251,7 +253,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "vote-page",
     fixture: "voteId",
     id: "list-votes",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/votes"
   },
@@ -259,7 +261,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "vote-resource",
     fixture: "voteId",
     id: "get-vote",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/votes/{voteId}"
   },
@@ -267,7 +269,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "vote-batch",
     fixture: "voteId",
     id: "batch-votes",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "POST",
     path: "/api/votes/batch"
   },
@@ -275,7 +277,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "change-page",
     fixture: "changeId",
     id: "list-changes",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/changes"
   },
@@ -283,7 +285,7 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     expected: "change-resource",
     fixture: "changeId",
     id: "get-change",
-    lifecycle: "in-progress",
+    lifecycle: "done",
     method: "GET",
     path: "/api/changes/{changeId}"
   }

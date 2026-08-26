@@ -44,7 +44,7 @@ Detail fixtures are supplied by name only through `LEGISLATION_SMOKE_JURISDICTIO
 `LEGISLATION_SMOKE_ORGANIZATION_ID`, `LEGISLATION_SMOKE_CHANGE_ID`, `LEGISLATION_SMOKE_SUBSCRIPTION_ID`, and
 `LEGISLATION_SMOKE_WEBHOOK_ID`.
 The document and supporting-material section checks require both the parent ID and its corresponding section ID. The
-full-profile manifest covers 23 implemented or In-progress operations: core bill and material reads, vote and change
+full-profile manifest covers 23 implemented operations across Done, In-progress, and Blocked release states: core bill and material reads, vote and change
 reads, document reads, bill and supporting-material search, and subscription and webhook reads. The bill, material,
 subscription, and webhook list routes always run; vote and change collection, detail, and batch checks run only when
 their corresponding fixture ID is supplied. This prevents an empty generic collection from being mistaken for evidence
@@ -59,8 +59,10 @@ report or diagnostics. Each manifest request has a 30-second request deadline by
 deadline is needed. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
 
-The release profile has no skipped checks: its reviewed full-profile report must have `status: "passed"`, with empty
-`blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, bill ID, vote
+The final release profile must have no skipped checks once every manifest operation is unblocked: its reviewed
+full-profile report must have `status: "passed"`, with empty `blocked`, `failed`, and `skipped` arrays. Until then, the
+two OCR-blocked document operations must remain explicit blocked evidence and cannot be promoted by omitting their
+fixtures. To produce the final report, provide jurisdiction and session IDs, bill ID, vote
 ID, change ID, material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID,
 both search-query variables, and authenticated mode with an explicit smoke token. A report with any skipped check is
 evidence of an incomplete fixture configuration, not a pass.

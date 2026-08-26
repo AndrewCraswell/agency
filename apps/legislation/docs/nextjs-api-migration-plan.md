@@ -25,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `c3c5f43` (including the header-adapter defect fix) deployed as `e1781bbc-6526-4f87-8eb8-df39142bf11a` and reached terminal `SUCCESS`; the prior deployment `4269326d-cc50-4023-81b0-c545d6c7206a` is superseded and `REMOVED`. Current health returned `200` in `361ms` and readiness returned `200` in `179ms`. The subscription lifecycle smoke passed all 12 documented checks, and the webhook lifecycle smoke passed all 14 documented checks, including signed verification against a throwaway Railway receiver; the cancellation fixture remains cancelled by design. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `2224ade` deployed as `e419978a-d839-41c5-897b-d9d536a60dc3` and reached terminal `SUCCESS`; the prior deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a` is superseded and `REMOVED`. Authenticated vote/change smoke passed all 10 checks with no blocked, failed, or skipped checks. Earlier subscription and webhook lifecycle evidence remains valid. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 54 are Done, 9 are In progress, and 25 have named data, fixture, or dependency blockers. The remaining promotion gates are the complete authenticated smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a` from source snapshot `c3c5f43` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because the document HNSW index is at `432502/648743` blocks and consuming database I/O. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
+| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 59 are Done, 7 are In progress, and 22 have named data, fixture, or dependency blockers. The remaining promotion gates are the complete authenticated smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `e419978a-d839-41c5-897b-d9d536a60dc3` from source snapshot `2224ade` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was `435065/648743` blocks. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
 | Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed in `e1781bbc-6526-4f87-8eb8-df39142bf11a`; bounded anonymous protected `401`, authenticated canonical-page probes, the 12-check subscription lifecycle, and the 14-check webhook lifecycle smoke passed. The complete authenticated cumulative gate remains. | Deployed before the complete authenticated cumulative gate |
 | MCP transport | In-process access remains | HTTP client cutover only after every API endpoint and authentication gate passes |
 
@@ -161,9 +161,10 @@ the deployed block and does not count as one of the 88 explicit migrated endpoin
 
 #### Bills, amendments, and votes (18 endpoints)
 
-Next route state: **15 Done; 3 Blocked by production data**. Fifteen bills and amendments operations passed deployed
-smoke. Three vote operations remain Blocked by their required production data and do not receive Done credit. This is
-not authorization or MCP scope.
+Next route state: **18 Done**. Fifteen bills and amendments operations passed their earlier deployed smoke. The three
+previously data-blocked vote operations passed authenticated collection, detail, and batch smoke against deployment
+`e419978a-d839-41c5-897b-d9d536a60dc3`; source-derived vote positions remain usable even when a canonical person link is
+not yet safe. This is not MCP scope.
 
 - `GET /api/bills`
 - `POST /api/bills/batch`
@@ -186,14 +187,16 @@ not authorization or MCP scope.
 
 #### Documents, supporting material, and canonical resources (10 endpoints)
 
-Next route state: **6 Done; 2 In progress; 2 Blocked by production data**. Deployed smoke passed all four
-supporting-material routes, `GET /api/documents/{documentId}/sections/{sectionId}`, and mixed-result
-`POST /api/resources/batch`. The two document routes remain Blocked and do not receive Done credit:
+Next route state: **8 Done; 2 Blocked by production data**. Deployed smoke passed all four supporting-material routes,
+`GET /api/documents/{documentId}/sections/{sectionId}`, mixed-result `POST /api/resources/batch`, and both global change
+routes. The two document routes remain Blocked and do not receive Done credit:
 
 - `GET /api/documents/{documentId}` and `GET /api/documents/{documentId}/sections`: every section-bearing production
   `bill_documents` row has `ocr_status = NULL`, so canonical document/OCR projection fails closed.
-The global change collection and canonical detail route are In progress pending authenticated smoke. Both expose only
-events with complete immutable provenance; the detail route returns `404 not_found` for incomplete legacy rows.
+The global change collection and canonical detail route are Done. Both expose only events with complete immutable
+provenance; the detail route returns `404 not_found` for incomplete legacy rows. Standard Congress vote ingestion created
+one genuine provenance-complete change fixture, and authenticated collection/detail smoke passed against deployment
+`e419978a-d839-41c5-897b-d9d536a60dc3`.
 
 - `GET /api/documents/{documentId}`
 - `GET /api/documents/{documentId}/sections`
@@ -270,7 +273,8 @@ The five operations below remain **Blocked by canonical production fixtures** an
 
 `POST /api/representative-lookups` remains **Blocked** pending the production OpenStates canary. The civic repair is
 committed and the plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains
-deferred while the document HNSW index is at `432502/648743` blocks. Do not promote blocked civic routes until a fresh POST
+deferred while the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was
+`435065/648743` blocks. Do not promote blocked civic routes until a fresh POST
 smoke passes.
 
 Exit gate: the meeting/calendar release is complete. Promote each currently blocked operation only after its named fixture or
@@ -424,12 +428,13 @@ Progress reports must always present both numbers:
 - **Reusable domain implementation:** 88/88.
 - **Explicit Next.js handler coverage:** 88/88 in reviewed source and the current production deployment. All 14
   subscription/webhook operations have passed their authenticated lifecycle smoke.
-- **Next.js Route Handler release state:** 54/88 Done; 9 In progress; 0 Ready; 25 Blocked. The states sum to all 88
+- **Next.js Route Handler release state:** 59/88 Done; 7 In progress; 0 Ready; 22 Blocked. The states sum to all 88
   public API operations.
-- **Blocked-route accounting:** 25 routes are Blocked by named production-data, canonical-fixture, or dependency
-  deficiencies: three vote operations, document detail and sections, 14 people/organization operations, five
+- **Blocked-route accounting:** 22 routes are Blocked by named production-data, canonical-fixture, or dependency
+  deficiencies: document detail and sections, 14 people/organization operations, five
   meeting/calendar fixture operations, and the representative lookup Alaska canary. The plural `OPENSTATES_API_KEY` is
-  corrected in Railway and Trigger; the canary remains deferred while the document HNSW index is at `432502/648743` blocks.
+  corrected in Railway and Trigger; the canary remains deferred while the active document HNSW build consumes database
+  I/O. Its latest 2026-08-26 read-only sample was `435065/648743` blocks.
 
 Foundation, authentication, MCP cutover, and final cleanup are separate phase gates. None may be inferred from the
 endpoint count, and none may be moved earlier than the approved sequence.

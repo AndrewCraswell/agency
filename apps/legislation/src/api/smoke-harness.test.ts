@@ -631,11 +631,12 @@ function mutateJson(
 }
 
 describe("local API smoke harness", () => {
-  it("keeps one manifest entry for every implemented or in-progress full-profile operation", () => {
+  it("keeps one release-state entry for every full-profile operation", () => {
     expect(SMOKE_MANIFEST).toHaveLength(23)
     expect(new Set(SMOKE_MANIFEST.map((entry) => entry.id)).size).toBe(SMOKE_MANIFEST.length)
-    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "done")).toHaveLength(2)
-    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress")).toHaveLength(21)
+    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "done")).toHaveLength(19)
+    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress")).toHaveLength(2)
+    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "blocked")).toHaveLength(2)
   })
 
   it("runs only universal checks and exact canonical scoped bill pages in the scoped-bills profile", async () => {
@@ -1287,21 +1288,21 @@ describe("local API smoke harness", () => {
     const inProgressIds = new Set(
       SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress").map((entry) => entry.id)
     )
-    expect(report.passed.filter((check) => inProgressIds.has(check.id))).toHaveLength(14)
+    expect(report.passed.filter((check) => inProgressIds.has(check.id))).toHaveLength(0)
     expect(
       report.skipped
         .filter((check) => inProgressIds.has(check.id))
         .map((check) => check.id)
         .sort()
-    ).toEqual([
-      "batch-votes",
-      "get-change",
-      "get-vote",
-      "list-changes",
-      "list-votes",
-      "search-bills",
-      "search-supporting-materials"
-    ])
+    ).toEqual(["search-bills", "search-supporting-materials"])
+
+    const blockedIds = new Set(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "blocked").map((entry) => entry.id))
+    expect(
+      report.passed
+        .filter((check) => blockedIds.has(check.id))
+        .map((check) => check.id)
+        .sort()
+    ).toEqual(["get-document", "list-document-sections"])
 
     const revisionEtagMismatch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
       const response = await fetch(input, init)
