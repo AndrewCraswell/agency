@@ -36,7 +36,7 @@ const configSchema = z
       storageAccount: z.string().trim().min(1).optional()
     }),
     database: z.object({
-      apiReadStatementTimeoutMs: z.coerce.number().int().min(1_000).max(60_000),
+      apiStatementTimeoutMs: z.coerce.number().int().min(1_000).max(60_000),
       connectionTimeoutMs: z.coerce.number().int().positive(),
       idleTimeoutMs: z.coerce.number().int().positive(),
       maxConnections: z.coerce.number().int().positive(),
@@ -188,7 +188,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       storageAccount: environment.AZURE_STORAGE_ACCOUNT
     },
     database: {
-      apiReadStatementTimeoutMs: environment.DATABASE_API_READ_STATEMENT_TIMEOUT_MS ?? "15000",
+      apiStatementTimeoutMs: environment.DATABASE_API_STATEMENT_TIMEOUT_MS ?? "15000",
       connectionTimeoutMs: environment.DATABASE_CONNECTION_TIMEOUT_MS ?? "10000",
       idleTimeoutMs: environment.DATABASE_IDLE_TIMEOUT_MS ?? "30000",
       maxConnections: environment.DATABASE_MAX_CONNECTIONS ?? "10",

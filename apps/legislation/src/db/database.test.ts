@@ -3,6 +3,7 @@ import { createDatabase } from "./database.js"
 
 const pools: Array<ReturnType<typeof createDatabase>["pool"]> = []
 const config = {
+  apiStatementTimeoutMs: 15_000,
   connectionTimeoutMs: 1_000,
   idleTimeoutMs: 1_000,
   maxConnections: 4,
@@ -26,5 +27,17 @@ describe("createDatabase", () => {
     pools.push(created.pool)
 
     expect(created.pool.options.options).toBe("-c synchronous_commit=off")
+  })
+
+  it("configures a bounded PostgreSQL statement deadline only when requested", () => {
+    const created = createDatabase(config, { statementTimeoutMs: 15_000 })
+    pools.push(created.pool)
+
+    expect(created.pool.options.statement_timeout).toBe(15_000)
+  })
+
+  it("rejects unsafe statement deadline values", () => {
+    expect(() => createDatabase(config, { statementTimeoutMs: 999 })).toThrow(RangeError)
+    expect(() => createDatabase(config, { statementTimeoutMs: 60_001 })).toThrow(RangeError)
   })
 })

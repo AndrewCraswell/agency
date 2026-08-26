@@ -26,7 +26,7 @@ describe("loadConfig", () => {
         documentHostLeaseMs: 90_000
       },
       database: {
-        apiReadStatementTimeoutMs: 15_000,
+        apiStatementTimeoutMs: 15_000,
         connectionTimeoutMs: 10_000,
         idleTimeoutMs: 30_000,
         maxConnections: 10,
@@ -98,7 +98,7 @@ describe("loadConfig", () => {
       }
     })
     expect(config.database).toEqual({
-      apiReadStatementTimeoutMs: 15_000,
+      apiStatementTimeoutMs: 15_000,
       connectionTimeoutMs: 5000,
       idleTimeoutMs: 15_000,
       maxConnections: 20,
@@ -253,6 +253,11 @@ describe("loadConfig", () => {
 
   it("rejects non-PostgreSQL database URLs", () => {
     expect(() => loadConfig({ DATABASE_URL: "https://database.example" })).toThrow(ConfigurationError)
+  })
+
+  it("requires the Next API statement deadline to stay within its safe bound", () => {
+    expect(() => loadConfig({ DATABASE_API_STATEMENT_TIMEOUT_MS: "999" })).toThrow(ConfigurationError)
+    expect(() => loadConfig({ DATABASE_API_STATEMENT_TIMEOUT_MS: "60001" })).toThrow(ConfigurationError)
   })
 
   it("keeps high-fanout derived workers on a one-connection pool", () => {

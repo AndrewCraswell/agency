@@ -18,7 +18,12 @@ export interface NextLegislationApplication {
  * Server Components. It deliberately imports neither Next nor route code.
  */
 export function createNextLegislationApplication(config: LegislationConfig = loadConfig()): NextLegislationApplication {
-  const { database, pool } = createDatabase(config.database)
+  // This pool exists only in the Next HTTP process. PostgreSQL cancels a slow
+  // API statement at the server, so abandoned client requests cannot continue
+  // consuming I/O during maintenance. Trigger and CLI pools remain unlimited.
+  const { database, pool } = createDatabase(config.database, {
+    statementTimeoutMs: config.database.apiStatementTimeoutMs
+  })
   const retrievalClient = createRetrievalClient(config)
 
   return {

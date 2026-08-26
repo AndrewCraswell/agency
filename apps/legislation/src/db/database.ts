@@ -4,21 +4,34 @@ import type { LegislationConfig } from "../config/config.js"
 import * as schema from "./schema/schema.js"
 
 export interface DatabaseSessionOptions {
+  /** PostgreSQL-enforced deadline that cancels an in-flight statement. */
+  statementTimeoutMs?: number
   synchronousCommit?: "off"
 }
 
 export function createDatabase(config: LegislationConfig["database"], session: DatabaseSessionOptions = {}) {
+  assertStatementTimeout(session.statementTimeoutMs)
   const pool = new pg.Pool({
     connectionString: config.url,
     connectionTimeoutMillis: config.connectionTimeoutMs,
     idleTimeoutMillis: config.idleTimeoutMs,
     max: config.maxConnections,
-    options: session.synchronousCommit === "off" ? "-c synchronous_commit=off" : undefined
+    options: session.synchronousCommit === "off" ? "-c synchronous_commit=off" : undefined,
+    statement_timeout: session.statementTimeoutMs
   })
 
   return {
     database: drizzle(pool, { schema }),
     pool
+  }
+}
+
+function assertStatementTimeout(value: number | undefined): void {
+  if (value === undefined) {
+    return
+  }
+  if (!Number.isSafeInteger(value) || value < 1_000 || value > 60_000) {
+    throw new RangeError("statementTimeoutMs must be a safe integer from 1000 through 60000")
   }
 }
 
