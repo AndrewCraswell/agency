@@ -15,8 +15,9 @@ import {
 } from "../../trigger/identities.js"
 import { synchronizeCongressAmendments } from "../congress/amendments-sync.js"
 import { type CongressClient, CongressClient as DefaultCongressClient } from "../congress/client.js"
-import { normalizeCongressCommittees, normalizeCongressMembers } from "../congress/entities.js"
+import { normalizeCongressCommittees } from "../congress/entities.js"
 import { synchronizeCongressEvents } from "../congress/events-sync.js"
+import { hydrateCongressMemberSnapshot } from "../congress/member-details.js"
 import { synchronizeCongressCommitteeReports } from "../congress/reports-sync.js"
 import { synchronizeCongress } from "../congress/sync.js"
 import { synchronizeCongressHouseVotes } from "../congress/votes-sync.js"
@@ -50,6 +51,7 @@ type CongressSynchronizationClient = Pick<
   | "getCommitteeReportBundle"
   | "getHearing"
   | "getHouseVoteBundle"
+  | "getMember"
   | "hearings"
   | "houseVotes"
   | "listUpdated"
@@ -80,6 +82,7 @@ type SynchronizationRouteContext = Readonly<{
   onProgress?: (event: Readonly<Record<string, unknown>>) => void
   openStatesClient?: OpenStatesSynchronizationClient
   openStatesBillsFrom?: Date
+  replaceEntitySnapshot?: typeof replaceEntitySnapshot
   sourceStore?: SourceStore
 }>
 
@@ -101,6 +104,7 @@ export type SynchronizationExecutionDependencies = Readonly<{
   now?: () => Date
   openStatesClient?: OpenStatesSynchronizationClient
   openStatesBillsFrom?: Date
+  replaceEntitySnapshot?: typeof replaceEntitySnapshot
   routes?: Partial<Record<SynchronizationRouteName, SynchronizationRoute>>
   runIngestionJob?: typeof runIngestionJob
   sourceStore?: SourceStore
@@ -136,6 +140,7 @@ export async function executeSynchronization(
       onProgress: input.onProgress,
       openStatesClient: dependencies.openStatesClient,
       openStatesBillsFrom,
+      replaceEntitySnapshot: dependencies.replaceEntitySnapshot,
       sourceStore: dependencies.sourceStore
     })
   )
@@ -297,6 +302,7 @@ async function synchronizeCongressEntitiesForScope(
   context: SynchronizationRouteContext
 ): Promise<SynchronizationOperationResult> {
   const identity = congressIdentityFor(context.identity, "entities")
+  const replaceSnapshot = context.replaceEntitySnapshot ?? replaceEntitySnapshot
   const client = context.congressClient ?? createCongressClient(context.config, context.onProgress)
   const members: unknown[] = []
   const committees: unknown[] = []
@@ -307,18 +313,22 @@ async function synchronizeCongressEntitiesForScope(
     committees.push(...page)
   }
   const entityContext = { retrievedAt: new Date() }
-  const memberSnapshot = normalizeCongressMembers(members, identity.scope, entityContext)
+  const memberSnapshot = await hydrateCongressMemberSnapshot(members, identity.scope, entityContext, client)
   const committeeSnapshot = normalizeCongressCommittees(committees, entityContext)
   const peopleById = new Map(memberSnapshot.people.map((person) => [person.id, person]))
   const termsById = new Map(memberSnapshot.terms.map((term) => [term.id, term]))
   const organizationsById = new Map(
     committeeSnapshot.organizations.map((organization) => [organization.id, organization])
   )
-  await replaceEntitySnapshot(context.database, "jurisdiction:us", {
+  await replaceSnapshot(context.database, "jurisdiction:us", {
     memberships: [],
     organizations: [...organizationsById.values()],
     personAliasPersonIds: [],
     personAliases: [],
+    personDetailPersonIds: memberSnapshot.personDetailPersonIds,
+    personDetailSourceProvider: "congress",
+    personDetails: memberSnapshot.personDetails,
+    personJurisdictions: memberSnapshot.personJurisdictions,
     people: [...peopleById.values()],
     terms: [...termsById.values()]
   })

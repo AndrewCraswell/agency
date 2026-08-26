@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { createServer, type Server } from "node:http"
 import { resolve } from "node:path"
-import { eq } from "drizzle-orm"
+import { asc, eq, inArray } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
@@ -1216,6 +1216,138 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(service.findRelatedBills({ id: "bill:wa:2025-2026:sb:5678" })).resolves.toMatchObject({
       items: [{ bill: { id: "bill:us:119:hr:1234" }, classification: "related" }]
     })
+  })
+
+  it("paginates a document-scoped embedding refresh without embedding another document", async () => {
+    const targetDocumentId = "bill:us:119:hr:1234:document:targeted-embedding"
+    const unrelatedDocumentId = "bill:us:119:hr:1234:document:unrelated-embedding"
+    await database.insert(schema.billDocuments).values([
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "version",
+        id: targetDocumentId,
+        sourceUrl: "https://www.govinfo.gov/example-targeted-embedding.xml",
+        title: "Targeted embedding"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "version",
+        id: unrelatedDocumentId,
+        sourceUrl: "https://www.govinfo.gov/example-unrelated-embedding.xml",
+        title: "Unrelated embedding"
+      }
+    ])
+    await persistProcessedDocument(database, {
+      bytes: new TextEncoder().encode("SECTION 1. FIRST.\nFirst text.\n\nSEC. 2. SECOND.\nSecond text."),
+      contentType: "text/plain",
+      documentId: targetDocumentId
+    })
+    await persistProcessedDocument(database, {
+      bytes: new TextEncoder().encode("SECTION 1. UNRELATED.\nUnrelated text."),
+      contentType: "text/plain",
+      documentId: unrelatedDocumentId
+    })
+    const route = embeddingRouteFor("document-section")
+    const vector = Array.from({ length: route.dimensions }, () => 0.1)
+    const client = {
+      embed: async (input: string[]) => ({ embeddings: input.map(() => vector), model: route.model })
+    }
+    const targetSections = await database
+      .select({ id: schema.documentSections.id })
+      .from(schema.documentSections)
+      .where(eq(schema.documentSections.documentId, targetDocumentId))
+      .orderBy(asc(schema.documentSections.id))
+    expect(targetSections).toHaveLength(2)
+
+    const initialEmbedding = await embedDocumentSections(database, client, {
+      documentId: targetDocumentId,
+      limit: 2,
+      rolloutId: "targeted-test"
+    })
+    expect(initialEmbedding).toMatchObject({ complete: true, cursor: "", embedded: 2, scanned: 2 })
+    const nonDocumentEmbeddingsBefore = await Promise.all([
+      database.select().from(schema.billEmbeddings).orderBy(asc(schema.billEmbeddings.billId)),
+      database.select().from(schema.amendmentEmbeddings).orderBy(asc(schema.amendmentEmbeddings.amendmentId)),
+      database
+        .select()
+        .from(schema.supportingMaterialSectionEmbeddings)
+        .orderBy(asc(schema.supportingMaterialSectionEmbeddings.sectionId))
+    ])
+
+    await expect(
+      persistProcessedDocument(
+        database,
+        {
+          bytes: new TextEncoder().encode(
+            "SECTION 1. FIRST REPLACED.\nReplacement first text.\n\nSEC. 2. SECOND REPLACED.\nReplacement second text."
+          ),
+          contentType: "text/plain",
+          documentId: targetDocumentId
+        },
+        { skipUnchangedCheck: true }
+      )
+    ).resolves.toBe("processed")
+    await expect(
+      database
+        .select({ sectionId: schema.documentSectionEmbeddings.sectionId })
+        .from(schema.documentSectionEmbeddings)
+        .where(
+          inArray(
+            schema.documentSectionEmbeddings.sectionId,
+            targetSections.map((section) => section.id)
+          )
+        )
+    ).resolves.toEqual([])
+    const replacementSections = await database
+      .select({ id: schema.documentSections.id })
+      .from(schema.documentSections)
+      .where(eq(schema.documentSections.documentId, targetDocumentId))
+      .orderBy(asc(schema.documentSections.id))
+    expect(replacementSections).toHaveLength(2)
+    expect(replacementSections.map((section) => section.id)).not.toEqual(targetSections.map((section) => section.id))
+
+    const first = await embedDocumentSections(database, client, {
+      documentId: targetDocumentId,
+      limit: 1,
+      rolloutId: "targeted-test",
+      scanLimit: 2
+    })
+    expect(first).toMatchObject({ complete: false, cursor: replacementSections[0]?.id, embedded: 1, scanned: 1 })
+
+    const second = await embedDocumentSections(database, client, {
+      afterId: first.cursor,
+      documentId: targetDocumentId,
+      limit: 1,
+      rolloutId: "targeted-test",
+      scanLimit: 2
+    })
+    expect(second).toMatchObject({ complete: true, cursor: "", embedded: 1, scanned: 1 })
+
+    const embeddedSections = await database
+      .select({ documentId: schema.documentSections.documentId, sectionId: schema.documentSectionEmbeddings.sectionId })
+      .from(schema.documentSectionEmbeddings)
+      .innerJoin(schema.documentSections, eq(schema.documentSections.id, schema.documentSectionEmbeddings.sectionId))
+      .where(eq(schema.documentSections.documentId, targetDocumentId))
+    const unrelatedEmbeddings = await database
+      .select({ sectionId: schema.documentSectionEmbeddings.sectionId })
+      .from(schema.documentSectionEmbeddings)
+      .innerJoin(schema.documentSections, eq(schema.documentSections.id, schema.documentSectionEmbeddings.sectionId))
+      .where(eq(schema.documentSections.documentId, unrelatedDocumentId))
+
+    expect(embeddedSections.map((section) => section.sectionId).sort()).toEqual(
+      replacementSections.map((section) => section.id).sort()
+    )
+    expect(unrelatedEmbeddings).toEqual([])
+    await expect(
+      Promise.all([
+        database.select().from(schema.billEmbeddings).orderBy(asc(schema.billEmbeddings.billId)),
+        database.select().from(schema.amendmentEmbeddings).orderBy(asc(schema.amendmentEmbeddings.amendmentId)),
+        database
+          .select()
+          .from(schema.supportingMaterialSectionEmbeddings)
+          .orderBy(asc(schema.supportingMaterialSectionEmbeddings.sectionId))
+      ])
+    ).resolves.toEqual(nonDocumentEmbeddingsBefore)
   })
 
   it("serves bounded, filter-bound lexical bill pages from canonical database records", async () => {

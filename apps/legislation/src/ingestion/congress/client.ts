@@ -121,7 +121,12 @@ export class CongressClient {
   }
 
   async *members(congress: number): AsyncGenerator<readonly unknown[]> {
-    yield* this.#pages(`member/congress/${congress}`, "members")
+    yield* this.#pages(`member/congress/${congress}`, "members", { currentMember: "false" })
+  }
+
+  async getMember(bioguideId: string): Promise<unknown> {
+    return z.object({ member: z.record(z.string(), z.unknown()) }).parse(await this.#json(`member/${bioguideId}`))
+      .member
   }
 
   async *committees(congress: number): AsyncGenerator<readonly unknown[]> {
@@ -302,12 +307,16 @@ export class CongressClient {
     return records
   }
 
-  async *#pages(path: string, key: string): AsyncGenerator<readonly unknown[]> {
+  async *#pages(
+    path: string,
+    key: string,
+    parameters: Readonly<Record<string, string>> = {}
+  ): AsyncGenerator<readonly unknown[]> {
     let offset = 0
     for (;;) {
       const response = z
         .record(z.string(), z.unknown())
-        .parse(await this.#json(path, { limit: "250", offset: String(offset) }))
+        .parse(await this.#json(path, { ...parameters, limit: "250", offset: String(offset) }))
       const value = response[key]
       const page = Array.isArray(value) ? value : []
       yield page

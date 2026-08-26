@@ -49,6 +49,54 @@ describe("CongressClient", () => {
     ).toBeLessThan(0)
   })
 
+  it("loads the documented member detail resource", async () => {
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      expect(url.pathname).toBe("/v3/member/G000607")
+      expect(url.searchParams.get("api_key")).toBe("secret-key")
+      return Response.json({ member: { bioguideId: "G000607", currentMember: true } })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    await expect(client.getMember("G000607")).resolves.toEqual({ bioguideId: "G000607", currentMember: true })
+    expect(request).toHaveBeenCalledOnce()
+  })
+
+  it("includes prior members on every paginated Congress member request", async () => {
+    const requests: URL[] = []
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      requests.push(url)
+      const offset = url.searchParams.get("offset")
+      return Response.json({
+        members: [{ bioguideId: offset === "0" ? "A000001" : "B000002" }],
+        pagination: offset === "0" ? { next: "present" } : {}
+      })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    const pages = []
+    for await (const page of client.members(119)) {
+      pages.push(page)
+    }
+
+    expect(pages).toHaveLength(2)
+    expect(requests).toHaveLength(2)
+    expect(
+      requests.every(
+        (url) => url.pathname === "/v3/member/congress/119" && url.searchParams.get("currentMember") === "false"
+      )
+    ).toBe(true)
+  })
+
   it("paginates every bill child collection", async () => {
     const offsets: string[] = []
     const request = vi.fn<typeof fetch>(async (input) => {

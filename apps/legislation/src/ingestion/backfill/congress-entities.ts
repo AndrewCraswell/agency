@@ -2,12 +2,14 @@ import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { replaceEntitySnapshot } from "../../db/queries/entities.js"
 import { CongressClient } from "../congress/client.js"
-import { normalizeCongressCommittees, normalizeCongressMembers } from "../congress/entities.js"
+import { normalizeCongressCommittees } from "../congress/entities.js"
+import { hydrateCongressMemberSnapshot } from "../congress/member-details.js"
 import { RetryingHttpClient } from "../http-client.js"
 import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
 
 interface CongressEntityClient {
   committees(congress: number): AsyncIterable<readonly unknown[]>
+  getMember(bioguideId: string): Promise<unknown>
   members(congress: number): AsyncIterable<readonly unknown[]>
 }
 
@@ -49,8 +51,10 @@ export async function executeCongressEntityRangeBackfill(
       : { ...jobInput, workflowExecutionId: input.workflowExecutionId },
     async () => {
       const peopleById = new Map()
+      const memberSnapshots: Array<Awaited<ReturnType<typeof hydrateCongressMemberSnapshot>>> = []
       const termsById = new Map()
       const organizationsById = new Map()
+      const memberDetailCache = new Map<string, unknown>()
       for (let congress = input.startCongress; congress <= input.endCongress; congress += 1) {
         const members: unknown[] = []
         const committees: unknown[] = []
@@ -61,7 +65,14 @@ export async function executeCongressEntityRangeBackfill(
           committees.push(...page)
         }
         const context = { retrievedAt: new Date() }
-        const memberSnapshot = normalizeCongressMembers(members, congress, context)
+        const memberSnapshot = await hydrateCongressMemberSnapshot(
+          members,
+          congress,
+          context,
+          client,
+          memberDetailCache
+        )
+        memberSnapshots.push(memberSnapshot)
         const committeeSnapshot = normalizeCongressCommittees(committees, context)
         for (const person of memberSnapshot.people) {
           peopleById.set(person.id, person)
@@ -78,6 +89,10 @@ export async function executeCongressEntityRangeBackfill(
         organizations: [...organizationsById.values()],
         personAliasPersonIds: [],
         personAliases: [],
+        personDetailPersonIds: memberDetailsByPersonId(memberSnapshots).map((detail) => detail.personId),
+        personDetailSourceProvider: "congress",
+        personDetails: memberDetailsByPersonId(memberSnapshots),
+        personJurisdictions: memberJurisdictionsByPersonId(memberSnapshots),
         people: [...peopleById.values()],
         terms: [...termsById.values()]
       })
@@ -85,6 +100,26 @@ export async function executeCongressEntityRangeBackfill(
       return { counts: createJobCounts({ discovered: records, read: records, updated: records }), failures: [] }
     }
   )
+}
+
+function memberDetailsByPersonId(snapshots: ReadonlyArray<Awaited<ReturnType<typeof hydrateCongressMemberSnapshot>>>) {
+  return uniqueById(
+    snapshots.flatMap((snapshot) => snapshot.personDetails ?? []),
+    (detail) => detail.personId
+  )
+}
+
+function memberJurisdictionsByPersonId(
+  snapshots: ReadonlyArray<Awaited<ReturnType<typeof hydrateCongressMemberSnapshot>>>
+) {
+  return uniqueById(
+    snapshots.flatMap((snapshot) => snapshot.personJurisdictions ?? []),
+    (record) => `${record.personId}:${record.jurisdictionId}:${record.sourceIdentity}`
+  )
+}
+
+function uniqueById<T>(values: readonly T[], identity: (value: T) => string): T[] {
+  return [...new Map(values.map((value) => [identity(value), value])).values()]
 }
 
 function createClient(config: LegislationConfig): CongressEntityClient {

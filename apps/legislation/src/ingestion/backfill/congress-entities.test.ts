@@ -7,7 +7,7 @@ describe("Congress entity range backfill", () => {
     const members = vi.fn<(congress: number) => AsyncGenerator<readonly unknown[]>>(async function* (congress: number) {
       yield [
         {
-          bioguideId: `M${congress}`,
+          bioguideId: "M000001",
           depiction: {},
           district: 1,
           name: `Member ${congress}`,
@@ -26,13 +26,34 @@ describe("Congress entity range backfill", () => {
             ]
           },
           updateDate: "2026-01-01",
-          url: `https://api.congress.gov/member/M${congress}`
+          url: "https://api.congress.gov/member/M000001"
         }
       ]
     })
     const committees = vi.fn<() => AsyncGenerator<readonly unknown[]>>(async function* () {
       yield []
     })
+    const getMember = vi.fn<(bioguideId: string) => Promise<unknown>>(async (bioguideId) => ({
+      bioguideId,
+      currentMember: true,
+      terms: {
+        item: [
+          {
+            chamber: "House of Representatives",
+            congress: 118,
+            endYear: 2025,
+            memberType: "Representative",
+            startYear: 2023
+          },
+          {
+            chamber: "House of Representatives",
+            congress: 119,
+            memberType: "Representative",
+            startYear: 2025
+          }
+        ]
+      }
+    }))
     const runIngestionJob = vi.fn<typeof runIngestionJobType>(async (_database, input, execute) => {
       expect(input).toMatchObject({ operation: "current-entities", scopeKey: "entities:all", source: "congress" })
       await execute("run-1")
@@ -57,7 +78,7 @@ describe("Congress entity range backfill", () => {
         startCongress: 118
       },
       {
-        client: { committees, members },
+        client: { committees, getMember, members },
         replaceEntitySnapshot,
         runIngestionJob: runIngestionJob as never
       }
@@ -78,6 +99,10 @@ describe("Congress entity range backfill", () => {
         ]),
         personAliasPersonIds: [],
         personAliases: [],
+        personDetailSourceProvider: "congress",
+        personDetails: expect.arrayContaining([
+          expect.objectContaining({ personId: "person:congress:m000001", sourceProvider: "congress" })
+        ]),
         terms: expect.arrayContaining([
           expect.objectContaining({
             provenanceComplete: true,
@@ -88,5 +113,6 @@ describe("Congress entity range backfill", () => {
         ])
       })
     )
+    expect(getMember).toHaveBeenCalledOnce()
   })
 })

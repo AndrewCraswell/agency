@@ -87,7 +87,73 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       sourceUrl: "https://legislature.example.test/entity-refresh/membership"
     })
   })
+
+  it("refreshes Congress-owned person details on a subsequent snapshot", async () => {
+    const congressPersonId = "person:congress:detail-refresh"
+    await replaceEntitySnapshot(database, jurisdictionId, congressDetailSnapshot(congressPersonId, "first.jpg"))
+    await replaceEntitySnapshot(database, jurisdictionId, congressDetailSnapshot(congressPersonId, "second.jpg"))
+
+    const [detail] = await database
+      .select()
+      .from(schema.personDetails)
+      .where(eq(schema.personDetails.personId, congressPersonId))
+
+    expect(detail).toMatchObject({
+      imageUrl: "https://api.congress.gov/member/detail-refresh/second.jpg",
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceUrl: "https://api.congress.gov/member/detail-refresh"
+    })
+  })
 })
+
+function congressDetailSnapshot(personId: string, imageName: string) {
+  const sourceUrl = "https://api.congress.gov/member/detail-refresh"
+  const provenance = {
+    provenanceComplete: true,
+    sourceIsOfficial: true,
+    sourceProvider: "congress",
+    sourceRetrievedAt: retrievedAt,
+    sourceUrl
+  }
+  return {
+    memberships: [],
+    organizations: [],
+    people: [
+      {
+        ...provenance,
+        id: personId,
+        isActive: true,
+        jurisdictionId,
+        name: "Detail Refresh",
+        sourceId: "detail-refresh",
+        upstreamIds: { bioguide: "detail-refresh" }
+      }
+    ],
+    personAliasPersonIds: [],
+    personAliases: [],
+    personDetailPersonIds: [personId],
+    personDetailSourceProvider: "congress",
+    personDetails: [
+      {
+        ...provenance,
+        imageUrl: `https://api.congress.gov/member/detail-refresh/${imageName}`,
+        officialUrl: null,
+        personId,
+        publicEmail: null
+      }
+    ],
+    personJurisdictions: [
+      {
+        ...provenance,
+        jurisdictionId,
+        personId,
+        sourceIdentity: "congress:detail-refresh:jurisdiction:us"
+      }
+    ],
+    terms: []
+  }
+}
 
 function snapshot({ complete, role }: { complete: boolean; role: string }) {
   const provenance = complete

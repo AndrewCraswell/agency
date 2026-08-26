@@ -17,6 +17,7 @@ import {
   personId
 } from "../../legislation/identifiers.js"
 import { canonicalChamberSchema, canonicalOrganizationClassificationSchema } from "../civic-foundation.js"
+import type { EntitySnapshot } from "../entity-snapshot.js"
 
 const optionalString = z.preprocess(
   (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
@@ -105,19 +106,6 @@ export interface OpenStatesEntityContext {
   retrievedAt: Date
 }
 
-export interface OpenStatesEntitySnapshot {
-  memberships: MembershipInsert[]
-  organizations: OrganizationInsert[]
-  personAliasPersonIds: string[]
-  personAliases: PersonAliasInsert[]
-  personDetails?: PersonDetailInsert[]
-  personDetailPersonIds?: string[]
-  personExternalIdentifiers?: PersonExternalIdentifierInsert[]
-  personJurisdictions?: PersonJurisdictionInsert[]
-  people: PersonInsert[]
-  terms: TermInsert[]
-}
-
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()]
 }
@@ -131,13 +119,14 @@ function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
 export function mergeOpenStatesEntitySnapshots(
   peopleSnapshot: ReturnType<typeof normalizeOpenStatesPeople>,
   committeeSnapshot: ReturnType<typeof normalizeOpenStatesCommittees>
-): OpenStatesEntitySnapshot {
+): EntitySnapshot {
   return {
     memberships: committeeSnapshot.memberships,
     organizations: committeeSnapshot.organizations,
     personAliasPersonIds: peopleSnapshot.personAliasPersonIds,
     personAliases: peopleSnapshot.personAliases,
     personDetailPersonIds: peopleSnapshot.personDetailPersonIds,
+    personDetailSourceProvider: "openstates",
     personDetails: peopleSnapshot.personDetails,
     personExternalIdentifiers: peopleSnapshot.personExternalIdentifiers,
     personJurisdictions: peopleSnapshot.personJurisdictions,
@@ -335,7 +324,7 @@ export function normalizeOpenStatesPeople(
   inputs: readonly unknown[],
   context: OpenStatesEntityContext
 ): Pick<
-  OpenStatesEntitySnapshot,
+  EntitySnapshot,
   | "personAliasPersonIds"
   | "personAliases"
   | "personDetailPersonIds"
@@ -390,7 +379,7 @@ export function normalizeOpenStatesCommittees(
   inputs: readonly unknown[],
   context: OpenStatesEntityContext
 ): Pick<
-  OpenStatesEntitySnapshot,
+  EntitySnapshot,
   "memberships" | "organizations" | "personAliasPersonIds" | "personAliases" | "people" | "terms"
 > {
   const peopleById = new Map<string, PersonInsert>()

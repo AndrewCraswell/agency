@@ -25,6 +25,25 @@ publisher fixes live in the
 6. Embeddings remain a separate, explicitly approved phase after document,
    material, and OCR gates are clean.
 
+### Targeted post-HNSW document repair
+
+After HNSW maintenance has completed and every index is valid, a single
+official document may be reprocessed and only its replacement sections
+re-embedded:
+
+```powershell
+pnpm --filter legislation cli documents:process --document-id <document-id> --force --limit 1
+pnpm --filter legislation cli embeddings:document-sections --document-id <document-id> --limit 64
+```
+
+The second command uses only the canonical document-section embedding route.
+It follows section cursors until that one document is complete; it does not
+scan or write bill, amendment, or supporting-material embeddings. Do not run
+it during HNSW construction or beside a broad embedding controller. A failed
+targeted embedding run is recovered by rerunning the same document ID, not by
+starting a corpus-wide embedding pass. `--limit` defaults to 64 and accepts
+only positive integers through 64.
+
 ## Parallelism
 
 | Work | Partitioning | Child bound | Database connections | Queue ceiling |

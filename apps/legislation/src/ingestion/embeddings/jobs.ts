@@ -383,9 +383,9 @@ export async function embedDocumentSections(
         options.documentId === undefined ? undefined : eq(documentSections.documentId, options.documentId),
         options.billId === undefined ? undefined : eq(billDocuments.billId, options.billId),
         options.sectionId === undefined ? undefined : eq(documentSections.id, options.sectionId),
-        options.documentId === undefined && options.billId === undefined && options.sectionId === undefined
-          ? gt(documentSections.id, selected.afterId)
-          : undefined,
+        // A document or bill target can still contain more than one scan page.
+        // Only an exact section target is non-pageable.
+        options.sectionId === undefined ? gt(documentSections.id, selected.afterId) : undefined,
         shard(documentSections.id, options)
       )
     )

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { isOrganizationCivicFoundationComplete } from "../civic-foundation.js"
-import { normalizeCongressCommittees, normalizeCongressMembers } from "./entities.js"
+import { normalizeCongressCommittees, normalizeCongressMemberDetails, normalizeCongressMembers } from "./entities.js"
 
 function organizationFoundationComplete(
   row: ReturnType<typeof normalizeCongressCommittees>["organizations"][number]
@@ -83,7 +83,7 @@ describe("Congress entity normalization", () => {
       party: undefined,
       provenanceComplete: false,
       sourceId: "S001234",
-      sourceIsOfficial: true,
+      sourceIsOfficial: false,
       sourceProvider: "congress",
       sourceRetrievedAt: organizationContext.retrievedAt,
       sourceUrl: undefined
@@ -93,11 +93,162 @@ describe("Congress entity normalization", () => {
       district: undefined,
       isActive: true,
       provenanceComplete: false,
-      sourceIsOfficial: true,
+      sourceIsOfficial: false,
       sourceProvider: "congress",
       sourceRetrievedAt: organizationContext.retrievedAt,
       sourceUrl: undefined
     })
+  })
+
+  it("fails closed for a non-Congress HTTPS member source URL", () => {
+    const result = normalizeCongressMembers(
+      [
+        {
+          bioguideId: "S001234",
+          name: "Senator Example",
+          terms: { item: [{ chamber: "Senate", startYear: 2025 }] },
+          url: "https://example.test/member/S001234"
+        }
+      ],
+      119,
+      organizationContext
+    )
+
+    expect(result.people[0]).toMatchObject({ provenanceComplete: false, sourceIsOfficial: false })
+    expect(result.terms[0]).toMatchObject({ provenanceComplete: false, sourceIsOfficial: false })
+  })
+
+  it("hydrates member profile and titled terms from the official detail record", () => {
+    const result = normalizeCongressMemberDetails(
+      [
+        {
+          detail: {
+            bioguideId: "G000607",
+            currentMember: true,
+            depiction: { imageUrl: "https://api.congress.gov/image/G000607.jpg" },
+            firstName: "James",
+            lastName: "Gallagher",
+            officialUrl: "https://gallagher.house.gov/",
+            terms: {
+              item: [
+                {
+                  chamber: "House of Representatives",
+                  congress: 118,
+                  district: 8,
+                  endYear: 2024,
+                  memberType: "Representative",
+                  partyName: "Republican",
+                  startYear: 2023
+                },
+                {
+                  chamber: "House of Representatives",
+                  congress: 119,
+                  district: 8,
+                  memberType: "Representative",
+                  partyName: "Republican",
+                  startYear: 2025
+                }
+              ]
+            },
+            updateDate: "2026-08-17T07:40:45Z"
+          },
+          member: {
+            bioguideId: "G000607",
+            district: 8,
+            name: "Gallagher, James",
+            partyName: "Republican",
+            terms: { item: [] },
+            url: "https://api.congress.gov/member/G000607"
+          }
+        }
+      ],
+      119,
+      organizationContext
+    )
+
+    expect(result.people).toEqual([
+      expect.objectContaining({
+        familyName: "Gallagher",
+        givenName: "James",
+        isActive: true,
+        sourceUrl: "https://api.congress.gov/member/G000607"
+      })
+    ])
+    expect(result.personDetails).toEqual([
+      expect.objectContaining({
+        imageUrl: "https://api.congress.gov/image/G000607.jpg",
+        officialUrl: "https://gallagher.house.gov/",
+        publicEmail: null,
+        sourceProvider: "congress"
+      })
+    ])
+    expect(result.personJurisdictions).toEqual([
+      expect.objectContaining({
+        jurisdictionId: "jurisdiction:us",
+        sourceIdentity: "congress:G000607:jurisdiction:us"
+      })
+    ])
+    expect(result.terms).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          isActive: false,
+          officeTitle: "Representative",
+          role: "Representative",
+          sourceId: "118:lower:2023:2024"
+        }),
+        expect.objectContaining({ isActive: true, officeTitle: "Representative", role: "Representative" })
+      ])
+    )
+    expect(result.terms.every((term) => term.startDate === undefined && term.endDate === undefined)).toBe(true)
+  })
+
+  it("rejects a detail term that omits its published member type", () => {
+    expect(() =>
+      normalizeCongressMemberDetails(
+        [
+          {
+            detail: {
+              bioguideId: "G000607",
+              currentMember: true,
+              terms: { item: [{ chamber: "House", congress: 119, startYear: 2025 }] }
+            },
+            member: {
+              bioguideId: "G000607",
+              name: "Gallagher, James",
+              terms: { item: [] },
+              url: "https://api.congress.gov/member/G000607"
+            }
+          }
+        ],
+        119,
+        organizationContext
+      )
+    ).toThrow(/memberType/)
+  })
+
+  it("rejects a detail update timestamp that is not an ISO datetime", () => {
+    expect(() =>
+      normalizeCongressMemberDetails(
+        [
+          {
+            detail: {
+              bioguideId: "G000607",
+              currentMember: true,
+              terms: { item: [] },
+              updateDate: "not-a-date"
+            },
+            member: {
+              bioguideId: "G000607",
+              name: "Gallagher, James",
+              terms: { item: [] },
+              url: "https://api.congress.gov/member/G000607"
+            }
+          }
+        ],
+        119,
+        organizationContext
+      )
+    ).toThrow(/Invalid ISO datetime/)
   })
 
   it("creates legislature, chamber, committee, and subcommittee hierarchy", () => {
@@ -126,6 +277,30 @@ describe("Congress entity normalization", () => {
         })
       ])
     )
+  })
+
+  it("fails closed for missing and non-Congress committee source URLs", () => {
+    const result = normalizeCongressCommittees(
+      [
+        { chamber: "House", name: "Missing URL Committee", systemCode: "missing-url" },
+        {
+          chamber: "Senate",
+          name: "Untrusted URL Committee",
+          systemCode: "untrusted-url",
+          url: "https://example.test/committee/untrusted-url"
+        }
+      ],
+      organizationContext
+    )
+
+    expect(result.organizations.find((organization) => organization.sourceId === "missing-url")).toMatchObject({
+      provenanceComplete: false,
+      sourceIsOfficial: false
+    })
+    expect(result.organizations.find((organization) => organization.sourceId === "untrusted-url")).toMatchObject({
+      provenanceComplete: false,
+      sourceIsOfficial: false
+    })
   })
 
   it("does not invent a Senate parent for an unmappable committee chamber", () => {

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest"
+import { afterAll, describe, expect, it, vi } from "vitest"
 import { loadConfig } from "../../config/config.js"
 import { createDatabase } from "../../db/database.js"
 import {
@@ -160,6 +160,63 @@ describe("executeSynchronization", () => {
         dependencies
       )
     ).rejects.toThrow("CONGRESS_API_KEY is required")
+  })
+
+  it("hydrates and persists Congress member detail through the default daily entity route", async () => {
+    const replaceSnapshot = vi.fn<() => Promise<void>>(async () => undefined)
+    const getMember = vi.fn<(bioguideId: string) => Promise<unknown>>(async (bioguideId) => ({
+      bioguideId,
+      currentMember: true,
+      officialUrl: "https://example.house.gov/",
+      terms: {
+        item: [
+          {
+            chamber: "House of Representatives",
+            congress: 119,
+            memberType: "Representative",
+            startYear: 2025
+          }
+        ]
+      }
+    }))
+    const congressClient = {
+      async *committees() {
+        yield []
+      },
+      getMember,
+      async *members() {
+        yield [
+          {
+            bioguideId: "D000001",
+            name: "Daily Example",
+            terms: { item: [{ chamber: "House of Representatives", startYear: 2025 }] },
+            url: "https://api.congress.gov/member/D000001"
+          }
+        ]
+      }
+    }
+
+    const result = await executeSynchronization(
+      executionInput(createCongressSynchronizationIdentity("entities", 119)),
+      {
+        congressClient: congressClient as never,
+        replaceEntitySnapshot: replaceSnapshot as never,
+        runIngestionJob: createJobRunner([])
+      }
+    )
+
+    expect(result.status).toBe("succeeded")
+    expect(getMember).toHaveBeenCalledWith("D000001")
+    expect(replaceSnapshot).toHaveBeenCalledWith(
+      expect.anything(),
+      "jurisdiction:us",
+      expect.objectContaining({
+        personDetailSourceProvider: "congress",
+        personDetails: [expect.objectContaining({ personId: "person:congress:d000001" })],
+        personJurisdictions: [expect.objectContaining({ personId: "person:congress:d000001" })],
+        terms: [expect.objectContaining({ officeTitle: "Representative", role: "Representative" })]
+      })
+    )
   })
 })
 

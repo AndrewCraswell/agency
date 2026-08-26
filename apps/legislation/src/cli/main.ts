@@ -29,8 +29,9 @@ import { isDatabaseReady, waitForDatabase } from "../db/readiness.js"
 import { decodeArchiveRecords, MAXIMUM_ARCHIVE_BYTES } from "../ingestion/archive.js"
 import { synchronizeCongressAmendments } from "../ingestion/congress/amendments-sync.js"
 import { CongressClient } from "../ingestion/congress/client.js"
-import { normalizeCongressCommittees, normalizeCongressMembers } from "../ingestion/congress/entities.js"
+import { normalizeCongressCommittees } from "../ingestion/congress/entities.js"
 import { synchronizeCongressEvents } from "../ingestion/congress/events-sync.js"
+import { hydrateCongressMemberSnapshot } from "../ingestion/congress/member-details.js"
 import { synchronizeCongressCommitteeReports } from "../ingestion/congress/reports-sync.js"
 import { synchronizeCongress } from "../ingestion/congress/sync.js"
 import { synchronizeCongressHouseVotes } from "../ingestion/congress/votes-sync.js"
@@ -320,6 +321,13 @@ program
   .option("--shard-count <number>", "number of disjoint embedding workers", "1")
   .option("--shard-index <number>", "zero-based embedding worker index", "0")
   .action(runEmbeddings)
+
+program
+  .command("embeddings:document-sections")
+  .description("Create missing or stale embeddings for one document's sections only")
+  .requiredOption("--document-id <id>", "canonical bill-document ID")
+  .option("--limit <number>", "maximum sections per embedding-provider request", "64")
+  .action(runDocumentSectionEmbeddings)
 
 program
   .command("coverage:report")
@@ -1087,9 +1095,13 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
           }
         }
         const entityContext = { retrievedAt: new Date() }
-        const memberSnapshots = rawMembers.map(({ congress, records }) =>
-          normalizeCongressMembers(records, congress, entityContext)
-        )
+        const memberDetailCache = new Map<string, unknown>()
+        const memberSnapshots = []
+        for (const { congress, records } of rawMembers) {
+          memberSnapshots.push(
+            await hydrateCongressMemberSnapshot(records, congress, entityContext, client, memberDetailCache)
+          )
+        }
         const committeeSnapshot = normalizeCongressCommittees(rawCommittees, entityContext)
         const peopleById = new Map(
           memberSnapshots.flatMap((snapshot) => snapshot.people).map((person) => [person.id, person])
@@ -1098,11 +1110,26 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
         const organizationsById = new Map(
           committeeSnapshot.organizations.map((organization) => [organization.id, organization])
         )
+        const personDetailsByPersonId = new Map(
+          memberSnapshots.flatMap((snapshot) => snapshot.personDetails ?? []).map((detail) => [detail.personId, detail])
+        )
+        const personJurisdictionsByIdentity = new Map(
+          memberSnapshots
+            .flatMap((snapshot) => snapshot.personJurisdictions ?? [])
+            .map((jurisdiction) => [
+              `${jurisdiction.personId}:${jurisdiction.jurisdictionId}:${jurisdiction.sourceIdentity}`,
+              jurisdiction
+            ])
+        )
         await replaceEntitySnapshot(database, "jurisdiction:us", {
           memberships: [],
           organizations: [...organizationsById.values()],
           personAliasPersonIds: [],
           personAliases: [],
+          personDetailPersonIds: [...personDetailsByPersonId.keys()],
+          personDetailSourceProvider: "congress",
+          personDetails: [...personDetailsByPersonId.values()],
+          personJurisdictions: [...personJurisdictionsByIdentity.values()],
           people: [...peopleById.values()],
           terms: [...termsById.values()]
         })
@@ -1899,6 +1926,84 @@ async function runEmbeddings(options: {
         materials: clients.materials.metrics,
         reused: result.counts.skipped,
         sections: clients.sections.metrics,
+        source: "openrouter"
+      })
+      printJobResult(result)
+    } finally {
+      await telemetry.shutdown()
+    }
+  }, config)
+}
+
+async function runDocumentSectionEmbeddings(options: { documentId: string; limit: string }) {
+  const limit = parseInteger(options.limit, "limit")
+  if (limit > 64) {
+    throw new InvalidJobInput("limit must not exceed 64 for document-section embeddings")
+  }
+  const config = loadConfig()
+  if (config.model.apiKey === undefined) {
+    throw new InvalidJobInput("OPENROUTER_API_KEY is required for embeddings:document-sections")
+  }
+  const client = new OpenRouterEmbeddingClient({
+    apiKey: config.model.apiKey,
+    baseUrl: new URL(config.model.baseUrl),
+    maximumAttempts: config.ingestion.maxAttempts,
+    route: embeddingRouteFor("document-section"),
+    timeoutMs: config.ingestion.requestTimeoutMs
+  })
+  const telemetry = createTelemetry(config)
+  const executionContext = jobExecutionContext()
+  await withDatabase(async (database) => {
+    try {
+      const result = await runIngestionJob(
+        database,
+        {
+          ...executionContext,
+          operation: "refresh-document-section-embeddings",
+          scope: { documentId: options.documentId, limit },
+          scopeKey: options.documentId,
+          source: "openrouter"
+        },
+        async () => {
+          let afterId = ""
+          let embedded = 0
+          let scanned = 0
+          let skipped = 0
+          let complete = false
+          while (!complete) {
+            const sections = await telemetry.observe(
+              "embedding.document_sections",
+              { batchLimit: limit, model: embeddingRouteFor("document-section").model },
+              async () =>
+                await embedDocumentSections(database, client, {
+                  afterId,
+                  documentId: options.documentId,
+                  limit,
+                  rolloutId: executionContext.correlationId
+                })
+            )
+            if (!sections.complete && sections.cursor === afterId) {
+              throw new Error("Document-section embedding cursor did not advance")
+            }
+            afterId = sections.cursor
+            complete = sections.complete
+            embedded += sections.embedded
+            scanned += sections.scanned
+            skipped += sections.skipped
+          }
+          if (scanned === 0) {
+            throw new InvalidJobInput("Document has no sections to embed")
+          }
+          return {
+            counts: createJobCounts({ discovered: scanned, inserted: embedded, skipped }),
+            failures: []
+          }
+        }
+      )
+      createCommandLogger(config).info("document-section embedding request metrics", {
+        documentId: options.documentId,
+        embedded: result.counts.inserted,
+        provider: client.metrics,
         source: "openrouter"
       })
       printJobResult(result)

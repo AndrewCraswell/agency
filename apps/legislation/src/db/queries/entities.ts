@@ -1,5 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
-import type { OpenStatesEntitySnapshot } from "../../ingestion/openstates/entities.js"
+import type { EntitySnapshot } from "../../ingestion/entity-snapshot.js"
 import type { LegislationDatabase } from "../database.js"
 import {
   legislativeTerms,
@@ -20,7 +20,7 @@ function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
 export async function replaceEntitySnapshot(
   database: LegislationDatabase,
   jurisdictionId: string,
-  snapshot: OpenStatesEntitySnapshot
+  snapshot: EntitySnapshot
 ): Promise<void> {
   const personValues = uniqueById(snapshot.people)
   const organizationValues = uniqueById(snapshot.organizations)
@@ -29,6 +29,7 @@ export async function replaceEntitySnapshot(
   const personAliasPersonIds = [...new Set(snapshot.personAliasPersonIds)]
   const personAliasValues = snapshot.personAliases
   const personDetailPersonIds = [...new Set(snapshot.personDetailPersonIds ?? [])]
+  const personDetailSourceProvider = snapshot.personDetailSourceProvider
   const personDetailValues = snapshot.personDetails ?? []
   const personExternalIdentifierValues = snapshot.personExternalIdentifiers ?? []
   const personJurisdictionValues = snapshot.personJurisdictions ?? []
@@ -97,18 +98,21 @@ export async function replaceEntitySnapshot(
           target: [personAliases.personId, personAliases.sourceIdentity]
         })
     }
-    if (personDetailPersonIds.length > 0) {
+    if (personDetailPersonIds.length > 0 && personDetailSourceProvider !== undefined) {
       await transaction
         .delete(personDetails)
         .where(
-          and(inArray(personDetails.personId, personDetailPersonIds), eq(personDetails.sourceProvider, "openstates"))
+          and(
+            inArray(personDetails.personId, personDetailPersonIds),
+            eq(personDetails.sourceProvider, personDetailSourceProvider)
+          )
         )
       await transaction
         .delete(personExternalIdentifiers)
         .where(
           and(
             inArray(personExternalIdentifiers.personId, personDetailPersonIds),
-            eq(personExternalIdentifiers.sourceProvider, "openstates")
+            eq(personExternalIdentifiers.sourceProvider, personDetailSourceProvider)
           )
         )
       await transaction
@@ -116,14 +120,14 @@ export async function replaceEntitySnapshot(
         .where(
           and(
             inArray(personJurisdictions.personId, personDetailPersonIds),
-            eq(personJurisdictions.sourceProvider, "openstates")
+            eq(personJurisdictions.sourceProvider, personDetailSourceProvider)
           )
         )
     }
-    if (personDetailValues.length > 0) {
+    for (const [sourceProvider, values] of groupedBySourceProvider(personDetailValues)) {
       await transaction
         .insert(personDetails)
-        .values(personDetailValues)
+        .values(values)
         .onConflictDoUpdate({
           set: {
             imageUrl: sql`excluded.image_url`,
@@ -138,7 +142,7 @@ export async function replaceEntitySnapshot(
             updatedAt: new Date()
           },
           target: personDetails.personId,
-          where: eq(personDetails.sourceProvider, "openstates")
+          where: eq(personDetails.sourceProvider, sourceProvider)
         })
     }
     if (personExternalIdentifierValues.length > 0) {
@@ -336,4 +340,18 @@ export async function replaceEntitySnapshot(
       })
     }
   })
+}
+
+function groupedBySourceProvider<T extends { sourceProvider?: string | null }>(values: readonly T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>()
+  for (const value of values) {
+    const sourceProvider = value.sourceProvider
+    if (sourceProvider === undefined || sourceProvider === null || sourceProvider.trim().length === 0) {
+      throw new Error("Canonical person detail requires a source provider")
+    }
+    const group = groups.get(sourceProvider) ?? []
+    group.push(value)
+    groups.set(sourceProvider, group)
+  }
+  return groups
 }
