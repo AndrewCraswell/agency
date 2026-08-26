@@ -1,312 +1,69 @@
 {
   "sections": {
-    "slideshow": {
-      "type": "slideshow",
+    "image_banner": {
+      "type": "image-banner",
       "blocks": {
-        "slideshow-0": {
-          "type": "image",
+        "heading": {
+          "type": "heading",
           "settings": {
-            "top_subheading": "",
-            "title": "Shop",
-            "title_size": 80,
-            "subheading": "Gear at competitive prices for competitive athletes",
-            "link": "shopify:\/\/collections\/all",
-            "link_text": "Shop Now",
-            "link_2": "shopify:\/\/collections\/innovations",
-            "link_text_2": "",
-            "color_accent": "rgba(0,0,0,0)",
-            "text_align": "vertical-bottom horizontal-left",
-            "image": "shopify:\/\/shop_images\/Hero_3_4a58194c-13bf-4a23-91c0-3a3bcec534b4.jpg",
-            "parallax_direction": "top",
-            "overlay_opacity": 46
+            "heading": "Browse our latest products",
+            "heading_size": "h0"
           }
         },
-        "slideshow-1": {
-          "type": "image",
+        "button": {
+          "type": "buttons",
           "settings": {
-            "top_subheading": "Special",
-            "title": "Get a blade",
-            "title_size": 80,
-            "subheading": "Best priced blades for beginners to elite athletes",
-            "link": "shopify:\/\/collections\/complete-weapons",
-            "link_text": "Weapons",
-            "link_2": "shopify:\/\/collections\/blades",
-            "link_text_2": "Blades",
-            "color_accent": "rgba(0,0,0,0)",
-            "text_align": "vertical-bottom horizontal-left",
-            "image": "shopify:\/\/shop_images\/Hero_Fencing_Field_908d0b99-1d56-45c9-a5b5-eb059014e962.jpg",
-            "parallax_direction": "top",
-            "overlay_opacity": 46
-          }
-        },
-        "d384a881-dc0f-4f25-82ee-31f8a8921aaa": {
-          "type": "image",
-          "disabled": true,
-          "settings": {
-            "top_subheading": "In Development",
-            "title": "Piste App",
-            "title_size": 80,
-            "subheading": "Club management and class scheduling app all-in-one",
-            "link": "shopify:\/\/pages\/piste",
-            "link_text": "Learn more",
-            "link_2": "",
-            "link_text_2": "",
-            "color_accent": "rgba(0,0,0,0)",
-            "text_align": "vertical-bottom horizontal-left",
-            "image": "shopify:\/\/shop_images\/Hero_Class_befd60f3-8037-43e5-a649-d97bd053f396.jpg",
-            "parallax_direction": "top",
-            "overlay_opacity": 50
+            "button_label_1": "Shop all",
+            "button_link_1": "shopify://collections/all",
+            "button_style_secondary_1": true,
+            "button_label_2": "",
+            "button_link_2": "",
+            "button_style_secondary_2": false
           }
         }
       },
-      "block_order": ["slideshow-0", "slideshow-1", "d384a881-dc0f-4f25-82ee-31f8a8921aaa"],
+      "block_order": ["heading", "button"],
       "settings": {
-        "section_height": "550px",
-        "mobile_height": "auto",
-        "parallax": true,
-        "style": "dots",
-        "autoplay": true,
-        "autoplay_speed": 7
+        "image_overlay_opacity": 40,
+        "image_height": "large",
+        "desktop_content_position": "bottom-center",
+        "show_text_box": false,
+        "image_behavior": "none",
+        "desktop_content_alignment": "center",
+        "color_scheme": "scheme-3",
+        "mobile_content_alignment": "center",
+        "stack_images_on_mobile": false,
+        "show_text_below": false
       }
     },
-    "featured_collections_ezUDPA": {
-      "type": "featured-collections",
-      "blocks": {
-        "collection_zdiaVb": {
-          "type": "collection",
-          "settings": { "collection": "clothing", "title": "", "focal_point": "center center" }
-        },
-        "collection_4CKCeL": {
-          "type": "collection",
-          "settings": { "collection": "complete-masks", "title": "Masks", "focal_point": "center center" }
-        },
-        "collection_fg9KKe": {
-          "type": "collection",
-          "settings": { "collection": "complete-weapons", "title": "Weapons", "focal_point": "center center" }
-        },
-        "collection_KFTWVJ": {
-          "type": "collection",
-          "settings": { "collection": "socks", "title": "", "focal_point": "center center" }
-        }
-      },
-      "block_order": ["collection_zdiaVb", "collection_4CKCeL", "collection_fg9KKe", "collection_KFTWVJ"],
-      "name": "t:sections.featured-collections.presets.collection_list.name",
-      "settings": { "title": "", "divider": false, "per_row": 4 }
-    },
-    "text_columns_LdkFNn": {
-      "type": "text-columns",
-      "blocks": {
-        "text_block_ybtA3C": {
-          "type": "text_block",
-          "settings": {
-            "enable_image": true,
-            "image": "shopify:\/\/shop_images\/PXL_20250218_015130341-Photoroom.jpg",
-            "image_mask": "square",
-            "image_width": 420,
-            "title": "Competition Bags",
-            "text": "<p>Designed for serious fencers, built for tournaments and travel. Pack smart, travel easy.<\/p>",
-            "button_label": "Shop Bags",
-            "button_link": "shopify:\/\/collections\/bags"
-          }
-        },
-        "text_block_mEa8i6": {
-          "type": "text_block",
-          "settings": {
-            "enable_image": true,
-            "image": "shopify:\/\/shop_images\/Red_Epee_Playset-Photoroom.png",
-            "image_mask": "square",
-            "image_width": 420,
-            "title": "Kids Training Sets",
-            "text": "<p>Training kits built for beginners and group classes offering safe, durable gear for young kids.<\/p>",
-            "button_label": "Shop Kids",
-            "button_link": "shopify:\/\/collections\/kids"
-          }
-        }
-      },
-      "block_order": ["text_block_ybtA3C", "text_block_mEa8i6"],
-      "settings": { "title": "", "align_text": "center", "divider": false }
-    },
-    "17692340183a5b8e71": { "type": "_blocks", "settings": {} },
-    "featured-collections": {
-      "type": "featured-collections",
-      "blocks": {
-        "featured-collections-0": {
-          "type": "collection",
-          "settings": { "collection": "body-cords", "title": "Body Cords", "focal_point": "center center" }
-        },
-        "collection_w49kpf": {
-          "type": "collection",
-          "settings": { "collection": "grips", "title": "", "focal_point": "center center" }
-        },
-        "featured-collections-2": {
-          "type": "collection",
-          "settings": { "collection": "weapon-parts", "title": "Parts", "focal_point": "center center" }
-        },
-        "featured-collections-1": {
-          "type": "collection",
-          "settings": { "collection": "tools", "title": "Tools", "focal_point": "center center" }
-        }
-      },
-      "block_order": [
-        "featured-collections-0",
-        "collection_w49kpf",
-        "featured-collections-2",
-        "featured-collections-1"
-      ],
-      "settings": { "title": "Trending now", "divider": false, "per_row": 4 }
-    },
-    "text_with_icons_XGYAHy": {
-      "type": "text-with-icons",
-      "blocks": {
-        "text_block_aeQiV3": {
-          "type": "text_block",
-          "settings": {
-            "icon": "trophy",
-            "title": "Expert Knowledge",
-            "text": "<p>Trusted by competitive fencers, clubs, and coaches nationwide. We specialize exclusively in Olympic fencing equipment and know what performs at every level.<br\/><br\/><a href=\"\/pages\/contact\" target=\"_blank\" title=\"Contact\"><span style=\"text-decoration:underline\">Learn more<\/span><\/a><\/p>"
-          }
-        },
-        "text_block_QdkQQ4": {
-          "type": "text_block",
-          "settings": {
-            "icon": "truck",
-            "title": "Fast Shipping",
-            "text": "<p>Orders ship within 1 business day. Most U.S. deliveries arrive in 5–8 days, with expedited options available. International orders ship Duties Paid (DDP).<br\/><br\/><a href=\"\/policies\/shipping-policy\" target=\"_blank\" title=\"Shipping Policy\"><span style=\"text-decoration:underline\">Learn more<\/span><\/a><\/p>"
-          }
-        },
-        "text_block_YaHCHH": {
-          "type": "text_block",
-          "settings": {
-            "icon": "shield",
-            "title": "Hassle-Free Returns",
-            "text": "<p>30-day returns on eligible items. Free, postage-paid return labels included so you can shop with confidence.<br\/><br\/><a href=\"\/policies\/refund-policy\" target=\"_blank\" title=\"Refund Policy\"><span style=\"text-decoration:underline\">Learn more<\/span><\/a><\/p>"
-          }
-        }
-      },
-      "block_order": ["text_block_aeQiV3", "text_block_QdkQQ4", "text_block_YaHCHH"],
-      "name": "t:common.text_with_icons.presets.text_with_icons.name",
+    "featured_collection": {
+      "type": "featured-collection",
       "settings": {
-        "title": "",
-        "align_text": "center",
-        "desktop_columns_per_row": 3,
-        "icon_color": "#111111",
-        "button_label": "",
-        "button_link": "",
-        "divider": false
+        "title": "Featured products",
+        "heading_size": "h2",
+        "description": "",
+        "show_description": false,
+        "description_style": "body",
+        "collection": "all",
+        "products_to_show": 8,
+        "columns_desktop": 4,
+        "color_scheme": "scheme-1",
+        "full_width": false,
+        "show_view_all": true,
+        "view_all_style": "solid",
+        "enable_desktop_slider": false,
+        "swipe_on_mobile": false,
+        "image_ratio": "adapt",
+        "image_shape": "default",
+        "show_secondary_image": true,
+        "show_vendor": false,
+        "show_rating": false,
+        "quick_add": "none",
+        "columns_mobile": "2",
+        "padding_top": 44,
+        "padding_bottom": 36
       }
-    },
-    "logo_list_xnHre9": {
-      "type": "logo-list",
-      "blocks": {
-        "logo_image_BnynhG": {
-          "type": "logo_image",
-          "settings": { "image": "shopify:\/\/shop_images\/fwf_logo-Photoroom.png", "link": "" }
-        },
-        "logo_image_XxTVpM": {
-          "type": "logo_image",
-          "settings": { "image": "shopify:\/\/shop_images\/unic_logo-Photoroom.png", "link": "" }
-        },
-        "logo_image_4MFxjK": {
-          "type": "logo_image",
-          "settings": { "image": "shopify:\/\/shop_images\/bf-logo-Photoroom.png", "link": "" }
-        },
-        "logo_image_CKwKR8": {
-          "type": "logo_image",
-          "settings": { "image": "shopify:\/\/shop_images\/images-Photoroom.png", "link": "" }
-        },
-        "logo_image_fdyGVP": {
-          "type": "logo_image",
-          "settings": { "image": "shopify:\/\/shop_images\/Fencingfan-NEPS_logo-min_edited-Photoroom.png", "link": "" }
-        },
-        "logo_image_jdcD4U": {
-          "type": "logo_image",
-          "disabled": true,
-          "settings": {
-            "image": "shopify:\/\/shop_images\/images_a5116edb-8e46-48b8-92d2-4071450fd069.png",
-            "link": ""
-          }
-        },
-        "logo_image_U8qQX4": {
-          "type": "logo_image",
-          "disabled": true,
-          "settings": {
-            "image": "shopify:\/\/shop_images\/46cc4c_1a110beeb4f64e9a9a9bc139b5e9593f_mv2.jpg",
-            "link": ""
-          }
-        },
-        "logo_image_eWNNgH": {
-          "type": "logo_image",
-          "settings": {
-            "image": "shopify:\/\/shop_images\/asics-6_aef88106-68a0-4f08-9444-29388b0b9b64.svg",
-            "link": ""
-          }
-        },
-        "logo_image_YXJHFR": {
-          "type": "logo_image",
-          "settings": {
-            "image": "shopify:\/\/shop_images\/Yonex-Logo-1978_576be449-a732-47f8-a857-f837fac709bb.png",
-            "link": ""
-          }
-        },
-        "logo_image_kn4E6e": {
-          "type": "logo_image",
-          "settings": {
-            "image": "shopify:\/\/shop_images\/logo_footer_03_2x_b31b1266-2e9c-4a9e-958a-6bd80caad015.png",
-            "link": ""
-          }
-        }
-      },
-      "block_order": [
-        "logo_image_BnynhG",
-        "logo_image_XxTVpM",
-        "logo_image_4MFxjK",
-        "logo_image_CKwKR8",
-        "logo_image_fdyGVP",
-        "logo_image_jdcD4U",
-        "logo_image_U8qQX4",
-        "logo_image_eWNNgH",
-        "logo_image_YXJHFR",
-        "logo_image_kn4E6e"
-      ],
-      "custom_css": [],
-      "settings": { "title": "Our brands", "logo_opacity": 90, "divider": false }
-    },
-    "blog-posts": {
-      "type": "blog-posts",
-      "settings": {
-        "title": "Latest news",
-        "blog": "blog",
-        "post_limit": 3,
-        "blog_show_tags": true,
-        "blog_show_date": true,
-        "blog_show_comments": false,
-        "blog_show_author": false,
-        "view_all": true,
-        "blog_image_size": "landscape",
-        "divider": false
-      }
-    },
-    "1706247420cd4ffb58": {
-      "type": "apps",
-      "blocks": {
-        "qr_code_hub_home_landing_kzaVeb": {
-          "type": "shopify:\/\/apps\/qr-codes-unlimited\/blocks\/home_landing\/4500f4b8-8cd3-4443-9a62-c1d1d9888ad7",
-          "settings": { "has_icon": true }
-        }
-      },
-      "block_order": ["qr_code_hub_home_landing_kzaVeb"],
-      "settings": { "full_width": false, "space_around": true }
     }
   },
-  "order": [
-    "slideshow",
-    "featured_collections_ezUDPA",
-    "text_columns_LdkFNn",
-    "17692340183a5b8e71",
-    "featured-collections",
-    "text_with_icons_XGYAHy",
-    "logo_list_xnHre9",
-    "blog-posts",
-    "1706247420cd4ffb58"
-  ]
+  "order": ["image_banner", "featured_collection"]
 }

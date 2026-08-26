@@ -1,5 +1,5 @@
 {
-  "version": "2.14",
+  "version": "2.17",
   "children": [
     {
       "type": "frame",
@@ -2408,6 +2408,7 @@
                     "left": 3
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "padding": [
                     4,
@@ -6234,6 +6235,7 @@
                             "bottom": 2
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 14,
                           "padding": [
@@ -9906,6 +9908,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
@@ -10329,6 +10332,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
@@ -10610,6 +10614,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
@@ -10964,6 +10969,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
@@ -11487,6 +11493,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
@@ -12009,6 +12016,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
@@ -15992,6 +16000,7 @@
                     "top": 1,
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "padding": [
                     12,
                     96
@@ -19028,6 +19037,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "children": [
                 {
                   "type": "frame",
@@ -19125,6 +19135,7 @@
                   "strokeWidth": {
                     "left": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 12,
                   "padding": 26,
@@ -19210,6 +19221,7 @@
                   "strokeWidth": {
                     "left": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 12,
                   "padding": 26,
@@ -19295,6 +19307,7 @@
                   "strokeWidth": {
                     "left": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 12,
                   "padding": 26,
@@ -21835,6 +21848,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 10,
                 96
@@ -22294,6 +22308,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 9,
                 96
@@ -27950,6 +27965,7 @@
             "top": 1,
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 28,
           "padding": [
@@ -30423,6 +30439,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -30608,6 +30625,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -30695,6 +30713,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -30782,6 +30801,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -30869,6 +30889,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -30956,6 +30977,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31043,6 +31065,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31130,6 +31153,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31217,6 +31241,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31340,6 +31365,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31525,6 +31551,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31612,6 +31639,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31699,6 +31727,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31786,6 +31815,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31873,6 +31903,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -31996,6 +32027,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32152,6 +32184,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32239,6 +32272,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32326,6 +32360,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32448,6 +32483,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32633,6 +32669,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32720,6 +32757,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32807,6 +32845,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -32930,6 +32969,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33115,6 +33155,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33202,6 +33243,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33289,6 +33331,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33411,6 +33454,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33567,6 +33611,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33654,6 +33699,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 12,
                       "padding": [
@@ -33891,6 +33937,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 20,
                 24
@@ -34021,6 +34068,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -34250,6 +34298,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -34417,6 +34466,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -34750,6 +34800,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -36263,6 +36314,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -36505,6 +36557,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -36962,6 +37015,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 12,
               "padding": [
@@ -37434,6 +37488,7 @@
                         "bottom": 1.5
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         0,
                         10,
@@ -37548,6 +37603,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -37658,6 +37714,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -37770,6 +37827,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -37904,6 +37962,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -38014,6 +38073,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -38124,6 +38184,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -38234,6 +38295,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         13,
                         10
@@ -39056,6 +39118,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39144,6 +39207,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39229,6 +39293,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39315,6 +39380,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39400,6 +39466,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39485,6 +39552,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39570,6 +39638,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "padding": [
                         11,
                         16
@@ -39659,6 +39728,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 8,
               "padding": [
@@ -40887,6 +40957,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 20,
@@ -41220,6 +41291,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -41480,6 +41552,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -41680,6 +41753,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -41940,6 +42014,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -42264,6 +42339,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -42491,6 +42567,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 20,
@@ -42719,6 +42796,7 @@
                           "strokeWidth": {
                             "left": 1
                           },
+                          "strokeLinejoin": "round",
                           "layout": "vertical",
                           "gap": 3,
                           "padding": [
@@ -42773,6 +42851,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -43000,6 +43079,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -43200,6 +43280,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -43552,6 +43633,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -43780,6 +43862,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 20,
@@ -44033,6 +44116,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         8,
@@ -44087,6 +44171,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -44314,6 +44399,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -44481,6 +44567,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -44832,6 +44919,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -45780,6 +45868,7 @@
                             "bottom": 1.5
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": [
                             0,
                             12,
@@ -45894,6 +45983,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46001,6 +46091,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46110,6 +46201,7 @@
                             "left": 3
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46227,6 +46319,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46334,6 +46427,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46441,6 +46535,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46548,6 +46643,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "padding": 12,
                           "alignItems": "center",
                           "children": [
@@ -46951,6 +47047,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 20,
@@ -47218,6 +47315,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -47472,6 +47570,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -47639,6 +47738,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -48018,6 +48118,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -48460,6 +48561,7 @@
                             "bottom": 1.5
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "alignItems": "end",
                           "children": [
                             {
@@ -48848,6 +48950,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "alignItems": "center",
                           "children": [
                             {
@@ -49054,6 +49157,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "alignItems": "center",
                           "children": [
                             {
@@ -49260,6 +49364,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "alignItems": "center",
                           "children": [
                             {
@@ -49466,6 +49571,7 @@
                             "bottom": 1
                           },
                           "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
                           "alignItems": "center",
                           "children": [
                             {
@@ -50014,6 +50120,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 20,
@@ -50279,6 +50386,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -50542,6 +50650,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -50745,6 +50854,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     18,
@@ -51168,6 +51278,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -51425,6 +51536,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 20,
                 24
@@ -51504,6 +51616,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 14,
                   "padding": [
@@ -52193,6 +52306,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 14,
                   "padding": [
@@ -53059,6 +53173,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -53266,6 +53381,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 20,
@@ -53435,6 +53551,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 14,
                       "padding": [
@@ -54115,6 +54232,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 14,
                       "padding": [
@@ -54967,6 +55085,7 @@
                       "strokeWidth": {
                         "bottom": 1
                       },
+                      "strokeLinejoin": "round",
                       "gap": 14,
                       "padding": [
                         18,
@@ -55397,6 +55516,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 14,
               "padding": [
@@ -60537,6 +60657,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -60610,6 +60731,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -60683,6 +60805,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -60756,6 +60879,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -61166,6 +61290,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -61256,6 +61381,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -61346,6 +61472,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -61458,6 +61585,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -61582,6 +61710,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -61672,6 +61801,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -64396,6 +64526,7 @@
                       "strokeWidth": {
                         "top": 1
                       },
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 16,
                       "padding": [
@@ -65953,6 +66084,7 @@
                   "strokeWidth": {
                     "bottom": 2
                   },
+                  "strokeLinejoin": "round",
                   "padding": [
                     0,
                     0,
@@ -66179,6 +66311,7 @@
                     "top": 1,
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "padding": [
                     18,
                     0
@@ -66386,6 +66519,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "padding": [
                     0,
                     0,
@@ -66486,6 +66620,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66524,6 +66659,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66562,6 +66698,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66600,6 +66737,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66638,6 +66776,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66719,6 +66858,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66757,6 +66897,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66795,6 +66936,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66833,6 +66975,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -66871,6 +67014,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "padding": [
                             13,
                             0
@@ -67357,6 +67501,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "padding": [
                     0,
                     0,
@@ -67494,6 +67639,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "children": [
                                 {
                                   "type": "frame",
@@ -67555,6 +67701,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "children": [
                                 {
                                   "type": "frame",
@@ -67616,6 +67763,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "children": [
                                 {
                                   "type": "frame",
@@ -67677,6 +67825,7 @@
                               "strokeWidth": {
                                 "bottom": 1
                               },
+                              "strokeLinejoin": "round",
                               "children": [
                                 {
                                   "type": "frame",
@@ -67817,6 +67966,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 0,
@@ -67913,6 +68063,7 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -67980,6 +68131,7 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -68047,6 +68199,7 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -68114,6 +68267,7 @@
                           "strokeWidth": {
                             "bottom": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -68251,6 +68405,7 @@
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "strokeLinejoin": "round",
                   "padding": [
                     0,
                     0,
@@ -68539,6 +68694,7 @@
               "strokeWidth": {
                 "bottom": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 0,
@@ -69976,6 +70132,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -70049,6 +70206,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -70122,6 +70280,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -70195,6 +70354,7 @@
                           "strokeWidth": {
                             "top": 1
                           },
+                          "strokeLinejoin": "round",
                           "gap": 16,
                           "padding": [
                             14,
@@ -73507,6 +73667,7 @@
           "strokeWidth": {
             "bottom": 1
           },
+          "strokeLinejoin": "round",
           "gap": 12,
           "padding": 16,
           "alignItems": "center",
@@ -73660,6 +73821,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 11,
                 0
@@ -73750,6 +73912,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 11,
                 0
@@ -73817,6 +73980,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 11,
                 0
@@ -73907,6 +74071,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 11,
                 0
@@ -73974,6 +74139,7 @@
               "strokeWidth": {
                 "top": 1
               },
+              "strokeLinejoin": "round",
               "padding": [
                 11,
                 0
@@ -75358,6 +75524,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -75448,6 +75615,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -75515,6 +75683,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -75605,6 +75774,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -75672,6 +75842,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -79253,6 +79424,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -79343,6 +79515,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -79410,6 +79583,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -79500,6 +79674,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
@@ -79567,6 +79742,7 @@
                                       "strokeWidth": {
                                         "top": 1
                                       },
+                                      "strokeLinejoin": "round",
                                       "padding": [
                                         9,
                                         0
