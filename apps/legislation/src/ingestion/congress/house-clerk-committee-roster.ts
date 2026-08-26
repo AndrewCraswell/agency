@@ -172,6 +172,9 @@ export function normalizeHouseClerkCurrentCommitteeRoster(
       memberships.set(membership.id, membership)
     }
   }
+  if (memberships.size === 0 && roster.completeOrganizationIds.length > 0) {
+    throw new Error("House Clerk roster has no normalized memberships.")
+  }
   return {
     completeOrganizationIds: [...roster.completeOrganizationIds],
     memberships: [...memberships.values()],

@@ -36,17 +36,28 @@ const lisMemberId = requiredText
   .transform(normalizeLisMemberId)
   .refine((value) => /^[A-Z]\d{3}$/.test(value), "LIS member ID must be one uppercase letter followed by three digits")
 const currentAssignmentSchema = z.object({ code: committeeCode, position: requiredText.optional() }).passthrough()
+const currentAssignmentsSchema = z.preprocess(
+  (value) => (value === "" ? { committee: [] } : value),
+  z.object({ committee: z.array(currentAssignmentSchema).default([]) })
+)
 const currentSenatorSchema = z
   .object({
     bioguideId,
-    committees: z.object({ committee: z.array(currentAssignmentSchema).default([]) }).default({ committee: [] }),
+    committees: currentAssignmentsSchema.default({ committee: [] }),
     lis_member_id: lisMemberId,
     name: z.object({ first: requiredText, last: requiredText, middle: optionalText, suffix: optionalText }),
     party: requiredText,
     state: requiredText
   })
   .passthrough()
-const currentRosterSchema = z.object({ senators: z.object({ senator: z.array(currentSenatorSchema) }) })
+const currentRosterSchema = z.object({
+  senators: z.preprocess(
+    (value) => (value === "" ? { senator: [] } : value),
+    z.object({
+      senator: z.array(currentSenatorSchema).min(1, "Senate current roster must contain at least one senator")
+    })
+  )
+})
 
 const rosterMemberSchema = z.object({
   name: z.object({ first: requiredText, last: requiredText }),
@@ -54,16 +65,20 @@ const rosterMemberSchema = z.object({
   position: requiredText,
   state: requiredText
 })
+const rosterMembersSchema = z.preprocess(
+  (value) => (value === "" ? { member: [] } : value),
+  z.object({ member: z.array(rosterMemberSchema).default([]) })
+)
 const subcommitteeSchema = z.object({
   committee_code: committeeCode,
-  members: z.object({ member: z.array(rosterMemberSchema) }),
+  members: rosterMembersSchema,
   subcommittee_name: requiredText
 })
 const committeeRosterSchema = z.object({
   committee_membership: z.object({
     committees: z.object({
       committee_code: committeeCode,
-      members: z.object({ member: z.array(rosterMemberSchema) }),
+      members: rosterMembersSchema,
       subcommittee: z.array(subcommitteeSchema).default([])
     })
   })
@@ -183,6 +198,10 @@ export function normalizeSenateCommitteeRosters(
       })
       completeOrganizationIds.add(organizationId("congress", parentCode))
     }
+  }
+
+  if (completeOrganizationIds.size === 0) {
+    throw new Error("Senate current roster must contain at least one non-joint parent committee assignment")
   }
 
   const rosterParents = new Set<string>()

@@ -98,15 +98,20 @@ describe("House Clerk current committee roster", () => {
     )
 
     expect(roster.members).toEqual([])
-    expect(
-      normalizeHouseClerkCurrentCommitteeRoster(roster, { knownOrganizationIds, retrievedAt }).memberships
-    ).toEqual([])
+  })
+
+  it("rejects a nonempty committee tree with no normalized memberships as an outage", () => {
+    const roster = parseHouseClerkCurrentCommitteeRoster(memberData(""))
+
+    expect(() => normalizeHouseClerkCurrentCommitteeRoster(roster, { knownOrganizationIds, retrievedAt })).toThrow(
+      "House Clerk roster has no normalized memberships."
+    )
   })
 
   it("marks every tree-declared organization complete, including a committee with no members", () => {
     const roster = parseHouseClerkCurrentCommitteeRoster(
       memberData(
-        "",
+        '<committee comcode="AS00" rank="1"/>',
         '<committee comcode="AS00"><subcommittee subcomcode="AS02"/></committee><committee comcode="JU00"/>'
       )
     )
@@ -117,7 +122,8 @@ describe("House Clerk current committee roster", () => {
       organizationId("congress", "HSAS02"),
       organizationId("congress", "HSJU00")
     ])
-    expect(result.memberships).toEqual([])
+    expect(result.memberships).toHaveLength(1)
+    expect(result.memberships[0]?.organizationId).toBe(organizationId("congress", "HSAS00"))
   })
 
   it("deduplicates exact repeated assignments but rejects conflicting or unknown assignments", () => {

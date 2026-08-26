@@ -186,6 +186,23 @@ describe("Senate official committee roster normalization", () => {
     ).toThrow("joint committee roster")
   })
 
+  it("requires usable non-joint Senate parent coverage from a nonempty current feed", () => {
+    expect(() =>
+      normalizeSenateCommitteeRosters(
+        currentRoster(assignmentsFor("A000001", "S001", "Alice", "Example", "CA", "D", [])),
+        [],
+        { retrievedAt }
+      )
+    ).toThrow("at least one non-joint parent committee assignment")
+    expect(() =>
+      normalizeSenateCommitteeRosters(
+        currentRoster(assignmentsFor("A000001", "S001", "Alice", "Example", "CA", "D", ["JSEC00"])),
+        [],
+        { retrievedAt }
+      )
+    ).toThrow("at least one non-joint parent committee assignment")
+  })
+
   it("rejects duplicate subcommittee members, mismatched feed parents, and missing retrieval provenance", () => {
     const duplicateMembers = [
       `<member><name><first>Alice</first><last>Example</last></name><state>CA</state><party>D</party><position>Chair</position></member>`,
@@ -212,6 +229,9 @@ describe("Senate official committee roster normalization", () => {
   it("rejects malformed XML and non-official Bioguide and LIS identifier shapes", () => {
     expect(() => normalizeSenateCommitteeRosters("<senators><senator>", [], { retrievedAt })).toThrow(
       "current roster XML is malformed"
+    )
+    expect(() => normalizeSenateCommitteeRosters("<senators/>", [], { retrievedAt })).toThrow(
+      "Senate current roster must contain at least one senator"
     )
     expect(() =>
       normalizeSenateCommitteeRosters(
