@@ -97,6 +97,23 @@ describe("meeting agenda read API handler", () => {
     })
   })
 
+  it("uses the shared default limit for independent agenda pages", async () => {
+    let received: MeetingAgendaListInput | undefined
+    const baseUrl = await startServer({
+      ...service(),
+      listMeetingAgenda: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/meetings/event%3Aus%3A119%3Ahearing%3A1/agenda`)
+
+    expect(response.status).toBe(200)
+    expect(received).toEqual({ cursor: undefined, limit: 20, meetingId: "event:us:119:hearing:1" })
+    await expect(response.json()).resolves.toMatchObject({ meta: { limit: 20 } })
+  })
+
   it("returns a canonical agenda resource and correlates a wrong-parent 404", async () => {
     let received: unknown
     const baseUrl = await startServer({

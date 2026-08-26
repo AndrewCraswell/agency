@@ -3,11 +3,11 @@ import type { EventLocationPayload, EventVirtualAccessPayload } from "../db/sche
 import { LegislationError } from "../legislation/errors.js"
 import { projectMeetingSummary } from "./canonical-projection.js"
 
-export function projectMeetingRead(read: MeetingRead, apiBaseUrl: string, calendarId: string | null = null) {
+export function projectMeetingRead(read: MeetingRead, apiBaseUrl: string) {
   const source = completeSource(read)
   return projectMeetingSummary(
     {
-      calendarId,
+      calendarId: read.calendarId,
       classification: classification(read.classification),
       date: requiredText(read.publisherLocalDate, "meeting publisherLocalDate"),
       description: nullableText(read.description, "meeting description"),

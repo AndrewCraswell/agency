@@ -14,7 +14,10 @@ let documentDetailError
 let documentSectionsError
 let documentBatchItemError
 let missingFixturePrefix
+let representativeUnavailable = false
 const nx03aErrorPaths = new Map()
+const nx03bErrorPaths = new Map()
+const nx03bNotFoundPaths = new Set()
 
 function json(response, correlationId, body, status = 200, headers = {}) {
   response.writeHead(status, { "content-type": "application/json", "x-correlation-id": correlationId, ...headers })
@@ -66,6 +69,21 @@ function resourceBatchItem(item) {
 }
 
 function batch(pathname, correlationId, requestBody) {
+  if (pathname === "/api/representative-lookups") {
+    return {
+      data: {
+        districts: [],
+        expiresAt: "2026-08-26T00:05:00.000Z",
+        lookupId: "lookup:fixture",
+        quality: "unresolved",
+        representatives: [],
+        resolvedAt: "2026-08-26T00:00:00.000Z",
+        warnings: []
+      },
+      links: { self: pathname },
+      meta: { correlationId, warnings: [] }
+    }
+  }
   if (pathname === "/api/resources/batch") {
     return {
       data: requestBody.items.map(resourceBatchItem),
@@ -124,6 +142,10 @@ beforeAll(async () => {
       json(response, correlationId, notFound(url.pathname, correlationId), 404)
       return
     }
+    if (nx03bNotFoundPaths.has(url.pathname)) {
+      json(response, correlationId, notFound(url.pathname, correlationId), 404)
+      return
+    }
     if (missingFixturePrefix !== undefined && url.pathname.startsWith(missingFixturePrefix)) {
       json(response, correlationId, notFound(url.pathname, correlationId), 404)
       return
@@ -157,6 +179,11 @@ beforeAll(async () => {
       apiJson(response, correlationId, nx03aError(correlationId), 422)
       return
     }
+    const nx03bError = nx03bErrorPaths.get(url.pathname)
+    if (request.method === "GET" && nx03bError !== undefined) {
+      apiJson(response, correlationId, nx03bError(correlationId), 422)
+      return
+    }
     if (request.method === "GET" && request.headers["if-none-match"] === 'W/"fixture"') {
       response.writeHead(304, {
         "cache-control": "private, no-store",
@@ -171,6 +198,23 @@ beforeAll(async () => {
       return
     }
     if (request.method === "POST") {
+      if (url.pathname === "/api/representative-lookups" && representativeUnavailable) {
+        json(
+          response,
+          correlationId,
+          {
+            error: {
+              category: "dependency_unavailable",
+              correlationId,
+              message: "Representative provider is unavailable",
+              retryable: true
+            }
+          },
+          503,
+          { "cache-control": "private, no-store", "retry-after": "30" }
+        )
+        return
+      }
       const responseBody = batch(url.pathname, correlationId, requests.at(-1).body)
       if (url.pathname === invalidBatchStatusPath) {
         responseBody.data[0] = {
@@ -197,10 +241,16 @@ beforeAll(async () => {
       (["people", "organizations"].includes(segments[1]) && segments.length === 3) ||
       (segments[1] === "people" && segments[3] === "terms" && segments.length === 5) ||
       (segments[1] === "organizations" && segments[3] === "memberships" && segments.length === 5)
+    const isNx03bResource =
+      (segments[1] === "meetings" && segments.length === 3) ||
+      (segments[1] === "meetings" &&
+        ["agenda", "documents", "outcomes", "participants"].includes(segments[3]) &&
+        segments.length === 5) ||
+      (segments[1] === "calendars" && segments.length === 3)
     apiJson(
       response,
       correlationId,
-      isNx02aResource || isNx02bResource || isNx02cResource || isNx03aResource
+      isNx02aResource || isNx02bResource || isNx02cResource || isNx03aResource || isNx03bResource
         ? resource(url.pathname, correlationId, id)
         : page(url.pathname, correlationId)
     )
@@ -798,6 +848,211 @@ describe("NX-03A deployed smoke profile", () => {
       expect(error.stderr).not.toContain(privateMessage)
     } finally {
       nx03aErrorPaths.clear()
+    }
+  })
+})
+
+describe("NX-03B deployed smoke profile", () => {
+  it("cumulatively checks earlier profiles and all fourteen meeting, calendar, and representative routes", async () => {
+    requests.length = 0
+    nx03bNotFoundPaths.add("/api/meetings/meeting%3Afixture%2Fwith%20space")
+    nx03bNotFoundPaths.add(
+      "/api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda/agenda-item%3Afixture%2Fwith%20space"
+    )
+    nx03bNotFoundPaths.add(
+      "/api/meetings/outcome-meeting%3Afixture%2Fwith%20space/outcomes/outcome%3Afixture%2Fwith%20space"
+    )
+    nx03bNotFoundPaths.add("/api/calendars/calendar%3Afixture%2Fwith%20space")
+    nx03bNotFoundPaths.add("/api/calendars/calendar%3Afixture%2Fwith%20space/meetings")
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID: "agenda-item:fixture/with space",
+        LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID: "agenda-meeting:fixture/with space",
+        LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+        LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+        LEGISLATION_WEB_SMOKE_CALENDAR_ID: "calendar:fixture/with space",
+        LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
+        LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID: "document-section:fixture",
+        LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID: "event-document:fixture/with space",
+        LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID: "event-document-meeting:fixture/with space",
+        LEGISLATION_WEB_SMOKE_MEETING_DETAIL_ID: "meeting:fixture/with space",
+        LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID: "membership:fixture",
+        LEGISLATION_WEB_SMOKE_NX_03B: "1",
+        LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: "organization:fixture",
+        LEGISLATION_WEB_SMOKE_OUTCOME_ID: "outcome:fixture/with space",
+        LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID: "outcome-meeting:fixture/with space",
+        LEGISLATION_WEB_SMOKE_PARTICIPANT_ID: "participant:fixture/with space",
+        LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID: "participant-detail-meeting:fixture/with space",
+        LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID: "participant-list-meeting:fixture/with space",
+        LEGISLATION_WEB_SMOKE_PERSON_ID: "person:fixture",
+        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
+        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944",
+        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "200",
+        LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture",
+        LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID: "supporting-material-section:fixture",
+        LEGISLATION_WEB_SMOKE_TERM_ID: "term:fixture",
+        LEGISLATION_WEB_SMOKE_VOTE_ID: "vote:fixture"
+      })
+
+      expect(result.profile).toBe("foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b")
+      expect(result.nx02a.passed).toHaveLength(11)
+      expect(result.nx02b.passed).toHaveLength(18)
+      expect(result.nx02c.passed).toHaveLength(9)
+      expect(result.nx03a.passed).toHaveLength(14)
+      expect(result.nx03b.passed).toHaveLength(9)
+      expect(result.nx03b.skipped).toEqual([
+        { name: "meeting", reason: "canonical_fixture_not_found" },
+        { name: "meeting agenda item", reason: "canonical_fixture_not_found" },
+        { name: "meeting outcome", reason: "canonical_fixture_not_found" },
+        { name: "calendar", reason: "canonical_fixture_not_found" },
+        { name: "calendar meetings", reason: "canonical_fixture_not_found" }
+      ])
+      expect(result.nx03b.notFound).toEqual([
+        "meetings_trailing_slash",
+        "calendars_trailing_slash",
+        "representative_lookups_trailing_slash"
+      ])
+
+      const nx03b = requests.filter((request) => /^nx-03b-smoke-\d+$/.test(request.correlationId))
+      const conditional = requests.filter((request) => /^nx-03b-smoke-conditional-\d+$/.test(request.correlationId))
+      expect(nx03b).toHaveLength(14)
+      expect(nx03b.map(requestSignature).sort()).toEqual(
+        [
+          "GET /api/meetings?limit=1",
+          "GET /api/meetings/meeting%3Afixture%2Fwith%20space",
+          "GET /api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda?limit=1",
+          "GET /api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda/agenda-item%3Afixture%2Fwith%20space",
+          "GET /api/meetings/event-document-meeting%3Afixture%2Fwith%20space/documents?limit=1",
+          "GET /api/meetings/event-document-meeting%3Afixture%2Fwith%20space/documents/event-document%3Afixture%2Fwith%20space",
+          "GET /api/meetings/outcome-meeting%3Afixture%2Fwith%20space/outcomes?limit=1",
+          "GET /api/meetings/outcome-meeting%3Afixture%2Fwith%20space/outcomes/outcome%3Afixture%2Fwith%20space",
+          "GET /api/meetings/participant-list-meeting%3Afixture%2Fwith%20space/participants?limit=1",
+          "GET /api/meetings/participant-detail-meeting%3Afixture%2Fwith%20space/participants/participant%3Afixture%2Fwith%20space",
+          "GET /api/calendars?limit=1",
+          "GET /api/calendars/calendar%3Afixture%2Fwith%20space",
+          "GET /api/calendars/calendar%3Afixture%2Fwith%20space/meetings?limit=1",
+          "POST /api/representative-lookups"
+        ].sort()
+      )
+      expect(conditional).toHaveLength(8)
+      expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
+      expect(nx03b.find((request) => request.pathname === "/api/representative-lookups")?.body).toEqual({
+        coordinates: { latitude: 38.5816, longitude: -121.4944 }
+      })
+    } finally {
+      nx03bNotFoundPaths.clear()
+    }
+  })
+
+  it("reports each missing audited NX-03B fixture as a named skip without requesting it", async () => {
+    requests.length = 0
+    const result = await runSmoke({ LEGISLATION_WEB_SMOKE_NX_03B: "1" })
+
+    expect(result.nx03b.passed).toEqual(["meetings", "calendars"])
+    expect(result.nx03b.skipped).toEqual(
+      expect.arrayContaining([
+        { name: "meeting", reason: "fixture_not_configured:meetingDetailId" },
+        { name: "meeting agenda item", reason: "fixture_not_configured:agendaMeetingId" },
+        { name: "calendar", reason: "fixture_not_configured:calendarId" },
+        { name: "representative lookup", reason: "fixture_not_configured:representativeCoordinates" }
+      ])
+    )
+    expect(requests.some((request) => `${request.pathname}${request.search}`.includes("fixture"))).toBe(false)
+  })
+
+  it("rejects a malformed NX-03B Resource envelope without exposing its fixture identifier", async () => {
+    const meetingId = "meeting:do-not-emit"
+    const documentId = "event-document:do-not-emit"
+    malformedPath = `/api/meetings/${encodeURIComponent(meetingId)}/documents/${encodeURIComponent(documentId)}`
+    try {
+      let error
+      try {
+        await runSmoke({
+          LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID: documentId,
+          LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID: meetingId,
+          LEGISLATION_WEB_SMOKE_NX_03B: "1"
+        })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET meeting document did not return an exact Resource envelope")
+      expect(error.stderr).not.toContain(meetingId)
+      expect(error.stderr).not.toContain(encodeURIComponent(meetingId))
+      expect(error.stderr).not.toContain(documentId)
+    } finally {
+      malformedPath = undefined
+    }
+  })
+
+  it("rejects an unapproved NX-03B canonical data-incomplete response without exposing its message", async () => {
+    const meetingId = "meeting:private-incomplete"
+    const documentId = "event-document:private-incomplete"
+    const privateMessage = "Meeting document has incomplete private production facts"
+    nx03bErrorPaths.set(
+      `/api/meetings/${encodeURIComponent(meetingId)}/documents/${encodeURIComponent(documentId)}`,
+      (correlationId) => ({
+        error: { category: "unprocessable", correlationId, message: privateMessage, retryable: false }
+      })
+    )
+    try {
+      let error
+      try {
+        await runSmoke({
+          LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID: documentId,
+          LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID: meetingId,
+          LEGISLATION_WEB_SMOKE_NX_03B: "1"
+        })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET meeting document returned status 422")
+      expect(error.stderr).not.toContain(meetingId)
+      expect(error.stderr).not.toContain(documentId)
+      expect(error.stderr).not.toContain(privateMessage)
+    } finally {
+      nx03bErrorPaths.clear()
+    }
+  })
+
+  it("rejects a malformed representative lookup Resource envelope without exposing request coordinates", async () => {
+    malformedPath = "/api/representative-lookups"
+    try {
+      let error
+      try {
+        await runSmoke({
+          LEGISLATION_WEB_SMOKE_NX_03B: "1",
+          LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
+          LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944",
+          LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "200"
+        })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("POST representative lookup did not return an exact Resource envelope")
+      expect(error.stderr).not.toContain("38.5816")
+      expect(error.stderr).not.toContain("-121.4944")
+    } finally {
+      malformedPath = undefined
+    }
+  })
+
+  it("accepts only the audited dependency-unavailable representative outcome with its retry contract", async () => {
+    representativeUnavailable = true
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_NX_03B: "1",
+        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "dependency_unavailable",
+        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
+        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944"
+      })
+      expect(result.nx03b.skipped).toContainEqual({ name: "representative lookup", reason: "dependency_unavailable" })
+      expect(JSON.stringify(result)).not.toContain("38.5816")
+      expect(JSON.stringify(result)).not.toContain("-121.4944")
+    } finally {
+      representativeUnavailable = false
     }
   })
 })

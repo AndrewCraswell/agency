@@ -144,6 +144,30 @@ describe("meeting participant list API handler", () => {
     expect(listed).toBe(false)
   })
 
+  it("uses the shared default limit for independent participant pages", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      assertMeetingExists: async () => undefined,
+      listMeetingParticipants: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/meetings/meeting%3Aus%3A119%3A1/participants`)
+
+    expect(response.status).toBe(200)
+    expect(received).toEqual({
+      cursor: undefined,
+      limit: 20,
+      meetingId: "meeting:us:119:1",
+      organizationId: undefined,
+      personId: undefined,
+      role: undefined
+    })
+    await expect(response.json()).resolves.toMatchObject({ meta: { limit: 20 } })
+  })
+
   it("rejects noncanonical linked provenance and malformed query contracts", async () => {
     const baseUrl = await startServer({
       assertMeetingExists: async () => undefined,

@@ -1,9 +1,9 @@
-import { and, asc, eq, gt, or, type SQL } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, or, type SQL } from "drizzle-orm"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import { billActions, eventOutcomes, legislativeEvents, votes } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export type MeetingOutcomeClassification = "action" | "disposition" | "note" | "vote"
@@ -12,6 +12,7 @@ export type MeetingOutcomeLinkMethod = "deterministic-id" | "explicit"
 export interface MeetingOutcomeListInput {
   billId?: string
   classification?: string
+  classifications?: readonly MeetingOutcomeClassification[]
   cursor?: string
   limit?: number
   meetingId: string
@@ -70,6 +71,7 @@ type MeetingOutcomePersistenceRead = Pick<
 type MeetingOutcomeCursorScope = {
   billId: string | null
   classification: MeetingOutcomeClassification | null
+  classifications?: readonly MeetingOutcomeClassification[]
   meetingId: string
 }
 
@@ -114,7 +116,7 @@ export function buildMeetingOutcomeListQuery(database: LegislationDatabase, inpu
       and(
         eq(eventOutcomes.eventId, scope.meetingId),
         eq(legislativeEvents.isDeleted, false),
-        scope.classification === null ? undefined : eq(eventOutcomes.classification, scope.classification),
+        classificationPredicate(scope),
         scope.billId === null ? undefined : or(eq(billActions.billId, scope.billId), eq(votes.billId, scope.billId)),
         cursorPredicate(cursor)
       )
@@ -217,11 +219,22 @@ function outcomeBaseQuery(database: LegislationDatabase) {
 }
 
 function cursorScope(input: MeetingOutcomeListInput): MeetingOutcomeCursorScope {
+  if (input.classification !== undefined && input.classifications !== undefined) {
+    throw new LegislationError("invalid_request", "classification and classifications cannot both be supplied")
+  }
   return {
     billId: input.billId === undefined ? null : requiredInputText(input.billId, "billId"),
     classification: input.classification === undefined ? null : canonicalClassification(input.classification),
-    meetingId: requiredInputText(input.meetingId, "meetingId")
+    meetingId: requiredInputText(input.meetingId, "meetingId"),
+    ...(input.classifications === undefined ? {} : { classifications: canonicalClassifications(input.classifications) })
   }
+}
+
+function classificationPredicate(scope: MeetingOutcomeCursorScope): SQL | undefined {
+  if (scope.classifications !== undefined) {
+    return inArray(eventOutcomes.classification, scope.classifications)
+  }
+  return scope.classification === null ? undefined : eq(eventOutcomes.classification, scope.classification)
 }
 
 function cursorPredicate(cursor: MeetingOutcomeCursor | undefined): SQL | undefined {
@@ -257,6 +270,7 @@ function decodeCursor(value: string | undefined, scope: MeetingOutcomeCursorScop
       !isCursor(decoded) ||
       decoded.scope.meetingId !== scope.meetingId ||
       decoded.scope.classification !== scope.classification ||
+      !sameClassifications(decoded.scope.classifications, scope.classifications) ||
       decoded.scope.billId !== scope.billId
     ) {
       throw invalidCursor()
@@ -279,6 +293,7 @@ function isCursor(value: unknown): value is MeetingOutcomeCursor {
     isRecord(value.scope) &&
     isNonemptyString(value.scope.meetingId) &&
     (value.scope.classification === null || isClassification(value.scope.classification)) &&
+    (value.scope.classifications === undefined || isClassifications(value.scope.classifications)) &&
     (value.scope.billId === null || isNonemptyString(value.scope.billId))
   )
 }
@@ -306,6 +321,35 @@ function canonicalClassification(value: unknown): MeetingOutcomeClassification {
     return value
   }
   throw new LegislationError("unprocessable", "outcome classification is not canonical")
+}
+
+function canonicalClassifications(
+  values: readonly MeetingOutcomeClassification[]
+): readonly MeetingOutcomeClassification[] {
+  const selected = new Set<MeetingOutcomeClassification>()
+  for (const value of values) {
+    selected.add(canonicalClassification(value))
+    if (selected.size > 25) {
+      throw new LegislationError("invalid_request", "classifications supports at most 25 unique values")
+    }
+  }
+  return ["action", "disposition", "note", "vote"].filter((value): value is MeetingOutcomeClassification =>
+    selected.has(value as MeetingOutcomeClassification)
+  )
+}
+
+function sameClassifications(
+  received: unknown,
+  expected: readonly MeetingOutcomeClassification[] | undefined
+): boolean {
+  if (received === undefined || expected === undefined) {
+    return received === expected
+  }
+  return (
+    Array.isArray(received) &&
+    received.length === expected.length &&
+    received.every((value, index) => value === expected[index])
+  )
 }
 
 function canonicalLinkMethod(value: string): MeetingOutcomeLinkMethod {
@@ -378,6 +422,10 @@ function nonnegativeInteger(value: number, name: string): number {
 
 function isClassification(value: unknown): value is MeetingOutcomeClassification {
   return value === "action" || value === "vote" || value === "disposition" || value === "note"
+}
+
+function isClassifications(value: unknown): value is readonly MeetingOutcomeClassification[] {
+  return Array.isArray(value) && value.length > 0 && value.length <= 25 && value.every(isClassification)
 }
 
 function isNonemptyString(value: unknown): value is string {

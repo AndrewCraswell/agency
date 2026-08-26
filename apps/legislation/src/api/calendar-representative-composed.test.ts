@@ -75,6 +75,7 @@ function calendar(overrides: Partial<CalendarRead> = {}): CalendarRead {
 
 function meeting(): MeetingRead {
   return {
+    calendarId: "calendar:wa:committee-schedule:2026",
     classification: "meeting",
     description: "Rules Committee hearing",
     endAt: new Date("2026-08-17T19:00:00.000Z"),

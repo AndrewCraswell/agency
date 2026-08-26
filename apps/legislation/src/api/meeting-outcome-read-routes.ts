@@ -17,7 +17,7 @@ import {
   type HttpApiHandler
 } from "./http.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface MeetingOutcomeReadApi {
@@ -62,13 +62,14 @@ async function handleCollection(
 ): Promise<void> {
   assertAllowedQueryParameters(url, ["billId", "classification", "cursor", "limit"])
   const limit = queryLimit(url)
+  const classifications = queryClassifications(url)
   await service.assertMeetingOutcomeParentExists(meetingId)
   const page = await service.listMeetingOutcomes({
     billId: queryText(url, "billId", 256),
-    classification: queryClassification(url),
     cursor: queryText(url, "cursor", 4096),
     limit,
-    meetingId
+    meetingId,
+    ...classificationInput(classifications)
   })
   sendApiJson(response, 200, apiPage(request, projectPage(page, apiBaseUrl), limit))
 }
@@ -199,10 +200,38 @@ function queryText(url: URL, name: string, maximum: number): string | undefined 
   return value
 }
 
-function queryClassification(url: URL): string | undefined {
-  const value = queryText(url, "classification", 256)
-  if (value === undefined || value === "action" || value === "vote" || value === "disposition" || value === "note") {
-    return value
+function queryClassifications(url: URL): readonly ("action" | "disposition" | "note" | "vote")[] | undefined {
+  const received = url.searchParams.getAll("classification")
+  if (received.length === 0) {
+    return undefined
   }
-  throw new LegislationError("invalid_request", "classification must be a canonical outcome classification")
+  const selected = new Set<string>()
+  for (const raw of received) {
+    const value = raw.trim()
+    if (value !== "action" && value !== "vote" && value !== "disposition" && value !== "note") {
+      throw new LegislationError("invalid_request", "classification must be a canonical outcome classification")
+    }
+    selected.add(value)
+    if (selected.size > 25) {
+      throw new LegislationError("invalid_request", "classification supports at most 25 unique values")
+    }
+  }
+  return ["action", "disposition", "note", "vote"].filter(
+    (value): value is "action" | "disposition" | "note" | "vote" => selected.has(value)
+  )
+}
+
+function classificationInput(
+  classifications: readonly ("action" | "disposition" | "note" | "vote")[] | undefined
+): Readonly<
+  | { classification: "action" | "disposition" | "note" | "vote" | undefined }
+  | { classifications: readonly ("action" | "disposition" | "note" | "vote")[] }
+> {
+  if (classifications === undefined) {
+    return { classification: undefined }
+  }
+  if (classifications.length === 1) {
+    return { classification: classifications[0] }
+  }
+  return { classifications }
 }

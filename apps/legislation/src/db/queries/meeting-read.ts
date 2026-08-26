@@ -67,6 +67,8 @@ export type MeetingPersistenceRead = Pick<
 >
 
 export interface MeetingRead extends MeetingPersistenceRead {
+  /** The sole publisher-declared calendar containing this meeting, when one exists. */
+  calendarId: string | null
   organizationIds: string[]
   sessionIds: string[]
 }
@@ -153,6 +155,7 @@ export async function listMeetings(database: LegislationDatabase, input: Meeting
   )
   const items = visible.map((row) => ({
     ...row,
+    calendarId: relations.calendars.get(row.id) ?? null,
     organizationIds: relations.organizations.get(row.id) ?? [],
     sessionIds: relations.sessions.get(row.id) ?? []
   }))
@@ -183,6 +186,7 @@ export async function getMeetingRead(database: LegislationDatabase, meetingId: s
   const relations = await relationIds(database, [row.id])
   return {
     ...row,
+    calendarId: relations.calendars.get(row.id) ?? null,
     organizationIds: relations.organizations.get(row.id) ?? [],
     sessionIds: relations.sessions.get(row.id) ?? []
   }
@@ -337,12 +341,18 @@ function sourceSequenceSort(): SQL<number> {
 }
 
 async function relationIds(database: LegislationDatabase, eventIds: readonly string[]) {
+  const calendars = new Map<string, string | null>(eventIds.map((id) => [id, null]))
   const sessions = new Map<string, string[]>(eventIds.map((id) => [id, []]))
   const organizations = new Map<string, string[]>(eventIds.map((id) => [id, []]))
   if (eventIds.length === 0) {
-    return { organizations, sessions }
+    return { calendars, organizations, sessions }
   }
-  const [sessionRows, organizationRows] = await Promise.all([
+  const [calendarRows, sessionRows, organizationRows] = await Promise.all([
+    database
+      .select({ calendarId: calendarEvents.calendarId, eventId: calendarEvents.eventId })
+      .from(calendarEvents)
+      .where(inArray(calendarEvents.eventId, eventIds))
+      .orderBy(asc(calendarEvents.eventId), asc(calendarEvents.calendarId)),
     database
       .select({ eventId: eventSessions.eventId, sessionId: eventSessions.sessionId })
       .from(eventSessions)
@@ -354,13 +364,35 @@ async function relationIds(database: LegislationDatabase, eventIds: readonly str
       .where(inArray(eventOrganizations.eventId, eventIds))
       .orderBy(asc(eventOrganizations.organizationId))
   ])
+  applyCalendarRelations(calendars, calendarRows)
   for (const row of sessionRows) {
     sessions.get(row.eventId)?.push(row.sessionId)
   }
   for (const row of organizationRows) {
     organizations.get(row.eventId)?.push(row.organizationId)
   }
-  return { organizations, sessions }
+  return { calendars, organizations, sessions }
+}
+
+/**
+ * Calendar membership is singular in the public meeting model. A malformed
+ * persisted relationship set is a canonical-data failure, never an arbitrary
+ * selection based on storage order.
+ */
+export function applyCalendarRelations(
+  calendars: Map<string, string | null>,
+  rows: readonly { calendarId: string; eventId: string }[]
+): void {
+  for (const row of rows) {
+    const current = calendars.get(row.eventId)
+    if (current === undefined) {
+      continue
+    }
+    if (current !== null && current !== row.calendarId) {
+      throw new LegislationError("unprocessable", `Meeting ${row.eventId} has multiple calendar relations`)
+    }
+    calendars.set(row.eventId, row.calendarId)
+  }
 }
 
 function cursorScope(input: MeetingListInput): MeetingCursorScope {

@@ -29,6 +29,7 @@ async function startServer(service: MeetingReadApi) {
 
 function meeting(): MeetingRead {
   return {
+    calendarId: "calendar:wa:committee-schedule:2026",
     classification: "meeting",
     description: "A source-declared meeting",
     endAt: null,
@@ -101,6 +102,7 @@ describe("meeting read API handler", () => {
     await expect(response.json()).resolves.toMatchObject({
       data: [
         {
+          calendarId: "calendar:wa:committee-schedule:2026",
           canonicalUrl: "https://api.example.test/api/meetings/event%3Aopenstates%3Arules-1",
           date: "2026-08-17",
           organizationIds: ["organization:openstates:rules"],
@@ -201,12 +203,36 @@ describe("meeting read API handler", () => {
       `${baseUrl}/api/meetings?billId=bill%3A1&calendarId=calendar%3A1&isRemote=false&jurisdictionId=jurisdiction%3Awa`
     )
     expect(global.status).toBe(200)
+    await expect(global.json()).resolves.toMatchObject({
+      data: [{ calendarId: "calendar:wa:committee-schedule:2026", type: "meeting" }]
+    })
     expect(received).toMatchObject({
       billId: "bill:1",
       calendarId: "calendar:1",
       isRemote: false,
       jurisdictionId: "jurisdiction:wa",
       limit: 20
+    })
+  })
+
+  it("deduplicates repeated global meeting enum filters into cursor-bound canonical arrays", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      listMeetings: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(
+      `${baseUrl}/api/meetings?classification=meeting&classification=hearing&classification=meeting&status=scheduled&status=completed&status=scheduled`
+    )
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({
+      classifications: ["hearing", "meeting"],
+      statuses: ["completed", "scheduled"]
     })
   })
 
@@ -230,6 +256,7 @@ describe("meeting read API handler", () => {
           agenda: { limit: 2, nextCursor: "agenda-next", truncated: true },
           documents: { limit: 2, nextCursor: null, truncated: false }
         },
+        calendarId: "calendar:wa:committee-schedule:2026",
         type: "meeting"
       },
       meta: { correlationId: "meeting-detail" }

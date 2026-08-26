@@ -16,7 +16,7 @@ import {
   type HttpApiHandler
 } from "./http.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface MeetingDocumentReadApi {

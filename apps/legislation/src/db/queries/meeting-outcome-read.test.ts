@@ -14,7 +14,14 @@ const database = drizzle(pool, { schema })
 const meetingId = "meeting:us:119:hearing:1"
 const outcomeId = "outcome:us:119:hearing:1:2"
 
-function cursor(scope: Readonly<{ billId: string | null; classification: string | null; meetingId: string }>): string {
+function cursor(
+  scope: Readonly<{
+    billId: string | null
+    classification: string | null
+    classifications?: readonly string[]
+    meetingId: string
+  }>
+): string {
   return Buffer.from(JSON.stringify({ id: outcomeId, scope, sourceSequence: 2, version: 1 })).toString("base64url")
 }
 
@@ -94,6 +101,24 @@ describe("meeting outcome repository", () => {
       buildMeetingOutcomeListQuery(database, {
         classification: "vote",
         cursor: cursor({ billId: null, classification: "action", meetingId }),
+        meetingId
+      })
+    ).toThrow("Invalid meeting outcome pagination cursor")
+  })
+
+  it("filters and cursor-binds canonical repeated classifications", () => {
+    const scope = { billId: null, classification: null, classifications: ["action", "note"], meetingId }
+    const generated = buildMeetingOutcomeListQuery(database, {
+      classifications: ["note", "action", "note"],
+      cursor: cursor(scope),
+      meetingId
+    }).toSQL().sql
+
+    expect(generated).toContain('"event_outcomes"."classification" in')
+    expect(() =>
+      buildMeetingOutcomeListQuery(database, {
+        classifications: ["action", "vote"],
+        cursor: cursor(scope),
         meetingId
       })
     ).toThrow("Invalid meeting outcome pagination cursor")

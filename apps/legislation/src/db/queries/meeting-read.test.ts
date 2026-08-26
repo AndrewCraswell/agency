@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { describe, expect, it } from "vitest"
 import * as schema from "../schema/schema.js"
-import { buildMeetingListQuery } from "./meeting-read.js"
+import { applyCalendarRelations, buildMeetingListQuery } from "./meeting-read.js"
 
 const pool = new pg.Pool({ connectionString: "postgresql://meeting-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })
@@ -74,6 +74,24 @@ describe("meeting read queries", () => {
     expect(buildMeetingListQuery(database, { calendarId: "calendar:wa:committee-schedule" }).toSQL().sql).toContain(
       'exists (select 1 from "legislation"."calendar_events"'
     )
+  })
+
+  it("maps zero or one persisted calendar relation and rejects non-singular meeting calendars", () => {
+    const noCalendar = new Map<string, string | null>([["event:wa:zero", null]])
+    applyCalendarRelations(noCalendar, [])
+    expect(noCalendar.get("event:wa:zero")).toBeNull()
+
+    const oneCalendar = new Map<string, string | null>([["event:wa:one", null]])
+    applyCalendarRelations(oneCalendar, [{ calendarId: "calendar:wa:committee-schedule", eventId: "event:wa:one" }])
+    expect(oneCalendar.get("event:wa:one")).toBe("calendar:wa:committee-schedule")
+
+    const multipleCalendars = new Map<string, string | null>([["event:wa:multiple", null]])
+    expect(() =>
+      applyCalendarRelations(multipleCalendars, [
+        { calendarId: "calendar:wa:first", eventId: "event:wa:multiple" },
+        { calendarId: "calendar:wa:second", eventId: "event:wa:multiple" }
+      ])
+    ).toThrow("Meeting event:wa:multiple has multiple calendar relations")
   })
 
   it("uses the selected calendar timezone for date-only bounds across DST transitions", () => {

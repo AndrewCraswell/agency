@@ -72,11 +72,7 @@ async function handleCalendarRequest(
     sendApiJson(
       response,
       200,
-      apiPage(
-        request,
-        { ...page, items: page.items.map((item) => projectMeetingRead(item, apiBaseUrl, route.calendarId)) },
-        input.limit
-      )
+      apiPage(request, { ...page, items: page.items.map((item) => projectMeetingRead(item, apiBaseUrl)) }, input.limit)
     )
     return true
   }
@@ -149,6 +145,7 @@ function calendarInput(url: URL, organizationId: string | undefined): CalendarLi
 function calendarMeetingInput(url: URL, calendarId: string): CalendarMeetingListInput {
   const from = queryDateBound(url, "from")
   const to = queryDateBound(url, "to")
+  const statuses = queryStatuses(url)
   validateDateRange(from, to)
   return {
     calendarId,
@@ -156,8 +153,8 @@ function calendarMeetingInput(url: URL, calendarId: string): CalendarMeetingList
     from,
     limit: queryLimit(url),
     sort: querySort(url),
-    status: queryStatus(url),
-    to
+    to,
+    ...statusInput(statuses)
   }
 }
 
@@ -254,21 +251,48 @@ function querySort(url: URL): CalendarMeetingListInput["sort"] {
   throw new LegislationError("invalid_request", "sort is not supported")
 }
 
-function queryStatus(url: URL): CalendarMeetingListInput["status"] {
-  const value = queryText(url, "status", 64)
-  if (value === undefined) {
+function queryStatuses(
+  url: URL
+): readonly ("cancelled" | "completed" | "other" | "postponed" | "scheduled")[] | undefined {
+  const received = url.searchParams.getAll("status")
+  if (received.length === 0) {
     return undefined
   }
-  switch (value) {
-    case "cancelled":
-    case "completed":
-    case "other":
-    case "postponed":
-    case "scheduled":
-      return value
-    default:
+  const selected = new Set<string>()
+  for (const raw of received) {
+    const value = raw.trim()
+    if (
+      value !== "cancelled" &&
+      value !== "completed" &&
+      value !== "other" &&
+      value !== "postponed" &&
+      value !== "scheduled"
+    ) {
       throw new LegislationError("invalid_request", "status is not supported")
+    }
+    selected.add(value)
+    if (selected.size > 25) {
+      throw new LegislationError("invalid_request", "status supports at most 25 unique values")
+    }
   }
+  return ["cancelled", "completed", "other", "postponed", "scheduled"].filter(
+    (value): value is "cancelled" | "completed" | "other" | "postponed" | "scheduled" => selected.has(value)
+  )
+}
+
+function statusInput(
+  statuses: readonly ("cancelled" | "completed" | "other" | "postponed" | "scheduled")[] | undefined
+): Readonly<
+  | { status: "cancelled" | "completed" | "other" | "postponed" | "scheduled" | undefined }
+  | { statuses: readonly ("cancelled" | "completed" | "other" | "postponed" | "scheduled")[] }
+> {
+  if (statuses === undefined) {
+    return { status: undefined }
+  }
+  if (statuses.length === 1) {
+    return { status: statuses[0] }
+  }
+  return { statuses }
 }
 
 function queryText(url: URL, name: string, maximum: number): string | undefined {

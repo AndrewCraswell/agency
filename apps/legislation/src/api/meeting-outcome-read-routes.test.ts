@@ -166,6 +166,31 @@ describe("meeting outcome read API handler", () => {
     })
   })
 
+  it("uses the shared independent-page default and canonicalizes repeated classifications", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      listMeetingOutcomes: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(
+      `${baseUrl}/api/meetings/meeting%3Aus%3A119%3Ahearing%3A1/outcomes?classification=note&classification=action&classification=note`
+    )
+
+    expect(response.status).toBe(200)
+    expect(received).toEqual({
+      billId: undefined,
+      classifications: ["action", "note"],
+      cursor: undefined,
+      limit: 20,
+      meetingId: "meeting:us:119:hearing:1"
+    })
+    await expect(response.json()).resolves.toMatchObject({ meta: { limit: 20 } })
+  })
+
   it("accepts only exact GET routes with bounded documented parameters", async () => {
     const baseUrl = await startServer(service())
     const path = "/api/meetings/meeting%3A1/outcomes"

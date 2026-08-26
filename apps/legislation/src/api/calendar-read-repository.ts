@@ -38,6 +38,7 @@ export interface CalendarMeetingListInput {
   limit: number
   sort?: "starts-asc" | "starts-desc"
   status?: "cancelled" | "completed" | "other" | "postponed" | "scheduled"
+  statuses?: readonly ("cancelled" | "completed" | "other" | "postponed" | "scheduled")[]
   to?: string
 }
 

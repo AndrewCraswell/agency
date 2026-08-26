@@ -112,6 +112,67 @@ const nx03aRoutes: readonly Nx03aRoute[] = [
   { name: "organization calendars", pathname: `/api/organizations/${organizationId}/calendars`, probe: "?limit=0" }
 ]
 
+type Nx03bRoute = Readonly<{
+  body?: string
+  method: "GET" | "POST"
+  name: string
+  pathname: string
+  probe?: string
+}>
+
+const meetingId = "meeting%3Arouter"
+const nx03bRoutes: readonly Nx03bRoute[] = [
+  { method: "GET", name: "meeting collection", pathname: "/api/meetings", probe: "?limit=0" },
+  { method: "GET", name: "meeting detail", pathname: `/api/meetings/${meetingId}`, probe: "?unexpected=1" },
+  { method: "GET", name: "meeting agenda", pathname: `/api/meetings/${meetingId}/agenda`, probe: "?limit=0" },
+  {
+    method: "GET",
+    name: "meeting agenda item",
+    pathname: `/api/meetings/${meetingId}/agenda/agenda%3Arouter`,
+    probe: "?unexpected=1"
+  },
+  { method: "GET", name: "meeting documents", pathname: `/api/meetings/${meetingId}/documents`, probe: "?limit=0" },
+  {
+    method: "GET",
+    name: "meeting event document",
+    pathname: `/api/meetings/${meetingId}/documents/document%3Arouter`,
+    probe: "?unexpected=1"
+  },
+  { method: "GET", name: "meeting outcomes", pathname: `/api/meetings/${meetingId}/outcomes`, probe: "?limit=0" },
+  {
+    method: "GET",
+    name: "meeting outcome",
+    pathname: `/api/meetings/${meetingId}/outcomes/outcome%3Arouter`,
+    probe: "?unexpected=1"
+  },
+  {
+    method: "GET",
+    name: "meeting participants",
+    pathname: `/api/meetings/${meetingId}/participants`,
+    probe: "?limit=0"
+  },
+  {
+    method: "GET",
+    name: "meeting participant",
+    pathname: `/api/meetings/${meetingId}/participants/person%3Arouter`,
+    probe: "?unexpected=1"
+  },
+  { method: "GET", name: "calendar collection", pathname: "/api/calendars", probe: "?limit=0" },
+  { method: "GET", name: "calendar detail", pathname: "/api/calendars/calendar%3Arouter", probe: "?unexpected=1" },
+  {
+    method: "GET",
+    name: "calendar meetings",
+    pathname: "/api/calendars/calendar%3Arouter/meetings",
+    probe: "?limit=0"
+  },
+  {
+    body: JSON.stringify({}),
+    method: "POST",
+    name: "representative lookup",
+    pathname: "/api/representative-lookups"
+  }
+]
+
 let baseUrl = ""
 let nextServer: ChildProcess | undefined
 let nextServerDiagnostics: () => string = () => "Next server did not start."
@@ -156,7 +217,7 @@ afterAll(async () => {
   }
 })
 
-describe.sequential("NX-02B, NX-02C, and NX-03A Next router acceptance", () => {
+describe.sequential("NX-02B, NX-02C, NX-03A, and NX-03B Next router acceptance", () => {
   it("resolves Next 16.3.1 from the legislation-web package and boots that resolved CLI", () => {
     const nextPackage = packageRequire("next/package.json") as Readonly<{ version: string }>
     const nextCliPath = packageRequire.resolve("next/dist/bin/next")
@@ -498,6 +559,122 @@ describe.sequential("NX-02B, NX-02C, and NX-03A Next router acceptance", () => {
       method: "GET"
     })
     await expectInvalidRequest(followUp, "router-nx03a-malformed-follow-up")
+  })
+
+  it.each(nx03bRoutes)("routes the encoded NX-03B %s path through its built handler", async (route) => {
+    expect.hasAssertions()
+    const correlationId = `router-nx03b-${route.name}`
+    const headers: Record<string, string> = { "x-correlation-id": correlationId }
+    if (route.body !== undefined) {
+      headers["content-type"] = "application/json"
+    }
+    const response = await request(`${route.pathname}${route.probe ?? ""}`, {
+      ...(route.body === undefined ? {} : { body: route.body }),
+      headers,
+      method: route.method
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it.each(nx03bRoutes)("keeps all unsupported methods on the built NX-03B %s route", async (route) => {
+    expect.hasAssertions()
+    const unsupportedMethods = route.method === "GET" ? unsupportedReadMethods : unsupportedResourceBatchMethods
+    for (const method of unsupportedMethods) {
+      const correlationId = `router-nx03b-${route.name}-${method.toLowerCase()}`
+      const response = await request(route.pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalNotFound(response, correlationId, method === "HEAD")
+    }
+  })
+
+  it.each(nx03bRoutes)(
+    "returns a canonical JSON 404 without redirecting a literal trailing slash for NX-03B %s",
+    async (route) => {
+      expect.hasAssertions()
+      const correlationId = `router-nx03b-trailing-${route.name}`
+      const headers: Record<string, string> = { "x-correlation-id": correlationId }
+      if (route.body !== undefined) {
+        headers["content-type"] = "application/json"
+      }
+      const response = await request(`${route.pathname}/`, {
+        ...(route.body === undefined ? {} : { body: route.body }),
+        headers,
+        method: route.method
+      })
+
+      expect(response.headers.get("location")).toBeNull()
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each([
+    `/api/meetings/${meetingId}/%61genda?limit=0`,
+    `/api/meetings/${meetingId}/%64ocuments?limit=0`,
+    `/api/meetings/${meetingId}/%6futcomes?limit=0`,
+    `/api/meetings/${meetingId}/%70articipants?limit=0`,
+    "/api/calendars/calendar%3Arouter/%6deetings"
+  ])("does not decode an encoded NX-03B static child segment before router precedence for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx03b-encoded-static-child"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectCanonicalNotFound(response, correlationId)
+  })
+
+  it.each(["/api/%6deetings", "/api/%63alendars", "/api/%72epresentative-lookups"])(
+    "does not decode an encoded NX-03B collection segment into a static route for %s",
+    async (pathname) => {
+      expect.hasAssertions()
+      const correlationId = "router-nx03b-encoded-static-collection"
+      const response = await request(pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method: "GET"
+      })
+
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each([
+    `/api/meetings/${meetingId}/agenda?limit=0`,
+    `/api/meetings/${meetingId}/documents?limit=0`,
+    `/api/meetings/${meetingId}/outcomes?limit=0`,
+    `/api/meetings/${meetingId}/participants?limit=0`,
+    "/api/calendars/calendar%3Arouter/meetings?limit=0"
+  ])("routes NX-03B nested static paths before the dynamic parent for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx03b-nested-static"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it.each([
+    "/api/meetings/%ZZ?unexpected=1",
+    `/api/meetings/${meetingId}/agenda/%ZZ?unexpected=1`,
+    `/api/meetings/${meetingId}/documents/%ZZ?unexpected=1`,
+    `/api/meetings/${meetingId}/outcomes/%ZZ?unexpected=1`,
+    `/api/meetings/${meetingId}/participants/%ZZ?unexpected=1`,
+    "/api/calendars/%C0%AF?unexpected=1"
+  ])("preserves malformed NX-03B path encodings at the proxy boundary for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx03b-malformed-path"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
   })
 })
 

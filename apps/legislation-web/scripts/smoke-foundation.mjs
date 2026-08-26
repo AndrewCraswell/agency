@@ -25,10 +25,16 @@ const configuredNx03a = process.env.LEGISLATION_WEB_SMOKE_NX_03A?.trim()
 if (configuredNx03a !== undefined && configuredNx03a !== "" && configuredNx03a !== "1") {
   throw new TypeError("LEGISLATION_WEB_SMOKE_NX_03A must be 1 when it is set")
 }
+const configuredNx03b = process.env.LEGISLATION_WEB_SMOKE_NX_03B?.trim()
+if (configuredNx03b !== undefined && configuredNx03b !== "" && configuredNx03b !== "1") {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_03B must be 1 when it is set")
+}
+const smokeNx03b = configuredNx03b === "1"
 const smokeNx03a = configuredNx03a === "1"
 const smokeNx02c = configuredNx02c === "1"
 const smokeNx02b = configuredNx02b === "1"
-const smokeNx02cCumulative = smokeNx02c || smokeNx03a
+const smokeNx03aCumulative = smokeNx03a || smokeNx03b
+const smokeNx02cCumulative = smokeNx02c || smokeNx03aCumulative
 const smokeNx02bCumulative = smokeNx02b || smokeNx02cCumulative
 const smokeNx02a = configuredNx02a === "1" || smokeNx02bCumulative
 
@@ -65,6 +71,50 @@ const nx03aFixtures = {
   organizationId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_ORGANIZATION_ID"),
   personId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PERSON_ID"),
   termId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_TERM_ID")
+}
+
+const nx03bFixtures = {
+  agendaItemId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID"),
+  agendaMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID"),
+  calendarId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_CALENDAR_ID"),
+  eventDocumentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID"),
+  eventDocumentMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID"),
+  meetingDetailId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_MEETING_DETAIL_ID"),
+  outcomeId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_OUTCOME_ID"),
+  outcomeMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID"),
+  participantDetailMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID"),
+  participantId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_ID"),
+  participantListMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID")
+}
+
+function representativeCoordinate(name, minimum, maximum) {
+  const value = fixtureEnvironmentValue(name)
+  if (value === undefined) {
+    return undefined
+  }
+  const coordinate = Number(value)
+  if (!Number.isFinite(coordinate) || coordinate < minimum || coordinate > maximum) {
+    throw new TypeError(`${name} must be a finite coordinate between ${minimum} and ${maximum}`)
+  }
+  return coordinate
+}
+
+const representativeLatitude = representativeCoordinate("LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE", -90, 90)
+const representativeLongitude = representativeCoordinate("LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE", -180, 180)
+if ((representativeLatitude === undefined) !== (representativeLongitude === undefined)) {
+  throw new TypeError(
+    "LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE and LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE must be configured together"
+  )
+}
+const representativeExpectedOutcome = fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME")
+if (
+  representativeExpectedOutcome !== undefined &&
+  representativeExpectedOutcome !== "200" &&
+  representativeExpectedOutcome !== "dependency_unavailable"
+) {
+  throw new TypeError(
+    "LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME must be 200 or dependency_unavailable when it is set"
+  )
 }
 
 function smokeBaseUrl(value) {
@@ -367,6 +417,19 @@ function requireCanonicalDataIncomplete(body, name, expectedCorrelationId) {
     body.error.retryable !== false
   ) {
     throw new Error(`${name} did not return a canonical data-incomplete ErrorResponse`)
+  }
+}
+
+function requireCanonicalDependencyUnavailable(body, name, expectedCorrelationId) {
+  if (
+    !hasExactKeys(body, ["error"]) ||
+    !hasExactKeys(body.error, ["category", "correlationId", "message", "retryable"]) ||
+    body.error.category !== "dependency_unavailable" ||
+    body.error.correlationId !== expectedCorrelationId ||
+    !isSafeNonEmptyMessage(body.error.message) ||
+    body.error.retryable !== true
+  ) {
+    throw new Error(`${name} did not return a canonical dependency-unavailable ErrorResponse`)
   }
 }
 
@@ -990,6 +1053,229 @@ async function smokeNx03aRoutes(root) {
   }
 }
 
+function missingNx03bFixtureName(route) {
+  return route.fixtures.find((fixture) => nx03bFixtures[fixture] === undefined)
+}
+
+function requireRepresentativeLookupEnvelope(body, name, expectedCorrelationId) {
+  if (!hasExactKeys(body, ["data", "links", "meta"]) || !isRecord(body.data)) {
+    throw new Error(`${name} did not return an exact Resource envelope`)
+  }
+  if (
+    !hasExactKeys(body.meta, ["correlationId", "warnings"]) ||
+    !hasExactKeys(body.links, ["self"]) ||
+    body.meta.correlationId !== expectedCorrelationId ||
+    !Array.isArray(body.meta.warnings) ||
+    body.links.self !== "/api/representative-lookups" ||
+    !hasExactKeys(body.data, [
+      "districts",
+      "expiresAt",
+      "lookupId",
+      "quality",
+      "representatives",
+      "resolvedAt",
+      "warnings"
+    ]) ||
+    !["exact", "interpolated", "postal-centroid", "unresolved"].includes(body.data.quality) ||
+    !Array.isArray(body.data.districts) ||
+    !Array.isArray(body.data.representatives) ||
+    !Array.isArray(body.data.warnings)
+  ) {
+    throw new Error(`${name} did not return the expected representative lookup Resource envelope`)
+  }
+  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
+  requireStringArray(body.data.warnings, `${name} data.warnings`)
+  requireNonEmptyString(body.data.lookupId, `${name} data.lookupId`)
+  requireNonEmptyString(body.data.resolvedAt, `${name} data.resolvedAt`)
+  requireNonEmptyString(body.data.expiresAt, `${name} data.expiresAt`)
+}
+
+async function smokeNx03bRoutes(root) {
+  const routes = [
+    { fixtures: [], kind: "page", name: "meetings", path: "/api/meetings?limit=1" },
+    {
+      expectedStatus: 404,
+      fixtures: ["meetingDetailId"],
+      kind: "resource",
+      name: "meeting",
+      path: ({ meetingDetailId }) => `/api/meetings/${encodeURIComponent(meetingDetailId)}`
+    },
+    {
+      fixtures: ["agendaMeetingId"],
+      kind: "page",
+      name: "meeting agenda",
+      path: ({ agendaMeetingId }) => `/api/meetings/${encodeURIComponent(agendaMeetingId)}/agenda?limit=1`
+    },
+    {
+      expectedStatus: 404,
+      fixtures: ["agendaMeetingId", "agendaItemId"],
+      kind: "resource",
+      name: "meeting agenda item",
+      path: ({ agendaMeetingId, agendaItemId }) =>
+        `/api/meetings/${encodeURIComponent(agendaMeetingId)}/agenda/${encodeURIComponent(agendaItemId)}`
+    },
+    {
+      fixtures: ["eventDocumentMeetingId"],
+      kind: "page",
+      name: "meeting documents",
+      path: ({ eventDocumentMeetingId }) =>
+        `/api/meetings/${encodeURIComponent(eventDocumentMeetingId)}/documents?limit=1`
+    },
+    {
+      fixtures: ["eventDocumentMeetingId", "eventDocumentId"],
+      kind: "resource",
+      name: "meeting document",
+      path: ({ eventDocumentMeetingId, eventDocumentId }) =>
+        `/api/meetings/${encodeURIComponent(eventDocumentMeetingId)}/documents/${encodeURIComponent(eventDocumentId)}`
+    },
+    {
+      fixtures: ["outcomeMeetingId"],
+      kind: "page",
+      name: "meeting outcomes",
+      path: ({ outcomeMeetingId }) => `/api/meetings/${encodeURIComponent(outcomeMeetingId)}/outcomes?limit=1`
+    },
+    {
+      expectedStatus: 404,
+      fixtures: ["outcomeMeetingId", "outcomeId"],
+      kind: "resource",
+      name: "meeting outcome",
+      path: ({ outcomeMeetingId, outcomeId }) =>
+        `/api/meetings/${encodeURIComponent(outcomeMeetingId)}/outcomes/${encodeURIComponent(outcomeId)}`
+    },
+    {
+      fixtures: ["participantListMeetingId"],
+      kind: "page",
+      name: "meeting participants",
+      path: ({ participantListMeetingId }) =>
+        `/api/meetings/${encodeURIComponent(participantListMeetingId)}/participants?limit=1`
+    },
+    {
+      fixtures: ["participantDetailMeetingId", "participantId"],
+      kind: "resource",
+      name: "meeting participant",
+      path: ({ participantDetailMeetingId, participantId }) =>
+        `/api/meetings/${encodeURIComponent(participantDetailMeetingId)}/participants/${encodeURIComponent(participantId)}`
+    },
+    { fixtures: [], kind: "page", name: "calendars", path: "/api/calendars?limit=1" },
+    {
+      expectedStatus: 404,
+      fixtures: ["calendarId"],
+      kind: "resource",
+      name: "calendar",
+      path: ({ calendarId }) => `/api/calendars/${encodeURIComponent(calendarId)}`
+    },
+    {
+      expectedStatus: 404,
+      fixtures: ["calendarId"],
+      kind: "page",
+      name: "calendar meetings",
+      path: ({ calendarId }) => `/api/calendars/${encodeURIComponent(calendarId)}/meetings?limit=1`
+    },
+    {
+      body: () => ({ coordinates: { latitude: representativeLatitude, longitude: representativeLongitude } }),
+      fixtures: [],
+      kind: "representative-lookup",
+      method: "POST",
+      name: "representative lookup",
+      path: "/api/representative-lookups",
+      requiresRepresentativeCoordinates: true
+    }
+  ]
+  const passed = []
+  const skipped = []
+
+  for (const [index, route] of routes.entries()) {
+    const missingFixture = missingNx03bFixtureName(route)
+    if (missingFixture !== undefined) {
+      skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
+      continue
+    }
+    if (route.requiresRepresentativeCoordinates && representativeLatitude === undefined) {
+      skipped.push({ name: route.name, reason: "fixture_not_configured:representativeCoordinates" })
+      continue
+    }
+    if (route.requiresRepresentativeCoordinates && representativeExpectedOutcome === undefined) {
+      skipped.push({ name: route.name, reason: "fixture_not_configured:representativeExpectedOutcome" })
+      continue
+    }
+    const path = typeof route.path === "function" ? route.path(nx03bFixtures) : route.path
+    const url = new URL(path, root)
+    const method = route.method ?? "GET"
+    const correlationId = `nx-03b-smoke-${index + 1}`
+    const name = `${method} ${route.name}`
+    const response = await smokeFetch(url, {
+      ...(route.body === undefined ? {} : { body: JSON.stringify(route.body()) }),
+      diagnosticName: name,
+      headers: {
+        ...(route.body === undefined ? {} : { "content-type": "application/json" }),
+        "x-correlation-id": correlationId
+      },
+      method
+    })
+    requireCorrelationId(response, name, correlationId)
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      throw new Error(`${name} did not return application/json`)
+    }
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      throw new Error(`${name} did not return a JSON body`)
+    }
+    if (route.kind === "representative-lookup" && representativeExpectedOutcome === "dependency_unavailable") {
+      if (response.status !== 503) {
+        throw new Error(`${name} returned status ${response.status}, expected 503`)
+      }
+      if (response.headers.get("retry-after") !== "30") {
+        throw new Error(`${name} did not return retry-after 30`)
+      }
+      requireCanonicalDependencyUnavailable(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "dependency_unavailable" })
+      continue
+    }
+    if (route.expectedStatus === 404) {
+      if (response.status !== 404) {
+        throw new Error(`${name} returned status ${response.status}, expected audited 404`)
+      }
+      requireCanonicalNotFound(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "canonical_fixture_not_found" })
+      continue
+    }
+    if (response.status !== 200) {
+      throw new Error(`${name} returned status ${response.status}, expected 200`)
+    }
+    requirePrivateNoStore(response, name)
+    if (method === "GET") {
+      const etag = requireEtag(response, name)
+      await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-03b-smoke-conditional-${index + 1}`)
+    }
+    if (route.kind === "page") {
+      requirePageEnvelope(body, name, correlationId)
+    } else if (route.kind === "resource") {
+      requireResourceEnvelope(body, name, correlationId, nx03bFixtures[route.fixtures.at(-1)])
+    } else {
+      requireRepresentativeLookupEnvelope(body, name, correlationId)
+    }
+    passed.push(route.name)
+  }
+
+  await Promise.all([
+    smokeCanonicalApiNotFound(root, "/api/meetings/", "nx-03b-smoke-meetings-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/calendars/", "nx-03b-smoke-calendars-trailing-slash"),
+    smokeCanonicalApiNotFound(
+      root,
+      "/api/representative-lookups/",
+      "nx-03b-smoke-representative-lookups-trailing-slash"
+    )
+  ])
+
+  return {
+    notFound: ["meetings_trailing_slash", "calendars_trailing_slash", "representative_lookups_trailing_slash"],
+    passed,
+    skipped
+  }
+}
+
 const root = smokeBaseUrl(baseUrl)
 const healthUrl = new URL("/health", root)
 const readyUrl = new URL("/ready", root)
@@ -1038,7 +1324,8 @@ if (!homepageMarkup.includes("<main")) {
 const nx02a = smokeNx02a ? await smokeNx02aRoutes(root) : undefined
 const nx02b = smokeNx02bCumulative ? await smokeNx02bRoutes(root) : undefined
 const nx02c = smokeNx02cCumulative ? await smokeNx02cRoutes(root) : undefined
-const nx03a = smokeNx03a ? await smokeNx03aRoutes(root) : undefined
+const nx03a = smokeNx03aCumulative ? await smokeNx03aRoutes(root) : undefined
+const nx03b = smokeNx03b ? await smokeNx03bRoutes(root) : undefined
 let profile = "foundation"
 if (smokeNx02a) {
   profile = "foundation+nx-02a"
@@ -1049,8 +1336,11 @@ if (smokeNx02bCumulative) {
 if (smokeNx02c) {
   profile = "foundation+nx-02a+nx-02b+nx-02c"
 }
-if (smokeNx03a) {
+if (smokeNx03aCumulative) {
   profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a"
+}
+if (smokeNx03b) {
+  profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b"
 }
 
 process.stdout.write(
@@ -1061,6 +1351,7 @@ process.stdout.write(
     ...(nx02b === undefined ? {} : { nx02b }),
     ...(nx02c === undefined ? {} : { nx02c }),
     ...(nx03a === undefined ? {} : { nx03a }),
+    ...(nx03b === undefined ? {} : { nx03b }),
     profile,
     ready: ready.status,
     timeoutMs,

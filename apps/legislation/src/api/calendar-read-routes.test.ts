@@ -57,6 +57,7 @@ function calendar(overrides: Partial<CalendarRead> = {}): CalendarRead {
 
 function meeting(): MeetingRead {
   return {
+    calendarId: "calendar:wa:committee-schedule:2026",
     classification: "meeting",
     description: null,
     endAt: null,
@@ -168,6 +169,32 @@ describe("calendar read API handler", () => {
     await expect(meetings.json()).resolves.toMatchObject({
       data: [{ calendarId: "calendar:wa:committee-schedule:2026", type: "meeting" }],
       links: { next: `${path}&cursor=meeting-keyset` }
+    })
+  })
+
+  it("canonicalizes repeated calendar-meeting status filters", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      listCalendarMeetings: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(
+      `${baseUrl}/api/calendars/calendar%3Awa%3Acommittee-schedule%3A2026/meetings?status=scheduled&status=completed&status=scheduled`
+    )
+
+    expect(response.status).toBe(200)
+    expect(received).toEqual({
+      calendarId: "calendar:wa:committee-schedule:2026",
+      cursor: undefined,
+      from: undefined,
+      limit: 20,
+      sort: undefined,
+      statuses: ["completed", "scheduled"],
+      to: undefined
     })
   })
 

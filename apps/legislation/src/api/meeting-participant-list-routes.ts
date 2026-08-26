@@ -12,7 +12,7 @@ import {
 } from "./http.js"
 import { projectMeetingParticipantRead } from "./meeting-participant-projection.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface MeetingParticipantListApi {

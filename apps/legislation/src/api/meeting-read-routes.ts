@@ -195,10 +195,12 @@ function inputFromQuery(url: URL, route: MeetingCollectionRoute): MeetingCollect
   const from = queryOptionalIsoDateOrRfc3339(url, "from")
   const to = queryOptionalIsoDateOrRfc3339(url, "to")
   assertTemporalRange(from, to)
+  const classifications =
+    route.name === "global" ? enumQueryValues(url, "classification", MEETING_CLASSIFICATIONS) : undefined
+  const statuses = route.name === "global" ? enumQueryValues(url, "status", MEETING_STATUSES) : undefined
   return {
     billId: route.name === "global" ? boundedQuery(url, "billId", 256) : undefined,
     calendarId: route.name === "global" ? boundedQuery(url, "calendarId", 256) : undefined,
-    classification: enumQuery(url, "classification", ["hearing", "meeting", "other", "session"]),
     cursor: boundedQuery(url, "cursor", 4096),
     from,
     isRemote: route.name === "global" ? booleanQuery(url, "isRemote") : undefined,
@@ -210,8 +212,13 @@ function inputFromQuery(url: URL, route: MeetingCollectionRoute): MeetingCollect
       route.name === "jurisdiction" || route.name === "session"
         ? "starts-asc"
         : enumQuery(url, "sort", ["starts-asc", "starts-desc", "updated-desc"]),
-    status: enumQuery(url, "status", ["cancelled", "completed", "other", "postponed", "scheduled"]),
-    to
+    to,
+    ...(route.name === "global"
+      ? enumFilterInput("classification", "classifications", classifications)
+      : { classification: enumQuery(url, "classification", MEETING_CLASSIFICATIONS) }),
+    ...(route.name === "global"
+      ? enumFilterInput("status", "statuses", statuses)
+      : { status: enumQuery(url, "status", MEETING_STATUSES) })
   }
 }
 
@@ -257,6 +264,10 @@ function routeMatch(method: string | undefined, pathname: string): MeetingRoute 
   return undefined
 }
 
+const MEETING_CLASSIFICATIONS = ["hearing", "meeting", "other", "session"] as const
+const MEETING_STATUSES = ["cancelled", "completed", "other", "postponed", "scheduled"] as const
+const MAXIMUM_ENUM_VALUES = 25
+
 function enumQuery<const T extends readonly string[]>(url: URL, name: string, values: T): T[number] | undefined {
   const value = boundedQuery(url, name, 64)
   if (value === undefined) {
@@ -266,6 +277,43 @@ function enumQuery<const T extends readonly string[]>(url: URL, name: string, va
     throw new LegislationError("invalid_request", `${name} is not supported`)
   }
   return value as T[number]
+}
+
+function enumQueryValues<const T extends readonly string[]>(
+  url: URL,
+  name: string,
+  values: T
+): readonly T[number][] | undefined {
+  const received = url.searchParams.getAll(name)
+  if (received.length === 0) {
+    return undefined
+  }
+  const selected = new Set<string>()
+  for (const raw of received) {
+    const value = raw.trim()
+    if (value.length === 0 || value.length > 64 || !(values as readonly string[]).includes(value)) {
+      throw new LegislationError("invalid_request", `${name} is not supported`)
+    }
+    selected.add(value)
+    if (selected.size > MAXIMUM_ENUM_VALUES) {
+      throw new LegislationError("invalid_request", `${name} supports at most ${MAXIMUM_ENUM_VALUES} unique values`)
+    }
+  }
+  return values.filter((value): value is T[number] => selected.has(value))
+}
+
+function enumFilterInput<const T extends string>(
+  singular: string,
+  plural: string,
+  values: readonly T[] | undefined
+): Readonly<Record<string, T | readonly T[] | undefined>> {
+  if (values === undefined) {
+    return { [singular]: undefined }
+  }
+  if (values.length === 1) {
+    return { [singular]: values[0] }
+  }
+  return { [plural]: values }
 }
 
 function booleanQuery(url: URL, name: string): boolean | undefined {

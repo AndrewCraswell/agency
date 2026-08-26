@@ -336,6 +336,7 @@ function personVotePosition(): PersonVotePositionRead {
 
 function meeting(): MeetingRead {
   return {
+    calendarId: "calendar:fixture",
     classification: "meeting",
     description: "Fixture meeting",
     endAt: null,

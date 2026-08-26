@@ -31,6 +31,10 @@
     "./server/next/nx03a": {
       "types": "./dist/server/next/nx03a.d.ts",
       "import": "./dist/server/next/nx03a.js"
+    },
+    "./server/next/nx03b": {
+      "types": "./dist/server/next/nx03b.d.ts",
+      "import": "./dist/server/next/nx03b.js"
     }
   },
   "files": [

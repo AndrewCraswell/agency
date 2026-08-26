@@ -275,6 +275,7 @@ const voteRead: VoteRead = {
 }
 
 const meetingRead: MeetingRead = {
+  calendarId: resourceIds.calendar,
   classification: "meeting",
   description: "Fixture meeting",
   endAt: null,

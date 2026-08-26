@@ -127,4 +127,47 @@ $env:LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID = "membership:audited-production-fixtur
 pnpm --filter legislation-web smoke:foundation
 ```
 
+After NX-03B is deployed, set `LEGISLATION_WEB_SMOKE_NX_03B` to `1`. This cumulative profile runs NX-02A, NX-02B,
+NX-02C, and NX-03A first, then checks the 14 meeting, calendar, and representative-lookup operations. It embeds no
+production civic IDs, addresses, or coordinates. Configure audited target values through
+`LEGISLATION_WEB_SMOKE_MEETING_DETAIL_ID`, `LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID`,
+`LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID`, `LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID`,
+`LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID`, `LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID`,
+`LEGISLATION_WEB_SMOKE_OUTCOME_ID`, `LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID`,
+`LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID`, `LEGISLATION_WEB_SMOKE_PARTICIPANT_ID`, and
+`LEGISLATION_WEB_SMOKE_CALENDAR_ID`. Each child ID must belong to its designated parent, which can differ between route
+groups because canonical visibility differs in production. Configure `LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE` and
+`LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE` together only after auditing the representative provider result in the
+target deployment, plus `LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME` as either `200` or
+`dependency_unavailable`. The smoke sends exactly one coordinates request and never emits its values.
+
+Routes whose needed fixture values are absent report explicit `fixture_not_configured` skips; once configured, every
+NX-03B route must return its production-audited outcome. Only raw meeting detail, agenda-item detail, outcome detail,
+calendar detail, and calendar meetings may return canonical `404 not_found`. Every other configured route must return
+its canonical `200` Page or Resource response; no `422` exception is allowed. Successful `GET`s must preserve the
+correlation ID, return `cache-control: private, no-store`, include an ETag, and pass an ETag conditional `304` check.
+The representative request must either return its exact `200` lookup Resource envelope with a non-empty lookup ID, or
+its exact audited `503 dependency_unavailable` response with `retryable: true` and `Retry-After: 30`. The smoke also
+checks canonical no-redirect `404` behavior for trailing slashes on the meeting, calendar, and representative-lookup
+roots. Fixture IDs, coordinates, and response messages are not written to the report or stable failure labels.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_NX_03B = "1"
+$env:LEGISLATION_WEB_SMOKE_MEETING_DETAIL_ID = "meeting:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID = "meeting:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID = "agenda-item:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID = "meeting:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID = "event-document:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID = "meeting:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_OUTCOME_ID = "outcome:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID = "meeting:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID = "meeting:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_PARTICIPANT_ID = "participant:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_CALENDAR_ID = "calendar:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE = "38.5816"
+$env:LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE = "-121.4944"
+$env:LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME = "dependency_unavailable"
+pnpm --filter legislation-web smoke:foundation
+```
+
 Start with the [frontend architecture and dependency record](docs/architecture.md).
