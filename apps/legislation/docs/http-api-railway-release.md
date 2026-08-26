@@ -142,7 +142,8 @@ Deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` now fetches the official Congr
 Bioguide identities across Congress ranges, and persists provider-owned profiles, federal jurisdiction links, and
 source-titled terms through CLI, backfill, and daily synchronization. This can unblock person detail and person-term
 detail after a bounded production refresh and fresh smoke. It does not fabricate or populate committee memberships, so
-organization detail and membership detail remain structurally blocked on an authoritative roster source.
+organization detail and membership detail remain structurally blocked pending a complete current GovInfo committee-data
+ingestion.
 
 ## Meetings, calendars, and representative lookup deployed smoke
 
@@ -206,11 +207,10 @@ is paused during active HNSW I/O.
    production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
 2. After HNSW is clear, run
    `congress:entities --start-congress 119 --end-congress 119`, verify the canonical person/profile/jurisdiction/term
-   predicates, and smoke person detail and person-term detail. Then run `congress:rosters`, verify the covered
-   organization membership-completeness predicates, and smoke organization members and person memberships. The roster
-   command takes no Congress range and requires that current catalog to be present already: it uses only
-   `config.ingestion.federalEndCongress` and applies separately scoped House and Senate official roster transactions. Do
-   not use historical `congress:entities` ranges or the historical backfill to imply a roster refresh. Then run
+   predicates, and smoke person detail and person-term detail. Federal organization and membership detail remain blocked
+   pending a complete current GovInfo committee-data ingestion and fresh smoke. No roster command exists. If a canonical
+   operator is later required, name it `govinfo:committees`; do not use historical `congress:entities` ranges or the
+   historical backfill to imply a federal committee refresh. Then run
    `congress:events --domain meetings --start-congress <start> --end-congress <end> --rematerialize`. Verify canonical
    provenance/relationship predicates before using the resulting meeting as smoke evidence; do not infer completion from
    an ingestion success count.

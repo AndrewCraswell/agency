@@ -129,10 +129,6 @@ export class CongressClient {
       .member
   }
 
-  async *committees(congress: number): AsyncGenerator<readonly unknown[]> {
-    yield* this.#pages(`committee/${congress}`, "committees")
-  }
-
   async *amendments(
     congress: number,
     startOffset = 0

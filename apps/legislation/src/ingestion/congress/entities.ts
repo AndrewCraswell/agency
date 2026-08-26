@@ -1,12 +1,6 @@
 import { z } from "zod"
-import type {
-  legislativeTerms,
-  organizations,
-  people,
-  personDetails,
-  personJurisdictions
-} from "../../db/schema/schema.js"
-import { jurisdictionId, legislativeTermId, organizationId, personId } from "../../legislation/identifiers.js"
+import type { legislativeTerms, people, personDetails, personJurisdictions } from "../../db/schema/schema.js"
+import { jurisdictionId, legislativeTermId, personId } from "../../legislation/identifiers.js"
 import type { EntitySnapshot } from "../entity-snapshot.js"
 
 const optionalString = z.preprocess(
@@ -26,9 +20,6 @@ const optionalDistrict = z.preprocess(
   (value) => (value === null ? undefined : value),
   z.union([z.number().int(), z.string()]).optional()
 )
-const publicContactSchema = z
-  .object({ address: optionalString, email: optionalString, phone: optionalString })
-  .passthrough()
 const termSchema = z
   .object({ chamber: z.string().trim().min(1), endYear: optionalInteger, startYear: z.number().int() })
   .passthrough()
@@ -64,50 +55,15 @@ const memberDetailSchema = z
     updateDate: optionalIsoDateTime
   })
   .passthrough()
-const subcommitteeSchema = z
-  .object({
-    contact: publicContactSchema.optional(),
-    description: optionalString,
-    name: z.string().trim().min(1),
-    systemCode: z.string().trim().min(1),
-    termsOfReference: optionalString,
-    url: optionalString,
-    website: optionalHttpsUrl,
-    websiteUrl: optionalHttpsUrl
-  })
-  .passthrough()
-const committeeSchema = z
-  .object({
-    chamber: z.string().trim().min(1),
-    committeeTypeCode: optionalString,
-    contact: publicContactSchema.optional(),
-    description: optionalString,
-    name: z.string().trim().min(1),
-    subcommittees: z.array(subcommitteeSchema).optional(),
-    systemCode: z.string().trim().min(1),
-    termsOfReference: optionalString,
-    updateDate: optionalString,
-    url: optionalString,
-    website: optionalHttpsUrl,
-    websiteUrl: optionalHttpsUrl
-  })
-  .passthrough()
 
 type PersonInsert = typeof people.$inferInsert
-type OrganizationInsert = typeof organizations.$inferInsert
 type PersonDetailInsert = typeof personDetails.$inferInsert
 type PersonJurisdictionInsert = typeof personJurisdictions.$inferInsert
 type TermInsert = typeof legislativeTerms.$inferInsert
 
 export type CongressEntitySnapshot = Pick<
   EntitySnapshot,
-  | "organizations"
-  | "personDetailPersonIds"
-  | "personDetails"
-  | "personJurisdictions"
-  | "people"
-  | "termPersonIds"
-  | "terms"
+  "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
 >
 
 export interface CongressEntityContext {
@@ -129,33 +85,6 @@ function chamber(value: string): "lower" | "upper" | undefined {
     return "upper"
   }
   return undefined
-}
-
-function rawObjectHasOwn(input: unknown, key: string): boolean {
-  return typeof input === "object" && input !== null && Object.hasOwn(input, key)
-}
-
-function profileFactsWereSupplied(input: unknown): boolean {
-  return ["contact", "description", "termsOfReference", "website", "websiteUrl"].some((key) =>
-    rawObjectHasOwn(input, key)
-  )
-}
-
-function profileFields(input: {
-  contact?: { address?: string; email?: string; phone?: string }
-  description?: string
-  termsOfReference?: string
-  website?: string
-  websiteUrl?: string
-}) {
-  return {
-    description: input.description ?? null,
-    publicContactAddress: input.contact?.address ?? null,
-    publicContactEmail: input.contact?.email ?? null,
-    publicContactPhone: input.contact?.phone ?? null,
-    termsOfReference: input.termsOfReference ?? null,
-    websiteUrl: input.websiteUrl ?? input.website ?? null
-  }
 }
 
 function isOfficialCongressUrl(value: string | undefined): value is string {
@@ -316,115 +245,5 @@ export function normalizeCongressMemberDetails(
     people,
     termPersonIds: people.filter((person) => person.provenanceComplete).map((person) => person.id),
     terms
-  }
-}
-
-export function normalizeCongressCommittees(
-  inputs: readonly unknown[],
-  context: CongressEntityContext
-): Pick<CongressEntitySnapshot, "organizations"> {
-  const federalJurisdictionId = jurisdictionId("us")
-  const legislatureId = organizationId("congress", "united-states-congress")
-  const houseId = organizationId("congress", "house")
-  const senateId = organizationId("congress", "senate")
-  const fixedOrganizations: OrganizationInsert[] = [
-    {
-      childRelationsComplete: true,
-      detailFactsComplete: false,
-      classification: "legislature",
-      id: legislatureId,
-      isActive: true,
-      jurisdictionId: federalJurisdictionId,
-      membershipRelationsComplete: false,
-      name: "United States Congress",
-      sourceId: "united-states-congress",
-      upstreamIds: { congress: "united-states-congress" },
-      ...congressProvenance("https://api.congress.gov/committee", context.retrievedAt)
-    },
-    {
-      chamber: "lower",
-      childRelationsComplete: true,
-      classification: "chamber",
-      detailFactsComplete: false,
-      id: houseId,
-      isActive: true,
-      jurisdictionId: federalJurisdictionId,
-      membershipRelationsComplete: false,
-      name: "House of Representatives",
-      parentOrganizationId: legislatureId,
-      sourceId: "house",
-      upstreamIds: { congress: "house" },
-      ...congressProvenance("https://api.congress.gov/committee", context.retrievedAt)
-    },
-    {
-      chamber: "upper",
-      childRelationsComplete: true,
-      classification: "chamber",
-      detailFactsComplete: false,
-      id: senateId,
-      isActive: true,
-      jurisdictionId: federalJurisdictionId,
-      membershipRelationsComplete: false,
-      name: "Senate",
-      parentOrganizationId: legislatureId,
-      sourceId: "senate",
-      upstreamIds: { congress: "senate" },
-      ...congressProvenance("https://api.congress.gov/committee", context.retrievedAt)
-    }
-  ]
-  const committees = inputs.map((input) => ({
-    detailFactsComplete: profileFactsWereSupplied(input),
-    record: committeeSchema.parse(input),
-    subcommitteesComplete: rawObjectHasOwn(input, "subcommittees")
-  }))
-  return {
-    organizations: [
-      ...fixedOrganizations,
-      ...committees.flatMap(({ detailFactsComplete, record: committee, subcommitteesComplete }) => {
-        const normalizedChamber = chamber(committee.chamber)
-        const canonicalCommitteeId = organizationId("congress", committee.systemCode)
-        let parentOrganizationId: string | null = null
-        if (normalizedChamber === "lower") {
-          parentOrganizationId = houseId
-        } else if (normalizedChamber === "upper") {
-          parentOrganizationId = senateId
-        }
-        return [
-          {
-            childRelationsComplete: subcommitteesComplete,
-            chamber: normalizedChamber ?? null,
-            classification: "committee",
-            detailFactsComplete,
-            id: canonicalCommitteeId,
-            isActive: true,
-            jurisdictionId: federalJurisdictionId,
-            membershipRelationsComplete: false,
-            name: committee.name,
-            parentOrganizationId,
-            sourceId: committee.systemCode,
-            sourceUpdatedAt: committee.updateDate === undefined ? undefined : new Date(committee.updateDate),
-            upstreamIds: { congress: committee.systemCode, typeCode: committee.committeeTypeCode ?? "" },
-            ...profileFields(committee),
-            ...congressProvenance(committee.url, context.retrievedAt)
-          } satisfies OrganizationInsert,
-          ...(committee.subcommittees ?? []).map((subcommittee) => ({
-            childRelationsComplete: true,
-            chamber: normalizedChamber ?? null,
-            classification: "subcommittee" as const,
-            detailFactsComplete: profileFactsWereSupplied(subcommittee),
-            id: organizationId("congress", subcommittee.systemCode),
-            isActive: true,
-            jurisdictionId: federalJurisdictionId,
-            membershipRelationsComplete: false,
-            name: subcommittee.name,
-            parentOrganizationId: canonicalCommitteeId,
-            sourceId: subcommittee.systemCode,
-            upstreamIds: { congress: subcommittee.systemCode },
-            ...profileFields(subcommittee),
-            ...congressProvenance(subcommittee.url ?? committee.url, context.retrievedAt)
-          }))
-        ]
-      })
-    ]
   }
 }

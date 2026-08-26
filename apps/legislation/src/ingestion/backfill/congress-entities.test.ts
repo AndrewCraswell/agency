@@ -3,7 +3,7 @@ import { createJobCounts, runIngestionJob as runIngestionJobType } from "../job.
 import { executeCongressEntityRangeBackfill } from "./congress-entities.js"
 
 describe("Congress entity range backfill", () => {
-  it("uses the legacy all-range lease and visits every Congress", async () => {
+  it("uses the all-range lease and visits every Congress", async () => {
     const members = vi.fn<(congress: number) => AsyncGenerator<readonly unknown[]>>(async function* (congress: number) {
       yield [
         {
@@ -29,9 +29,6 @@ describe("Congress entity range backfill", () => {
           url: "https://api.congress.gov/member/M000001"
         }
       ]
-    })
-    const committees = vi.fn<() => AsyncGenerator<readonly unknown[]>>(async function* () {
-      yield []
     })
     const getMember = vi.fn<(bioguideId: string) => Promise<unknown>>(async (bioguideId) => ({
       bioguideId,
@@ -78,7 +75,7 @@ describe("Congress entity range backfill", () => {
         startCongress: 118
       },
       {
-        client: { committees, getMember, members },
+        client: { getMember, members },
         replaceEntitySnapshot,
         runIngestionJob: runIngestionJob as never
       }
@@ -89,6 +86,7 @@ describe("Congress entity range backfill", () => {
       expect.anything(),
       "jurisdiction:us",
       expect.objectContaining({
+        organizations: [],
         people: expect.arrayContaining([
           expect.objectContaining({
             provenanceComplete: true,
@@ -113,7 +111,8 @@ describe("Congress entity range backfill", () => {
         ]),
         termPersonIds: ["person:congress:m000001"],
         termSourceProvider: "congress"
-      })
+      }),
+      { replaceOrganizations: false }
     )
     expect(getMember).toHaveBeenCalledOnce()
   })

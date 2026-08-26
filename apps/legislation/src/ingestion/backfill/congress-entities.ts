@@ -2,13 +2,11 @@ import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { replaceEntitySnapshot } from "../../db/queries/entities.js"
 import { CongressClient } from "../congress/client.js"
-import { normalizeCongressCommittees } from "../congress/entities.js"
 import { hydrateCongressMemberSnapshot } from "../congress/member-details.js"
 import { RetryingHttpClient } from "../http-client.js"
 import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
 
 interface CongressEntityClient {
-  committees(congress: number): AsyncIterable<readonly unknown[]>
   getMember(bioguideId: string): Promise<unknown>
   members(congress: number): AsyncIterable<readonly unknown[]>
 }
@@ -53,16 +51,11 @@ export async function executeCongressEntityRangeBackfill(
       const peopleById = new Map()
       const memberSnapshots: Array<Awaited<ReturnType<typeof hydrateCongressMemberSnapshot>>> = []
       const termsById = new Map()
-      const organizationsById = new Map()
       const memberDetailCache = new Map<string, unknown>()
       for (let congress = input.startCongress; congress <= input.endCongress; congress += 1) {
         const members: unknown[] = []
-        const committees: unknown[] = []
         for await (const page of client.members(congress)) {
           members.push(...page)
-        }
-        for await (const page of client.committees(congress)) {
-          committees.push(...page)
         }
         const context = { retrievedAt: new Date() }
         const memberSnapshot = await hydrateCongressMemberSnapshot(
@@ -73,32 +66,33 @@ export async function executeCongressEntityRangeBackfill(
           memberDetailCache
         )
         memberSnapshots.push(memberSnapshot)
-        const committeeSnapshot = normalizeCongressCommittees(committees, context)
         for (const person of memberSnapshot.people) {
           peopleById.set(person.id, person)
         }
         for (const term of memberSnapshot.terms) {
           termsById.set(term.id, term)
         }
-        for (const organization of committeeSnapshot.organizations) {
-          organizationsById.set(organization.id, organization)
-        }
       }
-      await replaceSnapshot(input.database, "jurisdiction:us", {
-        memberships: [],
-        organizations: [...organizationsById.values()],
-        personAliasPersonIds: [],
-        personAliases: [],
-        personDetailPersonIds: memberDetailsByPersonId(memberSnapshots).map((detail) => detail.personId),
-        personDetailSourceProvider: "congress",
-        personDetails: memberDetailsByPersonId(memberSnapshots),
-        personJurisdictions: memberJurisdictionsByPersonId(memberSnapshots),
-        people: [...peopleById.values()],
-        termPersonIds: unique(memberSnapshots.flatMap((snapshot) => snapshot.termPersonIds ?? [])),
-        termSourceProvider: "congress",
-        terms: [...termsById.values()]
-      })
-      const records = peopleById.size + termsById.size + organizationsById.size
+      await replaceSnapshot(
+        input.database,
+        "jurisdiction:us",
+        {
+          memberships: [],
+          organizations: [],
+          personAliasPersonIds: [],
+          personAliases: [],
+          personDetailPersonIds: memberDetailsByPersonId(memberSnapshots).map((detail) => detail.personId),
+          personDetailSourceProvider: "congress",
+          personDetails: memberDetailsByPersonId(memberSnapshots),
+          personJurisdictions: memberJurisdictionsByPersonId(memberSnapshots),
+          people: [...peopleById.values()],
+          termPersonIds: unique(memberSnapshots.flatMap((snapshot) => snapshot.termPersonIds ?? [])),
+          termSourceProvider: "congress",
+          terms: [...termsById.values()]
+        },
+        { replaceOrganizations: false }
+      )
+      const records = peopleById.size + termsById.size
       return { counts: createJobCounts({ discovered: records, read: records, updated: records }), failures: [] }
     }
   )

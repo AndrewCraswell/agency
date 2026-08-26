@@ -3,7 +3,6 @@ import { createReadStream } from "node:fs"
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { Command } from "commander"
-import { and, eq, inArray, sql } from "drizzle-orm"
 import { createLegislationApiHandler } from "../api/handlers.js"
 import { createRepresentativeLookupApi } from "../api/representative-lookup.js"
 import {
@@ -27,15 +26,9 @@ import { migrateDatabase } from "../db/migrate.js"
 import { replaceEntitySnapshot } from "../db/queries/entities.js"
 import { upsertEventSnapshots } from "../db/queries/events.js"
 import { isDatabaseReady, waitForDatabase } from "../db/readiness.js"
-import { organizations } from "../db/schema/schema.js"
 import { decodeArchiveRecords, MAXIMUM_ARCHIVE_BYTES } from "../ingestion/archive.js"
 import { synchronizeCongressAmendments } from "../ingestion/congress/amendments-sync.js"
 import { CongressClient } from "../ingestion/congress/client.js"
-import {
-  createCurrentCongressCommitteeRosterReaders,
-  synchronizeCurrentCongressCommitteeRosters
-} from "../ingestion/congress/current-committee-rosters.js"
-import { normalizeCongressCommittees } from "../ingestion/congress/entities.js"
 import { synchronizeCongressEvents } from "../ingestion/congress/events-sync.js"
 import { hydrateCongressMemberSnapshot } from "../ingestion/congress/member-details.js"
 import { synchronizeCongressCommitteeReports } from "../ingestion/congress/reports-sync.js"
@@ -98,7 +91,6 @@ import { normalizeOpenStatesEvent } from "../ingestion/openstates/events.js"
 import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
 import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
-import { jurisdictionId } from "../legislation/identifiers.js"
 import { LegislationQueryService } from "../legislation/query-service.js"
 import { close, createLegislationServer, listen } from "../mcp/server.js"
 import { createLegislationMcpHandler } from "../mcp/tools.js"
@@ -203,15 +195,10 @@ program
 
 program
   .command("congress:entities")
-  .description("Synchronize federal members, terms, committees, and subcommittees")
+  .description("Synchronize federal members and terms")
   .option("--end-congress <number>")
   .option("--start-congress <number>")
   .action(syncCongressEntities)
-
-program
-  .command("congress:rosters")
-  .description("Refresh authoritative current Congress committee rosters")
-  .action(syncCurrentCongressRosters)
 
 program
   .command("congress:amendments")
@@ -1095,16 +1082,12 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
       async () => {
         const counts = createJobCounts()
         const rawMembers: Array<{ congress: number; records: unknown[] }> = []
-        const rawCommittees: unknown[] = []
         for (const congress of congresses) {
           const members: unknown[] = []
           for await (const page of client.members(congress)) {
             members.push(...page)
           }
           rawMembers.push({ congress, records: members })
-          for await (const page of client.committees(congress)) {
-            rawCommittees.push(...page)
-          }
         }
         const entityContext = { retrievedAt: new Date() }
         const memberDetailCache = new Map<string, unknown>()
@@ -1114,14 +1097,10 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
             await hydrateCongressMemberSnapshot(records, congress, entityContext, client, memberDetailCache)
           )
         }
-        const committeeSnapshot = normalizeCongressCommittees(rawCommittees, entityContext)
         const peopleById = new Map(
           memberSnapshots.flatMap((snapshot) => snapshot.people).map((person) => [person.id, person])
         )
         const termsById = new Map(memberSnapshots.flatMap((snapshot) => snapshot.terms).map((term) => [term.id, term]))
-        const organizationsById = new Map(
-          committeeSnapshot.organizations.map((organization) => [organization.id, organization])
-        )
         const personDetailsByPersonId = new Map(
           memberSnapshots.flatMap((snapshot) => snapshot.personDetails ?? []).map((detail) => [detail.personId, detail])
         )
@@ -1133,70 +1112,28 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
               jurisdiction
             ])
         )
-        await replaceEntitySnapshot(database, "jurisdiction:us", {
-          memberships: [],
-          organizations: [...organizationsById.values()],
-          personAliasPersonIds: [],
-          personAliases: [],
-          personDetailPersonIds: [...personDetailsByPersonId.keys()],
-          personDetailSourceProvider: "congress",
-          personDetails: [...personDetailsByPersonId.values()],
-          personJurisdictions: [...personJurisdictionsByIdentity.values()],
-          people: [...peopleById.values()],
-          termPersonIds: [...new Set(memberSnapshots.flatMap((snapshot) => snapshot.termPersonIds ?? []))],
-          termSourceProvider: "congress",
-          terms: [...termsById.values()]
-        })
-        const records = peopleById.size + termsById.size + organizationsById.size
+        await replaceEntitySnapshot(
+          database,
+          "jurisdiction:us",
+          {
+            memberships: [],
+            organizations: [],
+            personAliasPersonIds: [],
+            personAliases: [],
+            personDetailPersonIds: [...personDetailsByPersonId.keys()],
+            personDetailSourceProvider: "congress",
+            personDetails: [...personDetailsByPersonId.values()],
+            personJurisdictions: [...personJurisdictionsByIdentity.values()],
+            people: [...peopleById.values()],
+            termPersonIds: [...new Set(memberSnapshots.flatMap((snapshot) => snapshot.termPersonIds ?? []))],
+            termSourceProvider: "congress",
+            terms: [...termsById.values()]
+          },
+          { replaceOrganizations: false }
+        )
+        const records = peopleById.size + termsById.size
         Object.assign(counts, { discovered: records, read: records, updated: records })
         return { counts, failures: [] }
-      }
-    )
-    printJobResult(result)
-  }, config)
-  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
-}
-
-async function syncCurrentCongressRosters() {
-  const config = loadConfig()
-  const providerHttp = httpClient(config)
-  const congress = config.ingestion.federalEndCongress
-  await withDatabase(async (database) => {
-    const result = await runIngestionJob(
-      database,
-      {
-        ...jobExecutionContext(),
-        operation: "current-rosters",
-        scope: { congress },
-        scopeKey: `rosters:${congress}`,
-        source: "congress"
-      },
-      async () => {
-        const catalog = await database
-          .select({
-            chamber: organizations.chamber,
-            classification: organizations.classification,
-            id: organizations.id,
-            sourceId: organizations.sourceId
-          })
-          .from(organizations)
-          .where(
-            and(
-              eq(organizations.jurisdictionId, jurisdictionId("us")),
-              eq(organizations.isActive, true),
-              eq(organizations.sourceProvider, "congress"),
-              inArray(organizations.classification, ["committee", "subcommittee"]),
-              sql`length(btrim(${organizations.sourceId})) > 0`
-            )
-          )
-        const rosters = await synchronizeCurrentCongressCommitteeRosters({
-          database,
-          organizations: catalog,
-          readers: createCurrentCongressCommitteeRosterReaders(providerHttp),
-          retrievedAt: new Date()
-        })
-        const records = rosters.house.memberships.length + rosters.senate.memberships.length
-        return { counts: createJobCounts({ discovered: records, read: records, updated: records }), failures: [] }
       }
     )
     printJobResult(result)

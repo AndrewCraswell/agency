@@ -3,7 +3,7 @@ import { resolve } from "node:path"
 import { and, eq } from "drizzle-orm"
 import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
-import { replaceAuthoritativeOrganizationMembershipRoster, replaceEntitySnapshot } from "../../db/queries/entities.js"
+import { replaceEntitySnapshot } from "../../db/queries/entities.js"
 import { upsertEventSnapshots } from "../../db/queries/events.js"
 import { syncCheckpoints } from "../../db/schema/schema.js"
 import {
@@ -15,12 +15,6 @@ import {
 } from "../../trigger/identities.js"
 import { synchronizeCongressAmendments } from "../congress/amendments-sync.js"
 import { type CongressClient, CongressClient as DefaultCongressClient } from "../congress/client.js"
-import {
-  createCurrentCongressCommitteeRosterReaders,
-  synchronizeCurrentCongressCommitteeRosters,
-  type CurrentCongressCommitteeRosterReaders
-} from "../congress/current-committee-rosters.js"
-import { normalizeCongressCommittees } from "../congress/entities.js"
 import { synchronizeCongressEvents } from "../congress/events-sync.js"
 import { hydrateCongressMemberSnapshot } from "../congress/member-details.js"
 import { synchronizeCongressCommitteeReports } from "../congress/reports-sync.js"
@@ -49,7 +43,6 @@ type CongressSynchronizationClient = Pick<
   | "amendments"
   | "committeeMeetings"
   | "committeeReports"
-  | "committees"
   | "getAmendmentBundle"
   | "getBillBundle"
   | "getCommitteeMeeting"
@@ -81,14 +74,12 @@ type SynchronizationRouteContext = Readonly<{
   congressAmendmentLimit?: number
   config: LegislationConfig
   congressClient?: CongressSynchronizationClient
-  currentCongressCommitteeRosterReaders?: CurrentCongressCommitteeRosterReaders
   database: LegislationDatabase
   identity: SynchronizationIdentity
   now: Date
   onProgress?: (event: Readonly<Record<string, unknown>>) => void
   openStatesClient?: OpenStatesSynchronizationClient
   openStatesBillsFrom?: Date
-  replaceAuthoritativeOrganizationMembershipRoster?: typeof replaceAuthoritativeOrganizationMembershipRoster
   replaceEntitySnapshot?: typeof replaceEntitySnapshot
   sourceStore?: SourceStore
 }>
@@ -108,11 +99,9 @@ export type SynchronizationExecutionInput = Readonly<{
 
 export type SynchronizationExecutionDependencies = Readonly<{
   congressClient?: CongressSynchronizationClient
-  currentCongressCommitteeRosterReaders?: CurrentCongressCommitteeRosterReaders
   now?: () => Date
   openStatesClient?: OpenStatesSynchronizationClient
   openStatesBillsFrom?: Date
-  replaceAuthoritativeOrganizationMembershipRoster?: typeof replaceAuthoritativeOrganizationMembershipRoster
   replaceEntitySnapshot?: typeof replaceEntitySnapshot
   routes?: Partial<Record<SynchronizationRouteName, SynchronizationRoute>>
   runIngestionJob?: typeof runIngestionJob
@@ -143,14 +132,12 @@ export async function executeSynchronization(
       congressAmendmentLimit: input.congressAmendmentLimit,
       config: input.config,
       congressClient: dependencies.congressClient,
-      currentCongressCommitteeRosterReaders: dependencies.currentCongressCommitteeRosterReaders,
       database: input.database,
       identity,
       now,
       onProgress: input.onProgress,
       openStatesClient: dependencies.openStatesClient,
       openStatesBillsFrom,
-      replaceAuthoritativeOrganizationMembershipRoster: dependencies.replaceAuthoritativeOrganizationMembershipRoster,
       replaceEntitySnapshot: dependencies.replaceEntitySnapshot,
       sourceStore: dependencies.sourceStore
     })
@@ -316,56 +303,33 @@ async function synchronizeCongressEntitiesForScope(
   const replaceSnapshot = context.replaceEntitySnapshot ?? replaceEntitySnapshot
   const client = context.congressClient ?? createCongressClient(context.config, context.onProgress)
   const members: unknown[] = []
-  const committees: unknown[] = []
   for await (const page of client.members(identity.scope)) {
     members.push(...page)
   }
-  for await (const page of client.committees(identity.scope)) {
-    committees.push(...page)
-  }
   const entityContext = { retrievedAt: new Date() }
   const memberSnapshot = await hydrateCongressMemberSnapshot(members, identity.scope, entityContext, client)
-  const committeeSnapshot = normalizeCongressCommittees(committees, entityContext)
   const peopleById = new Map(memberSnapshot.people.map((person) => [person.id, person]))
   const termsById = new Map(memberSnapshot.terms.map((term) => [term.id, term]))
-  const organizationsById = new Map(
-    committeeSnapshot.organizations.map((organization) => [organization.id, organization])
+  await replaceSnapshot(
+    context.database,
+    "jurisdiction:us",
+    {
+      memberships: [],
+      organizations: [],
+      personAliasPersonIds: [],
+      personAliases: [],
+      personDetailPersonIds: memberSnapshot.personDetailPersonIds,
+      personDetailSourceProvider: "congress",
+      personDetails: memberSnapshot.personDetails,
+      personJurisdictions: memberSnapshot.personJurisdictions,
+      people: [...peopleById.values()],
+      termPersonIds: memberSnapshot.termPersonIds,
+      termSourceProvider: "congress",
+      terms: [...termsById.values()]
+    },
+    { replaceOrganizations: false }
   )
-  await replaceSnapshot(context.database, "jurisdiction:us", {
-    memberships: [],
-    organizations: [...organizationsById.values()],
-    personAliasPersonIds: [],
-    personAliases: [],
-    personDetailPersonIds: memberSnapshot.personDetailPersonIds,
-    personDetailSourceProvider: "congress",
-    personDetails: memberSnapshot.personDetails,
-    personJurisdictions: memberSnapshot.personJurisdictions,
-    people: [...peopleById.values()],
-    termPersonIds: memberSnapshot.termPersonIds,
-    termSourceProvider: "congress",
-    terms: [...termsById.values()]
-  })
-  let records = peopleById.size + termsById.size + organizationsById.size
-  if (identity.scope === context.config.ingestion.federalEndCongress) {
-    const rosterReaders =
-      context.currentCongressCommitteeRosterReaders ??
-      createCurrentCongressCommitteeRosterReaders(
-        new RetryingHttpClient({
-          maxAttempts: context.config.ingestion.maxAttempts,
-          minimumIntervalMs: 750,
-          onAttemptComplete: (telemetry) => context.onProgress?.(congressRequestTelemetry(telemetry)),
-          requestTimeoutMs: context.config.ingestion.requestTimeoutMs
-        })
-      )
-    const rosters = await synchronizeCurrentCongressCommitteeRosters({
-      database: context.database,
-      organizations: [...organizationsById.values()],
-      readers: rosterReaders,
-      replaceRoster: context.replaceAuthoritativeOrganizationMembershipRoster,
-      retrievedAt: entityContext.retrievedAt
-    })
-    records += rosters.house.memberships.length + rosters.senate.memberships.length
-  }
+  const records = peopleById.size + termsById.size
   return { counts: createJobCounts({ discovered: records, read: records, updated: records }), failures: [] }
 }
 

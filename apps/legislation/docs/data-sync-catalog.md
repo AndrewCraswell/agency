@@ -18,6 +18,8 @@ Provider contracts were checked on 2026-08-18 against the official
 [GovInfo API documentation](https://github.com/usgpo/api), and
 [BILLSTATUS XML user guide](https://github.com/usgpo/bill-status/blob/main/BILLSTATUS-XML_User_User-Guide.md).
 The source contracts describe availability; the checked-in importers and database schema determine the ingestion status.
+Federal committee, subcommittee, and membership materialization is pending and may use GovInfo only. State committee,
+subcommittee, and membership materialization may use OpenStates only. No other provider is a committee-data fallback.
 
 This catalog inventories provider-defined fields, not merely the fields the product already uses. A row may group a
 small set of sibling fields only when they share one source type, ingestion decision, destination, and cadence; each
@@ -49,16 +51,17 @@ schedule; the live Trigger.dev project is the source of truth for a schedule's a
 | Provider | Data domain | Trigger.dev task | Scope | Cadence after activation | Cursor or reconciliation model |
 | --- | --- | --- | --- | --- | --- |
 | Open States | Bills and bill children | `openstates-bills-sync` | One of 52 jurisdictions per run | Every 30 minutes, phase-shifted by jurisdiction | `updated_since` with overlap; ascending updates; per-jurisdiction watermark |
-| Open States | People, terms, committees, memberships | `openstates-entities-sync` | One jurisdiction per run | Daily, staggered from 05:00 UTC in two-minute steps | Complete current snapshot; promote only after every page succeeds |
+| Open States | State people, terms, committees, memberships | `openstates-entities-sync` | One jurisdiction per run | Daily, staggered from 05:00 UTC in two-minute steps | Complete current snapshot; promote only after every page succeeds |
 | Open States | Events, agendas, documents, participants | `openstates-events-sync` | One jurisdiction, previous 30 through next 90 days | Every 2 hours, phase-shifted by jurisdiction | Rolling-window reconciliation; absence alone is not deletion |
 | Congress.gov | Bills and bill children | `congress-wave-child` | Federal update feed | Hourly wave | `updateDate` watermark with one-hour overlap |
 | Congress.gov | Amendments, actions, sponsors, text | `congress-wave-child` | Configured current Congress | Hourly wave | Offset checkpoint per Congress |
 | Congress.gov | Meetings and published hearings | `congress-wave-child` | Configured current Congress | Hourly wave | Independent meeting and hearing offsets per Congress |
 | Congress.gov | House roll calls and member positions | `congress-wave-child` | Both sessions of configured current Congress | Hourly wave | Offset checkpoint per Congress and session |
-| Congress.gov | Committee reports and text formats | `congress-wave-child` | Configured current Congress | Hourly wave | Offset checkpoint per Congress |
-| Congress.gov | Members, terms, committees, subcommittees | `congress-wave-child` | Configured current Congress | Hourly wave | Complete current snapshot |
+| Congress.gov | Committee reports and text formats, not committee organization or membership data | `congress-wave-child` | Configured current Congress | Hourly wave | Offset checkpoint per Congress |
+| Congress.gov | Members and terms | `congress-wave-child` | Configured current Congress | Hourly wave | Complete current snapshot |
 | GovInfo | Current-Congress BILLSTATUS XML | `govinfo-bill-status-sync` | Configured Congress and bill-type policy | Daily at 11:45 UTC | Collections API `lastModified` window with 24-hour replay; XML payload from bulk repository |
-| All three | Historical rebuild | `legislation-backfill` | Explicit rebuild ID and bounded historical ranges | Manual only | Existing archive, package, and domain checkpoints; deterministic child idempotency keys |
+| GovInfo | Federal committees, subcommittees, memberships | Pending; no task | Current federal catalog | Not scheduled | GovInfo is the sole approved federal committee-data source. Do not materialize or replace a cohort until a complete canonical ingestion is implemented and validated. |
+| Open States, GovInfo, and Congress.gov non-committee domains | Historical rebuild | `legislation-backfill` | Explicit rebuild ID and bounded historical ranges | Manual only | Existing archive, package, and domain checkpoints; deterministic child idempotency keys |
 
 The manifest creates 163 desired recurring schedules: 156 Open States jurisdiction schedules, six Congress.gov
 schedules, and one GovInfo schedule. The exact phase formulas and concurrency controls remain in the
@@ -249,10 +252,10 @@ available through `legislation-backfill` and CLI services.
 | Congresses | `/congress`, `/congress/{number}`, `/congress/current` | Congress names, years, sessions | Partial. Session identity derives from bill/entity context; official Congress/session dates are not directly synchronized. | No independent task. |
 | Members | `/member` list/detail and filters; sponsored/cosponsored legislation | Member identity, names, party, state, district, terms, leadership, party history, depiction, sponsorship | Partial current-Congress snapshot. Core identity, party, district, and terms are ingested. | `congress-wave-child`, hourly. |
 | House votes | `/house-vote` list/detail/members | House roll-call metadata, related legislation, result, question, vote type, notes, member positions | Ingested for both sessions of the configured Congress. Non-legislation votes remain valid chamber activity. | `congress-wave-child`, hourly. |
-| Committees | `/committee` list/detail and committee bills/reports/nominations/communications | Committee hierarchy, history, current state, related legislative work | Partial. Current committees and subcommittees are ingested; history and committee-scoped activity feeds are not. | `congress-wave-child`, hourly. |
-| Committee reports | `/committee-report` list/detail/text | Report identity, citation, committees, related bills, issue date, text formats | Ingested as supporting materials and links. | `congress-wave-child`, hourly. |
+| Committees | `/committee` list/detail and committee bills/reports/nominations/communications | Committee hierarchy, history, current state, related legislative work | Not ingested for federal committee materialization. GovInfo is the sole approved federal committee-data source. | No task. |
+| Committee reports | `/committee-report` list/detail/text | Report identity, citation, committees, related bills, issue date, text formats | Ingested as supporting materials. Committee references do not create or link canonical organizations. | `congress-wave-child`, hourly. |
 | Committee prints | `/committee-print` list/detail/text | Print identity, committees, related bills, text | Not ingested. | No task. |
-| Committee meetings | `/committee-meeting` list/detail | Schedule, status, committees, location, related bills, documents, video, witnesses | Ingested for configured current Congress. | `congress-wave-child`, hourly. |
+| Committee meetings | `/committee-meeting` list/detail | Schedule, status, committees, location, related bills, documents, video, witnesses | Ingested as events for configured current Congress. Committee references do not create or update canonical organizations. | `congress-wave-child`, hourly. |
 | Hearings | `/hearing` list/detail | Published hearing identity, dates, committees, citation, transcript formats, associated meeting | Partial. Core published hearing and available transcript formats are ingested. | `congress-wave-child`, hourly. |
 | Congressional Record | `/congressional-record` | Congressional Record issues | Not ingested. | No task. |
 | Daily Congressional Record | `/daily-congressional-record` list/issue/articles | Daily issues, sections, articles, full issue formats | Not ingested. | No task. |
@@ -290,8 +293,8 @@ available through `legislation-backfill` and CLI services.
 | Actions `[].actionCode` | string | Artifact only | Not persisted for bills. | `congress-wave-child`, hourly. |
 | Actions `[].type` | string | Artifact only | Bill action classification is not currently populated from Congress.gov. | `congress-wave-child`, hourly. |
 | Actions `[].sourceSystem` | object | Artifact only | Provider-system metadata is not modeled. | `congress-wave-child`, hourly. |
-| Committees `[].name` | string | Ingested | `bills.committees`; retained as `source_name` on organization link. | `congress-wave-child`, hourly. |
-| Committees `[].systemCode` | string | Ingested | Canonical `bill_organizations.organization_id`. | `congress-wave-child`, hourly. |
+| Committees `[].name` | string | Ingested | Bill-scoped relationship metadata only; does not materialize or update a canonical committee organization. | `congress-wave-child`, hourly. |
+| Committees `[].systemCode` | string | Ingested | Canonical bill-to-organization relationship ID only; does not materialize or update a canonical committee organization. | `congress-wave-child`, hourly. |
 | Sponsors `[].bioguideId` | string | Ingested | `bill_sponsors.person_id`, `people.source_id`. | `congress-wave-child`, hourly. |
 | Sponsors `[].fullName` | string | Ingested | `bill_sponsors.name`, minimal `people.name`. | `congress-wave-child`, hourly. |
 | Cosponsors `[].bioguideId` | string | Ingested | `bill_sponsors.person_id`, `people.source_id`. | `congress-wave-child`, hourly. |
@@ -343,7 +346,7 @@ available through `legislation-backfill` and CLI services.
 | Text `[].formats[].url` | string URL | Ingested | Supporting-material source and downstream document processing. | `congress-wave-child`, hourly. |
 | Amended amendments subresource | amendment references | Not ingested | Amendment-to-amendment relationships are not modeled. | No task. |
 
-### Congress.gov member and committee field catalog
+### Congress.gov member field catalog
 
 | Resource and source field | Source type | Ingestion | Canonical destination or disposition | Trigger.dev task and cadence |
 | --- | --- | --- | --- | --- |
@@ -363,16 +366,16 @@ available through `legislation-backfill` and CLI services.
 | Member `leadership[]` | array | Not ingested | Leadership roles are not modeled. | No task. |
 | Member `partyHistory[]` | array | Not ingested | Historical party changes are not modeled. | No task. |
 | Member `sponsoredLegislation`, `cosponsoredLegislation` | count/link objects | Not ingested | Bill sponsor relations provide the current product link. | No task. |
-| Committee `systemCode` | string | Ingested | Canonical organization ID and source ID. | `congress-wave-child`, hourly. |
-| Committee `name` | string | Ingested | `organizations.name`. | `congress-wave-child`, hourly. |
-| Committee `chamber` | string | Ingested/derived | `organizations.chamber` and parent House/Senate organization. | `congress-wave-child`, hourly. |
-| Committee `committeeTypeCode` or `type` | string | Partial | Retained in `organizations.upstream_ids.typeCode`; canonical classification remains committee. | `congress-wave-child`, hourly. |
-| Committee `updateDate` | date-time string | Ingested | `organizations.source_updated_at`. | `congress-wave-child`, hourly. |
-| Committee `url` | string URL | Ingested | `organizations.source_url`. | `congress-wave-child`, hourly. |
-| Committee `subcommittees[].systemCode` | string | Ingested | Canonical subcommittee organization ID/source ID. | `congress-wave-child`, hourly. |
-| Committee `subcommittees[].name` | string | Ingested | Subcommittee `organizations.name`. | `congress-wave-child`, hourly. |
-| Committee `subcommittees[].url` | string URL | Ingested | Subcommittee `organizations.source_url`. | `congress-wave-child`, hourly. |
-| Committee `isCurrent` | boolean | Artifact only | Snapshot currently marks returned organizations active. | `congress-wave-child`, hourly. |
+| Committee `systemCode` | string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `name` | string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `chamber` | string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `committeeTypeCode` or `type` | string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `updateDate` | date-time string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `url` | string URL | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `subcommittees[].systemCode` | string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `subcommittees[].name` | string | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `subcommittees[].url` | string URL | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
+| Committee `isCurrent` | boolean | Not ingested | Congress.gov is not an approved federal committee-data source. | No task. |
 | Committee `history[]` | array | Not ingested | Committee name/type history is not modeled. | No task. |
 | Committee `bills`, `reports`, `communications` | count/link objects | Not ingested | Domain-specific jobs and bill links are authoritative. | No task. |
 | Committee nominations/communication subresources | arrays | Not ingested | These endpoint families are outside current scope. | No task. |
@@ -390,8 +393,8 @@ available through `legislation-backfill` and CLI services.
 | Meeting `meetingStatus` | string | Ingested | Canonical status with canceled normalization. | `congress-wave-child`, hourly. |
 | Meeting `updateDate` | date-time string | Ingested | `legislative_events.source_updated_at`. | `congress-wave-child`, hourly. |
 | Meeting `location` | object | Ingested | `legislative_events.location` JSON. | `congress-wave-child`, hourly. |
-| Meeting `committees[].systemCode` | string | Ingested | Canonical organization participant link. | `congress-wave-child`, hourly. |
-| Meeting `committees[].name` | string | Ingested | Event participant name. | `congress-wave-child`, hourly. |
+| Meeting `committees[].systemCode` | string | Ingested | Event-participant relationship ID only; does not materialize or update a canonical federal committee organization. | `congress-wave-child`, hourly. |
+| Meeting `committees[].name` | string | Ingested | Event-participant relationship metadata only; does not materialize or update a canonical federal committee organization. | `congress-wave-child`, hourly. |
 | Meeting `relatedItems.bills[].congress/type/number` | object fields | Ingested | Event-to-bill links. | `congress-wave-child`, hourly. |
 | Meeting `meetingDocuments[]` | document array | Ingested | Event documents and searchable supporting materials. | `congress-wave-child`, hourly. |
 | Meeting `witnessDocuments[]` | document array | Ingested | Event documents and searchable supporting materials. | `congress-wave-child`, hourly. |
@@ -407,8 +410,8 @@ available through `legislation-backfill` and CLI services.
 | Hearing `chamber` | string | Partial | Present in source; committee participants provide organization links. | `congress-wave-child`, hourly. |
 | Hearing `title` | string | Ingested | `legislative_events.name` and transcript material title. | `congress-wave-child`, hourly. |
 | Hearing `dates[].date` | date string | Partial | First date becomes all-day event start and document date. | `congress-wave-child`, hourly. |
-| Hearing `committees[].systemCode` | string | Ingested | Canonical committee participant link. | `congress-wave-child`, hourly. |
-| Hearing `committees[].name` | string | Ingested | Event participant name. | `congress-wave-child`, hourly. |
+| Hearing `committees[].systemCode` | string | Ingested | Event-participant relationship ID only; does not materialize or update a canonical federal committee organization. | `congress-wave-child`, hourly. |
+| Hearing `committees[].name` | string | Ingested | Event-participant relationship metadata only; does not materialize or update a canonical federal committee organization. | `congress-wave-child`, hourly. |
 | Hearing `formats[].type` | string | Ingested | Transcript material content type. | `congress-wave-child`, hourly. |
 | Hearing `formats[].url` | string URL | Ingested | Event document/supporting material source URL. | `congress-wave-child`, hourly. |
 | Hearing `updateDate` | date-time string | Ingested | `legislative_events.source_updated_at`. | `congress-wave-child`, hourly. |
@@ -450,15 +453,15 @@ available through `legislation-backfill` and CLI services.
 | Reference `number` | string | Ingested | Source identity and detail route. | `congress-wave-child`, hourly. |
 | Reference `part` | string | Partial | Selects the matching report part; not persisted separately. | `congress-wave-child`, hourly. |
 | Reference `citation` | string | Ingested | Material title prefix/fallback. | `congress-wave-child`, hourly. |
-| Reference `chamber` | string | Artifact only | Committee links provide organization context. | `congress-wave-child`, hourly. |
+| Reference `chamber` | string | Artifact only | Does not provide canonical committee organization context. | `congress-wave-child`, hourly. |
 | Reference `updateDate` | date-time string | Ingested | Fallback `supporting_materials.source_updated_at`. | `congress-wave-child`, hourly. |
 | Reference `url` | string URL | Partial | API-record fallback if no text formats exist. | `congress-wave-child`, hourly. |
 | Detail `title` | string | Ingested | Material title. | `congress-wave-child`, hourly. |
 | Detail `issueDate` | date string | Ingested | `supporting_materials.document_date`. | `congress-wave-child`, hourly. |
 | Detail `updateDate` | date-time string | Ingested | Preferred material source-updated time. | `congress-wave-child`, hourly. |
 | Detail `associatedBill[].congress/type/number` | object fields | Ingested | `supporting_material_links.bill_id`. | `congress-wave-child`, hourly. |
-| Detail `committees[].systemCode` | string | Ingested | `supporting_material_links.organization_id`. | `congress-wave-child`, hourly. |
-| Detail `committees[].name` | string | Parsed, not persisted | Organization system code is authoritative. | `congress-wave-child`, hourly. |
+| Detail `committees[].systemCode` | string | Ingested | Supporting-material-to-organization relationship ID only; does not materialize or update a canonical committee organization. | `congress-wave-child`, hourly. |
+| Detail `committees[].name` | string | Ingested | Supporting-material-to-organization relationship metadata only; does not materialize or update a canonical committee organization. | `congress-wave-child`, hourly. |
 | Text `[].formats[].url` | string URL | Ingested | One material representation per unique URL. | `congress-wave-child`, hourly. |
 | Text `[].formats[].type` | string | Ingested | Material content type/title. | `congress-wave-child`, hourly. |
 | Text `[].formats[].isErrata` | string flag | Ingested/derived | Adds errata marker to title. | `congress-wave-child`, hourly. |
@@ -589,7 +592,7 @@ the legislative content field families and explicitly distinguish what the curre
 | `actions.item[].text` | string | Ingested | `bill_actions.description`. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].actionCode` | string | Artifact only | Not normalized. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].type` | string | Artifact only | Not normalized. | `govinfo-bill-status-sync`, daily. |
-| `actions.item[].committee.name/systemCode` | strings | Artifact only | Committee link is not taken from action child. | `govinfo-bill-status-sync`, daily. |
+| `actions.item[].committee.name/systemCode` | strings | Artifact only | Committee link is not taken from action child. GovInfo is the sole approved federal committee-data source, but standalone committee materialization remains pending. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].links[]` | link array | Artifact only | Roll-call/Record links are not normalized. | `govinfo-bill-status-sync`, daily. |
 | `actions.item[].sourceSystem.code/name` | strings | Artifact only | Source-system processing metadata is not modeled. | `govinfo-bill-status-sync`, daily. |
 | `actions.actionByCounts`, `actionTypeCounts` | count objects | Artifact only | Provider facet/processing counts are not canonical data. | `govinfo-bill-status-sync`, daily. |
@@ -600,7 +603,7 @@ the legislative content field families and explicitly distinguish what the curre
 | `cosponsors.item[].bioguideId` | string | Ingested | Canonical cosponsor person link. | `govinfo-bill-status-sync`, daily. |
 | Cosponsor `isOriginalCosponsor`, sponsorship/withdrawal dates, party/state/district, GPO/LIS IDs | scalar fields | Artifact only | Sponsor relationship dates/details are not modeled. | `govinfo-bill-status-sync`, daily. |
 | `committees.item[].name` | string | Partial | Flattened into `bills.committees`. | `govinfo-bill-status-sync`, daily. |
-| Committee chamber/systemCode/type, activities, subcommittees and report citations | nested objects/arrays | Artifact only | BILLSTATUS committee hierarchy/activity detail is not normalized. | `govinfo-bill-status-sync`, daily. |
+| Committee chamber/systemCode/type, activities, subcommittees and report citations | nested objects/arrays | Artifact only | GovInfo is the sole approved federal committee-data source, but standalone committee materialization is pending. | `govinfo-bill-status-sync`, daily. |
 | `committeeReports.committeeReport[].citation` | string | Artifact only | Report job through Congress.gov is authoritative. | `govinfo-bill-status-sync`, daily. |
 | `relatedBills.item[].congress` | integer-like string | Ingested | Related canonical bill ID. | `govinfo-bill-status-sync`, daily. |
 | `relatedBills.item[].type` | string | Ingested | Related canonical bill ID. | `govinfo-bill-status-sync`, daily. |

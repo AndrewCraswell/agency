@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | ADR-001 | Keep all product code, workflows, docs, and infrastructure under `apps/legislation`. | Prevent collisions in the shared monorepo until another app proves a reusable boundary. |
 | ADR-002 | Use PostgreSQL full-text search and pgvector as the only MVP retrieval stores. | One transactional system is sufficient until measured corpus or query limits justify another store. |
-| ADR-003 | Use Open States JSON archives, GovInfo bulk XML, and Congress.gov API v3 for state history, federal history, and federal updates. | These sources provide the required standardized or official coverage. |
+| ADR-003 | Use Open States JSON archives for state history and state committee data, GovInfo bulk XML for federal history, GovInfo for federal committee data, and Congress.gov API v3 for federal updates other than standalone committee organization and membership materialization. | GovInfo is the sole approved federal committee-data source and OpenStates is the sole approved state committee-data source; the GovInfo committee importer remains pending, and these sources otherwise provide the required standardized or official coverage. |
 | ADR-004 | Use OpenRouter as the model gateway and pin full provider/model IDs in code. | One gateway centralizes credentials and privacy controls; ADR-012 supersedes the original single-model assumption with evaluated product-specific routes. |
 | ADR-005 | Use WorkOS as identity and organization authority. | Authentication and tenant identity share one externally managed contract. |
 | ADR-007 | Deploy the application runtime to Azure Container Apps with Blob Storage, Key Vault, and Bicep. | The runtime remains containerized and infrastructure changes remain reviewable and repeatable. |

@@ -7,11 +7,15 @@
   never inferred as empty sessions.
 - Self-hosted jurisdiction scrapers are the state recurring-freshness source. The Open States API is not a production
   freshness dependency because its daily quota cannot support the required nationwide cadence.
-- GovInfo BILLSTATUS bulk XML is the federal historical metadata source. When a version record includes an official XML
+- GovInfo BILLSTATUS bulk XML is the federal historical metadata source. GovInfo is the sole approved federal
+  committee-data source, but its committee importer remains pending; do not use another provider as a fallback. When a
+  version record includes an official XML
   URL, it is retained and the document worker acquires that artifact separately. BILLSTATUS sometimes reports a version
   count without format URLs; Congress.gov supplies complementary current-version references without fabricated links.
   The default range is the 113th through 119th Congresses.
-- Congress.gov API v3 is the federal incremental source and updates the same canonical records created by GovInfo.
+- Congress.gov API v3 is the federal incremental source for records other than standalone committee organization and
+  membership materialization. It may retain bill, event, hearing, and supporting-material relationship metadata, but
+  does not materialize or update canonical federal committee organizations.
 
 `FEDERAL_START_CONGRESS` defaults to `113` and `FEDERAL_END_CONGRESS` defaults to `119`. Both are explicit runtime
 configuration values so deployments can advance or backfill deliberately.
