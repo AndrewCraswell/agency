@@ -23,4 +23,23 @@ describe("P0-03 phased seven-conductor circuit", () => {
     expect(names.filter((name) => /^R_SOURCE_[1-7]$/u.test(name))).toHaveLength(7)
     expect(names.filter((name) => /^R_SINK_[1-7]$/u.test(name))).toHaveLength(7)
   })
+
+  it("binds the protected source and sink resistors to the reviewed exact MPN", () => {
+    const sourceComponents = render().filter(
+      (element): element is Extract<typeof element, { type: "source_component" }> => element.type === "source_component"
+    )
+    const protectedResistors = sourceComponents.filter(
+      ({ name }) => typeof name === "string" && /^R_(SOURCE|SINK)_[1-7]$/u.test(name)
+    )
+    expect(protectedResistors).toHaveLength(14)
+    expect(
+      protectedResistors.every(({ manufacturer_part_number }) => manufacturer_part_number === "TNPW0603470RBEEA")
+    ).toBe(true)
+    expect(sourceComponents.find(({ name }) => name === "C_REF_REG")).toMatchObject({
+      manufacturer_part_number: "T521B106M025ATE100"
+    })
+    expect(sourceComponents.filter(({ name }) => typeof name === "string" && /^U_ESD_[12]$/u.test(name))).toHaveLength(
+      2
+    )
+  })
 })
