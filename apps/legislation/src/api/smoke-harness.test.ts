@@ -690,6 +690,96 @@ describe("local API smoke harness", () => {
     expect(report.passed.map((check) => check.id)).toContain("unknown-route")
   })
 
+  it("runs only universal, vote, and change checks in the authenticated vote-change profile", async () => {
+    const { calls, fetchImpl } = fakeFetch()
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      fixtures: { changeId: "change:fixture", voteId: "vote:fixture" },
+      profile: "vote-change",
+      requireAuth: true,
+      token: "do-not-log-this-token"
+    })
+
+    expect(report.status).toBe("passed")
+    expect(report.passed.map((check) => check.id)).toEqual([
+      "health",
+      "ready",
+      "unknown-route",
+      "unsupported-method",
+      "list-votes",
+      "get-vote",
+      "batch-votes",
+      "list-changes",
+      "get-change",
+      "auth-rejection"
+    ])
+    expect(report.checks.some((check) => check.id === "search-bills")).toBe(false)
+    expect(report.checks.some((check) => check.id === "absent-document-diff")).toBe(false)
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "GET", path: "/api/votes", search: "?limit=1" }),
+        expect.objectContaining({ method: "GET", path: "/api/votes/vote%3Afixture" }),
+        expect.objectContaining({ method: "POST", path: "/api/votes/batch" }),
+        expect.objectContaining({ method: "GET", path: "/api/changes", search: "?limit=1" }),
+        expect.objectContaining({ method: "GET", path: "/api/changes/change%3Afixture" })
+      ])
+    )
+    expect(calls.some((call) => call.path.startsWith("/api/search/") || call.path === "/api/document-diffs")).toBe(
+      false
+    )
+  })
+
+  it("blocks the vote-change profile without both fixture IDs while retaining universal checks", async () => {
+    const { fetchImpl } = fakeFetch()
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      fixtures: { voteId: "vote:fixture" },
+      profile: "vote-change",
+      requireAuth: true,
+      token: "do-not-log-this-token"
+    })
+
+    expect(report.status).toBe("blocked")
+    expect(report.blocked).toContainEqual(expect.objectContaining({ id: "vote-change-fixtures" }))
+    expect(report.passed.map((check) => check.id)).toContain("health")
+    expect(report.checks.some((check) => check.id === "list-votes")).toBe(false)
+    expect(report.checks.some((check) => check.id === "list-changes")).toBe(false)
+  })
+
+  it.each([
+    { requireAuth: false, token: "do-not-log-this-token" },
+    { requireAuth: true, token: undefined }
+  ])("requires authenticated mode and a token for the vote-change profile", async ({ requireAuth, token }) => {
+    await expect(
+      runApiSmoke({
+        baseUrl: "http://localhost:3199",
+        canonicalApiBaseUrl: "https://legislation.example.test",
+        fetchImpl: fakeFetch().fetchImpl,
+        fixtures: { changeId: "change:fixture", voteId: "vote:fixture" },
+        profile: "vote-change",
+        requireAuth,
+        token
+      })
+    ).rejects.toThrow("vote-change smoke requires authenticated mode and an explicit token")
+  })
+
+  it("requires a canonical API base URL for the vote-change profile", async () => {
+    await expect(
+      runApiSmoke({
+        baseUrl: "http://localhost:3199",
+        fetchImpl: fakeFetch().fetchImpl,
+        fixtures: { changeId: "change:fixture", voteId: "vote:fixture" },
+        profile: "vote-change",
+        requireAuth: true,
+        token: "do-not-log-this-token"
+      })
+    ).rejects.toThrow("canonicalApiBaseUrl is required for the vote-change smoke profile")
+  })
+
   it("rejects a scoped bill page whose canonical URL does not match the configured public base URL", async () => {
     const { fetchImpl } = fakeFetch()
     const malformed = mutateJson(fetchImpl, "/api/sessions/session%3Afixture/bills", (body) => {

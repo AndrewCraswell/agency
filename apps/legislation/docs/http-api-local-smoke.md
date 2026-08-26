@@ -74,6 +74,24 @@ In-progress and Blocked endpoint set. It also requires `LEGISLATION_SMOKE_CANONI
 fragment. Set the smoke-specific value when the expected configured public base URL differs from
 `LEGISLATION_SMOKE_BASE_URL`; the profile verifies every bill canonical URL against it.
 
+## Vote and change remote smoke
+
+While HNSW indexes are being built, use `LEGISLATION_SMOKE_PROFILE=vote-change` to exercise only the shared protocol
+checks plus the three vote and two change fixture checks. It does not call the search or diff routes. The profile
+requires authenticated mode with an explicit token, a configured canonical public API base URL, and both fixture IDs.
+It reports `vote-change-fixtures` as blocked when either fixture ID is absent.
+
+```powershell
+$env:LEGISLATION_SMOKE_BASE_URL = "https://your-legislation-web-domain"
+$env:LEGISLATION_SMOKE_CANONICAL_API_BASE_URL = "https://your-legislation-web-domain"
+$env:LEGISLATION_SMOKE_PROFILE = "vote-change"
+$env:LEGISLATION_SMOKE_REQUIRE_AUTH = "true"
+$env:LEGISLATION_SMOKE_VOTE_ID = "vote:approved-fixture"
+$env:LEGISLATION_SMOKE_CHANGE_ID = "change:approved-fixture"
+$env:LEGISLATION_SMOKE_TOKEN = Read-Host "Bearer token"
+pnpm --filter legislation smoke:api
+```
+
 ## Shared protocol smoke
 
 Complete these assertions once per composed server build and repeat mutation assertions for every mutable product.

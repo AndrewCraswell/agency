@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
 
 export type SmokeCheckStatus = "blocked" | "failed" | "passed" | "skipped"
-export type SmokeProfile = "full" | "scoped-bills" | "subscription-lifecycle" | "webhook-lifecycle"
+export type SmokeProfile = "full" | "scoped-bills" | "vote-change" | "subscription-lifecycle" | "webhook-lifecycle"
 
 export type SmokeFixture = Readonly<{
   amendmentId?: string
@@ -493,40 +493,59 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
     })
   }
   if (fixture.voteId !== undefined) {
-    checks.push({
+    checks.push(...voteChecks(fixture.voteId))
+  }
+  if (fixture.changeId !== undefined) {
+    checks.push(...changeChecks(fixture.changeId))
+  }
+  return checks
+}
+
+function voteChecks(voteId: string): readonly CheckDefinition[] {
+  return [
+    {
       expected: "vote-page",
       id: "list-votes",
       path: "/api/votes?limit=1"
-    })
-    checks.push({
+    },
+    {
       expected: "vote-resource",
-      expectedId: fixture.voteId,
+      expectedId: voteId,
       id: "get-vote",
-      path: `/api/votes/${encoded(fixture.voteId)}`
-    })
-    checks.push({
-      body: { ids: [fixture.voteId] },
+      path: `/api/votes/${encoded(voteId)}`
+    },
+    {
+      body: { ids: [voteId] },
       expected: "vote-batch",
-      expectedId: fixture.voteId,
+      expectedId: voteId,
       id: "batch-votes",
       method: "POST",
       path: "/api/votes/batch"
-    })
-  }
-  if (fixture.changeId !== undefined) {
-    checks.push({
+    }
+  ]
+}
+
+function changeChecks(changeId: string): readonly CheckDefinition[] {
+  return [
+    {
       expected: "change-page",
       id: "list-changes",
       path: "/api/changes?limit=1"
-    })
-    checks.push({
+    },
+    {
       expected: "change-resource",
-      expectedId: fixture.changeId,
+      expectedId: changeId,
       id: "get-change",
-      path: `/api/changes/${encoded(fixture.changeId)}`
-    })
+      path: `/api/changes/${encoded(changeId)}`
+    }
+  ]
+}
+
+function voteChangeChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
+  if (fixture.voteId === undefined || fixture.changeId === undefined) {
+    return []
   }
-  return checks
+  return [...voteChecks(fixture.voteId), ...changeChecks(fixture.changeId)]
 }
 
 function scopedBillChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
@@ -3109,7 +3128,10 @@ export async function runApiSmoke(options: {
   const baseUrl = canonicalSmokeApiBaseUrl(options.baseUrl)
   const profile = options.profile ?? "full"
   if (
-    (profile === "scoped-bills" || profile === "subscription-lifecycle" || profile === "webhook-lifecycle") &&
+    (profile === "scoped-bills" ||
+      profile === "vote-change" ||
+      profile === "subscription-lifecycle" ||
+      profile === "webhook-lifecycle") &&
     options.canonicalApiBaseUrl === undefined
   ) {
     throw new TypeError(`canonicalApiBaseUrl is required for the ${profile} smoke profile`)
@@ -3121,6 +3143,9 @@ export async function runApiSmoke(options: {
   const requestTimeoutMs = options.requestTimeoutMs ?? 30_000
   if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > 60_000) {
     throw new RangeError("requestTimeoutMs must be an integer between 1 and 60000")
+  }
+  if (profile === "vote-change" && (!requireAuth || options.token === undefined)) {
+    throw new Error("vote-change smoke requires authenticated mode and an explicit token")
   }
   if (profile === "subscription-lifecycle" || profile === "webhook-lifecycle") {
     if (!requireAuth || options.token === undefined) {
@@ -3156,7 +3181,14 @@ export async function runApiSmoke(options: {
     }
   }
   const fixtures = options.fixtures ?? {}
-  const fixtureDefinitions = profile === "full" ? fixtureChecks(fixtures) : scopedBillChecks(fixtures)
+  let fixtureDefinitions: readonly CheckDefinition[]
+  if (profile === "full") {
+    fixtureDefinitions = fixtureChecks(fixtures)
+  } else if (profile === "vote-change") {
+    fixtureDefinitions = voteChangeChecks(fixtures)
+  } else {
+    fixtureDefinitions = scopedBillChecks(fixtures)
+  }
   const definitions =
     profile === "full"
       ? [
@@ -3170,7 +3202,16 @@ export async function runApiSmoke(options: {
   const checks: SmokeCheck[] = []
   if (profile === "full") {
     checks.push(...missingFixtureChecks(fixtures, new Set(fixtureDefinitions.map((definition) => definition.id))))
-  } else if (fixtures.jurisdictionId === undefined || fixtures.sessionId === undefined) {
+  } else if (profile === "vote-change" && (fixtures.voteId === undefined || fixtures.changeId === undefined)) {
+    checks.push({
+      detail: "blocked: vote-change requires LEGISLATION_SMOKE_VOTE_ID and LEGISLATION_SMOKE_CHANGE_ID",
+      id: "vote-change-fixtures",
+      status: "blocked"
+    })
+  } else if (
+    profile === "scoped-bills" &&
+    (fixtures.jurisdictionId === undefined || fixtures.sessionId === undefined)
+  ) {
     checks.push({
       detail: "blocked: scoped-bills requires LEGISLATION_SMOKE_JURISDICTION_ID and LEGISLATION_SMOKE_SESSION_ID",
       id: "scoped-bills-fixtures",
