@@ -83,14 +83,14 @@ describe("BP-100 bench prototype analog topology", () => {
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["C_REF", "GRM21BR71A106KE51L"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_ESD", "TPD4E05U06DQAR"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["R_ESD", "CRCW060322R0FKEAHP"])
-    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_OVP_BUFFER", "ADA4177-1ARZ"])
+    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_OVP_BUFFER", "ADA4177-1BRZ"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_SAR", "ADS8881IDGS"])
     expect(benchPrototypeAnalogTopology.normalProtectionParts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ mpn: "TPD4E05U06DQAR", reference: "U_ESD" }),
         expect.objectContaining({ mpn: "CRCW060322R0FKEAHP", reference: "R_ESD" }),
         expect.objectContaining({ mpn: "TMUX1112PWR", reference: "U_SOURCE_SWITCH" }),
-        expect.objectContaining({ mpn: "ADA4177-1ARZ", reference: "U_OVP_BUFFER" })
+        expect.objectContaining({ mpn: "ADA4177-1BRZ", reference: "U_OVP_BUFFER" })
       ])
     )
   })

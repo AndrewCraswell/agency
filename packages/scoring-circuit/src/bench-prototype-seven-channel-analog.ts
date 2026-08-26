@@ -202,7 +202,7 @@ const enablePadMap = [
  */
 const cellIdentity = {
   adc: "ADS8881IDGS",
-  buffer: "ADA4177-1ARZ",
+  buffer: "ADA4177-1BRZ",
   esd: "TPD4E05U06DQAR",
   normalSeries: "CRCW060322R0FKEAHP",
   sarSeries: "CRCW060320R0FKEAHP",
@@ -214,7 +214,7 @@ const cellIdentity = {
   localReferenceReservoir: "GRM21BR71A106KE51L",
   localReferenceFeed: "RCWE0603R220FKEA",
   reference: "REF5025AQDRQ1",
-  referenceInputBypass: "CGA3E3X7R1H105K080AB",
+  referenceInputBypass: "GRM188R71A105KA12D",
   referenceRegulatorOutput: "T521B106M025ATE100",
   referenceRegulatorHighFrequency: "C0603C104K3RACTU"
 } as const

@@ -72,7 +72,7 @@ const selectedReferences = [
   ["R_ESD", "CRCW060322R0FKEAHP"],
   ["U_SOURCE_SWITCH", "TMUX1112PWR"],
   ["R_SOURCE", "ERA3AEB2491V"],
-  ["U_OVP_BUFFER", "ADA4177-1ARZ"],
+  ["U_OVP_BUFFER", "ADA4177-1BRZ"],
   ["U_SAR", "ADS8881IDGS"],
   ["R_SAR", "CRCW060320R0FKEAHP"],
   ["C_SAR", "C0603C102J5GACTU"],
@@ -111,10 +111,10 @@ const normalProtectionParts = [
   },
   {
     primaryEvidenceUrl:
-      "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf",
+      "https://www.analog.com/media/en/technical-documentation/data-sheets/ada4177-1_4177-2_4177-4.pdf",
     package: "R SOIC-8",
     reference: "U_OVP_BUFFER",
-    mpn: "ADA4177-1ARZ",
+    mpn: "ADA4177-1BRZ",
     role: "overvoltage-tolerant unity buffer"
   },
   {
@@ -523,7 +523,7 @@ const expectedUpstream = deepFreeze({
   },
   acquisition: {
     adc: "ADS8881IDGS",
-    buffer: "ADA4177-1ARZ",
+    buffer: "ADA4177-1BRZ",
     sarFilterPart: "C0603C102J5GACTU",
     sarFilterResistancePart: "CRCW060320R0FKEAHP"
   },

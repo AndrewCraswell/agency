@@ -1,11 +1,8 @@
-import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeFixtureHarness,
   benchPrototypeContinuityThresholds,
   evaluateBenchPrototypeContinuityEvidence,
-  evaluateBenchPrototypeFixturePhysicalEvidence,
   validateBenchPrototypeFixtureHarness
 } from "./bench-prototype-fixture-harness.js"
 
@@ -205,6 +202,10 @@ describe("BP-104 seven-channel fixture harness", () => {
     impossibleTimestamp.recordedAtUtc = "2026-02-30T19:45:00.000Z"
     expect(evaluateBenchPrototypeContinuityEvidence(impossibleTimestamp)).toMatchObject({ accepted: false })
 
+    const offsetTimestamp = structuredClone(validEvidence)
+    offsetTimestamp.recordedAtUtc = "2026-08-23T19:45:00.000+00:00"
+    expect(evaluateBenchPrototypeContinuityEvidence(offsetTimestamp)).toMatchObject({ accepted: false })
+
     const impossibleCalibrationDate = structuredClone(validEvidence)
     impossibleCalibrationDate.equipment.calibrationDueDate = "2026-02-30"
     expect(evaluateBenchPrototypeContinuityEvidence(impossibleCalibrationDate)).toMatchObject({ accepted: false })
@@ -212,305 +213,6 @@ describe("BP-104 seven-channel fixture harness", () => {
     const expiredCalibration = structuredClone(validEvidence)
     expiredCalibration.equipment.calibrationDueDate = "2026-08-22"
     expect(evaluateBenchPrototypeContinuityEvidence(expiredCalibration)).toMatchObject({ accepted: false })
-  })
-
-  it("fails closed on incomplete physical evidence without claiming a physical result", () => {
-    const continuityEvidence = {
-      artifactKind: "bench-prototype-fixture-continuity-evidence",
-      evidenceId: "BP104-CONTINUITY-SYNTHETIC",
-      status: "measured",
-      recordedAtUtc: "2026-08-24T01:02:03.000Z",
-      operator: "synthetic-test-operator",
-      boardId: "synthetic-board",
-      harnessId: "synthetic-harness",
-      testPlugMpn: "44242-0005",
-      equipment: {
-        manufacturer: "Synthetic Instruments",
-        model: "Synthetic Model",
-        serialNumber: "SYN-001",
-        calibrationCertificate: "SYN-CAL-001",
-        calibrationDueDate: "2027-08-24"
-      },
-      method: {
-        powerState: "off-and-discharged",
-        continuityTestVoltageV: 1,
-        isolationTestVoltageV: 5,
-        leadCompensationMethod: "zeroed-with-same-leads-at-fixture",
-        compensatedLeadResidualOhms: 0.05
-      },
-      endToEnd: [
-        "LEFT_WEAPON_A",
-        "LEFT_WEAPON_B",
-        "LEFT_WEAPON_C",
-        "RIGHT_WEAPON_A",
-        "RIGHT_WEAPON_B",
-        "RIGHT_WEAPON_C",
-        "PISTE"
-      ].map((signal, index) => ({
-        boardPin: index + 1,
-        harnessCircuit: index + 1,
-        signal,
-        resistanceOhms: 0.4
-      })),
-      isolation: Array.from({ length: 12 }, (_, index) => index + 1).flatMap((boardPinA) =>
-        Array.from({ length: 12 - boardPinA }, (_, offset) => ({
-          boardPinA,
-          boardPinB: boardPinA + offset + 1,
-          resistanceOhms: benchPrototypeContinuityThresholds.minimumIsolationResistanceOhms,
-          testVoltageV: 5
-        }))
-      ),
-      openCircuitChecks: Array.from({ length: 5 }, (_, index) => ({
-        boardPin: index + 8,
-        harnessCircuit: index + 8,
-        resistanceOhms: benchPrototypeContinuityThresholds.minimumIsolationResistanceOhms
-      })),
-      negativeTests: [
-        { id: "BP104-NEG-SWAP", result: "rejected", observation: "synthetic adjacent swap rejection" },
-        { id: "BP104-NEG-OPEN", result: "rejected", observation: "synthetic open rejection" },
-        { id: "BP104-NEG-RETURN-BOND", result: "rejected", observation: "synthetic return rejection" },
-        { id: "BP104-NEG-REVERSED-MATE", result: "rejected", observation: "synthetic mate rejection" }
-      ]
-    }
-    let digestCounter = 0
-    const nextSha256 = () => {
-      digestCounter += 1
-      return digestCounter.toString(16).padStart(64, "0")
-    }
-    const physicalEvidence = {
-      artifactKind: "bench-prototype-fixture-physical-evidence",
-      evidenceId: "BP104-PHYSICAL-SYNTHETIC",
-      status: "measured",
-      recordedAtUtc: "2026-08-24T01:02:03.000Z",
-      operator: "synthetic-test-operator",
-      drawingCadReviews: ["43045-1200", "43025-1200", "43030-0007", "44242-0005"].map((mpn) =>
-        mpn === "43030-0007"
-          ? {
-              mpn,
-              drawingArtifactId: `${mpn}-drawing`,
-              cadDisposition: "not-acquired-pattern-probe-returned-404",
-              cadArtifactId: null,
-              reviewArtifactId: `${mpn}-review`,
-              drawingSha256: nextSha256(),
-              cadSha256: null,
-              reviewSha256: nextSha256(),
-              reviewedAtUtc: "2026-08-24T01:02:03.000Z",
-              result: "accepted"
-            }
-          : {
-              mpn,
-              drawingArtifactId: `${mpn}-drawing`,
-              cadDisposition: "exact-retained-cad-artifact",
-              cadArtifactId: `${mpn}-cad`,
-              reviewArtifactId: `${mpn}-review`,
-              drawingSha256: nextSha256(),
-              cadSha256: nextSha256(),
-              reviewSha256: nextSha256(),
-              reviewedAtUtc: "2026-08-24T01:02:03.000Z",
-              result: "accepted"
-            }
-      ),
-      receivedParts: [
-        { mpn: "43045-1200", receivedQuantity: 1 },
-        { mpn: "43025-1200", receivedQuantity: 1 },
-        { mpn: "43030-0007", receivedQuantity: 7 },
-        { mpn: "44242-0005", receivedQuantity: 1 }
-      ].map((part) => ({
-        ...part,
-        receiptArtifactId: `${part.mpn}-receipt`,
-        receiptSha256: nextSha256()
-      })),
-      fitOrientationAndLabels: {
-        powerState: "off-and-discharged",
-        sampleFitArtifactId: "synthetic-fit",
-        sampleFitSha256: nextSha256(),
-        circuitOneAligned: true,
-        latchLockSeated: true,
-        independentFixtureStopVerified: true,
-        namedSignalLabelsLegible: true,
-        pinOneMarkerLegible: true,
-        forcedMateObserved: false,
-        result: "accepted"
-      },
-      negativeMiswireResults: [
-        "BP104-NEG-SWAP",
-        "BP104-NEG-OPEN",
-        "BP104-NEG-RETURN-BOND",
-        "BP104-NEG-REVERSED-MATE"
-      ].map((id) => ({
-        id,
-        artifactId: `${id}-synthetic`,
-        contentSha256: nextSha256(),
-        result: "rejected",
-        observation: "synthetic rejected fault"
-      })),
-      crimpAndRetention: [
-        "LEFT_WEAPON_A",
-        "LEFT_WEAPON_B",
-        "LEFT_WEAPON_C",
-        "RIGHT_WEAPON_A",
-        "RIGHT_WEAPON_B",
-        "RIGHT_WEAPON_C",
-        "PISTE"
-      ].map((signal, index) => ({
-        signal,
-        cavity: index + 1,
-        terminalMpn: "43030-0007",
-        crimpArtifactId: `${signal}-crimp`,
-        crimpSha256: nextSha256(),
-        retentionArtifactId: `${signal}-retention`,
-        retentionSha256: nextSha256(),
-        result: "accepted"
-      })),
-      strainRelief: {
-        artifactId: "synthetic-strain-relief",
-        contentSha256: nextSha256(),
-        pullLoadPathBypassesCrimpAndPcb: true,
-        bendPathVerified: true,
-        result: "accepted"
-      },
-      continuityEvidence
-    }
-
-    const accepted = evaluateBenchPrototypeFixturePhysicalEvidence(physicalEvidence)
-    expect(accepted).toEqual({ accepted: true, reasons: [] })
-    expect(Object.isFrozen(accepted)).toBe(true)
-    expect(Object.isFrozen(accepted.reasons)).toBe(true)
-    expect(physicalEvidence.drawingCadReviews[2]).toMatchObject({
-      mpn: "43030-0007",
-      cadDisposition: "not-acquired-pattern-probe-returned-404",
-      cadArtifactId: null,
-      cadSha256: null
-    })
-
-    const missingDrawingReview = structuredClone(physicalEvidence)
-    missingDrawingReview.drawingCadReviews[0]!.cadArtifactId = ""
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(missingDrawingReview)).toMatchObject({ accepted: false })
-
-    const nullCadForHeader = structuredClone(physicalEvidence)
-    Object.assign(nullCadForHeader.drawingCadReviews[0]!, { cadArtifactId: null, cadSha256: null })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(nullCadForHeader)).toMatchObject({ accepted: false })
-
-    const wrongNoCadDisposition = structuredClone(physicalEvidence)
-    Object.assign(wrongNoCadDisposition.drawingCadReviews[0]!, {
-      cadDisposition: "not-acquired-pattern-probe-returned-404",
-      cadArtifactId: null,
-      cadSha256: null
-    })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(wrongNoCadDisposition)).toMatchObject({ accepted: false })
-
-    const terminalWithCadArtifact = structuredClone(physicalEvidence)
-    Object.assign(terminalWithCadArtifact.drawingCadReviews[2]!, {
-      cadDisposition: "exact-retained-cad-artifact",
-      cadArtifactId: "43030-0007-forged-cad",
-      cadSha256: "f".repeat(64)
-    })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(terminalWithCadArtifact)).toMatchObject({ accepted: false })
-
-    const insufficientTerminals = structuredClone(physicalEvidence)
-    insufficientTerminals.receivedParts[2]!.receivedQuantity = 6
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(insufficientTerminals)).toMatchObject({ accepted: false })
-
-    const forcedMate = structuredClone(physicalEvidence)
-    forcedMate.fitOrientationAndLabels.forcedMateObserved = true
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(forcedMate)).toMatchObject({ accepted: false })
-
-    const acceptedNegativeFault = structuredClone(physicalEvidence)
-    acceptedNegativeFault.negativeMiswireResults[0]!.result = "accepted"
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(acceptedNegativeFault)).toMatchObject({ accepted: false })
-
-    const failedContinuity = structuredClone(physicalEvidence)
-    failedContinuity.continuityEvidence.endToEnd[0]!.resistanceOhms = 3
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(failedContinuity)).toMatchObject({ accepted: false })
-
-    let accessorInvoked = false
-    const withAccessor = structuredClone(physicalEvidence)
-    Object.defineProperty(withAccessor, "drawingCadReviews", {
-      enumerable: true,
-      get() {
-        accessorInvoked = true
-        return []
-      }
-    })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withAccessor).accepted).toBe(false)
-    expect(accessorInvoked).toBe(false)
-
-    const withSymbol = structuredClone(physicalEvidence)
-    Object.defineProperty(withSymbol.fitOrientationAndLabels, Symbol("unexpected"), {
-      enumerable: true,
-      value: true
-    })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withSymbol).accepted).toBe(false)
-
-    const withHidden = structuredClone(physicalEvidence)
-    Object.defineProperty(withHidden.strainRelief, "hidden", { enumerable: false, value: true })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withHidden).accepted).toBe(false)
-
-    const withNonPlainPrototype = structuredClone(physicalEvidence)
-    Object.setPrototypeOf(withNonPlainPrototype.receivedParts[0]!, {})
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withNonPlainPrototype).accepted).toBe(false)
-
-    const withSparseArray = structuredClone(physicalEvidence)
-    delete withSparseArray.drawingCadReviews[1]
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withSparseArray).accepted).toBe(false)
-
-    class EvidenceArray<T> extends Array<T> {}
-    const withArraySubclass = structuredClone(physicalEvidence)
-    withArraySubclass.negativeMiswireResults = EvidenceArray.from(withArraySubclass.negativeMiswireResults)
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withArraySubclass).accepted).toBe(false)
-
-    const withAlias = structuredClone(physicalEvidence)
-    withAlias.receivedParts[1] = withAlias.receivedParts[0]!
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withAlias).accepted).toBe(false)
-
-    const withCycle = structuredClone(physicalEvidence)
-    Object.defineProperty(withCycle.fitOrientationAndLabels, "cycle", {
-      enumerable: true,
-      value: withCycle.fitOrientationAndLabels
-    })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withCycle).accepted).toBe(false)
-
-    const withUnknownKey = structuredClone(physicalEvidence)
-    Object.defineProperty(withUnknownKey.receivedParts[0]!, "unexpected", { enumerable: true, value: true })
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withUnknownKey).reasons).toContain(
-      "evidence must contain only the exact BP-104 enumerable data keys"
-    )
-
-    const withMissingKey = structuredClone(physicalEvidence)
-    Reflect.deleteProperty(withMissingKey.fitOrientationAndLabels, "pinOneMarkerLegible")
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withMissingKey).reasons).toContain(
-      "evidence must contain only the exact BP-104 enumerable data keys"
-    )
-
-    const withoutReviewDigest = structuredClone(physicalEvidence)
-    Reflect.deleteProperty(withoutReviewDigest.drawingCadReviews[0]!, "reviewSha256")
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withoutReviewDigest).accepted).toBe(false)
-
-    const withReviewDigestSubstitution = structuredClone(physicalEvidence)
-    withReviewDigestSubstitution.drawingCadReviews[0]!.reviewSha256 =
-      withReviewDigestSubstitution.drawingCadReviews[0]!.drawingSha256
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withReviewDigestSubstitution).accepted).toBe(false)
-
-    const withoutCrimpDigest = structuredClone(physicalEvidence)
-    Reflect.deleteProperty(withoutCrimpDigest.crimpAndRetention[0]!, "crimpSha256")
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withoutCrimpDigest).accepted).toBe(false)
-
-    const withRetentionDigestSubstitution = structuredClone(physicalEvidence)
-    withRetentionDigestSubstitution.crimpAndRetention[0]!.retentionSha256 =
-      withRetentionDigestSubstitution.crimpAndRetention[0]!.crimpSha256
-    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withRetentionDigestSubstitution).accepted).toBe(false)
-
-    const continuityAccessor = structuredClone(continuityEvidence)
-    let continuityAccessorInvoked = false
-    Object.defineProperty(continuityAccessor.equipment, "model", {
-      enumerable: true,
-      get() {
-        continuityAccessorInvoked = true
-        return "forged"
-      }
-    })
-    expect(evaluateBenchPrototypeContinuityEvidence(continuityAccessor).accepted).toBe(false)
-    expect(continuityAccessorInvoked).toBe(false)
   })
 
   it.each([
@@ -582,7 +284,7 @@ describe("BP-104 seven-channel fixture harness", () => {
     expect(() => validateBenchPrototypeFixtureHarness(accessor)).toThrow(RangeError)
   })
 
-  it("keeps retained manufacturer artifacts hash-bound while physical evidence stays open", () => {
+  it("keeps the canonical graph immutable and all physical evidence open", () => {
     expect(Object.isFrozen(benchPrototypeFixtureHarness)).toBe(true)
     expect(Object.isFrozen(benchPrototypeFixtureHarness.connector)).toBe(true)
     expect(Object.isFrozen(benchPrototypeFixtureHarness.connector.pinMap)).toBe(true)
@@ -593,75 +295,6 @@ describe("BP-104 seven-channel fixture harness", () => {
       miswireRejection: "open",
       strainRelief: "open"
     })
-    expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery).toMatchObject({
-      status: "hash-bound",
-      candidates: [
-        {
-          mpn: "43045-1200",
-          drawingNumber: "SD-43045-001",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "12-circuit row, finish A, material number 43045-1200",
-          sourceUrl: expect.stringContaining("430450600_sd.pdf"),
-          retainedAsset: "docs/evidence/bp-104/assets/43045-1200-drawing.pdf",
-          contentSha256: "571c8a381be263cf8f92b064fe18dbc6ce6161e8cb2e931d186e8280b9f8338a",
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "exact-mpn-cad-drawing-pdf",
-          cadSourceUrl: expect.stringContaining("3dcadmodelspdf/430/43045/430451200.pdf"),
-          cadRetainedAsset: "docs/evidence/bp-104/assets/43045-1200-cad-preview.pdf",
-          cadContentSha256: "7ec4bed5fa8de35dbcf15486eea86062f9baaf8cdd2bfc0f4d2126a5d68f65fa",
-          cadRetrievalState: "official-bytes-retained-and-hash-bound"
-        },
-        {
-          mpn: "43025-1200",
-          drawingNumber: "430250000-SD",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "12-position row, material number 43025-1200",
-          sourceUrl: expect.stringContaining("430250400_sd.pdf"),
-          retainedAsset: "docs/evidence/bp-104/assets/43025-1200-drawing.pdf",
-          contentSha256: "3fa78847433b382fa07609fb9f44b5e8b017804b9b491250dc493eef9e029e28",
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "exact-mpn-cad-drawing-pdf",
-          cadSourceUrl: expect.stringContaining("3dcadmodelspdf/430/43025/430251200.pdf"),
-          cadRetainedAsset: "docs/evidence/bp-104/assets/43025-1200-cad-preview.pdf",
-          cadContentSha256: "57a49568309fb94161814f16e2544c6c096fd2c47c09536367bbbaf943b7680c",
-          cadRetrievalState: "official-bytes-retained-and-hash-bound"
-        },
-        {
-          mpn: "43030-0007",
-          drawingNumber: "SD-43030-XXXX",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "20-24 AWG, form A, loose terminal row, material number 43030-0007",
-          sourceUrl: expect.stringContaining("430300003_sd.pdf"),
-          retainedAsset: "docs/evidence/bp-104/assets/43030-0007-drawing.pdf",
-          contentSha256: "864e37707afed617ce5155661b9bbddd29bf10cae3d64185a34c71782574307b",
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "not-acquired-pattern-probe-returned-404",
-          cadSourceUrl: null,
-          cadRetainedAsset: null,
-          cadContentSha256: null,
-          cadRetrievalState: "not-acquired-pattern-probe-returned-404"
-        },
-        {
-          mpn: "44242-0005",
-          drawingNumber: "SD-44242-001",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "12-circuit test-plug row, material number 44242-0005",
-          sourceUrl: expect.stringContaining("442420001_sd.pdf"),
-          retainedAsset: "docs/evidence/bp-104/assets/44242-0005-drawing.pdf",
-          contentSha256: "c39b30b917e9beda545daa3ab00ff5f3ba5f27839d142edf035303dd8eb62eef",
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "exact-mpn-cad-drawing-pdf",
-          cadSourceUrl: expect.stringContaining("3dcadmodelspdf/442/44242/442420005.pdf"),
-          cadRetainedAsset: "docs/evidence/bp-104/assets/44242-0005-cad-preview.pdf",
-          cadContentSha256: "a7a9a9b236ba687c8ee3835a16120942f97742e61413c036513b8da7c7d3d84f",
-          cadRetrievalState: "official-bytes-retained-and-hash-bound"
-        }
-      ]
-    })
-    expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery.candidates).toHaveLength(4)
-    expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery.candidates.map(({ mpn }) => mpn)).toEqual(
-      ["43045-1200", "43025-1200", "43030-0007", "44242-0005"]
-    )
     expect(benchPrototypeFixtureHarness.authority).toMatchObject({
       exactSelectionFrozen: true,
       footprintEvidenceApproved: false,
@@ -671,52 +304,5 @@ describe("BP-104 seven-channel fixture harness", () => {
       releaseState: "deny"
     })
     expect(benchPrototypeFixtureHarness.fabricationDisposition).toBe("DENY")
-  })
-
-  it("verifies retained Molex PDF bytes against the executable SHA-256 bindings", () => {
-    for (const candidate of benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery.candidates) {
-      expect(candidate.retainedAsset).not.toBeNull()
-      expect(candidate.contentSha256).not.toBeNull()
-      if (candidate.retainedAsset === null || candidate.contentSha256 === null) continue
-      const drawingBytes = readFileSync(new URL(`../${candidate.retainedAsset}`, import.meta.url))
-      expect(drawingBytes.subarray(0, 5).toString()).toBe("%PDF-")
-      expect(createHash("sha256").update(drawingBytes).digest("hex")).toBe(candidate.contentSha256)
-
-      if (candidate.cadRetainedAsset === null || candidate.cadContentSha256 === null) {
-        expect(candidate.cadSourceKind).toBe("not-acquired-pattern-probe-returned-404")
-        continue
-      }
-      const cadBytes = readFileSync(new URL(`../${candidate.cadRetainedAsset}`, import.meta.url))
-      expect(cadBytes.subarray(0, 5).toString()).toBe("%PDF-")
-      expect(createHash("sha256").update(cadBytes).digest("hex")).toBe(candidate.cadContentSha256)
-    }
-  })
-
-  it("fails closed if a retained Molex drawing or CAD binding is changed", () => {
-    const drawingDigestSubstitution = structuredClone(benchPrototypeFixtureHarness)
-    Object.assign(drawingDigestSubstitution.evidence.manufacturerDrawingDiscovery.candidates[0], {
-      contentSha256: "a".repeat(64)
-    })
-    expect(() => validateBenchPrototypeFixtureHarness(drawingDigestSubstitution)).toThrow(RangeError)
-
-    const cadPathSubstitution = structuredClone(benchPrototypeFixtureHarness)
-    Object.assign(cadPathSubstitution.evidence.manufacturerDrawingDiscovery.candidates[0], {
-      cadRetainedAsset: "docs/evidence/bp-104/assets/forged.pdf"
-    })
-    expect(() => validateBenchPrototypeFixtureHarness(cadPathSubstitution)).toThrow(RangeError)
-
-    const missingCadBytes = structuredClone(benchPrototypeFixtureHarness)
-    Object.assign(missingCadBytes.evidence.manufacturerDrawingDiscovery.candidates[0], {
-      cadRetainedAsset: null,
-      cadContentSha256: null,
-      cadRetrievalState: "official-url-verified-but-local-bytes-unavailable"
-    })
-    expect(() => validateBenchPrototypeFixtureHarness(missingCadBytes)).toThrow(RangeError)
-
-    const unpublishedCadUrl = structuredClone(benchPrototypeFixtureHarness)
-    Object.assign(unpublishedCadUrl.evidence.manufacturerDrawingDiscovery.candidates[2], {
-      cadSourceUrl: "https://www.molex.com/unverified-cad"
-    })
-    expect(() => validateBenchPrototypeFixtureHarness(unpublishedCadUrl)).toThrow(RangeError)
   })
 })

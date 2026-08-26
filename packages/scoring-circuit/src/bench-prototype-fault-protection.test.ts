@@ -19,7 +19,7 @@ describe("BP-102 bench prototype fault protection", () => {
     expect(benchPrototypeFaultProtection.exactNetwork.normalSignal).toContain("TPD4E05U06DQAR")
     expect(benchPrototypeFaultProtection.exactNetwork.normalSignal).toContain("22 ohm")
     expect(benchPrototypeFaultProtection.exactNetwork.guardedInjection).toContain("56 kohm")
-    expect(benchPrototypeFaultProtection.exactNetwork.protectedAcquisition).toContain("ADA4177-1ARZ")
+    expect(benchPrototypeFaultProtection.exactNetwork.protectedAcquisition).toContain("ADA4177-1BRZ")
     expect(benchPrototypeFaultProtection.circuitPinAndNetMap).toMatchObject({
       J_FIXTURE: { 1: "LINE", 2: "SGND", 3: "ESD_RETURN_RESERVED_NC" },
       J_GUARDED_FORCE: { 1: "FORCE", 2: "SGND" },

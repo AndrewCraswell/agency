@@ -6,7 +6,6 @@
  */
 
 import { benchPrototypeContract, validateBenchPrototypeContract } from "./bench-prototype-contract.js"
-import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
 import {
   benchPrototypeSevenChannelAnalog,
   validateBenchPrototypeSevenChannelAnalog
@@ -35,71 +34,6 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
     deepFreeze(descriptor.value, seen)
   }
   return Object.freeze(value)
-}
-
-function inspectDataGraph(value: unknown, path: string, seen: WeakSet<object>, reasons: string[]): void {
-  if (value === null || typeof value !== "object") return
-  if (seen.has(value)) {
-    reasons.push(`${path} contains a cycle or object alias`)
-    return
-  }
-  seen.add(value)
-
-  const keys = Reflect.ownKeys(value)
-  if (Array.isArray(value)) {
-    if (Object.getPrototypeOf(value) !== Array.prototype) {
-      reasons.push(`${path} must be a plain array`)
-      return
-    }
-    const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length")
-    if (
-      lengthDescriptor === undefined ||
-      !("value" in lengthDescriptor) ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    ) {
-      reasons.push(`${path} must have a plain array length`)
-      return
-    }
-    const expectedKeys: PropertyKey[] = Array.from({ length: lengthDescriptor.value }, (_, index) => String(index))
-    expectedKeys.push("length")
-    if (keys.length !== expectedKeys.length || keys.some((key, index) => key !== expectedKeys[index])) {
-      reasons.push(`${path} must be a dense plain array with no extra or symbol keys`)
-      return
-    }
-    for (let index = 0; index < lengthDescriptor.value; index += 1) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
-      if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
-        reasons.push(`${path}[${index}] must be an enumerable data property`)
-        return
-      }
-      inspectDataGraph(descriptor.value, `${path}[${index}]`, seen, reasons)
-    }
-    return
-  }
-
-  if (Object.getPrototypeOf(value) !== Object.prototype) {
-    reasons.push(`${path} must be a plain data record`)
-    return
-  }
-  for (const key of keys) {
-    if (typeof key === "symbol") {
-      reasons.push(`${path} must not contain symbol keys`)
-      return
-    }
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
-      reasons.push(`${path}.${key} must be an enumerable data property`)
-      return
-    }
-    inspectDataGraph(descriptor.value, `${path}.${key}`, seen, reasons)
-  }
-}
-
-function hasExactKeys(value: unknown, expected: readonly string[]): value is DataRecord {
-  if (!isPlainRecord(value)) return false
-  const actual = Object.keys(value)
-  return actual.length === expected.length && expected.every((key) => actual.includes(key))
 }
 
 function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
@@ -375,64 +309,26 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0
 }
 
-function continuityEvidenceHasExactShape(value: unknown): value is DataRecord {
-  if (
-    !hasExactKeys(value, [
-      "artifactKind",
-      "evidenceId",
-      "status",
-      "recordedAtUtc",
-      "operator",
-      "boardId",
-      "harnessId",
-      "testPlugMpn",
-      "equipment",
-      "method",
-      "endToEnd",
-      "isolation",
-      "openCircuitChecks",
-      "negativeTests"
-    ]) ||
-    !hasExactKeys(value.equipment, [
-      "manufacturer",
-      "model",
-      "serialNumber",
-      "calibrationCertificate",
-      "calibrationDueDate"
-    ]) ||
-    !hasExactKeys(value.method, [
-      "powerState",
-      "continuityTestVoltageV",
-      "isolationTestVoltageV",
-      "leadCompensationMethod",
-      "compensatedLeadResidualOhms"
-    ]) ||
-    !Array.isArray(value.endToEnd) ||
-    !Array.isArray(value.isolation) ||
-    !Array.isArray(value.openCircuitChecks) ||
-    !Array.isArray(value.negativeTests)
-  ) {
-    return false
-  }
-  return (
-    value.endToEnd.every((row) => hasExactKeys(row, ["boardPin", "harnessCircuit", "signal", "resistanceOhms"])) &&
-    value.isolation.every((row) => hasExactKeys(row, ["boardPinA", "boardPinB", "resistanceOhms", "testVoltageV"])) &&
-    value.openCircuitChecks.every((row) => hasExactKeys(row, ["boardPin", "harnessCircuit", "resistanceOhms"])) &&
-    value.negativeTests.every((row) => hasExactKeys(row, ["id", "result", "observation"]))
-  )
+function parseStrictUtcDate(value: unknown): Date | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return null
+  const date = new Date(`${value}T00:00:00.000Z`)
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date
+}
+
+function parseStrictUtcTimestamp(value: unknown): Date | null {
+  if (typeof value !== "string") return null
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/u.exec(value)
+  if (match === null) return null
+  const milliseconds = match[7] ?? "000"
+  const canonical = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}.${milliseconds}Z`
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) || date.toISOString() !== canonical ? null : date
 }
 
 export function evaluateBenchPrototypeContinuityEvidence(value: unknown): BenchPrototypeContinuityEvaluation {
   const reasons: string[] = []
-  inspectDataGraph(value, "continuityEvidence", new WeakSet<object>(), reasons)
-  if (reasons.length > 0) return deepFreeze({ accepted: false, reasons })
-  if (!continuityEvidenceHasExactShape(value)) {
-    return deepFreeze({
-      accepted: false,
-      reasons: ["continuity evidence must contain only the exact BP-104 enumerable data keys"]
-    })
-  }
-  const recordedAt = parseCanonicalUtcTimestamp(value.recordedAtUtc)
+  if (!isPlainRecord(value)) return { accepted: false, reasons: ["evidence must be a plain data record"] }
+  const recordedAt = parseStrictUtcTimestamp(value.recordedAtUtc)
   if (value.artifactKind !== "bench-prototype-fixture-continuity-evidence") reasons.push("artifact kind is invalid")
   if (!nonEmptyString(value.evidenceId)) reasons.push("evidenceId is required")
   if (value.status !== "measured") reasons.push("status must be measured")
@@ -454,7 +350,7 @@ export function evaluateBenchPrototypeContinuityEvidence(value: unknown): BenchP
     ) {
       reasons.push("equipment manufacturer, model, and serial number are required")
     }
-    calibrationDueDate = parseRealUtcDate(equipment.calibrationDueDate)
+    calibrationDueDate = parseStrictUtcDate(equipment.calibrationDueDate)
     if (!nonEmptyString(equipment.calibrationCertificate) || calibrationDueDate === null) {
       reasons.push("equipment calibration certificate and real ISO due date are required")
     }
@@ -570,456 +466,8 @@ export function evaluateBenchPrototypeContinuityEvidence(value: unknown): BenchP
     })
   }
 
-  return deepFreeze({ accepted: reasons.length === 0, reasons })
+  return { accepted: reasons.length === 0, reasons }
 }
-
-const requiredDrawingCadReviewMpns = ["43045-1200", "43025-1200", "43030-0007", "44242-0005"] as const
-
-const cadNotAcquiredMpn = "43030-0007" as const
-
-const requiredReceivedParts = [
-  { mpn: "43045-1200", minimumReceivedQuantity: 1 },
-  { mpn: "43025-1200", minimumReceivedQuantity: 1 },
-  { mpn: "43030-0007", minimumReceivedQuantity: 7 },
-  { mpn: "44242-0005", minimumReceivedQuantity: 1 }
-] as const
-
-const requiredPhysicalNegativeTestIds = [
-  "BP104-NEG-SWAP",
-  "BP104-NEG-OPEN",
-  "BP104-NEG-RETURN-BOND",
-  "BP104-NEG-REVERSED-MATE"
-] as const
-
-function isSha256(value: unknown): value is string {
-  return typeof value === "string" && /^[a-f0-9]{64}$/u.test(value)
-}
-
-type BenchPrototypeFixtureDrawingCadReview = {
-  readonly mpn: "43045-1200" | "43025-1200" | "43030-0007" | "44242-0005"
-  readonly drawingArtifactId: string
-  readonly reviewArtifactId: string
-  readonly drawingSha256: string
-  readonly reviewSha256: string
-  readonly reviewedAtUtc: string
-  readonly result: "accepted"
-} & (
-  | {
-      readonly mpn: "43030-0007"
-      readonly cadDisposition: "not-acquired-pattern-probe-returned-404"
-      readonly cadArtifactId: null
-      readonly cadSha256: null
-    }
-  | {
-      readonly mpn: "43045-1200" | "43025-1200" | "44242-0005"
-      readonly cadDisposition: "exact-retained-cad-artifact"
-      readonly cadArtifactId: string
-      readonly cadSha256: string
-    }
-)
-
-/**
- * BP-104 physical evidence is deliberately separate from the frozen schematic
- * contract. An accepted synthetic test object proves only evaluator behavior;
- * it is never physical proof or fabrication authority.
- */
-export type BenchPrototypeFixturePhysicalEvidence = {
-  readonly artifactKind: "bench-prototype-fixture-physical-evidence"
-  readonly evidenceId: string
-  readonly status: "measured"
-  readonly recordedAtUtc: string
-  readonly operator: string
-  readonly drawingCadReviews: readonly BenchPrototypeFixtureDrawingCadReview[]
-  readonly receivedParts: readonly {
-    readonly mpn: "43045-1200" | "43025-1200" | "43030-0007" | "44242-0005"
-    readonly receivedQuantity: number
-    readonly receiptArtifactId: string
-    readonly receiptSha256: string
-  }[]
-  readonly fitOrientationAndLabels: {
-    readonly powerState: "off-and-discharged"
-    readonly sampleFitArtifactId: string
-    readonly sampleFitSha256: string
-    readonly circuitOneAligned: true
-    readonly latchLockSeated: true
-    readonly independentFixtureStopVerified: true
-    readonly namedSignalLabelsLegible: true
-    readonly pinOneMarkerLegible: true
-    readonly forcedMateObserved: false
-    readonly result: "accepted"
-  }
-  readonly negativeMiswireResults: readonly {
-    readonly id: "BP104-NEG-SWAP" | "BP104-NEG-OPEN" | "BP104-NEG-RETURN-BOND" | "BP104-NEG-REVERSED-MATE"
-    readonly artifactId: string
-    readonly contentSha256: string
-    readonly result: "rejected"
-    readonly observation: string
-  }[]
-  readonly crimpAndRetention: readonly {
-    readonly signal: (typeof conductorOrder)[number]
-    readonly cavity: number
-    readonly terminalMpn: "43030-0007"
-    readonly crimpArtifactId: string
-    readonly crimpSha256: string
-    readonly retentionArtifactId: string
-    readonly retentionSha256: string
-    readonly result: "accepted"
-  }[]
-  readonly strainRelief: {
-    readonly artifactId: string
-    readonly contentSha256: string
-    readonly pullLoadPathBypassesCrimpAndPcb: true
-    readonly bendPathVerified: true
-    readonly result: "accepted"
-  }
-  readonly continuityEvidence: BenchPrototypeContinuityEvidence
-}
-
-export type BenchPrototypeFixturePhysicalEvidenceEvaluation = {
-  readonly accepted: boolean
-  readonly reasons: readonly string[]
-}
-
-function physicalEvidenceHasExactShape(value: unknown): value is DataRecord {
-  if (
-    !hasExactKeys(value, [
-      "artifactKind",
-      "evidenceId",
-      "status",
-      "recordedAtUtc",
-      "operator",
-      "drawingCadReviews",
-      "receivedParts",
-      "fitOrientationAndLabels",
-      "negativeMiswireResults",
-      "crimpAndRetention",
-      "strainRelief",
-      "continuityEvidence"
-    ]) ||
-    !Array.isArray(value.drawingCadReviews) ||
-    !Array.isArray(value.receivedParts) ||
-    !Array.isArray(value.negativeMiswireResults) ||
-    !Array.isArray(value.crimpAndRetention) ||
-    !hasExactKeys(value.fitOrientationAndLabels, [
-      "powerState",
-      "sampleFitArtifactId",
-      "sampleFitSha256",
-      "circuitOneAligned",
-      "latchLockSeated",
-      "independentFixtureStopVerified",
-      "namedSignalLabelsLegible",
-      "pinOneMarkerLegible",
-      "forcedMateObserved",
-      "result"
-    ]) ||
-    !hasExactKeys(value.strainRelief, [
-      "artifactId",
-      "contentSha256",
-      "pullLoadPathBypassesCrimpAndPcb",
-      "bendPathVerified",
-      "result"
-    ]) ||
-    !continuityEvidenceHasExactShape(value.continuityEvidence)
-  ) {
-    return false
-  }
-  return (
-    value.drawingCadReviews.every((row) =>
-      hasExactKeys(row, [
-        "mpn",
-        "drawingArtifactId",
-        "cadDisposition",
-        "cadArtifactId",
-        "reviewArtifactId",
-        "drawingSha256",
-        "cadSha256",
-        "reviewSha256",
-        "reviewedAtUtc",
-        "result"
-      ])
-    ) &&
-    value.receivedParts.every((row) =>
-      hasExactKeys(row, ["mpn", "receivedQuantity", "receiptArtifactId", "receiptSha256"])
-    ) &&
-    value.negativeMiswireResults.every((row) =>
-      hasExactKeys(row, ["id", "artifactId", "contentSha256", "result", "observation"])
-    ) &&
-    value.crimpAndRetention.every((row) =>
-      hasExactKeys(row, [
-        "signal",
-        "cavity",
-        "terminalMpn",
-        "crimpArtifactId",
-        "crimpSha256",
-        "retentionArtifactId",
-        "retentionSha256",
-        "result"
-      ])
-    )
-  )
-}
-
-function registerEvidenceArtifact(
-  artifactId: unknown,
-  contentSha256: unknown,
-  field: string,
-  artifacts: Map<string, string>,
-  reasons: string[]
-): boolean {
-  if (!nonEmptyString(artifactId) || !isSha256(contentSha256)) {
-    reasons.push(`${field} must have its own artifact ID and SHA-256`)
-    return false
-  }
-  if (artifacts.has(artifactId)) {
-    reasons.push(`${field} must not reuse artifact ID ${artifactId}`)
-    return false
-  }
-  artifacts.set(artifactId, contentSha256)
-  return true
-}
-
-export function evaluateBenchPrototypeFixturePhysicalEvidence(
-  value: unknown
-): BenchPrototypeFixturePhysicalEvidenceEvaluation {
-  const reasons: string[] = []
-  inspectDataGraph(value, "evidence", new WeakSet<object>(), reasons)
-  if (reasons.length > 0) return deepFreeze({ accepted: false, reasons })
-  if (!physicalEvidenceHasExactShape(value)) {
-    return deepFreeze({
-      accepted: false,
-      reasons: ["evidence must contain only the exact BP-104 enumerable data keys"]
-    })
-  }
-  const artifacts = new Map<string, string>()
-  if (value.artifactKind !== "bench-prototype-fixture-physical-evidence") reasons.push("artifact kind is invalid")
-  if (!nonEmptyString(value.evidenceId)) reasons.push("evidenceId is required")
-  if (value.status !== "measured") reasons.push("status must be measured")
-  if (parseCanonicalUtcTimestamp(value.recordedAtUtc) === null)
-    reasons.push("recordedAtUtc must be a real UTC ISO timestamp")
-  if (!nonEmptyString(value.operator)) reasons.push("operator is required")
-
-  const drawingCadReviews = value.drawingCadReviews
-  if (!Array.isArray(drawingCadReviews) || drawingCadReviews.length !== requiredDrawingCadReviewMpns.length) {
-    reasons.push("exact drawing reviews and the required CAD dispositions are required for all four fixture parts")
-  } else {
-    requiredDrawingCadReviewMpns.forEach((mpn, index) => {
-      const review = drawingCadReviews[index]
-      const drawingArtifactAccepted =
-        isPlainRecord(review) &&
-        registerEvidenceArtifact(review.drawingArtifactId, review.drawingSha256, `${mpn}.drawing`, artifacts, reasons)
-      const reviewArtifactAccepted =
-        isPlainRecord(review) &&
-        registerEvidenceArtifact(review.reviewArtifactId, review.reviewSha256, `${mpn}.review`, artifacts, reasons)
-      const exactRetainedCadRequired = mpn !== cadNotAcquiredMpn
-      const cadArtifactAccepted =
-        isPlainRecord(review) &&
-        review.cadDisposition === "exact-retained-cad-artifact" &&
-        registerEvidenceArtifact(review.cadArtifactId, review.cadSha256, `${mpn}.CAD`, artifacts, reasons)
-      const notAcquiredCadAccepted =
-        isPlainRecord(review) &&
-        mpn === cadNotAcquiredMpn &&
-        review.cadDisposition === "not-acquired-pattern-probe-returned-404" &&
-        review.cadArtifactId === null &&
-        review.cadSha256 === null
-      const artifactBindingsAreDistinct =
-        isPlainRecord(review) &&
-        (exactRetainedCadRequired
-          ? new Set([review.drawingArtifactId, review.cadArtifactId, review.reviewArtifactId]).size === 3 &&
-            new Set([review.drawingSha256, review.cadSha256, review.reviewSha256]).size === 3
-          : review.drawingArtifactId !== review.reviewArtifactId && review.drawingSha256 !== review.reviewSha256)
-      if (
-        !isPlainRecord(review) ||
-        review.mpn !== mpn ||
-        !drawingArtifactAccepted ||
-        !reviewArtifactAccepted ||
-        !(exactRetainedCadRequired ? cadArtifactAccepted : notAcquiredCadAccepted) ||
-        !artifactBindingsAreDistinct ||
-        parseCanonicalUtcTimestamp(review.reviewedAtUtc) === null ||
-        review.result !== "accepted"
-      ) {
-        reasons.push(`drawing review or CAD disposition for ${mpn} is incomplete or not accepted`)
-      }
-    })
-  }
-
-  const receivedParts = value.receivedParts
-  if (!Array.isArray(receivedParts) || receivedParts.length !== requiredReceivedParts.length) {
-    reasons.push("received-part evidence is required for all four fixture parts")
-  } else {
-    requiredReceivedParts.forEach((part, index) => {
-      const received = receivedParts[index]
-      const receiptArtifactAccepted =
-        isPlainRecord(received) &&
-        registerEvidenceArtifact(
-          received.receiptArtifactId,
-          received.receiptSha256,
-          `${part.mpn}.receipt`,
-          artifacts,
-          reasons
-        )
-      if (
-        !isPlainRecord(received) ||
-        received.mpn !== part.mpn ||
-        !finiteNumber(received.receivedQuantity) ||
-        !Number.isSafeInteger(received.receivedQuantity) ||
-        received.receivedQuantity < part.minimumReceivedQuantity ||
-        !receiptArtifactAccepted
-      ) {
-        reasons.push(`received-part evidence for ${part.mpn} is incomplete`)
-      }
-    })
-  }
-
-  const fit = value.fitOrientationAndLabels
-  const sampleFitArtifactAccepted =
-    isPlainRecord(fit) &&
-    registerEvidenceArtifact(fit.sampleFitArtifactId, fit.sampleFitSha256, "sample fit", artifacts, reasons)
-  if (
-    !isPlainRecord(fit) ||
-    fit.powerState !== "off-and-discharged" ||
-    !sampleFitArtifactAccepted ||
-    fit.circuitOneAligned !== true ||
-    fit.latchLockSeated !== true ||
-    fit.independentFixtureStopVerified !== true ||
-    fit.namedSignalLabelsLegible !== true ||
-    fit.pinOneMarkerLegible !== true ||
-    fit.forcedMateObserved !== false
-  ) {
-    reasons.push("de-energized fit, orientation, and label evidence is incomplete")
-  }
-
-  const negativeMiswireResults = value.negativeMiswireResults
-  if (
-    !Array.isArray(negativeMiswireResults) ||
-    negativeMiswireResults.length !== requiredPhysicalNegativeTestIds.length
-  ) {
-    reasons.push("all four physical negative miswire results are required")
-  } else {
-    requiredPhysicalNegativeTestIds.forEach((id, index) => {
-      const result = negativeMiswireResults[index]
-      const negativeArtifactAccepted =
-        isPlainRecord(result) &&
-        registerEvidenceArtifact(result.artifactId, result.contentSha256, id, artifacts, reasons)
-      if (
-        !isPlainRecord(result) ||
-        result.id !== id ||
-        !negativeArtifactAccepted ||
-        result.result !== "rejected" ||
-        !nonEmptyString(result.observation)
-      ) {
-        reasons.push(`physical negative result ${id} must be recorded as rejected`)
-      }
-    })
-  }
-
-  const crimpAndRetention = value.crimpAndRetention
-  if (!Array.isArray(crimpAndRetention) || crimpAndRetention.length !== conductorOrder.length) {
-    reasons.push("accepted crimp and retention evidence is required for all seven conductors")
-  } else {
-    conductorOrder.forEach((signal, index) => {
-      const record = crimpAndRetention[index]
-      const crimpArtifactAccepted =
-        isPlainRecord(record) &&
-        registerEvidenceArtifact(record.crimpArtifactId, record.crimpSha256, `${signal}.crimp`, artifacts, reasons)
-      const retentionArtifactAccepted =
-        isPlainRecord(record) &&
-        registerEvidenceArtifact(
-          record.retentionArtifactId,
-          record.retentionSha256,
-          `${signal}.retention`,
-          artifacts,
-          reasons
-        )
-      if (
-        !isPlainRecord(record) ||
-        record.signal !== signal ||
-        record.cavity !== index + 1 ||
-        record.terminalMpn !== "43030-0007" ||
-        !crimpArtifactAccepted ||
-        !retentionArtifactAccepted ||
-        record.crimpArtifactId === record.retentionArtifactId ||
-        record.crimpSha256 === record.retentionSha256 ||
-        record.result !== "accepted"
-      ) {
-        reasons.push(`crimp and retention evidence for ${signal} is incomplete`)
-      }
-    })
-  }
-
-  const strainRelief = value.strainRelief
-  const strainReliefArtifactAccepted =
-    isPlainRecord(strainRelief) &&
-    registerEvidenceArtifact(strainRelief.artifactId, strainRelief.contentSha256, "strain relief", artifacts, reasons)
-  if (
-    !isPlainRecord(strainRelief) ||
-    !strainReliefArtifactAccepted ||
-    strainRelief.pullLoadPathBypassesCrimpAndPcb !== true ||
-    strainRelief.bendPathVerified !== true ||
-    strainRelief.result !== "accepted"
-  ) {
-    reasons.push("accepted strain-relief evidence is required")
-  }
-
-  if (!evaluateBenchPrototypeContinuityEvidence(value.continuityEvidence).accepted) {
-    reasons.push("accepted continuity evidence is required")
-  }
-
-  return deepFreeze({ accepted: reasons.length === 0, reasons })
-}
-
-const bp104MolexArtifacts = {
-  "43045-1200": {
-    drawing: {
-      path: "docs/evidence/bp-104/assets/43045-1200-drawing.pdf",
-      sha256: "571c8a381be263cf8f92b064fe18dbc6ce6161e8cb2e931d186e8280b9f8338a"
-    },
-    cad: {
-      sourceKind: "exact-mpn-cad-drawing-pdf",
-      sourceUrl:
-        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43045/430451200.pdf",
-      path: "docs/evidence/bp-104/assets/43045-1200-cad-preview.pdf",
-      sha256: "7ec4bed5fa8de35dbcf15486eea86062f9baaf8cdd2bfc0f4d2126a5d68f65fa"
-    }
-  },
-  "43025-1200": {
-    drawing: {
-      path: "docs/evidence/bp-104/assets/43025-1200-drawing.pdf",
-      sha256: "3fa78847433b382fa07609fb9f44b5e8b017804b9b491250dc493eef9e029e28"
-    },
-    cad: {
-      sourceKind: "exact-mpn-cad-drawing-pdf",
-      sourceUrl:
-        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43025/430251200.pdf?inline=",
-      path: "docs/evidence/bp-104/assets/43025-1200-cad-preview.pdf",
-      sha256: "57a49568309fb94161814f16e2544c6c096fd2c47c09536367bbbaf943b7680c"
-    }
-  },
-  "43030-0007": {
-    drawing: {
-      path: "docs/evidence/bp-104/assets/43030-0007-drawing.pdf",
-      sha256: "864e37707afed617ce5155661b9bbddd29bf10cae3d64185a34c71782574307b"
-    },
-    cad: {
-      sourceKind: "not-acquired-pattern-probe-returned-404",
-      sourceUrl: null,
-      path: null,
-      sha256: null
-    }
-  },
-  "44242-0005": {
-    drawing: {
-      path: "docs/evidence/bp-104/assets/44242-0005-drawing.pdf",
-      sha256: "c39b30b917e9beda545daa3ab00ff5f3ba5f27839d142edf035303dd8eb62eef"
-    },
-    cad: {
-      sourceKind: "exact-mpn-cad-drawing-pdf",
-      sourceUrl:
-        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf",
-      path: "docs/evidence/bp-104/assets/44242-0005-cad-preview.pdf",
-      sha256: "a7a9a9b236ba687c8ee3835a16120942f97742e61413c036513b8da7c7d3d84f"
-    }
-  }
-} as const
 
 const definition = {
   artifactKind: "bench-prototype-fixture-harness-contract",
@@ -1096,7 +544,6 @@ const definition = {
       sourceUrls: [
         "https://www.molex.com/en-us/products/series-chart/44242",
         "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf",
-        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf",
         "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/productspecificationpdf/203/203951/2039510000-PS-000.pdf"
       ]
     },
@@ -1152,12 +599,6 @@ const definition = {
       acceptanceRule:
         "Acceptance remains unresolved until evaluateBenchPrototypeContinuityEvidence returns accepted true for seven end-to-end readings, 66 unique pin-pair isolation readings, five open-circuit readings for pins 8-12, and four recorded rejected negative tests."
     },
-    physicalEvidenceAcceptance: {
-      status: "unresolved",
-      evaluator: "evaluateBenchPrototypeFixturePhysicalEvidence",
-      acceptanceRule:
-        "Acceptance remains unresolved until exact drawing reviews, exact retained CAD artifacts for 43045-1200, 43025-1200, and 44242-0005, the retained 43030-0007 no-CAD disposition, received parts, de-energized fit/orientation/labels, negative miswire results, crimp/retention, strain relief, and accepted continuity evidence are all present."
-    },
     sampleFitProcedure: {
       purpose:
         "one non-forced 43025-1200 to 43045-1200 sample-fit check only; it is separate from continuity and miswire probing",
@@ -1211,83 +652,6 @@ const definition = {
   evidence: {
     selectedParts: "candidate-orderable",
     manufacturerDrawings: "open",
-    manufacturerDrawingDiscovery: {
-      status: "hash-bound",
-      rule: "Series drawings identify the exact selected MPN only within their material tables. Retained source bytes and SHA-256 digests bind each drawing and published exact-MPN CAD preview; this is still not a footprint review.",
-      candidates: [
-        {
-          mpn: "43045-1200",
-          sourceKind: "series-drawing",
-          drawingNumber: "SD-43045-001",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "12-circuit row, finish A, material number 43045-1200",
-          sourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450600_sd.pdf",
-          retainedAsset: bp104MolexArtifacts["43045-1200"].drawing.path,
-          contentSha256: bp104MolexArtifacts["43045-1200"].drawing.sha256,
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "exact-mpn-cad-drawing-pdf",
-          cadSourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43045/430451200.pdf",
-          cadRetainedAsset: bp104MolexArtifacts["43045-1200"].cad.path,
-          cadContentSha256: bp104MolexArtifacts["43045-1200"].cad.sha256,
-          cadRetrievalState: "official-bytes-retained-and-hash-bound"
-        },
-        {
-          mpn: "43025-1200",
-          sourceKind: "series-drawing",
-          drawingNumber: "430250000-SD",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "12-position row, material number 43025-1200",
-          sourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf",
-          retainedAsset: bp104MolexArtifacts["43025-1200"].drawing.path,
-          contentSha256: bp104MolexArtifacts["43025-1200"].drawing.sha256,
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "exact-mpn-cad-drawing-pdf",
-          cadSourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43025/430251200.pdf?inline=",
-          cadRetainedAsset: bp104MolexArtifacts["43025-1200"].cad.path,
-          cadContentSha256: bp104MolexArtifacts["43025-1200"].cad.sha256,
-          cadRetrievalState: "official-bytes-retained-and-hash-bound"
-        },
-        {
-          mpn: "43030-0007",
-          sourceKind: "series-drawing",
-          drawingNumber: "SD-43030-XXXX",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "20-24 AWG, form A, loose terminal row, material number 43030-0007",
-          sourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf",
-          retainedAsset: bp104MolexArtifacts["43030-0007"].drawing.path,
-          contentSha256: bp104MolexArtifacts["43030-0007"].drawing.sha256,
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "not-acquired-pattern-probe-returned-404",
-          cadSourceUrl: null,
-          cadRetainedAsset: null,
-          cadContentSha256: null,
-          cadRetrievalState: "not-acquired-pattern-probe-returned-404"
-        },
-        {
-          mpn: "44242-0005",
-          sourceKind: "series-drawing",
-          drawingNumber: "SD-44242-001",
-          includesExactMpnInMaterialTable: true,
-          materialTableScope: "12-circuit test-plug row, material number 44242-0005",
-          sourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf",
-          retainedAsset: bp104MolexArtifacts["44242-0005"].drawing.path,
-          contentSha256: bp104MolexArtifacts["44242-0005"].drawing.sha256,
-          retrievalState: "official-bytes-retained-and-hash-bound",
-          cadSourceKind: "exact-mpn-cad-drawing-pdf",
-          cadSourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf",
-          cadRetainedAsset: bp104MolexArtifacts["44242-0005"].cad.path,
-          cadContentSha256: bp104MolexArtifacts["44242-0005"].cad.sha256,
-          cadRetrievalState: "official-bytes-retained-and-hash-bound"
-        }
-      ]
-    },
     sampleFit: "open",
     terminalCrimpAndRetention: "open",
     harnessContinuity: "open",
@@ -1340,10 +704,6 @@ const definition = {
     {
       title: "Molex SD-44242-001 test-plug drawing",
       url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf"
-    },
-    {
-      title: "Molex 442420005 exact CAD preview",
-      url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf"
     },
     { title: "BP-010 board boundary", url: "src/bench-prototype-contract.ts" },
     { title: "BP-103 seven-channel analog architecture", url: "src/bench-prototype-seven-channel-analog.ts" }
@@ -1442,7 +802,6 @@ export function validateBenchPrototypeFixtureHarness(value: unknown): true {
     !connector.matingOrientation.fixtureStopRequired ||
     connector.matingOrientation.energizedMating ||
     connector.continuityAcceptance.status !== "unresolved" ||
-    connector.physicalEvidenceAcceptance.status !== "unresolved" ||
     connector.continuityAcceptance.testPlugMpn !== "44242-0005" ||
     connector.continuityAcceptance.thresholds.maxEndToEndResistanceOhms !==
       benchPrototypeContinuityThresholds.maxEndToEndResistanceOhms ||
@@ -1467,25 +826,6 @@ export function validateBenchPrototypeFixtureHarness(value: unknown): true {
     connector.continuityMap.slice(7).some((entry) => !entry.expected.startsWith("open;")) ||
     contract.evidence.sampleFit !== "open" ||
     contract.evidence.harnessContinuity !== "open" ||
-    contract.evidence.manufacturerDrawingDiscovery.status !== "hash-bound" ||
-    contract.evidence.manufacturerDrawingDiscovery.candidates.some((candidate) => {
-      const artifacts = bp104MolexArtifacts[candidate.mpn]
-      return (
-        candidate.sourceKind !== "series-drawing" ||
-        !candidate.includesExactMpnInMaterialTable ||
-        candidate.retainedAsset !== artifacts.drawing.path ||
-        candidate.contentSha256 !== artifacts.drawing.sha256 ||
-        candidate.retrievalState !== "official-bytes-retained-and-hash-bound" ||
-        candidate.cadSourceKind !== artifacts.cad.sourceKind ||
-        candidate.cadSourceUrl !== artifacts.cad.sourceUrl ||
-        candidate.cadRetainedAsset !== artifacts.cad.path ||
-        candidate.cadContentSha256 !== artifacts.cad.sha256 ||
-        candidate.cadRetrievalState !==
-          (artifacts.cad.path === null
-            ? "not-acquired-pattern-probe-returned-404"
-            : "official-bytes-retained-and-hash-bound")
-      )
-    }) ||
     contract.authority.sampleFitApproved ||
     contract.authority.continuityVerified ||
     contract.connector.sampleFitProcedure.status !== "unresolved"

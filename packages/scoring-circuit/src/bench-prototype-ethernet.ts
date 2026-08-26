@@ -9,64 +9,6 @@ type ImportedEthernetPart = {
   readonly connection: string
 }
 
-type TestPointSelection = {
-  readonly reference: "TP_W5500_RESET_N" | "TP_W5500_INT_N"
-  readonly manufacturer: "Keystone Electronics"
-  readonly mpn: "5001"
-  readonly package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole"
-  readonly disposition: "populate-for-bench-observation"
-  readonly rationale: string
-  readonly sourceEvidence: {
-    readonly document: "Keystone terminals and test points catalog"
-    readonly url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf"
-    readonly artifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf"
-    readonly sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C"
-    readonly claims: readonly string[]
-  }
-}
-
-const resetTestPointSelection: TestPointSelection = {
-  reference: "TP_W5500_RESET_N",
-  manufacturer: "Keystone Electronics",
-  mpn: "5001",
-  package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
-  disposition: "populate-for-bench-observation",
-  rationale:
-    "Reset release, supervisor brownout hold, and the W5500 minimum 500 us reset interval require a directly probeable bench node.",
-  sourceEvidence: {
-    document: "Keystone terminals and test points catalog",
-    url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf",
-    artifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
-    sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C",
-    claims: [
-      "Keystone 5001 is the black miniature through-hole test point with a 0.040 inch (catalog 1.0 mm) mounting hole.",
-      "The catalog identifies the test point as suitable for standard probes, clips, and hooks.",
-      "The catalog mounting-hole callout is not a finished PCB drill instruction."
-    ]
-  }
-}
-
-const interruptTestPointSelection: TestPointSelection = {
-  reference: "TP_W5500_INT_N",
-  manufacturer: "Keystone Electronics",
-  mpn: "5001",
-  package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
-  disposition: "populate-for-bench-observation",
-  rationale:
-    "Although firmware polls over SPI, a local probe is required for interrupt assertion/clear and fault-injection captures without allocating an ESP32 GPIO.",
-  sourceEvidence: {
-    document: "Keystone terminals and test points catalog",
-    url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf",
-    artifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
-    sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C",
-    claims: [
-      "Keystone 5001 is the black miniature through-hole test point with a 0.040 inch (catalog 1.0 mm) mounting hole.",
-      "The catalog identifies the test point as suitable for standard probes, clips, and hooks.",
-      "The catalog mounting-hole callout is not a finished PCB drill instruction."
-    ]
-  }
-}
-
 const upstreamProvenanceDefinition = {
   componentDecision: {
     category: "ethernet",
@@ -97,53 +39,7 @@ const upstreamProvenanceDefinition = {
     ["C_W5500_AVDD_5", "Murata", "GRM188R71C104KA01D", "100nF"],
     ["C_W5500_AVDD_6", "Murata", "GRM188R71C104KA01D", "100nF"],
     ["FB_W5500_AVDD", "Murata", "BLM21PG221SN1D", "220Ohm impedance at 100MHz, 0.045Ohm maximum DCR"]
-  ],
-  interruptPolicy: {
-    signal: "INTn",
-    electricalType: "active-low digital output",
-    outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
-    lowState: "interrupt asserted from W5500",
-    highState: "no interrupt",
-    hostConnection: "none",
-    firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO",
-    bias: {
-      reference: "R_W5500_INT_BIAS",
-      disposition: "populate",
-      value: "100 kOhm, 1%",
-      manufacturer: "Yageo",
-      mpn: "RC0603FR-07100KL",
-      package: "0603",
-      rail: "V3_3",
-      reason:
-        "The canonical ESP32 allocation requires INTn to be pulled inactive locally for a defined high state while firmware polls over SPI; the 100 kOhm pull-up is a weak status bias and does not allocate an ESP32 GPIO."
-    },
-    sourceEvidence: {
-      manufacturer: "WIZnet",
-      document: "W5500 Datasheet v1.1.0",
-      url: "https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf",
-      artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
-      sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D",
-      claims: [
-        "W5500 pin 36 INTn is an output: Low means interrupt asserted from W5500 and High means no interrupt.",
-        "The W5500 DC-characteristics pull-up list names SCSn, RSTn, and PMODE[2:0], not INTn.",
-        "The cited W5500 pin and DC-characteristics tables do not specify whether the INTn output stage is push-pull, open-drain, or another topology."
-      ]
-    },
-    biasEvidence: {
-      manufacturer: "Yageo",
-      document: "RC0603FR-07100KL product specification",
-      url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
-      artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-      sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054",
-      claims: ["RC0603FR-07100KL is a 100 kOhm, 1%, 0603 / 1608 thick-film resistor."]
-    },
-    policyEvidence: {
-      document: "docs/esp32-pin-allocation.md",
-      claims: [
-        "INTn is intentionally not connected to an ESP32 GPIO; the application polls W5500 status and socket state over SPI while a local pull-up defines the inactive high state."
-      ]
-    }
-  }
+  ]
 } as const
 
 const supportConnections = {
@@ -253,7 +149,6 @@ const definition = {
       endpoints: ["U_APP_RESET_FANOUT.Y2", "R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"],
       firmwareControl: "none",
       observationEndpoint: "TP_W5500_RESET_N",
-      testPoint: resetTestPointSelection,
       pullup: {
         reference: "R_W5500_RESET_PULLUP",
         value: "10 kOhm, 1%",
@@ -272,45 +167,18 @@ const definition = {
     },
     interrupt: {
       name: "APP_W5500_INT_N",
-      electricalType: "active-low digital W5500 output",
-      outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
+      electricalType: "active-low push-pull W5500 output",
       endpoints: ["U_W5500.INT_N", "R_W5500_INT_BIAS.2", "TP_W5500_INT_N"],
       hostConnection: "none",
       observationEndpoint: "TP_W5500_INT_N",
-      testPoint: interruptTestPointSelection,
       bias: {
         reference: "R_W5500_INT_BIAS",
-        disposition: "populate",
-        value: "100 kOhm, 1%",
-        manufacturer: "Yageo",
-        mpn: "RC0603FR-07100KL",
-        package: "0603",
+        value: "TBD",
         rail: "V3_3",
-        population: "selected; footprint evidence open",
-        ownershipStatus:
-          "selected by the canonical ESP32 allocation; no ESP32 input is allocated, and SPI polling remains the host policy",
-        reason:
-          "The 100 kOhm local pull-up defines the inactive high state required by the canonical polling/test-point policy without allocating an ESP32 GPIO.",
-        sourceEvidence: {
-          document: "W5500 Datasheet v1.1.0",
-          artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
-          sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D"
-        },
-        biasEvidence: {
-          manufacturer: "Yageo",
-          document: "RC0603FR-07100KL product specification",
-          url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
-          artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-          sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
-        },
-        policyEvidence: {
-          document: "docs/esp32-pin-allocation.md",
-          claim:
-            "INTn is intentionally not connected to an ESP32 GPIO; the application polls W5500 status and socket state over SPI while a local pull-up defines the inactive high state."
-        }
+        ownershipStatus: "open; BP-123 must select or explicitly DNP the local bias after power-sequence review"
       },
       firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO",
-      rule: "the unconsumed digital output remains observable at the selected test point and uses the exact weak local pull-up; the output remains outside the ESP32 GPIO allocation"
+      rule: "the unconsumed push-pull output remains observable; exact local bias or explicit DNP is required before integration"
     }
   },
   openGates: [
@@ -320,7 +188,7 @@ const definition = {
     "AVDD/VDD impedance, ripple, ferrite heating, EMC, ESD, and thermal measurement",
     "BP-141 MDI, MagJack, termination, shield, and surge closure",
     "application 3.3 V regulator closure",
-    "BP-123 exact application supervisor, W5500 reset pullup, and reset timing closure"
+    "BP-123 exact application supervisor, W5500 reset pullup, timing, and INT bias-or-DNP closure"
   ]
 } as const
 
@@ -368,7 +236,6 @@ function assertUpstreamProvenance(): void {
     part.mpn,
     part.value
   ])
-  const currentInterruptPolicy = structuredClone(ethernetSupportNetwork.w5500.interruptPolicy)
   assertCanonical(
     currentDecision,
     benchPrototypeEthernetUpstreamProvenance.componentDecision,
@@ -379,12 +246,6 @@ function assertUpstreamProvenance(): void {
     currentSupportParts,
     benchPrototypeEthernetUpstreamProvenance.supportParts,
     "ethernetSupportNetwork provenance",
-    new WeakSet<object>()
-  )
-  assertCanonical(
-    currentInterruptPolicy,
-    benchPrototypeEthernetUpstreamProvenance.interruptPolicy,
-    "ethernetSupportNetwork.w5500.interruptPolicy provenance",
     new WeakSet<object>()
   )
 }

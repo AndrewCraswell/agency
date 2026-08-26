@@ -51,22 +51,21 @@ const packageByMpn = {
   "ESP32-S3-WROOM-1U-N16R2": "ESP32-S3-WROOM-1U module, 18mm x 25.5mm",
   ISO7762FDWR: "SOIC-16, 10.3mm body",
   ISO7721FDR: "SOIC-8, 5.0mm body",
-  NXE1S0505MC:
-    "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
-  REF5025AQDRQ1: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch",
+  NXE1S0505MC: "SMD isolated DC-DC converter, 7-pin case",
+  REF5025AQDRQ1: "VSON-8, 3mm x 3mm",
   W5500: "LQFP-48, 7mm x 7mm body, 0.5mm pitch",
   "7499011121A": "Shielded through-hole RJ45 with integrated magnetics and LEDs",
   SN74AHCT245PWR: "TSSOP-20",
   TPS3431SDRBR: "VSON-8, 2mm x 2mm",
   TPS389033DSER: "WSON-6, 1.5mm x 1.5mm",
   LMR43620MSC3RPERQ1: "VQFN-HR, 2mm x 2mm",
-  "CY15B104Q-LHXIT": "8-pin TDFN/DFN, 5 mm x 6 mm x 0.75 mm, PG-USON-8, drawing 001-85579",
+  "CY15B104Q-LHXIT": "SOIC-8",
   "RV-3028-C7": "SON-8, 3.0mm x 3.0mm",
   "STSAFE-A110": "SO8N, 150mil",
   TAS2505TRGERQ1: "VQFN-24, 4mm x 4mm",
   "10177070-00011LF": "Right-angle SMT USB-C receptacle, 0.80mm PCB",
-  TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body",
-  TPD2EUSB30DRTR: "SOT-9X3 (DRT), 3-pin",
+  TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3mm x 3mm",
+  TPD2EUSB30DRTR: "SOT-3 (DRT)",
   TVS2200DRVR: "WSON-6 (DRV), 2mm x 2mm",
   TPS25730ADREFR: "VQFN-38 (REF), 6mm x 4mm",
   TPS259474ARPWR: "VQFN-HR-10 (RPW), 2mm x 2mm"
@@ -260,6 +259,13 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     notes: "Select with the application regulator and reset timing evidence."
   },
   {
+    reference: "U_FRAM",
+    function: "Event journal F-RAM",
+    disposition: "TBD",
+    quantity: 1,
+    notes: "Storage remains optional for the first weapon and connector test until the application bus is exercised."
+  },
+  {
     reference: "U_RTC",
     function: "Wall-clock RTC",
     disposition: "TBD",
@@ -449,7 +455,7 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Required connector-side low-speed protection; it does not carry or protect USB D-minus or D-plus."
     ),
     selectedDecisionRow(
-      "U_USB_DATA_PROTECT",
+      "U_USB2_ESD",
       "TPD2EUSB30DRTR",
       "Native USB 2.0 low-capacitance ESD protection",
       "Required service-data protection; the ESP32-S3 remains the native USB device."
@@ -508,12 +514,6 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "HUB75 signal buffer B",
       "Exact buffer identity is retained for safe blanking; panel header and current remain prototype gates."
     ),
-    selectedDecisionRow(
-      "U_FRAM",
-      "CY15B104Q-LHXIT",
-      "Event journal F-RAM",
-      "Exact Infineon 8-pin TDFN orderable is selected; project footprint, orientation, placement, fabrication, and release remain denied."
-    ),
     ...selectedEthernetSupportRows,
     ...unresolvedRows
   ],
@@ -535,6 +535,30 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
 }
 
 export const benchPrototypeBom = deepFreeze(benchPrototypeBomDefinition)
+
+const requiredExactSelections = new Map([
+  ["U_SCORING", "STM32G474RET3TR"],
+  ["U_APP", "ESP32-S3-WROOM-1U-N16R2"],
+  ["U_ISO_MAIN", "ISO7762FDWR"],
+  ["U_ISO_AUX", "ISO7721FDR"],
+  ["U_ISO_POWER", "NXE1S0505MC"],
+  ["U_REF", "REF5025AQDRQ1"],
+  ["U_W5500", "W5500"],
+  ["J_ETH", "7499011121A"],
+  ["J_USB_C", "10177070-00011LF"],
+  ["U_USB_PD", "TPS25730ADREFR"],
+  ["U_USB_PORT_PROTECT", "TPD4S201TRGRRQ1"],
+  ["U_USB2_ESD", "TPD2EUSB30DRTR"],
+  ["J_LAB_INJECTION", "43045-0400"],
+  ["S_POWER_SOURCE_SELECTOR", "7101SYZQE"],
+  ["D_USB_PD_VBUS_TVS", "TVS2200DRVR"],
+  ["D_USB_PD_VBUS_DISCONNECT", "B340A-13-F"],
+  ["U_EFUSE", "TPS259474ARPWR"],
+  ["C_USB_PD_PPHV", "T523H107M035APE070"],
+  ["C_USB_PD_LDO", "T55A106M010C0200"],
+  ["U_DISPLAY_BUFFER_A", "SN74AHCT245PWR"],
+  ["U_DISPLAY_BUFFER_B", "SN74AHCT245PWR"]
+])
 
 type ParsedBomRow = {
   reference: string
@@ -796,6 +820,12 @@ export function validateBenchPrototypeBom(value: unknown): true {
         parsed.mpn !== expected.mpn
       ) {
         throw new RangeError(`${expected.reference} does not match the canonical baseline row`)
+      }
+    }
+    for (const [reference, mpn] of requiredExactSelections) {
+      const row = parsedRows.find((candidate) => candidate.reference === reference)
+      if (row === undefined || row.disposition !== "selected" || row.mpn !== mpn) {
+        throw new RangeError(`${reference} must select exact MPN ${mpn}`)
       }
     }
     validateExternalItems(bom.externalItems, seen)

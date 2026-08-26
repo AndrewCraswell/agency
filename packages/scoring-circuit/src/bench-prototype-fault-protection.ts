@@ -258,10 +258,10 @@ const selectedParts = deepFreeze([
     reference: "U_SOURCE_SWITCH"
   },
   {
-    mpn: "ADA4177-1ARZ",
+    mpn: "ADA4177-1BRZ",
     package: "R SOIC-8",
     primaryEvidenceUrl:
-      "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf",
+      "https://www.analog.com/media/en/technical-documentation/data-sheets/ada4177-1_4177-2_4177-4.pdf",
     reference: "U_OVP_BUFFER"
   },
   {
@@ -317,11 +317,11 @@ export const benchPrototypeFaultProtection = deepFreeze({
   decision: "freeze-one-channel-connector-side-protection-and-evidence-gated-guarded-fault-contract",
   exactNetwork: {
     normalSignal:
-      "J_FIXTURE pin 1 LINE -> U_ESD TPD4E05U06DQAR pin 1 LINE_SHUNT and R_ESD pin 1; R_ESD 22 ohm pin 2 -> TMUX1112 QUIET -> ADA4177-1ARZ non-inverting input",
+      "J_FIXTURE pin 1 LINE -> U_ESD TPD4E05U06DQAR pin 1 LINE_SHUNT and R_ESD pin 1; R_ESD 22 ohm pin 2 -> TMUX1112 QUIET -> ADA4177-1BRZ non-inverting input",
     guardedInjection:
       "external force source -> externally interlocked normally-open relay -> J_GUARDED_FORCE pin 1 FORCE -> R_FAULT_GUARD CRCW120656K0FKEAHP 56 kohm 1 percent -> LINE; the normal source and guarded force are never enabled together",
     protectedAcquisition:
-      "ADA4177-1ARZ unity buffer on S5V_ISOLATED and S5V_NEG -> R_SAR CRCW060320R0FKEAHP 20 ohm -> ADS8881IDGS AINP; ADS8881 AINN -> SCORING_SGND"
+      "ADA4177-1BRZ unity buffer on S5V_ISOLATED and S5V_NEG -> R_SAR CRCW060320R0FKEAHP 20 ohm -> ADS8881IDGS AINP; ADS8881 AINN -> SCORING_SGND"
   },
   circuitPinAndNetMap: {
     J_FIXTURE: { 1: "LINE", 2: "SGND", 3: "ESD_RETURN_RESERVED_NC" },

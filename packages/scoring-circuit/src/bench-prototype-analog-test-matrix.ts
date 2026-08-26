@@ -10,10 +10,6 @@ import {
   validateBenchPrototypeFixtureHarness
 } from "./bench-prototype-fixture-harness.js"
 import {
-  benchPrototypeReferenceDrive,
-  validateBenchPrototypeReferenceDrive
-} from "./bench-prototype-reference-drive.js"
-import {
   oneChannelAnalogExperiment,
   oneChannelExperimentArchiveSchema,
   validateOneChannelExperimentRun,
@@ -73,13 +69,8 @@ export function digestCanonicalArtifact(value: unknown): string {
     .digest("hex")
 }
 
-const validatedBp101Snapshot = (() => {
-  validateBenchPrototypeReferenceDrive(benchPrototypeReferenceDrive)
-  return structuredClone(oneChannelAnalogExperiment)
-})()
-
 export const benchPrototypeAnalogTestUpstreamSnapshots = deepFreeze({
-  BP101: validatedBp101Snapshot,
+  BP101: structuredClone(oneChannelAnalogExperiment),
   BP102: {
     connectorSafety: structuredClone(benchPrototypeFaultProtection.connectorSafety),
     guardedSourceEnvelope: structuredClone(benchPrototypeFaultProtection.guardedSourceEnvelope),
@@ -255,7 +246,6 @@ const requiredGuardedCategories = new Set<(typeof instrumentCategories)[number]>
 export function evaluateBenchPrototypeAnalogTestRun(input: unknown): BenchPrototypeAnalogTestEvaluation {
   const run = benchPrototypeAnalogTestRunSchema.parse(input)
   const reasons: string[] = []
-  validateBenchPrototypeReferenceDrive(benchPrototypeReferenceDrive)
   validateBenchPrototypeFaultProtection(benchPrototypeFaultProtection)
   validateBenchPrototypeFixtureHarness(benchPrototypeFixtureHarness)
   if (

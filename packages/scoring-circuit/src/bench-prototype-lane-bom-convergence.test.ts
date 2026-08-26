@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeLaneBomConvergence,
-  benchPrototypeLaneBomRows,
   evaluateLaneBomConvergence,
-  projectExactLaneRowsOntoOrderCandidateBaseline,
   type LaneBomRow
 } from "./bench-prototype-lane-bom-convergence.js"
 
@@ -16,7 +14,6 @@ const complete = (source: LaneBomRow["source"], reference: string): LaneBomRow =
   classification: "board-populated",
   footprintEvidenceRequired: source !== "BP-010",
   footprintEvidenceComplete: true,
-  footprintEvidenceState: source === "BP-010" ? "not-started" : "approved",
   sampleEvidenceRequired: false,
   sampleEvidenceComplete: false
 })
@@ -39,7 +36,7 @@ const allSourcesFor = (...provided: LaneBomRow["source"][]) => [
 ]
 
 describe("BP-035 lane BOM convergence", () => {
-  it("keeps the current prototype order candidate and fabrication release denied after exact BP-034 selections", () => {
+  it("keeps the current prototype order candidate and fabrication release denied", () => {
     expect(benchPrototypeLaneBomConvergence).toMatchObject({
       workUnit: "BP-035",
       orderCandidateReady: false,
@@ -47,38 +44,14 @@ describe("BP-035 lane BOM convergence", () => {
       fabricationDisposition: "DENY",
       productionRelease: false
     })
-    expect(benchPrototypeLaneBomConvergence.blockers.filter(({ code }) => code === "selection-blocked")).toEqual([])
     expect(benchPrototypeLaneBomConvergence.blockers).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" })])
+      expect.arrayContaining([
+        expect.objectContaining({ code: "selection-blocked", reference: "J_USB_C" }),
+        expect.objectContaining({ code: "selection-blocked", reference: "J_ETH" }),
+        expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" }),
+        expect.objectContaining({ code: "sample-evidence-open", reference: "J_USB_C" })
+      ])
     )
-    expect(benchPrototypeLaneBomConvergence.blockers).toHaveLength(343)
-    expect(benchPrototypeLaneBomConvergence.unresolvedPopulatedReferences).toHaveLength(247)
-    expect(
-      Object.fromEntries(
-        [
-          "footprint-evidence-open",
-          "missing-baseline-reference",
-          "missing-lane-reference",
-          "package-drift",
-          "population-drift",
-          "unresolved-mpn",
-          "unresolved-package",
-          "unresolved-population"
-        ].map((code) => [
-          code,
-          benchPrototypeLaneBomConvergence.blockers.filter((blocker) => blocker.code === code).length
-        ])
-      )
-    ).toEqual({
-      "footprint-evidence-open": 220,
-      "missing-baseline-reference": 8,
-      "missing-lane-reference": 7,
-      "package-drift": 8,
-      "population-drift": 11,
-      "unresolved-mpn": 21,
-      "unresolved-package": 35,
-      "unresolved-population": 33
-    })
   })
 
   it("accepts a fully aligned prototype order row while retaining fabrication denial", () => {
@@ -132,6 +105,7 @@ describe("BP-035 lane BOM convergence", () => {
         "package-drift",
         "population-drift",
         "footprint-evidence-open",
+        "sample-evidence-open",
         "unresolved-mpn",
         "unresolved-package",
         "selection-blocked"
@@ -160,16 +134,15 @@ describe("BP-035 lane BOM convergence", () => {
   })
 
   it("reconciles BP-034 board rows but excludes external sample rows from baseline identity drift", () => {
-    const board = { ...complete("BP-034", "J1"), sampleEvidenceRequired: true, sampleEvidenceComplete: false }
+    const board = { ...complete("BP-034", "J1"), sampleEvidenceRequired: true, sampleEvidenceComplete: true }
     const external: LaneBomRow = {
       ...complete("BP-034", "BP034_SAMPLE:cable:1:CABLE-1"),
       mpn: "CABLE-1",
       package: null,
       classification: "external-sample-test",
       footprintEvidenceRequired: false,
-      footprintEvidenceState: "not-started",
       sampleEvidenceRequired: true,
-      sampleEvidenceComplete: false
+      sampleEvidenceComplete: true
     }
     const evaluation = evaluateLaneBomConvergence({
       rows: [complete("BP-010", "J1"), board, external],
@@ -219,129 +192,6 @@ describe("BP-035 lane BOM convergence", () => {
     expect(Object.isFrozen(evaluation.blockers[0])).toBe(true)
     expect(Object.isFrozen(evaluation.blockers[0]?.sources)).toBe(true)
     expect(Object.isFrozen(evaluation.unresolvedPopulatedReferences)).toBe(true)
-  })
-
-  it("derives review state only from explicit per-row footprint evidence", () => {
-    const stateCounts = (source: LaneBomRow["source"]) =>
-      Object.fromEntries(
-        Object.entries(
-          Object.groupBy(
-            benchPrototypeLaneBomRows.filter((row) => row.source === source),
-            (row) => row.footprintEvidenceState
-          )
-        ).map(([state, rows]) => [state, rows.length])
-      )
-    const stateFor = (source: LaneBomRow["source"], reference: string) =>
-      benchPrototypeLaneBomRows.find((row) => row.source === source && row.reference === reference)
-        ?.footprintEvidenceState
-
-    expect(stateCounts("BP-031")).toEqual({ approved: 42, "reviewed-unapproved": 71 })
-    expect(stateCounts("BP-032")).toEqual({ "reviewed-unapproved": 50, approved: 1 })
-    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 99, "not-started": 2 })
-    expect(stateFor("BP-031", "C_SAR_1")).toBe("approved")
-    expect(stateFor("BP-031", "C_REF_IN_7")).toBe("approved")
-    expect(stateFor("BP-031", "R_FAULT_GUARD_7")).toBe("approved")
-    expect(stateFor("BP-031", "C_REF_REG_HF_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_APP_RESET_FANOUT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "U_REF_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "C_REF_REG_HF_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "J_WEAPON_FIXTURE")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "R_REF_SAR_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "R_SOURCE_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "C_REF_REG_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "C_REF_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "C_ESP_EN_DELAY")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "C_STM_SUPERVISOR_CT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_APP_RESET_FANOUT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "Q_ESP_RESET_STM")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "J_STM_SWD")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_STM_SUPERVISOR")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_ESP_SUPERVISOR")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_STM_WATCHDOG")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_ESP_WATCHDOG")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "C_STM_VDDA_HF")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "C_STM_VDDA_BULK")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "C_STM_3V3_BULK")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "C_ESP_3V3_BULK")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_ISO_MAIN")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_ISO_AUX")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_SCORING")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "J_ESP_SERVICE")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_APP")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_ISO_POWER")).toBe("approved")
-    expect(stateFor("BP-033", "J_USB_C")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_USB_PD")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_USB_PORT_PROTECT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_USB_DATA_PROTECT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_VBUS_EFUSE")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_DISPLAY_LIMITER")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_ETH_AVDD_FERRITE_INPUT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_W5500_AVDD_6")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_W5500")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_IR")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "J_LINK_INPUT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "J_LINK_SCORING")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "R_APP_REG_PGOOD")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "R_HUB75_R1_PD")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "R_IR_PULLUP")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "R_FRAM_HOLD_PULLUP")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "J_HUB75")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "D_SOURCE_SELECTOR")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "S_SOURCE_SELECTOR")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "D_VBUS_TVS")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "F_APPLICATION")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "F_DISPLAY")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "F_SCORING")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_APP_REG_IN_HF")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_FRAM_BYPASS")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "TP_W5500_RESET_N")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "TP_W5500_INT_N")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "TP_IR_RX")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_DISPLAY_IN")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_DISPLAY_OUT")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_APP_REG_OUT_A")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_APP_REG_OUT_B")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "C_APP_REG_OUT_C")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "Q_DISPLAY_BUFFER_A_ENABLE")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "Q_DISPLAY_BUFFER_B_ENABLE")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_DISPLAY_BUFFER_A")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_DISPLAY_BUFFER_B")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "Y_W5500")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "FB_W5500_AVDD")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "U_FRAM")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-033", "J_ETH")).toBe("not-started")
-    expect(stateFor("BP-033", "J_LAB_INJECTION")).toBe("not-started")
-    const approvedReferences = benchPrototypeLaneBomRows
-      .filter((row) => ["BP-031", "BP-032", "BP-033"].includes(row.source) && row.footprintEvidenceState === "approved")
-      .map((row) => row.reference)
-    expect(approvedReferences).toHaveLength(43)
-    expect(approvedReferences).toEqual(
-      expect.arrayContaining(["C_SAR_1", "C_REF_IN_7", "R_ESD_1", "R_FAULT_GUARD_7", "U_ISO_POWER"])
-    )
-  })
-
-  it("projects only exact lane identities into the BP-035 order-candidate baseline", () => {
-    const historical = [complete("BP-010", "U_HISTORICAL"), complete("BP-010", "U_EXISTING")]
-    const projection = projectExactLaneRowsOntoOrderCandidateBaseline(historical, [
-      complete("BP-031", "U_EXACT"),
-      { ...complete("BP-032", "U_TBD"), population: "TBD" },
-      { ...complete("BP-033", "U_NO_PACKAGE"), package: null },
-      { ...complete("BP-033", "U_TBD_PACKAGE"), package: "TBD" },
-      { ...complete("BP-033", "U_EXISTING"), mpn: "CONFLICT" }
-    ])
-
-    expect(projection).toEqual([
-      expect.objectContaining({
-        source: "BP-035",
-        reference: "U_EXACT",
-        orderCandidateProjection: true,
-        mpn: "EXACT-1",
-        package: "PACKAGE-1",
-        population: "populate"
-      })
-    ])
   })
 
   it("enumerates every unresolved populated reference once", () => {

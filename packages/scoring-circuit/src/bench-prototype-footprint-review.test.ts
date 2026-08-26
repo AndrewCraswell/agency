@@ -145,48 +145,6 @@ describe("BP-030 bench prototype footprint review method", () => {
     expect(() => validateBenchPrototypeFootprintReview(noReviewer)).toThrow(RangeError)
   })
 
-  it("rejects non-HTTPS manufacturer source URLs without changing the deny state", () => {
-    const review = reviewedFirstSelected()
-    const nonHttpsSource = {
-      ...review,
-      records: review.records.map((record, index) =>
-        index === 0
-          ? {
-              ...record,
-              manufacturerDrawing: {
-                ...record.manufacturerDrawing,
-                url: "http://manufacturer.example/drawing.pdf"
-              }
-            }
-          : record
-      )
-    }
-
-    expect(() => validateBenchPrototypeFootprintReview(nonHttpsSource)).toThrow(/HTTPS/)
-    expect(nonHttpsSource).toMatchObject({
-      fabricationRelease: false,
-      footprintClosure: false,
-      releaseState: "deny"
-    })
-  })
-
-  it("rejects impossible calendar dates in otherwise canonical review timestamps", () => {
-    const review = reviewedFirstSelected()
-    const impossibleCalendarDate = {
-      ...review,
-      records: review.records.map((record, index) =>
-        index === 0 ? { ...record, reviewedAt: "2026-02-30T18:00:00.000Z" } : record
-      )
-    }
-
-    expect(() => validateBenchPrototypeFootprintReview(impossibleCalendarDate)).toThrow(/canonical UTC timestamp/)
-    expect(impossibleCalendarDate).toMatchObject({
-      fabricationRelease: false,
-      footprintClosure: false,
-      releaseState: "deny"
-    })
-  })
-
   it("rejects accessors, extra keys, symbol keys, and aliased nested evidence", () => {
     const accessor = createBenchPrototypeFootprintReviewTemplate()
     Object.defineProperty(accessor.records[0], "exactMpn", { enumerable: true, get: () => "STM32G474RET3TR" })

@@ -23,10 +23,6 @@ import {
 } from "./bench-prototype-hub75-connector.js"
 import { benchPrototypeHub75Safing, validateBenchPrototypeHub75Safing } from "./bench-prototype-hub75-safing.js"
 import {
-  benchPrototypeIrReceiverFootprintEvidence,
-  validateBenchPrototypeIrReceiverFootprintEvidence
-} from "./bench-prototype-ir-receiver-footprint-evidence.js"
-import {
   benchPrototypeIrReceiverSelection,
   validateBenchPrototypeIrReceiverSelection
 } from "./bench-prototype-ir-receiver-selection.js"
@@ -35,47 +31,6 @@ import {
   validateBenchPrototypeOptionalPeripherals
 } from "./bench-prototype-optional-peripherals.js"
 import { calculateBenchPrototypePowerContract, defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
-import {
-  bp031032033C0603C104K3RactuFootprintEvidence,
-  validateBp031032033C0603C104K3RactuFootprintEvidence
-} from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
-import {
-  bp032ResetSupportFootprintEvidence,
-  validateBp032ResetSupportFootprintEvidence
-} from "./bp032-reset-support-footprints.js"
-import { validateBp033B340aProjectFootprintGeometry } from "./bp033-b340a-project-footprint.js"
-import {
-  bp033DisplayBufferBss138akaReferenceBinding,
-  validateBp033DisplayBufferBss138akaReferenceBinding
-} from "./bp033-display-buffer-bss138aka-reference-binding.js"
-import {
-  bp033InfineonCy15b104qFootprintEvidence,
-  validateBp033InfineonCy15b104qFootprintEvidence
-} from "./bp033-infineon-cy15b104q-footprint-evidence.js"
-import {
-  bp033Keystone5001TestPointEvidenceCandidate,
-  validateBp033Keystone5001TestPointEvidenceCandidate
-} from "./bp033-keystone-5001-test-point-evidence-candidate.js"
-import {
-  bp033Sn74ahct245pwrTssop20Footprint,
-  validateBp033Sn74ahct245pwrTssop20Footprint
-} from "./bp033-sn74ahct245pwr-tssop20-footprint.js"
-import {
-  bp033TdkC2012x7s1a226m125ac0805ReviewCandidate,
-  validateBp033TdkC2012x7s1a226m125ac0805ReviewCandidate
-} from "./bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.js"
-import {
-  bp033W5500CrystalSupportEvidence,
-  validateBp033W5500CrystalSupportEvidence
-} from "./bp033-w5500-crystal-support-evidence.js"
-import {
-  bp033W5500ProjectFootprintGeometry,
-  validateBp033W5500ProjectFootprintGeometry
-} from "./bp033-w5500-project-footprint.js"
-import {
-  bp033YageoRc0603fr07100rlIrReviewCandidate,
-  validateBp033YageoRc0603fr07100rlIrReviewCandidate
-} from "./bp033-yageo-rc0603fr-07100rl-ir-review-candidate.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
@@ -138,55 +93,11 @@ function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<ob
 }
 
 const noEvidence = () => ({
-  manufacturerDrawing: { state: "not-acquired", artifactPath: null, url: null, revision: null, sha256: null },
+  manufacturerDrawing: { state: "not-acquired", url: null, revision: null, sha256: null },
   manufacturerCad: { state: "not-acquired", url: null, revision: null, sha256: null },
   artwork: { state: "not-generated", artifactPath: null, generator: null, sha256: null },
   orientation: { state: "unreviewed", assemblyRotationDeg: null, datum: null, notes: null }
 })
-
-type SourceEvidence = {
-  readonly state: "not-acquired" | "acquired"
-  readonly artifactPath: string | null
-  readonly url: string | null
-  readonly revision: string | null
-  readonly sha256: string | null
-}
-
-type ProjectFootprintCandidate = {
-  readonly state: "source-controlled-review-only"
-  readonly artifactPath: string
-  readonly testArtifactPath: string
-  readonly renderedGeometrySha256: string
-  readonly orderableBinding: {
-    readonly orderableMpn: string
-    readonly deviceMpn: string
-    readonly packageDrawing: string
-    readonly perimeterPins?: number
-    readonly exposedPads?: readonly string[]
-    readonly electricalPinCount?: number
-    readonly pinMap?: readonly {
-      readonly pad: string
-      readonly signal: string
-      readonly function: string
-    }[]
-  }
-  readonly source: { readonly artifactPath: string; readonly sha256: string; readonly reviewedPages: string }
-  readonly review: {
-    readonly state: "root-reviewed-review-input" | "source-controlled-pending-review"
-    readonly reviewer: "root-final-reviewer" | null
-    readonly reviewedAt: "2026-08-25" | null
-    readonly scope: string
-  }
-  readonly authority: {
-    readonly manufacturerCadImported: false
-    readonly boardImported: false
-    readonly orientationAccepted: false
-    readonly courtyardAccepted: false
-    readonly drcAccepted: false
-    readonly fabricationAuthorized: false
-    readonly releaseState: "deny"
-  }
-}
 
 type Seed = {
   readonly reference: string
@@ -196,276 +107,14 @@ type Seed = {
   readonly package: string | null
   readonly sourceContract: string
   readonly sourceUrl: string | null
-  readonly manufacturerDrawing?: SourceEvidence
-  readonly pinMapOrientationOverlay?: {
-    readonly state: "source-controlled-pending-review"
-    readonly artifactPath: string
-    readonly sha256: string
-    readonly officialSources: {
-      readonly seriesPrint: { readonly artifactPath: string; readonly url: string; readonly sha256: string }
-      readonly footprintPrint: { readonly artifactPath: string; readonly url: string; readonly sha256: string }
-      readonly cad: { readonly state: "not-acquired-access-gated"; readonly url: string; readonly reason: string }
-    }
-    readonly pinMap: {
-      readonly rows: 2
-      readonly positions: 16
-      readonly pitchMm: 2.54
-      readonly pinOneAtKeyedEnd: true
-    }
-    readonly bp143Reconciliation: {
-      readonly signalCablePinOneMarker: "white stripe"
-      readonly panelConnector: "INPUT"
-      readonly sampleFitVerified: false
-      readonly orientationVerified: false
-      readonly continuityVerified: false
-      readonly currentVerified: false
-    }
-  }
-  readonly projectFootprintCandidate?: ProjectFootprintCandidate
 }
-
-const retainedPrimarySourceBatch = [
-  {
-    reference: "J_USB_C",
-    mpn: "10177070-00011LF",
-    package: "USB Type-C 16-position right-angle SMT receptacle, 0.80 mm PCB",
-    path: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
-    url: "https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/10177070.pdf",
-    sha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF"
-  },
-  {
-    reference: "U_USB_PD",
-    mpn: "TPS25730ADREFR",
-    package: "WQFN (REF), 38-pin",
-    path: "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf",
-    url: "https://www.ti.com/lit/ds/symlink/tps25730a.pdf",
-    sha256: "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28"
-  },
-  {
-    reference: "U_USB_PORT_PROTECT",
-    mpn: "TPD4S201TRGRRQ1",
-    package: "VQFN (RGR), 20-pin",
-    path: "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf",
-    url: "https://www.ti.com/lit/ds/symlink/tpd4s201-q1.pdf",
-    sha256: "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5"
-  },
-  {
-    reference: "U_USB_DATA_PROTECT",
-    mpn: "TPD2EUSB30DRTR",
-    package: "SOT-9X3 (DRT), 3-pin",
-    path: "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf",
-    url: "https://www.ti.com/lit/ds/symlink/tpd2eusb30a.pdf",
-    sha256: "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136"
-  },
-  {
-    reference: "D_VBUS_TVS",
-    mpn: "TVS2200DRVR",
-    package: "WSON (DRV), 6-pin",
-    path: "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf",
-    url: "https://www.ti.com/lit/ds/symlink/tvs2200.pdf",
-    sha256: "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801"
-  },
-  {
-    reference: "D_SOURCE_SELECTOR",
-    mpn: "B340A-13-F",
-    package: "SMA (DO-214AC)",
-    path: "docs/evidence/bp-033/diodes-b340a-datasheet.pdf",
-    url: "https://www.diodes.com/datasheet/download/B340A.pdf",
-    sha256: "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917"
-  },
-  {
-    reference: "U_VBUS_EFUSE",
-    mpn: "TPS259474ARPWR",
-    package: "VQFN-HR (RPW), 10-pin",
-    path: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
-    url: "https://www.ti.com/lit/ds/symlink/tps25947.pdf",
-    sha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC"
-  },
-  {
-    reference: "U_DISPLAY_LIMITER",
-    mpn: "TPS259474ARPWR",
-    package: "VQFN-HR (RPW), 10-pin",
-    path: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
-    url: "https://www.ti.com/lit/ds/symlink/tps25947.pdf",
-    sha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC"
-  },
-  {
-    reference: "L_APP_REGULATOR",
-    mpn: "XGL4030-222MEC",
-    package: "XGL4030, 4 mm x 4 mm x 3 mm molded power inductor",
-    path: "docs/evidence/bp-033/coilcraft-xgl4030-datasheet.pdf",
-    url: "https://www.coilcraft.com/getmedia/032d9c73-4222-482f-b6bc-7808590e27c9/xgl4030.pdf",
-    sha256: "34BB1C739914FC2114653D5B3D5893E90501129D5C2AF8A152E546B8068B72E5"
-  },
-  {
-    reference: "TP_W5500_RESET_N",
-    mpn: "5001",
-    package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
-    path: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
-    url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf",
-    sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C"
-  },
-  {
-    reference: "TP_W5500_INT_N",
-    mpn: "5001",
-    package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
-    path: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
-    url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf",
-    sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C"
-  },
-  {
-    reference: "R_W5500_INT_BIAS",
-    mpn: "RC0603FR-07100KL",
-    package: "0603",
-    path: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
-    sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
-  }
-] as const
-
-function retainedSourceFor(reference: string): SourceEvidence | undefined {
-  const source = retainedPrimarySourceBatch.find((candidate) => candidate.reference === reference)
-  return source === undefined
-    ? undefined
-    : {
-        state: "acquired",
-        artifactPath: source.path,
-        url: source.url,
-        revision: `Primary source retained at ${source.path}`,
-        sha256: source.sha256
-      }
-}
-
-function hasPinMapOrientationOverlay(record: {
-  readonly pinMapOrientationOverlay?: Seed["pinMapOrientationOverlay"]
-}): record is { readonly pinMapOrientationOverlay: NonNullable<Seed["pinMapOrientationOverlay"]> } {
-  return record.pinMapOrientationOverlay !== undefined
-}
-
-function hasProjectFootprintCandidate(record: {
-  readonly projectFootprintCandidate?: Seed["projectFootprintCandidate"]
-}): record is { readonly projectFootprintCandidate: NonNullable<Seed["projectFootprintCandidate"]> } {
-  return record.projectFootprintCandidate !== undefined
-}
-
-const tps25730aRefProjectFootprintCandidate = {
-  state: "source-controlled-review-only",
-  artifactPath: "src/bp033-tps25730a-ref-project-footprint.tsx",
-  testArtifactPath: "src/bp033-tps25730a-ref-project-footprint.test.tsx",
-  renderedGeometrySha256: "b35cde8711ffe20c9c1f38804c2e885bc7caa610db4f9bb5243f760a00e3e7e0",
-  orderableBinding: {
-    orderableMpn: "TPS25730ADREFR",
-    deviceMpn: "TPS25730AD",
-    packageDrawing: "REF0038A",
-    perimeterPins: 38,
-    exposedPads: ["39 GND", "40 DRAIN"]
-  },
-  source: {
-    artifactPath: "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf",
-    sha256: "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28",
-    reviewedPages: "1, 4-6, 61-63"
-  },
-  review: {
-    state: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    scope:
-      "Exact orderable/device/package binding, TI top-view pin order, published copper, exposed-pad identities, reference mapping, rendered-review hash, and deny-state integrity; mask, paste segmentation, courtyard, board fit, DRC, and fabrication remain unapproved."
-  },
-  authority: {
-    manufacturerCadImported: false,
-    boardImported: false,
-    orientationAccepted: false,
-    courtyardAccepted: false,
-    drcAccepted: false,
-    fabricationAuthorized: false,
-    releaseState: "deny"
-  }
-} as const
-
-const tpd4s201RgrProjectFootprintCandidate = {
-  state: "source-controlled-review-only",
-  artifactPath: "src/bp033-tpd4s201-rgr-project-footprint.tsx",
-  testArtifactPath: "src/bp033-tpd4s201-rgr-project-footprint.test.tsx",
-  renderedGeometrySha256: "6fa9a9c5018a1e1d9498032c2691e7aff50c0e0c9b2daa3acd4982cb21db4ac7",
-  orderableBinding: {
-    orderableMpn: "TPD4S201TRGRRQ1",
-    deviceMpn: "TPD4S201-Q1",
-    packageDrawing: "RGR0020C",
-    perimeterPins: 20,
-    exposedPads: ["21 GND"]
-  },
-  source: {
-    artifactPath: "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf",
-    sha256: "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5",
-    reviewedPages: "1, 3-4, 21, 26-28"
-  },
-  review: {
-    state: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    scope:
-      "Exact orderable, RGR package, TI pin map, copper, rendered stencil dimensions, explicit circuit-port aliases, and deny-state integrity; CAD, board fit, orientation acceptance, DRC, release, and fabrication remain unapproved."
-  },
-  authority: {
-    manufacturerCadImported: false,
-    boardImported: false,
-    orientationAccepted: false,
-    courtyardAccepted: false,
-    drcAccepted: false,
-    fabricationAuthorized: false,
-    releaseState: "deny"
-  }
-} as const
-
-const tpd2eusb30DrtProjectFootprintCandidate = {
-  state: "source-controlled-review-only",
-  artifactPath: "src/bp033-tpd2eusb30drtr-drt-project-footprint.tsx",
-  testArtifactPath: "src/bp033-tpd2eusb30drtr-drt-project-footprint.test.tsx",
-  renderedGeometrySha256: "f206c789162f96e38c781ca937d052b48b44bc66a91df41cebd7ad4cc6eff86e",
-  orderableBinding: {
-    orderableMpn: "TPD2EUSB30DRTR",
-    deviceMpn: "TPD2EUSB30",
-    packageDrawing: "DRT0003A",
-    electricalPinCount: 3,
-    pinMap: [
-      { pad: "1", signal: "D+", function: "D1+" },
-      { pad: "2", signal: "D-", function: "D1-" },
-      { pad: "3", signal: "GND", function: "GND" }
-    ]
-  },
-  source: {
-    artifactPath: "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf",
-    sha256: "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136",
-    reviewedPages: "1, 3, 12, 15-17"
-  },
-  review: {
-    state: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    scope:
-      "Exact TPD2EUSB30DRTR orderable, DRT package, three-pin map, retained TI sources, rendered review hash, and deny-state integrity; CAD, independent orientation, board fit, DRC, and fabrication remain unapproved."
-  },
-  authority: {
-    manufacturerCadImported: false,
-    boardImported: false,
-    orientationAccepted: false,
-    courtyardAccepted: false,
-    drcAccepted: false,
-    fabricationAuthorized: false,
-    releaseState: "deny"
-  }
-} as const
 
 function selected(seed: Seed) {
   return {
     ...seed,
     packageStatus: seed.package === null ? "upstream-package-not-specified" : "exact-package-identified",
     population: "DNP-unresolved",
-    manufacturerDrawing: seed.manufacturerDrawing ?? noEvidence().manufacturerDrawing,
-    manufacturerCad: noEvidence().manufacturerCad,
-    artwork: noEvidence().artwork,
-    orientation: noEvidence().orientation
+    ...noEvidence()
   } as const
 }
 
@@ -479,21 +128,31 @@ function dnp(reference: string, retainedCandidateMpn: string | null, reason: str
   } as const
 }
 
+function selectionBlocked(reference: string, role: string, upstreamDisposition: string) {
+  return {
+    reference,
+    section: "ethernet",
+    manufacturer: null,
+    mpn: null,
+    package: null,
+    packageStatus: "upstream-package-not-specified",
+    population: "DNP-or-selection-blocked",
+    sourceContract: "BP-140",
+    role,
+    upstreamDisposition,
+    ...noEvidence()
+  } as const
+}
+
 const powerSeeds = [
-  [
-    "J_USB_C",
-    "Amphenol ICC",
-    "10177070-00011LF",
-    "USB Type-C 16-position right-angle SMT receptacle, 0.80 mm PCB",
-    "USB-C receptacle"
-  ],
-  ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", "WQFN (REF), 38-pin", "USB-C PD sink controller"],
-  ["U_USB_PORT_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", "VQFN (RGR), 20-pin", "CC/SBU protector"],
-  ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", "SOT-9X3 (DRT), 3-pin", "USB data protector"],
-  ["D_VBUS_TVS", "Texas Instruments", "TVS2200DRVR", "WSON (DRV), 6-pin", "VBUS TVS"],
-  ["D_SOURCE_SELECTOR", "Diodes Incorporated", "B340A-13-F", "SMA (DO-214AC)", "source-selector surge diode"],
-  ["U_VBUS_EFUSE", "Texas Instruments", "TPS259474ARPWR", "VQFN-HR (RPW), 10-pin", "VBUS eFuse"],
-  ["U_DISPLAY_LIMITER", "Texas Instruments", "TPS259474ARPWR", "VQFN-HR (RPW), 10-pin", "display branch limiter"],
+  ["J_USB_C", "Amphenol ICC", "10177070-00011LF", null, "USB-C receptacle"],
+  ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", null, "USB-C PD sink controller"],
+  ["U_USB_CC_SBU_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", null, "CC/SBU protector"],
+  ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", null, "USB data protector"],
+  ["D_VBUS_TVS", "Texas Instruments", "TVS2200DRVR", null, "VBUS TVS"],
+  ["D_SOURCE_SELECTOR", "Diodes Incorporated", "B340A-13-F", null, "source-selector surge diode"],
+  ["U_VBUS_EFUSE", "Texas Instruments", "TPS259474ARPWR", null, "VBUS eFuse"],
+  ["U_DISPLAY_LIMITER", "Texas Instruments", "TPS259474ARPWR", null, "display branch limiter"],
   ["S_SOURCE_SELECTOR", "C&K", "7101SYZQE", null, "de-energized source selector"],
   ["F_APPLICATION", "Littelfuse", "0451002.MRL", null, "application branch fuse"],
   ["F_DISPLAY", "Littelfuse", "045106.3MRL", null, "display branch fuse"],
@@ -516,13 +175,7 @@ const powerSeeds = [
 
 const applicationSeeds = [
   ["U_APP_REGULATOR", "Texas Instruments", "LMR43620MSC3RPERQ1", "VQFN-HR RPE, 2 mm x 2 mm", "application regulator"],
-  [
-    "L_APP_REGULATOR",
-    "Coilcraft",
-    "XGL4030-222MEC",
-    "XGL4030, 4 mm x 4 mm x 3 mm molded power inductor",
-    "application regulator inductor"
-  ],
+  ["L_APP_REGULATOR", "Coilcraft", "XGL4030-222MEC", null, "application regulator inductor"],
   ["C_APP_REG_IN", "TDK", "C2012X7R1E475K125AB", "0805", "application regulator input capacitor"],
   ["C_APP_REG_IN_HF", "KEMET", "C0603C104K3RACTU", "0603", "application regulator bypass"],
   ["C_APP_REG_BOOT", "KEMET", "C0603C104K3RACTU", "0603", "application regulator bootstrap capacitor"],
@@ -563,33 +216,6 @@ const ethernetSeeds = [
     sourceUrl: part.sourceUrls[0] ?? null
   })),
   {
-    reference: "TP_W5500_RESET_N",
-    section: "ethernet",
-    manufacturer: benchPrototypeEthernet.nets.reset.testPoint.manufacturer,
-    mpn: benchPrototypeEthernet.nets.reset.testPoint.mpn,
-    package: benchPrototypeEthernet.nets.reset.testPoint.package,
-    sourceContract: "BP-140/BP-033",
-    sourceUrl: benchPrototypeEthernet.nets.reset.testPoint.sourceEvidence.url
-  },
-  {
-    reference: "TP_W5500_INT_N",
-    section: "ethernet",
-    manufacturer: benchPrototypeEthernet.nets.interrupt.testPoint.manufacturer,
-    mpn: benchPrototypeEthernet.nets.interrupt.testPoint.mpn,
-    package: benchPrototypeEthernet.nets.interrupt.testPoint.package,
-    sourceContract: "BP-140/BP-033",
-    sourceUrl: benchPrototypeEthernet.nets.interrupt.testPoint.sourceEvidence.url
-  },
-  {
-    reference: "R_W5500_INT_BIAS",
-    section: "ethernet",
-    manufacturer: benchPrototypeEthernet.nets.interrupt.bias.manufacturer,
-    mpn: benchPrototypeEthernet.nets.interrupt.bias.mpn,
-    package: benchPrototypeEthernet.nets.interrupt.bias.package,
-    sourceContract: "BP-140/BP-033",
-    sourceUrl: benchPrototypeEthernet.nets.interrupt.bias.biasEvidence.url
-  },
-  {
     reference: "R_W5500_RESET_PULLUP",
     section: "ethernet",
     manufacturer: "Yageo",
@@ -609,9 +235,23 @@ const ethernetSeeds = [
   }
 ] as const
 
-const bp140SelectionBlockedReferences: readonly { readonly reference: string }[] = []
-
-const bp140DnpReferences: readonly { readonly reference: string }[] = []
+const bp140SelectionBlockedReferences = [
+  selectionBlocked(
+    "TP_W5500_RESET_N",
+    "W5500 reset observation point",
+    "BP-140 requires an observation endpoint but selects no exact test-point manufacturer, MPN, or package."
+  ),
+  selectionBlocked(
+    "TP_W5500_INT_N",
+    "W5500 interrupt observation point",
+    "BP-140 requires an observation endpoint but selects no exact test-point manufacturer, MPN, or package."
+  ),
+  selectionBlocked(
+    "R_W5500_INT_BIAS",
+    "optional W5500 interrupt local bias",
+    "BP-140 leaves the value TBD and requires BP-123 to select an exact bias part or explicitly DNP it after power-sequence review."
+  )
+] as const
 
 function currentBp140ReferenceSet(): string[] {
   return [
@@ -633,38 +273,7 @@ const hub75Seeds = [
     mpn: "TST-108-04-G-D-RA",
     package: "2 x 8 right-angle through-hole header",
     sourceContract: "BP-143",
-    sourceUrl: "https://www.samtec.com/products/tst-108-04-g-d-ra",
-    pinMapOrientationOverlay: {
-      state: "source-controlled-pending-review",
-      artifactPath: "docs/evidence/bp-033/samtec-tst-108-04-g-d-ra-pin-map-orientation-overlay.svg",
-      sha256: "08FD50CDF71A209D936B6B74FD7DBBDAEDEF0404EA105A168623707FFA9D02F7",
-      officialSources: {
-        seriesPrint: {
-          artifactPath: "docs/evidence/bp-143/samtec-tst-series-print.pdf",
-          url: "https://suddendocs.samtec.com/prints/tst-1xx-xx-x-x-xx-xx-mkt.pdf",
-          sha256: "56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059"
-        },
-        footprintPrint: {
-          artifactPath: "docs/evidence/bp-143/samtec-tst-footprint.pdf",
-          url: "https://suddendocs.samtec.com/prints/tss-tstd.pdf",
-          sha256: "ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC"
-        },
-        cad: {
-          state: "not-acquired-access-gated",
-          url: "https://www.samtec.com/products/tst-108-04-g-d-ra",
-          reason: "Samtec requires a valid email address before instant model download."
-        }
-      },
-      pinMap: { rows: 2, positions: 16, pitchMm: 2.54, pinOneAtKeyedEnd: true },
-      bp143Reconciliation: {
-        signalCablePinOneMarker: "white stripe",
-        panelConnector: "INPUT",
-        sampleFitVerified: false,
-        orientationVerified: false,
-        continuityVerified: false,
-        currentVerified: false
-      }
-    }
+    sourceUrl: "https://www.samtec.com/products/tst-108-04-g-d-ra"
   },
   ...benchPrototypeHub75Safing.partIdentityEvidence.map((part) => ({
     reference: part.reference,
@@ -753,16 +362,7 @@ const records = [
       mpn,
       package: packageName,
       sourceContract: "BP-050",
-      sourceUrl: retainedSourceFor(reference)?.url ?? null,
-      manufacturerDrawing: retainedSourceFor(reference),
-      projectFootprintCandidate:
-        reference === "U_USB_PD"
-          ? tps25730aRefProjectFootprintCandidate
-          : reference === "U_USB_PORT_PROTECT"
-            ? tpd4s201RgrProjectFootprintCandidate
-            : reference === "U_USB_DATA_PROTECT"
-              ? tpd2eusb30DrtProjectFootprintCandidate
-              : undefined,
+      sourceUrl: null,
       role
     } as Seed & { readonly role: string })
   ),
@@ -774,18 +374,11 @@ const records = [
       mpn,
       package: packageName,
       sourceContract: "BP-142",
-      sourceUrl: retainedSourceFor(reference)?.url ?? null,
-      manufacturerDrawing: retainedSourceFor(reference),
+      sourceUrl: null,
       role
     } as Seed & { readonly role: string })
   ),
-  ...ethernetSeeds.map((seed) =>
-    selected({
-      ...seed,
-      sourceUrl: retainedSourceFor(seed.reference)?.url ?? seed.sourceUrl,
-      manufacturerDrawing: retainedSourceFor(seed.reference)
-    })
-  ),
+  ...ethernetSeeds.map(selected),
   ...hub75Seeds.map(selected),
   ...irSeeds.map(selected)
 ]
@@ -797,467 +390,16 @@ const bp140ReferenceReconciliation = [
       reference: record.reference,
       reconciliation: "selected-awaiting-footprint-evidence" as const
     })),
-  ...bp140DnpReferences.map((record) => ({
+  ...bp140SelectionBlockedReferences.map((record) => ({
     reference: record.reference,
-    reconciliation: "DNP-reviewed" as const
+    reconciliation: record.population
   }))
 ].sort((left, right) => left.reference.localeCompare(right.reference))
-
-const w5500BypassReferences = [
-  "C_ETH_AVDD_FERRITE_INPUT",
-  "C_W5500_VDD",
-  "C_W5500_AVDD_1",
-  "C_W5500_AVDD_2",
-  "C_W5500_AVDD_3",
-  "C_W5500_AVDD_4",
-  "C_W5500_AVDD_5",
-  "C_W5500_AVDD_6"
-] as const
-
-const molexLinkReferences = ["J_LINK_INPUT", "J_LINK_APPLICATION", "J_LINK_DISPLAY", "J_LINK_SCORING"] as const
-
-const yageo10kReferences = [
-  "R_APP_REG_PGOOD",
-  "R_W5500_RESET_PULLUP",
-  "R_HUB75_R1_PD",
-  "R_HUB75_G1_PD",
-  "R_HUB75_B1_PD",
-  "R_HUB75_R2_PD",
-  "R_HUB75_G2_PD",
-  "R_HUB75_B2_PD",
-  "R_HUB75_A_PD",
-  "R_HUB75_B_PD",
-  "R_HUB75_C_PD",
-  "R_HUB75_D_PD",
-  "R_HUB75_CLK_PD",
-  "R_HUB75_LAT_PD",
-  "R_HUB75_OE_PULLUP",
-  "R_HUB75_UNUSED_B_A6_PD",
-  "R_HUB75_UNUSED_B_A7_PD",
-  "R_HUB75_UNUSED_B_A8_PD",
-  "R_HUB75_PANEL_OE_PULLUP",
-  "R_BUFFER_A_ENABLE_PULLUP",
-  "R_BUFFER_A_GATE",
-  "R_BUFFER_B_ENABLE_PULLUP",
-  "R_BUFFER_B_GATE",
-  "R_IR_PULLUP",
-  "R_FRAM_WP_PULLUP",
-  "R_FRAM_HOLD_PULLUP"
-] as const
-
-const bp033SharedC0603References = bp031032033C0603C104K3RactuFootprintEvidence.referenceSets.bp033.references
-const bp033SharedC0603SourceArtifactPath = bp031032033C0603C104K3RactuFootprintEvidence.sources[0].artifactPath.replace(
-  /^packages\/scoring-circuit\//u,
-  ""
-)
-
-const bp033ApplicationRegulatorSupportMappings = [
-  {
-    reference: "U_APP_REGULATOR",
-    sourceArtifactPath: "docs/evidence/bp-033/ti-lmr43620-q1-datasheet.pdf",
-    sourceSha256: "DB767B9234F756C358C8254E682B917F16381EB0DB649A2936833E15EB8037FD"
-  },
-  {
-    reference: "L_APP_REGULATOR",
-    sourceArtifactPath: "docs/evidence/bp-033/coilcraft-xgl4030-datasheet.pdf",
-    sourceSha256: "34BB1C739914FC2114653D5B3D5893E90501129D5C2AF8A152E546B8068B72E5"
-  },
-  {
-    reference: "C_APP_REG_IN",
-    sourceArtifactPath: "docs/evidence/bp-033/tdk-c2012x7r1e475k125ab-product-page-capture.md",
-    sourceSha256: "BFCA5B5FA3A61383D54E9DF3AC784B571747A28D3E8ADA7410DE2391C3A40A93"
-  },
-  {
-    reference: "C_APP_REG_VCC",
-    sourceArtifactPath: "docs/evidence/bp-033/wurth-885012206052-datasheet.pdf",
-    sourceSha256: "459D7762A62A7A4BF66BDA7F96D4306A1EFFCCA85C8BB68F7B8444D5BBAFEA0F"
-  },
-  {
-    reference: "R_APP_REG_DISCHARGE",
-    sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-071kl-datasheet.pdf",
-    sourceSha256: "81CC922D526F75AC7B479167DC5BC3B6A46618F09A7F8BEB2C5E309767E596CB"
-  }
-] as const
-
-const bp033DisplayLimiterMappings = [
-  [
-    "R_DISPLAY_ILM",
-    "yageo-rc0402fr-07698rl-specsheet.pdf",
-    "B22937845B9DD9352E2959C69AE306C0D74BD998FB072481640602BC469D1DC6"
-  ],
-  [
-    "C_DISPLAY_BYPASS",
-    "kemet-c0402c104k3ractu-specsheet.pdf",
-    "889DE4201A2C26835545FC3BE215BE03637E2D3422FCC86B5FA5D96DBE0B30F1"
-  ],
-  [
-    "C_DISPLAY_DVDT",
-    "kemet-c0402c222k3ractu-specsheet.pdf",
-    "54F836BE838A054C9E696CD8FDB0C9529A190E11B1372C2ADCD615CD97A22133"
-  ],
-  [
-    "C_DISPLAY_ITIMER",
-    "kemet-c0402c222k3ractu-specsheet.pdf",
-    "54F836BE838A054C9E696CD8FDB0C9529A190E11B1372C2ADCD615CD97A22133"
-  ],
-  [
-    "R_DISPLAY_PG_PULLUP",
-    "yageo-rc0402fr-0710kl-specsheet.pdf",
-    "85ACEB87C42E4093DDDCD9563251F2E47E9EF8D0432D1F03B3A03FAEADD86BA3"
-  ],
-  [
-    "R_DISPLAY_PG_LOWER",
-    "yageo-rc0402fr-0749k9l-specsheet.pdf",
-    "B531815E39E63385D45860F0C737FF8627681D448DC3497AAE5D46157474EA2B"
-  ],
-  [
-    "R_DISPLAY_PG_UPPER",
-    "yageo-rc0402fr-07137kl-specsheet.pdf",
-    "7C76432DCDCB6DCC6D35F07B9281CC0EF5189AF5C9A26A7115FA8818F1B72D7B"
-  ]
-] as const
-
-const bp033W5500CrystalSupportMappings = bp033W5500CrystalSupportEvidence.rows.flatMap((row) => {
-  const source = bp033W5500CrystalSupportEvidence.sources.find((candidate) => candidate.exactMpn === row.mpn)
-  if (source === undefined) throw new RangeError(`BP-033 W5500 exact source missing for ${row.mpn}`)
-  return row.references.map((reference) => ({
-    reference,
-    sourceArtifactPath: source.artifactPath.replace(/^packages\/scoring-circuit\//u, ""),
-    sourceSha256: source.sha256
-  }))
-})
-
-const projectFootprintMappings = [
-  {
-    reference: "J_USB_C",
-    artifactKind: "bp033-usb-c-project-footprint",
-    artworkModule: "src/bp033-usb-c-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-usb-c-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
-    sourceSha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "D_SOURCE_SELECTOR",
-    artifactKind: "bp033-b340a-project-footprint",
-    artworkModule: "src/bp033-b340a-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-b340a-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/diodes-b340a-datasheet.pdf",
-    sourceSha256: "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "S_SOURCE_SELECTOR",
-    artifactKind: "bp033-7101syzqe-project-footprint",
-    artworkModule: "src/bp033-7101syzqe-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-7101syzqe-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/ck-7000toggle-7101syzqe-datasheet.pdf",
-    sourceSha256: "81C507AE655CBF893635F3E0ED421734A28AF08C975A8279E02070FFDCD353CB",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "D_VBUS_TVS",
-    artifactKind: "bp033-tvs2200-project-footprint",
-    artworkModule: "src/bp033-tvs2200-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-tvs2200-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf",
-    sourceSha256: "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "F_APPLICATION",
-    artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
-    artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
-    reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
-    sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
-    sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "F_DISPLAY",
-    artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
-    artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
-    reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
-    sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
-    sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "F_SCORING",
-    artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
-    artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
-    reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
-    sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
-    sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "U_VBUS_EFUSE",
-    artifactKind: "bp033-tps25947-project-footprint",
-    artworkModule: "src/bp033-tps25947-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-tps25947-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
-    sourceSha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  {
-    reference: "U_DISPLAY_LIMITER",
-    artifactKind: "bp033-tps25947-project-footprint",
-    artworkModule: "src/bp033-tps25947-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-tps25947-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
-    sourceSha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC",
-    reviewState: "root-reviewed-review-input",
-    reviewer: "root-final-reviewer",
-    reviewedAt: "2026-08-25",
-    fabricationRelease: "deny"
-  },
-  ...w5500BypassReferences.map((reference) => ({
-    reference,
-    artifactKind: "bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint",
-    artworkModule: "src/bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint.tsx",
-    reviewDocument: "docs/bp-033-w5500-100nf-bypass-footprint-evidence.md",
-    sourceArtifactPath: "docs/evidence/bp-033/murata-grm188r71c104ka01d-reference-sheet.pdf",
-    sourceSha256: "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09",
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...molexLinkReferences.map((reference) => ({
-    reference,
-    artifactKind: "bp033-molex-links-project-footprint",
-    artworkModule: "src/bp033-molex-links-project-footprint.tsx",
-    reviewDocument: "docs/bp-033-molex-links-project-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/molex-39281023-product-page.pdf",
-    sourceSha256: "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691",
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...yageo10kReferences.map((reference) => ({
-    reference,
-    artifactKind: "bp033-yageo-10k-bridge-footprint",
-    artworkModule: "src/bp033-yageo-10k-bridge-footprint.tsx",
-    reviewDocument: "docs/bp-033-yageo-10k-bridge-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
-    sourceSha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497",
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  {
-    reference: bp033W5500ProjectFootprintGeometry.reference,
-    artifactKind: bp033W5500ProjectFootprintGeometry.artifactKind,
-    artworkModule: "src/bp033-w5500-project-footprint.tsx",
-    reviewDocument: "docs/bench-prototype-application-footprints.md",
-    sourceArtifactPath: bp033W5500ProjectFootprintGeometry.sources[0].artifactPath,
-    sourceSha256: bp033W5500ProjectFootprintGeometry.sources[0].sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  },
-  {
-    reference: "U_IR",
-    artifactKind:
-      benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.projectFootprintArtifact.geometry.artifactKind,
-    artworkModule: "src/bench-prototype-ir-receiver-project-footprint.tsx",
-    reviewDocument: "docs/bench-prototype-plan.md#bp-146",
-    sourceArtifactPath: benchPrototypeIrReceiverFootprintEvidence.sources[0].retainedArtifactPath,
-    sourceSha256: benchPrototypeIrReceiverFootprintEvidence.sources[0].sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  },
-  ...bp033SharedC0603References.map((reference) => ({
-    reference,
-    artifactKind: bp031032033C0603C104K3RactuFootprintEvidence.artifactKind,
-    artworkModule: "src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx",
-    reviewDocument: "docs/bp-031-032-c0603c104k3ractu-footprint-review.md",
-    sourceArtifactPath: bp033SharedC0603SourceArtifactPath,
-    sourceSha256: bp031032033C0603C104K3RactuFootprintEvidence.sources[0].sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033Keystone5001TestPointEvidenceCandidate.sourceBinding.exactReferences.map((reference) => ({
-    reference,
-    artifactKind: bp033Keystone5001TestPointEvidenceCandidate.artifactKind,
-    artworkModule: "src/bp033-keystone-5001-test-point-evidence-candidate.ts",
-    reviewDocument: "docs/bp-033-keystone-5001-test-point-evidence-candidate.md",
-    sourceArtifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
-    sourceSha256: bp033Keystone5001TestPointEvidenceCandidate.source.sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.rootIntegrationHandoff.requiredRows.map(({ reference }) => ({
-    reference,
-    artifactKind: bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.artifactKind,
-    artworkModule: "src/bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.tsx",
-    reviewDocument: "docs/bp-033-tdk-c2012x7s1a226m125ac-0805-review-candidate.md",
-    sourceArtifactPath: "docs/evidence/bp-033/tdk-c2012x7s1a226m125ac-product-page-capture.md",
-    sourceSha256: bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.source.sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033DisplayBufferBss138akaReferenceBinding.exactReferenceSet.map((reference) => ({
-    reference,
-    artifactKind: bp033DisplayBufferBss138akaReferenceBinding.artifactKind,
-    artworkModule: "src/bp033-display-buffer-bss138aka-reference-binding.tsx",
-    reviewDocument: "docs/bp-033-display-buffer-bss138aka-reference-binding-review.md",
-    sourceArtifactPath: "docs/evidence/bp-032/nexperia-bss138aka-datasheet.pdf",
-    sourceSha256: bp033DisplayBufferBss138akaReferenceBinding.retainedManufacturerFacts.sourceSha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033Sn74ahct245pwrTssop20Footprint.references.map((reference) => ({
-    reference,
-    artifactKind: bp033Sn74ahct245pwrTssop20Footprint.artifactKind,
-    artworkModule: "src/bp033-sn74ahct245pwr-tssop20-footprint.tsx",
-    reviewDocument: "docs/bp033-sn74ahct245pwr-tssop20-footprint.md",
-    sourceArtifactPath: "docs/evidence/bp-033/ti-sn74ahct245-datasheet-official.pdf",
-    sourceSha256: bp033Sn74ahct245pwrTssop20Footprint.sourceBinding.sourceSha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...(["R_W5500_INT_BIAS", "R_BUFFER_A_GATE_PD", "R_BUFFER_B_GATE_PD"] as const).map((reference) => ({
-    reference,
-    artifactKind: "bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint" as const,
-    artworkModule: "src/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint.tsx",
-    reviewDocument: "docs/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint-review.md",
-    sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-    sourceSha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054" as const,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033YageoRc0603fr07100rlIrReviewCandidate.rootIntegrationHandoff.requiredRows.map(({ reference }) => ({
-    reference,
-    artifactKind: bp033YageoRc0603fr07100rlIrReviewCandidate.artifactKind,
-    artworkModule: "src/bp033-yageo-rc0603fr-07100rl-ir-review-candidate.tsx",
-    reviewDocument: "docs/bp-033-yageo-rc0603fr-07100rl-ir-review-candidate.md",
-    sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100rl-datasheet.pdf",
-    sourceSha256: bp033YageoRc0603fr07100rlIrReviewCandidate.source.sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033ApplicationRegulatorSupportMappings.map(({ reference, sourceArtifactPath, sourceSha256 }) => ({
-    reference,
-    artifactKind: "bp033-application-regulator-support-footprint-evidence" as const,
-    artworkModule: "src/bp033-application-regulator-support-footprint-evidence.tsx",
-    reviewDocument: "docs/bp-033-application-regulator-support-footprint-evidence-review.md",
-    sourceArtifactPath,
-    sourceSha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  ...bp033DisplayLimiterMappings.map(([reference, sourceFile, sourceSha256]) => ({
-    reference,
-    artifactKind: "bp033-display-limiter-0402-footprint" as const,
-    artworkModule: "src/bp033-display-limiter-0402-footprint.tsx",
-    reviewDocument: "docs/bp033-display-limiter-0402-footprint.md",
-    sourceArtifactPath: `docs/evidence/bp-033/${sourceFile}` as const,
-    sourceSha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  {
-    reference: "U_APP_RESET_FANOUT",
-    artifactKind: bp032ResetSupportFootprintEvidence.artifactKind,
-    artworkModule: "src/bp032-reset-support-footprints.ts",
-    reviewDocument: "docs/bench-prototype-application-footprints.md",
-    sourceArtifactPath: "docs/evidence/bp-032/ti-sn74lvc2g07-datasheet.pdf",
-    sourceSha256: "71BBB2FC452E2949B332C030B004B094BA679AC8CCE27123F806A0A6B1FDE660",
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  },
-  ...bp033W5500CrystalSupportMappings.map(({ reference, sourceArtifactPath, sourceSha256 }) => ({
-    reference,
-    artifactKind: bp033W5500CrystalSupportEvidence.artifactKind,
-    artworkModule: "src/bp033-w5500-crystal-support-evidence.ts",
-    reviewDocument: "docs/bench-prototype-application-footprints.md",
-    sourceArtifactPath,
-    sourceSha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  })),
-  {
-    reference: "U_FRAM",
-    artifactKind: bp033InfineonCy15b104qFootprintEvidence.artifactKind,
-    artworkModule: "src/bp033-infineon-cy15b104q-footprint-evidence.ts",
-    reviewDocument: "docs/bench-prototype-application-footprints.md",
-    sourceArtifactPath: bp033InfineonCy15b104qFootprintEvidence.source.artifactPath.replace(
-      /^packages\/scoring-circuit\//u,
-      ""
-    ),
-    sourceSha256: bp033InfineonCy15b104qFootprintEvidence.source.sha256,
-    reviewState: "root-reviewed-review-input" as const,
-    reviewer: "root-final-reviewer" as const,
-    reviewedAt: "2026-08-25" as const,
-    fabricationRelease: "deny" as const
-  }
-] as const
 
 const definition = {
   artifactKind: "bench-prototype-application-footprint-closure-ledger",
   workUnit: "BP-033",
   targetAssembly: "one-board bench prototype",
-  referenceAliases: [
-    {
-      canonical: "U_USB_PORT_PROTECT",
-      ledgerAlias: "U_USB_CC_SBU_PROTECT",
-      manufacturerPartNumber: "TPD4S201TRGRRQ1",
-      disposition: "ledger-alias-only"
-    }
-  ],
   releaseState: "deny",
   fabricationAuthorized: false,
   upstream: {
@@ -1270,10 +412,8 @@ const definition = {
     encryptedIrReceiver: "BP-146"
   },
   records,
-  projectFootprintMappings,
   bp140ReferenceReconciliation,
   bp140SelectionBlockedReferences,
-  bp140DnpReferences,
   omittedPeripherals: [
     dnp("U_RTC", "RV-3028-C7", "Not required for first physical validation."),
     dnp("U_SECURE_ELEMENT", "STSAFE-A110", "Exact provisioned orderable and package variant are not selected."),
@@ -1284,20 +424,16 @@ const definition = {
   closureRules: [
     "A package identity never grants pad, drill, copper, mask, paste, courtyard, or assembly geometry.",
     "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
-    "U_USB_PD has one source-controlled TPS25730ADREFR REF0038A artwork candidate with a rendered-geometry hash. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
-    "U_USB_PORT_PROTECT has one source-controlled TPD4S201TRGRRQ1 RGR review candidate with a rendered-geometry hash and explicit TI-to-circuit port aliases. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
-    "U_USB_DATA_PROTECT has one source-controlled TPD2EUSB30DRTR DRT review candidate with a rendered-geometry hash. It is review-only: no TI native CAD, board import, independent orientation, courtyard, DRC, release, or fabrication authority is granted.",
-    "J_HUB75 has a source-controlled pin-map and orientation overlay bound to the canonical BP-143 Samtec prints. It is not a project footprint, CAD import, board artwork, sample fit, continuity, current, orientation, or fabrication approval.",
     "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
-    "TP_W5500_RESET_N and TP_W5500_INT_N select Keystone Electronics 5001 miniature through-hole black test points with a 0.040 inch (catalog 1.0 mm) mounting hole; exact source evidence is retained, while drawings, CAD, artwork, orientation, and probe-clearance review remain open before population.",
-    "R_W5500_INT_BIAS selects Yageo RC0603FR-07100KL, 100 kOhm, 1%, 0603, to provide the locally pulled-inactive INTn state required by the canonical ESP32 polling policy without allocating an ESP32 GPIO.",
+    "TP_W5500_RESET_N and TP_W5500_INT_N require exact test-point selections, packages, drawings, CAD, artwork, and probe-clearance review before population.",
+    "R_W5500_INT_BIAS remains DNP-or-selection-blocked until BP-123 either selects its exact value, manufacturer, MPN, and package or explicitly records DNP after power-sequence review.",
     "Keep U_AUDIO and every omitted peripheral DNP. Do not create a land pattern, route, or bodge connection for an omitted peripheral.",
     "The TSOP38438 optical aperture, front-panel coupon, receiver timing/range/flood tests, and GPIO35 isolation remain BP-146 gates; they are not closed by this ledger."
   ],
   authority: {
     exactMpnAndManufacturerReconciled: true,
     fullBp140ReferenceSetReconciled: true,
-    bp140BlockedReferenceIdentitiesReconciled: true,
+    bp140BlockedReferenceIdentitiesReconciled: false,
     everyPackageIdentityReconciled: false,
     manufacturerDrawingsReviewed: false,
     manufacturerCadReviewed: false,
@@ -1322,59 +458,23 @@ function assertUpstream(): void {
   validateBenchPrototypeHub75Safing(benchPrototypeHub75Safing)
   validateBenchPrototypeOptionalPeripherals(benchPrototypeOptionalPeripherals)
   validateBenchPrototypeIrReceiverSelection(benchPrototypeIrReceiverSelection)
-  validateBenchPrototypeIrReceiverFootprintEvidence(benchPrototypeIrReceiverFootprintEvidence)
-  if (validateBp033B340aProjectFootprintGeometry().length !== 0) {
-    throw new RangeError("BP-033 B340A project-review candidate drifted")
-  }
-  validateBp033W5500ProjectFootprintGeometry()
 }
 
 /** Rejects package inference, geometry credit, populated omitted peripherals, and release relaxation. */
 export function validateBenchPrototypeApplicationFootprints(value: unknown): true {
   assertUpstream()
-  if (validateBp031032033C0603C104K3RactuFootprintEvidence(bp031032033C0603C104K3RactuFootprintEvidence).length !== 0) {
-    throw new RangeError("BP-033 shared C0603 footprint evidence drifted")
-  }
-  if (validateBp032ResetSupportFootprintEvidence(bp032ResetSupportFootprintEvidence).length !== 0) {
-    throw new RangeError("BP-033 reset-fanout footprint evidence drifted")
-  }
-  validateBp033W5500CrystalSupportEvidence()
-  validateBp033InfineonCy15b104qFootprintEvidence()
-  if (validateBp033Keystone5001TestPointEvidenceCandidate().length !== 0) {
-    throw new RangeError("BP-033 Keystone 5001 evidence candidate drifted")
-  }
-  if (validateBp033TdkC2012x7s1a226m125ac0805ReviewCandidate().length !== 0) {
-    throw new RangeError("BP-033 TDK 22 uF review candidate drifted")
-  }
-  validateBp033DisplayBufferBss138akaReferenceBinding()
-  validateBp033Sn74ahct245pwrTssop20Footprint(bp033Sn74ahct245pwrTssop20Footprint)
-  if (validateBp033YageoRc0603fr07100rlIrReviewCandidate().length !== 0) {
-    throw new RangeError("BP-033 encrypted-IR resistor review candidate drifted")
-  }
   if (!sameDataGraph(value, benchPrototypeApplicationFootprints))
     throw new RangeError("BP-033 must exactly match the reviewed fail-closed ledger")
   const contract = benchPrototypeApplicationFootprints
   const currentBp140References = currentBp140ReferenceSet()
   const reconciledBp140References = contract.bp140ReferenceReconciliation.map((record) => record.reference)
-  const retainedSourceReferences = contract.records.filter((record) => record.manufacturerDrawing.state === "acquired")
-  const retainedSourceReferenceIds = retainedSourceReferences.map((record) => record.reference)
-  const w5500SupportReferences = bp033W5500CrystalSupportEvidence.rows.flatMap((row) => row.references)
-  const w5500SupportMappings = contract.projectFootprintMappings.filter(
-    (mapping) => mapping.artifactKind === bp033W5500CrystalSupportEvidence.artifactKind
-  )
-  const framMapping = contract.projectFootprintMappings.find((mapping) => mapping.reference === "U_FRAM")
   if (
     contract.workUnit !== "BP-033" ||
     contract.releaseState !== "deny" ||
-    contract.referenceAliases.length !== 1 ||
-    contract.referenceAliases[0]?.canonical !== "U_USB_PORT_PROTECT" ||
-    contract.referenceAliases[0]?.ledgerAlias !== "U_USB_CC_SBU_PROTECT" ||
-    contract.referenceAliases[0]?.manufacturerPartNumber !== "TPD4S201TRGRRQ1" ||
-    contract.referenceAliases[0]?.disposition !== "ledger-alias-only" ||
     contract.fabricationAuthorized ||
     contract.authority.exactMpnAndManufacturerReconciled !== true ||
     contract.authority.fullBp140ReferenceSetReconciled !== true ||
-    contract.authority.bp140BlockedReferenceIdentitiesReconciled !== true ||
+    contract.authority.bp140BlockedReferenceIdentitiesReconciled ||
     contract.authority.everyPackageIdentityReconciled ||
     contract.authority.manufacturerDrawingsReviewed ||
     contract.authority.manufacturerCadReviewed ||
@@ -1386,477 +486,27 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     ) ||
     contract.records.some(
       (record) =>
-        (record.manufacturerDrawing.state !== "not-acquired" &&
-          !retainedPrimarySourceBatch.some((source) => source.reference === record.reference)) ||
+        record.manufacturerDrawing.state !== "not-acquired" ||
         record.manufacturerCad.state !== "not-acquired" ||
         record.artwork.state !== "not-generated" ||
         record.orientation.state !== "unreviewed"
     ) ||
-    new Set(retainedPrimarySourceBatch.map((source) => source.reference)).size !== retainedPrimarySourceBatch.length ||
-    retainedSourceReferences.length !== retainedPrimarySourceBatch.length ||
-    new Set(retainedSourceReferenceIds).size !== retainedSourceReferenceIds.length ||
-    retainedPrimarySourceBatch.some((source) => {
-      const record = retainedSourceReferences.find((candidate) => candidate.reference === source.reference)
-      return (
-        record === undefined ||
-        record.mpn !== source.mpn ||
-        record.package !== source.package ||
-        record.sourceUrl !== source.url ||
-        record.manufacturerDrawing.artifactPath !== source.path ||
-        record.manufacturerDrawing.url !== source.url ||
-        record.manufacturerDrawing.sha256 !== source.sha256 ||
-        record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
-      )
-    }) ||
-    contract.projectFootprintMappings.length !== 95 ||
-    w5500SupportMappings.length !== 9 ||
-    !w5500SupportReferences.every((reference) =>
-      w5500SupportMappings.some(
-        (mapping) =>
-          mapping.reference === reference &&
-          mapping.reviewState === "root-reviewed-review-input" &&
-          mapping.reviewer === "root-final-reviewer" &&
-          mapping.fabricationRelease === "deny"
-      )
-    ) ||
-    framMapping?.artifactKind !== bp033InfineonCy15b104qFootprintEvidence.artifactKind ||
-    framMapping.sourceArtifactPath !== "docs/evidence/bp-033/infineon-cy15b104q-datasheet.pdf" ||
-    framMapping.sourceSha256 !== bp033InfineonCy15b104qFootprintEvidence.source.sha256 ||
-    framMapping.reviewState !== "root-reviewed-review-input" ||
-    framMapping.reviewer !== "root-final-reviewer" ||
-    framMapping.fabricationRelease !== "deny" ||
-    contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
-    contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
-    contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
-    contract.projectFootprintMappings[0]?.reviewDocument !== "docs/bp-033-usb-c-project-footprint.md" ||
-    contract.projectFootprintMappings[0]?.sourceArtifactPath !==
-      "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf" ||
-    contract.projectFootprintMappings[0]?.sourceSha256 !==
-      "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF" ||
-    contract.projectFootprintMappings[0]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[0]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[0]?.fabricationRelease !== "deny" ||
-    contract.projectFootprintMappings[1]?.reference !== "D_SOURCE_SELECTOR" ||
-    contract.projectFootprintMappings[1]?.artifactKind !== "bp033-b340a-project-footprint" ||
-    contract.projectFootprintMappings[1]?.artworkModule !== "src/bp033-b340a-project-footprint.tsx" ||
-    contract.projectFootprintMappings[1]?.reviewDocument !== "docs/bp-033-b340a-project-footprint.md" ||
-    contract.projectFootprintMappings[1]?.sourceArtifactPath !== "docs/evidence/bp-033/diodes-b340a-datasheet.pdf" ||
-    contract.projectFootprintMappings[1]?.sourceSha256 !==
-      "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917" ||
-    contract.projectFootprintMappings[1]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[1]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[1]?.fabricationRelease !== "deny" ||
-    contract.projectFootprintMappings[2]?.reference !== "S_SOURCE_SELECTOR" ||
-    contract.projectFootprintMappings[2]?.artifactKind !== "bp033-7101syzqe-project-footprint" ||
-    contract.projectFootprintMappings[2]?.artworkModule !== "src/bp033-7101syzqe-project-footprint.tsx" ||
-    contract.projectFootprintMappings[2]?.reviewDocument !== "docs/bp-033-7101syzqe-project-footprint.md" ||
-    contract.projectFootprintMappings[2]?.sourceArtifactPath !==
-      "docs/evidence/bp-033/ck-7000toggle-7101syzqe-datasheet.pdf" ||
-    contract.projectFootprintMappings[2]?.sourceSha256 !==
-      "81C507AE655CBF893635F3E0ED421734A28AF08C975A8279E02070FFDCD353CB" ||
-    contract.projectFootprintMappings[2]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[2]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[2]?.fabricationRelease !== "deny" ||
-    contract.projectFootprintMappings[3]?.reference !== "D_VBUS_TVS" ||
-    contract.projectFootprintMappings[3]?.artifactKind !== "bp033-tvs2200-project-footprint" ||
-    contract.projectFootprintMappings[3]?.artworkModule !== "src/bp033-tvs2200-project-footprint.tsx" ||
-    contract.projectFootprintMappings[3]?.reviewDocument !== "docs/bp-033-tvs2200-project-footprint.md" ||
-    contract.projectFootprintMappings[3]?.sourceArtifactPath !== "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf" ||
-    contract.projectFootprintMappings[3]?.sourceSha256 !==
-      "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801" ||
-    contract.projectFootprintMappings[3]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[3]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[3]?.fabricationRelease !== "deny" ||
-    !(["F_APPLICATION", "F_DISPLAY", "F_SCORING"] as const).every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[4 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-littelfuse-0451-fuses-footprint-evidence" &&
-        mapping.artworkModule === "src/bp033-littelfuse-0451-fuses.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-littelfuse-0451-fuses.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf" &&
-        mapping.sourceSha256 === "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2" &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !(["U_VBUS_EFUSE", "U_DISPLAY_LIMITER"] as const).every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[7 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-tps25947-project-footprint" &&
-        mapping.artworkModule === "src/bp033-tps25947-project-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-tps25947-project-footprint.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/ti-tps25947-datasheet.pdf" &&
-        mapping.sourceSha256 === "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC" &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !w5500BypassReferences.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[9 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint" &&
-        mapping.artworkModule === "src/bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-w5500-100nf-bypass-footprint-evidence.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/murata-grm188r71c104ka01d-reference-sheet.pdf" &&
-        mapping.sourceSha256 === "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09" &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !molexLinkReferences.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[17 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-molex-links-project-footprint" &&
-        mapping.artworkModule === "src/bp033-molex-links-project-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-molex-links-project-footprint.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/molex-39281023-product-page.pdf" &&
-        mapping.sourceSha256 === "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691" &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !yageo10kReferences.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[21 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-yageo-10k-bridge-footprint" &&
-        mapping.artworkModule === "src/bp033-yageo-10k-bridge-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-yageo-10k-bridge-footprint.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf" &&
-        mapping.sourceSha256 === "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497" &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    contract.projectFootprintMappings[47]?.reference !== "U_W5500" ||
-    contract.projectFootprintMappings[47]?.artifactKind !== "bp033-w5500-project-footprint" ||
-    contract.projectFootprintMappings[47]?.artworkModule !== "src/bp033-w5500-project-footprint.tsx" ||
-    contract.projectFootprintMappings[47]?.reviewDocument !== "docs/bench-prototype-application-footprints.md" ||
-    contract.projectFootprintMappings[47]?.sourceArtifactPath !== "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf" ||
-    contract.projectFootprintMappings[47]?.sourceSha256 !==
-      "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D" ||
-    contract.projectFootprintMappings[47]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[47]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[47]?.reviewedAt !== "2026-08-25" ||
-    contract.projectFootprintMappings[47]?.fabricationRelease !== "deny" ||
-    contract.projectFootprintMappings[48]?.reference !== "U_IR" ||
-    contract.projectFootprintMappings[48]?.artifactKind !== "bp146-tsop38438-project-footprint" ||
-    contract.projectFootprintMappings[48]?.artworkModule !== "src/bench-prototype-ir-receiver-project-footprint.tsx" ||
-    contract.projectFootprintMappings[48]?.reviewDocument !== "docs/bench-prototype-plan.md#bp-146" ||
-    contract.projectFootprintMappings[48]?.sourceArtifactPath !==
-      "docs/evidence/bp-146/vishay-82491-tsop382-tsop384-datasheet.pdf" ||
-    contract.projectFootprintMappings[48]?.sourceSha256 !==
-      "5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074" ||
-    contract.projectFootprintMappings[48]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[48]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[48]?.reviewedAt !== "2026-08-25" ||
-    contract.projectFootprintMappings[48]?.fabricationRelease !== "deny" ||
-    !bp033SharedC0603References.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[49 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === bp031032033C0603C104K3RactuFootprintEvidence.artifactKind &&
-        mapping.artworkModule === "src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx" &&
-        mapping.reviewDocument === "docs/bp-031-032-c0603c104k3ractu-footprint-review.md" &&
-        mapping.sourceArtifactPath === bp033SharedC0603SourceArtifactPath &&
-        mapping.sourceSha256 === bp031032033C0603C104K3RactuFootprintEvidence.sources[0].sha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033Keystone5001TestPointEvidenceCandidate.sourceBinding.exactReferences.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[55 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === bp033Keystone5001TestPointEvidenceCandidate.artifactKind &&
-        mapping.artworkModule === "src/bp033-keystone-5001-test-point-evidence-candidate.ts" &&
-        mapping.reviewDocument === "docs/bp-033-keystone-5001-test-point-evidence-candidate.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/keystone-terminal-test-points.pdf" &&
-        mapping.sourceSha256 === bp033Keystone5001TestPointEvidenceCandidate.source.sha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.rootIntegrationHandoff.requiredRows.every((row, offset) => {
-      const mapping = contract.projectFootprintMappings[58 + offset]
-      return (
-        mapping?.reference === row.reference &&
-        row.manufacturer === "TDK" &&
-        row.manufacturerPartNumber === "C2012X7S1A226M125AC" &&
-        row.package === "0805" &&
-        mapping.artifactKind === bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.artifactKind &&
-        mapping.artworkModule === "src/bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-tdk-c2012x7s1a226m125ac-0805-review-candidate.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/tdk-c2012x7s1a226m125ac-product-page-capture.md" &&
-        mapping.sourceSha256 === bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.source.sha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033DisplayBufferBss138akaReferenceBinding.exactReferenceSet.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[63 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === bp033DisplayBufferBss138akaReferenceBinding.artifactKind &&
-        mapping.artworkModule === "src/bp033-display-buffer-bss138aka-reference-binding.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-display-buffer-bss138aka-reference-binding-review.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-032/nexperia-bss138aka-datasheet.pdf" &&
-        mapping.sourceSha256 === bp033DisplayBufferBss138akaReferenceBinding.retainedManufacturerFacts.sourceSha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033Sn74ahct245pwrTssop20Footprint.references.every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[65 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === bp033Sn74ahct245pwrTssop20Footprint.artifactKind &&
-        mapping.artworkModule === "src/bp033-sn74ahct245pwr-tssop20-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp033-sn74ahct245pwr-tssop20-footprint.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/ti-sn74ahct245-datasheet-official.pdf" &&
-        mapping.sourceSha256 === bp033Sn74ahct245pwrTssop20Footprint.sourceBinding.sourceSha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !(["R_W5500_INT_BIAS", "R_BUFFER_A_GATE_PD", "R_BUFFER_B_GATE_PD"] as const).every((reference, offset) => {
-      const mapping = contract.projectFootprintMappings[67 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint" &&
-        mapping.artworkModule === "src/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint-review.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf" &&
-        mapping.sourceSha256 === "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054" &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033YageoRc0603fr07100rlIrReviewCandidate.rootIntegrationHandoff.requiredRows.every((row, offset) => {
-      const mapping = contract.projectFootprintMappings[70 + offset]
-      return (
-        mapping?.reference === row.reference &&
-        row.manufacturer === "YAGEO" &&
-        row.manufacturerPartNumber === "RC0603FR-07100RL" &&
-        row.package === "0603" &&
-        mapping.artifactKind === bp033YageoRc0603fr07100rlIrReviewCandidate.artifactKind &&
-        mapping.artworkModule === "src/bp033-yageo-rc0603fr-07100rl-ir-review-candidate.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-yageo-rc0603fr-07100rl-ir-review-candidate.md" &&
-        mapping.sourceArtifactPath === "docs/evidence/bp-033/yageo-rc0603fr-07100rl-datasheet.pdf" &&
-        mapping.sourceSha256 === bp033YageoRc0603fr07100rlIrReviewCandidate.source.sha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033ApplicationRegulatorSupportMappings.every((reviewed, offset) => {
-      const mapping = contract.projectFootprintMappings[72 + offset]
-      return (
-        mapping?.reference === reviewed.reference &&
-        mapping.artifactKind === "bp033-application-regulator-support-footprint-evidence" &&
-        mapping.artworkModule === "src/bp033-application-regulator-support-footprint-evidence.tsx" &&
-        mapping.reviewDocument === "docs/bp-033-application-regulator-support-footprint-evidence-review.md" &&
-        mapping.sourceArtifactPath === reviewed.sourceArtifactPath &&
-        mapping.sourceSha256 === reviewed.sourceSha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    !bp033DisplayLimiterMappings.every(([reference, sourceFile, sourceSha256], offset) => {
-      const mapping = contract.projectFootprintMappings[77 + offset]
-      return (
-        mapping?.reference === reference &&
-        mapping.artifactKind === "bp033-display-limiter-0402-footprint" &&
-        mapping.artworkModule === "src/bp033-display-limiter-0402-footprint.tsx" &&
-        mapping.reviewDocument === "docs/bp033-display-limiter-0402-footprint.md" &&
-        mapping.sourceArtifactPath === `docs/evidence/bp-033/${sourceFile}` &&
-        mapping.sourceSha256 === sourceSha256 &&
-        mapping.reviewState === "root-reviewed-review-input" &&
-        mapping.reviewer === "root-final-reviewer" &&
-        mapping.reviewedAt === "2026-08-25" &&
-        mapping.fabricationRelease === "deny"
-      )
-    }) ||
-    contract.projectFootprintMappings[84]?.reference !== "U_APP_RESET_FANOUT" ||
-    contract.projectFootprintMappings[84]?.artifactKind !== bp032ResetSupportFootprintEvidence.artifactKind ||
-    contract.projectFootprintMappings[84]?.artworkModule !== "src/bp032-reset-support-footprints.ts" ||
-    contract.projectFootprintMappings[84]?.reviewDocument !== "docs/bench-prototype-application-footprints.md" ||
-    contract.projectFootprintMappings[84]?.sourceArtifactPath !== "docs/evidence/bp-032/ti-sn74lvc2g07-datasheet.pdf" ||
-    contract.projectFootprintMappings[84]?.sourceSha256 !==
-      "71BBB2FC452E2949B332C030B004B094BA679AC8CCE27123F806A0A6B1FDE660" ||
-    contract.projectFootprintMappings[84]?.reviewState !== "root-reviewed-review-input" ||
-    contract.projectFootprintMappings[84]?.reviewer !== "root-final-reviewer" ||
-    contract.projectFootprintMappings[84]?.reviewedAt !== "2026-08-25" ||
-    contract.projectFootprintMappings[84]?.fabricationRelease !== "deny" ||
-    !contract.records.some(
-      (record) =>
-        record.reference === "U_USB_PD" &&
-        record.mpn === "TPS25730ADREFR" &&
-        hasProjectFootprintCandidate(record) &&
-        record.projectFootprintCandidate.state === "source-controlled-review-only" &&
-        record.projectFootprintCandidate.artifactPath === "src/bp033-tps25730a-ref-project-footprint.tsx" &&
-        record.projectFootprintCandidate.testArtifactPath === "src/bp033-tps25730a-ref-project-footprint.test.tsx" &&
-        record.projectFootprintCandidate.renderedGeometrySha256 ===
-          "b35cde8711ffe20c9c1f38804c2e885bc7caa610db4f9bb5243f760a00e3e7e0" &&
-        record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPS25730AD" &&
-        record.projectFootprintCandidate.orderableBinding.packageDrawing === "REF0038A" &&
-        record.projectFootprintCandidate.orderableBinding.perimeterPins === 38 &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads?.[0] === "39 GND" &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads?.[1] === "40 DRAIN" &&
-        record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf" &&
-        record.projectFootprintCandidate.source.sha256 ===
-          "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28" &&
-        record.projectFootprintCandidate.source.reviewedPages === "1, 4-6, 61-63" &&
-        record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
-        record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
-        record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
-        record.projectFootprintCandidate.authority.boardImported === false &&
-        record.projectFootprintCandidate.authority.orientationAccepted === false &&
-        record.projectFootprintCandidate.authority.courtyardAccepted === false &&
-        record.projectFootprintCandidate.authority.drcAccepted === false &&
-        record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
-        record.projectFootprintCandidate.authority.releaseState === "deny"
-    ) ||
-    !contract.records.some(
-      (record) =>
-        record.reference === "U_USB_PORT_PROTECT" &&
-        record.mpn === "TPD4S201TRGRRQ1" &&
-        record.package === "VQFN (RGR), 20-pin" &&
-        hasProjectFootprintCandidate(record) &&
-        record.projectFootprintCandidate.state === "source-controlled-review-only" &&
-        record.projectFootprintCandidate.artifactPath === "src/bp033-tpd4s201-rgr-project-footprint.tsx" &&
-        record.projectFootprintCandidate.testArtifactPath === "src/bp033-tpd4s201-rgr-project-footprint.test.tsx" &&
-        record.projectFootprintCandidate.renderedGeometrySha256 ===
-          "6fa9a9c5018a1e1d9498032c2691e7aff50c0e0c9b2daa3acd4982cb21db4ac7" &&
-        record.projectFootprintCandidate.orderableBinding.orderableMpn === "TPD4S201TRGRRQ1" &&
-        record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPD4S201-Q1" &&
-        record.projectFootprintCandidate.orderableBinding.packageDrawing === "RGR0020C" &&
-        record.projectFootprintCandidate.orderableBinding.perimeterPins === 20 &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads?.length === 1 &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads?.[0] === "21 GND" &&
-        record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf" &&
-        record.projectFootprintCandidate.source.sha256 ===
-          "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5" &&
-        record.projectFootprintCandidate.source.reviewedPages === "1, 3-4, 21, 26-28" &&
-        record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
-        record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
-        record.projectFootprintCandidate.review.reviewedAt === "2026-08-25" &&
-        record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
-        record.projectFootprintCandidate.authority.boardImported === false &&
-        record.projectFootprintCandidate.authority.orientationAccepted === false &&
-        record.projectFootprintCandidate.authority.courtyardAccepted === false &&
-        record.projectFootprintCandidate.authority.drcAccepted === false &&
-        record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
-        record.projectFootprintCandidate.authority.releaseState === "deny"
-    ) ||
-    !contract.records.some(
-      (record) =>
-        record.reference === "U_USB_DATA_PROTECT" &&
-        record.manufacturer === "Texas Instruments" &&
-        record.mpn === "TPD2EUSB30DRTR" &&
-        record.package === "SOT-9X3 (DRT), 3-pin" &&
-        hasProjectFootprintCandidate(record) &&
-        record.projectFootprintCandidate.state === "source-controlled-review-only" &&
-        record.projectFootprintCandidate.artifactPath === "src/bp033-tpd2eusb30drtr-drt-project-footprint.tsx" &&
-        record.projectFootprintCandidate.testArtifactPath ===
-          "src/bp033-tpd2eusb30drtr-drt-project-footprint.test.tsx" &&
-        record.projectFootprintCandidate.renderedGeometrySha256 ===
-          "f206c789162f96e38c781ca937d052b48b44bc66a91df41cebd7ad4cc6eff86e" &&
-        record.projectFootprintCandidate.orderableBinding.orderableMpn === "TPD2EUSB30DRTR" &&
-        record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPD2EUSB30" &&
-        record.projectFootprintCandidate.orderableBinding.packageDrawing === "DRT0003A" &&
-        record.projectFootprintCandidate.orderableBinding.electricalPinCount === 3 &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.length === 3 &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[0]?.pad === "1" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[0]?.signal === "D+" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[0]?.function === "D1+" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[1]?.pad === "2" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[1]?.signal === "D-" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[1]?.function === "D1-" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[2]?.pad === "3" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[2]?.signal === "GND" &&
-        record.projectFootprintCandidate.orderableBinding.pinMap?.[2]?.function === "GND" &&
-        record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf" &&
-        record.projectFootprintCandidate.source.sha256 ===
-          "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136" &&
-        record.projectFootprintCandidate.source.reviewedPages === "1, 3, 12, 15-17" &&
-        record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
-        record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
-        record.projectFootprintCandidate.review.reviewedAt === "2026-08-25" &&
-        record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
-        record.projectFootprintCandidate.authority.boardImported === false &&
-        record.projectFootprintCandidate.authority.orientationAccepted === false &&
-        record.projectFootprintCandidate.authority.courtyardAccepted === false &&
-        record.projectFootprintCandidate.authority.drcAccepted === false &&
-        record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
-        record.projectFootprintCandidate.authority.releaseState === "deny"
-    ) ||
-    contract.records.filter(hasProjectFootprintCandidate).length !== 3 ||
-    !contract.records.some(
-      (record) =>
-        record.reference === "J_HUB75" &&
-        record.mpn === "TST-108-04-G-D-RA" &&
-        hasPinMapOrientationOverlay(record) &&
-        record.pinMapOrientationOverlay.state === "source-controlled-pending-review" &&
-        record.pinMapOrientationOverlay.artifactPath ===
-          "docs/evidence/bp-033/samtec-tst-108-04-g-d-ra-pin-map-orientation-overlay.svg" &&
-        record.pinMapOrientationOverlay.officialSources.seriesPrint.artifactPath ===
-          "docs/evidence/bp-143/samtec-tst-series-print.pdf" &&
-        record.pinMapOrientationOverlay.officialSources.seriesPrint.sha256 ===
-          "56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059" &&
-        record.pinMapOrientationOverlay.officialSources.footprintPrint.artifactPath ===
-          "docs/evidence/bp-143/samtec-tst-footprint.pdf" &&
-        record.pinMapOrientationOverlay.officialSources.footprintPrint.sha256 ===
-          "ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC" &&
-        record.pinMapOrientationOverlay.officialSources.cad.state === "not-acquired-access-gated" &&
-        record.pinMapOrientationOverlay.bp143Reconciliation.sampleFitVerified === false &&
-        record.pinMapOrientationOverlay.bp143Reconciliation.orientationVerified === false &&
-        record.pinMapOrientationOverlay.bp143Reconciliation.continuityVerified === false &&
-        record.pinMapOrientationOverlay.bp143Reconciliation.currentVerified === false
-    ) ||
-    contract.records.filter(hasPinMapOrientationOverlay).length !== 1 ||
     !contract.records.some((record) => record.packageStatus === "upstream-package-not-specified") ||
-    !contract.records.some(
-      (record) =>
-        record.reference === "R_W5500_INT_BIAS" &&
-        record.manufacturer === "Yageo" &&
-        record.mpn === "RC0603FR-07100KL" &&
-        record.package === "0603" &&
-        record.population === "DNP-unresolved" &&
-        record.packageStatus === "exact-package-identified"
-    ) ||
     currentBp140References.length !== reconciledBp140References.length ||
     currentBp140References.some((reference, index) => reference !== reconciledBp140References[index]) ||
-    contract.bp140SelectionBlockedReferences.length !== 0 ||
-    contract.bp140DnpReferences.length !== 0 ||
+    contract.bp140SelectionBlockedReferences.length !== 3 ||
+    contract.bp140SelectionBlockedReferences.some(
+      (record) =>
+        record.population !== "DNP-or-selection-blocked" ||
+        record.manufacturer !== null ||
+        record.mpn !== null ||
+        record.package !== null ||
+        record.packageStatus !== "upstream-package-not-specified" ||
+        record.manufacturerDrawing.state !== "not-acquired" ||
+        record.manufacturerCad.state !== "not-acquired" ||
+        record.artwork.state !== "not-generated" ||
+        record.orientation.state !== "unreviewed"
+    ) ||
     contract.omittedPeripherals.length !== 5 ||
     contract.omittedPeripherals.some((record) => record.population !== "DNP") ||
     !contract.omittedPeripherals.some((record) => record.reference === "U_AUDIO")

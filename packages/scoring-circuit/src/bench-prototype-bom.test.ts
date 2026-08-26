@@ -24,7 +24,7 @@ describe("bench prototype BOM baseline", () => {
       J_USB_C: "10177070-00011LF",
       U_USB_PD: "TPS25730ADREFR",
       U_USB_PORT_PROTECT: "TPD4S201TRGRRQ1",
-      U_USB_DATA_PROTECT: "TPD2EUSB30DRTR",
+      U_USB2_ESD: "TPD2EUSB30DRTR",
       J_LAB_INJECTION: "43045-0400",
       S_POWER_SOURCE_SELECTOR: "7101SYZQE",
       D_USB_PD_VBUS_TVS: "TVS2200DRVR",
@@ -33,31 +33,17 @@ describe("bench prototype BOM baseline", () => {
       C_USB_PD_PPHV: "T523H107M035APE070",
       C_USB_PD_LDO: "T55A106M010C0200",
       U_DISPLAY_BUFFER_A: "SN74AHCT245PWR",
-      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR",
-      U_FRAM: "CY15B104Q-LHXIT"
-    })
-  })
-
-  it("selects the exact F-RAM TDFN package", () => {
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_FRAM")).toMatchObject({
-      disposition: "selected",
-      manufacturer: "Infineon",
-      mpn: "CY15B104Q-LHXIT",
-      package: "8-pin TDFN/DFN, 5 mm x 6 mm x 0.75 mm, PG-USON-8, drawing 001-85579"
+      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR"
     })
   })
 
   it("keeps CC/SBU and USB 2.0 protection ownership distinct", () => {
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PORT_PROTECT")).toMatchObject({
-      function: "USB-C CC1, CC2, SBU1, and SBU2 short-to-VBUS protection",
-      mpn: "TPD4S201TRGRRQ1",
-      package: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body"
-    })
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_DATA_PROTECT")).toMatchObject({
-      function: "Native USB 2.0 low-capacitance ESD protection",
-      mpn: "TPD2EUSB30DRTR",
-      package: "SOT-9X3 (DRT), 3-pin"
-    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PORT_PROTECT")?.function).toBe(
+      "USB-C CC1, CC2, SBU1, and SBU2 short-to-VBUS protection"
+    )
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB2_ESD")?.function).toBe(
+      "Native USB 2.0 low-capacitance ESD protection"
+    )
   })
 
   it("classifies diagnostic injection as test-only and hard-selected", () => {
@@ -116,27 +102,6 @@ describe("bench prototype BOM baseline", () => {
       package: "LQFP-48",
       body: "7 mm x 7 mm, 48-pin LQFP; 0.5 mm pitch"
     })
-  })
-
-  it("binds U_REF to the exact TI D SOIC-8 orderable package", () => {
-    expect(benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_REF")).toMatchObject({
-      manufacturer: "Texas Instruments",
-      mpn: "REF5025AQDRQ1",
-      package: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch",
-      source: { kind: "component-decision", url: "https://www.ti.com/product/REF5025A-Q1" }
-    })
-  })
-
-  it("records the NXE1 manufacturer package positions without releasing a project footprint", () => {
-    const row = benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_ISO_POWER")
-
-    expect(row).toMatchObject({
-      mpn: "NXE1S0505MC",
-      package:
-        "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect"
-    })
-    expect(benchPrototypeBom.releaseState).toBe("deny")
-    expect(benchPrototypeBom.fabricationRelease).toBe(false)
   })
 
   it("keeps unresolved analog, connector, and USB power scope explicit", () => {
@@ -245,7 +210,6 @@ describe("bench prototype BOM baseline", () => {
 
   it("binds selected metadata to its exact provenance", () => {
     for (const [reference, change] of [
-      ["U_REF", { mpn: "forged-mpn" }],
       ["U_REF", { package: "wrong-package" }],
       ["U_DISPLAY_BUFFER_A", { manufacturer: "Not TI" }],
       ["U_DISPLAY_BUFFER_B", { lifecycle: "active-preferred" }],

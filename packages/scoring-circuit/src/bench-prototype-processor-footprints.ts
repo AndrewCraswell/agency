@@ -2,15 +2,9 @@
 
 import { benchPrototypeBom, validateBenchPrototypeBom } from "./bench-prototype-bom.js"
 import {
-  benchPrototypeBp125MurataCapacitorFootprintGeometries,
-  benchPrototypeBp125MurataCapacitorReviewBindings,
-  bp125MurataCapacitorFootprintIntegrityErrors
-} from "./bench-prototype-bp125-murata-capacitor-footprints.js"
-import {
   benchPrototypeEsp32Allocation,
   validateBenchPrototypeEsp32Allocation
 } from "./bench-prototype-esp32-allocation.js"
-import { isBenchPrototypeFootprintApproved } from "./bench-prototype-footprint-approval-decisions.js"
 import {
   benchPrototypeFootprintReviewTemplate,
   validateBenchPrototypeFootprintReview
@@ -28,51 +22,6 @@ import {
   benchPrototypeServiceHeaders,
   validateBenchPrototypeServiceHeaders
 } from "./bench-prototype-service-headers.js"
-import {
-  bp031032C0603C104K3RactuFootprintEvidence,
-  bp031032C0603C104K3RactuFootprintEvidenceFor,
-  validateBp031032C0603C104K3RactuFootprintEvidence
-} from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
-import {
-  benchPrototypeBp032Esp32S3Wroom1uExactFootprint,
-  validateBenchPrototypeBp032Esp32S3Wroom1uExactFootprint
-} from "./bp032-esp32-s3-wroom-1u-exact-footprint.js"
-import {
-  bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence,
-  validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence
-} from "./bp032-esp32-service-header-tsw-106-07-g-s-footprint-evidence.js"
-import {
-  bp032Ftsh10501LDv007KFootprintEvidence,
-  validateBp032Ftsh10501LDv007KFootprintEvidence
-} from "./bp032-ftsh-105-01-l-dv-007-k-footprint.js"
-import {
-  bp032MurataNxe1s0505mcCandidate,
-  validateBp032MurataNxe1s0505mcCandidate
-} from "./bp032-murata-nxe1s0505mc-isolated-converter-candidate-footprint.js"
-import {
-  bp032ResetSupportFootprintEvidence,
-  validateBp032ResetSupportFootprintEvidence
-} from "./bp032-reset-support-footprints.js"
-import {
-  bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence,
-  validateBp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence
-} from "./bp032-stm32g474ret3tr-lqfp64-project-footprint.js"
-import {
-  bp032SupervisorWatchdogFootprintEvidence,
-  validateBp032SupervisorWatchdogFootprintEvidence
-} from "./bp032-supervisor-watchdog-footprint-evidence.js"
-import {
-  bp032TdkC1608CapacitorFootprintEvidence,
-  bp032TdkC1608FootprintEvidenceFor
-} from "./bp032-tdk-c1608-capacitor-footprint-evidence.js"
-import {
-  bp032TiIsolatorFootprintEvidence,
-  validateBp032TiIsolatorFootprintEvidence
-} from "./bp032-ti-isolator-footprint-evidence.js"
-import {
-  bp032YageoRc0603FootprintEvidenceFor,
-  bp032YageoRc0603ResistorFootprintEvidence
-} from "./bp032-yageo-rc0603-resistor-footprint-evidence.js"
 import { findFootprintReleaseEvidence } from "./footprint-release-evidence.js"
 import { stm32PinAllocation, validateStm32PinAllocation } from "./stm32-pin-allocation.js"
 
@@ -144,186 +93,22 @@ function packageFor(mpn: string): string {
     BSS138AKA: "SOT-23",
     C0603C104K3RACTU: "0603",
     C1608X5R1A105K080AC: "0603",
-    GCM188R71H103KA37D: "0603 (1608M)",
-    GCM188R71H104KA57D: "0603 (1608M)",
-    GCM21BR71E225KA73L: "0805 (2012M)",
-    GCM32EC71A476KE02L: "1210 (3225M)",
-    GCM32ER71E106KA57L: "1210 (3225M)",
     ISO7721FDR: "SOIC-8",
     ISO7762FDWR: "SOIC-16 wide",
-    NXE1S0505MC:
-      "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
+    NXE1S0505MC: "SMD 7-pin",
     "RC0603FR-07100KL": "0603",
     "RC0603FR-0710KL": "0603",
     SN74LVC2G07DCKR: "SC70-6",
-    TPS3431SDRBR: "VSON-8 (DRB), 3 mm × 3 mm",
-    TPS389033DSER: "WSON-6 (DSE), 1.5 mm × 1.5 mm"
+    TPS3431SDRBR: "VSON-8",
+    TPS389033DSER: "WSON-6"
   }
   const value = packages[mpn]
   if (value === undefined) throw new RangeError(`BP-032 has no reviewed package identity for ${mpn}`)
   return value
 }
 
-/**
- * A product URL identifies the selected orderable but does not close source
- * evidence. Only the bounded retained-byte records below are verified.
- */
-const manufacturerPrimarySourceByMpn = {
-  BSS138AKA: { manufacturer: "Nexperia", url: "https://www.nexperia.com/product/BSS138AKA" },
-  C0603C104K3RACTU: {
-    manufacturer: "KEMET (Yageo Group)",
-    url: "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU"
-  },
-  C1608X5R1A105K080AC: {
-    manufacturer: "TDK",
-    url: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/0000?part_no=C1608X5R1A105K080AC"
-  },
-  "ESP32-S3-WROOM-1U-N16R2": {
-    manufacturer: "Espressif",
-    url: "https://www.espressif.com/en/products/modules/esp32-s3/esp32-s3-wroom-1"
-  },
-  GCM188R71H104KA57D: {
-    manufacturer: "Murata",
-    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D"
-  },
-  GCM188R71H103KA37D: {
-    manufacturer: "Murata",
-    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H103KA37D"
-  },
-  GCM21BR71E225KA73L: {
-    manufacturer: "Murata",
-    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM21BR71E225KA73L"
-  },
-  GCM32EC71A476KE02L: {
-    manufacturer: "Murata",
-    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM32EC71A476KE02L"
-  },
-  GCM32ER71E106KA57L: {
-    manufacturer: "Murata",
-    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM32ER71E106KA57L"
-  },
-  ISO7721FDR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/ISO7721" },
-  ISO7762FDWR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/ISO7762" },
-  NXE1S0505MC: {
-    manufacturer: "Murata",
-    url: "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf"
-  },
-  "RC0603FR-07100KL": {
-    manufacturer: "Yageo",
-    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
-  },
-  "RC0603FR-0710KL": {
-    manufacturer: "Yageo",
-    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
-  },
-  SN74LVC2G07DCKR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/SN74LVC2G07" },
-  STM32G474RET3TR: {
-    manufacturer: "STMicroelectronics",
-    url: "https://www.st.com/en/microcontrollers-microprocessors/stm32g474re.html"
-  },
-  TPS3431SDRBR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/TPS3431" },
-  TPS389033DSER: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/TPS3890" }
-} as const
-
-const retainedManufacturerPrimarySources = deepFreeze([
-  {
-    requestIdentity: "BP032-TI-TPS3431SDRBR-20260824",
-    mpn: "TPS3431SDRBR",
-    package: "VSON-8 (DRB), 3 mm × 3 mm",
-    artifactPath: "docs/evidence/bp-032/ti-tps3431.pdf",
-    sourceUrl: "https://www.ti.com/lit/ds/symlink/tps3431.pdf",
-    sha256: "99BF5DBFFFE06E8F85D9A86CFB777A0151E85B4A103033BC025F4897A0BDC6F3"
-  },
-  {
-    requestIdentity: "BP032-TI-TPS389033DSER-20260824",
-    mpn: "TPS389033DSER",
-    package: "WSON-6 (DSE), 1.5 mm × 1.5 mm",
-    artifactPath: "docs/evidence/bp-032/ti-tps3890.pdf",
-    sourceUrl: "https://www.ti.com/lit/ds/symlink/tps3890.pdf",
-    sha256: "EE79599730E7606BA9718D9820B411020E3DCD9FF7D44572F8EE63FEAD15B9D0"
-  },
-  {
-    requestIdentity: "BP032-TDK-C1608X5R1A105K080AC-20260825",
-    mpn: "C1608X5R1A105K080AC",
-    package: "0603",
-    artifactPath: "docs/evidence/bp-032/tdk-c1608x5r1a105k080ac-characterization.pdf",
-    sourceUrl:
-      "https://product.tdk.cn/system/files/dam/doc/product/capacitor/ceramic/mlcc/charasheet/c1608x5r1a105k080ac.pdf",
-    sha256: "180BECCB71F93CF9C4E7FDF810F9295BBE2009EF4595D733D32BE9DC4DEFC00D"
-  },
-  {
-    requestIdentity: "BP032-BP125-Yageo-RC0603FR-0710KL-20260824",
-    mpn: "RC0603FR-0710KL",
-    package: "0603",
-    artifactPath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
-    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
-    sha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497"
-  },
-  {
-    requestIdentity: "BP032-BP033-Yageo-RC0603FR-07100KL-20260825",
-    mpn: "RC0603FR-07100KL",
-    package: "0603",
-    artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
-    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
-    sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
-  }
-] as const)
-
-export const benchPrototypeProcessorFootprintsRetainedManufacturerSources = retainedManufacturerPrimarySources
-
-export function validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(value: unknown): true {
-  if (!sameDataGraph(value, retainedManufacturerPrimarySources))
-    throw new RangeError(
-      "BP-032 retained manufacturer-source evidence must exactly match the canonical request records"
-    )
-  const sources = retainedManufacturerPrimarySources
-  if (
-    sources.length !== 5 ||
-    new Set(sources.map((source) => source.mpn)).size !== sources.length ||
-    new Set(sources.map((source) => source.requestIdentity)).size !== sources.length ||
-    new Set(sources.map((source) => source.artifactPath)).size !== sources.length ||
-    sources.some(
-      (source) =>
-        source.package !== packageFor(source.mpn) ||
-        (source.mpn.startsWith("RC0603FR-07", 0)
-          ? !source.sourceUrl.startsWith("https://www.yageogroup.com/") ||
-            !/^docs\/evidence\/bp-(?:125|033)\/yageo-rc0603fr-07(?:10|100)kl-datasheet\.pdf$/u.test(source.artifactPath)
-          : source.mpn === "C1608X5R1A105K080AC"
-            ? !source.sourceUrl.startsWith("https://product.tdk.cn/") ||
-              source.artifactPath !== "docs/evidence/bp-032/tdk-c1608x5r1a105k080ac-characterization.pdf"
-            : !source.sourceUrl.startsWith("https://www.ti.com/") ||
-              !/^docs\/evidence\/bp-032\/[^/]+\.pdf$/u.test(source.artifactPath)) ||
-        !/^[0-9A-F]{64}$/u.test(source.sha256)
-    )
-  )
-    throw new RangeError("BP-032 retained manufacturer-source evidence has identity, package, path, or hash drift")
-  return true
-}
-
-function hasManufacturerPrimarySource(mpn: string): mpn is keyof typeof manufacturerPrimarySourceByMpn {
-  return Object.hasOwn(manufacturerPrimarySourceByMpn, mpn)
-}
-
-function retainedManufacturerPrimarySourceFor(mpn: string) {
-  const matches = retainedManufacturerPrimarySources.filter((source) => source.mpn === mpn)
-  if (matches.length > 1) throw new RangeError(`BP-032 has duplicate retained manufacturer sources for ${mpn}`)
-  return matches[0]
-}
-
-const evidence = (mpn: string | null, reference: string | null = null) => ({
+const evidence = (mpn: string | null) => ({
   priorGateReferences: mpn === null ? [] : [...(findFootprintReleaseEvidence(mpn)?.gateReferences ?? [])],
-  manufacturerPrimarySource:
-    mpn === null || !hasManufacturerPrimarySource(mpn) ? null : structuredClone(manufacturerPrimarySourceByMpn[mpn]),
-  manufacturerPrimarySourceMapping:
-    mpn === null
-      ? "not-applicable"
-      : retainedManufacturerPrimarySourceFor(mpn) !== undefined
-        ? "verified-by-retained-manufacturer-primary-bytes"
-        : hasManufacturerPrimarySource(mpn)
-          ? "source-unverified-primary-url-only"
-          : "missing",
-  retainedManufacturerPrimarySource:
-    mpn === null ? null : structuredClone(retainedManufacturerPrimarySourceFor(mpn) ?? null),
   manufacturerDrawing: "required-not-acquired",
   manufacturerCad: "required-not-acquired",
   copper: "not-claimed",
@@ -331,267 +116,8 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
   paste: "not-claimed",
   courtyard: "not-claimed",
   artwork: "not-generated",
-  orientation: "unreviewed",
-  footprintEvidence:
-    mpn === null || reference === null
-      ? null
-      : mpn === "C0603C104K3RACTU"
-        ? bp031032C0603C104K3RactuFootprintEvidenceFor(mpn, reference)
-        : mpn === "SN74LVC2G07DCKR" || mpn === "BSS138AKA"
-          ? resetSupportFootprintEvidenceFor(mpn, reference)
-          : mpn === "FTSH-105-01-L-DV-007-K"
-            ? ftshFootprintEvidenceFor(mpn, reference)
-            : mpn === "C1608X5R1A105K080AC"
-              ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
-              : mpn.startsWith("GCM")
-                ? murataProcessorSupportFootprintEvidenceFor(mpn, reference)
-                : mpn === "ISO7762FDWR" || mpn === "ISO7721FDR"
-                  ? tiIsolatorFootprintEvidenceFor(mpn, reference)
-                  : mpn === "NXE1S0505MC"
-                    ? isolatedConverterFootprintEvidenceFor(mpn, reference)
-                    : mpn === "ESP32-S3-WROOM-1U-N16R2"
-                      ? esp32ModuleFootprintEvidenceFor(mpn, reference)
-                      : mpn === "STM32G474RET3TR"
-                        ? stm32FootprintEvidenceFor(mpn, reference)
-                        : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
-                          ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                          : mpn === "TSW-106-07-G-S"
-                            ? esp32ServiceHeaderFootprintEvidenceFor(mpn, reference)
-                            : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+  orientation: "unreviewed"
 })
-
-function isolatedConverterFootprintEvidenceFor(mpn: string, reference: string) {
-  const candidate = bp032MurataNxe1s0505mcCandidate
-  if (candidate.manufacturerPartNumber !== mpn || candidate.canonicalReference !== reference) return null
-  const source = candidate.sources[0]
-  if (source === undefined) return null
-  return {
-    artifactKind: candidate.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: source.id,
-    sourceArtifactPath: source.artifactPath,
-    sourceSha256: source.sha256,
-    upstreamContract: "BP-122/BP-125",
-    projectFootprintId: "murata-nxe1s0505mc-project-review",
-    manufacturerCad: candidate.manufacturerCad.state,
-    manufacturerLandPattern: candidate.manufacturerLandPattern.sourceScope,
-    artwork: candidate.projectArtwork.state,
-    orientation: candidate.orientation.state,
-    releaseState: candidate.releaseState,
-    fabricationAuthority: candidate.fabricationAuthority,
-    accepted: isBenchPrototypeFootprintApproved(
-      "BP-032",
-      reference,
-      "bp032-murata-nxe1s0505mc-preorder-promotion-candidate"
-    )
-  } as const
-}
-
-function esp32ModuleFootprintEvidenceFor(mpn: string, reference: string) {
-  const candidate = benchPrototypeBp032Esp32S3Wroom1uExactFootprint
-  if (candidate.manufacturerPartNumber !== mpn || candidate.canonicalReference !== reference) return null
-  return {
-    artifactKind: candidate.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: "espressif-esp32-s3-wroom-1u-primary-set",
-    sourceArtifactPaths: candidate.officialSources.map((source) => source.artifactPath),
-    sourceSha256s: candidate.officialSources.map((source) => source.sha256),
-    upstreamContract: "BP-121/BP-125",
-    projectFootprintId: "esp32-s3-wroom-1u-n16r2-project-review",
-    manufacturerCad: candidate.authority.cadApproval,
-    manufacturerLandPattern: candidate.projectGeometry.perimeterCopper.source,
-    artwork: candidate.artworkProvenance.rendererState,
-    orientation: candidate.projectGeometry.orientation.independentOverlay,
-    releaseState: candidate.releaseState,
-    fabricationAuthority: candidate.fabricationAuthority,
-    accepted: candidate.accepted
-  } as const
-}
-
-function esp32ServiceHeaderFootprintEvidenceFor(mpn: string, reference: string) {
-  const candidate = bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence
-  if (candidate.boundary.exactMpn !== mpn || candidate.boundary.reference !== reference) return null
-  return {
-    artifactKind: candidate.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: "samtec-tsw-106-07-g-s-primary-set",
-    sourceArtifactPaths: candidate.manufacturerSources.map((source) => source.artifactPath),
-    sourceSha256s: candidate.manufacturerSources.map((source) => source.sha256),
-    upstreamContract: "BP-124",
-    projectFootprintId: "tsw-106-07-g-s-project-review",
-    manufacturerCad: candidate.gates.cadRelease,
-    manufacturerLandPattern: candidate.landPattern.holes.definition,
-    artwork: candidate.gates.cadRelease,
-    orientation: candidate.orientation.state,
-    releaseState: candidate.gates.fabricationRelease,
-    fabricationAuthority: candidate.gates.fabricationRelease,
-    accepted: candidate.gates.accepted
-  } as const
-}
-
-function stm32FootprintEvidenceFor(mpn: string, reference: string) {
-  const candidate = bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence
-  if (candidate.source.manufacturerPartNumber !== mpn || candidate.canonicalReference !== reference) return null
-  return {
-    artifactKind: candidate.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: "st-ds12288-rev6",
-    sourceArtifactPath: candidate.source.artifactPath,
-    sourceSha256: candidate.source.sha256,
-    upstreamContract: "BP-120/BP-125",
-    projectFootprintId: "stm32g474ret3tr-lqfp64-project-review",
-    manufacturerCad: candidate.manufacturerCad.state,
-    manufacturerLandPattern: candidate.manufacturerDrawing.state,
-    artwork: candidate.projectFootprint.state,
-    orientation: candidate.orientation.status,
-    releaseState: candidate.releaseState,
-    fabricationAuthority: candidate.fabricationAuthority,
-    accepted: candidate.accepted
-  } as const
-}
-
-function tiIsolatorFootprintEvidenceFor(mpn: string, reference: string) {
-  const device = bp032TiIsolatorFootprintEvidence.devices.find(
-    (item) => item.manufacturerPartNumber === mpn && item.canonicalReference === reference
-  )
-  if (device === undefined) return null
-  return {
-    artifactKind: bp032TiIsolatorFootprintEvidence.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: `ti-${mpn.toLowerCase()}-datasheet`,
-    sourceArtifactPath: device.manufacturerSource.artifactPath,
-    sourceSha256: device.manufacturerSource.sha256,
-    upstreamContract: "BP-122",
-    projectFootprintId: `ti-${mpn.toLowerCase()}-project-review`,
-    manufacturerCad: device.manufacturerCad.state,
-    manufacturerLandPattern: device.manufacturerFacts.landPatternStatus,
-    artwork: device.projectGeometry.status,
-    orientation: device.projectGeometry.orientation.status,
-    releaseState: device.gates.release,
-    fabricationAuthority: device.gates.fabrication,
-    accepted: false
-  } as const
-}
-
-function murataProcessorSupportFootprintEvidenceFor(mpn: string, reference: string) {
-  const binding = benchPrototypeBp125MurataCapacitorReviewBindings.find(
-    (item) => item.manufacturerPartNumber === mpn && item.reference === reference
-  )
-  if (binding === undefined) return null
-  const geometry =
-    benchPrototypeBp125MurataCapacitorFootprintGeometries[
-      binding.candidateKey as keyof typeof benchPrototypeBp125MurataCapacitorFootprintGeometries
-    ]
-  if (geometry === undefined) return null
-  const selection = geometry.appliesTo.find((item) => item.manufacturerPartNumber === mpn)
-  const exactEvidence = geometry.exactMpnEvidence.find((item) => item.manufacturerPartNumber === mpn)
-  if (selection === undefined || exactEvidence === undefined) return null
-  const selectionReferences: readonly string[] = selection.references
-  if (!selectionReferences.includes(reference)) return null
-  return {
-    artifactKind: geometry.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: `murata-${mpn.toLowerCase()}-retained-evidence`,
-    sourceArtifactPath: exactEvidence.artifactPath,
-    sourceSha256: exactEvidence.sha256,
-    upstreamContract: "BP-125",
-    projectFootprintId: `murata-${binding.candidateKey}-project-review`,
-    manufacturerCad: geometry.manufacturerCad.state,
-    manufacturerLandPattern: binding.landGuidanceScope,
-    artwork: "project-review-only",
-    orientation: geometry.orientation.state,
-    releaseState: "deny",
-    fabricationAuthority: geometry.fabricationAuthority,
-    accepted: geometry.accepted
-  } as const
-}
-
-function supervisorWatchdogFootprintEvidenceFor(mpn: string, reference: string) {
-  const candidate = bp032SupervisorWatchdogFootprintEvidence
-  const assignment = candidate.assignments.find(
-    (item) => item.reference === reference && item.manufacturerPartNumber === mpn
-  )
-  if (assignment === undefined) return null
-  const geometry =
-    mpn === "TPS389033DSER"
-      ? candidate.candidates.TPS389033DSER
-      : mpn === "TPS3431SDRBR"
-        ? candidate.candidates.TPS3431SDRBR
-        : null
-  if (geometry === null) return null
-  const source = geometry.officialSources[0]
-  if (source === undefined) return null
-  return {
-    artifactKind: candidate.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: assignment.sourceId,
-    sourceArtifactPath: source.artifactPath,
-    sourceSha256: source.sha256,
-    upstreamContract: "BP-123",
-    projectFootprintId: `${mpn.toLowerCase()}-project-review`,
-    manufacturerCad: geometry.manufacturerCad.state,
-    manufacturerLandPattern: source.packageGeometryEvidence.status,
-    artwork: "project-review-only",
-    orientation: geometry.orientation.state,
-    releaseState: "deny",
-    fabricationAuthority: geometry.fabricationAuthority,
-    accepted: geometry.accepted
-  } as const
-}
-
-function resetSupportFootprintEvidenceFor(mpn: string, reference: string) {
-  const part = bp032ResetSupportFootprintEvidence.parts.find(
-    (candidate) =>
-      candidate.manufacturerPartNumber === mpn && candidate.affectedReferences.some((item) => item === reference)
-  )
-  if (part === undefined) return null
-  return {
-    artifactKind: bp032ResetSupportFootprintEvidence.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: mpn === "SN74LVC2G07DCKR" ? "ti-sn74lvc2g07-datasheet" : "nexperia-bss138aka-datasheet",
-    sourceArtifactPath: part.source.artifactPath,
-    sourceSha256: part.source.sha256,
-    upstreamContract: "BP-123",
-    projectFootprintId: `${mpn.toLowerCase()}-project-review`,
-    manufacturerCad: part.manufacturerCad.state,
-    manufacturerLandPattern: "retained-manufacturer-guidance",
-    artwork: part.artwork.state,
-    orientation: part.projectFootprint.orientation.state,
-    releaseState: bp032ResetSupportFootprintEvidence.releaseState,
-    fabricationAuthority: bp032ResetSupportFootprintEvidence.fabricationAuthority,
-    accepted: bp032ResetSupportFootprintEvidence.accepted
-  } as const
-}
-
-function ftshFootprintEvidenceFor(mpn: string, reference: string) {
-  const candidate = bp032Ftsh10501LDv007KFootprintEvidence
-  if (mpn !== candidate.connector.manufacturerPartNumber || reference !== candidate.reference) return null
-  return {
-    artifactKind: candidate.artifactKind,
-    exactMpn: mpn,
-    reference,
-    sourceId: "samtec-ftsh-105-01-l-dv-007-k-primary-set",
-    sourceArtifactPaths: candidate.manufacturerLandPattern.sourceDocuments.map((source) => source.artifactPath),
-    sourceSha256s: candidate.manufacturerLandPattern.sourceDocuments.map((source) => source.sha256),
-    upstreamContract: "BP-124",
-    projectFootprintId: "ftsh-105-01-l-dv-007-k-project-review",
-    manufacturerCad: candidate.manufacturerCad.state,
-    manufacturerLandPattern: candidate.manufacturerLandPattern.authority,
-    artwork: candidate.projectFootprint.artwork.state,
-    orientation: candidate.projectFootprint.pinOne.orientationStatus,
-    releaseState: candidate.releaseState,
-    fabricationAuthority: candidate.fabricationAuthority,
-    accepted: candidate.accepted
-  } as const
-}
 
 const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
   reference: part.reference,
@@ -599,20 +125,11 @@ const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
   package: packageFor(part.mpn),
   population: "selected-awaiting-footprint-evidence",
   source: "BP-123 reset/watchdog contract",
-  evidence: evidence(part.mpn, part.reference)
+  evidence: evidence(part.mpn)
 }))
 
 function processorSupportReferenceContract() {
   const support = benchPrototypeProcessorSupport
-  const capacitorMpnFor = (references: readonly string[], index: number) => {
-    const reference = references[index]
-    if (reference === undefined) throw new RangeError("BP-125 capacitor reference index drifted")
-    const selection = support.supportSelectionEvidence.capacitorSelections.find((candidate) =>
-      candidate.references.some((candidateReference) => candidateReference === reference)
-    )
-    if (selection === undefined) throw new RangeError(`BP-125 has no exact capacitor selection for ${reference}`)
-    return selection.mpn
-  }
   const rows = [
     ...support.bypassAndBulk.stm32Digital.references.map((reference) => ({
       reference,
@@ -630,14 +147,14 @@ function processorSupportReferenceContract() {
     },
     ...support.bypassAndBulk.stm32Analog.vdDa.references.map((reference, index) => ({
       reference,
-      mpn: capacitorMpnFor(support.bypassAndBulk.stm32Analog.vdDa.references, index),
+      mpn: support.bypassAndBulk.stm32Analog.capacitorMpn,
       value: support.bypassAndBulk.stm32Analog.vdDa.values[index],
       population: support.bypassAndBulk.stm32Analog.population,
       section: "stm32-vdda"
     })),
     ...support.bypassAndBulk.stm32Analog.vref.references.map((reference, index) => ({
       reference,
-      mpn: capacitorMpnFor(support.bypassAndBulk.stm32Analog.vref.references, index),
+      mpn: support.bypassAndBulk.stm32Analog.capacitorMpn,
       value: support.bypassAndBulk.stm32Analog.vref.values[index],
       population: support.bypassAndBulk.stm32Analog.population,
       section: "stm32-vref"
@@ -651,7 +168,7 @@ function processorSupportReferenceContract() {
     },
     ...support.bypassAndBulk.esp32.references.map((reference, index) => ({
       reference,
-      mpn: capacitorMpnFor(support.bypassAndBulk.esp32.references, index),
+      mpn: support.bypassAndBulk.esp32.capacitorMpn,
       value: support.bypassAndBulk.esp32.values[index],
       population: support.bypassAndBulk.esp32.population,
       section: "esp32-supply"
@@ -696,16 +213,6 @@ const processorSupportLedger = processorSupportSnapshot.map((support) => {
   const selections = resetLedger.filter((part) => part.reference === support.reference)
   if (selections.length > 1) throw new RangeError(`BP-032 has duplicate BP-123 selections for ${support.reference}`)
   const selected = selections[0]
-  if (selected === undefined && support.mpn !== "TBD") {
-    return {
-      ...structuredClone(support),
-      reconciliation: "selected-by-BP-125",
-      selectedMpn: support.mpn,
-      package: packageFor(support.mpn),
-      source: "BP-125 exact manufacturer-source selection",
-      evidence: evidence(support.mpn, support.reference)
-    }
-  }
   return selected === undefined
     ? {
         ...structuredClone(support),
@@ -721,7 +228,7 @@ const processorSupportLedger = processorSupportSnapshot.map((support) => {
         selectedMpn: selected.mpn,
         package: selected.package,
         source: "BP-125 requirement reconciled to BP-123 exact selection",
-        evidence: evidence(selected.mpn, selected.reference)
+        evidence: evidence(selected.mpn)
       }
 })
 
@@ -745,7 +252,7 @@ const definition = {
       package: "LQFP-64",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-120 STM32 allocation",
-      evidence: evidence("STM32G474RET3TR", "U_SCORING")
+      evidence: evidence("STM32G474RET3TR")
     },
     {
       reference: "U_APP",
@@ -754,7 +261,7 @@ const definition = {
       package: "WROOM-1U module",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-121 ESP32 allocation and BP-125 module support",
-      evidence: evidence("ESP32-S3-WROOM-1U-N16R2", "U_APP")
+      evidence: evidence("ESP32-S3-WROOM-1U-N16R2")
     },
     {
       reference: "U_ISO_MAIN",
@@ -763,7 +270,7 @@ const definition = {
       package: "SOIC-16 wide",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 main isolation channel",
-      evidence: evidence("ISO7762FDWR", "U_ISO_MAIN")
+      evidence: evidence("ISO7762FDWR")
     },
     {
       reference: "U_ISO_AUX",
@@ -772,17 +279,16 @@ const definition = {
       package: "SOIC-8",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 auxiliary isolation channel",
-      evidence: evidence("ISO7721FDR", "U_ISO_AUX")
+      evidence: evidence("ISO7721FDR")
     },
     {
       reference: "U_ISO_POWER",
       boardReference: "U_ISOLATED_POWER",
       mpn: "NXE1S0505MC",
-      package:
-        "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
+      package: "SMD 7-pin",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 isolated-power channel",
-      evidence: evidence("NXE1S0505MC", "U_ISO_POWER")
+      evidence: evidence("NXE1S0505MC")
     },
     ...resetLedger
   ],
@@ -793,7 +299,7 @@ const definition = {
       package: "2x5 1.27 mm surface-mount keyed header",
       population: "DNP-until-footprint-and-mating-evidence",
       source: "BP-124 STM32 service header",
-      evidence: evidence("FTSH-105-01-L-DV-007-K", "J_STM_SWD")
+      evidence: evidence("FTSH-105-01-L-DV-007-K")
     },
     {
       reference: "J_ESP_SERVICE",
@@ -801,7 +307,7 @@ const definition = {
       package: "1x6 2.54 mm through-hole header",
       population: "DNP-until-footprint-and-mating-evidence",
       source: "BP-124 ESP32 service header",
-      evidence: evidence("TSW-106-07-G-S", "J_ESP_SERVICE")
+      evidence: evidence("TSW-106-07-G-S")
     }
   ],
   clockReferences: [
@@ -914,34 +420,6 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   validateBenchPrototypeResetWatchdog(benchPrototypeResetWatchdog)
   validateBenchPrototypeServiceHeaders(benchPrototypeServiceHeaders)
   validateBenchPrototypeProcessorSupport(benchPrototypeProcessorSupport)
-  if (validateBp031032C0603C104K3RactuFootprintEvidence().length !== 0) {
-    throw new RangeError("BP-032 C0603C104K3RACTU project-review candidate drifted")
-  }
-  if (validateBp032ResetSupportFootprintEvidence().length !== 0) {
-    throw new RangeError("BP-032 reset-support project-review candidates drifted")
-  }
-  if (validateBp032Ftsh10501LDv007KFootprintEvidence().length !== 0) {
-    throw new RangeError("BP-032 FTSH service-header project-review candidate drifted")
-  }
-  validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence(bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence)
-  validateBenchPrototypeBp032Esp32S3Wroom1uExactFootprint(benchPrototypeBp032Esp32S3Wroom1uExactFootprint)
-  if (validateBp032MurataNxe1s0505mcCandidate(bp032MurataNxe1s0505mcCandidate).length !== 0) {
-    throw new RangeError("BP-032 isolated-converter footprint candidate drifted")
-  }
-  validateBp032SupervisorWatchdogFootprintEvidence(bp032SupervisorWatchdogFootprintEvidence)
-  if (bp125MurataCapacitorFootprintIntegrityErrors().length !== 0) {
-    throw new RangeError("BP-032 Murata processor-support footprint candidate drifted")
-  }
-  if (validateBp032TiIsolatorFootprintEvidence(bp032TiIsolatorFootprintEvidence).length !== 0) {
-    throw new RangeError("BP-032 TI isolator footprint candidate drifted")
-  }
-  if (
-    validateBp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence(bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence)
-      .length !== 0
-  ) {
-    throw new RangeError("BP-032 STM32 footprint candidate drifted")
-  }
-  validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
   validateBenchPrototypeProcessorFootprintsUpstreamProvenance(currentUpstreamSnapshot())
@@ -949,60 +427,19 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const unresolvedProcessorSupport = ledger.processorSupportReferences.filter(
     (entry) => entry.reconciliation === "DNP-until-exact-selection"
   )
-  const bp125SelectedSupport = ledger.processorSupportReferences.filter(
-    (entry) => entry.reconciliation === "selected-by-BP-125"
-  )
   const references = [
     ...ledger.populatedReferences,
     ...ledger.debugReferences,
     ...ledger.clockReferences,
-    ...unresolvedProcessorSupport,
-    ...bp125SelectedSupport
+    ...unresolvedProcessorSupport
   ]
-  const yageoReferenceBindings = bp032YageoRc0603ResistorFootprintEvidence.referenceBindings
-  const tdkReferenceBindings = bp032TdkC1608CapacitorFootprintEvidence.affectedReferences.map((reference) => ({
-    reference,
-    manufacturerPartNumber: "C1608X5R1A105K080AC",
-    sourceId: bp032TdkC1608CapacitorFootprintEvidence.sources[0].id,
-    upstreamContract: "BP-123"
-  }))
-  const kemetReferenceBindings = bp031032C0603C104K3RactuFootprintEvidence.referenceSets.bp032.references.map(
-    (reference) => ({
-      reference,
-      manufacturerPartNumber: bp031032C0603C104K3RactuFootprintEvidence.manufacturerPartNumber,
-      sourceId: bp031032C0603C104K3RactuFootprintEvidence.sources[0].id,
-      upstreamContract: "BP-123"
-    })
-  )
-  const yageoLedgerRows = references.filter(
-    (entry) => entry.mpn === "RC0603FR-0710KL" || entry.mpn === "RC0603FR-07100KL"
-  )
-  const tdkSupportRows = ledger.processorSupportReferences.filter(
-    (entry) => entry.reference === "C_ESP_EN_DELAY" && entry.selectedMpn === "C1608X5R1A105K080AC"
-  )
-  const kemetResetRows = ledger.populatedReferences.filter((entry) => entry.mpn === "C0603C104K3RACTU")
-  const resetSupportRows = ledger.populatedReferences.filter((entry) =>
-    ["SN74LVC2G07DCKR", "BSS138AKA"].includes(entry.mpn)
-  )
-  const supervisorWatchdogRows = ledger.populatedReferences.filter((entry) =>
-    ["TPS389033DSER", "TPS3431SDRBR"].includes(entry.mpn)
-  )
-  const murataProcessorSupportRows = ledger.processorSupportReferences.filter((entry) => entry.mpn.startsWith("GCM"))
-  const isolatorRows = ledger.populatedReferences.filter((entry) => ["ISO7762FDWR", "ISO7721FDR"].includes(entry.mpn))
-  const stm32Rows = ledger.populatedReferences.filter((entry) => entry.mpn === "STM32G474RET3TR")
-  const esp32ModuleRows = ledger.populatedReferences.filter((entry) => entry.mpn === "ESP32-S3-WROOM-1U-N16R2")
-  const isolatedConverterRows = ledger.populatedReferences.filter((entry) => entry.mpn === "NXE1S0505MC")
-  const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
-  const esp32ServiceHeaderRows = ledger.debugReferences.filter((entry) => entry.mpn === "TSW-106-07-G-S")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
     ledger.populatedReferences.some(
       (entry) =>
         entry.mpn === null ||
         entry.population !== "selected-awaiting-footprint-evidence" ||
-        entry.evidence.copper !== "not-claimed" ||
-        entry.evidence.manufacturerPrimarySourceMapping === "missing" ||
-        entry.evidence.manufacturerPrimarySource === null
+        entry.evidence.copper !== "not-claimed"
     ) ||
     ledger.debugReferences.some((entry) => entry.population !== "DNP-until-footprint-and-mating-evidence") ||
     ledger.clockReferences[0].population !== "DNP" ||
@@ -1010,175 +447,11 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ledger.clockReferences[2].population !== "module-integrated" ||
     ledger.processorSupportReferences.length !== processorSupportSnapshot.length ||
     unresolvedProcessorSupport.some((entry) => entry.selectedMpn !== null || entry.mpn !== "TBD") ||
-    bp125SelectedSupport.some(
-      (entry) =>
-        entry.mpn === "TBD" ||
-        entry.selectedMpn !== entry.mpn ||
-        entry.package === null ||
-        entry.evidence.manufacturerPrimarySourceMapping === "missing" ||
-        entry.evidence.manufacturerPrimarySource === null
-    ) ||
-    yageoLedgerRows.length !== yageoReferenceBindings.length ||
-    yageoReferenceBindings.some((expected) => {
-      const row = yageoLedgerRows.find((candidate) => candidate.reference === expected.reference)
-      return (
-        row === undefined ||
-        row.mpn !== expected.manufacturerPartNumber ||
-        !("evidence" in row) ||
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence?.exactMpn !== expected.manufacturerPartNumber ||
-        row.evidence.footprintEvidence?.reference !== expected.reference ||
-        row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
-        row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
-        row.evidence.footprintEvidence?.projectFootprintId !== "yageo-rc0603-project-review" ||
-        row.evidence.footprintEvidence?.releaseState !== "deny" ||
-        row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence?.accepted
-      )
-    }) ||
-    tdkSupportRows.length !== tdkReferenceBindings.length ||
-    tdkReferenceBindings.some((expected) => {
-      const row = tdkSupportRows.find((candidate) => candidate.reference === expected.reference)
-      return (
-        row === undefined ||
-        row.mpn !== "TBD" ||
-        row.selectedMpn !== expected.manufacturerPartNumber ||
-        row.package !== "0603" ||
-        row.reconciliation !== "selected-by-BP-123" ||
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence?.exactMpn !== expected.manufacturerPartNumber ||
-        row.evidence.footprintEvidence?.reference !== expected.reference ||
-        row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
-        row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
-        row.evidence.footprintEvidence?.projectFootprintId !== "tdk-c1608-c1608x5r1a105k080ac-project-review" ||
-        row.evidence.footprintEvidence?.releaseState !== "deny" ||
-        row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence?.accepted
-      )
-    }) ||
-    kemetResetRows.length !== kemetReferenceBindings.length ||
-    kemetReferenceBindings.some((expected) => {
-      const row = kemetResetRows.find((candidate) => candidate.reference === expected.reference)
-      return (
-        row === undefined ||
-        row.mpn !== expected.manufacturerPartNumber ||
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence?.exactMpn !== expected.manufacturerPartNumber ||
-        row.evidence.footprintEvidence?.reference !== expected.reference ||
-        row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
-        row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
-        row.evidence.footprintEvidence?.projectFootprintId !== "c0603c104k3ractu-project-review" ||
-        row.evidence.footprintEvidence?.manufacturerCad !== "not-acquired" ||
-        row.evidence.footprintEvidence?.manufacturerLandPattern !== "not-published" ||
-        row.evidence.footprintEvidence?.releaseState !== "deny" ||
-        row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence?.accepted
-      )
-    }) ||
-    resetSupportRows.length !== 3 ||
-    resetSupportRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-123" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    supervisorWatchdogRows.length !== 4 ||
-    supervisorWatchdogRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-123" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    murataProcessorSupportRows.length !== 12 ||
-    murataProcessorSupportRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-125" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    isolatorRows.length !== 2 ||
-    isolatorRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-122" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    stm32Rows.length !== 1 ||
-    stm32Rows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-120/BP-125" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    esp32ModuleRows.length !== 1 ||
-    esp32ModuleRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-121/BP-125" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    isolatedConverterRows.length !== 1 ||
-    isolatedConverterRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-122/BP-125" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        !row.evidence.footprintEvidence.accepted
-    ) ||
-    ftshRows.length !== 1 ||
-    ftshRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-124" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
-    esp32ServiceHeaderRows.length !== 1 ||
-    esp32ServiceHeaderRows.some(
-      (row) =>
-        row.evidence.footprintEvidence === null ||
-        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
-        row.evidence.footprintEvidence.reference !== row.reference ||
-        row.evidence.footprintEvidence.upstreamContract !== "BP-124" ||
-        row.evidence.footprintEvidence.releaseState !== "deny" ||
-        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
-    ) ||
     ledger.processorSupportReferences
       .filter((entry) => entry.reconciliation === "selected-by-BP-123")
       .some(
         (entry) =>
-          (entry.mpn !== "TBD" && entry.mpn !== entry.selectedMpn) ||
+          entry.mpn !== "TBD" ||
           !ledger.populatedReferences.some(
             (selected) => selected.reference === entry.reference && selected.mpn === entry.selectedMpn
           )

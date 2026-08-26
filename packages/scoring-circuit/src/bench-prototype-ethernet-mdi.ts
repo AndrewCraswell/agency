@@ -32,45 +32,16 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   return Object.freeze(value)
 }
 
-type EndpointIdentity = {
-  readonly reference: string
-  readonly manufacturer: string
-  readonly mpn: string
-}
-
-function importControllerIdentity() {
-  const source = benchPrototypeEthernet.controller
-  return {
-    reference: source.reference,
-    manufacturer: source.manufacturer,
-    mpn: source.mpn
-  } as const satisfies EndpointIdentity
-}
-
-function importMagJackSource() {
-  const source = findCommunicationsFootprintEvidence("7499011121A")
-  if (source === undefined) throw new Error("communications footprint evidence no longer contains 7499011121A")
-  return source
-}
-
-const controllerIdentity = importControllerIdentity()
-const magJackSource = importMagJackSource()
-const magJackIdentity = {
-  reference: "J_ETH",
-  manufacturer: magJackSource.manufacturer,
-  mpn: magJackSource.mpn
-} as const satisfies EndpointIdentity
-
 const upstreamProvenanceDefinition = {
   controller: {
-    manufacturer: controllerIdentity.manufacturer,
-    mpn: controllerIdentity.mpn,
-    reference: controllerIdentity.reference
+    manufacturer: "WIZnet",
+    mpn: "W5500",
+    reference: "U_W5500"
   },
   magJack: {
-    manufacturer: magJackSource.manufacturer,
-    mpn: magJackSource.mpn,
-    releaseState: magJackSource.releaseState
+    manufacturer: "Würth Elektronik",
+    mpn: "7499011121A",
+    releaseState: "deny"
   }
 } as const
 
@@ -85,8 +56,16 @@ const definition = {
   layoutRelease: false,
   benchValidationRelease: false,
   releaseState: "deny",
-  controller: controllerIdentity,
-  magJack: magJackIdentity,
+  controller: {
+    reference: "U_W5500",
+    manufacturer: "WIZnet",
+    mpn: "W5500"
+  },
+  magJack: {
+    reference: "J_ETH",
+    manufacturer: "Würth Elektronik",
+    mpn: "7499011121A"
+  },
   mdiPairs: [
     {
       controllerEndpoint: "U_W5500.TXP",
