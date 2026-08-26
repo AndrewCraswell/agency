@@ -169,17 +169,17 @@ export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly
         pcbY={0}
       />
 
-      <trace from="net.V5" to="U_DISPLAY_LIMITER.IN" />
+      <trace from="net.V5" to="U_DISPLAY_LIMITER.IN" width="1.9mm" />
       <trace from="U_DISPLAY_LIMITER.IN" to="U_DISPLAY_LIMITER.EN_UVLO" />
       <trace from="U_DISPLAY_LIMITER.IN" to="C_DISPLAY_BYPASS.pin1" />
       <trace from="U_DISPLAY_LIMITER.IN" to="C_DISPLAY_IN.pin1" />
       <trace from="U_DISPLAY_LIMITER.OUT" to="net.V5_DISPLAY_LIMITED" />
-      <trace from="U_DISPLAY_LIMITER.OUT" to="F_DISPLAY.FUSED_IN" />
-      <trace from="F_DISPLAY.FUSED_OUT" to="net.V5_DISPLAY_LOAD" />
-      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_A" />
-      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_B" />
-      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_A" />
-      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_B" />
+      <trace from="U_DISPLAY_LIMITER.OUT" to="F_DISPLAY.FUSED_IN" width="1.9mm" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="net.V5_DISPLAY_LOAD" width="1.9mm" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_A" width="1.9mm" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_B" width="1.9mm" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_A" width="1.9mm" />
+      <trace from="F_DISPLAY.FUSED_OUT" to="J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_B" width="1.9mm" />
 
       <trace from="U_DISPLAY_LIMITER.OUT" to="C_DISPLAY_OUT.pin1" />
       <trace from="C_DISPLAY_BYPASS.pin2" to="net.APP_GND" />

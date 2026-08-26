@@ -36,6 +36,18 @@ function traceNames(circuitJson: ReturnType<typeof renderCircuit>): string[] {
   )
 }
 
+function traceWidths(circuitJson: ReturnType<typeof renderCircuit>): Map<string, number> {
+  return new Map(
+    circuitJson.flatMap((element) =>
+      element.type === "source_trace" && typeof element.display_name === "string"
+        ? element.min_trace_thickness === undefined
+          ? []
+          : [[element.display_name, element.min_trace_thickness] as const]
+        : []
+    )
+  )
+}
+
 function pcbFootprintElements(name: string) {
   const circuit = renderCircuit()
   const source = circuit.find((element) => element.type === "source_component" && element.name === name)
@@ -138,5 +150,19 @@ describe("P0 protected HUB75 display-power circuit", () => {
     })
     expect(p0DisplayPowerFootprintMetadata.pigtail).toMatchObject({ inBom: false, onBoard: true })
     expect(p0DisplayPowerFootprintMetadata.pigtail).not.toHaveProperty("manufacturerPartNumber")
+  })
+
+  it("keeps the display branch limiter, fuse, and pigtail trunk at its explicit width", () => {
+    expect(traceWidths(renderCircuit())).toEqual(
+      new Map([
+        ["U_DISPLAY_LIMITER.IN to net.V5", 1.9],
+        ["U_DISPLAY_LIMITER.OUT to F_DISPLAY.FUSED_IN", 1.9],
+        ["F_DISPLAY.FUSED_OUT to net.V5_DISPLAY_LOAD", 1.9],
+        ["F_DISPLAY.FUSED_OUT to J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_A", 1.9],
+        ["F_DISPLAY.FUSED_OUT to J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_B", 1.9],
+        ["F_DISPLAY.FUSED_OUT to J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_A", 1.9],
+        ["F_DISPLAY.FUSED_OUT to J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_B", 1.9]
+      ])
+    )
   })
 })

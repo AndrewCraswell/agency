@@ -12,6 +12,18 @@ function traceNames() {
   )
 }
 
+function traceWidths() {
+  return new Map(
+    render().flatMap((element) =>
+      element.type === "source_trace" && typeof element.display_name === "string"
+        ? element.min_trace_thickness === undefined
+          ? []
+          : [[element.display_name, element.min_trace_thickness] as const]
+        : []
+    )
+  )
+}
+
 describe("P0 USB-C power input", () => {
   it("renders the selected input, protection, and regulator chain", () => {
     const components = new Map<string, unknown>()
@@ -59,5 +71,17 @@ describe("P0 USB-C power input", () => {
     expect(names.some((name) => name.includes("CHASSIS to net.APP_GND"))).toBe(false)
     expect(names.some((name) => name.includes("SCORING_ISOLATOR"))).toBe(false)
     expect(names.some((name) => name.includes("J_LINK_") || name.includes("J_USB2_SERVICE"))).toBe(false)
+  })
+
+  it("keeps reviewed power trunks at their explicit outer-layer widths", () => {
+    expect(traceWidths()).toEqual(
+      new Map([
+        ["U_EFUSE.IN to net.PD_PPHV_20V", 0.9],
+        ["U_EFUSE.OUT to U_V5_BUCK.VIN", 0.9],
+        ["L_V5_BUCK.V5 to net.V5", 3.4],
+        ["U_APP_REGULATOR.VIN to net.V5", 0.3],
+        ["L_APP_REGULATOR.APP_3V3 to net.APP_3V3", 0.3]
+      ])
+    )
   })
 })

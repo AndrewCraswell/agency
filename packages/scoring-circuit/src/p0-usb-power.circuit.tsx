@@ -536,7 +536,7 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       <trace from="U_USB_PD.36" to="R_USB_PD_RESERVED_36.pin1" />
       <trace from="R_USB_PD_RESERVED_36.pin2" to="net.APP_GND" />
 
-      <trace from="net.PD_PPHV_20V" to="U_EFUSE.IN" />
+      <trace from="net.PD_PPHV_20V" to="U_EFUSE.IN" width="0.9mm" />
       <trace from="U_EFUSE.IN" to="C_EFUSE_IN.pin1" />
       <trace from="C_EFUSE_IN.pin2" to="net.APP_GND" />
       <trace from="U_EFUSE.pin1" to="R_EFUSE_UVLO_UP.pin2" />
@@ -557,7 +557,7 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       <trace from="U_EFUSE.OUT" to="C_EFUSE_OUT.V20_TO_V5_BUCK" />
       <trace from="U_EFUSE.OUT" to="TP_PD_EFUSE_OUT.V20_TO_V5_BUCK" />
 
-      <trace from="U_EFUSE.OUT" to="U_V5_BUCK.VIN" />
+      <trace from="U_EFUSE.OUT" to="U_V5_BUCK.VIN" width="0.9mm" />
       <trace from="U_V5_BUCK.VIN" to="U_V5_BUCK.EN" />
       <trace from="U_V5_BUCK.VIN" to="C_V5_BUCK_IN_A.pin1" />
       <trace from="U_V5_BUCK.VIN" to="C_V5_BUCK_IN_B.pin1" />
@@ -570,7 +570,7 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       <trace from="U_V5_BUCK.BOOT" to="C_V5_BUCK_BOOT.pin1" />
       <trace from="C_V5_BUCK_BOOT.pin2" to="U_V5_BUCK.SW" />
       <trace from="U_V5_BUCK.SW" to="L_V5_BUCK.SW" />
-      <trace from="L_V5_BUCK.V5" to="net.V5" />
+      <trace from="L_V5_BUCK.V5" to="net.V5" width="3.4mm" />
       <trace from="U_V5_BUCK.AGND" to="net.APP_GND" />
       <trace from="U_V5_BUCK.PGND" to="net.APP_GND" />
       <trace from="U_V5_BUCK.FB" to="R_V5_BUCK_FB_TOP.pin2" />
@@ -587,7 +587,7 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
         </group>
       ))}
       <trace from="net.V5" to="TP_V5.V5" />
-      <trace from="net.V5" to="U_APP_REGULATOR.VIN" />
+      <trace from="net.V5" to="U_APP_REGULATOR.VIN" width="0.3mm" />
       <trace from="U_APP_REGULATOR.VIN" to="U_APP_REGULATOR.EN_UVLO" />
       <trace from="U_APP_REGULATOR.VIN" to="C_APP_REG_IN.pin1" />
       <trace from="U_APP_REGULATOR.VIN" to="C_APP_REG_IN_HF.pin1" />
@@ -599,7 +599,7 @@ function P0UsbPower({ pcbX, pcbY }: P0UsbPowerProps): ReactElement {
       <trace from="U_APP_REGULATOR.BOOT" to="C_APP_REG_BOOT.pin1" />
       <trace from="C_APP_REG_BOOT.pin2" to="U_APP_REGULATOR.SW" />
       <trace from="U_APP_REGULATOR.SW" to="L_APP_REGULATOR.SW" />
-      <trace from="L_APP_REGULATOR.APP_3V3" to="net.APP_3V3" />
+      <trace from="L_APP_REGULATOR.APP_3V3" to="net.APP_3V3" width="0.3mm" />
       <trace from="U_APP_REGULATOR.VOUT_FB" to="net.APP_3V3" />
       <trace from="U_APP_REGULATOR.APP_GND" to="net.APP_GND" />
       {(["A", "B", "C"] as const).map((suffix) => (
