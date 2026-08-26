@@ -29,10 +29,11 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `2224ade` (canonical vote-person link repair plus vote/change smoke support) |
-| Deployment | `e419978a-d839-41c5-897b-d9d536a60dc3` |
+| Source snapshot commit | `b8e6ca6` (canonical Congress meeting provenance/relations plus explicit rematerialization operator) |
+| Deployment | `bb0d1d62-742a-48a6-a261-fc304acc12e7` |
 | Deployment status | `SUCCESS` |
-| Previous rollback artifact | `e1781bbc-6526-4f87-8eb8-df39142bf11a` (superseded and `REMOVED`; redeploy its immutable source/image only if Railway supports it) |
+| Image | `sha256:b9665f0ba91742d6fa69d662ea53a43c436dac45a28b910f7e1657d5f401fc48` |
+| Previous rollback artifact | `e419978a-d839-41c5-897b-d9d536a60dc3` (superseded and `REMOVED`; redeploy its immutable source/image only if Railway supports it) |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
@@ -146,6 +147,7 @@ required civic relationships, so data remediation is required before promoting t
 | Cumulative smoke | Production `/health` and `/ready` returned `200`; the meeting/calendar profile and all prior release profiles passed. |
 | Done | Eight operations passed deployed smoke: meetings collection, meeting agenda list, meeting documents list and detail, meeting outcomes list, meeting participants list and detail, and calendars collection. |
 | Canonical-fixture blocked | Meeting detail, meeting agenda-item detail, meeting outcome detail, calendar detail, and calendar meetings remain blocked and receive no Done credit. |
+| Meeting rematerialization operator | Deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` adds `congress:events --domain meetings --rematerialize`, which restarts the selected Congress range, reuses the canonical normalizer/upsert path for unchanged provider records, and fails closed on ambiguous location, classification, status, provenance, session, or committee facts. Do not run it until HNSW is clear. |
 | Dependency-configuration blocked | Representative lookup remains blocked pending the production OpenStates canary. The plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains deferred while the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was `435065/648743` blocks. Do not promote this route until a fresh POST smoke passes. |
 | Rollback | Previous successful `legislation-web` deployment: `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. |
 | Next endpoint block | Search, document-difference, and research delivery is **In progress**. |
@@ -166,9 +168,9 @@ them Done until the fixture or OpenStates production-canary prerequisite is reso
 The subsequent unified-runtime source snapshot `3a498d1` deployed as
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS` and superseded
 `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. Both are historical milestones and are now `REMOVED`; neither is a current
-rollback target. Current-release evidence is source `2224ade` deployed as
-`e419978a-d839-41c5-897b-d9d536a60dc3`; its immediately preceding successful deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a`
-is also `REMOVED`, as recorded above.
+rollback target. Current-release evidence is source `b8e6ca6` deployed as
+`bb0d1d62-742a-48a6-a261-fc304acc12e7`; its immediately preceding successful deployment
+`e419978a-d839-41c5-897b-d9d536a60dc3` is also `REMOVED`, as recorded above.
 
 The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
 pressure, then run the complete search, document-difference, and research production smoke with audited fixtures. Webhook
@@ -176,9 +178,9 @@ verification evidence is already recorded above; update this record with the rem
 
 ## Authenticated API release evidence
 
-The current `legislation-web` deployment `e419978a-d839-41c5-897b-d9d536a60dc3` is sourced from snapshot `2224ade`,
-including the header-adapter defect fix; it reached terminal `SUCCESS`. The prior deployment
-`e1781bbc-6526-4f87-8eb8-df39142bf11a` is superseded and `REMOVED`. The release uses separate WorkOS
+The current `legislation-web` deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` is sourced from snapshot `b8e6ca6`
+and reached terminal `SUCCESS`; health and readiness returned `200`, with an idle, unsaturated database pool. The prior
+deployment `e419978a-d839-41c5-897b-d9d536a60dc3` is superseded and `REMOVED`. The release uses separate WorkOS
 authorities for M2M API tokens and AuthKit user-session tokens. Prior bounded remote probes returned
 `GET /health` `200` in `361ms` with `status`, `GET /ready` `200` in `179ms` with `databasePool/status`, an anonymous
 protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` in `813ms` with
@@ -196,15 +198,19 @@ is paused during active HNSW I/O.
 
 1. Relieve or schedule around active HNSW index pressure, then run the pending search, document-difference, and research
    production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
-2. After that smoke passes, resolve the document OCR and canonical civic-fixture blockers one bounded source-backed
-   cohort at a time, then repeat the exact affected production smoke profile before promoting an operation.
-3. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
+2. After HNSW is clear, run a bounded federal entity refresh and then
+   `congress:events --domain meetings --start-congress <start> --end-congress <end> --rematerialize`. Verify canonical
+   provenance/relationship predicates before using the resulting meeting as smoke evidence; do not infer completion from
+   an ingestion success count.
+3. Resolve the document OCR and remaining canonical civic-fixture blockers one bounded source-backed cohort at a time,
+   then repeat the exact affected production smoke profile before promoting an operation.
+4. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
    its canary only after a live Next.js MCP route exists.
 
 ## Rollback
 
-The current deployment is `e419978a-d839-41c5-897b-d9d536a60dc3`. The preceding deployment
-`e1781bbc-6526-4f87-8eb8-df39142bf11a` was superseded and removed; it is not an active rollback deployment. If Railway
+The current deployment is `bb0d1d62-742a-48a6-a261-fc304acc12e7`. The preceding deployment
+`e419978a-d839-41c5-897b-d9d536a60dc3` was superseded and removed; it is not an active rollback deployment. If Railway
 supports redeploying its immutable source/image, it may be used only after verifying the resulting deployment. After each
 subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains available for
 redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a
