@@ -29,10 +29,10 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `c0ca1bf` (reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf`) |
-| Deployment | `b33d51ac-bc9b-462f-86db-7c5fa28fd015` |
+| Source snapshot commit | `f517021` (release lineage includes reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf`) |
+| Deployment | `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` |
 | Deployment status | `SUCCESS` |
-| Previous successful rollback deployment | `49fd21e5-ce81-4483-8e41-02d53799e82e` |
+| Previous rollback artifact | `b33d51ac-bc9b-462f-86db-7c5fa28fd015` (REMOVED after supersession; redeploy its immutable source/image only if Railway supports it) |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
@@ -41,7 +41,7 @@ described as final API cutover until the remaining migration gates pass.
 | Foundation smoke | Health, readiness, and homepage returned `200`; unknown-route and unsupported-method checks returned `404` |
 | Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
 | Current deployment handler coverage | 88 of 88 explicit Next.js handlers |
-| Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities; health/readiness returned `200`, anonymous protected API returned `401`, and authenticated organizations/subscriptions returned valid empty `200` pages |
+| Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities; health `200` in `275ms`, readiness `200` in `181ms`, anonymous protected API `401`, authenticated organizations `200` canonical Page in `813ms`, authenticated supporting materials `200` canonical Page in `3977ms`, authenticated bills `200` canonical Page in `6691ms`, and correlation-ID echo observed |
 | Next API database safety | PostgreSQL `statement_timeout` is set to `15s` for API requests |
 | Search/diff/research production smoke | Deliberately paused while active HNSW construction consumes database I/O; resume only after the index work is safe to exercise |
 
@@ -164,13 +164,15 @@ pressure, then run the complete search, document-difference, and research produc
 
 ## Authenticated API release evidence
 
-The current `legislation-web` deployment `b33d51ac-bc9b-462f-86db-7c5fa28fd015` is sourced from reviewed commits
-`ce91b16`, `09b9d28`, and `c0ca1bf`; it reached terminal `SUCCESS`. The release uses separate WorkOS authorities for
-M2M API tokens and AuthKit user-session tokens. Live probes returned `GET /health` `200`, `GET /ready` `200`, an
-anonymous protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` with
-an empty canonical page, and authenticated `GET /api/subscriptions` `200` with an empty canonical page. The Next API
-sets PostgreSQL `statement_timeout` to `15s`. These probes do not promote the 40/23/25 endpoint ledger: the full
-authenticated cumulative smoke remains pending, and expensive smoke is paused during active HNSW I/O.
+The current `legislation-web` deployment `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` is sourced from snapshot `f517021`,
+with reviewed lineage commits `ce91b16`, `09b9d28`, and `c0ca1bf`; it reached terminal `SUCCESS`. The release uses
+separate WorkOS authorities for M2M API tokens and AuthKit user-session tokens. Bounded remote probes returned
+`GET /health` `200` in `275ms` with `status`, `GET /ready` `200` in `181ms` with `databasePool/status`, an anonymous
+protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` in `813ms` with
+a canonical Page, authenticated `GET /api/supporting-materials?limit=1` `200` in `3977ms` with a canonical Page, and
+authenticated `GET /api/bills?sort=introduced-desc&limit=1` `200` in `6691ms` with a canonical Page; correlation-ID echo
+was observed. The Next API sets PostgreSQL `statement_timeout` to `15s`. These probes do not promote the 40/23/25 endpoint
+ledger: the full authenticated cumulative smoke remains pending, and expensive smoke is paused during active HNSW I/O.
 
 ## Next safe actions
 
@@ -184,9 +186,11 @@ authenticated cumulative smoke remains pending, and expensive smoke is paused du
 
 ## Rollback
 
-The current deployment is `b33d51ac-bc9b-462f-86db-7c5fa28fd015`; its immediately preceding known-good
-`legislation-web` rollback deployment is `49fd21e5-ce81-4483-8e41-02d53799e82e`. After each subsequent
-`legislation-web` deployment, rollback uses only the newly recorded immediately preceding known-good deployment. The
-old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a rollback target.
+The current deployment is `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c`. The preceding deployment
+`b33d51ac-bc9b-462f-86db-7c5fa28fd015` was removed after supersession and is not an active rollback deployment; if Railway
+supports redeploying its immutable source/image, it may be used only after verifying the resulting deployment. After each
+subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains available for
+redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a
+rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
 from process startup.

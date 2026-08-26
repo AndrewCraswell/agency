@@ -25,11 +25,11 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf` are included in source snapshot `c0ca1bf`, deployed as `b33d51ac-bc9b-462f-86db-7c5fa28fd015` and reached terminal `SUCCESS`. Live health and readiness probes returned `200`; authenticated organizations and subscriptions probes returned valid empty `200` pages. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf` are part of the release lineage; source snapshot `f517021` deployed as `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` and reached terminal `SUCCESS`. Bounded remote probes returned health `200` in `275ms`, readiness `200` in `181ms`, authenticated organizations `200` in `813ms`, authenticated supporting materials `200` in `3977ms`, and authenticated bills `200` in `6691ms`, each with the documented result shape; correlation-ID echo was observed. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
 | Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 40 are Done, 23 are In progress, and 25 have named data, fixture, or dependency blockers. The remaining promotion gates are authenticated functional smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `b33d51ac-bc9b-462f-86db-7c5fa28fd015` from source snapshot `c0ca1bf` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because active HNSW construction is consuming database I/O. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
-| Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed; live anonymous protected `401` and authenticated organizations/subscriptions empty-page probes passed, while the complete authenticated cumulative gate remains. | Deployed before functional subscription/webhook release smoke |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` from source snapshot `f517021` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because active HNSW construction is consuming database I/O. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
+| Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed in `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c`; bounded anonymous protected `401` and authenticated organizations, supporting-materials, and bills canonical-Page probes passed, while the complete authenticated cumulative gate remains. | Deployed before functional subscription/webhook release smoke |
 | MCP transport | In-process access remains | HTTP client cutover only after every API endpoint and authentication gate passes |
 
 The previous endpoint ledger's 88 **Done** rows described the reusable standalone implementation. They did not prove
@@ -343,11 +343,12 @@ coverage and local tests alone do not satisfy this gate.
 
 ### WorkOS authentication
 
-State: **In progress**. The authenticated boundary is deployed in `b33d51ac-bc9b-462f-86db-7c5fa28fd015` from source
-snapshot `c0ca1bf` (terminal `SUCCESS`). The release uses separate WorkOS authorities for M2M API tokens and AuthKit
-user-session tokens and has both application encryption secrets configured. Live health/readiness probes returned `200`,
-anonymous protected API returned `401`, and authenticated organizations/subscriptions returned valid empty `200` pages.
-The complete authenticated cumulative gate remains pending.
+State: **In progress**. The authenticated boundary is deployed in `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` from source
+snapshot `f517021` (terminal `SUCCESS`). The release uses separate WorkOS authorities for M2M API tokens and AuthKit
+user-session tokens and has both application encryption secrets configured. Bounded remote probes returned health `200`
+in `275ms`, readiness `200` in `181ms`, anonymous protected API `401`, authenticated organizations `200` in `813ms`,
+authenticated supporting materials `200` in `3977ms`, and authenticated bills `200` in `6691ms`; each authenticated
+collection returned a canonical Page and correlation-ID echo was observed. The complete authenticated cumulative gate remains pending.
 
 - WorkOS bearer verification and request identity now run in the shared Next.js API boundary.
 - `/health` and `/ready` remain public; supported and catch-all `/api/**` requests authenticate in WorkOS mode.
