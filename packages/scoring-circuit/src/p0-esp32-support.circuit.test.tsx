@@ -33,6 +33,41 @@ describe("P0 ESP32 support circuit", () => {
     )
   })
 
+  it("places the reset/watchdog ICs and exposes six non-BOM recovery testpoints", () => {
+    const circuitJson = renderCircuit()
+    const components = circuitJson.filter((element) => element.type === "source_component")
+    const supervisor = components.find((component) => component.name === "U_APP_SUPERVISOR")
+    const watchdog = components.find((component) => component.name === "U_APP_WATCHDOG")
+    expect(supervisor).toMatchObject({ manufacturer_part_number: "TPS389033DSER" })
+    expect(watchdog).toMatchObject({ manufacturer_part_number: "TPS3431SDRBR" })
+    expect(supervisor).not.toMatchObject({ do_not_place: true })
+    expect(watchdog).not.toMatchObject({ do_not_place: true })
+
+    const testpoints = components.filter((component) => component.name?.startsWith("TP_"))
+    expect(testpoints).toHaveLength(6)
+    expect(testpoints.every((testpoint) => testpoint.manufacturer_part_number === undefined)).toBe(true)
+    expect(testpoints.every((testpoint) => testpoint.ftype === "simple_test_point")).toBe(true)
+    const testpointSourceIds = new Set(
+      testpoints.flatMap((testpoint) => ("source_component_id" in testpoint ? [testpoint.source_component_id] : []))
+    )
+    const testpointPcbIds = new Set(
+      circuitJson.flatMap((element) =>
+        element.type === "pcb_component" && testpointSourceIds.has(element.source_component_id)
+          ? [element.pcb_component_id]
+          : []
+      )
+    )
+    expect(
+      circuitJson.filter(
+        (element) =>
+          element.type === "pcb_smtpad" &&
+          "pcb_component_id" in element &&
+          typeof element.pcb_component_id === "string" &&
+          testpointPcbIds.has(element.pcb_component_id)
+      )
+    ).toHaveLength(6)
+  })
+
   it("connects bypass, reset, watchdog, USB, and recovery boundaries", () => {
     const renderedTraces = traces(renderCircuit())
     expect(renderedTraces).toEqual(
@@ -43,9 +78,9 @@ describe("P0 ESP32 support circuit", () => {
         "U_APP.APP_WD_KICK to U_APP_WATCHDOG.APP_WD_KICK",
         "U_APP.USB_DN to net.USB_DN",
         "U_APP.USB_DP to net.USB_DP",
-        "U_APP.UART0_RX to TP_UART0_RX.UART0_RX",
-        "U_APP.UART0_TX to TP_UART0_TX.UART0_TX",
-        "U_APP.BOOT_N to TP_BOOT_N.BOOT_N"
+        "U_APP.UART0_RX to TP_UART0_RX.pin1",
+        "U_APP.UART0_TX to TP_UART0_TX.pin1",
+        "U_APP.BOOT_N to TP_BOOT_N.pin1"
       ])
     )
   })

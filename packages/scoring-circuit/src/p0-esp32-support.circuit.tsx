@@ -1,7 +1,6 @@
-import type { ReactElement } from "react"
+import { Fragment, type ReactElement } from "react"
+import { P0Esp32SupervisorFootprint, P0Esp32WatchdogFootprint } from "./p0-esp32-support-footprints.js"
 import P0Esp32Wroom1Footprint from "./p0-esp32-wroom-1-footprint.js"
-
-const dnpFootprint = [] as []
 
 const assignedBoundarySignals = [
   "SAR_SCLK",
@@ -90,36 +89,8 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
         pcbY={pcbY - 22}
       />
 
-      <chip
-        name="U_APP_SUPERVISOR"
-        manufacturerPartNumber="TPS389033DSER"
-        doNotPlace
-        footprint={dnpFootprint}
-        pinLabels={{
-          pin1: "SENSE",
-          pin2: "APP_GND",
-          pin3: "MANUAL_RESET_N",
-          pin4: "APP_3V3",
-          pin5: "CT",
-          pin6: "APP_RESET_N"
-        }}
-      />
-      <chip
-        name="U_APP_WATCHDOG"
-        manufacturerPartNumber="TPS3431SDRBR"
-        doNotPlace
-        footprint={dnpFootprint}
-        pinLabels={{
-          pin1: "APP_3V3",
-          pin2: "CWD",
-          pin3: "APP_3V3",
-          pin4: "APP_GND",
-          pin5: "APP_3V3",
-          pin6: "APP_WD_KICK",
-          pin7: "APP_RESET_N",
-          pin8: "APP_RESET_N"
-        }}
-      />
+      <P0Esp32SupervisorFootprint pcbX={pcbX - 45} pcbY={pcbY - 32} />
+      <P0Esp32WatchdogFootprint pcbX={pcbX - 29} pcbY={pcbY - 32} />
       <resistor
         name="R_APP_WD_CWD"
         manufacturerPartNumber="RC0603FR-0710KL"
@@ -163,14 +134,15 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
         pcbY={pcbY - 32}
       />
 
-      {testPads.map((signal) => (
-        <chip
+      {testPads.map((signal, index) => (
+        <testpoint
           key={signal}
           name={signal === "APP_3V3" ? "TP_RECOVERY_APP_3V3" : `TP_${signal}`}
-          manufacturerPartNumber="P0-RECOVERY-TEST-PAD"
-          doNotPlace
-          footprint={dnpFootprint}
-          pinLabels={{ pin1: signal }}
+          footprintVariant="pad"
+          padShape="circle"
+          padDiameter="1mm"
+          pcbX={pcbX - 45 + index * 5}
+          pcbY={pcbY - 42}
         />
       ))}
 
@@ -185,13 +157,13 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
 
       <trace from="U_APP.BOOT_N" to="R_ESP_BOOT_PULLUP.pin1" />
       <trace from="R_ESP_BOOT_PULLUP.pin2" to="net.APP_3V3" />
-      <trace from="U_APP.BOOT_N" to="TP_BOOT_N.BOOT_N" />
+      <trace from="U_APP.BOOT_N" to="TP_BOOT_N.pin1" />
       <trace from="U_APP.EN_RESET" to="R_ESP_EN_PULLUP.pin1" />
       <trace from="R_ESP_EN_PULLUP.pin2" to="net.APP_3V3" />
       <trace from="U_APP.EN_RESET" to="C_ESP_EN_DELAY.pin1" />
       <trace from="C_ESP_EN_DELAY.pin2" to="net.APP_GND" />
       <trace from="U_APP.EN_RESET" to="net.APP_RESET_N" />
-      <trace from="U_APP.EN_RESET" to="TP_EN_RESET.EN_RESET" />
+      <trace from="U_APP.EN_RESET" to="TP_EN_RESET.pin1" />
 
       <trace from="U_APP_SUPERVISOR.SENSE" to="net.APP_3V3" />
       <trace from="U_APP_SUPERVISOR.APP_3V3" to="net.APP_3V3" />
@@ -216,13 +188,15 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
       <trace from="U_APP.USB_DN" to="net.USB_DN" />
       <trace from="U_APP.USB_DP" to="net.USB_DP" />
 
-      <trace from="U_APP.UART0_RX" to="TP_UART0_RX.UART0_RX" />
-      <trace from="U_APP.UART0_TX" to="TP_UART0_TX.UART0_TX" />
-      <trace from="TP_RECOVERY_APP_3V3.APP_3V3" to="net.APP_3V3" />
-      <trace from="TP_APP_GND.APP_GND" to="net.APP_GND" />
+      <trace from="U_APP.UART0_RX" to="TP_UART0_RX.pin1" />
+      <trace from="U_APP.UART0_TX" to="TP_UART0_TX.pin1" />
+      <trace from="TP_RECOVERY_APP_3V3.pin1" to="net.APP_3V3" />
+      <trace from="TP_APP_GND.pin1" to="net.APP_GND" />
 
       {assignedBoundarySignals.map((signal) => (
-        <trace key={signal} from={`U_APP.${signal}`} to={`net.${signal}`} />
+        <Fragment key={signal}>
+          <trace from={`U_APP.${signal}`} to={`net.${signal}`} />
+        </Fragment>
       ))}
     </group>
   )
