@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { LegislationError } from "../../legislation/errors.js"
+import { CanonicalProjectionError } from "../canonical-projection.js"
 import { apiBatch, apiErrorResponse, apiPage, apiResource, apiSearchPage, jsonResponse, readJsonBody } from "./http.js"
 
 describe("Web API response boundary", () => {
@@ -62,6 +63,15 @@ describe("Web API response boundary", () => {
       { headers: { "retry-after": "45" } }
     )
     const internal = apiErrorResponse(request, new Error("secret"))
+    const projection = apiErrorResponse(request, new CanonicalProjectionError("missing source"))
+    const database = apiErrorResponse(request, { code: "57P03", message: "database is starting up" })
+    const resourceExhaustion = apiErrorResponse(request, {
+      cause: { cause: { code: "53100", message: "disk full" } },
+      code: "XX000",
+      message: "shared memory allocation failed"
+    })
+    const outOfMemory = apiErrorResponse(request, { code: "53200", message: "out of memory" })
+    const sqlBug = apiErrorResponse(request, { code: "42P01", message: "relation does not exist" })
 
     expect(unavailable.status).toBe(503)
     expect(unavailable.headers.get("retry-after")).toBe("45")
@@ -75,6 +85,27 @@ describe("Web API response boundary", () => {
     })
     expect(internal.status).toBe(500)
     await expect(internal.json()).resolves.toMatchObject({ error: { category: "internal", retryable: false } })
+    expect(projection.status).toBe(422)
+    await expect(projection.json()).resolves.toMatchObject({
+      error: {
+        category: "unprocessable",
+        message: "The record cannot be returned because its canonical provenance is incomplete"
+      }
+    })
+    expect(database.status).toBe(503)
+    await expect(database.json()).resolves.toMatchObject({
+      error: { category: "dependency_unavailable", retryable: true }
+    })
+    expect(resourceExhaustion.status).toBe(503)
+    await expect(resourceExhaustion.json()).resolves.toMatchObject({
+      error: { category: "dependency_unavailable", retryable: true }
+    })
+    expect(outOfMemory.status).toBe(503)
+    await expect(outOfMemory.json()).resolves.toMatchObject({
+      error: { category: "dependency_unavailable", retryable: true }
+    })
+    expect(sqlBug.status).toBe(500)
+    await expect(sqlBug.json()).resolves.toMatchObject({ error: { category: "internal", retryable: false } })
   })
 
   it("reads bounded JSON request bodies and rejects aborted requests", async () => {

@@ -772,11 +772,16 @@ export async function lexicalPassageSearch(
   }
 }
 
-function embeddingLiteral(embedding: number[], dimensions: number): SQL {
+export function embeddingLiteral(embedding: number[], dimensions: number): SQL {
   if (embedding.length !== dimensions || embedding.some((value) => !Number.isFinite(value))) {
     throw new Error(`Embedding must contain ${dimensions} finite numbers`)
   }
   return sql`${JSON.stringify(embedding)}::vector`
+}
+
+/** Parentheses keep PostgreSQL from evaluating integer subtraction against a vector before cosine distance. */
+export function semanticSimilarityScore(distance: SQL<number>): SQL<number> {
+  return sql<number>`1 - (${distance})`
 }
 
 export async function semanticBillSearch(
@@ -848,7 +853,7 @@ export async function semanticPassageSearch(
   const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const snippet = sql<string | null>`left(${documentSections.text}, 1200)`
   const rows = await database
-    .select(passageSelection(sql<number>`1 - ${distance}`, snippet, distance))
+    .select(passageSelection(semanticSimilarityScore(distance), snippet, distance))
     .from(documentSections)
     .innerJoin(documentSectionEmbeddings, eq(documentSectionEmbeddings.sectionId, documentSections.id))
     .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))

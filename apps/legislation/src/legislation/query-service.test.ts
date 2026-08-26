@@ -7,6 +7,7 @@ import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
   amendmentSearchPageState,
+  buildSemanticAmendmentCandidateQueries,
   buildStructuredAmendmentLexicalQuery,
   buildLexicalSupportingMaterialCandidateQuery,
   buildBillBrowseQuery,
@@ -153,12 +154,53 @@ describe("amendment lexical search query", () => {
   })
 })
 
+describe("amendment semantic search query", () => {
+  it("binds each structured and document vector comparison as one typed pgvector parameter", () => {
+    const embedding = Array.from({ length: 1536 }, (_, index) => index / 1536)
+    const { documentQuery, structuredQuery } = buildSemanticAmendmentCandidateQueries(
+      database,
+      { limit: 20, mode: "semantic", query: "housing" },
+      embedding,
+      25
+    )
+    const structured = structuredQuery.toSQL()
+    const document = documentQuery.toSQL()
+
+    expect(structured.sql).toMatch(/1 - \("legislation"\."amendment_embeddings"\."embedding" <=> \$\d+::vector\)/)
+    expect(structured.sql).toMatch(/order by "legislation"\."amendment_embeddings"\."embedding" <=> \$\d+::vector/)
+    expect(document.sql).toMatch(
+      /"legislation"\."document_section_embeddings"\."embedding" <=> \$\d+::vector as "distance"/
+    )
+    expect(document.sql).toMatch(
+      /row_number\(\) over \(partition by .*"document_section_embeddings"\."embedding" <=> \$\d+::vector/
+    )
+    expect(typedVectorBindingCounts(structured, JSON.stringify(embedding))).toEqual({
+      embeddingParameters: 2,
+      typedVectorParameters: 2
+    })
+    expect(typedVectorBindingCounts(document, JSON.stringify(embedding))).toEqual({
+      embeddingParameters: 2,
+      typedVectorParameters: 2
+    })
+  })
+})
+
 describe("amendment capped page state", () => {
   it("drains known candidates in a capped semantic window before retaining the cap signal", () => {
     expect(amendmentSearchPageState(25, 0, 20, true)).toEqual({ nextOffset: 20, truncated: true })
     expect(amendmentSearchPageState(25, 20, 20, true)).toEqual({ truncated: true })
   })
 })
+
+function typedVectorBindingCounts(
+  rendered: Readonly<{ params: readonly unknown[]; sql: string }>,
+  embedding: string
+): Readonly<{ embeddingParameters: number; typedVectorParameters: number }> {
+  return {
+    embeddingParameters: rendered.params.filter((parameter) => parameter === embedding).length,
+    typedVectorParameters: rendered.sql.match(/\$\d+::vector/g)?.length ?? 0
+  }
+}
 
 describe("bill search execution metadata", () => {
   it("does not claim a reranker when semantic search has no candidates", () => {

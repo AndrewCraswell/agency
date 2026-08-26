@@ -1,14 +1,17 @@
+import { sql } from "drizzle-orm"
 import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 import {
   buildLexicalBillSearchQuery,
   decodeSearchCursor,
+  embeddingLiteral,
   encodeSearchCursor,
   paginateCappedSearchRows,
   paginateSearchDatabaseRows,
   paginateSearchRows,
   reciprocalRankFusion,
-  reciprocalRankFusionWithScores
+  reciprocalRankFusionWithScores,
+  semanticSimilarityScore
 } from "./search.js"
 
 const dialect = new PgDialect()
@@ -110,6 +113,32 @@ describe("hybrid search ranking", () => {
       nextCursor: encodeSearchCursor(4),
       truncated: true
     })
+  })
+
+  it("parenthesizes vector distance before subtracting it from the semantic score", () => {
+    const distance = sql<number>`"section_embedding" <=> ${"[0,1]"}::vector`
+    const rendered = dialect.sqlToQuery(semanticSimilarityScore(distance))
+
+    expect(rendered.sql).toBe('1 - ("section_embedding" <=> $1::vector)')
+    expect(rendered.params).toEqual(["[0,1]"])
+  })
+
+  it("binds finite embeddings as pgvector literals instead of PostgreSQL records", () => {
+    const rendered = dialect.sqlToQuery(embeddingLiteral([0, 1], 2))
+
+    expect(rendered.sql).toBe("$1::vector")
+    expect(rendered.params).toEqual(["[0,1]"])
+    expect(() => embeddingLiteral([0], 2)).toThrow("Embedding must contain 2 finite numbers")
+    expect(() => embeddingLiteral([0, Number.NaN], 2)).toThrow("Embedding must contain 2 finite numbers")
+  })
+
+  it("renders a semantic pgvector expression as one typed parameter with a grouped distance", () => {
+    const distance = sql<number>`"section_embedding" <=> ${embeddingLiteral([0.125, -2, 3.5], 3)}`
+    const rendered = dialect.sqlToQuery(semanticSimilarityScore(distance))
+
+    expect(rendered.sql).toBe('1 - ("section_embedding" <=> $1::vector)')
+    expect(rendered.params).toEqual(["[0.125,-2,3.5]"])
+    expect(rendered.params).toHaveLength(1)
   })
 })
 

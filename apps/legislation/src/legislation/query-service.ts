@@ -72,6 +72,7 @@ import {
   lexicalBillSearch,
   lexicalPassageSearch,
   encodePassageSearchCursor,
+  embeddingLiteral,
   paginateCappedSearchRows,
   paginateSearchRows,
   reciprocalRankFusionWithScores,
@@ -204,21 +205,23 @@ export function buildStructuredAmendmentLexicalQuery(
     .limit(limit)
 }
 
-async function semanticAmendmentCandidates(
+export function buildSemanticAmendmentCandidateQueries(
   database: LegislationDatabase,
   input: ApiAmendmentSearchInput,
   embedding: number[],
   limit: number
-): Promise<Array<AmendmentSearchCandidate[]>> {
+) {
   const structuredRoute = embeddingRouteFor("structured-amendment")
   const documentRoute = embeddingRouteFor("document-backed-amendment-section")
+  const structuredEmbedding = embeddingLiteral(embedding, structuredRoute.dimensions)
+  const documentEmbedding = embeddingLiteral(embedding, documentRoute.dimensions)
   const documentCandidates = database.$with("amendment_document_semantic_candidates").as(
     database
       .select({
-        distance: sql<number>`${documentSectionEmbeddings.embedding} <=> ${embedding}`.as("distance"),
+        distance: sql<number>`${documentSectionEmbeddings.embedding} <=> ${documentEmbedding}`.as("distance"),
         documentId: billDocuments.id,
         rowNumber:
-          sql<number>`row_number() over (partition by ${billDocuments.id} order by ${documentSectionEmbeddings.embedding} <=> ${embedding}, ${documentSections.id} asc)`.as(
+          sql<number>`row_number() over (partition by ${billDocuments.id} order by ${documentSectionEmbeddings.embedding} <=> ${documentEmbedding}, ${documentSections.id} asc)`.as(
             "row_number"
           ),
         snippet: sql<string>`left(${documentSections.text}, 500)`.as("snippet")
@@ -235,42 +238,52 @@ async function semanticAmendmentCandidates(
         )
       )
   )
+  const structuredQuery = database
+    .select({
+      amendment: amendments,
+      score: sql<number>`1 - (${amendmentEmbeddings.embedding} <=> ${structuredEmbedding})`
+    })
+    .from(amendmentEmbeddings)
+    .innerJoin(amendments, eq(amendments.id, amendmentEmbeddings.amendmentId))
+    .where(
+      and(
+        isNotNull(amendments.billId),
+        structuredSearchFilters(input),
+        eq(amendmentEmbeddings.model, structuredRoute.model),
+        eq(amendmentEmbeddings.inputContract, structuredRoute.embeddingInputContract)
+      )
+    )
+    .orderBy(sql`${amendmentEmbeddings.embedding} <=> ${structuredEmbedding}`, asc(amendments.id))
+    .limit(limit)
+  const documentQuery = database
+    .with(documentCandidates)
+    .select({
+      bill: bills,
+      distance: documentCandidates.distance,
+      document: billDocuments,
+      snippet: documentCandidates.snippet
+    })
+    .from(documentCandidates)
+    .innerJoin(billDocuments, eq(billDocuments.id, documentCandidates.documentId))
+    .innerJoin(bills, eq(bills.id, billDocuments.billId))
+    .where(eq(documentCandidates.rowNumber, 1))
+    .orderBy(asc(documentCandidates.distance), asc(documentCandidates.documentId))
+    .limit(limit)
+  return { documentQuery, structuredQuery }
+}
+
+async function semanticAmendmentCandidates(
+  database: LegislationDatabase,
+  input: ApiAmendmentSearchInput,
+  embedding: number[],
+  limit: number
+): Promise<Array<AmendmentSearchCandidate[]>> {
+  const { documentQuery, structuredQuery } = buildSemanticAmendmentCandidateQueries(database, input, embedding, limit)
   const [structuredRows, documentRows] = await Promise.all([
-    input.recordTypes?.includes("document")
-      ? Promise.resolve([])
-      : database
-          .select({
-            amendment: amendments,
-            score: sql<number>`1 - (${amendmentEmbeddings.embedding} <=> ${embedding})`
-          })
-          .from(amendmentEmbeddings)
-          .innerJoin(amendments, eq(amendments.id, amendmentEmbeddings.amendmentId))
-          .where(
-            and(
-              isNotNull(amendments.billId),
-              structuredSearchFilters(input),
-              eq(amendmentEmbeddings.model, structuredRoute.model),
-              eq(amendmentEmbeddings.inputContract, structuredRoute.embeddingInputContract)
-            )
-          )
-          .orderBy(sql`${amendmentEmbeddings.embedding} <=> ${embedding}`, asc(amendments.id))
-          .limit(limit),
+    input.recordTypes?.includes("document") ? Promise.resolve([]) : structuredQuery,
     input.recordTypes?.includes("structured") || input.sponsorPersonIds !== undefined || input.statuses !== undefined
       ? Promise.resolve([])
-      : database
-          .with(documentCandidates)
-          .select({
-            bill: bills,
-            distance: documentCandidates.distance,
-            document: billDocuments,
-            snippet: documentCandidates.snippet
-          })
-          .from(documentCandidates)
-          .innerJoin(billDocuments, eq(billDocuments.id, documentCandidates.documentId))
-          .innerJoin(bills, eq(bills.id, billDocuments.billId))
-          .where(eq(documentCandidates.rowNumber, 1))
-          .orderBy(asc(documentCandidates.distance), asc(documentCandidates.documentId))
-          .limit(limit)
+      : documentQuery
   ])
   return [
     structuredRows.map(({ amendment, score }) => ({

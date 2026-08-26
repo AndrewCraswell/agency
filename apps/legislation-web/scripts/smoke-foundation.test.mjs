@@ -19,6 +19,8 @@ const nx03aErrorPaths = new Map()
 const nx03bErrorPaths = new Map()
 const nx03bNotFoundPaths = new Set()
 const nx04ErrorPaths = new Map()
+const nx04TimeoutPaths = new Set()
+const nx04UnexpectedErrorPaths = new Set()
 let malformedNx04Path
 
 function json(response, correlationId, body, status = 200, headers = {}) {
@@ -353,6 +355,27 @@ beforeAll(async () => {
           },
           503,
           { "cache-control": "private, no-store", "retry-after": "30" }
+        )
+        return
+      }
+      if (nx04TimeoutPaths.has(url.pathname)) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000))
+        return
+      }
+      if (nx04UnexpectedErrorPaths.has(url.pathname)) {
+        json(
+          response,
+          correlationId,
+          {
+            error: {
+              category: "internal",
+              correlationId,
+              message: "Private provider response must not appear in smoke diagnostics",
+              retryable: false
+            }
+          },
+          500,
+          { "cache-control": "private, no-store" }
         )
         return
       }
@@ -1411,6 +1434,95 @@ describe("NX-04 deployed smoke profile", () => {
       expect(JSON.stringify(result)).not.toContain(privateDocumentId)
     } finally {
       nx04ErrorPaths.clear()
+      nx03bNotFoundPaths.clear()
+    }
+  })
+
+  it("fails an unexpected 500 from semantic amendment search without exposing its query or provider error", async () => {
+    const query = "private semantic amendment query"
+    addNx03bNotFoundFixtures()
+    nx04UnexpectedErrorPaths.add("/api/search/amendments")
+    try {
+      let error
+      try {
+        await runSmoke(
+          nx04Environment({
+            LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME: "dependency_unavailable",
+            LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_QUERY: query
+          })
+        )
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("POST amendment search returned status 500, expected 503")
+      expect(error.stderr).not.toContain(query)
+      expect(error.stderr).not.toContain("Private provider response")
+    } finally {
+      nx04UnexpectedErrorPaths.clear()
+      nx03bNotFoundPaths.clear()
+    }
+  })
+
+  it("fails an unexpected 500 from hybrid passage search without exposing its query or provider error", async () => {
+    const query = "private hybrid passage query"
+    addNx03bNotFoundFixtures()
+    nx04ErrorPaths.set("/api/search/amendments", (correlationId) => ({
+      error: {
+        category: "dependency_unavailable",
+        correlationId,
+        message: "Private amendment provider error",
+        retryable: true
+      }
+    }))
+    nx04UnexpectedErrorPaths.add("/api/search/passages")
+    try {
+      let error
+      try {
+        await runSmoke(
+          nx04Environment({
+            LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME: "dependency_unavailable",
+            LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_EXPECTED_OUTCOME: "unprocessable",
+            LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_QUERY: query
+          })
+        )
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("POST passage search returned status 500, expected 422")
+      expect(error.stderr).not.toContain(query)
+      expect(error.stderr).not.toContain("Private provider response")
+      expect(error.stderr).not.toContain("Private amendment provider error")
+    } finally {
+      nx04ErrorPaths.clear()
+      nx04UnexpectedErrorPaths.clear()
+      nx03bNotFoundPaths.clear()
+    }
+  })
+
+  it("fails a timed-out semantic amendment search with a redacted route-specific diagnostic", async () => {
+    const query = "private timed semantic query"
+    addNx03bNotFoundFixtures()
+    nx04TimeoutPaths.add("/api/search/amendments")
+    try {
+      let error
+      try {
+        await runSmoke(
+          nx04Environment({
+            LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME: "dependency_unavailable",
+            LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_QUERY: query,
+            LEGISLATION_WEB_SMOKE_TIMEOUT_MS: "1000"
+          })
+        )
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("POST amendment search failed within 1000ms (TimeoutError)")
+      expect(error.stderr).not.toContain(query)
+    } finally {
+      nx04TimeoutPaths.clear()
       nx03bNotFoundPaths.clear()
     }
   })

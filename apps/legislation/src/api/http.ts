@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
 import { createLogger, errorContext } from "../observability/logger.js"
+import { toPublicApiError } from "./error-mapping.js"
 
 const apiLogger = createLogger({ level: "error", service: "legislation-api" })
 
@@ -109,10 +110,11 @@ export function apiSearchPage<T>(
 }
 
 export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
-  const category = error instanceof LegislationError ? error.category : "internal"
+  const publicError = toPublicApiError(error)
+  const category = publicError instanceof LegislationError ? publicError.category : "internal"
   const status = statusForError(category)
-  const message = error instanceof LegislationError ? error.message : "The request could not be completed"
-  const details = error instanceof LegislationError ? error.details : undefined
+  const message = publicError instanceof LegislationError ? publicError.message : "The request could not be completed"
+  const details = publicError instanceof LegislationError ? publicError.details : undefined
   return {
     error: {
       category,
@@ -126,6 +128,7 @@ export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
 }
 
 export function sendApiError(request: IncomingMessage, response: ServerResponse, error: unknown): void {
+  const publicError = toPublicApiError(error)
   if (!(error instanceof LegislationError)) {
     apiLogger.error("API request failed", {
       correlationId: correlationId(request),
@@ -134,15 +137,15 @@ export function sendApiError(request: IncomingMessage, response: ServerResponse,
       ...errorContext(error)
     })
   }
-  const body = apiError(request, error)
+  const body = apiError(request, publicError)
   const status = body.status
   const { status: _status, ...errorBody } = body
   if (
-    error instanceof LegislationError &&
-    (error.category === "dependency_unavailable" || error.category === "rate_limited") &&
+    publicError instanceof LegislationError &&
+    (publicError.category === "dependency_unavailable" || publicError.category === "rate_limited") &&
     !response.hasHeader("retry-after")
   ) {
-    response.setHeader("retry-after", error.category === "dependency_unavailable" ? "30" : "1")
+    response.setHeader("retry-after", publicError.category === "dependency_unavailable" ? "30" : "1")
   }
   sendApiJson(response, typeof status === "number" ? status : 500, errorBody)
 }

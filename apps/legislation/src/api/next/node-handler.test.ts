@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { LegislationError } from "../../legislation/errors.js"
+import { CanonicalProjectionError } from "../canonical-projection.js"
 import { readJsonBody, sendApiError, sendApiJson, type HttpApiHandler } from "../http.js"
 import { executeNextHttpApiHandler } from "./node-handler.js"
 
@@ -120,6 +121,36 @@ describe("Next Node HTTP handler bridge", () => {
         retryable: false
       }
     })
+  })
+
+  it("maps canonical projection and transient database failures without masking SQL bugs", async () => {
+    const projection = await executeNextHttpApiHandler(
+      new Request("https://api.example.test/api/search/amendments", {
+        headers: { "x-correlation-id": "projection-error" }
+      }),
+      async () => {
+        throw new CanonicalProjectionError("missing source")
+      }
+    )
+    const database = await executeNextHttpApiHandler(
+      new Request("https://api.example.test/api/search/bills", { headers: { "x-correlation-id": "database-error" } }),
+      async () => {
+        throw { cause: { code: "53100" }, code: "XX000" }
+      }
+    )
+    const sqlBug = await executeNextHttpApiHandler(
+      new Request("https://api.example.test/api/search/bills", { headers: { "x-correlation-id": "sql-bug" } }),
+      async () => {
+        throw { code: "42P01", message: "relation does not exist" }
+      }
+    )
+
+    expect(projection.status).toBe(422)
+    await expect(projection.json()).resolves.toMatchObject({ error: { category: "unprocessable" } })
+    expect(database.status).toBe(503)
+    await expect(database.json()).resolves.toMatchObject({ error: { category: "dependency_unavailable" } })
+    expect(sqlBug.status).toBe(500)
+    await expect(sqlBug.json()).resolves.toMatchObject({ error: { category: "internal" } })
   })
 
   it("streams a bounded request body into the existing Node handler", async () => {

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { LegislationError } from "../../legislation/errors.js"
+import { toPublicApiError } from "../error-mapping.js"
 import type { ModelUsage } from "../research-answers.js"
 
 export type JsonRecord = Readonly<Record<string, unknown>>
@@ -115,7 +116,8 @@ export function jsonResponse(
 }
 
 export function apiErrorResponse(request: Request, error: unknown, options: JsonResponseOptions = {}): Response {
-  const category = error instanceof LegislationError ? error.category : "internal"
+  const publicError = toPublicApiError(error)
+  const category = publicError instanceof LegislationError ? publicError.category : "internal"
   const headers = copyHeaders(options.headers)
   if ((category === "dependency_unavailable" || category === "rate_limited") && !headers.has("retry-after")) {
     headers.set("retry-after", category === "dependency_unavailable" ? "30" : "1")
@@ -125,8 +127,10 @@ export function apiErrorResponse(request: Request, error: unknown, options: Json
     error: {
       category,
       correlationId: correlation,
-      ...(error instanceof LegislationError && error.details !== undefined ? { details: error.details } : {}),
-      message: error instanceof LegislationError ? error.message : "The request could not be completed",
+      ...(publicError instanceof LegislationError && publicError.details !== undefined
+        ? { details: publicError.details }
+        : {}),
+      message: publicError instanceof LegislationError ? publicError.message : "The request could not be completed",
       retryable: category === "dependency_unavailable" || category === "rate_limited"
     }
   }
