@@ -32,6 +32,24 @@ function ScoringCircuit() {
       <hole name="H3" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={halfHeight - mountingInset} />
       <hole name="H4" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={halfHeight - mountingInset} />
 
+      <copperpour
+        name="APP_GND_PLANE"
+        layer="inner1"
+        connectsTo="net.APP_GND"
+        clearance="0.25mm"
+        padMargin="0.25mm"
+        traceMargin="0.25mm"
+        boardEdgeMargin="1mm"
+      />
+      <autoroutingphase
+        name="APP_GND_FANOUT"
+        phaseIndex={0}
+        autorouter="fanout"
+        connection="net.APP_GND"
+        fanoutRoutingLayers={["inner1"]}
+        fanoutPourNetMap={{ inner1: "net.APP_GND" }}
+      />
+
       <Bp034DirectWireWeaponFootprint {...p0BoardPlacement.islands.weapon} />
       <P0PisteLanding {...p0BoardPlacement.islands.piste} />
       <P0IrReceiver {...p0BoardPlacement.islands.irReceiver} />

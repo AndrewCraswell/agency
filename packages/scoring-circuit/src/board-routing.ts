@@ -38,7 +38,7 @@ function countByType(elements: readonly CircuitElement[]): Readonly<Record<strin
  */
 export const prototypeBoardRouting = {
   allowLegacyAutorouters: true,
-  autorouter: "sequential-trace",
+  autorouter: "sequential_trace",
   routingDrcChecksDisabled: false
 } as const
 

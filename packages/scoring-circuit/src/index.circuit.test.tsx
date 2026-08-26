@@ -1,6 +1,7 @@
+import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import { p0BoardPlacement, validateP0BoardPlacement } from "./board-placement.js"
-import { assertBoardRoutingIsComplete, summarizeBoardRouting } from "./board-routing.js"
+import { assertBoardRoutingIsComplete, prototypeBoardRouting, summarizeBoardRouting } from "./board-routing.js"
 import ScoringCircuit from "./index.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
@@ -110,6 +111,44 @@ describe("prototype board routing gate", () => {
       "PCB routing is incomplete: 1/2 connections routed; 1 unresolved; 2 routing/DRC errors"
     )
   })
+
+  it("declares the four-layer APP_GND plane and its fanout phase", () => {
+    const circuit = new Circuit()
+    circuit.pcbDisabled = true
+    circuit.pcbRoutingDisabled = true
+    circuit.schematicDisabled = true
+    circuit.add(<ScoringCircuit />)
+    circuit.render()
+
+    const board = circuit._getBoard()
+    expect(board?._parsedProps).toMatchObject({
+      autorouter: prototypeBoardRouting.autorouter,
+      layers: 4
+    })
+
+    const pours = circuit.selectAll("copperpour")
+    expect(pours).toHaveLength(1)
+    expect(pours[0]?._parsedProps).toMatchObject({
+      boardEdgeMargin: 1,
+      clearance: 0.25,
+      connectsTo: "net.APP_GND",
+      layer: "inner1",
+      name: "APP_GND_PLANE",
+      padMargin: 0.25,
+      traceMargin: 0.25
+    })
+
+    const phases = circuit.selectAll("autoroutingphase")
+    expect(phases).toHaveLength(1)
+    expect(phases[0]?._parsedProps).toMatchObject({
+      autorouter: "fanout",
+      connection: "net.APP_GND",
+      fanoutPourNetMap: { inner1: "net.APP_GND" },
+      fanoutRoutingLayers: ["inner1"],
+      name: "APP_GND_FANOUT",
+      phaseIndex: 0
+    })
+  }, 20_000)
 })
 
 describe("P0 integrated scoring-machine schematic", () => {
