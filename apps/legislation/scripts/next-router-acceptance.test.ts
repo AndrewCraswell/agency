@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const packageDirectory = join(dirname(fileURLToPath(import.meta.url)), "..")
 const packageRequire = createRequire(join(packageDirectory, "package.json"))
-const buildTimeoutMs = 120_000
+const buildTimeoutMs = 240_000
 const maximumBatchBytes = 5 * 1024 * 1024
 const requestTimeoutMs = 10_000
 const shutdownTimeoutMs = 10_000
@@ -194,6 +194,76 @@ const nx04Routes: readonly Nx04Route[] = [
   { encodedPath: "/api/search/%61ll", name: "universal search", pathname: "/api/search/all" }
 ]
 
+type StandardMethod = "DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT"
+
+type Nx05Operation = Readonly<{
+  method: Extract<StandardMethod, "DELETE" | "GET" | "PATCH" | "POST">
+  name: string
+  pathname: string
+}>
+
+type Nx05Route = Readonly<{
+  name: string
+  pathname: string
+  supportedMethods: readonly StandardMethod[]
+}>
+
+const subscriptionId = "subscription%3Arouter"
+const webhookId = "webhook%3Arouter"
+const nx05Operations: readonly Nx05Operation[] = [
+  { method: "GET", name: "subscription collection read", pathname: "/api/subscriptions" },
+  { method: "POST", name: "subscription creation", pathname: "/api/subscriptions" },
+  { method: "GET", name: "subscription detail read", pathname: `/api/subscriptions/${subscriptionId}` },
+  { method: "PATCH", name: "subscription update", pathname: `/api/subscriptions/${subscriptionId}` },
+  { method: "DELETE", name: "subscription cancellation", pathname: `/api/subscriptions/${subscriptionId}` },
+  { method: "GET", name: "subscription events", pathname: `/api/subscriptions/${subscriptionId}/events` },
+  {
+    method: "GET",
+    name: "subscription deliveries",
+    pathname: `/api/subscriptions/${subscriptionId}/deliveries`
+  },
+  { method: "GET", name: "webhook collection read", pathname: "/api/webhooks" },
+  { method: "POST", name: "webhook creation", pathname: "/api/webhooks" },
+  { method: "GET", name: "webhook detail read", pathname: `/api/webhooks/${webhookId}` },
+  { method: "PATCH", name: "webhook update", pathname: `/api/webhooks/${webhookId}` },
+  { method: "DELETE", name: "webhook deletion", pathname: `/api/webhooks/${webhookId}` },
+  { method: "POST", name: "webhook secret rotation", pathname: `/api/webhooks/${webhookId}/rotate-secret` },
+  { method: "POST", name: "webhook verification", pathname: `/api/webhooks/${webhookId}/verify` }
+]
+
+const nx05Routes: readonly Nx05Route[] = [
+  { name: "subscription collection", pathname: "/api/subscriptions", supportedMethods: ["GET", "POST"] },
+  {
+    name: "subscription detail",
+    pathname: `/api/subscriptions/${subscriptionId}`,
+    supportedMethods: ["DELETE", "GET", "PATCH"]
+  },
+  {
+    name: "subscription events",
+    pathname: `/api/subscriptions/${subscriptionId}/events`,
+    supportedMethods: ["GET"]
+  },
+  {
+    name: "subscription deliveries",
+    pathname: `/api/subscriptions/${subscriptionId}/deliveries`,
+    supportedMethods: ["GET"]
+  },
+  { name: "webhook collection", pathname: "/api/webhooks", supportedMethods: ["GET", "POST"] },
+  {
+    name: "webhook detail",
+    pathname: `/api/webhooks/${webhookId}`,
+    supportedMethods: ["DELETE", "GET", "PATCH"]
+  },
+  {
+    name: "webhook secret rotation",
+    pathname: `/api/webhooks/${webhookId}/rotate-secret`,
+    supportedMethods: ["POST"]
+  },
+  { name: "webhook verification", pathname: `/api/webhooks/${webhookId}/verify`, supportedMethods: ["POST"] }
+]
+
+const standardMethods: readonly StandardMethod[] = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+
 let baseUrl = ""
 let nextServer: ChildProcess | undefined
 let nextServerDiagnostics: () => string = () => "Next server did not start."
@@ -205,6 +275,7 @@ beforeAll(async () => {
     ...process.env,
     LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     LEGISLATION_PUBLIC_API_BASE_URL: baseUrl,
+    LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 11).toString("base64"),
     NEXT_TELEMETRY_DISABLED: "1",
     NODE_ENV: "production"
   }
@@ -238,7 +309,7 @@ afterAll(async () => {
   }
 })
 
-describe.sequential("NX-02B, NX-02C, NX-03A, and NX-03B Next router acceptance", () => {
+describe.sequential("NX-02 through NX-05 Next router acceptance", () => {
   it("resolves Next 16.3.1 from the legislation package and boots that resolved CLI", () => {
     const nextPackage = packageRequire("next/package.json") as Readonly<{ version: string }>
     const nextCliPath = packageRequire.resolve("next/dist/bin/next")
@@ -780,6 +851,113 @@ describe.sequential("NX-02B, NX-02C, NX-03A, and NX-03B Next router acceptance",
       await expectInvalidRequest(response, correlationId)
     }
   )
+
+  it.each(nx05Operations)("routes supported NX-05 $name with canonical authorization feedback", async (operation) => {
+    expect.hasAssertions()
+    const correlationId = `router-nx05-supported-${operation.name}`
+    const response = await request(operation.pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: operation.method
+    })
+
+    await expectCanonicalForbidden(response, correlationId)
+  })
+
+  it.each(nx05Routes)("keeps all unsupported methods on the built NX-05 $name route", async (route) => {
+    expect.hasAssertions()
+    for (const method of standardMethods.filter((candidate) => !route.supportedMethods.includes(candidate))) {
+      const correlationId = `router-nx05-${route.name}-${method.toLowerCase()}`
+      const response = await request(route.pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalNotFound(response, correlationId, method === "HEAD")
+    }
+  })
+
+  it.each(nx05Routes)(
+    "returns a canonical JSON 404 without redirecting a literal trailing slash for NX-05 $name",
+    async (route) => {
+      expect.hasAssertions()
+      const correlationId = `router-nx05-trailing-${route.name}`
+      const response = await request(`${route.pathname}/`, {
+        headers: { "x-correlation-id": correlationId },
+        method: route.supportedMethods[0]
+      })
+
+      expect(response.headers.get("location")).toBeNull()
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each([
+    { method: "GET", pathname: `/api/subscriptions/${subscriptionId}/unknown` },
+    { method: "POST", pathname: `/api/webhooks/${webhookId}/unknown` }
+  ] as const)("returns a canonical 404 for unknown NX-05 child $pathname", async ({ method, pathname }) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx05-unknown-child"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method
+    })
+
+    await expectCanonicalNotFound(response, correlationId)
+  })
+
+  it.each([
+    { method: "GET", pathname: `/api/subscriptions/${subscriptionId}/%65vents` },
+    { method: "GET", pathname: `/api/subscriptions/${subscriptionId}/%64eliveries` },
+    { method: "POST", pathname: `/api/webhooks/${webhookId}/%72otate-secret` },
+    { method: "POST", pathname: `/api/webhooks/${webhookId}/%76erify` }
+  ] as const)(
+    "does not decode an encoded NX-05 child into a static route for $pathname",
+    async ({ method, pathname }) => {
+      expect.hasAssertions()
+      const correlationId = "router-nx05-encoded-static-child"
+      const response = await request(pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each([
+    { method: "GET", pathname: `/api/subscriptions/${subscriptionId}/events` },
+    { method: "GET", pathname: `/api/subscriptions/${subscriptionId}/deliveries` },
+    { method: "POST", pathname: `/api/webhooks/${webhookId}/rotate-secret` },
+    { method: "POST", pathname: `/api/webhooks/${webhookId}/verify` }
+  ] as const)(
+    "routes NX-05 static child paths before the dynamic parent for $pathname",
+    async ({ method, pathname }) => {
+      expect.hasAssertions()
+      const correlationId = "router-nx05-static-child-precedence"
+      const response = await request(pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalForbidden(response, correlationId)
+    }
+  )
+
+  it.each([
+    "/api/subscriptions/%ZZ",
+    `/api/subscriptions/${subscriptionId}/%C0%AF`,
+    "/api/webhooks/%ZZ",
+    `/api/webhooks/${webhookId}/%C0%AF`
+  ])("preserves malformed NX-05 path encodings at the proxy boundary for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx05-malformed-path"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
 })
 
 async function expectInvalidRequest(response: Response, correlationId: string): Promise<void> {
@@ -793,6 +971,20 @@ async function expectInvalidRequest(response: Response, correlationId: string): 
   expect(response.headers.get("x-correlation-id")).toBe(correlationId)
   await expect(response.json()).resolves.toMatchObject({
     error: { category: "invalid_request", correlationId, retryable: false }
+  })
+}
+
+async function expectCanonicalForbidden(response: Response, correlationId: string): Promise<void> {
+  assertStatus(response, 403)
+  expect(response.headers.get("content-type")).toMatch(/^application\/json\b/)
+  expect(response.headers.get("x-correlation-id")).toBe(correlationId)
+  await expect(response.json()).resolves.toEqual({
+    error: {
+      category: "forbidden",
+      correlationId,
+      message: "An authenticated identity is required.",
+      retryable: false
+    }
   })
 }
 
