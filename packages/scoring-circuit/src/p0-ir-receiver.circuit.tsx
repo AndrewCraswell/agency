@@ -1,16 +1,24 @@
 import type { ReactElement } from "react"
 import { p0IrReceiverFootprint } from "./p0-ir-receiver-footprints.js"
 
-export function P0IrReceiver({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
+export type P0IrReceiverProps = {
+  readonly pcbRotation?: number
+  readonly pcbX: number
+  readonly pcbY: number
+}
+
+export function P0IrReceiver({ pcbRotation, pcbX, pcbY }: P0IrReceiverProps): ReactElement {
   return (
-    <group name="IR_RECEIVER">
+    <group name="IR_RECEIVER" pcbX={0} pcbY={0} pcbPositionMode="relative_to_board_anchor">
       <chip
         name="U_IR_RX"
         manufacturerPartNumber="TSOP38438"
         pinLabels={{ pin1: "OUT", pin2: "GND", pin3: "VS" }}
         footprint={p0IrReceiverFootprint}
+        pcbRotation={pcbRotation}
         pcbX={pcbX}
         pcbY={pcbY}
+        pcbPositionMode="relative_to_board_anchor"
       />
       <resistor
         name="R_IR_VS"
@@ -44,8 +52,8 @@ export function P0IrReceiver({ pcbX, pcbY }: { readonly pcbX: number; readonly p
         resistance="10k"
         tolerance="1%"
         footprint="0603"
-        pcbX={pcbX - 5}
-        pcbY={pcbY}
+        pcbX={pcbX - 12}
+        pcbY={pcbY - 2}
       />
       <pinheader name="TP_IR_RX" pinCount={1} pinLabels={["IR_RX_GPIO35"]} pcbX={pcbX - 10} pcbY={pcbY + 4} />
 

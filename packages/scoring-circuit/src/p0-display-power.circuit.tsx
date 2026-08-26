@@ -47,7 +47,7 @@ export function validateP0DisplayPowerCircuitContract(value: unknown = p0Display
  */
 export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
   return (
-    <group name="P0_DISPLAY_POWER" pcbX={pcbX} pcbY={pcbY}>
+    <group name="P0_DISPLAY_POWER" pcbX={pcbX} pcbY={pcbY} pcbPositionMode="relative_to_board_anchor">
       <chip
         name="U_DISPLAY_LIMITER"
         manufacturerPartNumber="TPS259474ARPWR"

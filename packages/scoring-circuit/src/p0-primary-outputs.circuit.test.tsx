@@ -39,6 +39,17 @@ function pcbFootprintElements(name: string) {
   )
 }
 
+function pcbComponent(name: string) {
+  const circuit = renderCircuit()
+  const source = circuit.find((element) => element.type === "source_component" && element.name === name)
+  if (source?.type !== "source_component") throw new RangeError(`missing ${name}`)
+  const component = circuit.find(
+    (element) => element.type === "pcb_component" && element.source_component_id === source.source_component_id
+  )
+  if (component?.type !== "pcb_component") throw new RangeError(`missing ${name} PCB component`)
+  return component
+}
+
 describe("P0 primary lamp and buzzer outputs", () => {
   it("renders the exact source driver, shared PPTC, ESD array, connector, loads, and ballasts on PCB", () => {
     const circuit = renderCircuit()
@@ -108,6 +119,13 @@ describe("P0 primary lamp and buzzer outputs", () => {
       "OUT8_NC"
     ])
     expect(traces().filter((trace) => trace.includes("_NC"))).toEqual([])
+  })
+
+  it("keeps the white-right indicator and buzzer in separate courtyards", () => {
+    const whiteRight = pcbComponent("D_P0_WHITE_RIGHT")
+    const buzzer = pcbComponent("BZ_P0")
+    expect(whiteRight.center.x).toBeCloseTo(buzzer.center.x)
+    expect(Math.abs(whiteRight.center.y - buzzer.center.y)).toBeGreaterThanOrEqual(10)
   })
 
   it("reconciles the placeable review pad counts and exact polarity/orientation inputs", () => {

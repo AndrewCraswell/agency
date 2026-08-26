@@ -348,6 +348,7 @@ export function Bp034DirectWireWeaponFootprint({
       pcbX={pcbX}
       pcbY={pcbY}
       pcbRotation={pcbRotation}
+      pcbPositionMode="relative_to_board_anchor"
     />
   )
 }

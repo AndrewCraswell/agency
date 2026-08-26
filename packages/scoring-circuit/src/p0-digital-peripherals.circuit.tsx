@@ -36,189 +36,228 @@ function hub75Part(reference: string) {
  * common reset: this block consumes their reviewed nets but creates
  * neither a second controller nor another reset authority.
  */
-export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
+export type P0DigitalPeripheralsProps = {
+  readonly ethernet: { readonly pcbX: number; readonly pcbY: number }
+  readonly hub75: { readonly pcbX: number; readonly pcbY: number }
+  readonly pcbX: number
+  readonly pcbY: number
+}
+
+export function P0DigitalPeripherals({ pcbX, pcbY, ethernet, hub75 }: P0DigitalPeripheralsProps): ReactElement {
   return (
-    <group name="P0_DIGITAL_PERIPHERALS">
-      <Bp033W5500ProjectFootprint name="U_W5500" pcbX={pcbX - 35} pcbY={pcbY} />
-      <P0EthernetMagJackFootprint pcbX={pcbX - 5} pcbY={pcbY} />
-      <P0W5500CrystalFootprint />
-      <chip
-        name="FB_W5500_AVDD"
-        manufacturerPartNumber="BLM21PG221SN1D"
-        footprint="0805"
-        pinLabels={{ pin1: "APP_3V3", pin2: "ETH_AVDD" }}
-      />
-      <resistor
-        name="R_W5500_XTAL"
-        manufacturerPartNumber="ERJ3EKF1004V"
-        resistance="1M"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor name="R_W5500_XO" manufacturerPartNumber="ERJ3GEY0R00V" resistance="0" footprint="0603" />
-      <resistor
-        name="R_W5500_EXRES"
-        manufacturerPartNumber="ERJ3EKF1242V"
-        resistance="12.4k"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_W5500_INT_BIAS"
-        manufacturerPartNumber="RC0603FR-07100KL"
-        resistance="100k"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <capacitor name="C_W5500_XI" manufacturerPartNumber="CGA3E2C0G1H180J080AA" capacitance="18pF" footprint="0603" />
-      <capacitor name="C_W5500_XO" manufacturerPartNumber="CGA3E2C0G1H180J080AA" capacitance="18pF" footprint="0603" />
-      <capacitor
-        name="C_W5500_TOCAP"
-        manufacturerPartNumber="GRM21BR71C475KA73L"
-        capacitance="4.7uF"
-        footprint="0805"
-      />
-      <capacitor name="C_W5500_1V2O" manufacturerPartNumber="GRM188R71H103KA01D" capacitance="10nF" footprint="0603" />
-      <capacitor name="C_W5500_VDD" manufacturerPartNumber="GRM188R71C104KA01D" capacitance="100nF" footprint="0603" />
-      <capacitor
-        name="C_ETH_AVDD_FERRITE_INPUT"
-        manufacturerPartNumber="GRM188R71C104KA01D"
-        capacitance="100nF"
-        footprint="0603"
-      />
-      {w5500AvddPins.map((pin) => (
+    <group
+      name="P0_DIGITAL_PERIPHERALS"
+      pcbX={0}
+      pcbY={0}
+      pcbRelative
+      pcbPositionMode="relative_to_board_anchor"
+      pcbPack={false}
+    >
+      <P0EthernetMagJackFootprint {...ethernet} pcbPositionMode="relative_to_board_anchor" />
+      <P0Hub75ConnectorFootprint {...hub75} pcbPositionMode="relative_to_board_anchor" />
+
+      <group name="ETHERNET_SUPPORT" pcbX={pcbX} pcbY={pcbY} pcbGrid pcbGridCols={7} pcbGridGap="1mm">
+        <Bp033W5500ProjectFootprint name="U_W5500" />
+        <P0W5500CrystalFootprint />
+        <chip
+          name="FB_W5500_AVDD"
+          manufacturerPartNumber="BLM21PG221SN1D"
+          footprint="0805"
+          pinLabels={{ pin1: "APP_3V3", pin2: "ETH_AVDD" }}
+        />
+        <resistor
+          name="R_W5500_XTAL"
+          manufacturerPartNumber="ERJ3EKF1004V"
+          resistance="1M"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor name="R_W5500_XO" manufacturerPartNumber="ERJ3GEY0R00V" resistance="0" footprint="0603" />
+        <resistor
+          name="R_W5500_EXRES"
+          manufacturerPartNumber="ERJ3EKF1242V"
+          resistance="12.4k"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_W5500_INT_BIAS"
+          manufacturerPartNumber="RC0603FR-07100KL"
+          resistance="100k"
+          tolerance="1%"
+          footprint="0603"
+        />
         <capacitor
-          key={pin}
-          name={`C_W5500_AVDD_${pin}`}
+          name="C_W5500_XI"
+          manufacturerPartNumber="CGA3E2C0G1H180J080AA"
+          capacitance="18pF"
+          footprint="0603"
+        />
+        <capacitor
+          name="C_W5500_XO"
+          manufacturerPartNumber="CGA3E2C0G1H180J080AA"
+          capacitance="18pF"
+          footprint="0603"
+        />
+        <capacitor
+          name="C_W5500_TOCAP"
+          manufacturerPartNumber="GRM21BR71C475KA73L"
+          capacitance="4.7uF"
+          footprint="0805"
+        />
+        <capacitor
+          name="C_W5500_1V2O"
+          manufacturerPartNumber="GRM188R71H103KA01D"
+          capacitance="10nF"
+          footprint="0603"
+        />
+        <capacitor
+          name="C_W5500_VDD"
           manufacturerPartNumber="GRM188R71C104KA01D"
           capacitance="100nF"
           footprint="0603"
         />
-      ))}
-      <resistor
-        name="R_ETH_TX_P_TERM"
-        manufacturerPartNumber="RC0603FR-0749R9L"
-        resistance="49.9"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_ETH_TX_N_TERM"
-        manufacturerPartNumber="RC0603FR-0749R9L"
-        resistance="49.9"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_ETH_RX_P_BIAS"
-        manufacturerPartNumber="RC0603FR-0749R9L"
-        resistance="49.9"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_ETH_RX_N_BIAS"
-        manufacturerPartNumber="RC0603FR-0749R9L"
-        resistance="49.9"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_ETH_TX_CT"
-        manufacturerPartNumber="RC0603FR-0710RL"
-        resistance="10"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_ETH_YELLOW"
-        manufacturerPartNumber="RC0603FR-07330RL"
-        resistance="330"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_ETH_GREEN"
-        manufacturerPartNumber="RC0603FR-07330RL"
-        resistance="330"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <capacitor name="C_ETH_TX_CT" manufacturerPartNumber="C0603C223K5RACTU" capacitance="22nF" footprint="0603" />
-      <capacitor name="C_ETH_RX_BIAS" manufacturerPartNumber="C0603C103K5RACTU" capacitance="10nF" footprint="0603" />
-      <capacitor name="C_ETH_RX_P" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
-      <capacitor name="C_ETH_RX_N" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
-      <pinheader name="TP_W5500_INT_N" manufacturerPartNumber="5001" pinCount={1} pinLabels={["APP_W5500_INT_N"]} />
-
-      <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_A" pcbX={pcbX + 15} pcbY={pcbY - 12} />
-      <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_B" pcbX={pcbX + 15} pcbY={pcbY + 12} />
-      {hub75Signals.map(([signal]) => {
-        const reference = signal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${signal}_PD`
-        const part = hub75Part(reference)
-        return (
-          <resistor
-            key={signal}
-            name={reference}
-            manufacturerPartNumber={part.mpn}
-            resistance="10k"
-            tolerance="1%"
-            footprint={part.footprint}
-          />
-        )
-      })}
-      {(["A6", "A7", "A8"] as const).map((input) => {
-        const reference = `R_HUB75_UNUSED_B_${input}_PD`
-        const part = hub75Part(reference)
-        return (
-          <resistor
-            key={input}
-            name={reference}
-            manufacturerPartNumber={part.mpn}
-            resistance="10k"
-            tolerance="1%"
-            footprint={part.footprint}
-          />
-        )
-      })}
-      <resistor
-        name="R_HUB75_PANEL_OE_PULLUP"
-        manufacturerPartNumber={hub75Part("R_HUB75_PANEL_OE_PULLUP").mpn}
-        resistance="10k"
-        tolerance="1%"
-        footprint="0603"
-      />
-      {(["A", "B"] as const).map((bank) => (
         <capacitor
-          key={bank}
-          name={`C_HUB75_BUF_${bank}_BYPASS`}
-          manufacturerPartNumber={hub75Part(`C_HUB75_BUF_${bank}_BYPASS`).mpn}
+          name="C_ETH_AVDD_FERRITE_INPUT"
+          manufacturerPartNumber="GRM188R71C104KA01D"
           capacitance="100nF"
           footprint="0603"
         />
-      ))}
-      <P0Hub75EnableFetFootprint />
-      <resistor
-        name="R_DISPLAY_ENABLE_PULLUP"
-        manufacturerPartNumber="RC0603FR-0710KL"
-        resistance="10k"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_DISPLAY_ENABLE_GATE"
-        manufacturerPartNumber="RC0603FR-0710KL"
-        resistance="10k"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <resistor
-        name="R_DISPLAY_ENABLE_GATE_PD"
-        manufacturerPartNumber="RC0603FR-07100KL"
-        resistance="100k"
-        tolerance="1%"
-        footprint="0603"
-      />
-      <P0Hub75ConnectorFootprint pcbX={pcbX + 42} pcbY={pcbY} />
+        {w5500AvddPins.map((pin) => (
+          <capacitor
+            key={pin}
+            name={`C_W5500_AVDD_${pin}`}
+            manufacturerPartNumber="GRM188R71C104KA01D"
+            capacitance="100nF"
+            footprint="0603"
+          />
+        ))}
+        <resistor
+          name="R_ETH_TX_P_TERM"
+          manufacturerPartNumber="RC0603FR-0749R9L"
+          resistance="49.9"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_ETH_TX_N_TERM"
+          manufacturerPartNumber="RC0603FR-0749R9L"
+          resistance="49.9"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_ETH_RX_P_BIAS"
+          manufacturerPartNumber="RC0603FR-0749R9L"
+          resistance="49.9"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_ETH_RX_N_BIAS"
+          manufacturerPartNumber="RC0603FR-0749R9L"
+          resistance="49.9"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_ETH_TX_CT"
+          manufacturerPartNumber="RC0603FR-0710RL"
+          resistance="10"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_ETH_YELLOW"
+          manufacturerPartNumber="RC0603FR-07330RL"
+          resistance="330"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_ETH_GREEN"
+          manufacturerPartNumber="RC0603FR-07330RL"
+          resistance="330"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <capacitor name="C_ETH_TX_CT" manufacturerPartNumber="C0603C223K5RACTU" capacitance="22nF" footprint="0603" />
+        <capacitor name="C_ETH_RX_BIAS" manufacturerPartNumber="C0603C103K5RACTU" capacitance="10nF" footprint="0603" />
+        <capacitor name="C_ETH_RX_P" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
+        <capacitor name="C_ETH_RX_N" manufacturerPartNumber="C0603C682J5RACTU" capacitance="6.8nF" footprint="0603" />
+        <pinheader name="TP_W5500_INT_N" manufacturerPartNumber="5001" pinCount={1} pinLabels={["APP_W5500_INT_N"]} />
+      </group>
+
+      <group name="HUB75_SUPPORT" pcbX={pcbX} pcbY={pcbY + 85} pcbGrid pcbGridCols={6} pcbGridGap="1mm">
+        <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_A" />
+        <P0Hub75Ahct245Footprint reference="U_DISPLAY_BUFFER_B" />
+        {hub75Signals.map(([signal]) => {
+          const reference = signal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${signal}_PD`
+          const part = hub75Part(reference)
+          return (
+            <resistor
+              key={signal}
+              name={reference}
+              manufacturerPartNumber={part.mpn}
+              resistance="10k"
+              tolerance="1%"
+              footprint={part.footprint}
+            />
+          )
+        })}
+        {(["A6", "A7", "A8"] as const).map((input) => {
+          const reference = `R_HUB75_UNUSED_B_${input}_PD`
+          const part = hub75Part(reference)
+          return (
+            <resistor
+              key={input}
+              name={reference}
+              manufacturerPartNumber={part.mpn}
+              resistance="10k"
+              tolerance="1%"
+              footprint={part.footprint}
+            />
+          )
+        })}
+        <resistor
+          name="R_HUB75_PANEL_OE_PULLUP"
+          manufacturerPartNumber={hub75Part("R_HUB75_PANEL_OE_PULLUP").mpn}
+          resistance="10k"
+          tolerance="1%"
+          footprint="0603"
+        />
+        {(["A", "B"] as const).map((bank) => (
+          <capacitor
+            key={bank}
+            name={`C_HUB75_BUF_${bank}_BYPASS`}
+            manufacturerPartNumber={hub75Part(`C_HUB75_BUF_${bank}_BYPASS`).mpn}
+            capacitance="100nF"
+            footprint="0603"
+          />
+        ))}
+        <P0Hub75EnableFetFootprint />
+        <resistor
+          name="R_DISPLAY_ENABLE_PULLUP"
+          manufacturerPartNumber="RC0603FR-0710KL"
+          resistance="10k"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_DISPLAY_ENABLE_GATE"
+          manufacturerPartNumber="RC0603FR-0710KL"
+          resistance="10k"
+          tolerance="1%"
+          footprint="0603"
+        />
+        <resistor
+          name="R_DISPLAY_ENABLE_GATE_PD"
+          manufacturerPartNumber="RC0603FR-07100KL"
+          resistance="100k"
+          tolerance="1%"
+          footprint="0603"
+        />
+      </group>
 
       <trace from="net.APP_SPI_SCK" to="U_W5500.33" />
       <trace from="net.APP_SPI_MOSI" to="U_W5500.35" />

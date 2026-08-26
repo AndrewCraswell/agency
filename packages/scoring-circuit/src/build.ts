@@ -1,39 +1,21 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
-import { jlcPartsEngine } from "@tscircuit/parts-engine"
 import { renderScene } from "@tscircuit/simple-3d-svg"
-import { any_circuit_element } from "circuit-json"
 import { convertCircuitJsonToGltf } from "circuit-json-to-gltf"
 import { convertCircuitJsonToSimple3dScene } from "circuit-json-to-simple-3d"
 import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
-import { benchPrototypeBom } from "./bench-prototype-bom.js"
 import { createReadinessReport, resolveSimulatorPresentationUrl } from "./board-artifact.js"
 import ScoringCircuit from "./index.circuit.js"
-import {
-  criticalPartReadiness,
-  summarizeCriticalPartReadiness,
-  validateCriticalPartReadiness
-} from "./part-readiness.js"
-
-type PlatformPartsEngine = NonNullable<Parameters<InstanceType<typeof Circuit>["setPlatform"]>[0]["partsEngine"]>
 
 const simulatorPresentationUrl = resolveSimulatorPresentationUrl(process.env)
 
-const partsEngine = {
-  fetchPartCircuitJson: async (parameters) => {
-    const circuitJson = await jlcPartsEngine.fetchPartCircuitJson(parameters)
-    return circuitJson === undefined ? undefined : any_circuit_element.array().parse(circuitJson)
-  },
-  findPart: (parameters) => jlcPartsEngine.findPart(parameters)
-} satisfies PlatformPartsEngine
-
 const circuit = new Circuit()
+circuit.pcbRoutingDisabled = true
 circuit.setPlatform({
   enablePartOrientationAnalysis: true,
-  partsEngine,
   printBoardInformationToSilkscreen: true,
   projectName: "Competition scoring apparatus",
   unitPreference: "mm"
@@ -42,9 +24,46 @@ circuit.add(createElement(ScoringCircuit))
 await circuit.renderUntilSettled()
 
 const circuitJson = circuit.getCircuitJson()
+const pcbPadComponentById = new Map<string, string>()
+for (const element of circuitJson) {
+  let padId: string | undefined
+  let componentId: string | undefined
+  if (element.type === "pcb_smtpad") ({ pcb_component_id: componentId, pcb_smtpad_id: padId } = element)
+  else if (element.type === "pcb_plated_hole") ({ pcb_component_id: componentId, pcb_plated_hole_id: padId } = element)
+  else if (element.type === "pcb_port") ({ pcb_component_id: componentId, pcb_port_id: padId } = element)
+  if (padId !== undefined && componentId !== undefined) pcbPadComponentById.set(padId, componentId)
+}
+const placementErrorTypes = new Set([
+  "pcb_courtyard_overlap_error",
+  "pcb_footprint_overlap_error",
+  "pcb_pad_pad_clearance_error",
+  "pcb_placement_error"
+])
+const placementErrors = circuitJson.filter((element) => {
+  if (!placementErrorTypes.has(element.type)) return false
+  if (element.type !== "pcb_pad_pad_clearance_error") return true
+  const componentIds = element.pcb_pad_ids.map((padId) => pcbPadComponentById.get(padId))
+  return componentIds.some((componentId) => componentId === undefined) || new Set(componentIds).size !== 1
+})
+if (placementErrors.length > 0) {
+  const counts = Object.entries(Object.groupBy(placementErrors, (element) => element.type))
+    .map(([type, elements]) => `${type}: ${elements?.length ?? 0}`)
+    .join(", ")
+  const examples = Object.values(Object.groupBy(placementErrors, (element) => element.type))
+    .flatMap((elements) => elements?.slice(0, 8) ?? [])
+    .map((element) => ("message" in element && typeof element.message === "string" ? element.message : element.type))
+    .join("\n")
+  throw new Error(`PCB placement validation failed (${counts})\n${examples}`)
+}
+const sourceComponents = circuitJson
+  .filter((element) => element.type === "source_component")
+  .toSorted((left, right) => (left.name ?? "").localeCompare(right.name ?? ""))
 const routeCount = circuitJson.filter((element) => element.type === "pcb_trace").length
 const connectionCount = circuitJson.filter((element) => element.type === "source_trace").length
-const unresolvedConnectionCount = circuitJson.filter((element) => element.type === "pcb_trace_missing_error").length
+const unresolvedConnectionCount = Math.max(
+  connectionCount - routeCount,
+  circuitJson.filter((element) => element.type === "pcb_trace_missing_error").length
+)
 const resolvedSupplierPartCount = circuitJson.filter(
   (element) =>
     element.type === "source_component" &&
@@ -62,11 +81,6 @@ const externallySourcedCadModelCount = circuitJson.filter(
       element.model_gltf_url !== undefined ||
       element.model_glb_url !== undefined)
 ).length
-const partReadinessErrors = validateCriticalPartReadiness(criticalPartReadiness)
-if (partReadinessErrors.length > 0) {
-  throw new Error(`Critical-part readiness validation failed:\n${partReadinessErrors.join("\n")}`)
-}
-const partReadinessSummary = summarizeCriticalPartReadiness(criticalPartReadiness)
 const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
   backgroundColor: "#101820",
   includeVersion: true,
@@ -101,66 +115,49 @@ const interactiveViewerBuild = await bundle({
 })
 const interactiveViewerModule = interactiveViewerBuild.outputFiles[0]?.text
 if (!interactiveViewerModule) throw new Error("Interactive 3D viewer bundle was not generated")
-const bomHeader = [
-  "reference",
-  "function",
-  "disposition",
-  "quantity",
-  "manufacturer",
-  "mpn",
-  "lifecycle",
-  "package",
-  "notes",
-  "source_url"
-]
+const bomHeader = ["reference", "value", "supplier_part_numbers"]
 const quoteCsv = (value: string) => `"${value.replaceAll('"', '""')}"`
+const bomRows = sourceComponents.map((component) => ({
+  reference: component.name ?? component.source_component_id,
+  supplierPartNumbers: Object.entries(component.supplier_part_numbers ?? {})
+    .flatMap(([supplier, partNumbers]) =>
+      Array.isArray(partNumbers) ? partNumbers.map((partNumber) => `${supplier}:${partNumber}`) : []
+    )
+    .toSorted(),
+  value: typeof component.display_value === "string" ? component.display_value : ""
+}))
 const bomCsv = [
   bomHeader.join(","),
-  ...benchPrototypeBom.rows.map((component) =>
-    [
-      component.reference,
-      component.function,
-      component.disposition,
-      String(component.quantity),
-      component.manufacturer ?? "",
-      component.mpn ?? "",
-      component.lifecycle ?? "",
-      component.package ?? "",
-      component.notes,
-      component.source?.url ?? ""
-    ]
-      .map(quoteCsv)
-      .join(",")
+  ...bomRows.map((component) =>
+    [component.reference, component.value, component.supplierPartNumbers.join(";")].map(quoteCsv).join(",")
   )
 ].join("\n")
 const readiness = createReadinessReport({
   circuitJson,
-  criticalPartReadiness,
+  criticalPartReadiness: [],
   readiness: {
-    canonicalBenchPrototype: true,
+    canonicalCleanSheetPrototype: true,
     fabricationReady: false,
-    modelAuthority: "canonical-clean-sheet-scaffold",
+    modelAuthority: "canonical-clean-sheet-board",
     modelPurpose:
-      "Canonical clean-sheet ESP32-S3 prototype with the P0 direct-wire weapon and piste interfaces placed; remaining electrical integration and fabrication are not complete",
-    retainedArchitectureRouting: {
+      "Canonical clean-sheet ESP32-S3 prototype board with all selected electrical subsystems placed; routing and fabrication review remain open",
+    routing: {
       connectionCount,
       routeCount,
       unresolvedConnectionCount
     },
     partsResolution: {
-      engine: "JLC parts engine with EasyEDA footprint and CAD import",
-      criticalParts: partReadinessSummary,
+      engine: "Reviewed project footprints only; automatic supplier geometry substitution is disabled",
       externallySourcedCadModelCount,
       renderedCadComponentCount,
       resolvedSupplierPartCount,
-      status:
-        "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
+      status: "Manufacturer CAD and supplier selection remain separate reviewed fabrication gates"
     },
     openGates: [
-      "Complete BP-321, BP-323, BP-328, and BP-333 schematic integration and review",
-      "Complete BP-420 through BP-435 stack-up, placement, routing, DRC, and release reviews",
-      "Close every unresolved component selection and footprint gate before fabrication",
-      "Run the physical bring-up and acceptance work tracked by BP-620 through BP-633"
+      "Route every declared electrical connection",
+      "Complete design-rule and manufacturability review",
+      "Generate and review fabrication outputs",
+      "Assemble and electrically validate the prototype"
     ]
   } as const
 })
@@ -224,17 +221,15 @@ const previewHtml = `<!doctype html>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
-  <p class="warning"><strong>Prototype integration in progress.</strong> The canonical board now contains the direct-wire weapon and piste interfaces. Power, processor, peripheral, and acquisition circuits are still being integrated, so it is not ready for fabrication.</p>
+  <p class="warning"><strong>Placement complete; routing in progress.</strong> The canonical board contains the direct-wire weapon and piste interfaces, power, ESP32-S3, Ethernet, display, IR, primary outputs, and seven-line acquisition circuits. It is not ready for fabrication until routing and design-rule review pass.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
     <li><strong>${routeCount}</strong> routed connections</li>
     <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
-    <li><strong>3</strong> electrical sections remaining</li>
+    <li><strong>${sourceComponents.length}</strong> placed source components</li>
     <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
-    <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
-    <li><strong>${partReadinessSummary.productionApproved}</strong> fabrication-approved critical parts</li>
   </ul>
-  <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype backlog</a><a href="../docs/clean-sheet-board-architecture.md">Clean-sheet architecture</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Prototype baseline BOM</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
+  <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype backlog</a><a href="../docs/clean-sheet-board-architecture.md">Clean-sheet architecture</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Current rendered BOM</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
@@ -344,13 +339,12 @@ await mkdir("dist", { recursive: true })
 await Promise.all([
   writeFile("dist/board.glb", new Uint8Array(boardGlb)),
   writeFile("dist/bom.csv", `${bomCsv}\n`),
-  writeFile("dist/bom.json", `${JSON.stringify(benchPrototypeBom, null, 2)}\n`),
+  writeFile("dist/bom.json", `${JSON.stringify(bomRows, null, 2)}\n`),
   writeFile("dist/circuit.json", `${JSON.stringify(circuitJson, null, 2)}\n`),
   writeFile("dist/index.html", previewHtml),
   writeFile("dist/interactive-3d-viewer.js", interactiveViewerModule),
   writeFile("dist/board-3d.svg", threeDimensionalSvg),
   writeFile("dist/pcb.svg", pcbSvg),
   writeFile("dist/readiness-report.json", `${JSON.stringify(readiness, null, 2)}\n`),
-  writeFile("dist/critical-part-readiness.json", `${JSON.stringify(criticalPartReadiness, null, 2)}\n`),
   writeFile("dist/schematic.svg", schematicSvg)
 ])

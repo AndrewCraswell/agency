@@ -476,6 +476,7 @@ export interface Bp033UsbCProjectFootprintProps {
   readonly pcbX?: number
   readonly pcbY?: number
   readonly pcbRotation?: number
+  readonly pcbPositionMode?: "relative_to_board_anchor"
 }
 
 /** Isolated review-only component. It is intentionally not imported by a board model. */
@@ -483,7 +484,8 @@ export function Bp033UsbCProjectFootprint({
   name,
   pcbX,
   pcbY,
-  pcbRotation
+  pcbRotation,
+  pcbPositionMode
 }: Bp033UsbCProjectFootprintProps = {}): ReactElement {
   return (
     <chip
@@ -494,6 +496,7 @@ export function Bp033UsbCProjectFootprint({
       pcbX={pcbX}
       pcbY={pcbY}
       pcbRotation={pcbRotation}
+      pcbPositionMode={pcbPositionMode}
     />
   )
 }

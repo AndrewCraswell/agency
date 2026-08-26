@@ -218,6 +218,7 @@ function P0Esp32Wroom1Footprint({ pcbX, pcbY }: P0Esp32Wroom1FootprintProps): Re
       manufacturerPartNumber={moduleMpn}
       pcbX={pcbX}
       pcbY={pcbY}
+      pcbPositionMode="relative_to_board_anchor"
       pinLabels={{
         pin1: "APP_GND",
         pin2: "APP_3V3",

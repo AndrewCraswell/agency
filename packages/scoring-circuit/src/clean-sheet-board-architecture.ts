@@ -6,8 +6,8 @@ export const cleanSheetBoardArchitecture = {
   board: {
     title: "ESP32 clean-sheet fencing scoring prototype",
     layerCount: 4,
-    provisionalWidthMm: 240,
-    provisionalHeightMm: 140,
+    provisionalWidthMm: 360,
+    provisionalHeightMm: 200,
     dimensionAuthority: "provisional-until-BP-010"
   },
   globalNets: [
@@ -57,7 +57,8 @@ export const cleanSheetBoardArchitecture = {
   authority: {
     canonicalPrototypeSource: true,
     schematicIntegrated: true,
-    pcbPlacedOrRouted: false,
+    pcbPlaced: true,
+    pcbRouted: false,
     fabricationAuthorized: false
   }
 } as const
@@ -73,7 +74,8 @@ export function validateCleanSheetBoardArchitecture(value: unknown): true {
     !cleanSheetBoardArchitecture.authority.canonicalPrototypeSource ||
     !cleanSheetBoardArchitecture.authority.schematicIntegrated ||
     cleanSheetBoardArchitecture.sheets.some(({ state }) => state !== "integrated") ||
-    cleanSheetBoardArchitecture.authority.pcbPlacedOrRouted ||
+    !cleanSheetBoardArchitecture.authority.pcbPlaced ||
+    cleanSheetBoardArchitecture.authority.pcbRouted ||
     cleanSheetBoardArchitecture.authority.fabricationAuthorized
   ) {
     throw new RangeError("BP-320 scaffold must remain canonical, unique, incomplete, and denied")

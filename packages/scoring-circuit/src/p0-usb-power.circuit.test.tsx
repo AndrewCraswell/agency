@@ -3,7 +3,7 @@ import P0UsbPower from "./p0-usb-power.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 function render() {
-  return renderTestCircuit(<P0UsbPower />, { pcbEnabled: false })
+  return renderTestCircuit(<P0UsbPower pcbX={0} pcbY={0} />, { pcbEnabled: false })
 }
 
 function traceNames() {

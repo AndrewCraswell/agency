@@ -1,3 +1,4 @@
+import { p0BoardPlacement } from "./board-placement.js"
 import { Bp034DirectWireWeaponFootprint } from "./bp034-direct-wire-weapon-footprint.js"
 import { cleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
 import { P0DigitalPeripherals } from "./p0-digital-peripherals.circuit.js"
@@ -21,21 +22,22 @@ function ScoringCircuit() {
       width={`${board.provisionalWidthMm}mm`}
       height={`${board.provisionalHeightMm}mm`}
       layers={board.layerCount}
+      pcbPack={false}
     >
       <hole name="H1" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={-halfHeight + mountingInset} />
       <hole name="H2" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={-halfHeight + mountingInset} />
       <hole name="H3" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={halfHeight - mountingInset} />
       <hole name="H4" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={halfHeight - mountingInset} />
 
-      <Bp034DirectWireWeaponFootprint pcbX={-halfWidth + 16} pcbY={0} pcbRotation={90} />
-      <P0PisteLanding pcbX={-halfWidth + 16} pcbY={halfHeight - 20} />
-      <P0IrReceiver pcbX={0} pcbY={halfHeight - 8} />
-      <P0UsbPower />
-      <P0DisplayPower pcbX={48} pcbY={-40} />
-      <P0DigitalPeripherals pcbX={52} pcbY={22} />
-      <P0Esp32SupportCircuit pcbX={22} pcbY={-4} />
-      <P0PrimaryOutputs pcbX={42} pcbY={45} />
-      <P0SevenLineAcquisition pcbX={0} pcbY={0} />
+      <Bp034DirectWireWeaponFootprint {...p0BoardPlacement.islands.weapon} />
+      <P0PisteLanding {...p0BoardPlacement.islands.piste} />
+      <P0IrReceiver {...p0BoardPlacement.islands.irReceiver} />
+      <P0UsbPower {...p0BoardPlacement.islands.usbPower} />
+      <P0DisplayPower {...p0BoardPlacement.islands.displayPower} />
+      <P0DigitalPeripherals {...p0BoardPlacement.islands.digital} />
+      <P0Esp32SupportCircuit {...p0BoardPlacement.islands.esp32} />
+      <P0PrimaryOutputs {...p0BoardPlacement.islands.primaryOutputs} />
+      <P0SevenLineAcquisition {...p0BoardPlacement.islands.analog} />
 
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="J_WEAPON_DIRECT.LEFT_WEAPON_A_TEST" />
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="J_WEAPON_DIRECT.LEFT_WEAPON_B_TEST" />

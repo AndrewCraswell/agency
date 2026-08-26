@@ -74,7 +74,7 @@ export const p0PrimaryOutputsCircuitContract = Object.freeze({
 /** Placeable P0 lamp and buzzer output circuit. */
 export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
   return (
-    <group name="P0_PRIMARY_OUTPUTS" pcbX={pcbX} pcbY={pcbY}>
+    <group name="P0_PRIMARY_OUTPUTS" pcbX={pcbX} pcbY={pcbY} pcbPositionMode="relative_to_board_anchor">
       <chip
         name="U_P0_OUTPUT_DRIVER"
         manufacturerPartNumber="TBD62783AFWG"
@@ -147,7 +147,7 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
           pin5: "CIRCUIT_5_BUZZER",
           pin6: "APP_GND_RETURN"
         }}
-        pcbX={26}
+        pcbX={20}
         pcbY={0}
       />
 
@@ -169,7 +169,7 @@ export function P0PrimaryOutputs({ pcbX, pcbY }: { readonly pcbX: number; readon
               footprint={p0BuzzerFootprint}
               pinLabels={{ pin1: "POSITIVE", pin2: "APP_GND" }}
               pcbX={59}
-              pcbY={12}
+              pcbY={22}
             />
           ) : (
             <Fragment>

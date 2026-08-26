@@ -24,7 +24,7 @@ function PhaseControl({ index }: { readonly index: 1 | 2 }): ReactElement {
       ? ["SOURCE_A0", "SOURCE_A1", "SOURCE_A2", "SOURCE_EN", "SINK_A0", "SINK_A1", "SINK_A2", "SINK_EN"]
       : ["SENSE_A0", "SENSE_A1", "SENSE_A2", "SENSE_EN", "UNUSED_4", "UNUSED_5", "UNUSED_6", "UNUSED_7"]
   return (
-    <group name={`P0_PHASE_CONTROL_${index}`}>
+    <>
       <P0Sn74Hcs595Footprint name={`U_PHASE_CONTROL_${index}`} />
       <capacitor
         name={`C_PHASE_CONTROL_${index}`}
@@ -47,18 +47,26 @@ function PhaseControl({ index }: { readonly index: 1 | 2 }): ReactElement {
           </Fragment>
         )
       )}
-    </group>
+    </>
   )
 }
 
 export function P0SevenLineAcquisition({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
   return (
-    <group name="P0_PHASED_SEVEN_CONDUCTOR_ACQUISITION" pcbX={pcbX} pcbY={pcbY}>
+    <group
+      name="P0_PHASED_SEVEN_CONDUCTOR_ACQUISITION"
+      pcbX={pcbX}
+      pcbY={pcbY}
+      pcbPositionMode="relative_to_board_anchor"
+      pcbGrid
+      pcbGridCols={10}
+      pcbGridGap="1mm"
+    >
       <P0Tmux1208Footprint name="U_SOURCE_MUX" />
       <P0Tmux1208Footprint name="U_SINK_MUX" />
       <P0Tmux1208Footprint name="U_SENSE_MUX" />
       {(["SOURCE", "SINK", "SENSE"] as const).map((role) => (
-        <group key={role} name={`${role}_MUX_SUPPORT`}>
+        <Fragment key={role}>
           <capacitor
             name={`C_${role}_MUX`}
             manufacturerPartNumber="C0603C104K3RACTU"
@@ -82,7 +90,7 @@ export function P0SevenLineAcquisition({ pcbX, pcbY }: { readonly pcbX: number; 
           />
           <trace from={`net.${role}_EN`} to={`R_${role}_EN_PD.pin1`} />
           <trace from={`R_${role}_EN_PD.pin2`} to="net.SCORING_SGND" />
-        </group>
+        </Fragment>
       ))}
 
       <PhaseControl index={1} />
@@ -149,7 +157,7 @@ export function P0SevenLineAcquisition({ pcbX, pcbY }: { readonly pcbX: number; 
         if (esdPort === undefined) throw new RangeError(`No ESD port for ${line}`)
         const protectedNet = `${line}_PROTECTED`
         return (
-          <group key={line} name={`${line}_PHASE_INTERFACE`}>
+          <Fragment key={line}>
             <resistor
               name={`R_LINE_${index + 1}`}
               manufacturerPartNumber="CRCW060322R0FKEAHP"
@@ -204,7 +212,7 @@ export function P0SevenLineAcquisition({ pcbX, pcbY }: { readonly pcbX: number; 
                 <trace from={`C_SENSE_NEG_${index + 1}.pin2`} to="net.SCORING_SGND" />
               </>
             )}
-          </group>
+          </Fragment>
         )
       })}
 

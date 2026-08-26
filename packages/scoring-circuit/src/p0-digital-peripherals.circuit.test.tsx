@@ -36,7 +36,7 @@ function renderCircuit(): CircuitJson {
         }}
       />
       <chip name="U_APP_RESET_FANOUT" doNotPlace footprint={[]} pinLabels={{ pin1: "Y2" }} />
-      <P0DigitalPeripherals pcbX={0} pcbY={0} />
+      <P0DigitalPeripherals pcbX={0} pcbY={0} ethernet={{ pcbX: -5, pcbY: 0 }} hub75={{ pcbX: 42, pcbY: 0 }} />
     </board>,
     { pcbEnabled: false }
   )
@@ -72,7 +72,7 @@ function renderPcbCircuit(): CircuitJson {
         }}
       />
       <chip name="U_APP_RESET_FANOUT" doNotPlace footprint={[]} pinLabels={{ pin1: "Y2" }} />
-      <P0DigitalPeripherals pcbX={0} pcbY={0} />
+      <P0DigitalPeripherals pcbX={0} pcbY={0} ethernet={{ pcbX: -5, pcbY: 0 }} hub75={{ pcbX: 42, pcbY: 0 }} />
     </board>
   )
   return pcbCircuitJson

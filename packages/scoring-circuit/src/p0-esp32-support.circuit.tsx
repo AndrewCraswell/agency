@@ -43,7 +43,7 @@ export type P0Esp32SupportCircuitProps = {
 /** P0 ESP32 support block. It records connectivity and review geometry, not fabrication authority. */
 export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps): ReactElement {
   return (
-    <group name="P0_ESP32_SUPPORT">
+    <group name="P0_ESP32_SUPPORT" pcbX={0} pcbY={0} pcbPositionMode="relative_to_board_anchor">
       <P0Esp32Wroom1Footprint pcbX={pcbX} pcbY={pcbY} />
 
       <capacitor
@@ -107,7 +107,7 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
         tolerance="1%"
         footprint="0603"
         pcbX={pcbX - 31}
-        pcbY={pcbY - 32}
+        pcbY={pcbY - 38}
       />
       <capacitor
         name="C_APP_SUPERVISOR_CT"

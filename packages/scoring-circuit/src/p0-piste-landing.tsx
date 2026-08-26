@@ -39,6 +39,7 @@ export function P0PisteLanding({ pcbX, pcbY }: { readonly pcbX: number; readonly
       footprint={footprint}
       pcbX={pcbX}
       pcbY={pcbY}
+      pcbPositionMode="relative_to_board_anchor"
     />
   )
 }

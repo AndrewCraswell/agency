@@ -152,12 +152,14 @@ export interface P0EthernetMagJackFootprintProps {
   readonly pcbX?: number
   readonly pcbY?: number
   readonly pcbRotation?: number
+  readonly pcbPositionMode?: "relative_to_board_anchor"
 }
 
 export function P0EthernetMagJackFootprint({
   pcbX,
   pcbY,
-  pcbRotation
+  pcbRotation,
+  pcbPositionMode
 }: P0EthernetMagJackFootprintProps = {}): ReactElement {
   return (
     <chip
@@ -168,6 +170,7 @@ export function P0EthernetMagJackFootprint({
       pcbX={pcbX}
       pcbY={pcbY}
       pcbRotation={pcbRotation}
+      pcbPositionMode={pcbPositionMode}
     />
   )
 }
@@ -572,12 +575,14 @@ export interface P0Hub75ConnectorFootprintProps {
   readonly pcbX?: number
   readonly pcbY?: number
   readonly pcbRotation?: number
+  readonly pcbPositionMode?: "relative_to_board_anchor"
 }
 
 export function P0Hub75ConnectorFootprint({
   pcbX,
   pcbY,
-  pcbRotation
+  pcbRotation,
+  pcbPositionMode
 }: P0Hub75ConnectorFootprintProps = {}): ReactElement {
   return (
     <chip
@@ -588,6 +593,7 @@ export function P0Hub75ConnectorFootprint({
       pcbX={pcbX}
       pcbY={pcbY}
       pcbRotation={pcbRotation}
+      pcbPositionMode={pcbPositionMode}
     />
   )
 }

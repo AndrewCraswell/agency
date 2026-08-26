@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { cleanSheetBoardArchitecture, validateCleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
 
-describe("BP-320 clean-sheet board architecture", () => {
+describe("clean-sheet board architecture", () => {
   it("defines one canonical scaffold and the complete schematic hierarchy", () => {
     expect(validateCleanSheetBoardArchitecture(cleanSheetBoardArchitecture)).toBe(true)
     expect(cleanSheetBoardArchitecture.canonicalEntryPoint).toBe("packages/scoring-circuit/src/index.circuit.tsx")
@@ -53,11 +53,12 @@ describe("BP-320 clean-sheet board architecture", () => {
     )
   })
 
-  it("records schematic integration without granting PCB or fabrication authority", () => {
+  it("records completed placement without granting routing or fabrication authority", () => {
     expect(cleanSheetBoardArchitecture.authority).toEqual({
       canonicalPrototypeSource: true,
       schematicIntegrated: true,
-      pcbPlacedOrRouted: false,
+      pcbPlaced: true,
+      pcbRouted: false,
       fabricationAuthorized: false
     })
     expect(() => validateCleanSheetBoardArchitecture(structuredClone(cleanSheetBoardArchitecture))).toThrow(RangeError)
