@@ -11,15 +11,18 @@ Conventions for authoring React components in this monorepo. Hooks have their ow
 - **The React Compiler is on** — do **not** hand-write `useMemo`/`useCallback`/`React.memo` for performance. Follow the
   Rules of React so the compiler can memoize safely.
 - **Name event handlers** with an `on` prefix (`onClick`) or a `handle` prefix (`handleClick`).
-- **The app is wrapped in `<StrictMode>` and an app shell** (`FluentProvider` + a top-level `react-error-boundary`).
-  Wrap stories and tests with the same shell so every surface shares context.
-- **Use Fluent UI v9 throughout the product surface** — app shell, navigation, controls, forms, dialogs,
-  notifications, and command icons. Do not introduce a second component system for these surfaces.
+- **Wrap every app in `<StrictMode>` and a top-level `react-error-boundary`.** Add the provider required by that app's
+  selected UI system, such as `FluentProvider` for Fluent UI. Wrap stories and tests with the same shell so every
+  surface shares context.
+- **Choose the UI system at the app or product-surface boundary.** Fluent UI v9 is established in `apps/web`; shadcn/ui
+  is also allowed for apps and product surfaces designed around it. Keep one coherent component system within a
+  product surface unless an explicit integration requires otherwise.
 
 ## Styling
 
-- **Style with Fluent UI v9 griffel `makeStyles()`** and Fluent design tokens (`tokens.*`) — never hardcode colors or
-  spacing. A global CSS reset + base is applied once at the app root; component styling stays in griffel.
+- **Follow the selected UI system's styling model.** Fluent surfaces use griffel `makeStyles()` and Fluent tokens;
+  shadcn/ui surfaces use Tailwind CSS and their CSS-variable token layer. Define shared visual values as tokens rather
+  than scattering hardcoded colors or spacing. Apply the app's global reset and base styles once at its root.
 - **Put styles in `{ComponentName}.styles.ts`** and export a hook named `use{ComponentName}Styles()`; name the result
   `classes` at the call site.
 
@@ -30,11 +33,11 @@ Conventions for authoring React components in this monorepo. Hooks have their ow
 - **Routing is type-safe via [TanStack Router](https://tanstack.com/router)** — register the router type and prefer the
   router's `<Link>` (it validates `to` and preloads on intent).
 - **Forms use [React Hook Form](https://react-hook-form.com)** with Zod through `@hookform/resolvers/zod`.
-- **Use `@1js/fluentui-rhf-inputs`** for controlled Fluent fields instead of repeating `Controller`, `Field`, and
-  event wiring.
-- **Use Fluent Toasts for transient action feedback** and reserve Message Bars for persistent inline status that
-  belongs to a page or section. Use `@1js/fluentui-modal-manager` for implicit or awaitable modals rather than
-  building ad hoc global state for them.
+- **On Fluent surfaces, use `@1js/fluentui-rhf-inputs`** for controlled fields instead of repeating `Controller`,
+  `Field`, and event wiring.
+- **Use the selected UI system's feedback and dialog primitives.** On Fluent surfaces, use Toasts for transient action
+  feedback, reserve Message Bars for persistent inline status, and use `@1js/fluentui-modal-manager` for implicit or
+  awaitable modals rather than building ad hoc global state for them.
 
 For component file layout (`{ComponentName}.tsx` / `.styles.ts` / `.utils.ts` / `.test.tsx` / `.stories.tsx`), see
 [conventions.md](conventions.md#files--component-layout).

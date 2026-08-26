@@ -1,9 +1,10 @@
 # Agency Monorepo — Project Guidelines
 
 A Turborepo + pnpm monorepo. The `web` app is a React 19 + TypeScript SPA built with Vite, the
-[React Compiler](https://react.dev/learn/react-compiler) (with `<StrictMode>`), and Fluent UI v9. Shared config lives in
-`@repo/*` packages under `packages/`. See [README.md](../README.md) for setup and the [docs index](../docs/README.md)
-for conventions.
+[React Compiler](https://react.dev/learn/react-compiler) (with `<StrictMode>`), and Fluent UI v9. Fluent UI describes
+that app, not a monorepo-wide UI requirement; other apps may use an approved product-level system such as shadcn/ui.
+Shared config lives in `@repo/*` packages under `packages/`. See [README.md](../README.md) for setup and the
+[docs index](../docs/README.md) for conventions.
 
 ## Tooling (differs from common defaults)
 

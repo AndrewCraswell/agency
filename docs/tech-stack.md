@@ -68,13 +68,18 @@ For building command-line tools.
 ## UI & components
 
 - ✅ **the-new-css-reset** — CSS reset.
-- ✅ **@fluentui/react-components** — component library (Fluent UI v9) · ✅ **@fluentui/react-icons** — icons. Use
-  Fluent components for the app shell, navigation, controls, forms, dialogs, notifications, and command icons.
-- ✅ **@1js/fluentui-rhf-inputs** — controlled Fluent UI v9 inputs for React Hook Form.
-- ✅ **@1js/fluentui-modal-manager** — implicit and awaitable Fluent modals.
-- ✅ **@fluentui/react-datepicker-compat** + **@fluentui/react-timepicker-compat** — Fluent date and time inputs.
+- ✅ **@fluentui/react-components** — component library (Fluent UI v9) · ✅ **@fluentui/react-icons** — icons for
+  Fluent-based apps and product surfaces.
+- ✅ **@1js/fluentui-rhf-inputs** — controlled Fluent UI v9 inputs for React Hook Form on Fluent surfaces.
+- ✅ **@1js/fluentui-modal-manager** — implicit and awaitable modals for Fluent surfaces.
+- ✅ **@fluentui/react-datepicker-compat** + **@fluentui/react-timepicker-compat** — date and time inputs for Fluent
+  surfaces.
 - ◻️ **@fluentui/react-charting** or **recharts** — charts / data visualization.
-- ◻️ **shadcn** — component scaffolding for non-Fluent projects (`pnpm dlx shadcn@latest init -t <vite|start>`).
+- ◻️ **shadcn/ui** — component scaffolding for apps and product surfaces that select the shadcn architecture
+  (`pnpm dlx shadcn@latest init -t <vite|start>`). Use its Tailwind CSS and CSS-variable token model consistently.
+
+Select Fluent UI or shadcn/ui at the app or product-surface boundary. Neither is a monorepo-wide requirement, and an
+existing surface should keep its established system unless its architecture is deliberately changed.
 
 ## Markdown & rich text
 

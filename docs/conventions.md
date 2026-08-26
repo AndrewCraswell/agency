@@ -27,7 +27,7 @@ hook.
 ## React
 
 See **[react.md](react.md)** for component conventions (function declarations, no `React.FC`, prop-type naming, the
-React Compiler), styling with Fluent griffel, and the state/error/URL/routing/form libraries.
+React Compiler), product-level UI-system selection and styling, and the state/error/URL/routing/form libraries.
 
 ## Imports & exports
 
@@ -58,7 +58,7 @@ Split a component by concern so the `.tsx` stays focused on rendering:
 | File                          | Holds                                                                    |
 | ----------------------------- | ------------------------------------------------------------------------ |
 | `{ComponentName}.tsx`         | The component **and** its `{ComponentName}Props` type                    |
-| `{ComponentName}.styles.ts`   | griffel `makeStyles()` exported as `use{ComponentName}Styles()`          |
+| `{ComponentName}.styles.ts`   | Griffel styles for Fluent components; omit when utility classes suffice |
 | `{ComponentName}.hooks.ts`    | Component-scoped hooks                                                   |
 | `{ComponentName}.utils.ts`    | Non-render helpers and logic                                             |
 | `{ComponentName}.test.tsx`    | Tests (`.tsx` when they render JSX, otherwise `{ComponentName}.test.ts`) |

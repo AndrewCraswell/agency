@@ -12,9 +12,6 @@
       "entry": ["trigger.config.ts", "src/api/next/http.ts", "src/server/next/runtime.ts", "src/trigger/tasks/**/*.ts"],
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
-    "apps/legislation-web": {
-      "ignoreDependencies": ["@swc/helpers"]
-    },
     "apps/blog-writer": {
       "entry": [
         "app/**/*.stories.tsx",

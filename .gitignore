@@ -24,3 +24,7 @@ apps/legislation/.container/
 .data/
 /tmp/
 /apps/legislation/infra/bicep/main.json
+
+# Next
+.next
+*.tsbuildinfo
