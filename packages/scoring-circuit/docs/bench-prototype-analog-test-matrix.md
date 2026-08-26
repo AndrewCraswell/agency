@@ -2,7 +2,7 @@
 
 **DENY.** BP-106 freezes what the prototype analog characterization must record. It does not authorize an energized test, fabrication, a production fixture, or seven-channel release. A manual laboratory fixture is acceptable; BP-105 automation is post-order work.
 
-The executable contract is `src/bench-prototype-analog-test-matrix.ts`. Before consuming the BP-101 snapshot, it validates the frozen BP-101 reference-drive decision and source provenance, then reuses the BP-101 one-channel archive schema, including its commanded-versus-observed source, sink, force relay, current trip, dwell-timer witness, watchdog, reference, rails, overload, ADC-code, trace, and 10-second guarded-pulse checks. The evaluator validates BP-102 and BP-104 directly, embeds frozen snapshots of the BP-102 guarded envelope, interlock and physically incompatible connectors, and the BP-104 exact connector identity and pin map, then checks their canonical SHA-256 digests. It rejects an altered embedded snapshot even if an attacker recomputes that snapshot's digest.
+The executable contract is `src/bench-prototype-analog-test-matrix.ts`. It reuses the BP-101 one-channel archive schema, including its commanded-versus-observed source, sink, force relay, current trip, dwell-timer witness, watchdog, reference, rails, overload, ADC-code, trace, and 10-second guarded-pulse checks. The evaluator validates BP-102 and BP-104 directly, embeds frozen snapshots of the BP-102 guarded envelope, interlock and physically incompatible connectors, and the BP-104 exact connector identity and pin map, then checks their canonical SHA-256 digests. It rejects an altered embedded snapshot even if an attacker recomputes that snapshot's digest.
 
 ## Frozen matrix
 

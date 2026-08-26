@@ -7,9 +7,7 @@ This document turns the separate scoring I/O board's four external harness place
 record. The executable record is
 [`production-harness-selection.ts`](../src/production-harness-selection.ts), with regression coverage in
 [`production-harness-selection.test.ts`](../src/production-harness-selection.test.ts). It deliberately leaves the
-manufacturer and pin identities in that executable selection as the single source for the physical-board integration.
-The board contract retains only ownership and chassis-socket metadata; readiness records remain evidence views and are
-cross-checked against the selected MPNs. Configured mechanical data must still be reviewed before release.
+current board circuit and readiness records unchanged until the configured mechanical data is reviewed.
 
 ## Selected interfaces
 

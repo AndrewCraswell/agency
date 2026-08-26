@@ -74,25 +74,6 @@ are rejected. Until
 `evaluateBenchPrototypeContinuityEvidence` accepts that record, continuity
 acceptance remains unresolved.
 
-`evaluateBenchPrototypeFixturePhysicalEvidence` is a separate, fail-closed
-evidence intake. It accepts only a complete immutable record containing exact
-drawing and review artifacts for `43045-1200`, `43025-1200`, `43030-0007`, and
-`44242-0005`; exact retained CAD artifacts for `43045-1200`, `43025-1200`, and
-`44242-0005`; and the explicit `not-acquired-pattern-probe-returned-404` CAD
-disposition with null CAD artifact fields for `43030-0007`. No other MPN may
-use that disposition or null CAD fields. It also requires receipt evidence for
-those same parts; a de-energized
-sample-fit/orientation/label result; rejected swap, open, return-bond, and
-reversed-mate results; all seven crimp/retention records; strain-relief
-evidence; and an accepted continuity record. Artifact digests and identifiers
-are mandatory. Drawing, CAD, and review artifacts each require their own ID
-and SHA-256; every conductor likewise requires separate crimp and retention
-IDs and SHA-256 values. Before reading any field, the evaluator rejects
-accessors, symbols, hidden properties, non-plain records, sparse or subclassed
-arrays, aliases, cycles, and unknown or missing keys. The evaluator does not
-create physical evidence, authorize fabrication, or change any canonical
-BP-104 gate. Synthetic records in unit tests verify the schema only.
-
 Separately perform one non-forced `43025-1200` to `43045-1200` sample-fit check:
 align circuit 1, verify latch/lock seating and the independent fixture stop,
 then remove it while de-energized. Do not use this sample-fit mate for the
@@ -103,26 +84,6 @@ crimp process, continuity, miswire rejection, strain relief, manufacturer
 drawing import, and fabrication remain open gates. The executable contract is
 `src/bench-prototype-fixture-harness.ts` and its focused tests.
 
-## Drawing evidence state
-
-The detailed retrieval record is [BP-104 Molex drawing and CAD discovery](evidence/bp-104/molex-drawing-discovery.md).
-
-Molex's official drawing endpoints were checked and the material-number tables
-identify the selected parts within their series scope: `43045-1200` is the
-12-circuit, finish-A row of `SD-43045-001`; `43025-1200` is the 12-position row
-of `430250000-SD`; `43030-0007` is the 20-24 AWG, form-A loose-terminal row of
-`SD-43030-XXXX`; and `44242-0005` is the 12-circuit row of `SD-44242-001`.
-Exact-MPN CAD preview PDFs are retained for `43045-1200`, `43025-1200`, and
-`44242-0005`. For `43030-0007`, the unlisted candidate URL pattern returned
-HTTP 404; that observation does not establish whether Molex publishes CAD at
-another URL. The physical-evidence evaluator therefore accepts its exact
-retained drawing and the explicit `not-acquired-pattern-probe-returned-404`
-disposition, while retaining exact CAD-artifact requirements for the other
-three MPNs. All four series drawings and the three retrieved exact-MPN CAD
-previews are retained under `docs/evidence/bp-104/assets` and SHA-256 bound in
-the executable contract. This closes source-byte acquisition, not footprint
-approval or any physical-evidence gate.
-
 Sources:
 
 - [Molex 43045-1200](https://www.molex.com/en-us/products/part-detail/43045-1200)
@@ -132,10 +93,4 @@ Sources:
 - [Molex 43030-0007](https://www.molex.com/en-us/products/part-detail/430300007)
 - [Molex 44242 series chart, including 12-circuit 44242-0005](https://www.molex.com/en-us/products/series-chart/44242)
 - [Molex SD-44242-001 test-plug drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf)
-- [Molex SD-43045-001 series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450600_sd.pdf)
-- [Molex SD-430250000 series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf)
-- [Molex SD-43030-XXXX terminal series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf)
-- [Molex 430451200 CAD preview](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43045/430451200.pdf)
-- [Molex 430251200 CAD preview](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43025/430251200.pdf?inline=)
-- [Molex 442420005 CAD preview](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf)
 - [Molex Micro-Fit product specification](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/productspecificationpdf/203/203951/2039510000-PS-000.pdf)

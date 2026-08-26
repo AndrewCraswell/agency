@@ -50,20 +50,14 @@ device pins and isolated-domain return, and remain unreleased:
 
 | Reference | Exact candidate | Pin/net connection and required role |
 | --- | --- | --- |
-| `C_REF_IN` | TDK `CGA3E3X7R1H105K080AB`, 1 uF +/-10%, 50 VDC X7R, 0603 / 1608, AEC-Q200 | `U_REF` input pin 2 (`S5V_ISO`) to `SGND` |
+| `C_REF_IN` | Murata `GRM188R71A105KA12D`, 1 uF X7R, 10 V, 0603 | `U_REF` input pin 2 (`S5V_ISO`) to `SGND` |
 | `C_REF_REG_HF` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | `U_REF` output pin 6 (`REF_2V5`) to `SGND`, in parallel with 10-uF `C_REF_REG` |
 | `R_REF_SAR` | Vishay Dale `RCWE0603R220FKEA`, 0.22 ohm, 1%, 0603 | Series feed from the REF5025-local node to the ADS8881-local reference node |
 | `C_BUFFER_POS` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | ADA4177-1 pin 7 (`S5V_ISO`) to `SGND` |
 | `C_BUFFER_NEG` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | ADA4177-1 pin 4 (`S5V_NEG`) to `SGND` |
-| `C_NEG_IN` | TDK `CGA3E3X7R1H105K080AB`, 1 uF +/-10%, 50 VDC X7R, 0603 / 1608, AEC-Q200 | TPS60400 input pin 2 (`S5V_ISO`) to pin 4 (`SGND`) |
+| `C_NEG_IN` | Murata `GRM188R71A105KA12D`, 1 uF X7R, 10 V, 0603 | TPS60400 input pin 2 (`S5V_ISO`) to pin 4 (`SGND`) |
 | `C_ISO_IN` | Murata `GRM188R71A225KE15D`, 2.2 uF X7R, 10 V, 0603 | NXE1 input pin 1 (`SYSTEM_5V`) to pin 2 (`SYSTEM_GND`); it does not cross isolation |
 | `C_ISO_OUT` | Murata `GRM188R71A225KE15D`, 2.2 uF X7R, 10 V, 0603 | NXE1 output pin 6 (`S5V_ISO`) to pin 7 (`SGND`) |
-
-The same selected TDK `CGA3E3X7R1H105K080AB` is used for `C_SAR_AVDD`,
-`C_SAR_DVDD`, `C_NEG_FLY`, `C_NEG_OUT`, `C_3V3_IN`, and `C_3V3_OUT`. The TDK
-product page and retained catalog establish 1 uF +/-10%, 50 VDC, X7R,
-0603/1608, -55 C to 125 C, and AEC-Q200. No numeric effective capacitance at
-5 V is claimed because raw TDK DC-bias CSV/model bytes have not been acquired.
 
 TI requires a 1-uF to 10-uF input bypass for `REF5025A-Q1` and a 1-uF to
 50-uF low-ESR output capacitor with ESR no greater than 1.5 ohm. `C_REF_REG` is

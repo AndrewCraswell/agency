@@ -6,8 +6,8 @@ This document defines the next prototype boundary: protected acquisition of the 
 left and right A/B/C body-cord sockets and the conductive piste. It supplies values for simulation and fixture design,
 but it does not release a schematic or PCB for fabrication.
 
-The FIE source is `apps/scoring/docs/fie-material-rules-2026-08-en.pdf`, August 2026. The local Favero comparison is
-`apps/scoring/docs/favero-fa15-t2016-specifications-en.pdf`. Page numbers below are printed PDF page numbers.
+The FIE source is `apps/scoring/docs/specifications/fie-material-rules-2026-08-en.pdf`, August 2026. The local Favero comparison is
+`apps/scoring/docs/specifications/manuals/favero-fa15-t2016-specifications-en.pdf`. Page numbers below are printed PDF page numbers.
 
 ## Governing limits
 

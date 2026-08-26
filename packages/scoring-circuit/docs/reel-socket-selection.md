@@ -34,20 +34,6 @@ material, not procurement paperwork:
    designed and tested cord retainer or shroud before the sockets can claim to
    meet that requirement as an assembly.
 
-### Superseded discrete-socket study
-
-An earlier central-apparatus study considered three discrete Stäubli
-`SLB4-F/A` sockets per side: red `23.3070-22` and blue `23.3070-23`. It was not
-released because the manufacturer records disagreed on overall length (30.5 mm
-in the 2022 sheet versus 30.7 mm in the 2024 sheet and 2026 catalogue), no
-controlling revision or received-sample measurement resolved the discrepancy,
-and no physical Favero or Allstar plug-fit evidence existed. Favero `900-09`
-and the Allstar/Uhlmann spool socket remain comparison parts, not documented
-central-apparatus selections. OK Fencing `17-2017-03` is a weapon/body-wire
-socket and generic triangular three-pole XLR does not match the FIE straight-line
-contact geometry. This rejected path grants no production, enclosure, footprint,
-or procurement authority.
-
 ### Exact bench-order candidates, not a released BOM
 
 The M4-10 sample order is intentionally simple: red identifies the left
@@ -133,7 +119,7 @@ intermateable or approved.
 
 ## Fencing-interface constraints and evidence limits
 
-The local [FIE Material Rules, August 2026](../../../apps/scoring/docs/fie-material-rules-2026-08-en.pdf)
+The local [FIE Material Rules, August 2026](../../../apps/scoring/docs/specifications/fie-material-rules-2026-08-en.pdf)
 are the normative source. Its foil bodywire rules on printed pages 33-34 and
 epee bodywire rules on printed pages 34-35 specify the spool-end three-pin
 plug's centre, 15 mm, and 20 mm connections, a transparent plug, insulation
@@ -143,7 +129,7 @@ the interface constraints, but do not name XUB-G, the 4 mm spring geometry,
 socket color, a panel layout, socket contact resistance, insertion force, or
 socket cycle life.
 
-The local [Favero FA-15 user manual](../../../apps/scoring/docs/favero-fa15-user-manual-en.pdf)
+The local [Favero FA-15 user manual](../../../apps/scoring/docs/specifications/manuals/favero-fa15-user-manual-en.pdf)
 is prior art only. Its printed page 17 describes a seven rear-socket
 short-circuit test. It is useful as a fixture idea, but provides no XUB-G
 part number, plug drawing, contact-plating evidence, retention target, or
@@ -173,6 +159,78 @@ positive wire identification at both ends. No adapter or reversible
 intermediate harness may make left/right or A/B/C exchange possible. The
 final pinout, bonding/ESD route, conductor gauge, terminal stack-up torque,
 and connector current rating belong to M4-13.
+
+### Prototype PCB-faceplate cassette
+
+For an enclosure-fit and whole-plug prototype, a two-piece PCB cassette is a
+reasonable alternative to machining a complete custom chassis. This is a
+prototype construction method, not a change to the XUB-G production
+candidate or an approved production footprint.
+
+Use a precision 1.6 mm insulating faceplate, orderable as a bare FR4 PCB with
+no copper near the sockets, over a generous non-precision opening in a stock
+enclosure. A separate connector PCB behind the faceplate receives the socket
+tails and connects through a keyed service harness to the scoring electronics.
+Four M3 fasteners and spacers join the faceplate, enclosure, and connector
+PCB so plug insertion, withdrawal, and cable loads are reacted by the
+cassette and enclosure rather than the main scoring PCB.
+
+Electro-PJP `3253/PCB-#` is the exact prototype socket candidate for this
+construction. Manufacturer documentation identifies it as an insulated
+vertical-PCB 4 mm female socket with a 1.9 mm diameter by 20.5 mm tail, PA6
+insulation, and a nickel-coated brass contact. Its drawing calls for an
+11.6 mm `+0.1/-0 mm` insulating-panel bore, a 13.5 mm maximum front-body
+diameter, and an insulating panel no thicker than 3.0 mm. These dimensions
+make the nominal 15 mm nearest-centre spacing possible, but leave only 1.5 mm
+between adjacent 13.5 mm front bodies. The drawing and received samples must
+set the connector-PCB plane and spacer length; this study does not release an
+axial stack-up from catalogue dimensions alone.
+
+- [Electro-PJP 3253/PCB manufacturer product page](https://www.electro-pjp.com/en/Product/o4mm-safety-banana-socket-o1-9mm-x-205-mm-pin-connexion-vertical-pcb-setting-up/)
+- [Electro-PJP 3253/PCB manufacturer drawing](https://cdn-reichelt.de/documents/datenblatt/D100/EPJP_3253-PCB_DB-EN.pdf)
+
+Define the socket pattern once as a single front-view cassette footprint,
+using `P0` as the origin. Do not place three independent socket footprints by
+eye or mirror the asymmetric pattern for the opposite fencer.
+
+| Feature | Front-view X | Front-view Y | Status |
+| --- | ---: | ---: | --- |
+| `P15` socket axis | -15.00 mm | 0.00 mm | FIE nominal geometry |
+| `P0` socket axis | 0.00 mm | 0.00 mm | Footprint origin |
+| `P20` socket axis | +20.00 mm | 0.00 mm | FIE nominal geometry |
+| Outer-axis span | 35.00 mm | 0.00 mm | Derived from the FIE offsets |
+| Left cassette fasteners | -29.00 mm | +/-11.50 mm | Prototype starting location |
+| Right cassette fasteners | +29.00 mm | +/-11.50 mm | Prototype starting location |
+
+A `68 mm x 32 mm` faceplate with four 3.2 mm M3 clearance holes at the
+starting locations above leaves useful edge margin and can cover a rough
+enclosure access window. The outline, access window, fastener locations,
+socket land pattern, spacer length, bezel recession, and plug-retention
+feature remain provisional until the received socket and intended plugs are
+measured. The connector PCB must include local mechanical attachment; the
+three solder tails alone may not locate the PCB or carry service load.
+
+The assembly fixture is the intended three-pin fencing plug, backed by a
+hard gauge or measured master where available:
+
+1. Bolt the faceplate and connector PCB loosely into the cassette fixture.
+2. Insert all three sockets through the faceplate and into the connector PCB.
+3. Fully mate an inspected fencing plug so its three rigid pins establish the
+   working `P15`/`P0`/`P20` relationship; do not use three loose laboratory
+   banana plugs as the alignment master.
+4. Tighten the cassette fasteners and tack, inspect, then solder the socket
+   tails while the plug remains fully seated and unloaded.
+5. Allow the joints to cool before withdrawing the plug, then repeat the
+   whole-plug fit, flex-continuity, and retention checks.
+
+The plug is an assembly aid, not dimensional evidence. Record the plug make,
+model, lot where available, measured pin diameters and offsets, socket sample
+identity, finished centre positions, and whether soldering caused movement.
+Because the 3253/PCB has a safety-socket collar not specified by FIE, the
+whole molded fencing plug must seat without collar, shroud, or bezel
+interference before this prototype can pass the fit gate. Passing this
+prototype does not approve 3253/PCB for production; corrosion, retention,
+endurance, serviceability, and intended-plug-population gates still apply.
 
 The retention feature must attach to the bezel/chassis, never to the PCB or
 the M4 electrical terminal. It must prevent a loaded cord from separating or
@@ -300,7 +358,8 @@ unexplained resistance step is a failure.
 | --- | --- | --- |
 | MPN | `XUB-G 66.9684-*`, candidate | Exact bench candidates are `66.9684-22` left/red and `66.9684-25` right/green; production MPN remains unapproved. |
 | Selection | Candidate; not production-approved | Exact sample order is defined, but all production decisions remain blocked by physical evidence. |
-| Footprint | Not applicable; chassis panel part with M4 harness termination | No change. The enclosure drawing and template still require official CAD/drawing review. |
+| Production footprint | Not applicable; chassis panel part with M4 harness termination | No change. The enclosure drawing and template still require official CAD/drawing review. |
+| Prototype cassette | None | Electro-PJP `3253/PCB-#` and a two-piece PCB faceplate/connector cassette are prototype candidates only. Nominal socket and fastener coordinates are recorded, but no land pattern, axial stack-up, enclosure cutout, or fabrication CAD is released. |
 | CAD | Pending | Official CAD catalogue entry found and recorded in the readiness manifest, but no file has been downloaded, versioned, or independently checked. Keep pending. |
 | Mechanical | Source identified | Catalogue dimensions/mounting are now recorded, but no actual plug or panel fit has been verified. Keep source-identified. |
 | Blockers | Color suffixes/keyed harnesses; body-cord fit; salt/sweat and cycle validation | Side-colour suffixes are now fixed for samples. Harness, plug fit, retention, CAD, supply consistency, corrosion, and cycle validation remain open. |

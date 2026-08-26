@@ -1,113 +1,10 @@
 # BP-031 analog and weapon-fixture footprint closure
 
-## Shared manufacturer-source projection
-
-BP-031 imports the already reviewed M4-04 source identities once, rather than
-copying source hashes into each of the seven repeated cells. Sixteen lane-B
-MPN source IDs are shared: ten are exact-MPN hash-bound drawing records, one
-is an exact-primary-identity hash-bound capture, and five are explicitly
-series-only Vishay resistor records. All 112 matching cell rows reference
-those IDs, including `ERA3AEB2491V` across `R_SOURCE_1` through `R_SOURCE_7`.
-The Panasonic source is exact MPN/package evidence; its manufacturer CAD-status
-page explicitly records that no Panasonic CAD object is published, and the
-recommended land-pattern PDF remains manufacturer guidance rather than project
-geometry.
-
-This is source provenance only. A shared source ID does not change a row's
-`manufacturerDrawing` state, DNP disposition, or release authority. Every
-manufacturer CAD record, generated artwork, orientation review, schematic
-integration, independent review, footprint closure, and fabrication gate
-remains unresolved and denied.
-
 BP-031 is the lane-B footprint evidence ledger for the one-board bench
 prototype. It reconciles BP-103's seven repeated acquisition cells and BP-104's
 12-position weapon-fixture header to the BP-030 evidence method. It freezes
 exact source-backed identities, but it does not generate or release PCB
 geometry.
-
-## TPD4E05U06DQAR review-input mapping
-
-The canonical ledger now maps the seven populated `U_ESD_1` through `U_ESD_7`
-references to the isolated BP-031 review candidate
-[`bp031-tpd4e05u06-dqa-project-footprint.tsx`](../src/bp031-tpd4e05u06-dqa-project-footprint.tsx).
-Root review accepts the mapping's exact identity, retained source, seven-reference
-scope, and deny-state integrity. It remains review input, not accepted footprint evidence:
-each row retains `manufacturerDrawing`, `manufacturerCad`, `artwork`, and
-`orientation` in their existing deny-by-default states, remains
-`DNP-unresolved`, and remains ineligible for PCB use.
-
-The mapping binds the exact TI Rev. O drawing at
-`packages/scoring-circuit/docs/evidence/bp-031/ti-tpd4e05u06-dqar-datasheet.pdf`
-(`C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6`) and
-records the exact CAD-or-absence disposition: no TI-native or partner CAD was
-acquired, so CAD artifact and digest are `null` with `deny` authority. It also
-records the rendered artwork digest
-`15706D98382BA8B1C0BB569AE04A34B2AEEAA665C2EB69CA1063D13ECDA6DCC9` from
-the tscircuit `0.0.2271` review rendering, plus pin one at the TI top-view
-top-left datum, board coordinates `(-0.4175, -1.0)` mm, and board rotation `0`
-degrees. Independent orientation, board-fit, CAD-import, project-geometry,
-schematic, and fabrication acceptance remain false; release remains denied.
-
-The executable evaluator fixes this mapping to exactly these seven affected
-references and prevents it from being mistaken for accepted or
-fabrication-authorized footprint evidence.
-
-## ADS8881IDGS root-reviewed mapping
-
-The canonical ledger also maps `U_SAR_1` through `U_SAR_7` to the isolated
-[`bp031-ads8881idgs-dgs-footprint-candidate.tsx`](../src/bp031-ads8881idgs-dgs-footprint-candidate.tsx)
-candidate. Root review binds the exact `ADS8881IDGS` DGS VSSOP-10 orderable and
-the retained TI SBAS547D Rev. D source at
-`packages/scoring-circuit/docs/evidence/bp-031/texas-instruments-ads8881-dgs-datasheet-rev-d.pdf`
-(`EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8`). Root review
-accepts the orderable, package drawing, pin functions, seven-reference mapping,
-TI DGS0010A land geometry, top-view pin-one orientation, and deny-state
-integrity. All seven rows remain `DNP-unresolved`, have no manufacturer CAD
-artifact, and remain ineligible for PCB use.
-
-The mapping retains the candidate's review-only DGS geometry and rendered
-artwork digest as traceable review input only. Root independently matched pin
-one to the manufacturer top view at `(-2.2, -1.0)` mm with rotation `0` degrees
-and matched the project copper to TI pages 55 through 57. CAD import, board fit,
-footprint closure, release, and fabrication authority remain denied.
-
-The executable evaluator requires exactly four root-reviewed mappings: TPD4,
-TMUX1112, ADS8881, and ADA4177. Each must cover its own seven references, and
-no other BP-031 record may hold a mapping ID.
-
-## ADA4177-1ARZ root-reviewed mapping
-
-The canonical ledger maps `U_OVP_BUFFER_1` through `U_OVP_BUFFER_7` to the
-retained BP-031 R-8 review candidate
-[`bp031-ada4177-r8-footprint-evidence.tsx`](../src/bp031-ada4177-r8-footprint-evidence.tsx).
-The exact selected orderable is `ADA4177-1ARZ`; no `ADA4177-2ARUZ` candidate
-or selected BOM identity is present, so the ledger does not invent a
-substitution.
-
-Root review visually matched the Rev. E ordering guide to the exact R-8
-package, the independent R-8 outline and lower-left pin-one datum, all seven
-canonical references, and the deny-state integrity. ADI document `90-0096`
-remains an S8 family land-pattern review input with
-`exactAda4177Approval: false`; project geometry, CAD, board fit, release, and
-fabrication remain unapproved. The canonical per-reference evidence fields
-remain empty and every mapped row remains `DNP-unresolved` and ineligible for
-PCB use.
-
-The retained Panasonic support set is byte-hash bound in M4-04: the exact
-[ERA3AEB2491V product page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V)
-is `packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-product.html`
-(`BB9C4A4BE74D7F700378C41A63089E158FFE929FA6EA3943427C27AD89BC6048`); the
-[AOA0000C309 ERAA datasheet/package drawing](https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/AOA0000C309.pdf)
-is `panasonic-era3aeb2491v-datasheet.pdf`
-(`FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79`); the
-[DMM0000COL20 recommended-land-pattern PDF](https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/DMM0000COL20.pdf)
-is `panasonic-resistor-land-pattern.pdf`
-(`65A9872D2618A23D77BD1B54B3DFDD6534A3F9E82A6BA6C136266399B9CFFA1D`); and
-the [exact CAD-status page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V/cad)
-is `panasonic-era3aeb2491v-cad.html`
-(`ADA48ECB98E85E4C346D9365C1C6BC7FED81504131E1B761854AD664D960A93D`). The
-last capture records manufacturer CAD as unavailable; none of these artifacts
-grants project artwork, orientation, fabrication, or footprint authority.
 
 ## Ledger scope
 
@@ -132,12 +29,12 @@ channel number, conductor, connector net, and role. The repeated set is:
 | `U_SOURCE_SWITCH_n` | `TMUX1112PWR` | PW TSSOP-16 | BP-102 |
 | `R_SOURCE_n` | `ERA3AEB2491V` | 0603 | BP-102 |
 | `R_SOURCE_PD_n` | `CRCW0603100KFKEAHP` | 0603 | BP-102 |
-| `U_OVP_BUFFER_n` | `ADA4177-1ARZ` | R SOIC-8 | BP-102 |
+| `U_OVP_BUFFER_n` | `ADA4177-1BRZ` | R SOIC-8 | BP-102 |
 | `R_SAR_n` | `CRCW060320R0FKEAHP` | 0603 | BP-102 |
 | `C_SAR_n` | `C0603C102J5GACTU` | 0603 | BP-102 |
 | `U_SAR_n` | `ADS8881IDGS` | DGS VSSOP-10 | BP-101 |
 | `U_REF_n` | `REF5025AQDRQ1` | D SOIC-8 | BP-101 |
-| `C_REF_IN_n` | TDK `CGA3E3X7R1H105K080AB` | 0603 / 1608 | BP-101 |
+| `C_REF_IN_n` | `GRM188R71A105KA12D` | 0603 | BP-101 |
 | `C_REF_REG_n` | `T521B106M025ATE100` | 1411 / 3528 B case | BP-101 |
 | `C_REF_REG_HF_n` | `C0603C104K3RACTU` | 0603 | BP-101 |
 | `R_REF_SAR_n` | `RCWE0603R220FKEA` | 0603 | BP-101 |
@@ -163,12 +60,9 @@ be reviewed as a footprint:
 4. An independent orientation review covering pin 1 or polarity, assembly
    rotation, package top view, edge/courtyard clearance, and assembly rules.
 
-The current ledger carries source identity/drawing evidence centrally for all
-112 replicated cells, including the Panasonic exact-MPN record, but it has no
-project CAD approval, generated artwork, or independent orientation review. It
-therefore records `DNP-unresolved` for all 113 references,
-`eligibleForPcb: false`, and missing copper, courtyard, paste, and solder-mask
-release data. Package prose,
+The current ledger has none of these artifacts. It therefore records
+`DNP-unresolved` for all 113 references, `eligibleForPcb: false`, and missing
+copper, courtyard, paste, and solder-mask release data. Package prose,
 datasheet images, generic library names, transcribed dimensions, and the old
 fabrication ledger cannot substitute for the four evidence classes.
 

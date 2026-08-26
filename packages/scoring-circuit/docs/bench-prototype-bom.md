@@ -22,14 +22,14 @@ validated on the bench:
 | Application and network MCU | `U_APP` | `ESP32-S3-WROOM-1U-N16R2` |
 | Main processor isolation | `U_ISO_MAIN` | `ISO7762FDWR` |
 | Auxiliary processor isolation | `U_ISO_AUX` | `ISO7721FDR` |
-| Isolated scoring power | `U_ISO_POWER` | `NXE1S0505MC`, surface-mount 14-position package with 5 solder lands at positions 1, 3, 7, 8, 14; four functional connections and position 14 NA/no-connect |
+| Isolated scoring power | `U_ISO_POWER` | `NXE1S0505MC` |
 | Scoring reference | `U_REF` | `REF5025AQDRQ1` |
 | Ethernet controller | `U_W5500` | `W5500`, LQFP-48, 7 mm by 7 mm body, 0.5 mm pitch |
 | Integrated-magnetics Ethernet jack | `J_ETH` | `7499011121A` |
 | USB-C power and service receptacle | `J_USB_C` | `10177070-00011LF` |
 | USB-PD sink controller | `U_USB_PD` | `TPS25730ADREFR` |
 | CC1/CC2/SBU1/SBU2 protection | `U_USB_PORT_PROTECT` | `TPD4S201TRGRRQ1` |
-| USB D-/D+ ESD protection | `U_USB_DATA_PROTECT` | `TPD2EUSB30DRTR`, SOT-9X3 (DRT), 3-pin |
+| USB D-/D+ ESD protection | `U_USB2_ESD` | `TPD2EUSB30DRTR` |
 | VBUS transient clamp | `D_USB_PD_VBUS_TVS` | `TVS2200DRVR` |
 | Disconnect-surge Schottky | `D_USB_PD_VBUS_DISCONNECT` | `B340A-13-F` |
 | Reverse-blocking eFuse | `U_EFUSE` | `TPS259474ARPWR` |
@@ -38,7 +38,6 @@ validated on the bench:
 | Test-only injection connector | `J_LAB_INJECTION` | `43045-0400` |
 | Hard source selector | `S_POWER_SOURCE_SELECTOR` | `7101SYZQE` |
 | HUB75 buffer A/B | `U_DISPLAY_BUFFER_A`, `U_DISPLAY_BUFFER_B` | `SN74AHCT245PWR` |
-| Event journal F-RAM | `U_FRAM` | `CY15B104Q-LHXIT`, 8-pin TDFN/DFN, 5 mm by 6 mm by 0.75 mm, drawing 001-85579 |
 
 The W5500 crystal, passives, ferrite, and supply capacitors are also included
 as selected rows. Their source and package data are reused from the committed
@@ -50,15 +49,6 @@ The `U_W5500` package identity is also checked against the existing WIZnet
 manufacturer footprint evidence. It is the 48-pin LQFP package, not a QFN
 package. Its manufacturer CAD still requires independent import, overlay, and
 lot/package-revision review before footprint closure.
-
-The Murata `NXE1S0505MC` package identity is a surface-mount 14-position
-geometry with five solder lands at positions 1, 3, 7, 8, and 14. Four are
-functional connections. The manufacturer pin map is 1 = -Vin, 3 = +Vin, 7 =
--Vout, 8 = +Vout, and 14 = NA (not available for electrical connection).
-Murata's recommended 5-pad
-footprint is source guidance only; it is not project CAD, generated artwork,
-or footprint approval. BP-032 remains DENY until its independent drawing, CAD,
-artwork, and orientation gates close.
 
 Adafruit product `2277`, the 64-by-32 1/16-scan HUB75 panel, is recorded as a
 selected external item. It is not assigned a PCB reference because it remains
@@ -81,9 +71,6 @@ The baseline keeps work visible without pretending it is closed:
 - The primary lamp and buzzer output connector is represented by
   `J_PRIMARY_OUTPUTS` and remains `TBD` until its connector, mate, pinout, load
   ratings, and harness are selected.
-- `U_FRAM` is selected as exact Infineon `CY15B104Q-LHXIT`. Its retained
-  manufacturer package evidence does not grant project geometry, orientation,
-  placement, fabrication, or release authority.
 - USB-C PD is required. The Amphenol receptacle, TPS25730A controller,
   connector protection, VBUS TVS, disconnect Schottky, reverse-blocking eFuse,
   and committed bulk capacitors are selected. Remaining PD strap, timing,

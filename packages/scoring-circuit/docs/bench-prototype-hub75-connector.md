@@ -96,17 +96,6 @@ The executable evidence record deliberately remains open:
 - no current, cable-drop, inrush, or temperature measurement exists;
 - no footprint, layout, schematic, or fabrication approval is granted.
 
-## Received-panel evidence intake
-
-The tested `bp-143-received-panel-evidence` source defines the separate,
-empty-by-default submission schema for the actual
-received panel and cables. It binds the exact sample and prototype identities,
-calibrated instruments, procedure, and artifact hashes before it will accept
-continuity, mating, orientation, current, cable-drop, connector-temperature,
-and fit records. A complete intake still leaves every release authority
-`deny`; it is not a substitute for downstream schematic, footprint, layout,
-or fabrication review.
-
 ## Sources
 
 - [Adafruit 2277 panel](https://www.adafruit.com/product/2277)
@@ -116,30 +105,3 @@ or fabrication review.
 - [Samtec TST-108-04-G-D-RA distributor rating](https://www.digikey.com/en/products/detail/samtec-inc/TST-108-04-G-D-RA/2685833)
 - [JST SM connector](https://www.jst.com/products/wire-to-wire-connectors/sm-connector/)
 - [JST SM connector drawing and rating](https://www.jst.com/wp-content/uploads/2025/06/eSM.pdf)
-
-## Acquired source snapshots
-
-On 2026-08-24, the manufacturer pages and technical documents below were
-downloaded into [`docs/evidence/bp-143`](evidence/bp-143) and SHA-256 hashed.
-The executable source record in
-[`src/display-panel-readiness.ts`](../src/display-panel-readiness.ts) binds
-each acquired byte set to its URL and digest, and the focused readiness test
-rehashes the committed files. These snapshots establish source provenance
-only. They do not establish receipt, continuity, mating fit, measured current,
-temperature, CAD import, fabrication, or physical evidence.
-
-| Exact selection | Manufacturer or vendor source | Retained artifact | SHA-256 |
-| --- | --- | --- | --- |
-| Adafruit product `2277` | [Product page](https://www.adafruit.com/product/2277) | `adafruit-2277.html` | `0C777FFEBB7B17739CCFDF91E3EADAE5AE50769F22C92492D281F4C33AF4EAB7` |
-| Adafruit product `4170` | [Product page](https://www.adafruit.com/product/4170) | `adafruit-4170.html` | `9947C756279B91B4416141B4C2D21B53D3C3DA8276AFFA49A95823E170EA3C0F` |
-| Adafruit product `4767` | [Product page](https://www.adafruit.com/product/4767) | `adafruit-4767.html` | `93BF82D57B0F6A3009C6BB993E60A422A3F5D091060FAE44B86A6436E1A100D6` |
-| Samtec `TST-108-04-G-D-RA` | [Product page](https://www.samtec.com/products/tst-108-04-g-d-ra) | `samtec-tst-108-04-g-d-ra.html` | `6B3FAD6D5B2E2649DEDFD00EE87C68D692C0CFF9ACFBB81A5D584D5F85A85464` |
-| Samtec `TST-108-04-G-D-RA` | [TST Series Print](https://suddendocs.samtec.com/prints/tst-1xx-xx-x-x-xx-xx-mkt.pdf) | `samtec-tst-series-print.pdf` | `56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059` |
-| Samtec `TST-108-04-G-D-RA` | [TST double-row footprint print](https://suddendocs.samtec.com/prints/tss-tstd.pdf) | `samtec-tst-footprint.pdf` | `ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC` |
-| JST `SMR-04V-N`, `SYM-001T-P0.6`, `SMP-04V-NC`, `SHF-001T-0.8BS` | [SM series specification](https://www.jst.com/wp-content/uploads/2025/06/eSM.pdf) | `jst-esm.pdf` | `05BB0EDE946AB6255692E007706C9AC87EECE07E2ADE4F6DD687723B4A7A3301` |
-
-The existing [DigiKey listing for Samtec `TST-108-04-G-D-RA`](https://www.digikey.com/en/products/detail/samtec-inc/TST-108-04-G-D-RA/2685833)
-remains a vendor-listed source for the published per-contact rating in the
-contract. It was not hash-bound because the acquisition request returned an
-access-denied response. No vendor listing is treated as a physical test or as
-panel-power approval.

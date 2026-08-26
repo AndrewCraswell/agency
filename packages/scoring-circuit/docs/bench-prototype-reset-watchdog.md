@@ -107,58 +107,6 @@ Manual ESP32 reset uses the same sink pattern: active-high
 | Application off, scoring on | Unaffected | Cannot release | No app-rail back-power is permitted |
 | Scoring off, application on | Unpowered | Unaffected | False request must remain impossible |
 
-## Schematic integration preflight remains unsubmitted
-
-`schematicIntegrationPreflight` is a typed extraction checklist for the future
-BP-300 schematic. It does not represent a schematic source, rendered PDF,
-ERC result, independent review, or physical evidence. Its state is
-`not-submitted`; its required artifacts are absent; and every authority flag
-remains `DENY`.
-
-Before an independent schematic review can begin, an integrator must submit
-hash-bound source, rendered-PDF, and ERC-report artifacts from one lowercase
-Git commit. The extraction must report zero unexplained ERC errors and
-warnings, and reproduce every frozen critical net and endpoint in order. The
-preflight checks the processor pins `U_STM32.NRST@7`, `U_STM32.PC9@41`,
-`U_STM32.PB5@58`, `U_ESP32.EN@3`, and `U_ESP32.GPIO12@20`; the local reset,
-supervisor, watchdog, pull-up, capacitor, and sink endpoints; the W5500
-supervisor-only reset fanout; and the ISO7762 channel-4 boundary from
-`ESP32_RESET_ASSERT` to `RESET_REQUEST`.
-
-An accepted synthetic or future extraction means only that its static netlist
-matches this frozen BP-123 contract. It never authorizes integration,
-fabrication, a physical test, or scoring operation. The canonical preflight
-cannot hold a submitted record until BP-300 supplies real source artifacts and
-an independent reviewer accepts them.
-
-## Physical-capture intake remains empty
-
-The executable `physicalEvidenceIntake` is an intake schema, not evidence.
-It contains no capture, prototype identity, instrument identity, calibration
-artifact, procedure, input profile, artifact ID, or digest. Its state is
-`absent` and every authority flag remains `DENY` until a real assembled
-prototype is measured.
-
-A submitted record must contain exactly one measured capture in this
-canonical order: `BP123-COLD-START`, `BP123-BROWNOUT`, `BP123-WATCHDOG`,
-`BP123-MANUAL-RESET`, `BP123-CROSS-DOMAIN`, and `BP123-POWER-OFF`. Each record
-must identify the same assembly, board revision, and serial number. It must
-identify its instrument by manufacturer, model, and serial number, bind its
-calibration certificate as an artifact ID and lowercase SHA-256 digest, and
-place the measurement date inside that calibration period. A capture also
-binds distinct trace, setup, exact procedure-revision, and injected-input
-profile artifacts and hashes.
-
-The evaluator computes acceptance from finite, frozen, typed limits instead of
-a submitter-supplied result. It requires reset assertion and release timing at
-cold start and manual reset; falling and rising thresholds plus hysteresis in
-both domains for brownout; both watchdog timeout and reset-pulse durations; cross-domain
-request and reset propagation; and both power-off backfeed currents plus reset
-release voltage. Each capture must provide exactly its required metrics with
-the expected unit and no duplicate or extra measurement. Named signals remain
-mandatory. Repeated trace/setup/input artifact IDs or digests, omitted fields,
-aliases, accessors, malformed timestamps, or out-of-limit values fail closed.
-
 ## Gates still denied
 
 Bench captures must cover cold start, brownout, normal falling-edge watchdog
@@ -171,5 +119,5 @@ reset, watchdog WDI/WDO/ENOUT, heartbeats, `ESP32_RESET_ASSERT`,
 direction/default behavior. `BP-144` depends on `EN_RESET` for reset-safe
 HUB75 blanking and may not add a reset source. Exact scoring-rail
 implementation, footprint evidence, placement/return path review, ERC,
-independent schematic review, schematic integration, and all physical
-measurements remain denied until their own gates close.
+schematic integration, and all physical measurements remain denied until
+their own gates close.

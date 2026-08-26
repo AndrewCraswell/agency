@@ -5,17 +5,17 @@
 BP-102 freezes the one-channel paper design at the connector boundary. It
 selects the existing `TPD4E05U06DQAR` shunt, 22-ohm
 `CRCW060322R0FKEAHP` series resistor, `TMUX1112PWR`, and isolated
-`ADA4177-1ARZ` buffer chain. It also freezes the separate guarded-force lane:
+`ADA4177-1BRZ` buffer chain. It also freezes the separate guarded-force lane:
 a normally-open, externally interlocked fixture relay drives `LINE` only through
 the 56-kohm, 1-percent `CRCW120656K0FKEAHP` resistor.
 
 ```text
 J_FIXTURE pin 1 LINE -> TPD4E05U06DQAR pin 1 LINE_SHUNT
-J_FIXTURE pin 1 LINE -> 22 ohm -> TMUX1112 QUIET -> ADA4177-1ARZ
+J_FIXTURE pin 1 LINE -> 22 ohm -> TMUX1112 QUIET -> ADA4177-1BRZ
 TPD4E05U06DQAR pins 3 and 8 -> SGND (canonical SCORING_SGND)
 external force source -> external normally-open relay -> J_GUARDED_FORCE pin 1 FORCE -> 56 kohm guard -> LINE
 J_FIXTURE pin 2 and J_GUARDED_FORCE pin 2 -> SGND
-ADA4177-1ARZ -> 20 ohm -> ADS8881 AINP
+ADA4177-1BRZ -> 20 ohm -> ADS8881 AINP
 ```
 
 The guarded lane is a source-energy limit, not a fault-survival claim. The
