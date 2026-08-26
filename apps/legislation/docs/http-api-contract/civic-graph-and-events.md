@@ -26,6 +26,12 @@ type LegislativeTerm = CanonicalFields & { type: "legislative-term"; personId: s
 type Membership = CanonicalFields & { type: "membership"; person: PersonSummary; organization: OrganizationSummary; role: string; label: string | null; startDate: string | null; endDate: string | null; isCurrent: boolean }
 ```
 
+Each source-backed appointment or reappointment is a separate `Membership` tenure with its own `id` and
+`canonicalUrl`, including appointments that repeat the same person, organization, and role. Consecutive complete
+snapshots of one uninterrupted appointment retain one tenure. An absence in a complete snapshot followed by a later
+reappearance creates a new tenure. Observation or retrieval times never substitute for an unknown `startDate` or
+`endDate`.
+
 ### Organizations
 
 | Schema | Required fields |

@@ -140,6 +140,12 @@ The paths below use Open States API v3 JSON names. Array children are written wi
 | Committee | `memberships[].person.current_role` | `CurrentRole` | Ingested | Current legislative term as described above. | `openstates-entities-sync`, daily. |
 | Committee | `memberships[].person_name` | string | Partial | Parsed but embedded person name is authoritative when supplied. | `openstates-entities-sync`, daily. |
 | Committee | `memberships[].role` | string | Ingested | Membership `title` and `classification`; participates in source identity. | `openstates-entities-sync`, daily. |
+
+Each source-backed committee appointment or reappointment is normalized as a distinct membership tenure. Consecutive
+complete snapshots of one uninterrupted appointment retain one tenure; an absence in a complete snapshot followed by a
+later reappearance creates a new tenure. Observation and retrieval times never become inferred membership start or end
+dates.
+
 | Committee | `other_names[]` | `AltName[]` | Not ingested | Committee aliases are not modeled. | `openstates-entities-sync`, daily. |
 | Committee | `links[]` | `Link[]` | Not ingested | General links are not normalized. | `openstates-entities-sync`, daily. |
 | Committee | `sources[].url` | string URL | Ingested | First URL becomes `organizations.source_url`. | `openstates-entities-sync`, daily. |

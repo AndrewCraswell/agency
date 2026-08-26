@@ -13,8 +13,67 @@ import {
 } from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
+type OrganizationMembershipInsert = typeof organizationMemberships.$inferInsert
+type OrganizationMembershipRow = typeof organizationMemberships.$inferSelect
+
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()]
+}
+
+function membershipContinuityKey(
+  membership: Pick<OrganizationMembershipInsert, "id" | "organizationId" | "sourceId">
+): string {
+  const sourceIdentity = membership.sourceId?.trim() || membership.id
+  return `${membership.organizationId}\u0000${sourceIdentity}`
+}
+
+function resolveMembershipTenures(
+  incomingMemberships: readonly OrganizationMembershipInsert[],
+  existingMemberships: readonly OrganizationMembershipRow[]
+): OrganizationMembershipInsert[] {
+  const incomingKeys = new Set<string>()
+  const existingByKey = new Map<string, OrganizationMembershipRow[]>()
+  for (const membership of existingMemberships) {
+    const key = membershipContinuityKey(membership)
+    const group = existingByKey.get(key) ?? []
+    group.push(membership)
+    existingByKey.set(key, group)
+  }
+
+  return incomingMemberships.map((membership) => {
+    const key = membershipContinuityKey(membership)
+    if (incomingKeys.has(key)) {
+      throw new Error(
+        `Entity snapshot contains duplicate membership source identity ${membership.sourceId ?? membership.id}`
+      )
+    }
+    incomingKeys.add(key)
+
+    const history = existingByKey.get(key) ?? []
+    const activeTenures = history.filter((existing) => existing.isActive === true)
+    if (activeTenures.length > 1) {
+      throw new Error(
+        `Entity snapshot found multiple active tenures for membership ${membership.sourceId ?? membership.id}`
+      )
+    }
+    const activeTenure = activeTenures[0]
+    if (activeTenure !== undefined) {
+      return {
+        ...membership,
+        endDate: membership.endDate ?? activeTenure.endDate,
+        id: activeTenure.id,
+        startDate: membership.startDate ?? activeTenure.startDate,
+        tenureOrdinal: activeTenure.tenureOrdinal
+      }
+    }
+
+    const tenureOrdinal = history.reduce((maximum, existing) => Math.max(maximum, existing.tenureOrdinal), 0) + 1
+    return {
+      ...membership,
+      id: tenureOrdinal === 1 ? membership.id : `${membership.id}:tenure:${tenureOrdinal}`,
+      tenureOrdinal
+    }
+  })
 }
 
 export async function replaceEntitySnapshot(
@@ -26,8 +85,11 @@ export async function replaceEntitySnapshot(
   const personValues = uniqueById(snapshot.people)
   const organizationValues = uniqueById(snapshot.organizations)
   const termValues = uniqueById(snapshot.terms)
-  const membershipValues = uniqueById(snapshot.memberships)
-  if (options.replaceOrganizations === false && (organizationValues.length > 0 || membershipValues.length > 0)) {
+  const incomingMembershipValues = uniqueById(snapshot.memberships)
+  if (
+    options.replaceOrganizations === false &&
+    (organizationValues.length > 0 || incomingMembershipValues.length > 0)
+  ) {
     throw new Error("A people-only entity snapshot cannot contain organizations or memberships")
   }
   const personAliasPersonIds = [...new Set(snapshot.personAliasPersonIds)]
@@ -265,11 +327,27 @@ export async function replaceEntitySnapshot(
     }
 
     const organizationIds = organizationValues.map((organization) => organization.id)
+    const completeMembershipOrganizationIds = organizationValues
+      .filter((organization) => organization.membershipRelationsComplete === true)
+      .map((organization) => organization.id)
+    let membershipValues = incomingMembershipValues
     if (organizationIds.length > 0) {
+      await transaction
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(inArray(organizations.id, organizationIds))
+        .for("update")
+      const existingMembershipValues = await transaction
+        .select()
+        .from(organizationMemberships)
+        .where(inArray(organizationMemberships.organizationId, organizationIds))
+      membershipValues = resolveMembershipTenures(incomingMembershipValues, existingMembershipValues)
+    }
+    if (completeMembershipOrganizationIds.length > 0) {
       await transaction
         .update(organizationMemberships)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(inArray(organizationMemberships.organizationId, organizationIds))
+        .where(inArray(organizationMemberships.organizationId, completeMembershipOrganizationIds))
     }
     if (membershipValues.length > 0) {
       await transaction
@@ -293,6 +371,7 @@ export async function replaceEntitySnapshot(
             sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
             startDate: sql`excluded.start_date`,
+            tenureOrdinal: sql`excluded.tenure_ordinal`,
             title: sql`excluded.title`,
             updatedAt: new Date()
           },

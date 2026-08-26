@@ -302,6 +302,13 @@
       "when": 1787761765364,
       "tag": "0042_strict-section-page-ranges",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1787772727759,
+      "tag": "0043_membership_tenures",
+      "breakpoints": true
     }
   ]
 }

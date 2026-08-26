@@ -17,6 +17,11 @@
   membership materialization. It may retain bill, event, hearing, and supporting-material relationship metadata, but
   does not materialize or update canonical federal committee organizations.
 
+Every source-backed committee appointment or reappointment is a distinct membership tenure. Consecutive complete
+snapshots of an uninterrupted appointment retain one tenure; an absence in a complete snapshot followed by a later
+reappearance creates a new tenure. Observation and retrieval times never substitute for unknown membership start or end
+dates.
+
 `FEDERAL_START_CONGRESS` defaults to `113` and `FEDERAL_END_CONGRESS` defaults to `119`. Both are explicit runtime
 configuration values so deployments can advance or backfill deliberately.
 

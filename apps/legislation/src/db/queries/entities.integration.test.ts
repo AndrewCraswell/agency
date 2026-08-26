@@ -24,6 +24,11 @@ if (databaseUrl !== undefined && new URL(databaseUrl).pathname !== "/legislation
 describePostgres.sequential("replaceEntitySnapshot", () => {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 2 })
   const database = drizzle(pool, { schema })
+  const membershipsForTenure = async (organizationId: string) =>
+    await database
+      .select()
+      .from(schema.organizationMemberships)
+      .where(eq(schema.organizationMemberships.organizationId, organizationId))
 
   beforeAll(async () => {
     await pool.query("drop schema if exists legislation cascade")
@@ -179,7 +184,189 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       expect.objectContaining({ id: otherCongressTermId, isActive: false, sourceProvider: "congress" })
     ])
   })
+
+  it("keeps an uninterrupted source relationship in its original tenure", async () => {
+    const fixture = tenureFixture("uninterrupted")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    const first = await membershipsForTenure(fixture.organizationId)
+    const original = first[0]
+    if (original === undefined) {
+      throw new Error("Initial tenure membership was not persisted")
+    }
+
+    expect(first).toEqual([
+      expect.objectContaining({
+        isActive: true,
+        organizationId: fixture.organizationId,
+        personId: fixture.personId,
+        role: "member",
+        sourceId: fixture.sourceRelationship,
+        tenureOrdinal: 1
+      })
+    ])
+
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    const repeated = await membershipsForTenure(fixture.organizationId)
+
+    expect(repeated).toEqual([expect.objectContaining({ id: original.id, isActive: true, tenureOrdinal: 1 })])
+  })
+
+  it("keeps a departed source relationship as an inactive original tenure", async () => {
+    const fixture = tenureFixture("departure")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    const original = (await membershipsForTenure(fixture.organizationId))[0]
+    if (original === undefined) {
+      throw new Error("Initial tenure membership was not persisted")
+    }
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, []))
+
+    expect(await membershipsForTenure(fixture.organizationId)).toEqual([
+      expect.objectContaining({
+        endDate: null,
+        id: original.id,
+        isActive: false,
+        tenureOrdinal: 1
+      })
+    ])
+  })
+
+  it("keeps an active tenure when a membership-incomplete snapshot omits memberships", async () => {
+    const fixture = tenureFixture("incomplete")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    const original = (await membershipsForTenure(fixture.organizationId))[0]
+    if (original === undefined) {
+      throw new Error("Initial tenure membership was not persisted")
+    }
+
+    await replaceEntitySnapshot(
+      database,
+      jurisdictionId,
+      tenureSnapshot(fixture, [], { membershipRelationsComplete: false })
+    )
+
+    expect(await membershipsForTenure(fixture.organizationId)).toEqual([
+      expect.objectContaining({ id: original.id, isActive: true, tenureOrdinal: 1 })
+    ])
+  })
+
+  it("creates a second tenure when the same source relationship returns after a departure", async () => {
+    const fixture = tenureFixture("rejoin")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    const original = (await membershipsForTenure(fixture.organizationId))[0]
+    if (original === undefined) {
+      throw new Error("Initial tenure membership was not persisted")
+    }
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, []))
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+
+    const memberships = await membershipsForTenure(fixture.organizationId)
+    const rejoined = memberships.find((membership) => membership.id !== original.id)
+
+    expect(memberships).toHaveLength(2)
+    expect(memberships).toContainEqual(expect.objectContaining({ id: original.id, isActive: false, tenureOrdinal: 1 }))
+    expect(rejoined).toEqual(
+      expect.objectContaining({
+        isActive: true,
+        organizationId: fixture.organizationId,
+        personId: fixture.personId,
+        role: "member",
+        tenureOrdinal: 2
+      })
+    )
+  })
+
+  it("rejects duplicate incoming source relationships without changing the active tenure", async () => {
+    const fixture = tenureFixture("duplicate")
+    await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
+    const original = (await membershipsForTenure(fixture.organizationId))[0]
+    if (original === undefined) {
+      throw new Error("Initial tenure membership was not persisted")
+    }
+
+    await expect(
+      replaceEntitySnapshot(
+        database,
+        jurisdictionId,
+        tenureSnapshot(fixture, [fixture.sourceMembershipId, `${fixture.sourceMembershipId}:duplicate`])
+      )
+    ).rejects.toThrow(/duplicate/i)
+
+    expect(await membershipsForTenure(fixture.organizationId)).toEqual([
+      expect.objectContaining({ id: original.id, isActive: true, tenureOrdinal: 1 })
+    ])
+  })
 })
+
+interface TenureFixture {
+  organizationId: string
+  personId: string
+  sourceMembershipId: string
+  sourceRelationship: string
+}
+
+function tenureFixture(scope: string): TenureFixture {
+  const organizationId = `organization:openstates:tenure-${scope}`
+  const personId = `person:openstates:tenure-${scope}`
+  return {
+    organizationId,
+    personId,
+    sourceMembershipId: `${organizationId}:membership:source-relationship`,
+    sourceRelationship: `ocd-organization/tenure-${scope}:ocd-person/tenure-${scope}:member`
+  }
+}
+
+function tenureSnapshot(
+  fixture: TenureFixture,
+  membershipIds: readonly string[],
+  options: Readonly<{ membershipRelationsComplete?: boolean }> = {}
+) {
+  const provenance = {
+    provenanceComplete: true,
+    sourceIsOfficial: false,
+    sourceProvider: "openstates",
+    sourceRetrievedAt: retrievedAt,
+    sourceUrl: `https://legislature.example.test/${fixture.organizationId}`
+  }
+  return {
+    memberships: membershipIds.map((id) => ({
+      ...provenance,
+      id,
+      isActive: true,
+      organizationId: fixture.organizationId,
+      personId: fixture.personId,
+      role: "member",
+      sourceId: fixture.sourceRelationship
+    })),
+    organizations: [
+      {
+        ...provenance,
+        childRelationsComplete: true,
+        classification: "committee",
+        detailFactsComplete: true,
+        id: fixture.organizationId,
+        isActive: true,
+        jurisdictionId,
+        membershipRelationsComplete: options.membershipRelationsComplete ?? true,
+        name: "Tenure refresh committee",
+        sourceId: fixture.organizationId
+      }
+    ],
+    people: [
+      {
+        ...provenance,
+        id: fixture.personId,
+        isActive: true,
+        jurisdictionId,
+        name: "Tenure Refresh",
+        sourceId: fixture.personId,
+        upstreamIds: { openstates: fixture.personId }
+      }
+    ],
+    personAliasPersonIds: [],
+    personAliases: [],
+    terms: []
+  }
+}
 
 function congressDetailSnapshot(personId: string, imageName: string) {
   const bioguideId = personId.slice("person:congress:".length)

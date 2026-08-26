@@ -536,6 +536,8 @@ export const organizationMemberships = legislationSchema.table(
       .notNull()
       .references(() => people.id, { onDelete: "cascade" }),
     sourceId: text("source_id"),
+    /** Sequential internal identity for distinct tenures with one provider assignment identity. */
+    tenureOrdinal: integer("tenure_ordinal").notNull().default(1),
     /** Canonical membership role. Null is incomplete, not a fallback to legacy fields. */
     role: text("role"),
     /** Source-supplied public label, kept distinct from the canonical role. */
@@ -561,13 +563,17 @@ export const organizationMemberships = legislationSchema.table(
       "organization_memberships_dates_check",
       sql`${table.startDate} is null or ${table.endDate} is null or ${table.startDate} <= ${table.endDate}`
     ),
+    check("organization_memberships_tenure_ordinal_check", sql`${table.tenureOrdinal} > 0`),
     check(
       "organization_memberships_provenance_complete_check",
       sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
-    uniqueIndex("organization_memberships_source_uidx")
-      .on(table.organizationId, table.sourceId)
+    uniqueIndex("organization_memberships_source_tenure_uidx")
+      .on(table.organizationId, table.sourceId, table.tenureOrdinal)
       .where(sql`${table.sourceId} is not null`),
+    uniqueIndex("organization_memberships_active_source_uidx")
+      .on(table.organizationId, table.sourceId)
+      .where(sql`${table.sourceId} is not null and ${table.isActive} is true`),
     index("organization_memberships_person_idx").on(table.personId, table.startDate, table.endDate),
     index("organization_memberships_organization_idx").on(table.organizationId, table.isActive)
   ]
