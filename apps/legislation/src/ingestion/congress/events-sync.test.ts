@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { LegislationDatabase } from "../../db/database.js"
-import type { CongressClient, CongressHearingReference } from "./client.js"
+import type { CongressClient, CongressCommitteeMeetingReference, CongressHearingReference } from "./client.js"
 import type { CongressEventSnapshot } from "./events.js"
 
 const mocks = vi.hoisted(() => ({
@@ -24,7 +24,16 @@ function hearingReference(jacketNumber: number): CongressHearingReference {
   }
 }
 
-function createDatabaseHarness(): {
+function committeeMeetingReference(eventId: string): CongressCommitteeMeetingReference {
+  return {
+    chamber: "House",
+    congress: 119,
+    eventId,
+    url: `https://api.congress.gov/v3/committee-meeting/119/house/${eventId}`
+  }
+}
+
+function createDatabaseHarness(existingSourceUpdatedAt?: Date): {
   checkpointWrites: number[]
   database: LegislationDatabase
   readOffset: () => number | undefined
@@ -46,7 +55,12 @@ function createDatabaseHarness(): {
     }),
     query: { syncCheckpoints: { findFirst: async () => checkpoint } },
     select: () => ({
-      from: () => ({ where: () => ({ limit: async () => [] }) })
+      from: () => ({
+        where: () => ({
+          limit: async () =>
+            existingSourceUpdatedAt === undefined ? [] : [{ sourceUpdatedAt: existingSourceUpdatedAt }]
+        })
+      })
     })
   } as unknown as LegislationDatabase
   return {
@@ -112,5 +126,63 @@ describe("Congress event synchronization", () => {
     expect(harness.checkpointWrites).toEqual([1, 2])
     expect(mocks.upsertCongressEvent).toHaveBeenCalledTimes(1)
     expect(mocks.upsertCongressEvent.mock.calls[0]?.[1].event.name).toBe("Dated hearing")
+  })
+
+  it("rematerializes equal-timestamp events only when explicitly requested", async () => {
+    const updatedAt = new Date("2026-08-26T12:00:00.000Z")
+    const reference = committeeMeetingReference("119189")
+    const client: EventClient = {
+      async *committeeMeetings(_congress, startOffset = 0) {
+        if (startOffset === 0) {
+          yield { offset: 0, reference }
+        }
+      },
+      async getCommitteeMeeting() {
+        return {
+          meeting: {
+            chamber: "House",
+            committees: [],
+            congress: 119,
+            date: "2026-08-26T14:00:00Z",
+            eventId: "119189",
+            location: { room: "2123" },
+            meetingStatus: "Scheduled",
+            title: "Meeting to rematerialize",
+            type: "Meeting",
+            updateDate: updatedAt.toISOString()
+          },
+          sourceUrl: reference.url
+        }
+      },
+      async getHearing() {
+        throw new Error("Hearing details should not be requested for meeting synchronization")
+      },
+      async *hearings() {
+        yield* []
+      }
+    }
+
+    const harness = createDatabaseHarness(updatedAt)
+    const unchanged = await synchronizeCongressEvents(harness.database, client, 119, "meetings")
+
+    expect(unchanged.counts).toMatchObject({ read: 1, unchanged: 1, updated: 0 })
+    expect(harness.readOffset()).toBe(1)
+    expect(mocks.upsertCongressEvent).not.toHaveBeenCalled()
+
+    const terminalCheckpoint = await synchronizeCongressEvents(harness.database, client, 119, "meetings", {
+      forceRematerialize: true
+    })
+
+    expect(terminalCheckpoint.counts).toMatchObject({ discovered: 0, read: 0, updated: 0 })
+    expect(mocks.upsertCongressEvent).not.toHaveBeenCalled()
+
+    const rematerialized = await synchronizeCongressEvents(harness.database, client, 119, "meetings", {
+      forceRematerialize: true,
+      restart: true
+    })
+
+    expect(rematerialized.counts).toMatchObject({ read: 1, unchanged: 0, updated: 1 })
+    expect(mocks.upsertCongressEvent).toHaveBeenCalledTimes(1)
+    expect(mocks.upsertCongressEvent.mock.calls[0]?.[1].event.id).toBe("event:congress:committee-meeting-119189")
   })
 })

@@ -22,7 +22,7 @@ export async function synchronizeCongressEvents(
   client: Pick<CongressClient, "committeeMeetings" | "getCommitteeMeeting" | "getHearing" | "hearings">,
   congress: number,
   domain: CongressEventDomain,
-  options: Readonly<{ limit?: number; restart?: boolean; sourceStore?: SourceStore }> = {}
+  options: Readonly<{ forceRematerialize?: boolean; limit?: number; restart?: boolean; sourceStore?: SourceStore }> = {}
 ): Promise<CongressEventSyncResult> {
   const stream = `${domain}-${congress}`
   const checkpoint = await database.query.syncCheckpoints.findFirst({
@@ -44,8 +44,11 @@ export async function synchronizeCongressEvents(
       await options.sourceStore?.put("congress", stream, new TextEncoder().encode(JSON.stringify(source)), {
         sourceUrl: item.reference.url
       })
+      const normalizationContext = { retrievedAt: new Date() }
       const snapshot =
-        domain === "meetings" ? normalizeCongressCommitteeMeeting(source) : normalizeCongressHearing(source)
+        domain === "meetings"
+          ? normalizeCongressCommitteeMeeting(source, normalizationContext)
+          : normalizeCongressHearing(source)
       if (snapshot === undefined) {
         counts.skipped += 1
         nextOffset = item.offset + 1
@@ -59,6 +62,7 @@ export async function synchronizeCongressEvents(
         .limit(1)
       counts.read += 1
       if (
+        options.forceRematerialize !== true &&
         existing[0]?.sourceUpdatedAt !== undefined &&
         existing[0].sourceUpdatedAt !== null &&
         snapshot.event.sourceUpdatedAt !== undefined &&

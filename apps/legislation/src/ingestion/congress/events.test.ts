@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { normalizeCongressCommitteeMeeting, normalizeCongressHearing } from "./events.js"
 
+const context = { retrievedAt: new Date("2026-08-26T12:00:00.000Z") }
+const normalizeMeeting = (input: unknown) => normalizeCongressCommitteeMeeting(input, context)
+
 describe("Congress event normalization", () => {
   it("normalizes a committee meeting with committees, witnesses, bills, and materials", () => {
-    const snapshot = normalizeCongressCommitteeMeeting({
+    const snapshot = normalizeMeeting({
       meeting: {
         chamber: "House",
         committees: [{ name: "Energy Subcommittee", systemCode: "hsif03" }],
@@ -38,11 +41,23 @@ describe("Congress event normalization", () => {
     })
 
     expect(snapshot.event).toMatchObject({
+      canonicalFactsComplete: true,
+      classification: "hearing",
       id: "event:congress:committee-meeting-119189",
-      status: "other"
+      isRemote: false,
+      organizationRelationsComplete: true,
+      provenanceComplete: true,
+      publisherLocalDate: "2026-04-29",
+      sessionRelationsComplete: true,
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: context.retrievedAt,
+      status: "scheduled"
     })
     expect(snapshot.billIds).toEqual(["bill:us:119:hr:6336"])
+    expect(snapshot.organizationIds).toEqual(["organization:congress:hsif03"])
     expect(snapshot.participants).toHaveLength(2)
+    expect(snapshot.sessionIds).toEqual(["session:us:119"])
     expect(snapshot.documents).toHaveLength(1)
     expect(snapshot.materials).toHaveLength(1)
     expect(snapshot.materials[0]?.material).toMatchObject({
@@ -78,8 +93,111 @@ describe("Congress event normalization", () => {
     expect(snapshot.materials[0]?.material.classification).toBe("hearing-transcript")
   })
 
+  it("derives remote status only from an unambiguous source-declared location", () => {
+    const ambiguousLocation = normalizeMeeting({
+      meeting: {
+        chamber: "House",
+        committees: [{ systemCode: "hsag00" }],
+        congress: 119,
+        date: "2026-08-26T14:00:00Z",
+        eventId: "ambiguous-location",
+        location: { access: "Online stream", building: "Rayburn" },
+        meetingStatus: "Scheduled",
+        title: "Ambiguous location",
+        type: "Meeting"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/ambiguous-location"
+    })
+    const virtualLocation = normalizeMeeting({
+      meeting: {
+        chamber: "House",
+        committees: [],
+        congress: 119,
+        date: "2026-08-26T14:00:00Z",
+        eventId: "virtual-location",
+        location: { address: "Remote online meeting", building: "----------", room: "WEBEX" },
+        meetingStatus: "Rescheduled",
+        title: "Virtual location",
+        type: "Markup"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/virtual-location"
+    })
+    const missingTypeAndStatus = normalizeMeeting({
+      meeting: {
+        chamber: "House",
+        committees: [],
+        congress: 119,
+        date: "2026-08-26T14:00:00Z",
+        eventId: "missing-type-and-status",
+        location: { room: "2123" },
+        title: "Missing type and status"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/missing-type-and-status"
+    })
+    const missingCommitteeCollection = normalizeMeeting({
+      meeting: {
+        chamber: "House",
+        congress: 119,
+        date: "2026-08-26T14:00:00Z",
+        eventId: "missing-committees",
+        location: { building: "Longworth House Office Building" },
+        meetingStatus: "Postponed",
+        title: "Missing committee collection",
+        type: "Meeting"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/missing-committees"
+    })
+    const missingRetrieval = normalizeCongressCommitteeMeeting(
+      {
+        meeting: {
+          chamber: "House",
+          committees: [],
+          congress: 119,
+          date: "2026-08-26T14:00:00Z",
+          eventId: "missing-retrieval",
+          location: { room: "2123" },
+          meetingStatus: "Scheduled",
+          title: "Missing retrieval provenance",
+          type: "Meeting"
+        },
+        sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/missing-retrieval"
+      },
+      {}
+    )
+
+    expect(ambiguousLocation.event).toMatchObject({
+      canonicalFactsComplete: false,
+      isRemote: undefined,
+      organizationRelationsComplete: true,
+      provenanceComplete: true,
+      sessionRelationsComplete: true
+    })
+    expect(ambiguousLocation.organizationIds).toEqual(["organization:congress:hsag00"])
+    expect(virtualLocation.event).toMatchObject({
+      canonicalFactsComplete: true,
+      classification: "meeting",
+      isRemote: true,
+      status: "postponed"
+    })
+    expect(missingTypeAndStatus.event).toMatchObject({
+      canonicalFactsComplete: false,
+      classification: "other",
+      status: "other"
+    })
+    expect(missingCommitteeCollection.event).toMatchObject({
+      canonicalFactsComplete: false,
+      classification: "meeting",
+      isRemote: false,
+      organizationRelationsComplete: false,
+      sessionRelationsComplete: true,
+      status: "postponed"
+    })
+    expect(missingCommitteeCollection.organizationIds).toEqual([])
+    expect(missingRetrieval.event).toMatchObject({ canonicalFactsComplete: false, provenanceComplete: false })
+  })
+
   it("normalizes the provider's alternate cancellation spelling", () => {
-    const snapshot = normalizeCongressCommitteeMeeting({
+    const snapshot = normalizeMeeting({
       meeting: {
         chamber: "House",
         committees: [],
@@ -97,7 +215,7 @@ describe("Congress event normalization", () => {
   })
 
   it("keeps a committee participant when Congress.gov provides only its system code", () => {
-    const snapshot = normalizeCongressCommitteeMeeting({
+    const snapshot = normalizeMeeting({
       meeting: {
         chamber: "House",
         committees: [{ systemCode: "hsgo00" }],
@@ -119,7 +237,7 @@ describe("Congress event normalization", () => {
   })
 
   it("deduplicates the repeated committee in the live meeting 338700 payload", () => {
-    const snapshot = normalizeCongressCommitteeMeeting({
+    const snapshot = normalizeMeeting({
       meeting: {
         chamber: "Senate",
         committees: [
@@ -143,7 +261,7 @@ describe("Congress event normalization", () => {
   })
 
   it("ignores a meeting document without a URL while retaining usable material", () => {
-    const snapshot = normalizeCongressCommitteeMeeting({
+    const snapshot = normalizeMeeting({
       meeting: {
         chamber: "House",
         committees: [],

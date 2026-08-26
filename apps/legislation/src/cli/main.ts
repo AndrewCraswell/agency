@@ -215,6 +215,7 @@ program
   .option("--domain <domain>", "meetings, hearings, or both", "both")
   .option("--end-congress <number>")
   .option("--limit <number>", "maximum records per domain and Congress")
+  .option("--rematerialize", "restart and re-upsert events even when Congress.gov reports no newer update")
   .option("--restart", "restart each domain and Congress from its first record")
   .option("--start-congress <number>")
   .action(syncCongressEventData)
@@ -1235,6 +1236,7 @@ async function syncCongressEventData(options: {
   domain: string
   endCongress?: string
   limit?: string
+  rematerialize?: boolean
   restart?: boolean
   startCongress?: string
 }) {
@@ -1281,8 +1283,9 @@ async function syncCongressEventData(options: {
         for (let congress = start; congress <= end; congress += 1) {
           for (const domain of domains) {
             const synchronized = await synchronizeCongressEvents(database, client, congress, domain, {
+              forceRematerialize: options.rematerialize,
               limit,
-              restart: options.restart,
+              restart: options.restart === true || options.rematerialize === true,
               sourceStore: createSourceStore(config, "federal")
             })
             for (const key of Object.keys(counts) as Array<keyof typeof counts>) {

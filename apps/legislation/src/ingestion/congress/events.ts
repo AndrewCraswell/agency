@@ -6,6 +6,7 @@ import {
   federalBillId,
   jurisdictionId,
   legislativeEventId,
+  legislativeSessionId,
   organizationId,
   supportingMaterialId
 } from "../../legislation/identifiers.js"
@@ -78,6 +79,10 @@ export interface CongressEventSnapshot extends EventSnapshot {
   materials: Array<{ link: MaterialLinkInsert; material: MaterialInsert }>
 }
 
+export interface CongressEventNormalizationContext {
+  retrievedAt?: Date
+}
+
 function committeeName(committee: z.infer<typeof committeeSchema>): string {
   return committee.name ?? committee.systemCode
 }
@@ -95,6 +100,123 @@ function uniqueCommittees(values: z.infer<typeof committeeSchema>[]): z.infer<ty
     }
   }
   return [...unique.values()]
+}
+
+function hasExplicitCommitteeList(input: unknown): boolean {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return false
+  }
+  const event = Reflect.get(input, "meeting")
+  return typeof event === "object" && event !== null && !Array.isArray(event) && Array.isArray(event.committees)
+}
+
+function sourceDate(value: string, field: string): Date {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.valueOf())) {
+    throw new Error(`Congress event ${field} must be a valid timestamp`)
+  }
+  return parsed
+}
+
+function publisherLocalDate(value: string): string | undefined {
+  const date = /^(\d{4}-\d{2}-\d{2})/.exec(value)?.[1]
+  const parsed = date === undefined ? undefined : new Date(`${date}T00:00:00.000Z`)
+  if (
+    date === undefined ||
+    parsed === undefined ||
+    Number.isNaN(parsed.valueOf()) ||
+    parsed.toISOString().slice(0, 10) !== date
+  ) {
+    return undefined
+  }
+  return date
+}
+
+function officialCongressSourceUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" && url.hostname === "api.congress.gov"
+  } catch {
+    return false
+  }
+}
+
+function validRetrievedAt(value: Date | undefined): value is Date {
+  return value instanceof Date && !Number.isNaN(value.valueOf())
+}
+
+function eventProvenance(sourceUrl: string, context: CongressEventNormalizationContext) {
+  const retrievedAt = validRetrievedAt(context.retrievedAt) ? context.retrievedAt : undefined
+  const provenanceComplete = officialCongressSourceUrl(sourceUrl) && retrievedAt !== undefined
+  return {
+    provenanceComplete,
+    sourceIsOfficial: provenanceComplete ? true : undefined,
+    sourceProvider: provenanceComplete ? "congress" : undefined,
+    sourceRetrievedAt: retrievedAt
+  }
+}
+
+/**
+ * Congress.gov does not expose a boolean remote flag for committee meetings.
+ * Its declared location can prove a physical or virtual setting, but a hybrid
+ * or otherwise unclassified location must remain unknown.
+ */
+function sourceRemoteStatus(location: Record<string, unknown> | undefined): boolean | undefined {
+  if (location === undefined) {
+    return undefined
+  }
+  const address = Reflect.get(location, "address")
+  const hasPhysicalLocation =
+    (typeof address === "string" && address.trim().length > 0 && !isVirtualLocationText(address)) ||
+    ["building", "room"].some((field) => {
+      const value = Reflect.get(location, field)
+      return (
+        typeof value === "string" &&
+        value.trim().length > 0 &&
+        !/^-+$/.test(value.trim()) &&
+        !isVirtualLocationText(value)
+      )
+    })
+  const hasVirtualLocation = Object.values(location).some(isVirtualLocationText)
+  if (hasPhysicalLocation === hasVirtualLocation) {
+    return undefined
+  }
+  return hasPhysicalLocation ? false : true
+}
+
+function isVirtualLocationText(value: unknown): boolean {
+  return typeof value === "string" && /\b(?:online|remote|virtual|webex)\b/i.test(value)
+}
+
+function sourceClassification(value: string | undefined): "hearing" | "meeting" | "other" | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  const normalized = value.trim().toLowerCase()
+  if (normalized === "hearing") {
+    return "hearing"
+  }
+  if (normalized === "markup" || normalized === "meeting") {
+    return "meeting"
+  }
+  return "other"
+}
+
+function sourceStatus(value: string | undefined): "cancelled" | "other" | "postponed" | "scheduled" | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  const normalized = value.trim().toLowerCase()
+  if (normalized === "scheduled") {
+    return "scheduled"
+  }
+  if (normalized === "canceled" || normalized === "cancelled") {
+    return "cancelled"
+  }
+  if (normalized === "postponed" || normalized === "rescheduled") {
+    return "postponed"
+  }
+  return "other"
 }
 
 function materialClassification(value: string | undefined): string {
@@ -145,7 +267,7 @@ function usableDocuments(values: unknown[]): z.infer<typeof documentSchema>[] {
 function materials(
   eventId: string,
   values: Array<{ description?: string; documentType?: string; format?: string; name?: string; url: string }>,
-  date: string
+  date: string | undefined
 ): CongressEventSnapshot["materials"] {
   return values.map((value) => {
     const id = supportingMaterialId("congress", value.url)
@@ -165,18 +287,26 @@ function materials(
   })
 }
 
-export function normalizeCongressCommitteeMeeting(input: unknown): CongressEventSnapshot {
+export function normalizeCongressCommitteeMeeting(
+  input: unknown,
+  context: CongressEventNormalizationContext
+): CongressEventSnapshot {
   const source = meetingBundleSchema.parse(input)
   const meeting = source.meeting
   const eventId = legislativeEventId("congress", `committee-meeting-${meeting.eventId}`)
-  const date = meeting.date.slice(0, 10)
+  const date = publisherLocalDate(meeting.date)
+  const startAt = sourceDate(meeting.date, "meeting.date")
   const committees = uniqueCommittees(meeting.committees)
+  const isRemote = sourceRemoteStatus(meeting.location)
+  const classification = sourceClassification(meeting.type)
+  const status = sourceStatus(meeting.meetingStatus)
+  const organizationRelationsComplete = hasExplicitCommitteeList(input)
+  const provenance = eventProvenance(source.sourceUrl, context)
+  const sessionRelationsComplete = true
   // Congress.gov occasionally includes placeholder document objects without a
   // usable URL. They cannot become a durable material or event child, but must
   // not prevent the meeting itself from checkpointing and the replay advancing.
   const documents = uniqueDocuments(usableDocuments([...meeting.meetingDocuments, ...meeting.witnessDocuments]))
-  const status =
-    meeting.meetingStatus?.toLowerCase() === "canceled" ? "cancelled" : meeting.meetingStatus?.toLowerCase()
   return {
     agendaItems: [],
     billIds: meeting.relatedItems.bills.map((bill) => federalBillId(bill.congress, bill.type, bill.number)),
@@ -191,25 +321,35 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
     })),
     event: {
       allDay: false,
-      canonicalFactsComplete: false,
-      classification: meeting.type?.toLowerCase().includes("hearing") ? "hearing" : "meeting",
+      canonicalFactsComplete:
+        date !== undefined &&
+        isRemote !== undefined &&
+        classification !== undefined &&
+        provenance.provenanceComplete &&
+        organizationRelationsComplete &&
+        sessionRelationsComplete &&
+        status !== undefined,
+      classification: classification ?? "other",
       id: eventId,
       isDeleted: false,
-      organizationRelationsComplete: false,
+      isRemote,
       jurisdictionId: jurisdictionId("us"),
       location: meeting.location,
       name: meeting.title,
+      organizationRelationsComplete,
+      publisherLocalDate: date,
+      ...provenance,
       sourceId: meeting.eventId,
       sourceUpdatedAt: meeting.updateDate === undefined ? undefined : new Date(meeting.updateDate),
       sourceUrl: source.sourceUrl,
-      startAt: new Date(meeting.date),
-      sessionRelationsComplete: false,
-      status: status === "cancelled" ? "cancelled" : "other",
+      startAt,
+      sessionRelationsComplete,
+      status: status ?? "other",
       upstreamIds: { congress: meeting.eventId },
       virtualAccess: meeting.videos[0] === undefined ? undefined : { url: meeting.videos[0].url }
     },
     materials: materials(eventId, documents, date),
-    organizationIds: [],
+    organizationIds: committees.map((committee) => organizationId("congress", committee.systemCode)),
     participants: [
       ...committees.map((committee) => ({
         eventId,
@@ -225,7 +365,7 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
         role: [witness.position, witness.organization].filter(Boolean).join(", ") || "witness"
       }))
     ],
-    sessionIds: []
+    sessionIds: [legislativeSessionId("us", String(meeting.congress))]
   }
 }
 
