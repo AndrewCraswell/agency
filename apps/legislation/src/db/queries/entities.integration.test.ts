@@ -4,8 +4,13 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import type { LegislationDatabase } from "../database.js"
 import * as schema from "../schema/schema.js"
-import { replaceEntitySnapshot } from "./entities.js"
+import {
+  replaceAuthoritativeOrganizationMembershipRoster,
+  replaceEntitySnapshot,
+  type AuthoritativeOrganizationMembershipRoster
+} from "./entities.js"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe
@@ -142,7 +147,343 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       expect.objectContaining({ id: otherCongressTermId, isActive: false, sourceProvider: "congress" })
     ])
   })
+
+  it("replaces only the covered authoritative committee roster", async () => {
+    const fixture = await seedCommitteeRosterScope(database, "roster-scope")
+
+    await replaceAuthoritativeOrganizationMembershipRoster(database, {
+      jurisdictionId,
+      memberships: [authoritativeMembership(fixture, "roster-scope:house-covered:current")],
+      organizationIds: [fixture.coveredOrganizationId]
+    })
+
+    const [coveredOrganization, coveredMemberships, unrelatedMemberships, unrelatedOrganizations] = await Promise.all([
+      database.select().from(schema.organizations).where(eq(schema.organizations.id, fixture.coveredOrganizationId)),
+      database
+        .select()
+        .from(schema.organizationMemberships)
+        .where(eq(schema.organizationMemberships.organizationId, fixture.coveredOrganizationId)),
+      Promise.all(
+        fixture.unrelatedMembershipIds.map(async (id) =>
+          database.select().from(schema.organizationMemberships).where(eq(schema.organizationMemberships.id, id))
+        )
+      ),
+      Promise.all(
+        fixture.unrelatedOrganizationIds.map(async (id) =>
+          database.select().from(schema.organizations).where(eq(schema.organizations.id, id))
+        )
+      )
+    ])
+
+    expect(coveredOrganization).toEqual([expect.objectContaining({ membershipRelationsComplete: true })])
+    expect(coveredMemberships).toContainEqual(
+      expect.objectContaining({ id: fixture.coveredStaleMembershipId, isActive: false })
+    )
+    expect(coveredMemberships).toContainEqual(
+      expect.objectContaining({ id: fixture.coveredCurrentMembershipId, isActive: true })
+    )
+    expect(unrelatedMemberships.flat()).toEqual(
+      fixture.unrelatedMembershipIds.map((id) => expect.objectContaining({ id, isActive: true }))
+    )
+    expect(unrelatedOrganizations.flat()).toEqual(
+      fixture.unrelatedOrganizationIds.map((_id) => expect.objectContaining({ membershipRelationsComplete: false }))
+    )
+  })
+
+  it("marks an explicitly covered empty roster complete", async () => {
+    const fixture = await seedCommitteeRosterScope(database, "roster-empty")
+
+    await replaceAuthoritativeOrganizationMembershipRoster(database, {
+      jurisdictionId,
+      memberships: [],
+      organizationIds: [fixture.coveredOrganizationId]
+    })
+
+    const [organization, staleMembership] = await Promise.all([
+      database.select().from(schema.organizations).where(eq(schema.organizations.id, fixture.coveredOrganizationId)),
+      database
+        .select()
+        .from(schema.organizationMemberships)
+        .where(eq(schema.organizationMemberships.id, fixture.coveredStaleMembershipId))
+    ])
+
+    expect(organization).toEqual([expect.objectContaining({ membershipRelationsComplete: true })])
+    expect(staleMembership).toEqual([
+      expect.objectContaining({ id: fixture.coveredStaleMembershipId, isActive: false })
+    ])
+  })
+
+  it("rejects invalid authoritative roster scopes without changing existing records", async () => {
+    for (const [name, createInput] of rosterValidationCases) {
+      const fixture = await seedCommitteeRosterScope(database, `roster-invalid-${name}`)
+
+      await expect(replaceAuthoritativeOrganizationMembershipRoster(database, createInput(fixture))).rejects.toThrow(
+        "Authoritative organization roster"
+      )
+      await expectRosterScopeUnchanged(database, fixture)
+    }
+  })
+
+  it("rolls back a failed authoritative committee roster without partial writes", async () => {
+    const fixture = await seedCommitteeRosterScope(database, "roster-rollback")
+
+    await expect(
+      replaceAuthoritativeOrganizationMembershipRoster(database, {
+        jurisdictionId,
+        memberships: [
+          {
+            id: fixture.coveredCurrentMembershipId,
+            isActive: true,
+            organizationId: fixture.coveredOrganizationId,
+            personId: fixture.coveredPersonId,
+            provenanceComplete: true,
+            sourceId: "roster-rollback:house-covered:current",
+            sourceIsOfficial: true,
+            sourceProvider: "congress",
+            sourceRetrievedAt: retrievedAt,
+            sourceUrl: "not-a-url"
+          }
+        ],
+        organizationIds: [fixture.coveredOrganizationId]
+      })
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ constraint: "organization_memberships_provenance_complete_check" })
+    })
+
+    const [organization, staleMembership] = await Promise.all([
+      database.select().from(schema.organizations).where(eq(schema.organizations.id, fixture.coveredOrganizationId)),
+      database
+        .select()
+        .from(schema.organizationMemberships)
+        .where(eq(schema.organizationMemberships.id, fixture.coveredStaleMembershipId))
+    ])
+
+    expect(organization).toEqual([expect.objectContaining({ membershipRelationsComplete: false })])
+    expect(staleMembership).toEqual([expect.objectContaining({ id: fixture.coveredStaleMembershipId, isActive: true })])
+  })
 })
+
+interface CommitteeRosterFixture {
+  coveredCurrentMembershipId: string
+  coveredOrganizationId: string
+  coveredPersonId: string
+  coveredStaleMembershipId: string
+  unrelatedMembershipIds: string[]
+  unrelatedOrganizationIds: string[]
+}
+
+const rosterValidationCases: readonly (readonly [
+  string,
+  (fixture: CommitteeRosterFixture) => AuthoritativeOrganizationMembershipRoster
+])[] = [
+  [
+    "inactive",
+    (fixture) => rosterInput(fixture, [{ ...authoritativeMembership(fixture, "inactive"), isActive: false }])
+  ],
+  [
+    "incomplete-provenance",
+    (fixture) =>
+      rosterInput(fixture, [{ ...authoritativeMembership(fixture, "incomplete"), provenanceComplete: false }])
+  ],
+  [
+    "non-official",
+    (fixture) =>
+      rosterInput(fixture, [{ ...authoritativeMembership(fixture, "non-official"), sourceIsOfficial: false }])
+  ],
+  [
+    "blank-source-id",
+    (fixture) => rosterInput(fixture, [{ ...authoritativeMembership(fixture, "blank-source-id"), sourceId: "" }])
+  ],
+  [
+    "missing-source-id",
+    (fixture) =>
+      rosterInput(fixture, [{ ...authoritativeMembership(fixture, "missing-source-id"), sourceId: undefined }])
+  ],
+  [
+    "null-source-id",
+    (fixture) => rosterInput(fixture, [{ ...authoritativeMembership(fixture, "null-source-id"), sourceId: null }])
+  ],
+  [
+    "blank-source-provider",
+    (fixture) => rosterInput(fixture, [{ ...authoritativeMembership(fixture, "blank-provider"), sourceProvider: "" }])
+  ],
+  [
+    "blank-source-url",
+    (fixture) => rosterInput(fixture, [{ ...authoritativeMembership(fixture, "blank-url"), sourceUrl: "" }])
+  ],
+  [
+    "invalid-retrieved-at",
+    (fixture) =>
+      rosterInput(fixture, [
+        { ...authoritativeMembership(fixture, "invalid-date"), sourceRetrievedAt: new Date("invalid") }
+      ])
+  ],
+  [
+    "missing-person",
+    (fixture) =>
+      rosterInput(fixture, [
+        { ...authoritativeMembership(fixture, "missing-person"), personId: `${fixture.coveredPersonId}:missing` }
+      ])
+  ],
+  [
+    "missing-organization",
+    (fixture) => {
+      const organizationId = `${fixture.coveredOrganizationId}:missing`
+      return {
+        jurisdictionId,
+        memberships: [{ ...authoritativeMembership(fixture, "missing-organization"), organizationId }],
+        organizationIds: [organizationId]
+      }
+    }
+  ],
+  [
+    "outside-covered-organization",
+    (fixture) =>
+      rosterInput(fixture, [
+        {
+          ...authoritativeMembership(fixture, "outside-covered-organization"),
+          organizationId: fixture.unrelatedOrganizationIds[0]
+        }
+      ])
+  ],
+  [
+    "duplicate-covered-organization",
+    (fixture) => ({
+      jurisdictionId,
+      memberships: [authoritativeMembership(fixture, "duplicate-covered-organization")],
+      organizationIds: [fixture.coveredOrganizationId, fixture.coveredOrganizationId]
+    })
+  ],
+  [
+    "duplicate-membership-id",
+    (fixture) => {
+      const membership = authoritativeMembership(fixture, "duplicate-membership-id")
+      return rosterInput(fixture, [membership, { ...membership, sourceId: "duplicate-membership-id:second" }])
+    }
+  ],
+  [
+    "duplicate-source-membership-id",
+    (fixture) => {
+      const membership = authoritativeMembership(fixture, "duplicate-source-membership-id")
+      return rosterInput(fixture, [{ ...membership, id: `${membership.id}:second` }, membership])
+    }
+  ]
+]
+
+function authoritativeMembership(
+  fixture: CommitteeRosterFixture,
+  sourceId: string
+): AuthoritativeOrganizationMembershipRoster["memberships"][number] {
+  return {
+    id: fixture.coveredCurrentMembershipId,
+    isActive: true,
+    organizationId: fixture.coveredOrganizationId,
+    personId: fixture.coveredPersonId,
+    provenanceComplete: true,
+    sourceId,
+    sourceIsOfficial: true,
+    sourceProvider: "congress",
+    sourceRetrievedAt: retrievedAt,
+    sourceUrl: `https://api.congress.gov/committee/${sourceId}`
+  }
+}
+
+function rosterInput(
+  fixture: CommitteeRosterFixture,
+  memberships: AuthoritativeOrganizationMembershipRoster["memberships"]
+): AuthoritativeOrganizationMembershipRoster {
+  return { jurisdictionId, memberships, organizationIds: [fixture.coveredOrganizationId] }
+}
+
+async function expectRosterScopeUnchanged(
+  database: LegislationDatabase,
+  fixture: CommitteeRosterFixture
+): Promise<void> {
+  const [organization, staleMembership] = await Promise.all([
+    database.select().from(schema.organizations).where(eq(schema.organizations.id, fixture.coveredOrganizationId)),
+    database
+      .select()
+      .from(schema.organizationMemberships)
+      .where(eq(schema.organizationMemberships.id, fixture.coveredStaleMembershipId))
+  ])
+
+  expect(organization).toEqual([expect.objectContaining({ membershipRelationsComplete: false })])
+  expect(staleMembership).toEqual([expect.objectContaining({ id: fixture.coveredStaleMembershipId, isActive: true })])
+}
+
+async function seedCommitteeRosterScope(database: LegislationDatabase, scope: string): Promise<CommitteeRosterFixture> {
+  const organizationPrefix = `organization:congress:${scope}`
+  const personPrefix = `person:congress:${scope}`
+  const coveredOrganizationId = `${organizationPrefix}:house-covered`
+  const unrelatedOrganizationIds = [
+    `${organizationPrefix}:house-uncovered`,
+    `${organizationPrefix}:senate`,
+    `${organizationPrefix}:joint`
+  ]
+  const coveredPersonId = `${personPrefix}:house-covered`
+  const personIds = [
+    coveredPersonId,
+    `${personPrefix}:house-uncovered`,
+    `${personPrefix}:senate`,
+    `${personPrefix}:joint`
+  ]
+  const coveredStaleMembershipId = `${coveredOrganizationId}:stale`
+  const coveredCurrentMembershipId = `${coveredOrganizationId}:current`
+  const unrelatedMembershipIds = unrelatedOrganizationIds.map((organizationId) => `${organizationId}:current`)
+
+  await database.insert(schema.people).values(
+    personIds.map((id) => ({
+      id,
+      isActive: true,
+      jurisdictionId,
+      name: id,
+      sourceId: id
+    }))
+  )
+  await database.insert(schema.organizations).values([
+    {
+      classification: "committee",
+      id: coveredOrganizationId,
+      isActive: true,
+      jurisdictionId,
+      name: "Covered House committee",
+      sourceId: `${scope}:house-covered`
+    },
+    ...unrelatedOrganizationIds.map((id) => ({
+      classification: "committee",
+      id,
+      isActive: true,
+      jurisdictionId,
+      name: id,
+      sourceId: id
+    }))
+  ])
+  await database.insert(schema.organizationMemberships).values([
+    {
+      id: coveredStaleMembershipId,
+      isActive: true,
+      organizationId: coveredOrganizationId,
+      personId: coveredPersonId,
+      sourceId: `${scope}:house-covered:stale`
+    },
+    ...unrelatedOrganizationIds.map((organizationId, index) => ({
+      id: unrelatedMembershipIds[index],
+      isActive: true,
+      organizationId,
+      personId: personIds[index + 1],
+      sourceId: `${scope}:${organizationId}:current`
+    }))
+  ])
+
+  return {
+    coveredCurrentMembershipId,
+    coveredOrganizationId,
+    coveredPersonId,
+    coveredStaleMembershipId,
+    unrelatedMembershipIds,
+    unrelatedOrganizationIds
+  }
+}
 
 function congressDetailSnapshot(personId: string, imageName: string) {
   const sourceUrl = "https://api.congress.gov/member/detail-refresh"

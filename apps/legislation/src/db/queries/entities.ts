@@ -13,8 +13,175 @@ import {
 } from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
+type OrganizationMembershipInsert = typeof organizationMemberships.$inferInsert
+
+/**
+ * An authoritative current roster for exactly the listed organizations in one
+ * jurisdiction. It deliberately does not infer coverage from parser output.
+ */
+export interface AuthoritativeOrganizationMembershipRoster {
+  jurisdictionId: string
+  memberships: readonly OrganizationMembershipInsert[]
+  organizationIds: readonly string[]
+}
+
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()]
+}
+
+/**
+ * Replaces the active roster only for an explicitly authoritative organization
+ * scope. The transaction first proves every organization and person belongs to
+ * the declared jurisdiction, so a partial provider response cannot alter an
+ * unrelated committee, chamber, or joint body.
+ */
+export async function replaceAuthoritativeOrganizationMembershipRoster(
+  database: LegislationDatabase,
+  input: AuthoritativeOrganizationMembershipRoster
+): Promise<void> {
+  const organizationIds = [...input.organizationIds]
+  const memberships = [...input.memberships]
+
+  await database.transaction(async (transaction) => {
+    assertCompleteRosterScope(input.jurisdictionId, organizationIds, memberships)
+
+    const coveredOrganizations = await transaction
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(and(eq(organizations.jurisdictionId, input.jurisdictionId), inArray(organizations.id, organizationIds)))
+    if (coveredOrganizations.length !== organizationIds.length) {
+      throw new Error(`Authoritative organization roster contains organizations outside ${input.jurisdictionId}`)
+    }
+
+    const personIds = [...new Set(memberships.map((membership) => membership.personId))]
+    if (personIds.length > 0) {
+      const rosterPeople = await transaction
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.jurisdictionId, input.jurisdictionId), inArray(people.id, personIds)))
+      if (rosterPeople.length !== personIds.length) {
+        throw new Error(`Authoritative organization roster contains people outside ${input.jurisdictionId}`)
+      }
+    }
+
+    await transaction
+      .update(organizationMemberships)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(inArray(organizationMemberships.organizationId, organizationIds))
+
+    if (memberships.length > 0) {
+      await transaction
+        .insert(organizationMemberships)
+        .values(memberships)
+        .onConflictDoUpdate({
+          set: {
+            classification: sql`excluded.classification`,
+            endDate: sql`excluded.end_date`,
+            isActive: sql`excluded.is_active`,
+            label: sql`excluded.label`,
+            organizationId: sql`excluded.organization_id`,
+            personId: sql`excluded.person_id`,
+            provenanceComplete: sql`excluded.provenance_complete`,
+            rank: sql`excluded.rank`,
+            role: sql`excluded.role`,
+            sourceId: sql`excluded.source_id`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            startDate: sql`excluded.start_date`,
+            title: sql`excluded.title`,
+            updatedAt: new Date()
+          },
+          target: organizationMemberships.id
+        })
+    }
+
+    await transaction
+      .update(organizations)
+      .set({ membershipRelationsComplete: true, updatedAt: new Date() })
+      .where(and(eq(organizations.jurisdictionId, input.jurisdictionId), inArray(organizations.id, organizationIds)))
+
+    for (const membership of memberships) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          classification: membership.classification,
+          endDate: membership.endDate,
+          isActive: membership.isActive,
+          rank: membership.rank,
+          startDate: membership.startDate,
+          title: membership.title
+        },
+        changeType: "relationship-change",
+        organizationId: membership.organizationId,
+        personId: membership.personId,
+        recordId: membership.id,
+        recordType: "organization-membership"
+      })
+    }
+  })
+}
+
+function assertCompleteRosterScope(
+  jurisdictionId: string,
+  organizationIds: readonly string[],
+  memberships: readonly OrganizationMembershipInsert[]
+): void {
+  if (jurisdictionId.trim().length === 0) {
+    throw new Error("Authoritative organization roster requires a jurisdiction")
+  }
+  if (organizationIds.length === 0) {
+    throw new Error("Authoritative organization roster requires at least one covered organization")
+  }
+  if (
+    new Set(organizationIds).size !== organizationIds.length ||
+    organizationIds.some((id) => id.trim().length === 0)
+  ) {
+    throw new Error("Authoritative organization roster has duplicate or blank covered organizations")
+  }
+
+  const coveredOrganizationIds = new Set(organizationIds)
+  const membershipIds = new Set<string>()
+  const sourceIdentities = new Set<string>()
+  for (const membership of memberships) {
+    if (!isNonBlankString(membership.id) || !isNonBlankString(membership.personId)) {
+      throw new Error("Authoritative organization roster has a membership without an identity")
+    }
+    if (!coveredOrganizationIds.has(membership.organizationId)) {
+      throw new Error("Authoritative organization roster has a membership outside its covered organizations")
+    }
+    if (membershipIds.has(membership.id)) {
+      throw new Error(`Authoritative organization roster has duplicate membership identity ${membership.id}`)
+    }
+    membershipIds.add(membership.id)
+    if (
+      membership.isActive !== true ||
+      membership.provenanceComplete !== true ||
+      membership.sourceIsOfficial !== true ||
+      !isNonBlankString(membership.sourceId) ||
+      !isNonBlankString(membership.sourceProvider) ||
+      !isNonBlankString(membership.sourceUrl) ||
+      !isValidDate(membership.sourceRetrievedAt)
+    ) {
+      throw new Error("Authoritative organization roster requires active, complete official membership provenance")
+    }
+    const sourceIdentity = `${membership.organizationId}\u0000${membership.sourceId}`
+    if (sourceIdentities.has(sourceIdentity)) {
+      throw new Error(
+        `Authoritative organization roster has duplicate source membership identity ${membership.sourceId}`
+      )
+    }
+    sourceIdentities.add(sourceIdentity)
+  }
+}
+
+function isNonBlankString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+function isValidDate(value: unknown): value is Date {
+  return value instanceof Date && !Number.isNaN(value.getTime())
 }
 
 export async function replaceEntitySnapshot(
