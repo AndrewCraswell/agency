@@ -175,6 +175,6 @@ latch; that external-latch or retained/revalidated-output decision is a release 
 | Recovery | Section 6; M0-04/M0-10 degraded/unavailable/safe-state contracts; M2-08 power-fail transactions; M3-10 update recovery; M6-06/M6-07; M7-08/M7-09; M8-02/M8-07 service recovery. |
 
 The abuse table additionally maps physical, service, manufacturing, replay/duplication/corruption, ESP32-compromise,
-key-custody, event-integrity, and privacy risks. M0-12 must carry these requirements into the requirements-to-evidence
+key-custody, event-integrity, and privacy risks. Security acceptance must carry these requirements into the release
 ledger. This documentation-only contract does not claim completed firmware, cryptography, schematic, manufacturing, or
 compliance evidence.

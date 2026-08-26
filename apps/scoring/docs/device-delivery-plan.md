@@ -190,11 +190,9 @@ core.
 M3-18 intentionally excludes `CW-20`: factory-facing evidence packaging is a subsequent deliverable after atomic
 TypeScript-scorer deletion and does not participate in the simulator cutover/deletion tracking alias.
 
-M3-10 is part of the ESP32 half of the launch update requirement. The independently verified STM32 image, dual-bank
-rollback, product compatibility manifest, ESP32 candidate health/rollback, interrupted-update matrix, and
-cohort-release controls are sequenced as `EVO-09` through `EVO-16` in
-[software-product-evolution-roadmap.md](software-product-evolution-roadmap.md). None of those
-tasks permits the ESP32 to decide or unilaterally activate STM32 scoring firmware.
+Production update and recovery work follows the single-ESP32 clean-sheet architecture. The portable C17 scoring core,
+ESP-IDF adapter, signed application image, rollback policy, compatibility manifest, interrupted-update matrix, and
+cohort controls must be reviewed together before release.
 
 ## M4: Analog and mechanical proof
 
@@ -309,7 +307,8 @@ and field service can diagnose and replace wear modules without factory-only kno
 **Exit criterion:** an independently powered and calibrated tester can drive both reel interfaces plus the piste/ground
 reference, observe the applicable complete-apparatus response, and produce immutable, reviewable evidence for each
 approved three-weapon and operational-behavior case within its declared scope. This is a parallel verification-instrument
-track, not another scoring-box feature and not an automatic FIE approval claim. See [box-tester-roadmap.md](box-tester-roadmap.md).
+track, not another scoring-box feature and not an automatic FIE approval claim. Its requirements remain in this table
+until the prototype board is ready to drive a physical tester design.
 
 | ID | Status | Latest state | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |

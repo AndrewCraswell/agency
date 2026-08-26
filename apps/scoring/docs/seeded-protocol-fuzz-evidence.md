@@ -1,6 +1,4 @@
-# M2-13 seeded protocol and record fuzz evidence
-
-**Task:** M2-13
+# Seeded protocol and record fuzz evidence
 
 The bounded suite in [`src/m2-13-seeded-fuzz.test.ts`](../src/m2-13-seeded-fuzz.test.ts) uses the checked seed
 fixture [`m2-13-seed-corpus.json`](../fixtures/m2-13-seed-corpus.json). It is a reviewable deterministic test corpus,

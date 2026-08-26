@@ -26,7 +26,7 @@ Functional reference evidence reviewed on 2026-08-23:
 - user-supplied photograph of the handheld control face;
 - [Skewered Fencing scoring-box manual](https://skewered-fencing.com/scoring-box-manual), including its interactive
   short/held button descriptions;
-- the official local [Favero FA-15 user manual](favero-fa15-user-manual-en.pdf), especially the remote-control
+- the official local [Favero FA-15 user manual](specifications/manuals/favero-fa15-user-manual-en.pdf), especially the remote-control
   descriptions on pp. 8-10 and pairing behavior on p. 14; and
 - the official [Favero FA-07 user manual](https://www.favero.com/get_file.php?id=160&lang=_en), especially its guarded
   remote mode and tournament-network bout-loading behavior.

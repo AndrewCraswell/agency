@@ -75,8 +75,8 @@ These vectors are hexadecimal complete frames, including CRC-32C.
 | `response`, payload `52`, sequence `7` | `534301040000000000070000000152694A1138` |
 
 The executable vectors are sourced from `fixtures/transport-frame-golden.json`, and malformed-frame cases are in
-`src/transport-frame.test.ts`. The decoder also rejects any input larger than the 4,114-byte complete-frame bound before reading payload bytes; M2-05 acceptance evidence is in
-[`m2-05-transport-codec-evidence.md`](m2-05-transport-codec-evidence.md).
+`src/transport-frame.test.ts`. The decoder also rejects any input larger than the 4,114-byte complete-frame bound before
+reading payload bytes.
 
 At the public decoder boundary, any value that is not a `Uint8Array` is rejected with the stable `frame-input` error
 before its length or contents are inspected. The decoder error vocabulary is `frame-input`, `truncated`,
