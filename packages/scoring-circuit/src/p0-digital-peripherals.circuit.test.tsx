@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { ethernetModule, ethernetModulePins } from "./ethernet-module-footprint.js"
 import { P0DigitalPeripherals } from "./p0-digital-peripherals.circuit.js"
 import { renderTestCircuit } from "./test-helper.js"
 
@@ -10,7 +11,7 @@ let pcbCircuitJson: CircuitJson | undefined
 function renderCircuit(): CircuitJson {
   if (schematicCircuitJson !== undefined) return schematicCircuitJson
   schematicCircuitJson = renderTestCircuit(
-    <board width="360mm" height="200mm">
+    <board width="140mm" height="120mm">
       <chip
         name="U_ESP32"
         doNotPlace
@@ -46,7 +47,7 @@ function renderCircuit(): CircuitJson {
 function renderPcbCircuit(): CircuitJson {
   if (pcbCircuitJson !== undefined) return pcbCircuitJson
   pcbCircuitJson = renderTestCircuit(
-    <board width="360mm" height="200mm">
+    <board width="140mm" height="120mm">
       <chip
         name="U_ESP32"
         doNotPlace
@@ -84,6 +85,10 @@ function traces(circuitJson: CircuitJson) {
   )
 }
 
+function sourceComponents(circuitJson: CircuitJson) {
+  return circuitJson.filter((element) => element.type === "source_component")
+}
+
 function pcbArtifacts(circuitJson: CircuitJson, reference: string) {
   const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
   if (source?.type !== "source_component") throw new RangeError(`missing ${reference}`)
@@ -105,12 +110,6 @@ function isPortedPlatedHole(element: CircuitElement): element is PortedPlatedHol
   return element.type === "pcb_plated_hole" && Array.isArray(element.port_hints)
 }
 
-function isRectSmtPad(
-  element: CircuitElement
-): element is Extract<CircuitElement, { readonly shape: "rect"; readonly type: "pcb_smtpad" }> {
-  return element.type === "pcb_smtpad" && element.shape === "rect"
-}
-
 function artifactWithPortHint(artifacts: ReturnType<typeof pcbArtifacts>, hint: string): PortedPlatedHole {
   const artifact = artifacts.find((element): element is PortedPlatedHole =>
     isPortedPlatedHole(element) ? element.port_hints.includes(hint) : false
@@ -120,92 +119,66 @@ function artifactWithPortHint(artifacts: ReturnType<typeof pcbArtifacts>, hint: 
 }
 
 describe("P0 digital peripherals", () => {
-  it("renders the selected W5500, MagJack, two AHCT buffers, and keyed HUB75 connector without errors", () => {
+  it("renders one WIZ850io module, two HUB75 buffers, and the keyed HUB75 connector without errors", () => {
     const circuitJson = renderCircuit()
-    const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
-    const names = sourceComponents.map((component) => component.name)
+    const names = sourceComponents(circuitJson).map((component) => component.name)
 
     expect(circuitJson.filter((element) => element.type.includes("error"))).toEqual([])
-    expect(names).toEqual(
-      expect.arrayContaining(["U_W5500", "J_ETH", "U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B", "J_HUB75"])
-    )
-    expect(JSON.stringify(sourceComponents)).toContain("W5500")
-    expect(JSON.stringify(sourceComponents)).toContain("7499011121A")
-    expect(JSON.stringify(sourceComponents)).toContain("SN74AHCT245PWR")
-    expect(JSON.stringify(sourceComponents)).toContain("TST-108-04-G-D-RA")
+    expect(names).toEqual(expect.arrayContaining(["U_ETHERNET", "U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B", "J_HUB75"]))
+    expect(names).not.toEqual(expect.arrayContaining(["U_W5500", "J_ETH", "Y_W5500"]))
+    expect(names.some((name) => /^(FB_W5500|R_W5500|C_W5500|R_ETH|C_ETH|TP_W5500)/.test(name))).toBe(false)
+    expect(JSON.stringify(sourceComponents(circuitJson))).toContain("WIZ850io")
+    expect(JSON.stringify(sourceComponents(circuitJson))).not.toContain("7499011121A")
+    expect(JSON.stringify(sourceComponents(circuitJson))).toContain("SN74AHCT245PWR")
   })
 
-  it("uses only the allocated SPI host signals, fanout reset, polling-only interrupt, and on-board MDI", () => {
+  it("maps the WIZ850io headers to the allocated SPI, reset, power, and ground nets", () => {
     const renderedTraces = traces(renderCircuit())
 
     expect(renderedTraces).toEqual(
       expect.arrayContaining([
-        "U_W5500.33 to net.APP_SPI_SCK",
-        "U_W5500.35 to net.APP_SPI_MOSI",
-        "U_W5500.34 to net.APP_SPI_MISO",
-        "U_W5500.32 to net.ETH_CS_N",
-        "U_W5500.37 to net.APP_RESET_N",
-        "U_W5500.36 to TP_W5500_INT_N.APP_W5500_INT_N",
-        "U_W5500.2 to J_ETH.TD_P",
-        "U_W5500.1 to J_ETH.TD_N",
-        "C_ETH_RX_P.pin2 to J_ETH.RD_P",
-        "C_ETH_RX_N.pin2 to J_ETH.RD_N"
+        "U_ETHERNET.4 to net.APP_SPI_SCK",
+        "U_ETHERNET.3 to net.APP_SPI_MOSI",
+        "U_ETHERNET.12 to net.APP_SPI_MISO",
+        "U_ETHERNET.5 to net.ETH_CS_N",
+        "U_ETHERNET.11 to net.APP_RESET_N",
+        "U_ETHERNET.1 to net.APP_GND",
+        "U_ETHERNET.2 to net.APP_GND",
+        "U_ETHERNET.7 to net.APP_GND",
+        "U_ETHERNET.8 to net.APP_3V3",
+        "U_ETHERNET.9 to net.APP_3V3"
       ])
     )
-    expect(renderedTraces.some((trace) => trace.includes("U_ESP32") && trace.includes("INT_N"))).toBe(false)
-    expect(renderedTraces.some((trace) => trace.includes("U_ESP32") && trace.includes("RST"))).toBe(false)
+    expect(renderedTraces.some((trace) => trace.includes("U_W5500") || trace.includes("J_ETH."))).toBe(false)
   })
 
-  it("keeps the RJ45 shield boundary separate from application ground", () => {
-    const renderedTraces = traces(renderCircuit())
-
-    expect(renderedTraces).toEqual(
-      expect.arrayContaining([
-        "J_ETH.CHASSIS_TERMINATION to net.CHASSIS_ETHERNET",
-        "J_ETH.SHIELD_A to net.CHASSIS_ETHERNET",
-        "J_ETH.SHIELD_B to net.CHASSIS_ETHERNET"
-      ])
-    )
-    expect(renderedTraces.some((trace) => trace.startsWith("J_ETH.SHIELD") && trace.endsWith("net.APP_GND"))).toBe(
-      false
-    )
-  })
-
-  it("renders the retained MagJack holes and ECS suggested land pattern into PCB artifacts", () => {
+  it("renders the official two-header WIZ850io socket pattern", () => {
     const circuitJson = renderPcbCircuit()
-    const magJackArtifacts = pcbArtifacts(circuitJson, "J_ETH")
-    const crystalArtifacts = pcbArtifacts(circuitJson, "Y_W5500")
+    const moduleArtifacts = pcbArtifacts(circuitJson, "U_ETHERNET")
+    const holes = moduleArtifacts.filter(isPortedPlatedHole)
 
     expect(circuitJson.filter((element) => element.type.includes("error"))).toEqual([])
-    expect(magJackArtifacts.filter((element) => element.type === "pcb_plated_hole")).toHaveLength(14)
-    expect(magJackArtifacts.filter((element) => element.type === "pcb_hole")).toHaveLength(2)
-    const txPositive = artifactWithPortHint(magJackArtifacts, "TD_P")
-    const txCenterTap = artifactWithPortHint(magJackArtifacts, "CTD")
-    const shield = artifactWithPortHint(magJackArtifacts, "SHIELD_A")
-    expect(txPositive).toMatchObject({ hole_diameter: 0.9, rect_pad_width: 1.408, rect_pad_height: 1.408 })
-    expect(shield).toMatchObject({ hole_diameter: 1.6, rect_pad_width: 2.4, rect_pad_height: 2.4 })
-    expect(txCenterTap.x - txPositive.x).toBeCloseTo(1.27)
-    expect(txCenterTap.y - txPositive.y).toBeCloseTo(-2.54)
-    const nonPlatedHole = magJackArtifacts.find((element) => element.type === "pcb_hole")
-    expect(nonPlatedHole).toMatchObject({ hole_diameter: 3.25, hole_shape: "circle" })
-    const crystalPads = crystalArtifacts.filter(isRectSmtPad)
-    expect(crystalPads).toHaveLength(4)
-    expect(crystalPads).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ width: 1.3, height: 1.1 }),
-        expect.objectContaining({ width: 1.3, height: 1.1 })
-      ])
-    )
-    const crystalPinOne = crystalPads.find((element) => element.port_hints?.includes("XI"))
-    const crystalPinThree = crystalPads.find((element) => element.port_hints?.includes("XO"))
-    if (crystalPinOne === undefined || crystalPinThree === undefined) {
-      throw new RangeError("missing ECS crystal pads")
-    }
-    expect(crystalPinThree.x - crystalPinOne.x).toBeCloseTo(2.3)
-    expect(crystalPinThree.y - crystalPinOne.y).toBeCloseTo(-1.9)
+    expect(ethernetModule.manufacturerPartNumber).toBe("WIZ850io")
+    expect(ethernetModulePins).toHaveLength(12)
+    expect(holes).toHaveLength(12)
+    expect(artifactWithPortHint(moduleArtifacts, "J1.1")).toMatchObject({
+      hole_diameter: 1,
+      rect_pad_width: 1.7,
+      rect_pad_height: 1.7,
+      port_hints: expect.arrayContaining(["APP_GND"])
+    })
+    const j1PinOne = artifactWithPortHint(moduleArtifacts, "J1.1")
+    const j1Int = artifactWithPortHint(moduleArtifacts, "J1.6")
+    const j2Miso = artifactWithPortHint(moduleArtifacts, "J2.6")
+    expect(j1Int).toMatchObject({ port_hints: expect.arrayContaining(["APP_W5500_INT_N"]) })
+    expect(traces(renderCircuit()).some((trace) => trace.includes("APP_W5500_INT_N"))).toBe(false)
+    expect(j2Miso).toMatchObject({ port_hints: expect.arrayContaining(["APP_SPI_MISO"]) })
+    expect(j1Int.x).toBeCloseTo(j1PinOne.x)
+    expect(j1Int.y - j1PinOne.y).toBeCloseTo(12.7)
+    expect(j2Miso.x - j1PinOne.x).toBeCloseTo(20.32)
   })
 
-  it("blanks the panel through one reset-only enable gate while every other HUB75 input defaults safe", () => {
+  it("retains the HUB75 safe defaults and reset-only enable gate", () => {
     const renderedTraces = traces(renderCircuit())
 
     for (const signal of [
