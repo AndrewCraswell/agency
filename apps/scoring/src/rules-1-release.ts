@@ -57,7 +57,7 @@ const REQUIRED_VERIFICATION_IDS = ["focused-rule-tests", "types", "lint", "forma
 const focusedRuleTests =
   "pnpm --filter scoring exec vitest run src/epee-state-machine-audit.test.ts src/epee.test.ts src/epee-contact-kernel.test.ts src/epee-resistance.test.ts src/foil.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts src/reference-machine-comparison-capture.test.ts src/scoring-glossary-and-units.test.ts src/scoring-timestamp-guard.test.ts"
 const focusedRuleSources =
-  "src/epee-state-machine-audit.ts src/epee.ts src/epee-contact-kernel.ts src/epee-resistance.ts src/foil.ts src/foil-insulation.ts src/sabre.ts src/bout-state.ts src/timing-table.ts src/timing-boundary.ts src/scoring-property-harness.ts src/reference-machine-comparison-capture.ts src/canonical-data-clone.ts src/scoring-glossary-and-units.ts"
+  "src/epee-state-machine-audit.ts src/epee.ts src/epee-contact-kernel.ts src/epee-resistance.ts src/foil.ts src/foil-insulation.ts src/sabre.ts src/bout-state.ts src/timing-table.ts src/timing-boundary.ts src/scoring-property-harness.ts src/reference-machine-comparison-capture.ts src/scoring-glossary-and-units.ts"
 
 export const RULES_ONE_RELEASE = {
   artifacts: [
@@ -96,12 +96,6 @@ export const RULES_ONE_RELEASE = {
       milestone: "M0-02",
       path: "apps/scoring/src/scoring-glossary-and-units.test.ts",
       sourceDigest: "sha256:002caf16fac99549e37ad55e46953abc78f6fd8b2fae025c9d9993dd61c8ac74"
-    },
-    {
-      id: "canonical-data-clone-source",
-      milestone: "M1-01",
-      path: "apps/scoring/src/canonical-data-clone.ts",
-      sourceDigest: "sha256:f9d62891d5c12efc306a5561f7426d1c834df32c5e4b78cf4fe6eed9949ce394"
     },
     {
       id: "epee-source",

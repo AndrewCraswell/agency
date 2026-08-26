@@ -11,7 +11,6 @@ import { REMOTE_PRESS_KINDS, type RemotePressKind } from "./remote-control.js"
 export const IR_PROTOCOL_ID = "fencing-ir" as const
 export const IR_PROTOCOL_VERSION = 1 as const
 export const IR_AEAD_SUITE = "AES-256-GCM-96N-128T" as const
-export const IR_AEAD_NONCE_BYTES = 12
 export const IR_AEAD_TAG_BYTES = 16
 export const IR_COMMAND_CIPHERTEXT_MAX_BYTES = 64
 /** Aligns command-id replay retention with the workflow reducer's 4,096-ID ledger. */

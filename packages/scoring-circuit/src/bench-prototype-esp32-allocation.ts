@@ -6,8 +6,6 @@
  * release.
  */
 
-export type Esp32PadDisposition = "assigned" | "ground" | "power" | "reserved-nc" | "reset"
-
 const allocationDefinition = {
   task: "BP-121",
   moduleMpn: "ESP32-S3-WROOM-1U-N16R2",

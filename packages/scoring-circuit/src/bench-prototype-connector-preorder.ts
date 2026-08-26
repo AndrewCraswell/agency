@@ -4,7 +4,6 @@
  * samples, physical mates, photographs, or measured continuity.
  */
 
-import type { BenchPrototypeContinuityEvidence } from "./bench-prototype-fixture-harness.js"
 import {
   benchPrototypeContinuityThresholds,
   evaluateBenchPrototypeContinuityEvidence
@@ -264,89 +263,6 @@ export const benchPrototypeConnectorPreorder = deepFreeze({
 })
 
 export type ImmutableEvidenceArtifact = { readonly artifactId: string; readonly sha256: string }
-
-type ReceivedComponent = {
-  readonly manufacturer: string
-  readonly mpn: string
-  readonly supplier: string
-  readonly receiptId: string
-  readonly lotOrDateCode: string
-  readonly quantity: number
-}
-
-export type BenchPrototypeConnectorPreorderEvidence = {
-  readonly artifactKind: "bench-prototype-connector-preorder-evidence"
-  readonly status: "measured"
-  readonly evidenceId: string
-  readonly recordedAtUtc: string
-  readonly operator: string
-  readonly samples: readonly {
-    readonly id: BenchPrototypeConnectorSampleId
-    readonly components: readonly ReceivedComponent[]
-  }[]
-  readonly drawingAndCad: readonly {
-    readonly id: BenchPrototypeConnectorSampleId
-    readonly drawingRevision: string
-    readonly drawingArtifact: ImmutableEvidenceArtifact
-    readonly cadArtifact: ImmutableEvidenceArtifact
-    readonly footprintReference: string
-    readonly pinOneOverlayAccepted: true
-    readonly boardEdgeAndKeepoutAccepted: true
-    readonly reviewer: string
-  }[]
-  readonly matingAndOrientation: readonly {
-    readonly id: BenchPrototypeConnectorSampleId
-    readonly mates: readonly {
-      readonly manufacturer: string
-      readonly mpn: string
-      readonly quantity: number
-      readonly pinOneOrKeyPhoto: ImmutableEvidenceArtifact
-      readonly fullySeatedPhoto: ImmutableEvidenceArtifact
-    }[]
-    readonly insertionDirection: string
-    readonly retentionObserved: true
-    readonly wrongMateOrReversalRejected: true
-  }[]
-  readonly retentionAndStrain: readonly {
-    readonly id: BenchPrototypeConnectorSampleId
-    readonly loadPath: string
-    readonly cableExitDirection: string
-    readonly retentionArtifact: ImmutableEvidenceArtifact
-    readonly strainArtifact: ImmutableEvidenceArtifact
-    readonly solderJointsAreNotSoleRetention: true
-  }[]
-  readonly continuity: readonly {
-    readonly id: BenchPrototypeConnectorSampleId
-    readonly checklistRevision: string
-    readonly evidenceArtifact: ImmutableEvidenceArtifact
-    readonly equipment: {
-      readonly manufacturer: string
-      readonly model: string
-      readonly serialNumber: string
-      readonly calibrationCertificate: ImmutableEvidenceArtifact
-      readonly calibrationDueDate: string
-    }
-    readonly method: {
-      readonly powerState: "off-and-discharged"
-      readonly testVoltageV: number
-      readonly leadCompensationMethod: "zeroed-with-same-leads-at-fixture"
-      readonly compensatedLeadResidualOhms: number
-    }
-    readonly measurements: readonly {
-      readonly id: string
-      readonly from: string
-      readonly to: string
-      readonly resistanceOhms: number
-    }[]
-    readonly negativeTests: readonly {
-      readonly id: "open" | "polarity" | "reversal" | "swap"
-      readonly result: "rejected"
-      readonly observation: string
-      readonly artifact: ImmutableEvidenceArtifact
-    }[]
-  }[]
-  readonly weaponFixtureContinuity: BenchPrototypeContinuityEvidence
-}
 
 export type BenchPrototypeConnectorPreorderEvaluation = {
   readonly accepted: boolean

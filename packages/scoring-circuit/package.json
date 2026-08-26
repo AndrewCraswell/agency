@@ -9,6 +9,7 @@
   },
   "scripts": {
     "analog:simulate": "node scripts/run-analog-sim.mjs",
+    "analog:simulate:reference-drive": "node scripts/run-reference-drive-sim.mjs",
     "build": "tsx src/build.ts",
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace packages/scoring-circuit",

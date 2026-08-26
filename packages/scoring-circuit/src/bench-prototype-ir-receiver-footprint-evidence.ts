@@ -236,8 +236,6 @@ const definition = {
 
 export const benchPrototypeIrReceiverFootprintEvidence = deepFreeze(definition)
 
-export type BenchPrototypeIrReceiverFootprintEvidence = typeof benchPrototypeIrReceiverFootprintEvidence
-
 /** Reject substitutions, invented geometry, missing digests, or approval credit. */
 export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown): true {
   if (!sameDataGraph(value, benchPrototypeIrReceiverFootprintEvidence)) {

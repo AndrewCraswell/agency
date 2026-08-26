@@ -154,17 +154,6 @@ export const VIRTUAL_FRONT_END_PHASE_PROFILES: readonly VirtualFrontEndPhaseProf
   }
 ] as const
 
-/** BP-103 net labels are physical aliases only; they are never logical IDs. */
-export const VIRTUAL_FRONT_END_BP103_PHYSICAL_ALIASES = Object.freeze({
-  "left.A": "LEFT_WEAPON_A",
-  "left.B": "LEFT_WEAPON_B",
-  "left.C": "LEFT_WEAPON_C",
-  piste: "PISTE",
-  "right.A": "RIGHT_WEAPON_A",
-  "right.B": "RIGHT_WEAPON_B",
-  "right.C": "RIGHT_WEAPON_C"
-} as const)
-
 export type VirtualFrontEndSide = "left" | "right"
 
 export type VirtualFrontEndPerspective = "acting-side" | "affected-side"

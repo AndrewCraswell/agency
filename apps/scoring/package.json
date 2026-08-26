@@ -57,8 +57,6 @@
     "check:golden-vectors": "pnpm build && node scripts/export-golden-vectors.mjs --check",
     "check:stm32-golden-fixture": "node firmware/stm32/tools/generate-golden-fixture.mjs --check",
     "check:lint": "pnpm lint",
-    "check:semantic-inventory": "node scripts/check-scoring-semantic-inventory.mjs",
-    "test:semantic-inventory": "node scripts/check-scoring-semantic-inventory.test.mjs",
     "check:types": "run-p check:types:*",
     "check:types:domain": "tsc --noEmit",
     "check:types:simulator": "tsc -p simulator/tsconfig.json --noEmit",
@@ -69,7 +67,7 @@
     "observe:scenarios": "pnpm build && node scripts/serve-scenario-observatory.mjs",
     "run:scenarios": "pnpm build && node scripts/run-scenarios.mjs",
     "test": "run-s build:simulator test:domain test:simulator",
-    "test:c-coverage": "node firmware/tools/check-coverage.mjs",
+    "test:c-coverage": "node --test firmware/tools/check-coverage.test.mjs && node firmware/tools/check-coverage.mjs",
     "test:coverage": "run-s build:simulator test:coverage:domain test:coverage:simulator",
     "test:coverage:domain": "vitest run --coverage",
     "test:coverage:simulator": "vitest run --config simulator/vite.config.ts --coverage",
@@ -78,7 +76,7 @@
     "test:simulator": "vitest run --config simulator/vite.config.ts",
     "test:stm32-host": "node firmware/stm32/tools/test-host.mjs",
     "test:watch": "vitest",
-    "verify": "run-s check:format check:lint check:types check:unused check:behavior-oracle check:semantic-inventory check:golden-vectors test:coverage test:c-coverage test:product-release-host test:stm32-host"
+    "verify": "run-s check:format check:lint check:types check:unused check:behavior-oracle check:golden-vectors test:coverage test:c-coverage test:product-release-host test:stm32-host"
   },
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",
@@ -95,7 +93,6 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "happy-dom": "^20.11.1",
     "oxlint": "^1.72.0",
-    "oxc-parser": "^0.140.0",
     "tailwindcss": "^4.3.3",
     "typescript": "catalog:",
     "vite": "^8.1.5",

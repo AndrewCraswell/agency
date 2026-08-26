@@ -14,8 +14,7 @@ import {
   type ControllerAuthority,
   type RemoteCommand,
   type RemoteCommandRejectionReason,
-  type SourceCommandIdentity,
-  type TimedWorkflowState
+  type SourceCommandIdentity
 } from "./remote-control.js"
 
 export type FreshBoutWorkflowInput = Readonly<{
@@ -1001,5 +1000,3 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
 
   return reject(state, command, "unsupported-command")
 }
-
-export type { TimedWorkflowState }

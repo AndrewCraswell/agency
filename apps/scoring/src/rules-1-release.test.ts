@@ -21,7 +21,7 @@ describe("rules-1 release record", () => {
       requiredRole: "root-independent-reviewer",
       reviewer: "root-independent-reviewer"
     })
-    expect(release.artifacts).toHaveLength(39)
+    expect(release.artifacts).toHaveLength(38)
     expect(new Set(release.artifacts.map((artifact) => artifact.path)).size).toBe(release.artifacts.length)
     expect(release.traceabilityIds).toEqual([
       "GEN-03",

@@ -41,21 +41,6 @@ const UNCERTAINTY_UNIT_BY_SUBJECT = {
   timing: "us"
 } as const satisfies Record<UncertaintySubject, "milliOhm" | "us" | null>
 
-/**
- * M0-03 cycle-receipt diagnostics that map to a recordable line fault. A null
- * mapping deliberately remains an uncertainty record instead of a guessed fault.
- */
-export const M003_DIAGNOSTIC_TO_LINE_FAULT = Object.freeze({
-  "cross-line": "cross-line",
-  "cycle-incomplete": "acquisition-gap",
-  "out-of-range-resistance": "out-of-range-resistance",
-  "safe-state": "safe-state",
-  "sample-overrun": "sample-overrun",
-  "stale-sample": "acquisition-gap",
-  "uncertain-evidence": null,
-  "unauthorized-excitation": "excitation-invalid"
-} as const)
-
 export type RawCaptureReference = Readonly<{
   captureId: string
   contentDigest: string
