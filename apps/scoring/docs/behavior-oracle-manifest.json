@@ -8,22 +8,22 @@
     {
       "category": "decision-schema",
       "path": "apps/scoring/docs/decision-record-contract.md",
-      "sha256": "sha256:f57413c314074c80671ec3df8a7e5e1a726638074e2ded000845fb3922084005"
+      "sha256": "sha256:749c1d9b557d6c27d4bd9b98505905a6acb72f0e80105a4b876e9cbe30d9df8f"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/docs/golden-scenario-manifest.json",
-      "sha256": "sha256:758e3275953f98a29cc7b7f20790cb6bb61728cca8cd36bccf7803af98a760d9"
+      "sha256": "sha256:580e1526c0bd66ae8c46715c4156b427997be80fb34a1759b18adf529c22e046"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/docs/golden-scenario-manifest.schema.json",
-      "sha256": "sha256:3b7478e401eb98d0b74a6033937214fac303c1e5b3743b1ad6912e8b4e9ae0f8"
+      "sha256": "sha256:945df2b7dca237ad5790edd492585f557bd1ceb9c38e5c9b9f334b264b380cd9"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/docs/golden-scenario.schema.json",
-      "sha256": "sha256:65ac206bff130fd3a4b2265622ecc9032a46c831c22998e00e12f289d05c59f8"
+      "sha256": "sha256:650d4ff6427d48cb27cd4402c42ebd10b23732a32855f30533b2c9af4b7f271c"
     },
     {
       "category": "golden-scenario",
@@ -59,6 +59,11 @@
       "category": "golden-scenario",
       "path": "apps/scoring/docs/golden-scenarios/epee-non-monotonic-time.json",
       "sha256": "sha256:8cc02fd15c48e59314471c82323f517ba14c97d565ce37b266f5b8801116ede4"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-resistance-near-lockout-both-sides.json",
+      "sha256": "sha256:bb0f6310a4e7c862728768d603ddc6ad220e791dcd4fe591e03f139fed257ede"
     },
     {
       "category": "golden-scenario",
@@ -118,7 +123,7 @@
     {
       "category": "golden-scenario",
       "path": "apps/scoring/docs/golden-scenarios/sabre-contact-floor-boundaries.json",
-      "sha256": "sha256:ad594bab795a9b08fc9447eec5c58d9442103d0668ae30a0ffbb25a29e5c1529"
+      "sha256": "sha256:b8a37425fca444ade5f679533c62ca4031261ef3e13e266f94d7fb57bf9b0fed"
     },
     {
       "category": "golden-scenario",
@@ -178,12 +183,12 @@
     {
       "category": "rules-1",
       "path": "apps/scoring/docs/rules-1-release-review.md",
-      "sha256": "sha256:ea36362a413b35ec321024bd9b96798258169a5a59992d9a4f8ca5be00bb0782"
+      "sha256": "sha256:218ee3418166f61e8e3f0e26579819945e635ebe0392cf97b41461da288cd794"
     },
     {
       "category": "product-release",
       "path": "apps/scoring/firmware/product-update/CMakeLists.txt",
-      "sha256": "sha256:6c10b689990b6c5307b9947f8dc081431ce2d60bab0192ae3fb19c7300470563"
+      "sha256": "sha256:e1271d9b8c0703114c351d0095850ccbac6199290a902ba899543c019f25ed8a"
     },
     {
       "category": "product-release",
@@ -198,12 +203,12 @@
     {
       "category": "product-release",
       "path": "apps/scoring/firmware/product-update/src/scoring_product_release.c",
-      "sha256": "sha256:73cc8a38ba30b1ad2e407f187833c2cb74b4658c491be32507e25d100aee359c"
+      "sha256": "sha256:5e0dc6639020c9227f1b72b74f5af1b5194cc6019b55c4ba1787ea10e6938842"
     },
     {
       "category": "product-release",
       "path": "apps/scoring/firmware/product-update/tests/scoring_product_release_host_test.c",
-      "sha256": "sha256:c2426513059f6266ea909fc8382031f51d0932c5a263115b2cd53f3f9df3783f"
+      "sha256": "sha256:2e8b7b1cc0e45236469d13436ded3dba6572fdea5dbc10cca2392ed93e866318"
     },
     {
       "category": "display-projection",
@@ -213,17 +218,17 @@
     {
       "category": "transport-frames",
       "path": "apps/scoring/fixtures/transport-frame-golden.json",
-      "sha256": "sha256:894cf5fe1a3d4dd34d69a602d95b8482aaf0716ae2b17daf1f854ade3eb27a9c"
+      "sha256": "sha256:96c48fdcac7cf300a988f0da4603736afea0185405bda3edd2acc422db95d472"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/observatory/index.html",
+      "sha256": "sha256:5adca142708e4f92ee009f95ecb8ec2aa2c1153eb10c883a5de2db8456fb49c1"
     },
     {
       "category": "environment",
       "path": "apps/scoring/package.json",
-      "sha256": "sha256:fc8903f42eb700bad82d516aa6018d8821998ad86a3989d468a24d6edc692156"
-    },
-    {
-      "category": "oracle-generator",
-      "path": "apps/scoring/scripts/behavior-oracle.mjs",
-      "sha256": "sha256:13ab1c1fc18851502e41f8045d23ca92860385e60552437eb2179e1cad400f7c"
+      "sha256": "sha256:b711bb8e5ede65755c04638b7330cec1d18c6484acd11cbdddd74b0c4a79848b"
     },
     {
       "category": "golden-corpus",
@@ -233,107 +238,12 @@
     {
       "category": "golden-corpus",
       "path": "apps/scoring/scripts/run-scenarios.mjs",
-      "sha256": "sha256:a2c59f6d9c0f5e93f36a6c5bfd24de6920b5ad5e881fb78f67d0d5b817a7a36c"
+      "sha256": "sha256:c677b4ac25895c0ae27f3897b82a64da4d8676223f3cbe5db62532f8f4aba5c3"
     },
     {
       "category": "display-projection",
       "path": "apps/scoring/scripts/serve-scenario-observatory.mjs",
-      "sha256": "sha256:d88a18fc05b8b708b5a08601938526ad64b142fa7d5049b8a9f64d8ecd2de5ad"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/components.json",
-      "sha256": "sha256:763dc6708496b6210b3603807701dd16da8d24165db1773ae758eaccbf7838e5"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/index.html",
-      "sha256": "sha256:566c03477c3fb8453d45a24f9169704ff25942d440d3fcce892282c98d606422"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/App.test.tsx",
-      "sha256": "sha256:214b97ae541a265a276be40b5faef591b071cf9e37dd40798e47ffb5896142fc"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/App.tsx",
-      "sha256": "sha256:0f520d16217b4eee4ca680b277695b2d679618adf9c1568dd828560399931edc"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/DeveloperDisplay.test.tsx",
-      "sha256": "sha256:068e1e5a0d585d99ba1dd5c4a57d6cebd65d00733e858c18e326e5e0a54e7a32"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/DeveloperDisplay.tsx",
-      "sha256": "sha256:9c519dcfe175ab4f56cbf912a53cb2395cea25762162d6ac0e411255eca394b2"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/ui/badge.tsx",
-      "sha256": "sha256:e10f96ac28e8271500b3f4d1b9b654b7b3f7e3918051d16cba5f5932ebd00565"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/ui/button.tsx",
-      "sha256": "sha256:df2713f5a9668db736da868ba792874ae7cc9f9ac72dcbbfcc660342cbe8e0ff"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/ui/dropdown-menu.tsx",
-      "sha256": "sha256:d4ccd9ee986ef6c7cd39367904078d9717fd60496efdd992e8ebaad4acb9523b"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/ui/input.tsx",
-      "sha256": "sha256:cb1737d618a4fba4d959e9d6c0fc7829f433539cb491fa76eeba1f50f459128c"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/components/ui/tooltip.tsx",
-      "sha256": "sha256:43567cd68dd75602ea4187c795e6d4353ab46e0da880de1b8c33a28c28c0cf17"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/format.test.ts",
-      "sha256": "sha256:016131bf9e7c94e68728310c85abca1b8801086d6f26066138e9715f8de73e02"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/format.ts",
-      "sha256": "sha256:3812ea225a9feec1af21da762b05f61351865764fa2bf535d180db87572cc941"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/lib/utils.ts",
-      "sha256": "sha256:7c8c3dfc0cdd370d44932828eb067ef771c8fe7996693221d5d4b90af6d54f2d"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/main.tsx",
-      "sha256": "sha256:420310255cd05907a8cfb09c3b6b3ee6faf7bf583eb965e0c8a32f933eb2960b"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/simulator-api.ts",
-      "sha256": "sha256:9339896480d928e699206dc3ebdf8aee8b20e80ca60ae3c53ab586919b1577b7"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/src/styles.css",
-      "sha256": "sha256:d92380bdcfc440f93903d6254886c0653f71fa94ce6b826b22ca87575e475e1a"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/tsconfig.json",
-      "sha256": "sha256:b405ba81424d26e1da52842420af471d2e2324a97ab24528e92fe833b7b26383"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/simulator/vite.config.ts",
-      "sha256": "sha256:a7980067e73dbb1b1856302f6bfde3cf18741b73bc532da1364bcddfe88a3c39"
+      "sha256": "sha256:ba56fe70915d97eea20400e9d95b4bd42120f1f96dc60b1e2d1ef130cf17175d"
     },
     {
       "category": "rules-1",
@@ -348,12 +258,12 @@
     {
       "category": "decision-schema",
       "path": "apps/scoring/src/decision-record.test.ts",
-      "sha256": "sha256:01db8a0fb249ead10791e74ea7ecd9ad5aae148d5c80c81db7ac4c9c49f2db0e"
+      "sha256": "sha256:fcacf4f9a60b3ec0ed4fd229b4c08174eab01ab9303c94b8a0f6e0b16a6588ab"
     },
     {
       "category": "decision-schema",
       "path": "apps/scoring/src/decision-record.ts",
-      "sha256": "sha256:78654764396b0e6e4eb87227f3e433f21f90d22721f4c5a24b31f0ecb1f846df"
+      "sha256": "sha256:bff9a9d4b29bb188e3935073e27a1e37179a8556b8dffd66605adfafd1d85211"
     },
     {
       "category": "rules-1",
@@ -363,7 +273,7 @@
     {
       "category": "rules-1",
       "path": "apps/scoring/src/epee.ts",
-      "sha256": "sha256:d5d55ad915598858ae92dd8a205f410f64a53ba1c1a11730beeacb058f65b65e"
+      "sha256": "sha256:428d020fd742bbed2de06b2dbef9722e807959bd9ef4c7e786c1593cb9269677"
     },
     {
       "category": "rules-1",
@@ -378,12 +288,12 @@
     {
       "category": "rules-1",
       "path": "apps/scoring/src/foil-insulation.test.ts",
-      "sha256": "sha256:b0c4f18a1062ca0a6b5e5e0b752163ef8a9b1eccf469a8896844aa1da63a7110"
+      "sha256": "sha256:e07eb0d4697218c2c40bfd52a04234975ff361341244b77b754124200cb608a9"
     },
     {
       "category": "rules-1",
       "path": "apps/scoring/src/foil-insulation.ts",
-      "sha256": "sha256:5ec955627dfc40ce2f301c5c66d21ac504aa4064c3cfbfcf15a1fb4f27da5ea5"
+      "sha256": "sha256:d549432d5e19c8f8922eb7d86c720d697617ecff6c1d524cbea7f78fef31318e"
     },
     {
       "category": "golden-corpus",
@@ -403,22 +313,12 @@
     {
       "category": "rules-1",
       "path": "apps/scoring/src/foil.ts",
-      "sha256": "sha256:fe233ff0d3c3f5bab15b059fc4746dbac5d9c82f8cd0c095922320da2bfbf8b9"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/src/observatory-identity.test.ts",
-      "sha256": "sha256:c6cbf76758bbfe242c3aed6218e3264f62f46a66f9e98b6bde2cc911f81ae6c0"
-    },
-    {
-      "category": "simulator",
-      "path": "apps/scoring/src/observatory-identity.ts",
-      "sha256": "sha256:36ebd9181f715af9f8bbed5028147ad6955b084daf24a0a67456d1ad8072c522"
+      "sha256": "sha256:4627f31f522d662f5cbea7271d1fdb77f77dcb1cc51f11fc8dc857811ce62bea"
     },
     {
       "category": "display-projection",
       "path": "apps/scoring/src/observatory-integration.test.ts",
-      "sha256": "sha256:b3e34f7ddf25a70ca5d906df4a9cc1c2712e21701dd5ccea70857d814a80cc43"
+      "sha256": "sha256:c01784b2dc97208831385945bec7cfe4d6283b758be92e575ab13d63365292fc"
     },
     {
       "category": "golden-corpus",
@@ -433,12 +333,12 @@
     {
       "category": "rules-1",
       "path": "apps/scoring/src/sabre.test.ts",
-      "sha256": "sha256:291bb4be8fa3f748f195cfa03e0a9ac004c212f14169e060e3e0c4360b6e7170"
+      "sha256": "sha256:fe0c46655a1909a2ee00292ec70234ab49d440930d8185880b810e32c8d96ae6"
     },
     {
       "category": "rules-1",
       "path": "apps/scoring/src/sabre.ts",
-      "sha256": "sha256:1b6a95363849f21a3701fbfc033a7df849b7656ba06fa38aed34fa23f90ce089"
+      "sha256": "sha256:d7a7a6a08a131e061d86d41c777bdca5ba1a420b87f5e6d6bdc0f199917962d8"
     },
     {
       "category": "display-projection",
@@ -448,27 +348,27 @@
     {
       "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-fixtures.ts",
-      "sha256": "sha256:f31f6f7274f68c97d7821a89cfc63914641b8d4d503e4413e6e60df3343e3fa4"
+      "sha256": "sha256:7d3690fbce812f66d396d30213642aaffeed132117d8a411c057de34bc99ca1b"
     },
     {
       "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-projection.test.ts",
-      "sha256": "sha256:914cf040ac3d1b968d92f564d4e8e24abb83ba19190f71ea0e306773b082d8d5"
+      "sha256": "sha256:dbf62aa72e22a40375b70b2a10105f0b79cc6ac8c22eb452e9940a7603f3ac96"
     },
     {
       "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-projection.ts",
-      "sha256": "sha256:b9edcd85a79d6a1cf8a67f3ba8c2105c761b31578715573b87051698d92dfa3c"
+      "sha256": "sha256:49e7c86ebc0acd291c45b3cb28aeeacc972aaf994d88c7508c4e6866d1eabfe3"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/src/scenario-runner.test.ts",
-      "sha256": "sha256:32f1c70181a4aec730b7b300d84c57bec899905308f15239b56ea0d3ca4e573f"
+      "sha256": "sha256:d5a49e6671a6ef7da168922b30da5595294d6e3ef34c18619bbd2050ceec1db4"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/src/scenario-runner.ts",
-      "sha256": "sha256:cd4b9baff3e8f3f21e865d14ac856d44572d5dbb24f6539435d07f9b5a2613a5"
+      "sha256": "sha256:781e9eacd535e32f9cbecaf50ec089a8b37dae1ebd82f2e07be5f732de564973"
     },
     {
       "category": "rules-1",
@@ -483,32 +383,32 @@
     {
       "category": "rules-1",
       "path": "apps/scoring/src/timing-boundary.test.ts",
-      "sha256": "sha256:e3cbe6f3fc1bd5d5382c259fdf1fdd2e9b9c0171d879426dbb9a50f979181cb8"
+      "sha256": "sha256:bd749620509930865aa141864a884fb82ed62efb838efe2ef7bdd9e2be92a972"
     },
     {
       "category": "rules-1",
       "path": "apps/scoring/src/timing-boundary.ts",
-      "sha256": "sha256:91a4e664c41af1401ddd20b15dabba6dc2b833f344c241d37210a9f62af94128"
+      "sha256": "sha256:7f195c735b1d1c1ddace365cc43434d106876fdc138189c24e6a3e8e9c6d0c21"
     },
     {
       "category": "rules-1",
       "path": "apps/scoring/src/timing-table.test.ts",
-      "sha256": "sha256:0afcf1b0c3ef5aed6597fe39a20aaa6925c2613e35c5766bdc19f026f485f56c"
+      "sha256": "sha256:419024cd012b3ccd8a1f180473d46ecfa478b12ecd093fd8da9e7b2156c7d53b"
     },
     {
       "category": "rules-1",
       "path": "apps/scoring/src/timing-table.ts",
-      "sha256": "sha256:61f6ab3a074c0cf81a50e0d1ceef227bc93bf532161258249db4e378244f83d8"
+      "sha256": "sha256:bb2978197c47c5b4cac53198b472bea42b3b6d3e6b08af406ad95de29083265c"
     },
     {
       "category": "transport-frames",
       "path": "apps/scoring/src/transport-frame.test.ts",
-      "sha256": "sha256:8cd89a1518bb10f2a2c4305dbc95c1a0537fc3c45fd21cdb603fef4871d3f05b"
+      "sha256": "sha256:7b22a993fb9d9d71dedb7dd02ddbe4443c924456550ff3b4b1273e5a19ff22d7"
     },
     {
       "category": "transport-frames",
       "path": "apps/scoring/src/transport-frame.ts",
-      "sha256": "sha256:35c66dae268b7883ac6a284ed1005f470e64928b7acc11c1f36a8a97a634dd08"
+      "sha256": "sha256:4374a0158ca21339c2849d8fee52f0b67518f5684794416b1a1d585057be35b2"
     },
     {
       "category": "environment",
@@ -528,7 +428,7 @@
     {
       "category": "environment",
       "path": "package.json",
-      "sha256": "sha256:b793b0eb5ba3514ac0859b0fd384f3b09da84c0d94c23d917ef8182b03215d1b"
+      "sha256": "sha256:136d1bc92ec5fa07f010f6b96315466a1fd6aac88a28f5578703fe4f3297d9ad"
     },
     {
       "category": "environment",
@@ -543,12 +443,12 @@
     {
       "category": "environment",
       "path": "pnpm-lock.yaml",
-      "sha256": "sha256:609d06ae81e7d17009b923d1dce5bca18d9ff68a4dbe4bcdfa6fec74aba2310a"
+      "sha256": "sha256:06ac7a64def0c62e38e96b1dfbabc5a7cd304528b2a1d492a9153b7a5970363c"
     },
     {
       "category": "environment",
       "path": "pnpm-workspace.yaml",
-      "sha256": "sha256:6c955229406118202bc2b109e44f882f10910eabd452d7fbf0c66c3332d3df6e"
+      "sha256": "sha256:bd305fec592ef40d000c945e1d9808e0275c10af09743a3f05e73311db40f481"
     },
     {
       "category": "environment",
@@ -561,7 +461,6 @@
     "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/foil-evidence.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
     "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
     "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/scenario-display-fixtures.test.ts src/observatory-integration.test.ts",
-    "pnpm --filter scoring test:simulator",
     "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
     "pnpm --filter scoring check:golden-vectors",
     "pnpm --filter scoring test:product-release-host"
@@ -570,5 +469,5 @@
   "hashPolicy": "sha256 over UTF-8 text after CRLF-to-LF normalization",
   "oracleRevision": "rules-1",
   "schemaVersion": 1,
-  "digest": "sha256:0347439c8d8c62e6b83c3779c964761d5ebd8356379267657c19207fe90ea59d"
+  "digest": "sha256:8b8866b902dac2928c8859d44b874176d56a8077c0b0a0528b3183c53280b046"
 }
