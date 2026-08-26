@@ -1,17 +1,20 @@
 # Scoring documentation
 
-Use this directory for current product contracts and executable behavior evidence. Historical task reports, superseded
-architecture plans, and completed implementation diaries are intentionally not retained here.
+Use this directory for current product contracts and executable behavior evidence. Source code and tests own
+implementation details. Historical task reports, superseded architecture plans, and completed implementation diaries
+are not retained here.
 
 ## Canonical plans
 
-- [Device delivery plan](device-delivery-plan.md) coordinates scoring-device software and delivery work.
 - [C17 and WebAssembly migration](c17-wasm-simulator-migration.md) owns the single portable scoring core.
 - [Encrypted IR remote-control contract](encrypted-ir-remote-control-contract.md) owns referee-control behavior and
   security requirements.
 - [ESP32 prototype backlog](../../../packages/scoring-circuit/docs/esp32-prototype-backlog.md) owns the clean-sheet PCB
   critical path.
 - [Technical debt](technical-debt.md) contains only current, actionable cleanup findings.
+
+There is no separate cross-project delivery backlog. It was removed after the clean-sheet ESP32-S3 prototype, C17
+core migration, and encrypted-IR work each gained a current owner above.
 
 ## Normative inputs
 
@@ -45,7 +48,9 @@ that the prototype is homologated.
 
 ## Product safety and recovery
 
-- [Product threat model](product-threat-model.md)
-- [Power and reset states](power-reset-state-contract.md)
-- [ESP32 security and recovery ADR](esp32-production-security-recovery-adr.md)
 - [Product release manifest](product-release-manifest-contract.md)
+- [Encrypted IR security](encrypted-ir-security-contract.md)
+
+The retired dual-processor threat, reset, transport, and recovery documents were removed when the prototype moved to
+one ESP32-S3. Replacement security and recovery contracts must describe that architecture rather than preserving the
+old STM32 boundary.
