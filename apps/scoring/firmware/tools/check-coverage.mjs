@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const firmwareRoot = resolve(scriptDirectory, "..")
 const scoringRoot = resolve(firmwareRoot, "..")
+const repositoryRoot = resolve(scoringRoot, "..", "..")
 const coverageRoot = resolve(firmwareRoot, "out", "coverage")
 const sourceExtensions = new Set([".c", ".cc", ".cpp", ".cxx"])
 const excludedDirectoryNames = new Set([".cache", "generated", "out", "tests", "vendor"])
@@ -49,6 +50,14 @@ function commandOrThrow(command, arguments_, options = {}) {
 function commandPath(command) {
   const result = spawnSync(command, ["--version"], { encoding: "utf8", stdio: "ignore" })
   return result.error === undefined && result.status === 0 ? command : undefined
+}
+
+function buildDomainArtifacts() {
+  const compiler = join(repositoryRoot, "node_modules", "typescript", "lib", "tsc.js")
+  if (!existsSync(compiler)) throw new Error(`TypeScript compiler is required at ${compiler}`)
+  commandOrThrow(process.execPath, [compiler, "-p", join(scoringRoot, "tsconfig.build.json")], {
+    cwd: scoringRoot
+  })
 }
 
 function findWindowsLlvmBin() {
@@ -231,6 +240,7 @@ function buildAndMeasure(project, toolchain) {
 }
 
 function run() {
+  buildDomainArtifacts()
   const toolchain = resolveToolchain()
   removeCoverageOutput()
   const measurements = new Map()
