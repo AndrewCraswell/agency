@@ -42,6 +42,7 @@
     "@types/node": "catalog:",
     "@types/react": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.9",
+    "circuit-json-to-gerber": "0.0.94",
     "circuit-json-to-kicad": "0.0.173",
     "earcut": "3.0.2",
     "esbuild": "0.28.1",

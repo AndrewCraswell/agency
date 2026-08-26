@@ -849,6 +849,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.9
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      circuit-json-to-gerber:
+        specifier: 0.0.94
+        version: 0.0.94(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(tscircuit@0.0.2271(@tscircuit/schematic-corpus@0.0.114(typescript@7.0.1-rc))(bun-match-svg@0.0.16(typescript@7.0.1-rc))(looks-same@9.0.1)(supports-color@10.2.2)(three@0.179.1)(typescript@7.0.1-rc))(typescript@7.0.1-rc)
       circuit-json-to-kicad:
         specifier: 0.0.173
         version: 0.0.173(typescript@7.0.1-rc)
@@ -7085,6 +7088,14 @@ packages:
     resolution: {integrity: sha1-9LTzz0/lqyHf3c2gnxRCAuG0J2E=}
     peerDependencies:
       typescript: ^5.9.3
+
+  circuit-json-to-gerber@0.0.94:
+    resolution: {integrity: sha1-ycnbxCaPmvUStwiJsgMJ7BxtcBk=}
+    hasBin: true
+    peerDependencies:
+      circuit-json: '*'
+      tscircuit: '*'
+      typescript: ^5.0.0
 
   circuit-json-to-gltf@0.0.111:
     resolution: {integrity: sha1-e+2fB99Wm91JqLUpt4BCwaYz/8w=}
@@ -18017,6 +18028,16 @@ snapshots:
   circuit-json-to-connectivity-map@0.0.27(typescript@7.0.1-rc):
     dependencies:
       '@tscircuit/math-utils': 0.0.9(typescript@7.0.1-rc)
+      typescript: 7.0.1-rc
+
+  circuit-json-to-gerber@0.0.94(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(tscircuit@0.0.2271(@tscircuit/schematic-corpus@0.0.114(typescript@7.0.1-rc))(bun-match-svg@0.0.16(typescript@7.0.1-rc))(looks-same@9.0.1)(supports-color@10.2.2)(three@0.179.1)(typescript@7.0.1-rc))(typescript@7.0.1-rc):
+    dependencies:
+      '@tscircuit/alphabet': 0.0.25(typescript@7.0.1-rc)
+      circuit-json: 0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc))
+      fast-json-stable-stringify: 2.1.0
+      polygon-clipping: 0.15.7
+      transformation-matrix: 3.1.0
+      tscircuit: 0.0.2271(@tscircuit/schematic-corpus@0.0.114(typescript@7.0.1-rc))(bun-match-svg@0.0.16(typescript@7.0.1-rc))(looks-same@9.0.1)(supports-color@10.2.2)(three@0.179.1)(typescript@7.0.1-rc)
       typescript: 7.0.1-rc
 
   circuit-json-to-gltf@0.0.111(@resvg/resvg-js@2.6.2)(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(@tscircuit/circuit-json-util@0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76))(@tscircuit/footprinter@0.0.409(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.179.1)(typescript@7.0.1-rc):

@@ -30,10 +30,10 @@ function countByType(elements: readonly CircuitElement[]): Readonly<Record<strin
   )
 }
 
-/** Legacy preview routing configuration. The fabrication-authority PCB is routed in KiCad. */
+/** Routing configuration used for the generated prototype KiCad board. */
 export const prototypeBoardRouting = {
   allowLegacyAutorouters: true,
-  autorouter: process.argv.includes("--route") ? "freerouting" : "sequential_trace",
+  autorouter: "freerouting",
   routingDrcChecksDisabled: false
 } as const
 
@@ -45,6 +45,45 @@ export type BoardRoutingReport = {
   readonly missingConnectionCount: number
   readonly routingErrorCount: number
   readonly routingErrorCounts: Readonly<Record<string, number>>
+}
+
+function countDisconnectedPcbNets(elements: readonly CircuitElement[]): number {
+  const sourcePortKeys = new Map(
+    elements
+      .filter((element) => element.type === "source_port")
+      .flatMap((element) => {
+        const sourcePortId = stringProperty(element, "source_port_id")
+        const connectivityKey = stringProperty(element, "subcircuit_connectivity_map_key")
+        return sourcePortId !== undefined && connectivityKey !== undefined
+          ? [[sourcePortId, connectivityKey] as const]
+          : []
+      })
+  )
+  const pcbPortsByNet = Object.groupBy(
+    elements
+      .filter((element) => element.type === "pcb_port")
+      .flatMap((element) => {
+        const pcbPortId = stringProperty(element, "pcb_port_id")
+        const sourcePortId = stringProperty(element, "source_port_id")
+        const connectivityKey = sourcePortId === undefined ? undefined : sourcePortKeys.get(sourcePortId)
+        return pcbPortId !== undefined && connectivityKey !== undefined ? [{ connectivityKey, pcbPortId }] : []
+      }),
+    (port) => port.connectivityKey
+  )
+  const connectedPorts = new Map<string, Set<string>>()
+  const connect = (left: string, right: string) => {
+    const merged = new Set([left, right, ...(connectedPorts.get(left) ?? []), ...(connectedPorts.get(right) ?? [])])
+    for (const portId of merged) connectedPorts.set(portId, merged)
+  }
+  for (const trace of elements.filter((element) => element.type === "pcb_trace")) {
+    const ports = stringArrayProperty(trace, "connectsTo")
+    for (const port of ports.slice(1)) connect(ports[0]!, port)
+  }
+  return Object.values(pcbPortsByNet).filter((ports) => {
+    if (ports === undefined || ports.length < 2) return false
+    const firstConnectedSet = connectedPorts.get(ports[0]!.pcbPortId)
+    return firstConnectedSet === undefined || ports.some((port) => !firstConnectedSet.has(port.pcbPortId))
+  }).length
 }
 
 export function isSameFootprintClearanceError(
@@ -62,27 +101,18 @@ export function isSameFootprintClearanceError(
 export function summarizeBoardRouting(circuitJson: readonly CircuitElement[]): BoardRoutingReport {
   const sourceConnections = circuitJson.filter((element) => element.type === "source_trace")
   const pcbTraces = circuitJson.filter((element) => element.type === "pcb_trace")
-  const sourceConnectionIds = new Set(
-    sourceConnections.flatMap((element) => stringProperty(element, "source_trace_id") ?? [])
-  )
-  const routedSourceConnectionIds = new Set(
-    pcbTraces.flatMap((element) => {
-      const sourceTraceId = stringProperty(element, "source_trace_id")
-      return sourceTraceId !== undefined && sourceConnectionIds.has(sourceTraceId) ? [sourceTraceId] : []
-    })
-  )
-  const routedConnectionCount = Math.min(
-    sourceConnections.length,
-    routedSourceConnectionIds.size > 0 ? routedSourceConnectionIds.size : pcbTraces.length
-  )
   const missingConnections = circuitJson.filter((element) => element.type === "pcb_trace_missing_error")
   const routingErrors = circuitJson.filter(isRoutingError)
+  const unroutedConnectionCount =
+    pcbTraces.length === 0
+      ? sourceConnections.length
+      : Math.max(missingConnections.length, countDisconnectedPcbNets(circuitJson))
 
   return {
     sourceConnectionCount: sourceConnections.length,
     pcbTraceCount: pcbTraces.length,
-    routedConnectionCount,
-    unroutedConnectionCount: Math.max(sourceConnections.length - routedConnectionCount, missingConnections.length),
+    routedConnectionCount: Math.max(0, sourceConnections.length - unroutedConnectionCount),
+    unroutedConnectionCount,
     missingConnectionCount: missingConnections.length,
     routingErrorCount: routingErrors.length,
     routingErrorCounts: countByType(routingErrors)

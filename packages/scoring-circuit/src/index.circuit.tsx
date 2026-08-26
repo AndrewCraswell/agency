@@ -75,6 +75,13 @@ function MinimalScoringPrototype(): ReactElement {
 
   return (
     <board title={title} width={`${widthMm}mm`} height={`${heightMm}mm`} layers={layerCount} pcbPack={false}>
+      <copperpour
+        name="GROUND_PLANE"
+        layer="bottom"
+        connectsTo="net.APP_GND"
+        clearance="0.25mm"
+        boardEdgeMargin="0.5mm"
+      />
       <hole name="H1" diameter="3.2mm" pcbX={-halfWidth + 5} pcbY={-halfHeight + 5} />
       <hole name="H2" diameter="3.2mm" pcbX={halfWidth - 5} pcbY={-halfHeight + 5} />
       <hole name="H3" diameter="3.2mm" pcbX={-halfWidth + 5} pcbY={halfHeight - 5} />

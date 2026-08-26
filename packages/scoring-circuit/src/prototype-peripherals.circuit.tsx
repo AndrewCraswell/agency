@@ -1,5 +1,26 @@
-import type { ReactElement } from "react"
-import { p0IrReceiverFootprint } from "./p0-ir-receiver-footprints.js"
+import { Fragment, type ReactElement } from "react"
+
+const irReceiverFootprint = (
+  <footprint name="TSOP38438_INLINE_FOOTPRINT" originalLayer="top">
+    {["OUT", "GND", "VS"].map((signal, index) => (
+      <Fragment key={signal}>
+        <platedhole
+          name={String(index + 1)}
+          shape="circular_hole_with_rect_pad"
+          pcbX={(index - 1) * 2.54}
+          pcbY={0}
+          holeDiameter="1.1mm"
+          rectPadWidth="2.2mm"
+          rectPadHeight="2.2mm"
+          rectBorderRadius={index === 0 ? "0mm" : "1.1mm"}
+          portHints={[`pin${index + 1}`, signal]}
+        />
+      </Fragment>
+    ))}
+    <silkscreenrect pcbX={0} pcbY={-2.4} width="7mm" height="4.8mm" strokeWidth="0.15mm" filled={false} />
+    <courtyardrect pcbX={0} pcbY={-2.4} width="8mm" height="5.8mm" strokeWidth="0.05mm" />
+  </footprint>
+)
 
 export function PrototypePeripherals(): ReactElement {
   return (
@@ -8,7 +29,7 @@ export function PrototypePeripherals(): ReactElement {
         name="U_IR_RECEIVER"
         manufacturerPartNumber="TSOP38438"
         pinLabels={{ pin1: "OUT", pin2: "GND", pin3: "VS" }}
-        footprint={p0IrReceiverFootprint}
+        footprint={irReceiverFootprint}
         pcbX={67}
         pcbY={36}
         pcbRotation={180}
