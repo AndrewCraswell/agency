@@ -60,8 +60,9 @@ operations, release state is 54 **Done**, 9 **In progress**, and 25 **Blocked** 
 Authenticated functional smoke must cover the provenance-complete change-feed rule before promoting remaining operations to Done.
 The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger; the Alaska canary remains deferred while
 the document HNSW index is at `432502/648743` blocks. Do not claim representative lookup completion from configuration alone.
-Application-level API and MCP rate limiting is intentionally absent;
-provider-specific ingestion retry behavior remains separate.
+Application-level API and MCP rate limiting is out of scope and intentionally absent. The application has no Redis
+limiter dependency, limiter configuration, or Railway Redis service. Provider-specific ingestion concurrency, retry,
+and `429` handling protect upstream data sources and remain separate from client-facing API throttling.
 
 ## Next.js foundation deployment configuration
 
