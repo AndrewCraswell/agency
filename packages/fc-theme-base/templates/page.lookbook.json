@@ -16,9 +16,7 @@
           }
         }
       },
-      "block_order": [
-        "text"
-      ],
+      "block_order": ["text"],
       "name": "t:sections.rich-text.presets.rich_text.name",
       "settings": {
         "align_text": "center",
@@ -51,11 +49,7 @@
           }
         }
       },
-      "block_order": [
-        "image-1",
-        "image-2",
-        "image-3"
-      ],
+      "block_order": ["image-1", "image-2", "image-3"],
       "name": "t:sections.image-grid.presets.image_grid.name",
       "settings": {
         "heading": "",
@@ -193,10 +187,5 @@
       }
     }
   },
-  "order": [
-    "main",
-    "rich-text",
-    "image-grid-1",
-    "image-grid-2"
-  ]
+  "order": ["main", "rich-text", "image-grid-1", "image-grid-2"]
 }

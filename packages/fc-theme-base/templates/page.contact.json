@@ -1,1 +1,39 @@
-{"sections":{"main":{"type":"main-page","disabled":true,"settings":{}},"rich-text":{"type":"rich-text","blocks":{"text":{"type":"text","settings":{"enlarge_text":false,"text":"<p>Have questions or need to provide feedback about our products? Interested in exploring business or club partnerships? We're here to help! We reply to all inquiries within 48 hours.<\/p>"}},"text_6m6fh8":{"type":"text","settings":{"enlarge_text":false,"text":"<p><strong>Phone<\/strong><br\/><a href=\"tel:4253123746\" title=\"+14253123746\">(425) 312-3746<\/a><br\/><br\/><strong>Email<\/strong><br\/><a href=\"mailto:support@fencing.club\" title=\"support@fencing.club\">support@fencing.club<\/a><br\/><br\/><strong>Business Hours<\/strong><br\/>Mon - Sat, 10am - 6pm (PST)<\/p>"}}},"block_order":["text","text_6m6fh8"],"custom_css":[],"settings":{"align_text":"left","narrow_column":true,"divider":false}},"form":{"type":"contact-form","settings":{"text":"","show_phone":false,"narrow_column":true}},"map_zpg9KF":{"type":"map","settings":{"map_title":"Warehouse","address":"<p>17190 128th Pl NE<br\/>Woodinville, WA 98072<\/p>","map_address":"17190 128th Pl NE Woodinville, WA 98072","api_key":"AIzaSyAfuWGMoNvoCyoGaOGs7GJrFAyojUoX77E","show_button":true}}},"order":["main","rich-text","form","map_zpg9KF"]}
+{
+  "sections": {
+    "main": { "type": "main-page", "disabled": true, "settings": {} },
+    "rich-text": {
+      "type": "rich-text",
+      "blocks": {
+        "text": {
+          "type": "text",
+          "settings": {
+            "enlarge_text": false,
+            "text": "<p>Have questions or need to provide feedback about our products? Interested in exploring business or club partnerships? We're here to help! We reply to all inquiries within 48 hours.<\/p>"
+          }
+        },
+        "text_6m6fh8": {
+          "type": "text",
+          "settings": {
+            "enlarge_text": false,
+            "text": "<p><strong>Phone<\/strong><br\/><a href=\"tel:4253123746\" title=\"+14253123746\">(425) 312-3746<\/a><br\/><br\/><strong>Email<\/strong><br\/><a href=\"mailto:support@fencing.club\" title=\"support@fencing.club\">support@fencing.club<\/a><br\/><br\/><strong>Business Hours<\/strong><br\/>Mon - Sat, 10am - 6pm (PST)<\/p>"
+          }
+        }
+      },
+      "block_order": ["text", "text_6m6fh8"],
+      "custom_css": [],
+      "settings": { "align_text": "left", "narrow_column": true, "divider": false }
+    },
+    "form": { "type": "contact-form", "settings": { "text": "", "show_phone": false, "narrow_column": true } },
+    "map_zpg9KF": {
+      "type": "map",
+      "settings": {
+        "map_title": "Warehouse",
+        "address": "<p>17190 128th Pl NE<br\/>Woodinville, WA 98072<\/p>",
+        "map_address": "17190 128th Pl NE Woodinville, WA 98072",
+        "api_key": "AIzaSyAfuWGMoNvoCyoGaOGs7GJrFAyojUoX77E",
+        "show_button": true
+      }
+    }
+  },
+  "order": ["main", "rich-text", "form", "map_zpg9KF"]
+}

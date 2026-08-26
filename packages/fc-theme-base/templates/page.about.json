@@ -1,1 +1,293 @@
-{"sections":{"main":{"type":"main-page","disabled":true,"settings":{}},"21b32715-cd50-43b9-9d66-aa95e265c350":{"type":"text-and-image","custom_css":[".feature-row__item--overlap-images {padding-top: 0;}"],"settings":{"image":"shopify:\/\/shop_images\/272251079_299716345533535_8000701869199042428_n.jpg","image_mask":"splat-1","image2":"shopify:\/\/shop_images\/604715797_17889916662401039_1634178802558249955_n_0b34b41a-445c-448a-9926-2ca2d7dc7ca3.jpg","image2_mask":"splat-3","subtitle":"About us","title":"Fencing Club","text":"<p>Fencing Club is a specialty retailer of Olympic fencing equipment and apparel, serving fencing clubs, schools, and individual athletes. We have been in business since 2023 and are based in the United States.<\/p><p>We focus exclusively on fencing, with an emphasis on dependable equipment, fair pricing, and clear support for athletes from beginner through competitive levels.<\/p>","button_label":"","button_link":"","button_style":"primary","align_text":"left","image_width":"66","layout":"right","divider":false,"top_padding":false,"bottom_padding":true}},"rich-text":{"type":"rich-text","blocks":{"heading_yGUeYm":{"type":"heading","settings":{"title":"Our background"}},"text":{"type":"text","settings":{"enlarge_text":false,"text":"<p>Based out of Seattle, Fencing Club began after extensive travel to fencing clubs and training facilities around the world. Through these visits, we saw firsthand how challenging it can be for athletes and clubs to obtain proper fencing gear, whether due to limited availability, inconsistent quality, or high costs driven by long supply chains.<\/p><p>These experiences shaped our commitment to ensure that cost and access are never barriers to participation in fencing. From beginners just starting out to competitive fencers training at higher levels, many athletes struggle to find reliable equipment that meets their needs.<\/p><p>Fencing Club was created to provide a dedicated, dependable place where athletes at every stage can acquire quality fencing gear, supported by direct sourcing, clear guidance, and straightforward service.<\/p>"}},"heading_EEbFQE":{"type":"heading","settings":{"title":"Sourcing and operations"}},"text_KfEKxa":{"type":"text","settings":{"enlarge_text":false,"text":"<p>We work directly with manufacturing partners and established fencing brands around the world to source reliable equipment and maintain consistent quality.<\/p><p>Fencing Club operates as a direct retailer and maintains its own inventory at our facility. Orders are shipped from U.S. based fulfillment locations. In some cases, we use third party logistics providers as fulfillment partners. These partners support shipping and delivery only and do not act as resellers.<\/p><p>All customer service, order support, and returns are handled directly by Fencing Club.<\/p>"}}},"block_order":["heading_yGUeYm","text","heading_EEbFQE","text_KfEKxa"],"custom_css":[],"settings":{"align_text":"left","narrow_column":true,"divider":false}},"694a9907-5a1a-4277-adba-bafa622521d9":{"type":"text-with-icons","blocks":{"template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-1":{"type":"text_block","settings":{"icon":"charity","title":"Equitable access","text":"<p>Our foremost principle is to ensure that every fencing enthusiast, regardless of their background or skill level, has access to quality gear at competitive prices. We strive to eliminate financial barriers in sport, making it more inclusive and welcoming for all.<\/p>"}},"template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-2":{"type":"text_block","settings":{"icon":"shield","title":"Operational integrity","text":"<p>We pride ourselves on a business model that emphasizes operational efficiency and integrity. By meticulously managing our supply chain and embracing a digital-first approach, we guarantee not just cost savings, but also uphold the highest standards of quality and service for our customers.<\/p>"}},"template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-3":{"type":"text_block","settings":{"icon":"trophy","title":"Community engagement","text":"<p>Central to our mission is a deep-rooted commitment to the fencing community. From our base in Seattle to connections worldwide, we aim to be more than just a supplier; we see ourselves as active participants and supporters in the journey of every fencer who chooses us, celebrating their achievements and supporting their aspirations in the sport.<\/p>"}}},"block_order":["template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-1","template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-2","template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-3"],"disabled":true,"settings":{"title":"Guiding principles","align_text":"center","desktop_columns_per_row":3,"icon_color":"#000000","button_label":"","button_link":"","divider":false}},"ec98538a-5448-44af-af0a-2dc08d1050b2":{"type":"logo-list","blocks":{"template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-1":{"type":"logo_image","settings":{"link":""}},"template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-2":{"type":"logo_image","settings":{"link":""}},"template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-3":{"type":"logo_image","settings":{"link":""}},"template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-4":{"type":"logo_image","settings":{"link":""}}},"block_order":["template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-1","template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-2","template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-3","template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-4"],"disabled":true,"settings":{"title":"Clubs we partner with","logo_opacity":76,"divider":false}},"8ed3c3d7-4bb4-4839-a938-d31e55c3e748":{"type":"logo-list","blocks":{"logo_image_wEMiK7":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/fwf_logo-Photoroom.png","link":""}},"logo_image_Wahyfa":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/unic_logo-Photoroom.png","link":""}},"logo_image_CDgXiP":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/bf-logo-Photoroom.png","link":""}},"logo_image_we8QxJ":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/images-Photoroom.png","link":""}},"logo_image_H7T78G":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/Fencingfan-NEPS_logo-min_edited-Photoroom.png","link":""}},"logo_image_Pi8bq8":{"type":"logo_image","disabled":true,"settings":{"image":"shopify:\/\/shop_images\/logoazza-1760612600072.png","link":""}},"logo_image_JQpzBd":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/images.png","link":""}},"logo_image_AAiLLR":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/asics-6.svg","link":""}},"logo_image_YN4xwi":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/Yonex-Logo-1978.png","link":""}},"logo_image_RNqqgk":{"type":"logo_image","settings":{"image":"shopify:\/\/shop_images\/logo_footer_03_2x_7afbda0d-5fdd-402d-b7fe-e8b60014ee80.png","link":"shopify:\/\/collections"}}},"block_order":["logo_image_wEMiK7","logo_image_Wahyfa","logo_image_CDgXiP","logo_image_we8QxJ","logo_image_H7T78G","logo_image_Pi8bq8","logo_image_JQpzBd","logo_image_AAiLLR","logo_image_YN4xwi","logo_image_RNqqgk"],"settings":{"title":"Our brands","logo_opacity":86,"divider":false}},"3af4ae52-69eb-4f42-b548-9a7cac4d29ef":{"type":"testimonials","blocks":{"template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-1":{"type":"testimonial","settings":{"icon":"5-stars","testimonial":"<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>","author":"Author's name","author_info":"Los Angeles, CA"}},"template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-2":{"type":"testimonial","settings":{"icon":"5-stars","testimonial":"<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>","author":"Author's name","author_info":"Los Angeles, CA"}},"template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-3":{"type":"testimonial","settings":{"icon":"5-stars","testimonial":"<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>","author":"Author's name","author_info":"Los Angeles, CA"}},"template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-4":{"type":"testimonial","settings":{"icon":"5-stars","testimonial":"<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>","author":"Author's name","author_info":"Los Angeles, CA"}},"template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-5":{"type":"testimonial","settings":{"icon":"5-stars","testimonial":"<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>","author":"Author's name","author_info":"Los Angeles, CA"}}},"block_order":["template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-1","template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-2","template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-3","template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-4","template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-5"],"disabled":true,"settings":{"title":"What our partners say","align_text":"center","round_images":true,"color_background":"#f9f9f9","color_text":"#1c1d1d"}},"67642654-b710-4b5b-88c2-d77b9e8b2826":{"type":"newsletter","blocks":{"template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-title-1":{"type":"title","settings":{"title":"Sign up for updates","heading_size":"h2"}},"template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-text-1":{"type":"text","settings":{"text":"<p><strong>Stay on the Cutting Edge! <\/strong>Subscribe to our mailing list for exclusive updates on our mission, early product announcements, and special subscriber-only sales. <\/p>"}},"template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-form-1":{"type":"form","settings":{}}},"block_order":["template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-title-1","template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-text-1","template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-form-1"],"custom_css":[".newsletter__input-group {max-width: 450px; width: 100%; column-gap: 12px;}"],"settings":{"align_text":"center","image_width":"33","image_mask":"none","image_position":"right","color_background":"#ffffff","color_text":"#1c1d1d","top_padding":true,"bottom_padding":true}}},"order":["main","21b32715-cd50-43b9-9d66-aa95e265c350","rich-text","694a9907-5a1a-4277-adba-bafa622521d9","ec98538a-5448-44af-af0a-2dc08d1050b2","8ed3c3d7-4bb4-4839-a938-d31e55c3e748","3af4ae52-69eb-4f42-b548-9a7cac4d29ef","67642654-b710-4b5b-88c2-d77b9e8b2826"]}
+{
+  "sections": {
+    "main": { "type": "main-page", "disabled": true, "settings": {} },
+    "21b32715-cd50-43b9-9d66-aa95e265c350": {
+      "type": "text-and-image",
+      "custom_css": [".feature-row__item--overlap-images {padding-top: 0;}"],
+      "settings": {
+        "image": "shopify:\/\/shop_images\/272251079_299716345533535_8000701869199042428_n.jpg",
+        "image_mask": "splat-1",
+        "image2": "shopify:\/\/shop_images\/604715797_17889916662401039_1634178802558249955_n_0b34b41a-445c-448a-9926-2ca2d7dc7ca3.jpg",
+        "image2_mask": "splat-3",
+        "subtitle": "About us",
+        "title": "Fencing Club",
+        "text": "<p>Fencing Club is a specialty retailer of Olympic fencing equipment and apparel, serving fencing clubs, schools, and individual athletes. We have been in business since 2023 and are based in the United States.<\/p><p>We focus exclusively on fencing, with an emphasis on dependable equipment, fair pricing, and clear support for athletes from beginner through competitive levels.<\/p>",
+        "button_label": "",
+        "button_link": "",
+        "button_style": "primary",
+        "align_text": "left",
+        "image_width": "66",
+        "layout": "right",
+        "divider": false,
+        "top_padding": false,
+        "bottom_padding": true
+      }
+    },
+    "rich-text": {
+      "type": "rich-text",
+      "blocks": {
+        "heading_yGUeYm": { "type": "heading", "settings": { "title": "Our background" } },
+        "text": {
+          "type": "text",
+          "settings": {
+            "enlarge_text": false,
+            "text": "<p>Based out of Seattle, Fencing Club began after extensive travel to fencing clubs and training facilities around the world. Through these visits, we saw firsthand how challenging it can be for athletes and clubs to obtain proper fencing gear, whether due to limited availability, inconsistent quality, or high costs driven by long supply chains.<\/p><p>These experiences shaped our commitment to ensure that cost and access are never barriers to participation in fencing. From beginners just starting out to competitive fencers training at higher levels, many athletes struggle to find reliable equipment that meets their needs.<\/p><p>Fencing Club was created to provide a dedicated, dependable place where athletes at every stage can acquire quality fencing gear, supported by direct sourcing, clear guidance, and straightforward service.<\/p>"
+          }
+        },
+        "heading_EEbFQE": { "type": "heading", "settings": { "title": "Sourcing and operations" } },
+        "text_KfEKxa": {
+          "type": "text",
+          "settings": {
+            "enlarge_text": false,
+            "text": "<p>We work directly with manufacturing partners and established fencing brands around the world to source reliable equipment and maintain consistent quality.<\/p><p>Fencing Club operates as a direct retailer and maintains its own inventory at our facility. Orders are shipped from U.S. based fulfillment locations. In some cases, we use third party logistics providers as fulfillment partners. These partners support shipping and delivery only and do not act as resellers.<\/p><p>All customer service, order support, and returns are handled directly by Fencing Club.<\/p>"
+          }
+        }
+      },
+      "block_order": ["heading_yGUeYm", "text", "heading_EEbFQE", "text_KfEKxa"],
+      "custom_css": [],
+      "settings": { "align_text": "left", "narrow_column": true, "divider": false }
+    },
+    "694a9907-5a1a-4277-adba-bafa622521d9": {
+      "type": "text-with-icons",
+      "blocks": {
+        "template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-1": {
+          "type": "text_block",
+          "settings": {
+            "icon": "charity",
+            "title": "Equitable access",
+            "text": "<p>Our foremost principle is to ensure that every fencing enthusiast, regardless of their background or skill level, has access to quality gear at competitive prices. We strive to eliminate financial barriers in sport, making it more inclusive and welcoming for all.<\/p>"
+          }
+        },
+        "template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-2": {
+          "type": "text_block",
+          "settings": {
+            "icon": "shield",
+            "title": "Operational integrity",
+            "text": "<p>We pride ourselves on a business model that emphasizes operational efficiency and integrity. By meticulously managing our supply chain and embracing a digital-first approach, we guarantee not just cost savings, but also uphold the highest standards of quality and service for our customers.<\/p>"
+          }
+        },
+        "template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-3": {
+          "type": "text_block",
+          "settings": {
+            "icon": "trophy",
+            "title": "Community engagement",
+            "text": "<p>Central to our mission is a deep-rooted commitment to the fencing community. From our base in Seattle to connections worldwide, we aim to be more than just a supplier; we see ourselves as active participants and supporters in the journey of every fencer who chooses us, celebrating their achievements and supporting their aspirations in the sport.<\/p>"
+          }
+        }
+      },
+      "block_order": [
+        "template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-1",
+        "template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-2",
+        "template--21727808061737__694a9907-5a1a-4277-adba-bafa622521d9-text_block-3"
+      ],
+      "disabled": true,
+      "settings": {
+        "title": "Guiding principles",
+        "align_text": "center",
+        "desktop_columns_per_row": 3,
+        "icon_color": "#000000",
+        "button_label": "",
+        "button_link": "",
+        "divider": false
+      }
+    },
+    "ec98538a-5448-44af-af0a-2dc08d1050b2": {
+      "type": "logo-list",
+      "blocks": {
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-1": {
+          "type": "logo_image",
+          "settings": { "link": "" }
+        },
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-2": {
+          "type": "logo_image",
+          "settings": { "link": "" }
+        },
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-3": {
+          "type": "logo_image",
+          "settings": { "link": "" }
+        },
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-4": {
+          "type": "logo_image",
+          "settings": { "link": "" }
+        }
+      },
+      "block_order": [
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-1",
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-2",
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-3",
+        "template--21727808061737__ec98538a-5448-44af-af0a-2dc08d1050b2-logo_image-4"
+      ],
+      "disabled": true,
+      "settings": { "title": "Clubs we partner with", "logo_opacity": 76, "divider": false }
+    },
+    "8ed3c3d7-4bb4-4839-a938-d31e55c3e748": {
+      "type": "logo-list",
+      "blocks": {
+        "logo_image_wEMiK7": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/fwf_logo-Photoroom.png", "link": "" }
+        },
+        "logo_image_Wahyfa": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/unic_logo-Photoroom.png", "link": "" }
+        },
+        "logo_image_CDgXiP": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/bf-logo-Photoroom.png", "link": "" }
+        },
+        "logo_image_we8QxJ": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/images-Photoroom.png", "link": "" }
+        },
+        "logo_image_H7T78G": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/Fencingfan-NEPS_logo-min_edited-Photoroom.png", "link": "" }
+        },
+        "logo_image_Pi8bq8": {
+          "type": "logo_image",
+          "disabled": true,
+          "settings": { "image": "shopify:\/\/shop_images\/logoazza-1760612600072.png", "link": "" }
+        },
+        "logo_image_JQpzBd": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/images.png", "link": "" }
+        },
+        "logo_image_AAiLLR": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/asics-6.svg", "link": "" }
+        },
+        "logo_image_YN4xwi": {
+          "type": "logo_image",
+          "settings": { "image": "shopify:\/\/shop_images\/Yonex-Logo-1978.png", "link": "" }
+        },
+        "logo_image_RNqqgk": {
+          "type": "logo_image",
+          "settings": {
+            "image": "shopify:\/\/shop_images\/logo_footer_03_2x_7afbda0d-5fdd-402d-b7fe-e8b60014ee80.png",
+            "link": "shopify:\/\/collections"
+          }
+        }
+      },
+      "block_order": [
+        "logo_image_wEMiK7",
+        "logo_image_Wahyfa",
+        "logo_image_CDgXiP",
+        "logo_image_we8QxJ",
+        "logo_image_H7T78G",
+        "logo_image_Pi8bq8",
+        "logo_image_JQpzBd",
+        "logo_image_AAiLLR",
+        "logo_image_YN4xwi",
+        "logo_image_RNqqgk"
+      ],
+      "settings": { "title": "Our brands", "logo_opacity": 86, "divider": false }
+    },
+    "3af4ae52-69eb-4f42-b548-9a7cac4d29ef": {
+      "type": "testimonials",
+      "blocks": {
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-1": {
+          "type": "testimonial",
+          "settings": {
+            "icon": "5-stars",
+            "testimonial": "<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>",
+            "author": "Author's name",
+            "author_info": "Los Angeles, CA"
+          }
+        },
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-2": {
+          "type": "testimonial",
+          "settings": {
+            "icon": "5-stars",
+            "testimonial": "<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>",
+            "author": "Author's name",
+            "author_info": "Los Angeles, CA"
+          }
+        },
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-3": {
+          "type": "testimonial",
+          "settings": {
+            "icon": "5-stars",
+            "testimonial": "<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>",
+            "author": "Author's name",
+            "author_info": "Los Angeles, CA"
+          }
+        },
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-4": {
+          "type": "testimonial",
+          "settings": {
+            "icon": "5-stars",
+            "testimonial": "<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>",
+            "author": "Author's name",
+            "author_info": "Los Angeles, CA"
+          }
+        },
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-5": {
+          "type": "testimonial",
+          "settings": {
+            "icon": "5-stars",
+            "testimonial": "<p>Add customer reviews and testimonials to showcase your store’s happy customers.<\/p>",
+            "author": "Author's name",
+            "author_info": "Los Angeles, CA"
+          }
+        }
+      },
+      "block_order": [
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-1",
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-2",
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-3",
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-4",
+        "template--21727808061737__3af4ae52-69eb-4f42-b548-9a7cac4d29ef-testimonial-5"
+      ],
+      "disabled": true,
+      "settings": {
+        "title": "What our partners say",
+        "align_text": "center",
+        "round_images": true,
+        "color_background": "#f9f9f9",
+        "color_text": "#1c1d1d"
+      }
+    },
+    "67642654-b710-4b5b-88c2-d77b9e8b2826": {
+      "type": "newsletter",
+      "blocks": {
+        "template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-title-1": {
+          "type": "title",
+          "settings": { "title": "Sign up for updates", "heading_size": "h2" }
+        },
+        "template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-text-1": {
+          "type": "text",
+          "settings": {
+            "text": "<p><strong>Stay on the Cutting Edge! <\/strong>Subscribe to our mailing list for exclusive updates on our mission, early product announcements, and special subscriber-only sales. <\/p>"
+          }
+        },
+        "template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-form-1": { "type": "form", "settings": {} }
+      },
+      "block_order": [
+        "template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-title-1",
+        "template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-text-1",
+        "template--21727808061737__67642654-b710-4b5b-88c2-d77b9e8b2826-form-1"
+      ],
+      "custom_css": [".newsletter__input-group {max-width: 450px; width: 100%; column-gap: 12px;}"],
+      "settings": {
+        "align_text": "center",
+        "image_width": "33",
+        "image_mask": "none",
+        "image_position": "right",
+        "color_background": "#ffffff",
+        "color_text": "#1c1d1d",
+        "top_padding": true,
+        "bottom_padding": true
+      }
+    }
+  },
+  "order": [
+    "main",
+    "21b32715-cd50-43b9-9d66-aa95e265c350",
+    "rich-text",
+    "694a9907-5a1a-4277-adba-bafa622521d9",
+    "ec98538a-5448-44af-af0a-2dc08d1050b2",
+    "8ed3c3d7-4bb4-4839-a938-d31e55c3e748",
+    "3af4ae52-69eb-4f42-b548-9a7cac4d29ef",
+    "67642654-b710-4b5b-88c2-d77b9e8b2826"
+  ]
+}

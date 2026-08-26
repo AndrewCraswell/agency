@@ -27,9 +27,7 @@
           }
         }
       },
-      "block_order": [
-        "image"
-      ],
+      "block_order": ["image"],
       "name": "t:sections.slideshow.presets.hero_optional_slideshow.name",
       "settings": {
         "section_height": "650px",
@@ -52,9 +50,7 @@
           }
         }
       },
-      "block_order": [
-        "text_block"
-      ],
+      "block_order": ["text_block"],
       "name": "t:common.text_with_icons.presets.text_with_icons.name",
       "settings": {
         "title": "",
@@ -136,11 +132,7 @@
           }
         }
       },
-      "block_order": [
-        "heading",
-        "text",
-        "button"
-      ],
+      "block_order": ["heading", "text", "button"],
       "name": "t:sections.rich-text.presets.rich_text.name",
       "settings": {
         "align_text": "left",
@@ -149,12 +141,5 @@
       }
     }
   },
-  "order": [
-    "main",
-    "slideshow",
-    "text-with-icons",
-    "text-and-image-1",
-    "text-and-image-2",
-    "rich-text"
-  ]
+  "order": ["main", "slideshow", "text-with-icons", "text-and-image-1", "text-and-image-2", "rich-text"]
 }
