@@ -25,11 +25,11 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot commit `3a498d1` deployed as `9de2719a-d34e-46ee-a86e-09768058d1ff` and reached terminal `SUCCESS`. Unified verification passed 221 test files with 2 skipped and 1,688 tests with 40 skipped; all 212 built-router acceptance tests and the Next.js build passed. Foundation health, readiness, and homepage smoke returned `200`; unknown-route and unsupported-method checks returned `404`. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot commit `7bb8a68` deployed as `f6a0534f-c56e-479f-b201-a086cd0f678a` and reached terminal `SUCCESS`. Bounded verification passed 227 test files with 2 skipped and 1,829 tests with 40 skipped; focused route acceptance and the Next.js build passed. Remote health and readiness returned `200`. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | Reviewed source coverage is 88 of 88; the current production deployment contains 73. Across all 88 operations, 40 are Done, 23 are In progress, and 25 have named data, fixture, or dependency blockers. Subscription/webhook routes and local tests exist in source; Railway verifier values and required secrets are configured, and their 14 routes await deployment and functional smoke. | 88 of 88 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `9de2719a-d34e-46ee-a86e-09768058d1ff` from source snapshot `3a498d1` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. Search, document-difference, and research production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
-| Authentication | The shared Next.js API boundary verifies WorkOS tokens, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. Railway verifier values and both application encryption secrets are configured. Deployment and authenticated remote smoke remain. | Deployed before functional subscription/webhook release smoke |
+| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 40 are Done, 23 are In progress, and 25 have named data, fixture, or dependency blockers. The remaining promotion gates are authenticated functional smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `f6a0534f-c56e-479f-b201-a086cd0f678a` from source snapshot `7bb8a68` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. Search, document-difference, and research production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
+| Authentication | The shared Next.js API boundary verifies WorkOS tokens, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed; anonymous rejection passed remote smoke, while authenticated functional smoke remains. | Deployed before functional subscription/webhook release smoke |
 | MCP transport | In-process access remains | HTTP client cutover only after the API and authentication gates pass |
 
 The previous endpoint ledger's 88 **Done** rows described the reusable standalone implementation. They did not prove
@@ -192,7 +192,7 @@ supporting-material routes, `GET /api/documents/{documentId}/sections/{sectionId
 
 - `GET /api/documents/{documentId}` and `GET /api/documents/{documentId}/sections`: every section-bearing production
   `bill_documents` row has `ocr_status = NULL`, so canonical document/OCR projection fails closed.
-The global change collection and canonical detail route are In progress pending deployment and smoke. Both expose only
+The global change collection and canonical detail route are In progress pending authenticated smoke. Both expose only
 events with complete immutable provenance; the detail route returns `404 not_found` for incomplete legacy rows.
 
 - `GET /api/documents/{documentId}`
@@ -406,8 +406,8 @@ complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 88/88.
-- **Explicit Next.js handler coverage:** 88/88 in reviewed source; 73/88 in the current production deployment. The
-  source-only subscription/webhook routes await the authenticated deployment and functional smoke.
+- **Explicit Next.js handler coverage:** 88/88 in reviewed source and the current production deployment. The
+  subscription/webhook routes await authenticated functional smoke.
 - **Next.js Route Handler release state:** 40/88 Done; 23 In progress; 0 Ready; 25 Blocked. The states sum to all 88
   public API operations.
 - **Blocked-route accounting:** 25 routes are Blocked by named production-data, canonical-fixture, or dependency

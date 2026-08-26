@@ -10,20 +10,21 @@ application in `apps/legislation`, with one explicit `route.ts` for every docume
 
 The 88 existing domain handlers are reusable implementation, not completed Next.js routes. The standalone server path
 in `apps/legislation` is transitional source, not a live rollback service: the old Railway `legislation-api` service is
-deleted. The current unified `legislation-web` deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff` from source
-snapshot `3a498d1` at `https://legislation-web-production-b024.up.railway.app`; its successful verification, build, and
+deleted. The current unified `legislation-web` deployment is `f6a0534f-c56e-479f-b201-a086cd0f678a` from source
+snapshot `7bb8a68` at `https://legislation-web-production-b024.up.railway.app`; its successful verification, build, and
 foundation smoke do not promote routes whose endpoint smoke remains incomplete.
-Authentication is implemented locally and awaits deployment and remote proof. MCP moves to the HTTP API last. The
+Authentication enforcement is deployed and its anonymous rejection boundary passed remote smoke; authenticated
+functional proof remains. MCP moves to the HTTP API last. The
 application, public API, and eventual MCP adapter share one
 application-service boundary so authorization, canonical identity, source attribution, and query behavior do not
 diverge.
 
 ## Migration state ledger
 
-The domain state is 88/88 **Done**. Explicit Next.js handler coverage is 88/88 in reviewed source and 73/88 in the
-current production deployment. Subscription and webhook route and composition code plus focused local tests exist;
-Railway now has the public WorkOS verifier configuration and both application encryption secrets, while the deployed
-image remains unchanged until the authenticated release. The Next.js Route Handler release state is 40/88 **Done**, 23
+The domain state is 88/88 **Done**. Explicit Next.js handler coverage is 88/88 in reviewed source and the current
+production deployment. Subscription and webhook route and composition code plus focused local tests are deployed;
+Railway has the public WorkOS verifier configuration and both application encryption secrets. The Next.js Route Handler
+release state is 40/88 **Done**, 23
 **In progress**, 0 **Ready**, and 25 **Blocked**; these states sum to 88. Every Blocked route has a named production-data,
 canonical-fixture, or dependency prerequisite. The 11 committed and deployed jurisdiction/session handlers passed all
 deployed operation and rejection checks. The corrected Alaska snapshot uses

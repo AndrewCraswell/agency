@@ -29,31 +29,33 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `3a498d1` |
-| Deployment | `9de2719a-d34e-46ee-a86e-09768058d1ff` |
+| Source snapshot commit | `7bb8a68` |
+| Deployment | `f6a0534f-c56e-479f-b201-a086cd0f678a` |
 | Deployment status | `SUCCESS` |
-| Previous successful rollback deployment | `35cfc3bb-ea63-477c-b467-6bf84a4200c5` |
+| Previous successful rollback deployment | `9de2719a-d34e-46ee-a86e-09768058d1ff` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
-| Unified verification | 221 test files passed with 2 skipped; 1,688 tests passed with 40 skipped; all 212 built-router acceptance tests passed; the Next.js production build succeeded |
+| Unified verification | 227 test files passed with 2 skipped; 1,829 tests passed with 40 skipped; focused route acceptance passed; the Next.js production build succeeded |
 | Foundation smoke | Health, readiness, and homepage returned `200`; unknown-route and unsupported-method checks returned `404` |
-| Reviewed source handler coverage | 88 of 88 explicit Next.js handlers; subscription and webhook routes, composition, and local tests are present in reviewed source but are not in the current production deployment |
-| Current deployment handler coverage | 73 of 88 explicit Next.js handlers |
+| Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
+| Current deployment handler coverage | 88 of 88 explicit Next.js handlers |
+| Authentication smoke | WorkOS mode is active; health and readiness returned `200`, while an anonymous `GET /api/jurisdictions` returned the canonical `401` envelope and Bearer challenge |
 | Search/diff/research production smoke | Pending: active HNSW index pressure must be relieved before semantic and hybrid search smoke |
 
 This is the current verified unified deployment from `apps/legislation`. The deleted `legislation-api` service is
 historical evidence only; it is not a current service or a rollback target. The successful unified verification,
-production build, and foundation smoke prove the consolidated runtime and operational boundary. They do not complete
-the required production semantic and hybrid smoke remains pending.
+production build, and foundation smoke prove the consolidated runtime and operational boundary. Required production
+semantic and hybrid smoke remains pending.
 
-The 14 subscription/webhook handlers are reviewed source implementation evidence only; the current production image
-still contains 73 of 88 handlers. Railway now has the public WorkOS verifier values and both application encryption
-secrets, but `AUTH_MODE` remains disabled until the reviewed image deploys. Across all 88 operations, release state is
-40 **Done**, 23 **In progress**, and 25 **Blocked** by named production prerequisites. The next release must deploy
-authentication, subscription/webhook handlers, and the provenance-complete change-feed rule, then retain remote smoke
-evidence before promoting any operation to Done.
+The 14 subscription/webhook handlers are deployed, and Railway has the public WorkOS verifier values and both
+application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
+authenticated ownership and lifecycle smoke remains. Across all 88 operations, release state is
+40 **Done**, 23 **In progress**, and 25 **Blocked** by named production prerequisites. Authenticated functional smoke
+must cover the subscription/webhook handlers and provenance-complete change-feed rule before promoting any operation to
+Done. Application-level API and MCP rate limiting is intentionally absent;
+provider-specific ingestion retry behavior remains separate.
 
 ## Next.js foundation deployment configuration
 

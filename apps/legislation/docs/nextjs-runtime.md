@@ -22,30 +22,26 @@ credentials.
 
 ## Current release boundary
 
-Reviewed source now contains 88 of 88 explicit Next.js route handlers. The current production deployment contains 73 of
-88: 40 have release **Done** credit, 26 remain blocked by named production data, fixture, or dependency prerequisites,
-and the seven search, document-difference, and research routes are deployed but remain **In progress** until their
-production smoke passes. The 14 subscription and webhook handlers, compositions, and local tests exist only in reviewed
-source and are not part of the current production image.
+Reviewed source and the current production deployment both contain 88 of 88 explicit Next.js route handlers. Forty have
+release **Done** credit, 25 remain blocked by named production data, fixture, or dependency prerequisites, and 23 remain
+**In progress** until their required remote functional smoke passes.
 
 The shared Next.js API boundary now authenticates supported and catch-all `/api/**` requests in WorkOS mode, installs
 only the verified user and optional organization identity in request context, and returns the canonical `401` challenge
 before endpoint handlers run. Health and readiness remain public. Production requires both encryption keys, while the
 release procedure separately requires `AUTH_MODE=workos` and the public WorkOS verifier values. Functional
-subscription/webhook deployment still requires the blocked search, document-difference, and research smoke, those
-Railway values, both keys, deployment, and cumulative authenticated smoke; until then all 14 routes remain **In
-progress**.
+subscription/webhook release still requires the blocked search, document-difference, and research smoke plus cumulative
+authenticated smoke; until then all 14 routes remain **In progress**.
 
 Set `LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET` and `LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY` to independent
 base64 or base64url-encoded 32-byte values in production. The names are deployment configuration only and are never
 returned to clients or written to logs.
 
-The current unified deployment is source snapshot commit `3a498d1`, deployed as Railway deployment
-`9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`. Unified verification passed 221 test files with 2
-skipped and 1,688 tests with 40 skipped; all 212 built-router acceptance tests and the Next.js production build also
-passed. Foundation smoke returned `200` for health, readiness, and the homepage, and `404` for the unknown-route and
-unsupported-method checks. The immediately preceding successful rollback deployment is
-`35cfc3bb-ea63-477c-b467-6bf84a4200c5`.
+The current unified deployment is source snapshot commit `7bb8a68`, deployed as Railway deployment
+`f6a0534f-c56e-479f-b201-a086cd0f678a` with terminal `SUCCESS`. Bounded verification passed 227 test files with 2
+skipped and 1,829 tests with 40 skipped; focused route acceptance and the Next.js production build also passed. Remote
+health and readiness returned `200`, and an anonymous protected API request returned the canonical `401` challenge. The
+immediately preceding successful rollback deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff`.
 
 Search, document-difference, and research production smoke is intentionally still pending: active HNSW index pressure
 must be relieved before exercising semantic and hybrid search in production. A successful deployment, verification,

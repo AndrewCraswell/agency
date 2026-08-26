@@ -99,17 +99,16 @@ Before release, verify the effective service uses the Dockerfile builder, `apps/
 health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
 release operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
 
-The current verified unified deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff` from source snapshot commit
-`3a498d1`. It reached terminal `SUCCESS`; foundation health, readiness, and homepage smoke returned `200`, while
-unknown-route and unsupported-method checks returned `404`. Rollback uses the immediately preceding successful
-`legislation-web` deployment `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. The former `legislation-api` Railway service was
+The current verified unified deployment is `f6a0534f-c56e-479f-b201-a086cd0f678a` from source snapshot commit
+`7bb8a68`. It reached terminal `SUCCESS`; remote health and readiness returned `200`, while an anonymous protected API
+request returned the canonical `401` envelope and Bearer challenge. Rollback uses the immediately preceding successful
+`legislation-web` deployment `9de2719a-d34e-46ee-a86e-09768058d1ff`. The former `legislation-api` Railway service was
 deleted and must not be redeployed, described as current, or used as a rollback target.
 
-Reviewed source now contains explicit Next.js handlers and subscription/webhook compositions for all 88 public operations, but the
-current production deployment contains only 73. The 14 source-only subscription and webhook routes intentionally have
-no production request identity and therefore fail closed with `403`. Do not add a fixture or hard-coded principal.
-After search, document-difference, and research smoke passes, configure WorkOS request identity plus the required
-idempotency and webhook-secret encryption keys before functional subscription/webhook deployment and smoke.
+Reviewed source and the current production deployment contain explicit Next.js handlers and subscription/webhook
+compositions for all 88 public operations. WorkOS request identity and the required encryption keys are configured;
+anonymous protected requests fail closed with `401`. Do not add a fixture or hard-coded principal. Authenticated
+subscription/webhook lifecycle smoke remains before those operations receive release Done credit.
 MCP migration remains deferred until after the authenticated API release.
 
 After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
