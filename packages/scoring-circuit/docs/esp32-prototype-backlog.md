@@ -18,7 +18,7 @@ focused verification, root review, and a commit.
 | Deliverable | Status | Latest state |
 | --- | --- | --- |
 | Close the carrier design | done | Commit `c9f3659` connects all seven weapon/piste landings, IR, and the five primary outputs; adds simple zero-ohm analog power/ground links; and restores usable ESP32 paste apertures. Root review, 18 focused tests, package typecheck, lint, and formatting passed. The WIZ850io may be directly soldered for this hand-built prototype. |
-| Produce and order the PCB | active | Export to a conventional PCB editor, place and route the roomy four-layer board, run ERC/DRC, inspect Gerbers and drills, generate the BOM and placement file, and order a small batch. Do not wait for the tscircuit autorouter or production layout optimization. |
+| Produce and order the PCB | active | Commit `0071570` adds the editable four-layer KiCad project and a repeatable placement/netlist exporter. The full 164-component, 489-connection board is now in `packages/scoring-circuit/pcb`; routing is active. Next: finish copper, run basic ERC/DRC, inspect Gerbers and drills, generate the BOM and placement file, and order a small batch. No production optimization gates apply. |
 | Bind firmware to the ordered board | waiting | After the final pinout is known, connect the portable C17 scoring core to ESP32 acquisition, Ethernet, HUB75, IR, USB diagnostics, lamps, buzzer, and safe-enable adapters. Do not build firmware for hypothetical hardware. |
 | Bring up and validate scoring | waiting | On assembled boards, check rails and programming first, then interfaces and outputs, then foil/epee/sabre timing and resistance behavior. Record faults that require a board revision or firmware change; do not create a production qualification dossier. |
 
