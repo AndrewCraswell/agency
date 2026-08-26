@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TDMXM2ZS4J"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-TDMXM2ZS4J');
+  </script>
+
+  <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon">
+  <meta charset="UTF-8">
+
+  <meta name="og:type" property="og:type" content="website" />
+  <meta name="og:url" property="og:url" content="https://skewered-fencing.com/scoring-box-manual" />
+  <meta name="og:title" property="og:title" content="Skewered Fencing" />
+  <meta name="og:description" property="og:description" content="Scoring box manual" />
+  <meta name="og:image" property="og:image" content="https://skewered-fencing.com/img/slack-card.png">
+  <meta name="twitter:card" property="twitter:card" content="summary_large_image">
+  <meta name="twitter:domain" property="twitter:domain" content="skewered-fencing.com">
+  <meta name="twitter:title" property="twitter:title" content="Skewered Fencing" />
+  <meta name="twitter:description" property="twitter:description" content="Scoring box manual">
+  <meta name="twitter:image" property="twitter:image" content="https://skewered-fencing.com/img/slack-card.png">
+  <meta name="twitter:url" property="twitter:url" content="https://skewered-fencing.com/scoring-box-manual">
+  <meta name="twitter:label1" property="twitter:label1" content="Available for pre-order">
+  <meta name="twitter:data1" property="twitter:data1" content="contact info@skewered-fencing.com">
+
+  <title>Skewered Fencing: Scoring Box Manual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="./main.css">
+  <style>
+    .button-highlight {
+        position: absolute;
+        width: 27%;
+        height: 13%;
+        border-radius: 50%;
+        border: 3px solid #0F0;
+        background: radial-gradient(rgba(255,255,255,.2) 60%, transparent 90%);
+        transition: opacity ease-in-out 0.2s;
+    }
+    figure.remote {
+      position: relative;
+      display: flex;
+      width: 100%;
+      margin-left: 0;
+      --img-width: 30%;
+    }
+    figure.remote img {
+      width: var(--img-width);
+      height: auto;
+      margin: 0 2ex 0 0;
+    }
+    figure.remote overlay-button {
+      position: absolute;
+      width: 27%;
+      height: 13%;
+      border-radius: 50%;
+      border: 3px solid #0F0;
+      background: radial-gradient(rgba(255,255,255,.2) 60%, transparent 90%);
+      transition: opacity ease-in-out 0.2s;
+      opacity: 0.001;
+    }
+    figure.remote overlay-button#led {
+      width: 15%;
+      height: 5%;
+    }
+    figure.remote overlay-button:hover {
+      opacity: 1;
+    }
+    figure.remote figcaption {
+      width: calc(var(--img-width) * 2);
+      text-align: left;
+    }
+    li.firmware ul, li.firmware ol {
+      width: 100%;
+    }
+    a.download {
+      border-radius: 5px;
+      border: 2px solid #555;
+      text-decoration: none;
+      padding: .1em .5ex;
+      background-color: #EEE;
+      color: inherit;
+    }
+    li.firmware {
+      color: #888;
+    }
+    li.firmware:first-child {
+      color: inherit;
+    }
+    li.firmware ul {
+      font-weight: 400;
+    }
+
+    li:target {
+      padding: 1ex;
+      background-color: inherit;
+      border-radius: 1ex;
+      animation-delay: 0.5s;
+      animation-fill-mode: forwards;
+      animation-duration: 2s;
+      animation-name: highlight;
+      animation-timing-function: ease-in-out;
+    }
+
+    @keyframes highlight {
+      from {
+        background-color: inherit;
+      }
+      50% {
+        background-color: hsl(53, 96%, 53%);
+      }
+      to {
+        background-color: hsl(50, 64%, 71%);
+      }
+    }
+
+  </style>
+</head>
+<body class="roboto-light">
+  <header>
+    <h1><img src="img/skewered_pad.svg" alt="Skewered Fencing Logo" class="logo">Skewered Fencing</h1>
+    <subtitle>A Beautiful, Modern Scoring Box</subtitle>
+    <p>
+        <a href="/">Home</a>
+        <span>
+            <a href="/scoring-box">Scoring Box</a>
+            <br>
+            <a class="sel">Manual</a>
+            &middot;
+            <a href="/scoring-box-sim">Try it now</a>
+        </span>
+        <a href="/video-replay">Video Replay</a>
+        <a href="/box-tester">Box Tester</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+    </p>
+  </header>
+  <main>
+    <h2 id="quick-start">Quick Start Guide</h2>
+    <p>
+      Download the <a class="download" href="dl/quick-start-guide.pdf">Quick Start Guide
+      (pdf)</a> that comes with new boxes. Print double-sided, trim along the
+      dotted lines, and fold in 4. It will fit in the shipping box under the
+      scoring box.
+    </p>
+
+    <h2 id="buttons">Physical buttons</h2>
+    <p>
+      There are three buttons on the box: a red button and two white buttons.
+    </p>
+    <p>
+      The red button has three functions:
+      <ul>
+        <li>A quick press will cycle through the weapon modes.</li>
+        <li>A long press will enter/exit the configuration menu on the box. This
+        is primarily useful to set the strip ID by pairing a remote.</li>
+        <li>A very long press (5s or more) will reboot the scoring box into
+        firmware upgrade mode. Once this is entered, it will remain in firmware
+        upgrade mode until the firmware is uploaded or the box is rebooted.</li>
+      </ul>
+    </p>
+    <p>
+      The two white buttons navigate and adjust the configuration menu: the left
+      button moves up (or decreases a value) and the right button moves down (or
+      increases it). Together with the red button (which acts as OPT/select
+      inside the menu), this lets you configure the box on its own, with no
+      remote needed. Outside the menu the white buttons do nothing.
+    </p>
+    <p>
+      The two white buttons may also be held down when the box is powered on to
+      immediately enter firmware-update mode as a recovery mechanism.
+    </p>
+
+    <h2 id="config">Configuration Menu</h2>
+    <p>
+      Long press the red button on the box or long press the OPT button of a
+      paired remote to enter the configuration menu. Once in the config menu,
+      use OPT to select items and CLR to exit items or CLR again to leave the
+      config menu.
+    </p><p>
+      You can also operate the menu using only the box's own buttons, with no
+      remote: the red button acts as OPT (select an item, then select again to
+      finish editing it) and a long press leaves the menu, while the left white
+      button moves up or decreases a value and the right white button moves down
+      or increases it. This lets you configure the box &mdash; including enabling
+      Bluetooth and setting the Strip ID &mdash; without a remote.
+    </p><p>
+      The configuration items are:
+      <ul>
+      <li id="cfg-strip"><b>Strip</b><br>
+        The strip ID of the box which defines which remote it will respond to.
+        See <a href="#pair">Pairing a Remote</a>.</li>
+      <li id="cfg-remote"><b>Remote</b><br>
+        The last received charge level of the remote, usually in 5% increments.
+        This cannot be changed.
+      </li>
+      <li id="cfg-epeeauto"><b>EpeeAuto</b><br>
+        Whether to auto-increment the score when a hit occurs in Epee (only
+        while the clock is running).</li>
+      <li id="cfg-passive"><b>Passive</b><br>
+        Controls what happens when the passivity shot clock expires (foil and
+        epee only; saber does not have a passivity clock). This can be set to:
+        <ul>
+          <li><b>Stop:</b> The bout clock stops and further touches are blocked
+          when the passivity threshold is exceeded — similar to when the period
+          expires. The passivity state clears when a P-card is given, the clock
+          is restarted, reset, or manually adjusted. The box beeps and the
+          passivity clock flashes.</li>
+          <li><b>Cont:</b> The bout continues normally after the passivity
+          threshold is reached. The passivity indicator will flash but the clock
+          keeps running and touches are still accepted.</li>
+        </ul>
+        The default is Stop.
+      </li>
+      <li id="cfg-saberper"><b>SaberPer</b><br>
+        Whether to display the period indicator for Saber.</li>
+      <li id="cfg-tone"><b>Tone</b><br>
+        The buzzer frequency in Hz (2700 - 3300). This can be useful if you have
+        multiple boxes near each other.</li>
+      <li id="cfg-vol"><b>Vol</b><br>
+        The box volume (Off / Low / Medium / High).</li>
+      <li id="cfg-btnbeep"><b>Btn Beep</b><br>
+        Whether to make an audible chirp every time a remote button press is
+        received.
+      </li>
+      <li id="cfg-startsnd"><b>StartSnd</b><br>
+        Whether to sound an audible signal when the bout clock is started. This
+        can be used instead of the director saying "fence!" or "allez!".
+      </li>
+      <li id="cfg-selfref"><b>Self Ref</b><br>
+        Allow fencers to start the bout clock and increment scores without
+        using the remote. When enabled, if both fencers short their weapons
+        to their lamés (foil and saber) or hold their blades together (any
+        weapon) for at least 600ms then the box will beep once to acknowledge
+        and then start the clock with a double beep after a short random
+        delay (1.5 - 3.5 seconds for lamé shorts, 2 - 4 seconds for blade
+        contact so fencers can return to their lines). Fencers can also
+        increment the score for their opponent by shorting to their own lamé
+        for 3 seconds. The box will emit warning chirps for the final 1.5
+        seconds to notify fencers and prevent accidental scoring.
+      </li>
+      <li id="cfg-timing"><b>Timing</b><br>
+        The timing standard used for lockout windows, passivity thresholds,
+        and default clock durations. This can be set to:
+        <ul>
+          <li><b>FIE:</b> Standard FIE timing. Lockout windows are 300ms
+          (foil), 170ms (saber), and 40ms (epee). The passivity threshold
+          is 60 seconds. The default bout clock is 3:00 for all
+          weapons.</li>
+          <li><b>WFL:</b> World Fencing League timing (according to preliminary
+          reports). Lockout windows are shorter: 200ms (foil), 100ms (saber),
+          and 40ms (epee). The passivity threshold is 45 seconds. Default bout
+          clocks vary by weapon: 2:00 (foil), 1:00 (saber), 3:00 (epee).</li>
+          <li><b>Custom:</b> Your own lockout windows. When Custom is
+          selected, a "configure &gt;" row appears below the Timing item and
+          opens a per-weapon editor: select a weapon and type its lockout
+          time in milliseconds as three digits (for example 2-5-0 for 250ms).
+          The values are remembered, even when switching to another timing
+          mode and back. Everything else (passivity, default clocks) follows
+          FIE.</li>
+        </ul>
+        The default is FIE. When any non-FIE timing is active, a scrolling
+        "NON-FIE TIMING" banner is shown and the display uses amber/purple
+        colors to visually distinguish from standard FIE mode.
+      </li>
+      <li id="cfg-timeline"><b>Timeline</b><br>
+        Whether to display the hit timeline. This can be set to:
+        <ul>
+          <li><b>Off:</b> The timeline is never shown and not available, even for review.</li>
+          <li><b>Live:</b> The timeline is always shown with live strip interactions being constantly shown.</li>
+          <li><b>Hit:</b> The timeline is shown only when a touch occurs.</li>
+        </ul>
+        For example, competitions may opt to either disable the timeline
+        entirely or show only when a hit occurs and allow reviewing the timeline
+        to disambiguate calls.
+      </li>
+      <li id="cfg-hittimes"><b>HitTimes</b><br>
+        How much extended hit-timing information to display:
+        <ul>
+          <li><b>No:</b> Late and short hits are not shown at all.</li>
+          <li><b>Late:</b> Late hits, whipovers, and short hits are shown
+          with their timing. This is the default.</li>
+          <li><b>All:</b> Additionally, on a double touch the second light
+          shows how many milliseconds after the first hit it landed, so
+          fencers can see how close the double was to the lockout.</li>
+        </ul>
+      </li>
+      <li id="cfg-rot"><b>Rot</b><br>
+        Whether to rotate the display 180 degrees. This can be useful if the box
+        is mounted upside down.</li>
+      <li id="cfg-lrswap"><b>L/R Swap</b><br>
+        Swap the left / right fencer connections. This can be useful if the box
+        is mounted upside down.</li>
+      <li id="cfg-livevid"><b>Live Vid</b><br>
+        This is for integration with an external video replay system. It will
+        indicate that the video replay system should display continuous live
+        video (instead of only showing replays).</li>
+      <li id="cfg-bluetooth"><b>Bluetooth ></b><br>
+        Enable and manage wireless Bluetooth connections to the box. See
+        <a href="#bluetooth">Bluetooth</a> below.</li>
+      <li id="cfg-systeminfo"><b>System Info ></b><br>
+        Select this option to show the serial number and current firmware
+        version of the device.
+      </li>
+      <li id="cfg-update"><b>Update ></b><br>
+        Select this option to show the current firmware version and optionally
+        reboot into firmware update mode via USB. If you choose to reboot into
+        update mode, you may exit without updating turning power off and back
+        on.
+      </li>
+      </ul>
+    </p>
+
+    <h2 id="remote">Remote</h2>
+    <div>Hover or tap on the buttons below to learn what they do.
+      <figure class="remote">
+        <img src="img/remote-overlay.webp">
+        <button-overlay-parent style="position: absolute; width: var(--img-width); height: 100%;">
+          <overlay-button id="led" style="top: 3%; left: 72%;"></overlay-button>
+          <overlay-button id="btn-11" style="top: 10.45%; left: 3.5%;"></overlay-button>
+          <overlay-button id="btn-12" style="top: 10.45%; left: 35.25%;"></overlay-button>
+          <overlay-button id="btn-13" style="top: 10.45%; left: 67%;"></overlay-button>
+          <overlay-button id="btn-21" style="top: 26.7%; left: 3.5%;"></overlay-button>
+          <overlay-button id="btn-22" style="top: 26.7%; left: 35.25%;"></overlay-button>
+          <overlay-button id="btn-23" style="top: 26.7%; left: 67%;"></overlay-button>
+          <overlay-button id="btn-31" style="top: 42.95%; left: 3.5%;"></overlay-button>
+          <overlay-button id="btn-32" style="top: 42.95%; left: 35.25%;"></overlay-button>
+          <overlay-button id="btn-33" style="top: 42.95%; left: 67%;"></overlay-button>
+          <overlay-button id="btn-41" style="top: 59.2%; left: 3.5%;"></overlay-button>
+          <overlay-button id="btn-42" style="top: 59.2%; left: 35.25%;"></overlay-button>
+          <overlay-button id="btn-43" style="top: 59.2%; left: 67%;"></overlay-button>
+          <overlay-button id="btn-51" style="top: 75.45%; left: 3.5%;"></overlay-button>
+          <overlay-button id="btn-52" style="top: 75.45%; left: 35.25%;"></overlay-button>
+          <overlay-button id="btn-53" style="top: 75.45%; left: 67%;"></overlay-button>
+        </button-overlay-parent>
+        <figcaption id="remote-caption"></caption>
+      </figure>
+    </div>
+    <h3>Remote ID (Strip ID)</h3>
+      <p>Each remote stores the Strip ID that it is configured for. Boxes and
+      remotes are initially configured as "Strip 1". Scoring boxes will only
+      respond to signals from remotes that have the same Strip ID as the scoring
+      machine. To change the ID for a given remote, press and hold the SET
+      button and PLUS button on the opposite corner for 5 seconds until the
+      green LED flashes several times quickly. Then enter a two digit strip id
+      (01 - 99). The green LED will flash quickly again when the new ID is
+      set.</p>
+
+      <h3>Charging</h3>
+      <p>The remote is powered by an internal rechargeable battery. The battery
+      should last 1-2 months of typical usage. When necessary, recharge the
+      battery by connecting it to a standard USB-C charger.</p>
+
+      <h3 id="pair">Pairing a Remote (Setting the Strip ID)</h3>
+      <p>To pair a remote with a customized strip ID (see above) with a box, do
+      the following:
+        <ul>
+          <li>Long press the red button on the box to enter config mode.</li>
+          <li>While config mode is active and the option is on strip id, it will
+          detect any remote. Press the OPT button on the remote twice to set the
+          new strip ID to the remote's ID.</li>
+          <li>Press CLR on the remote several times to exit config mode.</li>
+        </ul>
+      </p>
+
+    <h2 id="bluetooth">Bluetooth</h2>
+    <p>
+      The box continuously broadcasts its state over Bluetooth so nearby devices
+      can follow the bout. Turning on <b>BT Enable</b> in the Bluetooth menu
+      additionally lets up to three devices connect directly to the box at once.
+      A connection is one of two kinds:
+      <ul>
+        <li><b>Unpaired</b> connections are read-only: they can listen to the
+        box's state (score, clock, lights) but cannot control it.</li>
+        <li><b>Paired</b> connections can also send remote commands to the box.
+        A paired device is clearly indicated on the box &mdash; a "BT REMOTE"
+        banner appears when it connects (showing the device's name, if it has
+        set one), and a small blue dot at the bottom right of the screen stays
+        lit while it is connected.</li>
+      </ul>
+    </p>
+    <p>
+      Pairing is secured with an on-screen PIN, and is only accepted while the
+      box is in the Bluetooth menu, so a stray device nearby can never quietly
+      pair with your box. Up to 5 paired devices are remembered across power
+      cycles.
+    </p>
+
+    <h3 id="bluetooth-pair">Pairing a device</h3>
+    <p>
+      Use the <a
+      href="https://play.google.com/store/apps/details?id=com.skewered_fencing.app">Skewered
+      Fencing app</a> for Android to connect to a box (an iOS version is in the
+      works). To pair:
+      <ol>
+        <li>On the box, enter the config menu and open <b>Bluetooth</b>, then
+        set
+        <b>BT Enable</b> to <i>Yes</i>.</li>
+        <li>In the app, select your box to connect. The box displays a six-digit
+        <b>PIN</b>.</li>
+        <li>Enter that PIN in the app to complete pairing. The box shows a "BT
+        REMOTE" banner once the device connects.</li>
+      </ol>
+      Stay in the Bluetooth menu until pairing completes &mdash; pairing
+      requests are rejected otherwise.
+    </p>
+
+    <h3 id="bluetooth-menu">Bluetooth menu items</h3>
+    <p>
+      <ul>
+        <li id="cfg-bt-enable"><b>BT Enable</b><br>
+          Whether to allow devices to connect directly to the box. The box
+          broadcasts its state either way; this controls direct connections.</li>
+        <li id="cfg-paired"><b>Paired ></b><br>
+          The list of remembered (paired) devices, most recently used first,
+          shown by name (or the last four characters of the device's address if
+          it has no name). Select <b>Clear All</b> at the bottom of the list to
+          forget every paired device.</li>
+        <li id="cfg-pin"><b>PIN</b><br>
+          The six-digit pairing code, shown only while a device is pairing
+          (otherwise "---"). This cannot be changed.</li>
+        <li id="cfg-active"><b>Active</b><br>
+          How many devices are currently connected, shown as used / total (for
+          example, 1/3). This cannot be changed.</li>
+      </ul>
+    </p>
+
+    <h3 id="bluetooth-offline">If wireless goes offline</h3>
+    <p>
+      Scoring never depends on Bluetooth &mdash; a wireless problem only affects
+      the Bluetooth link, never the bout. If the wireless radio ever gets stuck,
+      the connected dot turns into a slowly breathing red marker. Simply open the
+      config menu and the box restarts the radio for you; the restart is fast
+      enough to be seamless, leaving you in the menu with wireless back online.
+    </p>
+
+    <h2 id="update">Updating the scoring machine firmware</h2>
+    <p>
+      To update the firmware of the scoring machine, follow these steps:
+      <ol>
+        <li>Download the desired firmware version to your computer. Do not
+        alter the name of the firmware file.</li>
+        <li>Connect a micro-USB cable from your computer to the micro-USB port
+        at the bottom of the back of the machine. If the scoring machine is
+        powered off, it will turn on when the USB cable is connected.</li>
+        <li>Enter the menu and select "Update" and then "Yes".
+          <br><small><b>Note:</b> If necessary, there is also a recovery
+          mechanism for entering firmware update mode: hold down the two white
+          buttons when powering on the box.</small>
+        </li>
+        <li>On the computer, a USB drive named "RPI-RP2" should show up.</li>
+        <li>Copy the firmware file to the "RPI-RP2" drive. Once it finishes
+        copying, the drive will automatically disconnect and the scoring machine
+        will restart with the updated firmware.</li>
+        <li>In some cases, the saved configuration will be reset after an
+        update. Press and hold the same button on the scoring machine (the
+        button further from the power switch) for 1 second to enter
+        configuration, then press "OPT" on the remote twice to register the
+        remote. You may also have to navigate the config menu to adjust the
+        screen rotation.</li>
+      </ol>
+    </p>
+
+    <h3 id="releases">Firmware releases</h3>
+    <p class="firmware">
+      <ul>
+        <li class="firmware" id="fw-build-591">Build 591 (2026-07-19) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20260719-591.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>Blade contact in Epee &amp; other strip sensing improvements:</b>
+              Epee now detects and shows blade contact, and will also show
+              shorts between the tip wires and the guard. Both saber body-cord
+              lines (B and C) are now monitored, so a touch registers via
+              whichever line is intact. A single-wire break still shows the
+              fault light but no longer blocks the touch. The strip sampling is
+              more robust to ambient EMI noise by taking multiple measurements
+              at each sample.
+            </li>
+            <li><b>Custom Hit Timing:</b><br>
+              The <a href="#cfg-timing">Timing</a> setting gains a
+              <b>Custom</b> option with per-weapon lockout windows, editable
+              in milliseconds right in the config menu. Other behavior
+              (passivity, default clocks) follows FIE.
+            </li>
+            <li><b>Double-Touch Timing:</b><br>
+              The <a href="#cfg-hittimes">HitTimes</a> setting is now
+              three-way (No / Late / All). <b>All</b> additionally shows how
+              many milliseconds after the first hit the second hit of a
+              double landed, inside the second light.
+            </li>
+            <li><b>Self-Start by Blade Contact:</b><br>
+              Fencers can now trigger the self-start (see
+              <a href="#cfg-selfref">Self Ref</a>) by holding their blades
+              together for 600ms, in addition to shorting to their lam&eacute;s.
+              This makes self-start practical in epee. A blade-contact start
+              waits slightly longer (2-4 seconds) so fencers can return to
+              their lines.
+            </li>
+            <li><b>Foil &amp; Epee: Short Hits Shown:</b><br>
+              Contacts too brief to register (under 14ms on-target in foil,
+              under 2ms in epee) are now latched and displayed with their
+              duration, just like saber whipovers.
+            </li>
+            <li>Misc minor improvements:
+              The config menu uses a new compact font and now shows five rows
+              at a time instead of four. The lockout period is centered in the
+              timeline view. Bluetooth apps can now send any remote button
+              press. Eliminated a rare display glitch where the image could come
+              up horizontally shifted and wrapped.
+            </li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-529">Build 529 (2026-06-27) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20260627-529.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>Bluetooth Remote Control:</b><br>
+              The box can now be controlled over Bluetooth, not just observed.
+              Up to three devices can connect at once &mdash; unpaired
+              connections follow the bout read-only (like a wireless repeater),
+              while paired devices (like a phone) can also send commands and are
+              clearly indicated when connected. Connect with the
+              <a href="https://play.google.com/store/apps/details?id=com.skewered_fencing.app">Skewered
+              Fencing app</a> for Android (an iOS version is in the works). See
+              <a href="#bluetooth">Bluetooth</a> for setup.
+              <br>
+              <i>NOTE:</i> Bluetooth is still evolving and the protocol may
+              change between releases.
+            </li>
+            <li><b>Smoother Display, Better Slow-Motion Video:</b><br>
+              The display engine was rewritten to refresh continuously in the
+              background, more than doubling the frame rate to over 450 fps.
+              This eliminates the rolling "banding" lines that cameras can pick
+              up in slow-motion video.
+            </li>
+            <li><b>Configure Without a Remote:</b><br>
+              The two white buttons now navigate and adjust the configuration
+              menu directly on the box, so you can change settings &mdash;
+              including enabling Bluetooth and setting the Strip ID &mdash;
+              without a remote. See <a href="#config">Configuration Menu</a>.
+            </li>
+            <li><b>Fix:</b> Restored the ability to view the timeline during the
+              one-minute break.
+            </li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-465">Build 465 (2026-04-28) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20260428-465.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>Timeline Review Shows Touches:</b><br>
+              When reviewing the timeline after a touch, the scoring lights now
+              indicate the type of hit that triggered the touch (valid,
+              off-target, or late) as a small overlay at the bottom of the valid
+              light area. This makes it easier to understand what happened at a
+              glance when reviewing the last touch, but it doesn't interfere
+              with new touches registering or showing.
+            </li>
+            <li><b>WFL Foil: No Off-Target:</b><br>
+              In WFL timing mode, foil off-target hits are now ignored.
+              Off-target will still be visible in the timeline, but no longer
+              stops the action.
+            </li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-459">Build 459 (2026-04-21) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20260421-459.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>Manually set passivity:</b><br>
+              In foil or epee, holding down SET the first time already allows
+              setting the time as M:SS. But now holding down SET again will
+              allow explicitly setting the two digit passivity timer.
+            </li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-450">Build 450 (2026-04-06) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20260406-450.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>WFL Timing Mode:</b><br>
+              Added a configurable timing mode (FIE / WFL) in the config menu
+              under "Timing". The default is FIE with all of the standard weapon
+              times. In addition, a new <a
+              href="https://www.reddit.com/r/Fencing/comments/1rx1d40/some_of_the_rule_changes_that_will_be_used_at_the/">preliminary
+              WFL mode</a> is added that uses shorter lockout windows (foil
+              200ms, saber 100ms), a 45-second passivity shot clock (vs FIE's
+              60s), and default bout times of 1 min for saber, 2 min for foil,
+              and 3 min for epee.
+              <br>
+              <i>NOTE:</i> To prevent any possible accidental usage of non-FIE
+              timing modes, the display shows a scrolling "NON-FIE TIMING"
+              banner and uses a tweaked color scheme: amber stopped clock and
+              purple scores.
+            </li>
+            <li><b>Passivity Stop:</b><br>
+              A new config option "Passive" (Stop / Cont) controls what happens
+              when the passivity shot clock expires. When set to "Stop" (now the
+              default behavior), the bout clock stops and further touches are
+              blocked — similar to when the period clock expires. The passivity
+              state clears when a touch occurs, a P-card is given, the clock is
+              restarted or reset. The "Cont" option behaves as before where the
+              passivity clock simply changes color when exceeding 60s.
+            </li>
+            <li><b>Fix:</b> Eliminated intermittent buzzing noise when idle.</li>
+            <li><b>Fix:</b>
+              Fixed a bug where an expired clock could be incorrectly encoded
+              as a break timer in the serial protocol. Removed some invalid
+              event transmissions.
+            </li>
+            <li><b>Repeaters:</b> Improved serial stability and display reliability.</li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-406">Build 406 (2025-10-30) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20251030-406.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>‼️ Improved Saber Whipover Detection:</b><br>
+              Saber whipover detection was missing some situations and would not
+              properly reject whipovers during longer parries. It will now catch
+              these and reject whipovers properly.
+            </li>
+            <li><b>‼️ Fix Epee Auto Scoring Double Touch Bug:</b><br>
+              In rare circumstances, Epee Auto Scoring would detect and display
+              a double touch but only award a single touche for the score
+              (instead of awarding a double touch). This would only occur if the
+              second touch was within 1ms of the cutoff and even then in only
+              about 20% of occurances. It is now fixed for all timings.
+            </li>
+            <li><b>Improve P-Cards:</b>
+              <ul>
+                <li>P-cards are now drawn as tiny P-shaped cards instead of
+                rectangles. This helps distinguish them from normal cards.</li>
+                <li>P-cards are now always granted and cycled for both fencers
+                simultaneously (rather than individually).</li>
+              </ul>
+            </li>
+            <li><b>Display improvements:</b>
+              Color representation has been improved, especially with dimmer
+              colors. This has allowed the display frame rate to increase to 200
+              fps, which improves the display quality in recorded videos.
+            </li>
+            <li><b>Fix:</b> Stop buzzing sound. The system would previously
+            sometimes make a buzzing sound when idle. That has been eliminated.
+            </li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-350">Build 350 (2025-06-12) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20250612-350.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>Reduce Mistakes: </b> This release focuses on reducing mistakes
+            and making the box simpler and more intuitive. In addition to Undo
+            (below), several minor improvements were made:
+            <ul>
+              <li>When the bout clock is running, operations such as changing
+              the weapon mode, clearing scores, or resetting the clock are
+              blocked. If one of these is pressed, the clock will flash red to
+              indicate that the operation cannot be done.</li>
+              <li>When reviewing the timeline for a touch, pressing CLR or SET
+              will exit the timeline view instead.</li>
+            </ul>
+            </li>
+            <li><b>New Feature</b>: Undo. A long-press of white ↩️ (left) button
+            triggers undo. The box now keeps a history of recent inputs and
+            allows undoing operations. In particular:
+            <ul>
+              <li>If you accidentally clear the scores, undo will restore the scores.</li>
+              <li>If you accidentally start a one-minute break and lose the
+              lock, Undo will restore the clock.</li>
+              <li>If you accidentally reset the clock, undo will restore the
+              clock. If you reset the clock during the one-minute break, it will
+              restore the "on break" status and continue counting down.</li>
+            </ul>
+            Scores, Cards, and priority can also be undone.
+            </li>
+
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-325">Build 325 (2025-04-14) &rightarrow;
+          <a class="download" href="dl/skewered-fencing.20250414-325.large-box.uf2">download 💾</a>
+          <ul>
+            <li><b>New Feature</b>: Bluetooth support for SFS integration! This
+            release provides the initial bluetooth broadcasting support so that
+            the <a href="https://superfencingsystem.com/index.html">Super
+            Fencing System iOS App</a> can connect to Skewered Fencing Boxes.
+            Please note that the bluetooth protocol is still in development and
+            may change.
+            </li>
+          </ul>
+        </li>
+        <li class="firmware" id="fw-build-321">Build 321 (2025-03-27) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250327-321.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>Improvement</b>: Direct time entry shows 0:0x values more clearly.
+          </li>
+          <li><b>Removed</b>: Pre-start warning ticker option for self-ref is
+          removed. The warning ticker to donate a point to the opponent remains.
+          </li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-319">Build 319 (2025-03-24) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250325-319.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>New Feature</b>: Direct entry for bout clock! Previously, a
+          long press of the SET button would reset the timer to 1:00.
+          Long-pressing the SET button now allows you to directly type in a time
+          in M:SS format. By default it's set to 1 minute, but using the button
+          numbers you can enter any time from 0:00 to 9:59. Pressing SET or CLR
+          will immediately accept the currently-displayed time.
+          </li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-316">Build 316 (2025-03-24) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250324-316.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>Improvement</b>: The timeline now marks whipovers. Whipovers
+          are also saved for review like touches.
+          </li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-314">Build 314 (2025-03-23) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250323-314.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>New Feature</b>: Allow showing the timelne only when a hit is
+          made. The timeline now has three options:
+          <ul>
+            <li><b>Off:</b> The timeline is never shown and not available, even for review.</li>
+            <li><b>Live:</b> The timeline is always shown with live strip interactions being constantly shown.</li>
+            <li><b>Hit:</b> The timeline is shown only when a touch occurs.</li>
+          </ul>
+          The new "Hit" option may be a better option for competitions to avoid
+          distracting live updates by still allowing review of a timeline to
+          disambiguate the sequence of actions around a touch.
+          </li>
+          <li><b>Update</b>: When the timeline is not disabled, the review may
+          be started either from the most recent portion (by pressing the back
+          button) or the earliest captured portion (by pressing the forward
+          button).</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-310">Build 310 (2025-03-21) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250321-310.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>New Feature</b>: Allow reviewing the timeline for the last
+          touch as well as scrolling back in time to see more. After a touch,
+          press the white ↩️ button to view the most recent touch timeline.
+          Press ↩️ again to scroll further back, and press ↪️ to scroll forward
+          in time. Scrolling forward to the end will stop the review and restore
+          the live timeline.</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-309">Build 309 (2025-03-21) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250320-309.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>New Feature</b>: Add self scoring and rename "Self Clk" to <a
+          href="#cfg-selfref">"Self Ref"</a>. Fencers can now donate points by
+          shorting to themselves for 3 seconds. This is also a temporary
+          "Ticker" option to indicate that self start is engaged.</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-292">Build 292 (2025-03-07) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250307-292.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>New Feature</b>: Add <a href="#cfg-selfref">config menu option "Self Clk"</a> to allow
+          fencers to start the clock themselves by shorting to their
+          lamés.</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-274">Build 274 (2025-02-18) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250218-274.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>UI</b>: Show the weapon mode when turned on.</li>
+          <li><b>Config menu</b>: Show remote charge level right under strip
+          id.</li>
+          <li><b>New Feature</b>: Add <a href="#cfg-btnbeep">config menu option "Btn Beep"</a> to beep for each remote button
+          press.</li>
+          <li><b>New Feature</b>: Add <a href="#cfg-startsnd">config menu option "StartSnd"</a> to beep when the clock starts.</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-250">Build 250 (2025-01-30) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250130-250.large-box.uf2">download 💾</a>
+        <ul>
+          <li><b>Fix</b>: Show ground light on epee if a fencer's A-C lines are shorted.</li>
+          <li><b>Remote</b>: Final production version of remotes include battery level monitoring and colored LED indicator for the battery level (green flash = &gt;40%, yellow = 20-40%, red = &lt;20%). </li>
+          <li><b>Config menu</b>: Display charge level of remote battery for production remotes.</li>
+          <li><b>Config menu</b>: Add system info display to show serial number and firmware level.</li>
+          <li><b>Internal</b>: Add a quick firmware update mode sequence: hold the two white buttons when powering on to immediately enter firmware update mode at startup.</li>
+          <li><b>Internal</b>: Increased display framerate to minimize flicker on recorded videos.</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-228">Build 228 (2025-01-13) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20250113-228.large-box.uf2">download 💾</a>
+        <br>
+        <ul>
+          <li><b>UI</b>: Center scores move penalty cards to outside (P-Cards still on inside).</li>
+          <li><b>UI</b>: Fix buzzing when 1 min break timer expires.</li>
+          <li><b>UI</b>: Flash the clock when time has expired (either break or normal).</li>
+          <li><b>Config menu</b>: Add firmware update screen, showing current build.</li>
+          <li><b>Internal</b>: Revamp serial communication for Favero repeater adapter and video replay support.</li>
+        </ul>
+      </li>
+      <li class="firmware" id="fw-build-201">Build 201 (2024-11-06) &rightarrow;
+        <a class="download" href="dl/skewered-fencing.20241106-201.large-box.uf2">download 💾</a>
+        <br>
+        Fix two bugs related to Favero repeater lights via the prototype
+        adapter:
+        <ol>
+          <li>In foil, after the lockout period off-target hits would
+        light up the white light momentarily like in saber instead of being
+        locked out. This is now fixed.</li>
+        <li>When the box went to sleep the
+        repeater lights would stay on. They should now turn off.</li>
+        </ol>
+      </li>
+      </ul>
+    </p>
+
+    <script>
+(() => {
+    var instructions = [
+        [
+            "Increase the score for the left fencer.",
+            "Start or stop the clock. In Foil and Epee modes, this will also start/stop the passivity shot clock.",
+            "Increase the score for the right fencer."
+        ], [
+            "Assign a penalty card for the left fencer. The card indicator will cycle through the sequence: <br/>&nbsp; &nbsp; nothing &rarr; yellow &rarr; red &rarr; nothing\n"+
+            "Hold to assign a p-card for the left fencer. The p-card indicator will cycle through the same sequence.",
+            "Begin a 1-minute break timer. The clock will be orange during the break and hits will not stop the clock."+
+            "\nHold to initiate a sudden-death 1 minute overtime with a randomly assigned priority. The blue last-scored arrow is replaced "+
+            "by a randomly chosen green priority arrow for one fencer. Holding this button a second time will switch the priority, and "+
+            "holding it a third time will clear the priority indicator.",
+            "Assign a penalty card for the right fencer. The card indicator will cycle through the sequence: <br/>&nbsp; &nbsp; nothing &rarr; yellow &rarr; red &rarr; nothing\n"+
+            "Hold to assign a p-card for the right fencer. The p-card indicator will cycle through the same sequence.",
+        ], [
+            "Decrease the score for the left fencer.",
+            "Add 1 second to the clock.\nHold to manually increase the period indicator by 1.",
+            "Decrease the score for the right fencer."
+        ], [
+            "Review the timeline for the most recent touch. Press again to scroll back in time.\nHold to undo the last operation.",
+            "Change the current weapon mode for the box. The first press will show the current weapon mode. Pressing again while the "+
+            "weapon mode is showing will cycle to the next weapon mode.\nHold to enter the configuration menu.",
+            "Scroll the reviewed timeline forward in time.\nThe FUNC hold operation will be used in future updates."
+        ], [
+            "Clear both scores to zero, remove all penalty cards and p-cards, and reset the bout period to 1."+
+            "\nHold to put the box to sleep immediately (as long as fencers are unplugged and the clocks are stopped).",
+            "Remove 1 second from the clock.\nHold to manually decrease the period indicator by 1.",
+            "Reset the clock to 3 minutes.\nHold to type in a specific time in M:SS format. Hold again to set a two-digit passivity in foil & epee."
+        ]
+    ]
+    function set_button_text(id, text) {
+      let el = document.querySelector(`#${id}`);
+      let activate = () => {
+        caption.innerHTML = text.replaceAll("\n", "<br>")
+          .replaceAll("<br>Hold", "<br><br/>▶ Hold");
+      };
+      let deactivate = () => { caption.innerHTML = "" };
+      el.addEventListener("mouseover", activate);
+      el.addEventListener("touchstart", activate);
+      el.addEventListener("mouseout", deactivate);
+    }
+
+    let caption = document.querySelector("#remote-caption");
+    for (var row = 0; row < instructions.length; row++) {
+      for (var col = 0; col < instructions[row].length; col++) {
+        let id = `btn-${row+1}${col+1}`;
+        set_button_text(id, instructions[row][col]);
+      }
+    }
+    set_button_text("led", `
+      The indicator LED will flash green when a signal is transmitted.
+      While charging the LED will be red. When charging is complete, it will
+      turn yellow.
+    `.replaceAll("\n", " "));
+
+})();
+    </script>
+  </main>
+</body>
+</html>
