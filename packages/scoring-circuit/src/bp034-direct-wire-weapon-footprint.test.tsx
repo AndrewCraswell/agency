@@ -90,6 +90,8 @@ describe("BP-034 direct-wire weapon footprint", () => {
     const mechanicalHoles = json.filter((element) => element.type === "pcb_hole")
     expect(platedHoles).toHaveLength(12)
     expect(mechanicalHoles).toHaveLength(4)
+    expect(platedHoles.every((hole) => typeof hole.pcb_port_id === "string")).toBe(true)
+    expect(json.filter((element) => element.type === "pcb_port")).toHaveLength(12)
     expect(json.filter((element) => element.type === "pcb_solder_paste")).toHaveLength(0)
 
     const landingHoles = platedHoles.filter((hole) => hasHoleDiameter(hole) && hole.hole_diameter === 1.3)
