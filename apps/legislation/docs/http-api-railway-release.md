@@ -28,11 +28,11 @@ not a live rollback service. Neither service should be described as final API cu
 | Field | Recorded value |
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
-| Source commit | `6afcf42` (including route commit `04ca95d`) |
-| Deployment | `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` |
+| Source commit | `866eb6f` |
+| Deployment | `168b7b40-3457-48e1-a470-a45cf5b112a9` |
 | Deployment status | `SUCCESS` |
-| Image | `sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84` |
-| Rollback deployment | `cc047806-27f7-4110-a6e0-7f27f4b4e517` |
+| Image | `sha256:2975fa98b4c408094ef66d80e0d3e07322a2e6cfe41fef6710815c1dae58b5a8` |
+| Rollback deployment | `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
@@ -90,7 +90,7 @@ the incomplete nationwide audit does not reduce the passed 11-operation deployed
 | **Done** | 6 NX-02C operations passed deployed smoke against the current `legislation-web` deployment. |
 | Production-data blocked | Document detail and document-section collection remain blocked because the production records have `NULL` OCR status. |
 | Production-data blocked | Global changes remains blocked because the production records lack source provenance. |
-| Next endpoint block | NX-03B is now the active implementation block after NX-03A route implementation and deployment. |
+| Next endpoint block | NX-03A and NX-03B subsequently completed their delivery/release blocks; their remaining operation-specific data gates are recorded below. |
 | MCP | MCP remains last. Its browser-consent canary is blocked until a live Next.js MCP route exists. |
 
 The three production-data-blocked operations are not **Done**. They require production data that satisfies their
@@ -104,16 +104,33 @@ documented contract, followed by a fresh deployed smoke, rather than a route or 
 | Cumulative smoke | NX-02A: 11 pass. NX-02B: 15 pass plus 3 vote-data skips. NX-02C: 6 pass plus 3 canonical-data skips. NX-03A: 9 pass, four canonical-data skips, and one expected synthetic membership `404`. Health/readiness and rejection checks passed. |
 | Route state | The 14 NX-03A routes are implemented and deployed, but remain data-blocked and receive no Next-route Done credit because production has zero canonical-ready civic fixtures. |
 | Rollback | Previous successful `legislation-web` deployment: `cc047806-27f7-4110-a6e0-7f27f4b4e517`. |
-| Next endpoint block | NX-03B is In progress. |
+| Next endpoint block | Historical evidence. NX-03B subsequently completed its delivery/release block. |
 
 The four canonical-data skips cover person detail, term detail, organization collection, and organization detail. The
 remaining NX-03A smoke routes returned the documented empty-page, dependency, or expected-not-found outcomes. The
 production fixture audit found no canonical-ready people, profiles, terms, organizations, memberships, calendars, or
 required civic relationships, so data remediation is required before promoting these routes to Done.
 
+## NX-03B deployed smoke
+
+| Outcome | Result |
+| --- | --- |
+| Deployment | Source commit `866eb6f` deployed as `168b7b40-3457-48e1-a470-a45cf5b112a9`; terminal `SUCCESS`; image `sha256:2975fa98b4c408094ef66d80e0d3e07322a2e6cfe41fef6710815c1dae58b5a8`. |
+| Verification | `apps/legislation` verification passed 198 files with 2 skipped and 1,036 tests with 40 skipped. `apps/legislation-web` verification passed 22 files and 571 tests. Next.js `16.3.1` build and built router 173/173 passed. |
+| Cumulative smoke | Production `/health` and `/ready` returned `200`; the NX-03B profile and all prior release profiles passed. |
+| Done | Eight operations passed deployed smoke: meetings collection, meeting agenda list, meeting documents list and detail, meeting outcomes list, meeting participants list and detail, and calendars collection. |
+| Canonical-fixture blocked | Meeting detail, meeting agenda-item detail, meeting outcome detail, calendar detail, and calendar meetings remain blocked and receive no Done credit. |
+| Dependency-configuration blocked | Representative lookup is blocked because `OPENSTATES_API_KEY` is absent. The deployed route returned `503 dependency_unavailable`, `retryable: true`, and `Retry-After: 30`. |
+| Rollback | Previous successful `legislation-web` deployment: `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. |
+| Next endpoint block | NX-04 is In progress. |
+
+NX-03B is complete as a delivery/release block. Its six named blockers are independent promotion gates: do not mark
+them Done until the fixture or `OPENSTATES_API_KEY` prerequisite is resolved and deployed smoke is repeated.
+
 ## Next safe actions
 
-1. Continue NX-03B while retaining the distinction between route behavior and production-data evidence.
+1. Continue the active NX-04 search/diff/research block without reopening NX-03B. Keep every named NX-03B fixture and
+   configuration blocker explicit until it passes a fresh deployed smoke.
 2. Continue the migration plan's fixed endpoint-block order; do not begin authentication until all 87 routes pass
    deployed smoke.
 3. Add distributed rate limiting after authentication. Migrate MCP last, and run its canary only after a live Next.js
@@ -121,8 +138,8 @@ required civic relationships, so data remediation is required before promoting t
 
 ## Rollback
 
-The current deployment is `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`; its rollback target is the prior successful
-`legislation-web` deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517`. After each subsequent `legislation-web`
+The current deployment is `168b7b40-3457-48e1-a470-a45cf5b112a9`; its rollback target is the prior successful
+`legislation-web` deployment `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. After each subsequent `legislation-web`
 deployment, rollback uses only the immediately preceding known-good `legislation-web` deployment. The old
 `legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
