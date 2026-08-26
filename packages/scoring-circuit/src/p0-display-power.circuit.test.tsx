@@ -36,36 +36,6 @@ function traceNames(circuitJson: ReturnType<typeof renderCircuit>): string[] {
   )
 }
 
-function pcbRouteFor(circuitJson: ReturnType<typeof renderCircuit>, displayName: string) {
-  const sourceTrace = circuitJson.find(
-    (element) => element.type === "source_trace" && element.display_name === displayName
-  )
-  if (sourceTrace?.type !== "source_trace") throw new RangeError(`missing source trace ${displayName}`)
-  const pcbTrace = circuitJson.find(
-    (element) => element.type === "pcb_trace" && element.source_trace_id === sourceTrace.source_trace_id
-  )
-  if (pcbTrace?.type !== "pcb_trace") throw new RangeError(`missing PCB trace ${displayName}`)
-  return pcbTrace.route
-}
-
-type PcbRoute = ReturnType<typeof pcbRouteFor>
-type PcbWirePoint = Extract<PcbRoute[number], { readonly route_type: "wire" }>
-
-function isPcbWirePoint(point: PcbRoute[number] | undefined): point is PcbWirePoint {
-  return point?.route_type === "wire"
-}
-
-function expectAxisAlignedRoute(route: ReturnType<typeof pcbRouteFor>) {
-  const interior = route.slice(1, -1)
-  expect(interior.length).toBeGreaterThan(1)
-  for (let index = 1; index < interior.length; index += 1) {
-    const previous = interior[index - 1]
-    const current = interior[index]
-    if (!isPcbWirePoint(previous) || !isPcbWirePoint(current)) continue
-    expect(Math.abs(current.x - previous.x) < 1e-9 || Math.abs(current.y - previous.y) < 1e-9).toBe(true)
-  }
-}
-
 function pcbFootprintElements(name: string) {
   const circuit = renderCircuit()
   const source = circuit.find((element) => element.type === "source_component" && element.name === name)
@@ -129,18 +99,6 @@ describe("P0 protected HUB75 display-power circuit", () => {
     )
     expect(traces).not.toContain("net.V5 to J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_1_A")
     expect(traces).not.toContain("net.V5 to J_DISPLAY_POWER_PIGTAIL.V5_DISPLAY_BRANCH_2_A")
-  })
-
-  it("keeps the display-limiter support routes explicit and orthogonal", () => {
-    const circuitJson = renderCircuit()
-    for (const displayName of [
-      "U_DISPLAY_LIMITER.ILM to R_DISPLAY_ILM.pin1",
-      "U_DISPLAY_LIMITER.ITIMER to C_DISPLAY_ITIMER.pin1",
-      "R_DISPLAY_PG_UPPER.pin2 to U_DISPLAY_LIMITER.PGTH",
-      "U_DISPLAY_LIMITER.PGTH to R_DISPLAY_PG_LOWER.pin1"
-    ]) {
-      expectAxisAlignedRoute(pcbRouteFor(circuitJson, displayName))
-    }
   })
 
   it("retains the upstream identities and default safe-off deny state", () => {

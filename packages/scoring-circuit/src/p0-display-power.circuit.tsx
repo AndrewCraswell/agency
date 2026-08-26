@@ -28,48 +28,6 @@ export const p0DisplayPowerCircuitContract = Object.freeze({
   fabricationAuthorized: false
 })
 
-type PcbPoint = readonly [number, number]
-
-/** Convert readable group-local board coordinates to the first trace component's frame. */
-function localPcbPath(origin: PcbPoint, points: readonly PcbPoint[]) {
-  return points.map(([x, y]) => ({ x: x - origin[0], y: y - origin[1] }))
-}
-
-const displayLimiterPcbPaths = {
-  ilm: localPcbPath(
-    [-34, 0],
-    [
-      [-29, 0.25],
-      [-29, -17],
-      [-24.51, -17]
-    ]
-  ),
-  itimer: localPcbPath(
-    [-34, 0],
-    [
-      [-29, 0.75],
-      [-29, 17],
-      [-15.51, 17]
-    ]
-  ),
-  pgLower: localPcbPath(
-    [-34, 0],
-    [
-      [-38, -0.25],
-      [-38, 3],
-      [-4.51, 3]
-    ]
-  ),
-  pgUpper: localPcbPath(
-    [-34, 0],
-    [
-      [-38, -0.75],
-      [-38, -10],
-      [-3.49, -10]
-    ]
-  )
-} as const
-
 export function validateP0DisplayPowerCircuitContract(value: unknown = p0DisplayPowerCircuitContract): true {
   validateBenchPrototypeDisplayPowerBranch(benchPrototypeDisplayPowerBranch)
   if (value !== p0DisplayPowerCircuitContract) {
@@ -231,21 +189,16 @@ export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly
       <trace from="U_DISPLAY_LIMITER.OVLO" to="net.APP_GND" />
       <trace from="U_DISPLAY_LIMITER.DVDT" to="C_DISPLAY_DVDT.pin1" />
       <trace from="C_DISPLAY_DVDT.pin2" to="net.APP_GND" />
-      <trace from="U_DISPLAY_LIMITER.ILM" to="R_DISPLAY_ILM.pin1" pcbPath={displayLimiterPcbPaths.ilm} />
+      <trace from="U_DISPLAY_LIMITER.ILM" to="R_DISPLAY_ILM.pin1" />
       <trace from="R_DISPLAY_ILM.pin2" to="net.APP_GND" />
-      <trace from="U_DISPLAY_LIMITER.ITIMER" to="C_DISPLAY_ITIMER.pin1" pcbPath={displayLimiterPcbPaths.itimer} />
+      <trace from="U_DISPLAY_LIMITER.ITIMER" to="C_DISPLAY_ITIMER.pin1" />
       <trace from="C_DISPLAY_ITIMER.pin2" to="net.APP_GND" />
 
       <trace from="net.APP_3V3" to="R_DISPLAY_PG_PULLUP.pin1" />
       <trace from="R_DISPLAY_PG_PULLUP.pin2" to="U_DISPLAY_LIMITER.PG" />
       <trace from="net.V5_DISPLAY_LIMITED" to="R_DISPLAY_PG_UPPER.pin1" />
-      <trace
-        from="R_DISPLAY_PG_UPPER.pin2"
-        to="U_DISPLAY_LIMITER.PGTH"
-        pcbPathRelativeTo="U_DISPLAY_LIMITER.PGTH"
-        pcbPath={displayLimiterPcbPaths.pgUpper}
-      />
-      <trace from="U_DISPLAY_LIMITER.PGTH" to="R_DISPLAY_PG_LOWER.pin1" pcbPath={displayLimiterPcbPaths.pgLower} />
+      <trace from="R_DISPLAY_PG_UPPER.pin2" to="U_DISPLAY_LIMITER.PGTH" />
+      <trace from="U_DISPLAY_LIMITER.PGTH" to="R_DISPLAY_PG_LOWER.pin1" />
       <trace from="R_DISPLAY_PG_LOWER.pin2" to="net.APP_GND" />
 
       <trace from="J_DISPLAY_POWER_PIGTAIL.APP_GND_BRANCH_1_A" to="net.APP_GND" />
