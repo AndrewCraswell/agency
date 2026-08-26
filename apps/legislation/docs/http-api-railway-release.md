@@ -44,6 +44,7 @@ described as final API cutover until the remaining migration gates pass.
 | Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities; current health returned `200` in `361ms`, readiness returned `200` in `179ms`, and the opt-in authenticated subscription and webhook lifecycle smokes passed 12 and 14 checks respectively |
 | Subscription lifecycle smoke | Authenticated list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`, and cancelled visibility `200`; cancellation fixture remains cancelled by design |
 | Webhook lifecycle smoke | All 14 checks passed: list `200`, create/replay `201`, pending filtered list `200`, detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, post-rotate detail `200`, delete/replay `200`, and cancelled visibility `200`; cancellation fixture remains cancelled by design |
+| Webhook verification smoke | Receiver deployment `ec110122-dc9a-4d03-aa0f-7f782739712c` resolved to public IP `69.46.46.106`; the signed challenge returned `200`, follow-up detail was `active`, and a redacted receiver acceptance receipt was observed. The cancellation fixture was cancelled afterward. Receiver service `66ac14e0-8726-40a0-a70b-db534b96c92f` was deleted; receiver test tool commit `553578e`. |
 | Next API database safety | PostgreSQL `statement_timeout` is set to `15s` for API requests |
 | Search/diff/research production smoke | Deliberately paused while the document HNSW index is at `432502/648743` blocks and consumes database I/O; resume only after the index work is safe to exercise |
 
@@ -54,10 +55,9 @@ probes are recorded above; full expensive smoke remains deliberately paused whil
 
 The 14 subscription/webhook handlers are deployed, and Railway has separate WorkOS M2M and AuthKit session authorities plus
 both application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
-the seven subscription and first six webhook operations are **Done** after authenticated lifecycle smoke. The webhook
-verification operation remains **In progress** pending its challenge smoke. Across all 88 operations, release state is
-53 **Done**, 10 **In progress**, and 25 **Blocked** by named production prerequisites. Authenticated functional smoke
-must cover webhook verification and the provenance-complete change-feed rule before promoting remaining operations to Done.
+the seven subscription and all seven webhook operations are **Done** after authenticated lifecycle smoke. Across all 88
+operations, release state is 54 **Done**, 9 **In progress**, and 25 **Blocked** by named production prerequisites.
+Authenticated functional smoke must cover the provenance-complete change-feed rule before promoting remaining operations to Done.
 The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger; the Alaska canary remains deferred while
 the document HNSW index is at `432502/648743` blocks. Do not claim representative lookup completion from configuration alone.
 Application-level API and MCP rate limiting is intentionally absent;
@@ -165,8 +165,8 @@ recorded in the current production table above. That deployment supersedes `35cf
 which is now the immediately preceding successful rollback target, but it does not change the route state.
 
 The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
-pressure, then run the complete search, document-difference, and research production smoke with audited fixtures, followed by
-the remaining webhook verification smoke, and record the result here.
+pressure, then run the complete search, document-difference, and research production smoke with audited fixtures. Webhook
+verification evidence is already recorded above; update this record with the remaining smoke results.
 
 ## Authenticated API release evidence
 
@@ -182,16 +182,16 @@ was observed. The opt-in authenticated subscription-lifecycle smoke passed all 1
 table, and the webhook lifecycle smoke passed all 14 checks: list `200`, create/replay `201`, pending filtered list `200`,
 detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, post-rotate detail `200`, delete/replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API sets PostgreSQL
-`statement_timeout` to `15s`. These probes do not promote the 53/10/25 endpoint ledger beyond the six webhook operations and
-seven subscription operations: webhook verification and the full authenticated cumulative smoke remain pending, and expensive
-smoke is paused during active HNSW I/O.
+`statement_timeout` to `15s`. These probes promote the six webhook operations covered by the lifecycle smoke plus the verified
+challenge operation; the 54/9/25 endpoint ledger still has the full authenticated cumulative smoke pending, and expensive smoke
+is paused during active HNSW I/O.
 
 ## Next safe actions
 
 1. Relieve or schedule around active HNSW index pressure, then run the pending search, document-difference, and research
    production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
-2. After that smoke passes, run authenticated challenge smoke for webhook verification and the provenance-complete change-feed
-   rule. Do not treat empty collection probes, reviewed source, or fail-closed `403` behavior as release completion.
+2. After that smoke passes, run the provenance-complete change-feed smoke. Do not treat empty collection probes, reviewed
+   source, or fail-closed `403` behavior as release completion.
 3. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
    its canary only after a live Next.js MCP route exists.
 
