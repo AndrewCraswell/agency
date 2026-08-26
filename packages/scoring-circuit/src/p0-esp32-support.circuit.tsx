@@ -1,5 +1,4 @@
 import { Fragment, type ReactElement } from "react"
-import { P0Esp32SupervisorFootprint, P0Esp32WatchdogFootprint } from "./p0-esp32-support-footprints.js"
 import P0Esp32Wroom1Footprint from "./p0-esp32-wroom-1-footprint.js"
 
 const assignedBoundarySignals = [
@@ -89,51 +88,6 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
         pcbY={pcbY - 22}
       />
 
-      <P0Esp32SupervisorFootprint pcbX={pcbX - 45} pcbY={pcbY - 32} />
-      <P0Esp32WatchdogFootprint pcbX={pcbX - 29} pcbY={pcbY - 32} />
-      <resistor
-        name="R_APP_WD_CWD"
-        manufacturerPartNumber="RC0603FR-0710KL"
-        resistance="10k"
-        tolerance="1%"
-        footprint="0603"
-        pcbX={pcbX - 38}
-        pcbY={pcbY - 32}
-      />
-      <resistor
-        name="R_APP_WDI_PULLUP"
-        manufacturerPartNumber="RC0603FR-07100KL"
-        resistance="100k"
-        tolerance="1%"
-        footprint="0603"
-        pcbX={pcbX - 31}
-        pcbY={pcbY - 38}
-      />
-      <capacitor
-        name="C_APP_SUPERVISOR_CT"
-        manufacturerPartNumber="C0603C104K3RACTU"
-        capacitance="100nF"
-        footprint="0603"
-        pcbX={pcbX - 24}
-        pcbY={pcbY - 32}
-      />
-      <capacitor
-        name="C_APP_SUPERVISOR_BYPASS"
-        manufacturerPartNumber="C0603C104K3RACTU"
-        capacitance="100nF"
-        footprint="0603"
-        pcbX={pcbX - 17}
-        pcbY={pcbY - 32}
-      />
-      <capacitor
-        name="C_APP_WD_BYPASS"
-        manufacturerPartNumber="C0603C104K3RACTU"
-        capacitance="100nF"
-        footprint="0603"
-        pcbX={pcbX - 10}
-        pcbY={pcbY - 32}
-      />
-
       {testPads.map((signal, index) => (
         <testpoint
           key={signal}
@@ -164,26 +118,6 @@ export function P0Esp32SupportCircuit({ pcbX, pcbY }: P0Esp32SupportCircuitProps
       <trace from="C_ESP_EN_DELAY.pin2" to="net.APP_GND" />
       <trace from="U_APP.EN_RESET" to="net.APP_RESET_N" />
       <trace from="U_APP.EN_RESET" to="TP_EN_RESET.pin1" />
-
-      <trace from="U_APP_SUPERVISOR.SENSE" to="net.APP_3V3" />
-      <trace from="U_APP_SUPERVISOR.APP_3V3" to="net.APP_3V3" />
-      <trace from="U_APP_SUPERVISOR.APP_GND" to="net.APP_GND" />
-      <trace from="U_APP_SUPERVISOR.APP_RESET_N" to="net.APP_RESET_N" />
-      <trace from="U_APP_SUPERVISOR.CT" to="C_APP_SUPERVISOR_CT.pin1" />
-      <trace from="C_APP_SUPERVISOR_CT.pin2" to="net.APP_GND" />
-      <trace from="U_APP_WATCHDOG.APP_3V3" to="net.APP_3V3" />
-      <trace from="U_APP_WATCHDOG.pin4" to="net.APP_GND" />
-      <trace from="U_APP_WATCHDOG.APP_RESET_N" to="net.APP_RESET_N" />
-      <trace from="U_APP_WATCHDOG.CWD" to="R_APP_WD_CWD.pin1" />
-      <trace from="R_APP_WD_CWD.pin2" to="net.APP_3V3" />
-      <trace from="U_APP.APP_WD_KICK" to="U_APP_WATCHDOG.APP_WD_KICK" />
-      <trace from="U_APP.APP_WD_KICK" to="R_APP_WDI_PULLUP.pin1" />
-      <trace from="R_APP_WDI_PULLUP.pin2" to="net.APP_3V3" />
-      <trace from="U_APP.APP_WD_KICK" to="net.APP_WD_KICK" />
-      <trace from="C_APP_SUPERVISOR_BYPASS.pin1" to="net.APP_3V3" />
-      <trace from="C_APP_SUPERVISOR_BYPASS.pin2" to="net.APP_GND" />
-      <trace from="C_APP_WD_BYPASS.pin1" to="net.APP_3V3" />
-      <trace from="C_APP_WD_BYPASS.pin2" to="net.APP_GND" />
 
       <trace from="U_APP.USB_DN" to="net.USB_DN" />
       <trace from="U_APP.USB_DP" to="net.USB_DP" />

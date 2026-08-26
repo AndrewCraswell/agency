@@ -22,26 +22,25 @@ describe("P0 ESP32 support circuit", () => {
     expect(circuitJson.filter((element) => element.type.includes("error"))).toEqual([])
     const components = circuitJson.filter((element) => element.type === "source_component")
     expect(components.map((component) => component.name)).toEqual(
-      expect.arrayContaining([
-        "U_APP",
-        "C_ESP_3V3_HF",
-        "C_ESP_3V3_BULK",
-        "U_APP_SUPERVISOR",
-        "U_APP_WATCHDOG",
-        "TP_RECOVERY_APP_3V3"
-      ])
+      expect.arrayContaining(["U_APP", "C_ESP_3V3_HF", "C_ESP_3V3_BULK", "TP_RECOVERY_APP_3V3"])
     )
   })
 
-  it("places the reset/watchdog ICs and exposes six non-BOM recovery testpoints", () => {
+  it("exposes six non-BOM recovery testpoints without external reset or watchdog parts", () => {
     const circuitJson = renderCircuit()
     const components = circuitJson.filter((element) => element.type === "source_component")
-    const supervisor = components.find((component) => component.name === "U_APP_SUPERVISOR")
-    const watchdog = components.find((component) => component.name === "U_APP_WATCHDOG")
-    expect(supervisor).toMatchObject({ manufacturer_part_number: "TPS389033DSER" })
-    expect(watchdog).toMatchObject({ manufacturer_part_number: "TPS3431SDRBR" })
-    expect(supervisor).not.toMatchObject({ do_not_place: true })
-    expect(watchdog).not.toMatchObject({ do_not_place: true })
+    const componentNames = components.map((component) => component.name)
+    expect(componentNames).not.toEqual(
+      expect.arrayContaining([
+        "U_APP_SUPERVISOR",
+        "U_APP_WATCHDOG",
+        "R_APP_WD_CWD",
+        "R_APP_WDI_PULLUP",
+        "C_APP_SUPERVISOR_CT",
+        "C_APP_SUPERVISOR_BYPASS",
+        "C_APP_WD_BYPASS"
+      ])
+    )
 
     const testpoints = components.filter((component) => component.name?.startsWith("TP_"))
     expect(testpoints).toHaveLength(6)
@@ -68,7 +67,7 @@ describe("P0 ESP32 support circuit", () => {
     ).toHaveLength(6)
   })
 
-  it("connects bypass, reset, watchdog, USB, and recovery boundaries", () => {
+  it("connects bypass, reset, USB, UART, and recovery boundaries", () => {
     const circuit = renderCircuit()
     const renderedTraces = traces(circuit)
     expect(renderedTraces).toEqual(
@@ -76,8 +75,6 @@ describe("P0 ESP32 support circuit", () => {
         "U_APP.APP_3V3 to C_ESP_3V3_HF.pin1",
         "C_ESP_3V3_HF.pin2 to net.APP_GND",
         "U_APP.EN_RESET to net.APP_RESET_N",
-        "U_APP_WATCHDOG.pin4 to net.APP_GND",
-        "U_APP.APP_WD_KICK to U_APP_WATCHDOG.APP_WD_KICK",
         "U_APP.USB_DN to net.USB_DN",
         "U_APP.USB_DP to net.USB_DP",
         "U_APP.UART0_RX to TP_UART0_RX.pin1",
@@ -85,19 +82,9 @@ describe("P0 ESP32 support circuit", () => {
         "U_APP.BOOT_N to TP_BOOT_N.pin1"
       ])
     )
-
-    const watchdog = circuit.find((element) => element.type === "source_component" && element.name === "U_APP_WATCHDOG")
-    if (watchdog?.type !== "source_component") throw new RangeError("missing watchdog source component")
-    const watchdogGround = circuit.find(
-      (element) =>
-        element.type === "source_port" &&
-        element.source_component_id === watchdog.source_component_id &&
-        element.pin_number === 4
+    expect(renderedTraces.some((trace) => trace.includes("U_APP_SUPERVISOR") || trace.includes("U_APP_WATCHDOG"))).toBe(
+      false
     )
-    if (watchdogGround?.type !== "source_port") throw new RangeError("missing watchdog ground source port")
-    expect(
-      circuit.find((element) => element.type === "pcb_port" && element.source_port_id === watchdogGround.source_port_id)
-    ).toMatchObject({ x: expect.any(Number), y: expect.any(Number) })
   })
 
   it("exports every assigned GPIO boundary while leaving the three spares and strap NC unconnected", () => {
@@ -134,7 +121,7 @@ describe("P0 ESP32 support circuit", () => {
     ]) {
       expect(renderedTraces).toContain(`U_APP.${signal} to net.${signal}`)
     }
-    for (const reserved of ["NC_STRAP_QUIET", "P0_SPARE_GPIO37"]) {
+    for (const reserved of ["APP_WD_KICK", "NC_STRAP_QUIET", "P0_SPARE_GPIO37"]) {
       expect(renderedTraces.some((trace) => trace.includes(`U_APP.${reserved}`))).toBe(false)
     }
   })
