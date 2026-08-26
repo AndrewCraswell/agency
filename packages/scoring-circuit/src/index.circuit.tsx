@@ -1,93 +1,132 @@
-import { p0BoardPlacement } from "./board-placement.js"
-import { prototypeBoardRouting } from "./board-routing.js"
-import { Bp034DirectWireWeaponFootprint } from "./bp034-direct-wire-weapon-footprint.js"
-import { prototypeCarrierArchitecture } from "./clean-sheet-board-architecture.js"
-import { P0DigitalPeripherals } from "./p0-digital-peripherals.circuit.js"
-import { P0DisplayPower } from "./p0-display-power.circuit.js"
-import { P0Esp32SupportCircuit } from "./p0-esp32-support.circuit.js"
-import { P0IrReceiver } from "./p0-ir-receiver.circuit.js"
-import { P0PisteLanding } from "./p0-piste-landing.js"
-import { P0PrimaryOutputs } from "./p0-primary-outputs.circuit.js"
-import { P0SevenLineAcquisition } from "./p0-seven-line-acquisition.circuit.js"
-import P0UsbPower from "./p0-usb-power.circuit.js"
+import type { ReactElement } from "react"
+import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
+import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
 
-function ScoringCircuit() {
-  const { board } = prototypeCarrierArchitecture
-  const halfWidth = board.widthMm / 2
-  const halfHeight = board.heightMm / 2
-  const mountingInset = 6
+export const controllerLeftPins = [
+  "APP_3V3",
+  "APP_3V3",
+  "APP_RESET_N",
+  "GPIO4",
+  "GPIO5",
+  "GPIO6",
+  "GPIO7",
+  "GPIO15",
+  "GPIO16",
+  "GPIO17",
+  "GPIO18",
+  "GPIO8",
+  "GPIO3",
+  "GPIO46",
+  "GPIO9",
+  "GPIO10",
+  "GPIO11",
+  "GPIO12",
+  "GPIO13",
+  "GPIO14",
+  "V5",
+  "APP_GND"
+] as const
+
+export const controllerRightPins = [
+  "APP_GND",
+  "GPIO43_UART_TX",
+  "GPIO44_UART_RX",
+  "GPIO1",
+  "GPIO2",
+  "GPIO42",
+  "GPIO41",
+  "GPIO40",
+  "GPIO39",
+  "GPIO38_RGB",
+  "RESERVED_GPIO37",
+  "RESERVED_GPIO36",
+  "RESERVED_GPIO35",
+  "GPIO0_BOOT",
+  "GPIO45",
+  "GPIO48",
+  "GPIO47",
+  "GPIO21",
+  "GPIO20_USB_D_PLUS",
+  "GPIO19_USB_D_MINUS",
+  "APP_GND",
+  "APP_GND"
+] as const
+
+export const prototypeInterfaces = {
+  weaponLeft: ["LEFT_A", "LEFT_B", "LEFT_C"],
+  weaponRight: ["RIGHT_A", "RIGHT_B", "RIGHT_C"],
+  piste: ["PISTE"],
+  ir: ["APP_3V3", "IR_RX", "APP_GND"],
+  buzzer: ["BUZZER_DRIVE", "APP_GND"],
+  displayPower: ["V5", "APP_GND"],
+  powerInput: ["V5", "APP_GND"],
+  hub75: ["R1", "G1", "B1", "APP_GND", "R2", "G2", "B2", "APP_GND", "A", "B", "C", "D", "CLK", "LAT", "OE_N", "APP_GND"]
+} as const
+
+function MinimalScoringPrototype(): ReactElement {
+  const { widthMm, heightMm, layerCount, title } = minimalPrototypeBoard
+  const halfWidth = widthMm / 2
+  const halfHeight = heightMm / 2
 
   return (
-    <board
-      title={prototypeCarrierArchitecture.title}
-      width={`${board.widthMm}mm`}
-      height={`${board.heightMm}mm`}
-      layers={board.layerCount}
-      pcbPack={false}
-      placementDrcChecksDisabled
-      autorouter={prototypeBoardRouting.autorouter}
-    >
-      <hole name="H1" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={-halfHeight + mountingInset} />
-      <hole name="H2" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={-halfHeight + mountingInset} />
-      <hole name="H3" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={halfHeight - mountingInset} />
-      <hole name="H4" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={halfHeight - mountingInset} />
+    <board title={title} width={`${widthMm}mm`} height={`${heightMm}mm`} layers={layerCount} pcbPack={false}>
+      <hole name="H1" diameter="3.2mm" pcbX={-halfWidth + 5} pcbY={-halfHeight + 5} />
+      <hole name="H2" diameter="3.2mm" pcbX={halfWidth - 5} pcbY={-halfHeight + 5} />
+      <hole name="H3" diameter="3.2mm" pcbX={-halfWidth + 5} pcbY={halfHeight - 5} />
+      <hole name="H4" diameter="3.2mm" pcbX={halfWidth - 5} pcbY={halfHeight - 5} />
 
-      <copperpour
-        name="APP_GND_PLANE"
-        layer="inner1"
-        connectsTo="net.APP_GND"
-        clearance="0.25mm"
-        padMargin="0.25mm"
-        traceMargin="0.25mm"
-        boardEdgeMargin="1mm"
+      <pinheader
+        name="J_CONTROLLER_LEFT"
+        pinCount={22}
+        pinLabels={[...controllerLeftPins]}
+        pcbX={18}
+        pcbY={0}
+        pcbRotation={90}
       />
-      <Bp034DirectWireWeaponFootprint {...p0BoardPlacement.islands.weapon} />
-      <P0PisteLanding {...p0BoardPlacement.islands.piste} />
-      <P0IrReceiver {...p0BoardPlacement.islands.irReceiver} />
-      <P0UsbPower {...p0BoardPlacement.islands.usbPower} />
-      <P0DisplayPower {...p0BoardPlacement.islands.displayPower} />
-      <P0DigitalPeripherals {...p0BoardPlacement.islands.digital} />
-      <P0Esp32SupportCircuit {...p0BoardPlacement.islands.esp32} />
-      <P0PrimaryOutputs {...p0BoardPlacement.islands.primaryOutputs} />
-      <P0SevenLineAcquisition {...p0BoardPlacement.islands.analog} />
+      <pinheader
+        name="J_CONTROLLER_RIGHT"
+        pinCount={22}
+        pinLabels={[...controllerRightPins]}
+        pcbX={43.4}
+        pcbY={0}
+        pcbRotation={90}
+      />
 
-      <resistor
-        name="R_V5_ANALOG_LINK"
-        manufacturerPartNumber="RC0603JR-070RL"
-        resistance="0"
-        footprint="0603"
-        pcbX={-30}
-        pcbY={15}
+      <pinheader
+        name="J_WEAPON_LEFT"
+        pinCount={3}
+        pinLabels={[...prototypeInterfaces.weaponLeft]}
+        pcbX={-68}
+        pcbY={-15}
       />
-      <resistor
-        name="R_SCORING_GROUND_LINK"
-        manufacturerPartNumber="RC0603JR-070RL"
-        resistance="0"
-        footprint="0603"
-        pcbX={-24}
-        pcbY={15}
+      <pinheader
+        name="J_WEAPON_RIGHT"
+        pinCount={3}
+        pinLabels={[...prototypeInterfaces.weaponRight]}
+        pcbX={-68}
+        pcbY={0}
       />
-      <trace from="net.V5" to="R_V5_ANALOG_LINK.pin1" />
-      <trace from="R_V5_ANALOG_LINK.pin2" to="net.V5_ANALOG" />
-      <trace from="net.SCORING_SGND" to="R_SCORING_GROUND_LINK.pin1" />
-      <trace from="R_SCORING_GROUND_LINK.pin2" to="net.APP_GND" />
-
-      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="J_WEAPON_DIRECT.LEFT_WEAPON_A_TEST" />
-      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="net.LEFT_WEAPON_A" />
-      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="J_WEAPON_DIRECT.LEFT_WEAPON_B_TEST" />
-      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="net.LEFT_WEAPON_B" />
-      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_C" to="J_WEAPON_DIRECT.LEFT_WEAPON_C_TEST" />
-      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_C" to="net.LEFT_WEAPON_C" />
-      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_A" to="J_WEAPON_DIRECT.RIGHT_WEAPON_A_TEST" />
-      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_A" to="net.RIGHT_WEAPON_A" />
-      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_B" to="J_WEAPON_DIRECT.RIGHT_WEAPON_B_TEST" />
-      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_B" to="net.RIGHT_WEAPON_B" />
-      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_C" to="J_WEAPON_DIRECT.RIGHT_WEAPON_C_TEST" />
-      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_C" to="net.RIGHT_WEAPON_C" />
-      <trace from="J_PISTE_DIRECT.PISTE" to="J_PISTE_DIRECT.PISTE_TEST" />
-      <trace from="J_PISTE_DIRECT.PISTE" to="net.PISTE" />
+      <pinheader name="J_PISTE" pinCount={1} pinLabels={[...prototypeInterfaces.piste]} pcbX={-68} pcbY={15} />
+      <pinheader
+        name="J_POWER_INPUT"
+        pinCount={2}
+        pinLabels={[...prototypeInterfaces.powerInput]}
+        pcbX={-55}
+        pcbY={40}
+      />
+      <pinheader
+        name="J_DISPLAY_POWER"
+        pinCount={2}
+        pinLabels={[...prototypeInterfaces.displayPower]}
+        pcbX={-20}
+        pcbY={40}
+      />
+      <pinheader name="J_IR" pinCount={3} pinLabels={[...prototypeInterfaces.ir]} pcbX={65} pcbY={35} />
+      <pinheader name="J_BUZZER" pinCount={2} pinLabels={[...prototypeInterfaces.buzzer]} pcbX={65} pcbY={20} />
+      <pinheader name="J_HUB75" pinCount={16} doubleRow pinLabels={[...prototypeInterfaces.hub75]} pcbX={65} pcbY={0} />
+      <EthernetModuleFootprint pcbX={-25} pcbY={-25} />
     </board>
   )
 }
 
-export default ScoringCircuit
+export default MinimalScoringPrototype
