@@ -24,6 +24,11 @@ export const cadModels = {
     modelBoardNormalDirection: "y+",
     positionOffset: { x: 0, y: -1.45, z: 0 }
   },
+  led5mm: {
+    stepUrl: "https://www.kingbrightusa.com/images/catalog/3D/STEP/WP7113.STEP",
+    modelBoardNormalDirection: "x-",
+    modelOriginPosition: { x: 446.187838274769, y: 127.91233816873, z: -0.25 }
+  },
   pinHeader1x01: {
     stepUrl: `${kicadModelRoot}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x01_P2.54mm_Vertical.step`,
     pcbRotationOffset: -90

@@ -7,6 +7,7 @@ import MinimalScoringPrototype, {
   controllerSocket,
   prototypeInterfaces
 } from "./index.circuit.js"
+import { prototypeIndicators } from "./prototype-indicators.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
 
@@ -57,10 +58,12 @@ describe("minimal scoring prototype baseline", () => {
         "U_IR_RECEIVER",
         "J_BUZZER",
         "J_DISPLAY",
+        "LED_LEFT_RED",
+        "LED_RIGHT_GREEN",
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(34)
+    expect(references).toHaveLength(38)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
@@ -68,6 +71,21 @@ describe("minimal scoring prototype baseline", () => {
     expect(cadComponents.some(({ model_jscad: jscad }) => jscad !== undefined)).toBe(false)
     expect(prototypeInterfaces.powerInput).toEqual(["USB-C PD 20V", "V5", "APP_GND"])
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
+  })
+
+  it("drives one red and one green bench indicator from unused ESP32 GPIOs", () => {
+    expect(prototypeIndicators).toEqual([
+      expect.objectContaining({ color: "red", gpio: "GPIO42", manufacturerPartNumber: "WP7113ID" }),
+      expect.objectContaining({ color: "green", gpio: "GPIO41", manufacturerPartNumber: "WP7113GD" })
+    ])
+    const circuit = renderPrototype()
+    const components = circuit.filter(({ type }) => type === "source_component")
+    expect(components.find(({ name }) => name === "LED_LEFT_RED")).toMatchObject({
+      manufacturer_part_number: "WP7113ID"
+    })
+    expect(components.find(({ name }) => name === "LED_RIGHT_GREEN")).toMatchObject({
+      manufacturer_part_number: "WP7113GD"
+    })
   })
 
   it("uses a module-level USB-C power chain with real assembly geometry", () => {
@@ -137,6 +155,10 @@ describe("minimal scoring prototype baseline", () => {
       position: { x: 67, y: 34.55, z: 0.7 },
       rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+"
+    })
+    expect(cadByReference.get("LED_LEFT_RED")).toMatchObject({
+      model_board_normal_direction: "x-",
+      model_origin_position: { x: 446.187838274769, y: 127.91233816873, z: -0.25 }
     })
     expect(cadByReference.get("J_WEAPON_LEFT")).toMatchObject({
       position: { x: -68, y: -15, z: 0.7 },

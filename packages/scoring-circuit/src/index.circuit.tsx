@@ -2,6 +2,7 @@ import type { ReactElement } from "react"
 import { cadModels } from "./cad-models.js"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
+import { PrototypeIndicators } from "./prototype-indicators.circuit.js"
 import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
 import { ScoringConductorInterface } from "./scoring-conductor-interface.circuit.js"
 import { UsbCPower } from "./usb-c-power.circuit.js"
@@ -168,6 +169,7 @@ function MinimalScoringPrototype(): ReactElement {
         cadModel={cadModels.resistor0603}
       />
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
+      <PrototypeIndicators />
       <PrototypePeripherals />
 
       <trace from="J_CONTROLLER_LEFT.1" to="net.APP_3V3" />
@@ -220,6 +222,8 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="U_ETHERNET.7" to="net.APP_GND" />
 
       <trace from="J_CONTROLLER_LEFT.11" to="net.IR_RX" />
+      <trace from="J_CONTROLLER_RIGHT.6" to="R_LEFT_RED_LED.pin1" />
+      <trace from="J_CONTROLLER_RIGHT.7" to="R_RIGHT_GREEN_LED.pin1" />
       <trace from="J_CONTROLLER_RIGHT.18" to="net.DISPLAY_DATA" />
       <trace from="J_CONTROLLER_RIGHT.9" to="net.BUZZER_DRIVE" />
     </board>

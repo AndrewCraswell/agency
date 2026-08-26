@@ -32,8 +32,10 @@ The initial schematic contains only these functional blocks:
   negative rail only if measured scoring behavior demonstrates that the direct interface cannot meet a named threshold.
 - A socketed or directly soldered WIZ850io module for Ethernet.
 - One TSOP38438-compatible IR receiver input.
-- A three-wire WS2812 matrix connection. It provides the prototype scoring lamps with one GPIO and no parallel display
-  bus. HUB75 is deferred behind the firmware display abstraction.
+- One red and one green 5 mm on-board LED for immediate scoring-state feedback during bench tests, each driven directly
+  from an otherwise unused ESP32 GPIO through one 330 ohm resistor.
+- A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
+  HUB75 is deferred behind the firmware display abstraction.
 - One transistor-driven buzzer. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
   omitted.
 - An Adafruit 5991 USB-C PD daughterboard set to 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
@@ -49,8 +51,8 @@ converter, an STM32, processor isolation, redundant supervisors, manufacturing f
 environmental qualification, homologation evidence, per-part evidence ledgers, backlog validators, automated release
 gates, or speculative expansion hardware.
 
-It also does not include duplicate indicator loads when a header to the intended external lamp, buzzer, or display is
-sufficient for firmware development.
+It does not include a production lamp engine or duplicate high-current indicator drivers. The two low-current on-board
+LEDs are only bench feedback; the display header remains the larger visual-output path.
 
 ## Complexity rules
 

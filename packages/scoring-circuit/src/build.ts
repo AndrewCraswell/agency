@@ -248,6 +248,10 @@ const previewHtml = `<!doctype html>
             <p>Vishay TSOP38438 with a filtered 3.3 V supply, protected GPIO35 output, probe point, and front-edge optical keepout</p>
           </article>
           <article class="io-module">
+            <h2>Scoring indicators</h2>
+            <p>One red and one green 5 mm on-board LED provide immediate bench feedback from two dedicated ESP32 GPIOs</p>
+          </article>
+          <article class="io-module">
             <h2>Communications</h2>
             <p>Required board interfaces</p>
             <div class="port-row">

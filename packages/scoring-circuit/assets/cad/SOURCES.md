@@ -19,6 +19,11 @@ references the same upstream URLs so the tscircuit STEP converter can load them 
 | `sot-23.step`                    | BSS138-7-F                                          | [KiCad packages3D at `b8b3cfdf`](https://github.com/KiCad/kicad-packages3D/tree/b8b3cfdfad88ba66f21002b3de51dc6f7d55ba5a/Package_TO_SOT_SMD.3dshapes)                       | CC BY-SA 4.0 with the KiCad library exception | `9FE9AF3CC6CF3D3BC3BD3DA71731AF2037C67F690245102A20E1E39A33E9ADE4` |
 | `adafruit-husb238-usb-c-pd.step` | Adafruit 5991 HUSB238 USB-C PD module               | [Adafruit CAD Parts at `84d8e0fc`](https://github.com/adafruit/Adafruit_CAD_Parts/tree/84d8e0fc41930bddfa46281b9e6186341f58655b/5991%20HUSB238%20USBC)                      | MIT                                           | `5AB424305B2A5B9AE73DC1088C380744EBE89C3309829736B81698727746AF31` |
 | `pololu-d36v50f5.step`           | Pololu D36V50F5 5 V regulator                       | [Pololu official STEP](https://www.pololu.com/file/0J1733/d36v50fx-step-down-voltage-regulator.step)                                                                        | Pololu published design resource              | `CDCC9E55BA1DE3ADFB59C330732E107A6419216C4C6F5F16396C5423757C5155` |
+| `kingbright-wp7113.step`         | Kingbright WP7113ID red and WP7113GD green LEDs     | [Kingbright official STEP](https://www.kingbrightusa.com/images/catalog/3D/STEP/WP7113.STEP)                                                                                | Kingbright published design resource          | `064C6DAC47AA208490B792AEE598B5053237B4A2F82E5411DAB2AE2C80F39857` |
+
+Kingbright publishes one WP7113 package model for both selected colors and states that its rendered lens color is for
+display only. The BOM identities `WP7113ID` and `WP7113GD`, not the STEP file's green display color, define the physical
+red and green parts.
 
 The complete ESP32-S3-DevKitC-1-N8R2 carrier has a public CC BY 4.0 model on
 [Flux](https://www.flux.ai/samanthadiaz08/esp32-s3-devkitc-1-tra8?editor=code). N8R2 and N8R8 use the same DevKitC
