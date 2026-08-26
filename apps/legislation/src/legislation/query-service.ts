@@ -449,6 +449,16 @@ type BillBrowseOrderColumns = {
   updatedAt: SQLWrapper
 }
 
+type BillBrowseFilterColumns = BillBrowseOrderColumns & {
+  classification: SQLWrapper
+  jurisdictionId: SQLWrapper
+  sessionId: SQLWrapper
+  status: SQLWrapper
+  subjects: SQLWrapper
+}
+
+type BillBrowseNonLatestSort = Exclude<NonNullable<BillBrowseInput["sort"]>, "latest-action-desc">
+
 function billBrowseOrder(
   sort: BillBrowseInput["sort"],
   latestActionAt: SQLWrapper,
@@ -466,6 +476,17 @@ function billBrowseOrder(
         desc(sql`coalesce(${latestActionAt}, ${billTable.sourceUpdatedAt}, ${billTable.updatedAt})`),
         asc(billTable.id)
       ]
+  }
+}
+
+function billBrowseNonLatestOrder(sort: BillBrowseNonLatestSort, billTable: BillBrowseOrderColumns): SQL[] {
+  switch (sort) {
+    case "identifier-asc":
+      return [asc(billTable.identifier), asc(billTable.id)]
+    case "introduced-desc":
+      return [desc(billTable.introducedAt), asc(billTable.id)]
+    case "updated-desc":
+      return [desc(billTable.updatedAt), asc(billTable.id)]
   }
 }
 
@@ -1222,7 +1243,39 @@ export interface BillBrowseInput {
   updatedFrom?: Date
 }
 
+function billBrowseFilters(input: BillBrowseInput, billTable: BillBrowseFilterColumns) {
+  return and(
+    input.jurisdictionId === undefined ? undefined : eq(billTable.jurisdictionId, input.jurisdictionId),
+    input.sessionId === undefined ? undefined : eq(billTable.sessionId, input.sessionId),
+    input.identifier === undefined ? undefined : sql`${billTable.identifier} ilike ${`${input.identifier}%`}`,
+    input.classification === undefined ? undefined : arrayOverlaps(billTable.classification, input.classification),
+    input.status === undefined ? undefined : inArray(billTable.status, input.status),
+    input.subject === undefined ? undefined : arrayContains(billTable.subjects, input.subject),
+    input.sponsorPersonId === undefined
+      ? undefined
+      : sql`exists (select 1 from ${billSponsors} where ${billSponsors.billId} = ${billTable.id} and ${billSponsors.personId} = ${input.sponsorPersonId})`,
+    input.organizationId === undefined
+      ? undefined
+      : sql`exists (select 1 from ${billOrganizations} where ${billOrganizations.billId} = ${billTable.id} and ${billOrganizations.organizationId} = ${input.organizationId})`,
+    input.introducedFrom === undefined ? undefined : gte(billTable.introducedAt, input.introducedFrom),
+    input.introducedTo === undefined ? undefined : lte(billTable.introducedAt, input.introducedTo),
+    input.updatedFrom === undefined ? undefined : gte(billTable.updatedAt, input.updatedFrom)
+  )
+}
+
 export function buildBillBrowseQuery(
+  database: LegislationDatabase,
+  input: BillBrowseInput,
+  limit: number,
+  offset: number
+) {
+  if (input.sort !== undefined && input.sort !== "latest-action-desc") {
+    return buildPageFirstBillBrowseQuery(database, input, input.sort, limit, offset)
+  }
+  return buildLatestActionBillBrowseQuery(database, input, limit, offset)
+}
+
+function buildLatestActionBillBrowseQuery(
   database: LegislationDatabase,
   input: BillBrowseInput,
   limit: number,
@@ -1247,28 +1300,47 @@ export function buildBillBrowseQuery(
     })
     .from(browseBill)
     .leftJoinLateral(latestActions, sql`true`)
-    .where(
-      and(
-        input.jurisdictionId === undefined ? undefined : eq(browseBill.jurisdictionId, input.jurisdictionId),
-        input.sessionId === undefined ? undefined : eq(browseBill.sessionId, input.sessionId),
-        input.identifier === undefined ? undefined : sql`${browseBill.identifier} ilike ${`${input.identifier}%`}`,
-        input.classification === undefined ? undefined : arrayOverlaps(browseBill.classification, input.classification),
-        input.status === undefined ? undefined : inArray(browseBill.status, input.status),
-        input.subject === undefined ? undefined : arrayContains(browseBill.subjects, input.subject),
-        input.sponsorPersonId === undefined
-          ? undefined
-          : sql`exists (select 1 from ${billSponsors} where ${billSponsors.billId} = ${browseBill.id} and ${billSponsors.personId} = ${input.sponsorPersonId})`,
-        input.organizationId === undefined
-          ? undefined
-          : sql`exists (select 1 from ${billOrganizations} where ${billOrganizations.billId} = ${browseBill.id} and ${billOrganizations.organizationId} = ${input.organizationId})`,
-        input.introducedFrom === undefined ? undefined : gte(browseBill.introducedAt, input.introducedFrom),
-        input.introducedTo === undefined ? undefined : lte(browseBill.introducedAt, input.introducedTo),
-        input.updatedFrom === undefined ? undefined : gte(browseBill.updatedAt, input.updatedFrom)
-      )
-    )
+    .where(billBrowseFilters(input, browseBill))
     .orderBy(...billBrowseOrder(input.sort, latestActions.latestActionAt, browseBill))
     .limit(limit + 1)
     .offset(offset)
+}
+
+function buildPageFirstBillBrowseQuery(
+  database: LegislationDatabase,
+  input: BillBrowseInput,
+  sort: BillBrowseNonLatestSort,
+  limit: number,
+  offset: number
+) {
+  const browseBill = alias(bills, "browse_bill")
+  const billPage = database
+    .select({ id: browseBill.id })
+    .from(browseBill)
+    .where(billBrowseFilters(input, browseBill))
+    .orderBy(...billBrowseNonLatestOrder(sort, browseBill))
+    .limit(limit + 1)
+    .offset(offset)
+    .as("bill_page")
+  const latestActions = database
+    .select({
+      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+        .mapWith(billActions.actionAt)
+        .as("latest_action_at")
+    })
+    .from(billActions)
+    .where(eq(billActions.billId, bills.id))
+    .as("latest_actions")
+
+  return database
+    .select({
+      bill: bills,
+      latestActionAt: latestActions.latestActionAt
+    })
+    .from(billPage)
+    .innerJoin(bills, eq(billPage.id, bills.id))
+    .leftJoinLateral(latestActions, sql`true`)
+    .orderBy(...billBrowseNonLatestOrder(sort, bills))
 }
 
 export function encodeBillBrowseCursor(offset: number, input: BillBrowseInput): string {

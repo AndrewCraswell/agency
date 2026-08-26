@@ -64,23 +64,71 @@ describe("bill browse query", () => {
     )
   })
 
-  it("computes latest action once and reuses it for latest-action-desc ordering", () => {
-    const query = buildBillBrowseQuery(
-      database,
-      { jurisdictionId: "jurisdiction:ak", sort: "latest-action-desc" },
-      100,
-      0
-    )
-    const generated = query.toSQL().sql
+  it("keeps the default latest-action query unchanged", () => {
+    const input = { jurisdictionId: "jurisdiction:ak" }
+    const generated = buildBillBrowseQuery(database, input, 100, 0).toSQL().sql
+    const explicit = buildBillBrowseQuery(database, { ...input, sort: "latest-action-desc" }, 100, 0).toSQL().sql
 
     expect(generated.match(/max\(coalesce/g)).toHaveLength(1)
     expect(generated).toContain("left join lateral")
+    expect(generated).not.toContain('"bill_page"')
+    expect(generated).toBe(explicit)
     expect(generated).toContain('"latest_action_at"')
     expect(generated).toContain('"legislation"."bill_actions"."bill_id" = "browse_bill"."id"')
     expect(generated).toMatch(
       /order by coalesce\("latest_action_at", "browse_bill"\."source_updated_at", "browse_bill"\."updated_at"\) desc, "browse_bill"\."id" asc/
     )
   })
+
+  it.each(["identifier-asc", "introduced-desc", "updated-desc"] as const)(
+    "selects the %s page before hydrating latest actions",
+    (sort) => {
+      const updatedFrom = new Date("2026-08-20T12:00:00.000Z")
+      const generated = buildBillBrowseQuery(
+        database,
+        {
+          classification: ["bill", "resolution"],
+          identifier: "HR",
+          introducedFrom: "2026-01-01",
+          introducedTo: "2026-01-31",
+          jurisdictionId: "jurisdiction:us",
+          organizationId: "organization:us:house:rules",
+          sessionId: "session:us:119",
+          sponsorPersonId: "person:us:1",
+          sort,
+          status: ["introduced", "referred"],
+          subject: ["budget", "taxes"],
+          updatedFrom
+        },
+        25,
+        50
+      ).toSQL()
+      const latestActionIndex = generated.sql.indexOf('"legislation"."bill_actions"')
+      const pageStartIndex = generated.sql.indexOf('from (select "id" from "legislation"."bills" "browse_bill"')
+      const pageLimitIndex = generated.sql.indexOf("limit", pageStartIndex)
+
+      expect(pageStartIndex).toBeGreaterThan(-1)
+      expect(generated.sql).toContain('"browse_bill"."identifier" ilike')
+      expect(generated.sql).toContain('"browse_bill"."jurisdiction_id" =')
+      expect(generated.sql).toContain('"browse_bill"."session_id" =')
+      expect(generated.sql).toContain('"browse_bill"."classification" &&')
+      expect(generated.sql).toContain('"browse_bill"."subjects" @>')
+      expect(generated.sql).toContain('exists (select 1 from "legislation"."bill_sponsors"')
+      expect(generated.sql).toContain('exists (select 1 from "legislation"."bill_organizations"')
+      expect(generated.sql).toContain('"browse_bill"."updated_at" >=')
+      expect(generated.sql).toContain(
+        'inner join "legislation"."bills" on "bill_page"."id" = "legislation"."bills"."id"'
+      )
+      expect(generated.sql).toContain('"legislation"."bill_actions"."bill_id" = "legislation"."bills"."id"')
+      expect(generated.sql).not.toContain('"legislation"."bill_actions"."bill_id" = "browse_bill"."id"')
+      expect(generated.sql).toContain("left join lateral")
+      expect(generated.sql.match(/max\(coalesce/g)).toHaveLength(1)
+      expect(pageLimitIndex).toBeGreaterThan(-1)
+      expect(latestActionIndex).toBeGreaterThan(pageLimitIndex)
+      expect(generated.params).toContain(updatedFrom.toISOString())
+      expect(generated.params).toEqual(expect.arrayContaining([26, 50]))
+    }
+  )
 
   it("applies the global collection's sponsor, organization, and update filters without changing its stable sort", () => {
     const updatedFrom = new Date("2026-08-20T12:00:00.000Z")
@@ -93,6 +141,7 @@ describe("bill browse query", () => {
         introducedTo: "2026-01-31",
         organizationId: "organization:us:house:rules",
         sponsorPersonId: "person:us:1",
+        sort: "latest-action-desc",
         status: ["introduced", "referred"],
         subject: ["budget", "taxes"],
         updatedFrom
