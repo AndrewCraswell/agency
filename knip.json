@@ -10,7 +10,7 @@
     },
     "apps/legislation": {
       "entry": ["trigger.config.ts", "src/api/next/http.ts", "src/server/next/runtime.ts", "src/trigger/tasks/**/*.ts"],
-      "ignoreDependencies": ["@repo/oxlint-config"]
+      "ignoreDependencies": ["@repo/oxlint-config", "@swc/helpers"]
     },
     "apps/blog-writer": {
       "entry": [
