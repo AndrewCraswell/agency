@@ -1,7 +1,0 @@
-Manufacturer endpoint: https://ds.murata.com/simserve/characteristics
-Retrieved: 2026-08-24
-Method: GET
-Query: callback=nothing&ReqType=Characteristics&CallBack=&WorkInfo=bp125
-ReqChara: {"partnumber":"GCM188R71H104KA57D","chara_type":"c_dcbias_capacitance","temperature":"-40,25,85,125","ac_vrms":"1"}
-Response archives: murata-gcm188r71h104ka57d-dcbias-tcneg40.json, murata-gcm188r71h104ka57d-dcbias-tc25.json, murata-gcm188r71h104ka57d-dcbias-tc85.json, murata-gcm188r71h104ka57d-dcbias-tc125.json
-Limitation: This retained request/response set is typical manufacturer characterization. It is not a guaranteed lot, assembled-board, placement, impedance, or temperature qualification result, and this BP-125 unit makes no numeric DC-bias claim.
