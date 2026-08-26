@@ -49,7 +49,7 @@
 }
 
 .image-with-text__media--placeholder:after {
-  content: "";
+  content: '';
   position: absolute;
   background: rgba(var(--color-foreground), 0.04);
 }
@@ -93,7 +93,7 @@
 }
 
 .image-with-text .grid__item::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;

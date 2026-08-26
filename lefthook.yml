@@ -7,7 +7,7 @@ pre-commit:
   commands:
     lint:
       glob: "*.{js,jsx,ts,tsx}"
-      run: pnpm oxlint --fix {staged_files}
+      run: pnpm oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     format:
       glob: "*.{js,jsx,ts,tsx,json,css,scss,yaml,yml,md}"

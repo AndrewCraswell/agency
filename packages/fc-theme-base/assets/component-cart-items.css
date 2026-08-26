@@ -133,8 +133,8 @@ cart-items .title-wrapper-with-link {
   background-color: rgb(var(--color-background));
   border: var(--popup-border-width) solid rgba(var(--color-foreground), var(--popup-border-opacity));
   bottom: calc(100% + 0.9rem);
-  box-shadow: var(--popup-shadow-horizontal-offset) var(--popup-shadow-vertical-offset) var(--popup-shadow-blur-radius)
-    rgba(var(--color-shadow), var(--popup-shadow-opacity));
+  box-shadow: var(--popup-shadow-horizontal-offset) var(--popup-shadow-vertical-offset)
+    var(--popup-shadow-blur-radius) rgba(var(--color-shadow), var(--popup-shadow-opacity));
   color: rgb(var(--color-foreground));
   display: flex;
   flex-direction: column;
@@ -153,9 +153,7 @@ cart-items .title-wrapper-with-link {
   position: absolute;
   text-align: left;
   transform: translateX(calc(-50% + var(--cart-disclosure-tooltip-shift, 0px)));
-  transition:
-    opacity var(--duration-short) ease,
-    visibility var(--duration-short) ease;
+  transition: opacity var(--duration-short) ease, visibility var(--duration-short) ease;
   visibility: hidden;
   width: max-content;
   z-index: 3;
@@ -229,8 +227,8 @@ cart-items .title-wrapper-with-link {
   border: var(--popup-border-width) solid rgba(var(--color-foreground), var(--popup-border-opacity));
   border-radius: var(--popup-corner-radius);
   box-sizing: border-box;
-  box-shadow: var(--popup-shadow-horizontal-offset) var(--popup-shadow-vertical-offset) var(--popup-shadow-blur-radius)
-    rgba(var(--color-shadow), var(--popup-shadow-opacity));
+  box-shadow: var(--popup-shadow-horizontal-offset) var(--popup-shadow-vertical-offset)
+    var(--popup-shadow-blur-radius) rgba(var(--color-shadow), var(--popup-shadow-opacity));
   color: rgb(var(--color-foreground));
   margin: auto;
   max-height: calc(100vh - 4rem);
@@ -302,7 +300,9 @@ cart-items .title-wrapper-with-link {
   display: inline-flex;
   height: var(--cart-disclosure-modal-symbol-height);
   justify-content: center;
-  margin-top: calc((var(--cart-disclosure-modal-title-line-height) - var(--cart-disclosure-modal-symbol-height)) / 2);
+  margin-top: calc(
+    (var(--cart-disclosure-modal-title-line-height) - var(--cart-disclosure-modal-symbol-height)) / 2
+  );
   width: var(--cart-disclosure-modal-symbol-width);
 }
 

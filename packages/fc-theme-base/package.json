@@ -1,0 +1,16 @@
+{
+  "name": "@repo/fc-theme-base",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "check:theme": "shopify theme check --path .",
+    "dev": "shopify theme dev --path .",
+    "package": "shopify theme package --path .",
+    "pull": "shopify theme pull --path .",
+    "push": "shopify theme push --path ."
+  },
+  "devDependencies": {
+    "@shopify/cli": "^4.6.1"
+  }
+}

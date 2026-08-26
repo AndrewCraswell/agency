@@ -4,6 +4,8 @@
   "sections": {
     "footer": {
       "type": "footer",
+      "blocks": {},
+      "block_order": [],
       "settings": {
         "color_scheme": "scheme-1",
         "newsletter_enable": true,
@@ -20,5 +22,7 @@
       }
     }
   },
-  "order": ["footer"]
+  "order": [
+    "footer"
+  ]
 }

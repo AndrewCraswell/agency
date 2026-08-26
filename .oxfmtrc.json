@@ -21,6 +21,8 @@
     "**/next-env.d.ts",
     "**/*.shopify*.html",
     "**/fixtures/golden-vector-export.json",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "packages/fc-theme/**",
+    "packages/fc-theme-base/**"
   ]
 }

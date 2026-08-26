@@ -1,192 +1,192 @@
-if (!customElements.get("cart-disclosure-modal")) {
+if (!customElements.get('cart-disclosure-modal')) {
   class CartDisclosureModal extends HTMLElement {
     constructor() {
-      super()
+      super();
 
-      this.onOpenerClick = this.onOpenerClick.bind(this)
-      this.onCloseClick = this.onCloseClick.bind(this)
-      this.onModalClick = this.onModalClick.bind(this)
-      this.onKeyUp = this.onKeyUp.bind(this)
-      this.removeIfOpenerDisconnected = this.removeIfOpenerDisconnected.bind(this)
+      this.onOpenerClick = this.onOpenerClick.bind(this);
+      this.onCloseClick = this.onCloseClick.bind(this);
+      this.onModalClick = this.onModalClick.bind(this);
+      this.onKeyUp = this.onKeyUp.bind(this);
+      this.removeIfOpenerDisconnected = this.removeIfOpenerDisconnected.bind(this);
     }
 
     connectedCallback() {
-      if (this.initialized) return
+      if (this.initialized) return;
 
-      this.initialized = true
-      this.dialog = this.querySelector('[role="dialog"]')
-      const controlsId = this.dialog?.id
-      this.opener = this.previousElementSibling?.classList.contains("cart-item__disclosure")
+      this.initialized = true;
+      this.dialog = this.querySelector('[role="dialog"]');
+      const controlsId = this.dialog?.id;
+      this.opener = this.previousElementSibling?.classList.contains('cart-item__disclosure')
         ? this.previousElementSibling
         : controlsId
           ? document.querySelector(`[aria-controls="${controlsId}"]`)
-          : null
-      this.closeButton = this.querySelector("[data-cart-disclosure-close]")
+          : null;
+      this.closeButton = this.querySelector('[data-cart-disclosure-close]');
 
-      let shouldRestoreOpen = false
-      document.querySelectorAll("cart-disclosure-modal").forEach((modal) => {
-        if (modal === this || modal.id !== this.id) return
+      let shouldRestoreOpen = false;
+      document.querySelectorAll('cart-disclosure-modal').forEach((modal) => {
+        if (modal === this || modal.id !== this.id) return;
 
-        shouldRestoreOpen = shouldRestoreOpen || modal.hasAttribute("open")
-        modal.remove()
-      })
+        shouldRestoreOpen = shouldRestoreOpen || modal.hasAttribute('open');
+        modal.remove();
+      });
 
-      this.opener?.addEventListener("click", this.onOpenerClick)
-      this.closeButton?.addEventListener("click", this.onCloseClick)
-      this.addEventListener("click", this.onModalClick)
-      this.addEventListener("keyup", this.onKeyUp)
+      this.opener?.addEventListener('click', this.onOpenerClick);
+      this.closeButton?.addEventListener('click', this.onCloseClick);
+      this.addEventListener('click', this.onModalClick);
+      this.addEventListener('keyup', this.onKeyUp);
 
       if (this.parentElement !== document.body) {
-        this.isMoving = true
-        document.body.appendChild(this)
-        this.isMoving = false
+        this.isMoving = true;
+        document.body.appendChild(this);
+        this.isMoving = false;
       }
 
-      this.observeOpener()
+      this.observeOpener();
 
-      if (shouldRestoreOpen) this.show()
+      if (shouldRestoreOpen) this.show();
     }
 
     disconnectedCallback() {
-      if (this.isMoving) return
+      if (this.isMoving) return;
 
-      this.openerObserver?.disconnect()
-      this.opener?.removeEventListener("click", this.onOpenerClick)
-      this.closeButton?.removeEventListener("click", this.onCloseClick)
-      this.removeEventListener("click", this.onModalClick)
-      this.removeEventListener("keyup", this.onKeyUp)
+      this.openerObserver?.disconnect();
+      this.opener?.removeEventListener('click', this.onOpenerClick);
+      this.closeButton?.removeEventListener('click', this.onCloseClick);
+      this.removeEventListener('click', this.onModalClick);
+      this.removeEventListener('keyup', this.onKeyUp);
 
-      if (this.hasAttribute("open")) this.hide(false)
+      if (this.hasAttribute('open')) this.hide(false);
     }
 
     observeOpener() {
-      this.openerObserver?.disconnect()
+      this.openerObserver?.disconnect();
 
-      if (!this.opener) return
+      if (!this.opener) return;
 
-      this.openerObserver = new MutationObserver(this.removeIfOpenerDisconnected)
-      this.openerObserver.observe(document.body, { childList: true, subtree: true })
-      this.removeIfOpenerDisconnected()
+      this.openerObserver = new MutationObserver(this.removeIfOpenerDisconnected);
+      this.openerObserver.observe(document.body, { childList: true, subtree: true });
+      this.removeIfOpenerDisconnected();
     }
 
     removeIfOpenerDisconnected() {
-      if (this.isMoving || !this.isConnected || this.opener?.isConnected) return
+      if (this.isMoving || !this.isConnected || this.opener?.isConnected) return;
 
-      this.remove()
+      this.remove();
     }
 
     onOpenerClick(event) {
-      event.preventDefault()
-      event.stopPropagation()
-      this.show()
+      event.preventDefault();
+      event.stopPropagation();
+      this.show();
     }
 
     onCloseClick(event) {
-      event.preventDefault()
-      event.stopPropagation()
-      this.hide()
+      event.preventDefault();
+      event.stopPropagation();
+      this.hide();
     }
 
     onModalClick(event) {
-      event.stopPropagation()
+      event.stopPropagation();
 
-      if (event.target === this) this.hide()
+      if (event.target === this) this.hide();
     }
 
     onKeyUp(event) {
-      if (event.code.toUpperCase() !== "ESCAPE") return
+      if (event.code.toUpperCase() !== 'ESCAPE') return;
 
-      event.preventDefault()
-      event.stopPropagation()
-      this.hide()
+      event.preventDefault();
+      event.stopPropagation();
+      this.hide();
     }
 
     show() {
-      if (this.hasAttribute("open")) return
+      if (this.hasAttribute('open')) return;
 
-      document.querySelectorAll("cart-disclosure-modal[open]").forEach((modal) => {
-        if (modal !== this) modal.hide(false)
-      })
+      document.querySelectorAll('cart-disclosure-modal[open]').forEach((modal) => {
+        if (modal !== this) modal.hide(false);
+      });
 
-      this.lockScroll()
-      this.setAttribute("open", "")
-      this.opener?.setAttribute("aria-expanded", "true")
+      this.lockScroll();
+      this.setAttribute('open', '');
+      this.opener?.setAttribute('aria-expanded', 'true');
 
-      if (typeof trapFocus === "function") {
-        trapFocus(this, this.dialog)
+      if (typeof trapFocus === 'function') {
+        trapFocus(this, this.dialog);
       } else {
-        this.dialog?.focus()
+        this.dialog?.focus();
       }
 
-      window.pauseAllMedia()
+      window.pauseAllMedia();
     }
 
     hide(restoreFocus = true) {
-      if (!this.hasAttribute("open")) return
+      if (!this.hasAttribute('open')) return;
 
-      this.removeAttribute("open")
-      this.opener?.setAttribute("aria-expanded", "false")
-      this.unlockScroll()
+      this.removeAttribute('open');
+      this.opener?.setAttribute('aria-expanded', 'false');
+      this.unlockScroll();
 
       if (restoreFocus) {
-        this.restoreFocusTrap()
-      } else if (typeof removeTrapFocus === "function") {
-        removeTrapFocus()
+        this.restoreFocusTrap();
+      } else if (typeof removeTrapFocus === 'function') {
+        removeTrapFocus();
       }
 
-      window.pauseAllMedia()
+      window.pauseAllMedia();
     }
 
     lockScroll() {
-      this.bodyOverflowWasHidden = document.body.classList.contains("overflow-hidden")
-      this.previousBodyPaddingRight = document.body.style.paddingRight
+      this.bodyOverflowWasHidden = document.body.classList.contains('overflow-hidden');
+      this.previousBodyPaddingRight = document.body.style.paddingRight;
 
-      if (this.bodyOverflowWasHidden) return
+      if (this.bodyOverflowWasHidden) return;
 
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
 
       if (scrollbarWidth > 0) {
-        const currentPaddingRight = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0
-        document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`
+        const currentPaddingRight = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
+        document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
       }
 
-      document.body.classList.add("overflow-hidden")
+      document.body.classList.add('overflow-hidden');
     }
 
     unlockScroll() {
-      if (this.bodyOverflowWasHidden) return
+      if (this.bodyOverflowWasHidden) return;
 
-      document.body.classList.remove("overflow-hidden")
-      document.body.style.paddingRight = this.previousBodyPaddingRight
+      document.body.classList.remove('overflow-hidden');
+      document.body.style.paddingRight = this.previousBodyPaddingRight;
     }
 
     restoreFocusTrap() {
-      const cartDrawer = this.opener?.closest("cart-drawer.active")
-      const cartNotification = this.opener?.closest("cart-notification")?.querySelector("#cart-notification.active")
+      const cartDrawer = this.opener?.closest('cart-drawer.active');
+      const cartNotification = this.opener?.closest('cart-notification')?.querySelector('#cart-notification.active');
 
-      if (cartDrawer && typeof trapFocus === "function") {
-        const containerToTrapFocusOn = cartDrawer.classList.contains("is-empty")
-          ? cartDrawer.querySelector(".drawer__inner-empty")
-          : document.getElementById("CartDrawer")
+      if (cartDrawer && typeof trapFocus === 'function') {
+        const containerToTrapFocusOn = cartDrawer.classList.contains('is-empty')
+          ? cartDrawer.querySelector('.drawer__inner-empty')
+          : document.getElementById('CartDrawer');
 
         if (containerToTrapFocusOn) {
-          trapFocus(containerToTrapFocusOn, this.opener)
-          return
+          trapFocus(containerToTrapFocusOn, this.opener);
+          return;
         }
       }
 
-      if (cartNotification && typeof trapFocus === "function") {
-        trapFocus(cartNotification, this.opener)
-        return
+      if (cartNotification && typeof trapFocus === 'function') {
+        trapFocus(cartNotification, this.opener);
+        return;
       }
 
-      if (typeof removeTrapFocus === "function") {
-        removeTrapFocus(this.opener)
+      if (typeof removeTrapFocus === 'function') {
+        removeTrapFocus(this.opener);
       } else {
-        this.opener?.focus()
+        this.opener?.focus();
       }
     }
   }
 
-  customElements.define("cart-disclosure-modal", CartDisclosureModal)
+  customElements.define('cart-disclosure-modal', CartDisclosureModal);
 }

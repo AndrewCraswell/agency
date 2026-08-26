@@ -50,7 +50,7 @@
 
 .card--card:after,
 .card--standard .card__inner:after {
-  content: "";
+  content: '';
   position: absolute;
   z-index: -1;
   width: calc(var(--border-width) * 2 + 100%);
@@ -348,7 +348,7 @@
 
 .card__heading a::after {
   bottom: 0;
-  content: "";
+  content: '';
   left: 0;
   position: absolute;
   right: 0;
@@ -361,16 +361,12 @@
 }
 
 .card__heading a:focus:after {
-  box-shadow:
-    0 0 0 0.3rem rgb(var(--color-background)),
-    0 0 0.5rem 0.4rem rgba(var(--color-foreground), 0.3);
+  box-shadow: 0 0 0 0.3rem rgb(var(--color-background)), 0 0 0.5rem 0.4rem rgba(var(--color-foreground), 0.3);
   outline: 0.2rem solid rgba(var(--color-foreground), 0.5);
 }
 
 .card__heading a:focus-visible:after {
-  box-shadow:
-    0 0 0 0.3rem rgb(var(--color-background)),
-    0 0 0.5rem 0.4rem rgba(var(--color-foreground), 0.3);
+  box-shadow: 0 0 0 0.3rem rgb(var(--color-background)), 0 0 0.5rem 0.4rem rgba(var(--color-foreground), 0.3);
   outline: 0.2rem solid rgba(var(--color-foreground), 0.5);
 }
 

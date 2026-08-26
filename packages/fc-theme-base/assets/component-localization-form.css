@@ -78,7 +78,7 @@
 
 .localization-form__select .icon-caret {
   position: absolute;
-  content: "";
+  content: '';
   height: 0.6rem;
   right: calc(var(--inputs-border-width) + 1.5rem);
   top: calc(50% - 0.2rem);
@@ -190,7 +190,7 @@
 .country-filter__reset-button:not(:focus)::after {
   display: block;
   height: calc(100% - 1.8rem);
-  content: "";
+  content: '';
   position: absolute;
   right: 0;
 }
@@ -218,9 +218,7 @@
 }
 
 .country-filter__search-icon {
-  transition:
-    opacity var(--duration-short) ease,
-    visibility var(--duration-short) ease;
+  transition: opacity var(--duration-short) ease, visibility var(--duration-short) ease;
   opacity: 1;
   visibility: visible;
   pointer-events: none;
@@ -335,7 +333,7 @@
   opacity: 1;
 }
 
-.disclosure__button[aria-expanded="true"] .icon-caret {
+.disclosure__button[aria-expanded='true'] .icon-caret {
   transform: rotate(180deg);
 }
 
