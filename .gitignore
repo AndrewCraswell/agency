@@ -7,6 +7,7 @@ dist
 dist-ssr
 coverage
 !apps/legislation/src/coverage/
+/apps/scoring/firmware/out/
 storybook-static
 *.local
 .cache
