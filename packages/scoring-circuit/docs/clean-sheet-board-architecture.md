@@ -36,14 +36,16 @@ The initial schematic contains only these functional blocks:
   bus. HUB75 is deferred behind the firmware display abstraction.
 - One transistor-driven buzzer. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
   omitted.
-- Fused 5 V input from the existing off-board USB-C PD and regulator modules, plus only the rails actually consumed by
-  the board.
+- An Adafruit 5991 USB-C PD daughterboard set to 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
+  modules use their manufacturer circuits and protection instead of reproducing USB-C negotiation or conversion from
+  discrete parts. The PD module mounts at the carrier edge; two short 18 AWG wires connect its output terminal to the
+  labeled carrier landings.
 - Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
 
 ## Explicitly deferred
 
-The first board does not include custom production connectors, on-board USB-C PD negotiation, on-board high-current
-conversion, an STM32, processor isolation, redundant supervisors, manufacturing fixtures, production service headers,
+The first board does not include custom production connectors, a custom USB-C PD circuit, a custom high-current
+converter, an STM32, processor isolation, redundant supervisors, manufacturing fixtures, production service headers,
 environmental qualification, homologation evidence, per-part evidence ledgers, backlog validators, automated release
 gates, or speculative expansion hardware.
 
@@ -74,6 +76,8 @@ either limit requires removing or moving functions off-board before layout; it i
 | WIZ850io | Supplies required wired Ethernet without a custom PHY, magnetics, crystal, or RJ45 design. |
 | TSOP38438 | Receives the required infrared remote signal with one ESP32 input. |
 | WS2812 matrix | Provides all prototype scoring indications through one data signal and an off-board panel. |
+| Adafruit 5991 | Provides the board-edge USB-C socket and switch-selected 20 V PD request without firmware. |
+| Pololu D36V50F5 | Converts the negotiated input to the board's 5 V rail without a custom regulator design. |
 
 There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, isolation
 device, supervisor, display buffer, or multi-channel output driver in the starting design.

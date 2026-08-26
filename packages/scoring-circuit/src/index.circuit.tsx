@@ -4,6 +4,7 @@ import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
 import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
 import { ScoringConductorInterface } from "./scoring-conductor-interface.circuit.js"
+import { UsbCPower } from "./usb-c-power.circuit.js"
 
 export const controllerLeftPins = [
   "APP_3V3",
@@ -66,7 +67,7 @@ export const prototypeInterfaces = {
   weaponLeft: ["LEFT_A", "LEFT_B", "LEFT_C"],
   weaponRight: ["RIGHT_A", "RIGHT_B", "RIGHT_C"],
   piste: ["PISTE"],
-  powerInput: ["V5", "APP_GND"]
+  powerInput: ["USB-C PD 20V", "V5", "APP_GND"]
 } as const
 
 const controllerModuleFootprint = (
@@ -150,18 +151,11 @@ function MinimalScoringPrototype(): ReactElement {
         name="J_PISTE"
         pinCount={1}
         pinLabels={[...prototypeInterfaces.piste]}
-        pcbX={-68}
+        pcbX={-76.5}
         pcbY={15}
         cadModel={cadModels.pinHeader1x01}
       />
-      <pinheader
-        name="J_POWER_INPUT"
-        pinCount={2}
-        pinLabels={[...prototypeInterfaces.powerInput]}
-        pcbX={-55}
-        pcbY={40}
-        cadModel={cadModels.pinHeader1x02}
-      />
+      <UsbCPower />
       <EthernetModuleFootprint pcbX={-20} pcbY={-32} />
       <resistor
         name="R_ETH_CS_PULLUP"
@@ -176,8 +170,6 @@ function MinimalScoringPrototype(): ReactElement {
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
       <PrototypePeripherals />
 
-      <trace from="J_POWER_INPUT.V5" to="net.V5" />
-      <trace from="J_POWER_INPUT.APP_GND" to="net.APP_GND" />
       <trace from="J_CONTROLLER_LEFT.1" to="net.APP_3V3" />
       <trace from="J_CONTROLLER_LEFT.2" to="net.APP_3V3" />
       <trace from="J_CONTROLLER_LEFT.3" to="net.APP_RESET_N" />

@@ -48,5 +48,18 @@ export const cadModels = {
   },
   sot23: {
     stepUrl: `${kicadModelRoot}/Package_TO_SOT_SMD.3dshapes/SOT-23.step`
+  },
+  usbCPdModule: {
+    stepUrl:
+      "https://raw.githubusercontent.com/adafruit/Adafruit_CAD_Parts/84d8e0fc41930bddfa46281b9e6186341f58655b/5991%20HUSB238%20USBC/5991%20HUSB238%20USBC.step",
+    modelOriginPosition: { x: 10.16, y: 13.9065, z: 0 },
+    positionOffset: { x: 0.0635, y: 2.94175, z: 0 },
+    zOffsetFromSurface: "6mm"
+  },
+  v5RegulatorModule: {
+    stepUrl: "https://www.pololu.com/file/0J1733/d36v50fx-step-down-voltage-regulator.step",
+    modelOriginPosition: { x: 12.7, y: 12.7, z: 0 },
+    positionOffset: { x: -0.05, y: -0.05, z: 0 },
+    zOffsetFromSurface: "6mm"
   }
 } as const

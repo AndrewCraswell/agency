@@ -252,7 +252,7 @@ const previewHtml = `<!doctype html>
             <p>Required board interfaces</p>
             <div class="port-row">
               <span class="port-model"><span class="rj45-model" aria-hidden="true"></span><span>Ethernet RJ45</span></span>
-              <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C PD power and service data</span></span>
+              <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C PD power</span></span>
             </div>
           </article>
         </div>

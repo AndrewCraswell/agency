@@ -8,6 +8,7 @@ import MinimalScoringPrototype, {
   prototypeInterfaces
 } from "./index.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
+import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
 
 function renderPrototype() {
   const circuit = new Circuit()
@@ -50,7 +51,8 @@ describe("minimal scoring prototype baseline", () => {
         "J_WEAPON_LEFT",
         "J_WEAPON_RIGHT",
         "J_PISTE",
-        "J_POWER_INPUT",
+        "U_USB_C_PD",
+        "U_V5_REGULATOR",
         "U_CONTROLLER_MODULE",
         "U_IR_RECEIVER",
         "J_BUZZER",
@@ -58,14 +60,44 @@ describe("minimal scoring prototype baseline", () => {
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(33)
+    expect(references).toHaveLength(34)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
     expect(cadComponents.every(({ model_step_url: stepUrl }) => typeof stepUrl === "string")).toBe(true)
     expect(cadComponents.some(({ model_jscad: jscad }) => jscad !== undefined)).toBe(false)
-    expect(prototypeInterfaces.powerInput).toEqual(["V5", "APP_GND"])
+    expect(prototypeInterfaces.powerInput).toEqual(["USB-C PD 20V", "V5", "APP_GND"])
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
+  })
+
+  it("uses a module-level USB-C power chain with real assembly geometry", () => {
+    const circuit = renderPrototype()
+    expect(usbCPowerAssembly).toMatchObject({
+      pdSetting: "20V",
+      regulatorModule: "Pololu D36V50F5 5V step-down regulator"
+    })
+
+    const sourceComponents = circuit.filter(({ type }) => type === "source_component")
+    expect(sourceComponents.find(({ name }) => name === "U_USB_C_PD")).toMatchObject({
+      manufacturer_part_number: "5991"
+    })
+    expect(sourceComponents.find(({ name }) => name === "U_V5_REGULATOR")).toMatchObject({
+      manufacturer_part_number: "D36V50F5"
+    })
+    const pdMountingHoles = circuit.filter(
+      ({ type, pcb_component_id: pcbComponentId }) =>
+        type === "pcb_hole" &&
+        circuit.some(
+          ({ type: candidateType, source_component_id: sourceComponentId, pcb_component_id: candidatePcbId }) =>
+            candidateType === "pcb_component" &&
+            candidatePcbId === pcbComponentId &&
+            sourceComponents.some(
+              ({ source_component_id: candidateSourceId, name }) =>
+                candidateSourceId === sourceComponentId && name === "U_USB_C_PD"
+            )
+        )
+    )
+    expect(pdMountingHoles).toHaveLength(4)
   })
 
   it("applies the vendor STEP coordinate transforms used by the assembled board", () => {
@@ -92,6 +124,14 @@ describe("minimal scoring prototype baseline", () => {
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
       position: { x: -20, y: -32, z: 0.7 },
       model_board_normal_direction: "y+"
+    })
+    expect(cadByReference.get("U_USB_C_PD")).toMatchObject({
+      position: { x: expect.closeTo(-62, 6), y: 34.5, z: 6.7 },
+      model_origin_position: { x: 10.16, y: 13.9065, z: 0 }
+    })
+    expect(cadByReference.get("U_V5_REGULATOR")).toMatchObject({
+      position: { x: expect.closeTo(-34, 6), y: expect.closeTo(34, 6), z: 6.7 },
+      model_origin_position: { x: 12.7, y: 12.7, z: 0 }
     })
     expect(cadByReference.get("U_IR_RECEIVER")).toMatchObject({
       position: { x: 67, y: 34.55, z: 0.7 },

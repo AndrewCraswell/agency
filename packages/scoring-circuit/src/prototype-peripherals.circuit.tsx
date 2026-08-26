@@ -128,8 +128,8 @@ export function PrototypePeripherals(): ReactElement {
         manufacturerPartNumber="C2012X5R0J226M125AC"
         capacitance="22uF"
         footprint="0805"
-        pcbX={-48}
-        pcbY={36}
+        pcbX={-17}
+        pcbY={39}
         cadModel={cadModels.capacitor0805}
       />
       <capacitor
@@ -137,8 +137,8 @@ export function PrototypePeripherals(): ReactElement {
         manufacturerPartNumber="C0603C104K3RACTU"
         capacitance="100nF"
         footprint="0603"
-        pcbX={-43}
-        pcbY={36}
+        pcbX={-13}
+        pcbY={39}
         cadModel={cadModels.capacitor0603}
       />
 
