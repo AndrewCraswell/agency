@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, lt, lte, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, isNull, lt, lte, or, sql, type SQL } from "drizzle-orm"
 import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
@@ -13,6 +13,16 @@ import {
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
+const CANONICAL_ORGANIZATION_CLASSIFICATIONS = [
+  "agency",
+  "chamber",
+  "committee",
+  "commission",
+  "legislature",
+  "other",
+  "subcommittee"
+] as const
+const CANONICAL_ORGANIZATION_CHAMBERS = ["lower", "upper", "unicameral", "legislature"] as const
 
 export type OrganizationSort = "name-asc" | "updated-desc"
 
@@ -122,6 +132,7 @@ export function buildOrganizationListQuery(database: LegislationDatabase, input:
     .from(organizations)
     .where(
       and(
+        canonicalOrganizationPredicate(),
         organizationJurisdictionPredicate(input, scope),
         organizationClassificationPredicate(input, scope),
         organizationParentPredicate(input, scope),
@@ -140,6 +151,35 @@ export function buildOrganizationListQuery(database: LegislationDatabase, input:
         : [desc(organizations.updatedAt), asc(organizations.id)])
     )
     .limit(limit + 1)
+}
+
+/**
+ * Collection endpoints publish only records that can be canonically projected.
+ * Direct detail routes deliberately retain their fail-closed incomplete-record
+ * behavior, but an unrelated legacy row must not turn an entire page into 422.
+ */
+function canonicalOrganizationPredicate(): SQL {
+  const predicate = and(
+    eq(organizations.provenanceComplete, true),
+    isNotNull(organizations.sourceIsOfficial),
+    isNotNull(organizations.sourceProvider),
+    sql`length(btrim(${organizations.sourceProvider})) > 0`,
+    isNotNull(organizations.sourceRetrievedAt),
+    isNotNull(organizations.sourceUrl),
+    sql`${organizations.sourceUrl} ~ '^https://'`,
+    isNotNull(organizations.isActive),
+    inArray(organizations.classification, CANONICAL_ORGANIZATION_CLASSIFICATIONS),
+    or(isNull(organizations.chamber), inArray(organizations.chamber, CANONICAL_ORGANIZATION_CHAMBERS)),
+    sql`length(btrim(${organizations.name})) > 0`,
+    or(
+      sql`coalesce(${organizations.upstreamIds} ->> 'openstatesParent', '') = ''`,
+      isNotNull(organizations.parentOrganizationId)
+    )
+  )
+  if (predicate === undefined) {
+    throw new Error("canonical organization predicate must contain conditions")
+  }
+  return predicate
 }
 
 export async function listOrganizations(
