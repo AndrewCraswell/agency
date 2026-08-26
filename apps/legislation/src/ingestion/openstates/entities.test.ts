@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { isOrganizationCivicFoundationComplete } from "../civic-foundation.js"
-import { normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "./entities.js"
+import { mergeOpenStatesEntitySnapshots, normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "./entities.js"
 
 function organizationFoundationComplete(
   row: ReturnType<typeof normalizeOpenStatesCommittees>["organizations"][number]
@@ -178,7 +178,96 @@ describe("Open States entity normalization", () => {
     })
     expect(result.people).toHaveLength(1)
     expect(result.terms).toHaveLength(1)
-    expect(result.memberships[0]).toMatchObject({ classification: "co-chair", isActive: true })
+    expect(result.memberships[0]).toMatchObject({ isActive: true, role: "co-chair" })
+    expect(result.memberships[0]?.classification).toBeUndefined()
+    expect(result.memberships[0]?.title).toBeUndefined()
+  })
+
+  it("retains memberships without inventing a role when Open States omits one", () => {
+    const result = normalizeOpenStatesCommittees(
+      [
+        {
+          classification: "committee",
+          id: "ocd-organization/roleless",
+          memberships: [
+            {
+              person: {
+                id: "ocd-person/roleless-member",
+                name: "Roleless Member"
+              }
+            }
+          ],
+          name: "Roleless committee"
+        }
+      ],
+      context
+    )
+
+    expect(result.memberships).toEqual([
+      expect.objectContaining({
+        role: undefined,
+        sourceId: "ocd-organization/roleless:ocd-person/roleless-member"
+      })
+    ])
+    expect(result.memberships[0]?.sourceId).not.toContain("member:member")
+  })
+
+  it("preserves detailed people and forwards their civic relationship collections", () => {
+    const people = normalizeOpenStatesPeople(
+      [
+        {
+          email: "detailed@example.test",
+          family_name: "Detail",
+          given_name: "Dana",
+          id: "ocd-person/detailed-member",
+          identifiers: [{ identifier: "D123", scheme: "provider" }],
+          name: "Dana Detail",
+          openstates_url: "https://openstates.org/person/detailed-member/",
+          sources: [{ url: "https://legislature.example.test/members/dana-detail" }]
+        }
+      ],
+      context
+    )
+    const committees = normalizeOpenStatesCommittees(
+      [
+        {
+          classification: "committee",
+          id: "ocd-organization/detail-committee",
+          memberships: [
+            {
+              person: {
+                id: "ocd-person/detailed-member",
+                name: "Dana Detail"
+              },
+              role: "member"
+            }
+          ],
+          name: "Detail committee"
+        }
+      ],
+      context
+    )
+
+    const snapshot = mergeOpenStatesEntitySnapshots(people, committees)
+
+    expect(snapshot.people).toEqual([
+      expect.objectContaining({
+        familyName: "Detail",
+        givenName: "Dana",
+        provenanceComplete: true,
+        sourceUrl: "https://legislature.example.test/members/dana-detail"
+      })
+    ])
+    expect(snapshot.personDetails).toEqual([
+      expect.objectContaining({ personId: "person:openstates:ocd-person-detailed-member" })
+    ])
+    expect(snapshot.personExternalIdentifiers).toEqual([expect.objectContaining({ scheme: "provider", value: "D123" })])
+    expect(snapshot.personJurisdictions).toEqual([
+      expect.objectContaining({
+        jurisdictionId: "jurisdiction:ak",
+        personId: "person:openstates:ocd-person-detailed-member"
+      })
+    ])
   })
 
   it("leaves unmappable organization classifications and chambers unknown", () => {

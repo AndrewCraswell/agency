@@ -1,0 +1,160 @@
+import { resolve } from "node:path"
+import { eq } from "drizzle-orm"
+import { drizzle } from "drizzle-orm/node-postgres"
+import { migrate } from "drizzle-orm/node-postgres/migrator"
+import pg from "pg"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import * as schema from "../schema/schema.js"
+import { replaceEntitySnapshot } from "./entities.js"
+
+const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
+const describePostgres = databaseUrl === undefined ? describe.skip : describe
+const migrationsFolder = resolve(process.cwd(), "src/db/migrations")
+const jurisdictionId = "jurisdiction:entity-refresh"
+const personId = "person:openstates:entity-refresh"
+const organizationId = "organization:openstates:entity-refresh"
+const termId = `${personId}:term:entity-refresh`
+const membershipId = `${organizationId}:membership:entity-refresh`
+const retrievedAt = new Date("2026-08-26T12:00:00.000Z")
+
+if (databaseUrl !== undefined && new URL(databaseUrl).pathname !== "/legislation_test") {
+  throw new Error("LEGISLATION_TEST_DATABASE_URL must target the legislation_test database")
+}
+
+describePostgres.sequential("replaceEntitySnapshot", () => {
+  const pool = new pg.Pool({ connectionString: databaseUrl, max: 2 })
+  const database = drizzle(pool, { schema })
+
+  beforeAll(async () => {
+    await pool.query("drop schema if exists legislation cascade")
+    await pool.query("drop schema if exists legislation_migrations cascade")
+    await migrate(database, {
+      migrationsFolder,
+      migrationsSchema: "legislation_migrations",
+      migrationsTable: "migrations"
+    })
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Entity refresh",
+      subdivisionCode: "ER"
+    })
+  })
+
+  afterAll(async () => {
+    await pool.query("drop schema if exists legislation cascade")
+    await pool.query("drop schema if exists legislation_migrations cascade")
+    await pool.end()
+  })
+
+  it("refreshes canonical provenance and completeness when snapshot records conflict", async () => {
+    await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: false, role: "member" }))
+    await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: true, role: "chair" }))
+
+    const [person] = await database.select().from(schema.people).where(eq(schema.people.id, personId))
+    const [term] = await database.select().from(schema.legislativeTerms).where(eq(schema.legislativeTerms.id, termId))
+    const [membership] = await database
+      .select()
+      .from(schema.organizationMemberships)
+      .where(eq(schema.organizationMemberships.id, membershipId))
+
+    expect(person).toMatchObject({
+      provenanceComplete: true,
+      sourceIsOfficial: false,
+      sourceProvider: "openstates",
+      sourceRetrievedAt: retrievedAt,
+      sourceUpdatedAt: new Date("2026-08-25T12:00:00.000Z"),
+      sourceUrl: "https://legislature.example.test/entity-refresh/person"
+    })
+    expect(term).toMatchObject({
+      officeTitle: "Representative",
+      provenanceComplete: true,
+      sourceIsOfficial: false,
+      sourceProvider: "openstates",
+      sourceRetrievedAt: retrievedAt,
+      sourceUpdatedAt: new Date("2026-08-25T12:00:00.000Z"),
+      sourceUrl: "https://legislature.example.test/entity-refresh/term"
+    })
+    expect(membership).toMatchObject({
+      label: "Committee chair",
+      provenanceComplete: true,
+      role: "chair",
+      sourceIsOfficial: false,
+      sourceProvider: "openstates",
+      sourceRetrievedAt: retrievedAt,
+      sourceUpdatedAt: new Date("2026-08-25T12:00:00.000Z"),
+      sourceUrl: "https://legislature.example.test/entity-refresh/membership"
+    })
+  })
+})
+
+function snapshot({ complete, role }: { complete: boolean; role: string }) {
+  const provenance = complete
+    ? {
+        provenanceComplete: true,
+        sourceIsOfficial: false,
+        sourceProvider: "openstates",
+        sourceRetrievedAt: retrievedAt,
+        sourceUpdatedAt: new Date("2026-08-25T12:00:00.000Z")
+      }
+    : { provenanceComplete: false }
+
+  return {
+    memberships: [
+      {
+        ...provenance,
+        id: membershipId,
+        isActive: true,
+        label: "Committee chair",
+        organizationId,
+        personId,
+        role,
+        sourceId: "entity-refresh:membership",
+        sourceUrl: complete ? "https://legislature.example.test/entity-refresh/membership" : undefined
+      }
+    ],
+    organizations: [
+      {
+        ...provenance,
+        childRelationsComplete: true,
+        classification: "committee",
+        detailFactsComplete: true,
+        id: organizationId,
+        isActive: true,
+        jurisdictionId,
+        membershipRelationsComplete: true,
+        name: "Entity refresh committee",
+        sourceId: "entity-refresh:organization",
+        sourceUrl: complete ? "https://legislature.example.test/entity-refresh/organization" : undefined
+      }
+    ],
+    people: [
+      {
+        ...provenance,
+        id: personId,
+        isActive: true,
+        jurisdictionId,
+        name: "Entity Refresh",
+        sourceId: "entity-refresh:person",
+        sourceUrl: complete ? "https://legislature.example.test/entity-refresh/person" : undefined,
+        upstreamIds: { openstates: "entity-refresh:person" }
+      }
+    ],
+    personAliasPersonIds: [],
+    personAliases: [],
+    terms: [
+      {
+        ...provenance,
+        id: termId,
+        isActive: true,
+        jurisdictionId,
+        officeTitle: "Representative",
+        personId,
+        role: "Representative",
+        sourceId: "entity-refresh:term",
+        sourceUrl: complete ? "https://legislature.example.test/entity-refresh/term" : undefined
+      }
+    ]
+  }
+}

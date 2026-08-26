@@ -25,7 +25,11 @@ import { RetryingHttpClient, type HttpRequestTelemetry } from "../http-client.js
 import { createJobCounts, runIngestionJob, type JobCounts, type JobResult } from "../job.js"
 import { type OpenStatesClient, OpenStatesClient as DefaultOpenStatesClient } from "../openstates/client.js"
 import { openStatesJurisdictionId, openStatesJurisdictionNames } from "../openstates/coverage.js"
-import { normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "../openstates/entities.js"
+import {
+  mergeOpenStatesEntitySnapshots,
+  normalizeOpenStatesCommittees,
+  normalizeOpenStatesPeople
+} from "../openstates/entities.js"
 import { normalizeOpenStatesEvent } from "../openstates/events.js"
 import { importOpenStatesRecords } from "../openstates/import.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../source-store.js"
@@ -212,23 +216,10 @@ async function synchronizeOpenStatesEntitiesForScope(
       jurisdictionCode: identity.scope,
       retrievedAt
     })
-    const peopleById = new Map(
-      [...normalizedPeople.people, ...normalizedCommittees.people].map((person) => [person.id, person])
-    )
-    const termsById = new Map([...normalizedPeople.terms, ...normalizedCommittees.terms].map((term) => [term.id, term]))
-    await replaceEntitySnapshot(context.database, `jurisdiction:${identity.scope}`, {
-      memberships: normalizedCommittees.memberships,
-      organizations: normalizedCommittees.organizations,
-      personAliasPersonIds: normalizedPeople.personAliasPersonIds,
-      personAliases: normalizedPeople.personAliases,
-      people: [...peopleById.values()],
-      terms: [...termsById.values()]
-    })
+    const snapshot = mergeOpenStatesEntitySnapshots(normalizedPeople, normalizedCommittees)
+    await replaceEntitySnapshot(context.database, `jurisdiction:${identity.scope}`, snapshot)
     const records =
-      peopleById.size +
-      termsById.size +
-      normalizedCommittees.organizations.length +
-      normalizedCommittees.memberships.length
+      snapshot.people.length + snapshot.terms.length + snapshot.organizations.length + snapshot.memberships.length
     counts.discovered += records
     counts.read += records
     counts.updated += records

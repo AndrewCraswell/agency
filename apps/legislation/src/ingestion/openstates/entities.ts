@@ -118,6 +118,34 @@ export interface OpenStatesEntitySnapshot {
   terms: TermInsert[]
 }
 
+function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
+  return [...new Map(values.map((value) => [value.id, value])).values()]
+}
+
+/**
+ * Combines the detailed people endpoint with committee-embedded people.
+ *
+ * The people endpoint is authoritative for profile facts and provenance. Committee
+ * membership embeds are retained only for people that did not appear there.
+ */
+export function mergeOpenStatesEntitySnapshots(
+  peopleSnapshot: ReturnType<typeof normalizeOpenStatesPeople>,
+  committeeSnapshot: ReturnType<typeof normalizeOpenStatesCommittees>
+): OpenStatesEntitySnapshot {
+  return {
+    memberships: committeeSnapshot.memberships,
+    organizations: committeeSnapshot.organizations,
+    personAliasPersonIds: peopleSnapshot.personAliasPersonIds,
+    personAliases: peopleSnapshot.personAliases,
+    personDetailPersonIds: peopleSnapshot.personDetailPersonIds,
+    personDetails: peopleSnapshot.personDetails,
+    personExternalIdentifiers: peopleSnapshot.personExternalIdentifiers,
+    personJurisdictions: peopleSnapshot.personJurisdictions,
+    people: uniqueById([...committeeSnapshot.people, ...peopleSnapshot.people]),
+    terms: uniqueById([...committeeSnapshot.terms, ...peopleSnapshot.terms])
+  }
+}
+
 function sourceUrl(sources: Array<{ url: string }>, fallback?: string): string | undefined {
   return sources[0]?.url ?? fallback
 }
@@ -387,20 +415,20 @@ export function normalizeOpenStatesCommittees(
         if (normalizedPerson.term !== undefined) {
           termsById.set(normalizedPerson.term.id, normalizedPerson.term)
         }
-        const sourceIdentity = membership.role ?? "member"
+        const sourceIdentity =
+          membership.role === undefined ? membership.person.id : `${membership.person.id}:${membership.role}`
         memberships.push({
-          classification: membership.role,
           id: organizationMembershipId(canonicalOrganizationId, normalizedPerson.person.id, sourceIdentity),
           isActive: true,
           organizationId: canonicalOrganizationId,
           personId: normalizedPerson.person.id,
           provenanceComplete: isHttpsUrl(canonicalSourceUrl),
-          sourceId: `${committee.id}:${membership.person.id}:${sourceIdentity}`,
+          role: membership.role,
+          sourceId: `${committee.id}:${sourceIdentity}`,
           sourceIsOfficial: false,
           sourceProvider: "openstates",
           sourceRetrievedAt: context.retrievedAt,
-          sourceUrl: canonicalSourceUrl,
-          title: membership.role
+          sourceUrl: canonicalSourceUrl
         })
       }
       return {
