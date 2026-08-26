@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   turbopack: {
     root: workspaceRoot
+  },
+  webpack(config) {
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      ".js": [".js", ".ts", ".tsx"]
+    }
+    return config
   }
 }
 
