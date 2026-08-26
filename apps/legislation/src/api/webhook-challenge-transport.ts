@@ -29,6 +29,7 @@ export function createPinnedWebhookVerificationTransport(
       headers: Readonly<Record<string, string>>
       hostname: string
       path: string
+      port: number
     }>
   ) => Promise<Readonly<{ body: string; statusCode: number }>> = connectPinnedHttps
 ): WebhookVerificationTransport {
@@ -54,7 +55,8 @@ export function createPinnedWebhookVerificationTransport(
           "legislation-timestamp": timestamp
         },
         hostname: destination.url.hostname,
-        path: `${destination.url.pathname}${destination.url.search}`
+        path: `${destination.url.pathname}${destination.url.search}`,
+        port: destinationPort(destination.url)
       })
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return false
@@ -86,14 +88,16 @@ async function connectPinnedHttps(
     headers: Readonly<Record<string, string>>
     hostname: string
     path: string
+    port: number
   }>
 ): Promise<Readonly<{ body: string; statusCode: number }>> {
   return await new Promise((resolve, reject) => {
     const request = httpsRequest({
-      headers: { ...input.headers, host: input.hostname },
+      headers: { ...input.headers, host: hostHeader(input.hostname, input.port) },
       hostname: input.address.address,
       method: "POST",
       path: input.path,
+      port: input.port,
       rejectUnauthorized: true,
       servername: input.hostname,
       timeout: timeoutMs
@@ -118,4 +122,13 @@ async function connectPinnedHttps(
     })
     request.end(input.body)
   })
+}
+
+function destinationPort(url: URL): number {
+  return url.port.length === 0 ? 443 : Number(url.port)
+}
+
+function hostHeader(hostname: string, port: number): string {
+  const authority = hostname.includes(":") && !hostname.startsWith("[") ? `[${hostname}]` : hostname
+  return port === 443 ? authority : `${authority}:${port}`
 }
