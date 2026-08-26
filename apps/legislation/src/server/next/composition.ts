@@ -1,13 +1,14 @@
 import { loadConfig, type LegislationConfig } from "../../config/config.js"
 import { createDatabase, type LegislationDatabase } from "../../db/database.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
-import { OpenRouterRetrievalClient, type RetrievalModelClient } from "../../models/openrouter-retrieval.js"
+import { OpenRouterRetrievalClient } from "../../models/openrouter-retrieval.js"
 import { createNextDatabaseReadiness, type NextDatabaseReadiness } from "./readiness.js"
 
 export interface NextLegislationApplication {
   readonly config: LegislationConfig
   readonly database: LegislationDatabase
   readonly queryService: LegislationQueryService
+  readonly retrievalClient: OpenRouterRetrievalClient | undefined
   readonly readiness: NextDatabaseReadiness
   close(): Promise<void>
 }
@@ -25,11 +26,12 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     config,
     database,
     queryService: new LegislationQueryService(database, retrievalClient),
+    retrievalClient,
     readiness: createNextDatabaseReadiness(pool)
   }
 }
 
-function createRetrievalClient(config: LegislationConfig): RetrievalModelClient | undefined {
+function createRetrievalClient(config: LegislationConfig): OpenRouterRetrievalClient | undefined {
   return config.model.apiKey === undefined
     ? undefined
     : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })

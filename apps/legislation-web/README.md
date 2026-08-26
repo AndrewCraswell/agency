@@ -170,4 +170,47 @@ $env:LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME = "dependency_unavail
 pnpm --filter legislation-web smoke:foundation
 ```
 
+After NX-04 is deployed, set `LEGISLATION_WEB_SMOKE_NX_04` to `1`. This cumulative profile runs NX-02A, NX-02B, NX-02C,
+NX-03A, and NX-03B before issuing exactly seven audited POST requests: bill, amendment, passage, supporting-material,
+and universal search; document comparison; and a research answer. It embeds no production query, record ID, document ID,
+or research question. All request inputs and each expected result are configured through the environment. Missing inputs
+create named `fixture_not_configured` skips and make no request.
+
+Set one query and one expected result for each search route. The profile fixes the audited request modes to lexical
+(bills, supporting materials, and universal), semantic (amendments), and hybrid (passages). The lexical searches expect
+`200`; the semantic amendment search is audited as `200` or `dependency_unavailable`; the hybrid passage search is
+audited as `200`, `dependency_unavailable`, or `unprocessable` when canonical OCR projection fails closed. A successful
+SearchPage must preserve the correlation ID, return `cache-control: private, no-store`, and report the exact documented
+lexical, embedding, and reranking metadata. A dependency result must be canonical `503 dependency_unavailable`,
+`retryable: true`, and `Retry-After: 30`; an OCR-data result must be canonical `422 unprocessable`, `retryable: false`.
+
+Document comparison needs one bill and two distinct sibling document IDs, plus an expected `200` or `unprocessable`; its
+request fixes `granularity: word` and `limit: 1`, and the response validates exact Resource metadata and all returned
+operation bounds. Research needs an explicit bill scope, question, and expected `200` or `dependency_unavailable`; its
+lexical retrieval request fixes one evidence item. A successful answer must be an exact Resource with cited claims and
+valid lexical retrieval metadata. Fixture values, query text, model errors, document IDs, and research prompts are never
+written to the JSON report or stable diagnostics.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_NX_04 = "1"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_BILLS_QUERY = "audited production query"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_BILLS_EXPECTED_OUTCOME = "200"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_QUERY = "audited production query"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME = "dependency_unavailable"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_QUERY = "audited production query"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_EXPECTED_OUTCOME = "unprocessable"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_SUPPORTING_MATERIALS_QUERY = "audited production query"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_SUPPORTING_MATERIALS_EXPECTED_OUTCOME = "200"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_ALL_QUERY = "audited production query"
+$env:LEGISLATION_WEB_SMOKE_SEARCH_ALL_EXPECTED_OUTCOME = "200"
+$env:LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_BILL_ID = "bill:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_LEFT_DOCUMENT_ID = "document:audited-left-fixture"
+$env:LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_RIGHT_DOCUMENT_ID = "document:audited-right-fixture"
+$env:LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_EXPECTED_OUTCOME = "unprocessable"
+$env:LEGISLATION_WEB_SMOKE_RESEARCH_BILL_ID = "bill:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_RESEARCH_QUESTION = "audited production research question"
+$env:LEGISLATION_WEB_SMOKE_RESEARCH_EXPECTED_OUTCOME = "dependency_unavailable"
+pnpm --filter legislation-web smoke:foundation
+```
+
 Start with the [frontend architecture and dependency record](docs/architecture.md).

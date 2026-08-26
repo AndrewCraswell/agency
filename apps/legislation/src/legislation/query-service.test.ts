@@ -20,6 +20,7 @@ import {
   lexicalSupportingMaterialCandidateLimit,
   lexicalSupportingMaterialCandidateWindowCapped,
   lexicalSupportingMaterialPageState,
+  LegislationQueryService,
   projectDocumentBackedAmendment
 } from "./query-service.js"
 
@@ -178,6 +179,20 @@ describe("bill search execution metadata", () => {
         { model: "voyageai/voyage-4", purpose: "embedding" },
         { model: "cohere/rerank-v3.5", purpose: "reranking" }
       ]
+    })
+  })
+
+  it("maps an embedding-provider failure to a safe typed dependency error", async () => {
+    const service = new LegislationQueryService(database, {
+      embed: async () => {
+        throw new Error("provider response must not reach callers")
+      },
+      rerank: async () => []
+    })
+
+    await expect(service.searchBills({ mode: "semantic", query: "housing" })).rejects.toMatchObject({
+      category: "dependency_unavailable",
+      message: "Semantic search is temporarily unavailable"
     })
   })
 })

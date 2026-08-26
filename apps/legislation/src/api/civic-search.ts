@@ -248,7 +248,7 @@ function searchInput(
     introducedFrom: value.introducedFrom,
     introducedTo: value.introducedTo,
     jurisdictionIds: value.jurisdictionIds,
-    limit: value.limit,
+    limit: validateSearchModeLimit(mode, value.limit),
     mode,
     query: value.query,
     sessionIds: value.sessionIds,
@@ -257,7 +257,7 @@ function searchInput(
     subjects: value.subjects,
     ...updatedRange
   }
-  return { input, offset: searchCursorOffset(input.cursor, mode === "lexical" ? input : undefined) }
+  return { input, offset: searchCursorOffset(input.cursor, input) }
 }
 
 function searchCursorOffset(cursor: string | null | undefined, input?: SearchInput): number {
@@ -323,10 +323,7 @@ export function createCivicSearchApiHandler(
           sessionIds: body.sessionIds,
           ...updatedRange
         }
-        const offset =
-          mode === "lexical"
-            ? decodeSupportingMaterialSearchCursor(input.cursor, input)
-            : searchCursorOffset(body.cursor)
+        const offset = decodeSupportingMaterialSearchCursor(input.cursor, input)
         const result = await service.searchSupportingMaterialHits(input)
         sendApiJson(
           response,

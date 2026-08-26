@@ -81,6 +81,7 @@ const nx02cRoutes: readonly Nx02cRoute[] = [
 
 const unsupportedReadMethods = ["DELETE", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"] as const
 const unsupportedResourceBatchMethods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "PUT"] as const
+const unsupportedPostMethods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "PUT"] as const
 
 type Nx03aRoute = Readonly<{
   name: string
@@ -171,6 +172,26 @@ const nx03bRoutes: readonly Nx03bRoute[] = [
     name: "representative lookup",
     pathname: "/api/representative-lookups"
   }
+]
+
+type Nx04Route = Readonly<{
+  encodedPath: string
+  name: string
+  pathname: string
+}>
+
+const nx04Routes: readonly Nx04Route[] = [
+  { encodedPath: "/api/%64ocument-diffs", name: "document diffs", pathname: "/api/document-diffs" },
+  { encodedPath: "/api/research/%61nswers", name: "research answers", pathname: "/api/research/answers" },
+  { encodedPath: "/api/search/%62ills", name: "bill search", pathname: "/api/search/bills" },
+  { encodedPath: "/api/search/%61mendments", name: "amendment search", pathname: "/api/search/amendments" },
+  { encodedPath: "/api/search/%70assages", name: "passage search", pathname: "/api/search/passages" },
+  {
+    encodedPath: "/api/search/%73upporting-materials",
+    name: "supporting-material search",
+    pathname: "/api/search/supporting-materials"
+  },
+  { encodedPath: "/api/search/%61ll", name: "universal search", pathname: "/api/search/all" }
 ]
 
 let baseUrl = ""
@@ -676,6 +697,89 @@ describe.sequential("NX-02B, NX-02C, NX-03A, and NX-03B Next router acceptance",
 
     await expectInvalidRequest(response, correlationId)
   })
+
+  it.each(nx04Routes)("routes the exact static NX-04 %s POST endpoint before the API catch-all", async (route) => {
+    expect.hasAssertions()
+    const correlationId = `router-nx04-static-${route.name}`
+    const response = await request(route.pathname, {
+      body: JSON.stringify({}),
+      headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+      method: "POST"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it.each(nx04Routes)(
+    "dispatches the supported NX-04 %s POST with deterministic invalid-input feedback",
+    async (route) => {
+      expect.hasAssertions()
+      const correlationId = `router-nx04-invalid-${route.name}`
+      const response = await request(`${route.pathname}?unexpected=1`, {
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+        method: "POST"
+      })
+
+      await expectInvalidRequest(response, correlationId)
+    }
+  )
+
+  it.each(nx04Routes)("keeps all unsupported methods on the built NX-04 %s route", async (route) => {
+    expect.hasAssertions()
+    for (const method of unsupportedPostMethods) {
+      const correlationId = `router-nx04-${route.name}-${method.toLowerCase()}`
+      const response = await request(route.pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalNotFound(response, correlationId, method === "HEAD")
+    }
+  })
+
+  it.each(nx04Routes)(
+    "returns a canonical JSON 404 without redirecting a literal trailing slash for NX-04 %s",
+    async (route) => {
+      expect.hasAssertions()
+      const correlationId = `router-nx04-trailing-${route.name}`
+      const response = await request(`${route.pathname}/`, {
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+        method: "POST"
+      })
+
+      expect(response.headers.get("location")).toBeNull()
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each(nx04Routes)("does not decode the encoded NX-04 static segment for %s", async (route) => {
+    expect.hasAssertions()
+    const correlationId = `router-nx04-encoded-static-${route.name}`
+    const response = await request(route.encodedPath, {
+      body: JSON.stringify({}),
+      headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+      method: "POST"
+    })
+
+    await expectCanonicalNotFound(response, correlationId)
+  })
+
+  it.each(["/api/document-diffs/%ZZ", "/api/research/%C0%AF", "/api/search/%ZZ", "/api/search/bills/%C0%AF"])(
+    "rejects malformed NX-04 path encodings at the proxy boundary for %s",
+    async (pathname) => {
+      expect.hasAssertions()
+      const correlationId = "router-nx04-malformed-path"
+      const response = await request(pathname, {
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+        method: "POST"
+      })
+
+      await expectInvalidRequest(response, correlationId)
+    }
+  )
 })
 
 async function expectInvalidRequest(response: Response, correlationId: string): Promise<void> {

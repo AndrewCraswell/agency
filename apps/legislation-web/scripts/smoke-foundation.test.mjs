@@ -18,6 +18,8 @@ let representativeUnavailable = false
 const nx03aErrorPaths = new Map()
 const nx03bErrorPaths = new Map()
 const nx03bNotFoundPaths = new Set()
+const nx04ErrorPaths = new Map()
+let malformedNx04Path
 
 function json(response, correlationId, body, status = 200, headers = {}) {
   response.writeHead(status, { "content-type": "application/json", "x-correlation-id": correlationId, ...headers })
@@ -101,6 +103,145 @@ function batch(pathname, correlationId, requestBody) {
     ],
     links: { self: pathname },
     meta: { correlationId, requested: 1, returned: 1, warnings: [] }
+  }
+}
+
+function searchModels(pathname, mode) {
+  if (mode === "lexical") {
+    return []
+  }
+  const model = pathname === "/api/search/bills" ? "voyageai/voyage-4" : "openai/text-embedding-3-small"
+  const provider = pathname === "/api/search/bills" ? "voyageai" : "openai"
+  const dimensions = pathname === "/api/search/bills" ? 1024 : 1536
+  const models = [{ dimensions, model, provider, purpose: "embedding" }]
+  if (pathname === "/api/search/bills" || pathname === "/api/search/passages") {
+    models.push({ dimensions: null, model: "cohere/rerank-v3.5", provider: "cohere", purpose: "reranking" })
+  }
+  return models
+}
+
+function searchRecordType(product) {
+  if (product === "all") {
+    return "bill"
+  }
+  if (product === "supporting-materials") {
+    return "supporting-material"
+  }
+  return product.endsWith("s") ? product.slice(0, -1) : product
+}
+
+function sourceReference() {
+  return {
+    isOfficial: true,
+    provider: "fixture",
+    retrievedAt: "2026-08-25T00:00:00.000Z",
+    sourceUpdatedAt: null,
+    sourceUrl: "https://example.test/source"
+  }
+}
+
+function nx04Response(pathname, correlationId, requestBody) {
+  if (pathname.startsWith("/api/search/")) {
+    const mode = requestBody.mode
+    const product = pathname.split("/").at(-1)
+    return {
+      data: [
+        {
+          match: {},
+          rank: 1,
+          record: {},
+          recordId: `${product}:fixture`,
+          recordType: searchRecordType(product),
+          score: 1,
+          sources: [sourceReference()]
+        }
+      ],
+      links: { next: null, self: pathname },
+      meta: {
+        correlationId,
+        isReranked: mode !== "lexical" && (pathname === "/api/search/bills" || pathname === "/api/search/passages"),
+        limit: 1,
+        mode,
+        models: searchModels(pathname, mode),
+        nextCursor: null,
+        truncated: false,
+        warnings: []
+      }
+    }
+  }
+  if (pathname === "/api/document-diffs") {
+    return {
+      data: {
+        billId: requestBody.billId,
+        counts: { added: 0, changed: 1, removed: 0, unchanged: 0 },
+        granularity: "word",
+        hunks: [
+          {
+            classification: "changed",
+            leftSectionId: null,
+            leftText: "left",
+            operations: [
+              {
+                classification: "delete",
+                leftEnd: 4,
+                leftStart: 0,
+                rightEnd: null,
+                rightStart: null,
+                text: "left"
+              }
+            ],
+            ordinal: 0,
+            rightSectionId: null,
+            rightText: "right",
+            sources: [sourceReference()]
+          }
+        ],
+        id: "diff:fixture",
+        leftDocument: { id: requestBody.leftDocumentId },
+        nextCursor: null,
+        rightDocument: { id: requestBody.rightDocumentId },
+        truncated: false
+      },
+      links: { self: pathname },
+      meta: { correlationId, warnings: [] }
+    }
+  }
+  return {
+    data: {
+      answer: "Fixture answer.",
+      citations: [
+        {
+          billId: requestBody.scope.billIds[0],
+          documentId: null,
+          id: "citation:fixture",
+          recordId: requestBody.scope.billIds[0],
+          recordType: "bill",
+          sectionId: null,
+          snippet: "Fixture evidence.",
+          sourceUpdatedAt: null,
+          sourceUrl: "https://example.test/source",
+          sources: [sourceReference()],
+          title: "Fixture bill"
+        }
+      ],
+      claims: [{ citationIds: ["citation:fixture"], confidence: "supported", text: "Fixture claim." }],
+      generatedAt: "2026-08-25T00:00:00.000Z",
+      id: "research-answer:fixture",
+      question: requestBody.question,
+      retrieval: {
+        candidateCount: 1,
+        evidenceCount: 1,
+        maxEvidence: 1,
+        mode: "lexical",
+        models: [],
+        recordTypes: ["bill"],
+        rerankedProducts: [],
+        rrfK: 60
+      },
+      warnings: []
+    },
+    links: { self: pathname },
+    meta: { correlationId, warnings: [] }
   }
 }
 
@@ -213,6 +354,28 @@ beforeAll(async () => {
           503,
           { "cache-control": "private, no-store", "retry-after": "30" }
         )
+        return
+      }
+      const nx04Error = nx04ErrorPaths.get(url.pathname)
+      if (nx04Error !== undefined) {
+        const error = nx04Error(correlationId)
+        const status = error.error.category === "unprocessable" ? 422 : 503
+        json(response, correlationId, error, status, {
+          "cache-control": "private, no-store",
+          ...(status === 503 ? { "retry-after": "30" } : {})
+        })
+        return
+      }
+      if (url.pathname === malformedNx04Path) {
+        apiJson(response, correlationId, { data: [] })
+        return
+      }
+      if (
+        url.pathname === "/api/document-diffs" ||
+        url.pathname === "/api/research/answers" ||
+        url.pathname.startsWith("/api/search/")
+      ) {
+        apiJson(response, correlationId, nx04Response(url.pathname, correlationId, requests.at(-1).body))
         return
       }
       const responseBody = batch(url.pathname, correlationId, requests.at(-1).body)
@@ -1053,6 +1216,202 @@ describe("NX-03B deployed smoke profile", () => {
       expect(JSON.stringify(result)).not.toContain("-121.4944")
     } finally {
       representativeUnavailable = false
+    }
+  })
+})
+
+function nx04Environment(overrides = {}) {
+  return {
+    LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID: "agenda-item:fixture",
+    LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID: "agenda-meeting:fixture",
+    LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+    LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+    LEGISLATION_WEB_SMOKE_CALENDAR_ID: "calendar:fixture",
+    LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_BILL_ID: "bill:diff fixture",
+    LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_LEFT_DOCUMENT_ID: "document:left fixture",
+    LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_RIGHT_DOCUMENT_ID: "document:right fixture",
+    LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
+    LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID: "document-section:fixture",
+    LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID: "event-document:fixture",
+    LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID: "event-document-meeting:fixture",
+    LEGISLATION_WEB_SMOKE_MEETING_DETAIL_ID: "meeting:fixture",
+    LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID: "membership:fixture",
+    LEGISLATION_WEB_SMOKE_NX_04: "1",
+    LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: "organization:fixture",
+    LEGISLATION_WEB_SMOKE_OUTCOME_ID: "outcome:fixture",
+    LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID: "outcome-meeting:fixture",
+    LEGISLATION_WEB_SMOKE_PARTICIPANT_ID: "participant:fixture",
+    LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID: "participant-detail-meeting:fixture",
+    LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID: "participant-list-meeting:fixture",
+    LEGISLATION_WEB_SMOKE_PERSON_ID: "person:fixture",
+    LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
+    LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944",
+    LEGISLATION_WEB_SMOKE_RESEARCH_BILL_ID: "bill:research fixture",
+    LEGISLATION_WEB_SMOKE_RESEARCH_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_RESEARCH_QUESTION: "What does the private research fixture require?",
+    LEGISLATION_WEB_SMOKE_SEARCH_ALL_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_SEARCH_ALL_QUERY: "private universal fixture query",
+    LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_QUERY: "private amendment fixture query",
+    LEGISLATION_WEB_SMOKE_SEARCH_BILLS_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_SEARCH_BILLS_QUERY: "private bill fixture query",
+    LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_QUERY: "private passage fixture query",
+    LEGISLATION_WEB_SMOKE_SEARCH_SUPPORTING_MATERIALS_EXPECTED_OUTCOME: "200",
+    LEGISLATION_WEB_SMOKE_SEARCH_SUPPORTING_MATERIALS_QUERY: "private material fixture query",
+    LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture",
+    LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID: "supporting-material-section:fixture",
+    LEGISLATION_WEB_SMOKE_TERM_ID: "term:fixture",
+    LEGISLATION_WEB_SMOKE_VOTE_ID: "vote:fixture",
+    ...overrides
+  }
+}
+
+function addNx03bNotFoundFixtures() {
+  nx03bNotFoundPaths.add("/api/meetings/meeting%3Afixture")
+  nx03bNotFoundPaths.add("/api/meetings/agenda-meeting%3Afixture/agenda/agenda-item%3Afixture")
+  nx03bNotFoundPaths.add("/api/meetings/outcome-meeting%3Afixture/outcomes/outcome%3Afixture")
+  nx03bNotFoundPaths.add("/api/calendars/calendar%3Afixture")
+  nx03bNotFoundPaths.add("/api/calendars/calendar%3Afixture/meetings")
+}
+
+describe("NX-04 deployed smoke profile", () => {
+  it("cumulatively checks earlier profiles and exactly seven configured NX-04 POST operations", async () => {
+    requests.length = 0
+    addNx03bNotFoundFixtures()
+    let result
+    try {
+      result = await runSmoke(nx04Environment())
+    } finally {
+      nx03bNotFoundPaths.clear()
+    }
+
+    expect(result.profile).toBe("foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b+nx-04")
+    expect(result.nx02a.passed).toHaveLength(11)
+    expect(result.nx02b.passed).toHaveLength(18)
+    expect(result.nx02c.passed).toHaveLength(9)
+    expect(result.nx03a.passed).toHaveLength(14)
+    expect(result.nx03b.passed).toHaveLength(9)
+    expect(result.nx04.passed).toEqual([
+      "bill search",
+      "amendment search",
+      "passage search",
+      "supporting-material search",
+      "universal search",
+      "document diff",
+      "research answer"
+    ])
+    expect(result.nx04.skipped).toEqual([])
+
+    const nx04 = requests.filter((request) => /^nx-04-smoke-\d+$/.test(request.correlationId))
+    expect(nx04).toHaveLength(7)
+    expect(nx04.map(requestSignature).sort()).toEqual(
+      [
+        "POST /api/search/bills",
+        "POST /api/search/amendments",
+        "POST /api/search/passages",
+        "POST /api/search/supporting-materials",
+        "POST /api/search/all",
+        "POST /api/document-diffs",
+        "POST /api/research/answers"
+      ].sort()
+    )
+    expect(nx04.every((request) => request.body !== undefined)).toBe(true)
+    expect(JSON.stringify(result)).not.toContain("private")
+    expect(JSON.stringify(result)).not.toContain("fixture query")
+  })
+
+  it("reports every unconfigured NX-04 input as a named skip without requesting it", async () => {
+    requests.length = 0
+    const result = await runSmoke({ LEGISLATION_WEB_SMOKE_NX_04: "1" })
+
+    expect(result.nx04.passed).toEqual([])
+    expect(result.nx04.skipped).toEqual(
+      expect.arrayContaining([
+        { name: "bill search", reason: "fixture_not_configured:billQuery" },
+        { name: "document diff", reason: "fixture_not_configured:diffBillId" },
+        { name: "research answer", reason: "fixture_not_configured:researchBillId" }
+      ])
+    )
+    expect(requests.some((request) => /^nx-04-smoke-\d+$/.test(request.correlationId))).toBe(false)
+  })
+
+  it("rejects malformed SearchPage responses without leaking its search query", async () => {
+    const query = "private search query must not escape"
+    malformedNx04Path = "/api/search/bills"
+    addNx03bNotFoundFixtures()
+    try {
+      let error
+      try {
+        await runSmoke(
+          nx04Environment({
+            LEGISLATION_WEB_SMOKE_SEARCH_BILLS_QUERY: query
+          })
+        )
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("POST bill search did not return an exact SearchPage envelope")
+      expect(error.stderr).not.toContain(query)
+    } finally {
+      malformedNx04Path = undefined
+      nx03bNotFoundPaths.clear()
+    }
+  })
+
+  it("accepts only typed NX-04 dependency and data-incomplete outcomes without leaking request inputs", async () => {
+    const privateQuestion = "Do not emit this private research prompt"
+    const privateDocumentId = "document:private diff input"
+    nx04ErrorPaths.set("/api/search/amendments", (correlationId) => ({
+      error: {
+        category: "dependency_unavailable",
+        correlationId,
+        message: "Private model prompt or key unavailable",
+        retryable: true
+      }
+    }))
+    nx04ErrorPaths.set("/api/document-diffs", (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: "Private document processing is incomplete",
+        retryable: false
+      }
+    }))
+    nx04ErrorPaths.set("/api/search/passages", (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: "Private canonical OCR facts are incomplete",
+        retryable: false
+      }
+    }))
+    addNx03bNotFoundFixtures()
+    try {
+      const result = await runSmoke(
+        nx04Environment({
+          LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_EXPECTED_OUTCOME: "unprocessable",
+          LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_LEFT_DOCUMENT_ID: privateDocumentId,
+          LEGISLATION_WEB_SMOKE_RESEARCH_QUESTION: privateQuestion,
+          LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME: "dependency_unavailable",
+          LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_EXPECTED_OUTCOME: "unprocessable"
+        })
+      )
+      expect(result.nx04.skipped).toEqual(
+        expect.arrayContaining([
+          { name: "amendment search", reason: "dependency_unavailable" },
+          { name: "document diff", reason: "canonical_data_incomplete" },
+          { name: "passage search", reason: "canonical_data_incomplete" }
+        ])
+      )
+      expect(JSON.stringify(result)).not.toContain(privateQuestion)
+      expect(JSON.stringify(result)).not.toContain(privateDocumentId)
+    } finally {
+      nx04ErrorPaths.clear()
+      nx03bNotFoundPaths.clear()
     }
   })
 })

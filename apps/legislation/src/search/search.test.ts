@@ -61,6 +61,9 @@ describe("hybrid search ranking", () => {
       1
     )
     expect(() => decodeSearchCursor(encodeSearchCursor(1_000, input), input)).toThrow("Invalid search cursor")
+    const semanticCursor = encodeSearchCursor(1, { ...input, mode: "semantic" })
+    expect(decodeSearchCursor(semanticCursor, { ...input, mode: "semantic" })).toBe(1)
+    expect(() => decodeSearchCursor(semanticCursor, { ...input, mode: "hybrid" })).toThrow("Invalid search cursor")
     const boundPayload: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
     if (
       typeof boundPayload !== "object" ||

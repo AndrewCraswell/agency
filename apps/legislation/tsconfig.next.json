@@ -8,6 +8,7 @@
     "src/server/next/nx02c.ts",
     "src/server/next/nx03a.ts",
     "src/server/next/nx03b.ts",
+    "src/server/next/nx04.ts",
     "src/server/next/representative-lookup-provider.ts"
   ],
   "exclude": ["dist", "node_modules", "src/**/*.test.ts"]

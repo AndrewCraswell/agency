@@ -68,6 +68,7 @@ import type {
   SearchInput
 } from "../search/search.js"
 import {
+  encodeSearchCursor,
   lexicalBillSearch,
   lexicalPassageSearch,
   encodePassageSearchCursor,
@@ -2107,7 +2108,7 @@ export class LegislationQueryService {
     }
     if (input.query !== undefined && mode !== "lexical") {
       const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
-      const offset = decodeOffset(input.cursor)
+      const offset = decodeSupportingMaterialSearchCursor(input.cursor, input)
       const candidateLimit = embeddingQueryRouteFor("search_supporting_materials").candidateLimit
       const queryEmbedding = await this.#embedQueryWithModel("search_supporting_materials", input.query)
       const semanticRows = await semanticSupportingMaterialSearch(this.#database, {
@@ -2178,6 +2179,10 @@ export class LegislationQueryService {
       return {
         ...page,
         items,
+        nextCursor:
+          page.nextCursor === undefined
+            ? undefined
+            : encodeSupportingMaterialSearchCursor(offset + items.length, input),
         search: { isReranked: false, models: [{ model: queryEmbedding.model, purpose: "embedding" as const }] },
         warnings: coverageWarnings(items.length, "supporting materials")
       }
@@ -2566,7 +2571,8 @@ export class LegislationQueryService {
       return { ...(await lexicalBillSearch(this.#database, input)), search: { isReranked: false, models: [] } }
     }
     const queryEmbedding = await this.#embedQueryWithModel("search_bills", input.query)
-    const { limit, offset } = validateSearchInput(input)
+    const cursorInput = { ...input, mode }
+    const { limit, offset } = validateSearchInput(cursorInput, true)
     const candidateLimit = embeddingQueryRouteFor("search_bills").candidateLimit
     const rerankModel = embeddingQueryRouteFor("search_bills").rerank?.model
     if (rerankModel === undefined) {
@@ -2586,13 +2592,16 @@ export class LegislationQueryService {
         (item) => item.id,
         (item) => [item.title, item.summary].filter((value): value is string => value !== null).join("\n")
       )
+      const page = paginateCappedSearchRows(
+        reranked.map((item) => ({ ...item, score: item.rerankScore })),
+        limit,
+        offset,
+        semantic.truncated
+      )
       return {
-        ...paginateCappedSearchRows(
-          reranked.map((item) => ({ ...item, score: item.rerankScore })),
-          limit,
-          offset,
-          semantic.truncated
-        ),
+        ...page,
+        nextCursor:
+          page.nextCursor === undefined ? undefined : encodeSearchCursor(offset + page.items.length, cursorInput),
         search: billSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length)
       }
     }
@@ -2629,13 +2638,16 @@ export class LegislationQueryService {
       (item) => item.id,
       (item) => [item.title, item.summary].filter((value): value is string => value !== null).join("\n")
     )
+    const page = paginateCappedSearchRows(
+      reranked.map((item) => ({ ...item, score: item.rerankScore })),
+      limit,
+      offset,
+      lexical.truncated || semantic.truncated
+    )
     return {
-      ...paginateCappedSearchRows(
-        reranked.map((item) => ({ ...item, score: item.rerankScore })),
-        limit,
-        offset,
-        lexical.truncated || semantic.truncated
-      ),
+      ...page,
+      nextCursor:
+        page.nextCursor === undefined ? undefined : encodeSearchCursor(offset + page.items.length, cursorInput),
       search: billSearchExecution(queryEmbedding.model, rerankModel, candidates.length)
     }
   }
@@ -3003,7 +3015,17 @@ export class LegislationQueryService {
       throw new LegislationError("dependency_unavailable", "Semantic search is not configured")
     }
     const route = embeddingQueryRouteFor(tool)
-    const response = await this.#retrievalClient.embed(route.queryEmbeddingProduct, [query])
+    let response: Awaited<ReturnType<RetrievalModelClient["embed"]>>
+    try {
+      response = await this.#retrievalClient.embed(route.queryEmbeddingProduct, [query])
+    } catch (error) {
+      if (error instanceof LegislationError) {
+        throw error
+      }
+      throw new LegislationError("dependency_unavailable", "Semantic search is temporarily unavailable", {
+        cause: error
+      })
+    }
     const embedding = response.embeddings[0]
     if (embedding === undefined) {
       throw new LegislationError("dependency_unavailable", "Embedding provider returned no query vector")
@@ -3024,11 +3046,19 @@ export class LegislationQueryService {
     if (this.#retrievalClient === undefined) {
       throw new LegislationError("dependency_unavailable", "Reranking is not configured")
     }
-    const reranked = await this.#retrievalClient.rerank(
-      tool,
-      query,
-      items.map((item) => ({ id: identify(item), text: text(item) }))
-    )
+    let reranked: Awaited<ReturnType<RetrievalModelClient["rerank"]>>
+    try {
+      reranked = await this.#retrievalClient.rerank(
+        tool,
+        query,
+        items.map((item) => ({ id: identify(item), text: text(item) }))
+      )
+    } catch (error) {
+      if (error instanceof LegislationError) {
+        throw error
+      }
+      throw new LegislationError("dependency_unavailable", "Reranking is temporarily unavailable", { cause: error })
+    }
     const byId = new Map(items.map((item) => [identify(item), item]))
     return reranked.flatMap((candidate) => {
       const item = byId.get(candidate.id)

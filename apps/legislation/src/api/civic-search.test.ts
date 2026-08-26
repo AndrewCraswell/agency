@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
+import { encodeSupportingMaterialSearchCursor } from "../legislation/query-service.js"
 import { encodeSearchCursor } from "../search/search.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 
@@ -181,10 +182,12 @@ describe("civic and search HTTP API handler", () => {
 
   it("uses the documented lexical default without claiming unreported model execution", async () => {
     const observedModes: string[] = []
+    const observedLimits: number[] = []
     const baseUrl = await startApi(
       createService({
         searchBills: async (input) => {
           observedModes.push(input.mode ?? "missing")
+          observedLimits.push(input.limit ?? 0)
           return {
             items: [],
             search:
@@ -209,6 +212,7 @@ describe("civic and search HTTP API handler", () => {
     })
 
     expect(observedModes).toEqual(["lexical", "semantic"])
+    expect(observedLimits).toEqual([20, 20])
     await expect(lexical.json()).resolves.toMatchObject({
       meta: { isReranked: false, mode: "lexical", models: [] }
     })
@@ -340,6 +344,55 @@ describe("civic and search HTTP API handler", () => {
     })
     expect(lexical.status).toBe(200)
     expect(observedLimits).toEqual([100])
+  })
+
+  it("binds semantic cursors to their original bill and material searches", async () => {
+    let billCalls = 0
+    let materialCalls = 0
+    const baseUrl = await startApi(
+      createService({
+        searchBills: async () => {
+          billCalls += 1
+          return {
+            items: [],
+            search: { isReranked: false, models: [{ model: "voyageai/voyage-4", purpose: "embedding" as const }] },
+            truncated: false
+          }
+        },
+        searchSupportingMaterialHits: async () => {
+          materialCalls += 1
+          return {
+            items: [],
+            search: { isReranked: false, models: [{ model: "voyageai/voyage-4", purpose: "embedding" as const }] },
+            truncated: false,
+            warnings: []
+          }
+        }
+      })
+    )
+    const billCursor = encodeSearchCursor(1, { mode: "semantic", query: "housing" })
+    const materialCursor = encodeSupportingMaterialSearchCursor(1, {
+      limit: 20,
+      mode: "semantic",
+      query: "housing"
+    })
+
+    const [bill, material] = await Promise.all([
+      fetch(`${baseUrl}/api/search/bills`, {
+        body: JSON.stringify({ cursor: billCursor, mode: "semantic", query: "transport" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/supporting-materials`, {
+        body: JSON.stringify({ cursor: materialCursor, mode: "semantic", query: "transport" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
+
+    expect([bill.status, material.status]).toEqual([400, 400])
+    expect(billCalls).toBe(0)
+    expect(materialCalls).toBe(0)
   })
 
   it("projects canonical bill hits and forwards every BillSearchRequest control", async () => {

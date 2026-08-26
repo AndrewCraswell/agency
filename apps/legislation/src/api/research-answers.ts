@@ -5,6 +5,7 @@ import { documentSectionReadFromPersistence } from "../db/queries/document-reads
 import { LegislationError } from "../legislation/errors.js"
 import type { ResearchAnswerModelClient } from "../models/openrouter-retrieval.js"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
+import { isRfc3339Timestamp } from "./canonical-projection.js"
 import { projectDocumentSectionRead, sourceProjectionContext, type SourceDocument } from "./canonical-read.js"
 import { projectBillSearchHits } from "./canonical-search.js"
 import type { CivicSearchApi } from "./civic-search.js"
@@ -20,6 +21,7 @@ import {
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 type ResearchRecordType = "amendment" | "bill" | "passage" | "supporting-material"
+const MAXIMUM_RESEARCH_RESPONSE_BYTES = 256 * 1024
 
 export type ResearchScope = Readonly<{
   billIds?: readonly string[]
@@ -455,7 +457,14 @@ export function createResearchAnswerApiHandler(
         },
         scope: body.scope
       })
-      sendApiJson(response, 200, apiResource(request, answer))
+      const payload = apiResource(request, answer)
+      if (Buffer.byteLength(JSON.stringify(payload), "utf8") > MAXIMUM_RESEARCH_RESPONSE_BYTES) {
+        throw new LegislationError(
+          "payload_too_large",
+          "Research response exceeds the allowed size; narrow the scope or evidence limit"
+        )
+      }
+      sendApiJson(response, 200, payload)
     } catch (error) {
       if (error instanceof z.ZodError) {
         sendApiError(
@@ -576,7 +585,7 @@ function citationFromPassage(
   )
   const source = section.sources[0]
   return {
-    billId: item.bill.id,
+    billId: item.bill?.id ?? null,
     documentId: item.document.id,
     id: `evidence:passage:${section.id}`,
     recordId: section.id,
@@ -800,6 +809,8 @@ function validateRetrievedEvidence(
       citation.snippet.trim().length === 0 ||
       !isAbsoluteUrl(citation.sourceUrl) ||
       !Array.isArray(citation.sources) ||
+      citation.sources.length === 0 ||
+      !citation.sources.every(isResearchSourceReference) ||
       (citation.sourceUpdatedAt !== null && Number.isNaN(Date.parse(citation.sourceUpdatedAt)))
     ) {
       throw new LegislationError("unprocessable", "Research retrieval returned invalid evidence provenance")
@@ -815,6 +826,26 @@ function validateRetrievedEvidence(
       throw new LegislationError("unprocessable", "Research retrieval returned invalid model metadata")
     }
   }
+}
+
+function isResearchSourceReference(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false
+  }
+  const provider = Reflect.get(value, "provider")
+  const sourceUrl = Reflect.get(value, "sourceUrl")
+  const sourceUpdatedAt = Reflect.get(value, "sourceUpdatedAt")
+  const retrievedAt = Reflect.get(value, "retrievedAt")
+  const isOfficial = Reflect.get(value, "isOfficial")
+  return (
+    typeof provider === "string" &&
+    provider.trim().length > 0 &&
+    typeof sourceUrl === "string" &&
+    isAbsoluteUrl(sourceUrl) &&
+    (sourceUpdatedAt === null || isRfc3339Timestamp(sourceUpdatedAt)) &&
+    isRfc3339Timestamp(retrievedAt) &&
+    typeof isOfficial === "boolean"
+  )
 }
 
 function validateGeneratedAnswer(

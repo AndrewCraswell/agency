@@ -238,6 +238,77 @@ describe("research answer HTTP API", () => {
     await expect(response.json()).resolves.toMatchObject({ error: { category: "dependency_unavailable" } })
   })
 
+  it("rejects research responses beyond the documented 256 KiB response ceiling", async () => {
+    const base = await answerService().answer({
+      answerFormat: "concise",
+      question: "What does the bill require?",
+      retrieval: { maxEvidence: 20, mode: "lexical", recordTypes: ["passage"] },
+      scope: { billIds: ["bill:wa:2026:hb:1"] }
+    })
+    const baseUrl = await start(
+      answerService({
+        answer: async () => ({ ...base, answer: "a".repeat(270_000) })
+      })
+    )
+
+    const response = await post(baseUrl, {
+      question: "What does the bill require?",
+      retrieval: { mode: "lexical", recordTypes: ["passage"] },
+      scope: { billIds: ["bill:wa:2026:hb:1"] }
+    })
+
+    expect(response.status).toBe(413)
+    await expect(response.json()).resolves.toMatchObject({ error: { category: "payload_too_large" } })
+  })
+
+  it("rejects retrieved evidence without canonical source provenance", async () => {
+    const service = createResearchAnswerService(
+      {
+        retrieve: async () => ({
+          candidateCount: 1,
+          citations: [{ ...citation, sources: [] }],
+          models: [],
+          rerankedProducts: []
+        })
+      },
+      undefined
+    )
+    const baseUrl = await start(service)
+
+    const response = await post(baseUrl, {
+      question: "What does the bill require?",
+      retrieval: { mode: "lexical", recordTypes: ["passage"] },
+      scope: { billIds: ["bill:wa:2026:hb:1"] }
+    })
+
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toMatchObject({ error: { category: "unprocessable" } })
+  })
+
+  it("rejects malformed source references returned by research retrieval", async () => {
+    const service = createResearchAnswerService(
+      {
+        retrieve: async () => ({
+          candidateCount: 1,
+          citations: [{ ...citation, sources: [{ provider: "fixture" }] }],
+          models: [],
+          rerankedProducts: []
+        })
+      },
+      undefined
+    )
+    const baseUrl = await start(service)
+
+    const response = await post(baseUrl, {
+      question: "What does the bill require?",
+      retrieval: { mode: "lexical", recordTypes: ["passage"] },
+      scope: { billIds: ["bill:wa:2026:hb:1"] }
+    })
+
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toMatchObject({ error: { category: "unprocessable" } })
+  })
+
   it("adapts canonical bill search evidence within a bounded requested scope", async () => {
     const retriever = createCanonicalResearchEvidenceRetriever(
       {

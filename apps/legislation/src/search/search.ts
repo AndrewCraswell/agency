@@ -53,6 +53,7 @@ export interface SearchFilters {
 export interface SearchInput extends SearchFilters {
   cursor?: string
   limit?: number
+  mode?: "hybrid" | "lexical" | "semantic"
   query: string
 }
 
@@ -177,6 +178,7 @@ function searchCursorBinding(input: SearchInput): string {
     introducedFrom: input.introducedFrom,
     introducedTo: input.introducedTo,
     jurisdictionIds: sortedValues(input.jurisdictionIds),
+    mode: input.mode ?? "lexical",
     query: input.query.trim(),
     sessionIds: sortedValues(input.sessionIds),
     sponsorIds: sortedValues(input.sponsorIds),

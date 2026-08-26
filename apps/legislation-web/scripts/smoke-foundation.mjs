@@ -29,11 +29,17 @@ const configuredNx03b = process.env.LEGISLATION_WEB_SMOKE_NX_03B?.trim()
 if (configuredNx03b !== undefined && configuredNx03b !== "" && configuredNx03b !== "1") {
   throw new TypeError("LEGISLATION_WEB_SMOKE_NX_03B must be 1 when it is set")
 }
+const configuredNx04 = process.env.LEGISLATION_WEB_SMOKE_NX_04?.trim()
+if (configuredNx04 !== undefined && configuredNx04 !== "" && configuredNx04 !== "1") {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_04 must be 1 when it is set")
+}
+const smokeNx04 = configuredNx04 === "1"
 const smokeNx03b = configuredNx03b === "1"
 const smokeNx03a = configuredNx03a === "1"
 const smokeNx02c = configuredNx02c === "1"
 const smokeNx02b = configuredNx02b === "1"
-const smokeNx03aCumulative = smokeNx03a || smokeNx03b
+const smokeNx03bCumulative = smokeNx03b || smokeNx04
+const smokeNx03aCumulative = smokeNx03a || smokeNx03bCumulative
 const smokeNx02cCumulative = smokeNx02c || smokeNx03aCumulative
 const smokeNx02bCumulative = smokeNx02b || smokeNx02cCumulative
 const smokeNx02a = configuredNx02a === "1" || smokeNx02bCumulative
@@ -49,6 +55,29 @@ function fixtureEnvironmentValue(name) {
     [...value].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F")
   ) {
     throw new TypeError(`${name} must be a non-empty fixture ID of at most 256 safe characters`)
+  }
+  return value
+}
+
+function safeEnvironmentText(name, maximumLength) {
+  const configured = process.env[name]
+  if (configured === undefined || configured.trim() === "") {
+    return undefined
+  }
+  const value = configured.trim()
+  if (
+    value.length > maximumLength ||
+    [...value].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F")
+  ) {
+    throw new TypeError(`${name} must be non-empty safe text of at most ${maximumLength} characters`)
+  }
+  return value
+}
+
+function expectedOutcomeEnvironmentValue(name, outcomes) {
+  const value = safeEnvironmentText(name, 64)
+  if (value !== undefined && !outcomes.includes(value)) {
+    throw new TypeError(`${name} must be one of ${outcomes.join(", ")} when it is set`)
   }
   return value
 }
@@ -85,6 +114,42 @@ const nx03bFixtures = {
   participantDetailMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID"),
   participantId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_ID"),
   participantListMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID")
+}
+
+const nx04Fixtures = {
+  allExpectedOutcome: expectedOutcomeEnvironmentValue("LEGISLATION_WEB_SMOKE_SEARCH_ALL_EXPECTED_OUTCOME", ["200"]),
+  allQuery: safeEnvironmentText("LEGISLATION_WEB_SMOKE_SEARCH_ALL_QUERY", 500),
+  amendmentExpectedOutcome: expectedOutcomeEnvironmentValue(
+    "LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_EXPECTED_OUTCOME",
+    ["200", "dependency_unavailable"]
+  ),
+  amendmentQuery: safeEnvironmentText("LEGISLATION_WEB_SMOKE_SEARCH_AMENDMENTS_QUERY", 500),
+  billExpectedOutcome: expectedOutcomeEnvironmentValue("LEGISLATION_WEB_SMOKE_SEARCH_BILLS_EXPECTED_OUTCOME", ["200"]),
+  billQuery: safeEnvironmentText("LEGISLATION_WEB_SMOKE_SEARCH_BILLS_QUERY", 500),
+  diffBillId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_BILL_ID"),
+  diffExpectedOutcome: expectedOutcomeEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_EXPECTED_OUTCOME", [
+    "200",
+    "unprocessable"
+  ]),
+  diffLeftDocumentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_LEFT_DOCUMENT_ID"),
+  diffRightDocumentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_RIGHT_DOCUMENT_ID"),
+  materialExpectedOutcome: expectedOutcomeEnvironmentValue(
+    "LEGISLATION_WEB_SMOKE_SEARCH_SUPPORTING_MATERIALS_EXPECTED_OUTCOME",
+    ["200"]
+  ),
+  materialQuery: safeEnvironmentText("LEGISLATION_WEB_SMOKE_SEARCH_SUPPORTING_MATERIALS_QUERY", 500),
+  passageExpectedOutcome: expectedOutcomeEnvironmentValue("LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_EXPECTED_OUTCOME", [
+    "200",
+    "dependency_unavailable",
+    "unprocessable"
+  ]),
+  passageQuery: safeEnvironmentText("LEGISLATION_WEB_SMOKE_SEARCH_PASSAGES_QUERY", 500),
+  researchBillId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_RESEARCH_BILL_ID"),
+  researchExpectedOutcome: expectedOutcomeEnvironmentValue("LEGISLATION_WEB_SMOKE_RESEARCH_EXPECTED_OUTCOME", [
+    "200",
+    "dependency_unavailable"
+  ]),
+  researchQuestion: safeEnvironmentText("LEGISLATION_WEB_SMOKE_RESEARCH_QUESTION", 2_000)
 }
 
 function representativeCoordinate(name, minimum, maximum) {
@@ -213,6 +278,24 @@ function requireNonEmptyString(value, description) {
 function requireStringArray(value, description) {
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
     throw new Error(`${description} must be an array of strings`)
+  }
+}
+
+function requireSourceReferences(value, description) {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some(
+      (source) =>
+        !hasExactKeys(source, ["isOfficial", "provider", "retrievedAt", "sourceUpdatedAt", "sourceUrl"]) ||
+        !isSafeNonEmptyMessage(source.provider) ||
+        !isSafeNonEmptyMessage(source.retrievedAt) ||
+        !isSafeNonEmptyMessage(source.sourceUrl) ||
+        typeof source.isOfficial !== "boolean" ||
+        !(source.sourceUpdatedAt === null || isSafeNonEmptyMessage(source.sourceUpdatedAt))
+    )
+  ) {
+    throw new Error(`${description} must be a non-empty array of SourceReference values`)
   }
 }
 
@@ -430,6 +513,309 @@ function requireCanonicalDependencyUnavailable(body, name, expectedCorrelationId
     body.error.retryable !== true
   ) {
     throw new Error(`${name} did not return a canonical dependency-unavailable ErrorResponse`)
+  }
+}
+
+function requireModelUsage(value, name) {
+  if (
+    !hasExactKeys(value, ["dimensions", "model", "provider", "purpose"]) ||
+    !["cohere", "openai", "voyageai"].includes(value.provider) ||
+    !["embedding", "generation", "reranking"].includes(value.purpose) ||
+    !isSafeNonEmptyMessage(value.model) ||
+    !(value.dimensions === null || (Number.isSafeInteger(value.dimensions) && value.dimensions >= 1))
+  ) {
+    throw new Error(`${name} returned invalid model metadata`)
+  }
+}
+
+function requireSearchModels(models, name, mode, product) {
+  if (!Array.isArray(models) || models.some((model) => !isRecord(model))) {
+    throw new Error(`${name} did not return a valid models array`)
+  }
+  if (mode === "lexical") {
+    if (models.length !== 0) {
+      throw new Error(`${name} reported models for lexical search`)
+    }
+    return
+  }
+  const embedding =
+    product === "bills" || product === "supporting-materials"
+      ? { dimensions: 1024, model: "voyageai/voyage-4", provider: "voyageai" }
+      : { dimensions: 1536, model: "openai/text-embedding-3-small", provider: "openai" }
+  const expectedReranking = product === "bills" || product === "passages"
+  if (models.length !== (expectedReranking ? 2 : 1)) {
+    throw new Error(`${name} did not report the expected model metadata`)
+  }
+  const [embeddingModel, rerankingModel] = models
+  requireModelUsage(embeddingModel, name)
+  if (
+    embeddingModel.provider !== embedding.provider ||
+    embeddingModel.model !== embedding.model ||
+    embeddingModel.purpose !== "embedding" ||
+    embeddingModel.dimensions !== embedding.dimensions
+  ) {
+    throw new Error(`${name} did not report the expected embedding model`)
+  }
+  if (expectedReranking) {
+    requireModelUsage(rerankingModel, name)
+    if (
+      rerankingModel.provider !== "cohere" ||
+      rerankingModel.model !== "cohere/rerank-v3.5" ||
+      rerankingModel.purpose !== "reranking" ||
+      rerankingModel.dimensions !== null
+    ) {
+      throw new Error(`${name} did not report the expected reranking model`)
+    }
+  }
+}
+
+function requireSearchPageEnvelope(body, name, expectedCorrelationId, mode, product, recordTypes) {
+  if (
+    !hasExactKeys(body, ["data", "links", "meta"]) ||
+    !Array.isArray(body.data) ||
+    body.data.some((hit) => !isRecord(hit)) ||
+    !hasExactKeys(body.links, ["next", "self"]) ||
+    !hasExactKeys(body.meta, [
+      "correlationId",
+      "isReranked",
+      "limit",
+      "mode",
+      "models",
+      "nextCursor",
+      "truncated",
+      "warnings"
+    ])
+  ) {
+    throw new Error(`${name} did not return an exact SearchPage envelope`)
+  }
+  if (
+    body.meta.correlationId !== expectedCorrelationId ||
+    body.meta.limit !== 1 ||
+    body.meta.mode !== mode ||
+    typeof body.meta.isReranked !== "boolean" ||
+    typeof body.meta.truncated !== "boolean" ||
+    (body.meta.nextCursor !== null && !isSafeNonEmptyMessage(body.meta.nextCursor)) ||
+    (body.links.next !== null && !isSafeNonEmptyMessage(body.links.next)) ||
+    !isSafeNonEmptyMessage(body.links.self)
+  ) {
+    throw new Error(`${name} did not return valid SearchPage metadata`)
+  }
+  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
+  requireSearchModels(body.meta.models, name, mode, product)
+  const expectedReranked = mode !== "lexical" && (product === "bills" || product === "passages")
+  if (body.meta.isReranked !== expectedReranked) {
+    throw new Error(`${name} reported an invalid reranking state`)
+  }
+  for (const hit of body.data) {
+    if (
+      !hasExactKeys(hit, ["match", "rank", "record", "recordId", "recordType", "score", "sources"]) ||
+      !isSafeNonEmptyMessage(hit.recordId) ||
+      !recordTypes.includes(hit.recordType) ||
+      !Number.isFinite(hit.score) ||
+      !Number.isSafeInteger(hit.rank) ||
+      hit.rank < 1 ||
+      !isRecord(hit.match) ||
+      !isRecord(hit.record) ||
+      !Array.isArray(hit.sources)
+    ) {
+      throw new Error(`${name} did not return a valid search hit`)
+    }
+    requireSourceReferences(hit.sources, `${name} hit sources`)
+  }
+}
+
+function requireDocumentDiffEnvelope(body, name, expectedCorrelationId, expected) {
+  if (!hasExactKeys(body, ["data", "links", "meta"]) || !isRecord(body.data)) {
+    throw new Error(`${name} did not return an exact Resource envelope`)
+  }
+  if (
+    !hasExactKeys(body.links, ["self"]) ||
+    !hasExactKeys(body.meta, ["correlationId", "warnings"]) ||
+    body.meta.correlationId !== expectedCorrelationId ||
+    !isSafeNonEmptyMessage(body.links.self) ||
+    !Array.isArray(body.meta.warnings) ||
+    !hasExactKeys(body.data, [
+      "billId",
+      "counts",
+      "granularity",
+      "hunks",
+      "id",
+      "leftDocument",
+      "nextCursor",
+      "rightDocument",
+      "truncated"
+    ]) ||
+    body.data.billId !== expected.diffBillId ||
+    !isSafeNonEmptyMessage(body.data.id) ||
+    body.data.granularity !== "word" ||
+    !Array.isArray(body.data.hunks) ||
+    body.data.hunks.length > 1 ||
+    !isRecord(body.data.leftDocument) ||
+    !isRecord(body.data.rightDocument) ||
+    body.data.leftDocument.id !== expected.diffLeftDocumentId ||
+    body.data.rightDocument.id !== expected.diffRightDocumentId ||
+    (body.data.nextCursor !== null && !isSafeNonEmptyMessage(body.data.nextCursor)) ||
+    typeof body.data.truncated !== "boolean" ||
+    !hasExactKeys(body.data.counts, ["added", "changed", "removed", "unchanged"])
+  ) {
+    throw new Error(`${name} did not return a valid document diff Resource`)
+  }
+  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
+  for (const count of Object.values(body.data.counts)) {
+    if (!Number.isSafeInteger(count) || count < 0) {
+      throw new Error(`${name} did not return non-negative document diff counts`)
+    }
+  }
+  for (const hunk of body.data.hunks) {
+    if (
+      !isRecord(hunk) ||
+      !hasExactKeys(hunk, [
+        "classification",
+        "leftSectionId",
+        "leftText",
+        "operations",
+        "ordinal",
+        "rightSectionId",
+        "rightText",
+        "sources"
+      ]) ||
+      !["added", "changed", "removed", "unchanged"].includes(hunk.classification) ||
+      !Number.isSafeInteger(hunk.ordinal) ||
+      hunk.ordinal < 0 ||
+      !Array.isArray(hunk.operations) ||
+      !Array.isArray(hunk.sources)
+    ) {
+      throw new Error(`${name} did not return valid document diff hunks`)
+    }
+    requireSourceReferences(hunk.sources, `${name} hunk sources`)
+    for (const operation of hunk.operations) {
+      if (
+        !isRecord(operation) ||
+        !hasExactKeys(operation, ["classification", "leftEnd", "leftStart", "rightEnd", "rightStart", "text"]) ||
+        !["delete", "equal", "insert"].includes(operation.classification) ||
+        typeof operation.text !== "string" ||
+        !validDiffRange(operation.leftStart, operation.leftEnd) ||
+        !validDiffRange(operation.rightStart, operation.rightEnd)
+      ) {
+        throw new Error(`${name} did not return valid document diff operation bounds`)
+      }
+    }
+  }
+}
+
+function validDiffRange(start, end) {
+  return (
+    (start === null && end === null) ||
+    (Number.isSafeInteger(start) && start >= 0 && Number.isSafeInteger(end) && end >= start)
+  )
+}
+
+function requireResearchAnswerEnvelope(body, name, expectedCorrelationId, expectedQuestion) {
+  if (!hasExactKeys(body, ["data", "links", "meta"]) || !isRecord(body.data)) {
+    throw new Error(`${name} did not return an exact Resource envelope`)
+  }
+  if (
+    !hasExactKeys(body.links, ["self"]) ||
+    !hasExactKeys(body.meta, ["correlationId", "warnings"]) ||
+    body.meta.correlationId !== expectedCorrelationId ||
+    !isSafeNonEmptyMessage(body.links.self) ||
+    !Array.isArray(body.meta.warnings) ||
+    !hasExactKeys(body.data, [
+      "answer",
+      "citations",
+      "claims",
+      "generatedAt",
+      "id",
+      "question",
+      "retrieval",
+      "warnings"
+    ]) ||
+    !isSafeNonEmptyMessage(body.data.id) ||
+    body.data.question !== expectedQuestion ||
+    !isSafeNonEmptyMessage(body.data.answer) ||
+    !isSafeNonEmptyMessage(body.data.generatedAt) ||
+    !Array.isArray(body.data.claims) ||
+    !Array.isArray(body.data.citations) ||
+    !Array.isArray(body.data.warnings) ||
+    !isRecord(body.data.retrieval)
+  ) {
+    throw new Error(`${name} did not return a valid research answer Resource`)
+  }
+  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
+  requireStringArray(body.data.warnings, `${name} data.warnings`)
+  const citationIds = new Set()
+  for (const citation of body.data.citations) {
+    if (
+      !isRecord(citation) ||
+      !hasExactKeys(citation, [
+        "billId",
+        "documentId",
+        "id",
+        "recordId",
+        "recordType",
+        "sectionId",
+        "snippet",
+        "sourceUpdatedAt",
+        "sourceUrl",
+        "sources",
+        "title"
+      ]) ||
+      !isSafeNonEmptyMessage(citation.id) ||
+      citationIds.has(citation.id) ||
+      !isSafeNonEmptyMessage(citation.recordId) ||
+      !isSafeNonEmptyMessage(citation.recordType) ||
+      !isSafeNonEmptyMessage(citation.snippet) ||
+      !isSafeNonEmptyMessage(citation.sourceUrl) ||
+      !isSafeNonEmptyMessage(citation.title) ||
+      !Array.isArray(citation.sources)
+    ) {
+      throw new Error(`${name} did not return valid research citations`)
+    }
+    requireSourceReferences(citation.sources, `${name} citation sources`)
+    citationIds.add(citation.id)
+  }
+  for (const claim of body.data.claims) {
+    if (
+      !isRecord(claim) ||
+      !hasExactKeys(claim, ["citationIds", "confidence", "text"]) ||
+      !isSafeNonEmptyMessage(claim.text) ||
+      !["insufficient", "mixed", "supported"].includes(claim.confidence) ||
+      !Array.isArray(claim.citationIds) ||
+      claim.citationIds.some((citationId) => !isSafeNonEmptyMessage(citationId) || !citationIds.has(citationId)) ||
+      (claim.confidence !== "insufficient" && claim.citationIds.length === 0)
+    ) {
+      throw new Error(`${name} did not return valid cited research claims`)
+    }
+  }
+  const retrieval = body.data.retrieval
+  if (
+    !hasExactKeys(retrieval, [
+      "candidateCount",
+      "evidenceCount",
+      "maxEvidence",
+      "mode",
+      "models",
+      "recordTypes",
+      "rerankedProducts",
+      "rrfK"
+    ]) ||
+    retrieval.mode !== "lexical" ||
+    retrieval.rrfK !== 60 ||
+    !Number.isSafeInteger(retrieval.maxEvidence) ||
+    retrieval.maxEvidence < 1 ||
+    retrieval.maxEvidence > 50 ||
+    !Number.isSafeInteger(retrieval.candidateCount) ||
+    retrieval.candidateCount < 0 ||
+    !Number.isSafeInteger(retrieval.evidenceCount) ||
+    retrieval.evidenceCount < 0 ||
+    retrieval.evidenceCount > retrieval.maxEvidence ||
+    !Array.isArray(retrieval.models) ||
+    retrieval.models.length !== 0 ||
+    !Array.isArray(retrieval.recordTypes) ||
+    !Array.isArray(retrieval.rerankedProducts) ||
+    retrieval.rerankedProducts.length !== 0
+  ) {
+    throw new Error(`${name} did not return valid lexical research retrieval metadata`)
   }
 }
 
@@ -1276,6 +1662,162 @@ async function smokeNx03bRoutes(root) {
   }
 }
 
+function missingNx04FixtureName(route) {
+  return route.fixtures.find((fixture) => nx04Fixtures[fixture] === undefined)
+}
+
+function nx04ExpectedStatus(route) {
+  const outcome = nx04Fixtures[route.expectedOutcome]
+  if (outcome === "200") {
+    return 200
+  }
+  return outcome === "unprocessable" ? 422 : 503
+}
+
+async function smokeNx04Routes(root) {
+  const routes = [
+    {
+      body: ({ billQuery }) => ({ limit: 1, mode: "lexical", query: billQuery }),
+      expectedOutcome: "billExpectedOutcome",
+      fixtures: ["billQuery", "billExpectedOutcome"],
+      kind: "search",
+      mode: "lexical",
+      name: "bill search",
+      path: "/api/search/bills",
+      product: "bills",
+      recordTypes: ["bill"]
+    },
+    {
+      body: ({ amendmentQuery }) => ({ limit: 1, mode: "semantic", query: amendmentQuery }),
+      expectedOutcome: "amendmentExpectedOutcome",
+      fixtures: ["amendmentQuery", "amendmentExpectedOutcome"],
+      kind: "search",
+      mode: "semantic",
+      name: "amendment search",
+      path: "/api/search/amendments",
+      product: "amendments",
+      recordTypes: ["amendment"]
+    },
+    {
+      body: ({ passageQuery }) => ({ limit: 1, mode: "hybrid", query: passageQuery }),
+      expectedOutcome: "passageExpectedOutcome",
+      fixtures: ["passageQuery", "passageExpectedOutcome"],
+      kind: "search",
+      mode: "hybrid",
+      name: "passage search",
+      path: "/api/search/passages",
+      product: "passages",
+      recordTypes: ["passage"]
+    },
+    {
+      body: ({ materialQuery }) => ({ limit: 1, mode: "lexical", query: materialQuery }),
+      expectedOutcome: "materialExpectedOutcome",
+      fixtures: ["materialQuery", "materialExpectedOutcome"],
+      kind: "search",
+      mode: "lexical",
+      name: "supporting-material search",
+      path: "/api/search/supporting-materials",
+      product: "supporting-materials",
+      recordTypes: ["supporting-material"]
+    },
+    {
+      body: ({ allQuery }) => ({
+        limit: 1,
+        mode: "lexical",
+        perTypeLimit: 1,
+        query: allQuery,
+        recordTypes: ["bill", "amendment", "supporting-material"]
+      }),
+      expectedOutcome: "allExpectedOutcome",
+      fixtures: ["allQuery", "allExpectedOutcome"],
+      kind: "search",
+      mode: "lexical",
+      name: "universal search",
+      path: "/api/search/all",
+      product: "all",
+      recordTypes: ["amendment", "bill", "supporting-material"]
+    },
+    {
+      body: ({ diffBillId, diffLeftDocumentId, diffRightDocumentId }) => ({
+        billId: diffBillId,
+        granularity: "word",
+        leftDocumentId: diffLeftDocumentId,
+        limit: 1,
+        rightDocumentId: diffRightDocumentId
+      }),
+      expectedOutcome: "diffExpectedOutcome",
+      fixtures: ["diffBillId", "diffLeftDocumentId", "diffRightDocumentId", "diffExpectedOutcome"],
+      kind: "document-diff",
+      name: "document diff",
+      path: "/api/document-diffs"
+    },
+    {
+      body: ({ researchBillId, researchQuestion }) => ({
+        answerFormat: "concise",
+        question: researchQuestion,
+        retrieval: { maxEvidence: 1, mode: "lexical", recordTypes: ["bill"] },
+        scope: { billIds: [researchBillId] }
+      }),
+      expectedOutcome: "researchExpectedOutcome",
+      fixtures: ["researchBillId", "researchQuestion", "researchExpectedOutcome"],
+      kind: "research-answer",
+      name: "research answer",
+      path: "/api/research/answers"
+    }
+  ]
+  const passed = []
+  const skipped = []
+
+  for (const [index, route] of routes.entries()) {
+    const missingFixture = missingNx04FixtureName(route)
+    if (missingFixture !== undefined) {
+      skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
+      continue
+    }
+    const url = new URL(route.path, root)
+    const correlationId = `nx-04-smoke-${index + 1}`
+    const name = `POST ${route.name}`
+    const response = await smokeFetch(url, {
+      body: JSON.stringify(route.body(nx04Fixtures)),
+      diagnosticName: name,
+      headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+      method: "POST"
+    })
+    requireCorrelationId(response, name, correlationId)
+    requireResponse(response, name, nx04ExpectedStatus(route), "application/json")
+    requirePrivateNoStore(response, name)
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      throw new Error(`${name} did not return a JSON body`)
+    }
+    if (nx04Fixtures[route.expectedOutcome] === "dependency_unavailable") {
+      if (response.headers.get("retry-after") !== "30") {
+        throw new Error(`${name} did not return retry-after 30`)
+      }
+      requireCanonicalDependencyUnavailable(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "dependency_unavailable" })
+      continue
+    }
+    if (nx04Fixtures[route.expectedOutcome] === "unprocessable") {
+      requireCanonicalDataIncomplete(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
+      continue
+    }
+    if (route.kind === "search") {
+      requireSearchPageEnvelope(body, name, correlationId, route.mode, route.product, route.recordTypes)
+    } else if (route.kind === "document-diff") {
+      requireDocumentDiffEnvelope(body, name, correlationId, nx04Fixtures)
+    } else {
+      requireResearchAnswerEnvelope(body, name, correlationId, nx04Fixtures.researchQuestion)
+    }
+    passed.push(route.name)
+  }
+
+  return { passed, skipped }
+}
+
 const root = smokeBaseUrl(baseUrl)
 const healthUrl = new URL("/health", root)
 const readyUrl = new URL("/ready", root)
@@ -1325,7 +1867,8 @@ const nx02a = smokeNx02a ? await smokeNx02aRoutes(root) : undefined
 const nx02b = smokeNx02bCumulative ? await smokeNx02bRoutes(root) : undefined
 const nx02c = smokeNx02cCumulative ? await smokeNx02cRoutes(root) : undefined
 const nx03a = smokeNx03aCumulative ? await smokeNx03aRoutes(root) : undefined
-const nx03b = smokeNx03b ? await smokeNx03bRoutes(root) : undefined
+const nx03b = smokeNx03bCumulative ? await smokeNx03bRoutes(root) : undefined
+const nx04 = smokeNx04 ? await smokeNx04Routes(root) : undefined
 let profile = "foundation"
 if (smokeNx02a) {
   profile = "foundation+nx-02a"
@@ -1339,8 +1882,11 @@ if (smokeNx02c) {
 if (smokeNx03aCumulative) {
   profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a"
 }
-if (smokeNx03b) {
+if (smokeNx03bCumulative) {
   profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b"
+}
+if (smokeNx04) {
+  profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a+nx-03b+nx-04"
 }
 
 process.stdout.write(
@@ -1352,6 +1898,7 @@ process.stdout.write(
     ...(nx02c === undefined ? {} : { nx02c }),
     ...(nx03a === undefined ? {} : { nx03a }),
     ...(nx03b === undefined ? {} : { nx03b }),
+    ...(nx04 === undefined ? {} : { nx04 }),
     profile,
     ready: ready.status,
     timeoutMs,
