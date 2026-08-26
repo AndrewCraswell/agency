@@ -14,7 +14,7 @@ or drive lamps and audio.
 
 The normative source is FIE Material Rules, Book 3, August 2026, Annex B,
 A.1(a)-A.2, pp. 77-79, as traced by FOIL-01 through FOIL-05 in
-[`fie-traceability-matrix.md`](fie-traceability-matrix.md). The local FIE
+[`fie-traceability-matrix.md`](specifications/fie-traceability-matrix.md). The local FIE
 matrix is authoritative. The seven-conductor contract supplies the logical
 input vocabulary and requires untrusted observations to suppress qualification.
 

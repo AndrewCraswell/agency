@@ -1,38 +1,45 @@
+import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { createServer } from "node:http"
-import { dirname, resolve } from "node:path"
+import { dirname, extname, isAbsolute, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { compileBoxTesterSequence } from "../dist/box-tester-sequence.js"
-import {
-  createIndeterminateVirtualTesterTimeline,
-  createInfrastructureErrorVirtualTesterTimeline,
-  createSkippedVirtualTesterTimeline,
-  createVirtualTesterTimeline
-} from "../dist/box-tester-virtual-timeline.js"
 import { runScenario } from "../dist/scenario-runner.js"
 import { loadTimingTableForRuleRevision } from "../dist/timing-boundary.js"
 
 const applicationDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const manifestPath = resolve(applicationDirectory, "docs/golden-scenario-manifest.json")
-const observatoryPath = resolve(applicationDirectory, "observatory/index.html")
-const projectionModulePath = resolve(applicationDirectory, "dist/scenario-display-projection.js")
-const schemaModulePath = resolve(applicationDirectory, "dist/scenario-display-schema.js")
-const identityModulePath = resolve(applicationDirectory, "dist/observatory-identity.js")
+const simulatorDirectoryArgument = process.argv.find((argument) => argument.startsWith("--simulator-directory="))
+const simulatorDirectoryValue = simulatorDirectoryArgument?.slice("--simulator-directory=".length)
+const simulatorDirectory = resolve(
+  simulatorDirectoryValue === undefined ? applicationDirectory : simulatorDirectoryValue,
+  simulatorDirectoryValue === undefined ? "dist/simulator" : "."
+)
+const simulatorPath = resolve(simulatorDirectory, "index.html")
 const host = "127.0.0.1"
 const portArgument = process.argv.find((argument) => argument.startsWith("--port="))
 const port = Number(portArgument?.slice("--port=".length) ?? 4178)
 
 if (!Number.isSafeInteger(port) || port < 1 || port > 65_535)
   throw new TypeError("--port must be an integer from 1 to 65535")
+if (simulatorDirectoryValue !== undefined && simulatorDirectoryValue.length === 0)
+  throw new TypeError("--simulator-directory must not be empty")
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
 const activeEntries = manifest.scenarios.filter((entry) => entry.status === "active")
 const activeById = new Map(activeEntries.map((entry) => [entry.scenarioId, entry]))
 const plannedCoverage = manifest.coverage.filter((entry) => entry.status === "planned")
-const observatoryHtml = await readFile(observatoryPath, "utf8")
-const projectionModule = await readFile(projectionModulePath, "utf8")
-const schemaModule = await readFile(schemaModulePath, "utf8")
-const identityModule = await readFile(identityModulePath, "utf8")
+const servedSimulatorAssets = new Map()
+
+for (const entry of plannedCoverage) {
+  if (
+    !Array.isArray(entry.scenarioIds) ||
+    entry.scenarioIds.length === 0 ||
+    new Set(entry.scenarioIds).size !== entry.scenarioIds.length ||
+    entry.scenarioIds.some((scenarioId) => !activeById.has(scenarioId))
+  ) {
+    throw new TypeError(`Planned requirement ${entry.traceabilityId} has an invalid active-scenario mapping`)
+  }
+}
 
 async function loadScenario(entry) {
   return JSON.parse(await readFile(resolve(applicationDirectory, "docs", entry.path), "utf8"))
@@ -70,24 +77,11 @@ async function executeActiveEntry(entry) {
   const result = run.report.scenarios[0]
   if (run.exitCode === 2 || result === undefined) throw new Error(run.report.error?.code ?? "scenario execution failed")
   const scenario = await loadScenario(entry)
-  let tester
-  try {
-    tester =
-      scenario.expect.status === "accepted"
-        ? createVirtualTesterTimeline(compileBoxTesterSequence(scenario), result)
-        : createIndeterminateVirtualTesterTimeline(scenario.scenarioId, "scenario-not-accepted-for-stimulus")
-  } catch (error) {
-    tester = createInfrastructureErrorVirtualTesterTimeline(
-      scenario.scenarioId,
-      error instanceof Error ? error.message : "virtual-tester-execution-error"
-    )
-  }
   return {
     expected: scenario.expect,
     result,
     scenario,
     status: result.status,
-    tester,
     timing: timingForScenario(scenario)
   }
 }
@@ -98,14 +92,15 @@ async function executeReport(selectedScenarioId) {
   if (selectedEntries.length === 0) return null
 
   const activeCases = await Promise.all(selectedEntries.map(executeActiveEntry))
-  const skippedCases =
+  const plannedRequirementCases =
     selectedScenarioId === undefined
       ? plannedCoverage.map((entry) => ({
+          evidence: { reason: "evidence-incomplete", status: "incomplete" },
           expected: null,
           result: null,
           scenario: {
-            description:
-              entry.description ?? "No executable golden scenario has been approved for this requirement yet.",
+            description: entry.description ?? "Full requirement evidence is pending.",
+            scenarioIds: [...entry.scenarioIds],
             traceabilityId: entry.traceabilityId,
             weapon: entry.traceabilityId.startsWith("FOIL")
               ? "foil"
@@ -113,21 +108,24 @@ async function executeReport(selectedScenarioId) {
                 ? "sabre"
                 : "epee"
           },
-          status: "skipped",
-          tester: createSkippedVirtualTesterTimeline(entry.traceabilityId, "scenario-not-executable"),
-          timing: { reason: "scenario-not-executable", status: "unavailable" }
+          status: "planned-requirement"
         }))
       : []
-  const cases = [...activeCases, ...skippedCases]
+  const cases = [...activeCases, ...plannedRequirementCases]
+  const executableCases = cases.filter((testCase) => testCase.status !== "planned-requirement")
+  const summary = {
+    executable: {
+      failed: executableCases.filter((testCase) => testCase.status === "failed").length,
+      passed: executableCases.filter((testCase) => testCase.status === "passed").length,
+      total: executableCases.length
+    },
+    plannedRequirements: plannedRequirementCases.length
+  }
+  const reportId = `sha256:${createHash("sha256").update(JSON.stringify({ cases, summary })).digest("hex")}`
   return {
     cases,
-    generatedAt: new Date().toISOString(),
-    summary: {
-      failed: cases.filter((testCase) => testCase.status === "failed").length,
-      passed: cases.filter((testCase) => testCase.status === "passed").length,
-      skipped: cases.filter((testCase) => testCase.status === "skipped").length,
-      total: cases.length
-    }
+    reportId,
+    summary
   }
 }
 
@@ -139,42 +137,101 @@ function sendJson(response, statusCode, value) {
   response.end(`${JSON.stringify(value)}\n`)
 }
 
+function contentType(path) {
+  const extension = extname(path)
+  if (extension === ".css") return "text/css; charset=utf-8"
+  if (extension === ".js") return "text/javascript; charset=utf-8"
+  if (extension === ".svg") return "image/svg+xml"
+  return "application/octet-stream"
+}
+
+function simulatorAssetPaths(html) {
+  const assetPaths = new Set()
+  for (const match of html.matchAll(/(?:href|src)="(\/assets\/[^"?]+)"/gu)) assetPaths.add(match[1])
+  return [...assetPaths]
+}
+
+async function loadSimulatorSnapshot() {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    let html
+    try {
+      html = await readFile(simulatorPath, "utf8")
+    } catch {
+      return { error: "simulator-build-unavailable" }
+    }
+    const assetPaths = simulatorAssetPaths(html)
+    if (assetPaths.length === 0) return { error: "simulator-build-invalid" }
+
+    const assets = new Map()
+    try {
+      for (const assetPath of assetPaths) {
+        const path = resolve(simulatorDirectory, assetPath.slice(1))
+        const relativePath = relative(simulatorDirectory, path)
+        if (relativePath.startsWith("..") || isAbsolute(relativePath)) return { error: "simulator-build-invalid" }
+        assets.set(assetPath, await readFile(path))
+      }
+    } catch {
+      return { error: "simulator-build-unavailable" }
+    }
+
+    try {
+      if (html !== (await readFile(simulatorPath, "utf8"))) continue
+    } catch {
+      return { error: "simulator-build-unavailable" }
+    }
+
+    for (const [assetPath, asset] of assets) servedSimulatorAssets.set(assetPath, asset)
+    return { assets, html }
+  }
+  return { error: "simulator-build-changing" }
+}
+
+async function sendSimulatorAsset(response, pathname) {
+  const servedAsset = servedSimulatorAssets.get(pathname)
+  if (servedAsset !== undefined) {
+    response.writeHead(200, {
+      "Cache-Control": "no-cache",
+      "Content-Type": contentType(pathname),
+      "X-Content-Type-Options": "nosniff"
+    })
+    response.end(servedAsset)
+    return true
+  }
+  const assetPath = resolve(simulatorDirectory, pathname.slice(1))
+  const relativePath = relative(simulatorDirectory, assetPath)
+  if (relativePath.startsWith("..") || isAbsolute(relativePath)) return false
+  try {
+    const asset = await readFile(assetPath)
+    response.writeHead(200, {
+      "Cache-Control": "no-cache",
+      "Content-Type": contentType(assetPath),
+      "X-Content-Type-Options": "nosniff"
+    })
+    response.end(asset)
+    return true
+  } catch {
+    return false
+  }
+}
+
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", `http://${host}:${port}`)
     if (request.method === "GET" && url.pathname === "/") {
+      const snapshot = await loadSimulatorSnapshot()
+      if ("error" in snapshot) {
+        sendJson(response, 503, { error: snapshot.error })
+        return
+      }
       response.writeHead(200, {
         "Cache-Control": "no-store",
         "Content-Type": "text/html; charset=utf-8"
       })
-      response.end(observatoryHtml)
+      response.end(snapshot.html)
       return
     }
-    if (request.method === "GET" && url.pathname === "/assets/scenario-display-projection.js") {
-      response.writeHead(200, {
-        "Cache-Control": "no-store",
-        "Content-Type": "text/javascript; charset=utf-8",
-        "X-Content-Type-Options": "nosniff"
-      })
-      response.end(projectionModule)
-      return
-    }
-    if (request.method === "GET" && url.pathname === "/assets/scenario-display-schema.js") {
-      response.writeHead(200, {
-        "Cache-Control": "no-store",
-        "Content-Type": "text/javascript; charset=utf-8",
-        "X-Content-Type-Options": "nosniff"
-      })
-      response.end(schemaModule)
-      return
-    }
-    if (request.method === "GET" && url.pathname === "/assets/observatory-identity.js") {
-      response.writeHead(200, {
-        "Cache-Control": "no-store",
-        "Content-Type": "text/javascript; charset=utf-8",
-        "X-Content-Type-Options": "nosniff"
-      })
-      response.end(identityModule)
+    if (request.method === "GET" && url.pathname.startsWith("/assets/")) {
+      if (!(await sendSimulatorAsset(response, url.pathname))) sendJson(response, 404, { error: "not-found" })
       return
     }
     if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/run") {
@@ -198,5 +255,5 @@ const server = createServer(async (request, response) => {
 })
 
 server.listen(port, host, () => {
-  process.stdout.write(`Bout test observatory: http://${host}:${port}/\n`)
+  process.stdout.write(`Scoring simulator: http://${host}:${port}/\n`)
 })

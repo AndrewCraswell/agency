@@ -16,11 +16,6 @@ processor reset produces a new deterministic boot identity. Diagnostics are
 bounded, immutable snapshots with the current identities, journal recovery
 state, scoring availability, and primary-output state.
 
-Diagnostic timestamps come only from the M2-06 virtual processor-link clock.
-The model neither reads the host clock nor schedules host work. A corrupt
-journal checkpoint at initial application boot creates an explicit `power-on`
-journal-recovery diagnostic and leaves the application unavailable.
-
 ## Reset ownership
 
 | Condition | Scoring result | Application result |
@@ -55,14 +50,7 @@ whole-device restoration. It exposes the journal's recovery outcome rather than
 repairing records. Thus a write interrupted at an M2-08 boundary recovers only
 the old committed checkpoint or the complete new one, never a partial record.
 
-M2-09 application-time annotations are application-owned projections. An ESP32
-reset creates a new application boot identity, so a recovered journal must be
-observed by a new M2-09 metadata instance; this model never carries an old
-application sequence, wall-clock anchor, or inferred timeline through the
-reset. STM32 record timestamps and scoring boot IDs remain unchanged.
-
 `src/reset-recovery-scenarios.test.ts` covers independent processor resets,
 watchdog/brownout/operator/update causes, link loss and reconnection,
 whole-device recovery, old/new journal recovery, boot-ID changes, primary-output
-authority, deterministic virtual-clock diagnostics, initial corrupt-journal
-fail-closed behavior, failed gates, and the forbidden automatic reset path.
+authority, failed gates, and the forbidden automatic reset path.

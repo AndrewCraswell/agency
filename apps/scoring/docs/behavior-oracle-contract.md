@@ -18,9 +18,11 @@ SHA-256 digest for:
 - the decision-record contract, implementation, and tests;
 - the transport codec, its tests, and its golden-frame fixture;
 - the scenario runner, display projection, and golden-vector/run entry points;
+- every checked-in simulator runtime source, UI component, test, Vite/TypeScript
+  configuration, and the explicit `pnpm --filter scoring test:simulator` command;
 - the scoring package and TypeScript/Vitest configuration, root package and
   inherited shared TypeScript configuration, pnpm catalog, lockfile, Turbo
-  configuration, and Node version pin;
+  configuration, Node version pin, and oracle-generator script;
 - the exact commands used to exercise those boundaries.
 
 Artifact hashes normalize CRLF to LF before hashing so a Windows checkout and
@@ -67,6 +69,11 @@ continues to project already-authoritative results and does not score. The
 scoring backend remains the TypeScript scenario runner until `CW-16` switches
 it to the reviewed C17 WebAssembly adapter; a module failure must render
 unavailable rather than selecting a TypeScript fallback.
+
+The simulator's browser interval advances only an already-materialized event
+index for visual replay. It supplies no timestamp, scheduling decision, random
+value, or result to the scenario runner or future WebAssembly adapter; all
+authoritative time remains explicit `atUs` evidence in the report.
 
 The oracle manifest must eventually bind the C core, ABI, generated timing profile,
 native/STM32/WebAssembly toolchains and tests, browser adapter, complete corpus,

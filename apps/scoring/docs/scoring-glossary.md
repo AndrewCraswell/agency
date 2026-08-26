@@ -8,24 +8,12 @@ This document defines the words, symbols, and units used by the scoring apparatu
 firmware, electrical design, scenarios, protocol records, user interface copy, and evidence. A term in this document
 has one meaning. A convenient synonym must not be introduced in a rule table or a machine-readable record.
 
-The tested machine-readable implementation is
-[`scoring-glossary-and-units.ts`](../src/scoring-glossary-and-units.ts). Its
-canonical graph is deeply frozen. `validateScoringGlossary` rejects duplicate
-canonical names, case or whitespace collisions, duplicate or unknown unit codes,
-quantity terms without units, non-quantity terms with units, ambiguous aliases,
-extra properties, and shape drift. `resolveScoringGlossaryTerm` accepts only a
-canonical name or an explicitly reviewed alias. `validateGlossaryMeasurement`
-rejects display symbols, unknown units, fractions, negative values, and extra
-properties; `assertIntegerMicroseconds` is the shared guard for monotonic instants
-and durations. Validation never converts malformed input into a default unit,
-`noSignal`, or `indeterminate` result.
-
 ## Authority and separation of terms
 
 The August 2026 English FIE Material Rules, Book 3, in
-[`fie-material-rules-2026-08-en.pdf`](fie-material-rules-2026-08-en.pdf) are the normative authority. The local source
+[`fie-material-rules-2026-08-en.pdf`](specifications/fie-material-rules-2026-08-en.pdf) are the normative authority. The local source
 has SHA-256 `1489D28ED6F3C91E27ECDF75BB29B4ED65C688A012F544D37D946A9DA81AFC26`. The cross-reference and page numbers
-in this contract use [`fie-traceability-matrix.md`](fie-traceability-matrix.md), whose page references are the printed
+in this contract use [`fie-traceability-matrix.md`](specifications/fie-traceability-matrix.md), whose page references are the printed
 pages in that PDF.
 
 The following order is mandatory:
@@ -226,9 +214,8 @@ prohibited in a rule field or protocol message unless the type supplies the weap
 
 ### Decision record vocabulary
 
-The current source provides the epee scoring baseline in [`epee.ts`](../src/epee.ts) and the canonical immutable-record
-boundary in [`decision-record.ts`](../src/decision-record.ts), with authority and receiver behavior covered by
-[`virtual-stm32.ts`](../src/virtual-stm32.ts) and [`virtual-esp32.ts`](../src/virtual-esp32.ts):
+The current source provides an epee baseline in [`epee.ts`](../src/epee.ts). The canonical record boundary is
+[`decision-record.ts`](../src/decision-record.ts), carried by the virtual STM32, processor link, and virtual ESP32:
 
 | Current source term | Contract meaning | Boundary |
 | --- | --- | --- |
@@ -238,13 +225,13 @@ boundary in [`decision-record.ts`](../src/decision-record.ts), with authority an
 | `EpeeScoringState.candidateSinceUs` | Start instant of a currently continuous candidate | Clearing it means the candidate was broken or rejected; it does not create a rejection record by itself. |
 | `EpeeHit.startedAtUs` | Candidate start instant | It is not necessarily the lamp or protocol emission instant. |
 | `EpeeHit.qualifiedAtUs` | Instant at which the candidate met the current epee rule table | It is not a wall-clock timestamp. |
-| `DecisionRecord.rawCaptureRefs` | Immutable content-addressed references to retained replay, calibration, fault, or reset evidence | References are evidence and must not be rewritten when rendered by the ESP32. |
-| `DecisionRecord.captureWindow.fromUs` and `throughUs` | Inclusive bounds of the evidence considered by the authority | The bounds use the monotonic scoring clock. |
-| `DecisionRecord.outcome` | The authority's already-decided qualified, rejected, diagnostic, calibration, reset, or uncertainty result | The ESP32 preserves the outcome and never re-runs a weapon scorer. |
+| `DecisionRecord.rawCaptureRefs` | Immutable references to retained replay evidence | Evidence must not be rewritten when stored or rendered by the ESP32. |
+| `DecisionRecord.captureWindow.fromUs` and `throughUs` | Inclusive bounds of retained replay evidence | The bounds use the monotonic scoring clock. |
+| `DecisionRecord.outcome` | Versioned qualified-hit, off-target, rejection, fault, reset, uncertainty, or calibration result | A consumer must not infer or reclassify an outcome. |
 
-The current source's `classification: "on-target"` is a product implementation term. It is not the literal FIE phrase
-`valid hit`; the record must retain enough electrical evidence to support the mapping. A future off-target record uses
-`off-target`, while FIE citations should continue to say `non-valid hit` where that is the source wording.
+The record's `qualified-hit` disposition is a product implementation term. It is not the literal FIE phrase `valid hit`;
+the record must retain enough electrical evidence to support the mapping. The `off-target` disposition maps separately,
+while FIE citations should continue to say `non-valid hit` where that is the source wording.
 
 ## Identity, ordering, and revision fields
 

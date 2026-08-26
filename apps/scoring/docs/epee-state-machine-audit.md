@@ -13,7 +13,7 @@ exceptional-resistance work.
 
 The normative source is FIE Material Rules, Book 3, August 2026, Annex B,
 B(a)-B(f), printed pages 80-81, as traced by
-[`fie-traceability-matrix.md`](fie-traceability-matrix.md) rows EPEE-01 through
+[`fie-traceability-matrix.md`](specifications/fie-traceability-matrix.md) rows EPEE-01 through
 EPEE-05. The matrix is authoritative for this audit. Its `45_000 us` value is
 explicitly a product implementation choice inside the FIE 40-50 ms tolerance;
 it is not an FIE constant.

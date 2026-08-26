@@ -16,7 +16,7 @@ priority, or infer a physical acquisition history from raw samples.
 
 The FIE Material Rules, Book 3, August 2026, Annex B C(a)-C(b), pp. 81-82 are
 the authority, as traced by SABRE-01 through SABRE-07 and OUT-01 through OUT-04
-in [`fie-traceability-matrix.md`](fie-traceability-matrix.md). This task
+in [`fie-traceability-matrix.md`](specifications/fie-traceability-matrix.md). This task
 exercises SABRE-01 through SABRE-07. Its SABRE-06 endpoints are provisional
 product choices, not an FIE timing-table release.
 

@@ -1,10 +1,8 @@
 # Decision record contract
 
-This is the M0-05 canonical logical schema for an immutable scoring decision record. The parsers in
-`src/decision-record.ts`, including the shared `parseRecordProvenance` guard, and the virtual STM32/ESP32 processor
-path consume this schema directly; there is no parallel prototype record shape. M2-04 event capture uses the same
-provenance guard before constructing a record.
-M2 owns the separately reviewed capture migration. This contract does not silently define M0-06 framing or M2 persistence.
+This is the M0-05 canonical logical schema for an immutable scoring decision record. The virtual STM32, processor link,
+and virtual ESP32 use this schema as their single decision-record payload boundary. This contract does not silently
+define M0-06 framing or M2 persistence.
 
 The record is sufficient to replay the decision and its initial indication without running the scoring algorithm again.
 Raw observations remain evidence, not input to a replay-time re-decision.
@@ -16,9 +14,9 @@ signature, clock synchronization protocol, seven-line electrical topology, or a 
 M0-06, M0-03, M0-10, M1-07, and M2 respectively.
 
 All `*Us` fields are non-negative safe integer microseconds on the STM32 monotonic scoring clock. UTC and network-time
-metadata are deliberately absent until M2-09. Required `provenance.firmware.identity` identifies the STM32 source
-authority that created the record. An ESP32 can display, store, or replay an accepted copy but cannot create or
-reclassify it.
+metadata remain outside this canonical record; M2-09 carries bounded wall-clock annotations separately after journal
+acceptance. Required `provenance.firmware.identity` identifies the STM32 source authority that created the record. An
+ESP32 can display, store, or replay an accepted copy but cannot create or reclassify it.
 
 ## Version and immutability policy
 

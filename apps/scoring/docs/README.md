@@ -4,6 +4,11 @@ The cross-software-and-hardware execution plan is in [device-delivery-plan.md](d
 milestones, dependencies, granular agent-sized tasks, acceptance evidence, and the boundary between emulation,
 fabrication readiness, EVT, DVT, and production validation.
 
+The broad discovery inventory of tournament systems, scoring software, mobile and desktop apps, video-refereeing
+systems, club tools, public repositories, historical products, and research prototypes is in
+[fencing-software-ecosystem-corpus.md](fencing-software-ecosystem-corpus.md). Status is metadata in that corpus, not an
+inclusion filter.
+
 The approved sequencing for the immediate RGB LED web player, two-chip OTA launch gate, shared C17 WebAssembly core,
 and open-source preparation is in [software-product-evolution-roadmap.md](software-product-evolution-roadmap.md).
 The granular native/STM32/WebAssembly parity, simulator cutover, and TypeScript scorer deletion gates are in
@@ -22,18 +27,28 @@ command-key, guard, and feedback lookup is in
 and controller-transfer boundary is in [the RC-01 authority ADR](remote-control-authority-adr.md).
 The partial RC-07 delivery and its P-card rules gate are in
 [p-card-rules-gate.md](p-card-rules-gate.md).
+The RC-08 overtime priority, medical-timer isolation, and typed
+competition-format transition rules are in
+[bout-workflow-overtime-and-format.md](bout-workflow-overtime-and-format.md).
 
 The reproducible `rules-1` baseline, its pinned executable inputs and toolchain,
 and its review-sensitive digest workflow are defined in
 [behavior-oracle-contract.md](behavior-oracle-contract.md).
 
-The normative requirements are decomposed in
-[fie-traceability-matrix.md](fie-traceability-matrix.md). Project terminology and the distinction between rule terms,
+The normative rules, protocol sources, and consolidated weapon behavior are indexed in
+[specifications/README.md](specifications/README.md). FIE requirements are decomposed in
+[fie-traceability-matrix.md](specifications/fie-traceability-matrix.md). Project terminology and the distinction between rule terms,
 electrical observations, decisions, and diagnostics are defined in [scoring-glossary.md](scoring-glossary.md). The
+[GitHub prior-art catalog](specifications/prior-art/fencing-scoring-github-catalog.md), its
+[FIE comparison](specifications/prior-art/fencing-scoring-prior-art-analysis.md), and the consolidated
+[weapon-mode programming specification](specifications/weapon-scoring-programming-specification.md) keep public implementations,
+normative rules, and project choices explicitly separate. The
 [seven-conductor contract](seven-conductor-signal-contract.md) and
 [processor fault-containment contract](processor-fault-containment-contract.md) define the hardware/software boundary.
 Immutable replay payloads and portable test vectors are specified in
 [decision-record-contract.md](decision-record-contract.md) and [golden-scenario-contract.md](golden-scenario-contract.md).
+Application boot identity and bounded RTC/network-time annotations are specified in
+[application-time-metadata-contract.md](application-time-metadata-contract.md).
 Stored-record replay rendering is specified in
 [replay-renderer-contract.md](replay-renderer-contract.md).
 The bounded M2-12 scenario-runner CLI and stable JSON report are specified in
@@ -50,6 +65,9 @@ are specified in
 [foil-resistance-and-context-contract.md](foil-resistance-and-context-contract.md).
 The M2-05 canonical binary frame implementation and acceptance evidence are
 specified in [m2-05-transport-codec-evidence.md](m2-05-transport-codec-evidence.md).
+The one canonical wire layout, directed message types, sequence ownership,
+compatibility policy, and immutable cross-codec vectors are specified in
+[m0-06-transport-frame-contract.md](m0-06-transport-frame-contract.md).
 The bounded M2-13 seeded protocol, decision-record, and journal fuzz evidence
 is specified in [m2-13-seeded-fuzz-evidence.md](m2-13-seeded-fuzz-evidence.md).
 The M3-10 ESP32-S3 production identity, signed-update, rollback, and locked
@@ -69,7 +87,7 @@ The M3-13 bounded ESP32-S3 QEMU feasibility result and optional smoke probe are
 specified in
 [`firmware/esp32/docs/qemu-feasibility-evidence.md`](../firmware/esp32/docs/qemu-feasibility-evidence.md).
 
-`fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
+`specifications/fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
 - Official index: https://fie.org/documents/rules
 - Official PDF: https://static.fie.org/uploads/40/204157-book%20material%20August%202026%20ang.pdf
@@ -78,17 +96,23 @@ specified in
 
 The scoring implementation should cite the relevant article or Annex B section in test names or nearby comments. Keep the original PDF unchanged; replace it only when the FIE publishes a newer edition, then update the filename, date, checksum, and rule-derived tests together.
 
-## Favero FA-15 reference
+## Commercial scoring-machine references
 
-These official Favero files document the current comparison machine identified for this project:
+The complete Favero, Virtual Scoring Machine, and Skewered source corpus, including checksums and provenance, now lives in
+[`specifications/manuals`](specifications/manuals/). The three original FA-15 comparison files are:
 
 | File | Official source | SHA-256 |
 | --- | --- | --- |
-| `favero-fa15-user-manual-en.pdf` | https://www.favero.com/get_file.php?id=398 | `C4AC240F4E81795D966EDE9909450CAE8AD9FCC7A19E138C83AB999664D33D20` |
-| `favero-fa15-t2016-specifications-en.pdf` | https://www.favero.com/get_file.php?id=399 | `F575C8A7630FBF104CA8AFA4CD28544CB2D75A35A4FF4C5716A19C31513DB72F` |
-| `favero-fa15-fie-homologation.pdf` | https://www.favero.com/get_file.php?id=391 | `1314E203ED3E0B5890B1EE9FF826778DDF6A6E4345439534128342AD2E0EE529` |
+| [`favero-fa15-user-manual-en.pdf`](specifications/manuals/favero-fa15-user-manual-en.pdf) | https://www.favero.com/get_file.php?id=398 | `C4AC240F4E81795D966EDE9909450CAE8AD9FCC7A19E138C83AB999664D33D20` |
+| [`favero-fa15-t2016-specifications-en.pdf`](specifications/manuals/favero-fa15-t2016-specifications-en.pdf) | https://www.favero.com/get_file.php?id=399 | `F575C8A7630FBF104CA8AFA4CD28544CB2D75A35A4FF4C5716A19C31513DB72F` |
+| [`favero-fa15-fie-homologation.pdf`](specifications/manuals/favero-fa15-fie-homologation.pdf) | https://www.favero.com/get_file.php?id=391 | `1314E203ED3E0B5890B1EE9FF826778DDF6A6E4345439534128342AD2E0EE529` |
 
 - Official product page: https://www.favero.com/en2_fencing_sport_fencing_apparatus_fa_15-319-17.html
 - Downloaded: 2026-08-22
 
 The T2016 document records the FA-15's published timing profile, but the August 2026 FIE Material Rules remain the normative source for our implementation. Favero does not publish the internal weapon-line voltages or complete analog schematic in these documents, so those values still require bench measurement rather than assumption.
+
+See the [commercial feature catalog](specifications/commercial-scoring-machine-feature-catalog.md) for the granular
+Favero/VSM/Skewered comparison and the
+[open-source gap analysis](specifications/prior-art/open-source-commercial-feature-gap-analysis.md) for coverage across
+the retained competitive public repositories.

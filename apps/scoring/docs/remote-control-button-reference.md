@@ -33,18 +33,18 @@ reference photograph is an operation inventory, not approved production artwork.
 | Top left | Left score `+` | Add one to left score. | Reserved. | No repeat. | `score.increment.left` | Accepted in allowed bout modes. |
 | Top center | `Start/Stop` | Start or stop the bout clock. | Reserved for reviewed safety/test behavior. | No alternate action. | `clock.toggle` | Always direct; coupled passivity timing follows the accepted transition. |
 | Top right | Right score `+` | Add one to right score. | Reserved. | No repeat. | `score.increment.right` | Accepted in allowed bout modes. |
-| Second row left | Left card | Award the next applicable left penalty; a red award also adds one right score. | Award the next rules-valid left P-card. | No repeat and never remove a card. | `penalty.award.left`, `passivityPenalty.award.left` | Atomic card/score result; correct with Back or Reset Cards. |
-| Second row center | `Pause 1 min` | Start a one-minute break. | Start the configured medical-intervention clock. | Enter one-minute overtime with random priority; repeat held action removes priority. | `break.start.oneMinute`, `medical.start`, `overtime.toggle` | Bout clock must be stopped. |
-| Second row right | Right card | Award the next applicable right penalty; a red award also adds one left score. | Award the next rules-valid right P-card. | No repeat and never remove a card. | `penalty.award.right`, `passivityPenalty.award.right` | Atomic card/score result; correct with Back or Reset Cards. |
+| Second row left | Left card | Preview the next rules-valid yellow/red state selected by the referee; repeat to confirm. | Preview the next rules-valid left P-card; repeat to confirm. | No repeat while held. | `penalty.review.left`, `passivityPenalty.review.left` | Red and the opponent point apply atomically. Black-card/exclusion remains a supervisor action. |
+| Second row center | `Pause 1 min` | Start a one-minute break. | Preview one-minute overtime with random priority. | Start the medical-intervention clock. | `break.start.oneMinute`, `overtime.review`, `medical.start` | Bout clock must be stopped; overtime requires visible confirmation. Priority correction remains a supervisor action. |
+| Second row right | Right card | Preview the next rules-valid yellow/red state selected by the referee; repeat to confirm. | Preview the next rules-valid right P-card; repeat to confirm. | No repeat while held. | `penalty.review.right`, `passivityPenalty.review.right` | Red and the opponent point apply atomically. Black-card/exclusion remains a supervisor action. |
 | Third row left | Left score `-` | Remove one left score, floor zero. | Reserved. | No repeat. | `score.decrement.left` | Rejected at zero. |
 | Third row center | `+Time` | Add one second, or one hundredth inside the stopped final ten seconds. | Increment the configured match/period field. | No repeat. | `clock.adjust.positive`, `format.advance` | Bout clock must be stopped. |
 | Third row right | Right score `-` | Remove one right score, floor zero. | Reserved. | No repeat. | `score.decrement.right` | Rejected at zero. |
 | Fourth row left | `Back` | Undo the most recent reversible referee workflow action by applying a compensating event. | Swap left/right workflow presentation and ownership. | No destructive repeat. | `workflow.undo`, `sides.swap` | Never rewrites history or changes an immutable STM32 decision. |
-| Fourth row center | `OPT` | Show weapon; a second standalone press in the selection window requests the next weapon. | Acts as the modifier for the paired control. | Hold alone opens local configuration only after the reviewed threshold. | `weapon.showOrAdvance`, `modifier.opt` | A chord must not also emit the standalone command. |
+| Fourth row center | `OPT` | Preview weapon; a second standalone press in the selection window requests the next proposal. | Acts as the modifier for the paired control. | Hold alone opens local configuration only after the reviewed threshold. | `weapon.showOrAdvance`, `modifier.opt` | Requires stopped clock, no candidate or latch, visible proposal, and scoring-controller acknowledgement. A chord must not also emit the standalone command. |
 | Fourth row right | `Rearm` | Request manual rearm. | Advance auto-rearm through manual, one, three, and five seconds. | No repeat. | `scoring.rearm`, `scoring.autoRearm.advance` | Distinct from reset, new bout, and clock control. |
-| Bottom left | `Reset Cards` | Clear penalty-card and P-card presentation only. | Guarded Reset All/New Bout. | Request sleep from safe idle. | `cards.reset`, `bout.new`, `device.sleep.request` | Reset/new-bout and sleep require stopped clocks and complete apparatus feedback. |
+| Bottom left | `Reset Cards` | Preview clearing penalty-card and P-card presentation. | Guarded Reset All/New Bout. | Confirm the card-clear preview. | `cards.clear.review`, `bout.new`, `cards.clear.confirm` | Bout clock must be stopped; the first press never clears a card. Sleep remains a local-menu action. |
 | Bottom center | `-Time` | Remove one second, or one hundredth inside the stopped final ten seconds; floor zero. | Decrement the configured match/period field. | No repeat. | `clock.adjust.negative`, `format.retreat` | Bout clock must be stopped. |
-| Bottom right | `Load Time` | Load the configured start time. | Enter bounded `M:SS` configuration. | Double press loads one minute. | `clock.loadConfigured`, `clock.configure`, `clock.loadOneMinute` | Bout clock must be stopped; absent configuration is rejected. |
+| Bottom right | `Load Time` | Load the configured start time. | Cycle reviewed time presets. | Double press loads one minute. | `clock.loadConfigured`, `clock.preset.advance`, `clock.loadOneMinute` | Bout clock must be stopped; preset values are configured locally and absent configuration is rejected. |
 
 ## Operations intentionally outside the handheld
 
@@ -52,6 +52,7 @@ reference photograph is an operation inventory, not approved production artwork.
 | --- | --- | --- |
 | Load or restore a complete bout snapshot | Authenticated application or tournament-controller API | Requires complete validation, revision/ownership checks, and an atomic state replacement. |
 | Manually choose a priority side | Supervisor interface | Ordinary priority remains unbiased; overrides must be explicit and audited. |
+| Set exact custom time presets or request sleep | Local configuration | These are setup operations, not blind routine-bout actions. |
 | Timeline browse and forward navigation | Application review UI | Avoids displacing routine `Back`, `Rearm`, and side-swap controls. |
 | Volume, venue profile, detailed weapon mode, pairing, and service diagnostics | Local configuration or authorized service UI | Infrequent configuration must not crowd routine referee actions. |
 | Tournament next/previous/begin/end | Tournament-controller API | These are competition-management operations, not scoring-machine button semantics. |
@@ -64,7 +65,7 @@ reference photograph is an operation inventory, not approved production artwork.
 | Rejected indication plus reason | No state was changed. | Correct the reported condition, such as running clock, invalid mode, bound, unavailable owner, or expired entry. |
 | Remote transmission LED only | The handheld emitted an optical frame. | Do not treat this as apparatus acceptance. |
 | Low-remote-battery indication on apparatus | Remaining operating margin is below the approved threshold. | Replace or recharge the remote under the venue procedure. |
-| No apparatus response | Delivery or decoding is unavailable or obstructed. | Re-aim, move within the approved range, or use the authorized fallback; do not repeat a destructive command blindly. |
+| No apparatus response | Delivery or decoding is unavailable or obstructed. | Re-aim, move within the approved range, or use a paired spare/replacement remote; do not repeat a destructive command blindly. |
 
 ## Compatibility notes
 

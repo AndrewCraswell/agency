@@ -12,7 +12,7 @@ separate, richer entry point from [`epee.ts`](../src/epee.ts), whose two
 booleans remain stable for existing callers.
 
 The governing requirements are EPEE-03 and EPEE-04 in the
-[FIE traceability matrix](fie-traceability-matrix.md): 10 ohms is the normal
+[FIE traceability matrix](specifications/fie-traceability-matrix.md): 10 ohms is the normal
 external-resistance test case, 100 ohms is the exceptional external-resistance
 test case, and grounded material must not signal even with 100 ohms in the
 earth circuit. The adapter does not make claims about excitation, ADC values,
@@ -44,12 +44,6 @@ The adapter retains the audited `epee.ts` 45,000 microsecond,
 start-anchored lockout behavior only for compatible trusted candidates. This
 is the existing provisional implementation choice, not an FIE endpoint rule.
 
-The TypeScript adapter is retained only as a migration comparison model. It
-does not set product-release behavior, physical thresholds, or timing policy.
-The C17 scoring core is the sole future authority for native, STM32, and
-WebAssembly execution; TypeScript must be removed after the migration gates in
-[`c17-wasm-simulator-migration.md`](c17-wasm-simulator-migration.md) close.
-
 ## Open interpretations and gates
 
 - The FIE wording supplies 10-ohm and 100-ohm compliance cases, not a
@@ -73,10 +67,9 @@ lexicographic order:
 
 - `epee.exceptional-resistance-duration`
 - `epee.grounded-material-100-ohm`
-- `epee.resistance-near-lockout-both-sides`
 - `epee.resistance-uncertainty-near-lockout`
 
-The manifest appends their IDs to the existing EPEE-02, EPEE-03, and EPEE-04
-coverage without changing any requirement's `covered` status. The scenario
-runner compares the richer logical adapter against these independently authored
-expectations; it must never regenerate them from a scorer.
+The manifest appends their IDs to the existing EPEE-03 and EPEE-04 coverage
+without changing either requirement's `covered` status. A future runner must
+execute the richer adapter for these vectors; the current boolean epee runner
+cannot safely project their uncertainty fields.

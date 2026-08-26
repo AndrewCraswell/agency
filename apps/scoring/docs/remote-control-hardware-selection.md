@@ -13,7 +13,7 @@ fabrication, firmware, pairing, or industrial design.
 | Keys | C&K KMR221G LFS | 2 N nominal tact switch with 200,000 published cycles. The 4 by 8 matrix has one Vishay 1N4148W-E3-08 diode per key, oriented from the row switch toward its column. |
 | Cell and protection | Panasonic Energy NCR18650B | 3.6 V cell with 3250 mAh manufacturer-minimum capacity. TI BQ29700DSER, CSD85301Q2 back-to-back FETs, a 330 ohm input resistor, and 100 nF filter form the candidate protection path. Pack construction and validation remain DENY. |
 | Remote USB-C sink | GCT USB4105-GF-A | Charging-only receptacle with one YAGEO RC0603FR-075K1L 5.1 kohm pulldown on each CC pin. TI TPD1E10B06 clamps VBUS ESD and two TPD4S012 signal channels clamp CC1/CC2. BQ24314DSGR is oriented IN from connector VBUS and OUT to the charger; a 50.0 kohm ILIM resistor sets a nominal 500 mA overcurrent threshold, a 100 kohm resistor senses PACK+, and exact 1 uF capacitors support IN and OUT. No PD controller or USB data path is fitted. |
-| Charge temperature inhibit | TI TMP390A2DRLR | Hardware-only hot/cold window with a 42 C hot trip and 15 C cold trip. Connector VBUS powers a TPS70933DBVR safety rail. The TMP390 outputs feed an open-drain SN74LVC1G38 that can pull BQ24314 CE low only in the configured temperature window; the CE divider otherwise disables BQ24314 OUT. |
+| Charge temperature inhibit | TI TMP390A2DRLR | Hardware-only hot/cold window with a conservative 42 C hot trip and 15 C cold trip. Connector VBUS powers a TPS70933DBVR safety rail. The exact threshold, pullup, bypass, open-drain NAND, CE pullup, and 3.3 V CE clamp make a temperature fault, invalid threshold resistor, startup, or safety-rail loss disable charger VBUS. |
 | Charge control | Microchip MCP73831T-2ACI/OT | Single-cell 4.20 V controller. YAGEO RC0603FR-074KL, exactly 4.000 kohm, sets a nominal 250 mA target. Murata GRM188R61C475KE11D 4.7 uF capacitors are fitted at VDD and VBAT. |
 | 3.3 V rail | Texas Instruments TPS62743YFPR | 300 mA buck with Murata LQH2MCN2R2M52L 2.2 uH inductor and GRM188R61A106KE69D 10 uF input and output capacitors. |
 | Debug cable | Tag-Connect TC2050-IDC-NL-050-ALL | No header is populated. The board imports manufacturer footprint TC2050-IDC-NL-FP revision A: ten 0.787 mm plus or minus 0.076 mm paste-free contact pads, three 0.991 mm plus or minus 0.076 mm non-plated alignment holes, 0.508 mm minimum signal clearance, and the published keepout. TC2050-CLIP-3PACK attaches from the PCB underside for temporary retention. |
@@ -30,12 +30,12 @@ conservative subset of the cell's published 10 C to 45 C range. Both sensor
 outputs must be healthy before the SN74LVC1G38 open-drain NAND can pull
 BQ24314 CE low. A 10 kohm plus 10 kohm connector-VBUS divider biases CE between
 2.375 V and 2.625 V over the specified USB input range, while a BZT52-C3V3
-clamps connector overvoltage. The open-drain NAND can pull CE low only when
-both TMP390 outputs are released in the configured temperature window; otherwise
-the divider holds CE high and disables BQ24314 OUT. The cell does not power this
-charging interlock. Threshold accuracy, sensor-to-cell thermal coupling,
-depleted-cell dissipation, copper area, thermal regulation, and charge time
-still require physical measurement and remain DENY.
+clamps connector overvoltage. This holds CE high during startup, invalid
+threshold resistance, temperature fault, or loss of the USB-powered TPS70933
+safety rail. The cell therefore does not have
+to power its own charging-safety interlock. Threshold accuracy, sensor-to-cell
+thermal coupling, depleted-cell dissipation, copper area, thermal regulation,
+and charge time still require physical measurement and remain DENY.
 
 The module remains supplied by VREMOTE_3V3 and enters nRF52840 System OFF for
 standby. Button-matrix inputs are the only normal wake sources. The Raytac RF

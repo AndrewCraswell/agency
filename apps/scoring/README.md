@@ -6,26 +6,17 @@ vendor SDKs so its timing rules can be replayed deterministically on a developer
 See `docs/device-delivery-plan.md` for the coordinated implementation plan from executable rules and emulation through
 fabrication readiness, EVT, DVT, FIE evidence, and production validation.
 
-The canonical virtual processor path is split across the scoring authority, binary processor link, and application
-receiver:
+The canonical two-processor path is `src/virtual-stm32.ts`, `src/virtual-processor-link.ts`, and `src/virtual-esp32.ts`:
 
-- [`src/virtual-stm32.ts`](src/virtual-stm32.ts) consumes trusted front-end snapshots, owns the selected weapon scorer,
-  and emits immutable authoritative outcomes.
-- [`src/virtual-processor-link.ts`](src/virtual-processor-link.ts) carries bounded binary transport frames with
-  deterministic delay, loss, duplication, reordering, corruption, and connection faults.
-- [`src/virtual-esp32.ts`](src/virtual-esp32.ts) accepts validated [`DecisionRecord`](src/decision-record.ts) payloads
-  from STM32, preserves them for display and storage, and never re-decides a touch.
+- The virtual STM32G474 consumes trusted front-end snapshots, owns scoring, and emits immutable scorer-origin outcomes.
+- `src/decision-record.ts` defines the M0-05 immutable decision-record payload that represents those outcomes.
+- `src/transport-frame.ts` carries the payload on the M0-06 fixed binary STM32-to-ESP32 frame with sequence, length, and
+  CRC-32C validation.
+- The virtual ESP32-S3 accepts valid records exactly once for display, storage, identity, and cloud work. It never
+  reconstructs or re-decides a touch.
 
-The virtual STM32 delays an authoritative outcome only according to the selected scorer and virtual clock. The canonical
-decision-record schema carries the qualified, rejected, diagnostic, calibration, reset, or uncertainty outcome together
-with capture bounds and firmware, rule, timing, line, and calibration provenance. The receiver rejects corrupt,
-duplicated, unordered, wrong-direction, forged, or structurally invalid records; it does not reconstruct or re-decide
-the touch. The transport uses the fixed binary frame defined in [`transport-frame.ts`](src/transport-frame.ts), while
-the decision-record payload remains independently validated by `decision-record.ts`.
-
-The virtual path is a deterministic host model and does not claim physical front-end, processor-peripheral, or
-hardware-in-the-loop evidence. Native C17 and WebAssembly implementations must preserve the same authority and record
-boundaries before hardware release.
+The virtual link and ESP32 receiver reject corrupt, duplicated, unordered, wrong-direction, and structurally invalid
+deliveries. The package has no JSON scoring-event protocol or `scoring/device` compatibility API.
 
 ## Golden scenario runner
 

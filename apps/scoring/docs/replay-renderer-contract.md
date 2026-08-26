@@ -38,11 +38,6 @@ uses a fixed property order. Equivalent input data therefore produces the
 same serialized model. The authoritative record remains a separate nested
 value so application metadata cannot be mistaken for STM32 provenance.
 
-Validation and input cloning are delegated to the canonical
-`parseDecisionRecord` and `parseApplicationTimeMetadata` parsers. The replay
-boundary performs only the final fixed-order presentation projection after
-those parsers succeed; it does not maintain a second record schema.
-
 ## Preservation and authority boundary
 
 The renderer preserves, without reinterpretation:

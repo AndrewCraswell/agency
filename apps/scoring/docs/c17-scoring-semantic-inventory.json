@@ -1,0 +1,1926 @@
+{
+  "format": "c17-scoring-semantic-inventory",
+  "schemaVersion": 1,
+  "task": "CW-02",
+  "branchSignatureFormat": "function-anchor:ast-kind:ordinal:predicate-sha256-16",
+  "retiredProductionSourceSet": [
+    "src/device.ts"
+  ],
+  "productionSourceSet": [
+    "simulator/src/App.tsx",
+    "simulator/src/components/DeveloperDisplay.tsx",
+    "simulator/src/components/ui/badge.tsx",
+    "simulator/src/components/ui/button.tsx",
+    "simulator/src/components/ui/dropdown-menu.tsx",
+    "simulator/src/components/ui/input.tsx",
+    "simulator/src/components/ui/tooltip.tsx",
+    "simulator/src/format.ts",
+    "simulator/src/lib/utils.ts",
+    "simulator/src/main.tsx",
+    "simulator/src/simulator-api.ts",
+    "src/application-time-metadata.ts",
+    "src/bout-state.ts",
+    "src/bout-workflow-reducer.ts",
+    "src/canonical-data-clone.ts",
+    "src/communications-power-connector-cad.ts",
+    "src/crc32c.ts",
+    "src/decision-record.ts",
+    "src/encrypted-ir-security.ts",
+    "src/epee-resistance.ts",
+    "src/epee-contact-kernel.ts",
+    "src/epee-state-machine-audit.ts",
+    "src/epee.ts",
+    "src/event-capture.ts",
+    "src/event-journal.ts",
+    "src/foil-evidence.ts",
+    "src/foil-insulation.ts",
+    "src/foil-scenario-evidence.ts",
+    "src/foil.ts",
+    "src/golden-vector-exporter.ts",
+    "src/m4-01-analog-rule-boundary-audit.ts",
+    "src/m4-02-clamp-rail-protection.ts",
+    "src/m4-03-sensing-error-budget.ts",
+    "src/m4-05-socketed-analog-fixture.ts",
+    "src/normalized-scoring-schema.ts",
+    "src/observatory-identity.ts",
+    "src/power-reset-state.ts",
+    "src/processor-fault-containment.ts",
+    "src/product-threat-model.ts",
+    "src/reel-socket-selection.ts",
+    "src/reference-machine-comparison-capture.ts",
+    "src/remote-button-gestures.ts",
+    "src/remote-control-authority.ts",
+    "src/remote-control-golden-fixtures.ts",
+    "src/remote-control-hardware-selection.ts",
+    "src/remote-control.ts",
+    "src/replay-renderer.ts",
+    "src/requirements-to-evidence-ledger.ts",
+    "src/reset-recovery-scenarios.ts",
+    "src/rules-1-release.ts",
+    "src/sabre-scenario-evidence.ts",
+    "src/sabre.ts",
+    "src/scenario-display-fixtures.ts",
+    "src/scenario-display-projection.ts",
+    "src/scenario-display-schema.ts",
+    "src/scenario-runner.ts",
+    "src/scenario-runner-cli.ts",
+    "src/scoring-glossary-and-units.ts",
+    "src/scoring-property-harness.ts",
+    "src/strict-data-object.ts",
+    "src/timing-boundary.ts",
+    "src/timing-table.ts",
+    "src/transport-frame.ts",
+    "src/virtual-clock.ts",
+    "src/virtual-esp32.ts",
+    "src/virtual-front-end.ts",
+    "src/virtual-processor-link.ts",
+    "src/virtual-stm32.ts"
+  ],
+  "runtimeConsumerClosure": [
+    "src/bout-state.ts",
+    "src/epee-contact-kernel.ts",
+    "src/epee-resistance.ts",
+    "src/epee.ts",
+    "src/foil-evidence.ts",
+    "src/foil-insulation.ts",
+    "src/foil-scenario-evidence.ts",
+    "src/foil.ts",
+    "src/golden-vector-exporter.ts",
+    "src/sabre-scenario-evidence.ts",
+    "src/sabre.ts",
+    "src/scenario-runner-cli.ts",
+    "src/scenario-runner.ts",
+    "src/timing-boundary.ts",
+    "src/timing-table.ts",
+    "src/virtual-stm32.ts"
+  ],
+  "requiredCategories": [
+    "qualification",
+    "resistance",
+    "uncertainty",
+    "grounding",
+    "fault",
+    "diagnostic",
+    "lockout",
+    "reset",
+    "timing",
+    "ordering"
+  ],
+  "ownership": [
+    {
+      "source": "src/canonical-data-clone.ts",
+      "sourceDigest": "f9d62891d5c12efc306a5561f7426d1c834df32c5e4b78cf4fe6eed9949ce394",
+      "branchCount": 29,
+      "branchSignatureDigest": "a1fa6432d6e6d0100d5ab7f240d534a30ca2d38cc9ec4226418e0047b77748f0",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Clone bounded canonical receipt data after its owning boundary has validated the schema.",
+      "prohibited": "May not classify a contact, select a score, or reinterpret an authoritative scoring receipt.",
+      "branchFamilies": [
+        {
+          "id": "CANONICAL-DATA-BOUNDARY",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/crc32c.ts",
+      "sourceDigest": "5395abbd5f56a56cd49a272160ccf1b111fc01774617bcc46c7b2a65b424894b",
+      "branchCount": 3,
+      "branchSignatureDigest": "f94a77439de25b28b46fd14f4d736211ba265dd17db23ace242b0a1669e39fad",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-04",
+        "CW-17"
+      ],
+      "allowed": "Calculate transport integrity over bytes already selected by an authoritative boundary.",
+      "prohibited": "May not parse, classify, or alter a scoring decision.",
+      "branchFamilies": [
+        {
+          "id": "CRC32C-TRANSPORT-INTEGRITY",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/epee-contact-kernel.ts",
+      "sourceDigest": "68c8c2a3f2d34de922d38790e094f2f41d0e0b7061c8947812ece722e1c878a1",
+      "branchCount": 19,
+      "branchSignatureDigest": "889a942b6ebe4b01452ef79a91fd64d1b150f068b3e4919cb9bfd17eac331f32",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05",
+        "CW-06E"
+      ],
+      "branchFamilies": [
+        {
+          "id": "EPEE-KERNEL-QUALIFICATION",
+          "categories": [
+            "qualification",
+            "timing",
+            "lockout",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/reference-machine-comparison-capture.ts",
+      "sourceDigest": "3af0a285e6e5179f16abea0d7ca2888a9bb4305dfc5377f4adb28361261bfe15",
+      "branchCount": 152,
+      "branchSignatureDigest": "42f59d28255eb5d4668d186820af392258928c9169df08fc8238157161f63ac4",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Validate and retain reference-machine observations as non-authoritative conformance evidence.",
+      "prohibited": "May not produce a scoring decision, timing profile, threshold, or golden-scenario expectation.",
+      "branchFamilies": [
+        {
+          "id": "REFERENCE-CAPTURE-EVIDENCE",
+          "categories": [
+            "uncertainty",
+            "diagnostic",
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/rules-1-release.ts",
+      "sourceDigest": "da487ce536c8a9553a7b8f2cdd0e9e0787899a612d2e8c145900fd4d9ff6ec19",
+      "branchCount": 48,
+      "branchSignatureDigest": "e679b43a9a8e68de7869be66173819446cf780d156eff1f708add805117f3c0e",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Validate the root-approved release evidence and its pinned artifact identities.",
+      "prohibited": "May not supply scoring logic, alter a decision, or stand in for the C17 core.",
+      "branchFamilies": [
+        {
+          "id": "RULES-RELEASE-EVIDENCE",
+          "categories": [
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/scenario-display-schema.ts",
+      "sourceDigest": "47b41224133e80e495804dc4436e609b29e8571375297b67e2f50bc6fe74c44a",
+      "branchCount": 41,
+      "branchSignatureDigest": "505c5d476f43aab06e97f2f6b5fc62261932d5994fb6547354bb3db36f73763f",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Validate already-authoritative display projections and diagnostics for presentation.",
+      "prohibited": "May not compute a hit, score, lockout, timer, or scoring disposition.",
+      "branchFamilies": [
+        {
+          "id": "DISPLAY-PROJECTION-SCHEMA",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/scenario-runner-cli.ts",
+      "sourceDigest": "350df2d4002cebdfaf1cbb638099b08cee6b212b9b53dc7a3e9fe5b0db5d4a4c",
+      "branchCount": 11,
+      "branchSignatureDigest": "132caaf37ae035f3ee315304444a5d9b30c068e9a98d65d65d5c8ecac88925cf",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Resolve one bounded input pathname, invoke the canonical runner, and serialize its report.",
+      "prohibited": "May not implement an alternate scorer or change the runner's authoritative output.",
+      "branchFamilies": [
+        {
+          "id": "SCENARIO-CLI-BOUNDARY",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/strict-data-object.ts",
+      "sourceDigest": "c0205feef7fe4d55fc099065bb726ad9c8056941bdc98642cefee3764729d3be",
+      "branchCount": 13,
+      "branchSignatureDigest": "64feaa2acfcc2104034971756d88acdb5af7fa42905957b0a44e0ea36aebd050",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Apply ordinary-object shape checks at an adapter boundary.",
+      "prohibited": "May not interpret a checked object as a scoring outcome or create a scoring decision.",
+      "branchFamilies": [
+        {
+          "id": "STRICT-DATA-SHAPE",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/App.tsx",
+      "sourceDigest": "97968a7fe27156cdb433d447d361cb6bec5622d2146de1e18e91755566da3718",
+      "branchCount": 107,
+      "branchSignatureDigest": "585a65e4ab93fccd0ad092640df749517f560bdb80429c7365a73b19ede49544",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Select, replay, and render scenarios using accepted reports and display projections.",
+      "prohibited": "May not run or retain a TypeScript scoring fallback, or infer score state in the user interface.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-APPLICATION",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/components/DeveloperDisplay.tsx",
+      "sourceDigest": "9c519dcfe175ab4f56cbf912a53cb2395cea25762162d6ac0e411255eca394b2",
+      "branchCount": 9,
+      "branchSignatureDigest": "bc3c08bbeff18fe31b321fb6ff9d6c6a0cc0027be0d859cdfa98e516ff43e318",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Display the projection of already-authoritative scenario results.",
+      "prohibited": "May not derive a lamp, buzzer, or score directly from expected values or input lines.",
+      "branchFamilies": [
+        {
+          "id": "DEVELOPER-DISPLAY",
+          "categories": [
+            "diagnostic",
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/components/ui/badge.tsx",
+      "sourceDigest": "e10f96ac28e8271500b3f4d1b9b654b7b3f7e3918051d16cba5f5932ebd00565",
+      "branchCount": 0,
+      "branchSignatureDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Render a supplied, non-authoritative presentation primitive.",
+      "prohibited": "May not inspect scoring inputs or derive a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-BADGE",
+          "categories": [
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/components/ui/button.tsx",
+      "sourceDigest": "df2713f5a9668db736da868ba792874ae7cc9f9ac72dcbbfcc660342cbe8e0ff",
+      "branchCount": 1,
+      "branchSignatureDigest": "b6bd3e2fecbd11219327ea49c40778c0e8618bb49b97d80c3dea8453c4e40861",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Render a supplied, non-authoritative input control.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-BUTTON",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/components/ui/dropdown-menu.tsx",
+      "sourceDigest": "d4ccd9ee986ef6c7cd39367904078d9717fd60496efdd992e8ebaad4acb9523b",
+      "branchCount": 1,
+      "branchSignatureDigest": "891021596619ba0a7fe9567923b8abc564ab125776f821af610fd9705c1cc6f5",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Render a supplied, non-authoritative navigation control.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-MENU",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/components/ui/input.tsx",
+      "sourceDigest": "cb1737d618a4fba4d959e9d6c0fc7829f433539cb491fa76eeba1f50f459128c",
+      "branchCount": 0,
+      "branchSignatureDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Render a supplied, non-authoritative text input.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-INPUT",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/components/ui/tooltip.tsx",
+      "sourceDigest": "43567cd68dd75602ea4187c795e6d4353ab46e0da880de1b8c33a28c28c0cf17",
+      "branchCount": 0,
+      "branchSignatureDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Render supplied explanatory text.",
+      "prohibited": "May not derive, expose, or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-TOOLTIP",
+          "categories": [
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/format.ts",
+      "sourceDigest": "3812ea225a9feec1af21da762b05f61351865764fa2bf535d180db87572cc941",
+      "branchCount": 7,
+      "branchSignatureDigest": "593243227ff08dfd214ea67c7fabb221f59f4d689e6cc74335bd877fc893b560",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Format already-authoritative values for presentation.",
+      "prohibited": "May not choose a disposition, score, hit, or timer value.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-FORMAT",
+          "categories": [
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/lib/utils.ts",
+      "sourceDigest": "7c8c3dfc0cdd370d44932828eb067ef771c8fe7996693221d5d4b90af6d54f2d",
+      "branchCount": 0,
+      "branchSignatureDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Provide presentation-only utility composition.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-UTILS",
+          "categories": [
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/main.tsx",
+      "sourceDigest": "420310255cd05907a8cfb09c3b6b3ee6faf7bf583eb965e0c8a32f933eb2960b",
+      "branchCount": 1,
+      "branchSignatureDigest": "d872d30419e65bdceae5ce3271459abfa1032422f6d2cf9b02d252fab63fdccd",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Mount the simulator application.",
+      "prohibited": "May not run a scorer or derive scoring state.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-BOOTSTRAP",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "simulator/src/simulator-api.ts",
+      "sourceDigest": "31e1e3c65e2d8e804ff643d1cf95a8362023f218d38a3403080cb4903aa66f02",
+      "branchCount": 6,
+      "branchSignatureDigest": "3813dfc1dd4235166b064d8a9345dc41b224855728d7363dbde5ee51dc9a8a5f",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-13",
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Validate a scenario report received from the selected scoring backend before presentation.",
+      "prohibited": "May not turn expected assertions, raw inputs, or an invalid report into a scored result.",
+      "branchFamilies": [
+        {
+          "id": "SIMULATOR-API",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/application-time-metadata.ts",
+      "sourceDigest": "dcff4409133fda69f275cb89f140beb8e05589e79ddc91b7379c276b68bdc52e",
+      "branchCount": 80,
+      "branchSignatureDigest": "23cd9482a5b604b083d22d45caf4185dd60562dd6869f5b4648676d8495ab890",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-04",
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Attach bounded application-time metadata to an already-authoritative decision record.",
+      "prohibited": "May not change scoring time, scoring order, or the authoritative disposition.",
+      "branchFamilies": [
+        {
+          "id": "APPLICATION-TIME",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/bout-state.ts",
+      "sourceDigest": "b95701affb58d35fd36e07525d2db3b4dd9bb1416124ac8d8cd15f8d6010d948",
+      "branchCount": 26,
+      "branchSignatureDigest": "e08512bac94c906682bdd2c226913874439c2157573dbefecf5eccffb97d747f",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-13",
+        "CW-17"
+      ],
+      "allowed": "Accept supervisor-authorized weapon and bout transitions, then create or discard opaque C-core state.",
+      "prohibited": "May not inspect, qualify, suppress, reorder, or synthesize a scoring decision.",
+      "branchFamilies": [
+        {
+          "id": "BOUT-LIFECYCLE",
+          "categories": [
+            "reset"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/bout-workflow-reducer.ts",
+      "sourceDigest": "c4873a86d84d75f5ed3d49c290009eb3e40b562f39f8eee69139f0236715e3d9",
+      "branchCount": 228,
+      "branchSignatureDigest": "ab380128ec8d6253c63fe49e6bac6bf065c6eb734d5af3ffefc5f70de6cae52c",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Apply authorized bout administration around opaque authoritative scoring receipts.",
+      "prohibited": "May not qualify contact or synthesize a weapon scoring decision.",
+      "branchFamilies": [
+        {
+          "id": "BOUT-WORKFLOW",
+          "categories": [
+            "fault",
+            "reset",
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/communications-power-connector-cad.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-communications-power-connector-cad.ts",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "c62ad44ad1b88db11581a2ee71c30f28637d462bcf2e1e0f3f692e85d6b70254",
+      "branchCount": 48,
+      "branchSignatureDigest": "3c6b25fe9d644f108691c59c2e353c9b3d87a24e6433002632de05a5abfe87bc"
+    },
+    {
+      "source": "src/decision-record.ts",
+      "sourceDigest": "6387131a80073aa134424e58a4ce97b8592681314a64d905b5cab4a2b1a1ecaa",
+      "branchCount": 141,
+      "branchSignatureDigest": "2b1afa7659da94d0e291c2a8808d04c65437dc19d2730a5b84d8960ec9609164",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-04",
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Validate, preserve, and decode canonical receipts produced by the authoritative core.",
+      "prohibited": "May not create an outcome from input signals or change a decoded outcome's disposition, time, side, or signal.",
+      "branchFamilies": [
+        {
+          "id": "RECORD-VALIDATION",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/encrypted-ir-security.ts",
+      "sourceDigest": "026e6332743298dbcd83c75c43f6f56104904adfe79cf2d7af2d2ca0a69a30e3",
+      "branchCount": 146,
+      "branchSignatureDigest": "a9a9759ff11780429118871920aae153d788b7049244237a7c983754db447010",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Authenticate and reject remote transport frames before authority processing.",
+      "prohibited": "May not translate authentication state into a score or scorer fallback.",
+      "branchFamilies": [
+        {
+          "id": "IR-SECURITY",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/epee-resistance.ts",
+      "sourceDigest": "c347542b3875c704340b174a2475dc1203e0b72c8c2cea650cc09b64c1a10584",
+      "branchCount": 26,
+      "branchSignatureDigest": "a91f7b2cb94fe24831e9cb72d32c0c6578f8a62d5044a03919460a5a5bc30622",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05",
+        "CW-06E",
+        "CW-07"
+      ],
+      "branchFamilies": [
+        {
+          "id": "EPR-CLASSIFY",
+          "categories": [
+            "qualification",
+            "resistance",
+            "uncertainty",
+            "grounding",
+            "fault"
+          ]
+        },
+        {
+          "id": "EPR-QUALIFY",
+          "categories": [
+            "qualification",
+            "timing",
+            "lockout",
+            "ordering"
+          ]
+        },
+        {
+          "id": "EPR-INPUT",
+          "categories": [
+            "fault",
+            "resistance",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/epee-state-machine-audit.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-03",
+        "CW-06E"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-epee-state-machine-audit.ts",
+          "categories": [
+            "qualification",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "4d0bd91a98393515ae642efbfd761c1f6b346915ae366d63e89f9d0755ec5dd4",
+      "branchCount": 14,
+      "branchSignatureDigest": "e8dcc50782fcdbc64dfdf82baaeef21cfc446c79c7cfebd7e2dfb85e49962096"
+    },
+    {
+      "source": "src/epee.ts",
+      "sourceDigest": "428d020fd742bbed2de06b2dbef9722e807959bd9ef4c7e786c1593cb9269677",
+      "branchCount": 3,
+      "branchSignatureDigest": "0694abbd62a66707d145f8f5479f807a0c0d2767b84ea128ac37dd634a923cc5",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05",
+        "CW-06E"
+      ],
+      "branchFamilies": [
+        {
+          "id": "EP-QUAL",
+          "categories": [
+            "qualification",
+            "grounding",
+            "timing"
+          ]
+        },
+        {
+          "id": "EP-LOCK",
+          "categories": [
+            "lockout",
+            "ordering"
+          ]
+        },
+        {
+          "id": "EP-INPUT",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/event-capture.ts",
+      "sourceDigest": "7a305a0a0764749908e0bebea9359a689ba4efc70bb75a0745a2ad291871475f",
+      "branchCount": 55,
+      "branchSignatureDigest": "2a160ad410a16a345d42e8071722865f7c0c19e1796521bbac069c44b6de1bfd",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Capture bounded raw context around a received authoritative decision record.",
+      "prohibited": "May not issue, suppress, or alter a scoring record because capture is unavailable or incomplete.",
+      "branchFamilies": [
+        {
+          "id": "EVENT-CAPTURE",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/event-journal.ts",
+      "sourceDigest": "03bd937928d634a9a460f589da50cd673ecd496f68ce875244a08b220719e48c",
+      "branchCount": 78,
+      "branchSignatureDigest": "c08f54769236d2fbd116282fd83e6bfcab70af1bcbd9c504fec4ea86c645b1a6",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Persist, recover, and order immutable decision records.",
+      "prohibited": "May not derive a scoring outcome from journal recovery or corrupt-record handling.",
+      "branchFamilies": [
+        {
+          "id": "EVENT-JOURNAL",
+          "categories": [
+            "fault",
+            "ordering",
+            "reset"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/foil-evidence.ts",
+      "sourceDigest": "bbb5a6ea804bc96be9dbde2fb3b62bdcefdb3382501716815d0606d2952b425f",
+      "branchCount": 16,
+      "branchSignatureDigest": "c8d5bb791b7d7d5b60966213cf535729a6f373eac8f61fb2bc047c7058711e3f",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-06F",
+        "CW-08"
+      ],
+      "branchFamilies": [
+        {
+          "id": "FOIL-EVIDENCE-CLASSIFY",
+          "categories": [
+            "resistance",
+            "uncertainty",
+            "grounding",
+            "qualification"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/foil-insulation.ts",
+      "sourceDigest": "5ec955627dfc40ce2f301c5c66d21ac504aa4064c3cfbfcf15a1fb4f27da5ea5",
+      "branchCount": 17,
+      "branchSignatureDigest": "380118701b7207e52eab300859e94c7ba8823d6c10ea6f15b3104a284e033806",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05",
+        "CW-06F"
+      ],
+      "branchFamilies": [
+        {
+          "id": "FOIL-ANTI-BLOCKING",
+          "categories": [
+            "resistance",
+            "uncertainty",
+            "diagnostic",
+            "fault"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/foil-scenario-evidence.ts",
+      "sourceDigest": "7c3e1fd05f224e24a9759fa7ff8a1f9a9f47c7596ce42e43772be20b8205a9a2",
+      "branchCount": 22,
+      "branchSignatureDigest": "05b5d3e4874fd0208b1163521001b26715b0b6d153f6d58b0d287430b12b4278",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-03",
+        "CW-08",
+        "CW-17"
+      ],
+      "allowed": "Validate fixture shape and normalize declared foil evidence into canonical C-core inputs or independent expected artifacts.",
+      "prohibited": "May not determine a runtime hit, lamp, lockout, or final scoring disposition.",
+      "branchFamilies": [
+        {
+          "id": "FOIL-FIXTURE-NORMALIZE",
+          "categories": [
+            "resistance",
+            "grounding",
+            "timing",
+            "fault"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/foil.ts",
+      "sourceDigest": "4627f31f522d662f5cbea7271d1fdb77f77dcb1cc51f11fc8dc857811ce62bea",
+      "branchCount": 26,
+      "branchSignatureDigest": "58503745992069ee1df6d5f37820331dea17a7992543d50f46bd805789238551",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05",
+        "CW-06F",
+        "CW-07"
+      ],
+      "branchFamilies": [
+        {
+          "id": "FOIL-OBSERVE",
+          "categories": [
+            "qualification",
+            "grounding",
+            "fault",
+            "uncertainty"
+          ]
+        },
+        {
+          "id": "FOIL-QUALIFY",
+          "categories": [
+            "qualification",
+            "timing",
+            "lockout",
+            "ordering"
+          ]
+        },
+        {
+          "id": "FOIL-INPUT",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/golden-vector-exporter.ts",
+      "sourceDigest": "b959eed86d93ad43d8e88bb402f01488a1338cbd5c255782a8f4fef9df0e8ae7",
+      "branchCount": 44,
+      "branchSignatureDigest": "9c443fb93ace0c180a2e5e53681a113f0f8cbcf8e73ea11375116b763fdfcc1e",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-08",
+        "CW-19B"
+      ],
+      "allowed": "Export the temporary TypeScript-era corpus only for regression comparison while independently reviewed C17 expected artifacts are built.",
+      "prohibited": "May not generate or approve the final C17 conformance oracle.",
+      "branchFamilies": [
+        {
+          "id": "VECTOR-EXPORT",
+          "categories": [
+            "qualification",
+            "diagnostic",
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/m4-01-analog-rule-boundary-audit.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-m4-01-analog-rule-boundary-audit.ts",
+          "categories": [
+            "resistance",
+            "fault",
+            "diagnostic"
+          ]
+        }
+      ],
+      "sourceDigest": "b18e380bc01830aab5cbe21c2bc43a97c77d4a2a2fbfea368cb270549908d697",
+      "branchCount": 40,
+      "branchSignatureDigest": "d3d86a4b4046f3b607b946f17c8e43248c195a01de552e6d9bb79b9ce3eb10f9"
+    },
+    {
+      "source": "src/m4-02-clamp-rail-protection.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-m4-02-clamp-rail-protection.ts",
+          "categories": [
+            "resistance",
+            "fault",
+            "diagnostic"
+          ]
+        }
+      ],
+      "sourceDigest": "fc611d073c8baf8040a559d58e2996f78c8cf1c7c69d42ca92ce0c97d6b23603",
+      "branchCount": 46,
+      "branchSignatureDigest": "6e697b2ef1aee9657dbf8a74d49a203a4c7ded0ff105ed399ddd931ea08ef384"
+    },
+    {
+      "source": "src/m4-03-sensing-error-budget.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-m4-03-sensing-error-budget.ts",
+          "categories": [
+            "resistance",
+            "uncertainty",
+            "fault",
+            "diagnostic"
+          ]
+        }
+      ],
+      "sourceDigest": "789cec84f0c98f7243ca9950575341828c49d11b0236834b0214ca2309cda6ef",
+      "branchCount": 68,
+      "branchSignatureDigest": "1ce40174ecaa46839c8456380d2e84b01ff35d4d78d068c337c512be33bedbea"
+    },
+    {
+      "source": "src/m4-05-socketed-analog-fixture.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-m4-05-socketed-analog-fixture.ts",
+          "categories": [
+            "resistance",
+            "fault",
+            "diagnostic"
+          ]
+        }
+      ],
+      "sourceDigest": "0fed643707e1543f63e306edc48080bde72b178033094e2c43e5b20e6ad50658",
+      "branchCount": 53,
+      "branchSignatureDigest": "072b8f385ce80137f84bfdb2e576d014c2d91fb6da6308fcf6db55abe20a900a"
+    },
+    {
+      "source": "src/normalized-scoring-schema.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-04",
+        "CW-05"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-normalized-scoring-schema.ts",
+          "categories": [
+            "qualification",
+            "uncertainty",
+            "fault",
+            "diagnostic",
+            "timing",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "a9ba3d9717174e9e84ad2f8e1582a0bb1b2df9445231caff1cd9b0665b759825",
+      "branchCount": 69,
+      "branchSignatureDigest": "ac196736f4548dc33ab44d65a986e9e8719fece78f36c397a3b64962375efd81"
+    },
+    {
+      "source": "src/observatory-identity.ts",
+      "sourceDigest": "36ebd9181f715af9f8bbed5028147ad6955b084daf24a0a67456d1ad8072c522",
+      "branchCount": 11,
+      "branchSignatureDigest": "d239dfd9c6734c7b4810e253e2b7e1f230565cf116e8deed0180a3ad25381782",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Identify executable scenarios and separately reported planned-evidence rows for the observatory.",
+      "prohibited": "May not promote planned evidence, alter an execution result, or score a scenario.",
+      "branchFamilies": [
+        {
+          "id": "OBSERVATORY-IDENTITY",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/power-reset-state.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-power-reset-state.ts",
+          "categories": [
+            "reset",
+            "fault",
+            "lockout"
+          ]
+        }
+      ],
+      "sourceDigest": "d35fab5df984a361d3c29ef5c76a1295c955d6d0322a67cd999ed85d259cd0c5",
+      "branchCount": 55,
+      "branchSignatureDigest": "77ed45236b263ee8190a21302dd67b6d4b38866c73f1c77d7c5c4409c8ccf370"
+    },
+    {
+      "source": "src/processor-fault-containment.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-processor-fault-containment.ts",
+          "categories": [
+            "fault",
+            "reset",
+            "lockout"
+          ]
+        }
+      ],
+      "sourceDigest": "034ef363bc9f17f1d682f0e7a6d1bfbd313169cb246d930d31f31db592b28873",
+      "branchCount": 62,
+      "branchSignatureDigest": "bc947554797759fe9da96794f530631f918e046bcf52e4f73629a33bfdcae62b"
+    },
+    {
+      "source": "src/product-threat-model.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-product-threat-model.ts",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "reset",
+            "lockout"
+          ]
+        }
+      ],
+      "sourceDigest": "0f0f7fcff6e1e42b519fc8fed8ff981d807480636d4d9c42d38588ba12cd2946",
+      "branchCount": 48,
+      "branchSignatureDigest": "ad30729d8256b58abd3a7fd3d0c37f940719aeaf9559dd41a2a24a4480d42ca8"
+    },
+    {
+      "source": "src/reel-socket-selection.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-reel-socket-selection.ts",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "ab3036bcb2088d1bd215c0a4b596cc536af4ef855da5fdc55772ec4e594d75af",
+      "branchCount": 29,
+      "branchSignatureDigest": "427c5008d86bf50a4b854a04b5aee3c544d99b765104f27163be7d5613486c6b"
+    },
+    {
+      "source": "src/remote-button-gestures.ts",
+      "sourceDigest": "bc7731aeed0cd27fa4e02190c9f643f720ef4e6f9307c29f4794bd1d77459e9e",
+      "branchCount": 65,
+      "branchSignatureDigest": "1b7273710f49b9aae8965adba4f3813ca344d83545783239b5b64f3bf2596bea",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Interpret authorized remote-button gestures into administrative requests.",
+      "prohibited": "May not derive a hit or scoring disposition from a gesture.",
+      "branchFamilies": [
+        {
+          "id": "REMOTE-GESTURES",
+          "categories": [
+            "fault",
+            "ordering",
+            "timing"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/remote-control-authority.ts",
+      "sourceDigest": "923d0e90d6b75f39e3453e32d2cb7486200e256589167d2331ce5f72eaecb1f3",
+      "branchCount": 73,
+      "branchSignatureDigest": "88514c826575f8603205c33cf55b74f6b98b35b7f13bfc822e0c43a88b170400",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Authorize remote requests that the authoritative scoring path may receive.",
+      "prohibited": "May not translate remote authority into a score, hit qualification, or scorer fallback.",
+      "branchFamilies": [
+        {
+          "id": "REMOTE-AUTHORITY",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/remote-control-golden-fixtures.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-remote-control-golden-fixtures.ts",
+          "categories": [
+            "qualification",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "cea5cc1dee5e63da1b0e4ed264d32afdaba9bc1f36fc2799de8a4e4c3ca7efaa",
+      "branchCount": 4,
+      "branchSignatureDigest": "99222099d0ea15f090c4343ddbb71ff3951a30c8e227976cc682d6ec9512acb3"
+    },
+    {
+      "source": "src/remote-control-hardware-selection.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-remote-control-hardware-selection.ts",
+          "categories": [
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "a9e36065ca0c23cbd5bae378df8eeeb55a2f53e7af8cf75b789ebe7dd9897ca4",
+      "branchCount": 30,
+      "branchSignatureDigest": "90301e26ffa4ee95d17534cdad252cebff738ab2222412727fa9f559dfa9e114"
+    },
+    {
+      "source": "src/remote-control.ts",
+      "sourceDigest": "843abcf115ddcb3a0ccc514905aacec6acaf514a5b2391f219e57543f226ea9f",
+      "branchCount": 179,
+      "branchSignatureDigest": "b41a0ca2bf0f743144d3abe09620e8732419c654152e41b4da8e5fa4dadd2819",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-17"
+      ],
+      "allowed": "Validate and route authorized remote administrative commands.",
+      "prohibited": "May not derive a hit or scoring disposition from a command.",
+      "branchFamilies": [
+        {
+          "id": "REMOTE-CONTROL",
+          "categories": [
+            "fault",
+            "ordering",
+            "reset",
+            "timing"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/replay-renderer.ts",
+      "sourceDigest": "f5d4a9ad8ce839deda42a95c62d45e321bff85e793482d33ef3db0f48d675b2f",
+      "branchCount": 26,
+      "branchSignatureDigest": "8fa13ab09f771f86008d0583d18e3af6de115eeafe54f606df8cc88ad50cd754",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-13",
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Render a validated historical decision record and its metadata.",
+      "prohibited": "May not replay raw capture into a new score or alter replayed decision semantics.",
+      "branchFamilies": [
+        {
+          "id": "REPLAY-RENDER",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/requirements-to-evidence-ledger.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-17"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-requirements-to-evidence-ledger.ts",
+          "categories": [
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "1d675026f49c2e0b109e6fb70302e034a22625feb5b75712d21f5ed73398cbc4",
+      "branchCount": 59,
+      "branchSignatureDigest": "e4273a1f41602fdc1164aeb88f8d3b2c0385e6a27e2a585a81b0b2c10d6847a6"
+    },
+    {
+      "source": "src/reset-recovery-scenarios.ts",
+      "sourceDigest": "3c99e3d88755bfd844960fc9f760c79aa4d47feb424bc34c3332f48d21a27b15",
+      "branchCount": 78,
+      "branchSignatureDigest": "46af87b477d367596e9a8987c54ed248f8182dcc2da1b324087718503c1f5327",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Exercise reset and recovery scenarios around canonical records and transport.",
+      "prohibited": "May not preserve opaque core state across a reset or manufacture a replacement score.",
+      "branchFamilies": [
+        {
+          "id": "RESET-RECOVERY",
+          "categories": [
+            "reset",
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/sabre-scenario-evidence.ts",
+      "sourceDigest": "c1eac3e104bbd209e38366ec3f1a6be2ccfd60859a70cbd8d318e895dd43d4f0",
+      "branchCount": 35,
+      "branchSignatureDigest": "002774ed698ecc6053ec0699d0ae524070b71f5a541e7b78f82db51403b8854a",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-03",
+        "CW-08",
+        "CW-17"
+      ],
+      "allowed": "Normalize declared logical lines and attach source-input provenance to receipts from the authoritative core.",
+      "prohibited": "May not independently qualify contact, make a diagnostic decision, or select lockout behavior.",
+      "branchFamilies": [
+        {
+          "id": "SABRE-FIXTURE-NORMALIZE",
+          "categories": [
+            "resistance",
+            "uncertainty",
+            "fault",
+            "diagnostic",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/sabre.ts",
+      "sourceDigest": "92b788e17614dda028efbe9025881b440f0efda4f116acbc54f57ad09b85ef15",
+      "branchCount": 68,
+      "branchSignatureDigest": "0cf04fddc8457847b2500d45e4236c379439818b31536f562f1ce8d5bb0adb08",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05",
+        "CW-06S",
+        "CW-07"
+      ],
+      "branchFamilies": [
+        {
+          "id": "SABRE-PATH",
+          "categories": [
+            "resistance",
+            "uncertainty",
+            "fault"
+          ]
+        },
+        {
+          "id": "SABRE-OBSERVE",
+          "categories": [
+            "qualification",
+            "fault",
+            "uncertainty"
+          ]
+        },
+        {
+          "id": "SABRE-DIAGNOSTIC",
+          "categories": [
+            "diagnostic",
+            "timing",
+            "ordering"
+          ]
+        },
+        {
+          "id": "SABRE-QUALIFY",
+          "categories": [
+            "qualification",
+            "timing",
+            "lockout",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/scenario-display-fixtures.ts",
+      "sourceDigest": "7d3690fbce812f66d396d30213642aaffeed132117d8a411c057de34bc99ca1b",
+      "branchCount": 89,
+      "branchSignatureDigest": "454ee54c669672df0d5063c63c86be97b0b3f81f9d3627c1932cbedc3b813229",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Validate independently reviewed display fixtures.",
+      "prohibited": "May not create a scoring outcome or use a fixture as a runtime scorer.",
+      "branchFamilies": [
+        {
+          "id": "DISPLAY-FIXTURES",
+          "categories": [
+            "diagnostic",
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/scenario-display-projection.ts",
+      "sourceDigest": "49e7c86ebc0acd291c45b3cb28aeeacc972aaf994d88c7508c4e6866d1eabfe3",
+      "branchCount": 64,
+      "branchSignatureDigest": "723ef47a497f2ea292f936e9e1faba8f4ef104ed06b6b67070d6fa859d1672d2",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-13",
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Project already-authoritative receipts and diagnostics into display and accessibility state, including unavailable state.",
+      "prohibited": "May not illuminate a hit lamp or request the buzzer from an expected result, raw input, or inferred scoring condition.",
+      "branchFamilies": [
+        {
+          "id": "DISPLAY-PROJECTION",
+          "categories": [
+            "diagnostic",
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/scenario-runner.ts",
+      "sourceDigest": "781e9eacd535e32f9cbecaf50ec089a8b37dae1ebd82f2e07be5f732de564973",
+      "branchCount": 194,
+      "branchSignatureDigest": "9b201329e5fdf9d8cd88f5b76776390f40adfae686a1f975b2e2d431bd1c8db0",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-08",
+        "CW-13",
+        "CW-16",
+        "CW-17"
+      ],
+      "allowed": "Validate corpus documents, normalize inputs, invoke exactly one selected scoring backend, and compare its receipts to reviewed expectations.",
+      "prohibited": "May not choose a TypeScript scorer after WebAssembly cutover or reinterpret a core receipt into a different scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "RUNNER-NORMALIZE",
+          "categories": [
+            "qualification",
+            "resistance",
+            "uncertainty",
+            "grounding",
+            "fault",
+            "diagnostic",
+            "timing",
+            "ordering"
+          ]
+        },
+        {
+          "id": "RUNNER-REPORT",
+          "categories": [
+            "reset",
+            "lockout"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/scoring-glossary-and-units.ts",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-03"
+      ],
+      "allowed": "Consume, validate, transport, or project an authoritative receipt.",
+      "prohibited": "May not derive or alter a scoring outcome.",
+      "branchFamilies": [
+        {
+          "id": "ADAPTER-src-scoring-glossary-and-units.ts",
+          "categories": [
+            "qualification",
+            "ordering"
+          ]
+        }
+      ],
+      "sourceDigest": "c55f38f55dc171991879ed400713ce28bd95445543b01a10c4194a4f0127e821",
+      "branchCount": 84,
+      "branchSignatureDigest": "426d6efc1704b704a9ce75f8ce30461fc373e96819d359389aa09dcc1972ebfe"
+    },
+    {
+      "source": "src/scoring-property-harness.ts",
+      "sourceDigest": "fc9d935049bfb82319a1cef758002ea6435f59780974f94ed4e95beee63dd2db",
+      "branchCount": 16,
+      "branchSignatureDigest": "318a06e249195642d3526a669521e94349f4f3de52a8a5cea080fab8529b88e7",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-08",
+        "CW-09",
+        "CW-19B"
+      ],
+      "allowed": "Generate adversarial test inputs and assert properties against the selected conformance target.",
+      "prohibited": "May not be linked into a production scoring path or define expected C17 behavior.",
+      "branchFamilies": [
+        {
+          "id": "PROPERTY-HARNESS",
+          "categories": [
+            "qualification",
+            "fault",
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/timing-boundary.ts",
+      "sourceDigest": "7f195c735b1d1c1ddace365cc43434d106876fdc138189c24e6a3e8e9c6d0c21",
+      "branchCount": 5,
+      "branchSignatureDigest": "655b2cdd2ec2954039dce34979e9fdffcd4eb3b2d1cc1f537545c6dd736cecde",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-05",
+        "CW-08"
+      ],
+      "allowed": "Generate independent boundary fixtures from a reviewed timing profile.",
+      "prohibited": "May not run in a device or browser scoring path or establish expected results from the scorer under test.",
+      "branchFamilies": [
+        {
+          "id": "TIMING-FIXTURES",
+          "categories": [
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/timing-table.ts",
+      "sourceDigest": "bb2978197c47c5b4cac53198b472bea42b3b6d3e6b08af406ad95de29083265c",
+      "branchCount": 22,
+      "branchSignatureDigest": "4de1ba9d2adfce057771510c78d73c327a31ab140392395bc287a0519eb5de5f",
+      "policy": "c17-core",
+      "successorTasks": [
+        "CW-03",
+        "CW-05"
+      ],
+      "branchFamilies": [
+        {
+          "id": "TIMING-PROFILE",
+          "categories": [
+            "timing",
+            "fault"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/transport-frame.ts",
+      "sourceDigest": "4374a0158ca21339c2849d8fee52f0b67518f5684794416b1a1d585057be35b2",
+      "branchCount": 23,
+      "branchSignatureDigest": "c71c84087a5edda59fc3e829302f51f8a3933be789a4e63d32ed86927cbbb9a3",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Encode and validate transport framing for authoritative records.",
+      "prohibited": "May not alter the scoring meaning represented by a record.",
+      "branchFamilies": [
+        {
+          "id": "TRANSPORT-FRAME",
+          "categories": [
+            "fault",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/virtual-clock.ts",
+      "sourceDigest": "42fffb43518410522fd38a0a7c3339caedb5c838a0098e9433a7bbe5d5611827",
+      "branchCount": 29,
+      "branchSignatureDigest": "bc46c5cd5314992183f809f3593f5a80d9e8ba30ca0bb392e45318fa7f80fbd4",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-05",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Supply deterministic test or execution time to the selected authoritative backend.",
+      "prohibited": "May not determine a scoring outcome from elapsed time.",
+      "branchFamilies": [
+        {
+          "id": "VIRTUAL-CLOCK",
+          "categories": [
+            "fault",
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/virtual-esp32.ts",
+      "sourceDigest": "bcb0bbf0953116b546074a865ad7d62cffa784797cd624ee008716ea5020844d",
+      "branchCount": 63,
+      "branchSignatureDigest": "274facd6954f8e184e46dc2e4db4a06835e7c0e664ac24f4b19b04acc3621235",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Validate and consume STM32-owned decision-record transport payloads.",
+      "prohibited": "May not decide a hit, reinterpret a score, or become a scoring fallback.",
+      "branchFamilies": [
+        {
+          "id": "ESP32-RECORD-CONSUME",
+          "categories": [
+            "fault",
+            "ordering",
+            "reset"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/virtual-front-end.ts",
+      "sourceDigest": "5f7bffc16581545a2fe89eff4887433ac4c732f0a26231d520a6d51812dacacf",
+      "branchCount": 272,
+      "branchSignatureDigest": "765c59337af4e4463bd5160029836519193f5f079f4ac4d212a3e93ccdd490a8",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-10",
+        "CW-13",
+        "CW-17"
+      ],
+      "allowed": "Validate and supply normalized acquisition snapshots to the authoritative execution path.",
+      "prohibited": "May not apply weapon rules or infer a hit from an acquisition sample.",
+      "branchFamilies": [
+        {
+          "id": "FRONT-END-NORMALIZE",
+          "categories": [
+            "fault",
+            "timing"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/virtual-processor-link.ts",
+      "sourceDigest": "1fc749cbaaedbb69805e226e2b4e98eadcb45abf3d12959217c0ec1b223aae54",
+      "branchCount": 65,
+      "branchSignatureDigest": "9617796afb3a262ad0c931084b59c8b9651c7c460367a9d6105399977bcb82c1",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-07",
+        "CW-10",
+        "CW-17"
+      ],
+      "allowed": "Transport already-authoritative records with explicit faults and ordering.",
+      "prohibited": "May not alter scoring meaning while queueing, corrupting, delaying, or dropping transport frames.",
+      "branchFamilies": [
+        {
+          "id": "PROCESSOR-LINK",
+          "categories": [
+            "fault",
+            "ordering",
+            "timing",
+            "reset"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "src/virtual-stm32.ts",
+      "sourceDigest": "11d86212394c50e48d0418d33a14b72533c3ff643b44f95303171df581610701",
+      "branchCount": 53,
+      "branchSignatureDigest": "16e188c34e8d33e5438f4f68f338f7efcd07479ceedea90ce95f92d8c8b51237",
+      "policy": "adapter",
+      "successorTasks": [
+        "CW-10",
+        "CW-14",
+        "CW-17"
+      ],
+      "allowed": "Model host-side acquisition scheduling and forward trusted snapshots to the one authoritative core invocation.",
+      "prohibited": "May not implement a weapon rule, decide a hit, or fabricate an authoritative outcome after a core failure.",
+      "branchFamilies": [
+        {
+          "id": "VSTM32-FAIL-CLOSED",
+          "categories": [
+            "fault",
+            "reset",
+            "timing",
+            "ordering"
+          ]
+        }
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "source": "src/bout-state.ts",
+      "consumes": [
+        "src/epee-resistance.ts",
+        "src/foil.ts",
+        "src/sabre.ts"
+      ]
+    },
+    {
+      "source": "src/epee-resistance.ts",
+      "consumes": [
+        "src/epee-contact-kernel.ts",
+        "src/epee.ts",
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/epee.ts",
+      "consumes": [
+        "src/epee-contact-kernel.ts",
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/foil-evidence.ts",
+      "consumes": [
+        "src/foil-insulation.ts"
+      ]
+    },
+    {
+      "source": "src/foil-insulation.ts",
+      "consumes": [
+        "src/foil.ts"
+      ]
+    },
+    {
+      "source": "src/foil-scenario-evidence.ts",
+      "consumes": [
+        "src/foil-evidence.ts",
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/foil.ts",
+      "consumes": [
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/golden-vector-exporter.ts",
+      "consumes": [
+        "src/epee-resistance.ts",
+        "src/foil.ts",
+        "src/sabre.ts",
+        "src/timing-boundary.ts",
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/sabre-scenario-evidence.ts",
+      "consumes": [
+        "src/sabre.ts",
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/sabre.ts",
+      "consumes": [
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/scenario-runner-cli.ts",
+      "consumes": [
+        "src/scenario-runner.ts"
+      ]
+    },
+    {
+      "source": "src/scenario-runner.ts",
+      "consumes": [
+        "src/epee-resistance.ts",
+        "src/epee.ts",
+        "src/foil-scenario-evidence.ts",
+        "src/foil.ts",
+        "src/sabre-scenario-evidence.ts",
+        "src/sabre.ts",
+        "src/timing-boundary.ts",
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/scoring-property-harness.ts",
+      "consumes": [
+        "src/epee-resistance.ts",
+        "src/foil.ts",
+        "src/sabre.ts"
+      ]
+    },
+    {
+      "source": "src/timing-boundary.ts",
+      "consumes": [
+        "src/timing-table.ts"
+      ]
+    },
+    {
+      "source": "src/virtual-stm32.ts",
+      "consumes": [
+        "src/timing-table.ts",
+        "src/virtual-front-end.ts"
+      ]
+    },
+    {
+      "source": "src/application-time-metadata.ts",
+      "consumes": [
+        "src/decision-record.ts"
+      ]
+    },
+    {
+      "source": "src/event-capture.ts",
+      "consumes": [
+        "src/decision-record.ts",
+        "src/virtual-front-end.ts",
+        "src/virtual-stm32.ts"
+      ]
+    },
+    {
+      "source": "src/event-journal.ts",
+      "consumes": [
+        "src/decision-record.ts"
+      ]
+    },
+    {
+      "source": "src/replay-renderer.ts",
+      "consumes": [
+        "src/application-time-metadata.ts",
+        "src/decision-record.ts"
+      ]
+    },
+    {
+      "source": "src/reset-recovery-scenarios.ts",
+      "consumes": [
+        "src/decision-record.ts",
+        "src/event-journal.ts",
+        "src/virtual-processor-link.ts"
+      ]
+    },
+    {
+      "source": "src/virtual-esp32.ts",
+      "consumes": [
+        "src/decision-record.ts",
+        "src/virtual-processor-link.ts"
+      ]
+    },
+    {
+      "source": "simulator/src/simulator-api.ts",
+      "consumes": [
+        "src/scenario-display-projection.ts"
+      ]
+    },
+    {
+      "source": "simulator/src/components/DeveloperDisplay.tsx",
+      "consumes": [
+        "src/scenario-display-projection.ts"
+      ]
+    },
+    {
+      "source": "simulator/src/App.tsx",
+      "consumes": [
+        "src/observatory-identity.ts",
+        "src/scenario-display-projection.ts"
+      ]
+    }
+  ]
+}

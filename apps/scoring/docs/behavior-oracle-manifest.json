@@ -216,14 +216,14 @@
       "sha256": "sha256:894cf5fe1a3d4dd34d69a602d95b8482aaf0716ae2b17daf1f854ade3eb27a9c"
     },
     {
-      "category": "display-projection",
-      "path": "apps/scoring/observatory/index.html",
-      "sha256": "sha256:b919a12a5dd4ebbffa53aeb3a733325e027f3b48a023acb7a811ba680299389e"
-    },
-    {
       "category": "environment",
       "path": "apps/scoring/package.json",
-      "sha256": "sha256:d400c175a63c1390509d667222480bf75cb2c5ad32eb33350ae6c57caf46a4c6"
+      "sha256": "sha256:fc8903f42eb700bad82d516aa6018d8821998ad86a3989d468a24d6edc692156"
+    },
+    {
+      "category": "oracle-generator",
+      "path": "apps/scoring/scripts/behavior-oracle.mjs",
+      "sha256": "sha256:13ab1c1fc18851502e41f8045d23ca92860385e60552437eb2179e1cad400f7c"
     },
     {
       "category": "golden-corpus",
@@ -238,7 +238,102 @@
     {
       "category": "display-projection",
       "path": "apps/scoring/scripts/serve-scenario-observatory.mjs",
-      "sha256": "sha256:185c9d66bec88ba64e89d0069de88672d202ab71c7ec3b2e68d136ca022d60ef"
+      "sha256": "sha256:d88a18fc05b8b708b5a08601938526ad64b142fa7d5049b8a9f64d8ecd2de5ad"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/components.json",
+      "sha256": "sha256:763dc6708496b6210b3603807701dd16da8d24165db1773ae758eaccbf7838e5"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/index.html",
+      "sha256": "sha256:566c03477c3fb8453d45a24f9169704ff25942d440d3fcce892282c98d606422"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/App.test.tsx",
+      "sha256": "sha256:214b97ae541a265a276be40b5faef591b071cf9e37dd40798e47ffb5896142fc"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/App.tsx",
+      "sha256": "sha256:0f520d16217b4eee4ca680b277695b2d679618adf9c1568dd828560399931edc"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/DeveloperDisplay.test.tsx",
+      "sha256": "sha256:068e1e5a0d585d99ba1dd5c4a57d6cebd65d00733e858c18e326e5e0a54e7a32"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/DeveloperDisplay.tsx",
+      "sha256": "sha256:9c519dcfe175ab4f56cbf912a53cb2395cea25762162d6ac0e411255eca394b2"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/ui/badge.tsx",
+      "sha256": "sha256:e10f96ac28e8271500b3f4d1b9b654b7b3f7e3918051d16cba5f5932ebd00565"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/ui/button.tsx",
+      "sha256": "sha256:df2713f5a9668db736da868ba792874ae7cc9f9ac72dcbbfcc660342cbe8e0ff"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/ui/dropdown-menu.tsx",
+      "sha256": "sha256:d4ccd9ee986ef6c7cd39367904078d9717fd60496efdd992e8ebaad4acb9523b"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/ui/input.tsx",
+      "sha256": "sha256:cb1737d618a4fba4d959e9d6c0fc7829f433539cb491fa76eeba1f50f459128c"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/components/ui/tooltip.tsx",
+      "sha256": "sha256:43567cd68dd75602ea4187c795e6d4353ab46e0da880de1b8c33a28c28c0cf17"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/format.test.ts",
+      "sha256": "sha256:016131bf9e7c94e68728310c85abca1b8801086d6f26066138e9715f8de73e02"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/format.ts",
+      "sha256": "sha256:3812ea225a9feec1af21da762b05f61351865764fa2bf535d180db87572cc941"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/lib/utils.ts",
+      "sha256": "sha256:7c8c3dfc0cdd370d44932828eb067ef771c8fe7996693221d5d4b90af6d54f2d"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/main.tsx",
+      "sha256": "sha256:420310255cd05907a8cfb09c3b6b3ee6faf7bf583eb965e0c8a32f933eb2960b"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/simulator-api.ts",
+      "sha256": "sha256:9339896480d928e699206dc3ebdf8aee8b20e80ca60ae3c53ab586919b1577b7"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/src/styles.css",
+      "sha256": "sha256:d92380bdcfc440f93903d6254886c0653f71fa94ce6b826b22ca87575e475e1a"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/tsconfig.json",
+      "sha256": "sha256:b405ba81424d26e1da52842420af471d2e2324a97ab24528e92fe833b7b26383"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/simulator/vite.config.ts",
+      "sha256": "sha256:a7980067e73dbb1b1856302f6bfde3cf18741b73bc532da1364bcddfe88a3c39"
     },
     {
       "category": "rules-1",
@@ -311,9 +406,19 @@
       "sha256": "sha256:fe233ff0d3c3f5bab15b059fc4746dbac5d9c82f8cd0c095922320da2bfbf8b9"
     },
     {
+      "category": "simulator",
+      "path": "apps/scoring/src/observatory-identity.test.ts",
+      "sha256": "sha256:c6cbf76758bbfe242c3aed6218e3264f62f46a66f9e98b6bde2cc911f81ae6c0"
+    },
+    {
+      "category": "simulator",
+      "path": "apps/scoring/src/observatory-identity.ts",
+      "sha256": "sha256:36ebd9181f715af9f8bbed5028147ad6955b084daf24a0a67456d1ad8072c522"
+    },
+    {
       "category": "display-projection",
       "path": "apps/scoring/src/observatory-integration.test.ts",
-      "sha256": "sha256:5980e0835a03b1053c460564f66329d01ecba717cdc50ef0d8a9d9b4e1b72cd7"
+      "sha256": "sha256:b3e34f7ddf25a70ca5d906df4a9cc1c2712e21701dd5ccea70857d814a80cc43"
     },
     {
       "category": "golden-corpus",
@@ -438,7 +543,7 @@
     {
       "category": "environment",
       "path": "pnpm-lock.yaml",
-      "sha256": "sha256:4cf3e261f64b4988906c54ce3736d922c9837c752803598fdf73362fb699bc65"
+      "sha256": "sha256:609d06ae81e7d17009b923d1dce5bca18d9ff68a4dbe4bcdfa6fec74aba2310a"
     },
     {
       "category": "environment",
@@ -456,6 +561,7 @@
     "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/foil-evidence.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
     "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
     "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/scenario-display-fixtures.test.ts src/observatory-integration.test.ts",
+    "pnpm --filter scoring test:simulator",
     "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
     "pnpm --filter scoring check:golden-vectors",
     "pnpm --filter scoring test:product-release-host"
@@ -464,5 +570,5 @@
   "hashPolicy": "sha256 over UTF-8 text after CRLF-to-LF normalization",
   "oracleRevision": "rules-1",
   "schemaVersion": 1,
-  "digest": "sha256:a1cda2dbd1617bab3706db528542c7a1f5f08ba3adad2790ce13cf752996cac7"
+  "digest": "sha256:0347439c8d8c62e6b83c3779c964761d5ebd8356379267657c19207fe90ea59d"
 }

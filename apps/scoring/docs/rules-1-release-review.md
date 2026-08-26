@@ -1,23 +1,20 @@
 # `rules-1` independent release review
 
 **Task:** M1-11
-**Review date:** 2026-08-24
-**Reviewer role:** root-independent-reviewer
-**Verdict:** **APPROVE CURRENT `rules-1` HOST SCORING-SPECIFICATION RELEASE**
+**Review date:** 2026-08-22
+**Reviewer role:** independent specification judge
+**Verdict:** **APPROVE `rules-1` host scoring-specification release**
 
 ## Decision
 
-The historical host rule review at source revision
-`8e4681d604468cf51b470c35a9908ed9f5061e74` was approved by commit `211c291`.
-The host rule modules remain deterministic, fail closed for their declared
-logical inputs, and retain the focused evidence recorded below. Commit
-`606ce67` subsequently changed the bound FIE traceability artifact, so the
-canonical `rules-1` record now pins current revision
-`afc7e6d44dc80e1147e9990931dafe78271f6cfc`. The root reviewer independently
-confirmed all 39 recorded Git-blob digests and the current focused verification;
-the renewed record is approved at that pinned source revision.
+The host rule modules are deterministic, fail closed for their declared
+logical inputs, and have focused unit evidence. The generated M1-08 suite
+exercises every selected runtime timing boundary below, at, and above its
+value for both sides and all three weapons. The reviewed R-02 ledger correction
+at `5ea3e70` now records the committed M1 host evidence and retains every
+physical and later-stage gate. The stated M1-11 acceptance criteria are met.
 
-The historical approval was deliberately narrow. It does **not** establish analog work,
+This is a deliberately narrow approval. It does **not** establish analog work,
 hardware, a new timing policy, a new FIE interpretation, an expanded
 emulator, foil or sabre golden-scenario files, or a scenario-runner CLI before
 releasing the host scoring specification. It also does not establish target
@@ -55,28 +52,16 @@ homologation certificate do not affect this host-rule release decision.
 | M1-08 boundary suite | The generated suite executes 54 runtime below/at/above vectors and retains 26 non-normative references for both sides. Its separate golden-corpus identity resolver permits only the currently committed epee corpus and fails closed for future identities. | Pass. |
 | M1-09 properties | Seeded determinism, symmetry, monotonic-time rejection, no-hit safety, and reset/weapon-change properties are reproducible and pass. | Pass. |
 | M1-10 reference capture | The schema-valid example and signed-measurement guard pass. The contract correctly prevents a Favero observation from becoming a rule. | Pass. |
-| M1-11 release | The historical review and current renewal record preserve the completed M1 host evidence and every remaining physical/later-stage gate. | **Pass at the pinned current source revision.** |
+| M1-11 release | The reviewed ledger records the completed M1 host evidence and its remaining physical/later-stage gates; focused and full scoring verification pass. | **Pass.** |
 
 ## Release closure
-
-### Historical closure
 
 The previous sole release blocker was the R-02 ledger status. Commit `5ea3e70`
 corrected it by recording M1-02 through M1-10 host evidence, the independent
 M1-11 review state, and the still-open analog, acquisition, firmware, output,
-HIL, EVT, DVT, production, fabrication, and approval gates. Commit `211c291`
-approved that record at source revision
-`8e4681d604468cf51b470c35a9908ed9f5061e74`; that approval remains
-historical and immutable in Git history.
-
-### Current renewal closure
-
-Commit `606ce67` changed the bound FIE traceability artifact. The canonical
-record has therefore been renewed at current source revision
-`afc7e6d44dc80e1147e9990931dafe78271f6cfc` with its independently recomputed
-digest. The root-independent reviewer confirmed all 39 bound artifact digests,
-reviewed the only changed bound artifact, and accepted the current declared
-checks. This closes M1-11 at the host-rule scope only.
+HIL, EVT, DVT, production, fabrication, and approval gates. This resolves the
+written M1-11 ledger criterion without promoting host tests into hardware or
+approval claims.
 
 ## Recommended follow-on work, not a `rules-1` release gate
 
@@ -90,10 +75,7 @@ remains accurately deferred until there is an executable host output contract.
 
 ## Validation evidence
 
-The historical checks remain retained below. For the current renewal, the
-39-artifact Git-blob audit passed with zero mismatches, the 14-file focused rule
-suite passed 353 tests, the release-record suite passed 3 tests, and TypeScript,
-focused lint, format, and whitespace checks passed.
+The following checks were run at the review revision:
 
 | Check | Result |
 | --- | --- |

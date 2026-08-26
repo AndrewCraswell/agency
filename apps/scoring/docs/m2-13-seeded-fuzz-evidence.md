@@ -30,14 +30,6 @@ decision-payload rejections. It exercises each of CRC, message type, payload len
 version rejection 32 times, and both direction checks 64 times. The journal matrix contains 1,024 write-boundary
 cases: 768 recover the old checkpoint and 256 recover the new checkpoint.
 
-The receiver-boundary checks replay all 256 seed/iteration pairs. A malformed
-frame is rejected before it can create a record or alter receiver state; the
-one below the link's minimum frame size is rejected by the bounded link input
-guard. The record-shape checks replay 256 malformed payloads plus an unknown
-field mutation for each pair, and every rejected payload leaves both the
-receiver and journal empty. The clone-boundary case also rejects a decoder
-result containing a 4,097-character record ID without retaining it.
-
 ## Properties and evidence
 
 The suite proves the following host-model properties across the fixed corpus:
@@ -50,11 +42,7 @@ The suite proves the following host-model properties across the fixed corpus:
 - matching journal record IDs are idempotent, differing content is a conflict, and neither path appends a second record;
 - extra or forward-version decision-record shapes are rejected by the M2-07 authority guard;
 - every M2-08 write boundary recovers exactly the old committed checkpoint or the new committed checkpoint; and
-- malformed records fail before the virtual journal performs a durable write;
-- a repeated frame sequence and a repeated record ID each produce a rejection,
-  while the receiver retains exactly one field-for-field-equivalent record; and
-- a decoder-owned record mutation after acceptance does not change the stored
-  record, ruling out silent aliasing corruption.
+- malformed records fail before the virtual journal performs a durable write.
 
 This evidence does not claim heap measurement, flash atomicity, physical transport integrity, or firmware qualification.
 Those remain target and hardware evidence owned by the later delivery tasks.

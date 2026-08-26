@@ -22,7 +22,7 @@ machine.
 
 The normative source is FIE Material Rules, Book 3, August 2026, Annex B,
 A.2, p. 79, as traced in FOIL-04 of
-[`fie-traceability-matrix.md`](fie-traceability-matrix.md). The terms and
+[`fie-traceability-matrix.md`](specifications/fie-traceability-matrix.md). The terms and
 interval rules in [`scoring-glossary.md`](scoring-glossary.md), the
 affected-side `foil-insulation-diagnostic` phase in
 [`seven-conductor-signal-contract.md`](seven-conductor-signal-contract.md),
@@ -30,7 +30,7 @@ and the uncertainty conventions in
 [`golden-scenario-contract.md`](golden-scenario-contract.md) apply.
 
 The source artifact is the local
-[`fie-material-rules-2026-08-en.pdf`](fie-material-rules-2026-08-en.pdf),
+[`fie-material-rules-2026-08-en.pdf`](specifications/fie-material-rules-2026-08-en.pdf),
 SHA-256
 `1489D28ED6F3C91E27ECDF75BB29B4ED65C688A012F544D37D946A9DA81AFC26`.
 The official source index is
