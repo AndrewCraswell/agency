@@ -252,6 +252,10 @@ const previewHtml = `<!doctype html>
             <p>One red and one green 5 mm on-board LED provide immediate bench feedback from two dedicated ESP32 GPIOs</p>
           </article>
           <article class="io-module">
+            <h2>Sound</h2>
+            <p>One on-board TDK PS1240P02BT piezo sounder is switched from GPIO39 at its 4 kHz rated frequency</p>
+          </article>
+          <article class="io-module">
             <h2>Communications</h2>
             <p>Required board interfaces</p>
             <div class="port-row">

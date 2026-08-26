@@ -23,6 +23,44 @@ const irReceiverFootprint = (
   </footprint>
 )
 
+const scoringSounderFootprint = (
+  <footprint name="TDK_PS1240P02BT_D12_2MM" originalLayer="top">
+    <platedhole
+      name="POSITIVE"
+      shape="circular_hole_with_rect_pad"
+      pcbX={-2.5}
+      pcbY={0}
+      holeDiameter="1mm"
+      rectPadWidth="2mm"
+      rectPadHeight="2mm"
+      rectBorderRadius="0mm"
+      portHints={["1", "pin1", "positive", "pos"]}
+    />
+    <platedhole
+      name="SWITCHED_GROUND"
+      shape="circular_hole_with_rect_pad"
+      pcbX={2.5}
+      pcbY={0}
+      holeDiameter="1mm"
+      rectPadWidth="2mm"
+      rectPadHeight="2mm"
+      rectBorderRadius="1mm"
+      portHints={["2", "pin2", "negative", "neg"]}
+    />
+    <silkscreencircle pcbX={0} pcbY={0} radius="6.1mm" strokeWidth="0.2mm" isOutline />
+    <silkscreencircle pcbX={-2.5} pcbY={0} radius="1.25mm" strokeWidth="0.2mm" isOutline />
+    <courtyardrect pcbX={0} pcbY={0} width="12.7mm" height="12.7mm" strokeWidth="0.05mm" />
+  </footprint>
+)
+
+export const prototypeSounder = {
+  driveGpio: "GPIO39",
+  driveFrequencyHz: 4000,
+  manufacturerPartNumber: "PS1240P02BT",
+  ratedDrive: "3V(0-p) square wave",
+  supply: "APP_3V3"
+} as const
+
 export function PrototypePeripherals(): ReactElement {
   return (
     <group name="PROTOTYPE_PERIPHERALS" pcbX={0} pcbY={0} pcbPack={false}>
@@ -85,13 +123,14 @@ export function PrototypePeripherals(): ReactElement {
         cadModel={cadModels.resistor0805}
       />
 
-      <pinheader
-        name="J_BUZZER"
-        pinCount={2}
-        pinLabels={["V5", "BUZZER_SWITCHED_GND"]}
+      <chip
+        name="BZ_SCORING"
+        manufacturerPartNumber={prototypeSounder.manufacturerPartNumber}
+        pinLabels={{ pin1: "POSITIVE", pin2: "SWITCHED_GROUND" }}
+        footprint={scoringSounderFootprint}
         pcbX={67}
         pcbY={-12}
-        cadModel={cadModels.pinHeader1x02}
+        cadModel={cadModels.scoringSounder}
       />
       <chip
         name="Q_BUZZER"
@@ -156,8 +195,8 @@ export function PrototypePeripherals(): ReactElement {
       <trace from="net.DISPLAY_DATA" to="R_DISPLAY_DATA.pin1" />
       <trace from="R_DISPLAY_DATA.pin2" to="J_DISPLAY.DISPLAY_DATA" />
 
-      <trace from="net.V5" to="J_BUZZER.V5" />
-      <trace from="J_BUZZER.BUZZER_SWITCHED_GND" to="Q_BUZZER.DRAIN" />
+      <trace from="net.APP_3V3" to="BZ_SCORING.POSITIVE" />
+      <trace from="BZ_SCORING.SWITCHED_GROUND" to="Q_BUZZER.DRAIN" />
       <trace from="Q_BUZZER.SOURCE" to="net.APP_GND" />
       <trace from="net.BUZZER_DRIVE" to="R_BUZZER_GATE.pin1" />
       <trace from="R_BUZZER_GATE.pin2" to="Q_BUZZER.GATE" />

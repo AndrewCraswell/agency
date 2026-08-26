@@ -51,6 +51,9 @@ export const cadModels = {
   resistor0805: {
     stepUrl: `${kicadModelRoot}/Resistor_SMD.3dshapes/R_0805_2012Metric.step`
   },
+  scoringSounder: {
+    stepUrl: `${kicadModelRoot}/Buzzer_Beeper.3dshapes/Buzzer_TDK_PS1240P02BT_D12.2mm_H6.5mm.step`
+  },
   sot23: {
     stepUrl: `${kicadModelRoot}/Package_TO_SOT_SMD.3dshapes/SOT-23.step`
   },

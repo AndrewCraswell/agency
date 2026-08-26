@@ -8,6 +8,7 @@ import MinimalScoringPrototype, {
   prototypeInterfaces
 } from "./index.circuit.js"
 import { prototypeIndicators } from "./prototype-indicators.circuit.js"
+import { prototypeSounder } from "./prototype-peripherals.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
 
@@ -56,7 +57,7 @@ describe("minimal scoring prototype baseline", () => {
         "U_V5_REGULATOR",
         "U_CONTROLLER_MODULE",
         "U_IR_RECEIVER",
-        "J_BUZZER",
+        "BZ_SCORING",
         "J_DISPLAY",
         "LED_LEFT_RED",
         "LED_RIGHT_GREEN",
@@ -86,6 +87,22 @@ describe("minimal scoring prototype baseline", () => {
     expect(components.find(({ name }) => name === "LED_RIGHT_GREEN")).toMatchObject({
       manufacturer_part_number: "WP7113GD"
     })
+  })
+
+  it("drives one real 3 V piezo sounder through the existing low-side switch", () => {
+    expect(prototypeSounder).toEqual({
+      driveFrequencyHz: 4000,
+      driveGpio: "GPIO39",
+      manufacturerPartNumber: "PS1240P02BT",
+      ratedDrive: "3V(0-p) square wave",
+      supply: "APP_3V3"
+    })
+    const circuit = renderPrototype()
+    const components = circuit.filter(({ type }) => type === "source_component")
+    expect(components.find(({ name }) => name === "BZ_SCORING")).toMatchObject({
+      manufacturer_part_number: "PS1240P02BT"
+    })
+    expect(components.some(({ name }) => name === "J_BUZZER")).toBe(false)
   })
 
   it("uses a module-level USB-C power chain with real assembly geometry", () => {

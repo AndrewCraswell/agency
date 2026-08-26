@@ -36,7 +36,7 @@ The initial schematic contains only these functional blocks:
   from an otherwise unused ESP32 GPIO through one 330 ohm resistor.
 - A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
   HUB75 is deferred behind the firmware display abstraction.
-- One transistor-driven buzzer. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
+- One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
   omitted.
 - An Adafruit 5991 USB-C PD daughterboard set to 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
   modules use their manufacturer circuits and protection instead of reproducing USB-C negotiation or conversion from
