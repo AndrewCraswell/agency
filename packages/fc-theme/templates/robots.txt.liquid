@@ -1,0 +1,37 @@
+# we use Shopify as our ecommerce platform
+
+#  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+#  ┃  Robots & Agent policy                                               ┃
+#  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+#  ┃  Checkouts are for humans.                                           ┃
+#  ┃  * Automated scraping, “buy-for-me” agents, or any end-to-end flow   ┃
+#  ┃    that completes payment without a final human review step is not   ┃
+#  ┃    permitted.                                                        ┃
+#  ┃  * Legitimate integrators must use the official Checkout Kit:        ┃
+#  ┃      https://www.shopify.com/checkout-kit                            ┃
+#  ┃                                                                      ┃
+#  ┃  Terms of Service: https://www.shopify.com/legal/terms               ┃
+#  ┃  Contact: bots@shopify.com                                           ┃
+#  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+{% for group in robots.default_groups %}
+  {{- group.user_agent -}}
+
+  {% for rule in group.rules %}
+    {{- rule -}}
+  {% endfor %}
+
+  {%- if group.sitemap != blank -%}
+    {{ group.sitemap }}
+  {%- endif -%}
+{% endfor %}
+User-agent: Googlebot
+Disallow: /admin/
+Allow: /
+
+User-agent: Googlebot-image
+Disallow: /admin/
+Allow: /
+
+User-agent: Storebot-Google
+Disallow: /admin/
+Allow: /

@@ -1,0 +1,209 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "judge_me_reviews_preview_badge_CCK8Bh": {
+          "type": "shopify://apps/judge-me-reviews/blocks/preview_badge/61ccd3b1-a9f2-4160-9fe9-4fec8413e5d8",
+          "settings": {}
+        },
+        "price": {
+          "type": "price",
+          "settings": {}
+        },
+        "39467760-bd31-4bd0-8046-76acbb6b08ad": {
+          "type": "size_chart",
+          "settings": {
+            "size_chart": "{{ product.metafields.custom.size_chart.value }}"
+          }
+        },
+        "variant_picker": {
+          "type": "variant_picker",
+          "settings": {
+            "variant_labels": true,
+            "picker_type": "button",
+            "product_dynamic_variants_enable": true,
+            "color_swatches": true
+          }
+        },
+        "easyflow_product_options_app_block_M9Bbwc": {
+          "type": "shopify://apps/easyflow/blocks/app-block/83d04f43-e63e-4a8d-82b9-e4f0b41ef22f",
+          "settings": {}
+        },
+        "1d304684-032e-479e-9bec-a79d49e8d72f": {
+          "type": "quantity_selector",
+          "settings": {}
+        },
+        "sellup_upsell_add_ons_checkbox_onpage_offers_eJXm9W": {
+          "type": "shopify://apps/sellup-upsell-add-ons/blocks/checkbox_onpage_offers/001ec440-29ea-4cbf-9265-4963fa825261",
+          "settings": {}
+        },
+        "sellup_upsell_add_ons_onpage_offers_dhxGzD": {
+          "type": "shopify://apps/sellup-upsell-add-ons/blocks/onpage_offers/001ec440-29ea-4cbf-9265-4963fa825261",
+          "settings": {}
+        },
+        "inventory_status": {
+          "type": "inventory_status",
+          "settings": {
+            "inventory_threshold": 6,
+            "inventory_transfers_enable": true
+          }
+        },
+        "buy_buttons": {
+          "type": "buy_buttons",
+          "settings": {
+            "show_dynamic_checkout": false,
+            "surface_pickup_enable": true,
+            "show_gift_card_recipient": false
+          }
+        },
+        "description": {
+          "type": "description",
+          "settings": {
+            "is_tab": false
+          }
+        }
+      },
+      "block_order": [
+        "judge_me_reviews_preview_badge_CCK8Bh",
+        "price",
+        "39467760-bd31-4bd0-8046-76acbb6b08ad",
+        "variant_picker",
+        "easyflow_product_options_app_block_M9Bbwc",
+        "1d304684-032e-479e-9bec-a79d49e8d72f",
+        "sellup_upsell_add_ons_checkbox_onpage_offers_eJXm9W",
+        "sellup_upsell_add_ons_onpage_offers_dhxGzD",
+        "inventory_status",
+        "buy_buttons",
+        "description"
+      ],
+      "custom_css": [".btn--full {width: 100% !important;}"],
+      "settings": {
+        "sku_enable": false,
+        "image_position": "left",
+        "image_size": "small",
+        "product_zoom_enable": true,
+        "thumbnail_position": "beside",
+        "thumbnail_height": "fixed",
+        "thumbnail_arrows": true,
+        "mobile_layout": "partial",
+        "enable_video_looping": true,
+        "product_video_style": "muted"
+      }
+    },
+    "sub": {
+      "type": "product-full-width",
+      "settings": {
+        "max_width": true
+      }
+    },
+    "f5b12062-8ed2-443b-8cf6-2007bb8b1756": {
+      "type": "text-with-icons",
+      "blocks": {
+        "template--21727808323881__f5b12062-8ed2-443b-8cf6-2007bb8b1756-text_block-1": {
+          "type": "text_block",
+          "settings": {
+            "icon": "stopwatch",
+            "title": "Dispatch",
+            "text": "<p>Within 1 business day<br/><a href=\"/policies/shipping-policy\" target=\"_blank\" title=\"Shipping Policy\"><span style=\"text-decoration:underline\"><br/>Learn more</span></a></p>"
+          }
+        },
+        "925c672a-f01f-4dd1-86ea-2d39e2d9993e": {
+          "type": "text_block",
+          "settings": {
+            "icon": "truck",
+            "title": "Shipping",
+            "text": "<p>US &amp; international shipping<br/>Duties paid at checkout<br/><a href=\"/policies/shipping-policy\" target=\"_blank\" title=\"Shipping Policy\"><span style=\"text-decoration:underline\">Learn more</span></a></p>"
+          }
+        },
+        "template--21727808323881__f5b12062-8ed2-443b-8cf6-2007bb8b1756-text_block-2": {
+          "type": "text_block",
+          "settings": {
+            "icon": "package",
+            "title": "Returns",
+            "text": "<p>Free returns within 30 days<br/><br/><a href=\"/policies/refund-policy\" target=\"_blank\" title=\"Refund Policy\"><span style=\"text-decoration:underline\">Learn more</span></a></p>"
+          }
+        },
+        "template--21727808323881__f5b12062-8ed2-443b-8cf6-2007bb8b1756-text_block-3": {
+          "type": "text_block",
+          "settings": {
+            "icon": "sales-tag",
+            "title": "Price-Match",
+            "text": "<p>Matching prices from other retailers<br/><br/><a href=\"/pages/price-match-guarantee\" target=\"_blank\" title=\"Price-Match Guarantee\"><span style=\"text-decoration:underline\">Learn more</span></a></p>"
+          }
+        }
+      },
+      "block_order": [
+        "template--21727808323881__f5b12062-8ed2-443b-8cf6-2007bb8b1756-text_block-1",
+        "925c672a-f01f-4dd1-86ea-2d39e2d9993e",
+        "template--21727808323881__f5b12062-8ed2-443b-8cf6-2007bb8b1756-text_block-2",
+        "template--21727808323881__f5b12062-8ed2-443b-8cf6-2007bb8b1756-text_block-3"
+      ],
+      "settings": {
+        "title": "",
+        "align_text": "center",
+        "desktop_columns_per_row": 4,
+        "icon_color": "#000000",
+        "button_label": "",
+        "button_link": "",
+        "divider": false
+      }
+    },
+    "1727733176991b293f": {
+      "type": "apps",
+      "blocks": {
+        "judge_me_reviews_review_widget_ppfV68": {
+          "type": "shopify://apps/judge-me-reviews/blocks/review_widget/61ccd3b1-a9f2-4160-9fe9-4fec8413e5d8",
+          "settings": {
+            "review_data": "real_data",
+            "max_width": 1200,
+            "show_shop_reviews": false,
+            "empty_state": "empty_widget"
+          }
+        }
+      },
+      "block_order": ["judge_me_reviews_review_widget_ppfV68"],
+      "settings": {
+        "full_width": false,
+        "space_around": true
+      }
+    },
+    "product-recommendations": {
+      "type": "product-recommendations",
+      "settings": {
+        "product_recommendations_heading": "You may also like",
+        "related_count": 5,
+        "products_per_row": 5
+      }
+    },
+    "recently-viewed": {
+      "type": "recently-viewed",
+      "disabled": true,
+      "settings": {
+        "recent_count": 5
+      }
+    },
+    "collection-return": {
+      "type": "collection-return",
+      "settings": {}
+    }
+  },
+  "order": [
+    "main",
+    "sub",
+    "f5b12062-8ed2-443b-8cf6-2007bb8b1756",
+    "1727733176991b293f",
+    "product-recommendations",
+    "recently-viewed",
+    "collection-return"
+  ]
+}

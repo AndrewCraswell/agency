@@ -1,0 +1,81 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "type": "header",
+  "name": "t:sections.header-group.name",
+  "sections": {
+    "announcement": {
+      "type": "announcement",
+      "blocks": {
+        "announcement-1": {
+          "type": "announcement",
+          "settings": {
+            "text": "Hassle-free returns",
+            "link_text": "30-day postage paid returns",
+            "link": "shopify://policies/refund-policy"
+          }
+        },
+        "c35d8e11-fc85-493d-bf9d-a21bfc86249a": {
+          "type": "announcement",
+          "settings": {
+            "text": "Price-match guarantee",
+            "link_text": "Priced competitively, matched to win",
+            "link": "shopify://pages/price-match-guarantee"
+          }
+        },
+        "announcement_XncpYJ": {
+          "type": "announcement",
+          "disabled": true,
+          "settings": {
+            "text": "Shipping Delay Notice:",
+            "link_text": "We’re away until Jan 12th. All orders will ship once we return.",
+            "link": ""
+          }
+        }
+      },
+      "block_order": ["announcement-1", "c35d8e11-fc85-493d-bf9d-a21bfc86249a", "announcement_XncpYJ"],
+      "custom_css": [".announcement-barDISABLED {background-color: #ff2222;}"],
+      "settings": {
+        "announcement_compact": true
+      }
+    },
+    "header": {
+      "type": "header",
+      "blocks": {
+        "39611f59-6fc1-4f34-a016-62bfea9a5928": {
+          "type": "logo",
+          "settings": {
+            "logo": "shopify://shop_images/Fencing_Club-05_c2ebd0ff-80dd-4121-8a3c-6867ecda9310.png",
+            "logo-inverted": "shopify://shop_images/Fencing_Club-09_520e012d-5260-4212-848c-8ec1c9089d46.png",
+            "desktop_logo_width": 100,
+            "mobile_logo_width": 80
+          }
+        }
+      },
+      "block_order": ["39611f59-6fc1-4f34-a016-62bfea9a5928"],
+      "custom_css": [],
+      "settings": {
+        "main_menu_link_list": "main-menu",
+        "hover_menu": true,
+        "mega_menu_images": false,
+        "main_menu_alignment": "left",
+        "header_style": "normal",
+        "sticky_index": true,
+        "sticky_collection": false,
+        "toolbar_menu": "toolbar",
+        "toolbar_social": false,
+        "show_locale_selector": true,
+        "show_currency_selector": true,
+        "show_currency_flags": true
+      }
+    }
+  },
+  "order": ["announcement", "header"]
+}

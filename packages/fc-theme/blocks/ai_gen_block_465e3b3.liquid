@@ -1,0 +1,556 @@
+{% doc %}
+  @prompt
+    I want a section that highlights our Kids category, showing the mask, vest, and full sets
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-kids-category-{{ ai_gen_id }} {
+    display: block;
+    width: 100%;
+    padding: {{ block.settings.section_padding }}px 20px;
+    background-color: {{ block.settings.background_color }};
+  }
+
+  .ai-kids-category__container-{{ ai_gen_id }} {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .ai-kids-category__header-{{ ai_gen_id }} {
+    text-align: center;
+    margin-bottom: {{ block.settings.header_spacing }}px;
+  }
+
+  .ai-kids-category__title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.title_size }}px;
+    color: {{ block.settings.text_color }};
+    margin: 0 0 12px;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+  }
+
+  .ai-kids-category__subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_size }}px;
+    color: {{ block.settings.text_color }};
+    opacity: 0.8;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .ai-kids-category__grid-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: {{ block.settings.grid_gap }}px;
+  }
+
+  .ai-kids-category__item-{{ ai_gen_id }} {
+    position: relative;
+    overflow: hidden;
+    border-radius: {{ block.settings.card_border_radius }}px;
+    background-color: {{ block.settings.card_background }};
+    border: 1px solid {{ block.settings.card_border_color }};
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .ai-kids-category__item-{{ ai_gen_id }}:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .ai-kids-category__image-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%;
+    overflow: hidden;
+    background-color: {{ block.settings.image_background }};
+  }
+
+  .ai-kids-category__image-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ai-kids-category__image-placeholder-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: {{ block.settings.image_background }};
+  }
+
+  .ai-kids-category__image-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;
+    opacity: 0.3;
+  }
+
+  .ai-kids-category__content-{{ ai_gen_id }} {
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .ai-kids-category__item-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.item_title_size }}px;
+    color: {{ block.settings.text_color }};
+    margin: 0 0 8px;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+  }
+
+  .ai-kids-category__item-description-{{ ai_gen_id }} {
+    font-size: {{ block.settings.item_description_size }}px;
+    color: {{ block.settings.text_color }};
+    opacity: 0.7;
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+
+  .ai-kids-category__button-{{ ai_gen_id }} {
+    display: inline-block;
+    padding: 12px 28px;
+    background-color: {{ block.settings.button_color }};
+    color: {{ block.settings.button_text_color }};
+    text-decoration: none;
+    border-radius: {{ block.settings.button_border_radius }}px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+
+  .ai-kids-category__button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.button_hover_color }};
+    transform: scale(1.02);
+  }
+
+  @media screen and (max-width: 989px) {
+    .ai-kids-category__grid-{{ ai_gen_id }} {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ai-kids-category__item-{{ ai_gen_id }}:last-child {
+      grid-column: 1 / -1;
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-kids-category-{{ ai_gen_id }} {
+      padding: {{ block.settings.section_padding | times: 0.7 }}px 16px;
+    }
+
+    .ai-kids-category__grid-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: {{ block.settings.grid_gap | times: 0.8 }}px;
+    }
+
+    .ai-kids-category__item-{{ ai_gen_id }}:last-child {
+      grid-column: auto;
+      max-width: 100%;
+    }
+
+    .ai-kids-category__title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.title_size | times: 0.8 }}px;
+    }
+
+    .ai-kids-category__subtitle-{{ ai_gen_id }} {
+      font-size: {{ block.settings.subtitle_size | times: 0.9 }}px;
+    }
+  }
+{% endstyle %}
+
+<div class="ai-kids-category-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-kids-category__container-{{ ai_gen_id }}">
+    {% if block.settings.title != blank or block.settings.subtitle != blank %}
+      <div class="ai-kids-category__header-{{ ai_gen_id }}">
+        {% if block.settings.title != blank %}
+          <h2 class="ai-kids-category__title-{{ ai_gen_id }}">{{ block.settings.title }}</h2>
+        {% endif %}
+        {% if block.settings.subtitle != blank %}
+          <div class="ai-kids-category__subtitle-{{ ai_gen_id }}">{{ block.settings.subtitle }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="ai-kids-category__grid-{{ ai_gen_id }}">
+      <div class="ai-kids-category__item-{{ ai_gen_id }}">
+        <div class="ai-kids-category__image-wrapper-{{ ai_gen_id }}">
+          {% if block.settings.mask_image %}
+            <img
+              src="{{ block.settings.mask_image | image_url: width: 800 }}"
+              alt="{{ block.settings.mask_image.alt | escape }}"
+              loading="lazy"
+              width="800"
+              height="800"
+              class="ai-kids-category__image-{{ ai_gen_id }}"
+            >
+          {% else %}
+            <div class="ai-kids-category__image-placeholder-{{ ai_gen_id }}">
+              {{ 'product-1' | placeholder_svg_tag }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="ai-kids-category__content-{{ ai_gen_id }}">
+          <h3 class="ai-kids-category__item-title-{{ ai_gen_id }}">{{ block.settings.mask_title }}</h3>
+          {% if block.settings.mask_description != blank %}
+            <p class="ai-kids-category__item-description-{{ ai_gen_id }}">{{ block.settings.mask_description }}</p>
+          {% endif %}
+          {% if block.settings.mask_link != blank %}
+            <a href="{{ block.settings.mask_link }}" class="ai-kids-category__button-{{ ai_gen_id }}">
+              {{ block.settings.button_text }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="ai-kids-category__item-{{ ai_gen_id }}">
+        <div class="ai-kids-category__image-wrapper-{{ ai_gen_id }}">
+          {% if block.settings.vest_image %}
+            <img
+              src="{{ block.settings.vest_image | image_url: width: 800 }}"
+              alt="{{ block.settings.vest_image.alt | escape }}"
+              loading="lazy"
+              width="800"
+              height="800"
+              class="ai-kids-category__image-{{ ai_gen_id }}"
+            >
+          {% else %}
+            <div class="ai-kids-category__image-placeholder-{{ ai_gen_id }}">
+              {{ 'product-2' | placeholder_svg_tag }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="ai-kids-category__content-{{ ai_gen_id }}">
+          <h3 class="ai-kids-category__item-title-{{ ai_gen_id }}">{{ block.settings.vest_title }}</h3>
+          {% if block.settings.vest_description != blank %}
+            <p class="ai-kids-category__item-description-{{ ai_gen_id }}">{{ block.settings.vest_description }}</p>
+          {% endif %}
+          {% if block.settings.vest_link != blank %}
+            <a href="{{ block.settings.vest_link }}" class="ai-kids-category__button-{{ ai_gen_id }}">
+              {{ block.settings.button_text }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="ai-kids-category__item-{{ ai_gen_id }}">
+        <div class="ai-kids-category__image-wrapper-{{ ai_gen_id }}">
+          {% if block.settings.sets_image %}
+            <img
+              src="{{ block.settings.sets_image | image_url: width: 800 }}"
+              alt="{{ block.settings.sets_image.alt | escape }}"
+              loading="lazy"
+              width="800"
+              height="800"
+              class="ai-kids-category__image-{{ ai_gen_id }}"
+            >
+          {% else %}
+            <div class="ai-kids-category__image-placeholder-{{ ai_gen_id }}">
+              {{ 'product-3' | placeholder_svg_tag }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="ai-kids-category__content-{{ ai_gen_id }}">
+          <h3 class="ai-kids-category__item-title-{{ ai_gen_id }}">{{ block.settings.sets_title }}</h3>
+          {% if block.settings.sets_description != blank %}
+            <p class="ai-kids-category__item-description-{{ ai_gen_id }}">{{ block.settings.sets_description }}</p>
+          {% endif %}
+          {% if block.settings.sets_link != blank %}
+            <a href="{{ block.settings.sets_link }}" class="ai-kids-category__button-{{ ai_gen_id }}">
+              {{ block.settings.button_text }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Kids category highlight",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Section header"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "title",
+      "label": "Title",
+      "default": "Kids Fencing Gear"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Premium equipment designed for young fencers"
+    },
+    {
+      "type": "range",
+      "id": "header_spacing",
+      "label": "Header spacing",
+      "min": 20,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Mask"
+    },
+    {
+      "type": "image_picker",
+      "id": "mask_image",
+      "label": "Image"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "mask_title",
+      "label": "Title",
+      "default": "Masks"
+    },
+    {
+      "type": "text",
+      "id": "mask_description",
+      "label": "Description",
+      "default": "Safety-certified masks for young athletes"
+    },
+    {
+      "type": "url",
+      "id": "mask_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Vest"
+    },
+    {
+      "type": "image_picker",
+      "id": "vest_image",
+      "label": "Image"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "vest_title",
+      "label": "Title",
+      "default": "Vests"
+    },
+    {
+      "type": "text",
+      "id": "vest_description",
+      "label": "Description",
+      "default": "Protective vests built for comfort and mobility"
+    },
+    {
+      "type": "url",
+      "id": "vest_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Full sets"
+    },
+    {
+      "type": "image_picker",
+      "id": "sets_image",
+      "label": "Image"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "sets_title",
+      "label": "Title",
+      "default": "Full Sets"
+    },
+    {
+      "type": "text",
+      "id": "sets_description",
+      "label": "Description",
+      "default": "Complete starter kits for new fencers"
+    },
+    {
+      "type": "url",
+      "id": "sets_link",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Shop Now"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "card_background",
+      "label": "Card background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_border_color",
+      "label": "Card border",
+      "default": "#e8e8e1"
+    },
+    {
+      "type": "color",
+      "id": "image_background",
+      "label": "Image background",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button background",
+      "default": "#111111"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_color",
+      "label": "Button hover background",
+      "default": "#000000"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "Title size",
+      "min": 24,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 38
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "label": "Subtitle size",
+      "min": 14,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "item_title_size",
+      "label": "Item title size",
+      "min": 16,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "item_description_size",
+      "label": "Item description size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "label": "Section padding",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "grid_gap",
+      "label": "Grid gap",
+      "min": 10,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "label": "Card border radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "label": "Button border radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "desktop_width_percent",
+      "label": "Desktop width",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 100
+    }
+  ],
+  "presets": [
+    {
+      "name": "Kids category highlight"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,133 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "type": "footer",
+  "name": "t:sections.footer-group.name",
+  "sections": {
+    "footer-promotions": {
+      "type": "footer-promotions",
+      "blocks": {
+        "footer-promotions-0": {
+          "type": "promotion",
+          "settings": {
+            "enable_image": true,
+            "image": "shopify://shop_images/coach-photo.jpg",
+            "image_mask": "none",
+            "title": "Club discounts",
+            "text": "<p>Refresh your club's gear at a lower cost with exclusive discounts up to 15% for club operators and non-profits.</p>",
+            "button_label": "Contact us",
+            "button_link": "shopify://pages/contact"
+          }
+        },
+        "footer-promotions-1": {
+          "type": "promotion",
+          "settings": {
+            "enable_image": true,
+            "image": "shopify://shop_images/bulk-orders.jpg",
+            "image_mask": "none",
+            "title": "Bulk orders",
+            "text": "<p>Need gear for your group? Enjoy bulk purchase discounts of up to 10% on eligible orders.</p>",
+            "button_label": "Contact us",
+            "button_link": "shopify://pages/contact"
+          }
+        },
+        "footer-promotions-2": {
+          "type": "promotion",
+          "settings": {
+            "enable_image": true,
+            "image": "shopify://shop_images/young-fencers.jpg",
+            "image_mask": "none",
+            "title": "Club partners",
+            "text": "<p>Become a partner to equip your club with top-quality gear at wholesale rates for resale.</p>",
+            "button_label": "Contact us",
+            "button_link": "shopify://pages/contact"
+          }
+        }
+      },
+      "block_order": ["footer-promotions-0", "footer-promotions-1", "footer-promotions-2"],
+      "settings": {
+        "hide_homepage": true
+      }
+    },
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "footer-0": {
+          "type": "logo_social",
+          "settings": {
+            "logo": "shopify://shop_images/Fencing_Club-01.png",
+            "desktop_logo_height": 120,
+            "container_width": 15
+          }
+        },
+        "custom_qhkBqX": {
+          "type": "custom",
+          "settings": {
+            "show_footer_title": true,
+            "title": "Contact",
+            "text": "<p><a href=\"tel:+14253123746\" title=\"tel:+14253123746\">(425) 312-3746</a><br/><a href=\"mailto:support@fencing.club\" title=\"support@fencing.club\">support@fencing.club</a><br/><br/>Mon - Sat<br/>10am - 6pm (PST)</p>",
+            "container_width": 20
+          }
+        },
+        "footer-1": {
+          "type": "menu",
+          "settings": {
+            "show_footer_title": true,
+            "menu": "footer-shop",
+            "container_width": 15
+          }
+        },
+        "b3dbfdb7-5922-4f99-b9dc-cb77ff09b66a": {
+          "type": "menu",
+          "settings": {
+            "show_footer_title": true,
+            "menu": "about-footer",
+            "container_width": 15
+          }
+        },
+        "986e6b7c-2aaf-478f-88ce-75b8d6837ad3": {
+          "type": "menu",
+          "settings": {
+            "show_footer_title": true,
+            "menu": "legal-footer",
+            "container_width": 15
+          }
+        },
+        "footer2": {
+          "type": "newsletter",
+          "settings": {
+            "show_footer_title": true,
+            "title": "Subscribe",
+            "text": "<p>Get exclusive offers and announcements.</p>",
+            "container_width": 20
+          }
+        }
+      },
+      "block_order": [
+        "footer-0",
+        "custom_qhkBqX",
+        "footer-1",
+        "b3dbfdb7-5922-4f99-b9dc-cb77ff09b66a",
+        "986e6b7c-2aaf-478f-88ce-75b8d6837ad3",
+        "footer2"
+      ],
+      "custom_css": [".inline-list.payment-icons {text-align: center;}"],
+      "settings": {
+        "show_locale_selector": true,
+        "show_currency_selector": true,
+        "show_currency_flags": true,
+        "show_payment_icons": true,
+        "show_copyright": true,
+        "copyright_text": ""
+      }
+    }
+  },
+  "order": ["footer-promotions", "footer"]
+}

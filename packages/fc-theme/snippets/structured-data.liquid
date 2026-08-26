@@ -1,0 +1,845 @@
+{% doc %}
+  Emits the storefront's server-rendered JSON-LD graph from native Shopify data.
+
+  @param {boolean} [collection_item_list_enabled] - Whether to emit a collection ItemList.
+  @param {product[]} [collection_item_list] - Products visible in the current collection page.
+  @param {number} [collection_item_count] - Total products in the collection.
+  @param {number} [collection_position_offset] - Zero-based offset for absolute list positions.
+{% enddoc %}
+
+{% comment %}
+  Fallback facts used only when canonical structured_data metafields or native
+  Shopify values are unavailable. Keep fallbacks synchronized with visible
+  policies and Merchant Center until the app-managed values are populated.
+{% endcomment %}
+{%- liquid
+  assign default_policy_country = 'US'
+  assign policy_country = shop.address.country_code | default: default_policy_country
+  assign policy_country_handle = policy_country | downcase
+  assign phone_dialing_country = 'US'
+  assign phone_dialing_prefix = '+1'
+
+  assign store_opening_days = 'Monday|Tuesday|Wednesday|Thursday|Friday|Saturday' | split: '|'
+  assign store_opens_at = '10:00'
+  assign store_closes_at = '18:00'
+
+  assign return_window_days = 30
+  assign return_policy_category = 'https://schema.org/MerchantReturnFiniteReturnWindow'
+  assign return_methods = 'https://schema.org/ReturnByMail' | split: '|'
+  assign return_fees = 'https://schema.org/FreeReturn'
+  assign return_label_source = 'https://schema.org/ReturnLabelDownloadAndPrint'
+  assign return_item_conditions = 'https://schema.org/NewCondition' | split: '|'
+  assign return_refund_types = 'https://schema.org/FullRefund|https://schema.org/ExchangeRefund' | split: '|'
+
+  assign default_shipping_service_name = 'Standard US shipping'
+  assign shipping_handling_days = 'Monday|Tuesday|Wednesday|Thursday|Friday' | split: '|'
+  assign shipping_handling_min_days = 0
+  assign shipping_handling_max_days = 1
+  assign shipping_transit_min_days = 5
+  assign shipping_transit_max_days = 8
+  assign shipping_duration_unit = 'DAY'
+
+  assign default_product_condition = 'https://schema.org/NewCondition'
+  assign preorder_template_identifier = 'preorder'
+  assign blog_item_limit = 21
+
+  assign customer_service_phone = shop.metafields.structured_data.customer_service_phone_e164.value | strip
+  assign customer_service_email = shop.metafields.structured_data.customer_service_email.value | strip
+  assign opening_hours_record = shop.metafields.structured_data.primary_opening_hours.value
+  if opening_hours_record != blank
+    assign configured_opening_days = opening_hours_record.days_of_week.value
+    assign configured_opens_at = opening_hours_record.opens.value | strip
+    assign configured_closes_at = opening_hours_record.closes.value | strip
+    if configured_opening_days != blank
+      assign store_opening_days = configured_opening_days
+    endif
+    if configured_opens_at != blank
+      assign store_opens_at = configured_opens_at
+    endif
+    if configured_closes_at != blank
+      assign store_closes_at = configured_closes_at
+    endif
+  endif
+
+  assign return_policy_record = shop.metafields.structured_data.primary_return_policy.value
+  if return_policy_record != blank
+    assign configured_policy_page = return_policy_record.policy_page.value
+    assign configured_applicable_countries = return_policy_record.applicable_countries.value
+    assign configured_return_country = return_policy_record.return_country.value | strip
+    assign configured_policy_category = return_policy_record.policy_category.value | strip
+    assign configured_return_days = return_policy_record.return_days.value
+    assign configured_return_fees = return_policy_record.return_fees.value | strip
+    assign configured_label_source = return_policy_record.return_label_source.value | strip
+
+    if configured_policy_page != blank
+      assign return_policy_url = configured_policy_page
+    endif
+    if configured_applicable_countries != blank
+      assign return_applicable_countries = configured_applicable_countries
+    endif
+    if configured_return_country != blank
+      assign policy_country = configured_return_country
+      assign policy_country_handle = policy_country | downcase
+    endif
+    case configured_policy_category
+      when 'finite'
+        assign return_policy_category = 'https://schema.org/MerchantReturnFiniteReturnWindow'
+      when 'unlimited'
+        assign return_policy_category = 'https://schema.org/MerchantReturnUnlimitedWindow'
+      when 'not_permitted'
+        assign return_policy_category = 'https://schema.org/MerchantReturnNotPermitted'
+    endcase
+    if configured_return_days != blank
+      assign return_window_days = configured_return_days
+    endif
+    case configured_return_fees
+      when 'free'
+        assign return_fees = 'https://schema.org/FreeReturn'
+      when 'customer_responsibility'
+        assign return_fees = 'https://schema.org/ReturnShippingFees'
+      when 'merchant_fee'
+        assign return_fees = 'https://schema.org/ReturnFeesCustomerResponsibility'
+    endcase
+    case configured_label_source
+      when 'download_and_print'
+        assign return_label_source = 'https://schema.org/ReturnLabelDownloadAndPrint'
+      when 'in_box'
+        assign return_label_source = 'https://schema.org/ReturnLabelInBox'
+      when 'customer_responsibility'
+        assign return_label_source = 'https://schema.org/ReturnLabelCustomerResponsibility'
+    endcase
+
+    assign configured_return_methods = return_policy_record.return_methods.value
+    if configured_return_methods != blank
+      capture mapped_return_methods
+        for configured_method in configured_return_methods
+          case configured_method
+            when 'mail'
+              echo 'https://schema.org/ReturnByMail'
+            when 'in_store'
+              echo 'https://schema.org/ReturnInStore'
+            when 'kiosk'
+              echo 'https://schema.org/ReturnAtKiosk'
+          endcase
+          unless forloop.last
+            echo '|'
+          endunless
+        endfor
+      endcapture
+      assign return_methods = mapped_return_methods | strip | split: '|'
+    endif
+
+    assign configured_item_conditions = return_policy_record.accepted_conditions.value
+    if configured_item_conditions != blank
+      capture mapped_item_conditions
+        for configured_condition in configured_item_conditions
+          case configured_condition
+            when 'new'
+              echo 'https://schema.org/NewCondition'
+            when 'used'
+              echo 'https://schema.org/UsedCondition'
+            when 'refurbished'
+              echo 'https://schema.org/RefurbishedCondition'
+            when 'damaged'
+              echo 'https://schema.org/DamagedCondition'
+          endcase
+          unless forloop.last
+            echo '|'
+          endunless
+        endfor
+      endcapture
+      assign return_item_conditions = mapped_item_conditions | strip | split: '|'
+    endif
+
+    assign configured_refund_types = return_policy_record.refund_types.value
+    if configured_refund_types != blank
+      capture mapped_refund_types
+        for configured_refund_type in configured_refund_types
+          case configured_refund_type
+            when 'full_refund'
+              echo 'https://schema.org/FullRefund'
+            when 'exchange'
+              echo 'https://schema.org/ExchangeRefund'
+            when 'store_credit'
+              echo 'https://schema.org/StoreCreditRefund'
+          endcase
+          unless forloop.last
+            echo '|'
+          endunless
+        endfor
+      endcapture
+      assign return_refund_types = mapped_refund_types | strip | split: '|'
+    endif
+  endif
+
+  assign shipping_service_records = shop.metafields.structured_data.shipping_services.value
+  assign shipping_service_record = shipping_service_records.first
+  if shipping_service_record != blank
+    assign configured_shipping_name = shipping_service_record.name.value | strip
+    assign configured_shipping_page = shipping_service_record.policy_page.value
+    assign configured_shipping_destinations = shipping_service_record.destinations.value
+    assign configured_handling_days = shipping_service_record.handling_days.value
+    assign configured_handling_min_days = shipping_service_record.handling_min_days.value
+    assign configured_handling_max_days = shipping_service_record.handling_max_days.value
+    assign configured_transit_min_days = shipping_service_record.transit_min_days.value
+    assign configured_transit_max_days = shipping_service_record.transit_max_days.value
+
+    if configured_shipping_name != blank
+      assign default_shipping_service_name = configured_shipping_name
+    endif
+    if configured_shipping_page != blank
+      assign configured_shipping_policy_url = configured_shipping_page
+    endif
+    if configured_shipping_destinations != blank
+      assign shipping_destinations = configured_shipping_destinations
+    endif
+    if configured_handling_days != blank
+      assign shipping_handling_days = configured_handling_days
+    endif
+    if configured_handling_min_days != blank
+      assign shipping_handling_min_days = configured_handling_min_days
+    endif
+    if configured_handling_max_days != blank
+      assign shipping_handling_max_days = configured_handling_max_days
+    endif
+    if configured_transit_min_days != blank
+      assign shipping_transit_min_days = configured_transit_min_days
+    endif
+    if configured_transit_max_days != blank
+      assign shipping_transit_max_days = configured_transit_max_days
+    endif
+  endif
+-%}
+
+{%- liquid
+  assign supported_page = false
+  if request.page_type == 'index' or request.page_type == 'product' or request.page_type == 'collection' or request.page_type == 'page' or request.page_type == 'blog' or request.page_type == 'article'
+    assign supported_page = true
+  endif
+
+  assign site_url = shop.url
+  assign organization_id = site_url | append: '/#organization'
+  assign website_id = site_url | append: '/#website'
+  assign webpage_id = canonical_url | append: '#webpage'
+  assign breadcrumb_id = canonical_url | append: '#breadcrumb'
+  assign home_url = site_url | append: routes.root_url
+  assign return_policy_id = site_url | append: '/#return-policy'
+  assign shipping_service_id = site_url | append: '/#shipping-standard-' | append: policy_country_handle
+  assign return_policy_url = shop.refund_policy.url
+  assign return_policy_url_prefix = return_policy_url | slice: 0, 1
+  if return_policy_url_prefix == '/'
+    assign return_policy_url = site_url | append: return_policy_url
+  endif
+  if return_policy_record != blank and return_policy_record.policy_page.value != blank
+    assign return_policy_url = return_policy_record.policy_page.value
+  endif
+  assign shipping_policy_url = shop.shipping_policy.url
+  assign shipping_policy_url_prefix = shipping_policy_url | slice: 0, 1
+  if shipping_policy_url_prefix == '/'
+    assign shipping_policy_url = site_url | append: shipping_policy_url
+  endif
+  if configured_shipping_policy_url != blank
+    assign shipping_policy_url = configured_shipping_policy_url
+  endif
+  assign organization_image = settings.logo
+  if organization_image == blank
+    assign organization_image = shop.brand.logo
+  endif
+  if organization_image == blank
+    assign organization_image = shop.brand.square_logo
+  endif
+  assign normalized_phone = customer_service_phone
+  if normalized_phone == blank
+    assign normalized_phone = shop.phone | strip | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | remove: '.'
+  endif
+  assign phone_length = normalized_phone | size
+  assign phone_country_prefix = normalized_phone | slice: 0, 1
+  assign street_address = shop.address.address1
+  if shop.address.address2 != blank
+    assign street_address = street_address | append: ', ' | append: shop.address.address2
+  endif
+  if customer_service_phone == blank and shop.address.country_code == phone_dialing_country
+    if phone_length == 10
+      assign normalized_phone = normalized_phone | prepend: phone_dialing_prefix
+    elsif phone_length == 11 and phone_country_prefix == '1'
+      assign normalized_phone = normalized_phone | prepend: '+'
+    endif
+  endif
+  if request.page_type == 'product'
+    assign product_variant_count = product.variants | size
+    assign product_schema_id = canonical_url | append: '#product'
+    unless product_variant_count == 1
+      assign product_schema_id = canonical_url | append: '#product-group'
+    endunless
+
+    assign configured_product_condition = product.metafields.structured_data.condition.value | strip
+    case configured_product_condition
+      when 'used'
+        assign product_condition = 'https://schema.org/UsedCondition'
+      when 'refurbished'
+        assign product_condition = 'https://schema.org/RefurbishedCondition'
+      else
+        assign product_condition = default_product_condition
+    endcase
+
+    assign configured_lifecycle_status = product.metafields.structured_data.lifecycle_status.value | strip
+    case configured_lifecycle_status
+      when 'preorder'
+        assign product_availability = 'https://schema.org/PreOrder'
+      when 'backorder'
+        assign product_availability = 'https://schema.org/BackOrder'
+      when 'discontinued'
+        assign product_availability = 'https://schema.org/Discontinued'
+    endcase
+  endif
+
+  assign webpage_type = 'WebPage'
+  if request.page_type == 'product'
+    assign webpage_type = 'ItemPage'
+  elsif request.page_type == 'collection' or request.page_type == 'blog'
+    assign webpage_type = 'CollectionPage'
+  elsif request.page_type == 'page' and page.handle == 'about'
+    assign webpage_type = 'AboutPage'
+  elsif request.page_type == 'page' and page.handle == 'contact'
+    assign webpage_type = 'ContactPage'
+  elsif request.page_type == 'page' and page.handle == 'faq'
+    assign webpage_type = 'FAQPage'
+  endif
+-%}
+
+{%- if supported_page -%}
+  {%- capture graph_json -%}
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {%- if request.page_type == 'index' -%}
+          {
+            "@type": "WebSite",
+            "@id": {{ website_id | json }},
+            "url": {{ canonical_url | json }},
+            "name": {{ shop.name | json }},
+            "publisher": { "@id": {{ organization_id | json }} },
+            "inLanguage": {{ request.locale.iso_code | json }}
+          },
+          {
+            "@type": ["OnlineStore", "Store"],
+            "@id": {{ organization_id | json }},
+            "url": {{ canonical_url | json }},
+            "name": {{ shop.name | json }}
+            {%- if shop.description != blank -%},
+              "description": {{ shop.description | strip_html | json }}
+            {%- endif -%}
+            {%- if organization_image != blank -%},
+              "logo": {
+                "@type": "ImageObject",
+                "url": {{ organization_image | image_url: width: organization_image.width | prepend: 'https:' | json }},
+                "width": {{ organization_image.width | json }},
+                "height": {{ organization_image.height | json }}
+              },
+              "image": {{ organization_image | image_url: width: organization_image.width | prepend: 'https:' | json }}
+            {%- endif -%}
+            {%- if customer_service_email != blank or shop.email != blank -%},
+              "email": {{ customer_service_email | default: shop.email | json }}
+            {%- endif -%}
+            {%- if normalized_phone != blank -%},
+              "telephone": {{ normalized_phone | json }}
+            {%- endif -%}
+            {%- if shop.address.address1 != blank -%},
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": {{ street_address | json }},
+                "addressLocality": {{ shop.address.city | json }},
+                "addressRegion": {{ shop.address.province_code | json }},
+                "postalCode": {{ shop.address.zip | json }},
+                "addressCountry": {{ shop.address.country_code | json }}
+              },
+              "openingHoursSpecification": [{
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": [
+                  {%- for opening_day in store_opening_days -%}
+                    {{ opening_day | prepend: 'https://schema.org/' | json }}{%- unless forloop.last -%},{%- endunless -%}
+                  {%- endfor -%}
+                ],
+                "opens": {{ store_opens_at | json }},
+                "closes": {{ store_closes_at | json }}
+              }]
+            {%- endif -%}
+            {%- if shop.refund_policy.url != blank -%},
+              "hasMerchantReturnPolicy": { "@id": {{ return_policy_id | json }} }
+            {%- endif -%}
+            {%- if shop.shipping_policy.url != blank -%},
+              "hasShippingService": { "@id": {{ shipping_service_id | json }} }
+            {%- endif -%}
+            {%- if settings.social_facebook_link != blank or settings.social_instagram_link != blank -%},
+              "sameAs": [
+                {%- if settings.social_facebook_link != blank -%}
+                  {{ settings.social_facebook_link | json }}
+                {%- endif -%}
+                {%- if settings.social_facebook_link != blank and settings.social_instagram_link != blank -%},{%- endif -%}
+                {%- if settings.social_instagram_link != blank -%}
+                  {{ settings.social_instagram_link | json }}
+                {%- endif -%}
+              ]
+            {%- endif -%}
+          }
+          {%- if shop.refund_policy.url != blank -%},
+          {
+            "@type": "MerchantReturnPolicy",
+            "@id": {{ return_policy_id | json }},
+            "applicableCountry": {% if return_applicable_countries != blank %}{{ return_applicable_countries | json }}{% else %}{{ policy_country | json }}{% endif %},
+            "returnPolicyCountry": {{ policy_country | json }},
+            "merchantReturnLink": {{ return_policy_url | json }},
+            "returnPolicyCategory": {{ return_policy_category | json }},
+            "merchantReturnDays": {{ return_window_days | json }},
+            "returnMethod": {% if return_methods.size == 1 %}{{ return_methods.first | json }}{% else %}{{ return_methods | json }}{% endif %},
+            "returnFees": {{ return_fees | json }},
+            "returnLabelSource": {{ return_label_source | json }},
+            "refundType": [
+              {%- for refund_type in return_refund_types -%}
+                {{ refund_type | json }}{%- unless forloop.last -%},{%- endunless -%}
+              {%- endfor -%}
+            ],
+            "itemCondition": {% if return_item_conditions.size == 1 %}{{ return_item_conditions.first | json }}{% else %}{{ return_item_conditions | json }}{% endif %},
+            "customerRemorseReturnFees": {{ return_fees | json }},
+            "itemDefectReturnFees": {{ return_fees | json }}
+          },
+          {%- endif -%}
+          {%- if shop.shipping_policy.url != blank -%}
+          {
+            "@type": "ShippingService",
+            "@id": {{ shipping_service_id | json }},
+            "name": {% if shipping_service_record != blank %}{{ default_shipping_service_name | json }}{% else %}{{ shop.shipping_policy.title | default: default_shipping_service_name | json }}{% endif %},
+            "url": {{ shipping_policy_url | json }},
+            "fulfillmentType": "https://schema.org/FulfillmentTypeDelivery",
+            "handlingTime": {
+              "@type": "ServicePeriod",
+              "businessDays": [
+                {%- for handling_day in shipping_handling_days -%}
+                  {{ handling_day | prepend: 'https://schema.org/' | json }}{%- unless forloop.last -%},{%- endunless -%}
+                {%- endfor -%}
+              ],
+              "duration": {
+                "@type": "QuantitativeValue",
+                "minValue": {{ shipping_handling_min_days | json }},
+                "maxValue": {{ shipping_handling_max_days | json }},
+                "unitCode": {{ shipping_duration_unit | json }}
+              }
+            },
+            "shippingConditions": {
+              "@type": "ShippingConditions",
+              "shippingDestination": {
+                "@type": "DefinedRegion",
+                "addressCountry": {% if shipping_destinations != blank %}{{ shipping_destinations | json }}{% else %}{{ policy_country | json }}{% endif %}
+              },
+              "transitTime": {
+                "@type": "ServicePeriod",
+                "duration": {
+                  "@type": "QuantitativeValue",
+                  "minValue": {{ shipping_transit_min_days | json }},
+                  "maxValue": {{ shipping_transit_max_days | json }},
+                  "unitCode": {{ shipping_duration_unit | json }}
+                }
+              }
+            }
+          },
+          {%- endif -%}
+        {%- endif -%}
+        {
+          "@type": {{ webpage_type | json }},
+          "@id": {{ webpage_id | json }},
+          "url": {{ canonical_url | json }},
+          "name": {{ page_title | json }},
+          "isPartOf": { "@id": {{ website_id | json }} },
+          "inLanguage": {{ request.locale.iso_code | json }}
+          {%- if page_description != blank -%},
+            "description": {{ page_description | strip_html | json }}
+          {%- endif -%}
+          {%- unless request.page_type == 'index' -%},
+            "breadcrumb": { "@id": {{ breadcrumb_id | json }} }
+          {%- endunless -%}
+          {%- if request.page_type == 'product' -%},
+            "mainEntity": { "@id": {{ product_schema_id | json }} }
+          {%- elsif request.page_type == 'collection' and collection_item_list_enabled -%},
+            "mainEntity": { "@id": {{ canonical_url | append: '#item-list' | json }} }
+          {%- elsif request.page_type == 'blog' -%},
+            "mainEntity": { "@id": {{ canonical_url | append: '#blog' | json }} }
+          {%- elsif request.page_type == 'article' -%},
+            "mainEntity": { "@id": {{ canonical_url | append: '#article' | json }} }
+          {%- endif -%}
+          {%- if request.page_type == 'product' and product.featured_image -%},
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": {{ product.featured_image | image_url: width: product.featured_image.width | prepend: 'https:' | json }},
+              "width": {{ product.featured_image.width | json }},
+              "height": {{ product.featured_image.height | json }}
+            }
+          {%- elsif request.page_type == 'collection' and collection.image -%},
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": {{ collection.image | image_url: width: collection.image.width | prepend: 'https:' | json }},
+              "width": {{ collection.image.width | json }},
+              "height": {{ collection.image.height | json }}
+            }
+          {%- elsif request.page_type == 'article' and article.image -%},
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": {{ article.image | image_url: width: article.image.width | prepend: 'https:' | json }},
+              "width": {{ article.image.width | json }},
+              "height": {{ article.image.height | json }}
+            }
+          {%- endif -%}
+        }
+        {%- unless request.page_type == 'index' -%},
+          {
+            "@type": "BreadcrumbList",
+            "@id": {{ breadcrumb_id | json }},
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": {{ 'general.breadcrumbs.home' | t | json }},
+                "item": {{ home_url | json }}
+              }
+              {%- if request.page_type == 'article' -%},
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": {{ blog.title | json }},
+                  "item": {{ site_url | append: blog.url | json }}
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": {{ article.title | json }},
+                  "item": {{ canonical_url | json }}
+                }
+              {%- else -%},
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": {{ page_title | json }},
+                  "item": {{ canonical_url | json }}
+                }
+              {%- endif -%}
+            ]
+          }
+        {%- endunless -%}
+        {%- if request.page_type == 'collection' and collection_item_list_enabled -%},
+          {
+            "@type": "ItemList",
+            "@id": {{ canonical_url | append: '#item-list' | json }},
+            "numberOfItems": {{ collection_item_count | json }},
+            "itemListOrder": "https://schema.org/ItemListOrderAscending",
+            "itemListElement": [
+              {%- for collection_product in collection_item_list -%}
+                {
+                  "@type": "ListItem",
+                  "position": {{ collection_position_offset | plus: forloop.index | json }},
+                  "name": {{ collection_product.title | json }},
+                  "url": {{ site_url | append: collection_product.url | json }}
+                }{%- unless forloop.last -%},{%- endunless -%}
+              {%- endfor -%}
+            ]
+          }
+        {%- elsif request.page_type == 'product' -%},
+          {%- if product_variant_count == 1 -%}
+            {%- liquid
+              assign variant = product.selected_or_first_available_variant
+              assign variant_url = canonical_url | append: '?variant=' | append: variant.id
+              assign barcode = variant.barcode | strip
+              assign barcode_length = barcode | size
+              assign barcode_remainder = barcode | remove: '0' | remove: '1' | remove: '2' | remove: '3' | remove: '4' | remove: '5' | remove: '6' | remove: '7' | remove: '8' | remove: '9'
+              assign valid_gtin = false
+              if barcode != blank and barcode_remainder == blank
+                if barcode_length == 8 or barcode_length == 12 or barcode_length == 13 or barcode_length == 14
+                  assign gtin_sum = 0
+                  assign gtin_last_index = barcode_length | minus: 1
+                  for digit_index in (0..gtin_last_index)
+                    assign gtin_digit = barcode | slice: digit_index, 1 | plus: 0
+                    assign position_from_right = barcode_length | minus: digit_index
+                    assign position_remainder = position_from_right | modulo: 2
+                    if position_remainder == 0
+                      assign gtin_digit = gtin_digit | times: 3
+                    endif
+                    assign gtin_sum = gtin_sum | plus: gtin_digit
+                  endfor
+                  assign gtin_remainder = gtin_sum | modulo: 10
+                  if gtin_remainder == 0
+                    assign valid_gtin = true
+                  endif
+                endif
+              endif
+            -%}
+            {
+              "@type": "Product",
+              "@id": {{ product_schema_id | json }},
+              "url": {{ canonical_url | json }},
+              "name": {{ product.title | json }},
+              "inLanguage": {{ request.locale.iso_code | json }}
+              {%- if product.description != blank -%},
+                "description": {{ product.description | strip_html | json }}
+              {%- endif -%}
+              {%- if product.vendor != blank -%},
+                "brand": { "@type": "Brand", "name": {{ product.vendor | json }} }
+              {%- endif -%}
+              {%- if product.featured_image -%},
+                "image": [{{ product.featured_image | image_url: width: product.featured_image.width | prepend: 'https:' | json }}]
+              {%- endif -%}
+              {%- if variant.sku != blank -%},
+                "sku": {{ variant.sku | json }}
+              {%- endif -%}
+              {%- if valid_gtin -%},
+                "gtin{{ barcode_length }}": {{ barcode | json }}
+              {%- endif -%},
+              "offers": {
+                "@type": "Offer",
+                "@id": {{ variant_url | append: '#offer' | json }},
+                "url": {{ variant_url | json }},
+                "price": {{ variant.price | divided_by: 100.0 | json }},
+                "priceCurrency": {{ cart.currency.iso_code | json }},
+                "availability": {% if product_availability != blank %}{{ product_availability | json }}{% else %}"https://schema.org/{% if template contains preorder_template_identifier and variant.available %}PreOrder{% elsif variant.available %}InStock{% else %}OutOfStock{% endif %}"{% endif %},
+                "itemCondition": {{ product_condition | json }}
+                {%- if variant.compare_at_price > variant.price -%},
+                  "priceSpecification": [
+                    {
+                      "@type": "UnitPriceSpecification",
+                      "price": {{ variant.price | divided_by: 100.0 | json }},
+                      "priceCurrency": {{ cart.currency.iso_code | json }}
+                    },
+                    {
+                      "@type": "UnitPriceSpecification",
+                      "price": {{ variant.compare_at_price | divided_by: 100.0 | json }},
+                      "priceCurrency": {{ cart.currency.iso_code | json }},
+                      "priceType": "https://schema.org/StrikethroughPrice"
+                    }
+                  ]
+                {%- endif -%}
+              }
+            }
+          {%- else -%}
+            {%- liquid
+              assign option_property_mappings = product.metafields.structured_data.schema_option_properties.value
+              assign has_valid_option_mapping = false
+              assign varies_by_count = 0
+              if option_property_mappings != blank and option_property_mappings.size == product.options.size
+                assign has_valid_option_mapping = true
+                for option_property_mapping in option_property_mappings
+                  if option_property_mapping == 'color' or option_property_mapping == 'size' or option_property_mapping == 'material' or option_property_mapping == 'pattern'
+                    assign varies_by_count = varies_by_count | plus: 1
+                  endif
+                endfor
+              endif
+            -%}
+            {
+              "@type": "ProductGroup",
+              "@id": {{ product_schema_id | json }},
+              "url": {{ canonical_url | json }},
+              "productGroupID": {{ product.id | append: '' | json }},
+              "name": {{ product.title | json }},
+              "inLanguage": {{ request.locale.iso_code | json }}
+              {%- if product.description != blank -%},
+                "description": {{ product.description | strip_html | json }}
+              {%- endif -%}
+              {%- if product.vendor != blank -%},
+                "brand": { "@type": "Brand", "name": {{ product.vendor | json }} }
+              {%- endif -%}
+              {%- if product.featured_image -%},
+                "image": [{{ product.featured_image | image_url: width: product.featured_image.width | prepend: 'https:' | json }}]
+              {%- endif -%}
+              {%- if varies_by_count > 0 -%},
+                "variesBy": [
+                  {%- assign emitted_varies_by_count = 0 -%}
+                  {%- for option_property_mapping in option_property_mappings -%}
+                    {%- if option_property_mapping == 'color' or option_property_mapping == 'size' or option_property_mapping == 'material' or option_property_mapping == 'pattern' -%}
+                      {%- if emitted_varies_by_count > 0 -%},{%- endif -%}
+                      {{ option_property_mapping | prepend: 'https://schema.org/' | json }}
+                      {%- assign emitted_varies_by_count = emitted_varies_by_count | plus: 1 -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                ]
+              {%- endif -%},
+              "hasVariant": [
+                {%- for variant in product.variants -%}
+                  {%- liquid
+                    assign variant_url = canonical_url | append: '?variant=' | append: variant.id
+                    assign barcode = variant.barcode | strip
+                    assign barcode_length = barcode | size
+                    assign barcode_remainder = barcode | remove: '0' | remove: '1' | remove: '2' | remove: '3' | remove: '4' | remove: '5' | remove: '6' | remove: '7' | remove: '8' | remove: '9'
+                    assign valid_gtin = false
+                    if barcode != blank and barcode_remainder == blank
+                      if barcode_length == 8 or barcode_length == 12 or barcode_length == 13 or barcode_length == 14
+                        assign gtin_sum = 0
+                        assign gtin_last_index = barcode_length | minus: 1
+                        for digit_index in (0..gtin_last_index)
+                          assign gtin_digit = barcode | slice: digit_index, 1 | plus: 0
+                          assign position_from_right = barcode_length | minus: digit_index
+                          assign position_remainder = position_from_right | modulo: 2
+                          if position_remainder == 0
+                            assign gtin_digit = gtin_digit | times: 3
+                          endif
+                          assign gtin_sum = gtin_sum | plus: gtin_digit
+                        endfor
+                        assign gtin_remainder = gtin_sum | modulo: 10
+                        if gtin_remainder == 0
+                          assign valid_gtin = true
+                        endif
+                      endif
+                    endif
+                    assign additional_property_count = 0
+                    for option_value in variant.options
+                      assign option_mapping = 'additionalProperty'
+                      if has_valid_option_mapping
+                        assign option_mapping = option_property_mappings[forloop.index0]
+                      endif
+                      unless option_mapping == 'color' or option_mapping == 'size' or option_mapping == 'material' or option_mapping == 'pattern'
+                        assign additional_property_count = additional_property_count | plus: 1
+                      endunless
+                    endfor
+                  -%}
+                  {
+                    "@type": "Product",
+                    "@id": {{ variant_url | append: '#product' | json }},
+                    "url": {{ variant_url | json }},
+                    "name": {{ product.title | append: ' - ' | append: variant.title | json }},
+                    "inProductGroupWithID": {{ product.id | append: '' | json }}
+                    {%- if product.description != blank -%},
+                      "description": {{ product.description | strip_html | json }}
+                    {%- endif -%}
+                    {%- if variant.featured_image -%},
+                      "image": [{{ variant.featured_image | image_url: width: variant.featured_image.width | prepend: 'https:' | json }}]
+                    {%- elsif product.featured_image -%},
+                      "image": [{{ product.featured_image | image_url: width: product.featured_image.width | prepend: 'https:' | json }}]
+                    {%- endif -%}
+                    {%- if variant.sku != blank -%},
+                      "sku": {{ variant.sku | json }}
+                    {%- endif -%}
+                    {%- if valid_gtin -%},
+                      "gtin{{ barcode_length }}": {{ barcode | json }}
+                    {%- endif -%}
+                    {%- for option_value in variant.options -%}
+                      {%- assign option_mapping = 'additionalProperty' -%}
+                      {%- if has_valid_option_mapping -%}
+                        {%- assign option_mapping = option_property_mappings[forloop.index0] -%}
+                      {%- endif -%}
+                      {%- if option_mapping == 'color' or option_mapping == 'size' or option_mapping == 'material' or option_mapping == 'pattern' -%},
+                        {{ option_mapping | json }}: {{ option_value | json }}
+                      {%- endif -%}
+                    {%- endfor -%}
+                    {%- if additional_property_count > 0 -%},
+                      "additionalProperty": [
+                        {%- assign emitted_additional_property_count = 0 -%}
+                        {%- for option_value in variant.options -%}
+                          {%- assign option_mapping = 'additionalProperty' -%}
+                          {%- if has_valid_option_mapping -%}
+                            {%- assign option_mapping = option_property_mappings[forloop.index0] -%}
+                          {%- endif -%}
+                          {%- unless option_mapping == 'color' or option_mapping == 'size' or option_mapping == 'material' or option_mapping == 'pattern' -%}
+                            {%- if emitted_additional_property_count > 0 -%},{%- endif -%}
+                            {
+                              "@type": "PropertyValue",
+                              "name": {{ product.options[forloop.index0] | json }},
+                              "value": {{ option_value | json }}
+                            }
+                            {%- assign emitted_additional_property_count = emitted_additional_property_count | plus: 1 -%}
+                          {%- endunless -%}
+                        {%- endfor -%}
+                      ]
+                    {%- endif -%},
+                    "offers": {
+                      "@type": "Offer",
+                      "@id": {{ variant_url | append: '#offer' | json }},
+                      "url": {{ variant_url | json }},
+                      "price": {{ variant.price | divided_by: 100.0 | json }},
+                      "priceCurrency": {{ cart.currency.iso_code | json }},
+                      "availability": {% if product_availability != blank %}{{ product_availability | json }}{% else %}"https://schema.org/{% if template contains preorder_template_identifier and variant.available %}PreOrder{% elsif variant.available %}InStock{% else %}OutOfStock{% endif %}"{% endif %},
+                      "itemCondition": {{ product_condition | json }}
+                      {%- if variant.compare_at_price > variant.price -%},
+                        "priceSpecification": [
+                          {
+                            "@type": "UnitPriceSpecification",
+                            "price": {{ variant.price | divided_by: 100.0 | json }},
+                            "priceCurrency": {{ cart.currency.iso_code | json }}
+                          },
+                          {
+                            "@type": "UnitPriceSpecification",
+                            "price": {{ variant.compare_at_price | divided_by: 100.0 | json }},
+                            "priceCurrency": {{ cart.currency.iso_code | json }},
+                            "priceType": "https://schema.org/StrikethroughPrice"
+                          }
+                        ]
+                      {%- endif -%}
+                    }
+                  }{%- unless forloop.last -%},{%- endunless -%}
+                {%- endfor -%}
+              ]
+            }
+          {%- endif -%}
+        {%- elsif request.page_type == 'blog' -%},
+          {
+            "@type": "Blog",
+            "@id": {{ canonical_url | append: '#blog' | json }},
+            "url": {{ canonical_url | json }},
+            "name": {{ blog.title | json }},
+            "inLanguage": {{ request.locale.iso_code | json }},
+            "publisher": { "@id": {{ organization_id | json }} }
+            {%- if current_page == 1 -%},
+              "mainEntity": { "@id": {{ canonical_url | append: '#item-list' | json }} }
+            {%- endif -%}
+          }
+          {%- if current_page == 1 -%},
+          {
+            "@type": "ItemList",
+            "@id": {{ canonical_url | append: '#item-list' | json }},
+            "numberOfItems": {{ blog.articles_count | at_most: blog_item_limit | json }},
+            "itemListOrder": "https://schema.org/ItemListOrderDescending",
+            "itemListElement": [
+              {%- for blog_article in blog.articles limit: blog_item_limit -%}
+                {
+                  "@type": "ListItem",
+                  "position": {{ forloop.index | json }},
+                  "name": {{ blog_article.title | json }},
+                  "url": {{ site_url | append: blog_article.url | json }}
+                }{%- unless forloop.last -%},{%- endunless -%}
+              {%- endfor -%}
+            ]
+          }
+          {%- endif -%}
+        {%- elsif request.page_type == 'article' -%},
+          {
+            "@type": "BlogPosting",
+            "@id": {{ canonical_url | append: '#article' | json }},
+            "url": {{ canonical_url | json }},
+            "mainEntityOfPage": { "@id": {{ webpage_id | json }} },
+            "headline": {{ article.title | json }},
+            "articleBody": {{ article.content | strip_html | json }},
+            "datePublished": {{ article.published_at | date: '%Y-%m-%dT%H:%M:%S%z' | json }},
+            "dateModified": {{ article.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' | json }},
+            "author": { "@type": "Person", "name": {{ article.author | json }} },
+            "publisher": { "@id": {{ organization_id | json }} },
+            "inLanguage": {{ request.locale.iso_code | json }}
+            {%- if article.excerpt != blank -%},
+              "description": {{ article.excerpt | strip_html | json }}
+            {%- endif -%}
+            {%- if article.image -%},
+              "image": [{{ article.image | image_url: width: article.image.width | prepend: 'https:' | json }}]
+            {%- endif -%}
+            {%- if article.comments_count > 0 -%},
+              "commentCount": {{ article.comments_count | json }}
+            {%- endif -%}
+          }
+        {%- endif -%}
+        {%- if request.page_type == 'blog' or request.page_type == 'article' -%},
+          {
+            "@type": "OnlineStore",
+            "@id": {{ organization_id | json }},
+            "url": {{ site_url | json }},
+            "name": {{ shop.name | json }}
+          }
+        {%- endif -%}
+      ]
+    }
+  {%- endcapture -%}
+  <script type="application/ld+json" data-structured-data-provider="fencing-club-theme">
+    {{- graph_json | replace: '&', '\u0026' | replace: '<', '\u003c' | replace: '>', '\u003e' -}}
+  </script>
+{%- endif -%}

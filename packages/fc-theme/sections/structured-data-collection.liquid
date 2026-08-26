@@ -1,0 +1,10 @@
+{%- if settings.structured_data_enabled -%}
+  {%- render 'structured-data', collection_item_list_enabled: false -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Collection schema",
+  "settings": []
+}
+{% endschema %}
