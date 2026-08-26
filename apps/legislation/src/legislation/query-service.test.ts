@@ -7,6 +7,7 @@ import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
   amendmentSearchPageState,
+  buildSupportingMaterialCollectionQuery,
   buildSemanticAmendmentCandidateQueries,
   buildStructuredAmendmentLexicalQuery,
   buildLexicalSupportingMaterialCandidateQuery,
@@ -22,7 +23,8 @@ import {
   lexicalSupportingMaterialCandidateWindowCapped,
   lexicalSupportingMaterialPageState,
   LegislationQueryService,
-  projectDocumentBackedAmendment
+  projectDocumentBackedAmendment,
+  type SupportingMaterialSearchInput
 } from "./query-service.js"
 
 const pool = new pg.Pool({ connectionString: "postgresql://query-service-test.invalid/legislation" })
@@ -357,6 +359,36 @@ describe("lexical supporting material candidate search", () => {
 })
 
 describe("supporting material collection cursors", () => {
+  it("omits link joins and DISTINCT when no link-based filter is supplied", () => {
+    const rendered = buildSupportingMaterialCollectionQuery(database, { sort: "document-desc" }, 20, 40).toSQL()
+
+    expect(rendered.sql).toContain('from "legislation"."supporting_materials"')
+    expect(rendered.sql).not.toContain('join "legislation"."supporting_material_links"')
+    expect(rendered.sql).not.toContain("select distinct")
+    expect(rendered.sql).toMatch(
+      /order by "legislation"."supporting_materials"\."document_date" desc, "legislation"\."supporting_materials"\."id" asc limit \$1 offset \$2/
+    )
+    expect(rendered.params).toEqual([21, 40])
+  })
+
+  it("retains the link join and DISTINCT for every link-based filter", () => {
+    const filters = [
+      { column: "bill_id", input: { billId: "bill:fixture" }, value: "bill:fixture" },
+      { column: "amendment_id", input: { amendmentId: "amendment:fixture" }, value: "amendment:fixture" },
+      { column: "event_id", input: { eventId: "event:fixture" }, value: "event:fixture" },
+      { column: "organization_id", input: { organizationId: "organization:fixture" }, value: "organization:fixture" }
+    ] satisfies readonly Readonly<{ column: string; input: SupportingMaterialSearchInput; value: string }>[]
+
+    for (const filter of filters) {
+      const rendered = buildSupportingMaterialCollectionQuery(database, filter.input, 20, 40).toSQL()
+
+      expect(rendered.sql).toContain("select distinct")
+      expect(rendered.sql).toContain('left join "legislation"."supporting_material_links"')
+      expect(rendered.sql).toContain(`"legislation"."supporting_material_links"."${filter.column}" = $1`)
+      expect(rendered.params).toEqual([filter.value, 21, 40])
+    }
+  })
+
   it("binds ordered traversal to filters and sort", () => {
     const input = {
       billId: "bill:fixture",

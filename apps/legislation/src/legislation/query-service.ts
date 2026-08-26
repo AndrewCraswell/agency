@@ -701,6 +701,89 @@ function supportingMaterialOrder(sort: SupportingMaterialSearchInput["sort"]): S
   }
 }
 
+export function buildSupportingMaterialCollectionQuery(
+  database: LegislationDatabase,
+  input: SupportingMaterialSearchInput,
+  limit: number,
+  offset: number
+) {
+  const linkScope = supportingMaterialCollectionLinkScope(input)
+  const scope = supportingMaterialCollectionScope(input)
+  if (linkScope === undefined) {
+    return database
+      .select({ material: supportingMaterialSummaryColumns })
+      .from(supportingMaterials)
+      .where(scope)
+      .orderBy(...supportingMaterialOrder(input.sort))
+      .limit(limit + 1)
+      .offset(offset)
+  }
+  return database
+    .selectDistinct({ material: supportingMaterialSummaryColumns })
+    .from(supportingMaterials)
+    .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
+    .where(and(scope, linkScope))
+    .orderBy(...supportingMaterialOrder(input.sort))
+    .limit(limit + 1)
+    .offset(offset)
+}
+
+function supportingMaterialCollectionScope(input: SupportingMaterialSearchInput): SQL | undefined {
+  return and(
+    supportingMaterialFilter(
+      input.jurisdictionIds,
+      input.jurisdictionId,
+      (value) => eq(supportingMaterials.jurisdictionId, value),
+      (values) => inArray(supportingMaterials.jurisdictionId, values)
+    ),
+    supportingMaterialFilter(
+      input.classifications,
+      input.classification,
+      (value) => eq(supportingMaterials.classification, value),
+      (values) => inArray(supportingMaterials.classification, values)
+    ),
+    input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
+    input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
+    input.processingStatus === undefined ? undefined : eq(supportingMaterials.processingStatus, input.processingStatus),
+    input.query === undefined
+      ? undefined
+      : sql`(to_tsvector('english', ${supportingMaterials.title}) @@ websearch_to_tsquery('english', ${input.query}) or exists (
+          select 1 from ${supportingMaterialSections}
+          where ${supportingMaterialSections.materialId} = ${supportingMaterials.id}
+            and ${supportingMaterialSections.searchVector} @@ websearch_to_tsquery('english', ${input.query})
+        ))`
+  )
+}
+
+function supportingMaterialCollectionLinkScope(input: SupportingMaterialSearchInput): SQL | undefined {
+  return and(
+    supportingMaterialFilter(
+      input.billIds,
+      input.billId,
+      (value) => eq(supportingMaterialLinks.billId, value),
+      (values) => inArray(supportingMaterialLinks.billId, values)
+    ),
+    supportingMaterialFilter(
+      input.amendmentIds,
+      input.amendmentId,
+      (value) => eq(supportingMaterialLinks.amendmentId, value),
+      (values) => inArray(supportingMaterialLinks.amendmentId, values)
+    ),
+    supportingMaterialFilter(
+      input.eventIds,
+      input.eventId,
+      (value) => eq(supportingMaterialLinks.eventId, value),
+      (values) => inArray(supportingMaterialLinks.eventId, values)
+    ),
+    supportingMaterialFilter(
+      input.organizationIds,
+      input.organizationId,
+      (value) => eq(supportingMaterialLinks.organizationId, value),
+      (values) => inArray(supportingMaterialLinks.organizationId, values)
+    )
+  )
+}
+
 /**
  * Lexical material search deliberately has a bounded retrieval window. It
  * preserves title and section-text matches, but runs both candidate sources
@@ -2202,65 +2285,7 @@ export class LegislationQueryService {
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeSupportingMaterialCollectionCursor(input.cursor, input)
-    const rows = await this.#database
-      .selectDistinct({ material: supportingMaterialSummaryColumns })
-      .from(supportingMaterials)
-      .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
-      .where(
-        and(
-          supportingMaterialFilter(
-            input.jurisdictionIds,
-            input.jurisdictionId,
-            (value) => eq(supportingMaterials.jurisdictionId, value),
-            (values) => inArray(supportingMaterials.jurisdictionId, values)
-          ),
-          supportingMaterialFilter(
-            input.classifications,
-            input.classification,
-            (value) => eq(supportingMaterials.classification, value),
-            (values) => inArray(supportingMaterials.classification, values)
-          ),
-          supportingMaterialFilter(
-            input.billIds,
-            input.billId,
-            (value) => eq(supportingMaterialLinks.billId, value),
-            (values) => inArray(supportingMaterialLinks.billId, values)
-          ),
-          supportingMaterialFilter(
-            input.amendmentIds,
-            input.amendmentId,
-            (value) => eq(supportingMaterialLinks.amendmentId, value),
-            (values) => inArray(supportingMaterialLinks.amendmentId, values)
-          ),
-          supportingMaterialFilter(
-            input.eventIds,
-            input.eventId,
-            (value) => eq(supportingMaterialLinks.eventId, value),
-            (values) => inArray(supportingMaterialLinks.eventId, values)
-          ),
-          supportingMaterialFilter(
-            input.organizationIds,
-            input.organizationId,
-            (value) => eq(supportingMaterialLinks.organizationId, value),
-            (values) => inArray(supportingMaterialLinks.organizationId, values)
-          ),
-          input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
-          input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
-          input.processingStatus === undefined
-            ? undefined
-            : eq(supportingMaterials.processingStatus, input.processingStatus),
-          input.query === undefined
-            ? undefined
-            : sql`(to_tsvector('english', ${supportingMaterials.title}) @@ websearch_to_tsquery('english', ${input.query}) or exists (
-                select 1 from ${supportingMaterialSections}
-                where ${supportingMaterialSections.materialId} = ${supportingMaterials.id}
-                  and ${supportingMaterialSections.searchVector} @@ websearch_to_tsquery('english', ${input.query})
-              ))`
-        )
-      )
-      .orderBy(...supportingMaterialOrder(input.sort))
-      .limit(limit + 1)
-      .offset(offset)
+    const rows = await buildSupportingMaterialCollectionQuery(this.#database, input, limit, offset)
     const truncated = rows.length > limit
     const items = await this.#withSupportingMaterialLinkIds(rows.slice(0, limit).map((row) => row.material))
     return {
