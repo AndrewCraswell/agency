@@ -13,15 +13,14 @@ From the repository root:
 
 ```text
 pnpm install
-pnpm --filter legislation-web dev
-pnpm --filter legislation-web test
-pnpm --filter legislation-web check:types
-pnpm --filter legislation-web verify
+pnpm --filter legislation dev
+pnpm --filter legislation test
+pnpm --filter legislation check:types
+pnpm --filter legislation verify
 ```
 
-The current public HTTP runtime is `apps/legislation-web` on Next.js 16.3.1. Its `app/api` Route Handlers are the
-deployment boundary. The following commands exercise reusable legislation domain and transitional standalone code; they
-do not start or deploy the deleted `legislation-api` Railway service:
+The current public HTTP runtime is `apps/legislation` on Next.js 16.3.1. Its `app/api` Route Handlers are the
+deployment boundary. The former `legislation-api` Railway service is deleted and must not be started or redeployed:
 
 ```text
 pnpm --filter legislation build
@@ -84,19 +83,19 @@ unexplained one-off files:
 
 ## Container and Railway build
 
-The current Railway runtime is `legislation-web`. Its image uses the repository root as Docker context so pnpm can
-resolve the root lockfile, catalog, and shared TypeScript package. The Dockerfile installs the web application and its
-legislation dependency closure, builds the Next.js application, and runs the standalone output as a non-root process.
+The current Railway service is named `legislation-web`. Its image uses the repository root as Docker context so pnpm
+can resolve the root lockfile, catalog, and shared TypeScript package. The Dockerfile installs `apps/legislation`,
+builds the Next.js application, and runs the standalone output as a non-root process.
 
 From the repository root:
 
 ```text
-docker build -f apps/legislation-web/Dockerfile -t legislation-web:local .
+docker build -f apps/legislation/Dockerfile -t legislation-web:local .
 ```
 
-Railway config-as-code lives at `apps/legislation-web/railway.json`. Keep the service root at the repository root and
-explicitly set Config File Path to `/apps/legislation-web/railway.json`; nested config is not discovered automatically.
-Before release, verify the effective service uses the Dockerfile builder, `apps/legislation-web/Dockerfile`, and `/ready`
+Railway config-as-code lives at `apps/legislation/railway.json`. Keep the service root at the repository root and
+explicitly set Config File Path to `/apps/legislation/railway.json`; nested config is not discovered automatically.
+Before release, verify the effective service uses the Dockerfile builder, `apps/legislation/Dockerfile`, and `/ready`
 health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
 release operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
 

@@ -1,7 +1,9 @@
 # Legislation
 
-Legislative intelligence service containing synchronization, canonical data, document processing, search, the remote MCP
-server, authentication, observability, and Azure MCP infrastructure.
+Legislative intelligence application containing synchronization, canonical data, document processing, search, the
+Next.js public API boundary, the remote MCP server, authentication, observability, and Azure MCP infrastructure. This is
+the canonical application and documentation home. Railway retains the service name `legislation-web`; that service name
+does not create a separate canonical product application.
 
 ## Structure
 
@@ -28,11 +30,11 @@ user.
 docker build -f apps/legislation/Dockerfile -t legislation:local .
 ```
 
-From `apps/legislation`, `pnpm docker:build` runs the same root-context build. For the `legislation-api` Railway
-service, keep the repository root visible and explicitly set Config File Path to `/apps/legislation/railway.json`;
-Railway does not auto-discover this nested file. The service reads Railway's `PORT`, binds to `0.0.0.0`, and starts only
-the HTTP/API/MCP server. Database migrations remain an explicit release operation through
-`pnpm --filter legislation db:migrate`; container startup never applies them.
+From `apps/legislation`, `pnpm docker:build` runs the same root-context build for local service work. Production is the
+Railway service named `legislation-web`; its current Next.js deployment configuration and release evidence are recorded
+in [the Railway API release record](docs/http-api-railway-release.md). The former standalone `legislation-api` service
+was deleted and must not be recreated as a rollback target. Database migrations remain an explicit release operation
+through `pnpm --filter legislation db:migrate`; container startup never applies them.
 
 ## Representative lookups
 
