@@ -53,15 +53,15 @@ const allocationDefinition = {
   releaseState: "schematic-input-only",
   pads,
   peripheralInstances: {
-    scoringAdc: "SPI3_HOST plus GDMA",
+    scoringAdc: "SPI3_HOST plus GDMA for one shared ADS8881",
     scoringConvst: "GPTimer0 hardware schedule; final GPIO event path is a BP-127 bench gate",
-    applicationBus: "SPI2_HOST shared by W5500 and the write-only source-control register",
+    applicationBus: "SPI2_HOST shared by W5500 and two cascaded write-only phase-control registers",
     ir: "RMT RX on GPIO35",
     usb: "native USB Serial/JTAG on GPIO19/GPIO20",
     watchdog: "GPTimer1 health epoch plus external APP_WD_KICK on GPIO12"
   },
   scoringAdc: {
-    converter: "seven ADS8881 devices in daisy-chain mode",
+    converter: "one ADS8881 behind five protected sense buffers and one TMUX1208 sense selector",
     peripheral: "dedicated SPI host plus GDMA",
     signals: ["SAR_SCLK", "SAR_DOUT", "SAR_CONVST"],
     gpio: [4, 5, 6],
@@ -69,20 +69,25 @@ const allocationDefinition = {
     feasibilityGate: "BP-127"
   },
   sourceControl: {
-    register: "SN74HCS595PWR",
+    register: "two cascaded SN74HCS595PWR phase-control registers",
     signals: ["APP_SPI_SCK", "APP_SPI_MOSI", "SOURCE_LATCH", "SOURCE_OE_N", "APP_RESET_N"],
     gpio: [18, 8, 47, 36],
     outputs: [
-      "LEFT_A_SOURCE_EN",
-      "LEFT_B_SOURCE_EN",
-      "LEFT_C_SOURCE_EN",
-      "RIGHT_A_SOURCE_EN",
-      "RIGHT_B_SOURCE_EN",
-      "RIGHT_C_SOURCE_EN",
-      "PISTE_SOURCE_EN"
+      "SOURCE_A0",
+      "SOURCE_A1",
+      "SOURCE_A2",
+      "SOURCE_EN",
+      "SINK_A0",
+      "SINK_A1",
+      "SINK_A2",
+      "SINK_EN",
+      "SENSE_A0",
+      "SENSE_A1",
+      "SENSE_A2",
+      "SENSE_EN"
     ],
     safeRule:
-      "APP_RESET_N clears the shift register, SOURCE_OE_N is pulled high to disable every output through reset, and each TMUX1112 select has a pulldown. Firmware latches a complete byte before enabling outputs."
+      "APP_RESET_N clears both registers and all three active-high TMUX1208 enables, while SOURCE_OE_N is pulled high to disable every output through reset. Firmware latches one complete source/sink/sense phase before enabling it."
   },
   primaryOutputs: {
     signals: ["LAMP_RED", "LAMP_GREEN", "LAMP_WHITE_LEFT", "LAMP_WHITE_RIGHT", "BUZZER"],
@@ -233,13 +238,13 @@ export function validateBenchPrototypeEsp32Allocation(input: unknown): true {
     new Set(gpios).size !== gpios.length ||
     new Set(signals).size !== signals.length ||
     benchPrototypeEsp32Allocation.scoringAdc.gpio.join(",") !== "4,5,6" ||
-    benchPrototypeEsp32Allocation.peripheralInstances.scoringAdc !== "SPI3_HOST plus GDMA" ||
+    benchPrototypeEsp32Allocation.peripheralInstances.scoringAdc !== "SPI3_HOST plus GDMA for one shared ADS8881" ||
     benchPrototypeEsp32Allocation.peripheralInstances.applicationBus !==
-      "SPI2_HOST shared by W5500 and the write-only source-control register" ||
+      "SPI2_HOST shared by W5500 and two cascaded write-only phase-control registers" ||
     benchPrototypeEsp32Allocation.scoringAdc.comparatorInputs !== 0 ||
     benchPrototypeEsp32Allocation.primaryOutputs.gpio.join(",") !== "7,15,17,10,11" ||
     benchPrototypeEsp32Allocation.sourceControl.gpio.join(",") !== "18,8,47,36" ||
-    benchPrototypeEsp32Allocation.sourceControl.outputs.length !== 7 ||
+    benchPrototypeEsp32Allocation.sourceControl.outputs.length !== 12 ||
     benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios.join(",") !== "37" ||
     benchPrototypeEsp32Allocation.irReceiver.gpio !== 35 ||
     benchPrototypeEsp32Allocation.irReceiver.receiverHardware !== "TSOP38438" ||

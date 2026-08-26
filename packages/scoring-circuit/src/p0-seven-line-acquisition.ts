@@ -1,69 +1,6 @@
-type PlainRecord = Record<PropertyKey, unknown>
+/** P0-03 phased seven-conductor acquisition for the single-ESP32 prototype. */
 
-function isPlainRecord(value: unknown): value is PlainRecord {
-  if (value === null || typeof value !== "object") return false
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-}
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if (value === null || typeof value !== "object") return value
-  if (seen.has(value)) throw new TypeError("P0 acquisition data cannot contain an alias or cycle")
-  seen.add(value)
-  for (const key of Reflect.ownKeys(value)) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    if (!descriptor || !("value" in descriptor)) throw new TypeError("P0 acquisition data must not use accessors")
-    deepFreeze(descriptor.value, seen)
-  }
-  return Object.freeze(value)
-}
-
-function hasExactDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
-  if (Object.is(actual, expected)) return true
-  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") return false
-  if (seen.has(actual)) return seen.get(actual) === expected
-  seen.set(actual, expected)
-
-  if (Array.isArray(expected)) {
-    if (
-      !Array.isArray(actual) ||
-      Object.getPrototypeOf(actual) !== Array.prototype ||
-      actual.length !== expected.length
-    ) {
-      return false
-    }
-    const keys = Reflect.ownKeys(actual)
-    if (keys.some((key) => typeof key === "symbol" || (key !== "length" && !/^(0|[1-9]\d*)$/u.test(key)))) {
-      return false
-    }
-    return expected.every((entry, index) => hasExactDataGraph(actual[index], entry, seen))
-  }
-
-  if (!isPlainRecord(actual) || !isPlainRecord(expected)) return false
-  const actualKeys = Reflect.ownKeys(actual)
-  const expectedKeys = Reflect.ownKeys(expected)
-  if (
-    actualKeys.length !== expectedKeys.length ||
-    actualKeys.some((key) => typeof key === "symbol" || !expectedKeys.includes(key))
-  ) {
-    return false
-  }
-  return expectedKeys.every((key) => {
-    const descriptor = Object.getOwnPropertyDescriptor(actual, key)
-    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
-    return Boolean(
-      descriptor &&
-      expectedDescriptor &&
-      "value" in descriptor &&
-      "value" in expectedDescriptor &&
-      descriptor.enumerable &&
-      expectedDescriptor.enumerable &&
-      hasExactDataGraph(descriptor.value, expectedDescriptor.value, seen)
-    )
-  })
-}
-
-const channelOrder = [
+const conductorOrder = [
   "LEFT_WEAPON_A",
   "LEFT_WEAPON_B",
   "LEFT_WEAPON_C",
@@ -73,311 +10,152 @@ const channelOrder = [
   "PISTE"
 ] as const
 
-const candidateQuantities = [
-  { designatorPrefix: "U_REF", mpn: "REF5025AQDRQ1", quantity: 7, role: "one 2.5 V reference per acquisition cell" },
-  {
-    designatorPrefix: "U_SOURCE_SWITCH",
-    mpn: "TMUX1112PWR",
-    quantity: 2,
-    role: "seven active-high source paths across two quad SPST packages"
-  },
-  {
-    designatorPrefix: "U_SOURCE_CONTROL",
-    mpn: "SN74HCS595PWR",
-    quantity: 1,
-    role: "reset-cleared serial-to-parallel control for seven source paths"
-  },
-  {
-    designatorPrefix: "U_ESD",
-    mpn: "TPD4E05U06DQAR",
-    quantity: 2,
-    role: "seven protected lines across eight shunt lanes"
-  },
-  { designatorPrefix: "U_OVP_BUFFER", mpn: "ADA4177-1ARZ", quantity: 7, role: "one unity buffer per cell" },
-  { designatorPrefix: "U_SAR", mpn: "ADS8881IDGS", quantity: 7, role: "one simultaneous 18-bit SAR per cell" },
-  {
-    designatorPrefix: "U_NEGATIVE_RAIL",
-    mpn: "TPS60400DBVR",
-    quantity: 1,
-    role: "candidate shared negative-rail generator"
-  },
-  { designatorPrefix: "R_ESD", mpn: "CRCW060322R0FKEAHP", quantity: 7, role: "22 ohm series protection" },
-  { designatorPrefix: "R_SOURCE", mpn: "ERA3AEB2491V", quantity: 7, role: "2.49 kohm excitation resistor" },
-  {
-    designatorPrefix: "R_SOURCE_PD",
-    mpn: "CRCW0603100KFKEAHP",
-    quantity: 7,
-    role: "100 kilohm source-switch safe-state pulldown"
-  },
-  { designatorPrefix: "R_SAR", mpn: "CRCW060320R0FKEAHP", quantity: 7, role: "20 ohm ADC input isolation" },
-  { designatorPrefix: "C_SAR", mpn: "C0603C102J5GACTU", quantity: 7, role: "1 nF ADC input capacitor" },
-  {
-    designatorPrefix: "C_REF_IN",
-    mpn: "CGA3E3X7R1H105K080AB",
-    quantity: 7,
-    role: "1 uF REF5025 input bypass"
-  },
-  { designatorPrefix: "C_REF_REG", mpn: "T521B106M025ATE100", quantity: 7, role: "10 uF reference output capacitor" },
-  {
-    designatorPrefix: "C_REF_REG_HF",
-    mpn: "C0603C104K3RACTU",
-    quantity: 7,
-    role: "100 nF reference high-frequency support"
-  },
-  { designatorPrefix: "R_REF_SAR", mpn: "RCWE0603R220FKEA", quantity: 7, role: "0.22 ohm ADC reference feed" },
-  { designatorPrefix: "C_REF", mpn: "GRM21BR71A106KE51L", quantity: 7, role: "10 uF ADC-local reference reservoir" },
-  {
-    designatorPrefix: "C_BUFFER_POS",
-    mpn: "C0603C104K3RACTU",
-    quantity: 7,
-    role: "100 nF ADA4177 positive-rail bypass"
-  },
-  {
-    designatorPrefix: "C_BUFFER_NEG",
-    mpn: "C0603C104K3RACTU",
-    quantity: 7,
-    role: "100 nF ADA4177 negative-rail bypass"
-  },
-  {
-    designatorPrefix: "C_SAR_AVDD",
-    mpn: "CGA3E3X7R1H105K080AB",
-    quantity: 7,
-    role: "1 uF ADS8881 AVDD bypass"
-  },
-  {
-    designatorPrefix: "C_SAR_DVDD",
-    mpn: "CGA3E3X7R1H105K080AB",
-    quantity: 7,
-    role: "1 uF ADS8881 DVDD bypass"
-  },
-  { designatorPrefix: "C_MUX", mpn: "C0603C104K3RACTU", quantity: 2, role: "100 nF TMUX1112 bypass" },
-  {
-    designatorPrefix: "C_SOURCE_CONTROL",
-    mpn: "C0603C104K3RACTU",
-    quantity: 1,
-    role: "100 nF SN74HCS595 bypass"
-  },
-  {
-    designatorPrefix: "R_SOURCE_OE_PULLUP",
-    mpn: "CRCW0603100KFKEAHP",
-    quantity: 1,
-    role: "100 kilohm hardware disable for the source-control register"
-  },
-  {
-    designatorPrefix: "C_NEG_IN",
-    mpn: "CGA3E3X7R1H105K080AB",
-    quantity: 1,
-    role: "shared TPS60400 1 uF input bypass"
-  },
-  {
-    designatorPrefix: "C_NEG_FLY",
-    mpn: "CGA3E3X7R1H105K080AB",
-    quantity: 1,
-    role: "shared TPS60400 1 uF flying capacitor"
-  },
-  {
-    designatorPrefix: "C_NEG_OUT",
-    mpn: "CGA3E3X7R1H105K080AB",
-    quantity: 1,
-    role: "shared TPS60400 1 uF output bypass"
-  }
-] as const
+const sensedConductorOrder = ["LEFT_WEAPON_B", "LEFT_WEAPON_C", "RIGHT_WEAPON_B", "RIGHT_WEAPON_C", "PISTE"] as const
 
-export function calculateP0SevenLineReadout(input: { sclkHz: number }) {
-  if (!isPlainRecord(input) || Reflect.ownKeys(input).length !== 1) {
-    throw new RangeError("P0 readout input must contain only a finite sclkHz value")
-  }
-  const descriptor = Object.getOwnPropertyDescriptor(input, "sclkHz")
-  if (!descriptor || !("value" in descriptor) || !descriptor.enumerable || typeof descriptor.value !== "number") {
-    throw new RangeError("P0 readout input must provide sclkHz as an own enumerable data property")
-  }
-  const sclkHz = descriptor.value
-  if (!Number.isFinite(sclkHz) || sclkHz <= 0 || sclkHz > 36_000_000) {
-    throw new RangeError("P0 SCLK must be finite, positive, and no more than 36 MHz")
-  }
-  const clockEdges = 18 * channelOrder.length
-  const shiftSeconds = clockEdges / sclkHz
-  const maximumConversionSeconds = 710e-9
-  const completeSetSeconds = maximumConversionSeconds + shiftSeconds
-  return deepFreeze({
-    bitsPerChannel: 18,
-    channelCount: channelOrder.length,
-    clockEdges,
-    completeSetMicroseconds: completeSetSeconds * 1e6,
-    completeSetSeconds,
-    maximumConversionSeconds,
-    sclkHz,
-    shiftSeconds,
-    underTenMicroseconds: completeSetSeconds <= 10e-6
-  })
+type PlainRecord = Record<PropertyKey, unknown>
+
+function isPlainRecord(value: unknown): value is PlainRecord {
+  return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype
 }
 
-const readoutAt20Mhz = calculateP0SevenLineReadout({ sclkHz: 20_000_000 })
-
-export const p0SevenLineAcquisition = deepFreeze({
-  workUnit: "P0-BP-100",
-  scope: "ESP32-only seven-line acquisition definition",
-  controller: {
-    host: "ESP32-S3",
-    activeDependencies: { isolationHardware: false, stm32: false },
-    requiredGpioRoles: { inputs: 1, outputs: 4 },
-    pinBinding:
-      "SAR_SCLK is GPIO4, SAR_DOUT is GPIO5, SAR_CONVST is GPIO6, SOURCE_LATCH is GPIO47, and SOURCE_OE_N is GPIO36; source data and clock share APP_SPI_MOSI and APP_SPI_SCK"
-  },
-  channels: channelOrder.map((line, index) => ({
-    chainIndex: index + 1,
-    line,
-    adc: `U_SAR_${index + 1}`,
-    sourceSwitch: `U_SOURCE_SWITCH_${Math.floor(index / 4) + 1}.CH${(index % 4) + 1}`,
-    sourceControl: `U_SOURCE_CONTROL.Q${index}`,
-    sourcePath: `U_REF_${index + 1}.VREF_2V5 -> R_SOURCE_${index + 1} 2.49 kohm -> U_SOURCE_SWITCH_${Math.floor(index / 4) + 1}.CH${(index % 4) + 1} -> ${line}; U_SOURCE_CONTROL.Q${index} drives the active-high switch select`,
-    acquisitionPath: `${line} -> TPD4E05U06 protected lane -> R_ESD_${index + 1} 22 ohm -> ADA4177-1 unity buffer -> R_SAR_${index + 1} 20 ohm and C_SAR_${index + 1} 1 nF -> ADS8881 AINP; AINN -> SCORING_SGND`
-  })),
-  candidateQuantities,
-  sourceControl: {
-    register: "SN74HCS595PWR",
-    sharedBus: { clock: "APP_SPI_SCK", data: "APP_SPI_MOSI" },
-    latch: { gpio: 47, net: "SOURCE_LATCH" },
-    reset: "APP_RESET_N drives active-low SRCLR",
-    outputEnable: "SOURCE_OE_N on GPIO36 with a 100 kilohm pull-up; high disables every register output",
-    outputs: channelOrder.map((line, index) => ({ bit: index, line, net: `${line.replace("_WEAPON", "")}_SOURCE_EN` })),
-    unusedOutput: { bit: 7, disposition: "no-connect" },
-    updateRule:
-      "Keep SOURCE_OE_N high while shifting and latching one complete byte; APP_RESET_N clears the shift register, firmware latches zero, then drives SOURCE_OE_N low only after acquisition health passes."
-  },
-  esdLaneAssignment: {
-    assigned: [
-      { lane: 1, line: "LEFT_WEAPON_A", protector: "U_ESD_1" },
-      { lane: 2, line: "LEFT_WEAPON_B", protector: "U_ESD_1" },
-      { lane: 3, line: "LEFT_WEAPON_C", protector: "U_ESD_1" },
-      { lane: 4, line: "RIGHT_WEAPON_A", protector: "U_ESD_1" },
-      { lane: 1, line: "RIGHT_WEAPON_B", protector: "U_ESD_2" },
-      { lane: 2, line: "RIGHT_WEAPON_C", protector: "U_ESD_2" },
-      { lane: 3, line: "PISTE", protector: "U_ESD_2" }
-    ],
-    unused: {
-      lane: 4,
-      protector: "U_ESD_2",
-      disposition: "unused-no-connect",
-      prohibition: "this lane may not become an unlisted input, connector path, test input, or acquisition channel"
-    }
-  },
-  rails: {
-    V5_ANALOG:
-      "positive analog supply for U_REF_1 through U_REF_7, U_OVP_BUFFER_1 through U_OVP_BUFFER_7, and C_NEG_IN",
-    VNEG_ANALOG: "TPS60400 output for U_OVP_BUFFER_1 through U_OVP_BUFFER_7 and C_BUFFER_NEG_1 through C_BUFFER_NEG_7",
-    APP_3V3:
-      "supply for U_SOURCE_SWITCH_1 through U_SOURCE_SWITCH_2, U_SOURCE_CONTROL, U_SAR_1 through U_SAR_7 AVDD/DVDD, and ESP32-S3 timing I/O",
-    VREF_2V5:
-      "seven separate REF5025 outputs; each U_REF_n drives only R_SOURCE_n, C_REF_REG_n, C_REF_REG_HF_n, and R_REF_SAR_n",
-    SCORING_SGND:
-      "return for every analog support capacitor, ADS8881 AINN, REF5025, TPS60400, and TPD4E05U06 ground pin"
-  },
-  adcTiming: {
-    converter: "ADS8881IDGS",
-    mode: "seven-ADC daisy chain, simultaneous conversion, no BUSY signal",
-    physicalChain: channelOrder,
-    hostWordOrder: [...channelOrder].reverse(),
-    esp32Signals: [
-      { direction: "output", gpio: 6, hostRole: "SAR_CONVST", net: "SAR_CONVST_ALL", requiredIdleLevel: "low" },
-      { direction: "output", gpio: 4, hostRole: "SAR_SCLK", net: "SAR_SCLK_ALL", requiredIdleLevel: "low" },
-      { direction: "input", gpio: 5, hostRole: "SAR_DOUT", net: "SAR_DOUT_TO_ESP32", source: "U_SAR_7.DOUT" }
-    ],
-    daisyEndpoints: [
-      { from: "SCORING_SGND", net: "SAR1_DIN_GROUND", to: "U_SAR_1.DIN" },
-      { from: "U_SAR_1.DOUT", net: "SAR_CHAIN_1_TO_2", to: "U_SAR_2.DIN" },
-      { from: "U_SAR_2.DOUT", net: "SAR_CHAIN_2_TO_3", to: "U_SAR_3.DIN" },
-      { from: "U_SAR_3.DOUT", net: "SAR_CHAIN_3_TO_4", to: "U_SAR_4.DIN" },
-      { from: "U_SAR_4.DOUT", net: "SAR_CHAIN_4_TO_5", to: "U_SAR_5.DIN" },
-      { from: "U_SAR_5.DOUT", net: "SAR_CHAIN_5_TO_6", to: "U_SAR_6.DIN" },
-      { from: "U_SAR_6.DOUT", net: "SAR_CHAIN_6_TO_7", to: "U_SAR_7.DIN" },
-      { from: "U_SAR_7.DOUT", net: "SAR_DOUT_TO_ESP32", to: "ESP32-S3 ADC_MISO" }
-    ],
-    transaction: {
-      conversionStartRule: "ADC_SCLK is low at ADC_CONVST rising edge",
-      readRule: "hold ADC_CONVST high while exactly 126 SCLK rising edges shift seven 18-bit MSB-first words",
-      targetSclkHz: 20_000_000,
-      maximumSclkHz: 36_000_000,
-      maximumConversionSeconds: 710e-9,
-      readoutAt20Mhz
-    }
-  },
-  failureStates: [
-    {
-      state: "boot-safe",
-      trigger: "ESP32 reset, brownout, watchdog reset, or firmware start",
-      requiredAction: "hold ADC_CONVST and ADC_SCLK low, reject ADC data, and keep every TMUX source control low"
-    },
-    {
-      state: "analog-health-fault",
-      trigger:
-        "reference, positive analog rail, or TPS60400 negative rail is outside its characterized operating range",
-      requiredAction: "reject the complete sample set and disable all excitation"
-    },
-    {
-      state: "serial-transaction-fault",
-      trigger: "not exactly 126 clocks, unexpected ADC_CONVST/SCLK sequence, or a missing word",
-      requiredAction: "discard all seven words; do not reuse a partial set"
-    },
-    {
-      state: "interlock-fault",
-      trigger: "source control is not observed low before quiet-path acquisition",
-      requiredAction: "disable excitation and reject the set"
-    },
-    {
-      state: "fault-or-unpowered-exposure",
-      trigger: "external fault, loss of analog power, or unpowered connector exposure",
-      requiredAction: "DENY normal acquisition pending the guarded-fault and recovery characterization matrix"
-    },
-    {
-      state: "characterization-incomplete",
-      trigger: "any required P0 physical evidence is absent",
-      requiredAction: "retain architecture-only status; no fabrication, scoring, or FIE claim"
-    }
-  ],
-  characterizationPlan: [
-    "Verify ESP32-S3 GPIO electrical levels, timing jitter, and boot/reset idle levels at ADC_CONVST, ADC_SCLK, and SAR_DOUT_TO_ESP32.",
-    "Capture simultaneous seven-line conversion timing and prove every 18-bit host word maps to the stated reverse chain order.",
-    "Measure reference, TPS60400 negative-rail load, crosstalk, ADC input settling, and serial signal integrity on the assembled seven-line board.",
-    "Run powered and unpowered plus/minus guarded-fault and overload-recovery matrices with source disabled, trace nodes, and post-pulse normal-acquisition checks.",
-    "Characterize 0 ohm and the 450/475/500 ohm region across intended temperature, fixture, cable, and calibration conditions."
-  ],
-  authority: {
-    architectureOnly: true,
-    fabricationAuthorized: false,
-    fieConformanceProven: false,
-    scoringReady: false
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value
+  if (seen.has(value)) throw new RangeError("P0 acquisition cannot contain cycles or aliases")
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor))
+      throw new RangeError("P0 acquisition must contain data only")
+    deepFreeze(descriptor.value, seen)
   }
-} as const)
+  return Object.freeze(value)
+}
+
+function sameDataGraph(actual: unknown, expected: unknown): boolean {
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") {
+    return Object.is(actual, expected)
+  }
+  if (Array.isArray(actual) !== Array.isArray(expected)) return false
+  if (!Array.isArray(actual) && !(isPlainRecord(actual) && isPlainRecord(expected))) return false
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  return (
+    actualKeys.length === expectedKeys.length &&
+    expectedKeys.every(
+      (key) => actualKeys.includes(key) && sameDataGraph(Reflect.get(actual, key), Reflect.get(expected, key))
+    )
+  )
+}
+
+const conductors = conductorOrder.map((line, index) => ({
+  line,
+  muxChannel: index + 1,
+  sourceResistanceOhm: 470,
+  sinkResistanceOhm: 470,
+  senseBuffer: sensedConductorOrder.includes(line as (typeof sensedConductorOrder)[number])
+    ? `U_SENSE_BUFFER_${sensedConductorOrder.indexOf(line as (typeof sensedConductorOrder)[number]) + 1}`
+    : null,
+  role: line.endsWith("_A") ? "controlled excitation only" : "controlled excitation, sink, and protected sense"
+}))
+
+const definition = {
+  artifactKind: "p0-phased-seven-conductor-acquisition",
+  workUnit: "P0-03",
+  revision: "P0-CS-B",
+  priorArtCorrection: {
+    source: "OpenPiste PCB revision 1.2 and pinned firmware",
+    finding:
+      "The seven connector conductors are exercised as named drive/read relations, not sampled as seven simultaneous independent voltages.",
+    adopted:
+      "A conductors are excitation-only; B, C, and piste are the five sensed nodes. Every phase selects exactly one source, one sink, and one sense relation.",
+    notAdopted:
+      "Direct ESP32 GPIO exposure, raw internal-ADC thresholds, OpenPiste component values, firmware, PCB geometry, and any claim of FIE conformance."
+  },
+  conductors,
+  sensedConductors: [...sensedConductorOrder],
+  phaseHardware: {
+    sourceMux: { reference: "U_SOURCE_MUX", mpn: "TMUX1208PWR", common: "VREF_2V5", activeHighEnable: true },
+    sinkMux: { reference: "U_SINK_MUX", mpn: "TMUX1208PWR", common: "SCORING_SGND", activeHighEnable: true },
+    senseMux: { reference: "U_SENSE_MUX", mpn: "TMUX1208PWR", common: "ADC_DRIVER_INPUT", activeHighEnable: true },
+    control: {
+      registers: ["U_PHASE_CONTROL_1", "U_PHASE_CONTROL_2"],
+      mpn: "SN74HCS595PWR",
+      sharedBus: { clock: "APP_SPI_SCK", data: "APP_SPI_MOSI" },
+      latch: "SOURCE_LATCH on GPIO47",
+      outputEnable: "SOURCE_OE_N on GPIO36; 100 kilohm pull-up disables both registers",
+      reset: "APP_RESET_N clears both registers; all three active-high mux enables therefore remain low",
+      invariant:
+        "Firmware writes a complete source/sink/sense phase before enabling any mux. Source and sink may never select the same conductor."
+    }
+  },
+  analogPath: {
+    protection: "two TPD4E05U06DQAR arrays plus one 22 ohm series resistor per external conductor",
+    senseBuffers: {
+      count: 5,
+      mpn: "ADA4177-1ARZ",
+      lines: [...sensedConductorOrder],
+      reason: "retain per-sense-node input overvoltage tolerance before the shared sense mux"
+    },
+    adc: { count: 1, reference: "U_SAR", mpn: "ADS8881IDGS", resolutionBits: 18, maximumSamplesPerSecond: 1_000_000 },
+    reference: { count: 1, reference: "U_REF", mpn: "REF5025AQDRQ1", volts: 2.5 },
+    negativeRail: { count: 1, reference: "U_NEGATIVE_RAIL", mpn: "TPS60400DBVR" },
+    measurement:
+      "Selected source and sink paths form a calibrated divider through the external relation. The selected protected sense node is digitized; open, closed, resistance, grounded, cross-line, and indeterminate results are derived from named phases, never a simultaneous snapshot."
+  },
+  timing: {
+    adcSignals: [
+      { gpio: 4, signal: "SAR_SCLK", direction: "output" },
+      { gpio: 5, signal: "SAR_DOUT", direction: "input" },
+      { gpio: 6, signal: "SAR_CONVST", direction: "output" }
+    ],
+    phaseSettleBudgetUs: 3,
+    adcConversionMaximumUs: 0.71,
+    serialClockHz: 20_000_000,
+    serialBits: 18,
+    maximumPhaseUs: 4.61,
+    scheduler:
+      "Sample the two weapon-critical relations every fast cycle; interleave target, guard, piste, leakage, and health relations without treating one full relation matrix as one atomic ADC snapshot."
+  },
+  quantities: [
+    { reference: "U_PHASE_CONTROL", mpn: "SN74HCS595PWR", quantity: 2 },
+    { reference: "U_SOURCE_MUX/U_SINK_MUX/U_SENSE_MUX", mpn: "TMUX1208PWR", quantity: 3 },
+    { reference: "U_SENSE_BUFFER", mpn: "ADA4177-1ARZ", quantity: 5 },
+    { reference: "U_SAR", mpn: "ADS8881IDGS", quantity: 1 },
+    { reference: "U_REF", mpn: "REF5025AQDRQ1", quantity: 1 },
+    { reference: "U_NEGATIVE_RAIL", mpn: "TPS60400DBVR", quantity: 1 },
+    { reference: "U_ESD", mpn: "TPD4E05U06DQAR", quantity: 2 },
+    { reference: "R_LINE", value: "22 ohm", quantity: 7 },
+    { reference: "R_SOURCE", value: "470 ohm 0.1 percent", quantity: 7 },
+    { reference: "R_SINK", value: "470 ohm 0.1 percent", quantity: 7 }
+  ],
+  dependencies: { stm32: false, isolationHardware: false, esp32InternalAdc: false },
+  authority: {
+    schematicIntegrated: false,
+    calibratedResistanceProven: false,
+    overloadRecoveryProven: false,
+    fieConformanceProven: false,
+    fabricationAuthorized: false
+  }
+} as const
+
+export const p0SevenLineAcquisition = deepFreeze(definition)
 
 export function validateP0SevenLineAcquisition(value: unknown): true {
-  if (!hasExactDataGraph(value, p0SevenLineAcquisition)) {
-    throw new RangeError("P0 acquisition definition must exactly match the reviewed ESP32-only decision")
-  }
+  if (!sameDataGraph(value, p0SevenLineAcquisition))
+    throw new RangeError("P0 acquisition must match the reviewed graph")
   if (
-    p0SevenLineAcquisition.channels.length !== 7 ||
-    new Set(p0SevenLineAcquisition.channels.map(({ line }) => line)).size !== 7 ||
-    !hasExactDataGraph(
-      p0SevenLineAcquisition.channels.map(({ line }) => line),
-      channelOrder
-    ) ||
-    p0SevenLineAcquisition.esdLaneAssignment.assigned.length !== 7 ||
-    !hasExactDataGraph(
-      p0SevenLineAcquisition.esdLaneAssignment.assigned.map(({ line }) => line),
-      channelOrder
-    ) ||
-    p0SevenLineAcquisition.esdLaneAssignment.unused.disposition !== "unused-no-connect" ||
-    p0SevenLineAcquisition.candidateQuantities.length !== 27 ||
-    p0SevenLineAcquisition.sourceControl.outputs.length !== 7 ||
-    p0SevenLineAcquisition.sourceControl.latch.gpio !== 47 ||
-    p0SevenLineAcquisition.controller.activeDependencies.stm32 ||
-    p0SevenLineAcquisition.controller.activeDependencies.isolationHardware ||
-    p0SevenLineAcquisition.adcTiming.transaction.readoutAt20Mhz.clockEdges !== 126 ||
-    !p0SevenLineAcquisition.adcTiming.transaction.readoutAt20Mhz.underTenMicroseconds ||
+    p0SevenLineAcquisition.conductors.length !== 7 ||
+    p0SevenLineAcquisition.sensedConductors.length !== 5 ||
+    p0SevenLineAcquisition.conductors.filter(({ senseBuffer }) => senseBuffer !== null).length !== 5 ||
+    p0SevenLineAcquisition.phaseHardware.control.registers.length !== 2 ||
+    p0SevenLineAcquisition.timing.maximumPhaseUs > 5 ||
+    p0SevenLineAcquisition.dependencies.stm32 ||
+    p0SevenLineAcquisition.dependencies.isolationHardware ||
+    p0SevenLineAcquisition.dependencies.esp32InternalAdc ||
     p0SevenLineAcquisition.authority.fieConformanceProven ||
-    p0SevenLineAcquisition.authority.scoringReady
+    p0SevenLineAcquisition.authority.fabricationAuthorized
   ) {
-    throw new RangeError("P0 channel identity, controller boundary, timing, or authority is invalid")
+    throw new RangeError("P0 conductor roles, phase safety, timing, or authority are invalid")
   }
   return true
 }

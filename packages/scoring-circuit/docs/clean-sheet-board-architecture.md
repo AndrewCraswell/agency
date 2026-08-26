@@ -13,8 +13,7 @@ The scaffold freezes:
 - a fail-closed authority record: canonical source is true, while schematic
   integration, PCB placement/routing, and fabrication authorization are false.
 
-The empty board render proves only that the old circuit is no longer the
-canonical source. Components and connections enter the canonical board only
-through their named integration tasks after their electrical contracts pass
-root review. BP-010 may change the provisional dimensions without reviving any
-old circuitry.
+The canonical board now contains the integrated P0 power, phased weapon acquisition, ESP32, Ethernet, HUB75, IR,
+USB, output, and direct-wire blocks. The OpenPiste comparison corrected the acquisition model from seven independent
+ADC cells to named source/sink/sense phases with five protected sensed conductors and one shared ADC/reference chain.
+Board placement, routing, and fabrication authority remain closed.

@@ -16,7 +16,7 @@ describe("BP-121 sole-ESP32 P0 allocation", () => {
 
   it("allocates dedicated ADC timing and direct primary outputs", () => {
     expect(benchPrototypeEsp32Allocation.scoringAdc).toMatchObject({
-      converter: "seven ADS8881 devices in daisy-chain mode",
+      converter: "one ADS8881 behind five protected sense buffers and one TMUX1208 sense selector",
       gpio: [4, 5, 6],
       comparatorInputs: 0
     })
@@ -25,8 +25,8 @@ describe("BP-121 sole-ESP32 P0 allocation", () => {
       gpio: [7, 15, 17, 10, 11]
     })
     expect(benchPrototypeEsp32Allocation.peripheralInstances).toMatchObject({
-      scoringAdc: "SPI3_HOST plus GDMA",
-      applicationBus: "SPI2_HOST shared by W5500 and the write-only source-control register",
+      scoringAdc: "SPI3_HOST plus GDMA for one shared ADS8881",
+      applicationBus: "SPI2_HOST shared by W5500 and two cascaded write-only phase-control registers",
       ir: "RMT RX on GPIO35"
     })
   })
