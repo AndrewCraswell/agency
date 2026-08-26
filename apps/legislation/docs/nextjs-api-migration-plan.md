@@ -25,11 +25,11 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `400edaf` deployed as `7922630a-2ef5-4da2-90c5-57ed0451b902` and reached terminal `SUCCESS`; closure commits are `20c6ab0`, `014ea3b`, and `400edaf`. The prior deployment `3c8c3b31-c150-4b9d-8190-c6e5d1ae973c` is superseded and `REMOVED`. The opt-in authenticated subscription-lifecycle smoke passed all 12 documented checks, including list, create/replay, filtering, detail, patch, stale revision, events/deliveries, delete/replay, and cancelled visibility. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `c3c5f43` (including the header-adapter defect fix) deployed as `e1781bbc-6526-4f87-8eb8-df39142bf11a` and reached terminal `SUCCESS`; the prior deployment `4269326d-cc50-4023-81b0-c545d6c7206a` is superseded and `REMOVED`. Current health returned `200` in `361ms` and readiness returned `200` in `179ms`. The subscription lifecycle smoke passed all 12 documented checks, and the webhook lifecycle smoke passed all 14 documented checks; the cancellation fixture remains cancelled by design. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 47 are Done, 16 are In progress, and 25 have named data, fixture, or dependency blockers. The remaining promotion gates are authenticated functional smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `7922630a-2ef5-4da2-90c5-57ed0451b902` from source snapshot `400edaf` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because active HNSW construction is consuming database I/O. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
-| Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed in `7922630a-2ef5-4da2-90c5-57ed0451b902`; bounded anonymous protected `401`, authenticated canonical-page probes, and the seven-operation subscription lifecycle smoke passed, while the complete authenticated cumulative gate and webhook smoke remain. | Deployed before functional webhook release smoke |
+| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 53 are Done, 10 are In progress, and 25 have named data, fixture, or dependency blockers. The remaining promotion gates are authenticated functional smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a` from source snapshot `c3c5f43` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because the document HNSW index is at `432502/648743` blocks and consuming database I/O. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
+| Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed in `e1781bbc-6526-4f87-8eb8-df39142bf11a`; bounded anonymous protected `401`, authenticated canonical-page probes, the 12-check subscription lifecycle, and the 14-check webhook lifecycle smoke passed, while webhook verification and the complete authenticated cumulative gate remain. | Deployed before the final functional webhook verification smoke |
 | MCP transport | In-process access remains | HTTP client cutover only after every API endpoint and authentication gate passes |
 
 The previous endpoint ledger's 88 **Done** rows described the reusable standalone implementation. They did not prove
@@ -269,8 +269,9 @@ The five operations below remain **Blocked by canonical production fixtures** an
 - `GET /api/calendars/{calendarId}/meetings`
 
 `POST /api/representative-lookups` remains **Blocked** pending the production OpenStates canary. The civic repair is
-committed, but Trigger production currently has the unused singular `OPENSTATE_API_KEY`, while the application requires
-`OPENSTATES_API_KEY`. Do not promote blocked civic routes until the plural secret is configured and the fresh POST smoke passes.
+committed and the plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains
+deferred while the document HNSW index is at `432502/648743` blocks. Do not promote blocked civic routes until a fresh POST
+smoke passes.
 
 Exit gate: the meeting/calendar release is complete. Promote each currently blocked operation only after its named fixture or
 configuration dependency is resolved and a fresh deployed smoke passes; do not reopen the completed block merely to
@@ -307,11 +308,12 @@ Exit gate: all seven routes are **Done** and the search, document-difference, an
 #### Subscriptions (7 endpoints)
 
 Reviewed source state: explicit routes, production composition, and focused local tests exist. Deployment
-`7922630a-2ef5-4da2-90c5-57ed0451b902` from source `400edaf` reached terminal `SUCCESS`. Next route release state for all
+`e1781bbc-6526-4f87-8eb8-df39142bf11a` from source `c3c5f43` reached terminal `SUCCESS`. Next route release state for all
 seven subscription operations is **Done** after opt-in authenticated lifecycle smoke passed all 12 checks: list `200`,
 create `201`, create replay `201`, filtered list `200`, detail `200`, patch `200`, stale revision `412`, events `200`
 empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`, and cancelled visibility `200`. The cancellation
-fixture remains cancelled by design. Closure commits are `20c6ab0`, `014ea3b`, and `400edaf`.
+fixture remains cancelled by design. Closure commits include `20c6ab0`, `014ea3b`, `400edaf`, and the header-adapter fix
+`c3c5f43`.
 
 - `GET /api/subscriptions`
 - `POST /api/subscriptions`
@@ -325,9 +327,12 @@ fixture remains cancelled by design. Closure commits are `20c6ab0`, `014ea3b`, a
 
 Reviewed source state: explicit routes, production composition, and focused local tests exist. The composition reuses
 the durable repository, encrypted idempotency replay, webhook-secret protection, URL-safety checks, and pinned
-verification challenge transport. The current Next.js deployment contains the explicit handlers, but Next route release
-state for all seven webhook operations remains **In progress** pending functional authenticated smoke. Reviewed local source
-now supplies verified identity through the shared API boundary.
+verification challenge transport. Source snapshot `c3c5f43` (including the header-adapter defect fix) is deployed as
+`e1781bbc-6526-4f87-8eb8-df39142bf11a` with terminal `SUCCESS`. Authenticated webhook lifecycle smoke passed all 14 checks:
+list `200`, create/replay `201`, pending filtered list `200`, detail `200`, patch/replay `200`, stale revision `412`,
+rotate/replay `200`, post-rotate detail `200`, delete/replay `200`, and cancelled visibility `200`; the cancellation fixture
+remains cancelled by design. Six webhook operations are **Done**; verification remains **In progress** pending its
+authenticated challenge smoke. Reviewed local source now supplies verified identity through the shared API boundary.
 
 - `GET /api/webhooks`
 - `POST /api/webhooks`
@@ -337,23 +342,22 @@ now supplies verified identity through the shared API boundary.
 - `POST /api/webhooks/{webhookId}/rotate-secret`
 - `POST /api/webhooks/{webhookId}/verify`
 
-After search, document-difference, and research smoke passes, WorkOS request identity and the required idempotency and webhook-secret encryption keys must be
-configured before functional webhook deployment smoke. The remote profile must prove owner scoping, fail-closed unauthenticated
-access, ETags and `If-Match`, idempotency, one-time secret handling, cancellation receipts, URL-safety checks,
-verification challenge behavior, and replay without printing secrets.
+The remote profile proves owner scoping, fail-closed authenticated access, ETags and `If-Match`, idempotency, one-time
+secret handling, cancellation receipts, URL-safety checks, and replay without printing secrets. WorkOS request identity and
+the required idempotency and webhook-secret encryption keys are configured in the current deployment. Verification challenge
+behavior remains the explicit final webhook gate.
 
-Exit gate: all seven subscription routes are **Done** with the recorded authenticated lifecycle smoke; all seven webhook
-routes become **Done** only after their authenticated deployment and cumulative smoke for all 88 routes. Source coverage
-and local tests alone do not satisfy either gate.
+Exit gate: all seven subscription routes and six webhook routes are **Done** with the recorded authenticated lifecycle
+smoke; `POST /api/webhooks/{webhookId}/verify` becomes **Done** only after its authenticated challenge smoke and the
+cumulative smoke for all 88 routes. Source coverage and local tests alone do not satisfy the remaining gate.
 
 ### WorkOS authentication
 
-State: **In progress**. The authenticated boundary is deployed in `7922630a-2ef5-4da2-90c5-57ed0451b902` from source
-snapshot `400edaf` (terminal `SUCCESS`). The release uses separate WorkOS authorities for M2M API tokens and AuthKit
-user-session tokens and has both application encryption secrets configured. The opt-in authenticated subscription-lifecycle
-smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch `200`,
-stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`, and cancelled
-visibility `200`; the cancellation fixture remains cancelled by design. The complete authenticated cumulative gate remains pending.
+State: **In progress**. The authenticated boundary is deployed in `e1781bbc-6526-4f87-8eb8-df39142bf11a` from source
+snapshot `c3c5f43` (terminal `SUCCESS`), including the header-adapter defect fix. The release uses separate WorkOS authorities
+for M2M API tokens and AuthKit user-session tokens and has both application encryption secrets configured. The opt-in
+authenticated subscription-lifecycle smoke passed all 12 checks, and webhook lifecycle smoke passed all 14 checks; the
+cancellation fixture remains cancelled by design. Webhook verification and the complete authenticated cumulative gate remain pending.
 
 - WorkOS bearer verification and request identity now run in the shared Next.js API boundary.
 - `/health` and `/ready` remain public; supported and catch-all `/api/**` requests authenticate in WorkOS mode.
@@ -416,13 +420,14 @@ complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 88/88.
-- **Explicit Next.js handler coverage:** 88/88 in reviewed source and the current production deployment. The
-  subscription/webhook routes await authenticated functional smoke.
-- **Next.js Route Handler release state:** 47/88 Done; 16 In progress; 0 Ready; 25 Blocked. The states sum to all 88
+- **Explicit Next.js handler coverage:** 88/88 in reviewed source and the current production deployment. Webhook
+  verification remains the only incomplete subscription/webhook operation.
+- **Next.js Route Handler release state:** 53/88 Done; 10 In progress; 0 Ready; 25 Blocked. The states sum to all 88
   public API operations.
 - **Blocked-route accounting:** 25 routes are Blocked by named production-data, canonical-fixture, or dependency
   deficiencies: three vote operations, document detail and sections, 14 people/organization operations, five
-  meeting/calendar fixture operations, and representative lookup configuration.
+  meeting/calendar fixture operations, and the representative lookup Alaska canary. The plural `OPENSTATES_API_KEY` is
+  corrected in Railway and Trigger; the canary remains deferred while the document HNSW index is at `432502/648743` blocks.
 
 Foundation, authentication, MCP cutover, and final cleanup are separate phase gates. None may be inferred from the
 endpoint count, and none may be moved earlier than the approved sequence.
