@@ -1085,8 +1085,11 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
             rawCommittees.push(...page)
           }
         }
-        const memberSnapshots = rawMembers.map(({ congress, records }) => normalizeCongressMembers(records, congress))
-        const committeeSnapshot = normalizeCongressCommittees(rawCommittees, { retrievedAt: new Date() })
+        const entityContext = { retrievedAt: new Date() }
+        const memberSnapshots = rawMembers.map(({ congress, records }) =>
+          normalizeCongressMembers(records, congress, entityContext)
+        )
+        const committeeSnapshot = normalizeCongressCommittees(rawCommittees, entityContext)
         const peopleById = new Map(
           memberSnapshots.flatMap((snapshot) => snapshot.people).map((person) => [person.id, person])
         )

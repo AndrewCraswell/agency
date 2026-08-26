@@ -1,4 +1,5 @@
 import { eq, inArray, sql } from "drizzle-orm"
+import { isPersonCivicFoundationComplete } from "../../ingestion/civic-foundation.js"
 import type { CongressHouseVoteSnapshot } from "../../ingestion/congress/votes.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -46,8 +47,21 @@ export async function upsertCongressHouseVoteSnapshot(
   const existingPeople =
     personIds.length === 0
       ? []
-      : await database.select({ id: people.id }).from(people).where(inArray(people.id, personIds))
-  const validPeople = new Set(existingPeople.map((person) => person.id))
+      : await database
+          .select({
+            id: people.id,
+            isActive: people.isActive,
+            jurisdictionId: people.jurisdictionId,
+            name: people.name,
+            provenanceComplete: people.provenanceComplete,
+            sourceIsOfficial: people.sourceIsOfficial,
+            sourceProvider: people.sourceProvider,
+            sourceRetrievedAt: people.sourceRetrievedAt,
+            sourceUrl: people.sourceUrl
+          })
+          .from(people)
+          .where(inArray(people.id, personIds))
+  const validPeople = new Set(existingPeople.filter(isVotePositionPersonLinkable).map((person) => person.id))
 
   await database.transaction(async (transaction) => {
     await transaction
@@ -128,4 +142,24 @@ export async function upsertCongressHouseVoteSnapshot(
       recordType: "vote"
     })
   })
+}
+
+/**
+ * A linked vote person must be usable by the vote-detail canonical projection.
+ * Source-derived display fields remain on the position even when the matching
+ * person has not been imported with complete canonical provenance.
+ */
+export function isVotePositionPersonLinkable(
+  person: Readonly<{
+    isActive: boolean | null
+    jurisdictionId: string | null
+    name: string
+    provenanceComplete: boolean
+    sourceIsOfficial: boolean | null
+    sourceProvider: string | null
+    sourceRetrievedAt: Date | null
+    sourceUrl: string | null
+  }>
+): boolean {
+  return isPersonCivicFoundationComplete(person)
 }

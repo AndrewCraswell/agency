@@ -67,7 +67,26 @@ describe("Congress entity range backfill", () => {
     expect(replaceEntitySnapshot).toHaveBeenCalledWith(
       expect.anything(),
       "jurisdiction:us",
-      expect.objectContaining({ personAliasPersonIds: [], personAliases: [] })
+      expect.objectContaining({
+        people: expect.arrayContaining([
+          expect.objectContaining({
+            provenanceComplete: true,
+            sourceIsOfficial: true,
+            sourceProvider: "congress",
+            sourceRetrievedAt: expect.any(Date)
+          })
+        ]),
+        personAliasPersonIds: [],
+        personAliases: [],
+        terms: expect.arrayContaining([
+          expect.objectContaining({
+            provenanceComplete: true,
+            sourceIsOfficial: true,
+            sourceProvider: "congress",
+            sourceRetrievedAt: expect.any(Date)
+          })
+        ])
+      })
     )
   })
 })

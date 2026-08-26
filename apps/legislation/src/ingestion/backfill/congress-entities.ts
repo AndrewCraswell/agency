@@ -60,8 +60,9 @@ export async function executeCongressEntityRangeBackfill(
         for await (const page of client.committees(congress)) {
           committees.push(...page)
         }
-        const memberSnapshot = normalizeCongressMembers(members, congress)
-        const committeeSnapshot = normalizeCongressCommittees(committees, { retrievedAt: new Date() })
+        const context = { retrievedAt: new Date() }
+        const memberSnapshot = normalizeCongressMembers(members, congress, context)
+        const committeeSnapshot = normalizeCongressCommittees(committees, context)
         for (const person of memberSnapshot.people) {
           peopleById.set(person.id, person)
         }

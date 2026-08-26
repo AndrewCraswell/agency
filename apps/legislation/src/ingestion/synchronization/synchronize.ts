@@ -306,8 +306,9 @@ async function synchronizeCongressEntitiesForScope(
   for await (const page of client.committees(identity.scope)) {
     committees.push(...page)
   }
-  const memberSnapshot = normalizeCongressMembers(members, identity.scope)
-  const committeeSnapshot = normalizeCongressCommittees(committees, { retrievedAt: new Date() })
+  const entityContext = { retrievedAt: new Date() }
+  const memberSnapshot = normalizeCongressMembers(members, identity.scope, entityContext)
+  const committeeSnapshot = normalizeCongressCommittees(committees, entityContext)
   const peopleById = new Map(memberSnapshot.people.map((person) => [person.id, person]))
   const termsById = new Map(memberSnapshot.terms.map((term) => [term.id, term]))
   const organizationsById = new Map(

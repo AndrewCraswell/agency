@@ -32,14 +32,32 @@ describe("Congress entity normalization", () => {
           name: "Gallagher, James",
           partyName: "Republican",
           terms: { item: [{ chamber: "House of Representatives", startYear: 2026 }] },
-          updateDate: "2026-08-17T07:40:45Z"
+          updateDate: "2026-08-17T07:40:45Z",
+          url: "https://api.congress.gov/member/G000607"
         }
       ],
-      119
+      119,
+      organizationContext
     )
 
-    expect(result.people[0]).toMatchObject({ jurisdictionId: "jurisdiction:us", sourceId: "G000607" })
-    expect(result.terms[0]).toMatchObject({ chamber: "lower", district: "1" })
+    expect(result.people[0]).toMatchObject({
+      jurisdictionId: "jurisdiction:us",
+      provenanceComplete: true,
+      sourceId: "G000607",
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: organizationContext.retrievedAt,
+      sourceUrl: "https://api.congress.gov/member/G000607"
+    })
+    expect(result.terms[0]).toMatchObject({
+      chamber: "lower",
+      district: "1",
+      provenanceComplete: true,
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: organizationContext.retrievedAt,
+      sourceUrl: "https://api.congress.gov/member/G000607"
+    })
     expect(result.terms[0]?.startDate).toBeUndefined()
     expect(result.terms[0]?.endDate).toBeUndefined()
   })
@@ -57,11 +75,29 @@ describe("Congress entity normalization", () => {
           url: null
         }
       ],
-      119
+      119,
+      organizationContext
     )
 
-    expect(result.people[0]).toMatchObject({ party: undefined, sourceId: "S001234" })
-    expect(result.terms[0]).toMatchObject({ chamber: "upper", district: undefined, isActive: true })
+    expect(result.people[0]).toMatchObject({
+      party: undefined,
+      provenanceComplete: false,
+      sourceId: "S001234",
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: organizationContext.retrievedAt,
+      sourceUrl: undefined
+    })
+    expect(result.terms[0]).toMatchObject({
+      chamber: "upper",
+      district: undefined,
+      isActive: true,
+      provenanceComplete: false,
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: organizationContext.retrievedAt,
+      sourceUrl: undefined
+    })
   })
 
   it("creates legislature, chamber, committee, and subcommittee hierarchy", () => {

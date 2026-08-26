@@ -130,7 +130,8 @@ function congressProvenance(sourceUrl: string | undefined, retrievedAt: Date) {
 
 export function normalizeCongressMembers(
   inputs: readonly unknown[],
-  congress: number
+  congress: number,
+  context: CongressEntityContext
 ): Pick<CongressEntitySnapshot, "people" | "terms"> {
   const federalJurisdictionId = jurisdictionId("us")
   const normalized = inputs.map((input) => memberSchema.parse(input))
@@ -145,8 +146,8 @@ export function normalizeCongressMembers(
       party: member.partyName,
       sourceId: member.bioguideId,
       sourceUpdatedAt: member.updateDate === undefined ? undefined : new Date(member.updateDate),
-      sourceUrl: member.url,
-      upstreamIds: { bioguide: member.bioguideId }
+      upstreamIds: { bioguide: member.bioguideId },
+      ...congressProvenance(member.url, context.retrievedAt)
     })),
     terms: normalized.flatMap((member) => {
       const canonicalPersonId = personId("congress", member.bioguideId)
@@ -167,7 +168,7 @@ export function normalizeCongressMembers(
             personId: canonicalPersonId,
             role: term.chamber,
             sourceId: sourceIdentity,
-            sourceUrl: member.url
+            ...congressProvenance(member.url, context.retrievedAt)
           } satisfies TermInsert
         ]
       })
