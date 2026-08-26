@@ -64,6 +64,7 @@ export function P0IrReceiver({ pcbRotation, pcbX, pcbY }: P0IrReceiverProps): Re
       <trace from="U_IR_RX.GND" to="net.APP_GND" />
       <trace from="U_IR_RX.OUT" to="R_IR_OUT.pin1" />
       <trace from="R_IR_OUT.pin2" to="TP_IR_RX.IR_RX_GPIO35" />
+      <trace from="R_IR_OUT.pin2" to="net.IR_RX" />
       <trace from="R_IR_OUT.pin2" to="R_IR_PULLUP.pin1" />
       <trace from="R_IR_PULLUP.pin2" to="net.APP_3V3" />
     </group>

@@ -187,7 +187,7 @@ const footprint = (
           width={`${pad.widthMm}mm`}
           height={`${pad.heightMm}mm`}
           solderMaskMargin="0mm"
-          solderPasteMargin="-1mm"
+          solderPasteMargin="0mm"
           portHints={[String(pad.number), `pin${pad.number}`]}
         />
       </Fragment>
@@ -202,7 +202,7 @@ const footprint = (
           width="0.9mm"
           height="0.9mm"
           solderMaskMargin="0mm"
-          solderPasteMargin="-0.45mm"
+          solderPasteMargin="0mm"
           portHints={["41", "GND_EP", "thermal-via"]}
         />
         <via

@@ -12,6 +12,12 @@ function sourceComponents() {
   return renderCircuit().filter((element) => element.type === "source_component")
 }
 
+function traces() {
+  return renderCircuit().flatMap((element) =>
+    element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
+  )
+}
+
 describe("P0 IR receiver footprint reconciliation", () => {
   it("renders the exact receiver and support population without circuit errors", () => {
     const circuit = renderCircuit()
@@ -35,6 +41,7 @@ describe("P0 IR receiver footprint reconciliation", () => {
     expect(components.find((component) => component.name === "R_IR_PULLUP")).toMatchObject({
       manufacturer_part_number: "RC0603FR-0710KL"
     })
+    expect(traces()).toContain("R_IR_OUT.pin2 to net.IR_RX")
   })
 
   it("keeps exact pin order, package geometry, and root-review authority explicit", () => {

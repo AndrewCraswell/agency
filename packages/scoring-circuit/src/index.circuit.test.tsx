@@ -182,6 +182,25 @@ describe("P0 integrated scoring-machine schematic", () => {
       ])
     )
     expect(names.some((name) => name.includes("STM32") || name.includes("ISOLAT"))).toBe(false)
+
+    const traces = circuit.flatMap((element) =>
+      element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
+    )
+    expect(traces).toEqual(
+      expect.arrayContaining([
+        "J_WEAPON_DIRECT.LEFT_WEAPON_A to net.LEFT_WEAPON_A",
+        "J_WEAPON_DIRECT.LEFT_WEAPON_B to net.LEFT_WEAPON_B",
+        "J_WEAPON_DIRECT.LEFT_WEAPON_C to net.LEFT_WEAPON_C",
+        "J_WEAPON_DIRECT.RIGHT_WEAPON_A to net.RIGHT_WEAPON_A",
+        "J_WEAPON_DIRECT.RIGHT_WEAPON_B to net.RIGHT_WEAPON_B",
+        "J_WEAPON_DIRECT.RIGHT_WEAPON_C to net.RIGHT_WEAPON_C",
+        "J_PISTE_DIRECT.PISTE to net.PISTE",
+        "R_V5_ANALOG_LINK.pin1 to net.V5",
+        "R_V5_ANALOG_LINK.pin2 to net.V5_ANALOG",
+        "R_SCORING_GROUND_LINK.pin1 to net.SCORING_SGND",
+        "R_SCORING_GROUND_LINK.pin2 to net.APP_GND"
+      ])
+    )
   }, 20_000)
 
   it("emits a complete populated BOM inventory with no placeholder parts", () => {

@@ -60,13 +60,41 @@ function ScoringCircuit() {
       <P0PrimaryOutputs {...p0BoardPlacement.islands.primaryOutputs} />
       <P0SevenLineAcquisition {...p0BoardPlacement.islands.analog} />
 
+      <resistor
+        name="R_V5_ANALOG_LINK"
+        manufacturerPartNumber="RC0603JR-070RL"
+        resistance="0"
+        footprint="0603"
+        pcbX={-30}
+        pcbY={15}
+      />
+      <resistor
+        name="R_SCORING_GROUND_LINK"
+        manufacturerPartNumber="RC0603JR-070RL"
+        resistance="0"
+        footprint="0603"
+        pcbX={-24}
+        pcbY={15}
+      />
+      <trace from="net.V5" to="R_V5_ANALOG_LINK.pin1" />
+      <trace from="R_V5_ANALOG_LINK.pin2" to="net.V5_ANALOG" />
+      <trace from="net.SCORING_SGND" to="R_SCORING_GROUND_LINK.pin1" />
+      <trace from="R_SCORING_GROUND_LINK.pin2" to="net.APP_GND" />
+
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="J_WEAPON_DIRECT.LEFT_WEAPON_A_TEST" />
+      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="net.LEFT_WEAPON_A" />
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="J_WEAPON_DIRECT.LEFT_WEAPON_B_TEST" />
+      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="net.LEFT_WEAPON_B" />
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_C" to="J_WEAPON_DIRECT.LEFT_WEAPON_C_TEST" />
+      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_C" to="net.LEFT_WEAPON_C" />
       <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_A" to="J_WEAPON_DIRECT.RIGHT_WEAPON_A_TEST" />
+      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_A" to="net.RIGHT_WEAPON_A" />
       <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_B" to="J_WEAPON_DIRECT.RIGHT_WEAPON_B_TEST" />
+      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_B" to="net.RIGHT_WEAPON_B" />
       <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_C" to="J_WEAPON_DIRECT.RIGHT_WEAPON_C_TEST" />
+      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_C" to="net.RIGHT_WEAPON_C" />
       <trace from="J_PISTE_DIRECT.PISTE" to="J_PISTE_DIRECT.PISTE_TEST" />
+      <trace from="J_PISTE_DIRECT.PISTE" to="net.PISTE" />
     </board>
   )
 }

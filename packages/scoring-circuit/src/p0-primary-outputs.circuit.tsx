@@ -10,7 +10,7 @@ import {
 } from "./p0-primary-outputs-footprints.js"
 const outputChannels = [
   {
-    signal: "ESP32_GPIO7_PRIMARY_LAMP_RED",
+    signal: "LAMP_RED",
     driverInput: "IN1",
     driverOutput: "OUT1",
     pulldown: "R_P0_RED_INPUT_PD",
@@ -20,7 +20,7 @@ const outputChannels = [
     connectorCircuit: "CIRCUIT_1_RED"
   },
   {
-    signal: "ESP32_GPIO15_PRIMARY_LAMP_GREEN",
+    signal: "LAMP_GREEN",
     driverInput: "IN2",
     driverOutput: "OUT2",
     pulldown: "R_P0_GREEN_INPUT_PD",
@@ -30,7 +30,7 @@ const outputChannels = [
     connectorCircuit: "CIRCUIT_2_GREEN"
   },
   {
-    signal: "ESP32_GPIO17_PRIMARY_LAMP_WHITE_LEFT",
+    signal: "LAMP_WHITE_LEFT",
     driverInput: "IN3",
     driverOutput: "OUT3",
     pulldown: "R_P0_WHITE_LEFT_INPUT_PD",
@@ -40,7 +40,7 @@ const outputChannels = [
     connectorCircuit: "CIRCUIT_3_WHITE_LEFT"
   },
   {
-    signal: "ESP32_GPIO10_PRIMARY_LAMP_WHITE_RIGHT",
+    signal: "LAMP_WHITE_RIGHT",
     driverInput: "IN4",
     driverOutput: "OUT4",
     pulldown: "R_P0_WHITE_RIGHT_INPUT_PD",
@@ -50,7 +50,7 @@ const outputChannels = [
     connectorCircuit: "CIRCUIT_4_WHITE_RIGHT"
   },
   {
-    signal: "ESP32_GPIO11_PRIMARY_BUZZER",
+    signal: "BUZZER",
     driverInput: "IN5",
     driverOutput: "OUT5",
     pulldown: "R_P0_BUZZER_INPUT_PD",

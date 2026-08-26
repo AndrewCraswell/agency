@@ -83,19 +83,19 @@ describe("P0 primary lamp and buzzer outputs", () => {
 
   it("binds the allocated ESP32 GPIO signals through five default-low inputs to the five harness circuits", () => {
     expect(p0PrimaryOutputsCircuitContract.gpioOrder).toEqual([
-      "ESP32_GPIO7_PRIMARY_LAMP_RED",
-      "ESP32_GPIO15_PRIMARY_LAMP_GREEN",
-      "ESP32_GPIO17_PRIMARY_LAMP_WHITE_LEFT",
-      "ESP32_GPIO10_PRIMARY_LAMP_WHITE_RIGHT",
-      "ESP32_GPIO11_PRIMARY_BUZZER"
+      "LAMP_RED",
+      "LAMP_GREEN",
+      "LAMP_WHITE_LEFT",
+      "LAMP_WHITE_RIGHT",
+      "BUZZER"
     ])
     expect(traces()).toEqual(
       expect.arrayContaining([
-        "U_P0_OUTPUT_DRIVER.IN1 to net.ESP32_GPIO7_PRIMARY_LAMP_RED",
-        "U_P0_OUTPUT_DRIVER.IN2 to net.ESP32_GPIO15_PRIMARY_LAMP_GREEN",
-        "U_P0_OUTPUT_DRIVER.IN3 to net.ESP32_GPIO17_PRIMARY_LAMP_WHITE_LEFT",
-        "U_P0_OUTPUT_DRIVER.IN4 to net.ESP32_GPIO10_PRIMARY_LAMP_WHITE_RIGHT",
-        "U_P0_OUTPUT_DRIVER.IN5 to net.ESP32_GPIO11_PRIMARY_BUZZER",
+        "U_P0_OUTPUT_DRIVER.IN1 to net.LAMP_RED",
+        "U_P0_OUTPUT_DRIVER.IN2 to net.LAMP_GREEN",
+        "U_P0_OUTPUT_DRIVER.IN3 to net.LAMP_WHITE_LEFT",
+        "U_P0_OUTPUT_DRIVER.IN4 to net.LAMP_WHITE_RIGHT",
+        "U_P0_OUTPUT_DRIVER.IN5 to net.BUZZER",
         "U_P0_OUTPUT_DRIVER.IN1 to R_P0_RED_INPUT_PD.pin1",
         "U_P0_OUTPUT_DRIVER.IN5 to R_P0_BUZZER_INPUT_PD.pin1",
         "R_P0_RED_INPUT_PD.pin2 to net.APP_GND",
