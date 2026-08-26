@@ -29,9 +29,10 @@ The source and sink paths create a measurable divider through the selected exter
 sense node is then digitized. This fixes the previous design's central flaw: seven high-impedance ADC inputs with source
 switches but no controlled sink could not establish a defined resistance-measurement current path.
 
-The active-high mux enables default low because both shift registers clear on `APP_RESET_N`. Their hardware output enable
-is pulled high, so reset, boot, and watchdog recovery leave source, sink, and sense disconnected. Firmware must latch the
-whole phase before enabling it, and source and sink may never select the same conductor.
+The active-high mux enables each have a 100-kilohm pulldown. Both shift registers clear on `APP_RESET_N`, and their
+hardware output enable has a 100-kilohm pull-up. Therefore the mux enables stay low even while the register outputs are
+high-impedance during reset, boot, or watchdog recovery. Firmware must latch the whole phase before enabling it, and
+source and sink may never select the same conductor.
 
 ## Timing and evidence boundary
 

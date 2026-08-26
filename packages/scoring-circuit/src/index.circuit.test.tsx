@@ -9,7 +9,7 @@ describe("P0 integrated scoring-machine schematic", () => {
     const names = circuit.flatMap((element) =>
       element.type === "source_component" && typeof element.name === "string" ? [element.name] : []
     )
-    expect(names).toHaveLength(253)
+    expect(names).toHaveLength(256)
     expect(names).toEqual(
       expect.arrayContaining([
         "U_APP",

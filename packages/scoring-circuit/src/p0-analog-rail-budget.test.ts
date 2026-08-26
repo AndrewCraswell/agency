@@ -26,7 +26,10 @@ describe("P0 phased analog rail budget", () => {
     expect(benchPrototypeP0AnalogRailBudget.arithmetic.assumptions.maximumSimultaneousSourcePaths).toBe(1)
     expect(benchPrototypeP0AnalogRailBudget.arithmetic.continuous.selectedPhaseCurrentA).toBeCloseTo(0.0025987526, 9)
     expect(benchPrototypeP0AnalogRailBudget.arithmetic.continuous.v5AnalogPaperCurrentA).toBeCloseTo(0.0100687526, 9)
-    expect(benchPrototypeP0AnalogRailBudget.arithmetic.continuous.app3v3BoundedSubtotalCurrentA).toBeCloseTo(0.00244, 8)
+    expect(benchPrototypeP0AnalogRailBudget.arithmetic.continuous.app3v3BoundedSubtotalCurrentA).toBeCloseTo(
+      0.002539,
+      8
+    )
   })
 
   it("keeps physical evidence and fabrication closed", () => {

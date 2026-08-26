@@ -115,6 +115,15 @@ export function P0SevenLineAcquisition({ pcbX, pcbY }: { readonly pcbX: number; 
           <trace from={`U_${role}_MUX.A1`} to={`net.${role}_A1`} />
           <trace from={`U_${role}_MUX.A2`} to={`net.${role}_A2`} />
           <trace from={`U_${role}_MUX.EN`} to={`net.${role}_EN`} />
+          <resistor
+            name={`R_${role}_EN_PD`}
+            manufacturerPartNumber="CRCW0603100KFKEAHP"
+            resistance="100k"
+            tolerance="1%"
+            footprint="0603"
+          />
+          <trace from={`net.${role}_EN`} to={`R_${role}_EN_PD.pin1`} />
+          <trace from={`R_${role}_EN_PD.pin2`} to="net.SCORING_SGND" />
         </group>
       ))}
 

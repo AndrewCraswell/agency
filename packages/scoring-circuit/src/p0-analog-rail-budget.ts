@@ -66,7 +66,7 @@ const definition = {
       referenceOutputCurrentA: phaseCurrentA,
       v5NegativeOutputCurrentA: 0.003,
       v5AnalogPaperCurrentA: 0.0012 + phaseCurrentA + 0.003 + 0.00327,
-      app3v3BoundedSubtotalCurrentA: 0.0024 + 0.000003 + 0.000004 + 0.000033,
+      app3v3BoundedSubtotalCurrentA: 0.0024 + 0.000003 + 0.000004 + 0.000033 + 0.000099,
       completeRailTotal: false
     },
     startupNominalCapacitanceUf: {

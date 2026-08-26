@@ -82,8 +82,10 @@ const definition = {
       mpn: "SN74HCS595PWR",
       sharedBus: { clock: "APP_SPI_SCK", data: "APP_SPI_MOSI" },
       latch: "SOURCE_LATCH on GPIO47",
-      outputEnable: "SOURCE_OE_N on GPIO36; 100 kilohm pull-up disables both registers",
-      reset: "APP_RESET_N clears both registers; all three active-high mux enables therefore remain low",
+      outputEnable:
+        "SOURCE_OE_N on GPIO36 has a 100 kilohm pull-up that disables both registers; every active-high mux enable has its own 100 kilohm pulldown while register outputs are high-impedance",
+      reset:
+        "APP_RESET_N clears both registers; the three mux-enable pulldowns keep all paths off before and during reset",
       invariant:
         "Firmware writes a complete source/sink/sense phase before enabling any mux. Source and sink may never select the same conductor."
     }
@@ -126,7 +128,8 @@ const definition = {
     { reference: "U_ESD", mpn: "TPD4E05U06DQAR", quantity: 2 },
     { reference: "R_LINE", value: "22 ohm", quantity: 7 },
     { reference: "R_SOURCE", value: "470 ohm 0.1 percent", quantity: 7 },
-    { reference: "R_SINK", value: "470 ohm 0.1 percent", quantity: 7 }
+    { reference: "R_SINK", value: "470 ohm 0.1 percent", quantity: 7 },
+    { reference: "R_MUX_EN_PD", value: "100 kilohm", quantity: 3 }
   ],
   dependencies: { stm32: false, isolationHardware: false, esp32InternalAdc: false },
   authority: {
