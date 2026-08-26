@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto"
 import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
 
 export type SmokeCheckStatus = "blocked" | "failed" | "passed" | "skipped"
-export type SmokeProfile = "full" | "scoped-bills"
+export type SmokeProfile = "full" | "scoped-bills" | "subscription-lifecycle"
 
 export type SmokeFixture = Readonly<{
   amendmentId?: string
@@ -1688,6 +1689,533 @@ async function execute(
   }
 }
 
+type LifecycleRequest = Readonly<{
+  body?: unknown
+  expectedStatus: number
+  headers?: Readonly<Record<string, string>>
+  id: string
+  method: "DELETE" | "GET" | "PATCH" | "POST"
+  path: string
+  validate: (body: unknown, response: Response) => boolean
+}>
+
+type LifecycleRequestResult = Readonly<{
+  body: unknown | undefined
+  check: SmokeCheck
+  response: Response | undefined
+}>
+
+async function executeLifecycleRequest(
+  baseUrl: URL,
+  fetchImpl: FetchLike,
+  request: LifecycleRequest,
+  token: string,
+  requestTimeoutMs: number,
+  callerSignal: AbortSignal | undefined
+): Promise<LifecycleRequestResult> {
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    authorization: `Bearer ${token}`,
+    "x-correlation-id": `smoke-${request.id}`,
+    ...request.headers
+  }
+  if (request.body !== undefined && headers["content-type"] === undefined) {
+    headers["content-type"] = "application/json"
+  }
+  const timeoutController = new AbortController()
+  const timeout = setTimeout(() => timeoutController.abort(), requestTimeoutMs)
+  const signal = AbortSignal.any(
+    callerSignal === undefined ? [timeoutController.signal] : [callerSignal, timeoutController.signal]
+  )
+  let response: Response
+  let body: unknown
+  try {
+    response = await fetchImpl(new URL(request.path, baseUrl), {
+      body: request.body === undefined ? undefined : JSON.stringify(request.body),
+      headers,
+      method: request.method,
+      signal
+    })
+    body = await parseJson(response)
+  } catch {
+    clearTimeout(timeout)
+    let detail = "request failed before a response was received"
+    if (timeoutController.signal.aborted) {
+      detail = `request timed out after ${requestTimeoutMs} ms`
+    } else if (callerSignal?.aborted === true) {
+      detail = "request was cancelled"
+    }
+    return {
+      body: undefined,
+      check: {
+        detail,
+        id: request.id,
+        method: request.method,
+        path: request.path,
+        status: "failed"
+      },
+      response: undefined
+    }
+  }
+  clearTimeout(timeout)
+  const valid =
+    response.status === request.expectedStatus &&
+    response.headers.get("content-type")?.toLowerCase().startsWith("application/json") === true &&
+    request.validate(body, response)
+  let detail: string | undefined = "response violated the lifecycle contract"
+  if (valid && response.status !== 200) {
+    detail = `HTTP ${response.status}`
+  } else if (valid) {
+    detail = undefined
+  }
+  return {
+    body,
+    check: {
+      detail,
+      id: request.id,
+      method: request.method,
+      path: request.path,
+      status: valid ? "passed" : "failed",
+      statusCode: response.status
+    },
+    response
+  }
+}
+
+function lifecycleResource(
+  body: unknown,
+  response: Response,
+  correlationId: string,
+  expectedPath: string,
+  predicate: (value: unknown) => boolean
+): boolean {
+  return (
+    hasApiCorrelation(body, response.headers.get("x-correlation-id")) &&
+    response.headers.get("x-correlation-id") === correlationId &&
+    isRecord(body) &&
+    hasResourceLinks(body.links, expectedPath) &&
+    predicate(body.data)
+  )
+}
+
+function lifecyclePage(
+  body: unknown,
+  response: Response,
+  correlationId: string,
+  expectedPath: string,
+  predicate: (value: unknown) => boolean
+): boolean {
+  return (
+    hasApiCorrelation(body, response.headers.get("x-correlation-id")) &&
+    response.headers.get("x-correlation-id") === correlationId &&
+    isRecord(body) &&
+    hasPageEnvelope(body, false, expectedPath) &&
+    Array.isArray(body.data) &&
+    body.data.every(predicate)
+  )
+}
+
+function subscriptionData(body: unknown): Record<string, unknown> | undefined {
+  if (!isRecord(body) || !isRecord(body.data)) {
+    return undefined
+  }
+  return body.data
+}
+
+function isCancellationReceipt(value: unknown, id: string, revision: string): boolean {
+  return isRecord(value) && value.id === id && isRfc3339(value.cancelledAt) && value.finalRevision === revision
+}
+
+function lifecycleCheckBlocked(id: string, detail: string): SmokeCheck {
+  return { detail, id, status: "blocked" }
+}
+
+async function cancelLifecycleSubscription(
+  input: Readonly<{
+    baseUrl: URL
+    canonicalApiBaseUrl: URL
+    callerSignal: AbortSignal | undefined
+    fetchImpl: FetchLike
+    requestTimeoutMs: number
+    token: string
+  }>,
+  id: string,
+  path: string
+): Promise<readonly SmokeCheck[]> {
+  const read = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "subscription-lifecycle-cleanup-read",
+      method: "GET",
+      path,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-subscription-lifecycle-cleanup-read", path, (value) =>
+          hasSubscription(value, input.canonicalApiBaseUrl)
+        )
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  const subscription = subscriptionData(read.body)
+  if (read.check.status !== "passed" || subscription === undefined || typeof subscription.revision !== "string") {
+    return [
+      read.check,
+      lifecycleCheckBlocked(
+        "subscription-lifecycle-cleanup",
+        "blocked: the generated subscription revision could not be read for cancellation"
+      )
+    ]
+  }
+  if (subscription.status === "cancelled") {
+    return [read.check]
+  }
+  const revision = subscription.revision
+  const cancellation = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      headers: { "idempotency-key": randomUUID(), "if-match": revision },
+      id: "subscription-lifecycle-cleanup",
+      method: "DELETE",
+      path,
+      validate: (body, response) => {
+        const finalRevision = response.headers.get("etag")
+        return (
+          typeof finalRevision === "string" &&
+          lifecycleResource(body, response, "smoke-subscription-lifecycle-cleanup", path, (value) =>
+            isCancellationReceipt(value, id, finalRevision)
+          )
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  return [read.check, cancellation.check]
+}
+
+async function runSubscriptionLifecycleSmoke(input: {
+  baseUrl: URL
+  canonicalApiBaseUrl: URL
+  callerSignal: AbortSignal | undefined
+  fetchImpl: FetchLike
+  requestTimeoutMs: number
+  token: string
+}): Promise<readonly SmokeCheck[]> {
+  const checks: SmokeCheck[] = []
+  const createKey = randomUUID()
+  const patchKey = randomUUID()
+  const staleKey = randomUUID()
+  const deleteKey = randomUUID()
+  const subscriptionName = `API lifecycle smoke ${randomUUID()}`
+  const createBody = {
+    delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+    eventTypes: ["query-match"],
+    frequency: "immediate",
+    name: subscriptionName,
+    target: { request: { mode: "lexical", query: "smoke lifecycle" }, searchType: "bills", type: "query" },
+    timezone: "Etc/UTC"
+  }
+  const list = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "subscription-lifecycle-list",
+      method: "GET",
+      path: "/api/subscriptions?limit=1",
+      validate: (body, response) =>
+        lifecyclePage(body, response, "smoke-subscription-lifecycle-list", "/api/subscriptions?limit=1", (value) =>
+          hasSubscription(value, input.canonicalApiBaseUrl)
+        )
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(list.check)
+  const created = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: createBody,
+      expectedStatus: 201,
+      headers: { "idempotency-key": createKey },
+      id: "subscription-lifecycle-create",
+      method: "POST",
+      path: "/api/subscriptions",
+      validate: (body, response) => {
+        const data = subscriptionData(body)
+        return (
+          lifecycleResource(body, response, "smoke-subscription-lifecycle-create", "/api/subscriptions", (value) =>
+            hasSubscription(value, input.canonicalApiBaseUrl)
+          ) &&
+          data !== undefined &&
+          response.headers.get("etag") === data.revision &&
+          response.headers.get("location") === `/api/subscriptions/${encoded(String(data.id))}`
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(created.check)
+  const postCreateCheckStart = checks.length
+  const createdData = subscriptionData(created.body)
+  if (createdData === undefined || typeof createdData.id !== "string" || typeof createdData.revision !== "string") {
+    checks.push(
+      lifecycleCheckBlocked(
+        "subscription-lifecycle-dependent-checks",
+        "blocked: subscription creation did not produce a usable fixture"
+      )
+    )
+    return checks
+  }
+  const id = createdData.id
+  const path = `/api/subscriptions/${encoded(id)}`
+  if (created.check.status !== "passed") {
+    checks.push(...(await cancelLifecycleSubscription(input, id, path)))
+    return checks
+  }
+  const createReplay = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: createBody,
+      expectedStatus: 201,
+      headers: { "idempotency-key": createKey },
+      id: "subscription-lifecycle-create-replay",
+      method: "POST",
+      path: "/api/subscriptions",
+      validate: (body, response) => {
+        const data = subscriptionData(body)
+        return (
+          lifecycleResource(
+            body,
+            response,
+            "smoke-subscription-lifecycle-create-replay",
+            "/api/subscriptions",
+            (value) => hasSubscription(value, input.canonicalApiBaseUrl)
+          ) &&
+          data?.id === id &&
+          data.revision === createdData.revision
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(createReplay.check)
+  const filteredPath =
+    "/api/subscriptions?targetType=query&eventType=query-match&channel=in-app&status=active&limit=100"
+  const filtered = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "subscription-lifecycle-filtered-list",
+      method: "GET",
+      path: filteredPath,
+      validate: (body, response) =>
+        lifecyclePage(body, response, "smoke-subscription-lifecycle-filtered-list", filteredPath, (value) =>
+          hasSubscription(value, input.canonicalApiBaseUrl)
+        ) &&
+        isRecord(body) &&
+        Array.isArray(body.data) &&
+        body.data.some((value) => isRecord(value) && value.id === id)
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(filtered.check)
+  const detail = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "subscription-lifecycle-detail",
+      method: "GET",
+      path,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-subscription-lifecycle-detail", path, (value) =>
+          hasSubscription(value, input.canonicalApiBaseUrl)
+        ) &&
+        subscriptionData(body)?.id === id &&
+        response.headers.get("etag") === createdData.revision
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(detail.check)
+  const patch = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { name: `${subscriptionName} updated` },
+      expectedStatus: 200,
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": patchKey,
+        "if-match": createdData.revision
+      },
+      id: "subscription-lifecycle-patch",
+      method: "PATCH",
+      path,
+      validate: (body, response) => {
+        const data = subscriptionData(body)
+        return (
+          lifecycleResource(body, response, "smoke-subscription-lifecycle-patch", path, (value) =>
+            hasSubscription(value, input.canonicalApiBaseUrl)
+          ) &&
+          data?.id === id &&
+          data.name === `${subscriptionName} updated` &&
+          typeof data.revision === "string" &&
+          data.revision !== createdData.revision &&
+          response.headers.get("etag") === data.revision
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(patch.check)
+  const patchedData = subscriptionData(patch.body)
+  const patchedRevision = patchedData?.revision
+  if (patch.check.status !== "passed" || typeof patchedRevision !== "string") {
+    checks.push(...(await cancelLifecycleSubscription(input, id, path)))
+    return checks
+  }
+  const stale = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      body: { status: "paused" },
+      expectedStatus: 412,
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": staleKey,
+        "if-match": createdData.revision
+      },
+      id: "subscription-lifecycle-stale-revision",
+      method: "PATCH",
+      path,
+      validate: (body, response) =>
+        hasErrorEnvelope(body, response.headers.get("x-correlation-id"), "precondition_failed") &&
+        response.headers.get("x-correlation-id") === "smoke-subscription-lifecycle-stale-revision"
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(stale.check)
+  for (const child of ["events", "deliveries"] as const) {
+    const childPath = `${path}/${child}?limit=1`
+    const expected = child === "events" ? hasSubscriptionEvent : hasDelivery
+    const childResult = await executeLifecycleRequest(
+      input.baseUrl,
+      input.fetchImpl,
+      {
+        expectedStatus: 200,
+        id: `subscription-lifecycle-${child}`,
+        method: "GET",
+        path: childPath,
+        validate: (body, response) =>
+          lifecyclePage(body, response, `smoke-subscription-lifecycle-${child}`, childPath, expected) &&
+          isRecord(body) &&
+          Array.isArray(body.data) &&
+          body.data.length === 0
+      },
+      input.token,
+      input.requestTimeoutMs,
+      input.callerSignal
+    )
+    checks.push(childResult.check)
+  }
+  const cancellation = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      headers: { "idempotency-key": deleteKey, "if-match": patchedRevision },
+      id: "subscription-lifecycle-delete",
+      method: "DELETE",
+      path,
+      validate: (body, response) => {
+        const finalRevision = response.headers.get("etag")
+        return (
+          typeof finalRevision === "string" &&
+          lifecycleResource(body, response, "smoke-subscription-lifecycle-delete", path, (value) =>
+            isCancellationReceipt(value, id, finalRevision)
+          )
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(cancellation.check)
+  const cancellationReplay = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      headers: { "idempotency-key": deleteKey, "if-match": patchedRevision },
+      id: "subscription-lifecycle-delete-replay",
+      method: "DELETE",
+      path,
+      validate: (body, response) => {
+        const finalRevision = response.headers.get("etag")
+        return (
+          typeof finalRevision === "string" &&
+          lifecycleResource(body, response, "smoke-subscription-lifecycle-delete-replay", path, (value) =>
+            isCancellationReceipt(value, id, finalRevision)
+          )
+        )
+      }
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(cancellationReplay.check)
+  const cancelled = await executeLifecycleRequest(
+    input.baseUrl,
+    input.fetchImpl,
+    {
+      expectedStatus: 200,
+      id: "subscription-lifecycle-cancelled-visibility",
+      method: "GET",
+      path,
+      validate: (body, response) =>
+        lifecycleResource(body, response, "smoke-subscription-lifecycle-cancelled-visibility", path, (value) =>
+          hasSubscription(value, input.canonicalApiBaseUrl)
+        ) &&
+        subscriptionData(body)?.id === id &&
+        subscriptionData(body)?.status === "cancelled" &&
+        isRfc3339(subscriptionData(body)?.cancelledAt)
+    },
+    input.token,
+    input.requestTimeoutMs,
+    input.callerSignal
+  )
+  checks.push(cancelled.check)
+  if (checks.slice(postCreateCheckStart).some((check) => check.status !== "passed")) {
+    checks.push(...(await cancelLifecycleSubscription(input, id, path)))
+  }
+  return checks
+}
+
 export async function runApiSmoke(options: {
   baseUrl: string | URL
   canonicalApiBaseUrl?: string | URL
@@ -1701,8 +2229,11 @@ export async function runApiSmoke(options: {
 }): Promise<SmokeReport> {
   const baseUrl = canonicalSmokeApiBaseUrl(options.baseUrl)
   const profile = options.profile ?? "full"
-  if (profile === "scoped-bills" && options.canonicalApiBaseUrl === undefined) {
-    throw new TypeError("canonicalApiBaseUrl is required for the scoped-bills smoke profile")
+  if (
+    (profile === "scoped-bills" || profile === "subscription-lifecycle") &&
+    options.canonicalApiBaseUrl === undefined
+  ) {
+    throw new TypeError(`canonicalApiBaseUrl is required for the ${profile} smoke profile`)
   }
   const canonicalApiBaseUrl =
     options.canonicalApiBaseUrl === undefined ? undefined : canonicalSmokeApiBaseUrl(options.canonicalApiBaseUrl)
@@ -1711,6 +2242,37 @@ export async function runApiSmoke(options: {
   const requestTimeoutMs = options.requestTimeoutMs ?? 30_000
   if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > 60_000) {
     throw new RangeError("requestTimeoutMs must be an integer between 1 and 60000")
+  }
+  if (profile === "subscription-lifecycle") {
+    if (!requireAuth || options.token === undefined) {
+      throw new Error("subscription-lifecycle smoke requires authenticated mode and an explicit token")
+    }
+    const checks = await runSubscriptionLifecycleSmoke({
+      baseUrl,
+      canonicalApiBaseUrl: canonicalApiBaseUrl!,
+      callerSignal: options.signal,
+      fetchImpl,
+      requestTimeoutMs,
+      token: options.token
+    })
+    const passed = checks.filter((check) => check.status === "passed")
+    const skipped = checks.filter((check) => check.status === "skipped")
+    const blocked = checks.filter((check) => check.status === "blocked")
+    const failed = checks.filter((check) => check.status === "failed")
+    let status: SmokeReport["status"] = "passed"
+    if (failed.length > 0) {
+      status = "failed"
+    } else if (blocked.length > 0) {
+      status = "blocked"
+    }
+    return {
+      blocked,
+      checks,
+      failed,
+      passed,
+      skipped,
+      status
+    }
   }
   const fixtures = options.fixtures ?? {}
   const fixtureDefinitions = profile === "full" ? fixtureChecks(fixtures) : scopedBillChecks(fixtures)

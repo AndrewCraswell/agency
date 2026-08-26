@@ -6,6 +6,7 @@ import {
   assertAllowedQueryParameters,
   apiPage,
   apiResource,
+  correlationId,
   queryInteger,
   queryOptionalDate,
   queryOptionalString,
@@ -297,7 +298,7 @@ export function createSubscriptionMutationApiHandler(
             }
           }
         )
-        sendIdempotentResponse(response, result.response)
+        sendIdempotentResponse(request, response, result.response)
         return true
       }
 
@@ -326,7 +327,7 @@ export function createSubscriptionMutationApiHandler(
             }
           }
         )
-        sendIdempotentResponse(response, result.response)
+        sendIdempotentResponse(request, response, result.response)
         return true
       }
 
@@ -341,13 +342,17 @@ export function createSubscriptionMutationApiHandler(
         async (repository) => {
           const subscription = await service.withRepository(repository).cancelSubscription(identity, id, revision)
           return {
-            body: apiResource(request, { cancelledAt: isoTimestamp(subscription.cancelledAt), id: subscription.id }),
+            body: apiResource(request, {
+              cancelledAt: isoTimestamp(subscription.cancelledAt),
+              finalRevision: subscription.revision,
+              id: subscription.id
+            }),
             headers: { etag: subscription.revision },
             statusCode: 200
           }
         }
       )
-      sendIdempotentResponse(response, result.response)
+      sendIdempotentResponse(request, response, result.response)
       return true
     } catch (error) {
       sendError(request, response, addDuplicateSubscriptionCanonicalUrl(error, options))
@@ -432,13 +437,21 @@ function addDuplicateSubscriptionCanonicalUrl(error: unknown, options: Subscript
 }
 
 function sendIdempotentResponse(
+  request: IncomingMessage,
   response: ServerResponse,
   result: Readonly<{ body: unknown; headers: Readonly<Record<string, string>>; statusCode: number }>
 ): void {
   for (const [name, value] of Object.entries(result.headers)) {
     response.setHeader(name, value)
   }
-  sendApiJson(response, result.statusCode, result.body)
+  sendApiJson(response, result.statusCode, withCurrentCorrelation(result.body, correlationId(request)))
+}
+
+function withCurrentCorrelation(body: unknown, currentCorrelationId: string): unknown {
+  if (!isJsonRecord(body) || !isJsonRecord(body.meta)) {
+    return body
+  }
+  return { ...body, meta: { ...body.meta, correlationId: currentCorrelationId } }
 }
 
 export function createSubscriptionApiHandler(
@@ -526,7 +539,15 @@ async function handleRequest(
     if (child === undefined && request.method === "DELETE") {
       requireIdempotencyKey(request)
       const subscription = await service.cancelSubscription(identity, id, requireIfMatch(request))
-      sendApiJson(response, 200, apiResource(request, { cancelledAt: subscription.cancelledAt, id: subscription.id }))
+      sendApiJson(
+        response,
+        200,
+        apiResource(request, {
+          cancelledAt: subscription.cancelledAt,
+          finalRevision: subscription.revision,
+          id: subscription.id
+        })
+      )
       return true
     }
   }

@@ -25,6 +25,10 @@ import {
 
 const servers = new Set<ReturnType<typeof createServer>>()
 
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 afterEach(async () => {
   await Promise.all(
     [...servers].map(async (server) => await new Promise<void>((resolve) => server.close(() => resolve())))
@@ -163,8 +167,13 @@ async function startMutation() {
     apiBaseUrl: "https://api.example.test"
   })
   const server = createServer(async (request, response) => {
+    const requestedCorrelationId = request.headers["x-correlation-id"]
+    const correlationId =
+      typeof requestedCorrelationId === "string" && requestedCorrelationId.trim() !== ""
+        ? requestedCorrelationId
+        : "mutation-route-test"
     const handled = await runWithRequestContext(
-      { correlationId: "mutation-route-test", identity: { userId: "user:test" } },
+      { correlationId, identity: { userId: "user:test" } },
       async () => await handler(request, response)
     )
     if (!handled) {
@@ -452,7 +461,8 @@ describe("createSubscriptionMutationApiHandler", () => {
       headers: {
         "content-type": "application/merge-patch+json",
         "idempotency-key": "equivalent-path-update",
-        "if-match": createdRevision!
+        "if-match": createdRevision!,
+        "x-correlation-id": "mutation-replay-test"
       },
       method: "PATCH"
     })
@@ -460,7 +470,13 @@ describe("createSubscriptionMutationApiHandler", () => {
     expect(encodedUpdate.status).toBe(200)
     expect(equivalentReplay.status).toBe(200)
     expect(equivalentReplay.headers.get("etag")).toBe(encodedUpdateRevision)
-    await expect(equivalentReplay.json()).resolves.toEqual(encodedUpdateBody)
+    const equivalentReplayBody = await equivalentReplay.json()
+    if (!isRecord(encodedUpdateBody)) {
+      throw new Error("Expected the initial mutation response to be a JSON object")
+    }
+    expect(equivalentReplayBody).toHaveProperty("data", encodedUpdateBody.data)
+    expect(equivalentReplayBody).toHaveProperty("links", encodedUpdateBody.links)
+    expect(equivalentReplayBody).toHaveProperty("meta.correlationId", "mutation-replay-test")
 
     const equivalentConflict = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
       body: JSON.stringify({ name: "Different request" }),
@@ -523,7 +539,11 @@ describe("createSubscriptionMutationApiHandler", () => {
 
     expect(cancelled.status).toBe(200)
     await expect(cancelled.json()).resolves.toMatchObject({
-      data: { cancelledAt: "2026-08-25T12:00:00.000Z", id: "subscription:test" }
+      data: {
+        cancelledAt: "2026-08-25T12:00:00.000Z",
+        finalRevision: cancelled.headers.get("etag"),
+        id: "subscription:test"
+      }
     })
   })
 })

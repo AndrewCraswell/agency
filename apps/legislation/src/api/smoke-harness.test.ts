@@ -1156,4 +1156,220 @@ describe("local API smoke harness", () => {
     expect(report.blocked.map((check) => check.id)).not.toContain("absent-list-organizations")
     expect(report.passed.map((check) => check.id)).not.toContain("absent-list-organizations")
   })
+
+  it("runs the opt-in authenticated subscription lifecycle without exposing bearer or idempotency values", async () => {
+    const token = "subscription-lifecycle-token-must-not-leak"
+    const id = "subscription:lifecycle"
+    const keys: string[] = []
+    let createdName = ""
+    let malformedCreateLocation = false
+    let malformedPatch = false
+    let revision = "revision:create"
+    let status: "active" | "cancelled" = "active"
+    const subscription = () => ({
+      cancelledAt: status === "cancelled" ? "2026-08-26T00:00:00.000Z" : null,
+      canonicalUrl: `https://legislation.example.test/api/subscriptions/${encodeURIComponent(id)}`,
+      createdAt: "2026-08-26T00:00:00.000Z",
+      delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+      eventTypes: ["query-match"],
+      frequency: "immediate",
+      id,
+      name: createdName,
+      owner: { organizationId: null, userId: "smoke-user" },
+      revision,
+      status,
+      target: { request: { mode: "lexical", query: "smoke lifecycle" }, searchType: "bills", type: "query" },
+      timezone: "Etc/UTC",
+      updatedAt: "2026-08-26T00:00:00.000Z"
+    })
+    const response = (
+      body: unknown,
+      statusCode: number,
+      correlationId: string,
+      headers: Readonly<Record<string, string>> = {}
+    ) =>
+      new Response(JSON.stringify(body), {
+        headers: { "content-type": "application/json", "x-correlation-id": correlationId, ...headers },
+        status: statusCode
+      })
+    const resource = (value: unknown, path: string, correlationId: string, statusCode = 200, location = path) =>
+      response(
+        { data: value, links: { self: path }, meta: { correlationId, warnings: [] } },
+        statusCode,
+        correlationId,
+        { etag: revision, ...(statusCode === 201 ? { location } : {}) }
+      )
+    const page = (values: readonly unknown[], path: string, correlationId: string) =>
+      response(
+        {
+          data: values,
+          links: { next: null, self: path },
+          meta: { correlationId, limit: 100, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    const fetchImpl = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const url = new URL(input)
+      const headers = new Headers(init?.headers)
+      const correlationId = headers.get("x-correlation-id") ?? "missing-correlation"
+      expect(headers.get("authorization")).toBe(`Bearer ${token}`)
+      const key = headers.get("idempotency-key")
+      if (key !== null) {
+        keys.push(key)
+      }
+      if (url.pathname === "/api/subscriptions" && init?.method === "GET") {
+        return page(
+          url.searchParams.has("targetType") ? [subscription()] : [],
+          `${url.pathname}${url.search}`,
+          correlationId
+        )
+      }
+      if (url.pathname === "/api/subscriptions" && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as { name: string }
+        createdName = body.name
+        return resource(
+          subscription(),
+          "/api/subscriptions",
+          correlationId,
+          201,
+          malformedCreateLocation ? "/api/subscriptions/unexpected" : `/api/subscriptions/${encodeURIComponent(id)}`
+        )
+      }
+      if (url.pathname === `/api/subscriptions/${encodeURIComponent(id)}` && init?.method === "GET") {
+        return resource(subscription(), url.pathname, correlationId)
+      }
+      if (url.pathname === `/api/subscriptions/${encodeURIComponent(id)}` && init?.method === "PATCH") {
+        if (headers.get("if-match") === "revision:create") {
+          const body = JSON.parse(String(init.body)) as { name?: unknown }
+          if (typeof body.name === "string" && body.name.endsWith("updated")) {
+            if (malformedPatch) {
+              return resource(subscription(), url.pathname, correlationId)
+            }
+            revision = "revision:updated"
+            createdName = body.name
+            return resource(subscription(), url.pathname, correlationId)
+          }
+          return response(
+            {
+              error: {
+                category: "precondition_failed",
+                correlationId,
+                message: "stale revision",
+                retryable: false
+              }
+            },
+            412,
+            correlationId
+          )
+        }
+        throw new Error("Unexpected subscription revision")
+      }
+      if (url.pathname === `/api/subscriptions/${encodeURIComponent(id)}/events`) {
+        return page([], `${url.pathname}${url.search}`, correlationId)
+      }
+      if (url.pathname === `/api/subscriptions/${encodeURIComponent(id)}/deliveries`) {
+        return page([], `${url.pathname}${url.search}`, correlationId)
+      }
+      if (url.pathname === `/api/subscriptions/${encodeURIComponent(id)}` && init?.method === "DELETE") {
+        status = "cancelled"
+        revision = "revision:cancelled"
+        return resource(
+          { cancelledAt: "2026-08-26T00:00:00.000Z", finalRevision: revision, id },
+          url.pathname,
+          correlationId
+        )
+      }
+      throw new Error(`Unexpected lifecycle request ${init?.method ?? "GET"} ${url.pathname}`)
+    }
+
+    const report = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "subscription-lifecycle",
+      requireAuth: true,
+      token
+    })
+
+    expect(report.status).toBe("passed")
+    expect(report.passed.map((check) => check.id)).toEqual([
+      "subscription-lifecycle-list",
+      "subscription-lifecycle-create",
+      "subscription-lifecycle-create-replay",
+      "subscription-lifecycle-filtered-list",
+      "subscription-lifecycle-detail",
+      "subscription-lifecycle-patch",
+      "subscription-lifecycle-stale-revision",
+      "subscription-lifecycle-events",
+      "subscription-lifecycle-deliveries",
+      "subscription-lifecycle-delete",
+      "subscription-lifecycle-delete-replay",
+      "subscription-lifecycle-cancelled-visibility"
+    ])
+    expect(keys).toHaveLength(6)
+    expect(new Set(keys)).toHaveLength(4)
+    expect(JSON.stringify(report)).not.toContain(token)
+    for (const key of keys) {
+      expect(JSON.stringify(report)).not.toContain(key)
+    }
+
+    keys.length = 0
+    createdName = ""
+    malformedPatch = true
+    revision = "revision:create"
+    status = "active"
+    const failedReport = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "subscription-lifecycle",
+      requireAuth: true,
+      token
+    })
+
+    expect(failedReport.status).toBe("failed")
+    expect(failedReport.failed.map((check) => check.id)).toContain("subscription-lifecycle-patch")
+    expect(failedReport.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["subscription-lifecycle-cleanup-read", "subscription-lifecycle-cleanup"])
+    )
+    expect(status).toBe("cancelled")
+    expect(keys).toHaveLength(4)
+
+    keys.length = 0
+    createdName = ""
+    malformedCreateLocation = true
+    malformedPatch = false
+    revision = "revision:create"
+    status = "active"
+    const malformedCreateReport = await runApiSmoke({
+      baseUrl: "https://legislation.example.test",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      profile: "subscription-lifecycle",
+      requireAuth: true,
+      token
+    })
+
+    expect(malformedCreateReport.status).toBe("failed")
+    expect(malformedCreateReport.failed.map((check) => check.id)).toContain("subscription-lifecycle-create")
+    expect(malformedCreateReport.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["subscription-lifecycle-cleanup-read", "subscription-lifecycle-cleanup"])
+    )
+    expect(status).toBe("cancelled")
+    expect(keys).toHaveLength(2)
+  })
+
+  it("requires an explicit authenticated opt-in before a subscription lifecycle smoke can mutate", async () => {
+    await expect(
+      runApiSmoke({
+        baseUrl: "https://legislation.example.test",
+        canonicalApiBaseUrl: "https://legislation.example.test",
+        fetchImpl: async () => {
+          throw new Error("fetch must not run")
+        },
+        profile: "subscription-lifecycle"
+      })
+    ).rejects.toThrow("subscription-lifecycle smoke requires authenticated mode and an explicit token")
+  })
 })
