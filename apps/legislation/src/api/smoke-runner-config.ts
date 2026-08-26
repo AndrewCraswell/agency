@@ -12,6 +12,7 @@ export function parseSmokeFixtures(environment: SmokeRunnerEnvironment): SmokeFi
     amendmentId: fixture(environment, "amendmentId"),
     billId: fixture(environment, "billId"),
     billSearchQuery: fixture(environment, "billSearchQuery"),
+    changeId: fixture(environment, "changeId"),
     documentId: fixture(environment, "documentId"),
     documentIdB: fixture(environment, "documentIdB"),
     documentSectionId: fixture(environment, "documentSectionId"),

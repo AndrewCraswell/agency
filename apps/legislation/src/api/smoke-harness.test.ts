@@ -66,6 +66,76 @@ function billSummary(id: string): Record<string, unknown> {
   }
 }
 
+function voteSummary(id = "vote:fixture"): Record<string, unknown> {
+  return {
+    ...canonical(id),
+    billId: "bill:fixture",
+    canonicalUrl: `https://legislation.example.test/api/votes/${encodeURIComponent(id)}`,
+    classification: "passage",
+    counts: { absent: 0, abstain: 0, no: 1, notVoting: 0, other: 0, paired: 0, present: 0, proxy: 0, yes: 2 },
+    date: "2026-01-01",
+    heldAt: "2026-01-01T12:00:00.000Z",
+    motion: "Passage on the fixture bill",
+    organizationId: "organization:fixture",
+    question: null,
+    result: "passed",
+    type: "vote"
+  }
+}
+
+function voteDetail(id = "vote:fixture"): Record<string, unknown> {
+  return {
+    ...voteSummary(id),
+    positions: [votePosition(id)],
+    positionsPageInfo: { limit: 25, nextCursor: null, truncated: false }
+  }
+}
+
+function votePosition(voteId: string): Record<string, unknown> {
+  const personId = "person:fixture"
+  return {
+    ...canonical("position:fixture"),
+    canonicalUrl: `https://legislation.example.test/api/votes/${encodeURIComponent(voteId)}#position%3Afixture`,
+    id: "position:fixture",
+    option: "yes",
+    person: {
+      ...canonical(personId),
+      canonicalUrl: `https://legislation.example.test/api/people/${encodeURIComponent(personId)}`,
+      familyName: "Legislator",
+      givenName: "Fixture",
+      imageUrl: null,
+      isActive: true,
+      jurisdictionIds: ["jurisdiction:fixture"],
+      name: "Fixture Legislator",
+      party: null,
+      type: "person"
+    },
+    sourceName: "Fixture Legislator",
+    sourcePersonId: "fixture-person",
+    type: "vote-position",
+    voteId
+  }
+}
+
+function changeEvent(id = "change:fixture"): Record<string, unknown> {
+  return {
+    ...canonical(id),
+    after: { status: "introduced" },
+    before: null,
+    canonicalUrl: `https://legislation.example.test/api/changes/${encodeURIComponent(id)}`,
+    changedFields: ["status"],
+    classification: "create",
+    jurisdictionId: "jurisdiction:fixture",
+    observedAt: "2026-01-01T12:00:00.000Z",
+    organizationId: null,
+    personId: null,
+    recordId: "vote:fixture",
+    recordType: "vote",
+    sourceUpdatedAt: null,
+    type: "change"
+  }
+}
+
 function billSummaryRead(id: string): BillSummaryRead {
   return {
     classification: ["bill"],
@@ -292,7 +362,6 @@ function fakeFetch() {
     if (
       url.pathname === "/api/jurisdictions" ||
       url.pathname === "/api/amendments" ||
-      url.pathname === "/api/votes" ||
       url.pathname === "/api/people" ||
       url.pathname === "/api/organizations" ||
       url.pathname === "/api/meetings" ||
@@ -301,6 +370,63 @@ function fakeFetch() {
       return jsonResponse(
         { error: { category: "not_found", correlationId, message: "not found", retryable: false } },
         404,
+        correlationId
+      )
+    }
+    if (url.pathname === "/api/votes" && init?.method !== "POST") {
+      return jsonResponse(
+        {
+          data: [voteSummary()],
+          links: { next: null, self: `${url.pathname}${url.search}` },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
+    if (url.pathname === "/api/votes/vote%3Afixture") {
+      return jsonResponse(
+        {
+          data: voteDetail(),
+          links: { self: `${url.pathname}${url.search}` },
+          meta: { correlationId, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
+    if (url.pathname === "/api/votes/batch" && init?.method === "POST") {
+      const parsed = typeof init.body === "string" ? JSON.parse(init.body) : undefined
+      const ids = isRecord(parsed) && Array.isArray(parsed.ids) ? parsed.ids : []
+      return jsonResponse(
+        {
+          data: ids.map((id) => ({ data: voteDetail(String(id)), id, status: "ok" })),
+          links: { self: `${url.pathname}${url.search}` },
+          meta: { correlationId, requested: ids.length, returned: ids.length, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
+    if (url.pathname === "/api/changes" && init?.method !== "POST") {
+      return jsonResponse(
+        {
+          data: [changeEvent()],
+          links: { next: null, self: `${url.pathname}${url.search}` },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
+    if (url.pathname === "/api/changes/change%3Afixture") {
+      return jsonResponse(
+        {
+          data: changeEvent(),
+          links: { self: `${url.pathname}${url.search}` },
+          meta: { correlationId, warnings: [] }
+        },
+        200,
         correlationId
       )
     }
@@ -414,8 +540,6 @@ function fakeFetch() {
       url.pathname === "/api/organizations" ||
       url.pathname === "/api/meetings" ||
       url.pathname === "/api/amendments" ||
-      url.pathname === "/api/votes" ||
-      url.pathname === "/api/changes" ||
       url.pathname === "/api/jurisdictions"
     ) {
       return jsonResponse(
@@ -508,10 +632,10 @@ function mutateJson(
 
 describe("local API smoke harness", () => {
   it("keeps one manifest entry for every implemented or in-progress full-profile operation", () => {
-    expect(SMOKE_MANIFEST).toHaveLength(18)
+    expect(SMOKE_MANIFEST).toHaveLength(23)
     expect(new Set(SMOKE_MANIFEST.map((entry) => entry.id)).size).toBe(SMOKE_MANIFEST.length)
     expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "done")).toHaveLength(2)
-    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress")).toHaveLength(16)
+    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress")).toHaveLength(21)
   })
 
   it("runs only universal checks and exact canonical scoped bill pages in the scoped-bills profile", async () => {
@@ -656,7 +780,8 @@ describe("local API smoke harness", () => {
 
     expect(report.status).toBe("blocked")
     expect(report.failed).toHaveLength(0)
-    expect(report.blocked.some((check) => check.id === "absent-list-votes")).toBe(true)
+    expect(report.blocked.some((check) => check.id === "list-bills")).toBe(true)
+    expect(report.skipped.some((check) => check.id === "list-votes")).toBe(true)
     expect(report.passed.some((check) => check.id === "auth-rejection")).toBe(true)
     expect(calls.every((call) => call.authorization === null)).toBe(true)
     expect(JSON.stringify(report)).not.toContain("bill:1")
@@ -673,9 +798,150 @@ describe("local API smoke harness", () => {
     })
     expect(report.status).toBe("passed")
     expect(report.failed).toHaveLength(0)
-    expect(report.passed.some((check) => check.id === "absent-list-votes")).toBe(true)
+    expect(report.skipped.some((check) => check.id === "list-votes")).toBe(true)
     expect(calls.some((call) => call.authorization === "Bearer do-not-log-this-token")).toBe(true)
     expect(JSON.stringify(report)).not.toContain("do-not-log-this-token")
+  })
+
+  it("requires a configured vote fixture to prove a nonempty canonical vote collection, detail, and batch", async () => {
+    const { calls, fetchImpl } = fakeFetch()
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl,
+      fixtures: { voteId: "vote:fixture" },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed).toEqual([])
+    expect(report.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["list-votes", "get-vote", "batch-votes"])
+    )
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "GET", path: "/api/votes", search: "?limit=1" }),
+        expect.objectContaining({ method: "GET", path: "/api/votes/vote%3Afixture" }),
+        expect.objectContaining({ method: "POST", path: "/api/votes/batch" })
+      ])
+    )
+  })
+
+  it("rejects a vote batch whose nested detail does not match the item identity", async () => {
+    const { fetchImpl } = fakeFetch()
+    const malformedBatch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const response = await fetchImpl(input, init)
+      if (new URL(input).pathname !== "/api/votes/batch") {
+        return response
+      }
+      const body = (await response.json()) as Record<string, unknown>
+      const data = Array.isArray(body.data) ? body.data : []
+      return new Response(
+        JSON.stringify({ ...body, data: data.map((item) => ({ ...item, data: voteDetail("vote:wrong") })) }),
+        { headers: response.headers, status: response.status }
+      )
+    }
+
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl: malformedBatch,
+      fixtures: { voteId: "vote:fixture" },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed).toContainEqual(expect.objectContaining({ id: "batch-votes", status: "failed" }))
+  })
+
+  it("rejects a vote detail position with an incomplete person summary", async () => {
+    const { fetchImpl } = fakeFetch()
+    const malformedDetail = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const response = await fetchImpl(input, init)
+      if (new URL(input).pathname !== "/api/votes/vote%3Afixture") {
+        return response
+      }
+      const body = (await response.json()) as Record<string, unknown>
+      return new Response(
+        JSON.stringify({
+          ...body,
+          data: {
+            ...voteDetail(),
+            positions: [
+              {
+                ...votePosition("vote:fixture"),
+                person: {
+                  ...canonical("person:fixture"),
+                  canonicalUrl: "https://legislation.example.test/api/people/person%3Afixture",
+                  familyName: "Legislator",
+                  givenName: "Fixture",
+                  imageUrl: null,
+                  jurisdictionIds: ["jurisdiction:fixture"],
+                  name: "Fixture Legislator",
+                  party: null,
+                  type: "person"
+                }
+              }
+            ]
+          }
+        }),
+        { headers: response.headers, status: response.status }
+      )
+    }
+
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl: malformedDetail,
+      fixtures: { voteId: "vote:fixture" },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed).toContainEqual(expect.objectContaining({ id: "get-vote", status: "failed" }))
+  })
+
+  it("rejects a vote detail position that is bound to another vote", async () => {
+    const { fetchImpl } = fakeFetch()
+    const malformedDetail = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const response = await fetchImpl(input, init)
+      if (new URL(input).pathname !== "/api/votes/vote%3Afixture") {
+        return response
+      }
+      const body = (await response.json()) as Record<string, unknown>
+      return new Response(
+        JSON.stringify({ ...body, data: { ...voteDetail(), positions: [votePosition("vote:other")] } }),
+        { headers: response.headers, status: response.status }
+      )
+    }
+
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl: malformedDetail,
+      fixtures: { voteId: "vote:fixture" },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed).toContainEqual(expect.objectContaining({ id: "get-vote", status: "failed" }))
+  })
+
+  it("requires a configured change fixture to prove a nonempty canonical change collection and detail", async () => {
+    const { calls, fetchImpl } = fakeFetch()
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl,
+      fixtures: { changeId: "change:fixture" },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed).toEqual([])
+    expect(report.passed.map((check) => check.id)).toEqual(expect.arrayContaining(["list-changes", "get-change"]))
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: "GET", path: "/api/changes", search: "?limit=1" }),
+        expect.objectContaining({ method: "GET", path: "/api/changes/change%3Afixture" })
+      ])
+    )
   })
 
   it("fails an abort-aware request at the configured timeout", async () => {
@@ -926,7 +1192,6 @@ describe("local API smoke harness", () => {
         "get-webhook"
       ])
     )
-    expect(report.passed.map((check) => check.id)).toContain("absent-list-votes")
     expect(report.passed.map((check) => check.id)).toContain("auth-rejection")
 
     const inProgressIds = new Set(
@@ -938,7 +1203,15 @@ describe("local API smoke harness", () => {
         .filter((check) => inProgressIds.has(check.id))
         .map((check) => check.id)
         .sort()
-    ).toEqual(["search-bills", "search-supporting-materials"])
+    ).toEqual([
+      "batch-votes",
+      "get-change",
+      "get-vote",
+      "list-changes",
+      "list-votes",
+      "search-bills",
+      "search-supporting-materials"
+    ])
 
     const revisionEtagMismatch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
       const response = await fetch(input, init)
@@ -1093,7 +1366,7 @@ describe("local API smoke harness", () => {
     expect(report.failed.map((check) => check.id)).toContain("ready")
   })
 
-  it("accepts canonical collection pages when a no-fixture probe is populated", async () => {
+  it("rejects a vote collection item that omits the documented vote fields", async () => {
     const { fetchImpl } = fakeFetch()
     const reachable = async (input: string | URL, init?: RequestInit): Promise<Response> => {
       const url = new URL(input)
@@ -1113,13 +1386,14 @@ describe("local API smoke harness", () => {
     }
     const report = await runApiSmoke({
       baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
       fetchImpl: reachable,
+      fixtures: { voteId: "vote:fixture" },
       requireAuth: true,
       token: "smoke-token"
     })
 
-    expect(report.failed).toEqual([])
-    expect(report.passed.map((check) => check.id)).toContain("absent-list-votes")
+    expect(report.failed).toContainEqual(expect.objectContaining({ id: "list-votes", status: "failed" }))
   })
 
   it("fails a no-fixture collection probe when canonical provenance is incomplete", async () => {

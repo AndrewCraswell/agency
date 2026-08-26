@@ -8,6 +8,7 @@ export type SmokeFixture = Readonly<{
   amendmentId?: string
   billId?: string
   billSearchQuery?: string
+  changeId?: string
   documentId?: string
   documentIdB?: string
   documentSectionId?: string
@@ -55,6 +56,8 @@ type CheckDefinition = Readonly<{
     | "batch"
     | "bill-page"
     | "calculation"
+    | "change-page"
+    | "change-resource"
     | "delivery-page"
     | "document-page"
     | "document-resource"
@@ -71,6 +74,9 @@ type CheckDefinition = Readonly<{
     | "subscription-event-page"
     | "subscription-page"
     | "subscription-resource"
+    | "vote-batch"
+    | "vote-page"
+    | "vote-resource"
     | "webhook-page"
     | "webhook-resource"
   healthStatus?: "ok" | "ready"
@@ -240,6 +246,46 @@ export const SMOKE_MANIFEST: readonly SmokeManifestEntry[] = [
     lifecycle: "in-progress",
     method: "GET",
     path: "/api/webhooks/{webhookId}"
+  },
+  {
+    expected: "vote-page",
+    fixture: "voteId",
+    id: "list-votes",
+    lifecycle: "in-progress",
+    method: "GET",
+    path: "/api/votes"
+  },
+  {
+    expected: "vote-resource",
+    fixture: "voteId",
+    id: "get-vote",
+    lifecycle: "in-progress",
+    method: "GET",
+    path: "/api/votes/{voteId}"
+  },
+  {
+    expected: "vote-batch",
+    fixture: "voteId",
+    id: "batch-votes",
+    lifecycle: "in-progress",
+    method: "POST",
+    path: "/api/votes/batch"
+  },
+  {
+    expected: "change-page",
+    fixture: "changeId",
+    id: "list-changes",
+    lifecycle: "in-progress",
+    method: "GET",
+    path: "/api/changes"
+  },
+  {
+    expected: "change-resource",
+    fixture: "changeId",
+    id: "get-change",
+    lifecycle: "in-progress",
+    method: "GET",
+    path: "/api/changes/{changeId}"
   }
 ]
 
@@ -292,12 +338,6 @@ const BLOCKED_ABSENCE_CHECKS: readonly CheckDefinition[] = [
     expected: "page",
     id: "absent-list-amendments",
     path: "/api/amendments?limit=1"
-  },
-  {
-    allowNotFound: true,
-    expected: "page",
-    id: "absent-list-votes",
-    path: "/api/votes?limit=1"
   },
   {
     allowNotFound: true,
@@ -452,6 +492,40 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
       requiresRevisionEtag: true
     })
   }
+  if (fixture.voteId !== undefined) {
+    checks.push({
+      expected: "vote-page",
+      id: "list-votes",
+      path: "/api/votes?limit=1"
+    })
+    checks.push({
+      expected: "vote-resource",
+      expectedId: fixture.voteId,
+      id: "get-vote",
+      path: `/api/votes/${encoded(fixture.voteId)}`
+    })
+    checks.push({
+      body: { ids: [fixture.voteId] },
+      expected: "vote-batch",
+      expectedId: fixture.voteId,
+      id: "batch-votes",
+      method: "POST",
+      path: "/api/votes/batch"
+    })
+  }
+  if (fixture.changeId !== undefined) {
+    checks.push({
+      expected: "change-page",
+      id: "list-changes",
+      path: "/api/changes?limit=1"
+    })
+    checks.push({
+      expected: "change-resource",
+      expectedId: fixture.changeId,
+      id: "get-change",
+      path: `/api/changes/${encoded(fixture.changeId)}`
+    })
+  }
   return checks
 }
 
@@ -587,6 +661,40 @@ function missingFixtureChecks(fixture: SmokeFixture, present: ReadonlySet<string
       skippedCheck(
         { expected: "webhook-resource", id: "get-webhook", path: "/api/webhooks/{webhookId}" },
         "skipped: provide LEGISLATION_SMOKE_WEBHOOK_ID to exercise webhook detail"
+      )
+    )
+  }
+  if (fixture.voteId === undefined) {
+    skipped.push(
+      skippedCheck(
+        { expected: "vote-page", id: "list-votes", path: "/api/votes?limit=1" },
+        "skipped: provide LEGISLATION_SMOKE_VOTE_ID to exercise the nonempty canonical vote collection"
+      )
+    )
+    skipped.push(
+      skippedCheck(
+        { expected: "vote-resource", id: "get-vote", path: "/api/votes/{voteId}" },
+        "skipped: provide LEGISLATION_SMOKE_VOTE_ID to exercise vote detail"
+      )
+    )
+    skipped.push(
+      skippedCheck(
+        { expected: "vote-batch", id: "batch-votes", method: "POST", path: "/api/votes/batch" },
+        "skipped: provide LEGISLATION_SMOKE_VOTE_ID to exercise the vote batch"
+      )
+    )
+  }
+  if (fixture.changeId === undefined) {
+    skipped.push(
+      skippedCheck(
+        { expected: "change-page", id: "list-changes", path: "/api/changes?limit=1" },
+        "skipped: provide LEGISLATION_SMOKE_CHANGE_ID to exercise the nonempty canonical change collection"
+      )
+    )
+    skipped.push(
+      skippedCheck(
+        { expected: "change-resource", id: "get-change", path: "/api/changes/{changeId}" },
+        "skipped: provide LEGISLATION_SMOKE_CHANGE_ID to exercise change detail"
       )
     )
   }
@@ -869,6 +977,142 @@ function hasSupportingMaterialPageEnvelope(
     hasPageEnvelope(body, true) &&
     Array.isArray(body.data) &&
     body.data.every((item) => hasSupportingMaterialSummary(item, canonicalApiBaseUrl))
+  )
+}
+
+function hasVoteCounts(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false
+  }
+  const names = ["yes", "no", "absent", "abstain", "notVoting", "present", "proxy", "paired", "other"]
+  return Object.keys(value).length === names.length && names.every((name) => isNonnegativeInteger(value[name]))
+}
+
+function hasVoteSummary(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  if (
+    !isRecord(value) ||
+    !hasCanonicalRecord(value) ||
+    value.type !== "vote" ||
+    (value.billId !== null && (typeof value.billId !== "string" || value.billId.trim() === "")) ||
+    (value.organizationId !== null &&
+      (typeof value.organizationId !== "string" || value.organizationId.trim() === "")) ||
+    typeof value.motion !== "string" ||
+    value.motion.trim() === "" ||
+    (value.question !== null && typeof value.question !== "string") ||
+    (value.classification !== null && typeof value.classification !== "string") ||
+    (value.heldAt !== null && !isRfc3339(value.heldAt)) ||
+    !isIsoDate(value.date) ||
+    (value.result !== "passed" && value.result !== "failed" && value.result !== "other") ||
+    !hasVoteCounts(value.counts)
+  ) {
+    return false
+  }
+  return hasCanonicalPath(value.canonicalUrl, value.id as string, "/api/votes", canonicalApiBaseUrl)
+}
+
+function hasVotePositionPerson(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  if (
+    !isRecord(value) ||
+    !hasCanonicalRecord(value) ||
+    value.type !== "person" ||
+    typeof value.name !== "string" ||
+    value.name.trim() === "" ||
+    (value.givenName !== null && typeof value.givenName !== "string") ||
+    (value.familyName !== null && typeof value.familyName !== "string") ||
+    (value.party !== null && typeof value.party !== "string") ||
+    (value.imageUrl !== null && !isAbsoluteHttpUrl(value.imageUrl)) ||
+    typeof value.isActive !== "boolean" ||
+    !isStringArray(value.jurisdictionIds) ||
+    value.jurisdictionIds.length === 0 ||
+    value.jurisdictionIds.some((id) => id.trim() === "") ||
+    new Set(value.jurisdictionIds).size !== value.jurisdictionIds.length
+  ) {
+    return false
+  }
+  return hasCanonicalPath(value.canonicalUrl, value.id as string, "/api/people", canonicalApiBaseUrl)
+}
+
+function hasVotePosition(value: unknown, voteId: string, canonicalApiBaseUrl: URL | undefined): boolean {
+  const options = new Set(["yes", "no", "absent", "abstain", "not-voting", "present", "proxy", "paired", "other"])
+  return (
+    isRecord(value) &&
+    hasCanonicalRecord(value) &&
+    value.type === "vote-position" &&
+    value.voteId === voteId &&
+    (value.person === null || hasVotePositionPerson(value.person, canonicalApiBaseUrl)) &&
+    typeof value.option === "string" &&
+    options.has(value.option) &&
+    typeof value.sourceName === "string" &&
+    value.sourceName.trim() !== "" &&
+    (value.sourcePersonId === null || typeof value.sourcePersonId === "string")
+  )
+}
+
+function hasVoteDetail(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  if (!hasVoteSummary(value, canonicalApiBaseUrl) || !isRecord(value) || !Array.isArray(value.positions)) {
+    return false
+  }
+  const page = value.positionsPageInfo
+  return (
+    value.positions.every((position) => hasVotePosition(position, value.id as string, canonicalApiBaseUrl)) &&
+    isRecord(page) &&
+    isNonnegativeInteger(page.limit) &&
+    page.limit > 0 &&
+    (page.nextCursor === null || typeof page.nextCursor === "string") &&
+    typeof page.truncated === "boolean"
+  )
+}
+
+function hasVotePageEnvelope(
+  body: Record<string, unknown>,
+  canonicalApiBaseUrl: URL | undefined,
+  expectedSelf: string
+): boolean {
+  return (
+    hasPageEnvelope(body, false, expectedSelf) &&
+    Array.isArray(body.data) &&
+    body.data.length > 0 &&
+    body.data.every((item) => hasVoteSummary(item, canonicalApiBaseUrl))
+  )
+}
+
+function hasChangeEvent(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  const classifications = new Set(["create", "update", "delete", "cancel", "reschedule", "relationship-change"])
+  if (
+    !isRecord(value) ||
+    !hasCanonicalRecord(value) ||
+    value.type !== "change" ||
+    typeof value.recordType !== "string" ||
+    value.recordType.trim() === "" ||
+    typeof value.recordId !== "string" ||
+    value.recordId.trim() === "" ||
+    typeof value.classification !== "string" ||
+    !classifications.has(value.classification) ||
+    !isStringArray(value.changedFields) ||
+    new Set(value.changedFields).size !== value.changedFields.length ||
+    (value.before !== null && !isRecord(value.before)) ||
+    (value.after !== null && !isRecord(value.after)) ||
+    (value.jurisdictionId !== null && typeof value.jurisdictionId !== "string") ||
+    (value.organizationId !== null && typeof value.organizationId !== "string") ||
+    (value.personId !== null && typeof value.personId !== "string") ||
+    !isRfc3339(value.observedAt) ||
+    (value.sourceUpdatedAt !== null && !isRfc3339(value.sourceUpdatedAt))
+  ) {
+    return false
+  }
+  return hasCanonicalPath(value.canonicalUrl, value.id as string, "/api/changes", canonicalApiBaseUrl)
+}
+
+function hasChangePageEnvelope(
+  body: Record<string, unknown>,
+  canonicalApiBaseUrl: URL | undefined,
+  expectedSelf: string
+): boolean {
+  return (
+    hasPageEnvelope(body, false, expectedSelf) &&
+    Array.isArray(body.data) &&
+    body.data.length > 0 &&
+    body.data.every((item) => hasChangeEvent(item, canonicalApiBaseUrl))
   )
 }
 
@@ -1299,13 +1543,13 @@ function hasSearchEnvelope(
   })
 }
 
-function hasBatchEnvelope(body: Record<string, unknown>): boolean {
+function hasBatchEnvelope(body: Record<string, unknown>, expectedSelf: string): boolean {
   const data = body.data
   const links = body.links
   const meta = body.meta
   if (
     !isRecord(links) ||
-    typeof links.self !== "string" ||
+    links.self !== expectedSelf ||
     !isRecord(meta) ||
     typeof meta.correlationId !== "string" ||
     !isNonnegativeInteger(meta.requested) ||
@@ -1344,6 +1588,25 @@ function hasBatchEnvelope(body: Record<string, unknown>): boolean {
       typeof item.error.retryable === "boolean"
     )
   })
+}
+
+function hasVoteBatchEnvelope(
+  body: Record<string, unknown>,
+  canonicalApiBaseUrl: URL | undefined,
+  expectedSelf: string
+): boolean {
+  if (!hasBatchEnvelope(body, expectedSelf) || !Array.isArray(body.data)) {
+    return false
+  }
+  return body.data.every(
+    (item) =>
+      isRecord(item) &&
+      item.status === "ok" &&
+      typeof item.id === "string" &&
+      isRecord(item.data) &&
+      item.data.id === item.id &&
+      hasVoteDetail(item.data, canonicalApiBaseUrl)
+  )
 }
 
 const SMOKE_ERROR_CATEGORIES = new Set([
@@ -1447,7 +1710,22 @@ function hasExpectedEnvelope(
     )
   }
   if (expected === "batch") {
-    return hasBatchEnvelope(body)
+    return hasBatchEnvelope(body, expectedSelf)
+  }
+  if (expected === "vote-page") {
+    return hasVotePageEnvelope(body, canonicalApiBaseUrl, expectedSelf)
+  }
+  if (expected === "vote-resource") {
+    return hasResourceLinks(body.links, expectedSelf) && hasVoteDetail(body.data, canonicalApiBaseUrl)
+  }
+  if (expected === "vote-batch") {
+    return hasVoteBatchEnvelope(body, canonicalApiBaseUrl, expectedSelf)
+  }
+  if (expected === "change-page") {
+    return hasChangePageEnvelope(body, canonicalApiBaseUrl, expectedSelf)
+  }
+  if (expected === "change-resource") {
+    return hasResourceLinks(body.links, expectedSelf) && hasChangeEvent(body.data, canonicalApiBaseUrl)
   }
   if (expected === "document-page") {
     return (

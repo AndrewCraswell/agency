@@ -41,11 +41,14 @@ Detail fixtures are supplied by name only through `LEGISLATION_SMOKE_JURISDICTIO
 `LEGISLATION_SMOKE_VOTE_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID`, `LEGISLATION_SMOKE_DOCUMENT_SECTION_ID`,
 `LEGISLATION_SMOKE_DOCUMENT_ID_B`, `LEGISLATION_SMOKE_MATERIAL_ID`,
 `LEGISLATION_SMOKE_MATERIAL_SECTION_ID`, `LEGISLATION_SMOKE_MEETING_ID`, `LEGISLATION_SMOKE_PERSON_ID`,
-`LEGISLATION_SMOKE_ORGANIZATION_ID`, `LEGISLATION_SMOKE_SUBSCRIPTION_ID`, and `LEGISLATION_SMOKE_WEBHOOK_ID`.
+`LEGISLATION_SMOKE_ORGANIZATION_ID`, `LEGISLATION_SMOKE_CHANGE_ID`, `LEGISLATION_SMOKE_SUBSCRIPTION_ID`, and
+`LEGISLATION_SMOKE_WEBHOOK_ID`.
 The document and supporting-material section checks require both the parent ID and its corresponding section ID. The
-full-profile manifest covers 18 implemented or In-progress operations: core bill and material reads, document reads,
-bill and supporting-material search, and subscription and webhook reads. The list routes always run; detail,
-relationship, and diff routes run only when
+full-profile manifest covers 23 implemented or In-progress operations: core bill and material reads, vote and change
+reads, document reads, bill and supporting-material search, and subscription and webhook reads. The bill, material,
+subscription, and webhook list routes always run; vote and change collection, detail, and batch checks run only when
+their corresponding fixture ID is supplied. This prevents an empty generic collection from being mistaken for evidence
+of a canonical fixture. Other detail, relationship, and diff routes run only when
 their required IDs are supplied. Positive bill and supporting-material search checks are fixture-backed and run only
 when `LEGISLATION_SMOKE_BILL_SEARCH_QUERY` and `LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY` are supplied respectively;
 each query must return a nonempty canonical hit page. For `AUTH_MODE=workos` (or explicit
@@ -57,10 +60,10 @@ deadline is needed. The harness separately asserts unauthenticated `401` rejecti
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
 
 The release profile has no skipped checks: its reviewed full-profile report must have `status: "passed"`, with empty
-`blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, bill ID,
-material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID, both search-query
-variables, and authenticated mode with an explicit smoke token. A report with any skipped check is evidence of an
-incomplete fixture configuration, not a pass.
+`blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, bill ID, vote
+ID, change ID, material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID,
+both search-query variables, and authenticated mode with an explicit smoke token. A report with any skipped check is
+evidence of an incomplete fixture configuration, not a pass.
 
 For the implemented scoped bill pages, set `LEGISLATION_SMOKE_PROFILE=scoped-bills` with both
 `LEGISLATION_SMOKE_JURISDICTION_ID` and `LEGISLATION_SMOKE_SESSION_ID`. This profile runs health, readiness,

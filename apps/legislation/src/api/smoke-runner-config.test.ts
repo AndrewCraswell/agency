@@ -29,10 +29,12 @@ describe("smoke runner configuration", () => {
       LEGISLATION_SMOKE_DOCUMENT_ID: " document:configured ",
       LEGISLATION_SMOKE_DOCUMENT_SECTION_ID: " document-section:configured ",
       LEGISLATION_SMOKE_BILL_SEARCH_QUERY: " housing ",
+      LEGISLATION_SMOKE_CHANGE_ID: " change:configured ",
       LEGISLATION_SMOKE_MATERIAL_ID: " material:configured ",
       LEGISLATION_SMOKE_MATERIAL_SECTION_ID: " material-section:configured ",
       LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY: " budget ",
       LEGISLATION_SMOKE_SUBSCRIPTION_ID: " subscription:configured ",
+      LEGISLATION_SMOKE_VOTE_ID: " vote:configured ",
       LEGISLATION_SMOKE_WEBHOOK_ID: " webhook:configured "
     })
 
@@ -40,10 +42,12 @@ describe("smoke runner configuration", () => {
       documentId: "document:configured",
       documentSectionId: "document-section:configured",
       billSearchQuery: "housing",
+      changeId: "change:configured",
       materialId: "material:configured",
       materialSectionId: "material-section:configured",
       materialSearchQuery: "budget",
       subscriptionId: "subscription:configured",
+      voteId: "vote:configured",
       webhookId: "webhook:configured"
     })
   })
