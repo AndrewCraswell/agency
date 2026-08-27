@@ -256,12 +256,14 @@ describe("minimal scoring prototype baseline", () => {
       rotation: { x: 0, y: 0, z: 270 }
     })
     expect(cadByReference.get("J_FAVERO_DATA_1")).toMatchObject({
-      position: { x: 40, y: -43.955, z: 1.2 },
-      model_board_normal_direction: "y-"
+      position: { x: 40, y: -43.955, z: 9.337 },
+      rotation: { x: 0, y: 0, z: 180 },
+      model_board_normal_direction: "y+"
     })
     expect(cadByReference.get("J_FAVERO_DATA_2")).toMatchObject({
-      position: { x: 60, y: -43.955, z: 1.2 },
-      model_board_normal_direction: "y-"
+      position: { x: 60, y: -43.955, z: 9.337 },
+      rotation: { x: 0, y: 0, z: 180 },
+      model_board_normal_direction: "y+"
     })
   })
 

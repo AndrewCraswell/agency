@@ -74,8 +74,10 @@ export const cadModels = {
   },
   repeaterConnectorRj14: {
     stepUrl: checkedInStepUrl("te-5520250-2-rj14.step"),
-    modelBoardNormalDirection: "y-",
-    zOffsetFromSurface: "0.5mm"
+    modelBoardNormalDirection: "y+",
+    pcbRotationOffset: 180,
+    // TE drawing 5520250 D3: the housing top is 16.13 mm above the PCB seating plane.
+    zOffsetFromSurface: "8.637mm"
   },
   scoringSounder: {
     stepUrl: `${kicadModelRoot}/Buzzer_Beeper.3dshapes/Buzzer_TDK_PS1240P02BT_D12.2mm_H6.5mm.step`

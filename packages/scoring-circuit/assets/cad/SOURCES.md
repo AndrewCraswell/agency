@@ -36,5 +36,5 @@ legible; their mechanical geometry is byte-for-byte the official model. The BOM 
 The complete DevKitC STEP replaces the earlier WROOM-only rendering. N8R2 and N8R8 use the same DevKitC carrier and
 WROOM-1 mechanical envelope, so the model is mechanically applicable to the selected N8R8 assembly. The model is
 oriented and elevated so its two 22-pin male rows enter the two socket models instead of floating above them. The TE
-5520250-2 models are likewise rotated onto the component side; their contact pins and board locks cross the PCB while
-the jack bodies remain above the board and overhang the enclosure edge.
+5520250-2 models follow manufacturer drawing 5520250 D3: each housing is upright with its top 16.13 mm above the PCB,
+the cable opening overhangs the rear edge, and only the contact tails and board locks extend below the board.

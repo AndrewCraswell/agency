@@ -39,8 +39,9 @@ The initial schematic contains only these functional blocks:
 - A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
   HUB75 is deferred behind the firmware display abstraction.
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
-- Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 bodies sit on the component-side seating
-  plane while only their contacts and board locks pass through the carrier. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
+- Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 models are upright, open over the rear
+  board edge, and use the manufacturer drawing's 16.13 mm housing height above the PCB. The rendered housing remains
+  above the carrier while only its contacts and board locks pass through it. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
   resistor, and protection diode, matching the documented Favero 20 mA current-loop topology without coupling the two
   repeater-supplied 10-15 V loops together. GPIO43 supplies one 2,400-baud 8N1 UART stream to both optocoupler inputs.
   These are not Ethernet, RS-422, or FPA DB9 ports and cannot affect scoring decisions.
