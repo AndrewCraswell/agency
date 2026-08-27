@@ -9,7 +9,7 @@ import MinimalScoringPrototype, {
   prototypeInterfaces
 } from "./index.circuit.js"
 import { prototypeIndicators } from "./prototype-indicators.circuit.js"
-import { prototypeSounder } from "./prototype-peripherals.circuit.js"
+import { hub75Display, prototypeSounder } from "./prototype-peripherals.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
 
@@ -31,15 +31,15 @@ describe("minimal scoring prototype baseline", () => {
       heightMm: 100,
       layerCount: 2,
       maximumPopulatedParts: 60,
-      controller: "ESP32-S3-DevKitC-1-N8R8",
+      controller: "ESP32-S3-DevKitC-1-N8R2",
       ethernet: "WIZ850io"
     })
   })
 
-  it("exposes both official 22-pin DevKitC socket rows without using reserved PSRAM pins", () => {
+  it("uses the N8R2 DevKitC so GPIO35 through GPIO37 remain available", () => {
     expect(controllerLeftPins).toHaveLength(22)
     expect(controllerRightPins).toHaveLength(22)
-    expect(controllerRightPins.slice(10, 13)).toEqual(["RESERVED_GPIO37", "RESERVED_GPIO36", "RESERVED_GPIO35"])
+    expect(controllerRightPins.slice(10, 13)).toEqual(["GPIO37", "GPIO36", "GPIO35"])
     expect(controllerSocket).toMatchObject({ rowSpacingMm: 22.86, outlineWidthMm: 25.4, outlineHeightMm: 69 })
   })
 
@@ -63,7 +63,8 @@ describe("minimal scoring prototype baseline", () => {
         "U_CONTROLLER_MODULE",
         "U_IR_RECEIVER",
         "BZ_SCORING",
-        "J_DISPLAY",
+        "J_HUB75_DATA",
+        "J_HUB75_POWER",
         "LED_LEFT_RED",
         "LED_LEFT_WHITE",
         "LED_RIGHT_GREEN",
@@ -73,7 +74,7 @@ describe("minimal scoring prototype baseline", () => {
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(56)
+    expect(references).toHaveLength(51)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
@@ -81,7 +82,7 @@ describe("minimal scoring prototype baseline", () => {
     expect(cadComponents.some(({ model_jscad: jscad }) => jscad !== undefined)).toBe(false)
     expect(prototypeInterfaces.powerInput).toEqual(["USB-C PD 20V", "V5", "APP_GND"])
     expect(prototypeInterfaces.repeaterOutputs).toEqual(["FA-05 DATA-LINE 1", "FA-05 DATA-LINE 2"])
-    expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
+    expect(references.some((reference) => /MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
     expect(references).not.toEqual(expect.arrayContaining(["R_ETH_CS_PULLUP", "R_IR_PULLUP"]))
   }, 15_000)
 
@@ -111,15 +112,8 @@ describe("minimal scoring prototype baseline", () => {
     expect(unconnectedPorts).toEqual(
       [
         "J_CONTROLLER_LEFT.14:GPIO46",
-        "J_CONTROLLER_RIGHT.10:GPIO38_RGB",
-        "J_CONTROLLER_RIGHT.11:RESERVED_GPIO37",
-        "J_CONTROLLER_RIGHT.12:RESERVED_GPIO36",
-        "J_CONTROLLER_RIGHT.13:RESERVED_GPIO35",
         "J_CONTROLLER_RIGHT.14:GPIO0_BOOT",
         "J_CONTROLLER_RIGHT.15:GPIO45",
-        "J_CONTROLLER_RIGHT.16:GPIO48",
-        "J_CONTROLLER_RIGHT.19:GPIO20_USB_D_PLUS",
-        "J_CONTROLLER_RIGHT.20:GPIO19_USB_D_MINUS",
         "J_CONTROLLER_RIGHT.3:GPIO44_UART_RX",
         "U_ETHERNET.10:NC",
         "U_FAVERO_DATA_1.3:NC",
@@ -131,10 +125,10 @@ describe("minimal scoring prototype baseline", () => {
   it("drives left red/white and right green/white scoring lamps from dedicated ESP32 GPIOs", () => {
     expect(prototypeIndicators).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ color: "red", gpio: "GPIO42", role: "left on-target" }),
-        expect.objectContaining({ color: "white", gpio: "GPIO40", role: "left off-target" }),
-        expect.objectContaining({ color: "green", gpio: "GPIO41", role: "right on-target" }),
-        expect.objectContaining({ color: "white", gpio: "GPIO47", role: "right off-target" })
+        expect.objectContaining({ color: "red", gpio: "GPIO39", role: "left on-target" }),
+        expect.objectContaining({ color: "white", gpio: "GPIO47", role: "left off-target" }),
+        expect.objectContaining({ color: "green", gpio: "GPIO19", role: "right on-target" }),
+        expect.objectContaining({ color: "white", gpio: "GPIO20", role: "right off-target" })
       ])
     )
     const circuit = renderPrototype()
@@ -154,7 +148,7 @@ describe("minimal scoring prototype baseline", () => {
   it("drives one real 3 V piezo sounder through the existing low-side switch", () => {
     expect(prototypeSounder).toEqual({
       driveFrequencyHz: 4000,
-      driveGpio: "GPIO39",
+      driveGpio: "GPIO48",
       manufacturerPartNumber: "PS1240P02BT",
       ratedDrive: "3V(0-p) square wave",
       supply: "APP_3V3"
@@ -327,17 +321,40 @@ describe("minimal scoring prototype baseline", () => {
     })
   })
 
-  it("uses seven current-limited drivers and only five direct ADC sense paths", () => {
+  it("matches the OpenPiste seven-conductor single-resistor topology", () => {
     expect(scoringConductorChannels).toHaveLength(7)
-    expect(scoringConductorChannels.filter((channel) => "sense" in channel).map(({ conductor }) => conductor)).toEqual([
-      "LEFT_B",
-      "LEFT_C",
-      "RIGHT_B",
-      "RIGHT_C",
-      "PISTE"
+    expect(scoringConductorChannels.map(({ gpio }) => gpio)).toEqual([
+      "SCORING_LEFT_A",
+      "SCORING_LEFT_B",
+      "SCORING_LEFT_C",
+      "SCORING_RIGHT_A",
+      "SCORING_RIGHT_B",
+      "SCORING_RIGHT_C",
+      "SCORING_PISTE"
     ])
     expect(scoringConductorChannels.map(({ resistanceOhms }) => resistanceOhms)).toEqual([
       33, 470, 470, 33, 470, 470, 470
     ])
+    const references = renderPrototype()
+      .filter(({ type }) => type === "source_component")
+      .map(({ name }) => name)
+    expect(references.filter((reference) => typeof reference === "string" && reference.includes("_SENSE"))).toEqual([])
+  })
+
+  it("provides one powered 64x32 HUB75 interface using the ESP32-S3 DMA signal set", () => {
+    expect(hub75Display).toEqual({
+      connector: "TST-108-02-G-D",
+      geometry: "64x32",
+      powerConnector: "645004114822",
+      scan: "1/16",
+      signals: ["R1", "G1", "B1", "R2", "G2", "B2", "A", "B", "C", "D", "CLK", "LAT", "OE"]
+    })
+    const components = renderPrototype().filter(({ type }) => type === "source_component")
+    expect(components.find(({ name }) => name === "J_HUB75_DATA")).toMatchObject({
+      manufacturer_part_number: "TST-108-02-G-D"
+    })
+    expect(components.find(({ name }) => name === "J_HUB75_POWER")).toMatchObject({
+      manufacturer_part_number: "645004114822"
+    })
   })
 })

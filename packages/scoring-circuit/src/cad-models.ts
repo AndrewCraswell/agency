@@ -23,6 +23,12 @@ export const cadModels = {
     stepUrl: "https://github.com/dubpixel/dpx_kicad/raw/11ce143404062a50f7df05892e87c65cfedf8b94/zusr_3D/WIZ850IO.step",
     modelBoardNormalDirection: "y+"
   },
+  hub75DataHeader: {
+    stepUrl: `${kicadModelRoot}/Connector_IDC.3dshapes/IDC-Header_2x08_P2.54mm_Vertical.step`
+  },
+  hub75PowerHeader: {
+    stepUrl: checkedInStepUrl("wurth-645004114822.step")
+  },
   dip6: {
     stepUrl: `${kicadModelRoot}/Package_DIP.3dshapes/DIP-6_W7.62mm.step`
   },

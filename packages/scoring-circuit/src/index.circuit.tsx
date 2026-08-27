@@ -44,9 +44,9 @@ export const controllerRightPins = [
   "GPIO40",
   "GPIO39",
   "GPIO38_RGB",
-  "RESERVED_GPIO37",
-  "RESERVED_GPIO36",
-  "RESERVED_GPIO35",
+  "GPIO37",
+  "GPIO36",
+  "GPIO35",
   "GPIO0_BOOT",
   "GPIO45",
   "GPIO48",
@@ -116,7 +116,7 @@ function MinimalScoringPrototype(): ReactElement {
       />
       <chip
         name="U_CONTROLLER_MODULE"
-        manufacturerPartNumber="ESP32-S3-DevKitC-1-N8R8"
+        manufacturerPartNumber="ESP32-S3-DevKitC-1-N8R2"
         footprint={controllerModuleFootprint}
         noSchematicRepresentation
         obstructsWithinBounds={false}
@@ -182,24 +182,19 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="J_WEAPON_RIGHT.RIGHT_C" to="net.RIGHT_C" />
       <trace from="J_PISTE.PISTE" to="net.PISTE" />
 
-      <trace from="J_CONTROLLER_LEFT.6" to="net.DRIVE_LEFT_A" />
-      <trace from="J_CONTROLLER_LEFT.7" to="net.DRIVE_LEFT_B" />
-      <trace from="J_CONTROLLER_LEFT.12" to="net.DRIVE_LEFT_C" />
-      <trace from="J_CONTROLLER_LEFT.15" to="net.DRIVE_RIGHT_A" />
-      <trace from="J_CONTROLLER_LEFT.16" to="net.DRIVE_RIGHT_B" />
-      <trace from="J_CONTROLLER_LEFT.17" to="net.DRIVE_RIGHT_C" />
-      <trace from="J_CONTROLLER_LEFT.18" to="net.DRIVE_PISTE" />
-      <trace from="J_CONTROLLER_RIGHT.4" to="net.SENSE_LEFT_B" />
-      <trace from="J_CONTROLLER_RIGHT.5" to="net.SENSE_LEFT_C" />
-      <trace from="J_CONTROLLER_LEFT.13" to="net.SENSE_RIGHT_B" />
-      <trace from="J_CONTROLLER_LEFT.4" to="net.SENSE_RIGHT_C" />
-      <trace from="J_CONTROLLER_LEFT.5" to="net.SENSE_PISTE" />
+      <trace from="J_CONTROLLER_LEFT.15" to="net.SCORING_LEFT_A" />
+      <trace from="J_CONTROLLER_LEFT.16" to="net.SCORING_LEFT_B" />
+      <trace from="J_CONTROLLER_LEFT.17" to="net.SCORING_LEFT_C" />
+      <trace from="J_CONTROLLER_LEFT.18" to="net.SCORING_RIGHT_A" />
+      <trace from="J_CONTROLLER_LEFT.19" to="net.SCORING_RIGHT_B" />
+      <trace from="J_CONTROLLER_LEFT.20" to="net.SCORING_RIGHT_C" />
+      <trace from="J_CONTROLLER_RIGHT.4" to="net.SCORING_PISTE" />
 
-      <trace from="J_CONTROLLER_LEFT.19" to="net.APP_SPI_SCK" />
-      <trace from="J_CONTROLLER_LEFT.20" to="net.APP_SPI_MOSI" />
-      <trace from="J_CONTROLLER_LEFT.8" to="net.APP_SPI_MISO" />
-      <trace from="J_CONTROLLER_LEFT.9" to="net.ETH_CS_N" />
-      <trace from="J_CONTROLLER_LEFT.10" to="net.ETH_INT_N" />
+      <trace from="J_CONTROLLER_LEFT.10" to="net.APP_SPI_SCK" />
+      <trace from="J_CONTROLLER_RIGHT.18" to="net.APP_SPI_MOSI" />
+      <trace from="J_CONTROLLER_RIGHT.13" to="net.APP_SPI_MISO" />
+      <trace from="J_CONTROLLER_RIGHT.12" to="net.ETH_CS_N" />
+      <trace from="J_CONTROLLER_RIGHT.11" to="net.ETH_INT_N" />
       <trace from="U_ETHERNET.4" to="net.APP_SPI_SCK" />
       <trace from="U_ETHERNET.3" to="net.APP_SPI_MOSI" />
       <trace from="U_ETHERNET.12" to="net.APP_SPI_MISO" />
@@ -212,14 +207,27 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="U_ETHERNET.2" to="net.APP_GND" />
       <trace from="U_ETHERNET.7" to="net.APP_GND" />
 
-      <trace from="J_CONTROLLER_LEFT.11" to="net.IR_RX" />
-      <trace from="J_CONTROLLER_RIGHT.6" to="R_LEFT_RED_LED.pin1" />
-      <trace from="J_CONTROLLER_RIGHT.7" to="R_RIGHT_GREEN_LED.pin1" />
-      <trace from="J_CONTROLLER_RIGHT.8" to="net.LED_LEFT_WHITE_DRIVE" />
-      <trace from="J_CONTROLLER_RIGHT.17" to="net.LED_RIGHT_WHITE_DRIVE" />
-      <trace from="J_CONTROLLER_RIGHT.18" to="net.DISPLAY_DATA" />
-      <trace from="J_CONTROLLER_RIGHT.9" to="net.BUZZER_DRIVE" />
+      <trace from="J_CONTROLLER_RIGHT.10" to="net.IR_RX" />
+      <trace from="J_CONTROLLER_RIGHT.9" to="R_LEFT_RED_LED.pin1" />
+      <trace from="J_CONTROLLER_RIGHT.20" to="R_RIGHT_GREEN_LED.pin1" />
+      <trace from="J_CONTROLLER_RIGHT.17" to="net.LED_LEFT_WHITE_DRIVE" />
+      <trace from="J_CONTROLLER_RIGHT.19" to="net.LED_RIGHT_WHITE_DRIVE" />
+      <trace from="J_CONTROLLER_RIGHT.16" to="net.BUZZER_DRIVE" />
       <trace from="J_CONTROLLER_RIGHT.2" to="net.FAVERO_DATA_TX" />
+
+      <trace from="J_CONTROLLER_LEFT.4" to="net.HUB75_R1" />
+      <trace from="J_CONTROLLER_LEFT.5" to="net.HUB75_G1" />
+      <trace from="J_CONTROLLER_LEFT.6" to="net.HUB75_B1" />
+      <trace from="J_CONTROLLER_LEFT.7" to="net.HUB75_R2" />
+      <trace from="J_CONTROLLER_LEFT.8" to="net.HUB75_G2" />
+      <trace from="J_CONTROLLER_LEFT.9" to="net.HUB75_B2" />
+      <trace from="J_CONTROLLER_LEFT.11" to="net.HUB75_A" />
+      <trace from="J_CONTROLLER_LEFT.12" to="net.HUB75_B" />
+      <trace from="J_CONTROLLER_LEFT.13" to="net.HUB75_C" />
+      <trace from="J_CONTROLLER_RIGHT.6" to="net.HUB75_D" />
+      <trace from="J_CONTROLLER_RIGHT.7" to="net.HUB75_CLK" />
+      <trace from="J_CONTROLLER_RIGHT.8" to="net.HUB75_LAT" />
+      <trace from="J_CONTROLLER_RIGHT.5" to="net.HUB75_OE" />
     </board>
   )
 }

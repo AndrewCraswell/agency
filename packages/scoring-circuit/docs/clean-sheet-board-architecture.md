@@ -24,12 +24,14 @@ effort is not a reason to include hardware.
 
 The initial schematic contains only these functional blocks:
 
-- An official ESP32-S3-DevKitC-1-N8R8 on two 22-pin socket rows. The complete carrier CAD model is aligned to the
+- An official ESP32-S3-DevKitC-1-N8R2 on two 22-pin socket rows. The quad-SPI PSRAM variant keeps GPIO35, GPIO36,
+  and GPIO37 available for carrier I/O, unlike the octal-PSRAM N8R8 variant. The complete carrier CAD model is aligned to the
   22.86 mm row spacing so its male headers visibly enter the sockets. Its on-board regulator, USB interfaces, reset, and boot
   controls replace the previous bare-module support circuitry.
 - Direct solder pads or simple headers for the six weapon wires and piste conductor.
-- An OpenPiste-style resistor/transistor conductor interface connected directly to ESP32-S3 GPIO and ADC-capable pins.
-  It is the starting prototype topology, not proof of FIE conformance. Add an external ADC, reference, mux, buffer, or
+- The OpenPiste seven-conductor topology: one bidirectional ESP32-S3 GPIO and one series resistor per conductor. Left
+  and right A use 33 ohms; left and right B/C plus piste use 470 ohms. There is no second sense-resistor column. This is
+  the starting prototype topology, not proof of FIE conformance. Add an external ADC, reference, mux, buffer, or
   negative rail only if measured scoring behavior demonstrates that the direct interface cannot meet a named threshold.
 - A socketed or directly soldered WIZ850io module for Ethernet. Its on-module pull-ups provide the required default
   states for chip select, interrupt, and reset; the carrier does not duplicate them.
@@ -38,8 +40,12 @@ The initial schematic contains only these functional blocks:
 - Four 5 mm on-board scoring lamps: left red and white, plus right green and white. Red and green use a 330 ohm
   resistor from 3.3 V GPIO drive. The higher-forward-voltage white lamps use the 5 V rail and one small low-side MOSFET
   each so their brightness does not depend on a marginal 3.3 V voltage headroom.
-- A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
-  HUB75 is deferred behind the firmware display abstraction.
+- A standard 2x8 keyed HUB75 data connector for one 64x32, 1/16-scan RGB panel. Its 13 signals use the established
+  ESP32-S3 LCD-DMA pin assignment, and all three connector grounds return to APP_GND. A separate Würth Elektronik
+  645004114822 four-pin 3.96 mm power header supplies two 5 V and two ground contacts from the prototype regulator;
+  its matching cable housing is 645004113322. GPIO19 and GPIO20 are assigned to
+  local indicators, so native USB is unavailable while the carrier is populated; programming remains available through
+  the DevKitC USB-to-UART port.
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
 - Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 models are upright, open over the rear
   board edge, and use the manufacturer drawing's 16.13 mm housing height above the PCB. The rendered housing remains
@@ -87,16 +93,18 @@ either limit requires removing or moving functions off-board before layout; it i
 
 | Item | Why it is on the first board |
 | --- | --- |
-| ESP32-S3-DevKitC-1-N8R8 | Runs all firmware and already includes programming, reset, boot, USB, regulation, flash, and PSRAM. |
+| ESP32-S3-DevKitC-1-N8R2 | Runs all firmware and already includes programming, reset, boot, regulation, flash, and PSRAM while leaving GPIO35 through GPIO37 available. |
 | WIZ850io | Supplies required wired Ethernet without a custom PHY, magnetics, crystal, or RJ45 design. |
 | TSOP38438 | Receives the required infrared remote signal with one ESP32 input. |
-| WS2812 matrix | Provides all prototype scoring indications through one data signal and an off-board panel. |
+| 64x32 HUB75 panel | Provides the Skewered-style full RGB score, clock, status, and diagnostic display through the ESP32-S3 LCD-DMA peripheral. |
 | Adafruit 5807 | Provides the board-edge USB-C socket and fixed 20 V PD request without firmware or loose power wires. |
 | Pololu D36V50F5 | Converts the negotiated input to the board's 5 V rail without a custom regulator design. |
 | Two 4N32M optocouplers | Reproduce the documented isolated FA-05 DATA-LINE current-loop output, one isolated loop per repeater socket. |
 
 There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, processor
-isolation, supervisor, display buffer, or multi-channel output driver in the starting design.
+isolation, supervisor, display level shifter, or multi-channel output driver in the starting design. Direct 3.3 V HUB75
+signaling is a prototype assumption to verify with the selected panel; add a buffer only if measured logic margin or
+signal integrity requires it.
 
 ## Component and connection audit
 

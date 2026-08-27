@@ -35,7 +35,7 @@ export const prototypeIndicators = [
   {
     color: "red",
     drive: "direct-3v3",
-    gpio: "GPIO42",
+    gpio: "GPIO39",
     led: "LED_LEFT_RED",
     manufacturerPartNumber: "WP7113ID",
     resistor: "R_LEFT_RED_LED",
@@ -46,7 +46,7 @@ export const prototypeIndicators = [
   {
     color: "white",
     drive: "v5-low-side",
-    gpio: "GPIO40",
+    gpio: "GPIO47",
     led: "LED_LEFT_WHITE",
     manufacturerPartNumber: "WP7113QWC/D",
     mosfet: "Q_LEFT_WHITE_LED",
@@ -59,7 +59,7 @@ export const prototypeIndicators = [
   {
     color: "green",
     drive: "direct-3v3",
-    gpio: "GPIO41",
+    gpio: "GPIO19",
     led: "LED_RIGHT_GREEN",
     manufacturerPartNumber: "WP7113GD",
     resistor: "R_RIGHT_GREEN_LED",
@@ -70,7 +70,7 @@ export const prototypeIndicators = [
   {
     color: "white",
     drive: "v5-low-side",
-    gpio: "GPIO47",
+    gpio: "GPIO20",
     led: "LED_RIGHT_WHITE",
     manufacturerPartNumber: "WP7113QWC/D",
     mosfet: "Q_RIGHT_WHITE_LED",

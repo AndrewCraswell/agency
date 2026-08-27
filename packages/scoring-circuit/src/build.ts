@@ -246,7 +246,7 @@ const previewHtml = `<!doctype html>
           </article>
           <article class="io-module">
             <h2>Encrypted IR receiver</h2>
-            <p>Vishay TSOP38438 with a filtered 3.3 V supply, protected GPIO35 output, probe point, and front-edge optical keepout</p>
+            <p>Vishay TSOP38438 with a filtered 3.3 V supply, GPIO38 output, probe point, and front-edge optical keepout</p>
           </article>
           <article class="io-module">
             <h2>Scoring indicators</h2>
@@ -254,7 +254,11 @@ const previewHtml = `<!doctype html>
           </article>
           <article class="io-module">
             <h2>Sound</h2>
-            <p>One on-board TDK PS1240P02BT piezo sounder is switched from GPIO39 at its 4 kHz rated frequency</p>
+            <p>One on-board TDK PS1240P02BT piezo sounder is switched from GPIO48 at its 4 kHz rated frequency</p>
+          </article>
+          <article class="io-module">
+            <h2>64x32 RGB display</h2>
+            <p>One keyed 2x8 HUB75 data header and one four-pin 5 V power header connect a 64x32, 1/16-scan panel</p>
           </article>
           <article class="io-module">
             <h2>Communications</h2>

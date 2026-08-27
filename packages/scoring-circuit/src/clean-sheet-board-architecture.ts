@@ -4,6 +4,6 @@ export const minimalPrototypeBoard = {
   heightMm: 100,
   layerCount: 2,
   maximumPopulatedParts: 60,
-  controller: "ESP32-S3-DevKitC-1-N8R8",
+  controller: "ESP32-S3-DevKitC-1-N8R2",
   ethernet: "WIZ850io"
 } as const
