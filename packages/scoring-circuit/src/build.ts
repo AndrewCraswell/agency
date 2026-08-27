@@ -86,6 +86,10 @@ const sourceComponents = circuitJson
   .toSorted((left, right) => (left.name ?? "").localeCompare(right.name ?? ""))
 const orderFiles = createPrototypeOrderFiles(circuitJson)
 const resolvedPartCount = orderFiles.bom.reduce((count, row) => count + row.quantity, 0)
+const estimatedBomTotalUsd = orderFiles.bom.reduce(
+  (total, { estimatedExtendedPriceUsd }) => total + estimatedExtendedPriceUsd,
+  0
+)
 const renderedCadComponentCount = circuitJson.filter((element) => element.type === "cad_component").length
 const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
   backgroundColor: "#101820",
@@ -187,7 +191,8 @@ const previewHtml = `<!doctype html>
     <li><strong>${routing.routedConnectionCount}</strong> routed connections</li>
     <li><strong>${routing.unroutedConnectionCount}</strong> unresolved connections</li>
     <li><strong>${sourceComponents.length}</strong> placed source components</li>
-    <li><strong>${resolvedPartCount}</strong> parts with manufacturer numbers</li>
+    <li><strong>${resolvedPartCount}</strong> priced parts with manufacturer numbers</li>
+    <li><strong>$${estimatedBomTotalUsd.toFixed(2)}</strong> estimated component cost, excluding the bare PCB, assembly, shipping, tax, and off-board equipment</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
   </ul>
   <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype checklist</a><a href="../docs/clean-sheet-board-architecture.md">Board architecture</a><a href="bom.csv">Prototype BOM</a><a href="placement.csv">Placement file</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
@@ -220,8 +225,8 @@ const previewHtml = `<!doctype html>
         <figcaption>Prototype external interfaces with selected connector part numbers and clearly identified custom conductor landings.</figcaption>
         <div class="io-assembly">
           <article class="io-module">
-            <h2>J_WEAPON_LEFT - custom 3 x 4 mm female banana-socket assembly</h2>
-            <p>The left fencer's three-pin cable connects the weapon, conductive clothing, and return circuit to the scoring machine. The three sockets are in one line; the outer sockets are 15 mm and 20 mm from the centre socket under FIE m.55.6. The prototype provides labeled solder landings for an assembly made from Ok Fencing-supplied sockets; no catalog part number has been provided.</p>
+            <h2>Sullins PREC003SAAN-RC - left weapon harness landing</h2>
+            <p>The left fencer's three-pin cable connects the weapon, conductive clothing, and return circuit to the scoring machine. The board's 2.54 mm header is a wire landing, not the cable's mating socket. Three wires connect it to the off-board assembly made from Ok Fencing-supplied 4 mm female banana sockets. Those sockets are arranged in one line with the outer sockets 15 mm and 20 mm from the centre socket under FIE m.55.6.</p>
             <div class="socket-row" aria-label="Left weapon cable solder landings A, B, and C">
               <span class="banana-socket"><span aria-hidden="true"></span><span>A</span></span>
               <span class="banana-socket"><span aria-hidden="true"></span><span>B</span></span>
@@ -229,8 +234,8 @@ const previewHtml = `<!doctype html>
             </div>
           </article>
           <article class="io-module">
-            <h2>J_WEAPON_RIGHT - custom 3 x 4 mm female banana-socket assembly</h2>
-            <p>The right fencer's three-pin cable connects the weapon, conductive clothing, and return circuit to the scoring machine. The three sockets are in one line; the outer sockets are 15 mm and 20 mm from the centre socket under FIE m.55.6. The prototype provides labeled solder landings for an assembly made from Ok Fencing-supplied sockets; no catalog part number has been provided.</p>
+            <h2>Sullins PREC003SAAN-RC - right weapon harness landing</h2>
+            <p>The right fencer's three-pin cable connects the weapon, conductive clothing, and return circuit to the scoring machine. The board's 2.54 mm header is a wire landing, not the cable's mating socket. Three wires connect it to the off-board assembly made from Ok Fencing-supplied 4 mm female banana sockets. Those sockets are arranged in one line with the outer sockets 15 mm and 20 mm from the centre socket under FIE m.55.6.</p>
             <div class="socket-row" aria-label="Right weapon cable solder landings A, B, and C">
               <span class="banana-socket"><span aria-hidden="true"></span><span>A</span></span>
               <span class="banana-socket"><span aria-hidden="true"></span><span>B</span></span>
@@ -238,8 +243,8 @@ const previewHtml = `<!doctype html>
             </div>
           </article>
           <article class="io-module">
-            <h2>J_PISTE - 4 mm female banana socket</h2>
-            <p>This Ok Fencing-supplied socket connects the scoring circuit's piste reference to the conductive metal piste. It lets the machine recognize a blade touching the floor and reject it instead of showing a valid hit, as required by FIE m.51.1. This is a scoring reference, not protective-earth wiring. The prototype provides one labeled solder landing; no catalog part number has been provided.</p>
+            <h2>Sullins PREC001SAAN-RC - piste-reference harness landing</h2>
+            <p>This single board pin is a wire landing for an off-board Ok Fencing-supplied 4 mm female banana socket. The socket connects the scoring circuit's piste reference to the conductive metal piste. It lets the machine recognize a blade touching the floor and reject it instead of showing a valid hit, as required by FIE m.51.1. This is a scoring reference, not protective-earth wiring.</p>
             <div class="socket-row" aria-label="Piste reference solder landing">
               <span class="banana-socket"><span aria-hidden="true"></span><span>PISTE</span></span>
             </div>

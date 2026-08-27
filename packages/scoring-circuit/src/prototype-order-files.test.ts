@@ -54,17 +54,25 @@ describe("prototype order files", () => {
 
     const files = createPrototypeOrderFiles(circuitJson)
 
-    expect(files.bom).toEqual([
+    expect(
+      files.bom.map(({ displayValue, manufacturerPartNumber, quantity, references }) => ({
+        displayValue,
+        manufacturerPartNumber,
+        quantity,
+        references
+      }))
+    ).toEqual([
       { manufacturerPartNumber: "CAP-10UF", displayValue: "10uF", quantity: 1, references: ["C1"] },
       { manufacturerPartNumber: "RES-1K", displayValue: "1 k", quantity: 1, references: ["R3"] },
       { manufacturerPartNumber: "RES-1K", displayValue: "1k", quantity: 2, references: ["R1", "R2"] }
     ])
+    expect(files.bom.every(({ estimatedUnitPriceUsd }) => estimatedUnitPriceUsd === 0)).toBe(true)
     expect(files.bomCsv).toBe(
       [
-        '"manufacturer_part_number","display_value","quantity","references"',
-        '"CAP-10UF","10uF","1","C1"',
-        '"RES-1K","1 k","1","R3"',
-        '"RES-1K","1k","2","R1;R2"'
+        '"manufacturer_part_number","display_value","quantity","references","estimated_unit_price_usd","estimated_extended_price_usd","price_checked_on","price_source_url"',
+        '"CAP-10UF","10uF","1","C1","0.00","0.00","2026-08-27",""',
+        '"RES-1K","1 k","1","R3","0.00","0.00","2026-08-27",""',
+        '"RES-1K","1k","2","R1;R2","0.00","0.00","2026-08-27",""'
       ].join("\n")
     )
   })

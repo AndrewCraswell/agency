@@ -106,6 +106,7 @@ function MinimalScoringPrototype(): ReactElement {
 
       <pinheader
         name="J_CONTROLLER_LEFT"
+        manufacturerPartNumber="PPTC221LFBN-RC"
         pinCount={22}
         pinLabels={[...controllerLeftPins]}
         pcbX={18}
@@ -115,7 +116,7 @@ function MinimalScoringPrototype(): ReactElement {
       />
       <chip
         name="U_CONTROLLER_MODULE"
-        manufacturerPartNumber="ESP32-S3-DevKitC-1-N8R2"
+        manufacturerPartNumber="ESP32-S3-DevKitC-1-N8R8"
         footprint={controllerModuleFootprint}
         noSchematicRepresentation
         obstructsWithinBounds={false}
@@ -125,6 +126,7 @@ function MinimalScoringPrototype(): ReactElement {
       />
       <pinheader
         name="J_CONTROLLER_RIGHT"
+        manufacturerPartNumber="PPTC221LFBN-RC"
         pinCount={22}
         pinLabels={[...controllerRightPins]}
         pcbX={18 + controllerSocket.rowSpacingMm}
@@ -135,6 +137,7 @@ function MinimalScoringPrototype(): ReactElement {
 
       <pinheader
         name="J_WEAPON_LEFT"
+        manufacturerPartNumber="PREC003SAAN-RC"
         pinCount={3}
         pinLabels={[...prototypeInterfaces.weaponLeft]}
         pcbX={-68}
@@ -143,6 +146,7 @@ function MinimalScoringPrototype(): ReactElement {
       />
       <pinheader
         name="J_WEAPON_RIGHT"
+        manufacturerPartNumber="PREC003SAAN-RC"
         pinCount={3}
         pinLabels={[...prototypeInterfaces.weaponRight]}
         pcbX={-68}
@@ -151,6 +155,7 @@ function MinimalScoringPrototype(): ReactElement {
       />
       <pinheader
         name="J_PISTE"
+        manufacturerPartNumber="PREC001SAAN-RC"
         pinCount={1}
         pinLabels={[...prototypeInterfaces.piste]}
         pcbX={-76.5}
@@ -190,9 +195,9 @@ function MinimalScoringPrototype(): ReactElement {
 
       <trace from="J_CONTROLLER_LEFT.10" to="net.APP_SPI_SCK" />
       <trace from="J_CONTROLLER_RIGHT.18" to="net.APP_SPI_MOSI" />
-      <trace from="J_CONTROLLER_RIGHT.13" to="net.APP_SPI_MISO" />
-      <trace from="J_CONTROLLER_RIGHT.12" to="net.ETH_CS_N" />
-      <trace from="J_CONTROLLER_RIGHT.11" to="net.ETH_INT_N" />
+      <trace from="J_CONTROLLER_RIGHT.19" to="net.APP_SPI_MISO" />
+      <trace from="J_CONTROLLER_RIGHT.17" to="net.ETH_CS_N" />
+      <trace from="J_CONTROLLER_RIGHT.9" to="net.ETH_INT_N" />
       <trace from="U_ETHERNET.4" to="net.APP_SPI_SCK" />
       <trace from="U_ETHERNET.3" to="net.APP_SPI_MOSI" />
       <trace from="U_ETHERNET.12" to="net.APP_SPI_MISO" />

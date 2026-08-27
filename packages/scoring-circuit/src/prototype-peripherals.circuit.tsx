@@ -230,7 +230,7 @@ export function PrototypePeripherals(): ReactElement {
 
       <capacitor
         name="C_V5_BULK"
-        manufacturerPartNumber="C2012X5R0J226M125AC"
+        manufacturerPartNumber="C2012X5R1A226M085AC"
         capacitance="22uF"
         footprint="0805"
         pcbX={-17}

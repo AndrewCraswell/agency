@@ -1,3 +1,4 @@
+import type { CircuitJson } from "circuit-json"
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
@@ -8,6 +9,7 @@ import MinimalScoringPrototype, {
   controllerSocket,
   prototypeInterfaces
 } from "./index.circuit.js"
+import { createPrototypeOrderFiles } from "./prototype-order-files.js"
 import { hub75Display, prototypeSounder } from "./prototype-peripherals.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
@@ -30,12 +32,12 @@ describe("minimal scoring prototype baseline", () => {
       heightMm: 100,
       layerCount: 2,
       maximumPopulatedParts: 60,
-      controller: "ESP32-S3-DevKitC-1-N8R2",
+      controller: "ESP32-S3-DevKitC-1-N8R8",
       ethernet: "WIZ850io"
     })
   })
 
-  it("uses the N8R2 DevKitC so GPIO35 through GPIO37 remain available", () => {
+  it("uses the active N8R8 DevKitC and reserves its octal-PSRAM pins", () => {
     expect(controllerLeftPins).toHaveLength(22)
     expect(controllerRightPins).toHaveLength(22)
     expect(controllerRightPins.slice(10, 13)).toEqual(["GPIO37", "GPIO36", "GPIO35"])
@@ -79,6 +81,10 @@ describe("minimal scoring prototype baseline", () => {
     expect(prototypeInterfaces.repeaterOutputs).toEqual(["FA-05 DATA-LINE 1", "FA-05 DATA-LINE 2"])
     expect(references.some((reference) => /MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
     expect(references).not.toEqual(expect.arrayContaining(["R_ETH_CS_PULLUP", "R_IR_PULLUP"]))
+
+    const orderFiles = createPrototypeOrderFiles(circuit as CircuitJson)
+    expect(orderFiles.bom.reduce((quantity, row) => quantity + row.quantity, 0)).toBe(39)
+    expect(orderFiles.bom.every(({ estimatedUnitPriceUsd }) => estimatedUnitPriceUsd > 0)).toBe(true)
   }, 15_000)
 
   it("leaves unconnected only pins that are inseparable from purchased modules or packages", () => {
@@ -109,11 +115,11 @@ describe("minimal scoring prototype baseline", () => {
         "J_CONTROLLER_LEFT.14:GPIO46",
         "J_CONTROLLER_RIGHT.14:GPIO0_BOOT",
         "J_CONTROLLER_RIGHT.15:GPIO45",
-        "J_CONTROLLER_RIGHT.17:GPIO47",
-        "J_CONTROLLER_RIGHT.19:GPIO20_USB_D_PLUS",
+        "J_CONTROLLER_RIGHT.11:GPIO37",
+        "J_CONTROLLER_RIGHT.12:GPIO36",
+        "J_CONTROLLER_RIGHT.13:GPIO35",
         "J_CONTROLLER_RIGHT.20:GPIO19_USB_D_MINUS",
         "J_CONTROLLER_RIGHT.3:GPIO44_UART_RX",
-        "J_CONTROLLER_RIGHT.9:GPIO39",
         "U_ETHERNET.10:NC",
         "U_FAVERO_DATA_1.3:NC",
         "U_FAVERO_DATA_2.3:NC"

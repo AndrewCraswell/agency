@@ -24,8 +24,9 @@ effort is not a reason to include hardware.
 
 The initial schematic contains only these functional blocks:
 
-- An official ESP32-S3-DevKitC-1-N8R2 on two 22-pin socket rows. The quad-SPI PSRAM variant keeps GPIO35, GPIO36,
-  and GPIO37 available for carrier I/O, unlike the octal-PSRAM N8R8 variant. The complete carrier CAD model is aligned to the
+- An official ESP32-S3-DevKitC-1-N8R8 on two 22-pin socket rows. This active, stocked variant replaces the obsolete
+  N8R2. Its octal-SPI PSRAM reserves GPIO35, GPIO36, and GPIO37, so Ethernet MISO, chip select, and interrupt use
+  GPIO20, GPIO47, and GPIO39 instead. The complete carrier CAD model is aligned to the
   22.86 mm row spacing so its male headers visibly enter the sockets. Its on-board regulator, USB interfaces, reset, and boot
   controls replace the previous bare-module support circuitry.
 - Direct solder pads or simple headers for the six weapon wires and piste conductor.
@@ -56,7 +57,9 @@ The initial schematic contains only these functional blocks:
   The regulator carrier connects both pins in each duplicated VIN, input-ground, VOUT, and output-ground pair. Its
   optional VRP, enable, and power-good positions are omitted because the fixed-output module is enabled by default and
   the prototype does not use remote voltage programming or power-good telemetry.
-- Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
+- Essential decoupling and reset-state resistors. The 2.54 mm module sockets and conductor headers provide direct probe
+  access, so dedicated test-point parts are unnecessary. The first OpenPiste-style conductor prototype uses only its
+  specified series resistors; transient clamps remain a measured follow-up rather than an unvalidated addition.
 
 ## Explicitly deferred
 
@@ -89,7 +92,7 @@ either limit requires removing or moving functions off-board before layout; it i
 
 | Item | Why it is on the first board |
 | --- | --- |
-| ESP32-S3-DevKitC-1-N8R2 | Runs all firmware and already includes programming, reset, boot, regulation, flash, and PSRAM while leaving GPIO35 through GPIO37 available. |
+| ESP32-S3-DevKitC-1-N8R8 | Runs all firmware and already includes programming, reset, boot, regulation, flash, and PSRAM. The carrier does not connect its reserved GPIO35 through GPIO37 pins. |
 | WIZ850io | Supplies required wired Ethernet without a custom PHY, magnetics, crystal, or RJ45 design. |
 | TSOP38438 | Receives the required infrared remote signal with one ESP32 input. |
 | 64x32 HUB75 panel | Provides the Skewered-style full RGB score, clock, status, and diagnostic display through the ESP32-S3 LCD-DMA peripheral. |
@@ -125,6 +128,20 @@ single-owner simplicity review.
 Do not start placement or routing until the root agent has reviewed the complete minimal schematic against this document.
 The board is ready to order after basic electrical review, footprint inspection, PCB ERC/DRC, and visual inspection of
 Gerbers and drill files. Production qualification is not part of this gate.
+
+The generated prototype BOM prices all 39 populated parts from 25 orderable line items. Its 2026-08-27 quantity-one
+estimate is $104.14 before the bare PCB, assembly, shipping, tax, and off-board equipment. Prices and source links are
+included in both CSV and JSON BOM exports and must be refreshed when an order is placed.
+
+The following off-board selections remain before the complete prototype system can be assembled:
+
+- Select the exact 64x32, 1/16-scan HUB75 panel and confirm its connector pinout, 3.3 V input threshold, and maximum
+  5 V current against the 5.5 A regulator and board power path.
+- Select a USB-C PD supply and cable that can provide the requested 20 V power profile with enough wattage for the
+  chosen display.
+- Build the two FIE-spaced weapon sockets and the piste socket from the validated Ok Fencing hardware. The board uses
+  Sullins PREC003SAAN-RC and PREC001SAAN-RC wire landings; those headers are not direct banana-socket replacements.
+- Obtain the HUB75 ribbon and power harness plus the two FA-05 repeater cables. These are cables, not PCB components.
 
 Firmware hardware bindings begin only after the ordered schematic and pinout are fixed. The portable C17 core remains
 hardware-independent and the sole scoring authority.
