@@ -1,3 +1,5 @@
+import { isOrganizationMembershipEndReason } from "../legislation/membership.js"
+
 export type DateValue = Date | string
 
 export interface SourceReference {
@@ -120,8 +122,13 @@ export interface Membership extends CanonicalFields {
   organization: OrganizationSummary
   role: string
   label: string | null
-  startDate: string | null
-  endDate: string | null
+  legislativeSessionId: string | null
+  effectiveStartDate: string | null
+  effectiveEndDate: string | null
+  detectedStartDate: string | null
+  detectedEndDate: string | null
+  lastObservedDate: string | null
+  endedReason: "roster_removal_detected" | "congress_ended" | null
   isCurrent: boolean
 }
 
@@ -515,8 +522,13 @@ export type MembershipProjectionInput = SourceRecord & {
   organization: OrganizationSummary
   role: string
   label: string | null
-  startDate: DateValue | null
-  endDate: DateValue | null
+  legislativeSessionId: string | null
+  effectiveStartDate: DateValue | null
+  effectiveEndDate: DateValue | null
+  detectedStartDate: DateValue | null
+  detectedEndDate: DateValue | null
+  lastObservedDate: DateValue | null
+  endedReason: Membership["endedReason"]
   isCurrent: boolean
 }
 
@@ -868,6 +880,35 @@ export function projectLegislativeTerm(
 export function projectMembership(input: MembershipProjectionInput, context: ProjectionContext): Membership {
   validatePersonSummary(input.person)
   validateOrganizationSummary(input.organization)
+  const effectiveStartDate = isoDate(input.effectiveStartDate, "membership effectiveStartDate")
+  const effectiveEndDate = isoDate(input.effectiveEndDate, "membership effectiveEndDate")
+  const detectedStartDate = isoDate(input.detectedStartDate, "membership detectedStartDate")
+  const detectedEndDate = isoDate(input.detectedEndDate, "membership detectedEndDate")
+  const lastObservedDate = isoDate(input.lastObservedDate, "membership lastObservedDate")
+  if (effectiveStartDate !== null && effectiveEndDate !== null && effectiveEndDate < effectiveStartDate) {
+    throw new CanonicalProjectionError("membership effectiveEndDate must not precede effectiveStartDate")
+  }
+  if (detectedStartDate !== null && detectedEndDate !== null && detectedEndDate < detectedStartDate) {
+    throw new CanonicalProjectionError("membership detectedEndDate must not precede detectedStartDate")
+  }
+  if (detectedStartDate !== null && lastObservedDate !== null && lastObservedDate < detectedStartDate) {
+    throw new CanonicalProjectionError("membership lastObservedDate must not precede detectedStartDate")
+  }
+  if (detectedEndDate !== null && lastObservedDate !== null && lastObservedDate > detectedEndDate) {
+    throw new CanonicalProjectionError("membership lastObservedDate must not follow detectedEndDate")
+  }
+  if (input.endedReason !== null && !isOrganizationMembershipEndReason(input.endedReason)) {
+    throw new CanonicalProjectionError("membership endedReason is not canonical")
+  }
+  if (input.endedReason === "roster_removal_detected" && detectedEndDate === null) {
+    throw new CanonicalProjectionError("roster removal requires membership detectedEndDate")
+  }
+  if (input.endedReason === "congress_ended" && (input.legislativeSessionId === null || detectedEndDate !== null)) {
+    throw new CanonicalProjectionError("Congress end requires a session and no membership detectedEndDate")
+  }
+  if (input.isCurrent && input.endedReason !== null) {
+    throw new CanonicalProjectionError("current membership must not have an endedReason")
+  }
   return {
     ...canonical(
       input.id,
@@ -879,8 +920,16 @@ export function projectMembership(input: MembershipProjectionInput, context: Pro
     organization: structuredClone(input.organization),
     role: required(input.role, "membership role"),
     label: input.label,
-    startDate: isoDate(input.startDate, "membership startDate"),
-    endDate: isoDate(input.endDate, "membership endDate"),
+    legislativeSessionId:
+      input.legislativeSessionId === null
+        ? null
+        : required(input.legislativeSessionId, "membership legislativeSessionId"),
+    effectiveStartDate,
+    effectiveEndDate,
+    detectedStartDate,
+    detectedEndDate,
+    lastObservedDate,
+    endedReason: input.endedReason,
     isCurrent: input.isCurrent
   }
 }
@@ -1476,8 +1525,17 @@ function validateMembership(input: Membership): void {
   validatePersonSummary(input.person)
   validateOrganizationSummary(input.organization)
   required(input.role, "membership role")
-  isoDate(input.startDate, "membership startDate")
-  isoDate(input.endDate, "membership endDate")
+  if (input.legislativeSessionId !== null) {
+    required(input.legislativeSessionId, "membership legislativeSessionId")
+  }
+  isoDate(input.effectiveStartDate, "membership effectiveStartDate")
+  isoDate(input.effectiveEndDate, "membership effectiveEndDate")
+  isoDate(input.detectedStartDate, "membership detectedStartDate")
+  isoDate(input.detectedEndDate, "membership detectedEndDate")
+  isoDate(input.lastObservedDate, "membership lastObservedDate")
+  if (input.endedReason !== null && !isOrganizationMembershipEndReason(input.endedReason)) {
+    throw new CanonicalProjectionError("membership endedReason is not canonical")
+  }
 }
 
 function validateMeetingParticipant(input: MeetingParticipant): void {

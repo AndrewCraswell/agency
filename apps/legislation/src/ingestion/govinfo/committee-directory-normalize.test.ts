@@ -32,10 +32,13 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     ])
     expect(result.snapshot.memberships).toEqual([
       expect.objectContaining({
+        detectedStartDate: "2026-02-20",
         isActive: true,
+        lastObservedDate: "2026-02-20",
+        legislativeSessionId: "session:us:119",
         personId: "person:congress:s000001",
         role: "chair",
-        startDate: "2026-02-20"
+        sourceId: "119:upper:committee:agriculture:person:congress:s000001"
       }),
       expect.objectContaining({ personId: "person:congress:s000001", role: "member" })
     ])

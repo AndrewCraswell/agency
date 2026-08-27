@@ -309,6 +309,13 @@
       "when": 1787772727759,
       "tag": "0043_membership_tenures",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1787800000000,
+      "tag": "0044_committee_membership_detection",
+      "breakpoints": true
     }
   ]
 }

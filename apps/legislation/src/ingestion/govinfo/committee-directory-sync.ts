@@ -1,9 +1,16 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm"
 import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { replaceEntitySnapshot } from "../../db/queries/entities.js"
-import { legislativeTerms, people, personAliases, syncCheckpoints } from "../../db/schema/schema.js"
-import { jurisdictionId } from "../../legislation/identifiers.js"
+import {
+  legislativeSessions,
+  legislativeTerms,
+  organizationMemberships,
+  people,
+  personAliases,
+  syncCheckpoints
+} from "../../db/schema/schema.js"
+import { jurisdictionId, legislativeSessionId } from "../../legislation/identifiers.js"
 import { RetryingHttpClient } from "../http-client.js"
 import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
 import { GovInfoCommitteeDirectoryClient } from "./committee-directory-client.js"
@@ -53,6 +60,9 @@ export async function executeGovInfoCommitteeSynchronization(
       : { ...jobInput, workflowExecutionId: input.workflowExecutionId },
     async () => {
       const counts = createJobCounts()
+      const runAt = dependencies.now?.() ?? new Date()
+      const session = federalCongressSession(input.congress, runAt)
+      await upsertFederalCongressSession(input.database, session)
       const discovered = await client.discover(input.congress)
       counts.discovered = discovered.length
       if (discovered.length === 0) {
@@ -69,12 +79,7 @@ export async function executeGovInfoCommitteeSynchronization(
         const text = await client.getText(directoryPackage)
         counts.read += 1
         const records = parseGovInfoCommitteeDirectory(text)
-        const normalized = normalizeGovInfoCommitteeDirectory(
-          records,
-          directoryPackage,
-          catalog,
-          dependencies.now?.() ?? new Date()
-        )
+        const normalized = normalizeGovInfoCommitteeDirectory(records, directoryPackage, catalog, runAt)
         if (normalized.unmatched.length > 0) {
           const examples = normalized.unmatched
             .slice(0, 5)
@@ -85,13 +90,17 @@ export async function executeGovInfoCommitteeSynchronization(
           )
         }
         await replaceEntitySnapshot(input.database, jurisdictionId("us"), normalized.snapshot, {
-          membershipObservedAt: directoryPackage.issuedAt.toISOString().slice(0, 10),
+          membershipDetectionDate: directoryPackage.issuedAt.toISOString().slice(0, 10),
+          membershipSessionId: session.id,
           organizationSourceProvider: "govinfo",
           replacePeople: false
         })
         counts.updated += normalized.snapshot.organizations.length + normalized.snapshot.memberships.length
         applied = directoryPackage.issuedAt
         packageId = directoryPackage.packageId
+      }
+      if (session.hasEnded) {
+        await endCongressMemberships(input.database, session.id)
       }
       counts.skipped = discovered.length - packages.length
       return {
@@ -105,6 +114,112 @@ export async function executeGovInfoCommitteeSynchronization(
       }
     }
   )
+}
+
+/** Deletes reconstructable GovInfo tenures before an explicit range replay. */
+export async function resetGovInfoCommitteeMembershipHistory(
+  database: LegislationDatabase,
+  congresses: readonly number[]
+): Promise<void> {
+  const sessionIds = congresses.map((congress) => legislativeSessionId("us", String(congress)))
+  await database
+    .delete(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.sourceProvider, "govinfo"),
+        sessionIds.length === 0
+          ? isNull(organizationMemberships.legislativeSessionId)
+          : or(
+              isNull(organizationMemberships.legislativeSessionId),
+              inArray(organizationMemberships.legislativeSessionId, sessionIds)
+            )
+      )
+    )
+}
+
+interface FederalCongressSession {
+  endDate: string
+  hasEnded: boolean
+  id: string
+  identifier: string
+  isActive: boolean
+  name: string
+  startDate: string
+}
+
+function federalCongressSession(congress: number, now: Date): FederalCongressSession {
+  const startYear = 1789 + (congress - 1) * 2
+  const startDate = `${startYear}-01-03`
+  const endDate = `${startYear + 2}-01-03`
+  const today = now.toISOString().slice(0, 10)
+  return {
+    endDate,
+    hasEnded: today >= endDate,
+    id: legislativeSessionId("us", String(congress)),
+    identifier: String(congress),
+    isActive: today >= startDate && today < endDate,
+    name: `${ordinal(congress)} Congress`,
+    startDate
+  }
+}
+
+function ordinal(value: number): string {
+  const remainder100 = value % 100
+  if (remainder100 >= 11 && remainder100 <= 13) {
+    return `${value}th`
+  }
+  switch (value % 10) {
+    case 1:
+      return `${value}st`
+    case 2:
+      return `${value}nd`
+    case 3:
+      return `${value}rd`
+    default:
+      return `${value}th`
+  }
+}
+
+async function upsertFederalCongressSession(
+  database: LegislationDatabase,
+  session: FederalCongressSession
+): Promise<void> {
+  await database
+    .insert(legislativeSessions)
+    .values({
+      classification: "congress",
+      endDate: session.endDate,
+      id: session.id,
+      identifier: session.identifier,
+      isActive: session.isActive,
+      jurisdictionId: jurisdictionId("us"),
+      name: session.name,
+      startDate: session.startDate
+    })
+    .onConflictDoUpdate({
+      set: {
+        classification: sql`excluded.classification`,
+        endDate: sql`excluded.end_date`,
+        isActive: sql`excluded.is_active`,
+        name: sql`excluded.name`,
+        startDate: sql`excluded.start_date`,
+        updatedAt: new Date()
+      },
+      target: legislativeSessions.id
+    })
+}
+
+async function endCongressMemberships(database: LegislationDatabase, sessionId: string): Promise<void> {
+  await database
+    .update(organizationMemberships)
+    .set({ endedReason: "congress_ended", isActive: false, updatedAt: new Date() })
+    .where(
+      and(
+        eq(organizationMemberships.legislativeSessionId, sessionId),
+        eq(organizationMemberships.sourceProvider, "govinfo"),
+        eq(organizationMemberships.isActive, true)
+      )
+    )
 }
 
 async function loadFederalPersonCatalog(database: LegislationDatabase): Promise<GovInfoPersonCatalog> {

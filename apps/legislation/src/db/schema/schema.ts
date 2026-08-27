@@ -19,6 +19,7 @@ import {
   uuid,
   vector
 } from "drizzle-orm/pg-core"
+import { organizationMembershipEndReasons, type OrganizationMembershipEndReason } from "../../legislation/membership.js"
 
 const tsvector = customType<{ data: string }>({
   dataType: () => "tsvector"
@@ -37,6 +38,12 @@ export interface EventVirtualAccessPayload {
 }
 
 export const legislationSchema = pgSchema("legislation")
+
+export const organizationMembershipEndReason = legislationSchema.enum(
+  "organization_membership_end_reason",
+  organizationMembershipEndReasons
+)
+export type { OrganizationMembershipEndReason }
 
 export const jurisdictions = legislationSchema.table(
   "jurisdictions",
@@ -535,6 +542,9 @@ export const organizationMemberships = legislationSchema.table(
     personId: text("person_id")
       .notNull()
       .references(() => people.id, { onDelete: "cascade" }),
+    legislativeSessionId: text("legislative_session_id").references(() => legislativeSessions.id, {
+      onDelete: "restrict"
+    }),
     sourceId: text("source_id"),
     /** Sequential internal identity for distinct tenures with one provider assignment identity. */
     tenureOrdinal: integer("tenure_ordinal").notNull().default(1),
@@ -545,8 +555,12 @@ export const organizationMemberships = legislationSchema.table(
     title: text("title"),
     rank: text("rank"),
     classification: text("classification"),
-    startDate: date("start_date"),
-    endDate: date("end_date"),
+    effectiveStartDate: date("effective_start_date"),
+    effectiveEndDate: date("effective_end_date"),
+    detectedStartDate: date("detected_start_date"),
+    detectedEndDate: date("detected_end_date"),
+    lastObservedDate: date("last_observed_date"),
+    endedReason: organizationMembershipEndReason("ended_reason"),
     isActive: boolean("is_active"),
     sourceUrl: text("source_url"),
     sourceProvider: text("source_provider"),
@@ -560,8 +574,24 @@ export const organizationMemberships = legislationSchema.table(
   (table) => [
     check("organization_memberships_id_check", sql`length(${table.id}) > 0`),
     check(
-      "organization_memberships_dates_check",
-      sql`${table.startDate} is null or ${table.endDate} is null or ${table.startDate} <= ${table.endDate}`
+      "organization_memberships_effective_dates_check",
+      sql`${table.effectiveStartDate} is null or ${table.effectiveEndDate} is null or ${table.effectiveStartDate} <= ${table.effectiveEndDate}`
+    ),
+    check(
+      "organization_memberships_detected_dates_check",
+      sql`${table.detectedStartDate} is null or ${table.detectedEndDate} is null or ${table.detectedStartDate} <= ${table.detectedEndDate}`
+    ),
+    check(
+      "organization_memberships_last_observed_check",
+      sql`${table.detectedStartDate} is null or ${table.lastObservedDate} is null or ${table.detectedStartDate} <= ${table.lastObservedDate}`
+    ),
+    check(
+      "organization_memberships_roster_removal_check",
+      sql`${table.endedReason} is distinct from 'roster_removal_detected' or ${table.detectedEndDate} is not null`
+    ),
+    check(
+      "organization_memberships_congress_end_check",
+      sql`${table.endedReason} is distinct from 'congress_ended' or (${table.legislativeSessionId} is not null and ${table.detectedEndDate} is null)`
     ),
     check("organization_memberships_tenure_ordinal_check", sql`${table.tenureOrdinal} > 0`),
     check(
@@ -574,8 +604,12 @@ export const organizationMemberships = legislationSchema.table(
     uniqueIndex("organization_memberships_active_source_uidx")
       .on(table.organizationId, table.sourceId)
       .where(sql`${table.sourceId} is not null and ${table.isActive} is true`),
-    index("organization_memberships_person_idx").on(table.personId, table.startDate, table.endDate),
-    index("organization_memberships_organization_idx").on(table.organizationId, table.isActive)
+    uniqueIndex("organization_memberships_session_tenure_uidx")
+      .on(table.organizationId, table.personId, table.legislativeSessionId, table.tenureOrdinal)
+      .where(sql`${table.legislativeSessionId} is not null`),
+    index("organization_memberships_person_idx").on(table.personId, table.effectiveStartDate, table.detectedStartDate),
+    index("organization_memberships_organization_idx").on(table.organizationId, table.isActive),
+    index("organization_memberships_session_idx").on(table.legislativeSessionId, table.isActive)
   ]
 )
 

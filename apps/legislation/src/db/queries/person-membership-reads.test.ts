@@ -32,8 +32,10 @@ describe("person membership queries", () => {
     expect(generated).toContain('"organizations"."provenance_complete" =')
     expect(generated).toContain('"people"."provenance_complete" =')
     expect(generated).toContain('"organization_memberships"."is_active" =')
-    expect(generated).toContain('coalesce("legislation"."organization_memberships"."end_date"')
-    expect(generated).toContain('coalesce("legislation"."organization_memberships"."start_date"')
+    expect(generated).toContain('coalesce("legislation"."organization_memberships"."effective_end_date"')
+    expect(generated).toContain('"legislation"."organization_memberships"."detected_end_date"')
+    expect(generated).toContain('coalesce("legislation"."organization_memberships"."effective_start_date"')
+    expect(generated).toContain('"legislation"."organization_memberships"."detected_start_date"')
     expect(generated).toContain("order by coalesce")
     expect(generated).toContain('"legislation"."organization_memberships"."id" asc')
     expect(generated).not.toContain(" offset ")
@@ -50,7 +52,7 @@ describe("person membership queries", () => {
         personId: "person:us:example",
         to: null
       },
-      startDate: "2025-01-03"
+      sortDate: "2025-01-03"
     })
 
     await expect(

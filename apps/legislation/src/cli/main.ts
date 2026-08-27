@@ -63,7 +63,10 @@ import {
   embedSupportingMaterialSections
 } from "../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
-import { executeGovInfoCommitteeSynchronization } from "../ingestion/govinfo/committee-directory-sync.js"
+import {
+  executeGovInfoCommitteeSynchronization,
+  resetGovInfoCommitteeMembershipHistory
+} from "../ingestion/govinfo/committee-directory-sync.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
 import {
@@ -973,6 +976,12 @@ async function syncGovInfoCommittees(options: { endCongress?: string; restart?: 
     throw new InvalidJobInput("start Congress must not exceed end Congress")
   }
   await withDatabase(async (database) => {
+    if (options.restart === true) {
+      await resetGovInfoCommitteeMembershipHistory(
+        database,
+        Array.from({ length: end - start + 1 }, (_, index) => start + index)
+      )
+    }
     for (let congress = start; congress <= end; congress += 1) {
       const result = await executeGovInfoCommitteeSynchronization({
         config,

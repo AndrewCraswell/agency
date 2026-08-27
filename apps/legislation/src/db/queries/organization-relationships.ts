@@ -539,8 +539,12 @@ function updatedToExclusivePredicate(scope: OrganizationCursorScope): SQL | unde
 function membershipDateBounds(from: string | undefined, to: string | undefined): SQL | undefined {
   validateDateRange(from, to)
   return and(
-    from === undefined ? undefined : sql`coalesce(${organizationMemberships.endDate}, '9999-12-31'::date) >= ${from}`,
-    to === undefined ? undefined : sql`coalesce(${organizationMemberships.startDate}, '0001-01-01'::date) <= ${to}`
+    from === undefined
+      ? undefined
+      : sql`coalesce(${organizationMemberships.effectiveEndDate}, ${organizationMemberships.detectedEndDate}, '9999-12-31'::date) >= ${from}`,
+    to === undefined
+      ? undefined
+      : sql`coalesce(${organizationMemberships.effectiveStartDate}, ${organizationMemberships.detectedStartDate}, '0001-01-01'::date) <= ${to}`
   )
 }
 

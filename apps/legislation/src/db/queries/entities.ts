@@ -21,10 +21,10 @@ function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
 }
 
 function membershipContinuityKey(
-  membership: Pick<OrganizationMembershipInsert, "id" | "organizationId" | "sourceId">
+  membership: Pick<OrganizationMembershipInsert, "id" | "legislativeSessionId" | "organizationId" | "sourceId">
 ): string {
   const sourceIdentity = membership.sourceId?.trim() || membership.id
-  return `${membership.organizationId}\u0000${sourceIdentity}`
+  return `${membership.organizationId}\u0000${membership.legislativeSessionId ?? ""}\u0000${sourceIdentity}`
 }
 
 function resolveMembershipTenures(
@@ -56,14 +56,20 @@ function resolveMembershipTenures(
         `Entity snapshot found multiple active tenures for membership ${membership.sourceId ?? membership.id}`
       )
     }
-    const activeTenure = activeTenures[0]
-    if (activeTenure !== undefined) {
+    const continuableTenure =
+      activeTenures[0] ??
+      history
+        .filter((existing) => existing.endedReason === "congress_ended")
+        .sort((left, right) => right.tenureOrdinal - left.tenureOrdinal)[0]
+    if (continuableTenure !== undefined) {
       return {
         ...membership,
-        endDate: membership.endDate ?? activeTenure.endDate,
-        id: activeTenure.id,
-        startDate: membership.startDate ?? activeTenure.startDate,
-        tenureOrdinal: activeTenure.tenureOrdinal
+        detectedStartDate: continuableTenure.detectedStartDate ?? membership.detectedStartDate,
+        effectiveEndDate: membership.effectiveEndDate ?? continuableTenure.effectiveEndDate,
+        effectiveStartDate: membership.effectiveStartDate ?? continuableTenure.effectiveStartDate,
+        id: continuableTenure.id,
+        lastObservedDate: membership.lastObservedDate ?? continuableTenure.lastObservedDate,
+        tenureOrdinal: continuableTenure.tenureOrdinal
       }
     }
 
@@ -81,7 +87,8 @@ export async function replaceEntitySnapshot(
   jurisdictionId: string,
   snapshot: EntitySnapshot,
   options: Readonly<{
-    membershipObservedAt?: string
+    membershipDetectionDate?: string
+    membershipSessionId?: string
     organizationSourceProvider?: string
     replaceOrganizations?: boolean
     replacePeople?: boolean
@@ -91,8 +98,11 @@ export async function replaceEntitySnapshot(
   const organizationValues = uniqueById(snapshot.organizations)
   const termValues = uniqueById(snapshot.terms)
   const incomingMembershipValues = uniqueById(snapshot.memberships)
-  if (options.membershipObservedAt !== undefined && !isIsoDate(options.membershipObservedAt)) {
-    throw new Error("Membership observation date must use YYYY-MM-DD")
+  if (options.membershipDetectionDate !== undefined && !isIsoDate(options.membershipDetectionDate)) {
+    throw new Error("Membership detection date must use YYYY-MM-DD")
+  }
+  if (options.membershipSessionId?.trim().length === 0) {
+    throw new Error("Membership session ID must not be empty")
   }
   if (options.organizationSourceProvider?.trim().length === 0) {
     throw new Error("Organization source provider must not be empty")
@@ -406,13 +416,23 @@ export async function replaceEntitySnapshot(
       await transaction
         .update(organizationMemberships)
         .set({
-          ...(options.membershipObservedAt === undefined
+          ...(options.membershipDetectionDate === undefined
             ? {}
-            : { endDate: sql`coalesce(${organizationMemberships.endDate}, ${options.membershipObservedAt})` }),
+            : {
+                detectedEndDate: sql`coalesce(${organizationMemberships.detectedEndDate}, ${options.membershipDetectionDate})`,
+                endedReason: "roster_removal_detected" as const
+              }),
           isActive: false,
           updatedAt: new Date()
         })
-        .where(inArray(organizationMemberships.organizationId, completeMembershipOrganizationIds))
+        .where(
+          and(
+            inArray(organizationMemberships.organizationId, completeMembershipOrganizationIds),
+            options.membershipSessionId === undefined
+              ? undefined
+              : eq(organizationMemberships.legislativeSessionId, options.membershipSessionId)
+          )
+        )
     }
     if (membershipValues.length > 0) {
       await transaction
@@ -421,9 +441,15 @@ export async function replaceEntitySnapshot(
         .onConflictDoUpdate({
           set: {
             classification: sql`excluded.classification`,
-            endDate: sql`excluded.end_date`,
+            detectedEndDate: sql`excluded.detected_end_date`,
+            detectedStartDate: sql`excluded.detected_start_date`,
+            effectiveEndDate: sql`excluded.effective_end_date`,
+            effectiveStartDate: sql`excluded.effective_start_date`,
+            endedReason: sql`excluded.ended_reason`,
             isActive: sql`excluded.is_active`,
             label: sql`excluded.label`,
+            lastObservedDate: sql`excluded.last_observed_date`,
+            legislativeSessionId: sql`excluded.legislative_session_id`,
             organizationId: sql`excluded.organization_id`,
             personId: sql`excluded.person_id`,
             provenanceComplete: sql`excluded.provenance_complete`,
@@ -435,7 +461,6 @@ export async function replaceEntitySnapshot(
             sourceRetrievedAt: sql`excluded.source_retrieved_at`,
             sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
-            startDate: sql`excluded.start_date`,
             tenureOrdinal: sql`excluded.tenure_ordinal`,
             title: sql`excluded.title`,
             updatedAt: new Date()
@@ -488,10 +513,15 @@ export async function replaceEntitySnapshot(
       await observeCanonicalRecord(transaction, {
         fields: {
           classification: membership.classification,
-          endDate: membership.endDate,
+          detectedEndDate: membership.detectedEndDate,
+          detectedStartDate: membership.detectedStartDate,
+          effectiveEndDate: membership.effectiveEndDate,
+          effectiveStartDate: membership.effectiveStartDate,
+          endedReason: membership.endedReason,
           isActive: membership.isActive,
+          lastObservedDate: membership.lastObservedDate,
+          legislativeSessionId: membership.legislativeSessionId,
           rank: membership.rank,
-          startDate: membership.startDate,
           title: membership.title
         },
         changeType: "relationship-change",

@@ -13,7 +13,7 @@ detail URLs remain top-level; nested routes expose a relationship from the named
 | `PersonDetail` | all `PersonSummary` fields plus `otherNames: string[]`, `email: string or null`, `officialUrl: URL or null`, `externalIdentifiers: ExternalIdentifier[]`, `terms: LegislativeTerm[]`, `memberships: Membership[]` |
 | `ExternalIdentifier` | `scheme`, `value`, `sourceUrl: URL or null` |
 | `LegislativeTerm` | `CanonicalFields`, `type: legislative-term`, `personId`, `jurisdictionId`, `organizationId: string or null`, `district: string or null`, `officeTitle: string`, `startDate: date or null`, `endDate: date or null`, `isCurrent: boolean` |
-| `Membership` | `CanonicalFields`, `type: membership`, `person: PersonSummary`, `organization: OrganizationSummary`, `role: string`, `label: string or null`, `startDate: date or null`, `endDate: date or null`, `isCurrent: boolean` |
+| `Membership` | `CanonicalFields`, `type: membership`, `person: PersonSummary`, `organization: OrganizationSummary`, `role: string`, `label: string or null`, `legislativeSessionId: string or null`, `effectiveStartDate: date or null`, `effectiveEndDate: date or null`, `detectedStartDate: date or null`, `detectedEndDate: date or null`, `lastObservedDate: date or null`, `endedReason: roster_removal_detected or congress_ended or null`, `isCurrent: boolean` |
 
 Email is included only when an official source publishes it for public constituent contact. Personal contact information
 is never inferred or exposed.
@@ -23,14 +23,16 @@ type ExternalIdentifier = { scheme: string; value: string; sourceUrl: string | n
 type PersonSummary = CanonicalFields & { type: "person"; name: string; givenName: string | null; familyName: string | null; party: string | null; imageUrl: string | null; isActive: boolean; jurisdictionIds: string[] }
 type PersonDetail = PersonSummary & { otherNames: string[]; email: string | null; officialUrl: string | null; externalIdentifiers: ExternalIdentifier[]; terms: LegislativeTerm[]; memberships: Membership[]; membershipsPageInfo: ChildCollectionPageInfo }
 type LegislativeTerm = CanonicalFields & { type: "legislative-term"; personId: string; jurisdictionId: string; organizationId: string | null; district: string | null; officeTitle: string; startDate: string | null; endDate: string | null; isCurrent: boolean }
-type Membership = CanonicalFields & { type: "membership"; person: PersonSummary; organization: OrganizationSummary; role: string; label: string | null; startDate: string | null; endDate: string | null; isCurrent: boolean }
+type Membership = CanonicalFields & { type: "membership"; person: PersonSummary; organization: OrganizationSummary; role: string; label: string | null; legislativeSessionId: string | null; effectiveStartDate: string | null; effectiveEndDate: string | null; detectedStartDate: string | null; detectedEndDate: string | null; lastObservedDate: string | null; endedReason: "roster_removal_detected" | "congress_ended" | null; isCurrent: boolean }
 ```
 
 Each source-backed appointment or reappointment is a separate `Membership` tenure with its own `id` and
 `canonicalUrl`, including appointments that repeat the same person, organization, and role. Consecutive complete
 snapshots of one uninterrupted appointment retain one tenure. An absence in a complete snapshot followed by a later
-reappearance creates a new tenure. Observation or retrieval times never substitute for an unknown `startDate` or
-`endDate`.
+reappearance creates a new tenure. `effectiveStartDate` and `effectiveEndDate` are populated only when a source states
+the appointment dates. `detectedStartDate` and `detectedEndDate` are source-publication dates from complete roster
+comparisons. Retrieval times never substitute for either date class. See [committee membership
+history](../committee-membership-history.md).
 
 ### Organizations
 

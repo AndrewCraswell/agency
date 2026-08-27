@@ -14,15 +14,20 @@ export function projectOrganizationMembershipRead(read: OrganizationMembershipRe
   const source = canonicalSource(read.membership, "membership")
   return projectMembership(
     {
-      endDate: read.membership.endDate,
+      detectedEndDate: read.membership.detectedEndDate,
+      detectedStartDate: read.membership.detectedStartDate,
+      effectiveEndDate: read.membership.effectiveEndDate,
+      effectiveStartDate: read.membership.effectiveStartDate,
+      endedReason: read.membership.endedReason,
       id: requiredText(read.membership.id, "membership ID"),
       isCurrent: requiredBoolean(read.membership.isActive, "membership isActive"),
       label: read.membership.label,
+      lastObservedDate: read.membership.lastObservedDate,
+      legislativeSessionId: read.membership.legislativeSessionId,
       organization: projectOrganization(read.organization, apiBaseUrl),
       person: projectPerson(read.person, apiBaseUrl),
       role: requiredText(read.membership.role, "membership role"),
-      sourceUrl: source.sourceUrl,
-      startDate: read.membership.startDate
+      sourceUrl: source.sourceUrl
     },
     sourceProjectionContext(source, apiBaseUrl)
   )

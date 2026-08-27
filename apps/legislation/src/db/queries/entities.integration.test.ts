@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import type { LegislationDatabase } from "../database.js"
 import * as schema from "../schema/schema.js"
 import { replaceEntitySnapshot } from "./entities.js"
 
@@ -250,7 +251,7 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
 
     expect(await membershipsForTenure(fixture.organizationId)).toEqual([
       expect.objectContaining({
-        endDate: null,
+        effectiveEndDate: null,
         id: original.id,
         isActive: false,
         tenureOrdinal: 1
@@ -258,17 +259,22 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     ])
   })
 
-  it("records the observation date when a complete source snapshot ends a tenure", async () => {
+  it("records the detection date when a complete source snapshot ends a tenure", async () => {
     const fixture = tenureFixture("observed-departure")
     await replaceEntitySnapshot(database, jurisdictionId, tenureSnapshot(fixture, [fixture.sourceMembershipId]))
     await replaceEntitySnapshot(database, jurisdictionId, organizationOnlyTenureSnapshot(fixture, []), {
-      membershipObservedAt: "2026-08-27",
+      membershipDetectionDate: "2026-08-27",
       organizationSourceProvider: "openstates",
       replacePeople: false
     })
 
     expect(await membershipsForTenure(fixture.organizationId)).toEqual([
-      expect.objectContaining({ endDate: "2026-08-27", isActive: false, tenureOrdinal: 1 })
+      expect.objectContaining({
+        detectedEndDate: "2026-08-27",
+        endedReason: "roster_removal_detected",
+        isActive: false,
+        tenureOrdinal: 1
+      })
     ])
   })
 
@@ -315,6 +321,72 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
         tenureOrdinal: 2
       })
     )
+  })
+
+  it("scopes complete roster replacement to one legislative session", async () => {
+    const fixture = tenureFixture("session-scope")
+    const session118 = "session:us:118"
+    const session119 = "session:us:119"
+    await insertSession(database, session118, "118")
+    await insertSession(database, session119, "119")
+    await replaceEntitySnapshot(database, jurisdictionId, sessionTenureSnapshot(fixture, session118, "2023-03-01"), {
+      membershipDetectionDate: "2023-03-01",
+      membershipSessionId: session118
+    })
+    await replaceEntitySnapshot(database, jurisdictionId, sessionTenureSnapshot(fixture, session119, "2025-02-20"), {
+      membershipDetectionDate: "2025-02-20",
+      membershipSessionId: session119
+    })
+    await replaceEntitySnapshot(database, jurisdictionId, sessionTenureSnapshot(fixture, session119), {
+      membershipDetectionDate: "2025-06-01",
+      membershipSessionId: session119
+    })
+
+    expect(await membershipsForTenure(fixture.organizationId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ isActive: true, legislativeSessionId: session118 }),
+        expect.objectContaining({
+          detectedEndDate: "2025-06-01",
+          endedReason: "roster_removal_detected",
+          isActive: false,
+          legislativeSessionId: session119
+        })
+      ])
+    )
+  })
+
+  it("extends a Congress-ended tenure when a later archived edition is discovered", async () => {
+    const fixture = tenureFixture("late-edition")
+    const sessionId = "session:us:117"
+    await insertSession(database, sessionId, "117")
+    await replaceEntitySnapshot(database, jurisdictionId, sessionTenureSnapshot(fixture, sessionId, "2021-02-01"), {
+      membershipDetectionDate: "2021-02-01",
+      membershipSessionId: sessionId
+    })
+    const original = (await membershipsForTenure(fixture.organizationId))[0]
+    if (original === undefined) {
+      throw new Error("Initial Congress tenure was not persisted")
+    }
+    await database
+      .update(schema.organizationMemberships)
+      .set({ endedReason: "congress_ended", isActive: false })
+      .where(eq(schema.organizationMemberships.id, original.id))
+
+    await replaceEntitySnapshot(database, jurisdictionId, sessionTenureSnapshot(fixture, sessionId, "2021-08-15"), {
+      membershipDetectionDate: "2021-08-15",
+      membershipSessionId: sessionId
+    })
+
+    expect(await membershipsForTenure(fixture.organizationId)).toEqual([
+      expect.objectContaining({
+        detectedStartDate: "2021-02-01",
+        endedReason: null,
+        id: original.id,
+        isActive: true,
+        lastObservedDate: "2021-08-15",
+        tenureOrdinal: 1
+      })
+    ])
   })
 
   it("rejects duplicate incoming source relationships without changing the active tenure", async () => {
@@ -417,6 +489,28 @@ function organizationOnlyTenureSnapshot(fixture: TenureFixture, membershipIds: r
     people: [],
     terms: []
   }
+}
+
+function sessionTenureSnapshot(fixture: TenureFixture, sessionId: string, detectedAt?: string) {
+  const snapshot = tenureSnapshot(fixture, detectedAt === undefined ? [] : [fixture.sourceMembershipId])
+  return {
+    ...snapshot,
+    memberships: snapshot.memberships.map((membership) => ({
+      ...membership,
+      detectedStartDate: detectedAt,
+      id: `${fixture.sourceMembershipId}:${sessionId}`,
+      lastObservedDate: detectedAt,
+      legislativeSessionId: sessionId,
+      sourceId: `${sessionId}:${fixture.sourceRelationship}`
+    }))
+  }
+}
+
+async function insertSession(database: LegislationDatabase, id: string, identifier: string): Promise<void> {
+  await database
+    .insert(schema.legislativeSessions)
+    .values({ id, identifier, jurisdictionId, name: `${identifier}th Congress` })
+    .onConflictDoNothing()
 }
 
 function congressDetailSnapshot(personId: string, imageName: string) {

@@ -44,14 +44,19 @@ function membership(id = "membership:us:house:1"): OrganizationMembershipRead {
   return {
     membership: {
       ...sourceFields(),
-      endDate: null,
+      detectedEndDate: null,
+      detectedStartDate: "2025-01-03",
+      effectiveEndDate: null,
+      effectiveStartDate: null,
+      endedReason: null,
       id,
       isActive: true,
       label: "Member",
+      lastObservedDate: "2026-02-20",
+      legislativeSessionId: "session:us:119",
       organizationId: "organization:us:house",
       personId: "person:us:example",
-      role: "member",
-      startDate: "2025-01-03"
+      role: "member"
     },
     organization: {
       ...sourceFields(),

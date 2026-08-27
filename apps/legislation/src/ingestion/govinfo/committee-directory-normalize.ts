@@ -1,5 +1,10 @@
 import type { legislativeTerms, people, personAliases } from "../../db/schema/schema.js"
-import { jurisdictionId, organizationId, organizationMembershipId } from "../../legislation/identifiers.js"
+import {
+  jurisdictionId,
+  legislativeSessionId,
+  organizationId,
+  organizationMembershipId
+} from "../../legislation/identifiers.js"
 import type { EntitySnapshot } from "../entity-snapshot.js"
 import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import type {
@@ -61,6 +66,7 @@ export function normalizeGovInfoCommitteeDirectory(
     }
   })
   const memberships: EntitySnapshot["memberships"] = []
+  const sessionId = legislativeSessionId("us", String(directoryPackage.congress))
   const unmatched: GovInfoCommitteeNormalizationResult["unmatched"][number][] = []
   for (const record of records) {
     const canonicalOrganizationId = organizationId("govinfo", organizationSourceId(record))
@@ -70,12 +76,15 @@ export function normalizeGovInfoCommitteeDirectory(
         unmatched.push({ chamber: record.chamber, name: member.name, organization: record.name })
         continue
       }
-      const sourceId = `${organizationSourceId(record)}:${match}`
+      const sourceId = `${directoryPackage.congress}:${organizationSourceId(record)}:${match}`
       memberships.push({
         classification: "member",
+        detectedStartDate: dateOnly(directoryPackage.issuedAt),
         id: organizationMembershipId(canonicalOrganizationId, match, sourceId),
         isActive: true,
         label: member.role ?? "member",
+        lastObservedDate: dateOnly(directoryPackage.issuedAt),
+        legislativeSessionId: sessionId,
         organizationId: canonicalOrganizationId,
         personId: match,
         provenanceComplete: true,
@@ -86,7 +95,6 @@ export function normalizeGovInfoCommitteeDirectory(
         sourceRetrievedAt: retrievedAt,
         sourceUpdatedAt: directoryPackage.lastModified,
         sourceUrl: directoryPackage.textUrl.href,
-        startDate: dateOnly(directoryPackage.issuedAt),
         title: member.role ?? null
       })
     }

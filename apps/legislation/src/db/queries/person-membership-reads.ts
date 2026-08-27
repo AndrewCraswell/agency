@@ -40,7 +40,7 @@ export type PersonMembershipCursorScope = {
 type PersonMembershipCursor = {
   id: string
   scope: PersonMembershipCursorScope
-  startDate: string
+  sortDate: string
   version: 1
 }
 
@@ -50,14 +50,11 @@ export function buildPersonMembershipListQuery(database: LegislationDatabase, in
   validateDateRange(input.from, input.to)
   const scope = personMembershipCursorScope(input)
   const cursor = decodePersonMembershipCursor(input.cursor, scope)
-  const startDateSort = membershipStartDateSort()
+  const sortDate = membershipStartDateSort()
   const cursorPredicate =
     cursor === undefined
       ? undefined
-      : or(
-          lt(startDateSort, cursor.startDate),
-          and(eq(startDateSort, cursor.startDate), gt(organizationMemberships.id, cursor.id))
-        )
+      : or(lt(sortDate, cursor.sortDate), and(eq(sortDate, cursor.sortDate), gt(organizationMemberships.id, cursor.id)))
 
   return database
     .select({ membership: organizationMemberships, organization: organizations, person: people })
@@ -79,7 +76,7 @@ export function buildPersonMembershipListQuery(database: LegislationDatabase, in
         cursorPredicate
       )
     )
-    .orderBy(desc(startDateSort), asc(organizationMemberships.id))
+    .orderBy(desc(sortDate), asc(organizationMemberships.id))
     .limit(limit + 1)
 }
 
@@ -99,7 +96,7 @@ export async function listPersonMemberships(
         ? encodePersonMembershipCursor({
             id: last.membership.id,
             scope: personMembershipCursorScope(input),
-            startDate: last.membership.startDate ?? "0001-01-01"
+            sortDate: last.membership.effectiveStartDate ?? last.membership.detectedStartDate ?? "0001-01-01"
           })
         : undefined,
     truncated
@@ -111,7 +108,7 @@ export function encodePersonMembershipCursor(cursor: Omit<PersonMembershipCursor
 }
 
 function membershipStartDateSort(): SQL<string> {
-  return sql<string>`coalesce(${organizationMemberships.startDate}, '0001-01-01'::date)`
+  return sql<string>`coalesce(${organizationMemberships.effectiveStartDate}, ${organizationMemberships.detectedStartDate}, '0001-01-01'::date)`
 }
 
 function personMembershipCursorScope(input: PersonMembershipListInput): PersonMembershipCursorScope {
@@ -126,8 +123,12 @@ function personMembershipCursorScope(input: PersonMembershipListInput): PersonMe
 
 function membershipDateBounds(from: string | undefined, to: string | undefined): SQL | undefined {
   return and(
-    from === undefined ? undefined : sql`coalesce(${organizationMemberships.endDate}, '9999-12-31'::date) >= ${from}`,
-    to === undefined ? undefined : sql`coalesce(${organizationMemberships.startDate}, '0001-01-01'::date) <= ${to}`
+    from === undefined
+      ? undefined
+      : sql`coalesce(${organizationMemberships.effectiveEndDate}, ${organizationMemberships.detectedEndDate}, '9999-12-31'::date) >= ${from}`,
+    to === undefined
+      ? undefined
+      : sql`coalesce(${organizationMemberships.effectiveStartDate}, ${organizationMemberships.detectedStartDate}, '0001-01-01'::date) <= ${to}`
   )
 }
 
@@ -143,13 +144,13 @@ function decodePersonMembershipCursor(
     parsed === undefined ||
     parsed.version !== 1 ||
     !isString(parsed.id) ||
-    !isString(parsed.startDate) ||
-    !isIsoDate(parsed.startDate) ||
+    !isString(parsed.sortDate) ||
+    !isIsoDate(parsed.sortDate) ||
     !sameScope(parsed.scope, expectedScope)
   ) {
     throw new LegislationError("invalid_request", "Invalid person membership pagination cursor")
   }
-  return { id: parsed.id, scope: expectedScope, startDate: parsed.startDate, version: 1 }
+  return { id: parsed.id, scope: expectedScope, sortDate: parsed.sortDate, version: 1 }
 }
 
 function decodeCursor(cursor: string): Record<string, unknown> | undefined {

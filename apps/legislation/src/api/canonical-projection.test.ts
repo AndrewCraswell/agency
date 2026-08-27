@@ -368,8 +368,13 @@ describe("canonical legislative projections", () => {
         organization,
         role: "member",
         label: null,
-        startDate: "2025-01-01",
-        endDate: null,
+        legislativeSessionId: "session:ca:2025-2026",
+        effectiveStartDate: "2025-01-01",
+        effectiveEndDate: null,
+        detectedStartDate: null,
+        detectedEndDate: null,
+        lastObservedDate: null,
+        endedReason: null,
         isCurrent: true
       },
       context

@@ -30,10 +30,16 @@ export interface OrganizationMembershipRead {
   membership: Pick<
     typeof organizationMemberships.$inferSelect,
     | "createdAt"
-    | "endDate"
+    | "detectedEndDate"
+    | "detectedStartDate"
+    | "effectiveEndDate"
+    | "effectiveStartDate"
+    | "endedReason"
     | "id"
     | "isActive"
     | "label"
+    | "lastObservedDate"
+    | "legislativeSessionId"
     | "organizationId"
     | "personId"
     | "provenanceComplete"
@@ -43,7 +49,6 @@ export interface OrganizationMembershipRead {
     | "sourceRetrievedAt"
     | "sourceUpdatedAt"
     | "sourceUrl"
-    | "startDate"
     | "updatedAt"
   >
   organization: Pick<

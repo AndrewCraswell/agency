@@ -20,14 +20,19 @@ function membership(): OrganizationMembershipRead {
   return {
     membership: {
       ...sourceFields(),
-      endDate: null,
+      detectedEndDate: null,
+      detectedStartDate: "2025-01-03",
+      effectiveEndDate: null,
+      effectiveStartDate: null,
+      endedReason: null,
       id: "membership:us:house:1",
       isActive: true,
       label: "Member",
+      lastObservedDate: "2026-02-20",
+      legislativeSessionId: "session:us:119",
       organizationId: "organization:us:house",
       personId: "person:us:example",
-      role: "member",
-      startDate: "2025-01-03"
+      role: "member"
     },
     organization: {
       ...sourceFields(),
@@ -62,6 +67,13 @@ describe("projectOrganizationMembershipRead", () => {
         type: "organization"
       },
       person: { canonicalUrl: "https://api.example.test/api/people/person%3Aus%3Aexample", type: "person" },
+      detectedEndDate: null,
+      detectedStartDate: "2025-01-03",
+      effectiveEndDate: null,
+      effectiveStartDate: null,
+      endedReason: null,
+      lastObservedDate: "2026-02-20",
+      legislativeSessionId: "session:us:119",
       type: "membership"
     })
   })
@@ -104,5 +116,22 @@ describe("projectOrganizationMembershipRead", () => {
     expect(() => projectOrganizationMembershipRead(mutate(membership()), "https://api.example.test")).toThrow(
       LegislationError
     )
+  })
+
+  it("fails closed when detected membership chronology is inconsistent", () => {
+    expect(() =>
+      projectOrganizationMembershipRead(
+        {
+          ...membership(),
+          membership: {
+            ...membership().membership,
+            detectedEndDate: "2025-01-02",
+            endedReason: "roster_removal_detected",
+            isActive: false
+          }
+        },
+        "https://api.example.test"
+      )
+    ).toThrow("detectedEndDate must not precede detectedStartDate")
   })
 })
