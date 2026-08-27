@@ -74,7 +74,8 @@ export const cadModels = {
   },
   repeaterConnectorRj14: {
     stepUrl: checkedInStepUrl("te-5520250-2-rj14.step"),
-    modelBoardNormalDirection: "y-"
+    modelBoardNormalDirection: "y-",
+    zOffsetFromSurface: "0.5mm"
   },
   scoringSounder: {
     stepUrl: `${kicadModelRoot}/Buzzer_Beeper.3dshapes/Buzzer_TDK_PS1240P02BT_D12.2mm_H6.5mm.step`
@@ -85,8 +86,7 @@ export const cadModels = {
   usbCPdModule: {
     stepUrl: checkedInStepUrl("adafruit-5807-husb238.step"),
     modelOriginPosition: { x: 10.16, y: 11.7475, z: 0 },
-    positionOffset: { x: 0.127, y: -0.175, z: 0 },
-    zOffsetFromSurface: "6mm"
+    positionOffset: { x: 0.127, y: -0.175, z: 0 }
   },
   v5RegulatorModule: {
     stepUrl: "https://www.pololu.com/file/0J1733/d36v50fx-step-down-voltage-regulator.step",

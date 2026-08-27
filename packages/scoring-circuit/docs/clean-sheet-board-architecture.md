@@ -39,15 +39,15 @@ The initial schematic contains only these functional blocks:
 - A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
   HUB75 is deferred behind the firmware display abstraction.
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
-- Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 bodies are oriented above the component
-  side with their contacts and board locks passing through the carrier. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
+- Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 bodies sit on the component-side seating
+  plane while only their contacts and board locks pass through the carrier. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
   resistor, and protection diode, matching the documented Favero 20 mA current-loop topology without coupling the two
   repeater-supplied 10-15 V loops together. GPIO43 supplies one 2,400-baud 8N1 UART stream to both optocoupler inputs.
   These are not Ethernet, RS-422, or FPA DB9 ports and cannot affect scoring decisions.
 - An Adafruit 5807 USB-C PD daughterboard fixed at 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
   modules use their manufacturer circuits and protection instead of reproducing USB-C negotiation or conversion from
-  discrete parts. The fabricator solders the PD module's VOUT and GND pins directly through the carrier; its loose
-  terminal block is not populated and there are no power wires or wire jumpers to install.
+  discrete parts. The PD daughterboard sits flush on the carrier with its VOUT and GND pads soldered directly through
+  plated carrier holes; its loose terminal block is not populated and there are no power wires or wire jumpers to install.
 - Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
 
 ## Explicitly deferred

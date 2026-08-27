@@ -186,6 +186,27 @@ describe("minimal scoring prototype baseline", () => {
         )
     )
     expect(pdMountingHoles).toHaveLength(2)
+
+    const pdSource = sourceComponents.find(({ name }) => name === "U_USB_C_PD")
+    const regulatorSource = sourceComponents.find(({ name }) => name === "U_V5_REGULATOR")
+    const sourcePorts = circuit.filter(({ type }) => type === "source_port")
+    const portId = (sourceComponentId: unknown, name: string) =>
+      sourcePorts.find(
+        ({ source_component_id: candidateSourceId, name: candidateName }) =>
+          candidateSourceId === sourceComponentId && candidateName === name
+      )?.source_port_id
+    const pdVoutPortId = portId(pdSource?.source_component_id, "PD_VOUT")
+    const pdGroundPortId = portId(pdSource?.source_component_id, "APP_GND")
+    const regulatorVinPortId = portId(regulatorSource?.source_component_id, "VIN_1")
+    const regulatorGroundPortId = portId(regulatorSource?.source_component_id, "GND_IN_1")
+    const sourceTraces = circuit.filter(({ type }) => type === "source_trace")
+
+    expect(sourceTraces).toContainEqual(
+      expect.objectContaining({ connected_source_port_ids: [pdVoutPortId, regulatorVinPortId] })
+    )
+    expect(sourceTraces).toContainEqual(
+      expect.objectContaining({ connected_source_port_ids: [pdGroundPortId, regulatorGroundPortId] })
+    )
   })
 
   it("applies the vendor STEP coordinate transforms used by the assembled board", () => {
@@ -214,7 +235,7 @@ describe("minimal scoring prototype baseline", () => {
       model_board_normal_direction: "y+"
     })
     expect(cadByReference.get("U_USB_C_PD")).toMatchObject({
-      position: { x: expect.closeTo(-62, 6), y: 34.5, z: 6.7 },
+      position: { x: expect.closeTo(-62, 6), y: 34.5, z: 0.7 },
       model_origin_position: { x: 10.16, y: 11.7475, z: 0 }
     })
     expect(cadByReference.get("U_V5_REGULATOR")).toMatchObject({
@@ -235,11 +256,11 @@ describe("minimal scoring prototype baseline", () => {
       rotation: { x: 0, y: 0, z: 270 }
     })
     expect(cadByReference.get("J_FAVERO_DATA_1")).toMatchObject({
-      position: { x: 40, y: -43.955, z: 0.7 },
+      position: { x: 40, y: -43.955, z: 1.2 },
       model_board_normal_direction: "y-"
     })
     expect(cadByReference.get("J_FAVERO_DATA_2")).toMatchObject({
-      position: { x: 60, y: -43.955, z: 0.7 },
+      position: { x: 60, y: -43.955, z: 1.2 },
       model_board_normal_direction: "y-"
     })
   })
