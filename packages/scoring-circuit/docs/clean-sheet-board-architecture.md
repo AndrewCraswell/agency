@@ -31,8 +31,10 @@ The initial schematic contains only these functional blocks:
 - An OpenPiste-style resistor/transistor conductor interface connected directly to ESP32-S3 GPIO and ADC-capable pins.
   It is the starting prototype topology, not proof of FIE conformance. Add an external ADC, reference, mux, buffer, or
   negative rail only if measured scoring behavior demonstrates that the direct interface cannot meet a named threshold.
-- A socketed or directly soldered WIZ850io module for Ethernet.
-- One TSOP38438-compatible IR receiver input.
+- A socketed or directly soldered WIZ850io module for Ethernet. Its on-module pull-ups provide the required default
+  states for chip select, interrupt, and reset; the carrier does not duplicate them.
+- One TSOP38438-compatible IR receiver input with only the manufacturer's recommended 100 ohm and 100 nF supply
+  filter. Its output connects directly to the ESP32 input without an unnecessary carrier pull-up.
 - Four 5 mm on-board scoring lamps: left red and white, plus right green and white. Red and green use a 330 ohm
   resistor from 3.3 V GPIO drive. The higher-forward-voltage white lamps use the 5 V rail and one small low-side MOSFET
   each so their brightness does not depend on a marginal 3.3 V voltage headroom.
@@ -49,6 +51,9 @@ The initial schematic contains only these functional blocks:
   modules use their manufacturer circuits and protection instead of reproducing USB-C negotiation or conversion from
   discrete parts. The PD daughterboard sits flush on the carrier with its VOUT and GND pads soldered directly through
   plated carrier holes; its loose terminal block is not populated and there are no power wires or wire jumpers to install.
+  The regulator carrier connects both pins in each duplicated VIN, input-ground, VOUT, and output-ground pair. Its
+  optional VRP, enable, and power-good positions are omitted because the fixed-output module is enabled by default and
+  the prototype does not use remote voltage programming or power-good telemetry.
 - Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
 
 ## Explicitly deferred
@@ -92,6 +97,18 @@ either limit requires removing or moving functions off-board before layout; it i
 
 There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, processor
 isolation, supervisor, display buffer, or multi-channel output driver in the starting design.
+
+## Component and connection audit
+
+Every carrier component and connection was reviewed after routing. The WIZ850io chip-select pull-up and TSOP38438
+output pull-up were removed because they duplicated behavior already supplied by the selected modules. The unused
+Pololu VRP, enable, and power-good carrier positions were also removed, while all eight duplicated power pins are now
+connected so the module does not rely on a single header contact for its input or output current.
+
+The remaining unconnected positions are inseparable from purchased parts: eleven unused positions on the standard
+ESP32-S3-DevKitC-1 socket pair, the WIZ850io module's designated NC position, and pin 3 marked NC on each 4N32M
+optocoupler package. They are not dangling carrier nets or optional support circuitry. A generated-product test holds
+that exact allowlist and fails if any other board pin becomes unconnected.
 
 ## Work ownership
 

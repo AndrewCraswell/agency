@@ -160,16 +160,6 @@ function MinimalScoringPrototype(): ReactElement {
       />
       <UsbCPower />
       <EthernetModuleFootprint pcbX={-20} pcbY={-32} />
-      <resistor
-        name="R_ETH_CS_PULLUP"
-        manufacturerPartNumber="RC0603FR-0710KL"
-        resistance="10kohm"
-        tolerance="1%"
-        footprint="0603"
-        pcbX={-5}
-        pcbY={-12}
-        cadModel={cadModels.resistor0603}
-      />
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
       <PrototypeIndicators />
       <PrototypePeripherals />
@@ -214,8 +204,6 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="U_ETHERNET.3" to="net.APP_SPI_MOSI" />
       <trace from="U_ETHERNET.12" to="net.APP_SPI_MISO" />
       <trace from="U_ETHERNET.5" to="net.ETH_CS_N" />
-      <trace from="net.ETH_CS_N" to="R_ETH_CS_PULLUP.pin1" />
-      <trace from="R_ETH_CS_PULLUP.pin2" to="net.APP_3V3" />
       <trace from="U_ETHERNET.6" to="net.ETH_INT_N" />
       <trace from="U_ETHERNET.11" to="net.APP_RESET_N" />
       <trace from="U_ETHERNET.8" to="net.APP_3V3" />

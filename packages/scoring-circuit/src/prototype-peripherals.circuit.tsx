@@ -93,17 +93,6 @@ export function PrototypePeripherals(): ReactElement {
         pcbY={32}
         cadModel={cadModels.capacitor0603}
       />
-      <resistor
-        name="R_IR_PULLUP"
-        manufacturerPartNumber="RC0603FR-0710KL"
-        resistance="10kohm"
-        tolerance="1%"
-        footprint="0603"
-        pcbX={52}
-        pcbY={36}
-        cadModel={cadModels.resistor0603}
-      />
-
       <pinheader
         name="J_DISPLAY"
         pinCount={3}
@@ -187,8 +176,6 @@ export function PrototypePeripherals(): ReactElement {
       <trace from="C_IR_SUPPLY.pin2" to="net.APP_GND" />
       <trace from="U_IR_RECEIVER.GND" to="net.APP_GND" />
       <trace from="U_IR_RECEIVER.OUT" to="net.IR_RX" />
-      <trace from="U_IR_RECEIVER.OUT" to="R_IR_PULLUP.pin1" />
-      <trace from="R_IR_PULLUP.pin2" to="net.APP_3V3" />
 
       <trace from="net.V5" to="J_DISPLAY.V5" />
       <trace from="net.APP_GND" to="J_DISPLAY.APP_GND" />

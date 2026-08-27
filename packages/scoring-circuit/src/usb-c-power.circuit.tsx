@@ -14,11 +14,7 @@ const regulatorPins = [
   { name: "GND_IN_1", x: -10.16, y: 1.27 },
   { name: "GND_IN_2", x: -7.62, y: 1.27 },
   { name: "VIN_1", x: -10.16, y: -1.27 },
-  { name: "VIN_2", x: -7.62, y: -1.27 },
-  { name: "VRP_1", x: -10.16, y: -3.81 },
-  { name: "VRP_2", x: -7.62, y: -3.81 },
-  { name: "EN", x: -10.16, y: -6.35 },
-  { name: "PG", x: -7.62, y: -6.35 }
+  { name: "VIN_2", x: -7.62, y: -1.27 }
 ] as const
 
 const regulatorMountingHoles = [
@@ -127,10 +123,13 @@ export function UsbCPower(): ReactElement {
       />
 
       <trace from="U_USB_C_PD.PD_VOUT" to="U_V5_REGULATOR.VIN_1" width="1mm" />
+      <trace from="U_USB_C_PD.PD_VOUT" to="U_V5_REGULATOR.VIN_2" width="1mm" />
       <trace from="U_USB_C_PD.APP_GND" to="U_V5_REGULATOR.GND_IN_1" width="1mm" />
+      <trace from="U_USB_C_PD.APP_GND" to="U_V5_REGULATOR.GND_IN_2" width="1mm" />
       <trace from="U_V5_REGULATOR.VOUT_1" to="net.V5" width="1mm" />
+      <trace from="U_V5_REGULATOR.VOUT_2" to="net.V5" width="1mm" />
       <trace from="U_V5_REGULATOR.GND_OUT_1" to="net.APP_GND" width="1mm" />
-      <trace from="U_V5_REGULATOR.EN" to="U_V5_REGULATOR.VIN_1" width="0.5mm" />
+      <trace from="U_V5_REGULATOR.GND_OUT_2" to="net.APP_GND" width="1mm" />
     </group>
   )
 }

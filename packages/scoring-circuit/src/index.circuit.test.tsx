@@ -73,7 +73,7 @@ describe("minimal scoring prototype baseline", () => {
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(58)
+    expect(references).toHaveLength(56)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
@@ -82,7 +82,51 @@ describe("minimal scoring prototype baseline", () => {
     expect(prototypeInterfaces.powerInput).toEqual(["USB-C PD 20V", "V5", "APP_GND"])
     expect(prototypeInterfaces.repeaterOutputs).toEqual(["FA-05 DATA-LINE 1", "FA-05 DATA-LINE 2"])
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
+    expect(references).not.toEqual(expect.arrayContaining(["R_ETH_CS_PULLUP", "R_IR_PULLUP"]))
   }, 15_000)
+
+  it("leaves unconnected only pins that are inseparable from purchased modules or packages", () => {
+    const circuit = renderPrototype()
+    const sourceNames = new Map(
+      circuit
+        .filter(({ type }) => type === "source_component")
+        .map(({ source_component_id: sourceComponentId, name }) => [sourceComponentId, name])
+    )
+    const connectedPortIds = new Set(
+      circuit
+        .filter(({ type }) => type === "source_trace")
+        .flatMap(({ connected_source_port_ids: portIds }) => (Array.isArray(portIds) ? portIds : []))
+    )
+    const unconnectedPorts = circuit
+      .filter(
+        ({ type, source_port_id: sourcePortId }) =>
+          type === "source_port" && typeof sourcePortId === "string" && !connectedPortIds.has(sourcePortId)
+      )
+      .map(
+        ({ source_component_id: sourceComponentId, pin_number: pinNumber, name }) =>
+          `${String(sourceNames.get(sourceComponentId))}.${String(pinNumber)}:${String(name)}`
+      )
+      .sort()
+
+    expect(unconnectedPorts).toEqual(
+      [
+        "J_CONTROLLER_LEFT.14:GPIO46",
+        "J_CONTROLLER_RIGHT.10:GPIO38_RGB",
+        "J_CONTROLLER_RIGHT.11:RESERVED_GPIO37",
+        "J_CONTROLLER_RIGHT.12:RESERVED_GPIO36",
+        "J_CONTROLLER_RIGHT.13:RESERVED_GPIO35",
+        "J_CONTROLLER_RIGHT.14:GPIO0_BOOT",
+        "J_CONTROLLER_RIGHT.15:GPIO45",
+        "J_CONTROLLER_RIGHT.16:GPIO48",
+        "J_CONTROLLER_RIGHT.19:GPIO20_USB_D_PLUS",
+        "J_CONTROLLER_RIGHT.20:GPIO19_USB_D_MINUS",
+        "J_CONTROLLER_RIGHT.3:GPIO44_UART_RX",
+        "U_ETHERNET.10:NC",
+        "U_FAVERO_DATA_1.3:NC",
+        "U_FAVERO_DATA_2.3:NC"
+      ].sort()
+    )
+  })
 
   it("drives left red/white and right green/white scoring lamps from dedicated ESP32 GPIOs", () => {
     expect(prototypeIndicators).toEqual(
@@ -198,14 +242,30 @@ describe("minimal scoring prototype baseline", () => {
     const pdVoutPortId = portId(pdSource?.source_component_id, "PD_VOUT")
     const pdGroundPortId = portId(pdSource?.source_component_id, "APP_GND")
     const regulatorVinPortId = portId(regulatorSource?.source_component_id, "VIN_1")
+    const regulatorVin2PortId = portId(regulatorSource?.source_component_id, "VIN_2")
     const regulatorGroundPortId = portId(regulatorSource?.source_component_id, "GND_IN_1")
+    const regulatorGround2PortId = portId(regulatorSource?.source_component_id, "GND_IN_2")
     const sourceTraces = circuit.filter(({ type }) => type === "source_trace")
+
+    expect(
+      sourcePorts
+        .filter(
+          ({ source_component_id: sourceComponentId }) => sourceComponentId === regulatorSource?.source_component_id
+        )
+        .map(({ name }) => name)
+    ).toEqual(["VOUT_1", "VOUT_2", "GND_OUT_1", "GND_OUT_2", "GND_IN_1", "GND_IN_2", "VIN_1", "VIN_2"])
 
     expect(sourceTraces).toContainEqual(
       expect.objectContaining({ connected_source_port_ids: [pdVoutPortId, regulatorVinPortId] })
     )
     expect(sourceTraces).toContainEqual(
+      expect.objectContaining({ connected_source_port_ids: [pdVoutPortId, regulatorVin2PortId] })
+    )
+    expect(sourceTraces).toContainEqual(
       expect.objectContaining({ connected_source_port_ids: [pdGroundPortId, regulatorGroundPortId] })
+    )
+    expect(sourceTraces).toContainEqual(
+      expect.objectContaining({ connected_source_port_ids: [pdGroundPortId, regulatorGround2PortId] })
     )
   })
 
