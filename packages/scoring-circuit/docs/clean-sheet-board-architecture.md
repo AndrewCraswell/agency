@@ -24,7 +24,8 @@ effort is not a reason to include hardware.
 
 The initial schematic contains only these functional blocks:
 
-- An official ESP32-S3-DevKitC-1-N8R8 on two socket rows. Its on-board regulator, USB interfaces, reset, and boot
+- An official ESP32-S3-DevKitC-1-N8R8 on two 22-pin socket rows. The complete carrier CAD model is aligned to the
+  22.86 mm row spacing so its male headers visibly enter the sockets. Its on-board regulator, USB interfaces, reset, and boot
   controls replace the previous bare-module support circuitry.
 - Direct solder pads or simple headers for the six weapon wires and piste conductor.
 - An OpenPiste-style resistor/transistor conductor interface connected directly to ESP32-S3 GPIO and ADC-capable pins.
@@ -38,7 +39,8 @@ The initial schematic contains only these functional blocks:
 - A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
   HUB75 is deferred behind the firmware display abstraction.
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
-- Two 6P4C RJ14 FA-05 DATA-LINE outputs. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
+- Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 bodies are oriented above the component
+  side with their contacts and board locks passing through the carrier. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
   resistor, and protection diode, matching the documented Favero 20 mA current-loop topology without coupling the two
   repeater-supplied 10-15 V loops together. GPIO43 supplies one 2,400-baud 8N1 UART stream to both optocoupler inputs.
   These are not Ethernet, RS-422, or FPA DB9 ports and cannot affect scoring decisions.

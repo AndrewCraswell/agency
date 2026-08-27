@@ -61,7 +61,7 @@ export const controllerRightPins = [
 export const controllerSocket = {
   rowSpacingMm: 22.86,
   outlineWidthMm: 25.4,
-  outlineHeightMm: 62.74,
+  outlineHeightMm: 69,
   center: { pcbX: 29.43, pcbY: 0 }
 } as const
 
@@ -122,7 +122,7 @@ function MinimalScoringPrototype(): ReactElement {
         obstructsWithinBounds={false}
         pcbX={controllerSocket.center.pcbX}
         pcbY={controllerSocket.center.pcbY}
-        cadModel={cadModels.controllerModule}
+        cadModel={cadModels.controllerDevKit}
       />
       <pinheader
         name="J_CONTROLLER_RIGHT"

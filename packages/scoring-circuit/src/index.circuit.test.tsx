@@ -40,7 +40,7 @@ describe("minimal scoring prototype baseline", () => {
     expect(controllerLeftPins).toHaveLength(22)
     expect(controllerRightPins).toHaveLength(22)
     expect(controllerRightPins.slice(10, 13)).toEqual(["RESERVED_GPIO37", "RESERVED_GPIO36", "RESERVED_GPIO35"])
-    expect(controllerSocket).toMatchObject({ rowSpacingMm: 22.86, outlineWidthMm: 25.4, outlineHeightMm: 62.74 })
+    expect(controllerSocket).toMatchObject({ rowSpacingMm: 22.86, outlineWidthMm: 25.4, outlineHeightMm: 69 })
   })
 
   it("contains only the required modules, interfaces, and simple support parts", () => {
@@ -206,8 +206,8 @@ describe("minimal scoring prototype baseline", () => {
       rotation: { x: 0, y: 0, z: 0 }
     })
     expect(cadByReference.get("U_CONTROLLER_MODULE")).toMatchObject({
-      position: { x: 29.43, y: 18.62, z: 8.7 },
-      model_origin_position: { x: 9, y: 12.75, z: 0 }
+      position: { x: 29.43, y: 0, z: 3.7 },
+      model_board_normal_direction: "y+"
     })
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
       position: { x: -20, y: -32, z: 0.7 },
@@ -233,6 +233,14 @@ describe("minimal scoring prototype baseline", () => {
     expect(cadByReference.get("J_WEAPON_LEFT")).toMatchObject({
       position: { x: -68, y: -15, z: 0.7 },
       rotation: { x: 0, y: 0, z: 270 }
+    })
+    expect(cadByReference.get("J_FAVERO_DATA_1")).toMatchObject({
+      position: { x: 40, y: -43.955, z: 0.7 },
+      model_board_normal_direction: "y-"
+    })
+    expect(cadByReference.get("J_FAVERO_DATA_2")).toMatchObject({
+      position: { x: 60, y: -43.955, z: 0.7 },
+      model_board_normal_direction: "y-"
     })
   })
 

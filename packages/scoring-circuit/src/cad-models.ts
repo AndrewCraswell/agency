@@ -14,11 +14,10 @@ export const cadModels = {
   capacitor0805: {
     stepUrl: `${kicadModelRoot}/Capacitor_SMD.3dshapes/C_0805_2012Metric.step`
   },
-  controllerModule: {
-    stepUrl: "https://www.espressif.com/sites/default/files/3dmodel/ESP32-S3-WROOM-1%203D%20Model.STEP",
-    modelOriginPosition: { x: 9, y: 12.75, z: 0 },
-    positionOffset: { x: 0, y: 18.62, z: 0 },
-    zOffsetFromSurface: "8mm"
+  controllerDevKit: {
+    stepUrl: checkedInStepUrl("esp32-s3-devkitc-1-n8r2.step"),
+    modelBoardNormalDirection: "y+",
+    zOffsetFromSurface: "3mm"
   },
   ethernetModule: {
     stepUrl: "https://github.com/dubpixel/dpx_kicad/raw/11ce143404062a50f7df05892e87c65cfedf8b94/zusr_3D/WIZ850IO.step",
@@ -74,7 +73,8 @@ export const cadModels = {
     stepUrl: `${kicadModelRoot}/Resistor_SMD.3dshapes/R_0805_2012Metric.step`
   },
   repeaterConnectorRj14: {
-    stepUrl: checkedInStepUrl("te-5520250-2-rj14.step")
+    stepUrl: checkedInStepUrl("te-5520250-2-rj14.step"),
+    modelBoardNormalDirection: "y-"
   },
   scoringSounder: {
     stepUrl: `${kicadModelRoot}/Buzzer_Beeper.3dshapes/Buzzer_TDK_PS1240P02BT_D12.2mm_H6.5mm.step`
