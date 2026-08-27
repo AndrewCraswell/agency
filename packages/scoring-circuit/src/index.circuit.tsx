@@ -59,9 +59,11 @@ export const controllerRightPins = [
 
 export const controllerSocket = {
   rowSpacingMm: 22.86,
+  leftRowX: 1.57,
+  rightRowX: 24.43,
   outlineWidthMm: 25.4,
   outlineHeightMm: 69,
-  center: { pcbX: 29.43, pcbY: 0 }
+  center: { pcbX: 13, pcbY: -2 }
 } as const
 
 export const prototypeInterfaces = {
@@ -109,8 +111,8 @@ function MinimalScoringPrototype(): ReactElement {
         manufacturerPartNumber="PPTC221LFBN-RC"
         pinCount={22}
         pinLabels={[...controllerLeftPins]}
-        pcbX={18}
-        pcbY={0}
+        pcbX={controllerSocket.leftRowX}
+        pcbY={controllerSocket.center.pcbY}
         pcbRotation={90}
         cadModel={cadModels.pinSocket1x22}
       />
@@ -129,8 +131,8 @@ function MinimalScoringPrototype(): ReactElement {
         manufacturerPartNumber="PPTC221LFBN-RC"
         pinCount={22}
         pinLabels={[...controllerRightPins]}
-        pcbX={18 + controllerSocket.rowSpacingMm}
-        pcbY={0}
+        pcbX={controllerSocket.rightRowX}
+        pcbY={controllerSocket.center.pcbY}
         pcbRotation={90}
         cadModel={cadModels.pinSocket1x22}
       />

@@ -41,7 +41,14 @@ describe("minimal scoring prototype baseline", () => {
     expect(controllerLeftPins).toHaveLength(22)
     expect(controllerRightPins).toHaveLength(22)
     expect(controllerRightPins.slice(10, 13)).toEqual(["GPIO37", "GPIO36", "GPIO35"])
-    expect(controllerSocket).toMatchObject({ rowSpacingMm: 22.86, outlineWidthMm: 25.4, outlineHeightMm: 69 })
+    expect(controllerSocket).toMatchObject({
+      rowSpacingMm: 22.86,
+      leftRowX: 1.57,
+      rightRowX: 24.43,
+      outlineWidthMm: 25.4,
+      outlineHeightMm: 69,
+      center: { pcbX: 13, pcbY: -2 }
+    })
   })
 
   it("contains only the required modules, interfaces, and simple support parts", () => {
@@ -259,12 +266,16 @@ describe("minimal scoring prototype baseline", () => {
     )
 
     expect(cadByReference.get("J_CONTROLLER_LEFT")).toMatchObject({
-      position: { x: 18, y: 0, z: 0.7 },
+      position: { x: expect.closeTo(1.57, 6), y: -2, z: 0.7 },
       rotation: { x: 0, y: 0, z: 0 }
     })
     expect(cadByReference.get("U_CONTROLLER_MODULE")).toMatchObject({
-      position: { x: 29.43, y: 0, z: 3.7 },
+      position: { x: 13, y: -2, z: 3.7 },
       model_board_normal_direction: "y+"
+    })
+    expect(cadByReference.get("J_CONTROLLER_RIGHT")).toMatchObject({
+      position: { x: expect.closeTo(24.43, 6), y: -2, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 0 }
     })
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
       position: { x: -20, y: -32, z: 0.7 },
