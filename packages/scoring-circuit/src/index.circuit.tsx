@@ -2,9 +2,9 @@ import type { ReactElement } from "react"
 import { cadModels } from "./cad-models.js"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
+import { FaveroDataLine } from "./favero-data-line.circuit.js"
 import { PrototypeIndicators } from "./prototype-indicators.circuit.js"
 import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
-import { PrototypeRepeaterInterfaces } from "./prototype-repeater-interfaces.circuit.js"
 import { ScoringConductorInterface } from "./scoring-conductor-interface.circuit.js"
 import { UsbCPower } from "./usb-c-power.circuit.js"
 
@@ -70,7 +70,7 @@ export const prototypeInterfaces = {
   weaponRight: ["RIGHT_A", "RIGHT_B", "RIGHT_C"],
   piste: ["PISTE"],
   powerInput: ["USB-C PD 20V", "V5", "APP_GND"],
-  repeaterOutputs: ["RS422-FPA 1", "RS422-FPA 2"]
+  repeaterOutputs: ["FA-05 DATA-LINE 1", "FA-05 DATA-LINE 2"]
 } as const
 
 const controllerModuleFootprint = (
@@ -173,7 +173,7 @@ function MinimalScoringPrototype(): ReactElement {
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
       <PrototypeIndicators />
       <PrototypePeripherals />
-      <PrototypeRepeaterInterfaces />
+      <FaveroDataLine />
 
       <trace from="J_CONTROLLER_LEFT.1" to="net.APP_3V3" />
       <trace from="J_CONTROLLER_LEFT.2" to="net.APP_3V3" />
@@ -227,9 +227,11 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="J_CONTROLLER_LEFT.11" to="net.IR_RX" />
       <trace from="J_CONTROLLER_RIGHT.6" to="R_LEFT_RED_LED.pin1" />
       <trace from="J_CONTROLLER_RIGHT.7" to="R_RIGHT_GREEN_LED.pin1" />
+      <trace from="J_CONTROLLER_RIGHT.8" to="net.LED_LEFT_WHITE_DRIVE" />
+      <trace from="J_CONTROLLER_RIGHT.17" to="net.LED_RIGHT_WHITE_DRIVE" />
       <trace from="J_CONTROLLER_RIGHT.18" to="net.DISPLAY_DATA" />
       <trace from="J_CONTROLLER_RIGHT.9" to="net.BUZZER_DRIVE" />
-      <trace from="J_CONTROLLER_RIGHT.2" to="net.FPA_TX" />
+      <trace from="J_CONTROLLER_RIGHT.2" to="net.FAVERO_DATA_TX" />
     </board>
   )
 }

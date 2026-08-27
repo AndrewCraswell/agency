@@ -32,19 +32,20 @@ The initial schematic contains only these functional blocks:
   negative rail only if measured scoring behavior demonstrates that the direct interface cannot meet a named threshold.
 - A socketed or directly soldered WIZ850io module for Ethernet.
 - One TSOP38438-compatible IR receiver input.
-- One red and one green 5 mm on-board LED for immediate scoring-state feedback during bench tests, each driven directly
-  from an otherwise unused ESP32 GPIO through one 330 ohm resistor.
+- Four 5 mm on-board scoring lamps: left red and white, plus right green and white. Red and green use a 330 ohm
+  resistor from 3.3 V GPIO drive. The higher-forward-voltage white lamps use the 5 V rail and one small low-side MOSFET
+  each so their brightness does not depend on a marginal 3.3 V voltage headroom.
 - A three-wire WS2812 matrix connection for the larger prototype display with one GPIO and no parallel display bus.
   HUB75 is deferred behind the firmware display abstraction.
-- One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor. The matrix provides the prototype scoring lamps, so duplicate discrete lamp drivers are
-  omitted.
-- Two DB9 RS-422/FPA repeater outputs driven from the ESP32-S3 UART transmit signal by one AM26LV31E line driver. Both
-  ports carry the same read-only 38,400-baud 8N1 presentation stream on pins 3 (Tx-), 4 (Tx+), and 6/7 (ground). They
-  are not extra Ethernet ports and cannot affect scoring decisions.
-- An Adafruit 5991 USB-C PD daughterboard set to 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
+- One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
+- Two 6P4C RJ14 FA-05 DATA-LINE outputs. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
+  resistor, and protection diode, matching the documented Favero 20 mA current-loop topology without coupling the two
+  repeater-supplied 10-15 V loops together. GPIO43 supplies one 2,400-baud 8N1 UART stream to both optocoupler inputs.
+  These are not Ethernet, RS-422, or FPA DB9 ports and cannot affect scoring decisions.
+- An Adafruit 5807 USB-C PD daughterboard fixed at 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
   modules use their manufacturer circuits and protection instead of reproducing USB-C negotiation or conversion from
-  discrete parts. The PD module mounts at the carrier edge; two short 18 AWG wires connect its output terminal to the
-  labeled carrier landings.
+  discrete parts. The fabricator solders the PD module's VOUT and GND pins directly through the carrier; its loose
+  terminal block is not populated and there are no power wires or wire jumpers to install.
 - Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
 
 ## Explicitly deferred
@@ -54,9 +55,9 @@ converter, an STM32, processor isolation, redundant supervisors, manufacturing f
 environmental qualification, homologation evidence, per-part evidence ledgers, backlog validators, automated release
 gates, or speculative expansion hardware.
 
-It does not include a production lamp engine or duplicate high-current indicator drivers. The two low-current on-board
-LEDs are only bench feedback; the display header remains the larger visual-output path. The two prototype FPA outputs
-are non-isolated; isolation and surge qualification remain production work.
+It does not include a production lamp engine or high-current lamp drivers. The four low-current on-board LEDs are bench
+feedback; the display header remains the larger visual-output path. The two DATA-LINE transmitters are optically
+isolated, but surge and cable-length qualification remain production work.
 
 ## Complexity rules
 
@@ -82,11 +83,12 @@ either limit requires removing or moving functions off-board before layout; it i
 | WIZ850io | Supplies required wired Ethernet without a custom PHY, magnetics, crystal, or RJ45 design. |
 | TSOP38438 | Receives the required infrared remote signal with one ESP32 input. |
 | WS2812 matrix | Provides all prototype scoring indications through one data signal and an off-board panel. |
-| Adafruit 5991 | Provides the board-edge USB-C socket and switch-selected 20 V PD request without firmware. |
+| Adafruit 5807 | Provides the board-edge USB-C socket and fixed 20 V PD request without firmware or loose power wires. |
 | Pololu D36V50F5 | Converts the negotiated input to the board's 5 V rail without a custom regulator design. |
+| Two 4N32M optocouplers | Reproduce the documented isolated FA-05 DATA-LINE current-loop output, one isolated loop per repeater socket. |
 
-There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, isolation
-device, supervisor, display buffer, or multi-channel output driver in the starting design.
+There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, processor
+isolation, supervisor, display buffer, or multi-channel output driver in the starting design.
 
 ## Work ownership
 

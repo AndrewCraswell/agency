@@ -165,7 +165,7 @@ const previewHtml = `<!doctype html>
     .port-row { display: flex; flex-wrap: wrap; gap: 22px; align-items: end; }
     .port-model { display: grid; gap: 8px; justify-items: center; font-weight: 700; text-align: center; }
     .rj45-model { width: 70px; height: 56px; border: 6px solid #aeb7bd; border-radius: 5px; background: linear-gradient(#243a47 65%, #c8a95b 65%); }
-    .db9-model { width: 76px; height: 36px; border: 6px solid #aeb7bd; border-radius: 5px 5px 12px 12px; background: radial-gradient(circle at 12px 12px, #c8a95b 0 3px, #111820 4px) 0 0 / 19px 18px; }
+    .rj14-model { width: 52px; height: 42px; border: 5px solid #30383f; border-radius: 4px; background: linear-gradient(90deg, transparent 18%, #b9913c 18% 27%, transparent 27% 39%, #b9913c 39% 48%, transparent 48% 60%, #b9913c 60% 69%, transparent 69% 81%, #b9913c 81% 90%, transparent 90%), #111820; }
     .usb-c-model { width: 70px; height: 28px; border: 6px solid #aeb7bd; border-radius: 18px; background: #111820; }
     .power-model { width: 54px; height: 54px; border: 7px solid #c6ccd1; border-radius: 50%; background: radial-gradient(circle, #111820 0 34%, #83919a 36% 45%, #111820 47%); }
     a { color: #7cc4ff; margin-right: 16px; }
@@ -250,7 +250,7 @@ const previewHtml = `<!doctype html>
           </article>
           <article class="io-module">
             <h2>Scoring indicators</h2>
-            <p>One red and one green 5 mm on-board LED provide immediate bench feedback from two dedicated ESP32 GPIOs</p>
+            <p>Left red and white, plus right green and white, 5 mm lamps provide on-target and off-target bench feedback</p>
           </article>
           <article class="io-module">
             <h2>Sound</h2>
@@ -258,11 +258,11 @@ const previewHtml = `<!doctype html>
           </article>
           <article class="io-module">
             <h2>Communications</h2>
-            <p>One LAN/Cyrano port and two physical outputs carrying the same read-only FPA repeater stream</p>
+            <p>One LAN/Cyrano port and two isolated FA-05 DATA-LINE outputs for Favero lamp repeaters</p>
             <div class="port-row">
               <span class="port-model"><span class="rj45-model" aria-hidden="true"></span><span>Ethernet RJ45</span></span>
-              <span class="port-model"><span class="db9-model" aria-hidden="true"></span><span>FPA repeater 1</span></span>
-              <span class="port-model"><span class="db9-model" aria-hidden="true"></span><span>FPA repeater 2</span></span>
+              <span class="port-model"><span class="rj14-model" aria-hidden="true"></span><span>FA-05 repeater 1</span></span>
+              <span class="port-model"><span class="rj14-model" aria-hidden="true"></span><span>FA-05 repeater 2</span></span>
               <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C PD power</span></span>
             </div>
           </article>

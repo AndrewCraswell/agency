@@ -1,6 +1,7 @@
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
+import { faveroDataLine } from "./favero-data-line.circuit.js"
 import MinimalScoringPrototype, {
   controllerLeftPins,
   controllerRightPins,
@@ -9,7 +10,6 @@ import MinimalScoringPrototype, {
 } from "./index.circuit.js"
 import { prototypeIndicators } from "./prototype-indicators.circuit.js"
 import { prototypeSounder } from "./prototype-peripherals.circuit.js"
-import { prototypeRepeaterInterfaces } from "./prototype-repeater-interfaces.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
 
@@ -65,28 +65,34 @@ describe("minimal scoring prototype baseline", () => {
         "BZ_SCORING",
         "J_DISPLAY",
         "LED_LEFT_RED",
+        "LED_LEFT_WHITE",
         "LED_RIGHT_GREEN",
-        "J_FPA_REPEATER_1",
-        "J_FPA_REPEATER_2",
+        "LED_RIGHT_WHITE",
+        "J_FAVERO_DATA_1",
+        "J_FAVERO_DATA_2",
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(42)
+    expect(references).toHaveLength(58)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
     expect(cadComponents.every(({ model_step_url: stepUrl }) => typeof stepUrl === "string")).toBe(true)
     expect(cadComponents.some(({ model_jscad: jscad }) => jscad !== undefined)).toBe(false)
     expect(prototypeInterfaces.powerInput).toEqual(["USB-C PD 20V", "V5", "APP_GND"])
-    expect(prototypeInterfaces.repeaterOutputs).toEqual(["RS422-FPA 1", "RS422-FPA 2"])
+    expect(prototypeInterfaces.repeaterOutputs).toEqual(["FA-05 DATA-LINE 1", "FA-05 DATA-LINE 2"])
     expect(references.some((reference) => /HUB75|MUX|ADC|REF|STM32|ISOLAT/iu.test(reference))).toBe(false)
   }, 15_000)
 
-  it("drives one red and one green bench indicator from unused ESP32 GPIOs", () => {
-    expect(prototypeIndicators).toEqual([
-      expect.objectContaining({ color: "red", gpio: "GPIO42", manufacturerPartNumber: "WP7113ID" }),
-      expect.objectContaining({ color: "green", gpio: "GPIO41", manufacturerPartNumber: "WP7113GD" })
-    ])
+  it("drives left red/white and right green/white scoring lamps from dedicated ESP32 GPIOs", () => {
+    expect(prototypeIndicators).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: "red", gpio: "GPIO42", role: "left on-target" }),
+        expect.objectContaining({ color: "white", gpio: "GPIO40", role: "left off-target" }),
+        expect.objectContaining({ color: "green", gpio: "GPIO41", role: "right on-target" }),
+        expect.objectContaining({ color: "white", gpio: "GPIO47", role: "right off-target" })
+      ])
+    )
     const circuit = renderPrototype()
     const components = circuit.filter(({ type }) => type === "source_component")
     expect(components.find(({ name }) => name === "LED_LEFT_RED")).toMatchObject({
@@ -95,6 +101,10 @@ describe("minimal scoring prototype baseline", () => {
     expect(components.find(({ name }) => name === "LED_RIGHT_GREEN")).toMatchObject({
       manufacturer_part_number: "WP7113GD"
     })
+    expect(components.filter(({ manufacturer_part_number: part }) => part === "WP7113QWC/D")).toHaveLength(2)
+    expect(
+      components.filter(({ name }) => typeof name === "string" && name.includes("WHITE_LED_PULLDOWN"))
+    ).toHaveLength(2)
   })
 
   it("drives one real 3 V piezo sounder through the existing low-side switch", () => {
@@ -113,19 +123,39 @@ describe("minimal scoring prototype baseline", () => {
     expect(components.some(({ name }) => name === "J_BUZZER")).toBe(false)
   })
 
-  it("drives two identical transmit-only FPA repeater ports from one ESP32 UART", () => {
-    expect(prototypeRepeaterInterfaces).toEqual({
-      connectors: ["J_FPA_REPEATER_1", "J_FPA_REPEATER_2"],
-      driver: "AM26LV31EIPWR",
+  it("drives two isolated FA-05 DATA-LINE current loops from one ESP32 UART", () => {
+    expect(faveroDataLine).toEqual({
+      connectors: ["J_FAVERO_DATA_1", "J_FAVERO_DATA_2"],
+      electricalInterface: "isolated 20 mA current loop",
       gpio: "GPIO43_UART_TX",
-      pinout: { 3: "Tx-", 4: "Tx+", 6: "GND", 7: "GND" },
-      protocol: "RS422-FPA 3.04a, 38400 baud, 8N1"
+      optocoupler: "4N32M",
+      pinout: {
+        2: "outer loop conductor",
+        3: "center data conductor",
+        4: "center data conductor",
+        5: "outer loop conductor"
+      },
+      protocol: "Favero FULL-ARM-05 DATA-LINE, 2400 baud, 8N1"
     })
     const components = renderPrototype().filter(({ type }) => type === "source_component")
-    expect(components.find(({ name }) => name === "U_FPA_DRIVER")).toMatchObject({
-      manufacturer_part_number: "AM26LV31EIPWR"
-    })
-    expect(components.filter(({ manufacturer_part_number: part }) => part === "182-009-113R161")).toHaveLength(2)
+    expect(components.filter(({ manufacturer_part_number: part }) => part === "4N32M")).toHaveLength(2)
+    expect(components.filter(({ manufacturer_part_number: part }) => part === "5520250-2")).toHaveLength(2)
+    expect(components.some(({ manufacturer_part_number: part }) => part === "AM26LV31EIPWR")).toBe(false)
+
+    const circuit = renderPrototype()
+    const connector = circuit.find(({ type, name }) => type === "source_component" && name === "J_FAVERO_DATA_1")
+    const connectorPorts = circuit
+      .filter(
+        ({ type, source_component_id: sourceComponentId }) =>
+          type === "source_port" && sourceComponentId === connector?.source_component_id
+      )
+      .map(({ name, pin_number: pinNumber }) => ({ name, pinNumber }))
+    expect(connectorPorts).toEqual([
+      { name: "OUTER_A", pinNumber: 2 },
+      { name: "DATA_A", pinNumber: 3 },
+      { name: "DATA_B", pinNumber: 4 },
+      { name: "OUTER_B", pinNumber: 5 }
+    ])
   })
 
   it("uses a module-level USB-C power chain with real assembly geometry", () => {
@@ -137,7 +167,7 @@ describe("minimal scoring prototype baseline", () => {
 
     const sourceComponents = circuit.filter(({ type }) => type === "source_component")
     expect(sourceComponents.find(({ name }) => name === "U_USB_C_PD")).toMatchObject({
-      manufacturer_part_number: "5991"
+      manufacturer_part_number: "5807"
     })
     expect(sourceComponents.find(({ name }) => name === "U_V5_REGULATOR")).toMatchObject({
       manufacturer_part_number: "D36V50F5"
@@ -155,7 +185,7 @@ describe("minimal scoring prototype baseline", () => {
             )
         )
     )
-    expect(pdMountingHoles).toHaveLength(4)
+    expect(pdMountingHoles).toHaveLength(2)
   })
 
   it("applies the vendor STEP coordinate transforms used by the assembled board", () => {
@@ -185,7 +215,7 @@ describe("minimal scoring prototype baseline", () => {
     })
     expect(cadByReference.get("U_USB_C_PD")).toMatchObject({
       position: { x: expect.closeTo(-62, 6), y: 34.5, z: 6.7 },
-      model_origin_position: { x: 10.16, y: 13.9065, z: 0 }
+      model_origin_position: { x: 10.16, y: 11.7475, z: 0 }
     })
     expect(cadByReference.get("U_V5_REGULATOR")).toMatchObject({
       position: { x: expect.closeTo(-34, 6), y: expect.closeTo(34, 6), z: 6.7 },

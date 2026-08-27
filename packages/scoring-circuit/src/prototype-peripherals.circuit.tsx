@@ -108,8 +108,8 @@ export function PrototypePeripherals(): ReactElement {
         name="J_DISPLAY"
         pinCount={3}
         pinLabels={["V5", "DISPLAY_DATA", "APP_GND"]}
-        pcbX={67}
-        pcbY={8}
+        pcbX={55}
+        pcbY={2}
         cadModel={cadModels.pinHeader1x03}
       />
       <resistor
@@ -118,8 +118,8 @@ export function PrototypePeripherals(): ReactElement {
         resistance="330ohm"
         tolerance="1%"
         footprint="0805"
-        pcbX={56}
-        pcbY={8}
+        pcbX={48}
+        pcbY={2}
         cadModel={cadModels.resistor0805}
       />
 
@@ -128,8 +128,8 @@ export function PrototypePeripherals(): ReactElement {
         manufacturerPartNumber={prototypeSounder.manufacturerPartNumber}
         pinLabels={{ pin1: "POSITIVE", pin2: "SWITCHED_GROUND" }}
         footprint={scoringSounderFootprint}
-        pcbX={67}
-        pcbY={-12}
+        pcbX={68}
+        pcbY={-6}
         cadModel={cadModels.scoringSounder}
       />
       <chip

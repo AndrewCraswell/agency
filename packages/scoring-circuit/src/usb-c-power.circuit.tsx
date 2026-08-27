@@ -2,10 +2,8 @@ import { Fragment, type ReactElement } from "react"
 import { cadModels } from "./cad-models.js"
 
 const pdMountingHoles = [
-  { x: -7.62, y: -11.3665 },
-  { x: 7.62, y: -11.3665 },
-  { x: -7.747, y: 11.3665 },
-  { x: 7.493, y: 11.3665 }
+  { x: -7.747, y: 9.2075 },
+  { x: 7.493, y: 9.2075 }
 ] as const
 
 const regulatorPins = [
@@ -30,38 +28,38 @@ const regulatorMountingHoles = [
 ] as const
 
 const pdModuleFootprint = (
-  <footprint name="ADAFRUIT_5991_MOUNT_AND_WIRE_LANDINGS" originalLayer="top">
-    <silkscreenrect pcbX={0} pcbY={0} width="20.32mm" height="27.813mm" strokeWidth="0.2mm" filled={false} />
-    <silkscreentext text="USB-C" pcbX={0} pcbY={11.5} fontSize="1.2mm" />
+  <footprint name="ADAFRUIT_5807_DIRECT_SOLDER_CARRIER" originalLayer="top">
+    <silkscreenrect pcbX={0} pcbY={0} width="20.32mm" height="23.495mm" strokeWidth="0.2mm" filled={false} />
+    <silkscreentext text="USB-C" pcbX={0} pcbY={9.8} fontSize="1.2mm" />
     {pdMountingHoles.map(({ x, y }, index) => (
       <Fragment key={index}>
         <hole diameter="2.5mm" pcbX={x} pcbY={y} />
       </Fragment>
     ))}
     <platedhole
-      name="PD_20V"
+      name="PD_VOUT"
       shape="circular_hole_with_rect_pad"
       pcbX={-2.54}
-      pcbY={-17}
-      holeDiameter="1.5mm"
-      rectPadWidth="3mm"
-      rectPadHeight="3mm"
+      pcbY={-9.2075}
+      holeDiameter="1mm"
+      rectPadWidth="1.8mm"
+      rectPadHeight="1.8mm"
       rectBorderRadius="0mm"
-      portHints={["1", "pin1", "PD_20V"]}
+      portHints={["1", "pin1", "PD_VOUT"]}
     />
     <platedhole
       name="APP_GND"
       shape="circular_hole_with_rect_pad"
       pcbX={2.54}
-      pcbY={-17}
-      holeDiameter="1.5mm"
-      rectPadWidth="3mm"
-      rectPadHeight="3mm"
-      rectBorderRadius="1.5mm"
+      pcbY={-9.2075}
+      holeDiameter="1mm"
+      rectPadWidth="1.8mm"
+      rectPadHeight="1.8mm"
+      rectBorderRadius="0.9mm"
       portHints={["2", "pin2", "APP_GND"]}
     />
-    <silkscreentext text="20V WIRE" pcbX={0} pcbY={-14.8} fontSize="0.9mm" />
-    <courtyardrect pcbX={0} pcbY={-1.55} width="22mm" height="33.5mm" strokeWidth="0.05mm" />
+    <silkscreentext text="20V FIXED" pcbX={0} pcbY={-7} fontSize="0.9mm" />
+    <courtyardrect pcbX={0} pcbY={0} width="21mm" height="24.2mm" strokeWidth="0.05mm" />
   </footprint>
 )
 
@@ -93,14 +91,15 @@ const regulatorFootprint = (
   </footprint>
 )
 
-const pdPinLabels = { pin1: "PD_20V", pin2: "APP_GND" } as const
+const pdPinLabels = { pin1: "PD_VOUT", pin2: "APP_GND" } as const
 const regulatorPinLabels = Object.fromEntries(regulatorPins.map(({ name }, index) => [`pin${index + 1}`, name]))
 
 export const usbCPowerAssembly = {
-  pdModule: "Adafruit 5991 HUSB238 USB-C PD switchable breakout",
+  directMount: "VOUT and GND pins soldered through the carrier PCB; terminal block not populated",
+  pdModule: "Adafruit 5807 HUSB238 USB-C PD breakout",
   pdSetting: "20V",
   regulatorModule: "Pololu D36V50F5 5V step-down regulator",
-  assemblyWire: "Two short 18 AWG jumpers from the PD terminal block to the labeled carrier landings"
+  solderConfiguration: "Open the factory 5V bridge and close the 20V bridge before assembly"
 } as const
 
 export function UsbCPower(): ReactElement {
@@ -108,7 +107,7 @@ export function UsbCPower(): ReactElement {
     <group name="USB_C_POWER">
       <chip
         name="U_USB_C_PD"
-        manufacturerPartNumber="5991"
+        manufacturerPartNumber="5807"
         pinLabels={pdPinLabels}
         footprint={pdModuleFootprint}
         pcbX={-62}
@@ -127,14 +126,10 @@ export function UsbCPower(): ReactElement {
         cadModel={cadModels.v5RegulatorModule}
       />
 
-      <trace from="U_USB_C_PD.PD_20V" to="U_V5_REGULATOR.VIN_1" width="1mm" />
-      <trace from="U_USB_C_PD.PD_20V" to="U_V5_REGULATOR.VIN_2" width="1mm" />
+      <trace from="U_USB_C_PD.PD_VOUT" to="U_V5_REGULATOR.VIN_1" width="1mm" />
       <trace from="U_USB_C_PD.APP_GND" to="U_V5_REGULATOR.GND_IN_1" width="1mm" />
-      <trace from="U_USB_C_PD.APP_GND" to="U_V5_REGULATOR.GND_IN_2" width="1mm" />
       <trace from="U_V5_REGULATOR.VOUT_1" to="net.V5" width="1mm" />
-      <trace from="U_V5_REGULATOR.VOUT_2" to="net.V5" width="1mm" />
       <trace from="U_V5_REGULATOR.GND_OUT_1" to="net.APP_GND" width="1mm" />
-      <trace from="U_V5_REGULATOR.GND_OUT_2" to="net.APP_GND" width="1mm" />
       <trace from="U_V5_REGULATOR.EN" to="U_V5_REGULATOR.VIN_1" width="0.5mm" />
     </group>
   )
