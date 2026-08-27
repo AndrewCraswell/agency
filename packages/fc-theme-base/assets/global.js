@@ -1031,11 +1031,8 @@ class SlideshowComponent extends SliderComponent {
     const animationClassIn = 'announcement-bar-slider--fade-in';
     const animationClassOut = 'announcement-bar-slider--fade-out';
 
-    const isFirstSlide = currentIndex === 0;
-    const isLastSlide = currentIndex === itemsCount - 1;
-
-    const shouldMoveNext = (button === 'next' && !isLastSlide) || (button === 'previous' && isFirstSlide);
-    const direction = shouldMoveNext ? 'next' : 'previous';
+    // Animate in the direction of travel, including when wrapping past the last or first slide.
+    const direction = button;
 
     currentSlide.classList.add(`${animationClassOut}-${direction}`);
     nextSlide.classList.add(`${animationClassIn}-${direction}`);

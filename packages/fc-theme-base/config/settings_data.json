@@ -2,6 +2,7 @@
   "current": "Dawn",
   "presets": {
     "Dawn": {
+      "logo": "shopify://shop_images/Fencing_Club-05.png",
       "logo_width": 90,
       "customer_account_menu": "customer-account-main-menu",
       "color_schemes": {
@@ -59,11 +60,22 @@
             "secondary_button_label": "#FFFFFF",
             "shadow": "#121212"
           }
+        },
+        "scheme-footer": {
+          "settings": {
+            "background": "#000000",
+            "background_gradient": "",
+            "text": "#F7F7F5",
+            "button": "#F7F7F5",
+            "button_label": "#000000",
+            "secondary_button_label": "#F7F7F5",
+            "shadow": "#000000"
+          }
         }
       },
-      "type_header_font": "assistant_n4",
+      "type_header_font": "archivo_n4",
       "heading_scale": 100,
-      "type_body_font": "assistant_n4",
+      "type_body_font": "inter_n4",
       "body_scale": 100,
       "page_width": 1200,
       "spacing_sections": 0,
@@ -73,7 +85,7 @@
       "animations_hover_elements": "none",
       "buttons_border_thickness": 1,
       "buttons_border_opacity": 100,
-      "buttons_radius": 0,
+      "buttons_radius": 14,
       "buttons_shadow_opacity": 0,
       "buttons_shadow_horizontal_offset": 0,
       "buttons_shadow_vertical_offset": 4,
@@ -87,7 +99,7 @@
       "variant_pills_shadow_blur": 5,
       "inputs_border_thickness": 1,
       "inputs_border_opacity": 55,
-      "inputs_radius": 0,
+      "inputs_radius": 14,
       "inputs_shadow_opacity": 0,
       "inputs_shadow_horizontal_offset": 0,
       "inputs_shadow_vertical_offset": 4,
@@ -157,16 +169,17 @@
       "sale_badge_color_scheme": "scheme-4",
       "sold_out_badge_color_scheme": "scheme-3",
       "brand_headline": "",
-      "brand_description": "<p></p>",
-      "brand_image_width": 100,
-      "social_twitter_link": "",
-      "social_facebook_link": "",
+      "brand_image": "shopify:\/\/shop_images\/Fencing_Club-09.png",
+      "brand_description": "<p>Gear at competitive prices for competitive athletes. Trusted by fencers, clubs, and coaches nationwide.<\/p>",
+      "brand_image_width": 110,
+      "social_twitter_link": "https:\/\/x.com\/fencingclub",
+      "social_facebook_link": "https:\/\/facebook.com\/fencingclub",
       "social_pinterest_link": "",
-      "social_instagram_link": "",
+      "social_instagram_link": "https:\/\/instagram.com\/fencingclub",
       "social_tiktok_link": "",
       "social_tumblr_link": "",
       "social_snapchat_link": "",
-      "social_youtube_link": "",
+      "social_youtube_link": "https:\/\/youtube.com\/@fencingclub",
       "social_vimeo_link": "",
       "predictive_search_enabled": true,
       "predictive_search_show_vendor": false,

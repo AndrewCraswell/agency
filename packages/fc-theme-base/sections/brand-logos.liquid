@@ -1,0 +1,79 @@
+{{ 'section-home.css' | asset_url | stylesheet_tag }}
+
+<div class="fc-home">
+  <section class="fc-home__brands-section" aria-labelledby="BrandLogos-{{ section.id }}">
+    <div class="fc-home__inner">
+      {%- if section.settings.eyebrow != blank or section.settings.heading != blank -%}
+        <header class="fc-home__head">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="fc-home__eyebrow fc-home__eyebrow--soft">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="fc-home__h30" id="BrandLogos-{{ section.id }}">{{ section.settings.heading | escape }}</h2>
+          {%- endif -%}
+        </header>
+      {%- endif -%}
+      <div class="fc-home__brands">
+        {%- for block in section.blocks -%}
+          {%- capture logo -%}
+            {%- if block.settings.image -%}
+              {{
+                block.settings.image
+                | image_url: width: 552
+                | image_tag:
+                  class: 'fc-home__brand',
+                  widths: '276, 414, 552',
+                  alt: block.settings.image.alt,
+                  loading: 'lazy'
+              }}
+            {%- else -%}
+              <span class="fc-home__brand fc-home__brand--placeholder"></span>
+            {%- endif -%}
+          {%- endcapture -%}
+          {%- if block.settings.link != blank -%}
+            <a href="{{ block.settings.link }}" {{ block.shopify_attributes }}>{{ logo }}</a>
+          {%- else -%}
+            <span {{ block.shopify_attributes }}>{{ logo }}</span>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Brand logos",
+  "tag": "section",
+  "max_blocks": 16,
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "AUTHORIZED SELLER" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Official dealer for the sport’s best brands" }
+  ],
+  "blocks": [
+    {
+      "type": "logo",
+      "name": "Logo",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Logo" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Brand logos",
+      "blocks": [
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" }
+      ]
+    }
+  ]
+}
+{% endschema %}

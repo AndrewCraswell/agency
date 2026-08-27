@@ -15,12 +15,11 @@
   }
 {%- endstyle -%}
 
-<div class="newsletter center {% if section.settings.full_width == false %}newsletter--narrow page-width{% endif %}">
+<div class="newsletter newsletter--{{ section.settings.layout }} center {% if section.settings.full_width == false %}newsletter--narrow page-width{% endif %}">
   <div class="newsletter__wrapper color-{{ section.settings.color_scheme }} gradient content-container isolate{% if section.settings.full_width %} content-container--full-width{% endif %} section-{{ section.id }}-padding">
+    <div class="newsletter__copy">
     {%- for block in section.blocks -%}
       {%- case block.type -%}
-        {%- when '@app' -%}
-          {% render block %}
         {%- when 'heading' -%}
           <h2
             class="inline-richtext {{ block.settings.heading_size }}{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}"
@@ -43,6 +42,13 @@
           >
             {{ block.settings.text }}
           </div>
+      {%- endcase -%}
+    {%- endfor -%}
+    </div>
+
+    <div class="newsletter__capture">
+    {%- for block in section.blocks -%}
+      {%- case block.type -%}
         {%- when 'email_form' -%}
           <div {{ block.shopify_attributes }}>
             {% form 'customer', class: 'newsletter-form' %}
@@ -72,24 +78,16 @@
                     {% elsif form.posted_successfully? %}
                       aria-describedby="Newsletter-success--{{ section.id }}"
                     {% endif %}
-                    placeholder="{{ 'newsletter.label' | t }}"
+                    placeholder="{{ section.settings.email_placeholder | escape }}"
                     required
                   >
-                  <label class="field__label" for="NewsletterForm--{{ section.id }}">
-                    {{ 'newsletter.label' | t }}
+                  <label class="visually-hidden" for="NewsletterForm--{{ section.id }}">
+                    {{ section.settings.email_placeholder | escape }}
                   </label>
-                  <button
-                    type="submit"
-                    class="newsletter-form__button field__button"
-                    name="commit"
-                    id="Subscribe"
-                    aria-label="{{ 'newsletter.button_label' | t }}"
-                  >
-                    <span class="svg-wrapper">
-                      {{- 'icon-arrow.svg' | inline_asset_content -}}
-                    </span>
-                  </button>
                 </div>
+                <button type="submit" class="newsletter-form__submit" name="commit" id="Subscribe">
+                  {{ 'newsletter.button_label' | t }}
+                </button>
                 {%- if form.errors -%}
                   <small class="newsletter-form__message form__message" id="Newsletter-error--{{ section.id }}">
                     <span class="svg-wrapper">
@@ -115,8 +113,14 @@
               {%- endif -%}
             {% endform %}
           </div>
+        {%- when '@app' -%}
+          {% render block %}
       {%- endcase -%}
     {%- endfor -%}
+      {%- if section.settings.disclaimer_text != blank -%}
+        <p class="newsletter__disclaimer">{{ section.settings.disclaimer_text | escape }}</p>
+      {%- endif -%}
+    </div>
   </div>
 </div>
 
@@ -144,6 +148,28 @@
       "id": "full_width",
       "default": true,
       "label": "t:sections.newsletter.settings.full_width.label"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "options": [
+        { "value": "stacked", "label": "Stacked and centered" },
+        { "value": "split", "label": "Side by side" }
+      ],
+      "default": "stacked",
+      "label": "Desktop layout"
+    },
+    {
+      "type": "text",
+      "id": "email_placeholder",
+      "default": "Enter your email",
+      "label": "Email placeholder"
+    },
+    {
+      "type": "text",
+      "id": "disclaimer_text",
+      "default": "We respect your privacy. Unsubscribe anytime.",
+      "label": "Privacy text"
     },
     {
       "type": "header",

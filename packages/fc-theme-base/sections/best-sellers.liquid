@@ -1,0 +1,148 @@
+{{ 'section-home.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign view_all = section.settings.collection.url | default: routes.all_products_collection_url
+-%}
+
+<div class="fc-home">
+  <section class="fc-home__section" aria-labelledby="BestSellers-{{ section.id }}">
+    <div class="fc-home__inner">
+      <header class="fc-home__head-row">
+        <div class="fc-home__head fc-home__head--tight">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="fc-home__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="fc-home__h44 fc-home__h44--tight" id="BestSellers-{{ section.id }}">
+              {{- section.settings.heading | escape -}}
+            </h2>
+          {%- endif -%}
+        </div>
+        {%- if section.settings.link_label != blank -%}
+          {%- render 'ui-link',
+            label: section.settings.link_label,
+            url: view_all,
+            icon: 'arrow-right',
+            class: 'fc-home__viewall'
+          -%}
+        {%- endif -%}
+      </header>
+
+      <div class="fc-home__products">
+        {%- for block in section.blocks -%}
+          {%- assign product = block.settings.product -%}
+          {%- if product != blank -%}
+            <article class="fc-home__product" {{ block.shopify_attributes }}>
+              <div class="fc-home__product-media">
+                {%- if product.featured_image -%}
+                  {{
+                    product.featured_image
+                    | image_url: width: 600
+                    | image_tag:
+                      widths: '294, 441, 588',
+                      sizes: '(min-width: 990px) 294px, 50vw',
+                      alt: product.featured_image.alt | default: product.title,
+                      loading: 'lazy'
+                  }}
+                {%- else -%}
+                  <span class="fc-home__product-placeholder"></span>
+                {%- endif -%}
+                {%- if section.settings.badge_label != blank -%}
+                  <span class="fc-home__badge">{{ section.settings.badge_label | escape }}</span>
+                {%- endif -%}
+              </div>
+              <div class="fc-home__product-info">
+                {%- if product.type != blank -%}
+                  <p class="fc-home__product-tag">{{ product.type | upcase }}</p>
+                {%- endif -%}
+                <h3 class="fc-home__product-name" id="BestSellersTitle-{{ section.id }}-{{ product.id }}">
+                  <a class="fc-home__product-link" href="{{ product.url }}">{{ product.title }}</a>
+                </h3>
+              </div>
+              <div class="fc-home__price-row">
+                <span class="fc-home__price">{{ product.price | money }}</span>
+                {%- if section.settings.show_add -%}
+                  {%- liquid
+                    assign add_variant = product.selected_or_first_available_variant
+                    assign add_form_id = 'BestSellersAdd-' | append: section.id | append: '-' | append: product.id
+                  -%}
+                  {%- comment -%}
+                    Multi-variant products need a choice, so those keep linking through to the product page.
+                  {%- endcomment -%}
+                  {%- if product.variants.size == 1 and add_variant.available -%}
+                    <product-form data-section-id="{{ section.id }}">
+                      {%- form 'product',
+                        product,
+                        id: add_form_id,
+                        class: 'fc-home__add-form',
+                        novalidate: 'novalidate',
+                        data-type: 'add-to-cart-form'
+                      -%}
+                        <input type="hidden" name="id" value="{{ add_variant.id }}" class="product-variant-id">
+                        <button
+                          id="{{ add_form_id }}-submit"
+                          class="fc-home__add"
+                          type="submit"
+                          name="add"
+                          aria-labelledby="{{ add_form_id }}-submit BestSellersTitle-{{ section.id }}-{{ product.id }}"
+                          aria-live="polite"
+                        >
+                          {%- render 'fc-icon', icon: 'plus', size: 15 -%}
+                          <span>{{ section.settings.add_label | escape }}</span>
+                          {%- render 'loading-spinner' -%}
+                        </button>
+                      {%- endform -%}
+                    </product-form>
+                  {%- else -%}
+                    <a class="fc-home__add" href="{{ product.url }}">
+                      {%- render 'fc-icon', icon: 'plus', size: 15 -%}
+                      <span>{{ section.settings.add_label | escape }}</span>
+                    </a>
+                  {%- endif -%}
+                {%- endif -%}
+              </div>
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Best sellers",
+  "tag": "section",
+  "max_blocks": 8,
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "FEATURED PRODUCTS" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Best sellers" },
+    { "type": "text", "id": "badge_label", "label": "Badge", "default": "BEST SELLER", "info": "Shown on every card. Leave empty to hide." },
+    { "type": "header", "content": "View all link" },
+    { "type": "collection", "id": "collection", "label": "Collection", "info": "Where the view all link points. Defaults to all products." },
+    { "type": "text", "id": "link_label", "label": "Link label", "default": "View all" },
+    { "type": "header", "content": "Cards" },
+    { "type": "checkbox", "id": "show_add", "label": "Show add button", "default": true },
+    { "type": "text", "id": "add_label", "label": "Add button label", "default": "Add" }
+  ],
+  "blocks": [
+    {
+      "type": "product",
+      "name": "Product",
+      "settings": [{ "type": "product", "id": "product", "label": "Product" }]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Best sellers",
+      "blocks": [
+        { "type": "product" },
+        { "type": "product" },
+        { "type": "product" },
+        { "type": "product" }
+      ]
+    }
+  ]
+}
+{% endschema %}

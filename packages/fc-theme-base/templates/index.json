@@ -1,75 +1,249 @@
 {
   "sections": {
-    "image_banner": {
-      "type": "image-banner",
+    "hero": {
+      "type": "home-hero",
       "blocks": {
-        "heading": {
-          "type": "heading",
+        "slide-1": {
+          "type": "slide",
           "settings": {
-            "heading": "Browse our latest products",
-            "heading_size": "h0"
+            "image": "shopify://shop_images/generated-1783898147425.jpg",
+            "eyebrow": "OLYMPIC FENCING GEAR",
+            "heading": "Shop",
+            "subheading": "Gear at competitive prices for competitive athletes",
+            "button_label": "Shop Now",
+            "button_url": "shopify://collections/all"
           }
         },
-        "button": {
-          "type": "buttons",
+        "slide-2": {
+          "type": "slide",
           "settings": {
-            "button_label_1": "Shop all",
-            "button_link_1": "shopify://collections/all",
-            "button_style_secondary_1": true,
-            "button_label_2": "",
-            "button_link_2": "",
-            "button_style_secondary_2": false
+            "image": "shopify://shop_images/generated-1783898148562.jpg",
+            "eyebrow": "BEST-PRICED BLADES",
+            "heading": "Get a blade",
+            "subheading": "Best priced blades for beginners to elite athletes",
+            "button_label": "Weapons",
+            "button_url": "shopify://collections/weapons",
+            "link_label": "Blades",
+            "link_url": "shopify://collections/blades"
           }
         }
       },
-      "block_order": [
-        "heading",
-        "button"
-      ],
+      "block_order": ["slide-1", "slide-2"],
       "settings": {
-        "image_overlay_opacity": 40,
-        "image_height": "large",
-        "desktop_content_position": "bottom-center",
-        "show_text_box": false,
-        "image_behavior": "none",
-        "desktop_content_alignment": "center",
-        "color_scheme": "scheme-3",
-        "mobile_content_alignment": "center",
-        "stack_images_on_mobile": false,
-        "show_text_below": false
+        "aria_label": "Featured",
+        "autoplay": true,
+        "autoplay_speed": 6
       }
     },
-    "featured_collection": {
-      "type": "featured-collection",
+    "featured_picks": {
+      "type": "featured-picks",
+      "blocks": {
+        "card-1": {
+          "type": "card",
+          "settings": {
+            "image": "shopify://shop_images/generated-1783898148391.jpg",
+            "title": "Build Your Own Kit",
+            "description": "Everything to get on the strip — uniform, blade, and mask bundled together.",
+            "link_1_label": "Foil Kits",
+            "link_1_url": "shopify://collections/weapons",
+            "link_2_label": "Épée Kits",
+            "link_2_url": "shopify://collections/weapons",
+            "link_3_label": "Sabre Kits",
+            "link_3_url": "shopify://collections/weapons"
+          }
+        },
+        "card-2": {
+          "type": "card",
+          "settings": {
+            "image": "shopify://shop_images/generated-1783898149263.jpg",
+            "title": "Weapon Builder",
+            "description": "Assemble a competition-ready blade part by part, tuned exactly how you like it.",
+            "link_1_label": "Foil Weapon",
+            "link_1_url": "shopify://collections/weapons",
+            "link_2_label": "Épée Weapon",
+            "link_2_url": "shopify://collections/weapons",
+            "link_3_label": "Sabre Weapon",
+            "link_3_url": "shopify://collections/weapons"
+          }
+        },
+        "card-3": {
+          "type": "card",
+          "settings": {
+            "image": "shopify://shop_images/generated-1783898149949.jpg",
+            "title": "Team Fencing Bag",
+            "description": "Roomy, durable bags to haul your whole setup — from the club to the competition.",
+            "link_1_label": "Wheel Bags",
+            "link_2_label": "Carry Bags"
+          }
+        }
+      },
+      "block_order": ["card-1", "card-2", "card-3"],
       "settings": {
-        "title": "Featured products",
-        "heading_size": "h2",
-        "description": "",
-        "show_description": false,
-        "description_style": "body",
-        "collection": "all",
-        "products_to_show": 8,
-        "columns_desktop": 4,
-        "color_scheme": "scheme-1",
-        "full_width": false,
-        "show_view_all": true,
-        "view_all_style": "solid",
-        "enable_desktop_slider": false,
-        "swipe_on_mobile": false,
-        "image_ratio": "adapt",
-        "image_shape": "default",
-        "show_secondary_image": true,
-        "show_vendor": false,
-        "show_rating": false,
-        "quick_add": "none",
-        "columns_mobile": "2",
-        "padding_top": 44,
-        "padding_bottom": 36
+        "eyebrow": "GEAR UP YOUR WAY",
+        "heading": "Featured picks"
+      }
+    },
+    "category_grid": {
+      "type": "category-grid",
+      "blocks": {
+        "cat-1": { "type": "category", "settings": { "collection": "masks" } },
+        "cat-2": { "type": "category", "settings": { "collection": "jackets" } },
+        "cat-3": { "type": "category", "settings": { "collection": "weapons" } },
+        "cat-4": { "type": "category", "settings": { "collection": "blades" } },
+        "cat-5": { "type": "category", "settings": { "collection": "gloves" } },
+        "cat-6": { "type": "category", "settings": { "collection": "shoes-socks" } }
+      },
+      "block_order": ["cat-1", "cat-2", "cat-3", "cat-4", "cat-5", "cat-6"],
+      "settings": {
+        "eyebrow": "BROWSE THE RANGE",
+        "heading": "Shop by Category",
+        "show_count": true,
+        "link_label": "Shop"
+      }
+    },
+    "best_sellers": {
+      "type": "best-sellers",
+      "blocks": {
+        "product-1": { "type": "product", "settings": { "product": "signature-fie-foil" } },
+        "product-2": { "type": "product", "settings": { "product": "aero-fencing-mask-1600n" } },
+        "product-3": { "type": "product", "settings": { "product": "competition-jacket" } },
+        "product-4": { "type": "product", "settings": { "product": "carbon-body-cord" } }
+      },
+      "block_order": ["product-1", "product-2", "product-3", "product-4"],
+      "settings": {
+        "eyebrow": "FEATURED PRODUCTS",
+        "heading": "Best sellers",
+        "badge_label": "BEST SELLER",
+        "link_label": "View all",
+        "show_add": true,
+        "add_label": "Add"
+      }
+    },
+    "why_us": {
+      "type": "why-us",
+      "blocks": {
+        "point-1": {
+          "type": "point",
+          "settings": {
+            "icon": "badge-check",
+            "label": "Expert Knowledge",
+            "detail": "National-level guidance",
+            "link_label": "Get advice",
+            "link_url": "shopify://pages/contact"
+          }
+        },
+        "point-2": {
+          "type": "point",
+          "settings": {
+            "icon": "truck",
+            "label": "Fast Shipping",
+            "detail": "Ships in 1 business day",
+            "link_label": "Shipping policy",
+            "link_url": "shopify://policies/shipping-policy"
+          }
+        },
+        "point-3": {
+          "type": "point",
+          "settings": {
+            "icon": "rotate-ccw",
+            "label": "Hassle-Free Returns",
+            "detail": "30-day, postage-paid",
+            "link_label": "Returns policy",
+            "link_url": "shopify://policies/refund-policy"
+          }
+        }
+      },
+      "block_order": ["point-1", "point-2", "point-3"],
+      "settings": {
+        "image": "shopify://shop_images/generated-1783898170501.jpg",
+        "eyebrow": "WHY FENCING CLUB",
+        "heading": "Trusted by competitive fencers, clubs, and coaches nationwide",
+        "body": "We build and source competition-grade foil, épée, and sabre equipment for athletes at every level — tested by national-team fencers and trusted by clubs from first lesson to finals."
+      }
+    },
+    "testimonials": {
+      "type": "testimonials",
+      "blocks": {
+        "quote-1": {
+          "type": "quote",
+          "settings": {
+            "quote": "The blade balance is exceptional and the kit arrived faster than any supplier I've used. My whole club switched over.",
+            "name": "Marguerite Lavoie",
+            "role": "Épée coach, Boston Fencing Club",
+            "rating": 5
+          }
+        },
+        "quote-2": {
+          "type": "quote",
+          "settings": {
+            "quote": "Impeccable finishing on every mask and lamé. This is the first gear I trust for national-level competition.",
+            "name": "Daniel Osei",
+            "role": "Sabre fencer, Team GB Development",
+            "rating": 5
+          }
+        },
+        "quote-3": {
+          "type": "quote",
+          "settings": {
+            "quote": "Minimal, precise, and built to last. Restocks are quick and the fit guidance is spot on for beginners and veterans.",
+            "name": "Yuki Tanaka",
+            "role": "Foil coach, Kyoto Salle d'Armes",
+            "rating": 5
+          }
+        },
+        "quote-4": {
+          "type": "quote",
+          "settings": {
+            "quote": "Ordering for a whole squad used to be a nightmare. Now it is one call and everything arrives sized and ready.",
+            "name": "Priya Raman",
+            "role": "Club manager, Chennai Fencing Academy",
+            "rating": 5
+          }
+        }
+      },
+      "block_order": ["quote-1", "quote-2", "quote-3", "quote-4"],
+      "settings": {
+        "eyebrow": "TESTIMONIALS",
+        "heading": "Loved by the fencing community"
+      }
+    },
+    "brand_logos": {
+      "type": "brand-logos",
+      "blocks": {
+        "logo-1": { "type": "logo", "settings": { "image": "shopify://shop_images/fwf.png" } },
+        "logo-2": { "type": "logo", "settings": { "image": "shopify://shop_images/unic.png" } },
+        "logo-3": { "type": "logo", "settings": { "image": "shopify://shop_images/blaise.png" } },
+        "logo-4": { "type": "logo", "settings": { "image": "shopify://shop_images/favero.png" } },
+        "logo-5": { "type": "logo", "settings": { "image": "shopify://shop_images/neps.png" } },
+        "logo-6": { "type": "logo", "settings": { "image": "shopify://shop_images/asics.png" } },
+        "logo-7": { "type": "logo", "settings": { "image": "shopify://shop_images/yonex.png" } },
+        "logo-8": { "type": "logo", "settings": { "image": "shopify://shop_images/bsi.png" } }
+      },
+      "block_order": ["logo-1", "logo-2", "logo-3", "logo-4", "logo-5", "logo-6", "logo-7", "logo-8"],
+      "settings": {
+        "eyebrow": "AUTHORIZED SELLER",
+        "heading": "Official dealer for the sport’s best brands"
+      }
+    },
+    "journal": {
+      "type": "journal-highlights",
+      "settings": {
+        "eyebrow": "THE JOURNAL",
+        "heading": "From the Journal",
+        "blog": "journal",
+        "link_label": "View all posts",
+        "read_label": "Read more"
       }
     }
   },
   "order": [
-    "image_banner",
-    "featured_collection"
+    "hero",
+    "featured_picks",
+    "category_grid",
+    "best_sellers",
+    "why_us",
+    "testimonials",
+    "brand_logos",
+    "journal"
   ]
 }

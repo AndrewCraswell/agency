@@ -1,0 +1,434 @@
+.header-utility {
+  display: none;
+}
+
+@media screen and (min-width: 990px) {
+  .header-utility.page-width {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: none;
+    /* Design: Utility Row padding [9, 96]; padding rather than a fixed height so the
+       controls cannot overflow into the announcement bar. */
+    padding-block: 0.9rem;
+    padding-inline: max(9.6rem, calc((100% - 124.8rem) / 2));
+    border-bottom: 0.1rem solid rgba(var(--color-foreground), 0.12);
+    background: rgb(var(--color-background));
+  }
+
+  .header-utility__links,
+  .header-utility__localization {
+    display: flex;
+    gap: 2.2rem;
+    align-items: center;
+  }
+
+  .header-utility__link {
+    font-size: 1.3rem;
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: 0;
+    color: rgba(var(--color-foreground), 0.68);
+    text-decoration: none;
+  }
+
+  .header-utility__link:hover,
+  .header-utility__link:focus-visible {
+    color: rgb(var(--color-foreground));
+  }
+
+  .header-utility .localization-form {
+    padding: 0;
+  }
+
+  /* localization-form is a block wrapping an inline-flex form, so its line box height
+     varies with the control's contents; flex removes it and keeps both on one baseline. */
+  .header-utility__localization localization-form {
+    display: flex;
+    align-items: center;
+  }
+
+  .header-utility .localization-form > div {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Beats .js .header-localization:not(...) .localization-form__select, which forces 3.8rem. */
+  .js .header-utility .header-localization .localization-form__select,
+  .header-utility .localization-form__select {
+    height: auto;
+    /* Equal height keeps both controls, and their hover fills, on one baseline. */
+    min-height: 2.8rem;
+    padding-block: 0.4rem;
+    padding-inline: 0.6rem 2.4rem;
+    font-size: 1.3rem;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-decoration: none;
+    border-radius: 0.4rem;
+  }
+
+  .header-utility .localization-form__select span,
+  .header-utility .localization-form__select:hover,
+  .header-utility .localization-form__select:hover span {
+    text-decoration: none;
+  }
+
+  .header-utility .localization-form__select::after,
+  .header-utility .localization-form__select::before {
+    content: none;
+  }
+
+  /* Popout styled after fc-theme: borderless white panel with a soft shadow. */
+  .header-utility .disclosure__list-wrapper {
+    margin-top: 0.9rem;
+    border: 0;
+    border-radius: 0;
+    /* Dawn caps this at 275px and clips it; the inner list is the scroller instead, so
+       the scrollbar track matches the visible panel rather than being cut off. */
+    max-height: none;
+    overflow: visible;
+    padding-block: 0;
+    background: #fff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.09);
+  }
+
+  .header-utility .disclosure__list-wrapper.country-selector {
+    width: 30rem;
+  }
+
+  .header-utility .disclosure__list {
+    /* The ul is otherwise shrink-to-fit and capped by Dawn's max-width: 25.5rem,
+       which leaves a gap beside the scrollbar. */
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding-block: 1rem;
+    padding-inline: 0;
+    max-height: min(50vh, 42rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  /* Dawn lays these out as a grid for its checkmark column; this list has no checkmark. */
+  .header-utility .disclosure__link {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    padding: 0.7rem 1.6rem;
+    white-space: nowrap;
+    color: rgb(var(--color-foreground));
+  }
+
+  /* An unusually long country name ellipsizes rather than forcing a horizontal scrollbar. */
+  .header-utility .disclosure__link .country {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+
+  .header-utility .disclosure__link:hover {
+    background: rgba(var(--color-foreground), 0.04);
+  }
+
+  .header-utility .disclosure__link[aria-current='true'] {
+    font-weight: var(--font-body-weight-bold);
+  }
+
+  /* Matches base.css's .header:not(.drawer-menu).page-width, which sets 5rem gutters. */
+  .header:not(.drawer-menu).page-width {
+    min-height: 16.4rem;
+    max-width: none;
+    grid-template-columns: 11rem minmax(0, 1fr) auto;
+    column-gap: 2.4rem;
+    padding-inline: max(9.6rem, calc((100% - 124.8rem) / 2));
+  }
+
+  .header--middle-left .header__heading-link,
+  .header--top-left .header__heading-link {
+    margin-left: 0;
+  }
+
+  .header__heading-logo-wrapper {
+    width: 11rem;
+  }
+
+  .header__heading-logo {
+    width: 11rem;
+    max-height: 13.6rem;
+    object-fit: contain;
+  }
+
+  .header__inline-menu {
+    justify-self: center;
+    margin-left: 0;
+  }
+
+  .header__inline-menu > .list-menu--inline {
+    gap: 2.6rem;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .header__menu-item {
+    gap: 0.4rem;
+    padding: 1rem 0;
+    font-size: 1.7rem;
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0;
+    color: rgb(var(--color-foreground));
+    white-space: nowrap;
+  }
+
+  .header__inline-menu > .list-menu--inline > li > header-menu > details > .header__menu-item {
+    padding-right: 0;
+  }
+
+  .header__inline-menu > .list-menu--inline > li > a.header__menu-item {
+    padding-right: 1.7rem;
+  }
+
+  .header__menu-item:hover,
+  .header__menu-item:hover span,
+  .header__menu-item span {
+    text-decoration: none;
+  }
+
+  .header__menu-item .icon-caret {
+    position: static;
+    width: 1.3rem;
+    height: 1.3rem;
+    margin-left: 0;
+  }
+
+  .header__icons {
+    gap: 1.6rem;
+    padding-right: 0;
+  }
+
+  /* Shopify injects a zero-width <shopify-store>; as a flex child it still eats a gap. */
+  .header__icons > shopify-store {
+    display: none;
+  }
+
+  .header__icons .desktop-localization-wrapper {
+    display: none;
+  }
+
+  .header__icon,
+  .header__icon--cart .icon {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .header__icon .svg-wrapper {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .header__icon .icon {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .header__icon--cart {
+    margin-right: 0;
+  }
+}
+
+@media screen and (max-width: 989px) {
+  .header {
+    min-height: 9.4rem;
+    padding: 1.2rem 1.6rem;
+  }
+
+  .header__heading-logo-wrapper {
+    width: 5.6rem;
+  }
+
+  .header__heading-logo {
+    width: 5.6rem;
+    max-height: 7rem;
+    object-fit: contain;
+  }
+
+  .header__icons {
+    gap: 1.6rem;
+    padding-right: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Homepage overlay header — the design draws the header on top of the hero
+   (Hero Header, 214px tall, transparent over a 720px hero).
+   --------------------------------------------------------------------------- */
+
+.header__heading-logo--light {
+  display: none;
+}
+
+/* The sprite's cells are authored at 40px. `zoom` scales the layout box too, so the
+   flag occupies a true 20px slot instead of needing negative margins that break alignment. */
+.currency-flag {
+  flex: 0 0 auto;
+  zoom: 0.5;
+}
+
+.header-utility .localization-form__select {
+  display: flex;
+  gap: 1.6rem;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* Dawn underlines this on hover via .header-localization .disclosure ...; the design has no underlines. */
+.header-utility .header-localization .disclosure .localization-form__select,
+.header-utility .header-localization .disclosure .localization-form__select:hover {
+  text-decoration: none;
+}
+
+.disclosure__link .country {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+/* The wrapper only exists to scope the overlay styles. Left as a box it becomes the containing
+   block for Dawn's `position: sticky` header, which then can never travel past the wrapper's own
+   ~26rem height, so the header never came back on scroll up. */
+.header-group {
+  display: contents;
+}
+
+@media screen and (min-width: 990px) {
+  .header-group--overlay {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 4;
+  }
+
+  /* The overlay needs a real box to float over the hero, which traps sticky again, so pin the
+     revealed header to the viewport instead. Dawn still drives `top` via its own classes. */
+  .header-group--overlay .shopify-section-header-sticky {
+    position: fixed;
+    right: 0;
+    left: 0;
+  }
+
+  .header-group--overlay .header-wrapper {
+    border-bottom: 0;
+    background: transparent;
+  }
+
+  .header-group--overlay .header-utility {
+    border-bottom: 0.1rem solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+  }
+
+  .header-group--overlay .header-utility__link {
+    color: #a0a0a6;
+  }
+
+  .header-group--overlay .header-utility__link:hover,
+  .header-group--overlay .header-utility__link:focus-visible {
+    color: #f7f7f5;
+  }
+
+  .header-group--overlay .header-utility .localization-form__select {
+    color: #f7f7f5;
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .header-group--overlay .header-utility .localization-form__select:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .header-group--overlay .header-utility .localization-form__select .svg-wrapper,
+  .header-group--overlay .header-utility .localization-form__select svg {
+    color: #a0a0a6;
+  }
+
+  .header-group--overlay .header {
+    background: transparent;
+  }
+
+  .header-group--overlay .header__menu-item,
+  .header-group--overlay .header__menu-item:hover,
+  .header-group--overlay .header__icon,
+  .header-group--overlay .header__icon .icon,
+  .header-group--overlay .header__heading-link {
+    color: #f7f7f5;
+  }
+
+  .header-group--overlay .header__menu-item .icon-caret {
+    color: #a0a0a6;
+  }
+
+  .header-group--overlay .header__icon .icon {
+    stroke: currentColor;
+  }
+
+  /* Swap to the light mark while the header floats over the hero. */
+  .header-group--overlay .header__heading-logo {
+    display: none;
+  }
+
+  .header-group--overlay .header__heading-logo--light {
+    display: block;
+  }
+
+  /* Once Dawn pins the header on scroll it needs its solid background back. */
+  .header-group--overlay .shopify-section-header-sticky .header-wrapper,
+  .header-group--overlay .shopify-section-header-sticky .header,
+  .header-group--overlay .shopify-section-header-sticky .header-utility {
+    background: rgb(var(--color-background));
+  }
+
+  .header-group--overlay .shopify-section-header-sticky .header-utility {
+    border-bottom-color: rgba(var(--color-foreground), 0.12);
+  }
+
+  .header-group--overlay .shopify-section-header-sticky .header-utility__link {
+    color: rgba(var(--color-foreground), 0.68);
+  }
+
+  .header-group--overlay .shopify-section-header-sticky .header__menu-item,
+  .header-group--overlay .shopify-section-header-sticky .header__icon,
+  .header-group--overlay .shopify-section-header-sticky .header__icon .icon,
+  .header-group--overlay .shopify-section-header-sticky .header-utility .localization-form__select {
+    color: rgb(var(--color-foreground));
+  }
+
+  .header-group--overlay .shopify-section-header-sticky .header__heading-logo {
+    display: block;
+  }
+
+  .header-group--overlay .shopify-section-header-sticky .header__heading-logo--light {
+    display: none;
+  }
+}
+
+/* Dawn's bubble is near-black, which vanishes against the hero's dark header. Its fixed
+   left/bottom offsets also assume a 2.2rem icon, so on mobile it drifts into the middle of the
+   bag; anchoring to the top-right corner keeps it put at every icon size. */
+.cart-count-bubble {
+  top: -0.7rem;
+  right: -0.9rem;
+  bottom: auto;
+  left: auto;
+  background-color: #b91c1c;
+  color: #ffffff;
+}
+
+/* The bag is a flex child, so the count must not be able to squeeze it. */
+.header__icons .header__icon,
+.header__icon .svg-wrapper,
+.header__icon .svg-wrapper svg {
+  flex: 0 0 auto;
+}

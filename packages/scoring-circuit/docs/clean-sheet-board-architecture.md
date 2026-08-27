@@ -7,7 +7,7 @@ on real hardware. This board is a disposable, hand-assembled engineering prototy
 machine, certification sample, manufacturing reference, or enclosure-ready product.
 
 The prototype succeeds when it can be powered and programmed, observe and stimulate the seven scoring conductors,
-drive the basic scoring indications, and exercise the portable C17 scoring logic. Anything that does not directly help
+drive the HUB75 scoring display, and exercise the portable C17 scoring logic. Anything that does not directly help
 that first firmware-development loop is deferred.
 
 ## Restart decision
@@ -37,15 +37,11 @@ The initial schematic contains only these functional blocks:
   states for chip select, interrupt, and reset; the carrier does not duplicate them.
 - One TSOP38438-compatible IR receiver input with only the manufacturer's recommended 100 ohm and 100 nF supply
   filter. Its output connects directly to the ESP32 input without an unnecessary carrier pull-up.
-- Four 5 mm on-board scoring lamps: left red and white, plus right green and white. Red and green use a 330 ohm
-  resistor from 3.3 V GPIO drive. The higher-forward-voltage white lamps use the 5 V rail and one small low-side MOSFET
-  each so their brightness does not depend on a marginal 3.3 V voltage headroom.
 - A standard 2x8 keyed HUB75 data connector for one 64x32, 1/16-scan RGB panel. Its 13 signals use the established
   ESP32-S3 LCD-DMA pin assignment, and all three connector grounds return to APP_GND. A separate Würth Elektronik
   645004114822 four-pin 3.96 mm power header supplies two 5 V and two ground contacts from the prototype regulator;
-  its matching cable housing is 645004113322. GPIO19 and GPIO20 are assigned to
-  local indicators, so native USB is unavailable while the carrier is populated; programming remains available through
-  the DevKitC USB-to-UART port.
+  its matching cable housing is 645004113322. GPIO19 and GPIO20 are no longer consumed by duplicate local indicators,
+  so the DevKitC native USB pins remain electrically unused by the carrier.
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
 - Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 models are upright, open over the rear
   board edge, and use the manufacturer drawing's 16.13 mm housing height above the PCB. The rendered housing remains
@@ -69,8 +65,8 @@ converter, an STM32, processor isolation, redundant supervisors, manufacturing f
 environmental qualification, homologation evidence, per-part evidence ledgers, backlog validators, automated release
 gates, or speculative expansion hardware.
 
-It does not include a production lamp engine or high-current lamp drivers. The four low-current on-board LEDs are bench
-feedback; the display header remains the larger visual-output path. The two DATA-LINE transmitters are optically
+It does not include separate on-board scoring lamps or a production lamp engine. The HUB75 panel is the local visual
+output, and the two FA-05 DATA-LINE interfaces drive external repeaters. The DATA-LINE transmitters are optically
 isolated, but surge and cable-length qualification remain production work.
 
 ## Complexity rules
@@ -113,7 +109,7 @@ output pull-up were removed because they duplicated behavior already supplied by
 Pololu VRP, enable, and power-good carrier positions were also removed, while all eight duplicated power pins are now
 connected so the module does not rely on a single header contact for its input or output current.
 
-The remaining unconnected positions are inseparable from purchased parts: eleven unused positions on the standard
+The remaining unconnected positions are inseparable from purchased parts: eight unused positions on the standard
 ESP32-S3-DevKitC-1 socket pair, the WIZ850io module's designated NC position, and pin 3 marked NC on each 4N32M
 optocoupler package. They are not dangling carrier nets or optional support circuitry. A generated-product test holds
 that exact allowlist and fails if any other board pin becomes unconnected.

@@ -13,6 +13,7 @@
     aria-controls="{{ localPosition }}List"
     aria-describedby="{{ localPosition }}Label"
   >
+    <span class="localization-form__globe">{% render 'fc-icon', icon: 'globe', size: 14 %}</span>
     <span>{{ localization.language.endonym_name | capitalize }}</span>
     {{ 'icon-caret.svg' | inline_asset_content }}
   </button>

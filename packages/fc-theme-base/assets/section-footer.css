@@ -1,5 +1,6 @@
 .footer {
   border-top: 0.1rem solid rgba(var(--color-foreground), 0.08);
+  background: #0b0b0c;
 }
 
 .footer:not(.color-scheme-1) {
@@ -504,5 +505,297 @@
     .footer__content-top .grid__item {
       padding-left: 3rem;
     }
+  }
+}
+
+.footer-block__heading {
+  font-family: var(--font-body-family);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.1rem;
+  text-transform: uppercase;
+  margin-bottom: 1.6rem;
+}
+
+@media screen and (min-width: 990px) {
+  .footer-block__heading {
+    font-size: 1.3rem;
+  }
+}
+
+.footer-block__details-content .list-menu__item--link,
+.footer-block__contact {
+  font-size: 1.4rem;
+  letter-spacing: normal;
+  color: rgba(var(--color-foreground), 0.65);
+}
+
+.footer-block__brand-info .rte,
+.footer-block__brand-info .rte p {
+  font-size: 1.4rem;
+  line-height: 1.55;
+  letter-spacing: normal;
+  color: rgba(var(--color-foreground), 0.65);
+}
+
+.footer-block__details-content > li {
+  padding-bottom: 1.6rem;
+}
+
+.footer-block__details-content > li:last-child {
+  padding-bottom: 0;
+}
+
+.footer-block__contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  line-height: 1.5;
+}
+
+.footer-block__contact-icon {
+  flex: 0 0 1.6rem;
+  height: 1.6rem;
+  margin-top: 0.2rem;
+}
+
+/* `<address>` is italic by default in every browser. */
+.footer-block__contact-address {
+  font-style: normal;
+}
+
+.footer-block__contact-icon svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  fill: none;
+  stroke: currentColor;
+}
+
+/* Design stacks logo, tagline and social on a uniform 20px rhythm. */
+.footer-block__brand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.footer-block__brand-info > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.footer-block__brand-info .footer-block__image-wrapper {
+  margin-bottom: 0;
+}
+
+.footer-block__brand-info .footer__list-social.list-social {
+  justify-content: flex-start;
+  margin-top: 0;
+  gap: 1rem;
+}
+
+.footer .list-social__item {
+  margin: 0;
+}
+
+.footer .list-social__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.8rem;
+  height: 3.8rem;
+  padding: 0;
+  border-radius: 50%;
+  background-color: rgba(var(--color-foreground), 0.08);
+}
+
+/* Lucide glyphs span ~20 of a 24 viewBox, so the box is oversized to paint the design's 17px mark. */
+.footer .list-social__link .svg-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.05rem;
+  height: 2.05rem;
+}
+
+.footer .list-social__link .svg-wrapper svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+}
+
+/* Dawn separates policy links with a middle dot; spacing carries the same meaning without the glyph. */
+.policies li::before {
+  content: none;
+}
+
+.policies li:not(:last-child) {
+  margin-right: 2.4rem;
+}
+
+.footer__content-bottom {
+  border-top-color: rgba(var(--color-foreground), 0.12);
+  margin-top: 5.6rem;
+}
+
+/* Wide desktop: brand and navigation share one row, per the design. */
+@media screen and (min-width: 1200px) {
+  .footer__blocks-wrapper.grid {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 7.2rem;
+    margin-left: 0;
+  }
+
+  .footer__blocks-wrapper .footer-block.grid__item {
+    flex: 0 1 auto;
+    max-width: none;
+    padding-left: 0;
+  }
+
+  .footer__blocks-wrapper .footer-block.footer-block--brand-information {
+    flex: 0 0 32rem;
+    margin-right: auto;
+  }
+
+  .footer__blocks-wrapper .footer-block.footer-block--contact {
+    flex: 0 0 24rem;
+  }
+}
+
+/* Tablet and compact desktop: brand becomes its own section above the navigation. */
+@media screen and (min-width: 750px) and (max-width: 1199px) {
+  .footer__blocks-wrapper.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4rem 4.8rem;
+    margin-left: 0;
+  }
+
+  .footer__blocks-wrapper .footer-block.grid__item {
+    width: 100%;
+    max-width: none;
+    padding-left: 0;
+  }
+
+  .footer__blocks-wrapper .footer-block.footer-block--brand-information {
+    grid-column: 1 / -1;
+    padding-bottom: 4rem;
+    border-bottom: 0.1rem solid rgba(var(--color-foreground), 0.12);
+  }
+}
+
+@media screen and (min-width: 990px) and (max-width: 1199px) {
+  .footer__blocks-wrapper.grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.footer-block--brand-information .footer-block__details-content {
+  margin-bottom: 0;
+}
+
+/* Design keeps every footer link on one line. */
+.footer-block__details-content .list-menu__item--link {
+  white-space: nowrap;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+@media screen and (min-width: 990px) {
+  .footer__content-bottom {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2.4rem;
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding-inline: 5rem;
+  }
+
+  .footer__content-bottom > .footer__content-bottom-wrapper {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .footer__payment {
+    margin-top: 0;
+  }
+}
+
+.footer__content-bottom-wrapper--center {
+  justify-content: space-between;
+  align-items: center;
+  gap: 2.4rem;
+}
+
+.footer__content-bottom-wrapper--center .footer__column--info {
+  align-items: flex-start;
+  padding: 0;
+}
+
+.footer__copyright {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 2.4rem;
+  text-align: left;
+}
+
+.footer__copyright .policies {
+  margin: 0;
+}
+
+@media screen and (max-width: 989px) {
+  .footer__content-bottom-wrapper--center {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .footer__copyright {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* Mobile: blocks stack as full-width sections divided by hairlines.
+   Must stay last in this file to win over Dawn's earlier mobile rules. */
+@media screen and (max-width: 749px) {
+  .footer-block.grid__item {
+    margin: 0;
+    padding: 2.8rem 0;
+    border-top: 0.1rem solid rgba(var(--color-foreground), 0.12);
+  }
+
+  .footer-block.grid__item:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .footer__content-top {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .footer__content-bottom-wrapper,
+  .footer__content-bottom-wrapper--center {
+    align-items: flex-start;
+    justify-content: flex-start;
+    row-gap: 1.8rem;
+  }
+
+  .footer__column--info {
+    align-items: flex-start;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .footer__copyright {
+    justify-content: flex-start;
+    text-align: left;
   }
 }

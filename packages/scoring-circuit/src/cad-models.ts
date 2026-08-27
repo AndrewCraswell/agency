@@ -41,21 +41,6 @@ export const cadModels = {
     modelBoardNormalDirection: "y+",
     positionOffset: { x: 0, y: -1.45, z: 0 }
   },
-  led5mmGreen: {
-    stepUrl: checkedInStepUrl("kingbright-wp7113.step"),
-    modelBoardNormalDirection: "x-",
-    modelOriginPosition: { x: 446.187838274769, y: 127.91233816873, z: -0.25 }
-  },
-  led5mmRed: {
-    stepUrl: checkedInStepUrl("kingbright-wp7113-red.step"),
-    modelBoardNormalDirection: "x-",
-    modelOriginPosition: { x: 446.187838274769, y: 127.91233816873, z: -0.25 }
-  },
-  led5mmWhite: {
-    stepUrl: checkedInStepUrl("kingbright-wp7113-white.step"),
-    modelBoardNormalDirection: "x-",
-    modelOriginPosition: { x: 446.187838274769, y: 127.91233816873, z: -0.25 }
-  },
   pinHeader1x01: {
     stepUrl: `${kicadModelRoot}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x01_P2.54mm_Vertical.step`,
     pcbRotationOffset: -90

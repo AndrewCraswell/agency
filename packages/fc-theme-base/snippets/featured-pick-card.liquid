@@ -1,0 +1,57 @@
+{%- comment -%}
+  Renders one Featured picks card.
+
+  Accepts:
+    - block: the card block
+    - tall: true for the full-height card beside the stacked pair
+{%- endcomment -%}
+
+{%- liquid
+  assign image_height = 279
+  if tall
+    assign image_height = 731
+  endif
+-%}
+
+<article class="fc-home__pick{% if tall %} fc-home__pick--tall{% endif %}" {{ block.shopify_attributes }}>
+  {%- if block.settings.image -%}
+    {{
+      block.settings.image
+      | image_url: width: 1224
+      | image_tag:
+        class: 'fc-home__pick-image',
+        widths: '612, 918, 1224',
+        sizes: '(min-width: 990px) 612px, 100vw',
+        alt: block.settings.image.alt,
+        loading: 'lazy'
+    }}
+  {%- else -%}
+    <span class="fc-home__pick-image fc-home__pick-image--placeholder" style="height: {{ image_height }}px"></span>
+  {%- endif -%}
+  <div class="fc-home__pick-body">
+    <div class="fc-home__pick-head">
+      {%- if block.settings.title != blank -%}
+        <h3 class="fc-home__pick-title">{{ block.settings.title | escape }}</h3>
+      {%- endif -%}
+      {%- if block.settings.description != blank -%}
+        <p class="fc-home__pick-desc">{{ block.settings.description | escape }}</p>
+      {%- endif -%}
+    </div>
+    {%- capture links -%}
+      {%- for i in (1..3) -%}
+        {%- assign label_key = 'link_' | append: i | append: '_label' -%}
+        {%- assign url_key = 'link_' | append: i | append: '_url' -%}
+        {%- assign label = block.settings[label_key] -%}
+        {%- if label != blank -%}
+          <a class="fc-home__chip" href="{{ block.settings[url_key] | default: '#' }}">
+            {{ label | escape }}
+            {%- render 'fc-icon', icon: 'arrow-up-right', size: 14 -%}
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+    {%- if links != blank -%}
+      <div class="fc-home__chips">{{ links }}</div>
+    {%- endif -%}
+  </div>
+</article>

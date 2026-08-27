@@ -1,0 +1,104 @@
+{{ 'section-home.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'fc-carousel.js' | asset_url }}" defer="defer"></script>
+
+<div class="fc-home">
+  <section class="fc-home__section" aria-labelledby="Testimonials-{{ section.id }}">
+    <div class="fc-home__inner">
+      <fc-carousel class="fc-home__quote-carousel" aria-roledescription="carousel" aria-label="Testimonials">
+        <header class="fc-home__quote-head">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="fc-home__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+          {%- endif -%}
+          <div class="fc-home__quote-head-row">
+            {%- if section.settings.heading != blank -%}
+              <h2 class="fc-home__h44 fc-home__h44--quotes" id="Testimonials-{{ section.id }}">
+                {{- section.settings.heading | escape -}}
+              </h2>
+            {%- endif -%}
+            {%- if section.blocks.size > 1 -%}
+              <div class="fc-home__quote-nav">
+                <button class="fc-home__navbtn fc-home__navbtn--prev" type="button" data-carousel-prev aria-label="Previous testimonial">
+                  {%- render 'fc-icon', icon: 'chevron-left', size: 22 -%}
+                </button>
+                <button class="fc-home__navbtn fc-home__navbtn--next" type="button" data-carousel-next aria-label="Next testimonial">
+                  {%- render 'fc-icon', icon: 'chevron-right', size: 22 -%}
+                </button>
+              </div>
+            {%- endif -%}
+          </div>
+        </header>
+
+        <div class="fc-home__quotes-viewport">
+          <div class="fc-home__quotes" data-carousel-track>
+            {%- for block in section.blocks -%}
+              <figure class="fc-home__quote" data-carousel-slide {{ block.shopify_attributes }}>
+                {%- if block.settings.rating > 0 -%}
+                  <span class="fc-home__stars" aria-label="{{ block.settings.rating }} out of 5 stars">
+                    {%- for i in (1..block.settings.rating) -%}
+                      {%- render 'fc-icon', icon: 'star', size: 16 -%}
+                    {%- endfor -%}
+                  </span>
+                {%- endif -%}
+                <blockquote class="fc-home__quote-copy">{{ block.settings.quote | escape }}</blockquote>
+                <figcaption class="fc-home__quote-by">
+                  <span class="fc-home__quote-name">{{ block.settings.name | escape }}</span>
+                  <span class="fc-home__quote-role">{{ block.settings.role | escape }}</span>
+                </figcaption>
+              </figure>
+            {%- endfor -%}
+          </div>
+        </div>
+
+        {%- if section.blocks.size > 1 -%}
+          <div class="fc-home__quote-dots" role="tablist" aria-label="Choose testimonial">
+            {%- for block in section.blocks -%}
+              <button
+                class="fc-home__qdot{% if forloop.first %} fc-home__qdot--active{% endif %}"
+                type="button"
+                role="tab"
+                data-carousel-dot
+                aria-label="Testimonial {{ forloop.index }}"
+                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+              ></button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </fc-carousel>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Testimonials",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "TESTIMONIALS" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Loved by the fencing community" }
+  ],
+  "blocks": [
+    {
+      "type": "quote",
+      "name": "Testimonial",
+      "settings": [
+        { "type": "textarea", "id": "quote", "label": "Quote" },
+        { "type": "text", "id": "name", "label": "Name" },
+        { "type": "text", "id": "role", "label": "Role" },
+        { "type": "range", "id": "rating", "min": 0, "max": 5, "step": 1, "label": "Stars", "default": 5 }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Testimonials",
+      "blocks": [
+        { "type": "quote", "settings": { "quote": "The blade balance is exceptional and the kit arrived faster than any supplier I've used. My whole club switched over.", "name": "Marguerite Lavoie", "role": "Épée coach, Boston Fencing Club" } },
+        { "type": "quote", "settings": { "quote": "Impeccable finishing on every mask and lamé. This is the first gear I trust for national-level competition.", "name": "Daniel Osei", "role": "Sabre fencer, Team GB Development" } },
+        { "type": "quote", "settings": { "quote": "Minimal, precise, and built to last. Restocks are quick and the fit guidance is spot on for beginners and veterans.", "name": "Yuki Tanaka", "role": "Foil coach, Kyoto Salle d'Armes" } },
+        { "type": "quote", "settings": { "quote": "Ordering for a whole squad used to be a nightmare. Now it is one call and everything arrives sized and ready.", "name": "Priya Raman", "role": "Club manager, Chennai Fencing Academy" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

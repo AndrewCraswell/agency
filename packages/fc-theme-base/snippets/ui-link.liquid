@@ -1,0 +1,16 @@
+{% comment %}
+  Renders a standalone text link.
+
+  Accepts:
+  - label: {String} Visible text.
+  - url: {String} Destination.
+  - icon: {String} Optional trailing ui-icon name.
+  - class: {String} Optional extra classes for section-level sizing.
+{% endcomment %}
+
+<a class="ui-link{% if icon %} ui-link--with-icon{% endif %}{% if class %} {{ class }}{% endif %}" href="{{ url }}">
+  {{- label | escape -}}
+  {%- if icon -%}
+    {%- render 'ui-icon', icon: icon -%}
+  {%- endif -%}
+</a>

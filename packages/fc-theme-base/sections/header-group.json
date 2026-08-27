@@ -5,10 +5,10 @@
     "announcement-bar": {
       "type": "announcement-bar",
       "settings": {
-        "color_scheme": "scheme-1",
-        "show_line_separator": true,
+        "color_scheme": "scheme-footer",
+        "show_line_separator": false,
         "show_social": false,
-        "auto_rotate": false,
+        "auto_rotate": true,
         "change_slides_speed": 5,
         "enable_country_selector": false,
         "enable_language_selector": false
@@ -17,15 +17,70 @@
         "announcement-bar-0": {
           "type": "announcement",
           "settings": {
-            "text": "Welcome to our store",
+            "text": "Price-match guarantee",
+            "message": "Priced competitively, matched to win",
+            "tone": "announcement",
             "text_alignment": "center",
-            "color_scheme": "scheme-1",
-            "link": ""
+            "color_scheme": "scheme-footer",
+            "link": "shopify://pages/price-match-guarantee",
+            "link_label": "Learn more \u2192"
+          }
+        },
+        "announcement-bar-1": {
+          "type": "announcement",
+          "settings": {
+            "text": "Hassle-free returns",
+            "message": "30-day postage paid returns",
+            "tone": "announcement",
+            "text_alignment": "center",
+            "color_scheme": "scheme-footer",
+            "link": "shopify://policies/refund-policy",
+            "link_label": "See policy \u2192"
+          }
+        },
+        "announcement-bar-3": {
+          "type": "announcement",
+          "settings": {
+            "text": "New athletic season",
+            "message": "Up to 30% off",
+            "tone": "sale",
+            "text_alignment": "center",
+            "color_scheme": "scheme-footer",
+            "link": "shopify://collections/all",
+            "link_label": "Shop the sale \u2192"
+          }
+        },
+        "announcement-bar-4": {
+          "type": "announcement",
+          "settings": {
+            "text": "Summer nationals",
+            "message": "Visit us at booth 14",
+            "tone": "event",
+            "text_alignment": "center",
+            "color_scheme": "scheme-footer",
+            "link": "shopify://pages/about",
+            "link_label": "Event details \u2192"
+          }
+        },
+        "announcement-bar-5": {
+          "type": "announcement",
+          "settings": {
+            "text": "Traveling to our factories",
+            "message": "Orders ship from July 20",
+            "tone": "vacation",
+            "text_alignment": "center",
+            "color_scheme": "scheme-footer",
+            "link": "shopify://policies/shipping-policy",
+            "link_label": "Learn more \u2192"
           }
         }
       },
       "block_order": [
-        "announcement-bar-0"
+        "announcement-bar-0",
+        "announcement-bar-1",
+        "announcement-bar-3",
+        "announcement-bar-4",
+        "announcement-bar-5"
       ]
     },
     "header": {

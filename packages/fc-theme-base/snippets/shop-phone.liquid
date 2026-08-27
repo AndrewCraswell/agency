@@ -1,0 +1,29 @@
+{% comment %}
+  Outputs the store phone from Settings > Store details.
+
+  Accepts:
+  - format: {String} 'e164' for '+14252602501', anything else for '+1 (425) 260-2501'
+
+  Usage:
+  {%- capture phone -%}{%- render 'shop-phone', format: 'e164' -%}{%- endcapture -%}
+{% endcomment %}
+{%- liquid
+  assign compact = shop.phone | remove: ' ' | remove: '(' | remove: ')' | remove: '-' | remove: '.'
+  assign digits = compact | remove: '+'
+
+  # Store details holds a bare 10-digit US number, so the country code is added here.
+  if digits.size == 10
+    if format == 'e164'
+      echo '+1' | append: digits
+    else
+      assign area = digits | slice: 0, 3
+      assign prefix = digits | slice: 3, 3
+      assign line = digits | slice: 6, 4
+      echo '+1 (' | append: area | append: ') ' | append: prefix | append: '-' | append: line
+    endif
+  elsif format == 'e164'
+    echo compact
+  else
+    echo shop.phone
+  endif
+-%}

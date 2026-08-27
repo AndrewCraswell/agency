@@ -1,0 +1,106 @@
+{{ 'section-home.css' | asset_url | stylesheet_tag }}
+
+<div class="fc-home">
+  <section class="fc-home__why" aria-labelledby="WhyUs-{{ section.id }}">
+    <div class="fc-home__inner fc-home__why-row">
+      {%- if section.settings.image -%}
+        {{
+          section.settings.image
+          | image_url: width: 1040
+          | image_tag:
+            class: 'fc-home__why-image',
+            widths: '520, 780, 1040',
+            sizes: '(min-width: 990px) 520px, 100vw',
+            alt: section.settings.image.alt,
+            loading: 'lazy'
+        }}
+      {%- else -%}
+        <span class="fc-home__why-image fc-home__why-image--placeholder"></span>
+      {%- endif -%}
+      <div class="fc-home__why-content">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="fc-home__eyebrow fc-home__eyebrow--soft">{{ section.settings.eyebrow | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="fc-home__h36 fc-home__h36--why" id="WhyUs-{{ section.id }}">{{ section.settings.heading | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.body != blank -%}
+          <p class="fc-home__why-copy">{{ section.settings.body | escape }}</p>
+        {%- endif -%}
+        {%- if section.blocks.size > 0 -%}
+          <div class="fc-home__trust">
+            {%- for block in section.blocks -%}
+              <div class="fc-home__trust-item" {{ block.shopify_attributes }}>
+                {%- render 'fc-icon', icon: block.settings.icon, size: 20 -%}
+                <span class="fc-home__trust-text">
+                  <span class="fc-home__trust-label">{{ block.settings.label | escape }}</span>
+                  <span class="fc-home__trust-detail">{{ block.settings.detail | escape }}</span>
+                  {%- if block.settings.link_label != blank -%}
+                    {%- assign trust_url = block.settings.link_url | default: '#' -%}
+                    {%- render 'ui-link',
+                      label: block.settings.link_label,
+                      url: trust_url,
+                      icon: 'arrow-right',
+                      class: 'fc-home__trust-link'
+                    -%}
+                  {%- endif -%}
+                </span>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Why us",
+  "tag": "section",
+  "max_blocks": 4,
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Image" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "WHY FENCING CLUB" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Trusted by competitive fencers, clubs, and coaches nationwide" },
+    { "type": "textarea", "id": "body", "label": "Body" }
+  ],
+  "blocks": [
+    {
+      "type": "point",
+      "name": "Point",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "default": "badge-check",
+          "options": [
+            { "value": "badge-check", "label": "Badge check" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "rotate-ccw", "label": "Returns" },
+            { "value": "star", "label": "Star" }
+          ]
+        },
+        { "type": "text", "id": "label", "label": "Label" },
+        { "type": "text", "id": "detail", "label": "Detail" },
+        { "type": "text", "id": "link_label", "label": "Link label" },
+        { "type": "url", "id": "link_url", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Why us",
+      "settings": {
+        "body": "We build and source competition-grade foil, épée, and sabre equipment for athletes at every level — tested by national-team fencers and trusted by clubs from first lesson to finals."
+      },
+      "blocks": [
+        { "type": "point", "settings": { "icon": "badge-check", "label": "Expert Knowledge", "detail": "National-level guidance", "link_label": "Get advice" } },
+        { "type": "point", "settings": { "icon": "truck", "label": "Fast Shipping", "detail": "Ships in 1 business day", "link_label": "Shipping policy" } },
+        { "type": "point", "settings": { "icon": "rotate-ccw", "label": "Hassle-Free Returns", "detail": "30-day, postage-paid", "link_label": "Returns policy" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

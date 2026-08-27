@@ -2121,7 +2121,8 @@ input[type='checkbox'] {
 
 .utility-bar__grid {
   display: grid;
-  grid-template-columns: 1fr;
+  /* A bare `1fr` floors at min-content, letting the widest slide push the bar past the viewport. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas: 'announcements';
 }
 
@@ -2144,12 +2145,12 @@ input[type='checkbox'] {
 
 @media screen and (min-width: 990px) {
   .utility-bar__grid--3-col {
-    grid-template-columns: 3fr 4fr 3fr;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 4fr) minmax(0, 3fr);
     grid-template-areas: 'social-icons announcements language-currency';
   }
 
   .utility-bar__grid--2-col {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: 'social-icons language-currency';
   }
 
@@ -2181,13 +2182,16 @@ input[type='checkbox'] {
   width: 100%;
 }
 
-.utility-bar__grid .announcement-bar-slider {
-  width: 100%;
-}
-
 .announcement-bar-slider,
 .announcement-bar-slider .slider {
   width: 100%;
+}
+
+/* Lets the bar shrink to the viewport instead of to the widest slide; the slider scrolls. */
+.utility-bar__grid .announcement-bar,
+.announcement-bar-slider,
+.announcement-bar-slider .slider {
+  min-width: 0;
 }
 
 .announcement-bar .slider-button--next {

@@ -245,12 +245,8 @@ const previewHtml = `<!doctype html>
             </div>
           </article>
           <article class="io-module">
-            <h2>TSOP38438 - encrypted IR remote receiver</h2>
-            <p>Receives commands from the handheld infrared remote through GPIO38 so the referee can control the scoring machine without a cable.</p>
-          </article>
-          <article class="io-module">
-            <h2>WP7113 series - scoring indicators</h2>
-            <p>Four 5 mm lamps show the basic fencing result locally: left red and right green for valid target hits, plus one white off-target lamp for each fencer.</p>
+            <h2>Vishay TSOP38438 - 38 kHz IR receiver</h2>
+            <p>This front-facing sensor receives and demodulates the handheld remote's infrared signal, then sends the digital pulse stream to ESP32 GPIO38. The ESP32 firmware authenticates and decodes the encrypted command so the referee can control the scoring machine without a cable.</p>
           </article>
           <article class="io-module">
             <h2>PS1240P02BT - scoring sounder</h2>

@@ -3,7 +3,6 @@ import { cadModels } from "./cad-models.js"
 import { minimalPrototypeBoard } from "./clean-sheet-board-architecture.js"
 import { EthernetModuleFootprint } from "./ethernet-module-footprint.js"
 import { FaveroDataLine } from "./favero-data-line.circuit.js"
-import { PrototypeIndicators } from "./prototype-indicators.circuit.js"
 import { PrototypePeripherals } from "./prototype-peripherals.circuit.js"
 import { ScoringConductorInterface } from "./scoring-conductor-interface.circuit.js"
 import { UsbCPower } from "./usb-c-power.circuit.js"
@@ -161,7 +160,6 @@ function MinimalScoringPrototype(): ReactElement {
       <UsbCPower />
       <EthernetModuleFootprint pcbX={-20} pcbY={-32} />
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
-      <PrototypeIndicators />
       <PrototypePeripherals />
       <FaveroDataLine />
 
@@ -208,10 +206,6 @@ function MinimalScoringPrototype(): ReactElement {
       <trace from="U_ETHERNET.7" to="net.APP_GND" />
 
       <trace from="J_CONTROLLER_RIGHT.10" to="net.IR_RX" />
-      <trace from="J_CONTROLLER_RIGHT.9" to="R_LEFT_RED_LED.pin1" />
-      <trace from="J_CONTROLLER_RIGHT.20" to="R_RIGHT_GREEN_LED.pin1" />
-      <trace from="J_CONTROLLER_RIGHT.17" to="net.LED_LEFT_WHITE_DRIVE" />
-      <trace from="J_CONTROLLER_RIGHT.19" to="net.LED_RIGHT_WHITE_DRIVE" />
       <trace from="J_CONTROLLER_RIGHT.16" to="net.BUZZER_DRIVE" />
       <trace from="J_CONTROLLER_RIGHT.2" to="net.FAVERO_DATA_TX" />
 

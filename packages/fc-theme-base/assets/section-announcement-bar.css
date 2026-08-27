@@ -1,0 +1,126 @@
+/*
+  Announcement bar — design values: 40px tall, #000000 bar, all three labels Inter 12.5/normal.
+  Title 700/ls2 uppercase, message 400/ls0, link 600/ls0. Dawn's `h5` class is deliberately not
+  used on the message: it would impose the Archivo heading family, scale and 1.3 line height.
+*/
+
+.announcement-bar {
+  background: transparent;
+}
+
+.announcement-bar__message {
+  display: flex;
+  /* Column gap is the design's 12px; the smaller row gap only applies once narrow screens wrap. */
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 4rem;
+  margin: 0;
+  padding: 1.1rem 0;
+  color: rgb(var(--color-foreground));
+  font-family: var(--font-body-family);
+  font-style: var(--font-body-style);
+  font-size: 1.25rem;
+  line-height: normal;
+}
+
+.announcement-bar__title {
+  font-weight: 700;
+  letter-spacing: 0.2rem;
+  text-transform: uppercase;
+}
+
+.announcement-bar__body {
+  font-weight: var(--font-body-weight);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.announcement-bar__cta {
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Only the call to action underlines on interaction. */
+.announcement-bar__message,
+.announcement-bar__cta {
+  text-decoration: none;
+}
+
+.announcement-bar__cta:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+/* Dawn's `.slider-button:not([disabled]):hover` outranks a plain class pair, so match it here. */
+.announcement-bar-slider .slider-button,
+.announcement-bar-slider .slider-button:not([disabled]):hover {
+  color: #ffffff;
+}
+
+.announcement-bar-slider .slider-button .svg-wrapper {
+  width: 1.4rem;
+  height: 1.4rem;
+  transition: transform var(--duration-short) ease;
+}
+
+/* Scaling rather than resizing keeps the chevron from nudging the bar's layout. */
+.announcement-bar-slider .slider-button:hover .svg-wrapper,
+.announcement-bar-slider .slider-button:focus-visible .svg-wrapper {
+  transform: scale(1.15);
+}
+
+.utility-bar {
+  min-height: 4rem;
+  padding-inline: 2.8rem;
+  transition: background-color var(--duration-default) ease;
+}
+
+/*
+  Announcement types, design values: announcement #101012, sale #B91C1C, event #1D4ED8, vacation #B45309.
+  The bar paints the background, so the tone of whichever slide is currently visible wins.
+*/
+.utility-bar:has(.announcement-bar[data-tone='sale']),
+.utility-bar:has(.slideshow__slide[data-tone='sale'][aria-hidden='false']) {
+  background: #b91c1c;
+}
+
+.utility-bar:has(.announcement-bar[data-tone='event']),
+.utility-bar:has(.slideshow__slide[data-tone='event'][aria-hidden='false']) {
+  background: #1d4ed8;
+}
+
+.utility-bar:has(.announcement-bar[data-tone='vacation']),
+.utility-bar:has(.slideshow__slide[data-tone='vacation'][aria-hidden='false']) {
+  background: #b45309;
+}
+
+@media screen and (min-width: 990px) {
+  /* base.css gives .utility-bar__grid.page-width 3.2rem gutters; the design runs full width. */
+  .utility-bar > .utility-bar__grid.page-width {
+    max-width: none;
+    padding-inline: 0;
+  }
+}
+
+/* The design's 28px gutters plus Dawn's 44px chevrons left the message barely a third of a phone
+   screen, so it wrapped to three lines. Narrower here; the targets stay 36x44. */
+@media screen and (max-width: 749px) {
+  .utility-bar {
+    padding-inline: 0.8rem;
+  }
+
+  .utility-bar > .utility-bar__grid.page-width {
+    padding-inline: 0;
+  }
+
+  .announcement-bar .slider-button--prev,
+  .announcement-bar .slider-button--next {
+    min-width: 3.6rem;
+    margin: 0;
+    padding: 0;
+  }
+}

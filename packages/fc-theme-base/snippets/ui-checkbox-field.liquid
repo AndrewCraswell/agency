@@ -1,0 +1,34 @@
+{% comment %}
+  Renders a checkbox with a label, optional badge, and optional description.
+
+  Accepts:
+  - id: {String} Input id, used to associate the label. Required.
+  - label: {String} Visible label text.
+  - description: {String} Optional supporting text below the label.
+  - badge: {String} Optional badge text shown beside the label.
+  - checked: {Boolean} Initial checked state.
+  - disabled: {Boolean} Render as a locked, non-interactive option.
+  - action: {String} Optional token rendered as data-action for scripts to bind to.
+  - value: {String} Optional token rendered as data-value for scripts to read.
+{% endcomment %}
+
+<div class="ui-checkbox-field">
+  <input
+    type="checkbox"
+    class="ui-checkbox"
+    id="{{ id }}"
+    {% if checked %}checked{% endif %}
+    {% if disabled %}disabled{% endif %}
+    {% if action %}data-action="{{ action | escape }}"{% endif %}
+    {% if value %}data-value="{{ value | escape }}"{% endif %}
+  >
+  <label class="ui-checkbox-field__copy" for="{{ id }}">
+    <span class="ui-checkbox-field__label">
+      {{- label | escape -}}
+      {%- if badge %}{% render 'ui-badge', label: badge %}{% endif -%}
+    </span>
+    {%- if description -%}
+      <span class="ui-checkbox-field__description">{{ description | escape }}</span>
+    {%- endif -%}
+  </label>
+</div>

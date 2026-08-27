@@ -8,7 +8,6 @@ import MinimalScoringPrototype, {
   controllerSocket,
   prototypeInterfaces
 } from "./index.circuit.js"
-import { prototypeIndicators } from "./prototype-indicators.circuit.js"
 import { hub75Display, prototypeSounder } from "./prototype-peripherals.circuit.js"
 import { scoringConductorChannels } from "./scoring-conductor-interface.circuit.js"
 import { usbCPowerAssembly } from "./usb-c-power.circuit.js"
@@ -65,16 +64,12 @@ describe("minimal scoring prototype baseline", () => {
         "BZ_SCORING",
         "J_HUB75_DATA",
         "J_HUB75_POWER",
-        "LED_LEFT_RED",
-        "LED_LEFT_WHITE",
-        "LED_RIGHT_GREEN",
-        "LED_RIGHT_WHITE",
         "J_FAVERO_DATA_1",
         "J_FAVERO_DATA_2",
         "U_ETHERNET"
       ])
     )
-    expect(references).toHaveLength(51)
+    expect(references).toHaveLength(39)
     expect(references.length).toBeLessThan(minimalPrototypeBoard.maximumPopulatedParts)
     const cadComponents = circuit.filter(({ type }) => type === "cad_component")
     expect(cadComponents).toHaveLength(references.length)
@@ -114,35 +109,16 @@ describe("minimal scoring prototype baseline", () => {
         "J_CONTROLLER_LEFT.14:GPIO46",
         "J_CONTROLLER_RIGHT.14:GPIO0_BOOT",
         "J_CONTROLLER_RIGHT.15:GPIO45",
+        "J_CONTROLLER_RIGHT.17:GPIO47",
+        "J_CONTROLLER_RIGHT.19:GPIO20_USB_D_PLUS",
+        "J_CONTROLLER_RIGHT.20:GPIO19_USB_D_MINUS",
         "J_CONTROLLER_RIGHT.3:GPIO44_UART_RX",
+        "J_CONTROLLER_RIGHT.9:GPIO39",
         "U_ETHERNET.10:NC",
         "U_FAVERO_DATA_1.3:NC",
         "U_FAVERO_DATA_2.3:NC"
       ].sort()
     )
-  })
-
-  it("drives left red/white and right green/white scoring lamps from dedicated ESP32 GPIOs", () => {
-    expect(prototypeIndicators).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ color: "red", gpio: "GPIO39", role: "left on-target" }),
-        expect.objectContaining({ color: "white", gpio: "GPIO47", role: "left off-target" }),
-        expect.objectContaining({ color: "green", gpio: "GPIO19", role: "right on-target" }),
-        expect.objectContaining({ color: "white", gpio: "GPIO20", role: "right off-target" })
-      ])
-    )
-    const circuit = renderPrototype()
-    const components = circuit.filter(({ type }) => type === "source_component")
-    expect(components.find(({ name }) => name === "LED_LEFT_RED")).toMatchObject({
-      manufacturer_part_number: "WP7113ID"
-    })
-    expect(components.find(({ name }) => name === "LED_RIGHT_GREEN")).toMatchObject({
-      manufacturer_part_number: "WP7113GD"
-    })
-    expect(components.filter(({ manufacturer_part_number: part }) => part === "WP7113QWC/D")).toHaveLength(2)
-    expect(
-      components.filter(({ name }) => typeof name === "string" && name.includes("WHITE_LED_PULLDOWN"))
-    ).toHaveLength(2)
   })
 
   it("drives one real 3 V piezo sounder through the existing low-side switch", () => {
@@ -300,10 +276,6 @@ describe("minimal scoring prototype baseline", () => {
       position: { x: 67, y: 34.55, z: 0.7 },
       rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+"
-    })
-    expect(cadByReference.get("LED_LEFT_RED")).toMatchObject({
-      model_board_normal_direction: "x-",
-      model_origin_position: { x: 446.187838274769, y: 127.91233816873, z: -0.25 }
     })
     expect(cadByReference.get("J_WEAPON_LEFT")).toMatchObject({
       position: { x: -68, y: -15, z: 0.7 },

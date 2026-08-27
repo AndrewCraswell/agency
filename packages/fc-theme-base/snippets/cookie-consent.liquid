@@ -1,0 +1,111 @@
+{% comment %}
+  Renders the cookie consent banner and the preferences dialog.
+
+  Consent is applied through Shopify's Customer Privacy API, so the choices here
+  propagate to Shopify-managed pixels, audiences, and checkout. Disable the native
+  banner under Settings > Customer privacy so only one banner renders.
+{% endcomment %}
+
+{%- liquid
+  assign privacy_url = '/policies/privacy-policy'
+  if shop.privacy_policy != blank
+    assign privacy_url = shop.privacy_policy.url
+  endif
+-%}
+
+<cookie-consent class="cookie-consent">
+  <div class="cookie-consent__banner" role="region" aria-label="Cookie consent" data-consent-banner hidden>
+    <div class="cookie-consent__message">
+      <span class="cookie-consent__icon">
+        {%- render 'ui-icon', icon: 'shield-check' -%}
+      </span>
+
+      <div class="cookie-consent__copy">
+        <h2 class="cookie-consent__heading">You choose how we use cookies</h2>
+        <p class="cookie-consent__body">
+          Some cookies keep your cart and checkout working. Others let us and our partners, including
+          Shopify, show you ads and measure how the site performs. We won't use those unless you accept.
+          {% render 'ui-link', label: 'Privacy policy', url: privacy_url, icon: 'arrow-right' %}
+        </p>
+      </div>
+    </div>
+
+    <div class="cookie-consent__actions">
+      <p class="cookie-consent__error" role="status" data-consent-error hidden>
+        We couldn't save your choice. Try again.
+      </p>
+      <div class="cookie-consent__decisions">
+        {%- render 'ui-button', label: 'Decline', variant: 'secondary', action: 'consent-decline' -%}
+        {%- render 'ui-button', label: 'Accept', variant: 'primary', action: 'consent-accept' -%}
+      </div>
+      {%- render 'ui-button',
+        label: 'Manage preferences',
+        variant: 'ghost',
+        icon: 'sliders',
+        action: 'consent-manage'
+      -%}
+    </div>
+  </div>
+
+  <dialog class="cookie-consent__dialog" aria-labelledby="CookieConsentTitle" data-consent-dialog>
+    <div class="cookie-consent__dialog-header">
+      <div class="cookie-consent__copy">
+        <h2 class="cookie-consent__heading" id="CookieConsentTitle">Cookie preferences</h2>
+        <p class="cookie-consent__body">Choose which cookies we can use. You can change this anytime.</p>
+      </div>
+      {%- render 'ui-button', aria_label: 'Close', variant: 'icon', icon: 'close', action: 'consent-close' -%}
+    </div>
+
+    <ul class="cookie-consent__categories" role="list">
+      <li class="cookie-consent__category">
+        {%- render 'ui-checkbox-field',
+          id: 'CookieConsentRequired',
+          label: 'Required',
+          badge: 'Always on',
+          description: "Keeps sign-in, your cart, and checkout working. These can't be turned off.",
+          checked: true,
+          disabled: true
+        -%}
+      </li>
+      <li class="cookie-consent__category">
+        {%- render 'ui-checkbox-field',
+          id: 'CookieConsentPersonalization',
+          label: 'Personalization',
+          description: 'Remembers your choices so we can suggest gear that fits on your next visit.',
+          action: 'consent-category',
+          value: 'preferences'
+        -%}
+      </li>
+      <li class="cookie-consent__category">
+        {%- render 'ui-checkbox-field',
+          id: 'CookieConsentMarketing',
+          label: 'Marketing',
+          description: 'Lets us and our partners, including Shopify, show you our ads on other sites.',
+          action: 'consent-category',
+          value: 'marketing'
+        -%}
+      </li>
+      <li class="cookie-consent__category">
+        {%- render 'ui-checkbox-field',
+          id: 'CookieConsentAnalytics',
+          label: 'Analytics',
+          description: 'Shows us which pages and products people use, so we can improve them.',
+          action: 'consent-category',
+          value: 'analytics'
+        -%}
+      </li>
+    </ul>
+
+    <div class="cookie-consent__dialog-footer">
+      {%- render 'ui-link', label: 'Privacy policy', url: privacy_url -%}
+      <p class="cookie-consent__error" role="status" data-consent-error hidden>
+        We couldn't save your choice. Try again.
+      </p>
+      <div class="cookie-consent__decisions">
+        {%- render 'ui-button', label: 'Decline all', variant: 'secondary', action: 'consent-decline' -%}
+        {%- render 'ui-button', label: 'Accept all', variant: 'secondary', action: 'consent-accept' -%}
+        {%- render 'ui-button', label: 'Save preferences', variant: 'primary', action: 'consent-save' -%}
+      </div>
+    </div>
+  </dialog>
+</cookie-consent>

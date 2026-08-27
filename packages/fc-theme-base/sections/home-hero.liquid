@@ -1,0 +1,184 @@
+{{ 'section-home.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'fc-carousel.js' | asset_url }}" defer="defer"></script>
+
+<div class="fc-home">
+  <fc-carousel
+    class="fc-home__hero"
+    aria-roledescription="carousel"
+    aria-label="{{ section.settings.aria_label | escape }}"
+    {% if section.settings.autoplay %}
+      data-autoplay="{{ section.settings.autoplay_speed | times: 1000 }}"
+    {% endif %}
+  >
+    <div class="fc-home__hero-track" data-carousel-track>
+      {%- for block in section.blocks -%}
+        <div
+          class="fc-home__slide{% if forloop.first %} is-active{% endif %}"
+          data-carousel-slide
+          role="group"
+          aria-roledescription="slide"
+          aria-label="{{ forloop.index }} of {{ forloop.length }}"
+          {% unless forloop.first %}
+            aria-hidden="true"
+          {% endunless %}
+          {{ block.shopify_attributes }}
+        >
+          {%- if block.settings.image -%}
+            {%- liquid
+              assign slide_loading = 'lazy'
+              if forloop.first
+                assign slide_loading = 'eager'
+              endif
+            -%}
+            {{
+              block.settings.image
+              | image_url: width: 2880
+              | image_tag:
+                class: 'fc-home__hero-image',
+                widths: '750, 1100, 1440, 2160, 2880',
+                sizes: '100vw',
+                alt: block.settings.image.alt,
+                loading: slide_loading
+            }}
+          {%- else -%}
+            <span class="fc-home__hero-image fc-home__hero-image--placeholder"></span>
+          {%- endif -%}
+          <span class="fc-home__hero-overlay"></span>
+          <div class="fc-home__hero-content">
+            <div class="fc-home__inner">
+              <div class="fc-home__hero-inner">
+                <span class="fc-home__accent-bar"></span>
+                {%- if block.settings.eyebrow != blank -%}
+                  <p class="fc-home__eyebrow fc-home__eyebrow--light">{{ block.settings.eyebrow | escape }}</p>
+                {%- endif -%}
+                {%- if block.settings.heading != blank -%}
+                  {%- if forloop.first -%}
+                    <h1 class="fc-home__hero-headline">{{ block.settings.heading | escape }}</h1>
+                  {%- else -%}
+                    <p class="fc-home__hero-headline">{{ block.settings.heading | escape }}</p>
+                  {%- endif -%}
+                {%- endif -%}
+                {%- if block.settings.subheading != blank -%}
+                  <p class="fc-home__hero-subline">{{ block.settings.subheading | escape }}</p>
+                {%- endif -%}
+                {%- if block.settings.button_label != blank or block.settings.link_label != blank -%}
+                  <div class="fc-home__hero-buttons">
+                    {%- if block.settings.button_label != blank -%}
+                      <a class="fc-home__btn fc-home__btn--primary" href="{{ block.settings.button_url | default: '#' }}">
+                        {{- block.settings.button_label | escape -}}
+                      </a>
+                    {%- endif -%}
+                    {%- if block.settings.link_label != blank -%}
+                      <a class="fc-home__hero-textlink" href="{{ block.settings.link_url | default: '#' }}">
+                        {{ block.settings.link_label | escape }}
+                        {%- render 'fc-icon', icon: 'arrow-right', size: 16 -%}
+                      </a>
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+              </div>
+            </div>
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+
+    {%- if section.blocks.size > 1 -%}
+      <button class="fc-home__arrow fc-home__arrow--prev" type="button" data-carousel-prev aria-label="Previous slide">
+        {%- render 'fc-icon', icon: 'chevron-left', size: 22 -%}
+      </button>
+      <button class="fc-home__arrow fc-home__arrow--next" type="button" data-carousel-next aria-label="Next slide">
+        {%- render 'fc-icon', icon: 'chevron-right', size: 22 -%}
+      </button>
+      <div class="fc-home__hero-dots" role="tablist" aria-label="Choose slide">
+        {%- for block in section.blocks -%}
+          <button
+            class="fc-home__dot{% if forloop.first %} fc-home__dot--active{% endif %}"
+            type="button"
+            role="tab"
+            data-carousel-dot
+            aria-label="Slide {{ forloop.index }}"
+            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+          ></button>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </fc-carousel>
+</div>
+
+{% schema %}
+{
+  "name": "Home hero",
+  "tag": "section",
+  "max_blocks": 6,
+  "settings": [
+    {
+      "type": "text",
+      "id": "aria_label",
+      "label": "Accessible label",
+      "default": "Featured",
+      "info": "Describes the carousel to screen readers."
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "Rotate slides automatically",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "autoplay_speed",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "label": "Seconds between slides",
+      "default": 6
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Slide",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "eyebrow", "label": "Eyebrow" },
+        { "type": "text", "id": "heading", "label": "Heading" },
+        { "type": "text", "id": "subheading", "label": "Subheading" },
+        { "type": "header", "content": "Primary button" },
+        { "type": "text", "id": "button_label", "label": "Button label" },
+        { "type": "url", "id": "button_url", "label": "Button link" },
+        { "type": "header", "content": "Text link" },
+        { "type": "text", "id": "link_label", "label": "Link label" },
+        { "type": "url", "id": "link_url", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Home hero",
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": {
+            "eyebrow": "OLYMPIC FENCING GEAR",
+            "heading": "Shop",
+            "subheading": "Gear at competitive prices for competitive athletes",
+            "button_label": "Shop Now"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "eyebrow": "BEST-PRICED BLADES",
+            "heading": "Get a blade",
+            "subheading": "Best priced blades for beginners to elite athletes",
+            "button_label": "Weapons",
+            "link_label": "Blades"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,193 @@
+/* Shared UI primitives. Dawn's own .button, .badge, and .link are settings-driven
+   (min-width 12rem, 4.5rem height, themed radius) and are kept for Dawn's sections. */
+
+.ui-button {
+  display: inline-flex;
+  gap: 0.8rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 4.4rem;
+  padding: 0 2rem;
+  border: 0.1rem solid transparent;
+  border-radius: 0.4rem;
+  font-family: inherit;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ui-button--primary {
+  border-color: rgb(var(--color-foreground));
+  background-color: rgb(var(--color-foreground));
+  font-weight: 700;
+  color: rgb(var(--color-background));
+}
+
+.ui-button--secondary {
+  border-color: rgba(var(--color-foreground), 0.3);
+  background-color: transparent;
+  color: rgb(var(--color-foreground));
+}
+
+.ui-button--secondary:hover {
+  border-color: rgba(var(--color-foreground), 0.6);
+}
+
+.ui-button--ghost {
+  min-height: 4rem;
+  padding: 0 0.4rem;
+  background: none;
+  color: rgb(var(--color-foreground));
+}
+
+.ui-button--ghost:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+.ui-button--icon {
+  width: 3.6rem;
+  min-height: 3.6rem;
+  padding: 0;
+  background: none;
+  color: rgba(var(--color-foreground), 0.72);
+}
+
+.ui-button--icon:hover {
+  color: rgb(var(--color-foreground));
+}
+
+.ui-button--full-width {
+  width: 100%;
+}
+
+.ui-button--ghost .ui-icon {
+  opacity: 0.7;
+}
+
+.ui-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.ui-button--icon .ui-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.ui-link {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: rgb(var(--color-foreground));
+  text-decoration: none;
+}
+
+.ui-link:hover,
+.ui-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+/* Keeps the label and its arrow on one line when the link sits inside running text. */
+.ui-link--with-icon {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.ui-link--with-icon .ui-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.ui-badge {
+  padding: 0.1rem 0.8rem;
+  border-radius: 0.3rem;
+  background-color: rgba(var(--color-foreground), 0.06);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: rgba(var(--color-foreground), 0.72);
+}
+
+.ui-checkbox-field {
+  display: flex;
+  gap: 1.4rem;
+  align-items: flex-start;
+}
+
+/* Specificity must beat Dawn's base.css `input[type="checkbox"] { width: auto }`. */
+input[type='checkbox'].ui-checkbox {
+  display: grid;
+  flex: 0 0 auto;
+  place-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  border: 0.15rem solid rgba(var(--color-foreground), 0.35);
+  border-radius: 0.3rem;
+  background-color: rgb(var(--color-background));
+  appearance: none;
+  cursor: pointer;
+}
+
+input[type='checkbox'].ui-checkbox:checked {
+  border-color: rgb(var(--color-foreground));
+  background-color: rgb(var(--color-foreground));
+}
+
+input[type='checkbox'].ui-checkbox:checked::after {
+  width: 0.5rem;
+  height: 0.9rem;
+  margin-bottom: 0.25rem;
+  border: solid rgb(var(--color-background));
+  border-width: 0 0.2rem 0.2rem 0;
+  transform: rotate(45deg);
+  content: '';
+}
+
+input[type='checkbox'].ui-checkbox:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ui-checkbox-field__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+input[type='checkbox'].ui-checkbox:disabled + .ui-checkbox-field__copy {
+  cursor: default;
+}
+
+/* Line height matches the 2rem checkbox so both align on their first line. */
+.ui-checkbox-field__label {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  min-height: 2rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+  color: rgb(var(--color-foreground));
+}
+
+.ui-checkbox-field__description {
+  font-size: 1.3rem;
+  line-height: 1.55;
+  letter-spacing: 0;
+  color: rgba(var(--color-foreground), 0.72);
+}
+
+:is(.ui-button, .ui-link, .ui-checkbox):focus-visible {
+  outline: 0.2rem solid rgb(var(--color-foreground));
+  outline-offset: 0.3rem;
+}
