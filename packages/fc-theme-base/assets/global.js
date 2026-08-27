@@ -453,14 +453,7 @@ class MenuDrawer extends HTMLElement {
   onSummaryClick(event) {
     const summaryElement = event.currentTarget;
     const detailsElement = summaryElement.parentNode;
-    const parentMenuElement = detailsElement.closest('.has-submenu');
     const isOpen = detailsElement.hasAttribute('open');
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    function addTrapFocus() {
-      trapFocus(summaryElement.nextElementSibling, detailsElement.querySelector('button'));
-      summaryElement.nextElementSibling.removeEventListener('transitionend', addTrapFocus);
-    }
 
     if (detailsElement === this.mainDetailsToggle) {
       if (isOpen) event.preventDefault();
@@ -470,13 +463,11 @@ class MenuDrawer extends HTMLElement {
         document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight}px`);
       }
     } else {
+      // Submenus expand in place, so the parent list stays visible and focus is not
+      // trapped inside the panel the way a drill-down requires.
       setTimeout(() => {
         detailsElement.classList.add('menu-opening');
-        summaryElement.setAttribute('aria-expanded', true);
-        parentMenuElement && parentMenuElement.classList.add('submenu-open');
-        !reducedMotion || reducedMotion.matches
-          ? addTrapFocus()
-          : summaryElement.nextElementSibling.addEventListener('transitionend', addTrapFocus);
+        summaryElement.setAttribute('aria-expanded', !isOpen);
       }, 100);
     }
   }
@@ -564,11 +555,13 @@ class HeaderDrawer extends MenuDrawer {
     this.header = this.header || document.querySelector('.section-header');
     this.borderOffset =
       this.borderOffset || this.closest('.header-wrapper').classList.contains('header-wrapper--border-bottom') ? 1 : 0;
+    // `menu-open` collapses the promo and utility rows on phones, so the header has to
+    // be measured after the class lands or the drawer is offset by rows that are gone.
+    this.header.classList.add('menu-open');
     document.documentElement.style.setProperty(
       '--header-bottom-position',
       `${parseInt(this.header.getBoundingClientRect().bottom - this.borderOffset)}px`
     );
-    this.header.classList.add('menu-open');
 
     setTimeout(() => {
       this.mainDetailsToggle.classList.add('menu-opening');

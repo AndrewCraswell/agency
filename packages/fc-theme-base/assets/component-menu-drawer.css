@@ -200,3 +200,142 @@ details[open].menu-opening > .menu-drawer__submenu {
     transition: none !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Accordion drawer, per "Component/Header — Mobile Menu Open" (390) and
+   "Component/Header — Tablet Menu Open" (768). Dawn slides each level in as a
+   drill-down panel; both designs expand them in place instead.
+   --------------------------------------------------------------------------- */
+
+.js .menu-drawer__submenu,
+.js .menu-drawer__submenu .menu-drawer__submenu {
+  position: static;
+  transform: none;
+  visibility: visible;
+  overflow: visible;
+}
+
+/* A drill-down hides the list behind the panel; an accordion has to keep it. */
+.js .menu-drawer__navigation .submenu-open {
+  visibility: visible;
+}
+
+/* The back button and the drill-down arrow exist only for the sliding panel. */
+.menu-drawer__close-button,
+.menu-drawer__menu-item > .svg-wrapper:has(.icon-arrow) {
+  display: none;
+}
+
+.js .menu-drawer__menu-item .icon-caret {
+  position: static;
+  display: block;
+  width: 1.4rem;
+  height: 1.4rem;
+  transform: none;
+  transition: transform var(--duration-short) ease;
+}
+
+.menu-drawer details[open] > .menu-drawer__menu-item .icon-caret {
+  transform: rotate(180deg);
+}
+
+.menu-drawer__inner-submenu {
+  height: auto;
+  overflow: visible;
+}
+
+.menu-drawer__navigation {
+  padding: 1rem 0;
+}
+
+.js .menu-drawer__menu li {
+  margin-bottom: 0;
+}
+
+.menu-drawer__menu-item {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3.2rem;
+  font-family: var(--font-body-family);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: #101012;
+}
+
+.menu-drawer summary.menu-drawer__menu-item {
+  padding-right: 3.2rem;
+}
+
+/* Top level */
+.menu-drawer__navigation > .menu-drawer__menu > li > details > .menu-drawer__menu-item,
+.menu-drawer__navigation > .menu-drawer__menu > li > .menu-drawer__menu-item {
+  min-height: 5.8rem;
+  font-family: var(--font-heading-family);
+  font-size: 2.2rem;
+  font-weight: 500;
+}
+
+/* Second level */
+.menu-drawer__submenu .menu-drawer__menu-item {
+  min-height: 4.4rem;
+  padding-left: 4.8rem;
+}
+
+/* Third level */
+.menu-drawer__submenu .menu-drawer__submenu .menu-drawer__menu-item {
+  min-height: 4rem;
+  padding-left: 6.4rem;
+  color: #5a5a60;
+}
+
+/* The caret sits in a 30px outlined circle at the right edge of the row. */
+.menu-drawer__menu-item > .svg-wrapper {
+  position: static;
+  display: flex;
+  flex: 0 0 3rem;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border: 0.1rem solid #e3e3e0;
+  border-radius: 50%;
+  transform: none;
+}
+
+/* Rule between top-level groups. */
+.menu-drawer__navigation > .menu-drawer__menu > li + li::before {
+  content: '';
+  display: block;
+  height: 0.1rem;
+  margin: 1rem 3.2rem;
+  background: #e3e3e0;
+}
+
+.menu-drawer__utility-links {
+  border-top: 0.1rem solid #e3e3e0;
+  background-color: transparent;
+}
+
+.header--has-localizations .menu-drawer__utility-links,
+.header--has-social .menu-drawer__utility-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+  padding: 2rem 1.6rem;
+}
+
+.menu-drawer .list-social {
+  gap: 1.8rem;
+  margin-left: 0;
+}
+
+.menu-drawer .list-social__link {
+  padding: 0;
+}
+
+.menu-drawer .list-social__link .svg-wrapper {
+  width: 2rem;
+  height: 2rem;
+}

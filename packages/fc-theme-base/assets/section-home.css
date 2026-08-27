@@ -133,7 +133,8 @@
   font-size: 1.4rem;
 }
 
-/* Hero: 720px frame, content inset 362px from top, 620px column. */
+/* Hero: 720px frame, 620px column. The design insets the content 362px from the top, which
+   bottom-weights the taller built copy block, so it is centred instead. */
 .fc-home__hero {
   position: relative;
   display: block;
@@ -233,8 +234,10 @@
 
 .fc-home__hero-content {
   position: relative;
+  display: flex;
+  align-items: center;
   height: 100%;
-  padding: 36.2rem 9.6rem 0;
+  padding: 0 9.6rem;
 }
 
 .fc-home__hero-inner {
@@ -274,6 +277,7 @@
 
 .fc-home__hero-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.8rem;
   align-items: center;
 }
@@ -303,28 +307,38 @@
   color: #f7f7f5;
 }
 
-.fc-home__arrow {
+.fc-home__hero-controls {
   position: absolute;
-  top: 33.4rem;
+  right: 0;
+  bottom: 2.8rem;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  gap: 1.6rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.fc-home__arrow {
+  position: static;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 5.2rem;
-  height: 5.2rem;
+  width: 1rem;
+  height: 0.6rem;
   padding: 0;
-  border: 0.1rem solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
-  font-size: 1.8rem;
-  color: #f7f7f5;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  transition: background-color 200ms ease, border-color 200ms ease;
+  transition: color 200ms ease;
 }
 
 .fc-home__arrow:hover,
 .fc-home__arrow:focus-visible {
-  border-color: rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.6);
+  background: transparent;
+  color: #f7f7f5;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -333,23 +347,39 @@
   }
 }
 
-.fc-home__arrow--prev {
-  left: 2.4rem;
+.fc-home__arrow-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 0.6rem;
+  transition: transform var(--duration-short) ease;
 }
 
-.fc-home__arrow--next {
-  right: 2.4rem;
+.fc-home__arrow--prev .fc-home__arrow-icon {
+  transform: rotate(90deg);
+}
+
+.fc-home__arrow--next .fc-home__arrow-icon {
+  transform: rotate(-90deg);
+}
+
+.fc-home__arrow--prev:hover .fc-home__arrow-icon,
+.fc-home__arrow--prev:focus-visible .fc-home__arrow-icon {
+  transform: rotate(90deg) scale(1.15);
+}
+
+.fc-home__arrow--next:hover .fc-home__arrow-icon,
+.fc-home__arrow--next:focus-visible .fc-home__arrow-icon {
+  transform: rotate(-90deg) scale(1.15);
 }
 
 .fc-home__hero-dots {
-  position: absolute;
-  right: 0;
-  bottom: 2.8rem;
-  left: 0;
+  position: static;
   display: flex;
   gap: 0.8rem;
+  align-items: center;
   justify-content: center;
-  z-index: 1;
 }
 
 .fc-home__dot {
@@ -723,15 +753,19 @@
 
 .fc-home__trust {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1.6rem;
   padding-top: 2.2rem;
 }
 
+/* 17.6rem is the widest of the three at max-content, so they stay on one row while
+   the column can hold them and wrap only once it cannot. */
 .fc-home__trust-item {
   display: flex;
+  flex: 1 1 17.6rem;
   gap: 1.1rem;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .fc-home__trust-text {
@@ -952,6 +986,7 @@
 }
 
 .fc-home__post {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -1007,6 +1042,40 @@
   text-decoration: none;
 }
 
+.fc-home__post-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* One link per card, stretched over it so the image and excerpt open the article too. */
+.fc-home__post-title-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* The read affordance is a span, so it cannot pick up its own hover state. */
+.fc-home__post:hover .fc-home__post-link,
+.fc-home__post:focus-within .fc-home__post-link {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+/* Only here does the header float over the hero, so the copy centres in the area below it
+   rather than in the full frame, where the logo crowds it. The reserve tracks the header,
+   which loses the logo row below 1250px. */
+@media screen and (min-width: 990px) {
+  .fc-home__hero-content {
+    padding-top: 17rem;
+  }
+}
+
+@media screen and (min-width: 1250px) {
+  .fc-home__hero-content {
+    padding-top: 25rem;
+  }
+}
+
 @media screen and (max-width: 1199px) {
   .fc-home__section,
   .fc-home__why,
@@ -1028,20 +1097,11 @@
     width: 100%;
     height: 40rem;
   }
-
-  .fc-home__trust {
-    flex-direction: column;
-    gap: 1.6rem;
-  }
 }
 
 @media screen and (max-width: 989px) {
   .fc-home__hero {
     height: 60rem;
-  }
-
-  .fc-home__hero-content {
-    padding-top: 26rem;
   }
 
   .fc-home__picks,
@@ -1087,21 +1147,11 @@
   }
 
   .fc-home__hero-content {
-    padding: 22rem 2rem 0;
+    padding-inline: 2rem;
   }
 
   .fc-home__hero-headline {
     font-size: 4.4rem;
-  }
-
-  .fc-home__hero-buttons {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .fc-home__arrow {
-    display: none;
   }
 
   .fc-home__h44 {

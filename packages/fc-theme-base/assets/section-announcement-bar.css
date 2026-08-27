@@ -38,10 +38,19 @@
 }
 
 .announcement-bar__cta {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
   color: inherit;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
+}
+
+/* Scaled down from the 1.4rem default to sit with the bar's 1.25rem text. */
+.announcement-bar__cta .ui-icon {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 /* Only the call to action underlines on interaction. */

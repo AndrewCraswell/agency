@@ -92,7 +92,7 @@
 .newsletter--split .newsletter__capture {
   display: flex;
   flex-direction: column;
-  gap: 1.4rem;
+  gap: 1.2rem;
   width: 100%;
   margin: 0;
 }
@@ -133,12 +133,16 @@
 
 .newsletter--split .newsletter__wrapper .newsletter-form__field-wrapper {
   display: flex;
-  flex-direction: column;
+  flex-flow: row wrap;
   gap: 1.2rem;
+  align-items: center;
   max-width: none;
 }
 
+/* The huge grow factor keeps the spare width on the input, so the button stays at
+   its label width beside it but still fills the row once it wraps below it. */
 .newsletter--split .newsletter-form__field-wrapper .field {
+  flex: 999 1 22rem;
   min-width: 0;
   height: 5rem;
 }
@@ -170,8 +174,10 @@
 }
 
 .newsletter--split .newsletter-form__submit {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   min-height: 5rem;
+  padding-inline: 3.2rem;
   border-radius: 1.4rem;
   background: #f7f7f5;
   font-family: var(--font-heading-family);
@@ -196,7 +202,14 @@
   margin: 0;
 }
 
-@media screen and (min-width: 750px) {
+/* Matches the tablet footer's 32px gutter so the two sections align. */
+@media screen and (min-width: 750px) and (max-width: 1199px) {
+  .newsletter--split .newsletter__wrapper {
+    padding-inline: 3.2rem;
+  }
+}
+
+@media screen and (min-width: 1200px) {
   .newsletter--split .newsletter__wrapper {
     padding-inline: max(5rem, calc((100% - var(--page-width) + 10rem) / 2));
   }
@@ -210,14 +223,17 @@
     justify-content: space-between;
   }
 
+  /* The form keeps its width; the copy takes what is left so the row never
+     overflows between this breakpoint and the design's 1440 frame. */
   .newsletter--split .newsletter__copy {
-    flex: 0 0 52rem;
-    width: 52rem;
+    flex: 0 1 52rem;
+    min-width: 0;
   }
 
   .newsletter--split .newsletter__capture {
     flex: 0 0 46rem;
-    width: 46rem;
+    max-width: 100%;
+    gap: 1.4rem;
   }
 
   .newsletter--split .newsletter__wrapper h2 {
@@ -227,20 +243,5 @@
 
   .newsletter--split .newsletter__subheading {
     font-size: 1.6rem;
-  }
-
-  .newsletter--split .newsletter__wrapper .newsletter-form__field-wrapper {
-    flex-flow: row wrap;
-    align-items: center;
-  }
-
-  .newsletter--split .newsletter-form__field-wrapper .field {
-    flex: 1 1 0;
-  }
-
-  .newsletter--split .newsletter-form__submit {
-    flex: 0 0 auto;
-    width: auto;
-    padding-inline: 3.2rem;
   }
 }

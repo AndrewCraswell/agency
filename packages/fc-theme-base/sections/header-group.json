@@ -23,7 +23,7 @@
             "text_alignment": "center",
             "color_scheme": "scheme-footer",
             "link": "shopify://pages/price-match-guarantee",
-            "link_label": "Learn more \u2192"
+            "link_label": "Learn more"
           }
         },
         "announcement-bar-1": {
@@ -35,7 +35,7 @@
             "text_alignment": "center",
             "color_scheme": "scheme-footer",
             "link": "shopify://policies/refund-policy",
-            "link_label": "See policy \u2192"
+            "link_label": "See policy"
           }
         },
         "announcement-bar-3": {
@@ -47,7 +47,7 @@
             "text_alignment": "center",
             "color_scheme": "scheme-footer",
             "link": "shopify://collections/all",
-            "link_label": "Shop the sale \u2192"
+            "link_label": "Shop the sale"
           }
         },
         "announcement-bar-4": {
@@ -59,7 +59,7 @@
             "text_alignment": "center",
             "color_scheme": "scheme-footer",
             "link": "shopify://pages/about",
-            "link_label": "Event details \u2192"
+            "link_label": "Event details"
           }
         },
         "announcement-bar-5": {
@@ -71,7 +71,7 @@
             "text_alignment": "center",
             "color_scheme": "scheme-footer",
             "link": "shopify://policies/shipping-policy",
-            "link_label": "Learn more \u2192"
+            "link_label": "Learn more"
           }
         }
       },

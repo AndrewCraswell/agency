@@ -50,14 +50,18 @@
                     {{- article.published_at | date: '%b %-d, %Y' -}}
                   </time>
                 </p>
-                <h3 class="fc-home__post-title">{{ article.title }}</h3>
+                <h3 class="fc-home__post-title">
+                  <a class="fc-home__post-title-link" href="{{ article.url }}">{{ article.title }}</a>
+                </h3>
                 <p class="fc-home__post-excerpt">{{ article.excerpt_or_content | strip_html | truncatewords: 18 }}</p>
-                {%- render 'ui-link',
-                  label: section.settings.read_label,
-                  url: article.url,
-                  icon: 'arrow-right',
-                  class: 'fc-home__post-link'
-                -%}
+                {%- comment -%}
+                  The title link above already covers the card, so this repeats its
+                  destination and is presentational only.
+                {%- endcomment -%}
+                <span class="ui-link ui-link--with-icon fc-home__post-link" aria-hidden="true">
+                  {{- section.settings.read_label | escape -}}
+                  {%- render 'ui-icon', icon: 'arrow-right' -%}
+                </span>
               </div>
             </article>
           {%- endfor -%}

@@ -1,12 +1,10 @@
 {% doc %}
   Renders a header drawer menu for mobile and desktop.
 
-  @param {boolean} [show_country_selector] - Whether to render the country selector in the drawer.
-  @param {boolean} [show_language_selector] - Whether to render the language selector in the drawer.
   @param {boolean} [show_social_links] - Whether to render social links list in the drawer.
 
   @example
-  {% render 'header-drawer', show_language_selector: true %}
+  {% render 'header-drawer', show_social_links: true %}
 {% enddoc %}
 
 <header-drawer data-breakpoint="{% if section.settings.menu_type_desktop == 'drawer' %}desktop{% else %}tablet{% endif %}">
@@ -140,37 +138,18 @@
             </ul>
           </nav>
           <div class="menu-drawer__utility-links">
-            {%- if show_country_selector or show_language_selector -%}
-              <div class="menu-drawer__localization header-localization">
-                {%- if show_country_selector -%}
-                  <localization-form>
-                    {%- form 'localization', id: 'HeaderCountryMobileForm', class: 'localization-form' -%}
-                      <div>
-                        <h2 class="visually-hidden" id="HeaderCountryMobileLabel">
-                          {{ 'localization.country_label' | t }}
-                        </h2>
-                        {%- render 'country-localization', localPosition: 'HeaderCountryMobile' -%}
-                      </div>
-                    {%- endform -%}
-                  </localization-form>
-                {% endif %}
-
-                {%- if show_language_selector -%}
-                  <localization-form>
-                    {%- form 'localization', id: 'HeaderLanguageMobileForm', class: 'localization-form' -%}
-                      <div>
-                        <h2 class="visually-hidden" id="HeaderLanguageMobileLabel">
-                          {{ 'localization.language_label' | t }}
-                        </h2>
-                        {%- render 'language-localization', localPosition: 'HeaderLanguageMobile' -%}
-                      </div>
-                    {%- endform -%}
-                  </localization-form>
-                {%- endif -%}
-              </div>
-            {%- endif -%}
             {% if show_social_links %}
               <ul class="list list-social list-unstyled" role="list">
+                {%- if settings.social_instagram_link != blank -%}
+                  <li class="list-social__item">
+                    <a href="{{ settings.social_instagram_link }}" class="list-social__link link">
+                      <span class="svg-wrapper">
+                        {{- 'icon-instagram.svg' | inline_asset_content -}}
+                      </span>
+                      <span class="visually-hidden">{{ 'general.social.links.instagram' | t }}</span>
+                    </a>
+                  </li>
+                {%- endif -%}
                 {%- if settings.social_twitter_link != blank -%}
                   <li class="list-social__item">
                     <a href="{{ settings.social_twitter_link }}" class="list-social__link link">
@@ -198,16 +177,6 @@
                         {{- 'icon-pinterest.svg' | inline_asset_content -}}
                       </span>
                       <span class="visually-hidden">{{ 'general.social.links.pinterest' | t }}</span>
-                    </a>
-                  </li>
-                {%- endif -%}
-                {%- if settings.social_instagram_link != blank -%}
-                  <li class="list-social__item">
-                    <a href="{{ settings.social_instagram_link }}" class="list-social__link link">
-                      <span class="svg-wrapper">
-                        {{- 'icon-instagram.svg' | inline_asset_content -}}
-                      </span>
-                      <span class="visually-hidden">{{ 'general.social.links.instagram' | t }}</span>
                     </a>
                   </li>
                 {%- endif -%}

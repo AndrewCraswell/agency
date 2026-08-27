@@ -551,12 +551,21 @@
   align-items: flex-start;
   gap: 1rem;
   line-height: 1.5;
+  /* The email is one unbreakable token and would otherwise overflow a narrow column. */
+  overflow-wrap: anywhere;
 }
 
+/* The glyph is centred on the first line box, matching the design's 16x21 icon
+   frame. The extra 1px is an optical nudge: lucide marks sit on the cap band, so
+   without it they read high against lowercase text with descenders. */
 .footer-block__contact-icon {
+  display: flex;
   flex: 0 0 1.6rem;
-  height: 1.6rem;
-  margin-top: 0.2rem;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 2.1rem;
+  margin-top: 0.1rem;
 }
 
 /* `<address>` is italic by default in every browser. */
@@ -664,34 +673,6 @@
   }
 }
 
-/* Tablet and compact desktop: brand becomes its own section above the navigation. */
-@media screen and (min-width: 750px) and (max-width: 1199px) {
-  .footer__blocks-wrapper.grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4rem 4.8rem;
-    margin-left: 0;
-  }
-
-  .footer__blocks-wrapper .footer-block.grid__item {
-    width: 100%;
-    max-width: none;
-    padding-left: 0;
-  }
-
-  .footer__blocks-wrapper .footer-block.footer-block--brand-information {
-    grid-column: 1 / -1;
-    padding-bottom: 4rem;
-    border-bottom: 0.1rem solid rgba(var(--color-foreground), 0.12);
-  }
-}
-
-@media screen and (min-width: 990px) and (max-width: 1199px) {
-  .footer__blocks-wrapper.grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 .footer-block--brand-information .footer-block__details-content {
   margin-bottom: 0;
 }
@@ -762,40 +743,212 @@
   }
 }
 
-/* Mobile: blocks stack as full-width sections divided by hairlines.
+/* Mirrors "Component/Footer — Tablet" (768) and "Component/Footer — Mobile" (390).
    Must stay last in this file to win over Dawn's earlier mobile rules. */
-@media screen and (max-width: 749px) {
-  .footer-block.grid__item {
-    margin: 0;
-    padding: 2.8rem 0;
-    border-top: 0.1rem solid rgba(var(--color-foreground), 0.12);
+@media screen and (max-width: 1199px) {
+  /* Both designs inset the section by 48/32. The section's own padding rule is a
+     single class printed after this file, so an element selector is needed. */
+  footer.footer {
+    padding-top: 4.8rem;
+    padding-bottom: 3.2rem;
   }
 
-  .footer-block.grid__item:first-child {
-    padding-top: 0;
-    border-top: 0;
+  .footer .page-width {
+    padding-inline: 3.2rem;
   }
 
   .footer__content-top {
-    padding-left: 2rem;
-    padding-right: 2rem;
+    padding-bottom: 0;
   }
 
-  .footer__content-bottom-wrapper,
+  /* Menus and contact share a wrapping row: four across when there is room, then
+     three, then two, with the brand always on its own row. Contact carries denser
+     content, so it takes a larger basis and a larger share of the spare space. */
+  .footer__blocks-wrapper.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.8rem 2.4rem;
+    margin-left: 0;
+  }
+
+  /* Dawn sizes `.grid__item` with an explicit percentage width, which would fight
+     the flex basis below. */
+  .footer-block.grid__item {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .footer-block--menu {
+    order: 1;
+    flex: 1 1 12rem;
+  }
+
+  /* 19rem is the widest contact line ("Mon-Fri, 9am-6pm PDT") plus the icon and its
+     gap, so the column drops to a row of its own rather than breaking its values. */
+  .footer-block--contact {
+    order: 2;
+    flex: 1.6 1 19rem;
+  }
+
+  /* Full-bleed rule; the row gap supplies the 28px above and below it. */
+  .footer__blocks-wrapper.grid::after {
+    content: '';
+    order: 3;
+    flex: 0 0 100%;
+    height: 0.1rem;
+    background: rgba(var(--color-foreground), 0.12);
+  }
+
+  /* Capped so the tagline keeps a readable measure instead of running the full
+     width of the row; matches the ~240px copy column in the designs. */
+  .footer-block--brand-information.grid__item {
+    order: 4;
+    flex: 0 0 100%;
+    max-width: 36rem;
+  }
+
+  /* Columns can be narrow, so the longest labels wrap instead of overflowing. */
+  .footer-block__details-content .list-menu__item--link {
+    white-space: normal;
+  }
+
+  .footer-block__heading {
+    margin-bottom: 1.4rem;
+  }
+
+  .footer-block__details-content {
+    margin-bottom: 0;
+  }
+
+  .footer-block__details-content > li {
+    padding-bottom: 1.4rem;
+  }
+
+  .footer-block__details-content > li:last-child {
+    padding-bottom: 0;
+  }
+
+  /* The design sets a 17px line box on these 14px labels; the inherited 1.8 body
+     line-height would make every row 25px instead. */
+  .footer-block__details-content .list-menu__item--link {
+    display: block;
+    line-height: 1.2;
+  }
+
+  /* The logo moves beside the tagline and social row instead of sitting above them. */
+  .footer-block__brand-info {
+    display: grid;
+    grid-template-columns: 9.6rem minmax(0, 1fr);
+    column-gap: 1.6rem;
+    row-gap: 1.4rem;
+    align-items: start;
+  }
+
+  .footer-block__brand-info .footer-block__image-wrapper {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    width: 9.6rem;
+  }
+
+  .footer-block__brand-info .rte {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .footer-block__brand-info .footer__list-social.list-social {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .footer__content-bottom {
+    margin-top: 2.8rem;
+    padding-top: 2.8rem;
+  }
+
+  .footer__copyright {
+    margin-top: 0;
+  }
+
+  /* The designs draw a 268px payment row: 38px marks on an 8px rhythm. */
+  .footer__payment .list-payment {
+    gap: 0.8rem;
+    margin: 0;
+    padding-top: 0;
+  }
+
+  .footer__payment .list-payment__item {
+    padding: 0;
+  }
+}
+
+/* Tablet keeps the desktop bottom row: copyright left, payment marks right. */
+@media screen and (min-width: 750px) and (max-width: 1199px) {
+  .footer__content-bottom {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2.4rem;
+    padding-inline: 3.2rem;
+  }
+
+  .footer__content-bottom > .footer__content-bottom-wrapper {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding-inline: 0;
+  }
+
   .footer__content-bottom-wrapper--center {
-    align-items: flex-start;
-    justify-content: flex-start;
-    row-gap: 1.8rem;
+    flex-direction: row;
   }
 
-  .footer__column--info {
-    align-items: flex-start;
-    padding-left: 0;
-    padding-right: 0;
+  .footer__payment {
+    margin-top: 0;
   }
 
   .footer__copyright {
     justify-content: flex-start;
     text-align: left;
+  }
+}
+
+/* Mobile narrows the gutter; the column grid above handles the rest. */
+@media screen and (max-width: 749px) {
+  .footer .page-width {
+    padding-inline: 2rem;
+  }
+
+  .footer__content-bottom-wrapper,
+  .footer__content-bottom-wrapper--center {
+    align-items: center;
+    justify-content: center;
+    row-gap: 1.8rem;
+  }
+
+  .footer__column--info {
+    align-items: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Dawn pads this column whenever the localization block is empty, which it is here. */
+  .footer__localization:empty + .footer__column {
+    padding-top: 0;
+  }
+
+  .footer__payment .list-payment {
+    justify-content: center;
+  }
+
+  .footer__copyright {
+    justify-content: center;
+    margin-top: 1.8rem;
+    text-align: center;
   }
 }

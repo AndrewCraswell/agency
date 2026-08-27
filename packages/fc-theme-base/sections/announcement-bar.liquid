@@ -51,6 +51,7 @@
                 class="announcement-bar__cta focus-inset"
               >
                 {{- section.blocks.first.settings.link_label | escape -}}
+                {%- render 'ui-icon', icon: 'arrow-right' -%}
               </a>
             {%- endif -%}
           </p>
@@ -113,6 +114,7 @@
                           class="announcement-bar__cta focus-inset"
                         >
                           {{- block.settings.link_label | escape -}}
+                          {%- render 'ui-icon', icon: 'arrow-right' -%}
                         </a>
                       {%- endif -%}
                     </p>

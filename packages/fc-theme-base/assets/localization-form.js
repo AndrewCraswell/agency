@@ -110,6 +110,15 @@ if (!customElements.get('localization-form')) {
       }
 
       openSelector() {
+        // The mobile sheet is fixed, so it needs the header's live bottom edge. Same
+        // variable, and same source element, as HeaderDrawer uses.
+        const header = document.querySelector('.section-header');
+        if (header) {
+          document.documentElement.style.setProperty(
+            '--header-bottom-position',
+            `${Math.round(header.getBoundingClientRect().bottom)}px`
+          );
+        }
         this.elements.button.focus();
         this.elements.panel.toggleAttribute('hidden');
         this.elements.button.setAttribute(

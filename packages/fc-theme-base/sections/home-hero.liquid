@@ -84,23 +84,29 @@
     </div>
 
     {%- if section.blocks.size > 1 -%}
-      <button class="fc-home__arrow fc-home__arrow--prev" type="button" data-carousel-prev aria-label="Previous slide">
-        {%- render 'fc-icon', icon: 'chevron-left', size: 22 -%}
-      </button>
-      <button class="fc-home__arrow fc-home__arrow--next" type="button" data-carousel-next aria-label="Next slide">
-        {%- render 'fc-icon', icon: 'chevron-right', size: 22 -%}
-      </button>
-      <div class="fc-home__hero-dots" role="tablist" aria-label="Choose slide">
-        {%- for block in section.blocks -%}
-          <button
-            class="fc-home__dot{% if forloop.first %} fc-home__dot--active{% endif %}"
-            type="button"
-            role="tab"
-            data-carousel-dot
-            aria-label="Slide {{ forloop.index }}"
-            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
-          ></button>
-        {%- endfor -%}
+      <div class="fc-home__hero-controls">
+        <button class="fc-home__arrow fc-home__arrow--prev" type="button" data-carousel-prev aria-label="Previous slide">
+          <span class="fc-home__arrow-icon svg-wrapper">
+            {{- 'icon-caret.svg' | inline_asset_content -}}
+          </span>
+        </button>
+        <div class="fc-home__hero-dots" role="tablist" aria-label="Choose slide">
+          {%- for block in section.blocks -%}
+            <button
+              class="fc-home__dot{% if forloop.first %} fc-home__dot--active{% endif %}"
+              type="button"
+              role="tab"
+              data-carousel-dot
+              aria-label="Slide {{ forloop.index }}"
+              aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+            ></button>
+          {%- endfor -%}
+        </div>
+        <button class="fc-home__arrow fc-home__arrow--next" type="button" data-carousel-next aria-label="Next slide">
+          <span class="fc-home__arrow-icon svg-wrapper">
+            {{- 'icon-caret.svg' | inline_asset_content -}}
+          </span>
+        </button>
       </div>
     {%- endif -%}
   </fc-carousel>

@@ -10,16 +10,6 @@
 {% endcomment %}
 
 <ul class="list-unstyled list-social{% if class %} {{ class}}{% endif %}" role="list">
-  {%- if settings.social_facebook_link != blank -%}
-    <li class="list-social__item">
-      <a href="{{ settings.social_facebook_link }}" class="link list-social__link">
-        <span class="svg-wrapper">
-          {{- 'icon-facebook.svg' | inline_asset_content -}}
-        </span>
-        <span class="visually-hidden">{{ 'general.social.links.facebook' | t }}</span>
-      </a>
-    </li>
-  {%- endif -%}
   {%- if settings.social_instagram_link != blank -%}
     <li class="list-social__item">
       <a href="{{ settings.social_instagram_link }}" class="link list-social__link">
@@ -27,6 +17,16 @@
           {{- 'icon-instagram.svg' | inline_asset_content -}}
         </span>
         <span class="visually-hidden">{{ 'general.social.links.instagram' | t }}</span>
+      </a>
+    </li>
+  {%- endif -%}
+  {%- if settings.social_facebook_link != blank -%}
+    <li class="list-social__item">
+      <a href="{{ settings.social_facebook_link }}" class="link list-social__link">
+        <span class="svg-wrapper">
+          {{- 'icon-facebook.svg' | inline_asset_content -}}
+        </span>
+        <span class="visually-hidden">{{ 'general.social.links.facebook' | t }}</span>
       </a>
     </li>
   {%- endif -%}
