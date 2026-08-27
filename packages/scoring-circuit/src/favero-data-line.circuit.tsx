@@ -146,8 +146,8 @@ export function FaveroDataLine(): ReactElement {
             />
             <resistor
               name={inputResistor}
-              manufacturerPartNumber="RC0805FR-07330RL"
-              resistance="330ohm"
+              manufacturerPartNumber="RC0805FR-0782RL"
+              resistance="82ohm"
               tolerance="1%"
               footprint="0805"
               pcbX={x}

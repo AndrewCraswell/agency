@@ -1,0 +1,29 @@
+FA-05 DATA-LINE transmitter
+* The 4N32M model uses 500 percent minimum CTR at 10 mA and a conservative 100 us release constant.
+* The external repeater is represented as a 15 V loop through 470 ohms plus the board's 82 ohm resistor.
+
+VGPIO gpio_source 0 PULSE(0 3.3 1u 1u 1u 200u 416.67u)
+ROUT gpio_source gpio 40
+RINPUT gpio led_anode 82
+DLED led_anode 0 OPTO_LED
+.model OPTO_LED D (IS=1e-18 N=1.8 RS=5 CJO=150p)
+
+BTARGET target 0 V={min(1,max(i(DLED)/6m,0))}
+RRELEASE target opto_state 100k
+CRELEASE opto_state 0 1n
+VLOOP loop_supply 0 15
+REXTERNAL loop_supply external_line 470
+RLOOP external_line collector 82
+BPHOTO collector 0 I={min(30m*V(opto_state),max(V(collector)/50,0))}
+
+.control
+set noaskquit
+tran 0.5u 833.34u
+meas tran opto_led_current AVG i(V_DLED) FROM=100u TO=190u
+meas tran loop_current_on MIN i(VLOOP) FROM=150u TO=195u
+meas tran loop_voltage_on MAX v(collector) FROM=150u TO=195u
+meas tran loop_voltage_off MIN v(collector) FROM=400u TO=415u
+meas tran loop_release_time TRIG v(gpio_source) VAL=1.65 FALL=1 TARG v(collector) VAL=7.5 RISE=1
+quit
+.endc
+.end

@@ -1714,9 +1714,9 @@
     "source_component_id": "source_component_29",
     "ftype": "simple_resistor",
     "name": "R_FAVERO_DATA_1_INPUT",
-    "manufacturer_part_number": "RC0805FR-07330RL",
-    "resistance": 330,
-    "display_resistance": "330Ω",
+    "manufacturer_part_number": "RC0805FR-0782RL",
+    "resistance": 82,
+    "display_resistance": "82Ω",
     "are_pins_interchangeable": true,
     "source_group_id": "source_group_3"
   },
@@ -1950,9 +1950,9 @@
     "source_component_id": "source_component_35",
     "ftype": "simple_resistor",
     "name": "R_FAVERO_DATA_2_INPUT",
-    "manufacturer_part_number": "RC0805FR-07330RL",
-    "resistance": 330,
-    "display_resistance": "330Ω",
+    "manufacturer_part_number": "RC0805FR-0782RL",
+    "resistance": 82,
+    "display_resistance": "82Ω",
     "are_pins_interchangeable": true,
     "source_group_id": "source_group_3"
   },
@@ -6086,7 +6086,7 @@
     "source_component_id": "source_component_29",
     "is_box_with_pins": true,
     "symbol_name": "boxresistor_up",
-    "symbol_display_value": "330Ω",
+    "symbol_display_value": "82Ω",
     "schematic_group_id": "schematic_group_3"
   },
   {
@@ -6287,7 +6287,7 @@
     "source_component_id": "source_component_35",
     "is_box_with_pins": true,
     "symbol_name": "boxresistor_up",
-    "symbol_display_value": "330Ω",
+    "symbol_display_value": "82Ω",
     "schematic_group_id": "schematic_group_3"
   },
   {

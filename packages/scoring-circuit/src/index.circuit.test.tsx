@@ -167,6 +167,14 @@ describe("minimal scoring prototype baseline", () => {
     const components = renderPrototype().filter(({ type }) => type === "source_component")
     expect(components.filter(({ manufacturer_part_number: part }) => part === "4N32M")).toHaveLength(2)
     expect(components.filter(({ manufacturer_part_number: part }) => part === "5520250-2")).toHaveLength(2)
+    expect(
+      components
+        .filter(({ name }) => name === "R_FAVERO_DATA_1_INPUT" || name === "R_FAVERO_DATA_2_INPUT")
+        .map(({ manufacturer_part_number: part, resistance }) => ({ part, resistance }))
+    ).toEqual([
+      { part: "RC0805FR-0782RL", resistance: 82 },
+      { part: "RC0805FR-0782RL", resistance: 82 }
+    ])
     expect(components.some(({ manufacturer_part_number: part }) => part === "AM26LV31EIPWR")).toBe(false)
 
     const circuit = renderPrototype()

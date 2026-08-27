@@ -39,7 +39,6 @@ const estimatedUnitPriceUsdByMpn = {
   "RC0603FR-07100KL": [0.1, "https://www.digikey.com/en/products/detail/726889"],
   "RC0603FR-07100RL": [0.1, "https://www.digikey.com/en/products/result?keywords=RC0603FR-07100RL"],
   "RC0603FR-071KL": [0.1, "https://www.digikey.com/en/products/result?keywords=RC0603FR-071KL"],
-  "RC0805FR-07330RL": [0.1, "https://www.digikey.com/en/products/result?keywords=RC0805FR-07330RL"],
   "RC0805FR-0733RL": [0.1, "https://www.digikey.com/en/products/result?keywords=RC0805FR-0733RL"],
   "RC0805FR-07470RL": [0.1, "https://www.digikey.com/en/products/result?keywords=RC0805FR-07470RL"],
   "RC0805FR-07680KL": [0.1, "https://www.digikey.com/en/products/result?keywords=RC0805FR-07680KL"],

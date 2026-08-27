@@ -46,8 +46,9 @@ The initial schematic contains only these functional blocks:
 - One TDK PS1240P02BT 4 kHz piezo sounder, driven from 3.3 V through one low-side transistor.
 - Two board-edge 6P4C RJ14 FA-05 DATA-LINE outputs. The exact TE 5520250-2 models are upright, open over the rear
   board edge, and use the manufacturer drawing's 16.13 mm housing height above the PCB. The rendered housing remains
-  above the carrier while only its contacts and board locks pass through it. Each socket has its own 4N32 optocoupler, 82 ohm loop resistor, 680 kohm base
-  resistor, and protection diode, matching the documented Favero 20 mA current-loop topology without coupling the two
+  above the carrier while only its contacts and board locks pass through it. Each socket has its own 4N32 optocoupler,
+  82 ohm LED resistor, 82 ohm loop resistor, 680 kohm base resistor, and protection diode, matching the documented
+  Favero 20 mA current-loop topology without coupling the two
   repeater-supplied 10-15 V loops together. GPIO43 supplies one 2,400-baud 8N1 UART stream to both optocoupler inputs.
   These are not Ethernet, RS-422, or FPA DB9 ports and cannot affect scoring decisions.
 - An Adafruit 5807 USB-C PD daughterboard fixed at 20 V and a socketed Pololu D36V50F5 regulator supplying 5 V. Both
@@ -129,9 +130,14 @@ Do not start placement or routing until the root agent has reviewed the complete
 The board is ready to order after basic electrical review, footprint inspection, PCB ERC/DRC, and visual inspection of
 Gerbers and drill files. Production qualification is not part of this gate.
 
-The generated prototype BOM prices all 39 populated parts from 25 orderable line items. Its 2026-08-27 quantity-one
+The generated prototype BOM prices all 39 populated parts from 24 orderable line items. Its 2026-08-27 quantity-one
 estimate is $104.14 before the bare PCB, assembly, shipping, tax, and off-board equipment. Prices and source links are
 included in both CSV and JSON BOM exports and must be refreshed when an order is placed.
+
+The carrier's analog behavior is checked by the ngspice suite documented in
+[`electrical-simulation.md`](electrical-simulation.md). All five focused models run through the package `simulate`
+command. Simulation constrains the selected panel to a 4.2 A modeled load and does not replace measurement on the
+assembled prototype.
 
 The following off-board selections remain before the complete prototype system can be assembled:
 

@@ -1,0 +1,16 @@
+TSOP38438 receiver supply filter
+* The receiver load steps from its nominal current to a conservative 1.5 mA burst.
+
+V3V3 app_3v3 0 3.3
+RFILTER app_3v3 receiver_vcc 100
+CFILTER receiver_vcc 0 100n
+IRECEIVER receiver_vcc 0 PWL(0 0.35m 1m 0.35m 1.001m 1.5m 2m 1.5m 2.001m 0.35m 3m 0.35m)
+
+.control
+set noaskquit
+tran 0.5u 3m
+meas tran receiver_voltage_min MIN v(receiver_vcc) FROM=0.1m TO=3m
+meas tran receiver_voltage_max MAX v(receiver_vcc) FROM=0.1m TO=3m
+quit
+.endc
+.end

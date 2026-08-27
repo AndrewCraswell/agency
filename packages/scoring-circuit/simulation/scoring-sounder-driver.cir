@@ -1,0 +1,22 @@
+TDK scoring sounder low-side driver
+* The piezoelectric sounder is represented by a 15 nF capacitive load at 4 kHz.
+
+V3V3 app_3v3 0 3.3
+VGPIO gpio_source 0 PULSE(0 3.3 1u 100n 100n 124.9u 250u)
+RGATE gpio_source gate 1k
+RPULLDOWN gate 0 100k
+CGATE gate 0 100p
+CSOUNDER app_3v3 drain 15n
+RLEAK app_3v3 drain 100k
+MSWITCH drain gate 0 0 BSS138
+.model BSS138 NMOS (LEVEL=1 VTO=1.2 KP=0.2 LAMBDA=0.02 RD=1 RS=1 CGS=40p CGD=10p)
+
+.control
+set noaskquit
+tran 20n 500u
+meas tran sounder_switch_on_max MAX v(drain) FROM=20u TO=120u
+meas tran sounder_gate_off_max MAX v(gate) FROM=150u TO=240u
+meas tran gpio_drive_current_peak MIN i(VGPIO) FROM=0 TO=500u
+quit
+.endc
+.end

@@ -30,6 +30,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install --yes ngspice
       # Storybook browser tests run through Playwright.
       - run: pnpm --filter web exec playwright install --with-deps chromium
       - run: pnpm verify

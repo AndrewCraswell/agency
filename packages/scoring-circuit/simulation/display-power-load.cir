@@ -1,0 +1,23 @@
+Combined 5 V board and HUB75 load
+* The purchased regulator is a 5 V behavioral source with 20 milliohm output impedance.
+* The panel load is limited to 4.2 A so the complete modeled board remains below 5.5 A.
+
+VREG regulator 0 5
+RREG regulator board_5v 20m
+CBULK board_5v 0 22u
+CBYPASS board_5v 0 100n
+RBOARD board_5v connector 15m
+RCONNECTOR connector harness 10m
+RHARNESS harness panel_5v 30m
+IBOARD board_5v 0 PWL(0 0.7 1m 0.7 1.001m 0.7 6m 0.7)
+IPANEL panel_5v 0 PWL(0 0.2 1m 0.2 1.001m 4.2 5m 4.2 5.001m 0.2 6m 0.2)
+
+.control
+set noaskquit
+tran 1u 6m
+meas tran board_voltage_min MIN v(board_5v) FROM=1.1m TO=4.9m
+meas tran panel_voltage_min MIN v(panel_5v) FROM=1.1m TO=4.9m
+meas tran regulator_current_peak MIN i(VREG) FROM=1.1m TO=4.9m
+quit
+.endc
+.end

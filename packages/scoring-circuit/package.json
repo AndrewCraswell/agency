@@ -14,6 +14,7 @@
     "dev": "tsx --watch src/build.ts",
     "pcb:export": "tsx src/export-pcb.ts",
     "pcb:route": "tsx src/export-pcb.ts --route",
+    "simulate": "tsx src/run-electrical-simulations.ts",
     "lint": "oxlint --max-warnings=0",
     "test": "vitest run"
   },

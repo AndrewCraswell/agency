@@ -1,0 +1,39 @@
+ESP32 scoring conductor interface
+* ESP32-S3 limits: VIH >= 0.75*VDD, VIL <= 0.25*VDD, CIN 2 pF.
+* GPIO output impedance is conservatively represented as 40 ohms.
+
+VDRIVE33 drive33 0 PULSE(0 3.3 1u 50n 50n 10u 20u)
+ROUT33 drive33 gpio33 40
+RSOURCE33 gpio33 contact33 33
+RCABLE33 contact33 line33 2
+RRECEIVE33 line33 sense33 33
+CINPUT33 sense33 0 2p
+RLEAK33 sense33 0 66meg
+
+VDRIVE470 drive470 0 PULSE(0 3.3 1u 50n 50n 10u 20u)
+ROUT470 drive470 gpio470 40
+RSOURCE470 gpio470 contact470 470
+RCABLE470 contact470 line470 2
+RRECEIVE470 line470 sense470 470
+CINPUT470 sense470 0 2p
+RLEAK470 sense470 0 66meg
+
+VFAULT fault_supply 0 3.3
+RFAULT_SOURCE fault_supply fault_high 40
+RFAULT_SERIES_HIGH fault_high fault_line 33
+RFAULT_SERIES_LOW fault_line fault_low 33
+RFAULT_SINK fault_low 0 40
+
+.control
+set noaskquit
+tran 20n 25u
+meas tran sense33_high MIN v(sense33) FROM=2u TO=10u
+meas tran sense33_low MAX v(sense33) FROM=12u TO=19u
+meas tran sense470_high MIN v(sense470) FROM=2u TO=10u
+meas tran sense470_low MAX v(sense470) FROM=12u TO=19u
+meas tran sense33_rise TRIG v(drive33) VAL=1.65 RISE=1 TARG v(sense33) VAL=2.475 RISE=1
+meas tran sense470_rise TRIG v(drive470) VAL=1.65 RISE=1 TARG v(sense470) VAL=2.475 RISE=1
+meas tran opposed_gpio_current AVG i(VFAULT) FROM=2u TO=20u
+quit
+.endc
+.end
