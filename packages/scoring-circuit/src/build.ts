@@ -1,10 +1,6 @@
-import { mkdir, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { renderScene } from "@tscircuit/simple-3d-svg"
-import { convertCircuitJsonToGltf } from "circuit-json-to-gltf"
-import { convertCircuitJsonToSimple3dScene } from "circuit-json-to-simple-3d"
-import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
-import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
 import {
@@ -17,6 +13,15 @@ import ScoringCircuit from "./index.circuit.js"
 import { createPrototypeOrderFiles } from "./prototype-order-files.js"
 
 const simulatorPresentationUrl = process.env.SCORING_SIMULATOR_ORIGIN ?? "../simulator/"
+const outputDirectory = fileURLToPath(new URL("../dist/", import.meta.url))
+const outputPath = (filename: string) => join(outputDirectory, filename)
+
+await mkdir(outputDirectory, { recursive: true })
+await Promise.all(
+  ["board-3d.svg", "board.glb", "interactive-3d-viewer.js", "pcb.svg", "schematic.svg"].map((filename) =>
+    rm(outputPath(filename), { force: true })
+  )
+)
 
 const circuit = new Circuit()
 circuit.pcbRoutingDisabled = false
@@ -67,8 +72,8 @@ console.info(
     `${routing.unroutedConnectionCount} unresolved; ${routing.routingErrorCount} routing/DRC errors`
 )
 if (routing.routingErrorCount > 0) {
-  await mkdir("dist", { recursive: true })
-  await writeFile("dist/routing-diagnostic.json", JSON.stringify(circuitJson, null, 2))
+  await mkdir(outputDirectory, { recursive: true })
+  await writeFile(outputPath("routing-diagnostic.json"), JSON.stringify(circuitJson, null, 2))
   const examples = circuitJson
     .filter(isRoutingError)
     .slice(0, 30)
@@ -91,40 +96,39 @@ const estimatedBomTotalUsd = orderFiles.bom.reduce(
   0
 )
 const renderedCadComponentCount = circuitJson.filter((element) => element.type === "cad_component").length
-const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
-  backgroundColor: "#101820",
-  includeVersion: true,
-  matchBoardAspectRatio: true,
-  shouldDrawErrors: true
-})
-const schematicSvg = convertCircuitJsonToSchematicSvg(circuitJson, { includeVersion: true })
-const threeDimensionalScene = await convertCircuitJsonToSimple3dScene(circuitJson, {
-  anglePreset: "right-raised",
-  defaultZoomMultiplier: 1.6
-})
-const threeDimensionalSvg = await renderScene(threeDimensionalScene, {
-  backgroundColor: "#101820",
-  height: 900,
-  width: 1440
-})
-const boardGlb = await convertCircuitJsonToGltf(circuitJson, {
-  boardTextureResolution: 1024,
-  format: "glb",
-  includeModels: true
-})
-if (!(boardGlb instanceof ArrayBuffer)) throw new Error("The interactive 3D board model was not generated")
-const embeddedBoardGlb = Buffer.from(boardGlb).toString("base64")
-const interactiveViewerBuild = await bundle({
-  bundle: true,
-  entryPoints: [fileURLToPath(new URL("../assets/interactive-3d-viewer.js", import.meta.url))],
-  format: "iife",
-  minify: true,
-  platform: "browser",
-  target: "es2022",
-  write: false
-})
-const interactiveViewerModule = interactiveViewerBuild.outputFiles[0]?.text
-if (!interactiveViewerModule) throw new Error("Interactive 3D viewer bundle was not generated")
+const runframeBundlePath = fileURLToPath(import.meta.resolve("@tscircuit/runframe/standalone-preview"))
+const runframePackageJson = JSON.parse(await readFile(join(dirname(runframeBundlePath), "../package.json"), "utf8"))
+const runframeVersion = String(runframePackageJson.version)
+const embeddedCircuitJson = JSON.stringify(circuitJson).replaceAll("<", "\\u003c")
+const runframeHtml = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scoring apparatus circuit preview</title>
+  <style>html, body, #root { height: 100%; margin: 0; }</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    window.CIRCUIT_JSON = ${embeddedCircuitJson}
+    window.CIRCUIT_JSON_PREVIEW_PROPS = {
+      availableTabs: ["pcb", "schematic", "cad"],
+      defaultActiveTab: "pcb",
+      isWebEmbedded: true,
+      projectName: "competition-scoring-apparatus",
+      readOnly: true,
+      showCodeTab: false,
+      showFileMenu: false,
+      showJsonTab: false,
+      showRightHeaderContent: true,
+      showToggleFullScreen: true
+    }
+  </script>
+  <script src="runframe-preview.js?v=${runframeVersion}"></script>
+</body>
+</html>
+`
 const previewHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -148,17 +152,7 @@ const previewHtml = `<!doctype html>
     [role="tabpanel"][hidden] { display: none; }
     figure { margin: 0; padding: 16px; border: 1px solid #33424f; border-radius: 8px; background: #101820; }
     figcaption { margin-bottom: 12px; font-weight: 700; }
-    img { display: block; width: 100%; min-height: 320px; max-height: calc(100vh - 310px); object-fit: contain; background: white; }
-    img.dark-render { background: #101820; }
-    .viewer-shell { position: relative; min-height: 320px; height: min(58vh, 620px); overflow: hidden; background: #101820; }
-    .viewer-shell canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
-    .viewer-shell canvas:active { cursor: grabbing; }
-    .viewer-shell canvas:focus-visible { outline: 3px solid #7cc4ff; outline-offset: -3px; }
-    .viewer-status { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: rgb(11 17 23 / 88%); color: #eef4f8; font-weight: 700; }
-    .viewer-status[hidden] { display: none; }
-    .viewer-controls { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
-    .viewer-controls button { border: 1px solid #60788a; border-radius: 6px; padding: 8px 12px; background: #172630; color: #eef4f8; font: inherit; font-weight: 700; cursor: pointer; }
-    .viewer-help { margin: 10px 0 0; color: #b7c7d3; }
+    .runframe { display: block; width: 100%; height: min(72vh, 820px); min-height: 520px; border: 0; border-radius: 6px; background: white; }
     .io-assembly { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 16px; }
     .io-module { border: 1px solid #60788a; border-radius: 10px; padding: 18px; background: #172630; }
     .io-module h2 { margin: 0 0 6px; font-size: 1.05rem; }
@@ -178,8 +172,7 @@ const previewHtml = `<!doctype html>
       h1 { font-size: 1.6rem; }
       [role="tab"] { flex: 1 0 auto; padding-inline: 12px; }
       figure { padding: 10px; }
-      img { min-height: 220px; max-height: none; }
-      .viewer-shell { min-height: 300px; height: 52vh; }
+      .runframe { height: 68vh; min-height: 420px; }
       .io-assembly { grid-template-columns: 1fr; }
     }
   </style>
@@ -197,27 +190,14 @@ const previewHtml = `<!doctype html>
   </ul>
   <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype checklist</a><a href="../docs/clean-sheet-board-architecture.md">Board architecture</a><a href="bom.csv">Prototype BOM</a><a href="placement.csv">Placement file</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
-    <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
-    <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
-    <button id="tab-3d" role="tab" aria-selected="false" aria-controls="view-3d" tabindex="-1">3D</button>
+    <button id="tab-board" role="tab" aria-selected="true" aria-controls="view-board" tabindex="0">Board preview</button>
     <button id="tab-io" role="tab" aria-selected="false" aria-controls="view-io" tabindex="-1">External I/O</button>
   </div>
   <main>
-    <section id="view-pcb" role="tabpanel" aria-labelledby="tab-pcb">
-      <figure><figcaption>Routed component placement. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="Routed PCB component placement"></a></figure>
-    </section>
-    <section id="view-schematic" role="tabpanel" aria-labelledby="tab-schematic" hidden>
-      <figure><figcaption>Logical schematic. Select the image to open it full size.</figcaption><a href="schematic.svg"><img src="schematic.svg" alt="Logical schematic model"></a></figure>
-    </section>
-    <section id="view-3d" role="tabpanel" aria-labelledby="tab-3d" hidden>
+    <section id="view-board" role="tabpanel" aria-labelledby="tab-board">
       <figure>
-        <figcaption>Interactive 3D board model.</figcaption>
-        <div class="viewer-shell">
-          <canvas id="board-3d-canvas" tabindex="0" aria-label="Interactive three-dimensional board model. Drag to rotate and scroll to zoom."></canvas>
-          <p id="board-3d-status" class="viewer-status" role="status">Loading detailed board model</p>
-          <div class="viewer-controls"><button id="reset-3d-view" type="button">Reset view</button></div>
-        </div>
-        <p class="viewer-help">Drag to rotate. Scroll to zoom. Use the arrow keys when the model is focused. <a href="board-3d.svg">Open the static 3D export</a>.</p>
+        <figcaption>Interactive tscircuit preview. Use its PCB, Schematic, and 3D tabs to inspect the generated board.</figcaption>
+        <iframe class="runframe" src="runframe.html?v=${runframeVersion}" title="Interactive PCB, schematic, and three-dimensional board preview"></iframe>
       </figure>
     </section>
     <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
@@ -287,7 +267,6 @@ const previewHtml = `<!doctype html>
       </figure>
     </section>
   </main>
-  <script id="board-3d-model" type="application/octet-stream">${embeddedBoardGlb}</script>
   <script>
     const tabs = Array.from(document.querySelectorAll('[role="tab"]'))
     const panels = Array.from(document.querySelectorAll('[role="tabpanel"]'))
@@ -318,21 +297,16 @@ const previewHtml = `<!doctype html>
       })
     }
   </script>
-  <script defer src="interactive-3d-viewer.js?v=interactive"></script>
 </body>
 </html>
 `
 
-await mkdir("dist", { recursive: true })
 await Promise.all([
-  writeFile("dist/board.glb", new Uint8Array(boardGlb)),
-  writeFile("dist/bom.csv", `${orderFiles.bomCsv}\n`),
-  writeFile("dist/bom.json", `${JSON.stringify(orderFiles.bom, null, 2)}\n`),
-  writeFile("dist/circuit.json", `${JSON.stringify(circuitJson, null, 2)}\n`),
-  writeFile("dist/index.html", previewHtml),
-  writeFile("dist/interactive-3d-viewer.js", interactiveViewerModule),
-  writeFile("dist/placement.csv", `${orderFiles.placementCsv}\n`),
-  writeFile("dist/board-3d.svg", threeDimensionalSvg),
-  writeFile("dist/pcb.svg", pcbSvg),
-  writeFile("dist/schematic.svg", schematicSvg)
+  writeFile(outputPath("bom.csv"), `${orderFiles.bomCsv}\n`),
+  writeFile(outputPath("bom.json"), `${JSON.stringify(orderFiles.bom, null, 2)}\n`),
+  writeFile(outputPath("circuit.json"), `${JSON.stringify(circuitJson, null, 2)}\n`),
+  writeFile(outputPath("index.html"), previewHtml),
+  writeFile(outputPath("placement.csv"), `${orderFiles.placementCsv}\n`),
+  writeFile(outputPath("runframe.html"), runframeHtml),
+  copyFile(runframeBundlePath, outputPath("runframe-preview.js"))
 ])

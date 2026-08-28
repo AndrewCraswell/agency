@@ -19,13 +19,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tscircuit/simple-3d-svg": "0.0.41",
+    "@tscircuit/runframe": "0.0.2522",
     "circuit-json": "0.0.465",
-    "circuit-json-to-gltf": "0.0.111",
-    "circuit-json-to-simple-3d": "0.0.9",
-    "circuit-to-svg": "0.0.400",
     "react": "^19.2.0",
-    "three": "0.179.1",
     "tscircuit": "0.0.2271"
   },
   "devDependencies": {
@@ -36,7 +32,6 @@
     "@types/react": "^19.2.0",
     "circuit-json-to-gerber": "0.0.94",
     "circuit-json-to-kicad": "0.0.173",
-    "esbuild": "0.28.1",
     "oxlint": "^1.72.0",
     "tsx": "^4.23.0",
     "typescript": "catalog:",

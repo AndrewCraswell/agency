@@ -12,8 +12,8 @@ The active design documents are:
 
 Useful commands:
 
-- `pnpm --filter @repo/scoring-circuit build` generates the routed PCB, schematic, static and interactive 3D previews,
-  BOM, and placement files in `dist/`.
+- `pnpm --filter @repo/scoring-circuit build` generates the circuit JSON, the locally bundled tscircuit RunFrame PCB,
+  schematic, and 3D preview, plus the BOM and placement files in `dist/`.
 - `pnpm --filter @repo/scoring-circuit pcb:route` regenerates the KiCad project, Gerbers, drill files, BOM, and
   placement files in `pcb/`.
 - `pnpm --filter @repo/scoring-circuit test` runs the focused board tests.

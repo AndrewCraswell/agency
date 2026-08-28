@@ -1,18 +1,15 @@
 import { readFileSync } from "node:fs"
 
-const kicadModelRevision = "b8b3cfdfad88ba66f21002b3de51dc6f7d55ba5a"
-const kicadModelRoot = `https://github.com/KiCad/kicad-packages3D/raw/${kicadModelRevision}`
-
 function checkedInStepUrl(fileName: string): string {
   return `data:model/step;base64,${readFileSync(new URL(`../assets/cad/${fileName}`, import.meta.url)).toString("base64")}`
 }
 
 export const cadModels = {
   capacitor0603: {
-    stepUrl: `${kicadModelRoot}/Capacitor_SMD.3dshapes/C_0603_1608Metric.step`
+    stepUrl: checkedInStepUrl("capacitor-0603.step")
   },
   capacitor0805: {
-    stepUrl: `${kicadModelRoot}/Capacitor_SMD.3dshapes/C_0805_2012Metric.step`
+    stepUrl: checkedInStepUrl("capacitor-0805.step")
   },
   controllerDevKit: {
     stepUrl: checkedInStepUrl("esp32-s3-devkitc-1-n8r2.step"),
@@ -20,48 +17,47 @@ export const cadModels = {
     zOffsetFromSurface: "3mm"
   },
   ethernetModule: {
-    stepUrl: "https://github.com/dubpixel/dpx_kicad/raw/11ce143404062a50f7df05892e87c65cfedf8b94/zusr_3D/WIZ850IO.step",
+    stepUrl: checkedInStepUrl("wiz850io.step"),
     modelBoardNormalDirection: "y+"
   },
   hub75DataHeader: {
-    stepUrl: `${kicadModelRoot}/Connector_IDC.3dshapes/IDC-Header_2x08_P2.54mm_Vertical.step`
+    stepUrl: checkedInStepUrl("idc-header-2x08-p2.54mm-vertical.step")
   },
   hub75PowerHeader: {
     stepUrl: checkedInStepUrl("wurth-645004114822.step")
   },
   dip6: {
-    stepUrl: `${kicadModelRoot}/Package_DIP.3dshapes/DIP-6_W7.62mm.step`
+    stepUrl: checkedInStepUrl("dip-6-w7.62mm.step")
   },
   diodeDo41: {
-    stepUrl: `${kicadModelRoot}/Diode_THT.3dshapes/D_DO-41_SOD81_P10.16mm_Horizontal.step`
+    stepUrl: checkedInStepUrl("do-41-p10.16mm.step")
   },
   irReceiver: {
-    stepUrl:
-      "https://github.com/StefanHamminga/kicad-packages3D/raw/395108dcab363619c3c82ad00e060acd423aeeb7/Sensor_Optical.3dshapes/TSOP384xx.step",
+    stepUrl: checkedInStepUrl("tsop384xx.step"),
     modelBoardNormalDirection: "y+",
     positionOffset: { x: 0, y: -1.45, z: 0 }
   },
   pinHeader1x01: {
-    stepUrl: `${kicadModelRoot}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x01_P2.54mm_Vertical.step`,
+    stepUrl: checkedInStepUrl("pin-header-1x01-2.54mm.step"),
     pcbRotationOffset: -90
   },
   pinHeader1x02: {
-    stepUrl: `${kicadModelRoot}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step`,
+    stepUrl: checkedInStepUrl("pin-header-1x02-2.54mm.step"),
     pcbRotationOffset: -90
   },
   pinHeader1x03: {
-    stepUrl: `${kicadModelRoot}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x03_P2.54mm_Vertical.step`,
+    stepUrl: checkedInStepUrl("pin-header-1x03-2.54mm.step"),
     pcbRotationOffset: -90
   },
   pinSocket1x22: {
-    stepUrl: `${kicadModelRoot}/Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x22_P2.54mm_Vertical.step`,
+    stepUrl: checkedInStepUrl("pin-socket-1x22-2.54mm.step"),
     pcbRotationOffset: -90
   },
   resistor0603: {
-    stepUrl: `${kicadModelRoot}/Resistor_SMD.3dshapes/R_0603_1608Metric.step`
+    stepUrl: checkedInStepUrl("resistor-0603.step")
   },
   resistor0805: {
-    stepUrl: `${kicadModelRoot}/Resistor_SMD.3dshapes/R_0805_2012Metric.step`
+    stepUrl: checkedInStepUrl("resistor-0805.step")
   },
   repeaterConnectorRj14: {
     stepUrl: checkedInStepUrl("te-5520250-2-rj14.step"),
@@ -71,10 +67,10 @@ export const cadModels = {
     zOffsetFromSurface: "8.637mm"
   },
   scoringSounder: {
-    stepUrl: `${kicadModelRoot}/Buzzer_Beeper.3dshapes/Buzzer_TDK_PS1240P02BT_D12.2mm_H6.5mm.step`
+    stepUrl: checkedInStepUrl("tdk-ps1240p02bt.step")
   },
   sot23: {
-    stepUrl: `${kicadModelRoot}/Package_TO_SOT_SMD.3dshapes/SOT-23.step`
+    stepUrl: checkedInStepUrl("sot-23.step")
   },
   usbCPdModule: {
     stepUrl: checkedInStepUrl("adafruit-5807-husb238.step"),
@@ -82,7 +78,7 @@ export const cadModels = {
     positionOffset: { x: 0.127, y: -0.175, z: 0 }
   },
   v5RegulatorModule: {
-    stepUrl: "https://www.pololu.com/file/0J1733/d36v50fx-step-down-voltage-regulator.step",
+    stepUrl: checkedInStepUrl("pololu-d36v50f5.step"),
     modelOriginPosition: { x: 12.7, y: 12.7, z: 0 },
     positionOffset: { x: -0.05, y: -0.05, z: 0 },
     zOffsetFromSurface: "6mm"
