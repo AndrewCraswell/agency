@@ -14,7 +14,9 @@ export const cadModels = {
   controllerDevKit: {
     stepUrl: checkedInStepUrl("esp32-s3-devkitc-1-n8r2.step"),
     modelBoardNormalDirection: "y+",
-    zOffsetFromSurface: "3mm"
+    // Seat the DevKitC PCB on top of the 7 mm female socket bodies. The model's
+    // male pins then enter the sockets without the carrier PCB intersecting them.
+    zOffsetFromSurface: "7mm"
   },
   ethernetModule: {
     stepUrl: checkedInStepUrl("wiz850io.step"),
@@ -35,6 +37,8 @@ export const cadModels = {
   irReceiver: {
     stepUrl: checkedInStepUrl("tsop384xx.step"),
     modelBoardNormalDirection: "y+",
+    // The STEP includes the receiver's untrimmed through-hole leads. Its body is
+    // intentionally above the board while the leads pass through the footprint.
     positionOffset: { x: 0, y: -1.45, z: 0 }
   },
   pinHeader1x01: {

@@ -63,7 +63,8 @@ export const controllerSocket = {
   rightRowX: 24.43,
   outlineWidthMm: 25.4,
   outlineHeightMm: 69,
-  center: { pcbX: 13, pcbY: -2 }
+  // Keep the DevKitC USB/programming connector at the lower board edge.
+  center: { pcbX: 13, pcbY: -15 }
 } as const
 
 export const prototypeInterfaces = {
@@ -93,7 +94,15 @@ function MinimalScoringPrototype(): ReactElement {
   const halfHeight = heightMm / 2
 
   return (
-    <board title={title} width={`${widthMm}mm`} height={`${heightMm}mm`} layers={layerCount} pcbPack={false}>
+    <board
+      title={title}
+      width={`${widthMm}mm`}
+      height={`${heightMm}mm`}
+      layers={layerCount}
+      solderMaskColor="green"
+      silkscreenColor="white"
+      pcbPack={false}
+    >
       <copperpour
         name="GROUND_PLANE"
         layer="bottom"

@@ -18,5 +18,9 @@ Useful commands:
   placement files in `pcb/`.
 - `pnpm --filter @repo/scoring-circuit test` runs the focused board tests.
 
+The board source sets a green solder mask and white silkscreen for the preview. Gerbers define the mask and silkscreen
+geometry, but the fabricator's order form or fabrication notes select the physical pigment; change `solderMaskColor` and
+`silkscreenColor` in `src/index.circuit.tsx` when a different finish is chosen.
+
 This is a prototype, not a production or FIE-certified board. Review the KiCad board and fabrication preview before
 ordering, then validate the assembled hardware electrically before connecting it to fencing equipment.

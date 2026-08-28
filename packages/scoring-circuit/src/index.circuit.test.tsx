@@ -47,7 +47,7 @@ describe("minimal scoring prototype baseline", () => {
       rightRowX: 24.43,
       outlineWidthMm: 25.4,
       outlineHeightMm: 69,
-      center: { pcbX: 13, pcbY: -2 }
+      center: { pcbX: 13, pcbY: -15 }
     })
   })
 
@@ -302,15 +302,15 @@ describe("minimal scoring prototype baseline", () => {
     )
 
     expect(cadByReference.get("J_CONTROLLER_LEFT")).toMatchObject({
-      position: { x: expect.closeTo(1.57, 6), y: -2, z: 0.7 },
+      position: { x: expect.closeTo(1.57, 6), y: -15, z: 0.7 },
       rotation: { x: 0, y: 0, z: 0 }
     })
     expect(cadByReference.get("U_CONTROLLER_MODULE")).toMatchObject({
-      position: { x: 13, y: -2, z: 3.7 },
+      position: { x: 13, y: -15, z: 7.7 },
       model_board_normal_direction: "y+"
     })
     expect(cadByReference.get("J_CONTROLLER_RIGHT")).toMatchObject({
-      position: { x: expect.closeTo(24.43, 6), y: -2, z: 0.7 },
+      position: { x: expect.closeTo(24.43, 6), y: -15, z: 0.7 },
       rotation: { x: 0, y: 0, z: 0 }
     })
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
@@ -326,7 +326,7 @@ describe("minimal scoring prototype baseline", () => {
       model_origin_position: { x: 12.7, y: 12.7, z: 0 }
     })
     expect(cadByReference.get("U_IR_RECEIVER")).toMatchObject({
-      position: { x: 67, y: 34.55, z: 0.7 },
+      position: { x: 67, y: 44.55, z: 0.7 },
       rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+"
     })

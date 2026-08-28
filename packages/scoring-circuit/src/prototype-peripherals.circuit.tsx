@@ -128,7 +128,7 @@ export function PrototypePeripherals(): ReactElement {
         pinLabels={{ pin1: "OUT", pin2: "GND", pin3: "VS" }}
         footprint={irReceiverFootprint}
         pcbX={67}
-        pcbY={36}
+        pcbY={46}
         pcbRotation={180}
         cadModel={cadModels.irReceiver}
       />
@@ -139,7 +139,7 @@ export function PrototypePeripherals(): ReactElement {
         tolerance="1%"
         footprint="0603"
         pcbX={58}
-        pcbY={36}
+        pcbY={44}
         cadModel={cadModels.resistor0603}
       />
       <capacitor
@@ -148,7 +148,7 @@ export function PrototypePeripherals(): ReactElement {
         capacitance="100nF"
         footprint="0603"
         pcbX={58}
-        pcbY={32}
+        pcbY={40}
         cadModel={cadModels.capacitor0603}
       />
       <chip
