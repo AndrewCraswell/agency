@@ -18,7 +18,7 @@ Useful commands:
   placement files in `pcb/`.
 - `pnpm --filter @repo/scoring-circuit test` runs the focused board tests.
 
-The board source sets a green solder mask and white silkscreen for the preview. Gerbers define the mask and silkscreen
+The board source sets a red solder mask and white silkscreen for the preview. Gerbers define the mask and silkscreen
 geometry, but the fabricator's order form or fabrication notes select the physical pigment; change `solderMaskColor` and
 `silkscreenColor` in `src/index.circuit.tsx` when a different finish is chosen.
 

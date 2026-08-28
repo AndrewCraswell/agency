@@ -35,6 +35,11 @@ describe("minimal scoring prototype baseline", () => {
       controller: "ESP32-S3-DevKitC-1-N8R8",
       ethernet: "WIZ850io"
     })
+
+    expect(renderPrototype().find(({ type }) => type === "pcb_board")).toMatchObject({
+      solder_mask_color: "red",
+      silkscreen_color: "white"
+    })
   })
 
   it("uses the active N8R8 DevKitC and reserves its octal-PSRAM pins", () => {
