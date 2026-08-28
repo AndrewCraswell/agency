@@ -828,6 +828,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@tscircuit/checks':
+        specifier: 0.0.151
+        version: 0.0.151(@flatten-js/core@1.6.13)(@tscircuit/math-utils@0.0.36(typescript@7.0.1-rc))(circuit-json-to-connectivity-map@0.0.27(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc)
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2

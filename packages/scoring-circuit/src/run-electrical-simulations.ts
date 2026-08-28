@@ -32,7 +32,12 @@ const simulations: readonly SimulationCase[] = [
       { name: "sense470_low", maximum: 0.825, unit: "V" },
       { name: "sense33_rise", maximum: 2e-6, unit: "s" },
       { name: "sense470_rise", maximum: 2e-6, unit: "s" },
-      { name: "opposed_gpio_current", absolute: true, maximum: 0.028, unit: "A" }
+      { name: "opposed_gpio_current", absolute: true, maximum: 0.028, unit: "A" },
+      { name: "fie_500ohm_continuity_high", minimum: 2.475, unit: "V" },
+      { name: "fie_100ohm_earth_high", minimum: 2.475, unit: "V" },
+      { name: "fie_zero_ohm_fault_current", absolute: true, maximum: 0.028, unit: "A" },
+      { name: "fie_450ohm_fault_current", absolute: true, maximum: 0.028, unit: "A" },
+      { name: "fie_475ohm_fault_current", absolute: true, maximum: 0.028, unit: "A" }
     ]
   },
   {

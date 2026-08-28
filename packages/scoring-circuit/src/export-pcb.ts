@@ -1,5 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
+import { runAllChecks } from "@tscircuit/checks"
 import {
   convertSoupToExcellonDrillCommandLayers,
   convertSoupToGerberCommands,
@@ -22,6 +23,46 @@ const outputDirectory = fileURLToPath(new URL("../pcb/", import.meta.url))
 const manufacturingDirectory = `${outputDirectory}manufacturing/`
 const routingRequested = process.argv.includes("--route")
 
+const componentsWithAcceptedMetadataWarnings = new Set([
+  "BZ_SCORING",
+  "D_FAVERO_DATA_1",
+  "D_FAVERO_DATA_2",
+  "J_FAVERO_DATA_1",
+  "J_FAVERO_DATA_2",
+  "J_HUB75_DATA",
+  "J_HUB75_POWER",
+  "Q_BUZZER",
+  "U_ETHERNET",
+  "U_FAVERO_DATA_1",
+  "U_FAVERO_DATA_2",
+  "U_IR_RECEIVER",
+  "U_USB_C_PD",
+  "U_V5_REGULATOR"
+])
+const acceptedWarningTypes = new Set([
+  "source_component_pins_underspecified_warning",
+  "source_no_ground_pin_defined_warning",
+  "source_no_power_pin_defined_warning"
+])
+
+async function assertTscircuitChecksPass(circuitJson: Parameters<typeof runAllChecks>[0]): Promise<void> {
+  const results = await runAllChecks(circuitJson)
+  const errors = results.filter(({ type }) => type.endsWith("_error"))
+  const unexpectedWarnings = results.filter(({ message, type }) => {
+    if (type.endsWith("_error")) return false
+    const component = message.match(/^(?:All pins on )?([A-Z][A-Z0-9_]*)\b/u)?.[1]
+    return (
+      !acceptedWarningTypes.has(type) ||
+      component === undefined ||
+      !componentsWithAcceptedMetadataWarnings.has(component)
+    )
+  })
+  if (errors.length === 0 && unexpectedWarnings.length === 0) return
+
+  const failures = [...errors, ...unexpectedWarnings].map(({ message, type }) => `${type}: ${message}`)
+  throw new Error(`tscircuit board validation failed:\n${failures.join("\n")}`)
+}
+
 const circuit = new Circuit()
 circuit.pcbRoutingDisabled = !routingRequested
 circuit.setPlatform(prototypeBoardRouting)
@@ -39,6 +80,7 @@ if (routingRequested && (routing.unroutedConnectionCount > 0 || routing.routingE
   console.info(`Routing failure examples:\n${examples.join("\n")}`)
 }
 if (routingRequested) assertBoardRoutingIsComplete(routing)
+if (routingRequested) await assertTscircuitChecksPass(circuitJson)
 const orderFiles = createPrototypeOrderFiles(circuitJson)
 const blockingErrors = circuitJson.filter(
   (element) => element.type.endsWith("_error") && !element.type.startsWith("pcb_trace")

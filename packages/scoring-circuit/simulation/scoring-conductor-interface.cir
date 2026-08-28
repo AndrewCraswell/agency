@@ -24,6 +24,47 @@ RFAULT_SERIES_HIGH fault_high fault_line 33
 RFAULT_SERIES_LOW fault_line fault_low 33
 RFAULT_SINK fault_low 0 40
 
+* Published FIE resistance/fault boundaries. These branches validate that the
+* carrier can electrically observe continuity at the maximum external and earth
+* resistances and survives the foil/sabre insulation-fault range. Scoring and
+* threshold classification remain firmware and calibrated-fixture checks.
+VFIE500 fie500_supply 0 3.3
+RFIE500_SOURCE fie500_supply fie500_gpio 40
+RFIE500_SERIES fie500_gpio fie500_contact 33
+RFIE500_EXTERNAL fie500_contact fie500_line 500
+RFIE500_RECEIVE fie500_line fie500_sense 470
+CFIE500_INPUT fie500_sense 0 2p
+RFIE500_LEAK fie500_sense 0 66meg
+
+VEARTH100 earth100_supply 0 3.3
+REARTH100_SOURCE earth100_supply earth100_gpio 40
+REARTH100_SERIES earth100_gpio earth100_contact 470
+REARTH100_EXTERNAL earth100_contact earth100_line 100
+REARTH100_RECEIVE earth100_line earth100_sense 33
+CEARTH100_INPUT earth100_sense 0 2p
+REARTH100_LEAK earth100_sense 0 66meg
+
+VINSULATION0 insulation0_supply 0 3.3
+RINSULATION0_SOURCE insulation0_supply insulation0_high 40
+RINSULATION0_HIGH insulation0_high insulation0_contact 33
+RINSULATION0_EXTERNAL insulation0_contact insulation0_line 1u
+RINSULATION0_LOW insulation0_line insulation0_low 470
+RINSULATION0_SINK insulation0_low 0 40
+
+VINSULATION450 insulation450_supply 0 3.3
+RINSULATION450_SOURCE insulation450_supply insulation450_high 40
+RINSULATION450_HIGH insulation450_high insulation450_contact 33
+RINSULATION450_EXTERNAL insulation450_contact insulation450_line 450
+RINSULATION450_LOW insulation450_line insulation450_low 470
+RINSULATION450_SINK insulation450_low 0 40
+
+VINSULATION475 insulation475_supply 0 3.3
+RINSULATION475_SOURCE insulation475_supply insulation475_high 40
+RINSULATION475_HIGH insulation475_high insulation475_contact 33
+RINSULATION475_EXTERNAL insulation475_contact insulation475_line 475
+RINSULATION475_LOW insulation475_line insulation475_low 470
+RINSULATION475_SINK insulation475_low 0 40
+
 .control
 set noaskquit
 tran 20n 25u
@@ -34,6 +75,11 @@ meas tran sense470_low MAX v(sense470) FROM=12u TO=19u
 meas tran sense33_rise TRIG v(drive33) VAL=1.65 RISE=1 TARG v(sense33) VAL=2.475 RISE=1
 meas tran sense470_rise TRIG v(drive470) VAL=1.65 RISE=1 TARG v(sense470) VAL=2.475 RISE=1
 meas tran opposed_gpio_current AVG i(VFAULT) FROM=2u TO=20u
+meas tran fie_500ohm_continuity_high MIN v(fie500_sense) FROM=2u TO=20u
+meas tran fie_100ohm_earth_high MIN v(earth100_sense) FROM=2u TO=20u
+meas tran fie_zero_ohm_fault_current AVG i(VINSULATION0) FROM=2u TO=20u
+meas tran fie_450ohm_fault_current AVG i(VINSULATION450) FROM=2u TO=20u
+meas tran fie_475ohm_fault_current AVG i(VINSULATION475) FROM=2u TO=20u
 quit
 .endc
 .end

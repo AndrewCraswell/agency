@@ -31,6 +31,7 @@
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@tscircuit/checks": "0.0.151",
     "@types/node": "catalog:",
     "@types/react": "^19.2.0",
     "circuit-json-to-gerber": "0.0.94",

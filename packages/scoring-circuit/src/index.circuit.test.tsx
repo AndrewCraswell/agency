@@ -191,6 +191,34 @@ describe("minimal scoring prototype baseline", () => {
       { name: "DATA_B", pinNumber: 4 },
       { name: "OUTER_B", pinNumber: 5 }
     ])
+
+    const sourceNets = new Map(
+      circuit.filter(({ type }) => type === "source_net").map(({ source_net_id: id, name }) => [id, name])
+    )
+    const sourcePorts = circuit.filter(({ type }) => type === "source_port")
+    const sourceTraces = circuit.filter(({ type }) => type === "source_trace")
+    for (const index of [1, 2]) {
+      const channelConnector = circuit.find(
+        ({ type, name }) => type === "source_component" && name === `J_FAVERO_DATA_${index}`
+      )
+      const channelPortIds = new Set(
+        sourcePorts
+          .filter(
+            ({ source_component_id: sourceComponentId }) => sourceComponentId === channelConnector?.source_component_id
+          )
+          .map(({ source_port_id: sourcePortId }) => sourcePortId)
+      )
+      const connectorTraceNets = sourceTraces
+        .filter(
+          ({ connected_source_port_ids: portIds }) =>
+            Array.isArray(portIds) && portIds.some((portId) => channelPortIds.has(portId))
+        )
+        .flatMap(({ connected_source_net_ids: netIds }) =>
+          Array.isArray(netIds) ? netIds.map((netId) => sourceNets.get(netId)) : []
+        )
+
+      expect(connectorTraceNets).toEqual([])
+    }
   })
 
   it("uses a module-level USB-C power chain with real assembly geometry", () => {

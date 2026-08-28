@@ -14,7 +14,9 @@ The repository `pnpm verify` command runs the suite, and CI installs ngspice bef
 ## Models and limits
 
 - The scoring-conductor model checks the 33 ohm and 470 ohm paths against the ESP32-S3 0.75 VDD high threshold,
-  0.25 VDD low threshold, 2 pF pin capacitance, and 28 mA sink-current rating. It includes a two-output contention case.
+  0.25 VDD low threshold, 2 pF pin capacitance, and 28 mA sink-current rating. It includes a two-output contention case,
+  continuity through the published FIE 500 ohm external-circuit and 100 ohm earth-path limits, and current stress at
+  0, 450, and 475 ohm insulation-fault boundaries.
 - The display-power model applies a 4.2 A panel step plus 0.7 A of other board load. It checks the 5.5 A regulator limit,
   a 4.75 V board rail, and a 4.5 V panel rail through modeled board, connector, and harness resistance.
 - The IR model applies a receiver-current step to the fitted 100 ohm and 100 nF supply filter.
@@ -29,3 +31,10 @@ These are engineering checks, not fabrication or FIE-conformance proof. The USB-
 internals, WIZ850io internals, ESP32 internals, HUB75 panel internals, EMC, ESD, and thermal behavior remain outside the
 models because the selected purchased modules do not provide complete transistor-level models. The chosen HUB75 panel
 must draw no more than the modeled 4.2 A until this limit is rerun with its measured current profile.
+
+The FIE boundary branches prove only that the carrier presents readable electrical continuity and stays within the
+modeled GPIO current limit. They do not prove that firmware classifies foil insulation below 450 ohms versus above 475
+ohms, rejects earthed hits, or preserves opponent hits. Those results require the finished scan algorithm plus a
+calibrated resistance/contact fixture. The FA-05 Circuit JSON checks independently reject any direct application net on
+the external connector side of either 4N32M barrier. Isolation resistance, dielectric withstand, UPS transfer, and the
+FIE SEMI apparatus programme remain physical or procedural evidence.
