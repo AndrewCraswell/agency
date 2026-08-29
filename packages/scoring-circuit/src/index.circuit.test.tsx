@@ -308,7 +308,8 @@ describe("minimal scoring prototype baseline", () => {
 
     expect(cadByReference.get("J_CONTROLLER_LEFT")).toMatchObject({
       position: { x: expect.closeTo(1.57, 6), y: -15, z: 0.7 },
-      rotation: { x: 0, y: 0, z: 0 }
+      rotation: { x: 0, y: 0, z: 0 },
+      model_origin_position: { x: 0, y: -26.67, z: 0 }
     })
     expect(cadByReference.get("U_CONTROLLER_MODULE")).toMatchObject({
       position: { x: 13, y: -15, z: 7.7 },
@@ -316,11 +317,23 @@ describe("minimal scoring prototype baseline", () => {
     })
     expect(cadByReference.get("J_CONTROLLER_RIGHT")).toMatchObject({
       position: { x: expect.closeTo(24.43, 6), y: -15, z: 0.7 },
-      rotation: { x: 0, y: 0, z: 0 }
+      rotation: { x: 0, y: 0, z: 0 },
+      model_origin_position: { x: 0, y: -26.67, z: 0 }
     })
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
       position: { x: -20, y: -32, z: 0.7 },
-      model_board_normal_direction: "y+"
+      model_board_normal_direction: "y+",
+      model_origin_position: { x: 0, y: 0, z: 6.35 }
+    })
+    expect(cadByReference.get("J_HUB75_DATA")).toMatchObject({
+      position: { x: 15, y: 42, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 90 },
+      model_origin_position: { x: 1.27, y: -8.89, z: 0 }
+    })
+    expect(cadByReference.get("BZ_SCORING")).toMatchObject({
+      position: { x: 68, y: -6, z: 0.7 },
+      model_board_normal_direction: "y+",
+      model_origin_position: { x: 2.5, y: 0, z: 0 }
     })
     expect(cadByReference.get("U_USB_C_PD")).toMatchObject({
       position: { x: expect.closeTo(-62, 6), y: 34.5, z: 0.7 },
@@ -331,21 +344,29 @@ describe("minimal scoring prototype baseline", () => {
       model_origin_position: { x: 12.7, y: 12.7, z: 0 }
     })
     expect(cadByReference.get("U_IR_RECEIVER")).toMatchObject({
-      position: { x: 67, y: 44.55, z: 0.7 },
+      position: { x: 67, y: 46, z: 0.7 },
       rotation: { x: 0, y: 0, z: 180 },
-      model_board_normal_direction: "y+"
+      model_board_normal_direction: "y+",
+      model_origin_position: { x: 0, y: 0, z: -1.45 }
     })
     expect(cadByReference.get("J_WEAPON_LEFT")).toMatchObject({
       position: { x: -68, y: -15, z: 0.7 },
-      rotation: { x: 0, y: 0, z: 270 }
+      rotation: { x: 0, y: 0, z: 270 },
+      model_origin_position: { x: 0, y: -2.54, z: 0 }
+    })
+    expect(cadByReference.get("U_FAVERO_DATA_1")).toMatchObject({
+      model_origin_position: { x: 3.81, y: -2.54, z: 0 }
+    })
+    expect(cadByReference.get("D_FAVERO_DATA_1")).toMatchObject({
+      model_origin_position: { x: 5.08, y: 0, z: 0 }
     })
     expect(cadByReference.get("J_FAVERO_DATA_1")).toMatchObject({
-      position: { x: 40, y: -43.955, z: 9.337 },
+      position: { x: 40, y: -40, z: 9.337 },
       rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+"
     })
     expect(cadByReference.get("J_FAVERO_DATA_2")).toMatchObject({
-      position: { x: 60, y: -43.955, z: 9.337 },
+      position: { x: 60, y: -40, z: 9.337 },
       rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+"
     })
