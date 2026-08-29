@@ -99,7 +99,6 @@ const renderedCadComponentCount = circuitJson.filter((element) => element.type =
 const runframeBundlePath = fileURLToPath(import.meta.resolve("@tscircuit/runframe/standalone-preview"))
 const runframePackageJson = JSON.parse(await readFile(join(dirname(runframeBundlePath), "../package.json"), "utf8"))
 const runframeVersion = String(runframePackageJson.version)
-const embeddedCircuitJson = JSON.stringify(circuitJson).replaceAll("<", "\\u003c")
 const runframeHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -109,9 +108,8 @@ const runframeHtml = `<!doctype html>
   <style>html, body, #root { height: 100%; margin: 0; }</style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">Loading circuit viewer...</div>
   <script>
-    window.CIRCUIT_JSON = ${embeddedCircuitJson}
     window.CIRCUIT_JSON_PREVIEW_PROPS = {
       availableTabs: ["pcb", "schematic", "cad"],
       defaultActiveTab: "pcb",
@@ -124,8 +122,21 @@ const runframeHtml = `<!doctype html>
       showRightHeaderContent: true,
       showToggleFullScreen: true
     }
+    fetch("circuit.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("Circuit data could not be loaded")
+        return response.json()
+      })
+      .then((circuitJson) => {
+        window.CIRCUIT_JSON = circuitJson
+        const viewerScript = document.createElement("script")
+        viewerScript.type = "module"
+        viewerScript.src = "runframe-preview.js?v=${runframeVersion}"
+        viewerScript.onerror = () => { document.getElementById("root").textContent = "Circuit viewer could not be loaded." }
+        document.body.append(viewerScript)
+      })
+      .catch(() => { document.getElementById("root").textContent = "Circuit data could not be loaded." })
   </script>
-  <script src="runframe-preview.js?v=${runframeVersion}"></script>
 </body>
 </html>
 `
@@ -144,12 +155,7 @@ const previewHtml = `<!doctype html>
     .resources a { margin: 0; }
     .metrics { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
     .metrics li { border: 1px solid #33424f; border-radius: 6px; padding: 8px 12px; background: #101820; }
-    .tabs { display: flex; gap: 4px; margin-top: 24px; border-bottom: 1px solid #33424f; overflow-x: auto; }
-    [role="tab"] { border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 10px 16px; background: transparent; color: #a8c5d8; font: inherit; font-weight: 700; cursor: pointer; }
-    [role="tab"][aria-selected="true"] { border-color: #33424f; background: #101820; color: #eef4f8; }
-    [role="tab"]:focus-visible { outline: 3px solid #7cc4ff; outline-offset: -3px; }
-    [role="tabpanel"] { margin-top: 0; }
-    [role="tabpanel"][hidden] { display: none; }
+    main { display: grid; gap: 24px; margin-top: 24px; }
     figure { margin: 0; padding: 16px; border: 1px solid #33424f; border-radius: 8px; background: #101820; }
     figcaption { margin-bottom: 12px; font-weight: 700; }
     .runframe { display: block; width: 100%; height: min(72vh, 820px); min-height: 520px; border: 0; border-radius: 6px; background: white; }
@@ -170,7 +176,6 @@ const previewHtml = `<!doctype html>
     @media (max-width: 640px) {
       body { padding: 16px; }
       h1 { font-size: 1.6rem; }
-      [role="tab"] { flex: 1 0 auto; padding-inline: 12px; }
       figure { padding: 10px; }
       .runframe { height: 68vh; min-height: 420px; }
       .io-assembly { grid-template-columns: 1fr; }
@@ -189,20 +194,17 @@ const previewHtml = `<!doctype html>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
   </ul>
   <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype checklist</a><a href="../docs/clean-sheet-board-architecture.md">Board architecture</a><a href="bom.csv">Prototype BOM</a><a href="placement.csv">Placement file</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
-  <div class="tabs" role="tablist" aria-label="Circuit views">
-    <button id="tab-board" role="tab" aria-selected="true" aria-controls="view-board" tabindex="0">Board preview</button>
-    <button id="tab-io" role="tab" aria-selected="false" aria-controls="view-io" tabindex="-1">External I/O</button>
-  </div>
   <main>
-    <section id="view-board" role="tabpanel" aria-labelledby="tab-board">
+    <section aria-labelledby="board-preview-heading">
       <figure>
-        <figcaption>Interactive tscircuit preview. Use its PCB, Schematic, and 3D tabs to inspect the generated board.</figcaption>
+        <figcaption id="board-preview-heading">Interactive tscircuit preview. Use its PCB, Schematic, and 3D views to inspect the generated board.</figcaption>
         <iframe class="runframe" src="runframe.html?v=${runframeVersion}" title="Interactive PCB, schematic, and three-dimensional board preview"></iframe>
       </figure>
     </section>
-    <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
+    <section aria-labelledby="external-connections-heading">
       <figure>
-        <figcaption>Prototype external interfaces with selected connector part numbers and clearly identified custom conductor landings.</figcaption>
+        <figcaption id="external-connections-heading">External connections</figcaption>
+        <p>Prototype interfaces with selected connector part numbers and clearly identified custom conductor landings.</p>
         <div class="io-assembly">
           <article class="io-module">
             <h2>Sullins PREC003SAAN-RC - left weapon harness landing</h2>
@@ -267,36 +269,6 @@ const previewHtml = `<!doctype html>
       </figure>
     </section>
   </main>
-  <script>
-    const tabs = Array.from(document.querySelectorAll('[role="tab"]'))
-    const panels = Array.from(document.querySelectorAll('[role="tabpanel"]'))
-
-    function selectTab(nextTab, moveFocus) {
-      for (const tab of tabs) {
-        const selected = tab === nextTab
-        tab.setAttribute('aria-selected', String(selected))
-        tab.tabIndex = selected ? 0 : -1
-      }
-      for (const panel of panels) panel.hidden = panel.id !== nextTab.getAttribute('aria-controls')
-      window.dispatchEvent(new CustomEvent('circuit-view-changed', { detail: nextTab.getAttribute('aria-controls') }))
-      if (moveFocus) nextTab.focus()
-    }
-
-    for (const tab of tabs) {
-      tab.addEventListener('click', () => selectTab(tab, false))
-      tab.addEventListener('keydown', (event) => {
-        const index = tabs.indexOf(tab)
-        let nextIndex = index
-        if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length
-        else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length
-        else if (event.key === 'Home') nextIndex = 0
-        else if (event.key === 'End') nextIndex = tabs.length - 1
-        else return
-        event.preventDefault()
-        selectTab(tabs[nextIndex], true)
-      })
-    }
-  </script>
 </body>
 </html>
 `
