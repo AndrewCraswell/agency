@@ -14,6 +14,10 @@ export const cadModels = {
   controllerDevKit: {
     stepUrl: checkedInStepUrl("esp32-s3-devkitc-1-n8r2.step"),
     modelBoardNormalDirection: "y+",
+    // The retained DevKitC model's 22-pin rows run from Z=-29.9705 mm to
+    // Z=23.3695 mm. Anchor their -3.3005 mm midpoint to the carrier socket
+    // midpoint so every male pin enters its corresponding socket hole.
+    modelOriginPosition: { x: 0, y: 0, z: -3.3005 },
     // Seat the DevKitC PCB on top of the 7 mm female socket bodies. The model's
     // male pins then enter the sockets without the carrier PCB intersecting them.
     zOffsetFromSurface: "7mm"
@@ -21,9 +25,9 @@ export const cadModels = {
   ethernetModule: {
     stepUrl: checkedInStepUrl("wiz850io.step"),
     modelBoardNormalDirection: "y+",
-    // The WIZ850io STEP uses the first pin pair as its longitudinal origin.
-    // Its two six-pin rows run 12.7 mm, so their carrier center is 6.35 mm.
-    modelOriginPosition: { x: 0, y: 0, z: 6.35 }
+    // The retained WIZ850io model's six-pin rows run from Z=-6.10 mm to
+    // Z=6.60 mm. Anchor their 0.25 mm midpoint to the carrier footprint.
+    modelOriginPosition: { x: 0, y: 0, z: 0.25 }
   },
   hub75DataHeader: {
     stepUrl: checkedInStepUrl("idc-header-2x08-p2.54mm-vertical.step"),
@@ -32,7 +36,10 @@ export const cadModels = {
     modelOriginPosition: { x: 1.27, y: -8.89, z: 0 }
   },
   hub75PowerHeader: {
-    stepUrl: checkedInStepUrl("wurth-645004114822.step")
+    stepUrl: checkedInStepUrl("wurth-645004114822.step"),
+    // The four retained STEP pin centers share model Y=3.625 mm. Move that
+    // pin row onto the footprint's Y=0 hole row.
+    modelOriginPosition: { x: 0, y: 3.625, z: 0 }
   },
   dip6: {
     stepUrl: checkedInStepUrl("dip-6-w7.62mm.step"),
@@ -48,8 +55,8 @@ export const cadModels = {
     stepUrl: checkedInStepUrl("tsop384xx.step"),
     modelBoardNormalDirection: "y+",
     // With the model's Y axis normal to the board, its three lead centers lie
-    // at model Z=-1.45 mm. Anchor that lead row to the footprint holes.
-    modelOriginPosition: { x: 0, y: 0, z: -1.45 }
+    // on model Z=0. The previous -1.45 mm datum was the plastic body edge.
+    modelOriginPosition: { x: 0, y: 0, z: 0 }
   },
   pinHeader1x01: {
     stepUrl: checkedInStepUrl("pin-header-1x01-2.54mm.step"),
@@ -114,9 +121,6 @@ export const cadModels = {
     // anchor the selected eight pins at their exact plated-hole coordinates.
     pcbRotationOffset: -90,
     modelOriginPosition: { x: 12.7, y: 11.43, z: 0 },
-    // Cancel the 0.05 mm bounds-center shift so the model uses the authored
-    // module anchor rather than the derived footprint-bounds center.
-    positionOffset: { x: -0.05, y: -0.05, z: 0 },
     zOffsetFromSurface: "6mm"
   }
 } as const

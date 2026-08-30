@@ -313,7 +313,8 @@ describe("minimal scoring prototype baseline", () => {
     })
     expect(cadByReference.get("U_CONTROLLER_MODULE")).toMatchObject({
       position: { x: 13, y: -15, z: 7.7 },
-      model_board_normal_direction: "y+"
+      model_board_normal_direction: "y+",
+      model_origin_position: { x: 0, y: 0, z: -3.3005 }
     })
     expect(cadByReference.get("J_CONTROLLER_RIGHT")).toMatchObject({
       position: { x: expect.closeTo(24.43, 6), y: -15, z: 0.7 },
@@ -323,12 +324,17 @@ describe("minimal scoring prototype baseline", () => {
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
       position: { x: -20, y: -32, z: 0.7 },
       model_board_normal_direction: "y+",
-      model_origin_position: { x: 0, y: 0, z: 6.35 }
+      model_origin_position: { x: 0, y: 0, z: 0.25 }
     })
     expect(cadByReference.get("J_HUB75_DATA")).toMatchObject({
       position: { x: 15, y: 42, z: 0.7 },
       rotation: { x: 0, y: 0, z: 90 },
       model_origin_position: { x: 1.27, y: -8.89, z: 0 }
+    })
+    expect(cadByReference.get("J_HUB75_POWER")).toMatchObject({
+      position: { x: 38, y: 42, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 90 },
+      model_origin_position: { x: 0, y: 3.625, z: 0 }
     })
     expect(cadByReference.get("BZ_SCORING")).toMatchObject({
       position: { x: 68, y: -6, z: 0.7 },
@@ -348,7 +354,7 @@ describe("minimal scoring prototype baseline", () => {
       position: { x: 67, y: 46, z: 0.7 },
       rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+",
-      model_origin_position: { x: 0, y: 0, z: -1.45 }
+      model_origin_position: { x: 0, y: 0, z: 0 }
     })
     expect(cadByReference.get("J_WEAPON_LEFT")).toMatchObject({
       position: { x: -68, y: -15, z: 0.7 },

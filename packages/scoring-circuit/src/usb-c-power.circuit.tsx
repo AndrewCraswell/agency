@@ -18,9 +18,9 @@ const regulatorPins = [
 ] as const
 
 const regulatorMountingHoles = [
-  { x: -10.5, y: -10.5 },
-  { x: 10.6, y: -10.5 },
-  { x: 10.6, y: 10.6 }
+  { x: -10.541, y: 10.541 },
+  { x: -10.541, y: -10.541 },
+  { x: 10.541, y: 10.541 }
 ] as const
 
 const pdModuleFootprint = (
@@ -61,7 +61,7 @@ const pdModuleFootprint = (
 
 const regulatorFootprint = (
   <footprint name="POLOLU_D36V50F5_CARRIER" originalLayer="top">
-    <silkscreenrect pcbX={0} pcbY={0} width="25.4mm" height="25.4mm" strokeWidth="0.2mm" filled={false} />
+    <silkscreenrect pcbX={1.27} pcbY={0} width="25.4mm" height="25.4mm" strokeWidth="0.2mm" filled={false} />
     {regulatorPins.map(({ name, x, y }, index) => (
       <Fragment key={name}>
         <platedhole
@@ -82,8 +82,8 @@ const regulatorFootprint = (
         <hole diameter="2.18mm" pcbX={x} pcbY={y} />
       </Fragment>
     ))}
-    <silkscreentext text="5V REG" pcbX={3.5} pcbY={0} fontSize="1mm" />
-    <courtyardrect pcbX={0} pcbY={0} width="27mm" height="27mm" strokeWidth="0.05mm" />
+    <silkscreentext text="5V REG" pcbX={4.77} pcbY={0} fontSize="1mm" />
+    <courtyardrect pcbX={1.27} pcbY={0} width="27mm" height="27mm" strokeWidth="0.05mm" />
   </footprint>
 )
 
