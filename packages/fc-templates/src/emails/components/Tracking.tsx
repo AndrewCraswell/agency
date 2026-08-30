@@ -21,7 +21,9 @@ export const Tracking = ({ fulfillment }: TrackingProps) => (
         style={{
           backgroundColor: color.surface,
           border: `1px solid ${color.line}`,
+          borderCollapse: "separate",
           borderRadius: radius,
+          borderSpacing: 0,
           padding: "18px 20px"
         }}
       >
