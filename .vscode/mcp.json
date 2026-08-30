@@ -42,10 +42,6 @@
       "type": "http",
       "url": "https://leg-dev-mcp.orangemushroom-4d0319a3.westus2.azurecontainerapps.io/mcp"
     },
-    // "higgsfield": {
-    //   "type": "http",
-    //   "url": "https://mcp.higgsfield.ai/mcp"
-    // },
     "trigger": {
       "command": "npx",
       "args": ["trigger.dev@latest", "mcp"]

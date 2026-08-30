@@ -18,25 +18,28 @@
         {%- for block in section.blocks -%}
           {%- assign cat = block.settings.collection -%}
           {%- assign cat_name = block.settings.title | default: cat.title -%}
-          <a class="fc-home__cat" href="{{ cat.url | default: routes.collections_url }}" {{ block.shopify_attributes }}>
+          {%- assign cat_url = cat.url | default: routes.collections_url -%}
+          <article class="fc-home__cat" {{ block.shopify_attributes }}>
             {%- assign card_image = block.settings.image | default: cat.featured_image -%}
-            {%- if card_image -%}
-              {{
-                card_image
-                | image_url: width: 800
-                | image_tag:
-                  class: 'fc-home__cat-photo',
-                  widths: '395, 592, 790',
-                  sizes: '(min-width: 990px) 395px, 100vw',
-                  alt: cat_name,
-                  loading: 'lazy'
-              }}
-            {%- else -%}
-              <span class="fc-home__cat-photo fc-home__cat-photo--placeholder"></span>
-            {%- endif -%}
+            <a class="fc-home__cat-image-link" href="{{ cat_url }}" aria-label="{{ cat_name | escape }}">
+              {%- if card_image -%}
+                {{
+                  card_image
+                  | image_url: width: 800
+                  | image_tag:
+                    class: 'fc-home__cat-photo',
+                    widths: '395, 592, 790',
+                    sizes: '(min-width: 990px) 395px, 100vw',
+                    alt: cat_name,
+                    loading: 'lazy'
+                }}
+              {%- else -%}
+                <span class="fc-home__cat-photo fc-home__cat-photo--placeholder"></span>
+              {%- endif -%}
+            </a>
             <span class="fc-home__cat-info">
               <span class="fc-home__cat-text">
-                <span class="fc-home__cat-name">{{ cat_name }}</span>
+                <a class="fc-home__cat-name" href="{{ cat_url }}">{{ cat_name | escape }}</a>
                 {%- if section.settings.show_count -%}
                   <span class="fc-home__cat-count">
                     {{- cat.all_products_count | default: 0 }}
@@ -45,13 +48,15 @@
                 {%- endif -%}
               </span>
               {%- if section.settings.link_label != blank -%}
-                <span class="fc-home__cat-shop">
-                  {{- section.settings.link_label | escape -}}
-                  {%- render 'ui-icon', icon: 'arrow-right' -%}
-                </span>
+                {%- render 'ui-link',
+                  label: section.settings.link_label,
+                  url: cat_url,
+                  icon: 'arrow-right',
+                  class: 'fc-home__cat-shop'
+                -%}
               {%- endif -%}
             </span>
-          </a>
+          </article>
         {%- endfor -%}
       </div>
     </div>

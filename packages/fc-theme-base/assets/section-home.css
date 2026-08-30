@@ -518,7 +518,10 @@
   flex-direction: column;
   gap: 1.6rem;
   color: #101012;
-  text-decoration: none;
+}
+
+.fc-home__cat-image-link {
+  display: block;
 }
 
 .fc-home__cat-photo {
@@ -549,6 +552,14 @@
   font-weight: 600;
   line-height: normal;
   letter-spacing: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fc-home__cat-name:hover,
+.fc-home__cat-name:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
 }
 
 .fc-home__cat-count {
@@ -571,13 +582,6 @@
 .fc-home__cat-shop .ui-icon {
   width: 1.4rem;
   height: 1.4rem;
-}
-
-/* The whole card is the anchor, so the affordance underlines from the card's hover. */
-.fc-home__cat:hover .fc-home__cat-shop,
-.fc-home__cat:focus-visible .fc-home__cat-shop {
-  text-decoration: underline;
-  text-underline-offset: 0.3rem;
 }
 
 /* Products: four 294px cards, 24px gutters. */
