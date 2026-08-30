@@ -496,4 +496,185 @@ describe("mapOrderToVariables", () => {
   it("writes every line to the edited-order drop, which Shopify sets whether or not one was removed", () => {
     expect(vars.line_items_including_zero_quantity).toEqual(vars.line_items)
   })
+
+  it("replaces absent Admin API details with honest empty notification values", () => {
+    const sparseOrder = structuredClone(order!)
+    const sparseStore = structuredClone(store)
+    const line = sparseOrder.lineItems.nodes[0]!
+
+    Object.assign(line, {
+      customAttributes: [{ key: "Engraving", value: null }],
+      discountAllocations: [
+        {
+          allocatedAmountSet: null,
+          discountApplication: {
+            allocationMethod: "EACH",
+            targetSelection: "UNKNOWN",
+            targetType: "UNKNOWN",
+            value: { __typename: "MoneyV2", amount: "5.00" }
+          }
+        }
+      ],
+      image: null,
+      originalTotalSet: null,
+      originalUnitPriceSet: null,
+      product: null,
+      sku: null,
+      taxLines: [{ priceSet: null, rate: null, ratePercentage: null, title: "Tax" }],
+      variant: null,
+      variantTitle: null,
+      vendor: null
+    })
+    Object.assign(sparseOrder, {
+      billingAddress: null,
+      cancelReason: "CUSTOMER",
+      cancelledAt: "2026-03-05T10:00:00-08:00",
+      confirmationNumber: null,
+      customer: null,
+      currentTotalDutiesSet: null,
+      displayFinancialStatus: null,
+      displayFulfillmentStatus: null,
+      fulfillmentOrders: { nodes: [{ assignedLocation: null }] },
+      paymentTerms: {
+        dueInDays: null,
+        paymentSchedules: { nodes: [{ balanceDue: { amount: "0" }, completedAt: null, dueAt: null, issuedAt: null }] },
+        paymentTermsName: null,
+        paymentTermsType: "UNKNOWN",
+        translatedName: "On receipt"
+      },
+      poNumber: "PO-7",
+      purchasingEntity: {},
+      shippingAddress: null,
+      shippingLine: null,
+      taxLines: [{ priceSet: null, rate: null, ratePercentage: null, title: "Tax" }],
+      transactions: [
+        {
+          amountSet: null,
+          formattedGateway: null,
+          gateway: null,
+          kind: "UNKNOWN",
+          paymentDetails: null,
+          status: "UNKNOWN"
+        }
+      ]
+    })
+    sparseOrder.fulfillments[0] = {
+      ...sparseOrder.fulfillments[0]!,
+      estimatedDeliveryAt: null,
+      fulfillmentLineItems: {
+        nodes: [{ lineItem: { id: "gid://shopify/LineItem/404" }, quantity: 1 }]
+      },
+      trackingInfo: [{ company: null, number: null, url: null }]
+    }
+    sparseOrder.returns.nodes[0] = {
+      exchangeLineItems: {
+        nodes: [{ lineItems: [{ id: "gid://shopify/LineItem/404" }], quantity: 1 }]
+      },
+      returnLineItems: {
+        nodes: [{ fulfillmentLineItem: null, quantity: 1, withCodeDiscountedTotalPriceSet: null }]
+      },
+      reverseFulfillmentOrders: {
+        nodes: [{ reverseDeliveries: { nodes: [{ deliverable: null }] } }]
+      }
+    }
+    sparseOrder.refunds[0] = {
+      refundLineItems: {
+        nodes: [
+          {
+            lineItem: { id: "gid://shopify/LineItem/404" },
+            quantity: 1,
+            restockType: null,
+            subtotalSet: null
+          }
+        ]
+      },
+      totalRefundedSet: null
+    }
+    sparseStore.shop.shopAddress = null
+    sparseStore.shop.shopPolicies = []
+    sparseStore.giftCards.nodes[0] = { ...sparseStore.giftCards.nodes[0]!, customer: null }
+    sparseStore.abandonedCheckouts.nodes[0] = {
+      ...sparseStore.abandonedCheckouts.nodes[0]!,
+      lineItems: { nodes: [{ image: null, quantity: 1, title: null, variantTitle: null }] }
+    }
+
+    const sparse = mapOrderToVariables(sparseOrder, sparseStore)
+    const sparseLine = sparse.line_items[0]!
+
+    expect(sparseLine).toMatchObject({
+      image: "",
+      original_line_price: 0,
+      price: 0,
+      properties: [{ first: "Engraving", last: "" }],
+      sku: "",
+      title_without_variant: line.title,
+      url: "",
+      variant_id: 0,
+      vendor: ""
+    })
+    expect(sparseLine.variant).toMatchObject({ available: true, compare_at_price: null, options: [], price: 0 })
+    expect(sparseLine.product).toMatchObject({ featured_image: "", images: [], options: [], title: "" })
+    expect(sparseLine.discount_allocations[0]?.discount_application).toMatchObject({
+      target_selection: "explicit",
+      target_type: "line_item",
+      title: "",
+      value: "5.00",
+      value_type: "fixed_amount"
+    })
+    expect(sparse.fulfillment).toMatchObject({
+      estimated_delivery_at: null,
+      fulfillment_line_items: [],
+      tracking_company: null,
+      tracking_numbers: [],
+      tracking_url: null,
+      tracking_urls: []
+    })
+    expect(sparse.return).toMatchObject({
+      deliveries: [
+        { carrier_name: null, return_label: null, tracking_number: null, tracking_url: null, type: "manual" }
+      ],
+      exchange_line_items: [],
+      line_items: [],
+      line_items_subtotal_price: -0
+    })
+    expect(sparse.refund_line_items).toEqual([])
+    expect(sparse.gift_card?.customer).toBeNull()
+    expect(sparse.abandoned_visit?.products_added_to_cart[0]).toMatchObject({
+      image_url: "",
+      title: "",
+      variant_title: ""
+    })
+    expect(sparse).toMatchObject({
+      "b2b?": false,
+      cancel_reason: "customer",
+      cancelled: true,
+      confirmation_number: "",
+      delivery_method_for_subtotal: "",
+      financial_status: "",
+      fulfillment_status: "",
+      po_number: "PO-7"
+    })
+    expect(sparse.customer).toMatchObject({
+      accepts_marketing: false,
+      addresses: [],
+      default_address: null,
+      first_name: "",
+      has_account: false,
+      orders_count: 0,
+      state: null,
+      tags: [],
+      tax_exempt: false,
+      total_spent: 0,
+      verified_email: null
+    })
+    expect(sparse.payment_terms?.type).toBe("net")
+    expect(sparse).not.toHaveProperty("payment_schedule")
+    expect(sparse.transactions[0]).toMatchObject({
+      amount: 0,
+      gateway_display_name: "",
+      kind: "sale",
+      payment_details: { credit_card_company: "", credit_card_last_four_digits: "" },
+      status: "success"
+    })
+  })
 })
