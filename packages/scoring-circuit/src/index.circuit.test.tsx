@@ -332,16 +332,17 @@ describe("minimal scoring prototype baseline", () => {
     })
     expect(cadByReference.get("BZ_SCORING")).toMatchObject({
       position: { x: 68, y: -6, z: 0.7 },
-      model_board_normal_direction: "y+",
       model_origin_position: { x: 2.5, y: 0, z: 0 }
     })
+    expect(cadByReference.get("BZ_SCORING")?.model_board_normal_direction).toBeUndefined()
     expect(cadByReference.get("U_USB_C_PD")).toMatchObject({
       position: { x: expect.closeTo(-62, 6), y: 34.5, z: 0.7 },
       model_origin_position: { x: 10.16, y: 11.7475, z: 0 }
     })
     expect(cadByReference.get("U_V5_REGULATOR")).toMatchObject({
-      position: { x: expect.closeTo(-34, 6), y: expect.closeTo(34, 6), z: 6.7 },
-      model_origin_position: { x: 12.7, y: 12.7, z: 0 }
+      position: { x: -34, y: expect.closeTo(34, 6), z: 6.7 },
+      rotation: { x: 0, y: 0, z: 270 },
+      model_origin_position: { x: 12.7, y: 11.43, z: 0 }
     })
     expect(cadByReference.get("U_IR_RECEIVER")).toMatchObject({
       position: { x: 67, y: 46, z: 0.7 },

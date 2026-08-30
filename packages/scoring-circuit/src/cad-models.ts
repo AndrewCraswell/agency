@@ -27,8 +27,8 @@ export const cadModels = {
   },
   hub75DataHeader: {
     stepUrl: checkedInStepUrl("idc-header-2x08-p2.54mm-vertical.step"),
-    // KiCad's model origin is pin 1; the centered 2x8 footprint origin is the
-    // midpoint of the 2.54 mm row spacing and the 17.78 mm column length.
+    // The KiCad STEP is authored from pin 1. Anchor the midpoint of its 2x8
+    // pin grid to the centered footprint datum.
     modelOriginPosition: { x: 1.27, y: -8.89, z: 0 }
   },
   hub75PowerHeader: {
@@ -36,17 +36,19 @@ export const cadModels = {
   },
   dip6: {
     stepUrl: checkedInStepUrl("dip-6-w7.62mm.step"),
+    // Pin 1 is the STEP origin; this is the midpoint of the six-pin grid.
     modelOriginPosition: { x: 3.81, y: -2.54, z: 0 }
   },
   diodeDo41: {
     stepUrl: checkedInStepUrl("do-41-p10.16mm.step"),
+    // The axial model begins at pad 1 and spans 10.16 mm to pad 2.
     modelOriginPosition: { x: 5.08, y: 0, z: 0 }
   },
   irReceiver: {
     stepUrl: checkedInStepUrl("tsop384xx.step"),
     modelBoardNormalDirection: "y+",
-    // The STEP includes the receiver's untrimmed through-hole leads. Its body is
-    // intentionally above the board while the leads pass through the footprint.
+    // With the model's Y axis normal to the board, its three lead centers lie
+    // at model Z=-1.45 mm. Anchor that lead row to the footprint holes.
     modelOriginPosition: { x: 0, y: 0, z: -1.45 }
   },
   pinHeader1x01: {
@@ -66,6 +68,8 @@ export const cadModels = {
   pinSocket1x22: {
     stepUrl: checkedInStepUrl("pin-socket-1x22-2.54mm.step"),
     pcbRotationOffset: -90,
+    // The KiCad socket model runs from Y=1.27 to Y=-54.61. Its pin-grid
+    // midpoint is -26.67 mm and must coincide with the centered 22-hole row.
     modelOriginPosition: { x: 0, y: -26.67, z: 0 }
   },
   resistor0603: {
@@ -86,7 +90,8 @@ export const cadModels = {
   },
   scoringSounder: {
     stepUrl: checkedInStepUrl("tdk-ps1240p02bt.step"),
-    modelBoardNormalDirection: "y+",
+    // The two pins are 5 mm apart and the STEP origin is at pin 1. Do not
+    // change the board-normal orientation: the viewer already converts STEP.
     modelOriginPosition: { x: 2.5, y: 0, z: 0 }
   },
   sot23: {
@@ -94,12 +99,23 @@ export const cadModels = {
   },
   usbCPdModule: {
     stepUrl: checkedInStepUrl("adafruit-5807-husb238.step"),
+    // The retained STEP places VOUT/GND at (7.62, 2.54) and (12.7, 2.54)
+    // and the two mounting holes at (2.413, 20.955) and (17.653, 20.955).
+    // Their shared board center is therefore the exact carrier datum below.
     modelOriginPosition: { x: 10.16, y: 11.7475, z: 0 },
+    // tscircuit reports this asymmetric footprint's bounds center 0.127 mm
+    // left and 0.175 mm above its authored anchor. Cancel only that recentering.
     positionOffset: { x: 0.127, y: -0.175, z: 0 }
   },
   v5RegulatorModule: {
     stepUrl: checkedInStepUrl("pololu-d36v50f5.step"),
-    modelOriginPosition: { x: 12.7, y: 12.7, z: 0 },
+    // The retained STEP's pin grid runs along model X at Y=1.27/3.81.
+    // Rotate that grid onto the carrier's vertical two-column footprint and
+    // anchor the selected eight pins at their exact plated-hole coordinates.
+    pcbRotationOffset: -90,
+    modelOriginPosition: { x: 12.7, y: 11.43, z: 0 },
+    // Cancel the 0.05 mm bounds-center shift so the model uses the authored
+    // module anchor rather than the derived footprint-bounds center.
     positionOffset: { x: -0.05, y: -0.05, z: 0 },
     zOffsetFromSurface: "6mm"
   }
