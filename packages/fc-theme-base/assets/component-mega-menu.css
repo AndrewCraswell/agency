@@ -2,17 +2,26 @@
   position: static;
 }
 
+/* The panel spans the header wrapper rather than 100vw: 100vw includes the scrollbar,
+   and centring on the nav drifts the panel off the page as the nav shifts. The logo is
+   pushed behind so the open panel is not painted over. */
+.header__heading {
+  position: relative;
+  z-index: 0;
+}
+
 .mega-menu__content {
   background-color: rgb(var(--color-background));
   border-left: 0;
   border-radius: 0;
   border-right: 0;
   left: 0;
-  overflow-y: auto;
-  padding-bottom: 3rem;
-  padding-top: 3rem;
-  position: absolute;
   right: 0;
+  overflow-y: auto;
+  padding-bottom: 0;
+  padding-top: 0;
+  position: absolute;
+  width: auto;
   top: 100%;
 }
 
@@ -24,13 +33,19 @@
   border-top: 0;
 }
 
+/* Closed panels keep their absolute box, so without this they still catch the pointer
+   and steal hover from the panel that is actually open. */
 .js .mega-menu__content {
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transform: translateY(-1.5rem);
 }
 
 .mega-menu[open] .mega-menu__content {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -84,4 +99,416 @@
 
 .mega-menu__list--condensed .mega-menu__link {
   font-weight: normal;
+}
+
+/* ---------------------------------------------------------------------------
+   Fencing Club mega menu. One shell (title, "Shop all", hairline) wraps four
+   bodies: L2/L3 columns, image cards, the weapon builder and the kit panels.
+   --------------------------------------------------------------------------- */
+
+.fc-mega {
+  --fc-mega-ink: #101012;
+  --fc-mega-ink-soft: #5a5a60;
+  --fc-mega-line: #e3e3e0;
+  --fc-mega-surface: #f4f4f2;
+  --fc-mega-radius: 1.4rem;
+  /* Panel chrome is 119px, so this pins every variant to a 349px panel. */
+  --fc-mega-body-min: 23rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 144rem;
+  margin-inline: auto;
+  padding-block: 2.4rem 2.8rem;
+  padding-inline: 9.6rem;
+  color: var(--fc-mega-ink);
+}
+
+.fc-mega__header {
+  display: flex;
+  gap: 2rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.fc-mega__title {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fc-mega__shop-all,
+.fc-mega-card__view,
+.fc-mega-feature__view {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-family: var(--font-body-family);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+.fc-mega-feature__header {
+  display: flex;
+  gap: 1.2rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.fc-mega-feature__view .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.fc-mega__shop-all:hover,
+.fc-mega-feature:hover .fc-mega-feature__view,
+.fc-mega-card:hover .fc-mega-card__view {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+.fc-mega__shop-all .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* base.css hides empty divs, so these separators have to declare display. */
+.fc-mega__rule {
+  display: block;
+  height: 0.1rem;
+  background: var(--fc-mega-line);
+}
+
+.fc-mega__body {
+  display: flex;
+  gap: 4.8rem;
+  align-items: flex-start;
+  min-height: var(--fc-mega-body-min);
+}
+
+.fc-mega__columns {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 2.4rem 4.4rem;
+  min-width: 0;
+}
+
+/* Columns hug their links and sit left aligned, so a two column menu does not stretch
+   each one across half the panel. */
+.fc-mega__column {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: 1.4rem;
+  min-width: 0;
+}
+
+.fc-mega__column-heading {
+  font-family: var(--font-heading-family);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.6rem;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+.fc-mega__column-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin: 0;
+}
+
+/* Block links keep each row's box tight to the text, so the gap alone sets the
+   design's row pitch instead of Dawn's inherited body line-height. */
+.fc-mega__link {
+  display: block;
+  font-family: var(--font-body-family);
+  font-size: 1.4rem;
+  line-height: 1.7rem;
+  color: var(--fc-mega-ink-soft);
+  text-decoration: none;
+}
+
+.fc-mega__column-heading:hover,
+.fc-mega__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+/* Cards ------------------------------------------------------------------- */
+
+/* Cards sit at 300 when there is room and shrink below it when there is not, so a
+   four-up row never pushes the panel wider than the viewport. */
+.fc-mega__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem;
+  min-height: var(--fc-mega-body-min);
+}
+
+.fc-mega-card {
+  display: flex;
+  flex: 1 1 22rem;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+  max-width: 30rem;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+.fc-mega-card__media {
+  display: block;
+  flex: none;
+  overflow: hidden;
+  height: 17.5rem;
+  border-radius: var(--fc-mega-radius);
+  background: var(--fc-mega-surface);
+}
+
+.fc-mega-card__media img,
+.fc-mega-card__media svg,
+.fc-mega-feature__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fc-mega-card__header {
+  display: flex;
+  gap: 1.2rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.fc-mega-card__title {
+  font-family: var(--font-heading-family);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fc-mega-card__view .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.fc-mega-card__desc,
+.fc-mega-feature__desc,
+.fc-mega-tool__copy,
+.fc-mega-panel__desc {
+  font-family: var(--font-body-family);
+  font-size: 1.3rem;
+  line-height: 1.45;
+  color: var(--fc-mega-ink-soft);
+}
+
+.fc-mega-card--compact .fc-mega-card__desc {
+  font-size: 1.25rem;
+}
+
+/* Feature and tool cards --------------------------------------------------- */
+
+.fc-mega-feature,
+.fc-mega-tool {
+  display: flex;
+  flex: 0 1 30rem;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-self: stretch;
+  min-width: 0;
+  width: 30rem;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+/* Matches one column of the starter kits grid, so both tool cards are the same width. */
+.fc-mega-tool {
+  flex: 0 0 auto;
+  width: calc((100% - 4.8rem) / 3);
+}
+
+/* The tool cards carry no imagery, so the inverted fill is what gives them weight. */
+.fc-mega-tool,
+.fc-mega-panel--tool {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-self: stretch;
+  padding: 1.8rem;
+  border-color: transparent;
+  border-radius: var(--fc-mega-radius);
+  background: var(--fc-mega-ink);
+  color: #f7f7f5;
+}
+
+.fc-mega-tool .fc-mega-tool__title,
+.fc-mega-panel--tool .fc-mega-panel__title {
+  color: #f7f7f5;
+}
+
+.fc-mega-tool .fc-mega-tool__copy,
+.fc-mega-panel--tool .fc-mega-panel__desc {
+  color: #a0a0a6;
+}
+
+.fc-mega-feature__media {
+  display: block;
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  height: 17.5rem;
+  border-radius: var(--fc-mega-radius);
+  background: var(--fc-mega-surface);
+}
+
+.fc-mega-feature__title,
+.fc-mega-tool__title {
+  font-family: var(--font-heading-family);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fc-mega-tool__title {
+  font-size: 2rem;
+}
+
+.fc-mega-tool__pill {
+  align-self: flex-start;
+  padding: 0.4rem 1rem;
+  border: 0.1rem solid #a0a0a6;
+  border-radius: 10rem;
+  font-family: var(--font-body-family);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #f7f7f5;
+  text-transform: uppercase;
+}
+
+.fc-mega-tool__button {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 1.1rem 0;
+  border-radius: var(--fc-mega-radius);
+  background: #fff;
+  font-family: var(--font-body-family);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+.fc-mega-tool__button:hover {
+  background: #e3e3e0;
+}
+
+.fc-mega-tool__button .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: var(--fc-mega-ink);
+}
+
+/* Starter kit panels ------------------------------------------------------- */
+
+.fc-mega__body--panels {
+  display: grid;
+  gap: 2.4rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Cards match each other, but the row hugs its content so the panel's
+     spare height falls below the cards instead of inside them. */
+  align-content: start;
+  align-items: stretch;
+}
+
+.fc-mega-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.6rem;
+  border: 0.1rem solid var(--fc-mega-line);
+  border-radius: var(--fc-mega-radius);
+}
+
+.fc-mega-panel__title {
+  font-family: var(--font-heading-family);
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fc-mega-panel__rule {
+  display: block;
+  height: 0.1rem;
+  background: var(--fc-mega-line);
+}
+
+.fc-mega-panel__options {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.fc-mega-panel__options li + li {
+  border-top: 0.1rem solid var(--fc-mega-line);
+}
+
+/* Standalone L2 entries stack as headings in one column rather than taking a column each. */
+.fc-mega__column--standalone {
+  gap: 1.4rem;
+}
+
+.fc-mega-panel__option {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-family: var(--font-body-family);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+.fc-mega-panel__option:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+.fc-mega-panel__option .icon {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+@media screen and (max-width: 1199px) {
+  .fc-mega {
+    padding-inline: 5rem;
+  }
+
+  /* The kits grid keeps its own gutter, which the tool card's width is derived from. */
+  .fc-mega__body:not(.fc-mega__body--panels) {
+    gap: 3.2rem;
+  }
+
+  .fc-mega__columns {
+    gap: 2.4rem 3.2rem;
+  }
+
+  .fc-mega-feature {
+    flex-basis: 26rem;
+    width: 26rem;
+  }
 }

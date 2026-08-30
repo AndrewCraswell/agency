@@ -6,8 +6,8 @@
         "slide-1": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/generated-1783898147425.jpg",
-            "eyebrow": "OLYMPIC FENCING GEAR",
+            "image": "shopify://shop_images/Hero_3_4a58194c-13bf-4a23-91c0-3a3bcec534b4.jpg",
+            "eyebrow": "",
             "heading": "Shop",
             "subheading": "Gear at competitive prices for competitive athletes",
             "button_label": "Shop Now",
@@ -17,18 +17,29 @@
         "slide-2": {
           "type": "slide",
           "settings": {
-            "image": "shopify://shop_images/generated-1783898148562.jpg",
-            "eyebrow": "BEST-PRICED BLADES",
+            "image": "shopify://shop_images/Hero_Fencing_Field_908d0b99-1d56-45c9-a5b5-eb059014e962.jpg",
+            "eyebrow": "SPECIAL",
             "heading": "Get a blade",
             "subheading": "Best priced blades for beginners to elite athletes",
             "button_label": "Weapons",
-            "button_url": "shopify://collections/weapons",
+            "button_url": "shopify://collections/complete-weapons",
             "link_label": "Blades",
             "link_url": "shopify://collections/blades"
           }
+        },
+        "slide-3": {
+          "type": "slide",
+          "settings": {
+            "image": "shopify://shop_images/novus-original.png",
+            "eyebrow": "NEW RELEASE",
+            "heading": "Meet Novus",
+            "subheading": "The 350N uniform that works as hard as you do",
+            "button_label": "Shop Novus",
+            "button_url": "shopify://collections/clothing"
+          }
         }
       },
-      "block_order": ["slide-1", "slide-2"],
+      "block_order": ["slide-1", "slide-2", "slide-3"],
       "settings": {
         "aria_label": "Featured",
         "autoplay": true,
@@ -55,7 +66,7 @@
         "card-2": {
           "type": "card",
           "settings": {
-            "image": "shopify://shop_images/generated-1783898149263.jpg",
+            "image": "shopify://shop_images/weapon-builder-home.jpg",
             "title": "Weapon Builder",
             "description": "Assemble a competition-ready blade part by part, tuned exactly how you like it.",
             "link_1_label": "Foil Weapon",
@@ -69,7 +80,7 @@
         "card-3": {
           "type": "card",
           "settings": {
-            "image": "shopify://shop_images/generated-1783898149949.jpg",
+            "image": "shopify://shop_images/team-fencing-bag-full-bleed-v2.jpg",
             "title": "Team Fencing Bag",
             "description": "Roomy, durable bags to haul your whole setup — from the club to the competition.",
             "link_1_label": "Wheel Bags",

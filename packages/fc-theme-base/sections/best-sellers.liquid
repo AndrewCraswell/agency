@@ -34,7 +34,11 @@
           {%- assign product = block.settings.product -%}
           {%- if product != blank -%}
             <article class="fc-home__product" {{ block.shopify_attributes }}>
-              <div class="fc-home__product-media">
+              <a
+                class="fc-home__product-media"
+                href="{{ product.url }}"
+                aria-label="{{ product.title | escape }}"
+              >
                 {%- if product.featured_image -%}
                   {{
                     product.featured_image
@@ -51,13 +55,13 @@
                 {%- if section.settings.badge_label != blank -%}
                   <span class="fc-home__badge">{{ section.settings.badge_label | escape }}</span>
                 {%- endif -%}
-              </div>
+              </a>
               <div class="fc-home__product-info">
                 {%- if product.type != blank -%}
                   <p class="fc-home__product-tag">{{ product.type | upcase }}</p>
                 {%- endif -%}
                 <h3 class="fc-home__product-name" id="BestSellersTitle-{{ section.id }}-{{ product.id }}">
-                  <a class="fc-home__product-link" href="{{ product.url }}">{{ product.title }}</a>
+                  <a class="fc-home__product-link" href="{{ product.url }}">{{ product.title | escape }}</a>
                 </h3>
               </div>
               <div class="fc-home__price-row">

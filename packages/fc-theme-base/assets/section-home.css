@@ -655,11 +655,10 @@
   text-decoration: none;
 }
 
-/* One link per card, stretched over the card so the media and price area open the product too. */
-.fc-home__product-link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+.fc-home__product-link:hover,
+.fc-home__product-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
 }
 
 .fc-home__price-row {
@@ -668,13 +667,6 @@
   justify-content: space-between;
   gap: 1.2rem;
   min-height: 3.2rem;
-}
-
-/* Lifted clear of the card-wide link overlay so the add button stays clickable. */
-.fc-home__price-row > product-form,
-.fc-home__price-row > .fc-home__add {
-  position: relative;
-  z-index: 1;
 }
 
 .fc-home__price {
@@ -992,6 +984,10 @@
   gap: 2rem;
 }
 
+.fc-home__post-image-link {
+  display: block;
+}
+
 .fc-home__post-image {
   display: block;
   width: 100%;
@@ -1034,6 +1030,7 @@
 }
 
 .fc-home__post-link {
+  align-self: flex-start;
   font-family: var(--font-body-family);
   font-size: 1.3rem;
   font-weight: 600;
@@ -1047,16 +1044,8 @@
   text-decoration: none;
 }
 
-/* One link per card, stretched over it so the image and excerpt open the article too. */
-.fc-home__post-title-link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-/* The read affordance is a span, so it cannot pick up its own hover state. */
-.fc-home__post:hover .fc-home__post-link,
-.fc-home__post:focus-within .fc-home__post-link {
+.fc-home__post-title-link:hover,
+.fc-home__post-title-link:focus-visible {
   text-decoration: underline;
   text-underline-offset: 0.3rem;
 }
@@ -1121,7 +1110,8 @@
   }
 
   .fc-home__pick--tall .fc-home__pick-image {
-    height: 36rem;
+    height: auto;
+    aspect-ratio: 612 / 731;
   }
 
   .fc-home__products {
@@ -1178,8 +1168,7 @@
     flex-basis: 100%;
   }
 
-  .fc-home__pick-image,
-  .fc-home__pick--tall .fc-home__pick-image {
+  .fc-home__pick:not(.fc-home__pick--tall) .fc-home__pick-image {
     height: 24rem;
   }
 

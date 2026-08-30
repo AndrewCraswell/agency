@@ -1,0 +1,72 @@
+{% comment %}
+  Renders the L2 heading + L3 link columns shared by the complex and weapon builder views.
+  L2 entries with no children of their own do not earn a column each, so they collect into
+  a single stacked column at the end.
+
+  Accepts:
+  - link: {Link} the top level menu entry (required).
+
+  Usage:
+  {% render 'mega-menu-columns', link: link %}
+{% endcomment %}
+
+<div class="fc-mega__columns">
+  {%- for childlink in link.links -%}
+    {%- if childlink.links != blank -%}
+      <div class="fc-mega__column">
+        <a
+          class="fc-mega__column-heading"
+          href="{{ childlink.url }}"
+          {% if childlink.current %}
+            aria-current="page"
+          {% endif %}
+        >
+          {{ childlink.title | escape }}
+        </a>
+
+        <ul class="fc-mega__column-links list-unstyled" role="list">
+          {%- for grandchildlink in childlink.links -%}
+            <li>
+              <a
+                class="fc-mega__link"
+                href="{{ grandchildlink.url }}"
+                {% if grandchildlink.current %}
+                  aria-current="page"
+                {% endif %}
+              >
+                {{ grandchildlink.title | escape }}
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- liquid
+    assign standalone_count = 0
+    for childlink in link.links
+      if childlink.links == blank
+        assign standalone_count = standalone_count | plus: 1
+      endif
+    endfor
+  -%}
+
+  {%- if standalone_count > 0 -%}
+    <div class="fc-mega__column fc-mega__column--standalone">
+      {%- for childlink in link.links -%}
+        {%- if childlink.links == blank -%}
+          <a
+            class="fc-mega__column-heading"
+            href="{{ childlink.url }}"
+            {% if childlink.current %}
+              aria-current="page"
+            {% endif %}
+          >
+            {{ childlink.title | escape }}
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+</div>

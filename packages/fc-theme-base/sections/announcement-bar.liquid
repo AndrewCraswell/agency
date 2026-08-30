@@ -46,13 +46,12 @@
               <span class="announcement-bar__body">{{ section.blocks.first.settings.message | escape }}</span>
             {%- endif -%}
             {%- if section.blocks.first.settings.link != blank and section.blocks.first.settings.link_label != blank -%}
-              <a
-                href="{{ section.blocks.first.settings.link }}"
-                class="announcement-bar__cta focus-inset"
-              >
-                {{- section.blocks.first.settings.link_label | escape -}}
-                {%- render 'ui-icon', icon: 'arrow-right' -%}
-              </a>
+              {%- render 'ui-link',
+                label: section.blocks.first.settings.link_label,
+                url: section.blocks.first.settings.link,
+                icon: 'arrow-right',
+                class: 'announcement-bar__cta focus-inset'
+              -%}
             {%- endif -%}
           </p>
         {%- endif -%}
@@ -109,13 +108,12 @@
                         <span class="announcement-bar__body">{{ block.settings.message | escape }}</span>
                       {%- endif -%}
                       {%- if block.settings.link != blank and block.settings.link_label != blank -%}
-                        <a
-                          href="{{ block.settings.link }}"
-                          class="announcement-bar__cta focus-inset"
-                        >
-                          {{- block.settings.link_label | escape -}}
-                          {%- render 'ui-icon', icon: 'arrow-right' -%}
-                        </a>
+                        {%- render 'ui-link',
+                          label: block.settings.link_label,
+                          url: block.settings.link,
+                          icon: 'arrow-right',
+                          class: 'announcement-bar__cta focus-inset'
+                        -%}
                       {%- endif -%}
                     </p>
                   {%- endif -%}

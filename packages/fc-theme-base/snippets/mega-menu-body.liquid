@@ -1,0 +1,130 @@
+{% comment %}
+  Renders the body of one mega menu panel. The variant is inferred from the menu tree,
+  except for the two categories the design gives bespoke views.
+
+  Accepts:
+  - link: {Link} the top level menu entry (required).
+
+  Usage:
+  {% render 'mega-menu-body', link: link %}
+{% endcomment %}
+
+{%- liquid
+  assign has_third_level = false
+  for childlink in link.links
+    if childlink.links != blank
+      assign has_third_level = true
+      break
+    endif
+  endfor
+
+  assign variant = 'cards'
+  if link.handle == 'weapons'
+    assign variant = 'weapon-builder'
+  elsif link.handle == 'starter-kits'
+    assign variant = 'starter-kits'
+  elsif has_third_level
+    assign variant = 'columns'
+  endif
+-%}
+
+{%- case variant -%}
+  {%- when 'columns' -%}
+    <div class="fc-mega__body">
+      {%- render 'mega-menu-columns', link: link -%}
+
+      {%- if link.handle == 'clothing' -%}
+        <a class="fc-mega-feature" href="{{ routes.root_url }}pages/sizing-guide">
+          <span class="fc-mega-feature__media">
+            <img
+              src="{{ 'mega-sizing-guide.jpg' | asset_url }}"
+              alt=""
+              loading="lazy"
+              width="600"
+              height="350"
+            >
+          </span>
+          <span class="fc-mega-feature__header">
+            <span class="fc-mega-feature__title">Sizing guide</span>
+            <span class="fc-mega-feature__view">
+              View
+              {{- 'icon-arrow.svg' | inline_asset_content -}}
+            </span>
+          </span>
+          <span class="fc-mega-feature__desc">Measure once, order the right fit.</span>
+        </a>
+      {%- endif -%}
+    </div>
+
+  {%- when 'weapon-builder' -%}
+    <div class="fc-mega__body">
+      {%- render 'mega-menu-columns', link: link -%}
+
+      <div class="fc-mega-tool">
+        <span class="fc-mega-tool__pill">Interactive tool</span>
+        <span class="fc-mega-tool__title">Weapon Builder</span>
+        <span class="fc-mega-tool__copy">
+          Choose your blade, guard, grip and pommel. We build, wire and test it
+          before it ships.
+        </span>
+        <a class="fc-mega-tool__button" href="{{ link.url }}">
+          Build a weapon
+          {{- 'icon-arrow.svg' | inline_asset_content -}}
+        </a>
+      </div>
+    </div>
+
+  {%- when 'starter-kits' -%}
+    {%- liquid
+      assign panel_titles = 'Practice Kits|Electric Kits' | split: '|'
+      assign panel_copy = 'Everything you need to start training: mask, jacket, glove and a practice weapon.|Competition-ready electric sets with lamé, body cord and a tested weapon.' | split: '|'
+    -%}
+
+    <div class="fc-mega__body fc-mega__body--panels">
+      {%- for panel_index in (0..1) -%}
+        <div class="fc-mega-panel">
+          <span class="fc-mega-panel__title">{{ panel_titles[panel_index] }}</span>
+          <span class="fc-mega-panel__desc">{{ panel_copy[panel_index] }}</span>
+          <span class="fc-mega-panel__rule"></span>
+
+          <ul class="fc-mega-panel__options list-unstyled" role="list">
+            {%- for childlink in link.links -%}
+              <li>
+                <a class="fc-mega-panel__option" href="{{ childlink.url }}">
+                  <span>{{ childlink.title | escape }}</span>
+                  {{- 'icon-arrow.svg' | inline_asset_content -}}
+                </a>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endfor -%}
+
+      <div class="fc-mega-panel fc-mega-panel--tool">
+        <span class="fc-mega-tool__pill">Interactive tool</span>
+        <span class="fc-mega-panel__title">Build Your Own Kit</span>
+        <span class="fc-mega-panel__desc">
+          Bundle any weapon, mask, jacket and more into one kit.
+        </span>
+        <a class="fc-mega-tool__button" href="{{ link.url }}">
+          Build a kit
+          {{- 'icon-arrow.svg' | inline_asset_content -}}
+        </a>
+      </div>
+    </div>
+
+  {%- else -%}
+    {%- liquid
+      assign card_count = link.links | size
+      assign compact = false
+      if card_count > 3
+        assign compact = true
+      endif
+    -%}
+
+    <div class="fc-mega__cards" style="--fc-mega-columns: {{ card_count }};">
+      {%- for childlink in link.links -%}
+        {%- render 'mega-menu-card', childlink: childlink, compact: compact -%}
+      {%- endfor -%}
+    </div>
+{%- endcase -%}

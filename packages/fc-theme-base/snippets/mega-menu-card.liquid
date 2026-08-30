@@ -1,0 +1,71 @@
+{% comment %}
+  Renders one mega menu card: image, title, "View" affordance and a short description.
+
+  Prototype content is held here rather than in collections, because most menu entries
+  point at collections that do not exist in the store yet.
+
+  Accepts:
+  - childlink: {Link} the menu entry to render (required).
+  - compact: {Boolean} tighter image and type for the four-up layout (optional).
+
+  Usage:
+  {% render 'mega-menu-card', childlink: childlink, compact: true %}
+{% endcomment %}
+
+{%- liquid
+  assign card_handles = 'shoes,socks,wheel-bags,carry-bags,kids,scoring-systems,reels-and-floor-cables,repair-tools' | split: ','
+  assign card_images = 'mega-footwear-shoes.jpg,mega-footwear-socks.jpg,mega-bags-wheel.jpg,mega-bags-carry.jpg,mega-club-kids.jpg,mega-club-scoring.jpg,mega-club-reels.jpg,mega-club-repair.jpg' | split: ','
+  assign card_copy = 'Grippy soles and lunge support.|Knee-high and moisture-wicking.|Rolling bags for a full kit.|Carry for a single weapon.|Club sets sized for juniors.|FIE machines and repeaters.|Reels and floor cabling.|Testers, tips and spares.' | split: '|'
+
+  assign card_index = -1
+  for handle in card_handles
+    if handle == childlink.handle
+      assign card_index = forloop.index0
+      break
+    endif
+  endfor
+-%}
+
+<a
+  class="fc-mega-card{% if compact %} fc-mega-card--compact{% endif %}"
+  href="{{ childlink.url }}"
+  {% if childlink.current %}
+    aria-current="page"
+  {% endif %}
+>
+  <span class="fc-mega-card__media">
+    {%- if card_index >= 0 -%}
+      <img
+        src="{{ card_images[card_index] | asset_url }}"
+        alt=""
+        loading="lazy"
+        width="600"
+        height="420"
+      >
+    {%- elsif childlink.object.image -%}
+      {{
+        childlink.object.image
+        | image_url: width: 600
+        | image_tag: loading: 'lazy', alt: ''
+      }}
+    {%- else -%}
+      {{ 'collection-1' | placeholder_svg_tag: 'fc-mega-card__placeholder' }}
+    {%- endif -%}
+  </span>
+
+  <span class="fc-mega-card__header">
+    <span class="fc-mega-card__title">{{ childlink.title | escape }}</span>
+    <span class="fc-mega-card__view">
+      View
+      {{- 'icon-arrow.svg' | inline_asset_content -}}
+    </span>
+  </span>
+
+  {%- if card_index >= 0 -%}
+    <span class="fc-mega-card__desc">{{ card_copy[card_index] }}</span>
+  {%- elsif childlink.object.description != blank -%}
+    <span class="fc-mega-card__desc">
+      {{- childlink.object.description | strip_html | truncatewords: 12 -}}
+    </span>
+  {%- endif -%}
+</a>
