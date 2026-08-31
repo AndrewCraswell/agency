@@ -6,10 +6,18 @@
   - url: {String} Destination.
   - icon: {String} Optional trailing ui-icon name.
   - class: {String} Optional extra classes for section-level sizing.
+  - label_class: {String} Optional class for the label span.
+  - tabindex: {String} Optional tabindex value.
 {% endcomment %}
 
-<a class="ui-link{% if icon %} ui-link--with-icon{% endif %}{% if class %} {{ class }}{% endif %}" href="{{ url }}">
-  {{- label | escape -}}
+<a
+  class="ui-link{% if icon %} ui-link--with-icon{% endif %}{% if class %} {{ class }}{% endif %}"
+  href="{{ url }}"
+  {% if tabindex != blank %}
+    tabindex="{{ tabindex }}"
+  {% endif %}
+>
+  <span class="ui-link__label{% if label_class %} {{ label_class }}{% endif %}">{{ label | escape }}</span>
   {%- if icon -%}
     {%- render 'ui-icon', icon: icon -%}
   {%- endif -%}

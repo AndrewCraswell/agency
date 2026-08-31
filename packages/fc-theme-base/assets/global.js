@@ -3,7 +3,7 @@ function getFocusableElements(container) {
     container.querySelectorAll(
       "summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe"
     )
-  );
+  ).filter((element) => element.getAttribute('tabindex') !== '-1');
 }
 
 class SectionId {
@@ -87,24 +87,16 @@ document.querySelectorAll('[id^="Details-"] summary').forEach((summary) => {
 const trapFocusHandlers = {};
 
 function trapFocus(container, elementToFocus = container) {
-  var elements = getFocusableElements(container);
-  var first = elements[0];
-  var last = elements[elements.length - 1];
-
   removeTrapFocus();
 
-  trapFocusHandlers.focusin = (event) => {
-    if (event.target !== container && event.target !== last && event.target !== first) return;
-
-    document.addEventListener('keydown', trapFocusHandlers.keydown);
-  };
-
-  trapFocusHandlers.focusout = function () {
-    document.removeEventListener('keydown', trapFocusHandlers.keydown);
-  };
-
   trapFocusHandlers.keydown = function (event) {
-    if (event.code.toUpperCase() !== 'TAB') return; // If not TAB key
+    if (event.code.toUpperCase() !== 'TAB' || !container.contains(event.target)) return;
+
+    const elements = getFocusableElements(container).filter((element) => element.offsetParent !== null);
+    const first = elements[0];
+    const last = elements[elements.length - 1];
+    if (!first || !last) return;
+
     // On the last focusable element and tab forward, focus the first element.
     if (event.target === last && !event.shiftKey) {
       event.preventDefault();
@@ -118,8 +110,7 @@ function trapFocus(container, elementToFocus = container) {
     }
   };
 
-  document.addEventListener('focusout', trapFocusHandlers.focusout);
-  document.addEventListener('focusin', trapFocusHandlers.focusin);
+  document.addEventListener('keydown', trapFocusHandlers.keydown);
 
   elementToFocus.focus();
 

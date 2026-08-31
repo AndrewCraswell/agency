@@ -74976,6 +74976,4080 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "OgcE8",
+      "x": 59620,
+      "y": -7637,
+      "name": "Docs/Search — Alternatives",
+      "width": 1568,
+      "fill": "#e9e8e4",
+      "cornerRadius": 24,
+      "layout": "vertical",
+      "gap": 44,
+      "padding": 64,
+      "children": [
+        {
+          "type": "frame",
+          "id": "X3Cs6",
+          "name": "Board Title",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "JbLS5",
+              "name": "Title",
+              "fill": "$ink",
+              "content": "Search",
+              "fontFamily": "$font-display",
+              "fontSize": 40,
+              "fontWeight": "800",
+              "letterSpacing": -1
+            },
+            {
+              "type": "text",
+              "id": "monnn",
+              "name": "Sub",
+              "fill": "$ink-soft",
+              "content": "Predictive search from Shopify resources: suggestions, products, collections, articles and pages",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "W6hNEG",
+          "name": "Search/D — Desktop",
+          "clip": true,
+          "width": 1440,
+          "fill": "$bg",
+          "cornerRadius": "$radius",
+          "stroke": "$line",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "K7Xnas",
+              "name": "Search Bar",
+              "width": "fill_container",
+              "stroke": "$line",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "strokeAlignment": "inner",
+              "gap": 16,
+              "padding": [
+                22,
+                96
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "f0ZLJX",
+                  "name": "Search Icon",
+                  "width": 22,
+                  "height": 22,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "$ink"
+                },
+                {
+                  "type": "text",
+                  "id": "Yr9rA",
+                  "name": "Query",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "fencing mask",
+                  "fontFamily": "$font-body",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "R5Kr6S",
+                  "name": "Esc Chip",
+                  "cornerRadius": 6,
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    4,
+                    9
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hCmCg",
+                      "name": "Esc Label",
+                      "fill": "$ink-soft",
+                      "content": "ESC",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.6
+                    }
+                  ]
+                },
+                {
+                  "type": "icon",
+                  "id": "CXQa4",
+                  "name": "Close",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "x",
+                  "library": "lucide",
+                  "fill": "$ink-soft"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "yWK4g",
+              "name": "Results",
+              "width": "fill_container",
+              "gap": 44,
+              "padding": [
+                26,
+                96,
+                30,
+                96
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "M3xNMf",
+                  "name": "Rail",
+                  "width": 264,
+                  "layout": "vertical",
+                  "gap": 26,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "y7pgKa",
+                      "name": "Suggestions",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "JJWOf",
+                          "name": "Heading SUGGESTIONS",
+                          "fill": "$ink-soft",
+                          "content": "SUGGESTIONS",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kkdg1",
+                          "name": "Suggestion 350n",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "H333w3",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "NUqmW",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mcuyu",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J1niu",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " 350n",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LGScC",
+                          "name": "Suggestion bib",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "HTDnD",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "PZj1W",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "zkccA",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "L3xv72",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " bib",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rujsG",
+                          "name": "Suggestion for kids",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "fp5SC",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SMizq",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "x9p6F",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "G7uRSb",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " for kids",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lQgSy",
+                          "name": "Suggestion cover",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "KrQCe",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lbzJw",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "GMK3K",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "XRiqm",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " cover",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UlcsF",
+                      "name": "Categories",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pDywx",
+                          "name": "Heading CATEGORIES",
+                          "fill": "$ink-soft",
+                          "content": "CATEGORIES",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "TXOTc",
+                          "name": "Category Masks",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "YlCUx",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "layout-grid",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "fIpFH",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Masks",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "DRZua",
+                              "name": "Count",
+                              "fill": "$ink-soft",
+                              "content": "12 items",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EjGdC",
+                          "name": "Category Kids Masks",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "g9abo",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "layout-grid",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "sgGOS",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Kids Masks",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "XZNKJ",
+                              "name": "Count",
+                              "fill": "$ink-soft",
+                              "content": "6 items",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "maQtM",
+                          "name": "Category Club Gear",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "oDYF2",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "layout-grid",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Qo2Eg",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Club Gear",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "fsZsZ",
+                              "name": "Count",
+                              "fill": "$ink-soft",
+                              "content": "24 items",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "t9o6DD",
+                  "name": "Main",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "left": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 24,
+                  "padding": [
+                    0,
+                    0,
+                    0,
+                    44
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Kk9Rr",
+                      "name": "Products",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 14,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WZLrb",
+                          "name": "Heading PRODUCTS",
+                          "fill": "$ink-soft",
+                          "content": "PRODUCTS",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "B57P8O",
+                          "name": "Product Grid",
+                          "width": "fill_container",
+                          "gap": 20,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Cj2QL",
+                              "name": "Product Aero Fencing Mask 1600N",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "N3ahSv",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 150
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "KWAOX",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Aero Fencing Mask 1600N",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fhjse",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$189.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Yf67x",
+                              "name": "Product Signature FIE Foil Mask 350N",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "vGGzi",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 150
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "POdiP",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Signature FIE Foil Mask 350N",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "APQpY",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$145.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OXMWx",
+                              "name": "Product Kids Plastic Mask",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "d1Hra",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 150
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "soHcK",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Kids Plastic Mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ckO59",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$39.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "CUSHZ",
+                              "name": "Product Mask Body Cord",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "xka2z",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 150
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "PVYnc",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Mask Body Cord",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "NevyX",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$24.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VjeLa",
+                      "name": "Guides",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        20,
+                        0,
+                        0,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Z8Kpd",
+                          "name": "Heading GUIDES & SUPPORT",
+                          "fill": "$ink-soft",
+                          "content": "GUIDES & SUPPORT",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Q1Nklj",
+                          "name": "Guide How to choose your first mask",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "PvI65",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "book-open",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ZIpLf",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "How to choose your first mask",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tAkez",
+                              "name": "Kind",
+                              "fill": "$ink-soft",
+                              "content": "ARTICLE",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l9AbE",
+                          "name": "Guide Mask sizing & care",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "UDjcp",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "life-buoy",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "r8ZfSs",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Mask sizing & care",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "v9O9b7",
+                              "name": "Kind",
+                              "fill": "$ink-soft",
+                              "content": "PAGE",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "H1ZrM",
+              "name": "View All",
+              "width": "fill_container",
+              "fill": "$surface",
+              "stroke": "$line",
+              "strokeWidth": {
+                "top": 1
+              },
+              "strokeAlignment": "inner",
+              "padding": [
+                14,
+                96
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "dXVMa",
+                  "name": "Hints",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nbGTO",
+                      "name": "Hint Navigate",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jNMR8",
+                          "name": "Key",
+                          "fill": "$bg",
+                          "cornerRadius": 5,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            3,
+                            7
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WJG5M",
+                              "name": "Key Label",
+                              "fill": "$ink-soft",
+                              "content": "↑↓",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "WoIAe",
+                          "name": "Hint Label",
+                          "fill": "$ink-soft",
+                          "content": "Navigate",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vy2tD",
+                      "name": "Hint Open",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "iezUh",
+                          "name": "Key",
+                          "fill": "$bg",
+                          "cornerRadius": 5,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            3,
+                            7
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lJxeb",
+                              "name": "Key Label",
+                              "fill": "$ink-soft",
+                              "content": "↵",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "tILlw",
+                          "name": "Hint Label",
+                          "fill": "$ink-soft",
+                          "content": "Open",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "epzDs",
+                      "name": "Hint Close",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "XhsSG",
+                          "name": "Key",
+                          "fill": "$bg",
+                          "cornerRadius": 5,
+                          "stroke": "$line",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            3,
+                            7
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i61Ak",
+                              "name": "Key Label",
+                              "fill": "$ink-soft",
+                              "content": "esc",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Jqtd6",
+                          "name": "Hint Label",
+                          "fill": "$ink-soft",
+                          "content": "Close",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jsWjY",
+                  "name": "View All Action",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NWPdU",
+                      "name": "View All Label",
+                      "fill": "$ink",
+                      "content": "View all results for “fencing mask”",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "Q2BOz",
+                      "name": "Arrow",
+                      "width": 15,
+                      "height": 15,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "jzqLx",
+          "name": "D — Mobile & States",
+          "width": "fill_container",
+          "gap": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "IYw8B",
+              "name": "Search/D — Mobile",
+              "clip": true,
+              "width": 390,
+              "fill": "$bg",
+              "cornerRadius": "$radius",
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "y3pQvm",
+                  "name": "Search Bar",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    15,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "n1Dwqj",
+                      "name": "Search Icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zYEzT",
+                      "name": "Query",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "fencing mask",
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "X0Qfma",
+                      "name": "Close",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$ink-soft"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ojjgz",
+                  "name": "Results",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 22,
+                  "padding": [
+                    18,
+                    20,
+                    22,
+                    20
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xWBZ0",
+                      "name": "Suggestions",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "REg9r",
+                          "name": "Heading SUGGESTIONS",
+                          "fill": "$ink-soft",
+                          "content": "SUGGESTIONS",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EtoWg",
+                          "name": "Suggestion 350n",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "QqV6N",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Y1sH3L",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "HEanY",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "K3aZMa",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " 350n",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kgA9j",
+                          "name": "Suggestion bib",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "zrlIt",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UReov",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NZa8Z",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "grGsC",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " bib",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hvEBc",
+                          "name": "Suggestion for kids",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "mRVng",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GLP8v",
+                              "name": "Text",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Rczq3",
+                                  "name": "Typed",
+                                  "fill": "$ink-soft",
+                                  "content": "fencing mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IStI0",
+                                  "name": "Completion",
+                                  "fill": "$ink",
+                                  "content": " for kids",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VEePy",
+                      "name": "Products",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Usqrp",
+                          "name": "Heading PRODUCTS",
+                          "fill": "$ink-soft",
+                          "content": "PRODUCTS",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hve1x",
+                          "name": "Product Row",
+                          "width": "fill_container",
+                          "gap": 14,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "XLAg6",
+                              "name": "Product Aero Fencing Mask 1600N",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 10,
+                                  "id": "XMTB4",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Vy3fj",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Aero Fencing Mask 1600N",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "nUSGL",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$189.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LgOdF",
+                              "name": "Product FIE Foil Mask 350N",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 10,
+                                  "id": "sc8Qu",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ImmXA",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "FIE Foil Mask 350N",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fexkl",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$145.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ccnqz",
+                          "name": "Product Row",
+                          "width": "fill_container",
+                          "gap": 14,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "EdK6o",
+                              "name": "Product Kids Plastic Mask",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 10,
+                                  "id": "BVNBq",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "O4UCIr",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Kids Plastic Mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "k2wu75",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$39.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "eupdw",
+                              "name": "Product Mask Body Cord",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 10,
+                                  "id": "f9xZGj",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "SePiw",
+                                  "name": "Title",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Mask Body Cord",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "p5XZlx",
+                                  "name": "Price",
+                                  "fill": "$ink-soft",
+                                  "content": "$24.00",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BwQ9y",
+                      "name": "Categories",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "k0L5c",
+                          "name": "Heading CATEGORIES",
+                          "fill": "$ink-soft",
+                          "content": "CATEGORIES",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "br0XM",
+                          "name": "Category Masks",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "p8bGDe",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "layout-grid",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "NIKTK",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Masks",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "rKur0",
+                              "name": "Count",
+                              "fill": "$ink-soft",
+                              "content": "12 items",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "KbLF8",
+                          "name": "Category Kids Masks",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "hkyjh",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "layout-grid",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "m3isjm",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Kids Masks",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "xzXRw",
+                              "name": "Count",
+                              "fill": "$ink-soft",
+                              "content": "6 items",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RJH9H",
+                      "name": "Guides",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NGyTS",
+                          "name": "Heading GUIDES & SUPPORT",
+                          "fill": "$ink-soft",
+                          "content": "GUIDES & SUPPORT",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.4
+                        },
+                        {
+                          "type": "frame",
+                          "id": "m3f3zD",
+                          "name": "Guide How to choose your first mask",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "hjvgD",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "book-open",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "h8NvpA",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "How to choose your first mask",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Zv2np",
+                              "name": "Kind",
+                              "fill": "$ink-soft",
+                              "content": "ARTICLE",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "w1bVs",
+                          "name": "Guide Mask sizing & care",
+                          "width": "fill_container",
+                          "gap": 10,
+                          "padding": [
+                            7,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "XPTFH",
+                              "name": "Icon",
+                              "width": 15,
+                              "height": 15,
+                              "icon": "life-buoy",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yUqks",
+                              "name": "Label",
+                              "fill": "$ink",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Mask sizing & care",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Qx2rY",
+                              "name": "Kind",
+                              "fill": "$ink-soft",
+                              "content": "PAGE",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.8
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a3dQdO",
+                  "name": "View All",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    15,
+                    20
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "lVugM",
+                      "name": "View All Label",
+                      "fill": "$ink",
+                      "content": "View all results",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "b0vGk",
+                      "name": "Arrow",
+                      "width": 15,
+                      "height": 15,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fQFRS",
+              "name": "States",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vfpzE",
+                  "name": "Caption Idle — before typing",
+                  "fill": "$ink-soft",
+                  "content": "Idle — before typing",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "f3ABiK",
+                  "name": "State/Idle",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$bg",
+                  "cornerRadius": "$radius",
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dYU0G",
+                      "name": "Search Bar",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        16,
+                        24
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "piMUE",
+                          "name": "Search Icon",
+                          "width": 19,
+                          "height": 19,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "$ink-soft"
+                        },
+                        {
+                          "type": "text",
+                          "id": "N4gfbS",
+                          "name": "Query",
+                          "fill": "$ink-soft",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Search products, guides and help",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NN2Xa",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "gap": 44,
+                      "padding": [
+                        20,
+                        24,
+                        24,
+                        24
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "guBDd",
+                          "name": "Recent",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "RTDPS",
+                              "name": "Recent Heading Row",
+                              "width": "fill_container",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "FEOiN",
+                                  "name": "Heading RECENT SEARCHES",
+                                  "fill": "$ink-soft",
+                                  "content": "RECENT SEARCHES",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1.4
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ZJODx",
+                                  "name": "Clear",
+                                  "fill": "$ink-soft",
+                                  "content": "Clear",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "500",
+                                  "letterSpacing": 0.2
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UkRu7",
+                              "name": "Recent foil blade",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "X7OvA6",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "history",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "QXomy",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "foil blade",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "RbVfk",
+                              "name": "Recent size 5 mask",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "A0wHF0",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "history",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "H34bvQ",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "size 5 mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "D7ure",
+                              "name": "Recent body cord",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "dfjb6",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "history",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "y1DbK",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "body cord",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ONZNg",
+                          "name": "Popular",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "left": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            0,
+                            0,
+                            0,
+                            44
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "AVS3S",
+                              "name": "Heading POPULAR CATEGORIES",
+                              "fill": "$ink-soft",
+                              "content": "POPULAR CATEGORIES",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 1.4
+                            },
+                            {
+                              "type": "frame",
+                              "id": "n7eksr",
+                              "name": "Popular Masks",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "uG1Eh",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "layout-grid",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "M3sZb",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Masks",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "CgA28",
+                                  "name": "Count",
+                                  "fill": "$ink-soft",
+                                  "content": "12 items",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "XthKb",
+                              "name": "Popular Blades",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ghjh7",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "layout-grid",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "y5cAKa",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Blades",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "lRzUw",
+                                  "name": "Count",
+                                  "fill": "$ink-soft",
+                                  "content": "17 items",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dIWx7",
+                              "name": "Popular Clothing",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "FqBWi",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "layout-grid",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "iarXv",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Clothing",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "AGfsN",
+                                  "name": "Count",
+                                  "fill": "$ink-soft",
+                                  "content": "31 items",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "S37q7f",
+                  "name": "Caption Loading",
+                  "fill": "$ink-soft",
+                  "content": "Loading",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "H5DVv8",
+                  "name": "State/Loading",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$bg",
+                  "cornerRadius": "$radius",
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xoaCw",
+                      "name": "Search Bar",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        16,
+                        24
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "VPPhT",
+                          "name": "Search Icon",
+                          "width": 19,
+                          "height": 19,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        },
+                        {
+                          "type": "text",
+                          "id": "oP5iq",
+                          "name": "Query",
+                          "fill": "$ink",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "fencing mask",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "xfHIT",
+                          "name": "Trailing",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "loader-circle",
+                          "library": "lucide",
+                          "fill": "$ink-soft"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "X1UfN",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "gap": 44,
+                      "padding": 24,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zPBXp",
+                          "name": "Rail Skeleton",
+                          "width": 264,
+                          "layout": "vertical",
+                          "gap": 14,
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 6,
+                              "id": "l8I28A",
+                              "name": "Bar",
+                              "fill": "$surface",
+                              "width": 90,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 6,
+                              "id": "jy8Gg",
+                              "name": "Bar",
+                              "fill": "$surface",
+                              "width": 150,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 6,
+                              "id": "KmoeC",
+                              "name": "Bar",
+                              "fill": "$surface",
+                              "width": 120,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 6,
+                              "id": "c5omBI",
+                              "name": "Bar",
+                              "fill": "$surface",
+                              "width": 140,
+                              "height": 11
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Qask3",
+                          "name": "Main Skeleton",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "left": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 20,
+                          "padding": [
+                            0,
+                            0,
+                            0,
+                            44
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "afkdN",
+                              "name": "Card Skeleton",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "vAr94",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 6,
+                                  "id": "fWlrp",
+                                  "name": "Title Bar",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 11
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 6,
+                                  "id": "HEHsp",
+                                  "name": "Price Bar",
+                                  "fill": "$surface",
+                                  "width": 64,
+                                  "height": 11
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "uxoLU",
+                              "name": "Card Skeleton",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "Np0SX",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 6,
+                                  "id": "p1fwup",
+                                  "name": "Title Bar",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 11
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 6,
+                                  "id": "DgpW8",
+                                  "name": "Price Bar",
+                                  "fill": "$surface",
+                                  "width": 64,
+                                  "height": 11
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "l4Gda",
+                              "name": "Card Skeleton",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 10,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 12,
+                                  "id": "c4W50",
+                                  "name": "Image",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 120
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 6,
+                                  "id": "z6R885",
+                                  "name": "Title Bar",
+                                  "fill": "$surface",
+                                  "width": "fill_container",
+                                  "height": 11
+                                },
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 6,
+                                  "id": "KpAbl",
+                                  "name": "Price Bar",
+                                  "fill": "$surface",
+                                  "width": 64,
+                                  "height": 11
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "ZCjMX",
+                  "name": "Caption No results",
+                  "fill": "$ink-soft",
+                  "content": "No results",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "htexo",
+                  "name": "State/No Results",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$bg",
+                  "cornerRadius": "$radius",
+                  "stroke": "$line",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "qceJ9",
+                      "name": "Search Bar",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        16,
+                        24
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "POZp5",
+                          "name": "Search Icon",
+                          "width": 19,
+                          "height": 19,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tKQhs",
+                          "name": "Query",
+                          "fill": "$ink",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "fencng maks",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "tws79",
+                          "name": "Trailing",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "x",
+                          "library": "lucide",
+                          "fill": "$ink-soft"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CNJiT",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        40,
+                        24,
+                        32,
+                        24
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "omcJH",
+                          "name": "Icon",
+                          "width": 26,
+                          "height": 26,
+                          "icon": "search-x",
+                          "library": "lucide",
+                          "fill": "$ink-soft"
+                        },
+                        {
+                          "type": "text",
+                          "id": "A7l6w7",
+                          "name": "Title",
+                          "fill": "$ink",
+                          "content": "No results for “fencng maks”",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "X8fcQm",
+                          "name": "Sub",
+                          "fill": "$ink-soft",
+                          "content": "Check the spelling, or try a broader term like “mask”.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K4S1K",
+                          "name": "Suggested",
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            0,
+                            0,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YwBxF",
+                              "name": "Chip Masks",
+                              "cornerRadius": 999,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CDKty",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "content": "Masks",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "EpVDE",
+                              "name": "Chip Blades",
+                              "cornerRadius": 999,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "IUEzd",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "content": "Blades",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vY7YW",
+                              "name": "Chip Clothing",
+                              "cornerRadius": 999,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "MXlSI",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "content": "Clothing",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OCXUP",
+                              "name": "Chip Club Gear",
+                              "cornerRadius": 999,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "JtvDX",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "content": "Club Gear",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zLkhA",
+                      "name": "Help",
+                      "width": "fill_container",
+                      "fill": "$surface",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 6,
+                      "padding": [
+                        13,
+                        24
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zFcQ4",
+                          "name": "Help Label",
+                          "fill": "$ink",
+                          "content": "Still stuck? Contact us",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "NB59S",
+                          "name": "Arrow",
+                          "width": 15,
+                          "height": 15,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "Acsvr",
+          "name": "Caption — In Page",
+          "fill": "$ink",
+          "content": "In page (header open, page dimmed behind)",
+          "fontFamily": "$font-body",
+          "fontSize": 13,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "QC9V3",
+          "name": "Search/D — In Page",
+          "clip": true,
+          "width": 1440,
+          "height": 900,
+          "fill": "$bg",
+          "cornerRadius": "$radius",
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "l6PfTI",
+              "x": 0,
+              "y": 0,
+              "name": "Page Content",
+              "width": 1440,
+              "layout": "vertical",
+              "children": [
+                {
+                  "id": "rbABN",
+                  "type": "ref",
+                  "ref": "JNawB",
+                  "name": "Header",
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "imwsq",
+                  "name": "Hero",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 520,
+                  "fill": "$surface-dark",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    96
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "a6w5vN",
+                      "name": "Hero Inner",
+                      "width": 620,
+                      "layout": "vertical",
+                      "gap": 22,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "Z52CjV",
+                          "name": "Accent Bar",
+                          "fill": "$on-dark",
+                          "width": 48,
+                          "height": 3
+                        },
+                        {
+                          "type": "text",
+                          "id": "JIs81",
+                          "name": "Eyebrow",
+                          "fill": "$on-dark-soft",
+                          "content": "OLYMPIC FENCING GEAR",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "600",
+                          "letterSpacing": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "usGDX",
+                          "name": "Headline",
+                          "fill": "$on-dark",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Gear up for the season",
+                          "fontFamily": "$font-display",
+                          "fontSize": 60,
+                          "fontWeight": "800",
+                          "letterSpacing": -1.5
+                        },
+                        {
+                          "type": "text",
+                          "id": "JfnAY",
+                          "name": "Sub",
+                          "fill": "$on-dark-soft",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Competition-ready kit for fencers, clubs and coaches.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 17,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "MQi0V",
+                          "name": "Button",
+                          "fill": "$on-dark",
+                          "cornerRadius": 8,
+                          "padding": [
+                            14,
+                            26
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Az6lb",
+                              "name": "Button Label",
+                              "fill": "$ink",
+                              "content": "Shop Now",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SgbZH",
+                  "name": "Category Strip",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "padding": [
+                    40,
+                    96
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "o0hVL",
+                      "name": "Cat Masks",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "u5dTs",
+                          "name": "Image",
+                          "fill": "$surface",
+                          "width": "fill_container",
+                          "height": 180
+                        },
+                        {
+                          "type": "text",
+                          "id": "JcAvm",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "Masks",
+                          "fontFamily": "$font-body",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k857x",
+                      "name": "Cat Blades",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "G9IsnN",
+                          "name": "Image",
+                          "fill": "$surface",
+                          "width": "fill_container",
+                          "height": 180
+                        },
+                        {
+                          "type": "text",
+                          "id": "j4t7k",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "Blades",
+                          "fontFamily": "$font-body",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XKfPP",
+                      "name": "Cat Clothing",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 12,
+                          "id": "S9If7b",
+                          "name": "Image",
+                          "fill": "$surface",
+                          "width": "fill_container",
+                          "height": 180
+                        },
+                        {
+                          "type": "text",
+                          "id": "hsXro",
+                          "name": "Label",
+                          "fill": "$ink",
+                          "content": "Clothing",
+                          "fontFamily": "$font-body",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "bs4uY",
+              "x": 0,
+              "y": 212,
+              "name": "Scrim",
+              "fill": "#101012A8",
+              "width": 1440,
+              "height": 688
+            },
+            {
+              "type": "frame",
+              "id": "Z5BDbB",
+              "x": 0,
+              "y": 212,
+              "name": "Search Panel — Open",
+              "clip": true,
+              "width": 1440,
+              "fill": "$bg",
+              "stroke": "$line",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000033",
+                "offset": {
+                  "x": 0,
+                  "y": 18
+                },
+                "blur": 44
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "A8XCg",
+                  "name": "Search Bar",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 16,
+                  "padding": [
+                    22,
+                    96
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "To589",
+                      "name": "Search Icon",
+                      "width": 22,
+                      "height": 22,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L36FMd",
+                      "name": "Query",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "fencing mask",
+                      "fontFamily": "$font-body",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OUGez",
+                      "name": "Esc Chip",
+                      "cornerRadius": 6,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        4,
+                        9
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SFmK8",
+                          "name": "Esc Label",
+                          "fill": "$ink-soft",
+                          "content": "ESC",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.6
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon",
+                      "id": "wdFpK",
+                      "name": "Close",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$ink-soft"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y7HjR",
+                  "name": "Results",
+                  "width": "fill_container",
+                  "gap": 44,
+                  "padding": [
+                    26,
+                    96,
+                    30,
+                    96
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SNUhV",
+                      "name": "Rail",
+                      "width": 264,
+                      "layout": "vertical",
+                      "gap": 26,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uKYWE",
+                          "name": "Suggestions",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cojwh",
+                              "name": "Heading SUGGESTIONS",
+                              "fill": "$ink-soft",
+                              "content": "SUGGESTIONS",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 1.4
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LjSA0",
+                              "name": "Suggestion 350n",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ya2lQ",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "search",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ffQay",
+                                  "name": "Text",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "YMzVL",
+                                      "name": "Typed",
+                                      "fill": "$ink-soft",
+                                      "content": "fencing mask",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "v0Tp4",
+                                      "name": "Completion",
+                                      "fill": "$ink",
+                                      "content": " 350n",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "I7aQH",
+                              "name": "Suggestion bib",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "T6al7t",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "search",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "uFo2r",
+                                  "name": "Text",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "GsEFA",
+                                      "name": "Typed",
+                                      "fill": "$ink-soft",
+                                      "content": "fencing mask",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "y2Y4hS",
+                                      "name": "Completion",
+                                      "fill": "$ink",
+                                      "content": " bib",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FvaGG",
+                              "name": "Suggestion for kids",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "PpySf",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "search",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "S4wBt",
+                                  "name": "Text",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "F5Ahv6",
+                                      "name": "Typed",
+                                      "fill": "$ink-soft",
+                                      "content": "fencing mask",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "p6QnbC",
+                                      "name": "Completion",
+                                      "fill": "$ink",
+                                      "content": " for kids",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "P523Ln",
+                              "name": "Suggestion cover",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "fQfXn",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "search",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "T0I8n",
+                                  "name": "Text",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ntMxU",
+                                      "name": "Typed",
+                                      "fill": "$ink-soft",
+                                      "content": "fencing mask",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "h5cX5a",
+                                      "name": "Completion",
+                                      "fill": "$ink",
+                                      "content": " cover",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ODcBS",
+                          "name": "Categories",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KXC5S",
+                              "name": "Heading CATEGORIES",
+                              "fill": "$ink-soft",
+                              "content": "CATEGORIES",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 1.4
+                            },
+                            {
+                              "type": "frame",
+                              "id": "C8Ry0c",
+                              "name": "Category Masks",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "tIhYu",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "layout-grid",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eAWQi",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Masks",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "lhzDz",
+                                  "name": "Count",
+                                  "fill": "$ink-soft",
+                                  "content": "12 items",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Q9bTmI",
+                              "name": "Category Kids Masks",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Y468E",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "layout-grid",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "a1sgY",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Kids Masks",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "yN9Ri",
+                                  "name": "Count",
+                                  "fill": "$ink-soft",
+                                  "content": "6 items",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "A77yE1",
+                              "name": "Category Club Gear",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "b9uVu",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "layout-grid",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "b9VmQ",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Club Gear",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "k5kA3c",
+                                  "name": "Count",
+                                  "fill": "$ink-soft",
+                                  "content": "24 items",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p7Mog",
+                      "name": "Main",
+                      "width": "fill_container",
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "left": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 24,
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        44
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cOxr8",
+                          "name": "Products",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 14,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Bgc2L",
+                              "name": "Heading PRODUCTS",
+                              "fill": "$ink-soft",
+                              "content": "PRODUCTS",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 1.4
+                            },
+                            {
+                              "type": "frame",
+                              "id": "F1ioR6",
+                              "name": "Product Grid",
+                              "width": "fill_container",
+                              "gap": 20,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "XafRq",
+                                  "name": "Product Aero Fencing Mask 1600N",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 12,
+                                      "id": "jUlSM",
+                                      "name": "Image",
+                                      "fill": "$surface",
+                                      "width": "fill_container",
+                                      "height": 150
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "N2Gb1u",
+                                      "name": "Title",
+                                      "fill": "$ink",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Aero Fencing Mask 1600N",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "lfQfy",
+                                      "name": "Price",
+                                      "fill": "$ink-soft",
+                                      "content": "$189.00",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "b7DIl",
+                                  "name": "Product Signature FIE Foil Mask 350N",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 12,
+                                      "id": "EHeYr",
+                                      "name": "Image",
+                                      "fill": "$surface",
+                                      "width": "fill_container",
+                                      "height": 150
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "a9MbGf",
+                                      "name": "Title",
+                                      "fill": "$ink",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Signature FIE Foil Mask 350N",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "YWtR2",
+                                      "name": "Price",
+                                      "fill": "$ink-soft",
+                                      "content": "$145.00",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "czFsa",
+                                  "name": "Product Kids Plastic Mask",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 12,
+                                      "id": "nhTua",
+                                      "name": "Image",
+                                      "fill": "$surface",
+                                      "width": "fill_container",
+                                      "height": 150
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Dec8x",
+                                      "name": "Title",
+                                      "fill": "$ink",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Kids Plastic Mask",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "CRWOO",
+                                      "name": "Price",
+                                      "fill": "$ink-soft",
+                                      "content": "$39.00",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Mw4B9",
+                                  "name": "Product Mask Body Cord",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 10,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 12,
+                                      "id": "yof2V",
+                                      "name": "Image",
+                                      "fill": "$surface",
+                                      "width": "fill_container",
+                                      "height": 150
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "O6MvY",
+                                      "name": "Title",
+                                      "fill": "$ink",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Mask Body Cord",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "eLuwp",
+                                      "name": "Price",
+                                      "fill": "$ink-soft",
+                                      "content": "$24.00",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ktjEX",
+                          "name": "Guides",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            20,
+                            0,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "JfCnL",
+                              "name": "Heading GUIDES & SUPPORT",
+                              "fill": "$ink-soft",
+                              "content": "GUIDES & SUPPORT",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "600",
+                              "letterSpacing": 1.4
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kzEa6",
+                              "name": "Guide How to choose your first mask",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "YEUN1",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "book-open",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Kczau",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "How to choose your first mask",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Ovr99",
+                                  "name": "Kind",
+                                  "fill": "$ink-soft",
+                                  "content": "ARTICLE",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e27wtn",
+                              "name": "Guide Mask sizing & care",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "padding": [
+                                7,
+                                0
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "i6cXkb",
+                                  "name": "Icon",
+                                  "width": 15,
+                                  "height": 15,
+                                  "icon": "life-buoy",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "UmHhY",
+                                  "name": "Label",
+                                  "fill": "$ink",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Mask sizing & care",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "T9EDNz",
+                                  "name": "Kind",
+                                  "fill": "$ink-soft",
+                                  "content": "PAGE",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 0.8
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X884W5",
+                  "name": "View All",
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    14,
+                    96
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YUJxH",
+                      "name": "Hints",
+                      "gap": 16,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hKlYe",
+                          "name": "Hint Navigate",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YHHBP",
+                              "name": "Key",
+                              "fill": "$bg",
+                              "cornerRadius": 5,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                3,
+                                7
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "E2N71",
+                                  "name": "Key Label",
+                                  "fill": "$ink-soft",
+                                  "content": "↑↓",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "d5GGa0",
+                              "name": "Hint Label",
+                              "fill": "$ink-soft",
+                              "content": "Navigate",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EgKoP",
+                          "name": "Hint Open",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hcjVl",
+                              "name": "Key",
+                              "fill": "$bg",
+                              "cornerRadius": 5,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                3,
+                                7
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "B6F1vG",
+                                  "name": "Key Label",
+                                  "fill": "$ink-soft",
+                                  "content": "↵",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Q9Rzu",
+                              "name": "Hint Label",
+                              "fill": "$ink-soft",
+                              "content": "Open",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fqKbg",
+                          "name": "Hint Close",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "mheIc",
+                              "name": "Key",
+                              "fill": "$bg",
+                              "cornerRadius": 5,
+                              "stroke": "$line",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                3,
+                                7
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "GBkMJ",
+                                  "name": "Key Label",
+                                  "fill": "$ink-soft",
+                                  "content": "esc",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "WN92c",
+                              "name": "Hint Label",
+                              "fill": "$ink-soft",
+                              "content": "Close",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k4Cb5",
+                      "name": "View All Action",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "R2pxZo",
+                          "name": "View All Label",
+                          "fill": "$ink",
+                          "content": "View all results for “fencing mask”",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "PCg1k",
+                          "name": "Arrow",
+                          "width": 15,
+                          "height": 15,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

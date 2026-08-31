@@ -37,6 +37,7 @@
     },
     "search": {
       "search": "搜索",
+      "placeholder": "Search products, guides and help",
       "reset": "清除搜索词"
     },
     "cart": {
@@ -244,7 +245,30 @@
       "results_suggestions_with_count": {
         "one": "{{ count }} 个建议",
         "other": "{{ count }} 个建议"
-      }
+      },
+      "article": "Article",
+      "categories": "Categories",
+      "guides": "Guides and support",
+      "recent_searches": "Recent searches",
+      "clear_recent_searches": "Clear",
+      "popular_categories": "Popular categories",
+      "product_count_with_count": {
+        "one": "{{ count }} product",
+        "other": "{{ count }} products"
+      },
+      "results_guides_with_count": {
+        "one": "{{ count }} guide",
+        "other": "{{ count }} guides"
+      },
+      "view_all_results": "View all results for “{{ terms }}”",
+      "no_results_heading": "No results for “{{ terms }}”",
+      "no_results_hint": "Check the spelling, or try a broader term.",
+      "no_results_help": "Not finding something?",
+      "no_results_contact": "Contact us",
+      "keyboard_navigate": "Navigate",
+      "keyboard_open": "Open",
+      "keyboard_close": "Close",
+      "keyboard_escape": "Esc"
     },
     "cart": {
       "cart": "购物车"

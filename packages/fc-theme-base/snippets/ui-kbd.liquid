@@ -1,0 +1,29 @@
+{%- comment -%}
+  Renders a keyboard key cap. The label is uppercased by CSS, so pass it in
+  sentence case and let translations stay readable.
+
+  Accepts:
+  - label: {String} key name, e.g. "Esc"
+  - icons: {String} comma-separated fc-icon names, used instead of a label for arrow keys
+  - class: {String} extra classes
+  - decorative: {Boolean} true to hide the cap from assistive tech
+
+  Usage:
+  {% render 'ui-kbd', label: 'Esc' %}
+  {% render 'ui-kbd', icons: 'arrow-up,arrow-down' %}
+{%- endcomment -%}
+<kbd
+  class="ui-kbd{% if class %} {{ class }}{% endif %}"
+  {% if decorative %}
+    aria-hidden="true"
+  {% endif %}
+>
+  {%- if icons != blank -%}
+    {%- assign icon_names = icons | split: ',' -%}
+    {%- for icon_name in icon_names -%}
+      {%- render 'fc-icon', icon: icon_name, size: 12 -%}
+    {%- endfor -%}
+  {%- else -%}
+    <span class="ui-kbd__label">{{ label | escape }}</span>
+  {%- endif -%}
+</kbd>

@@ -1,0 +1,63 @@
+{%- comment -%}
+  Renders the curated category shortcuts shared by the search idle and empty states.
+
+  Accepts:
+  - variant: {String} 'rows' (default) or 'chips'
+  - heading: {String} group heading (required)
+  - hide_heading: {Boolean} keep the heading for assistive tech only (default false)
+  - id_prefix: {String} unique prefix for the heading and option ids (required)
+  - as_options: {Boolean} mark each entry as a listbox option (default false)
+
+  Usage:
+  {% render 'predictive-search-categories', heading: 'Popular categories', id_prefix: 'idle-category' %}
+{%- endcomment -%}
+{%- liquid
+  assign variant = variant | default: 'rows'
+  assign popular_handles = 'weapons,masks,clothing,footwear,bags' | split: ','
+  assign heading_id = id_prefix | append: '-heading'
+-%}
+{%- capture category_items -%}
+    {%- for handle in popular_handles -%}
+      {%- assign category = collections[handle] -%}
+      {%- if category.handle != blank -%}
+        <li
+          id="{{ id_prefix }}-{{ forloop.index }}"
+          class="predictive-search__list-item"
+          {% if as_options %}
+            role="option"
+            aria-selected="false"
+          {% endif %}
+        >
+          {%- if variant == 'chips' -%}
+            {%- render 'ui-chip', label: category.title, url: category.url, option: as_options -%}
+          {%- else -%}
+            <a
+              href="{{ category.url }}"
+              class="predictive-search__item"
+              {% if as_options %}
+                tabindex="-1"
+              {% endif %}
+            >
+              <span class="predictive-search__item-icon">
+                {%- render 'fc-icon', icon: 'layout-grid', size: 15 -%}
+              </span>
+              <span class="predictive-search__item-title">{{ category.title | escape }}</span>
+              {%- if category.products_count > 0 -%}
+                <span class="predictive-search__item-count">
+                  {{- 'templates.search.product_count_with_count' | t: count: category.products_count -}}
+                </span>
+              {%- endif -%}
+            </a>
+          {%- endif -%}
+        </li>
+      {%- endif -%}
+    {%- endfor -%}
+{%- endcapture -%}
+{%- assign list_class = 'predictive-search__results-list--' | append: variant -%}
+{%- render 'predictive-search-list',
+  heading: heading,
+  heading_id: heading_id,
+  items: category_items,
+  list_class: list_class,
+  hide_heading: hide_heading
+-%}

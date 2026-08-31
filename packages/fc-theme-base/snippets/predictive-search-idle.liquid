@@ -1,0 +1,42 @@
+{%- comment -%}
+  Renders the panel shown while the search field is focused but empty.
+
+  Recent searches are filled in by predictive-search.js from local storage, so the
+  list starts empty and the whole group stays hidden until there is something to show.
+
+  Accepts:
+  - id_prefix: {String} unique prefix for the ids in this instance (required)
+  - modifier: {String} extra class matching the results panel's positioning variant
+
+  Usage:
+  {% render 'predictive-search-idle', id_prefix: 'header-search' %}
+{%- endcomment -%}
+<div class="predictive-search predictive-search--idle {{ modifier }}" data-predictive-search-idle tabindex="-1">
+  <div class="predictive-search__results-groups-wrapper">
+    <div class="predictive-search__rail" data-recent-searches hidden>
+      {%- assign recent_heading = 'templates.search.recent_searches' | t -%}
+      {%- assign recent_heading_id = id_prefix | append: '-recent-heading' -%}
+      {%- capture clear_action -%}
+        <button type="button" class="predictive-search__clear-recent" data-clear-recent-searches>
+          {{- 'templates.search.clear_recent_searches' | t -}}
+        </button>
+      {%- endcapture -%}
+      {%- render 'predictive-search-list',
+        heading: recent_heading,
+        heading_id: recent_heading_id,
+        items: '',
+        heading_action: clear_action,
+        list_attributes: 'data-recent-searches-list'
+      -%}
+    </div>
+    <div class="predictive-search__main">
+      {%- assign popular_heading = 'templates.search.popular_categories' | t -%}
+      {%- assign category_id_prefix = id_prefix | append: '-popular-category' -%}
+      {%- render 'predictive-search-categories',
+        variant: 'rows',
+        heading: popular_heading,
+        id_prefix: category_id_prefix
+      -%}
+    </div>
+  </div>
+</div>

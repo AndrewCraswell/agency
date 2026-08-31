@@ -1,0 +1,121 @@
+{%- comment -%}
+  Renders a product card with separate media and title links.
+
+  Accepts:
+  - product: {Product} Product to render (required)
+  - variant: {String} 'home' or 'search' (default 'home')
+  - card_id: {String} Unique title id
+  - block_attributes: {String} Optional Shopify block attributes
+  - badge_label: {String} Optional media badge
+  - show_type: {Boolean} Show the product type
+  - show_price: {Boolean} Show the product price
+  - show_add: {Boolean} Show the homepage add action
+  - add_label: {String} Add action label
+  - section_id: {String} Section id used by product-form
+  - tabindex: {String} Optional tabindex for both links
+  - image_width: {Number} Requested image width
+  - image_widths: {String} Responsive image widths
+  - image_sizes: {String} Responsive image sizes
+  - image_loading: {String} Image loading strategy
+{%- endcomment -%}
+{%- liquid
+  assign variant = variant | default: 'home'
+  assign image_width = image_width | default: 600
+  assign image_widths = image_widths | default: '294, 441, 588'
+  assign image_sizes = image_sizes | default: '(min-width: 990px) 294px, 50vw'
+  assign image_loading = image_loading | default: 'lazy'
+  assign title_id = card_id
+  if title_id == blank
+    assign title_id = 'ProductCardTitle-' | append: product.id
+  endif
+-%}
+
+<article class="ui-product-card ui-product-card--{{ variant }}" {{ block_attributes }}>
+  <a
+    class="ui-product-card__media"
+    href="{{ product.url }}"
+    aria-label="{{ product.title | escape }}"
+    {% if tabindex != blank %}
+      tabindex="{{ tabindex }}"
+    {% endif %}
+  >
+    {%- if product.featured_image -%}
+      {{
+        product.featured_image
+        | image_url: width: image_width
+        | image_tag:
+          class: 'ui-product-card__image',
+          widths: image_widths,
+          sizes: image_sizes,
+          alt: product.featured_image.alt | default: product.title,
+          loading: image_loading
+      }}
+    {%- else -%}
+      <span class="ui-product-card__placeholder"></span>
+    {%- endif -%}
+    {%- if badge_label != blank -%}
+      <span class="ui-product-card__badge">{{ badge_label | escape }}</span>
+    {%- endif -%}
+  </a>
+
+  <div class="ui-product-card__info">
+    {%- if show_type and product.type != blank -%}
+      <p class="ui-product-card__tag">{{ product.type | upcase }}</p>
+    {%- endif -%}
+    <h3 class="ui-product-card__name" id="{{ title_id }}">
+      <a
+        class="ui-product-card__link"
+        href="{{ product.url }}"
+        {% if tabindex != blank %}
+          tabindex="{{ tabindex }}"
+        {% endif %}
+      >
+        {{- product.title | escape -}}
+      </a>
+    </h3>
+  </div>
+
+  {%- if show_price or show_add -%}
+    <div class="ui-product-card__price-row">
+      {%- if show_price -%}
+        <span class="ui-product-card__price">{{ product.price | money }}</span>
+      {%- endif -%}
+      {%- if show_add -%}
+        {%- liquid
+          assign add_variant = product.selected_or_first_available_variant
+          assign add_form_id = 'ProductCardAdd-' | append: section_id | append: '-' | append: product.id
+        -%}
+        {%- if product.variants.size == 1 and add_variant.available -%}
+          <product-form data-section-id="{{ section_id }}">
+            {%- form 'product',
+              product,
+              id: add_form_id,
+              class: 'ui-product-card__add-form',
+              novalidate: 'novalidate',
+              data-type: 'add-to-cart-form'
+            -%}
+              <input type="hidden" name="id" value="{{ add_variant.id }}" class="product-variant-id">
+              <button
+                id="{{ add_form_id }}-submit"
+                class="ui-product-card__add"
+                type="submit"
+                name="add"
+                aria-labelledby="{{ add_form_id }}-submit {{ title_id }}"
+                aria-live="polite"
+              >
+                {%- render 'fc-icon', icon: 'plus', size: 15 -%}
+                <span>{{ add_label | escape }}</span>
+                {%- render 'loading-spinner' -%}
+              </button>
+            {%- endform -%}
+          </product-form>
+        {%- else -%}
+          <a class="ui-product-card__add" href="{{ product.url }}">
+            {%- render 'fc-icon', icon: 'plus', size: 15 -%}
+            <span>{{ add_label | escape }}</span>
+          </a>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+</article>

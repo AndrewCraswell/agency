@@ -1,0 +1,44 @@
+{%- comment -%}
+  Renders a predictive-search heading and its list.
+
+  Accepts:
+  - heading: {String} Group heading (required)
+  - heading_id: {String} Heading id used by aria-labelledby (required)
+  - list_id: {String} Optional list id
+  - items: {String} Captured list item markup (required)
+  - modifier: {String} Optional group modifier class
+  - list_class: {String} Optional list modifier class
+  - heading_action: {String} Optional captured action beside the heading
+  - group_attributes: {String} Optional attributes for the group
+  - list_attributes: {String} Optional attributes for the list
+  - hide_heading: {Boolean} Visually hide the heading
+{%- endcomment -%}
+<div
+  class="predictive-search__group predictive-search-list{% if modifier %} {{ modifier }}{% endif %}"
+  {{ group_attributes }}
+>
+  {%- if heading_action != blank -%}
+    <div class="predictive-search__heading-row">
+      <h2 id="{{ heading_id }}" class="predictive-search__heading">{{ heading }}</h2>
+      {{- heading_action -}}
+    </div>
+  {%- else -%}
+    <h2
+      id="{{ heading_id }}"
+      class="predictive-search__heading{% if hide_heading %} visually-hidden{% endif %}"
+    >
+      {{- heading -}}
+    </h2>
+  {%- endif -%}
+  <ul
+    {% if list_id %}
+      id="{{ list_id }}"
+    {% endif %}
+    class="predictive-search__results-list{% if list_class %} {{ list_class }}{% endif %} list-unstyled"
+    role="group"
+    aria-labelledby="{{ heading_id }}"
+    {{ list_attributes }}
+  >
+    {{- items -}}
+  </ul>
+</div>

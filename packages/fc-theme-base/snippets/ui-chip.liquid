@@ -1,0 +1,22 @@
+{%- comment -%}
+  Renders a pill link with a trailing arrow that inverts on hover.
+
+  Accepts:
+  - label: {String} link text (required)
+  - url: {String} link target (required)
+  - class: {String} extra classes
+  - option: {Boolean} true when the chip is a listbox option, so it leaves the tab order
+
+  Usage:
+  {% render 'ui-chip', label: 'Masks', url: collection.url %}
+{%- endcomment -%}
+<a
+  class="ui-chip{% if class %} {{ class }}{% endif %}"
+  href="{{ url }}"
+  {% if option %}
+    tabindex="-1"
+  {% endif %}
+>
+  {{- label | escape -}}
+  {%- render 'fc-icon', icon: 'arrow-up-right', size: 14 -%}
+</a>

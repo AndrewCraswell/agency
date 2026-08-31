@@ -1,8 +1,4 @@
-{% if cart == empty %}
-  <span class="svg-wrapper">{{ 'icon-cart-empty.svg' | inline_asset_content }}</span>
-{% else %}
-  <span class="svg-wrapper">{{ 'icon-cart.svg' | inline_asset_content }}</span>
-{% endif %}
+<span class="svg-wrapper">{% render 'fc-icon', icon: 'shopping-bag', size: 22 %}</span>
 
 <span class="visually-hidden">{{ 'templates.cart.cart' | t }}</span>
 {%- if cart != empty -%}
