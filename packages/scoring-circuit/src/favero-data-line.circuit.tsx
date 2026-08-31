@@ -4,10 +4,10 @@ import { cadModels } from "./cad-models.js"
 const rj14Footprint = (
   <footprint name="TE_5520250_2_RJ14_6P4C" originalLayer="top">
     {[
-      { name: "OUTER_A", number: 2, x: -1.905, y: 0.635 },
-      { name: "DATA_A", number: 3, x: -0.635, y: -0.635 },
-      { name: "DATA_B", number: 4, x: 0.635, y: 0.635 },
-      { name: "OUTER_B", number: 5, x: 1.905, y: -0.635 }
+      { name: "OUTER_A", number: 2, x: -1.905, y: 1.27 },
+      { name: "DATA_A", number: 3, x: -0.635, y: -1.27 },
+      { name: "DATA_B", number: 4, x: 0.635, y: 1.27 },
+      { name: "OUTER_B", number: 5, x: 1.905, y: -1.27 }
     ].map(({ name, number, x, y }) => (
       <Fragment key={name}>
         <platedhole
@@ -21,11 +21,11 @@ const rj14Footprint = (
         />
       </Fragment>
     ))}
-    <hole name="BOARD_LOCK_LEFT" diameter="3.25mm" pcbX={-5.08} pcbY={-7.62} />
-    <hole name="BOARD_LOCK_RIGHT" diameter="3.25mm" pcbX={5.08} pcbY={-7.62} />
-    <silkscreenrect pcbX={0} pcbY={-3.7} width="15.88mm" height="20.96mm" strokeWidth="0.2mm" filled={false} />
-    <silkscreentext text="FA-05 DATA" pcbX={0} pcbY={4.5} fontSize="0.9mm" />
-    <courtyardrect pcbX={0} pcbY={-3.7} width="16.4mm" height="21.5mm" strokeWidth="0.05mm" />
+    <hole name="BOARD_LOCK_LEFT" diameter="3.25mm" pcbX={-5.08} pcbY={7.62} />
+    <hole name="BOARD_LOCK_RIGHT" diameter="3.25mm" pcbX={5.08} pcbY={7.62} />
+    <silkscreenrect pcbX={0} pcbY={7.747} width="15.88mm" height="20.96mm" strokeWidth="0.2mm" filled={false} />
+    <silkscreentext text="FA-05 DATA" pcbX={0} pcbY={-1.5} fontSize="0.9mm" />
+    <courtyardrect pcbX={0} pcbY={7.747} width="16.4mm" height="21.5mm" strokeWidth="0.05mm" />
   </footprint>
 )
 
@@ -125,7 +125,7 @@ export function FaveroDataLine(): ReactElement {
               pinLabels={{ pin2: "OUTER_A", pin3: "DATA_A", pin4: "DATA_B", pin5: "OUTER_B" }}
               footprint={rj14Footprint}
               pcbX={connectorX}
-              pcbY={-47}
+              pcbY={-31.8}
               pcbRotation={180}
               cadModel={cadModels.repeaterConnectorRj14}
             />
@@ -172,7 +172,7 @@ export function FaveroDataLine(): ReactElement {
               tolerance="1%"
               footprint="0805"
               pcbX={x + 9}
-              pcbY={-30}
+              pcbY={-20}
               cadModel={cadModels.resistor0805}
             />
             <chip

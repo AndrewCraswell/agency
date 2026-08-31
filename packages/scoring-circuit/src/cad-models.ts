@@ -89,10 +89,14 @@ export const cadModels = {
     stepUrl: checkedInStepUrl("te-5520250-2-rj14.step"),
     modelBoardNormalDirection: "y+",
     pcbRotationOffset: 180,
-    // The asymmetric footprint bounds are centered 3.955 mm ahead of its
-    // authored origin after the connector is rotated. Return the manufacturer
-    // model to the actual hole datum.
-    positionOffset: { x: 0, y: -3.955, z: 0 },
+    // The TE STEP's four contact-tail centerlines are at model Z=-16.891
+    // and -19.431 mm. Anchor their -18.161 mm midpoint to the footprint's
+    // staggered contact-row midpoint so every tail enters its drilled hole.
+    modelOriginPosition: { x: 0, y: 0, z: -18.161 },
+    // The board-lock and contact holes place the generated footprint center
+    // 3.6375 mm toward the mating face from the contact-row midpoint. Restore
+    // the manufacturer model to that drilled-hole datum.
+    positionOffset: { x: 0, y: 3.6375, z: 0 },
     // TE drawing 5520250 D3: the housing top is 16.13 mm above the PCB seating plane.
     zOffsetFromSurface: "8.637mm"
   },

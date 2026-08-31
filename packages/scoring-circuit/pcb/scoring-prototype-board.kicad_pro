@@ -4,8 +4,8 @@
     "generator": "circuit-json-to-kicad",
     "generator_version": "0.0.1",
     "project_name": "scoring-prototype-board",
-    "created": "2026-08-31T00:40:08.850Z",
-    "modified": "2026-08-31T00:40:08.850Z"
+    "created": "2026-08-31T06:38:35.109Z",
+    "modified": "2026-08-31T06:38:35.109Z"
   },
   "meta": {
     "version": 1
@@ -72,7 +72,7 @@
   },
   "sheets": [
     [
-      "2581ed83-2d62-40ee-a77a-127852ca90ae",
+      "2a6ffc3c-f1ed-4bab-8ba1-165df1d322b5",
       "Root"
     ]
   ]

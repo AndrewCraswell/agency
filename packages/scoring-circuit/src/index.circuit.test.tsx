@@ -378,23 +378,50 @@ describe("minimal scoring prototype baseline", () => {
       model_origin_position: { x: 5.08, y: 0, z: 0 }
     })
     expect(cadByReference.get("J_FAVERO_DATA_1")).toMatchObject({
-      position: { x: 40, y: -47, z: 9.337 },
+      position: { x: 40, y: -31.8, z: 9.337 },
       rotation: { x: 0, y: 0, z: 0 },
-      model_board_normal_direction: "y+"
+      model_board_normal_direction: "y+",
+      model_origin_position: { x: 0, y: 0, z: -18.161 }
     })
     expect(pcbByReference.get("J_FAVERO_DATA_1")).toMatchObject({
-      center: { x: 40, y: -43.045 },
+      center: { x: 40, y: -35.4375 },
       rotation: 180
     })
     expect(cadByReference.get("J_FAVERO_DATA_2")).toMatchObject({
-      position: { x: 60, y: -47, z: 9.337 },
+      position: { x: 60, y: -31.8, z: 9.337 },
       rotation: { x: 0, y: 0, z: 0 },
-      model_board_normal_direction: "y+"
+      model_board_normal_direction: "y+",
+      model_origin_position: { x: 0, y: 0, z: -18.161 }
     })
     expect(pcbByReference.get("J_FAVERO_DATA_2")).toMatchObject({
-      center: { x: 60, y: -43.045 },
+      center: { x: 60, y: -35.4375 },
       rotation: 180
     })
+
+    const faveroOnePcbId = pcbByReference.get("J_FAVERO_DATA_1")?.pcb_component_id
+    expect(
+      circuit
+        .filter(
+          ({ type, pcb_component_id: pcbComponentId }) =>
+            type === "pcb_plated_hole" && pcbComponentId === faveroOnePcbId
+        )
+        .map(({ x, y, hole_diameter: holeDiameter }) => ({ x, y, holeDiameter }))
+    ).toEqual([
+      { x: 41.905, y: -33.07, holeDiameter: 0.9 },
+      { x: 40.635, y: -30.53, holeDiameter: 0.9 },
+      { x: 39.365, y: -33.07, holeDiameter: 0.9 },
+      { x: 38.095, y: -30.53, holeDiameter: 0.9 }
+    ])
+    expect(
+      circuit
+        .filter(
+          ({ type, pcb_component_id: pcbComponentId }) => type === "pcb_hole" && pcbComponentId === faveroOnePcbId
+        )
+        .map(({ x, y, hole_diameter: holeDiameter }) => ({ x, y, holeDiameter }))
+    ).toEqual([
+      { x: 45.08, y: -39.42, holeDiameter: 3.25 },
+      { x: 34.92, y: -39.42, holeDiameter: 3.25 }
+    ])
   })
 
   it("matches the OpenPiste seven-conductor single-resistor topology", () => {
