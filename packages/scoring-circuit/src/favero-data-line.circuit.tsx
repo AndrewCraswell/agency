@@ -55,6 +55,7 @@ const dip6Footprint = (
     ))}
     <silkscreenrect pcbX={0} pcbY={0} width="10.2mm" height="7.4mm" strokeWidth="0.2mm" filled={false} />
     <silkscreencircle pcbX={-3.2} pcbY={2.5} radius="0.5mm" strokeWidth="0.2mm" isOutline />
+    <courtyardrect pcbX={0} pcbY={0} width="10.7mm" height="7.9mm" strokeWidth="0.05mm" />
   </footprint>
 )
 
@@ -84,6 +85,7 @@ const do41Footprint = (
     />
     <silkscreenrect pcbX={0} pcbY={0} width="6mm" height="2.6mm" strokeWidth="0.2mm" filled={false} />
     <silkscreenline x1={-2} y1={-1.3} x2={-2} y2={1.3} strokeWidth="0.3mm" />
+    <courtyardrect pcbX={0} pcbY={0} width="11.16mm" height="3.2mm" strokeWidth="0.05mm" />
   </footprint>
 )
 
@@ -142,7 +144,7 @@ export function FaveroDataLine(): ReactElement {
               }}
               footprint={dip6Footprint}
               pcbX={x}
-              pcbY={-24}
+              pcbY={-12}
               cadModel={cadModels.dip6}
             />
             <resistor
@@ -152,7 +154,7 @@ export function FaveroDataLine(): ReactElement {
               tolerance="1%"
               footprint="0805"
               pcbX={x}
-              pcbY={-18}
+              pcbY={-6}
               cadModel={cadModels.resistor0805}
             />
             <resistor
@@ -162,7 +164,7 @@ export function FaveroDataLine(): ReactElement {
               tolerance="1%"
               footprint="0805"
               pcbX={loopX}
-              pcbY={-27}
+              pcbY={-15}
               cadModel={cadModels.resistor0805}
             />
             <resistor
@@ -172,7 +174,7 @@ export function FaveroDataLine(): ReactElement {
               tolerance="1%"
               footprint="0805"
               pcbX={x + 9}
-              pcbY={-20}
+              pcbY={-8}
               cadModel={cadModels.resistor0805}
             />
             <chip
@@ -181,7 +183,7 @@ export function FaveroDataLine(): ReactElement {
               pinLabels={{ pin1: "CATHODE", pin2: "ANODE" }}
               footprint={do41Footprint}
               pcbX={x}
-              pcbY={-30}
+              pcbY={-18}
               cadModel={cadModels.diodeDo41}
             />
 

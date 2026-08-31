@@ -37,7 +37,7 @@ describe("minimal scoring prototype baseline", () => {
     })
 
     expect(renderPrototype().find(({ type }) => type === "pcb_board")).toMatchObject({
-      solder_mask_color: "red",
+      solder_mask_color: "black",
       silkscreen_color: "white"
     })
   })
@@ -347,7 +347,7 @@ describe("minimal scoring prototype baseline", () => {
       model_origin_position: { x: 0, y: 3.625, z: 0 }
     })
     expect(cadByReference.get("BZ_SCORING")).toMatchObject({
-      position: { x: 68, y: -6, z: 0.7 },
+      position: { x: 68, y: 16, z: 0.7 },
       model_origin_position: { x: 2.5, y: 0, z: 0 }
     })
     expect(cadByReference.get("BZ_SCORING")?.model_board_normal_direction).toBeUndefined()

@@ -99,7 +99,7 @@ function MinimalScoringPrototype(): ReactElement {
       width={`${widthMm}mm`}
       height={`${heightMm}mm`}
       layers={layerCount}
-      solderMaskColor="red"
+      solderMaskColor="black"
       silkscreenColor="white"
       pcbPack={false}
     >

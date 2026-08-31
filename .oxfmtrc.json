@@ -22,6 +22,7 @@
     "**/*.shopify*.html",
     "**/fixtures/golden-vector-export.json",
     "pnpm-lock.yaml",
+    "packages/scoring-circuit/pcb/**",
     "packages/fc-theme/**",
     "packages/fc-theme-base/**"
   ]

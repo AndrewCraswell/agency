@@ -195,7 +195,7 @@ export function PrototypePeripherals(): ReactElement {
         pinLabels={{ pin1: "POSITIVE", pin2: "SWITCHED_GROUND" }}
         footprint={scoringSounderFootprint}
         pcbX={68}
-        pcbY={-6}
+        pcbY={16}
         cadModel={cadModels.scoringSounder}
       />
       <chip
@@ -204,7 +204,7 @@ export function PrototypePeripherals(): ReactElement {
         pinLabels={{ pin1: "GATE", pin2: "SOURCE", pin3: "DRAIN" }}
         footprint="sot23"
         pcbX={55}
-        pcbY={-12}
+        pcbY={10}
         cadModel={cadModels.sot23}
       />
       <resistor
@@ -214,7 +214,7 @@ export function PrototypePeripherals(): ReactElement {
         tolerance="1%"
         footprint="0603"
         pcbX={47}
-        pcbY={-10}
+        pcbY={12}
         cadModel={cadModels.resistor0603}
       />
       <resistor
@@ -224,7 +224,7 @@ export function PrototypePeripherals(): ReactElement {
         tolerance="1%"
         footprint="0603"
         pcbX={47}
-        pcbY={-15}
+        pcbY={7}
         cadModel={cadModels.resistor0603}
       />
 
