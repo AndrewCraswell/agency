@@ -398,20 +398,32 @@ describe("minimal scoring prototype baseline", () => {
       rotation: 180
     })
 
-    const faveroOnePcbId = pcbByReference.get("J_FAVERO_DATA_1")?.pcb_component_id
-    expect(
-      circuit
+    const retainedStepContactTailOffsets = [
+      { x: -1.905, y: 1.27 },
+      { x: -0.635, y: -1.27 },
+      { x: 0.635, y: 1.27 },
+      { x: 1.905, y: -1.27 }
+    ]
+    for (const [reference, connectorX] of [
+      ["J_FAVERO_DATA_1", 40],
+      ["J_FAVERO_DATA_2", 60]
+    ] as const) {
+      const pcbComponentId = pcbByReference.get(reference)?.pcb_component_id
+      const contactHoles = circuit
         .filter(
-          ({ type, pcb_component_id: pcbComponentId }) =>
-            type === "pcb_plated_hole" && pcbComponentId === faveroOnePcbId
+          ({ type, pcb_component_id: holePcbComponentId }) =>
+            type === "pcb_plated_hole" && holePcbComponentId === pcbComponentId
         )
         .map(({ x, y, hole_diameter: holeDiameter }) => ({ x, y, holeDiameter }))
-    ).toEqual([
-      { x: 41.905, y: -33.07, holeDiameter: 0.9 },
-      { x: 40.635, y: -30.53, holeDiameter: 0.9 },
-      { x: 39.365, y: -33.07, holeDiameter: 0.9 },
-      { x: 38.095, y: -30.53, holeDiameter: 0.9 }
-    ])
+        .toSorted((left, right) => Number(left.x) - Number(right.x) || Number(left.y) - Number(right.y))
+      const stepTailCenters = retainedStepContactTailOffsets
+        .map(({ x, y }) => ({ x: connectorX + x, y: -31.8 + y, holeDiameter: 0.9 }))
+        .toSorted((left, right) => left.x - right.x || left.y - right.y)
+
+      expect(contactHoles).toEqual(stepTailCenters)
+    }
+
+    const faveroOnePcbId = pcbByReference.get("J_FAVERO_DATA_1")?.pcb_component_id
     expect(
       circuit
         .filter(
