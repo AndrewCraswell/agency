@@ -89,9 +89,10 @@ export const cadModels = {
     stepUrl: checkedInStepUrl("te-5520250-2-rj14.step"),
     modelBoardNormalDirection: "y+",
     pcbRotationOffset: 180,
-    // The asymmetric footprint bounds are centered 3.955 mm behind its
-    // authored origin. Return the manufacturer model to the actual hole datum.
-    positionOffset: { x: 0, y: 3.955, z: 0 },
+    // The asymmetric footprint bounds are centered 3.955 mm ahead of its
+    // authored origin after the connector is rotated. Return the manufacturer
+    // model to the actual hole datum.
+    positionOffset: { x: 0, y: -3.955, z: 0 },
     // TE drawing 5520250 D3: the housing top is 16.13 mm above the PCB seating plane.
     zOffsetFromSurface: "8.637mm"
   },

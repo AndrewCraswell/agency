@@ -305,6 +305,11 @@ describe("minimal scoring prototype baseline", () => {
         .filter(({ type }) => type === "cad_component")
         .map((component) => [sourceNames.get(component.source_component_id), component])
     )
+    const pcbByReference = new Map(
+      circuit
+        .filter(({ type }) => type === "pcb_component")
+        .map((component) => [sourceNames.get(component.source_component_id), component])
+    )
 
     expect(cadByReference.get("J_CONTROLLER_LEFT")).toMatchObject({
       position: { x: expect.closeTo(1.57, 6), y: -15, z: 0.7 },
@@ -323,8 +328,13 @@ describe("minimal scoring prototype baseline", () => {
     })
     expect(cadByReference.get("U_ETHERNET")).toMatchObject({
       position: { x: -20, y: -32, z: 0.7 },
+      rotation: { x: 0, y: 0, z: 180 },
       model_board_normal_direction: "y+",
       model_origin_position: { x: 0, y: 0, z: 0.25 }
+    })
+    expect(pcbByReference.get("U_ETHERNET")).toMatchObject({
+      center: { x: -20, y: -32 },
+      rotation: 180
     })
     expect(cadByReference.get("J_HUB75_DATA")).toMatchObject({
       position: { x: 15, y: 42, z: 0.7 },
@@ -368,14 +378,22 @@ describe("minimal scoring prototype baseline", () => {
       model_origin_position: { x: 5.08, y: 0, z: 0 }
     })
     expect(cadByReference.get("J_FAVERO_DATA_1")).toMatchObject({
-      position: { x: 40, y: -40, z: 9.337 },
-      rotation: { x: 0, y: 0, z: 180 },
+      position: { x: 40, y: -47, z: 9.337 },
+      rotation: { x: 0, y: 0, z: 0 },
       model_board_normal_direction: "y+"
     })
+    expect(pcbByReference.get("J_FAVERO_DATA_1")).toMatchObject({
+      center: { x: 40, y: -43.045 },
+      rotation: 180
+    })
     expect(cadByReference.get("J_FAVERO_DATA_2")).toMatchObject({
-      position: { x: 60, y: -40, z: 9.337 },
-      rotation: { x: 0, y: 0, z: 180 },
+      position: { x: 60, y: -47, z: 9.337 },
+      rotation: { x: 0, y: 0, z: 0 },
       model_board_normal_direction: "y+"
+    })
+    expect(pcbByReference.get("J_FAVERO_DATA_2")).toMatchObject({
+      center: { x: 60, y: -43.045 },
+      rotation: 180
     })
   })
 

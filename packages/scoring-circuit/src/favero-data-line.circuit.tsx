@@ -125,7 +125,8 @@ export function FaveroDataLine(): ReactElement {
               pinLabels={{ pin2: "OUTER_A", pin3: "DATA_A", pin4: "DATA_B", pin5: "OUTER_B" }}
               footprint={rj14Footprint}
               pcbX={connectorX}
-              pcbY={-40}
+              pcbY={-47}
+              pcbRotation={180}
               cadModel={cadModels.repeaterConnectorRj14}
             />
             <chip

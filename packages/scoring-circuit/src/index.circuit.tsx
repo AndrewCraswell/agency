@@ -174,7 +174,7 @@ function MinimalScoringPrototype(): ReactElement {
         cadModel={cadModels.pinHeader1x01}
       />
       <UsbCPower />
-      <EthernetModuleFootprint pcbX={-20} pcbY={-32} />
+      <EthernetModuleFootprint pcbX={-20} pcbY={-32} pcbRotation={180} />
       <ScoringConductorInterface pcbX={-48} pcbY={0} />
       <PrototypePeripherals />
       <FaveroDataLine />
