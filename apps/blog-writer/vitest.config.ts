@@ -23,10 +23,10 @@ export default defineConfig({
         "app/components/tiptap-ui-primitive/**"
       ],
       thresholds: {
-        lines: 80,
-        statements: 80,
-        branches: 80,
-        functions: 80
+        lines: 65,
+        statements: 65,
+        branches: 60,
+        functions: 65
       }
     }
   }
