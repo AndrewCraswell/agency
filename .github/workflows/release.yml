@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
           # Use a token that can push back to a protected main if needed.
           token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v4
         with:
           node-version: 24
