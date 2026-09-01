@@ -1,0 +1,19 @@
+{%- comment -%}
+  Renders one Journal tag filter.
+
+  Accepts:
+  - blog: {Blog} Current blog (required)
+  - tag: {String} Tag label (required)
+  - current_tags: {Array} Active blog tags
+{%- endcomment -%}
+{%- assign tag_handle = tag | handle -%}
+{%- assign tag_url = blog.url | append: '/tagged/' | append: tag_handle -%}
+{%- assign tag_is_active = false -%}
+{%- for current_tag in current_tags -%}
+  {%- assign current_tag_handle = current_tag | handle -%}
+  {%- if current_tag_handle == tag_handle -%}
+    {%- assign tag_is_active = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- render 'ui-pill', label: tag, url: tag_url, active: tag_is_active -%}

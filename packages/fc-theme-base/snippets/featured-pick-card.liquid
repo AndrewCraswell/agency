@@ -43,13 +43,13 @@
         {%- assign url_key = 'link_' | append: i | append: '_url' -%}
         {%- assign label = block.settings[label_key] -%}
         {%- if label != blank -%}
-          {%- assign chip_url = block.settings[url_key] | default: '#' -%}
-          {%- render 'ui-chip', label: label, url: chip_url -%}
+          {%- assign pill_url = block.settings[url_key] | default: '#' -%}
+          {%- render 'ui-pill', label: label, url: pill_url, icon: 'arrow-up-right' -%}
         {%- endif -%}
       {%- endfor -%}
     {%- endcapture -%}
     {%- if links != blank -%}
-      <div class="ui-chips">{{ links }}</div>
+      <div class="ui-pills">{{ links }}</div>
     {%- endif -%}
   </div>
 </article>

@@ -1385,6 +1385,18 @@
     ]
   },
   {
+    "name": "Structured data",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "structured_data_enabled",
+        "label": "Enable custom structured data",
+        "info": "Enable only when no other app provides JSON-LD for this theme.",
+        "default": true
+      }
+    ]
+  },
+  {
     "name": "t:settings_schema.currency_format.name",
     "settings": [
       {

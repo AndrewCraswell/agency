@@ -29,45 +29,12 @@
 
         <div class="fc-home__journal">
           {%- for article in blog.articles limit: 3 -%}
-            <article class="fc-home__post">
-              <a
-                class="fc-home__post-image-link"
-                href="{{ article.url }}"
-                aria-label="{{ article.title | escape }}"
-              >
-                {%- if article.image -%}
-                  {{
-                    article.image
-                    | image_url: width: 790
-                    | image_tag:
-                      class: 'fc-home__post-image',
-                      widths: '395, 592, 790',
-                      sizes: '(min-width: 990px) 395px, 100vw',
-                      alt: article.image.alt | default: article.title,
-                      loading: 'lazy'
-                  }}
-                {%- else -%}
-                  <span class="fc-home__post-image fc-home__post-image--placeholder"></span>
-                {%- endif -%}
-              </a>
-              <div class="fc-home__post-body">
-                <p class="fc-home__post-meta">
-                  <time datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
-                    {{- article.published_at | date: '%b %-d, %Y' -}}
-                  </time>
-                </p>
-                <h3 class="fc-home__post-title">
-                  <a class="fc-home__post-title-link" href="{{ article.url }}">{{ article.title | escape }}</a>
-                </h3>
-                <p class="fc-home__post-excerpt">{{ article.excerpt_or_content | strip_html | truncatewords: 18 }}</p>
-                {%- render 'ui-link',
-                  label: section.settings.read_label,
-                  url: article.url,
-                  icon: 'arrow-right',
-                  class: 'fc-home__post-link'
-                -%}
-              </div>
-            </article>
+            {%- render 'ui-article-card',
+              article: article,
+              read_label: section.settings.read_label,
+              heading_level: 3,
+              show_tag: false
+            -%}
           {%- endfor -%}
         </div>
       </div>

@@ -3,13 +3,20 @@
     "main": {
       "type": "main-blog",
       "settings": {
-        "layout": "collage",
-        "show_image": true,
-        "image_height": "medium",
+        "home_label": "Home",
+        "heading": "The Journal",
+        "description": "Technique, gear guides, and stories from the strip — from your first lesson to the finals.",
+        "filter_label": "Filter articles by tag",
+        "all_label": "All",
+        "tag_order": "Technique, Gear, Training, Competition, Club Life",
+        "archive_label": "Past articles",
+        "featured_link_label": "Read article",
+        "card_link_label": "Read more",
+        "show_author": true,
+        "author_prefix": "By",
         "show_date": true,
-        "show_author": false,
-        "padding_top": 36,
-        "padding_bottom": 36
+        "show_reading_time": true,
+        "reading_time_suffix": "min read"
       }
     }
   },

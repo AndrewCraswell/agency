@@ -30,10 +30,14 @@ const InstructionSchema = z.string().trim().min(3).max(500)
 const TitleSchema = z.string().trim().min(1).max(300)
 const PassageSchema = z.string().trim().min(1).max(5000)
 const PassageResponseSchema = z.object({ text: z.string().trim().min(1).max(20_000) })
-const ImageResponseSchema = z.object({
-  image_url: z.url({ protocol: /^https$/ }),
-  alt_text: z.string().trim().max(300).default("")
-})
+const ImageAltTextSchema = z.string().trim().max(300).default("")
+const ImageMimeTypeSchema = z.enum(["image/jpeg", "image/png", "image/gif", "image/webp"])
+const imageExtensions: Record<z.infer<typeof ImageMimeTypeSchema>, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp"
+}
 
 function getWebhookUrl(path: string) {
   const configuredBaseUrl = WebhookBaseUrlSchema.parse(process.env.N8N_WEBHOOK_BASE_URL)
@@ -41,16 +45,19 @@ function getWebhookUrl(path: string) {
   return new URL(path, baseUrl)
 }
 
-async function invokeWebhook<T>(path: string, payload: Record<string, string | number>, responseSchema: z.ZodType<T>) {
+function getWebhookHeaders() {
   const headers = new Headers({ "Content-Type": "application/json" })
   const bearerToken = process.env.N8N_WEBHOOK_BEARER_TOKEN
   if (bearerToken !== undefined && bearerToken.length > 0) {
     headers.set("Authorization", `Bearer ${bearerToken}`)
   }
+  return headers
+}
 
+async function invokeWebhook<T>(path: string, payload: Record<string, string | number>, responseSchema: z.ZodType<T>) {
   const response = await fetch(getWebhookUrl(path), {
     method: "POST",
-    headers,
+    headers: getWebhookHeaders(),
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(180_000)
   })
@@ -58,6 +65,26 @@ async function invokeWebhook<T>(path: string, payload: Record<string, string | n
     throw new Error(`Blog workflow returned HTTP ${response.status}`)
   }
   return responseSchema.parse(await response.json())
+}
+
+async function invokeImageWebhook(path: string, payload: Record<string, string>) {
+  const response = await fetch(getWebhookUrl(path), {
+    method: "POST",
+    headers: getWebhookHeaders(),
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(180_000)
+  })
+  if (!response.ok) {
+    throw new Error(`Blog workflow returned HTTP ${response.status}`)
+  }
+  const mimeType = ImageMimeTypeSchema.parse(response.headers.get("Content-Type")?.split(";")[0]?.trim())
+  const encodedAltText = response.headers.get("X-Image-Alt-Text") ?? ""
+  const altText = ImageAltTextSchema.parse(decodeURIComponent(encodedAltText))
+  const bytes = await response.arrayBuffer()
+  return {
+    altText,
+    file: new File([bytes], `generated-image.${imageExtensions[mimeType]}`, { type: mimeType })
+  }
 }
 
 /**
@@ -179,18 +206,13 @@ export async function rewriteArticleText(tenantId: string, text: string, instruc
 
 /**
  * Draws a featured image for the article.
- * The workflow answers with a link to the picture it made, which the caller stores in Shopify Files, and with a
- * description of it so the image arrives with alt text already written.
+ * The workflow returns the picture bytes, which the caller stores in Shopify Files, and a description in a response
+ * header so the image arrives with alt text already written.
  */
 export async function generateArticleImage(tenantId: string, title: string, instruction: string) {
-  const response = await invokeWebhook(
-    "generate-article-image",
-    {
-      tenant_id: IdentifierSchema.parse(tenantId),
-      title: TitleSchema.parse(title),
-      instruction: InstructionSchema.parse(instruction)
-    },
-    ImageResponseSchema
-  )
-  return { altText: response.alt_text, imageUrl: response.image_url }
+  return invokeImageWebhook("generate-article-image", {
+    tenant_id: IdentifierSchema.parse(tenantId),
+    title: TitleSchema.parse(title),
+    instruction: InstructionSchema.parse(instruction)
+  })
 }

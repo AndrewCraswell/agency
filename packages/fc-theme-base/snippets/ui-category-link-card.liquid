@@ -1,0 +1,15 @@
+{%- comment -%}
+  Renders a compact category link card with a trailing arrow.
+
+  Accepts:
+  - label: {String} Category label (required)
+  - url: {String} Link target (required)
+  - class: {String} Optional extra classes
+
+  Usage:
+  {% render 'ui-category-link-card', label: 'Weapons', url: collections.weapons.url %}
+{%- endcomment -%}
+<a class="ui-category-link-card{% if class %} {{ class }}{% endif %}" href="{{ url }}">
+  <span>{{ label | escape }}</span>
+  {%- render 'fc-icon', icon: 'arrow-right', size: 18 -%}
+</a>

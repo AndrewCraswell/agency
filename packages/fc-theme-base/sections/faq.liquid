@@ -1,0 +1,147 @@
+{{ 'section-faq.css' | asset_url | stylesheet_tag }}
+
+<div class="faq-page">
+  <div class="faq-page__breadcrumb">
+    {%- render 'ui-breadcrumbs', root_label: 'Home', root_url: routes.root_url, current_label: page.title -%}
+  </div>
+
+  <header class="faq-page__hero">
+    <p class="faq-page__kicker">{{ section.settings.kicker | escape }}</p>
+    <h1>{{ section.settings.heading | default: page.title | escape }}</h1>
+    <p class="faq-page__subtitle">{{ section.settings.subtitle | escape }}</p>
+    <nav class="faq-page__topics" aria-label="Frequently asked question topics">
+      {%- assign faq_categories = 'shipping::Shipping|returns::Returns|discounts::Discounts|programs::Programs|sizing-and-gear::Sizing & gear|about-us::About us'
+        | split: '|'
+      -%}
+      {%- assign first_topic_rendered = false -%}
+      {%- for category_definition in faq_categories -%}
+        {%- assign category_parts = category_definition | split: '::' -%}
+        {%- assign category_key = category_parts[0] -%}
+        {%- assign category_label = category_parts[1] -%}
+        {%- assign category_has_items = false -%}
+        {%- for block in section.blocks -%}
+          {%- if block.settings.category == category_key -%}
+            {%- assign category_has_items = true -%}
+            {%- break -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- if category_has_items -%}
+          <a class="ui-pill{% if first_topic_rendered == false %} faq-page__topic--active{% endif %}" href="#{{ category_key }}">
+            {{- category_label | escape -}}
+          </a>
+          {%- assign first_topic_rendered = true -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </nav>
+  </header>
+
+  <div class="faq-page__content">
+    <div class="faq-page__column">
+      {%- for category_definition in faq_categories -%}
+        {%- assign category_parts = category_definition | split: '::' -%}
+        {%- assign category_key = category_parts[0] -%}
+        {%- assign category_label = category_parts[1] -%}
+        {%- capture category_items -%}
+          {%- for block in section.blocks -%}
+            {%- if block.settings.category == category_key -%}
+              {%- render 'ui-faq-item',
+                question: block.settings.question,
+                answer: block.settings.answer,
+                open: block.settings.open,
+                link_label: block.settings.link_label,
+                link_url: block.settings.link_url,
+                block: block
+              -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endcapture -%}
+        {%- if category_items != blank -%}
+          <section
+            class="faq-page__group"
+            id="{{ category_key }}"
+            aria-labelledby="Faq-{{ section.id }}-{{ category_key }}"
+          >
+            <h2 id="Faq-{{ section.id }}-{{ category_key }}">{{ category_label | escape }}</h2>
+            {{- category_items -}}
+          </section>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <aside class="faq-page__contact">
+    <div>
+      <h2>{{ section.settings.contact_heading | escape }}</h2>
+      <p>{{ section.settings.contact_text | escape }}</p>
+    </div>
+    <a href="{{ section.settings.contact_url | default: pages.contact.url }}">
+      {{- section.settings.contact_label | escape -}}
+    </a>
+  </aside>
+</div>
+
+{%- if settings.structured_data_enabled -%}
+  {%- render 'structured-data', faq_blocks: section.blocks -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "FAQ page",
+  "tag": "section",
+  "class": "section",
+  "max_blocks": 50,
+  "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "Help center" },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Frequently asked questions"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Everything about shipping, returns, discounts, programs, sizing, gear, and who we are, in one place."
+    },
+    { "type": "header", "content": "Contact card" },
+    { "type": "text", "id": "contact_heading", "label": "Heading", "default": "Questions?" },
+    {
+      "type": "textarea",
+      "id": "contact_text",
+      "label": "Text",
+      "default": "Cannot find the answer you are looking for? Contact us. We are happy to help."
+    },
+    { "type": "text", "id": "contact_label", "label": "Button label", "default": "Contact us" },
+    { "type": "url", "id": "contact_url", "label": "Button link" }
+  ],
+  "blocks": [
+    {
+      "type": "faq_item",
+      "name": "FAQ item",
+      "settings": [
+        {
+          "type": "select",
+          "id": "category",
+          "label": "Category",
+          "options": [
+            { "value": "shipping", "label": "Shipping" },
+            { "value": "returns", "label": "Returns" },
+            { "value": "discounts", "label": "Discounts" },
+            { "value": "programs", "label": "Programs" },
+            { "value": "sizing-and-gear", "label": "Sizing & gear" },
+            { "value": "about-us", "label": "About us" }
+          ],
+          "default": "shipping"
+        },
+        { "type": "text", "id": "question", "label": "Question", "default": "Question" },
+        { "type": "richtext", "id": "answer", "label": "Answer", "default": "<p>Answer</p>" },
+        { "type": "checkbox", "id": "open", "label": "Open by default", "default": false },
+        { "type": "text", "id": "link_label", "label": "Related link label" },
+        { "type": "url", "id": "link_url", "label": "Related link" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "FAQ page" }]
+}
+{% endschema %}

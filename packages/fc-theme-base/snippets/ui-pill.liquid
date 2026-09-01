@@ -1,0 +1,38 @@
+{%- comment -%}
+  Renders a plain pill as a link or static label.
+
+  Accepts:
+  - label: {String} Visible text (required)
+  - url: {String} Optional link target
+  - active: {Boolean} Applies the selected appearance and page state
+  - icon: {String} Optional trailing icon name
+  - option: {Boolean} Removes a listbox option link from the tab order
+  - class: {String} Optional extra classes
+
+  Usage:
+  {% render 'ui-pill', label: 'Gear', url: collection.url, active: true %}
+{%- endcomment -%}
+{%- if url != blank -%}
+  <a
+    class="ui-pill{% if icon %} ui-pill--with-icon{% endif %}{% if active %} ui-pill--active{% endif %}{% if class %} {{ class }}{% endif %}"
+    href="{{ url }}"
+    {% if active %}
+      aria-current="page"
+    {% endif %}
+    {% if option %}
+      tabindex="-1"
+    {% endif %}
+  >
+    {{- label | escape -}}
+    {%- if icon -%}
+      {%- render 'fc-icon', icon: icon, size: 14 -%}
+    {%- endif -%}
+  </a>
+{%- else -%}
+  <span class="ui-pill{% if icon %} ui-pill--with-icon{% endif %}{% if active %} ui-pill--active{% endif %}{% if class %} {{ class }}{% endif %}">
+    {{- label | escape -}}
+    {%- if icon -%}
+      {%- render 'fc-icon', icon: icon, size: 14 -%}
+    {%- endif -%}
+  </span>
+{%- endif -%}

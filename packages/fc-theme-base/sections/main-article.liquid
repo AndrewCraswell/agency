@@ -1,5 +1,11 @@
 {{ 'section-blog-post.css' | asset_url | stylesheet_tag }}
 
+{%- liquid
+  assign primary_tag = article.tags.first | default: blog.title
+  assign article_words = article.content | strip_html | split: ' ' | size
+  assign reading_minutes = article_words | divided_by: 200 | plus: 1
+-%}
+
 <article class="article-template">
   {%- for block in section.blocks -%}
     {%- case block.type -%}
@@ -14,10 +20,7 @@
             {{ block.shopify_attributes }}
           >
             <div
-              class="article-template__hero-{{ block.settings.image_height }} media"
-              {% if block.settings.image_height == 'adapt' and article.image %}
-                style="padding-bottom: {{ 1 | divided_by: article.image.aspect_ratio | times: 100 }}%;"
-              {% endif %}
+              class="article-template__hero media"
             >
               <img
                 srcset="
@@ -29,8 +32,8 @@
                   {% if article.image.width >= 3000 %}{{ article.image | image_url: width: 3000 }} 3000w,{% endif %}
                   {{ article.image | image_url }} {{ article.image.width }}w
                 "
-                sizes="(min-width: {{ settings.page_width }}px) {{ settings.page_width | minus: 100 }}px, (min-width: 750px) calc(100vw - 10rem), 100vw"
-                src="{{ article.image | image_url: width: 1100 }}"
+                sizes="(min-width: 1440px) 1248px, (min-width: 750px) calc(100vw - 8rem), calc(100vw - 4rem)"
+                src="{{ article.image | image_url: width: 1500 }}"
                 loading="eager"
                 fetchpriority="high"
                 width="{{ article.image.width }}"
@@ -43,24 +46,34 @@
 
       {%- when 'title' -%}
         <header
-          class="page-width page-width--narrow{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--fade-in{% endif %}"
+          class="article-template__header{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--fade-in{% endif %}"
           {{ block.shopify_attributes }}
         >
-          <h1
-            class="article-template__title"
-          >
+          {%- render 'ui-breadcrumbs',
+            root_label: 'Home',
+            root_url: routes.root_url,
+            parent_label: blog.title,
+            parent_url: blog.url,
+            current_label: primary_tag
+          -%}
+          {%- if article.tags.first != blank -%}
+            <p class="article-template__tag">{{ article.tags.first | upcase | escape }}</p>
+          {%- endif -%}
+          <h1 class="article-template__title">
             {{ article.title | escape }}
           </h1>
-          {%- if block.settings.blog_show_date -%}
-            <span class="circle-divider caption-with-letter-spacing">
-              {{- article.published_at | time_tag: format: 'date' -}}
-            </span>
-          {%- endif -%}
-          {%- if block.settings.blog_show_author -%}
-            <span class="caption-with-letter-spacing">
-              <span>{{ article.author }}</span>
-            </span>
-          {%- endif -%}
+          <div class="article-template__meta">
+            {%- if block.settings.blog_show_author and article.author != blank -%}
+              <span class="article-template__avatar" aria-hidden="true">
+                {{- article.author | slice: 0 | upcase | escape -}}
+              </span>
+              <span class="article-template__author">By {{ article.author | escape }}</span>
+            {%- endif -%}
+            {%- if block.settings.blog_show_date -%}
+              <span>{{ article.published_at | time_tag: format: 'date' }}</span>
+            {%- endif -%}
+            <span>{{ reading_minutes }} min read</span>
+          </div>
         </header>
 
       {%- when 'content' -%}
@@ -92,6 +105,73 @@
       {{ 'blogs.article.back_to_blog' | t: title: blog.title | escape }}
     </a>
   </div>
+
+  <aside class="article-template__discovery">
+    <div class="article-template__discovery-inner">
+      <header class="article-template__discovery-header">
+        <p class="article-template__discovery-kicker">From Fencing Club</p>
+        <h2>Everything for fencing, in one place.</h2>
+        <p>A fencing-only shop with dependable gear, fair prices, and support from people who fence.</p>
+      </header>
+
+      <nav class="article-template__discovery-tiles" aria-label="Explore Fencing Club">
+        {%- render 'ui-page-link-card',
+          title: 'Contact us',
+          description: 'Get help choosing the right gear.',
+          url: pages.contact.url
+        -%}
+        {%- render 'ui-page-link-card',
+          title: 'How we operate',
+          description: 'Direct from the makers, shipped by us.',
+          url: shop.shipping_policy.url
+        -%}
+        {%- render 'ui-page-link-card',
+          title: 'Shop all gear',
+          description: 'Blades, masks, jackets and more.',
+          url: routes.all_products_collection_url
+        -%}
+        {%- render 'ui-page-link-card',
+          title: 'Starter kits',
+          description: 'Everything to step on the piste.',
+          url: collections['starter-kits'].url
+        -%}
+      </nav>
+
+      <nav class="article-template__categories" aria-labelledby="ArticleCategories-{{ section.id }}">
+        <h2 id="ArticleCategories-{{ section.id }}">Shop by category</h2>
+        <div class="article-template__category-grid">
+          {%- render 'ui-category-link-card', label: 'Weapons', url: collections.weapons.url -%}
+          {%- render 'ui-category-link-card', label: 'Masks', url: collections.masks.url -%}
+          {%- render 'ui-category-link-card', label: 'Clothing', url: collections.clothing.url -%}
+          {%- render 'ui-category-link-card', label: 'Footwear', url: collections.footwear.url -%}
+          {%- render 'ui-category-link-card', label: 'Bags', url: collections.bags.url -%}
+          {%- render 'ui-category-link-card', label: 'Club Gear', url: collections['club-gear'].url -%}
+        </div>
+      </nav>
+    </div>
+  </aside>
+
+  {%- assign related_count = 0 -%}
+  <section class="article-template__related" aria-labelledby="RelatedArticles-{{ section.id }}">
+    <h2 id="RelatedArticles-{{ section.id }}">Keep reading</h2>
+    <div class="article-template__related-grid">
+      {%- for related_article in blog.articles -%}
+        {%- if related_article.id == article.id -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- render 'ui-article-card',
+          article: related_article,
+          read_label: 'Read more',
+          heading_level: 3,
+          show_tag: false
+        -%}
+        {%- assign related_count = related_count | plus: 1 -%}
+        {%- if related_count == 3 -%}
+          {%- break -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </section>
   {%- if blog.comments_enabled? -%}
     <div class="article-template__comment-wrapper background-secondary">
       <div
@@ -287,10 +367,6 @@
     </div>
   {%- endif -%}
 </article>
-
-<script type="application/ld+json">
-  {{ article | structured_data }}
-</script>
 
 {% schema %}
 {

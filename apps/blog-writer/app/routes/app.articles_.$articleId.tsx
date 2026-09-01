@@ -6,12 +6,7 @@ import { z } from "zod"
 import { toArticleHandle } from "../articles/article-handle"
 import { isArticleHtmlEmpty, sanitizeArticleHtml, articleHtmlToText } from "../articles/article-html.server"
 import { deleteShopifyArticle, ShopifyArticleWriteError, writeShopifyArticle } from "../articles/shopify-article.server"
-import {
-  ArticleImageUploadError,
-  downloadArticleImage,
-  resolveArticleImage,
-  uploadArticleImage
-} from "../articles/shopify-image.server"
+import { ArticleImageUploadError, resolveArticleImage, uploadArticleImage } from "../articles/shopify-image.server"
 import { ArticleDetailPage } from "../components/ArticleDetailPage"
 import {
   ArticleRevisionConflictError,
@@ -364,9 +359,8 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
       }
       const identity = await getArticleWorkflowIdentity(session.shop, articleId)
       const drawn = await generateArticleImage(identity.tenantId, parsed.data.title, parsed.data.instruction)
-      // The workflow keeps the picture only briefly, so it is copied into Shopify Files before anything points at it.
       const image = await uploadArticleImage((query, options) => admin.graphql(query, options), {
-        file: await downloadArticleImage(drawn.imageUrl),
+        file: drawn.file,
         altText: drawn.altText
       })
       return { ok: true, intent, imageUrl: image.url, imageAltText: drawn.altText }

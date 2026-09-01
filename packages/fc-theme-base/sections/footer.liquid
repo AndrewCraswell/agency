@@ -151,8 +151,13 @@
                     </ul>
                   {%- when 'link_list' -%}
                     {%- if block.settings.menu != blank -%}
+                      {%- assign faq_page = pages.faq -%}
+                      {%- assign menu_has_faq = false -%}
                       <ul class="footer-block__details-content list-unstyled">
                         {%- for link in block.settings.menu.links -%}
+                          {%- if faq_page != blank and link.url == faq_page.url -%}
+                            {%- assign menu_has_faq = true -%}
+                          {%- endif -%}
                           <li>
                             <a
                               href="{{ link.url }}"
@@ -163,6 +168,16 @@
                             </a>
                           </li>
                         {%- endfor -%}
+                        {%- if block.settings.menu.handle == 'footer-support'
+                          and faq_page != blank
+                          and menu_has_faq == false
+                        -%}
+                          <li>
+                            <a href="{{ faq_page.url }}" class="link link--text list-menu__item list-menu__item--link">
+                              Frequently asked questions
+                            </a>
+                          </li>
+                        {%- endif -%}
                       </ul>
                     {%- endif -%}
                   {%- when 'brand_information' -%}

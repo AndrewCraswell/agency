@@ -42,6 +42,18 @@
 >
   <div class="section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}">
     {%- paginate collection.products by section.settings.products_per_page -%}
+      {%- if settings.structured_data_enabled -%}
+        {%- assign structured_data_position_offset = paginate.current_page
+          | minus: 1
+          | times: paginate.page_size
+        -%}
+        {%- render 'structured-data',
+          collection_item_list_enabled: true,
+          collection_item_list: collection.products,
+          collection_item_count: paginate.items,
+          collection_position_offset: structured_data_position_offset
+        -%}
+      {%- endif -%}
       {% comment %} Sort is the first tabbable element when filter type is vertical {% endcomment %}
       {%- if section.settings.enable_sorting and section.settings.filter_type == 'vertical' -%}
         <facet-filters-form class="facets facets-vertical-sort page-width small-hide">

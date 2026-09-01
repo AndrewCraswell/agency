@@ -1,0 +1,24 @@
+{%- comment -%}
+  Renders breadcrumbs with a root, an optional parent, and the current page.
+
+  Accepts:
+  - root_label: {String} Root link text (required)
+  - root_url: {String} Root link target (required)
+  - current_label: {String} Current page text (required)
+  - parent_label: {String} Optional parent link text
+  - parent_url: {String} Optional parent link target
+  - aria_label: {String} Navigation accessible name; defaults to Breadcrumb
+  - class: {String} Optional extra classes
+
+  Usage:
+  {% render 'ui-breadcrumbs', root_label: 'Home', root_url: routes.root_url, current_label: page.title %}
+{%- endcomment -%}
+<nav class="ui-breadcrumbs{% if class %} {{ class }}{% endif %}" aria-label="{{ aria_label | default: 'Breadcrumb' | escape }}">
+  <a href="{{ root_url }}">{{ root_label | escape }}</a>
+  {%- render 'fc-icon', icon: 'chevron-right', size: 14 -%}
+  {%- if parent_label != blank and parent_url != blank -%}
+    <a href="{{ parent_url }}">{{ parent_label | escape }}</a>
+    {%- render 'fc-icon', icon: 'chevron-right', size: 14 -%}
+  {%- endif -%}
+  <span aria-current="page">{{ current_label | escape }}</span>
+</nav>

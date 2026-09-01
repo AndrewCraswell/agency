@@ -2343,7 +2343,7 @@
               "type": "frame",
               "id": "YazIy",
               "name": "Prose Column",
-              "width": 720,
+              "width": 726,
               "layout": "vertical",
               "gap": 24,
               "children": [
@@ -2685,7 +2685,7 @@
                 {
                   "type": "frame",
                   "id": "YyNC5",
-                  "name": "Our story",
+                  "name": "Contact us",
                   "width": "fill_container",
                   "height": "fill_container",
                   "fill": "$bg",
@@ -2709,7 +2709,7 @@
                           "id": "H6QPV",
                           "name": "Title",
                           "fill": "$ink",
-                          "content": "Our story",
+                          "content": "Contact us",
                           "fontFamily": "$font-display",
                           "fontSize": 18,
                           "fontWeight": "700"
@@ -2733,7 +2733,7 @@
                       "fill": "$ink-soft",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Why we started, and how we source.",
+                      "content": "Get help choosing the right gear.",
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"

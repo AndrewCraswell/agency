@@ -178,33 +178,6 @@ export async function uploadArticleImage(
 }
 
 /**
- * Brings a picture drawn by the writing workflow into memory so it can be stored like any image a merchant uploads.
- * The workflow serves the file for a short while only, and the reply is treated as untrusted: the address has to be
- * an unredirected HTTPS one, and the bytes have to arrive as an image Shopify accepts.
- */
-export async function downloadArticleImage(imageUrl: string): Promise<File> {
-  const address = z.url({ protocol: /^https$/ }).safeParse(imageUrl)
-  if (!address.success) {
-    throw new ArticleImageUploadError("The generated image is not at an address this app can read")
-  }
-
-  const response = await fetch(address.data, { redirect: "error", signal: AbortSignal.timeout(60_000) })
-  if (!response.ok) {
-    throw new ArticleImageUploadError("The generated image could not be collected. Try it again.")
-  }
-  const mimeType = response.headers.get("Content-Type")?.split(";")[0]?.trim() ?? ""
-  const extension = imageExtensions[mimeType]
-  if (extension === undefined) {
-    throw new ArticleImageUploadError("The writer returned something that is not an image")
-  }
-  const bytes = await response.arrayBuffer()
-  if (bytes.byteLength > maximumImageBytes) {
-    throw new ArticleImageUploadError("The generated image is too large to store")
-  }
-  return new File([bytes], `generated-image.${extension}`, { type: mimeType })
-}
-
-/**
  * Resolves a file the merchant chose in the admin's own image picker to the address the storefront can serve.
  * The picker hands back a `MediaImage` identifier and never a URL, so the address has to be read back here.
  */

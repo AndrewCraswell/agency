@@ -27,8 +27,8 @@
         }
       },
       "block_order": [
-        "featured_image",
         "title",
+        "featured_image",
         "share",
         "content"
       ]

@@ -29,7 +29,12 @@
           {% endif %}
         >
           {%- if variant == 'chips' -%}
-            {%- render 'ui-chip', label: category.title, url: category.url, option: as_options -%}
+            {%- render 'ui-pill',
+              label: category.title,
+              url: category.url,
+              icon: 'arrow-up-right',
+              option: as_options
+            -%}
           {%- else -%}
             <a
               href="{{ category.url }}"

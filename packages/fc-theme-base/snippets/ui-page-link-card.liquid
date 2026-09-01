@@ -1,0 +1,19 @@
+{%- comment -%}
+  Renders a page link card with a title, description, and trailing arrow.
+
+  Accepts:
+  - title: {String} Card title (required)
+  - description: {String} Supporting text (required)
+  - url: {String} Link target (required)
+  - class: {String} Optional extra classes
+
+  Usage:
+  {% render 'ui-page-link-card', title: 'Contact us', description: 'Get help choosing the right gear.', url: pages.contact.url %}
+{%- endcomment -%}
+<a class="ui-page-link-card{% if class %} {{ class }}{% endif %}" href="{{ url }}">
+  <span class="ui-page-link-card__title">
+    <strong>{{ title | escape }}</strong>
+    {%- render 'fc-icon', icon: 'arrow-up-right', size: 18 -%}
+  </span>
+  <span class="ui-page-link-card__description">{{ description | escape }}</span>
+</a>

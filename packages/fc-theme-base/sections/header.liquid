@@ -516,64 +516,6 @@
   customElements.define('sticky-header', StickyHeader);
 {% endjavascript %}
 
-{%- capture shop_phone_e164 -%}{%- render 'shop-phone', format: 'e164' -%}{%- endcapture -%}
-{%- assign shop_phone_e164 = shop_phone_e164 | strip -%}
-<script type="application/ld+json">
-  {
-    "@context": "http://schema.org",
-    "@type": "Organization",
-    "name": {{ shop.name | json }},
-    {% if settings.logo %}
-      "logo": {{ settings.logo | image_url: width: 500 | prepend: "https:" | json }},
-    {% endif %}
-    {% if shop.address.street != blank %}
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": {{ shop.address.street | json }},
-        "addressLocality": {{ shop.address.city | json }},
-        "addressRegion": {{ shop.address.province_code | json }},
-        "postalCode": {{ shop.address.zip | json }},
-        "addressCountry": {{ shop.address.country_code | json }}
-      },
-    {% endif %}
-    {% if shop.email != blank %}
-      "email": {{ shop.email | json }},
-    {% endif %}
-    {% if shop_phone_e164 != blank %}
-      "telephone": {{ shop_phone_e164 | json }},
-    {% endif %}
-    "sameAs": [
-      {{ settings.social_twitter_link | json }},
-      {{ settings.social_facebook_link | json }},
-      {{ settings.social_pinterest_link | json }},
-      {{ settings.social_instagram_link | json }},
-      {{ settings.social_tiktok_link | json }},
-      {{ settings.social_tumblr_link | json }},
-      {{ settings.social_snapchat_link | json }},
-      {{ settings.social_youtube_link | json }},
-      {{ settings.social_vimeo_link | json }}
-    ],
-    "url": {{ request.origin | append: page.url | json }}
-  }
-</script>
-
-{%- if request.page_type == 'index' -%}
-  {% assign potential_action_target = request.origin | append: routes.search_url | append: '?q={search_term_string}' %}
-  <script type="application/ld+json">
-    {
-      "@context": "http://schema.org",
-      "@type": "WebSite",
-      "name": {{ shop.name | json }},
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {{ potential_action_target | json }},
-        "query-input": "required name=search_term_string"
-      },
-      "url": {{ request.origin | append: page.url | json }}
-    }
-  </script>
-{%- endif -%}
-
 {% schema %}
 {
   "name": "t:sections.header.name",

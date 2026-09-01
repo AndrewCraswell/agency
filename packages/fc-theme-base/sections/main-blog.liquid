@@ -1,143 +1,155 @@
-{{ 'component-article-card.css' | asset_url | stylesheet_tag }}
-{{ 'component-card.css' | asset_url | stylesheet_tag }}
 {{ 'section-main-blog.css' | asset_url | stylesheet_tag }}
 
-{%- style -%}
-  .section-{{ section.id }}-padding {
-    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
-    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
-  }
+{%- paginate blog.articles by 7 -%}
+  {%- assign featured_article = blog.articles.first -%}
+  <div class="journal-page">
+    <header class="journal-hero">
+      {%- render 'ui-breadcrumbs',
+        root_label: section.settings.home_label,
+        root_url: routes.root_url,
+        current_label: blog.title
+      -%}
 
-  @media screen and (min-width: 750px) {
-    .section-{{ section.id }}-padding {
-      padding-top: {{ section.settings.padding_top }}px;
-      padding-bottom: {{ section.settings.padding_bottom }}px;
-    }
-  }
-{%- endstyle -%}
+      <h1 class="journal-title">{{ section.settings.heading | default: blog.title | escape }}</h1>
 
-{%- paginate blog.articles by 6 -%}
-  <div class="main-blog page-width section-{{ section.id }}-padding">
-    <h1 class="title--primary{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--fade-in{% endif %}">
-      {{ blog.title | escape }}
-    </h1>
+      {%- if section.settings.description != blank -%}
+        <p class="journal-description">{{ section.settings.description | escape }}</p>
+      {%- endif -%}
 
-    <div class="blog-articles {% if section.settings.layout == 'collage' %}blog-articles--collage{% endif %}">
-      {%- for article in blog.articles -%}
-        <div
-          class="blog-articles__article article{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}"
-          {% if settings.animations_reveal_on_scroll %}
-            data-cascade
-            style="--animation-order: {{ forloop.index }};"
-          {% endif %}
-        >
-          {%- render 'article-card',
-            article: article,
-            media_height: section.settings.image_height,
-            media_aspect_ratio: article.image.aspect_ratio,
-            show_image: section.settings.show_image,
-            show_date: section.settings.show_date,
-            show_author: section.settings.show_author,
-            show_excerpt: true
-          -%}
-        </div>
-      {%- endfor -%}
-    </div>
+      <nav class="journal-filters" aria-label="{{ section.settings.filter_label | escape }}">
+        {%- assign all_is_active = false -%}
+        {%- if current_tags == blank -%}
+          {%- assign all_is_active = true -%}
+        {%- endif -%}
+        {%- render 'ui-pill', label: section.settings.all_label, url: blog.url, active: all_is_active -%}
+        {%- liquid
+          assign preferred_tags = section.settings.tag_order | split: ','
+          assign rendered_tags = '|'
+        -%}
+        {%- for configured_tag in preferred_tags -%}
+          {%- assign tag = configured_tag | strip -%}
+          {%- if blog.all_tags contains tag -%}
+            {%- render 'journal-tag-filter', blog: blog, tag: tag, current_tags: current_tags -%}
+            {%- assign rendered_tags = rendered_tags | append: tag | append: '|' -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- for tag in blog.all_tags -%}
+          {%- assign tag_token = '|' | append: tag | append: '|' -%}
+          {%- unless rendered_tags contains tag_token -%}
+            {%- render 'journal-tag-filter', blog: blog, tag: tag, current_tags: current_tags -%}
+          {%- endunless -%}
+        {%- endfor -%}
+      </nav>
+    </header>
 
-    {%- if paginate.pages > 1 -%}
-      {%- render 'pagination', paginate: paginate -%}
+    {%- if featured_article != blank and paginate.current_page == 1 -%}
+      <section class="journal-featured" aria-labelledby="JournalFeatured-{{ section.id }}">
+        <article class="journal-feature">
+          <a
+            class="journal-feature__media"
+            href="{{ featured_article.url }}"
+            aria-label="{{ featured_article.title | escape }}"
+          >
+            {%- if featured_article.image -%}
+              {{
+                featured_article.image
+                | image_url: width: 1280
+                | image_tag:
+                  class: 'journal-feature__image',
+                  widths: '640, 960, 1280',
+                  sizes: '(min-width: 990px) 640px, calc(100vw - 40px)',
+                  alt: featured_article.image.alt | default: featured_article.title,
+                  loading: 'eager',
+                  fetchpriority: 'high'
+              }}
+            {%- else -%}
+              <span class="journal-feature__placeholder"></span>
+            {%- endif -%}
+          </a>
+
+          <div class="journal-feature__content">
+            {%- if featured_article.tags.first != blank -%}
+              <p class="journal-feature__tag">{{ featured_article.tags.first | upcase | escape }}</p>
+            {%- endif -%}
+            <h2 class="journal-feature__title" id="JournalFeatured-{{ section.id }}">
+              <a href="{{ featured_article.url }}">{{ featured_article.title | escape }}</a>
+            </h2>
+            <p class="journal-feature__excerpt">
+              {%- if featured_article.excerpt != blank -%}
+                {{ featured_article.excerpt | strip_html | truncatewords: 28 }}
+              {%- else -%}
+                {{ featured_article.content | strip_html | truncatewords: 28 }}
+              {%- endif -%}
+            </p>
+            <div class="journal-feature__meta">
+              {%- if section.settings.show_author and featured_article.author != blank -%}
+                <span>{{ section.settings.author_prefix | escape }} {{ featured_article.author | escape }}</span>
+              {%- endif -%}
+              {%- if section.settings.show_date -%}
+                <span>{{ featured_article.published_at | time_tag: format: 'date' }}</span>
+              {%- endif -%}
+              {%- if section.settings.show_reading_time -%}
+                {%- assign article_words = featured_article.content | strip_html | split: ' ' | size -%}
+                {%- assign reading_minutes = article_words | divided_by: 200 | plus: 1 -%}
+                <span>{{ reading_minutes }} {{ section.settings.reading_time_suffix | escape }}</span>
+              {%- endif -%}
+            </div>
+            {%- render 'ui-link',
+              label: section.settings.featured_link_label,
+              url: featured_article.url,
+              icon: 'arrow-right',
+              class: 'journal-feature__link'
+            -%}
+          </div>
+        </article>
+      </section>
     {%- endif -%}
+
+    <section class="journal-archive" id="JournalArchive" aria-label="{{ section.settings.archive_label | escape }}">
+      <div class="journal-grid">
+        {%- for article in blog.articles -%}
+          {%- if paginate.current_page == 1 and forloop.first -%}
+            {%- continue -%}
+          {%- endif -%}
+          {%- render 'ui-article-card', article: article, read_label: section.settings.card_link_label -%}
+        {%- endfor -%}
+      </div>
+
+      {%- render 'ui-pagination', paginate: paginate, anchor: 'JournalArchive' -%}
+    </section>
   </div>
 {%- endpaginate -%}
 
 {% schema %}
 {
-  "name": "t:sections.main-blog.name",
+  "name": "Journal",
   "tag": "section",
   "class": "section",
   "settings": [
+    { "type": "text", "id": "home_label", "label": "Home label", "default": "Home" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "The Journal" },
     {
-      "type": "select",
-      "id": "layout",
-      "options": [
-        {
-          "value": "grid",
-          "label": "t:sections.main-blog.settings.layout.options__1.label"
-        },
-        {
-          "value": "collage",
-          "label": "t:sections.main-blog.settings.layout.options__2.label"
-        }
-      ],
-      "default": "collage",
-      "label": "t:sections.main-blog.settings.layout.label"
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Technique, gear guides, and stories from the strip — from your first lesson to the finals."
     },
+    { "type": "text", "id": "filter_label", "label": "Filter label", "default": "Filter articles by tag" },
+    { "type": "text", "id": "all_label", "label": "All articles label", "default": "All" },
     {
-      "type": "checkbox",
-      "id": "show_image",
-      "default": true,
-      "label": "t:sections.main-blog.settings.show_image.label"
+      "type": "text",
+      "id": "tag_order",
+      "label": "Preferred tag order",
+      "default": "Technique, Gear, Training, Competition, Club Life"
     },
-    {
-      "type": "select",
-      "id": "image_height",
-      "options": [
-        {
-          "value": "adapt",
-          "label": "t:sections.main-blog.settings.image_height.options__1.label"
-        },
-        {
-          "value": "small",
-          "label": "t:sections.main-blog.settings.image_height.options__2.label"
-        },
-        {
-          "value": "medium",
-          "label": "t:sections.main-blog.settings.image_height.options__3.label"
-        },
-        {
-          "value": "large",
-          "label": "t:sections.main-blog.settings.image_height.options__4.label"
-        }
-      ],
-      "default": "medium",
-      "label": "t:sections.main-blog.settings.image_height.label"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_date",
-      "default": true,
-      "label": "t:sections.main-blog.settings.show_date.label"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_author",
-      "default": false,
-      "label": "t:sections.main-blog.settings.show_author.label"
-    },
-    {
-      "type": "header",
-      "content": "t:sections.all.padding.section_padding_heading"
-    },
-    {
-      "type": "range",
-      "id": "padding_top",
-      "min": 0,
-      "max": 100,
-      "step": 4,
-      "unit": "px",
-      "label": "t:sections.all.padding.padding_top",
-      "default": 36
-    },
-    {
-      "type": "range",
-      "id": "padding_bottom",
-      "min": 0,
-      "max": 100,
-      "step": 4,
-      "unit": "px",
-      "label": "t:sections.all.padding.padding_bottom",
-      "default": 36
-    }
+    { "type": "text", "id": "archive_label", "label": "Archive label", "default": "Past articles" },
+    { "type": "text", "id": "featured_link_label", "label": "Featured link label", "default": "Read article" },
+    { "type": "text", "id": "card_link_label", "label": "Card link label", "default": "Read more" },
+    { "type": "checkbox", "id": "show_author", "label": "Show author", "default": true },
+    { "type": "text", "id": "author_prefix", "label": "Author prefix", "default": "By" },
+    { "type": "checkbox", "id": "show_date", "label": "Show date", "default": true },
+    { "type": "checkbox", "id": "show_reading_time", "label": "Show reading time", "default": true },
+    { "type": "text", "id": "reading_time_suffix", "label": "Reading time suffix", "default": "min read" }
   ]
 }
 {% endschema %}

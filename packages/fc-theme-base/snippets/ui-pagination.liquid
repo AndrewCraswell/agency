@@ -1,0 +1,56 @@
+{%- comment -%}
+  Renders a compact pagination control.
+
+  Accepts:
+  - paginate: {PaginateDrop} Shopify pagination object (required)
+  - anchor: {String} Optional fragment identifier without the leading hash
+  - class: {String} Optional extra classes
+
+  Usage:
+  {% render 'ui-pagination', paginate: paginate, anchor: 'Results' %}
+{%- endcomment -%}
+{%- if paginate.pages > 1 -%}
+  {%- assign pagination_anchor = '' -%}
+  {%- if anchor != blank -%}
+    {%- assign pagination_anchor = '#' | append: anchor -%}
+  {%- endif -%}
+  <nav class="ui-pagination{% if class %} {{ class }}{% endif %}" aria-label="{{ 'general.pagination.label' | t }}">
+    {%- if paginate.previous -%}
+      <a
+        href="{{ paginate.previous.url }}{{ pagination_anchor }}"
+        class="ui-pagination__item"
+        aria-label="{{ 'general.pagination.previous' | t }}"
+      >
+        {%- render 'fc-icon', icon: 'chevron-left', size: 16 -%}
+      </a>
+    {%- endif -%}
+
+    {%- for part in paginate.parts -%}
+      {%- if part.is_link -%}
+        <a
+          href="{{ part.url }}{{ pagination_anchor }}"
+          class="ui-pagination__item"
+          aria-label="{{ 'general.pagination.page' | t: number: part.title }}"
+        >
+          {{- part.title -}}
+        </a>
+      {%- elsif part.title == paginate.current_page -%}
+        <span class="ui-pagination__item ui-pagination__item--current" aria-current="page">
+          {{- part.title -}}
+        </span>
+      {%- else -%}
+        <span class="ui-pagination__ellipsis">{{ part.title }}</span>
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- if paginate.next -%}
+      <a
+        href="{{ paginate.next.url }}{{ pagination_anchor }}"
+        class="ui-pagination__item"
+        aria-label="{{ 'general.pagination.next' | t }}"
+      >
+        {%- render 'fc-icon', icon: 'chevron-right', size: 16 -%}
+      </a>
+    {%- endif -%}
+  </nav>
+{%- endif -%}

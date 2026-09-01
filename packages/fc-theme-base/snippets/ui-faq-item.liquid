@@ -1,0 +1,29 @@
+{%- comment -%}
+  Renders one accessible FAQ disclosure.
+
+  Accepts:
+  - question: {String} Question text (required)
+  - answer: {RichText} Answer content (required)
+  - open: {Boolean} Expand the item initially
+  - link_label: {String} Optional related link label
+  - link_url: {String} Optional related link target
+  - block: {Block} Optional Theme Editor block
+{%- endcomment -%}
+<details class="ui-faq-item"{% if open %} open{% endif %}{% if block %} {{ block.shopify_attributes }}{% endif %}>
+  <summary class="ui-faq-item__question">
+    <span class="ui-faq-item__badge ui-faq-item__badge--question" aria-hidden="true">Q</span>
+    <span class="ui-faq-item__question-text">{{ question | escape }}</span>
+    <span class="ui-faq-item__chevron" aria-hidden="true">
+      {%- render 'fc-icon', icon: 'chevron-down', size: 18 -%}
+    </span>
+  </summary>
+  <div class="ui-faq-item__answer">
+    <span class="ui-faq-item__badge ui-faq-item__badge--answer" aria-hidden="true">A</span>
+    <div class="ui-faq-item__answer-copy">
+      <div class="ui-faq-item__answer-text rte">{{ answer }}</div>
+      {%- if link_label != blank and link_url != blank -%}
+        {%- render 'ui-link', label: link_label, url: link_url, icon: 'arrow-right' -%}
+      {%- endif -%}
+    </div>
+  </div>
+</details>

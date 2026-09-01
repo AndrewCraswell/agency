@@ -1,0 +1,273 @@
+{
+  "sections": {
+    "main": {
+      "type": "faq",
+      "blocks": {
+        "shipping_track": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "How do I track my order?",
+            "answer": "<p>You will receive notifications about your order status via email and be provided with a tracking code. You can also track any order by accessing your <a href=\"https://account.fencing.club/\">account order history</a>.</p>",
+            "open": true
+          }
+        },
+        "shipping_dispatch": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "How quickly are orders dispatched?",
+            "answer": "<p>We process orders Monday through Friday, US Pacific time. Orders need to be placed by 1pm Pacific time to go out on the same day. Please contact us through online chat or <a href=\"mailto:support@fencing.club\">support@fencing.club</a> if you have any specific needs.</p>",
+            "open": false
+          }
+        },
+        "shipping_providers": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "Which providers do you ship with?",
+            "answer": "<p>We ship domestically in the US with USPS, UPS, and FedEx. For international orders, we offer DHL and UPS worldwide shipping with duties paid upfront.</p>",
+            "open": false
+          }
+        },
+        "shipping_delayed": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "What if my package is delayed?",
+            "answer": "<p>Once your order ships, you’ll receive tracking information by email. If your package appears delayed or tracking hasn’t updated for an extended period, please contact <a href=\"mailto:support@fencing.club\">support@fencing.club</a> and we’ll help look into it with the carrier.</p>",
+            "open": false
+          }
+        },
+        "shipping_address": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "How do I change my delivery address?",
+            "answer": "<p>Once your order ships, you’ll receive tracking information by email. If your package appears delayed or tracking hasn’t updated for an extended period, please contact <a href=\"mailto:support@fencing.club\">support@fencing.club</a> and we’ll help look into it with the carrier.</p>",
+            "open": false
+          }
+        },
+        "shipping_international": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "Do you ship internationally?",
+            "answer": "<p>We provide international shipping to numerous countries. Shipping estimates and availability can be viewed at checkout. International orders are delivered via DHL or UPS with Duties Paid.</p>",
+            "open": false
+          }
+        },
+        "shipping_duties": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "Who pays duties, customs, and tariffs?",
+            "answer": "<p>For international orders we ship duties paid (DDP). You will not be responsible for any customs or duties charges on your order.</p>",
+            "open": false
+          }
+        },
+        "shipping_tournament": {
+          "type": "faq_item",
+          "settings": {
+            "category": "shipping",
+            "question": "Can you prioritize my order so it arrives in time for a tournament?",
+            "answer": "<p>We understand that sometimes timelines are tight, and you need gear before the big day. During checkout, select a shipping service for timely delivery and include a note on the order. We will do our best to dispatch the order on the same day. It's recommended to place rush orders early in the day.</p>",
+            "open": false
+          }
+        },
+        "returns_free": {
+          "type": "faq_item",
+          "settings": {
+            "category": "returns",
+            "question": "Do you offer free returns?",
+            "answer": "<p>We offer a free 30-day return policy from the date of receipt of the purchased item, during which you may request a refund or exchange. A shipping label will be provided free of charge.</p><p>Review the full <a href=\"/policies/refund-policy\">Return Policy</a> for details.</p>",
+            "open": true
+          }
+        },
+        "returns_request": {
+          "type": "faq_item",
+          "settings": {
+            "category": "returns",
+            "question": "How can I request a return?",
+            "answer": "<p>You can request a return by logging into your customer account and visiting your <a href=\"https://account.fencing.club/orders\">order history</a>. Select the order you wish to return and use the “Request return” option on the order details page. If you need help accessing your account, please contact us at <a href=\"mailto:support@fencing.club\">support@fencing.club</a>.</p>",
+            "open": false
+          }
+        },
+        "returns_cancel": {
+          "type": "faq_item",
+          "settings": {
+            "category": "returns",
+            "question": "What if I want to cancel or change my order?",
+            "answer": "<p>We try to fulfill orders very quickly; that said, please email us at <a href=\"mailto:support@fencing.club\">support@fencing.club</a> and we'll see what we can do!</p>",
+            "open": false
+          }
+        },
+        "returns_damaged": {
+          "type": "faq_item",
+          "settings": {
+            "category": "returns",
+            "question": "What if I received a damaged or wrong item?",
+            "answer": "<p>Please inspect your order upon reception and contact us immediately if the item is defective, damaged or if you receive the wrong item so that we can evaluate the issue and make it right.</p>",
+            "open": false
+          }
+        },
+        "returns_exchange": {
+          "type": "faq_item",
+          "settings": {
+            "category": "returns",
+            "question": "Can I exchange an item?",
+            "answer": "<p>The fastest way to ensure you get what you want is to return the item you have, and once the return is accepted, make a separate purchase for the new item.</p>",
+            "open": false
+          }
+        },
+        "returns_policy": {
+          "type": "faq_item",
+          "settings": {
+            "category": "returns",
+            "question": "Where can I find the return policy?",
+            "answer": "<p>Refer to our official <a href=\"/policies/refund-policy\">Return Policy</a> for more specific terms and conditions related to returns.</p>",
+            "open": false
+          }
+        },
+        "discounts_clubs": {
+          "type": "faq_item",
+          "settings": {
+            "category": "discounts",
+            "question": "Do you offer club discounts?",
+            "answer": "<p>Club owners may reach out to us for a specialized discount code providing 15% off on club purchases. The code is unique to the account email and not shareable.</p>",
+            "open": true
+          }
+        },
+        "discounts_nonprofits": {
+          "type": "faq_item",
+          "settings": {
+            "category": "discounts",
+            "question": "Do you offer discounts for non-profits?",
+            "answer": "<p>Non-profits may reach out to us for a specialized discount code providing 15% off on equipment purchases. The code is unique to the account email and not shareable.</p>",
+            "open": false
+          }
+        },
+        "discounts_education": {
+          "type": "faq_item",
+          "settings": {
+            "category": "discounts",
+            "question": "Do you offer discounts for education institutions?",
+            "answer": "<p>Educational institutions, including homeschools, are welcome to contact us for a personalized discount code that grants a 15% reduction on equipment purchases. The code is exclusive to the account email and cannot be distributed.</p>",
+            "open": false
+          }
+        },
+        "discounts_sale": {
+          "type": "faq_item",
+          "settings": {
+            "category": "discounts",
+            "question": "Why is everything marked on sale?",
+            "answer": "<p>Our aim is to provide the most competitive prices. The strike-out amount signifies the lowest price available among our competitors. This allows you to easily calculate your savings compared to the next cheapest supplier.</p><p>We use our price-match gaurentee program to continually keep the the discount price up-to-date.</p>",
+            "open": false
+          }
+        },
+        "programs_club_store": {
+          "type": "faq_item",
+          "settings": {
+            "category": "programs",
+            "question": "Can you supply our club store with gear?",
+            "answer": "<p>Wholesale pricing is available for clubs that meet certain volume criteria. Please contact us to determine if your club is a good fit.</p>",
+            "open": true
+          }
+        },
+        "programs_price_match": {
+          "type": "faq_item",
+          "settings": {
+            "category": "programs",
+            "question": "Do you offer price matching?",
+            "answer": "<p>Yes, see our <a href=\"/pages/price-match-guarantee\">Price Match-Guarantee</a> for specifics on our matching program.</p>",
+            "open": false
+          }
+        },
+        "programs_tax": {
+          "type": "faq_item",
+          "settings": {
+            "category": "programs",
+            "question": "How do I apply for tax exemption?",
+            "answer": "<p>Please send your tax exemption form to <a href=\"mailto:support@fencing.club\">support@fencing.club</a> before placing your order.</p>",
+            "open": false
+          }
+        },
+        "programs_everify": {
+          "type": "faq_item",
+          "settings": {
+            "category": "programs",
+            "question": "Does Fencing Club participate in E-Verify?",
+            "answer": "<p>Yes. Fencing Club is an active E-Verify participant and is fully compliant with federal employment eligibility verification requirements. Our participation allows us to support contracts and partnerships with local, state, and federal government agencies.</p>",
+            "open": false
+          }
+        },
+        "about_location": {
+          "type": "faq_item",
+          "settings": {
+            "category": "about-us",
+            "question": "Where is Fencing Club located?",
+            "answer": "<p>Our warehouse is situated in the Seattle metropolitan area. All orders are dispatched from our warehouse. If you're in the Pacific Northwest region, there's a high chance we can provide the most competitive shipping costs.</p>",
+            "open": true
+          }
+        },
+        "about_stores": {
+          "type": "faq_item",
+          "settings": {
+            "category": "about-us",
+            "question": "Do you have any physical stores?",
+            "answer": "<p>To maintain low operational costs and offer competitive prices, we do not have retail space. However, we deliver to select local clubs in the Seattle metropolitan area.</p>",
+            "open": false
+          }
+        },
+        "about_why": {
+          "type": "faq_item",
+          "settings": {
+            "category": "about-us",
+            "question": "Why another fencing equipment supplier?",
+            "answer": "<p>Fencing Club started from a passion for sport, helping athletes find quality gear at competitive prices—whether you're a novice or Olympian. We saw there was a gap in the market for distributors with low operational costs that could offer the lowest prices for the same equipment.</p><p>Our journey began with a simple goal: make fencing more accessible. We've painstakingly optimized our supply chain to ensure every piece of gear meets high standards without the hefty price tag. It's not just about selling equipment; it's about supporting the fencing community's passion and growth.</p>",
+            "open": false
+          }
+        }
+      },
+      "block_order": [
+        "shipping_track",
+        "shipping_dispatch",
+        "shipping_providers",
+        "shipping_delayed",
+        "shipping_address",
+        "shipping_international",
+        "shipping_duties",
+        "shipping_tournament",
+        "returns_free",
+        "returns_request",
+        "returns_cancel",
+        "returns_damaged",
+        "returns_exchange",
+        "returns_policy",
+        "discounts_clubs",
+        "discounts_nonprofits",
+        "discounts_education",
+        "discounts_sale",
+        "programs_club_store",
+        "programs_price_match",
+        "programs_tax",
+        "programs_everify",
+        "about_location",
+        "about_stores",
+        "about_why"
+      ],
+      "settings": {
+        "kicker": "Help center",
+        "heading": "Frequently asked questions",
+        "subtitle": "Everything about shipping, returns, discounts, programs, and who we are, in one place.",
+        "contact_heading": "Questions?",
+        "contact_text": "Cannot find the answer you are looking for? Contact us. We are happy to help.",
+        "contact_label": "Contact us",
+        "contact_url": "/pages/contact"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}
