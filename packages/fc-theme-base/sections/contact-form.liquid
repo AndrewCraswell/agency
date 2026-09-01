@@ -1,218 +1,225 @@
 {{ 'section-contact-form.css' | asset_url | stylesheet_tag }}
 
-{%- style -%}
-  .section-{{ section.id }}-padding {
-    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
-    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
-  }
-
-  @media screen and (min-width: 750px) {
-    .section-{{ section.id }}-padding {
-      padding-top: {{ section.settings.padding_top }}px;
-      padding-bottom: {{ section.settings.padding_bottom }}px;
-    }
-  }
-{%- endstyle -%}
-
-<div class="color-{{ section.settings.color_scheme }} gradient">
-  <div class="contact page-width page-width--narrow section-{{ section.id }}-padding">
-    {%- if section.settings.heading != blank -%}
-      <h2 class="title title-wrapper--no-top-margin inline-richtext {{ section.settings.heading_size }}{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}">
-        {{ section.settings.heading }}
-      </h2>
-    {%- else -%}
-      <h2 class="visually-hidden">{{ 'templates.contact.form.title' | t }}</h2>
-    {%- endif -%}
-    {%- liquid
-      assign contact_form_class = 'isolate'
-      if settings.animations_reveal_on_scroll
-        assign contact_form_class = 'isolate scroll-trigger animate--slide-in'
-      endif
-    -%}
-    {%- form 'contact', id: 'ContactForm', class: contact_form_class -%}
-      {%- if form.posted_successfully? -%}
-        <h2 class="form-status form-status-list form__message" tabindex="-1" autofocus>
-          {{- 'icon-success.svg' | inline_asset_content -}}
-          {{ 'templates.contact.form.post_success' | t }}
-        </h2>
-      {%- elsif form.errors -%}
-        <div class="form__message">
-          <h2 class="form-status caption-large text-body" role="alert" tabindex="-1" autofocus>
-            {{- 'icon-error.svg' | inline_asset_content -}}
-            {{ 'templates.contact.form.error_heading' | t }}
-          </h2>
-        </div>
-        <ul class="form-status-list caption-large" role="list">
-          <li>
-            <a href="#ContactForm-email" class="link">
-              {{ form.errors.translated_fields.email | capitalize }}
-              {{ form.errors.messages.email }}
-            </a>
-          </li>
-        </ul>
-      {%- endif -%}
-      <div class="contact__fields">
-        <div class="field">
-          <input
-            class="field__input"
-            autocomplete="name"
-            type="text"
-            id="ContactForm-name"
-            name="contact[{{ 'templates.contact.form.name' | t }}]"
-            value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}"
-            placeholder="{{ 'templates.contact.form.name' | t }}"
-          >
-          <label class="field__label" for="ContactForm-name">{{ 'templates.contact.form.name' | t }}</label>
-        </div>
-        <div class="field field--with-error">
-          <input
-            autocomplete="email"
-            type="email"
-            id="ContactForm-email"
-            class="field__input"
-            name="contact[email]"
-            spellcheck="false"
-            autocapitalize="off"
-            value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}"
-            aria-required="true"
-            {% if form.errors contains 'email' %}
-              aria-invalid="true"
-              aria-describedby="ContactForm-email-error"
-            {% endif %}
-            placeholder="{{ 'templates.contact.form.email' | t }}"
-          >
-          <label class="field__label" for="ContactForm-email">
-            {{- 'templates.contact.form.email' | t }}
-            <span aria-hidden="true">*</span></label
-          >
-          {%- if form.errors contains 'email' -%}
-            <small class="contact__field-error" id="ContactForm-email-error">
-              <span class="visually-hidden">{{ 'accessibility.error' | t }}</span>
-              <span class="form__message">
-                <span class="svg-wrapper">
-                  {{- 'icon-error.svg' | inline_asset_content -}}
-                </span>
-                {{- form.errors.translated_fields.email | capitalize }}
-                {{ form.errors.messages.email -}}
-              </span>
-            </small>
-          {%- endif -%}
-        </div>
-      </div>
-      <div class="field">
-        <input
-          type="tel"
-          id="ContactForm-phone"
-          class="field__input"
-          autocomplete="tel"
-          name="contact[{{ 'templates.contact.form.phone' | t }}]"
-          pattern="[0-9\-]*"
-          value="{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}"
-          placeholder="{{ 'templates.contact.form.phone' | t }}"
-        >
-        <label class="field__label" for="ContactForm-phone">{{ 'templates.contact.form.phone' | t }}</label>
-      </div>
-      <div class="field">
-        <textarea
-          rows="10"
-          id="ContactForm-body"
-          class="text-area field__input"
-          name="contact[{{ 'templates.contact.form.comment' | t }}]"
-          placeholder="{{ 'templates.contact.form.comment' | t }}"
-        >
-          {{- form.body -}}
-        </textarea>
-        <label class="form__label field__label" for="ContactForm-body">
-          {{- 'templates.contact.form.comment' | t -}}
-        </label>
-      </div>
-      <div class="contact__button">
-        <button type="submit" class="button">
-          {{ 'templates.contact.form.send' | t }}
-        </button>
-      </div>
-    {%- endform -%}
+<contact-form-section class="contact-page">
+  <div class="contact-page__breadcrumb">
+    {%- render 'ui-breadcrumbs', root_label: 'Home', root_url: routes.root_url, current_label: page.title -%}
   </div>
-</div>
+
+  <div class="contact-page__intro">
+    <header class="contact-page__hero">
+      <p class="contact-page__kicker">{{ section.settings.kicker | escape }}</p>
+      <h1>{{ section.settings.heading | default: page.title | escape }}</h1>
+      <p>{{ section.settings.subtitle | escape }}</p>
+    </header>
+
+    <nav class="contact-page__intents" aria-label="Choose a contact topic">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'intent' -%}
+          {%- render 'ui-contact-intent-card',
+            title: block.settings.title,
+            description: block.settings.description,
+            icon: block.settings.icon,
+            topic: block.settings.topic,
+            block: block
+          -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </nav>
+  </div>
+
+  <section class="contact-page__details" aria-labelledby="ContactDetails-{{ section.id }}">
+    <div class="contact-page__details-row">
+      <div class="contact-page__form-card">
+        <header>
+          <h2 id="ContactDetails-{{ section.id }}">{{ section.settings.form_heading | escape }}</h2>
+          <p>{{ section.settings.form_note | escape }}</p>
+        </header>
+
+        {%- form 'contact', id: 'ContactForm', class: 'contact-page__form' -%}
+          <input id="ContactForm-topic" type="hidden" name="contact[Topic]" value="General question">
+          {%- if form.posted_successfully? -%}
+            <p class="contact-page__status contact-page__status--success" tabindex="-1" autofocus>
+              {{- 'templates.contact.form.post_success' | t -}}
+            </p>
+          {%- elsif form.errors -%}
+            <div class="contact-page__status contact-page__status--error" role="alert" tabindex="-1" autofocus>
+              {{- form.errors | default_errors -}}
+            </div>
+          {%- endif -%}
+
+          <div class="contact-page__field">
+            <label for="ContactForm-name">Name</label>
+            <input
+              id="ContactForm-name"
+              type="text"
+              name="contact[name]"
+              autocomplete="name"
+              value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}"
+              placeholder="{{ section.settings.name_placeholder | escape }}"
+            >
+          </div>
+          <div class="contact-page__field">
+            <label for="ContactForm-email">Email</label>
+            <input
+              id="ContactForm-email"
+              type="email"
+              name="contact[email]"
+              autocomplete="email"
+              spellcheck="false"
+              autocapitalize="off"
+              value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}"
+              placeholder="{{ section.settings.email_placeholder | escape }}"
+              aria-required="true"
+              required
+            >
+          </div>
+          <div class="contact-page__field">
+            <label for="ContactForm-phone">Phone</label>
+            <input
+              id="ContactForm-phone"
+              type="tel"
+              name="contact[phone]"
+              autocomplete="tel"
+              value="{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}"
+              placeholder="{{ section.settings.phone_placeholder | escape }}"
+            >
+          </div>
+          <div class="contact-page__field">
+            <label for="ContactForm-body">Anything we should know?</label>
+            <textarea
+              id="ContactForm-body"
+              name="contact[body]"
+              rows="4"
+              placeholder="{{ section.settings.message_placeholder | escape }}"
+            >{{- form.body -}}</textarea>
+          </div>
+          <button type="submit" class="contact-page__submit">{{ section.settings.submit_label | escape }}</button>
+        {%- endform -%}
+      </div>
+
+      <aside class="contact-page__direct">
+        <header>
+          <h2>{{ section.settings.direct_heading | escape }}</h2>
+          <p>{{ section.settings.direct_text | escape }}</p>
+        </header>
+        {%- render 'shop-contact-details', class: 'contact-page__contact-details' -%}
+      </aside>
+    </div>
+  </section>
+
+  <section class="contact-page__answers" aria-labelledby="ContactAnswers-{{ section.id }}">
+    <p class="contact-page__kicker">{{ section.settings.answers_kicker | escape }}</p>
+    <h2 id="ContactAnswers-{{ section.id }}">{{ section.settings.answers_heading | escape }}</h2>
+    <div class="contact-page__answer-grid">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'quick_answer' -%}
+          {%- render 'ui-contact-quick-answer',
+            question: block.settings.question,
+            answer: block.settings.answer,
+            block: block
+          -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+    <p class="contact-page__faq-link">
+      <span>{{ section.settings.faq_prompt | escape }}</span>
+      {%- assign contact_faq_url = section.settings.faq_url | default: pages.faq.url -%}
+      {%- render 'ui-link',
+        label: section.settings.faq_label,
+        url: contact_faq_url,
+        icon: 'arrow-right'
+      -%}
+    </p>
+  </section>
+</contact-form-section>
+
+{% javascript %}
+  if (!customElements.get('contact-form-section')) {
+    customElements.define(
+      'contact-form-section',
+      class ContactFormSection extends HTMLElement {
+        connectedCallback() {
+          this.addEventListener('click', (event) => {
+            const card = event.target.closest('[data-contact-topic]');
+            if (!card || !this.contains(card)) return;
+
+            const topic = this.querySelector('#ContactForm-topic');
+            if (topic) topic.value = card.dataset.contactTopic;
+            requestAnimationFrame(() => this.querySelector('#ContactForm-name')?.focus());
+          });
+        }
+      }
+    );
+  }
+{% endjavascript %}
 
 {% schema %}
 {
-  "name": "t:sections.contact-form.name",
+  "name": "Contact form",
   "tag": "section",
   "class": "section",
-  "disabled_on": {
-    "groups": ["header", "footer"]
-  },
+  "max_blocks": 12,
+  "disabled_on": { "groups": ["header", "footer"] },
   "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "Support" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "How can we help?" },
     {
-      "type": "inline_richtext",
-      "id": "heading",
-      "default": "t:sections.contact-form.settings.title.default",
-      "label": "t:sections.contact-form.settings.title.label"
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Pick a topic to reach the right person, or send a note and we’ll route it. We reply within 2 business days."
     },
+    { "type": "header", "content": "Form" },
+    { "type": "text", "id": "form_heading", "label": "Heading", "default": "Your details" },
+    { "type": "text", "id": "form_note", "label": "Note", "default": "Tell us how to reach you about your question." },
+    { "type": "text", "id": "name_placeholder", "label": "Name placeholder", "default": "Your full name" },
+    { "type": "text", "id": "email_placeholder", "label": "Email placeholder", "default": "you@email.com" },
+    { "type": "text", "id": "phone_placeholder", "label": "Phone placeholder", "default": "+1 (415) 555-0100" },
+    { "type": "text", "id": "message_placeholder", "label": "Message placeholder", "default": "Order number, sizing questions, timing, anything else..." },
+    { "type": "text", "id": "submit_label", "label": "Submit label", "default": "Send message" },
+    { "type": "header", "content": "Direct contact" },
+    { "type": "text", "id": "direct_heading", "label": "Heading", "default": "Prefer to just message us?" },
+    { "type": "text", "id": "direct_text", "label": "Text", "default": "No appointment needed. Reach us any time." },
+    { "type": "header", "content": "Quick answers" },
+    { "type": "text", "id": "answers_kicker", "label": "Kicker", "default": "Before you write" },
+    { "type": "text", "id": "answers_heading", "label": "Heading", "default": "A few quick answers" },
+    { "type": "text", "id": "faq_prompt", "label": "FAQ prompt", "default": "Still have a question?" },
+    { "type": "text", "id": "faq_label", "label": "FAQ link label", "default": "Read our full FAQ" },
+    { "type": "url", "id": "faq_url", "label": "FAQ link" }
+  ],
+  "blocks": [
     {
-      "type": "select",
-      "id": "heading_size",
-      "options": [
+      "type": "intent",
+      "name": "Contact topic",
+      "settings": [
         {
-          "value": "h2",
-          "label": "t:sections.all.heading_size.options__1.label"
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "package", "label": "Package" },
+            { "value": "ruler", "label": "Ruler" },
+            { "value": "rotate-ccw", "label": "Returns" },
+            { "value": "users", "label": "People" },
+            { "value": "mic", "label": "Microphone" },
+            { "value": "message-circle", "label": "Message" }
+          ],
+          "default": "message-circle"
         },
-        {
-          "value": "h1",
-          "label": "t:sections.all.heading_size.options__2.label"
-        },
-        {
-          "value": "h0",
-          "label": "t:sections.all.heading_size.options__3.label"
-        },
-        {
-          "value": "hxl",
-          "label": "t:sections.all.heading_size.options__4.label"
-        },
-        {
-          "value": "hxxl",
-          "label": "t:sections.all.heading_size.options__5.label"
-        }
-      ],
-      "default": "h1",
-      "label": "t:sections.all.heading_size.label"
+        { "type": "text", "id": "title", "label": "Title", "default": "Contact topic" },
+        { "type": "text", "id": "description", "label": "Description", "default": "How we can help." },
+        { "type": "text", "id": "topic", "label": "Submitted topic", "default": "General question" }
+      ]
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:sections.all.colors.label",
-      "default": "scheme-1"
-    },
-    {
-      "type": "header",
-      "content": "t:sections.all.padding.section_padding_heading"
-    },
-    {
-      "type": "range",
-      "id": "padding_top",
-      "min": 0,
-      "max": 100,
-      "step": 4,
-      "unit": "px",
-      "label": "t:sections.all.padding.padding_top",
-      "default": 36
-    },
-    {
-      "type": "range",
-      "id": "padding_bottom",
-      "min": 0,
-      "max": 100,
-      "step": 4,
-      "unit": "px",
-      "label": "t:sections.all.padding.padding_bottom",
-      "default": 36
+      "type": "quick_answer",
+      "name": "Quick answer",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "Question" },
+        { "type": "textarea", "id": "answer", "label": "Answer", "default": "Answer" }
+      ]
     }
   ],
-  "presets": [
-    {
-      "name": "t:sections.contact-form.presets.name"
-    }
-  ]
+  "presets": [{ "name": "Contact form" }]
 }
 {% endschema %}

@@ -16445,7 +16445,7 @@
                   "fill": "$ink-soft",
                   "textGrowth": "fixed-width",
                   "width": 640,
-                  "content": "Pick a topic to reach the right person — or send a note and we’ll route it. We reply within one business day.",
+                  "content": "Pick a topic to reach the right person, or send a note and we’ll route it. We reply within 2 business days.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 16,
@@ -16903,7 +16903,7 @@
                           "fill": "$ink-soft",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "General questions — just ask.",
+                          "content": "General questions. Just ask.",
                           "fontFamily": "$font-body",
                           "fontSize": 13.5,
                           "fontWeight": "normal"
@@ -17001,7 +17001,7 @@
                           "id": "MHE8W",
                           "name": "Note",
                           "fill": "$ink-soft",
-                          "content": "So we can confirm your booking.",
+                          "content": "Tell us how to reach you about your question.",
                           "fontFamily": "$font-body",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -17190,7 +17190,7 @@
                               "id": "qWdit",
                               "name": "Placeholder",
                               "fill": "$ink-soft",
-                              "content": "Sizing questions, timing, anything else…",
+                              "content": "Order number, sizing questions, timing, anything else...",
                               "fontFamily": "$font-body",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -17215,7 +17215,7 @@
                           "id": "D0uZP",
                           "name": "Label",
                           "fill": "$on-dark",
-                          "content": "Confirm booking",
+                          "content": "Send message",
                           "fontFamily": "$font-body",
                           "fontSize": 15,
                           "fontWeight": "600"
@@ -17257,7 +17257,7 @@
                           "fill": "$ink-soft",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "No appointment needed — reach us any time.",
+                          "content": "No appointment needed. Reach us any time.",
                           "fontFamily": "$font-body",
                           "fontSize": 14,
                           "fontWeight": "normal"
@@ -17323,7 +17323,7 @@
                               "id": "pd9Jm",
                               "name": "Text",
                               "fill": "$ink",
-                              "content": "+1 (415) 555-0137",
+                              "content": "+1 (425) 260-2501",
                               "fontFamily": "$font-body",
                               "fontSize": 15,
                               "fontWeight": "normal"
@@ -17352,7 +17352,7 @@
                               "id": "O5fBiR",
                               "name": "Text",
                               "fill": "$ink",
-                              "content": "Mon–Fri, 9am–6pm PT",
+                              "content": "Mon–Fri, 9am–6pm PDT",
                               "fontFamily": "$font-body",
                               "fontSize": 15,
                               "fontWeight": "normal"
@@ -17433,7 +17433,7 @@
                       "fill": "$ink-soft",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Track it from your account, or include your order number and we’ll find it fast.",
+                      "content": "Sign in to view your order history and tracking. If tracking has stalled, include your order number in your message so we can check with the carrier.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -17466,7 +17466,7 @@
                       "fill": "$ink-soft",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Free 30-day exchanges — just tell us the new size and we’ll sort it.",
+                      "content": "Start a free return within 30 days, then order the size you need. Contact us if you need help.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -17499,7 +17499,7 @@
                       "fill": "$ink-soft",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Yes — bulk kit, loaners and fittings for schools, universities and clubs.",
+                      "content": "Yes. Clubs, schools, and nonprofits can ask about bulk orders, wholesale pricing, and qualifying discounts.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -17561,7 +17561,12 @@
           "type": "ref",
           "ref": "IPBQu",
           "x": 0,
-          "y": 1927
+          "y": 1948,
+          "descendants": {
+            "rIevG": {
+              "content": "Join the list for early drops, limited restocks, and fitting guides. No noise, just the essentials."
+            }
+          }
         },
         {
           "id": "HQ5sC",
@@ -74980,9 +74985,9 @@
     {
       "type": "frame",
       "id": "OgcE8",
-      "x": 59620,
+      "x": 22005,
       "y": -7637,
-      "name": "Docs/Search — Alternatives",
+      "name": "Docs/Search",
       "width": 1568,
       "fill": "#e9e8e4",
       "cornerRadius": 24,

@@ -1,0 +1,24 @@
+{%- comment -%}
+  Renders a Contact topic card that selects a form topic.
+
+  Accepts:
+  - title: {String} Card title (required)
+  - description: {String} Supporting text (required)
+  - icon: {String} Leading icon name (required)
+  - topic: {String} Value submitted with the contact form (required)
+  - block: {Block} Optional Theme Editor block
+{%- endcomment -%}
+<a
+  class="ui-contact-intent-card"
+  href="#ContactForm"
+  data-contact-topic="{{ topic | escape }}"
+  {% if block %}{{ block.shopify_attributes }}{% endif %}
+>
+  {%- render 'fc-icon', icon: icon, size: 24 -%}
+  <strong>{{ title | escape }}</strong>
+  <span class="ui-contact-intent-card__description">{{ description | escape }}</span>
+  <span class="ui-contact-intent-card__action">
+    Go
+    {%- render 'fc-icon', icon: 'arrow-right', size: 14 -%}
+  </span>
+</a>

@@ -1,0 +1,12 @@
+{%- comment -%}
+  Renders one compact Contact quick answer.
+
+  Accepts:
+  - question: {String} Question text (required)
+  - answer: {String} Answer text (required)
+  - block: {Block} Optional Theme Editor block
+{%- endcomment -%}
+<article class="ui-contact-quick-answer"{% if block %} {{ block.shopify_attributes }}{% endif %}>
+  <h3>{{ question | escape }}</h3>
+  <p>{{ answer | escape }}</p>
+</article>

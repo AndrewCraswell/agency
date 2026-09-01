@@ -52,9 +52,9 @@
         "card-1": {
           "type": "card",
           "settings": {
-            "image": "shopify://shop_images/generated-1783898148391.jpg",
+            "image": "shopify://shop_images/starter-kits-featured-pick.jpg",
             "title": "Build Your Own Kit",
-            "description": "Everything to get on the strip — uniform, blade, and mask bundled together.",
+            "description": "Everything to get on the strip: uniform, blade, and mask bundled together.",
             "link_1_label": "Foil Kits",
             "link_1_url": "shopify://collections/weapons",
             "link_2_label": "Épée Kits",
@@ -82,7 +82,7 @@
           "settings": {
             "image": "shopify://shop_images/team-fencing-bag-full-bleed-v2.jpg",
             "title": "Team Fencing Bag",
-            "description": "Roomy, durable bags to haul your whole setup — from the club to the competition.",
+            "description": "Roomy, durable bags to haul your whole setup, from the club to the competition.",
             "link_1_label": "Wheel Bags",
             "link_2_label": "Carry Bags"
           }
@@ -169,7 +169,7 @@
         "image": "shopify://shop_images/generated-1783898170501.jpg",
         "eyebrow": "WHY FENCING CLUB",
         "heading": "Trusted by competitive fencers, clubs, and coaches nationwide",
-        "body": "We build and source competition-grade foil, épée, and sabre equipment for athletes at every level — tested by national-team fencers and trusted by clubs from first lesson to finals."
+        "body": "We build and source competition-grade foil, épée, and sabre equipment for athletes at every level, tested by national-team fencers and trusted by clubs from first lesson to finals."
       }
     },
     "testimonials": {

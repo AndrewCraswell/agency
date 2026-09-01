@@ -87,68 +87,10 @@
                       {{ block.settings.subtext }}
                     </div>
                   {%- when 'contact' -%}
-                    <ul class="footer-block__details-content footer-block__contact list-unstyled">
-                      {%- comment -%}
-                        Address, email and phone come from Settings > Store details.
-                      {%- endcomment -%}
-                      {%- capture contact_address -%}
-                        {%- if shop.address.street != blank -%}
-                          {{- shop.address.street | escape -}}
-                        {%- endif -%}
-                        {%- capture contact_locality -%}
-                          {%- if shop.address.city != blank -%}
-                            {{- shop.address.city | escape -}}
-                            {%- if shop.address.province_code != blank -%}, {% endif -%}
-                          {%- endif -%}
-                          {{- shop.address.province_code | escape }} {{ shop.address.zip | escape -}}
-                        {%- endcapture -%}
-                        {%- assign contact_locality = contact_locality | strip -%}
-                        {%- if contact_locality != blank -%}
-                          {%- if shop.address.street != blank -%}<br>{%- endif -%}
-                          {{- contact_locality -}}
-                        {%- endif -%}
-                      {%- endcapture -%}
-                      {%- render 'footer-contact-item',
-                        icon: 'icon-pin.svg',
-                        label: 'Address',
-                        value: contact_address,
-                        tag: 'address'
-                      -%}
-
-                      {%- assign contact_email = shop.email | escape -%}
-                      {%- assign contact_email_href = 'mailto:' | append: contact_email -%}
-                      {%- render 'footer-contact-item',
-                        icon: 'icon-mail.svg',
-                        label: 'Email',
-                        value: contact_email,
-                        href: contact_email_href
-                      -%}
-
-                      {%- capture contact_phone -%}{%- render 'shop-phone' -%}{%- endcapture -%}
-                      {%- capture contact_phone_e164 -%}{%- render 'shop-phone', format: 'e164' -%}{%- endcapture -%}
-                      {%- assign contact_phone = contact_phone | strip | escape -%}
-                      {%- assign contact_phone_href = contact_phone_e164 | strip | prepend: 'tel:' -%}
-                      {%- render 'footer-contact-item',
-                        icon: 'icon-phone.svg',
-                        label: 'Phone',
-                        value: contact_phone,
-                        href: contact_phone_href
-                      -%}
-
-                      {%- capture contact_hours -%}
-                        {{- block.settings.hours | escape -}}
-                        {%- comment -%}
-                          Liquid renders dates in the store's timezone, so %Z is its current abbreviation.
-                        {%- endcomment -%}
-                        {%- assign shop_timezone = 'now' | date: '%Z' -%}
-                        {%- if block.settings.hours != blank and shop_timezone != blank %} {{ shop_timezone | escape }}{% endif -%}
-                      {%- endcapture -%}
-                      {%- render 'footer-contact-item',
-                        icon: 'icon-clock.svg',
-                        label: 'Hours',
-                        value: contact_hours
-                      -%}
-                    </ul>
+                    {%- render 'shop-contact-details',
+                      show_address: true,
+                      class: 'footer-block__contact'
+                    -%}
                   {%- when 'link_list' -%}
                     {%- if block.settings.menu != blank -%}
                       {%- assign faq_page = pages.faq -%}
@@ -452,13 +394,7 @@
         },
         {
           "type": "paragraph",
-          "content": "Address, email and phone come from Settings > Store details."
-        },
-        {
-          "type": "text",
-          "id": "hours",
-          "label": "Opening hours",
-          "info": "The store's timezone is added automatically."
+          "content": "Contact details and business hours come from Theme settings > Store contact details."
         }
       ]
     },

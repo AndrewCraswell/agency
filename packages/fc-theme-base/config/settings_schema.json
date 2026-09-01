@@ -1385,6 +1385,22 @@
     ]
   },
   {
+    "name": "Store contact details",
+    "settings": [
+      {
+        "type": "paragraph",
+        "content": "Email, phone, address, and timezone come from Settings > Store details."
+      },
+      {
+        "type": "text",
+        "id": "business_hours",
+        "label": "Business hours",
+        "info": "The store's current timezone abbreviation is added automatically.",
+        "default": "Mon–Fri, 9am–6pm"
+      }
+    ]
+  },
+  {
     "name": "Structured data",
     "settings": [
       {

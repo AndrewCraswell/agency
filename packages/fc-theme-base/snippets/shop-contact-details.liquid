@@ -1,0 +1,71 @@
+{%- comment -%}
+  Renders contact details from Shopify store data and shared theme hours.
+
+  Accepts:
+  - show_address: {Boolean} Show the store address
+  - class: {String} Optional extra classes
+{%- endcomment -%}
+{%- liquid
+  capture contact_address
+    if shop.address.street != blank
+      echo shop.address.street | escape
+    endif
+    capture contact_locality
+      if shop.address.city != blank
+        echo shop.address.city | escape
+        if shop.address.province_code != blank
+          echo ', '
+        endif
+      endif
+      echo shop.address.province_code | escape
+      if shop.address.zip != blank
+        echo ' '
+        echo shop.address.zip | escape
+      endif
+    endcapture
+    assign contact_locality = contact_locality | strip
+    if contact_locality != blank
+      if shop.address.street != blank
+        echo '<br>'
+      endif
+      echo contact_locality
+    endif
+  endcapture
+  assign contact_address = contact_address | strip
+  assign contact_email = shop.email | strip
+  capture contact_phone
+    render 'shop-phone'
+  endcapture
+  capture contact_phone_e164
+    render 'shop-phone', format: 'e164'
+  endcapture
+  assign contact_phone = contact_phone | strip
+  assign contact_phone_e164 = contact_phone_e164 | strip
+  assign shop_timezone = 'now' | date: '%Z'
+-%}
+<ul class="shop-contact-details{% if class %} {{ class }}{% endif %}" role="list">
+  {%- if show_address and contact_address != blank -%}
+    <li class="shop-contact-details__item">
+      <span class="shop-contact-details__icon">{%- render 'fc-icon', icon: 'map-pin', size: 16 -%}</span>
+      <address><span class="visually-hidden">Address </span>{{ contact_address }}</address>
+    </li>
+  {%- endif -%}
+  {%- if contact_email != blank -%}
+    <li class="shop-contact-details__item">
+      <span class="shop-contact-details__icon">{%- render 'fc-icon', icon: 'mail', size: 16 -%}</span>
+      <a href="mailto:{{ contact_email | escape }}"><span class="visually-hidden">Email </span>{{ contact_email | escape }}</a>
+    </li>
+  {%- endif -%}
+  {%- if contact_phone != blank -%}
+    <li class="shop-contact-details__item">
+      <span class="shop-contact-details__icon">{%- render 'fc-icon', icon: 'phone', size: 16 -%}</span>
+      <a href="tel:{{ contact_phone_e164 | escape }}"><span class="visually-hidden">Phone </span>{{ contact_phone | escape }}</a>
+    </li>
+  {%- endif -%}
+  {%- if settings.business_hours != blank -%}
+    <li class="shop-contact-details__item">
+      <span class="shop-contact-details__icon">{%- render 'fc-icon', icon: 'clock-3', size: 16 -%}</span>
+      <span><span class="visually-hidden">Hours </span>{{ settings.business_hours | escape }}{% if shop_timezone != blank %} {{ shop_timezone | escape }}{% endif %}</span>
+    </li>
+  {%- endif -%}
+</ul>

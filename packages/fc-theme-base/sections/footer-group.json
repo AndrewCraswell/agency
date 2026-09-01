@@ -15,7 +15,7 @@
         "paragraph": {
           "type": "paragraph",
           "settings": {
-            "text": "<p>Join the list for early drops, limited restocks, and fitting guides — no noise, just the essentials.</p>"
+            "text": "<p>Join the list for early drops, limited restocks, and fitting guides. No noise, just the essentials.</p>"
           }
         },
         "email_form": {
@@ -64,8 +64,7 @@
         "contact": {
           "type": "contact",
           "settings": {
-            "heading": "Contact",
-            "hours": "Mon–Fri, 9am–6pm"
+            "heading": "Contact"
           }
         }
       },

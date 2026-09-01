@@ -344,6 +344,7 @@
 .footer-block__details-content .list-menu__item--active {
   transition: text-decoration-thickness var(--duration-short) ease;
   color: rgb(var(--color-foreground));
+  text-decoration: none;
 }
 
 @media screen and (min-width: 750px) {
@@ -546,38 +547,8 @@
   padding-bottom: 0;
 }
 
-.footer-block__contact-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  line-height: 1.5;
-  /* The email is one unbreakable token and would otherwise overflow a narrow column. */
-  overflow-wrap: anywhere;
-}
-
-/* The glyph is centred on the first line box, matching the design's 16x21 icon
-   frame. The extra 1px is an optical nudge: lucide marks sit on the cap band, so
-   without it they read high against lowercase text with descenders. */
-.footer-block__contact-icon {
-  display: flex;
-  flex: 0 0 1.6rem;
-  align-items: center;
-  justify-content: center;
-  width: 1.6rem;
-  height: 2.1rem;
-  margin-top: 0.1rem;
-}
-
-/* `<address>` is italic by default in every browser. */
-.footer-block__contact-address {
-  font-style: normal;
-}
-
-.footer-block__contact-icon svg {
-  width: 1.6rem;
-  height: 1.6rem;
-  fill: none;
-  stroke: currentColor;
+.footer-block__contact.shop-contact-details {
+  gap: 1.6rem;
 }
 
 /* Design stacks logo, tagline and social on a uniform 20px rhythm. */

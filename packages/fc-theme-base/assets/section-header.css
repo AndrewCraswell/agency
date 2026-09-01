@@ -83,7 +83,7 @@
     height: auto;
     /* Equal height keeps both controls, and their hover fills, on one baseline. */
     min-height: var(--utility-select-min-height);
-    padding: var(--utility-select-padding-block) 0;
+    padding: var(--utility-select-padding-block) 0.6rem;
     font-size: var(--utility-select-font-size);
     line-height: 1.25;
     letter-spacing: 0;

@@ -1,25 +1,117 @@
 {
   "sections": {
-    "main": {
-      "type": "main-page",
-      "settings": {
-        "padding_top": 36,
-        "padding_bottom": 36
-      }
-    },
     "form": {
       "type": "contact-form",
+      "blocks": {
+        "orders_shipping": {
+          "type": "intent",
+          "settings": {
+            "icon": "package",
+            "title": "Orders & shipping",
+            "description": "Track, change or ask about an order.",
+            "topic": "Orders & shipping"
+          }
+        },
+        "sizing_fit": {
+          "type": "intent",
+          "settings": {
+            "icon": "ruler",
+            "title": "Sizing & fit",
+            "description": "Size charts and fit advice for every weapon.",
+            "topic": "Sizing & fit"
+          }
+        },
+        "returns_exchanges": {
+          "type": "intent",
+          "settings": {
+            "icon": "rotate-ccw",
+            "title": "Returns & exchanges",
+            "description": "Free 30-day returns and swaps.",
+            "topic": "Returns & exchanges"
+          }
+        },
+        "club_school": {
+          "type": "intent",
+          "settings": {
+            "icon": "users",
+            "title": "Club & school supply",
+            "description": "Bulk kit, loaners and fittings.",
+            "topic": "Club & school supply"
+          }
+        },
+        "product_press": {
+          "type": "intent",
+          "settings": {
+            "icon": "mic",
+            "title": "Product & press",
+            "description": "Wholesale, media and partnerships.",
+            "topic": "Product & press"
+          }
+        },
+        "everything_else": {
+          "type": "intent",
+          "settings": {
+            "icon": "message-circle",
+            "title": "Everything else",
+            "description": "General questions. Just ask.",
+            "topic": "General question"
+          }
+        },
+        "answer_order": {
+          "type": "quick_answer",
+          "settings": {
+            "question": "Where is my order?",
+            "answer": "Sign in to view your order history and tracking. If tracking has stalled, include your order number in your message so we can check with the carrier."
+          }
+        },
+        "answer_size": {
+          "type": "quick_answer",
+          "settings": {
+            "question": "Can I change my size?",
+            "answer": "Start a free return within 30 days, then order the size you need. Contact us if you need help."
+          }
+        },
+        "answer_clubs": {
+          "type": "quick_answer",
+          "settings": {
+            "question": "Do you supply clubs?",
+            "answer": "Yes. Clubs, schools, and nonprofits can ask about bulk orders, wholesale pricing, and qualifying discounts."
+          }
+        }
+      },
+      "block_order": [
+        "orders_shipping",
+        "sizing_fit",
+        "returns_exchanges",
+        "club_school",
+        "product_press",
+        "everything_else",
+        "answer_order",
+        "answer_size",
+        "answer_clubs"
+      ],
       "settings": {
-        "heading": "",
-        "heading_size": "h1",
-        "color_scheme": "scheme-1",
-        "padding_top": 36,
-        "padding_bottom": 36
+        "kicker": "Support",
+        "heading": "How can we help?",
+        "subtitle": "Pick a topic to reach the right person, or send a note and we’ll route it. We reply within 2 business days.",
+        "form_heading": "Your details",
+        "form_note": "Tell us how to reach you about your question.",
+        "name_placeholder": "Your full name",
+        "email_placeholder": "you@email.com",
+        "phone_placeholder": "+1 (415) 555-0100",
+        "message_placeholder": "Order number, sizing questions, timing, anything else...",
+        "submit_label": "Send message",
+        "direct_heading": "Prefer to just message us?",
+        "direct_text": "No appointment needed. Reach us any time.",
+        "answers_kicker": "Before you write",
+        "answers_heading": "A few quick answers",
+        "faq_prompt": "Still have a question?",
+        "faq_label": "Read our full FAQ",
+        "faq_url": "/pages/faq"
       }
     }
   },
   "order": [
-    "main",
     "form"
   ]
 }
