@@ -183,6 +183,7 @@ export const bills = legislationSchema.table(
     uniqueIndex("bills_identifier_uidx").on(table.jurisdictionId, table.sessionId, table.identifier),
     index("bills_status_idx").on(table.jurisdictionId, table.sessionId, table.status),
     index("bills_introduced_idx").on(table.jurisdictionId, table.introducedAt),
+    index("bills_global_introduced_idx").on(table.introducedAt.desc().nullsFirst(), table.id.asc()),
     index("bills_classification_gin_idx").using("gin", table.classification),
     index("bills_subjects_gin_idx").using("gin", table.subjects),
     index("bills_search_vector_gin_idx").using("gin", table.searchVector),
@@ -1548,6 +1549,12 @@ export const billDocuments = legislationSchema.table(
     ),
     uniqueIndex("bill_documents_source_uidx").on(table.billId, table.sourceUrl),
     index("bill_documents_processing_idx").on(table.processingStatus, table.updatedAt),
+    index("bill_documents_amendment_date_idx").on(
+      table.classification.asc(),
+      sql`${table.documentDate} is null`,
+      table.documentDate.desc().nullsFirst(),
+      table.id.asc()
+    ),
     index("bill_documents_pending_claim_idx")
       .on(table.id)
       .where(sql`${table.processingStatus} = 'pending'`),

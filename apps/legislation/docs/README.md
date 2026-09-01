@@ -23,6 +23,7 @@
 - [HTTP API implementation backlog and endpoint states](http-api-implementation-backlog.md)
 - [HTTP API local smoke checklist](http-api-local-smoke.md)
 - [HTTP API Railway release record](http-api-railway-release.md)
+- [API performance remediation](api-performance-remediation.md)
 - [WorkOS MCP-resource OAuth canary](workos-mcp-resource-oauth-canary.md)
 - [Architecture decisions](architecture-decisions.md)
 - [Trigger.dev synchronization orchestration design](trigger-orchestration-design.md)

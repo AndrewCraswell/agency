@@ -4,6 +4,7 @@ import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { generateCoverageReport } from "../../coverage/report.js"
 import { createDatabase, type LegislationDatabase } from "../../db/database.js"
+import { acquireIndexMaintenanceLock, releaseIndexMaintenanceLock } from "../../db/index-maintenance.js"
 import {
   executeGovInfoHistoricalImport,
   executeOpenStatesArchiveImport,
@@ -563,7 +564,10 @@ export const embeddingIndexMaintenance = task({
     const payload = baseWorkerSchema.strict().parse(unparsedPayload)
     await withDerivedBackfillDatabase("embeddings", async (_database, pool) => {
       const client = await pool.connect()
+      let acquired = false
       try {
+        await acquireIndexMaintenanceLock(client)
+        acquired = true
         // Railway's PostgreSQL container has a 64 MiB POSIX shared-memory
         // segment. The default 64 MiB maintenance allocation consumed almost
         // all of it before indexing began. A 32 MiB session allocation leaves
@@ -581,7 +585,13 @@ export const embeddingIndexMaintenance = task({
         await client.query("analyze legislation.amendment_embeddings")
         await client.query("analyze legislation.supporting_material_section_embeddings")
       } finally {
-        client.release()
+        try {
+          if (acquired) {
+            await releaseIndexMaintenanceLock(client)
+          }
+        } finally {
+          client.release()
+        }
       }
     })
     return { rebuildId: payload.rebuildId, status: "completed" as const }

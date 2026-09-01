@@ -215,12 +215,14 @@ CREATE UNIQUE INDEX "bill_actions_ordinal_uidx" ON "legislation"."bill_actions" 
 CREATE INDEX "bill_actions_timeline_idx" ON "legislation"."bill_actions" USING btree ("bill_id","action_date","ordinal");--> statement-breakpoint
 CREATE UNIQUE INDEX "bill_documents_source_uidx" ON "legislation"."bill_documents" USING btree ("bill_id","source_url");--> statement-breakpoint
 CREATE INDEX "bill_documents_processing_idx" ON "legislation"."bill_documents" USING btree ("processing_status","updated_at");--> statement-breakpoint
+CREATE INDEX "bill_documents_amendment_date_idx" ON "legislation"."bill_documents" USING btree ("classification",("document_date" is null),"document_date" DESC NULLS FIRST,"id");--> statement-breakpoint
 CREATE INDEX "bill_relations_related_idx" ON "legislation"."bill_relations" USING btree ("related_bill_id","classification");--> statement-breakpoint
 CREATE UNIQUE INDEX "bill_sponsors_person_uidx" ON "legislation"."bill_sponsors" USING btree ("bill_id","person_id","classification") WHERE "legislation"."bill_sponsors"."person_id" is not null;--> statement-breakpoint
 CREATE INDEX "bill_sponsors_bill_idx" ON "legislation"."bill_sponsors" USING btree ("bill_id","is_primary");--> statement-breakpoint
 CREATE UNIQUE INDEX "bills_identifier_uidx" ON "legislation"."bills" USING btree ("jurisdiction_id","session_id","identifier");--> statement-breakpoint
 CREATE INDEX "bills_status_idx" ON "legislation"."bills" USING btree ("jurisdiction_id","session_id","status");--> statement-breakpoint
 CREATE INDEX "bills_introduced_idx" ON "legislation"."bills" USING btree ("jurisdiction_id","introduced_at");--> statement-breakpoint
+CREATE INDEX "bills_global_introduced_idx" ON "legislation"."bills" USING btree ("introduced_at" DESC NULLS FIRST,"id");--> statement-breakpoint
 CREATE UNIQUE INDEX "document_sections_ordinal_uidx" ON "legislation"."document_sections" USING btree ("document_id","ordinal");--> statement-breakpoint
 CREATE INDEX "document_sections_identifier_idx" ON "legislation"."document_sections" USING btree ("document_id","section_identifier");--> statement-breakpoint
 CREATE INDEX "ingestion_runs_source_idx" ON "legislation"."ingestion_runs" USING btree ("source","operation","started_at");--> statement-breakpoint
