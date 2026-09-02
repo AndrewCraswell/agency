@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest"
-import { ingestionLeaseHandoffAt } from "./job.js"
+import { ingestionFailureSummary, ingestionLeaseHandoffAt } from "./job.js"
+
+describe("ingestion failure summaries", () => {
+  it("prefixes failure messages with their identifiers", () => {
+    expect(
+      ingestionFailureSummary([
+        { identifier: "119/hr/1234", message: "Congress.gov bundle was invalid" },
+        { identifier: "119/s/567", message: "Congress.gov request failed" }
+      ])
+    ).toBe("119/hr/1234: Congress.gov bundle was invalid; 119/s/567: Congress.gov request failed")
+  })
+
+  it("keeps identifier-free failure messages unchanged", () => {
+    expect(ingestionFailureSummary([{ message: "Source discovery failed" }])).toBe("Source discovery failed")
+  })
+})
 
 describe("ingestion lease handoff", () => {
   it("uses PostgreSQL string timestamps instead of falling back to a short retry", () => {

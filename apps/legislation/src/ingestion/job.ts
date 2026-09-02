@@ -44,6 +44,19 @@ export interface JobResult {
 
 type JobOperationResult = Omit<JobResult, "correlationId" | "operation" | "runId" | "source" | "status">
 
+export function ingestionFailureSummary(
+  failures: ReadonlyArray<Readonly<{ identifier?: string; message: string }>>
+): string | null {
+  return (
+    failures
+      .slice(0, 20)
+      .map((failure) =>
+        failure.identifier === undefined ? failure.message : `${failure.identifier}: ${failure.message}`
+      )
+      .join("; ") || null
+  )
+}
+
 export class JobAlreadyRunningError extends Error {
   readonly operation: string
   readonly scopeKey: string
@@ -360,11 +373,7 @@ export async function runIngestionJob(
       .set({
         completedAt: new Date(),
         counts: { ...result.counts },
-        errorSummary:
-          result.failures
-            .slice(0, 20)
-            .map((failure) => failure.message)
-            .join("; ") || null,
+        errorSummary: ingestionFailureSummary(result.failures),
         status
       })
       .where(eq(ingestionRuns.id, runId))
