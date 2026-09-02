@@ -603,6 +603,7 @@ export const embeddingIndexMaintenance = task({
 
 export function documentEmbeddingClassificationBackfillStatements() {
   return {
+    configureSession: "set statement_timeout = 0",
     createHelperIndex:
       "create index concurrently if not exists bill_documents_amendment_classification_backfill_idx on legislation.bill_documents (id) where classification = 'amendment'",
     dropHelperIndex:
@@ -661,6 +662,23 @@ export function documentEmbeddingClassificationBackfillStatements() {
   } as const
 }
 
+interface DocumentEmbeddingClassificationMaintenanceClient {
+  query(statement: string): Promise<unknown>
+}
+
+export async function prepareDocumentEmbeddingClassificationBackfill(
+  client: DocumentEmbeddingClassificationMaintenanceClient,
+  statements = documentEmbeddingClassificationBackfillStatements()
+): Promise<void> {
+  // Classification repair, helper-index maintenance, verification, and
+  // constraint validation intentionally share this dedicated client. Disable
+  // the normal request timeout for the entire maintenance session before any
+  // of that work begins; individual batches remain restartable and bounded.
+  await client.query(statements.configureSession)
+  await client.query(statements.createHelperIndex)
+  await client.query(statements.refreshStatistics)
+}
+
 export const documentEmbeddingClassificationBackfill = task({
   id: "document-embedding-classification-backfill",
   maxDuration: 86_400,
@@ -676,8 +694,7 @@ export const documentEmbeddingClassificationBackfill = task({
       try {
         await acquireIndexMaintenanceLock(client)
         acquired = true
-        await client.query(statements.createHelperIndex)
-        await client.query(statements.refreshStatistics)
+        await prepareDocumentEmbeddingClassificationBackfill(client, statements)
         while (true) {
           const result = await client.query<{
             document_id: string

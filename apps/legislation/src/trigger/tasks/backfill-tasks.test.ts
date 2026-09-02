@@ -12,6 +12,7 @@ import {
   embeddingIndexMaintenancePayload,
   FULL_EMBEDDING_PRODUCT_ORDER,
   isMaterialPhaseGateOpen,
+  prepareDocumentEmbeddingClassificationBackfill,
   reconcileSupportingMaterialOcrCheckpoint
 } from "./backfill-tasks.js"
 
@@ -43,6 +44,7 @@ describe("derived backfill task payload", () => {
   it("uses a restartable null-only classification backfill", () => {
     const statements = documentEmbeddingClassificationBackfillStatements()
 
+    expect(statements.configureSession).toBe("set statement_timeout = 0")
     expect(statements.createHelperIndex).toContain(
       "on legislation.bill_documents (id) where classification = 'amendment'"
     )
@@ -57,6 +59,23 @@ describe("derived backfill task payload", () => {
     expect(statements.updateBatch).toContain("for update of embedding skip locked")
     expect(statements.verify).toContain("embedding.document_classification is distinct from document.classification")
     expect(statements.verify).toContain("where document.classification = 'amendment'")
+  })
+
+  it("disables the session statement timeout before classification maintenance SQL", async () => {
+    const queries: string[] = []
+    const client = {
+      query: async (statement: string) => {
+        queries.push(statement)
+      }
+    }
+
+    await prepareDocumentEmbeddingClassificationBackfill(client)
+
+    expect(queries).toEqual([
+      "set statement_timeout = 0",
+      expect.stringContaining("create index concurrently"),
+      expect.stringContaining("analyze legislation.document_section_embeddings")
+    ])
   })
 
   it("keeps material children inside the renewable ingestion lease", () => {
