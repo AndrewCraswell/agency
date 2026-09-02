@@ -3,6 +3,7 @@ import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import { billActions, eventAgendaItemBills, eventOutcomes, organizations, votes } from "../schema/schema.js"
+import { billActionTimestamp } from "./bill-action-timestamp.js"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -50,7 +51,7 @@ type OrderedRow = {
   sortAt: Date
   type: BillTimelineType
 }
-const actionSortAt = sql<Date>`coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp at time zone 'UTC')`
+const actionSortAt = billActionTimestamp()
 
 /** Merges only completeness-gated source facts into the public timeline union. */
 export async function listBillTimeline(

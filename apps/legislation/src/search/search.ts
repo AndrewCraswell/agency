@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import { getTableColumns, type SQL } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
+import { billActionTimestamp } from "../db/queries/bill-action-timestamp.js"
 import {
   amendmentEmbeddings,
   amendments,
@@ -459,7 +460,7 @@ async function hydrateLexicalBillCandidates(
   const latestActionRows = await database
     .select({
       billId: billActions.billId,
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
     })
     .from(billActions)
     .where(inArray(billActions.billId, billIds))
@@ -737,7 +738,7 @@ function passageSelection(rank: SQL<number>, snippet: SQL<string | null>, distan
       versionCode: billDocuments.versionCode
     },
     latestActionAt: sql<Date | null>`(
-      select max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))
+      select max(${billActionTimestamp()})
       from ${billActions}
       where ${billActions.billId} = ${bills.id}
     )`,
@@ -824,9 +825,7 @@ export async function semanticBillSearch(
   const distance = sql<number>`${billEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const latestActions = database
     .select({
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`.as(
-        "latest_action_at"
-      )
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`.as("latest_action_at")
     })
     .from(billActions)
     .where(eq(billActions.billId, bills.id))

@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import type { LegislationDatabase } from "../db/database.js"
+import { billActionTimestamp } from "../db/queries/bill-action-timestamp.js"
 import { findChangeEvents, type CanonicalChangeType } from "../db/queries/changes.js"
 import {
   amendmentActions,
@@ -1296,7 +1297,7 @@ function buildLatestActionBillBrowseQuery(
   const billActionPredicate = eq(billActions.billId, browseBill.id)
   const latestActions = database
     .select({
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
         .mapWith(billActions.actionAt)
         .as("latest_action_at")
     })
@@ -1335,7 +1336,7 @@ function buildPageFirstBillBrowseQuery(
     .as("bill_page")
   const latestActions = database
     .select({
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
         .mapWith(billActions.actionAt)
         .as("latest_action_at")
     })

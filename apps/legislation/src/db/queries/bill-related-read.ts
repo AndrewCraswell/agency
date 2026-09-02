@@ -5,6 +5,7 @@ import { embeddingRouteFor } from "../../models/embedding-routing.js"
 import { semanticBillSearch } from "../../search/search.js"
 import type { LegislationDatabase } from "../database.js"
 import { billActions, billEmbeddings, billRelations, bills } from "../schema/schema.js"
+import { billActionTimestamp } from "./bill-action-timestamp.js"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -113,7 +114,7 @@ export function buildBillRelatedExplicitQuery(
   const id = requiredBillId(input.billId)
   const relatedBills = bills
   const latestActionAt = sql<Date | null>`(
-    select max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))
+    select max(${billActionTimestamp()})
     from ${billActions}
     where ${billActions.billId} = ${relatedBills.id}
   )`.mapWith(billActions.actionAt)

@@ -10,6 +10,7 @@ import {
   organizations,
   people
 } from "../schema/schema.js"
+import { billActionTimestamp } from "./bill-action-timestamp.js"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -330,7 +331,7 @@ export function buildOrganizationBillListQuery(database: LegislationDatabase, in
   const cursor = decodeBillCursor(input.cursor, scope)
   const latestActions = database
     .select({
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
         .mapWith(billActions.actionAt)
         .as("latest_action_at")
     })

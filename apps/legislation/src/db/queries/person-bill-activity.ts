@@ -4,6 +4,7 @@ import type { BillSummaryRead } from "../../api/canonical-read.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import { billActions, billSponsors, bills, people } from "../schema/schema.js"
+import { billActionTimestamp } from "./bill-action-timestamp.js"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -95,7 +96,7 @@ export function buildPersonBillActivityListQuery(database: LegislationDatabase, 
     .as("person_bill_activities")
   const latestActions = database
     .select({
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
         .mapWith(billActions.actionAt)
         .as("latest_action_at")
     })
