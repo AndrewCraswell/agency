@@ -29,17 +29,17 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `6d807c6` (bounded bill/passage search, timestamp decoding, and processed non-OCR document projection) |
-| Deployment | `9275f4d8-bc7a-45b7-bf99-4290751a8f38` |
+| Source snapshot commit | `819a0fc` (final bill, amendment, and supporting-material query remediation) |
+| Deployment | `9824b674-c55e-4933-8cec-a68475746f5f` |
 | Deployment status | `SUCCESS` |
-| Image | `sha256:6717281f100b98594b957c07ef9497af42c3fcd33aa542feb321ae26ece08a5e` |
-| Previous rollback artifact | `7f774e63-28a6-49da-92b0-64b6c0d34d5f` (superseded and `REMOVING`; redeploy its immutable source/image only if Railway supports it) |
+| Image | Not recorded in the final acceptance evidence |
+| Previous rollback artifact | Reverify the immediately preceding immutable Railway artifact before any rollback |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
-| Current verification | Full legislation verification passed format, lint, service/web types, unused-code analysis, coverage, 233 test files with 4 skipped, 1,879 tests with 57 skipped, and all 4 webhook receiver tests. |
-| Foundation smoke | Current health returned `200` in `351ms`; readiness returned `200` in `192ms` with an idle, unsaturated database pool. |
+| Current verification | Commits `1fa13a0`, `36e7060`, `e72b5c4`, and `819a0fc` contain the classification-backfill safety fix and final query work; their focused and legislation verification gates passed before release. |
+| Foundation smoke | Health and readiness returned `200`; unknown routes and unsupported methods returned `404`. |
 | Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
 | Current deployment handler coverage | 88 of 88 explicit Next.js handlers |
 | Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities. Current health and readiness returned `200`; prior bounded probes recorded `361ms` and `179ms`. The opt-in authenticated subscription and webhook lifecycle smokes passed 12 and 14 checks respectively. |
@@ -48,20 +48,21 @@ described as final API cutover until the remaining migration gates pass.
 | Webhook verification smoke | Receiver deployment `ec110122-dc9a-4d03-aa0f-7f782739712c` resolved to public IP `69.46.46.106`; the signed challenge returned `200`, follow-up detail was `active`, and a redacted receiver acceptance receipt was observed. The cancellation fixture was cancelled afterward. Receiver service `66ac14e0-8726-40a0-a70b-db534b96c92f` was deleted; receiver test tool commit `553578e`. |
 | Next API database safety | PostgreSQL `statement_timeout` is set to `15s` for API requests |
 | Vote/change production smoke | The authenticated `vote-change` profile passed all 10 checks with no blocked, failed, or skipped checks. Vote collection/detail/batch used `vote:congress:house-119-2-74`; change collection/detail used a genuine provenance-complete event created by the same standard ingestion run. |
-| Search/diff/research production smoke | All four HNSW indexes are valid and ready. Bill lexical search passed on the immediately preceding source snapshot. Current anonymous bill, passage, and amendment probes returned the canonical `401` boundary. Authenticated passage verification and the remaining suite require the separately provisioned smoke session. Document-backed amendment semantic/hybrid search still requires a product-specific candidate store or index. |
+| Search/diff/research production smoke | All seven authenticated operations passed without a search skip: bill, amendment, passage, supporting-material, and universal search, document diff, and research answer. Production measurements were 176 ms for the bill branch, 711.8 ms for the final amendment SQL, 1,022/1,095 ms for stable first/deep supporting-material pages, and about 661 ms for a targeted supporting-material query. |
+| Search-storage maintenance | Trigger version `20260902.9` run `run_06g6567e43uu13mooebqbu8501` completed. The 23 MB sponsor GIN index is valid and ready, `bill_sponsors` was analyzed at `2026-09-02T14:50:14.923Z`, and a natural plan used the index in 0.066 ms. All five embedding HNSW indexes are valid and ready, all four embedding tables are analyzed, and no index build remains active. |
+| Classification and page integrity | The restartable classification backfill completed with zero nulls and zero mismatches after commit `1fa13a0` removed the dedicated maintenance session timeout. The classification constraint and both page-range constraints are valid; no page data repair was required. |
+| Cumulative authenticated smoke | Jurisdiction/session: 11 pass. Legislative: 12 pass plus six exact `canonical_data_incomplete` skips. Documents/resources: nine pass. People/organizations: two collection passes plus 12 fixture-not-configured skips. Meetings/calendars: two collection passes plus 12 fixture-not-configured skips. The skips are named production-data gates, not query-performance or authentication failures. |
 
 This is the current verified unified deployment from `apps/legislation`. The deleted `legislation-api` service is
 historical evidence only; it is not a current service or a rollback target. The successful unified verification,
-production build, and foundation smoke prove the consolidated runtime and operational boundary. Live authenticated
-probes are recorded above; the remaining expensive smoke now depends on bounded search-query remediation rather than HNSW
-construction.
+production build, and foundation smoke prove the consolidated runtime and operational boundary. The final authenticated
+search, document-difference, and research smoke and production query plans are recorded above.
 
 The 14 subscription/webhook handlers are deployed, and Railway has separate WorkOS M2M and AuthKit session authorities plus
 both application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
 the seven subscription and all seven webhook operations are **Done** after authenticated lifecycle smoke. Across all 88
-operations, release state is 59 **Done**, 7 **In progress**, and 22 **Blocked** by named production prerequisites.
-The remaining functional promotion gate covers the seven search, document-difference, and research operations plus each
-named production-fixture blocker.
+operations, release state is 66 **Done** and 22 **Blocked** by named production prerequisites. No route remains In
+progress; each remaining promotion gate is a named production-fixture blocker.
 The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger. The Alaska canary remains a separate
 production-data gate; no HNSW build is active. Do not claim representative lookup completion from configuration alone.
 Application-level API and MCP rate limiting is out of scope and intentionally absent. The application has no Redis
@@ -155,9 +156,9 @@ ingestion.
 | Done | Eight operations passed deployed smoke: meetings collection, meeting agenda list, meeting documents list and detail, meeting outcomes list, meeting participants list and detail, and calendars collection. |
 | Canonical-fixture blocked | Meeting detail, meeting agenda-item detail, meeting outcome detail, calendar detail, and calendar meetings remain blocked and receive no Done credit. |
 | Meeting rematerialization operator | Deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` adds `congress:events --domain meetings --rematerialize`, which restarts the selected Congress range, reuses the canonical normalizer/upsert path for unchanged provider records, and fails closed on ambiguous location, classification, status, provenance, session, or committee facts. Do not run it until HNSW is clear. |
-| Dependency-configuration blocked | Representative lookup remains blocked pending the production OpenStates canary. The plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains deferred while the active document HNSW build consumes database I/O; its latest read-only sample was `437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Do not promote this route until a fresh POST smoke passes. |
+| Dependency-configuration blocked | Representative lookup remains blocked pending the production OpenStates canary. The plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger, and the former HNSW prerequisite is clear. Do not promote this route until a fresh POST smoke passes. |
 | Rollback | Previous successful `legislation-web` deployment: `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. |
-| Next endpoint block | Search, document-difference, and research delivery is **In progress**. |
+| Next endpoint block | Search, document-difference, and research delivery is **Done**. |
 
 The meeting/calendar delivery block is complete. Its six named blockers are independent promotion gates: do not mark
 them Done until the fixture or OpenStates production-canary prerequisite is resolved and deployed smoke is repeated.
@@ -166,11 +167,11 @@ them Done until the fixture or OpenStates production-canary prerequisite is reso
 
 | Outcome | Result |
 | --- | --- |
-| Historical handler coverage at `0a2748b` | 88 of 88 public operations had explicit deployed Next.js handlers. At that snapshot, 53 routes had Done release credit, 25 were blocked by named production prerequisites, and 10 awaited their documented release gates. Current 59/7/22 accounting is recorded above. |
+| Historical handler coverage at `0a2748b` | 88 of 88 public operations had explicit deployed Next.js handlers. At that snapshot, 53 routes had Done release credit, 25 were blocked by named production prerequisites, and 10 awaited their documented release gates. Current 66/0/22 accounting is recorded above. |
 | Deployment | Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5`; terminal `SUCCESS`. |
 | Operational smoke | Production `GET /health` and `GET /ready` returned `200`. |
-| Production endpoint smoke | Browse smoke passed after the ordered-index release. Bill lexical search returned `200` after timestamp decoding. Current health/readiness and anonymous authentication-boundary probes pass; authenticated passage, amendment, diff, and research probes remain pending. |
-| Route state | All seven routes remain **In progress**. Do not mark them Done until cumulative production smoke passes. |
+| Production endpoint smoke | The final cumulative authenticated profile passed bill, amendment, passage, supporting-material, and universal search, document diff, and research answer without a search skip. |
+| Route state | All seven routes are **Done**. |
 
 The subsequent unified-runtime source snapshot `3a498d1` deployed as
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS` and superseded
@@ -179,17 +180,15 @@ rollback target. Current-release evidence is source `8150f36` deployed as
 `5c5ed557-fcff-40e4-bce7-2e473423b2c0`; its immediately preceding successful deployment
 `fe2db27e-4229-4fb4-9afd-98911fd6941d` is `REMOVED`, as recorded above.
 
-The old `legislation-api` service remains deleted. Passage hybrid ranking is bounded and the non-OCR projection fix is
-deployed. The next query-design action is a product-specific candidate store or index for document-backed amendment
-embeddings; the shared document-section HNSW index cannot efficiently apply the joined amendment-classification filter.
-Run the authenticated passage, amendment, document-difference, and research smoke when the separately provisioned API
-smoke session is available.
+The old `legislation-api` service remains deleted. Passage hybrid ranking is bounded, the amendment-only partial HNSW
+candidate path is valid and ready, and the authenticated passage, amendment, document-difference, and research smoke has
+passed.
 
 ## Authenticated API release evidence
 
-The current `legislation-web` deployment `9275f4d8-bc7a-45b7-bf99-4290751a8f38` is sourced from snapshot `6d807c6`
-and reached terminal `SUCCESS`; health and readiness returned `200`, with an idle, unsaturated database pool. The prior
-deployment `7f774e63-28a6-49da-92b0-64b6c0d34d5f` is superseded and `REMOVING`. The release uses separate WorkOS
+The current `legislation-web` deployment `9824b674-c55e-4933-8cec-a68475746f5f` is sourced from snapshot `819a0fc`
+and reached terminal `SUCCESS`; health and readiness returned `200`, with an idle, unsaturated database pool. The final
+acceptance evidence did not record the immediately preceding immutable deployment ID. The release uses separate WorkOS
 authorities for M2M API tokens and AuthKit user-session tokens. Prior bounded remote probes returned
 `GET /health` `200` in `361ms` with `status`, `GET /ready` `200` in `179ms` with `databasePool/status`, an anonymous
 protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` in `813ms` with
@@ -200,16 +199,16 @@ table, and the webhook lifecycle smoke passed all 14 checks: list `200`, create/
 detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, post-rotate detail `200`, delete/replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API sets PostgreSQL
 `statement_timeout` to `15s`. These probes promote the six webhook operations covered by the lifecycle smoke plus the verified
-challenge operation; the 59/7/22 endpoint ledger still has the full authenticated cumulative smoke pending. The browse
+challenge operation. The final cumulative smoke promotes all seven search, document-difference, and research operations;
+the endpoint ledger is now 66 Done and 22 Blocked. The browse
 index release additionally returned authenticated canonical one-item pages for bills in 609/158/77 ms and amendments in
 345/108/88 ms, with correlation-ID echo on all six requests.
 
 ## Next safe actions
 
-1. Add a product-specific candidate store or index for document-backed amendment embeddings, then complete bounded
-   amendment semantic/hybrid retrieval. Run the authenticated passage, amendment, document-difference, and research
-   production smoke when the separately provisioned API smoke session is available. Keep every named fixture and
-   configuration blocker explicit until it passes a fresh deployed smoke.
+1. Begin MCP migration only when directed. Cut over through the authenticated HTTP API tool by tool, prove canonical
+   lexical, semantic, and hybrid parity, and retain a rollback boundary. This release intentionally stopped before MCP
+   implementation or smoke.
 2. Run
    `congress:entities --start-congress 119 --end-congress 119`, verify the canonical person/profile/jurisdiction/term
    predicates, and smoke person detail and person-term detail. Federal organization and membership detail remain blocked
@@ -225,16 +224,14 @@ index release additionally returned authenticated canonical one-item pages for b
    and the two affected document routes before promotion.
 4. Resolve the remaining canonical civic-fixture blockers one bounded source-backed cohort at a time, then repeat the
    exact affected production smoke profile before promoting an operation.
-5. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
-   its canary only after a live Next.js MCP route exists.
+5. Keep every named fixture and configuration blocker explicit until it passes fresh deployed smoke.
 
 ## Rollback
 
-The current deployment is `9275f4d8-bc7a-45b7-bf99-4290751a8f38`. The preceding deployment
-`7f774e63-28a6-49da-92b0-64b6c0d34d5f` was superseded and is being removed; it is not an active rollback deployment. If Railway
-supports redeploying its immutable source/image, it may be used only after verifying the resulting deployment. After each
-subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains available for
-redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a
-rollback target.
+The current deployment is `9824b674-c55e-4933-8cec-a68475746f5f`. Reverify the immediately preceding immutable Railway
+source or image before using it as a rollback artifact; the final acceptance evidence did not record that artifact's ID.
+After each subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains
+available for redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be
+recreated as a rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
 from process startup.

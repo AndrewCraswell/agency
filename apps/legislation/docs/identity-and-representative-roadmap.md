@@ -164,7 +164,8 @@ Future cleanup follows these rules:
 
 ## Phase 0: close the embedding program
 
-Dependency: none. Status: in progress.
+Dependency: none. Status: complete for generation and production index maintenance; final MCP transport verification is
+tracked separately.
 
 | Task | Status | Deliverable and acceptance gate |
 | --- | --- | --- |
@@ -172,8 +173,8 @@ Dependency: none. Status: in progress.
 | EMB-002 | Complete | Persist four dedicated embedding tables with exact model, dimensions, input contract, hash, and rollout identity. |
 | EMB-003 | Complete | Deploy `embedding-sync`, shard controller, shard worker, and index-maintenance tasks. |
 | EMB-004 | Complete | Verify MCP treatment/control recall, canonical projection, amendment fusion, material search, and selective reranking. |
-| EMB-005 | In progress | Structured amendments are complete. Finish bills, material sections, and document sections through the pooled 128-worker steady state, with no overlap and zero unexplained failures. |
-| EMB-006 | Planned | Run final `ANALYZE`, record counts and provider spend, rerun the frozen evaluation, and publish the promotion decision. |
+| EMB-005 | Complete | Bills, amendments, material sections, and document sections are complete, and all five production HNSW indexes are valid and ready. |
+| EMB-006 | In progress | Final `ANALYZE` is complete for all four embedding tables. Record provider spend, rerun the frozen evaluation, and publish the promotion decision if those artifacts are still required. |
 | EMB-007 | Planned | Verify daily ingestion creates or refreshes only affected embeddings and does not require a historical sweep. |
 | EMB-008 | Complete | Add `embedding-full-sync` so future complete recreations run amendments, bills, material sections, and document sections sequentially at the 128-worker steady-state cap and transfer capacity automatically at each product boundary. |
 

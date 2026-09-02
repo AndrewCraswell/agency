@@ -18,27 +18,27 @@ An endpoint is not Next-route **Done** merely because the standalone Node handle
 the source of truth for request and response bodies. The existing local smoke checklist is reusable test input, but the
 release gate also requires block-by-block deployed Railway smoke.
 
-This ledger was updated on 2026-08-26 after the authenticated vote and change release was verified. `apps/legislation` is the canonical
+This ledger was updated on 2026-09-02 after the authenticated API performance release was verified. `apps/legislation` is the canonical
 application and documentation home; Railway retains the `legislation-web` service name. All 88 rows have reviewed
 domain/query/projection evidence, so the **Domain state** is 88 **Done**. Reviewed source now has 88/88 explicit Next.js
-handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 59
-**Done**, 22 **Blocked** by named production prerequisites, and 7 **In progress**. The shared Next.js API boundary now verifies WorkOS bearer tokens and
+handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 66
+**Done** and 22 **Blocked** by named production prerequisites. The shared Next.js API boundary verifies WorkOS bearer tokens and
 installs the derived request identity in reviewed local source. The deployed release records separate WorkOS authorities for
 M2M API tokens and AuthKit user-session tokens, plus both required encryption secrets. The 14 subscription/webhook
-operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Source snapshot `9879d32` is deployed as
-`fe2db27e-4229-4fb4-9afd-98911fd6941d` with terminal `SUCCESS`. The prior deployment
-`bb0d1d62-742a-48a6-a261-fc304acc12e7` is superseded and `REMOVED`. The subscription
+operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Source snapshot `819a0fc` is deployed as
+`9824b674-c55e-4933-8cec-a68475746f5f` with terminal `SUCCESS`. The subscription
 smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch
 `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API database session
-`statement_timeout` is `15s`. The current deployment returned `200` for both health and readiness; the prior bounded
-release probes recorded `361ms` for health and `179ms` for readiness. A throwaway Railway receiver deployment completed the signed verification challenge with `200`, transitioned
-the webhook to `active`, and was deleted after its redacted acceptance receipt was observed. Full expensive smoke is
-deliberately paused while the document HNSW index is actively consuming database I/O; its latest 2026-08-26 read-only
-sample was `437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Semantic/hybrid and other
-expensive probes remain pending.
+`statement_timeout` is `15s`. The current deployment returned `200` for both health and readiness; unknown routes and
+unsupported methods returned `404`. A throwaway Railway receiver deployment completed the signed verification challenge with `200`, transitioned
+the webhook to `active`, and was deleted after its redacted acceptance receipt was observed. The final cumulative
+authenticated smoke passed all seven search, document-difference, and research operations without a search skip. All
+five embedding HNSW indexes are valid and ready, all four embedding tables are analyzed, and both page-range constraints
+are valid.
 The old Railway `legislation-api` service is deleted and is not a rollback target. Authentication enforcement is live;
-authenticated functional smoke is the remaining global API gate. MCP cutover is deferred until after the API release.
+the remaining route blockers are named production-data gates. MCP cutover and smoke are the next deferred step, and work
+stopped before that step as requested.
 
 ## Delivery traceability
 
@@ -46,12 +46,12 @@ authenticated functional smoke is the remaining global API gate. MCP cutover is 
 | --- | --- | --- |
 | Delivery record correction | Done | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS`; this remains historical foundation evidence, while the current unified deployment is recorded above. |
-| Legislative routes | Complete | 37 routes are Done: 11 jurisdiction/session routes, 18 bills, amendments, and vote routes, six document/resource routes, and two global change routes. The three vote operations and both provenance-complete global change operations passed the authenticated `vote-change` production smoke against deployment `e419978a-d839-41c5-897b-d9d536a60dc3`. Two document routes remain Blocked because every section-bearing production `bill_documents` row has `ocr_status = NULL`. Deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` adds the bounded `embeddings:document-sections` repair command and fixes document-scoped cursor pagination, but no document route receives Done credit until a post-HNSW source reprocess, targeted re-embedding, integrity check, and fresh smoke pass. This block contains 39 explicit routes. |
-| Civic routes | Complete | People and organizations (14) has complete route implementation, deployment, and smoke evidence, but all 14 operations remain blocked by missing canonical production fixtures. The current deployment hydrates Congress.gov member detail into provider-owned profiles, federal jurisdiction links, and source-titled terms across CLI, backfill, and daily synchronization paths; person detail and term detail remain Blocked until the bounded production refresh and fresh smoke pass. The GovInfo-only federal committee importer is implemented in source; organization detail and membership detail remain Blocked until it is committed, deployed, run for the current Congress after the active HNSW build, reconciled without unmatched people, and followed by fresh smoke. The meeting/calendar release completed: eight operations are Done; five await canonical fixtures. Deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` added a fail-closed Congress meeting rematerialization operator that can rebuild official provenance and source-declared session/committee relations after HNSW completes; no endpoint receives Done credit until that bounded production run and smoke pass. State committee freshness remains deferred to the self-hosted OpenStates scraper lane described below. Do not promote the representative lookup or other blocked civic routes without fresh smoke. |
-| Search, document-difference, and research routes | In progress | All seven handlers are included in the reviewed current deployment source snapshot `9879d32`, deployed as `fe2db27e-4229-4fb4-9afd-98911fd6941d` with terminal `SUCCESS`, and passed build/foundation gates. Full expensive lexical, semantic, hybrid, diff, and cited-answer smoke is deliberately paused while the document HNSW index consumes database I/O. |
+| Legislative routes | Complete | 37 routes are Done: 11 jurisdiction/session routes, 18 bills, amendments, and vote routes, six document/resource routes, and two global change routes. The three vote operations and both provenance-complete global change operations passed the authenticated `vote-change` production smoke against deployment `e419978a-d839-41c5-897b-d9d536a60dc3`. Two document routes remain Blocked because every section-bearing production `bill_documents` row has `ocr_status = NULL`. Deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` adds the bounded `embeddings:document-sections` repair command and fixes document-scoped cursor pagination, but no document route receives Done credit until a source reprocess, targeted re-embedding, integrity check, and fresh smoke pass. This block contains 39 explicit routes. |
+| Civic routes | Complete | People and organizations (14) has complete route implementation, deployment, and smoke evidence, but all 14 operations remain blocked by missing canonical production fixtures. The current deployment hydrates Congress.gov member detail into provider-owned profiles, federal jurisdiction links, and source-titled terms across CLI, backfill, and daily synchronization paths; person detail and term detail remain Blocked until the bounded production refresh and fresh smoke pass. The GovInfo-only federal committee importer is implemented in source; organization detail and membership detail remain Blocked until it is committed, deployed, run for the current Congress, reconciled without unmatched people, and followed by fresh smoke. The meeting/calendar release completed: eight operations are Done; five await canonical fixtures. Deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` added a fail-closed Congress meeting rematerialization operator that can rebuild official provenance and source-declared session/committee relations; no endpoint receives Done credit until that bounded production run and smoke pass. State committee freshness remains deferred to the self-hosted OpenStates scraper lane described below. Do not promote the representative lookup or other blocked civic routes without fresh smoke. |
+| Search, document-difference, and research routes | Done | All seven handlers are deployed from source snapshot `819a0fc` as `9824b674-c55e-4933-8cec-a68475746f5f` with terminal `SUCCESS`. Authenticated bill, amendment, passage, supporting-material, universal, document-difference, and research-answer smoke passed without a search skip. |
 | Subscription and webhook routes | Done | All 14 explicit routes, domain compositions, and focused local tests are deployed. The seven subscription and all seven webhook operations are Done after authenticated lifecycle smoke in deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a` from source `c3c5f43`; all 14 webhook-lifecycle checks passed, including signed verification against a throwaway Railway receiver. |
-| WorkOS authentication | In progress | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Deployment with `AUTH_MODE=workos` is live; health/readiness, anonymous `401`, authenticated organizations, and the seven-operation subscription lifecycle smoke passed. The full authenticated cumulative gate remains. |
-| MCP HTTP migration | Deferred | Begin only after the authenticated API release; cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence. |
+| WorkOS authentication | Done for released surface | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Authenticated lifecycle and cumulative search/diff/research smoke passed; remaining skips are named missing-fixture gates. |
+| MCP HTTP migration | Deferred | This is the next step. Cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence; work stopped before implementation or smoke as requested. |
 | Final runtime cleanup | Blocked | Remove duplicate standalone production serving code, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
 
 ## Review and commit protocol
@@ -69,23 +69,23 @@ For each deliverable:
 
 | Work item | State | Scope and exit gate |
 | --- | --- | --- |
-| GovInfo federal committee import | In progress | Commit and deploy the `govinfo:committees` JSON-discovery/plain-text importer; after HNSW completes, run the current-Congress edition sequence, require every roster member to resolve to one existing Congress.gov person and term, verify provider-scoped atomic replacement and distinct reappointment tenures, then smoke the organization and membership APIs. GovInfo is the only permitted federal committee source and XML committee ingestion is not supported. |
+| GovInfo federal committee import | In progress | Commit and deploy the `govinfo:committees` JSON-discovery/plain-text importer; run the current-Congress edition sequence, require every roster member to resolve to one existing Congress.gov person and term, verify provider-scoped atomic replacement and distinct reappointment tenures, then smoke the organization and membership APIs. GovInfo is the only permitted federal committee source and XML committee ingestion is not supported. |
 | Self-hosted OpenStates state committee ingestion | Blocked | After the OpenStates scrapers are self-hosted, add a pinned scraper/people-data adapter for complete per-jurisdiction committee, subcommittee, and membership snapshots. Reuse the canonical tenure reconciliation so a returning member receives a new tenure instead of reactivating an old one. Activate only after an ordinary-jurisdiction canary, atomic-promotion verification, and API smoke. Do not add another state committee source without explicit approval. |
 
 ## Endpoint state matrix
 
 The endpoint rows below record reusable domain implementation only. The current Next.js route release state is tracked
 separately until each explicit handler passes deployment smoke. All 88 explicit handlers are deployed; the release ledger
-is 59 Done, 7 In progress, and 22 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
+is 66 Done and 22 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
 the 88 public API endpoint count.
 
 ### Current Next.js route release state
 
 | State | Count | Scope |
 | --- | ---: | --- |
-| Done | 59 | Eleven jurisdiction/session routes, 18 bills, amendments, and vote routes, six document/resource routes, two global change routes, eight meeting/calendar operations, seven subscription operations, and seven webhook operations passed deployed smoke. |
-| In progress | 7 | Seven search/diff/research routes await their required remote functional smoke evidence. |
-| Ready | 0 | Every non-blocked route has either completed remote smoke or has active deployment/smoke work. |
+| Done | 66 | Eleven jurisdiction/session routes, 18 bills, amendments, and vote routes, six document/resource routes, two global change routes, eight meeting/calendar operations, seven search/diff/research operations, seven subscription operations, and seven webhook operations passed deployed smoke. |
+| In progress | 0 | No route is awaiting an active implementation, deployment, or smoke gate. |
+| Ready | 0 | Every non-blocked route has completed remote smoke. |
 | Blocked | 22 | These routes have named production-data, canonical-fixture, or dependency-configuration blockers. |
 
 The 22 Blocked public API routes all have named production-data, canonical-fixture, or dependency blockers.
@@ -94,9 +94,8 @@ section-bearing production `bill_documents` rows have `ocr_status = NULL`; and a
 operations lack canonical-ready civic fixtures (people, person profiles, terms, organizations, memberships, calendars,
 and required relationships). The meeting/calendar release additionally has five canonical-fixture blockers (meeting detail, agenda-item
 detail, outcome detail, calendar detail, and calendar meetings) and one representative-lookup blocker. The OpenStates civic repair is
-committed and the plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger; its Alaska production canary remains
-deferred while the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was
-`437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Do not promote the blocked civic routes until a fresh deployed
+committed and the plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger; its Alaska production canary
+remains a separate data gate now that the HNSW build is complete. Do not promote the blocked civic routes until a fresh deployed
 canary passes. This work has no authentication or MCP scope. The API catch-all is
 outside the 88-route inventory.
 
@@ -235,8 +234,8 @@ tool is committed in `553578e`.
 The current release evidence is recorded in the [Railway API release record](http-api-railway-release.md). Progress
 reports must state all three totals: reusable domain implementation is 88/88 **Done**; explicit Next.js handler coverage
 is 88/88 in reviewed source and the current production deployment; and Next.js Route Handler release state is
-59/88 **Done**, 7 **In progress**, 0 **Ready**, and 22
+66/88 **Done**, 0 **In progress**, 0 **Ready**, and 22
 **Blocked**. The states sum to 88. The 22 Blocked routes have named production-data, canonical-fixture, or
 dependency-configuration deficiencies. All 14 subscription and webhook operations, three vote operations, and two global
-change operations are Done after authenticated smoke; the seven search/diff/research routes remain In progress. The root operational `/health` and
+change operations and all seven search/diff/research operations are Done after authenticated smoke. The root operational `/health` and
 `/ready` handlers and the API catch-all are outside the 88-route count.

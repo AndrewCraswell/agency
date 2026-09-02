@@ -90,6 +90,6 @@ fields into an ambiguous `startDate` or `endDate`.
 
 ## Operational sequencing
 
-Schema work, importer implementation, and local verification may proceed while embedding HNSW indexes build. The
-production historical backfill is a separate gate because it creates sustained database writes. It starts only after the
-active index build completes or production metrics demonstrate sufficient I/O headroom for a bounded canary.
+Schema work, importer implementation, and local verification were safe to perform while embedding HNSW indexes built.
+The index build is now complete. The production historical backfill remains a separate gate because it creates sustained
+database writes and still requires a bounded canary with adequate production I/O headroom.

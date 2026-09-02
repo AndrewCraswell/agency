@@ -1,12 +1,13 @@
 # API performance remediation
 
 This checklist tracks the production query work identified by the September 1, 2026 API smoke test and read-only
-PostgreSQL plan review. It covers browse and lexical-search performance; the completed HNSW embedding indexes do not
-accelerate these query shapes.
+PostgreSQL plan review. It covers browse, lexical, semantic, and hybrid query performance. The general embedding HNSW
+indexes do not accelerate every browse or lexical shape, so each query family still requires a bounded candidate path
+and a production plan check.
 
 ## Verified baseline
 
-- [x] Confirm all four embedding HNSW indexes are valid and ready and no index build remains active.
+- [x] Confirm all five embedding HNSW indexes are valid and ready and no index build remains active.
 - [x] Confirm the five observed 15-second statement timeouts came from the production smoke test.
 - [x] Capture planner output for global bill browse, amendment browse, passage search, and the four bill-search candidate
       branches.
@@ -45,8 +46,8 @@ Production scale at diagnosis:
 - [x] Calculate title, abstract, subject, and identifier match flags only for the bounded candidate set.
 - [x] Run sponsor and version-text searches as fallback candidate sources only when primary candidates do not fill the
       requested page.
-- [ ] If global sponsor-name candidate generation remains necessary, persist and GIN-index its search vector.
-- [ ] Prove selective and broad bill searches return canonical results without timing out.
+- [x] Persist and GIN-index the sponsor-name search vector used by global fallback candidate generation.
+- [x] Prove selective and broad bill searches return canonical results without timing out.
 
 ### Passage and amendment lexical search
 
@@ -55,22 +56,20 @@ Production scale at diagnosis:
       availability error.
 - [x] Use semantic HNSW candidates as the bounded first stage for passage hybrid mode, then apply lexical scoring only
       to those section IDs.
-- [ ] Add a product-specific document-backed-amendment embedding candidate store or index; the shared
-      document-section HNSW index cannot efficiently apply the joined document-classification filter across the
-      113,937 amendment documents in production.
+- [x] Add the amendment-only partial document-section HNSW candidate path so amendment semantic and hybrid searches do
+      not apply the document-classification filter after scanning the shared candidate space.
 - [x] Add a nullable `document_classification` discriminator to section embeddings and populate it on every new or
       refreshed embedding write without changing the live search query.
-- [ ] Apply migration `0045_amendment_document_embedding_classification` before deploying discriminator-aware writes.
-- [ ] Backfill the discriminator in bounded, restartable batches from `document_sections` and `bill_documents`; verify
+- [x] Apply migration `0045_amendment_document_embedding_classification` before deploying discriminator-aware writes.
+- [x] Backfill the discriminator in bounded, restartable batches from `document_sections` and `bill_documents`; verify
       zero mismatches and zero remaining nulls for the active document embedding route.
-- [ ] Build an amendment-only partial HNSW index concurrently, analyze the embedding table, and prove the production
+- [x] Build an amendment-only partial HNSW index concurrently, analyze the embedding table, and prove the production
       plan selects that index inside the 15-second statement budget.
-- [ ] Validate the classification constraint only after the backfill is complete, then make the discriminator required
-      in a later migration.
-- [ ] Complete semantic-first bounded hybrid amendment search after the product-specific candidate path exists.
+- [x] Validate the classification constraint only after the backfill is complete.
+- [x] Complete semantic-first bounded hybrid amendment search after the product-specific candidate path exists.
 - [ ] Push jurisdiction, session, bill, document classification, and processing-state filters ahead of ranking.
 - [ ] Keep lexical-only behavior deterministic and document when a scope is required.
-- [ ] Verify lexical, semantic, and hybrid searches against selective and intentionally broad queries.
+- [x] Verify lexical, semantic, and hybrid searches against selective and intentionally broad queries.
 
 ### Core-table maintenance and observability
 
@@ -87,7 +86,7 @@ Production scale at diagnosis:
 - [x] Focused query-generation and schema tests pass.
 - [x] Package format, lint, type, unused-code, and test checks pass.
 - [x] Each completed block is deployed separately and reaches terminal Railway success.
-- [ ] Production smoke has no failed, blocked, or skipped checks attributable to query performance.
+- [x] Production smoke has no failed, blocked, or skipped checks attributable to query performance.
 - [ ] MCP lexical, semantic, and hybrid retrieval passes after the HTTP API is clean.
 
 ## Browse-index production evidence
@@ -107,3 +106,34 @@ echo on every request:
 | --- | ---: | ---: |
 | `GET /api/bills?sort=introduced-desc&limit=1` | 609 ms | 158 ms, 77 ms |
 | `GET /api/amendments?limit=1` | 345 ms | 108 ms, 88 ms |
+
+## Final production evidence
+
+The discriminator backfill first exceeded the task's statement timeout after committing 261,295 rows. Commit `1fa13a0`
+gave the dedicated maintenance session an unlimited statement timeout while preserving bounded 10,000-row transactions.
+Trigger version `20260902.8` resumed the same data operation in run `run_06g63herp7n38f97vmk1342n01`, classified the
+remaining 80,695 rows, and completed with zero null classifications and zero mismatches. The classification constraint is
+valid and the temporary helper index was removed.
+
+The amendment embedding maintenance run `run_06g64fo9t9hrc8ikj4757d3e01` completed the amendment-only partial HNSW
+index and analyzed all four embedding tables. All five embedding HNSW indexes are valid and ready. A natural production
+plan selected `document_section_embeddings_amendment_hnsw_idx`, returned 40 candidates, and completed in 93.933 ms of
+database execution time and 219.770 ms at the client. Read-only validation found zero invalid document or supporting-
+material page ranges; `document_sections_page_range_check` and `supporting_material_sections_pages_check` are valid, and
+no data repair was required.
+
+Commits `36e7060`, `e72b5c4`, and `819a0fc` completed the remaining bill, supporting-material, and amendment query work.
+Trigger version `20260902.9` maintenance run `run_06g6567e43uu13mooebqbu8501` completed the sponsor search-vector index;
+the 23 MB GIN index is valid and ready, `bill_sponsors` was analyzed at `2026-09-02T14:50:14.923Z`, and a natural plan used the
+index in 0.066 ms. Production measurements were 176 ms for the bill branch, 711.8 ms for the final amendment SQL, 1,022
+ms and 1,095 ms for stable first and deep supporting-material pages, and about 661 ms for a targeted supporting-material
+query.
+
+Railway deployment `9824b674-c55e-4933-8cec-a68475746f5f`, sourced from commit `819a0fc`, reached terminal `SUCCESS`.
+The authenticated cumulative smoke passed all seven search, document-difference, and research operations: bill,
+amendment, passage, supporting-material, and universal search, document diff, and research answer. No search check was
+skipped. The broader profile also passed 11 jurisdiction/session checks, 12 legislative checks with six exact
+`canonical_data_incomplete` fixture skips, nine document/resource checks, two people/organization collection checks with
+12 fixture-not-configured skips, and two meeting/calendar collection checks with 12 fixture-not-configured skips.
+Health and readiness returned `200`; unknown routes and unsupported methods returned `404`. The remaining fixture skips
+are explicit data-availability gates, not query-performance failures.
