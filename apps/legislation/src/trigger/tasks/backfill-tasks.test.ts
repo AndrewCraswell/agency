@@ -47,6 +47,7 @@ describe("derived backfill task payload", () => {
       "on legislation.bill_documents (id) where classification = 'amendment'"
     )
     expect(statements.dropHelperIndex).toContain("bill_documents_amendment_classification_backfill_idx")
+    expect(statements.refreshStatistics).toContain("document_classification")
     expect(statements.updateBatch).toContain("where embedding.document_classification is null")
     expect(statements.updateBatch).toContain("document.classification = 'amendment'")
     expect(statements.updateBatch).toContain("limit $1")

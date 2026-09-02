@@ -607,6 +607,7 @@ export function documentEmbeddingClassificationBackfillStatements() {
       "create index concurrently if not exists bill_documents_amendment_classification_backfill_idx on legislation.bill_documents (id) where classification = 'amendment'",
     dropHelperIndex:
       "drop index concurrently if exists legislation.bill_documents_amendment_classification_backfill_idx",
+    refreshStatistics: "analyze legislation.document_section_embeddings (document_classification)",
     updateBatch: `
       with candidates as (
         select
@@ -676,6 +677,7 @@ export const documentEmbeddingClassificationBackfill = task({
         await acquireIndexMaintenanceLock(client)
         acquired = true
         await client.query(statements.createHelperIndex)
+        await client.query(statements.refreshStatistics)
         while (true) {
           const result = await client.query<{
             document_id: string
