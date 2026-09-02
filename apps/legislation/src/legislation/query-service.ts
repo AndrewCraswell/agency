@@ -103,7 +103,8 @@ function coverageWarnings(itemCount: number, domain: string): string[] {
 async function lexicalAmendmentCandidates(
   database: LegislationDatabase,
   input: ApiAmendmentSearchInput,
-  limit: number
+  limit: number,
+  candidateIds?: { document: readonly string[]; structured: readonly string[] }
 ): Promise<Array<AmendmentSearchCandidate[]>> {
   const query = sql`websearch_to_tsquery('english', ${input.query})`
   const documentTitleVector = sql`to_tsvector('english', coalesce(${billDocuments.title}, ''))`
@@ -131,15 +132,19 @@ async function lexicalAmendmentCandidates(
       .where(
         and(
           documentSearchFilters(input),
+          candidateIds === undefined ? undefined : inArray(billDocuments.id, candidateIds.document),
           sql`(${documentSections.searchVector} @@ ${query} or ${documentTitleVector} @@ ${query})`
         )
       )
   )
   const [structuredRows, documentRows] = await Promise.all([
-    input.recordTypes?.includes("document")
+    input.recordTypes?.includes("document") || candidateIds?.structured.length === 0
       ? Promise.resolve([])
-      : buildStructuredAmendmentLexicalQuery(database, input, limit),
-    input.recordTypes?.includes("structured") || input.sponsorPersonIds !== undefined || input.statuses !== undefined
+      : buildStructuredAmendmentLexicalQuery(database, input, limit, candidateIds?.structured),
+    input.recordTypes?.includes("structured") ||
+    input.sponsorPersonIds !== undefined ||
+    input.statuses !== undefined ||
+    candidateIds?.document.length === 0
       ? Promise.resolve([])
       : database
           .with(documentCandidates)
@@ -186,7 +191,8 @@ async function lexicalAmendmentCandidates(
 export function buildStructuredAmendmentLexicalQuery(
   database: LegislationDatabase,
   input: ApiAmendmentSearchInput,
-  limit: number
+  limit: number,
+  candidateAmendmentIds?: readonly string[]
 ) {
   const query = sql`websearch_to_tsquery('english', ${input.query})`
   const vector = sql`setweight(to_tsvector('english', coalesce(${amendments.printedIdentifier}, '')), 'A') || setweight(to_tsvector('english', coalesce(${amendments.purpose}, '')), 'B') || setweight(to_tsvector('english', coalesce(${amendments.description}, '')), 'C')`
@@ -201,7 +207,14 @@ export function buildStructuredAmendmentLexicalQuery(
       snippet: sql<string>`left(ts_headline('english', concat_ws(' ', ${amendments.purpose}, ${amendments.description}), ${query}, 'MaxWords=35, MinWords=10, MaxFragments=1'), 1000)`
     })
     .from(amendments)
-    .where(and(isNotNull(amendments.billId), structuredSearchFilters(input), sql`${vector} @@ ${query}`))
+    .where(
+      and(
+        isNotNull(amendments.billId),
+        structuredSearchFilters(input),
+        candidateAmendmentIds === undefined ? undefined : inArray(amendments.id, candidateAmendmentIds),
+        sql`${vector} @@ ${query}`
+      )
+    )
     .orderBy(desc(sql`ts_rank_cd(${vector}, ${query})`), asc(amendments.id))
     .limit(limit)
 }
@@ -2206,14 +2219,31 @@ export class LegislationQueryService {
   async searchAmendmentHits(input: ApiAmendmentSearchInput): Promise<AmendmentSearchPage<AmendmentSearchCandidate>> {
     const offset = decodeAmendmentSearchCursor(input.cursor, input)
     const candidateLimit = input.mode === "lexical" ? offset + input.limit + 1 : 25
-    const lexical =
-      input.mode === "semantic" ? [] : await lexicalAmendmentCandidates(this.#database, input, candidateLimit)
     const queryEmbedding =
       input.mode === "lexical" ? undefined : await this.#embedQueryWithModel("search_amendments", input.query)
     const semantic =
       queryEmbedding === undefined
         ? []
         : await semanticAmendmentCandidates(this.#database, input, queryEmbedding.embedding, candidateLimit)
+    const semanticCandidates = semantic.flat()
+    const lexical =
+      input.mode === "semantic"
+        ? []
+        : await lexicalAmendmentCandidates(
+            this.#database,
+            input,
+            candidateLimit,
+            input.mode === "hybrid"
+              ? {
+                  document: semanticCandidates
+                    .filter((candidate) => candidate.recordType === "document")
+                    .map((candidate) => candidate.document.id),
+                  structured: semanticCandidates
+                    .filter((candidate) => candidate.recordType === "structured")
+                    .map((candidate) => candidate.amendment.id)
+                }
+              : undefined
+          )
     const candidates = fuseAmendmentSearchCandidates(
       [...lexical, ...semantic],
       input.mode === "lexical" ? candidateLimit : 25

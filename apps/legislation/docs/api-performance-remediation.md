@@ -55,7 +55,8 @@ Production scale at diagnosis:
       availability error.
 - [x] Use semantic HNSW candidates as the bounded first stage for passage hybrid mode, then apply lexical scoring only
       to those section IDs.
-- [ ] Apply the same semantic-first bounded candidate contract to hybrid amendment search.
+- [x] Apply the same semantic-first bounded candidate contract to hybrid amendment search, with independent candidate
+      sets for structured and document-backed amendments.
 - [ ] Push jurisdiction, session, bill, document classification, and processing-state filters ahead of ranking.
 - [ ] Keep lexical-only behavior deterministic and document when a scope is required.
 - [ ] Verify lexical, semantic, and hybrid searches against selective and intentionally broad queries.

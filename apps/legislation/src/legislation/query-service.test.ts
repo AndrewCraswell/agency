@@ -204,6 +204,16 @@ describe("amendment lexical search query", () => {
       ])
     )
   })
+
+  it("restricts hybrid lexical ranking to the semantic amendment candidates", () => {
+    const query = buildStructuredAmendmentLexicalQuery(database, { limit: 20, mode: "hybrid", query: "housing" }, 25, [
+      "amendment:first",
+      "amendment:second"
+    ]).toSQL()
+
+    expect(query.sql).toContain('"legislation"."amendments"."id" in ($')
+    expect(query.params).toEqual(expect.arrayContaining(["amendment:first", "amendment:second"]))
+  })
 })
 
 describe("hybrid passage lexical scoring", () => {
