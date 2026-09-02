@@ -14,19 +14,19 @@ ALTER TABLE "legislation"."organization_memberships" ADD COLUMN "last_observed_d
 --> statement-breakpoint
 ALTER TABLE "legislation"."organization_memberships" ADD COLUMN "ended_reason" "legislation"."organization_membership_end_reason";
 --> statement-breakpoint
-ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_legislative_session_id_legislative_sessions_id_fk" FOREIGN KEY ("legislative_session_id") REFERENCES "legislation"."legislative_sessions"("id") ON DELETE restrict ON UPDATE no action;
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_legislative_session_id_legislative_sessions_id_fk" FOREIGN KEY ("legislative_session_id") REFERENCES "legislation"."legislative_sessions"("id") ON DELETE restrict ON UPDATE no action NOT VALID;
 --> statement-breakpoint
 ALTER TABLE "legislation"."organization_memberships" DROP CONSTRAINT "organization_memberships_dates_check";
 --> statement-breakpoint
-ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_effective_dates_check" CHECK ("legislation"."organization_memberships"."effective_start_date" is null or "legislation"."organization_memberships"."effective_end_date" is null or "legislation"."organization_memberships"."effective_start_date" <= "legislation"."organization_memberships"."effective_end_date");
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_effective_dates_check" CHECK ("legislation"."organization_memberships"."effective_start_date" is null or "legislation"."organization_memberships"."effective_end_date" is null or "legislation"."organization_memberships"."effective_start_date" <= "legislation"."organization_memberships"."effective_end_date") NOT VALID;
 --> statement-breakpoint
-ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_detected_dates_check" CHECK ("legislation"."organization_memberships"."detected_start_date" is null or "legislation"."organization_memberships"."detected_end_date" is null or "legislation"."organization_memberships"."detected_start_date" <= "legislation"."organization_memberships"."detected_end_date");
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_detected_dates_check" CHECK ("legislation"."organization_memberships"."detected_start_date" is null or "legislation"."organization_memberships"."detected_end_date" is null or "legislation"."organization_memberships"."detected_start_date" <= "legislation"."organization_memberships"."detected_end_date") NOT VALID;
 --> statement-breakpoint
-ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_last_observed_check" CHECK ("legislation"."organization_memberships"."detected_start_date" is null or "legislation"."organization_memberships"."last_observed_date" is null or "legislation"."organization_memberships"."detected_start_date" <= "legislation"."organization_memberships"."last_observed_date");
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_last_observed_check" CHECK ("legislation"."organization_memberships"."detected_start_date" is null or "legislation"."organization_memberships"."last_observed_date" is null or "legislation"."organization_memberships"."detected_start_date" <= "legislation"."organization_memberships"."last_observed_date") NOT VALID;
 --> statement-breakpoint
-ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_roster_removal_check" CHECK ("legislation"."organization_memberships"."ended_reason" is distinct from 'roster_removal_detected' or "legislation"."organization_memberships"."detected_end_date" is not null);
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_roster_removal_check" CHECK ("legislation"."organization_memberships"."ended_reason" is distinct from 'roster_removal_detected' or "legislation"."organization_memberships"."detected_end_date" is not null) NOT VALID;
 --> statement-breakpoint
-ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_congress_end_check" CHECK ("legislation"."organization_memberships"."ended_reason" is distinct from 'congress_ended' or ("legislation"."organization_memberships"."legislative_session_id" is not null and "legislation"."organization_memberships"."detected_end_date" is null));
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_congress_end_check" CHECK ("legislation"."organization_memberships"."ended_reason" is distinct from 'congress_ended' or ("legislation"."organization_memberships"."legislative_session_id" is not null and "legislation"."organization_memberships"."detected_end_date" is null)) NOT VALID;
 --> statement-breakpoint
 DROP INDEX "legislation"."organization_memberships_person_idx";
 --> statement-breakpoint

@@ -1,7 +1,3 @@
-UPDATE "legislation"."document_sections"
-SET "page_start" = NULL, "page_end" = NULL
-WHERE ("page_start" IS NULL) <> ("page_end" IS NULL);
---> statement-breakpoint
 ALTER TABLE "legislation"."document_sections"
   DROP CONSTRAINT "document_sections_page_range_check";
 --> statement-breakpoint
@@ -15,11 +11,7 @@ ALTER TABLE "legislation"."document_sections"
       AND "page_start" > 0
       AND "page_end" >= "page_start"
     )
-  );
---> statement-breakpoint
-UPDATE "legislation"."supporting_material_sections"
-SET "page_start" = NULL, "page_end" = NULL
-WHERE ("page_start" IS NULL) <> ("page_end" IS NULL);
+  ) NOT VALID;
 --> statement-breakpoint
 ALTER TABLE "legislation"."supporting_material_sections"
   DROP CONSTRAINT "supporting_material_sections_pages_check";
@@ -34,4 +26,4 @@ ALTER TABLE "legislation"."supporting_material_sections"
       AND "page_start" >= 1
       AND "page_end" >= "page_start"
     )
-  );
+  ) NOT VALID;

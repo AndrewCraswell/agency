@@ -7,6 +7,7 @@ import {
   derivedDatabaseConnectionsFor,
   derivedPayloadSchema,
   derivedWorkerMaxBatchesFor,
+  documentEmbeddingClassificationBackfillStatements,
   embeddingIndexMaintenanceStatements,
   embeddingIndexMaintenancePayload,
   FULL_EMBEDDING_PRODUCT_ORDER,
@@ -33,7 +34,20 @@ describe("derived backfill task payload", () => {
     expect(statements).toContain("drop index concurrently if exists legislation.bill_embeddings_hnsw_idx")
     expect(statements).toContain("drop index concurrently if exists legislation.document_section_embeddings_hnsw_idx")
     expect(statements).not.toContain("drop index concurrently if exists legislation.amendment_embeddings_hnsw_idx")
-    expect(statements.filter((statement) => statement.startsWith("create index concurrently"))).toHaveLength(4)
+    expect(statements.filter((statement) => statement.startsWith("create index concurrently"))).toHaveLength(5)
+    expect(statements).toContain(
+      "create index concurrently if not exists document_section_embeddings_amendment_hnsw_idx on legislation.document_section_embeddings using hnsw (embedding vector_cosine_ops) where document_classification = 'amendment' and model = 'openai/text-embedding-3-small' and input_contract = 'document-section-heading-text'"
+    )
+  })
+
+  it("uses a restartable null-only classification backfill", () => {
+    const statements = documentEmbeddingClassificationBackfillStatements()
+
+    expect(statements.updateBatch).toContain("where embedding.document_classification is null")
+    expect(statements.updateBatch).toContain("limit $1")
+    expect(statements.updateBatch).toContain("(embedding.section_id, embedding.model, embedding.input_contract) >")
+    expect(statements.updateBatch).toContain("for update of embedding skip locked")
+    expect(statements.verify).toContain("embedding.document_classification is distinct from document.classification")
   })
 
   it("keeps material children inside the renewable ingestion lease", () => {

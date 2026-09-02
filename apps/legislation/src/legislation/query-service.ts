@@ -229,15 +229,13 @@ export function buildSemanticAmendmentCandidateQueries(
   const documentRoute = embeddingRouteFor("document-backed-amendment-section")
   const structuredEmbedding = embeddingLiteral(embedding, structuredRoute.dimensions)
   const documentEmbedding = embeddingLiteral(embedding, documentRoute.dimensions)
-  const documentCandidates = database.$with("amendment_document_semantic_candidates").as(
+  const candidateWindow = Math.min(Math.max(limit * 10, 100), 250)
+  const sectionCandidates = database.$with("amendment_section_semantic_candidates").as(
     database
       .select({
         distance: sql<number>`${documentSectionEmbeddings.embedding} <=> ${documentEmbedding}`.as("distance"),
         documentId: billDocuments.id,
-        rowNumber:
-          sql<number>`row_number() over (partition by ${billDocuments.id} order by ${documentSectionEmbeddings.embedding} <=> ${documentEmbedding}, ${documentSections.id} asc)`.as(
-            "row_number"
-          ),
+        sectionId: documentSectionEmbeddings.sectionId,
         snippet: sql<string>`left(${documentSections.text}, 500)`.as("snippet")
       })
       .from(documentSectionEmbeddings)
@@ -246,11 +244,25 @@ export function buildSemanticAmendmentCandidateQueries(
       .innerJoin(bills, eq(bills.id, billDocuments.billId))
       .where(
         and(
-          documentSearchFilters(input),
-          eq(documentSectionEmbeddings.model, documentRoute.model),
-          eq(documentSectionEmbeddings.inputContract, documentRoute.embeddingInputContract)
+          sql`${documentSectionEmbeddings.documentClassification} = 'amendment' and ${documentSectionEmbeddings.model} = 'openai/text-embedding-3-small' and ${documentSectionEmbeddings.inputContract} = 'document-section-heading-text'`,
+          documentSearchFilters(input)
         )
       )
+      .orderBy(sql`${documentSectionEmbeddings.embedding} <=> ${documentEmbedding}`)
+      .limit(candidateWindow)
+  )
+  const documentCandidates = database.$with("amendment_document_semantic_candidates").as(
+    database
+      .select({
+        distance: sectionCandidates.distance,
+        documentId: sectionCandidates.documentId,
+        rowNumber:
+          sql<number>`row_number() over (partition by ${sectionCandidates.documentId} order by ${sectionCandidates.distance}, ${sectionCandidates.sectionId} asc)`.as(
+            "row_number"
+          ),
+        snippet: sectionCandidates.snippet
+      })
+      .from(sectionCandidates)
   )
   const structuredQuery = database
     .select({
@@ -270,7 +282,7 @@ export function buildSemanticAmendmentCandidateQueries(
     .orderBy(sql`${amendmentEmbeddings.embedding} <=> ${structuredEmbedding}`, asc(amendments.id))
     .limit(limit)
   const documentQuery = database
-    .with(documentCandidates)
+    .with(sectionCandidates, documentCandidates)
     .select({
       bill: bills,
       distance: documentCandidates.distance,

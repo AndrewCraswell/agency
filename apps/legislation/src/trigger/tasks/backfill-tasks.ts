@@ -262,6 +262,9 @@ const embeddingShardPayloadSchema = embeddingSyncPayloadSchema
 const embeddingFullSyncPayloadSchema = baseWorkerSchema
   .extend({ maxContinuations: z.number().int().positive().max(1_000).default(1_000) })
   .strict()
+const documentEmbeddingClassificationBackfillPayloadSchema = baseWorkerSchema
+  .extend({ batchSize: z.number().int().positive().max(50_000).default(10_000) })
+  .strict()
 
 export const FULL_EMBEDDING_PRODUCT_ORDER = ["amendments", "bills", "materials", "sections"] as const
 
@@ -598,6 +601,115 @@ export const embeddingIndexMaintenance = task({
   }
 })
 
+export function documentEmbeddingClassificationBackfillStatements() {
+  return {
+    updateBatch: `
+      with candidates as (
+        select embedding.ctid, embedding.section_id, embedding.model, embedding.input_contract
+        from legislation.document_section_embeddings embedding
+        where embedding.document_classification is null
+          and (
+            $2::text is null
+            or (embedding.section_id, embedding.model, embedding.input_contract) > ($2::text, $3::text, $4::text)
+          )
+        order by embedding.section_id, embedding.model, embedding.input_contract
+        limit $1
+        for update of embedding skip locked
+      ), updated as (
+        update legislation.document_section_embeddings embedding
+        set document_classification = document.classification
+        from candidates
+        join legislation.document_sections section on section.id = candidates.section_id
+        join legislation.bill_documents document on document.id = section.document_id
+        where embedding.ctid = candidates.ctid
+        returning embedding.section_id
+      )
+      select
+        (select count(*)::integer from updated) as updated_count,
+        candidates.section_id,
+        candidates.model,
+        candidates.input_contract
+      from candidates
+      order by candidates.section_id desc, candidates.model desc, candidates.input_contract desc
+      limit 1
+    `,
+    verify: `
+      select
+        count(*) filter (where embedding.document_classification is null)::integer as unclassified_count,
+        count(*) filter (
+          where embedding.document_classification is distinct from document.classification
+        )::integer as mismatch_count
+      from legislation.document_section_embeddings embedding
+      join legislation.document_sections section on section.id = embedding.section_id
+      join legislation.bill_documents document on document.id = section.document_id
+    `
+  } as const
+}
+
+export const documentEmbeddingClassificationBackfill = task({
+  id: "document-embedding-classification-backfill",
+  maxDuration: 86_400,
+  queue: { concurrencyLimit: 1, name: "legislation-embedding-index-maintenance" },
+  run: async (unparsedPayload: unknown) => {
+    const payload = documentEmbeddingClassificationBackfillPayloadSchema.parse(unparsedPayload)
+    const statements = documentEmbeddingClassificationBackfillStatements()
+    let classifiedCount = 0
+    await withDerivedBackfillDatabase("embeddings", async (_database, pool) => {
+      const client = await pool.connect()
+      let acquired = false
+      let cursor: { input_contract: string; model: string; section_id: string } | undefined
+      try {
+        await acquireIndexMaintenanceLock(client)
+        acquired = true
+        while (true) {
+          const result = await client.query<{
+            input_contract: string
+            model: string
+            section_id: string
+            updated_count: number
+          }>(statements.updateBatch, [
+            payload.batchSize,
+            cursor?.section_id ?? null,
+            cursor?.model ?? null,
+            cursor?.input_contract ?? null
+          ])
+          const next = result.rows[0]
+          if (next === undefined) {
+            break
+          }
+          const updated = next.updated_count
+          classifiedCount += updated
+          cursor = next
+          if (classifiedCount % 100_000 < payload.batchSize) {
+            logger.info("Document embedding classifications backfilled", { classifiedCount })
+          }
+        }
+        const verification = await client.query<{ mismatch_count: number; unclassified_count: number }>(
+          statements.verify
+        )
+        const counts = verification.rows[0]
+        if (counts === undefined || counts.unclassified_count !== 0 || counts.mismatch_count !== 0) {
+          throw new Error(
+            `Document embedding classification verification failed: ${counts?.unclassified_count ?? "unknown"} unclassified, ${counts?.mismatch_count ?? "unknown"} mismatched`
+          )
+        }
+        await client.query(
+          "alter table legislation.document_section_embeddings validate constraint document_section_embeddings_classification_check"
+        )
+      } finally {
+        try {
+          if (acquired) {
+            await releaseIndexMaintenanceLock(client)
+          }
+        } finally {
+          client.release()
+        }
+      }
+    })
+    return { classifiedCount, rebuildId: payload.rebuildId, status: "completed" as const }
+  }
+})
+
 const EMBEDDING_HNSW_INDEXES = [
   {
     create:
@@ -608,6 +720,11 @@ const EMBEDDING_HNSW_INDEXES = [
     create:
       "create index concurrently if not exists document_section_embeddings_hnsw_idx on legislation.document_section_embeddings using hnsw (embedding vector_cosine_ops)",
     name: "document_section_embeddings_hnsw_idx"
+  },
+  {
+    create:
+      "create index concurrently if not exists document_section_embeddings_amendment_hnsw_idx on legislation.document_section_embeddings using hnsw (embedding vector_cosine_ops) where document_classification = 'amendment' and model = 'openai/text-embedding-3-small' and input_contract = 'document-section-heading-text'",
+    name: "document_section_embeddings_amendment_hnsw_idx"
   },
   {
     create:

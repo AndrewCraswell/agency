@@ -243,11 +243,14 @@ describe("amendment semantic search query", () => {
     expect(structured.sql).toMatch(/1 - \("legislation"\."amendment_embeddings"\."embedding" <=> \$\d+::vector\)/)
     expect(structured.sql).toMatch(/order by "legislation"\."amendment_embeddings"\."embedding" <=> \$\d+::vector/)
     expect(document.sql).toMatch(
-      /"legislation"\."document_section_embeddings"\."embedding" <=> \$\d+::vector as "distance"/
+      /select "legislation"\."document_section_embeddings"\."embedding" <=> \$\d+::vector as "distance"/
     )
-    expect(document.sql).toMatch(
-      /row_number\(\) over \(partition by .*"document_section_embeddings"\."embedding" <=> \$\d+::vector/
-    )
+    expect(document.sql).toContain("\"document_classification\" = 'amendment'")
+    expect(document.sql).toContain("\"model\" = 'openai/text-embedding-3-small'")
+    expect(document.sql).toContain("\"input_contract\" = 'document-section-heading-text'")
+    expect(document.sql).toMatch(/order by "legislation"\."document_section_embeddings"\."embedding" <=> \$\d+::vector/)
+    expect(document.sql).toMatch(/limit \$\d+\)?, "amendment_document_semantic_candidates" as/)
+    expect(document.sql).toMatch(/row_number\(\) over \(partition by .* order by "distance"/)
     expect(typedVectorBindingCounts(structured, JSON.stringify(embedding))).toEqual({
       embeddingParameters: 2,
       typedVectorParameters: 2
@@ -256,6 +259,20 @@ describe("amendment semantic search query", () => {
       embeddingParameters: 2,
       typedVectorParameters: 2
     })
+  })
+
+  it("caps the HNSW section candidate window before document joins and ranking", () => {
+    const embedding = Array.from({ length: 1536 }, () => 0)
+    const { documentQuery } = buildSemanticAmendmentCandidateQueries(
+      database,
+      { limit: 20, mode: "semantic", query: "housing" },
+      embedding,
+      25
+    )
+    const rendered = documentQuery.toSQL()
+
+    expect(rendered.params).toContain(250)
+    expect(rendered.sql.indexOf("limit")).toBeLessThan(rendered.sql.indexOf("row_number()"))
   })
 })
 
