@@ -55,8 +55,10 @@ Production scale at diagnosis:
       availability error.
 - [x] Use semantic HNSW candidates as the bounded first stage for passage hybrid mode, then apply lexical scoring only
       to those section IDs.
-- [x] Apply the same semantic-first bounded candidate contract to hybrid amendment search, with independent candidate
-      sets for structured and document-backed amendments.
+- [ ] Add a product-specific document-backed-amendment embedding candidate store or index; the shared
+      document-section HNSW index cannot efficiently apply the joined document-classification filter across the
+      113,937 amendment documents in production.
+- [ ] Complete semantic-first bounded hybrid amendment search after the product-specific candidate path exists.
 - [ ] Push jurisdiction, session, bill, document classification, and processing-state filters ahead of ranking.
 - [ ] Keep lexical-only behavior deterministic and document when a scope is required.
 - [ ] Verify lexical, semantic, and hybrid searches against selective and intentionally broad queries.

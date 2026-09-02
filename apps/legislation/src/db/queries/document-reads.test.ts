@@ -153,6 +153,30 @@ describe("bill document reads", () => {
     expect(error).toMatchObject({ category: "unprocessable" })
   })
 
+  it("projects a processed document without an OCR run as not-required", () => {
+    const read = documentReadFromPersistence({
+      billId: "bill:us:119:hr:1",
+      classification: "version",
+      contentHash: "a".repeat(64),
+      contentType: "text/html",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      documentDate: "2026-01-03",
+      id: "document:us:119:hr:1:html",
+      ocrCompletedAt: null,
+      ocrPageCount: null,
+      ocrProvider: null,
+      ocrStatus: null,
+      processingErrorCategory: null,
+      processingStatus: "processed",
+      sourceUrl: "https://www.congress.gov/bill/119th-congress/house-bill/1/text",
+      title: "Introduced in House",
+      updatedAt: new Date("2026-01-03T10:00:00.000Z"),
+      versionCode: "ih"
+    })
+
+    expect(read.ocrStatus).toBe("not-required")
+  })
+
   it("fails closed when a persisted document date is not an ISO date", () => {
     expect(() =>
       documentReadFromPersistence({

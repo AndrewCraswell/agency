@@ -590,7 +590,7 @@ export function documentReadFromPersistence(row: DocumentPersistenceRead): Canon
     mimeType: row.contentType,
     ocrCompletedAt: row.ocrCompletedAt,
     ocrProvider: row.ocrProvider,
-    ocrStatus: ocrStatus(row.ocrStatus),
+    ocrStatus: ocrStatus(row.ocrStatus, row.processingStatus),
     pageCount: nullablePositiveInteger(row.ocrPageCount, "document pageCount"),
     processingStatus: processingStatus(row.processingStatus),
     sourceUrl: requiredText(row.sourceUrl, "document sourceUrl"),
@@ -726,7 +726,7 @@ function processingStatus(value: string): ProcessingStatus {
   }
 }
 
-function ocrStatus(value: string | null): OcrStatus {
+function ocrStatus(value: string | null, documentProcessingStatus: string): OcrStatus {
   switch (value) {
     case "failed":
     case "not-required":
@@ -736,6 +736,9 @@ function ocrStatus(value: string | null): OcrStatus {
     case "unsupported":
       return value
     default:
+      if (value === null && documentProcessingStatus === "processed") {
+        return "not-required"
+      }
       throw new LegislationError("unprocessable", "Document OCR status is unavailable")
   }
 }
