@@ -605,9 +605,17 @@ export function documentEmbeddingClassificationBackfillStatements() {
   return {
     updateBatch: `
       with candidates as (
-        select embedding.ctid, embedding.section_id, embedding.model, embedding.input_contract
+        select
+          embedding.ctid,
+          embedding.section_id,
+          embedding.model,
+          embedding.input_contract,
+          document.classification
         from legislation.document_section_embeddings embedding
+        join legislation.document_sections section on section.id = embedding.section_id
+        join legislation.bill_documents document on document.id = section.document_id
         where embedding.document_classification is null
+          and document.classification = 'amendment'
           and (
             $2::text is null
             or (embedding.section_id, embedding.model, embedding.input_contract) > ($2::text, $3::text, $4::text)
@@ -617,10 +625,8 @@ export function documentEmbeddingClassificationBackfillStatements() {
         for update of embedding skip locked
       ), updated as (
         update legislation.document_section_embeddings embedding
-        set document_classification = document.classification
+        set document_classification = candidates.classification
         from candidates
-        join legislation.document_sections section on section.id = candidates.section_id
-        join legislation.bill_documents document on document.id = section.document_id
         where embedding.ctid = candidates.ctid
         returning embedding.section_id
       )
@@ -642,6 +648,7 @@ export function documentEmbeddingClassificationBackfillStatements() {
       from legislation.document_section_embeddings embedding
       join legislation.document_sections section on section.id = embedding.section_id
       join legislation.bill_documents document on document.id = section.document_id
+      where document.classification = 'amendment'
     `
   } as const
 }

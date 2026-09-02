@@ -44,10 +44,12 @@ describe("derived backfill task payload", () => {
     const statements = documentEmbeddingClassificationBackfillStatements()
 
     expect(statements.updateBatch).toContain("where embedding.document_classification is null")
+    expect(statements.updateBatch).toContain("document.classification = 'amendment'")
     expect(statements.updateBatch).toContain("limit $1")
     expect(statements.updateBatch).toContain("(embedding.section_id, embedding.model, embedding.input_contract) >")
     expect(statements.updateBatch).toContain("for update of embedding skip locked")
     expect(statements.verify).toContain("embedding.document_classification is distinct from document.classification")
+    expect(statements.verify).toContain("where document.classification = 'amendment'")
   })
 
   it("keeps material children inside the renewable ingestion lease", () => {
