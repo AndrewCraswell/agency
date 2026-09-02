@@ -1362,7 +1362,11 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(second).toMatchObject({ complete: true, cursor: "", embedded: 1, scanned: 1 })
 
     const embeddedSections = await database
-      .select({ documentId: schema.documentSections.documentId, sectionId: schema.documentSectionEmbeddings.sectionId })
+      .select({
+        documentClassification: schema.documentSectionEmbeddings.documentClassification,
+        documentId: schema.documentSections.documentId,
+        sectionId: schema.documentSectionEmbeddings.sectionId
+      })
       .from(schema.documentSectionEmbeddings)
       .innerJoin(schema.documentSections, eq(schema.documentSections.id, schema.documentSectionEmbeddings.sectionId))
       .where(eq(schema.documentSections.documentId, targetDocumentId))
@@ -1375,6 +1379,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(embeddedSections.map((section) => section.sectionId).sort()).toEqual(
       replacementSections.map((section) => section.id).sort()
     )
+    expect(embeddedSections.every((section) => section.documentClassification === "version")).toBe(true)
     expect(unrelatedEmbeddings).toEqual([])
     await expect(
       Promise.all([

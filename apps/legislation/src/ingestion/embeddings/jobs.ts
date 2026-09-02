@@ -357,6 +357,7 @@ export async function embedDocumentSections(
   const records = await database
     .select({
       documentId: documentSections.documentId,
+      documentClassification: billDocuments.classification,
       embedding: embeddingPresence(documentSectionEmbeddings.embedding),
       embeddingInputContract: documentSectionEmbeddings.inputContract,
       embeddingInputHash: documentSectionEmbeddings.inputHash,
@@ -404,6 +405,7 @@ export async function embedDocumentSections(
       .values(
         embeddedRecords.map(({ candidate, embedding }) => ({
           dimensions: route.dimensions,
+          documentClassification: candidate.documentClassification,
           embedding,
           inputContract: route.embeddingInputContract,
           inputHash: candidate.inputHash,
@@ -415,6 +417,7 @@ export async function embedDocumentSections(
       .onConflictDoUpdate({
         set: {
           dimensions: route.dimensions,
+          documentClassification: sql`excluded.document_classification`,
           embedding: sql`excluded.embedding`,
           inputHash: sql`excluded.input_hash`,
           rolloutId: sql`excluded.rollout_id`,

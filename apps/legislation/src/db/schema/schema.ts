@@ -1671,6 +1671,7 @@ export const documentSectionEmbeddings = legislationSchema.table(
       .references(() => documentSections.id, { onDelete: "cascade" }),
     model: text("model").notNull(),
     dimensions: integer("dimensions").notNull(),
+    documentClassification: text("document_classification"),
     inputContract: text("input_contract").notNull(),
     inputHash: char("input_hash", { length: 64 }).notNull(),
     embedding: vector("embedding", { dimensions: 1536 }).notNull(),
@@ -1681,6 +1682,10 @@ export const documentSectionEmbeddings = legislationSchema.table(
   (table) => [
     primaryKey({ columns: [table.sectionId, table.model, table.inputContract] }),
     check("document_section_embeddings_dimensions_check", sql`${table.dimensions} = 1536`),
+    check(
+      "document_section_embeddings_classification_check",
+      sql`${table.documentClassification} is null or ${table.documentClassification} in ('amendment', 'analysis', 'fiscal-note', 'supplemental', 'version')`
+    ),
     check("document_section_embeddings_hash_check", sql`${table.inputHash} ~ '^[0-9a-f]{64}$'`),
     check("document_section_embeddings_model_check", sql`length(${table.model}) > 0`),
     check("document_section_embeddings_contract_check", sql`length(${table.inputContract}) > 0`),

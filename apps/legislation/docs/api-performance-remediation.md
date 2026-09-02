@@ -58,6 +58,15 @@ Production scale at diagnosis:
 - [ ] Add a product-specific document-backed-amendment embedding candidate store or index; the shared
       document-section HNSW index cannot efficiently apply the joined document-classification filter across the
       113,937 amendment documents in production.
+- [x] Add a nullable `document_classification` discriminator to section embeddings and populate it on every new or
+      refreshed embedding write without changing the live search query.
+- [ ] Apply migration `0045_amendment_document_embedding_classification` before deploying discriminator-aware writes.
+- [ ] Backfill the discriminator in bounded, restartable batches from `document_sections` and `bill_documents`; verify
+      zero mismatches and zero remaining nulls for the active document embedding route.
+- [ ] Build an amendment-only partial HNSW index concurrently, analyze the embedding table, and prove the production
+      plan selects that index inside the 15-second statement budget.
+- [ ] Validate the classification constraint only after the backfill is complete, then make the discriminator required
+      in a later migration.
 - [ ] Complete semantic-first bounded hybrid amendment search after the product-specific candidate path exists.
 - [ ] Push jurisdiction, session, bill, document classification, and processing-state filters ahead of ranking.
 - [ ] Keep lexical-only behavior deterministic and document when a scope is required.
