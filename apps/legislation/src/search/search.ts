@@ -460,7 +460,7 @@ async function hydrateLexicalBillCandidates(
   const latestActionRows = await database
     .select({
       billId: billActions.billId,
-      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`.mapWith(billActions.actionAt)
     })
     .from(billActions)
     .where(inArray(billActions.billId, billIds))
@@ -741,7 +741,7 @@ function passageSelection(rank: SQL<number>, snippet: SQL<string | null>, distan
       select max(${billActionTimestamp()})
       from ${billActions}
       where ${billActions.billId} = ${bills.id}
-    )`,
+    )`.mapWith(billActions.actionAt),
     rank,
     rerankText: sql<string>`left(concat_ws(E'\\n', ${documentSections.heading}, ${documentSections.text}), 4000)`,
     section: {
@@ -839,7 +839,9 @@ export async function semanticBillSearch(
   const distance = sql<number>`${billEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const latestActions = database
     .select({
-      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`.as("latest_action_at")
+      latestActionAt: sql<Date | null>`max(${billActionTimestamp()})`
+        .mapWith(billActions.actionAt)
+        .as("latest_action_at")
     })
     .from(billActions)
     .where(eq(billActions.billId, bills.id))
