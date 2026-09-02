@@ -29,11 +29,11 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `9879d32` (source-backed Congress member hydration plus bounded document-section embedding repair) |
-| Deployment | `fe2db27e-4229-4fb4-9afd-98911fd6941d` |
+| Source snapshot commit | `8150f36` (API browse indexes plus aligned Railway frozen-install configuration) |
+| Deployment | `5c5ed557-fcff-40e4-bce7-2e473423b2c0` |
 | Deployment status | `SUCCESS` |
-| Image | `sha256:acf825164bfaaa08aed2d19885d1c6a1885cc34f33523a82e0be3170bba7b544` |
-| Previous rollback artifact | `bb0d1d62-742a-48a6-a261-fc304acc12e7` (superseded and `REMOVED`; redeploy its immutable source/image only if Railway supports it) |
+| Image | `sha256:06a90f8bc15a884dd7458c4d752c0031bca8ad6675f4b310ca30eca8748006f7` |
+| Previous rollback artifact | `fe2db27e-4229-4fb4-9afd-98911fd6941d` (superseded and `REMOVED`; redeploy its immutable source/image only if Railway supports it) |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
@@ -48,12 +48,13 @@ described as final API cutover until the remaining migration gates pass.
 | Webhook verification smoke | Receiver deployment `ec110122-dc9a-4d03-aa0f-7f782739712c` resolved to public IP `69.46.46.106`; the signed challenge returned `200`, follow-up detail was `active`, and a redacted receiver acceptance receipt was observed. The cancellation fixture was cancelled afterward. Receiver service `66ac14e0-8726-40a0-a70b-db534b96c92f` was deleted; receiver test tool commit `553578e`. |
 | Next API database safety | PostgreSQL `statement_timeout` is set to `15s` for API requests |
 | Vote/change production smoke | The authenticated `vote-change` profile passed all 10 checks with no blocked, failed, or skipped checks. Vote collection/detail/batch used `vote:congress:house-119-2-74`; change collection/detail used a genuine provenance-complete event created by the same standard ingestion run. |
-| Search/diff/research production smoke | Deliberately paused while the document HNSW build consumes database I/O; the latest read-only sample was `437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Resume only after the index work is safe to exercise. |
+| Search/diff/research production smoke | No HNSW build remains active and all four HNSW indexes are valid and ready. Browse smoke is complete; lexical, semantic, hybrid, document-difference, and research smoke remains pending behind the query-remediation checklist. |
 
 This is the current verified unified deployment from `apps/legislation`. The deleted `legislation-api` service is
 historical evidence only; it is not a current service or a rollback target. The successful unified verification,
 production build, and foundation smoke prove the consolidated runtime and operational boundary. Live authenticated
-probes are recorded above; full expensive smoke remains deliberately paused while HNSW construction consumes database I/O.
+probes are recorded above; the remaining expensive smoke now depends on bounded search-query remediation rather than HNSW
+construction.
 
 The 14 subscription/webhook handlers are deployed, and Railway has separate WorkOS M2M and AuthKit session authorities plus
 both application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
@@ -61,9 +62,8 @@ the seven subscription and all seven webhook operations are **Done** after authe
 operations, release state is 59 **Done**, 7 **In progress**, and 22 **Blocked** by named production prerequisites.
 The remaining functional promotion gate covers the seven search, document-difference, and research operations plus each
 named production-fixture blocker.
-The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger; the Alaska canary remains deferred while
-the active document HNSW build continues to consume database I/O. Its latest 2026-08-26 read-only sample was
-`437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Do not claim representative lookup completion from configuration alone.
+The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger. The Alaska canary remains a separate
+production-data gate; no HNSW build is active. Do not claim representative lookup completion from configuration alone.
 Application-level API and MCP rate limiting is out of scope and intentionally absent. The application has no Redis
 limiter dependency, limiter configuration, or Railway Redis service. Provider-specific ingestion concurrency, retry,
 and `429` handling protect upstream data sources and remain separate from client-facing API throttling.
@@ -169,25 +169,25 @@ them Done until the fixture or OpenStates production-canary prerequisite is reso
 | Historical handler coverage at `0a2748b` | 88 of 88 public operations had explicit deployed Next.js handlers. At that snapshot, 53 routes had Done release credit, 25 were blocked by named production prerequisites, and 10 awaited their documented release gates. Current 59/7/22 accounting is recorded above. |
 | Deployment | Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5`; terminal `SUCCESS`. |
 | Operational smoke | Production `GET /health` and `GET /ready` returned `200`. |
-| Production endpoint smoke | Deliberately paused. Active HNSW index construction consumes database I/O, so the full expensive lexical, semantic, hybrid, diff, and research probes must wait. |
-| Route state | All seven routes remain **In progress**. Do not mark them Done until cumulative production smoke passes after the index pressure is relieved. |
+| Production endpoint smoke | Browse smoke passed after the ordered-index release. Lexical, semantic, hybrid, diff, and research probes remain pending behind the query-remediation checklist. |
+| Route state | All seven routes remain **In progress**. Do not mark them Done until cumulative production smoke passes. |
 
 The subsequent unified-runtime source snapshot `3a498d1` deployed as
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS` and superseded
 `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. Both are historical milestones and are now `REMOVED`; neither is a current
-rollback target. Current-release evidence is source `9879d32` deployed as
-`fe2db27e-4229-4fb4-9afd-98911fd6941d`; its immediately preceding successful deployment
-`bb0d1d62-742a-48a6-a261-fc304acc12e7` is also `REMOVED`, as recorded above.
+rollback target. Current-release evidence is source `8150f36` deployed as
+`5c5ed557-fcff-40e4-bce7-2e473423b2c0`; its immediately preceding successful deployment
+`fe2db27e-4229-4fb4-9afd-98911fd6941d` is `REMOVED`, as recorded above.
 
-The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
-pressure, then run the complete search, document-difference, and research production smoke with audited fixtures. Webhook
+The old `legislation-api` service remains deleted. The next action is to bound the remaining lexical and hybrid query
+families, then run the complete search, document-difference, and research production smoke with audited fixtures. Webhook
 verification evidence is already recorded above; update this record with the remaining smoke results.
 
 ## Authenticated API release evidence
 
-The current `legislation-web` deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` is sourced from snapshot `9879d32`
+The current `legislation-web` deployment `5c5ed557-fcff-40e4-bce7-2e473423b2c0` is sourced from snapshot `8150f36`
 and reached terminal `SUCCESS`; health and readiness returned `200`, with an idle, unsaturated database pool. The prior
-deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` is superseded and `REMOVED`. The release uses separate WorkOS
+deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` is superseded and `REMOVED`. The release uses separate WorkOS
 authorities for M2M API tokens and AuthKit user-session tokens. Prior bounded remote probes returned
 `GET /health` `200` in `361ms` with `status`, `GET /ready` `200` in `179ms` with `databasePool/status`, an anonymous
 protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` in `813ms` with
@@ -198,14 +198,15 @@ table, and the webhook lifecycle smoke passed all 14 checks: list `200`, create/
 detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, post-rotate detail `200`, delete/replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API sets PostgreSQL
 `statement_timeout` to `15s`. These probes promote the six webhook operations covered by the lifecycle smoke plus the verified
-challenge operation; the 59/7/22 endpoint ledger still has the full authenticated cumulative smoke pending, and expensive smoke
-is paused during active HNSW I/O.
+challenge operation; the 59/7/22 endpoint ledger still has the full authenticated cumulative smoke pending. The browse
+index release additionally returned authenticated canonical one-item pages for bills in 609/158/77 ms and amendments in
+345/108/88 ms, with correlation-ID echo on all six requests.
 
 ## Next safe actions
 
-1. Relieve or schedule around active HNSW index pressure, then run the pending search, document-difference, and research
+1. Complete the bounded lexical and hybrid query work, then run the pending search, document-difference, and research
    production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
-2. After HNSW is clear, run
+2. Run
    `congress:entities --start-congress 119 --end-congress 119`, verify the canonical person/profile/jurisdiction/term
    predicates, and smoke person detail and person-term detail. Federal organization and membership detail remain blocked
    pending a complete current GovInfo committee-data ingestion and fresh smoke. No roster command exists. If a canonical
@@ -225,8 +226,8 @@ is paused during active HNSW I/O.
 
 ## Rollback
 
-The current deployment is `fe2db27e-4229-4fb4-9afd-98911fd6941d`. The preceding deployment
-`bb0d1d62-742a-48a6-a261-fc304acc12e7` was superseded and removed; it is not an active rollback deployment. If Railway
+The current deployment is `5c5ed557-fcff-40e4-bce7-2e473423b2c0`. The preceding deployment
+`fe2db27e-4229-4fb4-9afd-98911fd6941d` was superseded and removed; it is not an active rollback deployment. If Railway
 supports redeploying its immutable source/image, it may be used only after verifying the resulting deployment. After each
 subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains available for
 redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a

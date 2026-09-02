@@ -6,6 +6,7 @@ import {
   decodeSearchCursor,
   embeddingLiteral,
   encodeSearchCursor,
+  isBillIdentifierQuery,
   paginateCappedSearchRows,
   paginateSearchDatabaseRows,
   paginateSearchRows,
@@ -147,33 +148,50 @@ describe("lexical bill candidate query", () => {
     return dialect.sqlToQuery(buildLexicalBillSearchQuery(input, input.query, 25, 0))
   }
 
-  it("covers identifiers, sponsor names, and processed version sections without broadening non-version documents", () => {
+  it("uses bounded bill text first and gates sponsor and processed-version fallbacks on primary underfill", () => {
     const generated = renderBillSearch({ query: "appropriations act" }).sql
 
-    expect(generated).toContain('to_tsvector(\'english\', "legislation"."bills"."identifier")')
+    expect(generated).not.toContain('to_tsvector(\'english\', "legislation"."bills"."identifier")')
     expect(generated).toContain('"legislation"."bill_sponsors"."name"')
     expect(generated).toContain('"legislation"."document_sections"."search_vector"')
     expect(generated).toContain('"legislation"."bill_documents"."classification" =')
     expect(generated).toContain('"legislation"."bill_documents"."processing_status" =')
     expect(generated).toContain("with bill_text_matches as")
     expect(generated).toContain("identifier_matches as")
+    expect(generated).toContain("primary_sources as")
+    expect(generated).toContain("primary_matches as")
+    expect(generated).toContain("primary_count as")
     expect(generated).toContain("candidate_sources as")
     expect(generated).toContain("candidate_ids as")
     expect(generated).toContain("sponsor_matches as")
     expect(generated).toContain("version_matches as")
-    expect(generated).not.toContain("left join lateral")
+    expect(generated.match(/cross join lateral/g)).toHaveLength(2)
+    expect(generated.match(/limit greatest/g)).toHaveLength(2)
+    expect(generated).toContain("primary_count.count")
     expect(generated).toContain("as sponsor_rank")
     expect(generated).toContain("as version_rank")
-    expect(generated.match(/as materialized/g)).toHaveLength(4)
-    expect(generated.match(/limit \$/g)).toHaveLength(5)
+    expect(generated.match(/as materialized/g)).toHaveLength(5)
     expect(generated).not.toContain("sponsor_snippet")
     expect(generated).not.toContain("version_snippet")
+  })
+
+  it("uses a case-insensitive indexed equality candidate for identifier-shaped input", () => {
+    const identifier = renderBillSearch({ query: "H.R. 1" }).sql
+    const prose = renderBillSearch({ query: "appropriations act" }).sql
+
+    expect(isBillIdentifierQuery("H.R. 1")).toBe(true)
+    expect(isBillIdentifierQuery("HB 12A")).toBe(true)
+    expect(isBillIdentifierQuery("appropriations act")).toBe(false)
+    expect(identifier).toContain('lower("legislation"."bills"."identifier") = lower(')
+    expect(prose).toContain("where false")
   })
 
   it("deduplicates all match sources before applying a stable rank and SQL cursor", () => {
     const rendered = dialect.sqlToQuery(buildLexicalBillSearchQuery({ query: "HB 1" }, "HB 1", 2, 2))
 
     expect(rendered.sql).toContain("union all")
+    expect(rendered.sql).toContain("from primary_sources")
+    expect(rendered.sql).toContain("from primary_matches")
     expect(rendered.sql).toContain("from candidate_sources")
     expect(rendered.sql).toContain("group by id")
     expect(rendered.sql).toContain('order by "rank" desc, "id" asc')
@@ -200,10 +218,10 @@ describe("lexical bill candidate query", () => {
   })
 
   it("preserves the established lexical score inputs after ranking candidates", () => {
-    const generated = renderBillSearch({ query: "appropriations act" }).sql
+    const generated = renderBillSearch({ query: "H.R. 1" }).sql
 
     expect(generated).toContain('ts_rank_cd("legislation"."bills"."search_vector"')
-    expect(generated).toContain('case when to_tsvector(\'english\', "legislation"."bills"."identifier")')
+    expect(generated).toContain('case when lower("legislation"."bills"."identifier") = lower(')
     expect(generated).toContain("coalesce(sponsor_matches.sponsor_rank, 0)")
     expect(generated).toContain("coalesce(version_matches.version_rank, 0)")
   })

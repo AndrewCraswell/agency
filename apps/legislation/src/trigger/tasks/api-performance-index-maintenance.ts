@@ -13,6 +13,11 @@ const apiPerformanceIndexMaintenancePayloadSchema = z
 const API_PERFORMANCE_INDEXES = [
   {
     create:
+      "create index concurrently if not exists bills_identifier_lower_idx on legislation.bills (lower(identifier), id asc)",
+    name: "bills_identifier_lower_idx"
+  },
+  {
+    create:
       "create index concurrently if not exists bills_global_introduced_idx on legislation.bills (introduced_at desc nulls first, id asc)",
     name: "bills_global_introduced_idx"
   },

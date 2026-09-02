@@ -181,6 +181,7 @@ export const bills = legislationSchema.table(
     check("bills_identifier_check", sql`length(${table.identifier}) > 0`),
     check("bills_title_check", sql`length(${table.title}) > 0`),
     uniqueIndex("bills_identifier_uidx").on(table.jurisdictionId, table.sessionId, table.identifier),
+    index("bills_identifier_lower_idx").on(sql`lower(${table.identifier})`, table.id),
     index("bills_status_idx").on(table.jurisdictionId, table.sessionId, table.status),
     index("bills_introduced_idx").on(table.jurisdictionId, table.introducedAt),
     index("bills_global_introduced_idx").on(table.introducedAt.desc().nullsFirst(), table.id.asc()),

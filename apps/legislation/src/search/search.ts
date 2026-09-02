@@ -284,7 +284,9 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
   const searchQuery = sql`websearch_to_tsquery('english', ${query})`
   const candidateLimit = Math.min(Math.max(limit + offset + 1, 25), LEXICAL_BILL_CANDIDATE_LIMIT)
   const billTextMatches = sql<boolean>`${bills.searchVector} @@ ${searchQuery}`
-  const identifierMatches = sql<boolean>`to_tsvector('english', ${bills.identifier}) @@ ${searchQuery}`
+  const identifierMatches = isBillIdentifierQuery(query)
+    ? sql<boolean>`lower(${bills.identifier}) = lower(${query})`
+    : sql<boolean>`false`
   const titleMatches = sql<boolean>`to_tsvector('english', ${bills.title}) @@ ${searchQuery}`
   const abstractMatches = sql<boolean>`to_tsvector('english', coalesce(${bills.summary}, '')) @@ ${searchQuery}`
   const subjectMatches = sql<boolean>`to_tsvector('english', array_to_string(${bills.subjects}, ' ')) @@ ${searchQuery}`
@@ -312,35 +314,56 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
       order by ${bills.id} asc
       limit ${candidateLimit}
     ),
-    sponsor_matches as materialized (
-      select ${billSponsors.billId} as bill_id, ${sponsorRank} as sponsor_rank
-      from ${billSponsors}
-      inner join ${bills} on ${bills.id} = ${billSponsors.billId}
-      where
-        ${sponsorSearchVector} @@ ${searchQuery}
-        and ${and(...billFilters(input)) ?? sql`true`}
-      group by ${billSponsors.billId}
-      order by ${sponsorRank} desc, ${billSponsors.billId} asc
-      limit ${candidateLimit}
-    ),
-    version_matches as materialized (
-      select ${billDocuments.billId} as bill_id, ${versionRank} as version_rank
-      from ${documentSections}
-      inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
-      inner join ${bills} on ${bills.id} = ${billDocuments.billId}
-      where
-        ${billDocuments.classification} = 'version'
-        and ${billDocuments.processingStatus} = 'processed'
-        and ${documentSections.searchVector} @@ ${searchQuery}
-        and ${and(...billFilters(input)) ?? sql`true`}
-      group by ${billDocuments.billId}
-      order by ${versionRank} desc, ${billDocuments.billId} asc
-      limit ${candidateLimit}
-    ),
-    candidate_sources as (
+    primary_sources as (
       select id from bill_text_matches
       union all
       select id from identifier_matches
+    ),
+    primary_matches as materialized (
+      select id
+      from primary_sources
+      group by id
+      limit ${candidateLimit}
+    ),
+    primary_count as (
+      select count(*)::integer as count
+      from primary_matches
+    ),
+    sponsor_matches as materialized (
+      select sponsor_fallback.*
+      from primary_count
+      cross join lateral (
+        select ${billSponsors.billId} as bill_id, ${sponsorRank} as sponsor_rank
+        from ${billSponsors}
+        inner join ${bills} on ${bills.id} = ${billSponsors.billId}
+        where
+          ${sponsorSearchVector} @@ ${searchQuery}
+          and ${and(...billFilters(input)) ?? sql`true`}
+        group by ${billSponsors.billId}
+        order by ${sponsorRank} desc, ${billSponsors.billId} asc
+        limit greatest(${candidateLimit} - primary_count.count, 0)
+      ) sponsor_fallback
+    ),
+    version_matches as materialized (
+      select version_fallback.*
+      from primary_count
+      cross join lateral (
+        select ${billDocuments.billId} as bill_id, ${versionRank} as version_rank
+        from ${documentSections}
+        inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
+        inner join ${bills} on ${bills.id} = ${billDocuments.billId}
+        where
+          ${billDocuments.classification} = 'version'
+          and ${billDocuments.processingStatus} = 'processed'
+          and ${documentSections.searchVector} @@ ${searchQuery}
+          and ${and(...billFilters(input)) ?? sql`true`}
+        group by ${billDocuments.billId}
+        order by ${versionRank} desc, ${billDocuments.billId} asc
+        limit greatest(${candidateLimit} - primary_count.count, 0)
+      ) version_fallback
+    ),
+    candidate_sources as (
+      select id from primary_matches
       union all
       select bill_id as id from sponsor_matches
       union all
@@ -373,6 +396,10 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
     limit ${limit + 1}
     offset ${offset}
   `
+}
+
+export function isBillIdentifierQuery(query: string): boolean {
+  return /^[a-z][a-z. -]*\d+[a-z]?$/i.test(query.trim())
 }
 
 function billSearchMatchedFields(value: {
