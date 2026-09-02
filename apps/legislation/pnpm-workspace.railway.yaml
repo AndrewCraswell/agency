@@ -7,6 +7,9 @@ packages:
 # repository while excluding unrelated workspace roots.
 nodeLinker: isolated
 packageExtensions:
+  "@tscircuit/props@0.0.618":
+    dependencies:
+      zod: 3.25.76
   "circuit-json@0.0.465":
     dependencies:
       zod: 3.25.76
