@@ -252,6 +252,7 @@ beforeAll(async () => {
     const url = new URL(request.url, "http://127.0.0.1")
     const correlationId = request.headers["x-correlation-id"] ?? "generated-correlation-id"
     requests.push({
+      authorization: request.headers.authorization,
       body: await body(request),
       correlationId,
       ifNoneMatch: request.headers["if-none-match"],
@@ -1342,9 +1343,10 @@ describe("search and research deployed smoke profile", () => {
   it("cumulatively checks earlier profiles and exactly seven configured search and research POST operations", async () => {
     requests.length = 0
     addMeetingsCalendarsNotFoundFixtures()
+    const token = "private-foundation-smoke-token"
     let result
     try {
-      result = await runSmoke(searchResearchEnvironment())
+      result = await runSmoke(searchResearchEnvironment({ LEGISLATION_WEB_SMOKE_TOKEN: token }))
     } finally {
       meetingsCalendarsNotFoundPaths.clear()
     }
@@ -1382,8 +1384,19 @@ describe("search and research deployed smoke profile", () => {
       ].sort()
     )
     expect(searchResearch.every((request) => request.body !== undefined)).toBe(true)
+    expect(
+      requests
+        .filter((request) => request.pathname.startsWith("/api/"))
+        .every((request) => request.authorization === `Bearer ${token}`)
+    ).toBe(true)
+    expect(
+      requests
+        .filter((request) => !request.pathname.startsWith("/api/"))
+        .every((request) => request.authorization === undefined)
+    ).toBe(true)
     expect(JSON.stringify(result)).not.toContain("private")
     expect(JSON.stringify(result)).not.toContain("fixture query")
+    expect(JSON.stringify(result)).not.toContain(token)
   })
 
   it("reports every unconfigured search and research input as a named skip without requesting it", async () => {

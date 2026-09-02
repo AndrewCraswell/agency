@@ -58,8 +58,14 @@ The profile is cumulative for every enabled route block.
 
 ```powershell
 $env:LEGISLATION_WEB_SMOKE_BASE_URL = 'https://legislation-web-production-b024.up.railway.app'
+$env:LEGISLATION_WEB_SMOKE_TOKEN = Read-Host 'API bearer token'
 pnpm --filter legislation smoke:foundation
 ```
+
+`LEGISLATION_WEB_SMOKE_TOKEN` is optional for an isolated runtime with authentication disabled and required when the
+target uses `AUTH_MODE=workos`. The harness sends it only as an in-memory `Authorization: Bearer` header for `/api/**`
+requests. It does not send the token to `/health`, `/ready`, or the homepage and does not include it in reports or
+diagnostics.
 
 For search, document-difference, and research smoke, configure the audited query, expected-outcome, bill, document,
 and research-fixture variables. Do not run that profile while HNSW index pressure is active. The harness keeps fixture

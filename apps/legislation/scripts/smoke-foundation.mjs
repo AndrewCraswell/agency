@@ -3,6 +3,16 @@ if (baseUrl === undefined || baseUrl === "") {
   throw new Error("LEGISLATION_WEB_SMOKE_BASE_URL is required")
 }
 
+const configuredApiToken = process.env.LEGISLATION_WEB_SMOKE_TOKEN?.trim()
+const apiToken = configuredApiToken === undefined || configuredApiToken === "" ? undefined : configuredApiToken
+if (
+  apiToken !== undefined &&
+  (apiToken.length > 8_192 ||
+    [...apiToken].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F"))
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_TOKEN must be a bearer token of at most 8192 safe characters")
+}
+
 const configuredTimeoutMs = process.env.LEGISLATION_WEB_SMOKE_TIMEOUT_MS?.trim()
 const timeoutMs = configuredTimeoutMs === undefined || configuredTimeoutMs === "" ? 10_000 : Number(configuredTimeoutMs)
 if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 30_000) {
@@ -230,8 +240,12 @@ async function smokeFetch(url, options = {}) {
   const { diagnosticName, ...fetchOptions } = options
   const method = fetchOptions.method ?? "GET"
   const name = diagnosticName ?? requestName(url, method)
+  const headers = new Headers(fetchOptions.headers)
+  if (apiToken !== undefined && url.pathname.startsWith("/api/")) {
+    headers.set("authorization", `Bearer ${apiToken}`)
+  }
   try {
-    return await fetch(url, { ...fetchOptions, signal: AbortSignal.timeout(timeoutMs) })
+    return await fetch(url, { ...fetchOptions, headers, signal: AbortSignal.timeout(timeoutMs) })
   } catch (error) {
     const reason = error instanceof Error ? error.name : "request failure"
     throw new Error(`${name} failed within ${timeoutMs}ms (${reason})`)
