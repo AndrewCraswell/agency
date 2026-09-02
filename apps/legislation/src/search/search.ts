@@ -762,30 +762,14 @@ function passageSelection(rank: SQL<number>, snippet: SQL<string | null>, distan
 
 export async function lexicalPassageSearch(
   database: LegislationDatabase,
-  input: PassageSearchInput
+  input: PassageSearchInput,
+  candidateSectionIds?: readonly string[]
 ): Promise<SearchPage<PassageSearchCandidate>> {
-  const { limit, offset, query } = validatePassageSearchInput(input)
-  const searchQuery = sql`websearch_to_tsquery('english', ${query})`
-  const rank = sql<number>`ts_rank_cd(${documentSections.searchVector}, ${searchQuery})`
-  const headingMatched = sql<boolean>`coalesce(to_tsvector('english', coalesce(${documentSections.heading}, '')) @@ ${searchQuery}, false)`
-  const snippet = sql<
-    string | null
-  >`ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=3, MaxWords=45, MinWords=12')`
-  const rows = await database
-    .select({ ...passageSelection(rank, snippet), headingMatched })
-    .from(documentSections)
-    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
-    .innerJoin(bills, eq(billDocuments.billId, bills.id))
-    .where(
-      and(
-        sql`${documentSections.searchVector} @@ ${searchQuery}`,
-        eq(billDocuments.processingStatus, "processed"),
-        ...passageFilters(input)
-      )
-    )
-    .orderBy(desc(rank), asc(documentSections.id))
-    .limit(limit + 1)
-    .offset(offset)
+  if (candidateSectionIds?.length === 0) {
+    return { items: [], nextCursor: undefined, truncated: false }
+  }
+  const { limit, offset } = validatePassageSearchInput(input)
+  const rows = await buildLexicalPassageSearchQuery(database, input, candidateSectionIds)
   return {
     items: rows.slice(0, limit).map(({ headingMatched: matchedHeading, ...row }) => ({
       ...row,
@@ -798,6 +782,36 @@ export async function lexicalPassageSearch(
     nextCursor: rows.length > limit ? encodePassageSearchCursor(offset + limit, input) : undefined,
     truncated: rows.length > limit
   }
+}
+
+export function buildLexicalPassageSearchQuery(
+  database: LegislationDatabase,
+  input: PassageSearchInput,
+  candidateSectionIds?: readonly string[]
+) {
+  const { limit, offset, query } = validatePassageSearchInput(input)
+  const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+  const rank = sql<number>`ts_rank_cd(${documentSections.searchVector}, ${searchQuery})`
+  const headingMatched = sql<boolean>`coalesce(to_tsvector('english', coalesce(${documentSections.heading}, '')) @@ ${searchQuery}, false)`
+  const snippet = sql<
+    string | null
+  >`ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=3, MaxWords=45, MinWords=12')`
+  return database
+    .select({ ...passageSelection(rank, snippet), headingMatched })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+    .innerJoin(bills, eq(billDocuments.billId, bills.id))
+    .where(
+      and(
+        sql`${documentSections.searchVector} @@ ${searchQuery}`,
+        candidateSectionIds === undefined ? undefined : inArray(documentSections.id, candidateSectionIds),
+        eq(billDocuments.processingStatus, "processed"),
+        ...passageFilters(input)
+      )
+    )
+    .orderBy(desc(rank), asc(documentSections.id))
+    .limit(limit + 1)
+    .offset(offset)
 }
 
 export function embeddingLiteral(embedding: number[], dimensions: number): SQL {

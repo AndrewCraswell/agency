@@ -53,7 +53,9 @@ Production scale at diagnosis:
 - [ ] Detect lexical queries whose estimated match set is too broad to rank safely within the API budget.
 - [ ] Return a documented `query_too_broad` error for unscoped pathological lexical searches rather than a database
       availability error.
-- [ ] Use semantic HNSW candidates as the bounded first stage for hybrid mode, then apply lexical scoring to that set.
+- [x] Use semantic HNSW candidates as the bounded first stage for passage hybrid mode, then apply lexical scoring only
+      to those section IDs.
+- [ ] Apply the same semantic-first bounded candidate contract to hybrid amendment search.
 - [ ] Push jurisdiction, session, bill, document classification, and processing-state filters ahead of ranking.
 - [ ] Keep lexical-only behavior deterministic and document when a scope is required.
 - [ ] Verify lexical, semantic, and hybrid searches against selective and intentionally broad queries.

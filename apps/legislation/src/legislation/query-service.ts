@@ -2940,15 +2940,17 @@ export class LegislationQueryService {
         search: passageSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length)
       }
     }
-    const [lexical, semantic] = await Promise.all([
-      lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit }),
-      semanticPassageSearch(this.#database, {
-        ...input,
-        cursor: undefined,
-        embedding: queryEmbedding.embedding,
-        limit: candidateLimit
-      })
-    ])
+    const semantic = await semanticPassageSearch(this.#database, {
+      ...input,
+      cursor: undefined,
+      embedding: queryEmbedding.embedding,
+      limit: candidateLimit
+    })
+    const lexical = await lexicalPassageSearch(
+      this.#database,
+      { ...input, cursor: undefined, limit: candidateLimit },
+      semantic.items.map((item) => item.section.id)
+    )
     const lexicalById = new Map(lexical.items.map((item) => [item.section.id, item]))
     const semanticById = new Map(semantic.items.map((item) => [item.section.id, item]))
     const lexicalCandidates = lexical.items.map((item) => ({ ...item, id: item.section.id }))

@@ -3,6 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
 import * as schema from "../db/schema/schema.js"
+import { buildLexicalPassageSearchQuery } from "../search/search.js"
 import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
@@ -202,6 +203,18 @@ describe("amendment lexical search query", () => {
         "adopted"
       ])
     )
+  })
+})
+
+describe("hybrid passage lexical scoring", () => {
+  it("restricts lexical ranking to the semantic HNSW candidate IDs", () => {
+    const query = buildLexicalPassageSearchQuery(database, { limit: 20, mode: "hybrid", query: "housing" }, [
+      "section:first",
+      "section:second"
+    ]).toSQL()
+
+    expect(query.sql).toContain('"legislation"."document_sections"."id" in ($')
+    expect(query.params).toEqual(expect.arrayContaining(["section:first", "section:second"]))
   })
 })
 
