@@ -1107,18 +1107,26 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       order by title_score desc, material_id asc
       limit ${candidateLimit}
     ),
-    section_candidate_scores as (
+    section_ranked_matches as (
       select
         ${supportingMaterialSections.materialId} as material_id,
-        max(${sectionRank}) as section_score
+        ${supportingMaterialSections.id} as section_id,
+        ${sectionRank} as section_score
       from ${supportingMaterialSections}
       ${sectionMaterialJoin}
       where ${sectionMatches} and ${sectionScope}
-      group by ${supportingMaterialSections.materialId}
+    ),
+    section_best_matches as (
+      select distinct on (material_id)
+        material_id,
+        section_id,
+        section_score
+      from section_ranked_matches
+      order by material_id asc, section_score desc, section_id asc
     ),
     section_candidate_probe as (
-      select material_id, section_score
-      from section_candidate_scores
+      select material_id, section_id, section_score
+      from section_best_matches
       order by section_score desc, material_id asc
       limit ${candidateProbeLimit}
     ),
@@ -1133,89 +1141,64 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       union
       select material_id from section_candidate_materials
     ),
-    section_ranked_candidates as (
+    ranked_candidate_scores as (
       select
-        ${supportingMaterialSections.materialId} as material_id,
-        ${supportingMaterialSections.id} as section_id,
-        ${sectionRank} as section_score,
-        row_number() over (
-          partition by ${supportingMaterialSections.materialId}
-          order by ${sectionRank} desc, ${supportingMaterialSections.id} asc
-        ) as section_rank
-      from ${supportingMaterialSections}
-      inner join candidate_materials on candidate_materials.material_id = ${supportingMaterialSections.materialId}
-      where ${sectionMatches}
+        candidate_materials.material_id,
+        title_candidates.title_score,
+        section_best_matches.section_score,
+        greatest(coalesce(title_candidates.title_score, 0), coalesce(section_best_matches.section_score, 0)) as lexical_score,
+        section_best_matches.section_id as matched_section_id
+      from candidate_materials
+      left join title_candidates on title_candidates.material_id = candidate_materials.material_id
+      left join section_best_matches on section_best_matches.material_id = candidate_materials.material_id
+    ),
+    ranked_candidate_prefix as (
+      select *
+      from ranked_candidate_scores
+      order by lexical_score desc, material_id asc
+      limit ${candidateLimit}
     ),
     section_candidates as (
       select
-        section_ranked_candidates.material_id,
-        section_ranked_candidates.section_id,
-        section_ranked_candidates.section_score,
+        ranked_candidate_prefix.material_id,
         ts_headline(
           'english',
           ${supportingMaterialSections.text},
           ${searchQuery},
           'MaxFragments=2, MaxWords=35, MinWords=10'
         ) as section_snippet
-      from section_ranked_candidates
+      from ranked_candidate_prefix
       inner join ${supportingMaterialSections}
-        on ${supportingMaterialSections.id} = section_ranked_candidates.section_id
-      where section_ranked_candidates.section_rank = 1
-    ),
-    candidate_scores as (
-      select
-        material_id,
-        title_score,
-        null::text as section_id,
-        null::real as section_score,
-        null::text as section_snippet
-      from title_candidates
-      union all
-      select
-        material_id,
-        null::real as title_score,
-        section_id,
-        section_score,
-        section_snippet
-      from section_candidates
-    ),
-    ranked_candidates as (
-      select
-        material_id,
-        max(title_score) as title_score,
-        max(section_score) as section_score,
-        greatest(coalesce(max(title_score), 0), coalesce(max(section_score), 0)) as lexical_score,
-        (array_agg(section_id order by section_score desc nulls last, section_id asc) filter (where section_id is not null))[1] as matched_section_id,
-        (array_agg(section_snippet order by section_score desc nulls last, section_id asc) filter (where section_id is not null))[1] as section_snippet
-      from candidate_scores
-      group by material_id
+        on ${supportingMaterialSections.id} = ranked_candidate_prefix.matched_section_id
     ),
     candidate_window as (
       select
         (
           exists (select 1 from title_candidate_probe offset ${candidateLimit})
           or exists (select 1 from section_candidate_probe offset ${candidateLimit})
+          or exists (select 1 from ranked_candidate_scores offset ${candidateLimit})
         ) as capped
     )
     select
-      ranked_candidates.material_id as id,
-      ranked_candidates.lexical_score as "lexicalScore",
-      ranked_candidates.title_score as "titleScore",
-      ranked_candidates.section_score as "sectionScore",
-      ranked_candidates.matched_section_id as "matchedSectionId",
-      coalesce(ranked_candidates.matched_section_id, fallback_section.id) as "sectionId",
-      ranked_candidates.section_snippet as snippet,
+      ranked_candidate_prefix.material_id as id,
+      ranked_candidate_prefix.lexical_score as "lexicalScore",
+      ranked_candidate_prefix.title_score as "titleScore",
+      ranked_candidate_prefix.section_score as "sectionScore",
+      ranked_candidate_prefix.matched_section_id as "matchedSectionId",
+      coalesce(ranked_candidate_prefix.matched_section_id, fallback_section.id) as "sectionId",
+      section_candidates.section_snippet as snippet,
       candidate_window.capped as "candidateWindowCapped"
-    from ranked_candidates
+    from ranked_candidate_prefix
+    left join section_candidates on section_candidates.material_id = ranked_candidate_prefix.material_id
     inner join lateral (
       select ${supportingMaterialSections.id}
       from ${supportingMaterialSections}
-      where ${supportingMaterialSections.materialId} = ranked_candidates.material_id
+      where ${supportingMaterialSections.materialId} = ranked_candidate_prefix.material_id
       order by ${supportingMaterialSections.ordinal} asc, ${supportingMaterialSections.id} asc
       limit 1
     ) as fallback_section on true
     cross join candidate_window
-    order by ranked_candidates.lexical_score desc, ranked_candidates.material_id asc
+    order by ranked_candidate_prefix.lexical_score desc, ranked_candidate_prefix.material_id asc
     limit ${limit + 1}
     offset ${offset}
   `

@@ -333,8 +333,12 @@ describe("bill search execution metadata", () => {
 describe("lexical supporting material candidate search", () => {
   const dialect = new PgDialect()
 
-  function renderCandidateSearch(input: Parameters<typeof buildLexicalSupportingMaterialCandidateQuery>[0]) {
-    return dialect.sqlToQuery(buildLexicalSupportingMaterialCandidateQuery(input, "Build the Wall", 20, 0))
+  function renderCandidateSearch(
+    input: Parameters<typeof buildLexicalSupportingMaterialCandidateQuery>[0],
+    limit = 20,
+    offset = 0
+  ) {
+    return dialect.sqlToQuery(buildLexicalSupportingMaterialCandidateQuery(input, "Build the Wall", limit, offset))
   }
 
   it("bounds title and indexed section retrieval before material-level ranking", () => {
@@ -342,19 +346,28 @@ describe("lexical supporting material candidate search", () => {
 
     expect(rendered.sql).toContain("with title_candidate_probe as")
     expect(rendered.sql).toContain("title_candidates as")
-    expect(rendered.sql).toContain("section_candidate_scores as")
+    expect(rendered.sql).toContain("section_ranked_matches as")
+    expect(rendered.sql).toContain("section_best_matches as")
     expect(rendered.sql).toContain("section_candidate_probe as")
     expect(rendered.sql).toContain("section_candidate_materials as")
+    expect(rendered.sql).toContain("candidate_materials as")
+    expect(rendered.sql).toContain("ranked_candidate_scores as")
+    expect(rendered.sql).toContain("ranked_candidate_prefix as")
     expect(rendered.sql.match(/order by section_score desc, material_id asc/g)).toHaveLength(2)
-    expect(rendered.sql).toContain("section_ranked_candidates as")
     expect(rendered.sql).toContain("section_candidates as")
-    expect(rendered.sql.match(/limit \$\d+/g)).toHaveLength(5)
-    expect(rendered.sql).toContain("from candidate_scores")
-    expect(rendered.sql).toContain("group by material_id")
+    expect(rendered.sql.match(/limit \$\d+/g)).toHaveLength(6)
     expect(rendered.sql).toContain('as "matchedSectionId"')
     expect(rendered.sql).toContain("as section_snippet")
-    expect(rendered.sql).toContain("row_number() over")
-    expect(rendered.sql).toContain('group by "legislation"."supporting_material_sections"."material_id"')
+    expect(rendered.sql).toContain("select distinct on (material_id)")
+    expect(rendered.sql).toContain("order by material_id asc, section_score desc, section_id asc")
+    expect(rendered.sql).not.toContain("row_number() over")
+    expect(rendered.sql.match(/"search_vector" @@/g)).toHaveLength(1)
+    expect(rendered.sql).toContain(
+      "left join section_best_matches on section_best_matches.material_id = candidate_materials.material_id"
+    )
+    expect(rendered.sql).toContain(
+      'on "legislation"."supporting_material_sections"."id" = ranked_candidate_prefix.matched_section_id'
+    )
     expect(rendered.sql).toContain('to_tsvector(\'english\', "legislation"."supporting_materials"."title")')
     expect(rendered.sql.indexOf("section_candidates as")).toBeLessThan(rendered.sql.indexOf("ts_headline("))
     expect(rendered.sql).not.toContain('inner join "legislation"."supporting_materials" on')
@@ -377,7 +390,7 @@ describe("lexical supporting material candidate search", () => {
       updatedToExclusive: new Date("2026-09-01T00:00:00.000Z")
     })
 
-    expect(rendered.sql.match(/exists \(/g)).toHaveLength(4)
+    expect(rendered.sql.match(/exists \(/g)).toHaveLength(5)
     expect(rendered.sql.match(/"bill_id" in/g)).toHaveLength(2)
     expect(rendered.sql.match(/"amendment_id" in/g)).toHaveLength(2)
     expect(rendered.sql.match(/"event_id" in/g)).toHaveLength(2)
@@ -393,6 +406,20 @@ describe("lexical supporting material candidate search", () => {
     expect(lexicalSupportingMaterialCandidateLimit(1, 0)).toBe(25)
     expect(lexicalSupportingMaterialCandidateLimit(100, 0)).toBe(101)
     expect(lexicalSupportingMaterialCandidateLimit(100, 200)).toBe(250)
+  })
+
+  it("globally caps disjoint title and section candidates before deep-page pagination", () => {
+    const rendered = renderCandidateSearch({ query: "Build the Wall" }, 100, 200)
+    const prefixStart = rendered.sql.indexOf("ranked_candidate_prefix as")
+    const pageOffset = rendered.sql.lastIndexOf("offset")
+
+    expect(prefixStart).toBeGreaterThan(-1)
+    expect(rendered.sql.indexOf("limit", prefixStart)).toBeLessThan(pageOffset)
+    expect(rendered.sql).toContain("exists (select 1 from ranked_candidate_scores offset")
+    expect(lexicalSupportingMaterialPageState(200, 100, 50, true)).toEqual({
+      nextCursor: undefined,
+      truncated: true
+    })
   })
 
   it("does not mark an exactly full candidate window as capped", () => {
