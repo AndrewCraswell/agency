@@ -1015,6 +1015,7 @@ export const billSponsors = legislationSchema.table(
       .on(table.billId, table.personId, table.classification)
       .where(sql`${table.personId} is not null`),
     index("bill_sponsors_bill_idx").on(table.billId, table.isPrimary),
+    index("bill_sponsors_name_search_gin_idx").using("gin", sql`to_tsvector('english', ${table.name})`),
     index("bill_sponsors_person_activity_idx")
       .on(table.personId, table.latestObservedAt, table.billId)
       .where(sql`${table.personId} is not null and ${table.latestObservedAt} is not null`)

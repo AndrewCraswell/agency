@@ -9,6 +9,10 @@ let server
 let baseUrl
 let malformedPath
 let invalidBatchStatusPath
+let billBatchItemError
+let amendmentBatchItemError
+let billDetailError
+const legislativeRecordErrorPaths = new Map()
 let changeFeedError
 let documentDetailError
 let documentSectionsError
@@ -97,6 +101,20 @@ function batch(pathname, correlationId, requestBody) {
   }
   const isBillAmendments = pathname === "/api/bills/amendments/batch"
   const id = isBillAmendments ? requestBody.billIds[0] : requestBody.ids[0]
+  if (pathname === "/api/bills/batch" && billBatchItemError !== undefined) {
+    return {
+      data: [{ error: billBatchItemError, id, status: "error" }],
+      links: { self: pathname },
+      meta: { correlationId, requested: 1, returned: 1, warnings: [] }
+    }
+  }
+  if (pathname === "/api/amendments/batch" && amendmentBatchItemError !== undefined) {
+    return {
+      data: [{ error: amendmentBatchItemError, id, status: "error" }],
+      links: { self: pathname },
+      meta: { correlationId, requested: 1, returned: 1, warnings: [] }
+    }
+  }
   return {
     data: [
       isBillAmendments
@@ -296,6 +314,20 @@ beforeAll(async () => {
     }
     if (request.method === "GET" && url.pathname === "/api/changes" && changeFeedError !== undefined) {
       apiJson(response, correlationId, changeFeedError(correlationId), 422)
+      return
+    }
+    if (
+      request.method === "GET" &&
+      url.pathname.startsWith("/api/bills/") &&
+      url.pathname.split("/").filter(Boolean).length === 3 &&
+      billDetailError !== undefined
+    ) {
+      apiJson(response, correlationId, billDetailError(correlationId), 422)
+      return
+    }
+    const legislativeRecordError = legislativeRecordErrorPaths.get(url.pathname)
+    if (request.method === "GET" && legislativeRecordError !== undefined) {
+      apiJson(response, correlationId, legislativeRecordError(correlationId), 422)
       return
     }
     const requestSegments = url.pathname.split("/").filter(Boolean)
@@ -606,6 +638,251 @@ describe("legislative record deployed smoke profile", () => {
       ).rejects.toThrow("Command failed")
     } finally {
       invalidBatchStatusPath = undefined
+    }
+  })
+
+  it("reports the exact non-retryable incomplete canonical bill batch item as a stable data skip", async () => {
+    billBatchItemError = {
+      category: "dependency_unavailable",
+      message: "The bill is incomplete in canonical persistence",
+      retryable: false
+    }
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+        LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+      })
+
+      expect(result.legislativeRecords.passed).not.toContain("bill batch")
+      expect(result.legislativeRecords.skipped).toContainEqual({
+        name: "bill batch",
+        reason: "canonical_data_incomplete"
+      })
+    } finally {
+      billBatchItemError = undefined
+    }
+  })
+
+  it("reports the exact non-retryable incomplete canonical amendment batch item as a stable data skip", async () => {
+    amendmentBatchItemError = {
+      category: "dependency_unavailable",
+      message: "The amendment is incomplete in canonical persistence",
+      retryable: false
+    }
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+        LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+      })
+
+      expect(result.legislativeRecords.passed).not.toContain("amendment batch")
+      expect(result.legislativeRecords.skipped).toContainEqual({
+        name: "amendment batch",
+        reason: "canonical_data_incomplete"
+      })
+    } finally {
+      amendmentBatchItemError = undefined
+    }
+  })
+
+  it.each([
+    {
+      message: "The amendment is incomplete in canonical persistence",
+      retryable: true
+    },
+    {
+      message: "A different amendment batch error",
+      retryable: false
+    }
+  ])(
+    "rejects an amendment batch dependency error with message=$message and retryable=$retryable",
+    async ({ message, retryable }) => {
+      amendmentBatchItemError = { category: "dependency_unavailable", message, retryable }
+      try {
+        await expect(
+          runSmoke({
+            LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+            LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+          })
+        ).rejects.toThrow("Command failed")
+      } finally {
+        amendmentBatchItemError = undefined
+      }
+    }
+  )
+
+  it("reports the exact non-retryable incomplete canonical bill detail as a stable data skip", async () => {
+    billDetailError = (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: "Bill action canonical provenance is not persisted",
+        retryable: false
+      }
+    })
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+        LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+      })
+
+      expect(result.legislativeRecords.passed).not.toContain("bill")
+      expect(result.legislativeRecords.skipped).toContainEqual({
+        name: "bill",
+        reason: "canonical_data_incomplete"
+      })
+    } finally {
+      billDetailError = undefined
+    }
+  })
+
+  it.each([
+    {
+      message: "Bill action canonical provenance is not persisted",
+      retryable: true
+    },
+    {
+      message: "A different canonical-data error",
+      retryable: false
+    }
+  ])("rejects a bill detail 422 with message=$message and retryable=$retryable", async ({ message, retryable }) => {
+    billDetailError = (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message, retryable }
+    })
+    try {
+      await expect(
+        runSmoke({ LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture", LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1" })
+      ).rejects.toThrow("Command failed")
+    } finally {
+      billDetailError = undefined
+    }
+  })
+
+  it.each([
+    {
+      message: "timeline-complete row has incomplete ordering facts",
+      name: "bill timeline",
+      path: "/api/bills/bill%3Afixture/timeline"
+    },
+    {
+      message: "Vote canonical persistence is incomplete",
+      name: "bill votes",
+      path: "/api/bills/bill%3Afixture/votes"
+    }
+  ])("reports the exact non-retryable incomplete canonical $name response as a stable data skip", async (fixture) => {
+    legislativeRecordErrorPaths.set(fixture.path, (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: fixture.message,
+        retryable: false
+      }
+    }))
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+        LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+      })
+
+      expect(result.legislativeRecords.passed).not.toContain(fixture.name)
+      expect(result.legislativeRecords.skipped).toContainEqual({
+        name: fixture.name,
+        reason: "canonical_data_incomplete"
+      })
+    } finally {
+      legislativeRecordErrorPaths.delete(fixture.path)
+    }
+  })
+
+  it.each([
+    {
+      expectedMessage: "timeline-complete row has incomplete ordering facts",
+      name: "bill timeline",
+      path: "/api/bills/bill%3Afixture/timeline"
+    },
+    {
+      expectedMessage: "Vote canonical persistence is incomplete",
+      name: "bill votes",
+      path: "/api/bills/bill%3Afixture/votes"
+    }
+  ])("rejects a different non-retryable 422 from $name", async (fixture) => {
+    legislativeRecordErrorPaths.set(fixture.path, (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: `${fixture.expectedMessage} unexpected`,
+        retryable: false
+      }
+    }))
+    try {
+      await expect(
+        runSmoke({ LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture", LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1" })
+      ).rejects.toThrow("Command failed")
+    } finally {
+      legislativeRecordErrorPaths.delete(fixture.path)
+    }
+  })
+
+  it("reports the exact non-retryable incomplete canonical amendment detail as a stable data skip", async () => {
+    const path = "/api/amendments/amendment%3Afixture"
+    legislativeRecordErrorPaths.set(path, (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: "Structured amendment sponsor person canonical provenance is incomplete",
+        retryable: false
+      }
+    }))
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+        LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+      })
+
+      expect(result.legislativeRecords.passed).not.toContain("amendment")
+      expect(result.legislativeRecords.skipped).toContainEqual({
+        name: "amendment",
+        reason: "canonical_data_incomplete"
+      })
+    } finally {
+      legislativeRecordErrorPaths.delete(path)
+    }
+  })
+
+  it("rejects a different non-retryable 422 from amendment detail", async () => {
+    const path = "/api/amendments/amendment%3Afixture"
+    legislativeRecordErrorPaths.set(path, (correlationId) => ({
+      error: {
+        category: "unprocessable",
+        correlationId,
+        message: "Structured amendment sponsor person canonical provenance is incomplete unexpected",
+        retryable: false
+      }
+    }))
+    try {
+      await expect(
+        runSmoke({
+          LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+          LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1"
+        })
+      ).rejects.toThrow("Command failed")
+    } finally {
+      legislativeRecordErrorPaths.delete(path)
+    }
+  })
+
+  it("rejects a retryable dependency-unavailable bill batch item instead of classifying it as incomplete data", async () => {
+    billBatchItemError = {
+      category: "dependency_unavailable",
+      message: "The bill is incomplete in canonical persistence",
+      retryable: true
+    }
+    try {
+      await expect(
+        runSmoke({ LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture", LEGISLATION_WEB_SMOKE_LEGISLATIVE_RECORDS: "1" })
+      ).rejects.toThrow("Command failed")
+    } finally {
+      billBatchItemError = undefined
     }
   })
 })

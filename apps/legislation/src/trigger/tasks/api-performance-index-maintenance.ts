@@ -25,6 +25,11 @@ const API_PERFORMANCE_INDEXES = [
     create:
       "create index concurrently if not exists bill_documents_amendment_date_idx on legislation.bill_documents (classification asc, (document_date is null) asc, document_date desc nulls first, id asc)",
     name: "bill_documents_amendment_date_idx"
+  },
+  {
+    create:
+      "create index concurrently if not exists bill_sponsors_name_search_gin_idx on legislation.bill_sponsors using gin (to_tsvector('english', name))",
+    name: "bill_sponsors_name_search_gin_idx"
   }
 ] as const
 
@@ -66,6 +71,7 @@ export const apiPerformanceIndexMaintenance = task({
 
       await client.query("analyze legislation.bills")
       await client.query("analyze legislation.bill_documents")
+      await client.query("analyze legislation.bill_sponsors")
       logger.info("API performance indexes are valid and analyzed", { maintenanceId: payload.maintenanceId })
     } finally {
       try {

@@ -22,6 +22,9 @@ import { embeddingRouteFor } from "../models/embedding-routing.js"
 
 const DEFAULT_LIMIT = 20
 const LEXICAL_BILL_CANDIDATE_LIMIT = 1_000
+// PostgreSQL cannot use the section GIN index to satisfy a relevance ordering.
+// Rank a deterministic section sample and report when its lookahead proves incomplete coverage.
+const LEXICAL_BILL_VERSION_CANDIDATE_LIMIT = 1_000
 const MAXIMUM_LIMIT = 100
 const MAXIMUM_QUERY_LENGTH = 500
 const {
@@ -250,12 +253,16 @@ export function paginateSearchDatabaseRows<T>(
   limit: number,
   offset: number,
   input?: SearchInput,
-  capped = false
+  capped = false,
+  maximumOffset?: number
 ): SearchPage<T> {
   const truncated = rows.length > limit || capped
   return {
     items: rows.slice(0, limit),
-    nextCursor: rows.length > limit && !capped ? encodeSearchCursor(offset + limit, input) : undefined,
+    nextCursor:
+      rows.length > limit && (maximumOffset === undefined || offset + limit < maximumOffset)
+        ? encodeSearchCursor(offset + limit, input)
+        : undefined,
     truncated
   }
 }
@@ -266,12 +273,15 @@ export async function lexicalBillSearch(
 ): Promise<SearchPage<BillSearchCandidate>> {
   const { limit, offset, query } = validateSearchInput(input, true)
   const result = await database.execute<LexicalBillSearchRow>(buildLexicalBillSearchQuery(input, query, limit, offset))
+  const versionCoverageCapped = hasCappedLexicalBillVersionCoverage(result.rows)
+  const candidateRows = result.rows.filter(isLexicalBillSearchCandidateRow)
   const page = paginateSearchDatabaseRows(
-    result.rows,
+    candidateRows,
     limit,
     offset,
     input,
-    offset + limit + 1 > LEXICAL_BILL_CANDIDATE_LIMIT
+    offset + limit + 1 > LEXICAL_BILL_CANDIDATE_LIMIT || versionCoverageCapped,
+    LEXICAL_BILL_CANDIDATE_LIMIT
   )
   if (page.items.length === 0) {
     return { ...page, items: [] }
@@ -292,7 +302,7 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
   const abstractMatches = sql<boolean>`to_tsvector('english', coalesce(${bills.summary}, '')) @@ ${searchQuery}`
   const subjectMatches = sql<boolean>`to_tsvector('english', array_to_string(${bills.subjects}, ' ')) @@ ${searchQuery}`
   const sponsorSearchVector = sql`to_tsvector('english', ${billSponsors.name})`
-  const versionRank = sql<number>`max(ts_rank_cd(${documentSections.searchVector}, ${searchQuery}))`
+  const versionRank = sql<number>`max(ts_rank_cd(version_section_matches.search_vector, ${searchQuery}))`
   const sponsorRank = sql<number>`max(ts_rank_cd(${sponsorSearchVector}, ${searchQuery}))`
   const rank = sql<number>`
     ts_rank_cd(${bills.searchVector}, ${searchQuery})
@@ -345,21 +355,49 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
         limit greatest(${candidateLimit} - primary_count.count, 0)
       ) sponsor_fallback
     ),
+    version_section_lookahead as materialized (
+      select
+        ${documentSections.id} as section_id,
+        ${billDocuments.billId} as bill_id
+      from primary_count
+      cross join ${documentSections}
+      inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
+      inner join ${bills} on ${bills.id} = ${billDocuments.billId}
+      where
+        primary_count.count < ${candidateLimit}
+        and ${billDocuments.classification} = 'version'
+        and ${billDocuments.processingStatus} = 'processed'
+        and ${documentSections.searchVector} @@ ${searchQuery}
+        and ${and(...billFilters(input)) ?? sql`true`}
+      order by ${documentSections.id} asc
+      limit ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT + 1}
+    ),
+    version_section_coverage as (
+      select count(*) > ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT} as capped
+      from version_section_lookahead
+    ),
+    version_section_candidates as materialized (
+      select bill_id, section_id
+      from version_section_lookahead
+      order by section_id asc
+      limit ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT}
+    ),
+    version_section_matches as materialized (
+      select
+        version_section_candidates.bill_id,
+        ${documentSections.searchVector} as search_vector
+      from version_section_candidates
+      inner join ${documentSections} on ${documentSections.id} = version_section_candidates.section_id
+      order by ts_rank_cd(${documentSections.searchVector}, ${searchQuery}) desc, version_section_candidates.section_id asc
+    ),
     version_matches as materialized (
       select version_fallback.*
       from primary_count
       cross join lateral (
-        select ${billDocuments.billId} as bill_id, ${versionRank} as version_rank
-        from ${documentSections}
-        inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
-        inner join ${bills} on ${bills.id} = ${billDocuments.billId}
-        where
-          ${billDocuments.classification} = 'version'
-          and ${billDocuments.processingStatus} = 'processed'
-          and ${documentSections.searchVector} @@ ${searchQuery}
-          and ${and(...billFilters(input)) ?? sql`true`}
-        group by ${billDocuments.billId}
-        order by ${versionRank} desc, ${billDocuments.billId} asc
+        select version_section_matches.bill_id as bill_id, ${versionRank} as version_rank
+        from version_section_matches
+        group by version_section_matches.bill_id
+        order by ${versionRank} desc, version_section_matches.bill_id asc
         limit greatest(${candidateLimit} - primary_count.count, 0)
       ) version_fallback
     ),
@@ -385,17 +423,43 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
         sponsor_matches.sponsor_rank as "sponsorRank",
         ${subjectMatches} as "subjectMatches",
         ${titleMatches} as "titleMatches",
+        version_section_coverage.capped as "versionCoverageCapped",
         version_matches.version_rank as "versionRank"
       from candidate_ids
       inner join ${bills} on ${bills.id} = candidate_ids.id
       left join sponsor_matches on sponsor_matches.bill_id = ${bills.id}
       left join version_matches on version_matches.bill_id = ${bills.id}
+      cross join version_section_coverage
+    ),
+    bounded_candidates as materialized (
+      select *
+      from ranked_candidates
+      order by "rank" desc, "id" asc
+      limit ${candidateLimit}
+    ),
+    page_candidates as materialized (
+      select *, false as "coverageOnly"
+      from bounded_candidates
+      order by "rank" desc, "id" asc
+      limit ${limit + 1}
+      offset ${offset}
     )
-    select *
-    from ranked_candidates
-    order by "rank" desc, "id" asc
-    limit ${limit + 1}
-    offset ${offset}
+    select * from page_candidates
+    union all
+    select
+      null::text as "id",
+      null::boolean as "abstractMatches",
+      null::boolean as "billTextMatches",
+      null::boolean as "identifierMatches",
+      null::real as "rank",
+      null::real as "sponsorRank",
+      null::boolean as "subjectMatches",
+      null::boolean as "titleMatches",
+      version_section_coverage.capped as "versionCoverageCapped",
+      null::real as "versionRank",
+      true as "coverageOnly"
+    from version_section_coverage
+    order by "coverageOnly" asc, "rank" desc nulls last, "id" asc nulls last
   `
 }
 
@@ -421,27 +485,52 @@ function billSearchMatchedFields(value: {
   ]
 }
 
-interface LexicalBillSearchRow {
+interface LexicalBillSearchCandidateRow {
   [key: string]: unknown
   abstractMatches: boolean
   billTextMatches: boolean
+  coverageOnly: false
   id: string
   identifierMatches: boolean
   rank: number
   sponsorRank: number | null
   subjectMatches: boolean
   titleMatches: boolean
+  versionCoverageCapped: boolean
   versionRank: number | null
+}
+
+interface LexicalBillSearchCoverageRow {
+  [key: string]: unknown
+  coverageOnly: true
+  id: null
+  versionCoverageCapped: boolean
+}
+
+type LexicalBillSearchRow = LexicalBillSearchCandidateRow | LexicalBillSearchCoverageRow
+
+function isLexicalBillSearchCandidateRow(row: LexicalBillSearchRow): row is LexicalBillSearchCandidateRow {
+  return !row.coverageOnly
+}
+
+export function hasCappedLexicalBillVersionCoverage(rows: readonly { versionCoverageCapped: boolean }[]): boolean {
+  return rows.some((row) => row.versionCoverageCapped)
 }
 
 async function hydrateLexicalBillCandidates(
   database: LegislationDatabase,
-  rows: readonly LexicalBillSearchRow[],
+  rows: readonly LexicalBillSearchCandidateRow[],
   query: string
 ): Promise<BillSearchCandidate[]> {
   const billIds = rows.map((row) => row.id)
   const searchQuery = sql`websearch_to_tsquery('english', ${query})`
   const sponsorSearchVector = sql`to_tsvector('english', ${billSponsors.name})`
+  const sponsorCandidateIds = rows
+    .filter((row) => !row.billTextMatches && !row.identifierMatches && row.sponsorRank !== null)
+    .map((row) => row.id)
+  const versionCandidateIds = rows
+    .filter((row) => !row.billTextMatches && !row.identifierMatches && row.versionRank !== null)
+    .map((row) => row.id)
   // Keep each request to one active database operation at a time. The ranking
   // window is already small, while concurrent hydration queries would add four
   // simultaneous PgBouncer clients for a single API request.
@@ -465,40 +554,46 @@ async function hydrateLexicalBillCandidates(
     .from(billActions)
     .where(inArray(billActions.billId, billIds))
     .groupBy(billActions.billId)
-  const sponsorSnippetRows = await database
-    .select({
-      billId: billSponsors.billId,
-      snippet: sql<string | null>`min(ts_headline(
-        'english',
-        ${billSponsors.name},
-        ${searchQuery},
-        'MaxFragments=1, MaxWords=20, MinWords=5'
-      ))`
-    })
-    .from(billSponsors)
-    .where(and(inArray(billSponsors.billId, billIds), sql`${sponsorSearchVector} @@ ${searchQuery}`))
-    .groupBy(billSponsors.billId)
-  const versionSnippetRows = await database
-    .select({
-      billId: billDocuments.billId,
-      snippet: sql<string | null>`min(ts_headline(
-        'english',
-        ${documentSections.text},
-        ${searchQuery},
-        'MaxFragments=2, MaxWords=35, MinWords=10'
-      ))`
-    })
-    .from(documentSections)
-    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
-    .where(
-      and(
-        inArray(billDocuments.billId, billIds),
-        eq(billDocuments.classification, "version"),
-        eq(billDocuments.processingStatus, "processed"),
-        sql`${documentSections.searchVector} @@ ${searchQuery}`
-      )
-    )
-    .groupBy(billDocuments.billId)
+  const sponsorSnippetRows =
+    sponsorCandidateIds.length === 0
+      ? []
+      : await database
+          .select({
+            billId: billSponsors.billId,
+            snippet: sql<string | null>`min(ts_headline(
+              'english',
+              ${billSponsors.name},
+              ${searchQuery},
+              'MaxFragments=1, MaxWords=20, MinWords=5'
+            ))`
+          })
+          .from(billSponsors)
+          .where(and(inArray(billSponsors.billId, sponsorCandidateIds), sql`${sponsorSearchVector} @@ ${searchQuery}`))
+          .groupBy(billSponsors.billId)
+  const versionSnippetRows =
+    versionCandidateIds.length === 0
+      ? []
+      : await database
+          .select({
+            billId: billDocuments.billId,
+            snippet: sql<string | null>`min(ts_headline(
+              'english',
+              ${documentSections.text},
+              ${searchQuery},
+              'MaxFragments=2, MaxWords=35, MinWords=10'
+            ))`
+          })
+          .from(documentSections)
+          .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+          .where(
+            and(
+              inArray(billDocuments.billId, versionCandidateIds),
+              eq(billDocuments.classification, "version"),
+              eq(billDocuments.processingStatus, "processed"),
+              sql`${documentSections.searchVector} @@ ${searchQuery}`
+            )
+          )
+          .groupBy(billDocuments.billId)
   const billsById = new Map(billRows.map((row) => [row.bill.id, row]))
   const latestActionsByBillId = new Map(latestActionRows.map((row) => [row.billId, row.latestActionAt]))
   const sponsorSnippetsByBillId = new Map(sponsorSnippetRows.map((row) => [row.billId, row.snippet]))

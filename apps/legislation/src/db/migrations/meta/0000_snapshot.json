@@ -500,6 +500,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "bill_sponsors_name_search_gin_idx": {
+          "name": "bill_sponsors_name_search_gin_idx",
+          "columns": [
+            {
+              "expression": "to_tsvector('english', \"name\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
         }
       },
       "foreignKeys": {

@@ -384,7 +384,14 @@ function requireResourceEnvelope(body, name, expectedCorrelationId, expectedId) 
   requireNonEmptyString(body.links.self, `${name} links.self`)
 }
 
-function requireBatchEnvelope(body, name, expectedCorrelationId, expectedId, expectedKind) {
+function requireBatchEnvelope(
+  body,
+  name,
+  expectedCorrelationId,
+  expectedId,
+  expectedKind,
+  canonicalDataIncompleteMessage
+) {
   if (
     !hasExactKeys(body, ["data", "links", "meta"]) ||
     !Array.isArray(body.data) ||
@@ -427,14 +434,26 @@ function requireBatchEnvelope(body, name, expectedCorrelationId, expectedId, exp
   if (item.status !== "error") {
     throw new Error(`${name} did not return a Batch item with status ok or error`)
   }
+  const expectedItemKeys =
+    expectedKind === "bill-amendments" ? ["billId", "error", "status"] : ["error", "id", "status"]
+  const itemId = expectedKind === "bill-amendments" ? item.billId : item.id
   if (
-    !hasExactKeys(
-      item,
-      expectedKind === "bill-amendments" ? ["billId", "error", "status"] : ["error", "id", "status"]
-    ) ||
-    (expectedKind === "bill-amendments" ? item.billId : item.id) !== expectedId ||
+    !hasExactKeys(item, expectedItemKeys) ||
+    itemId !== expectedId ||
     !isRecord(item.error) ||
-    !hasExactKeys(item.error, ["category", "message", "retryable"]) ||
+    !hasExactKeys(item.error, ["category", "message", "retryable"])
+  ) {
+    throw new Error(`${name} did not return a canonical Batch error item`)
+  }
+  if (
+    canonicalDataIncompleteMessage !== undefined &&
+    item.error.category === "dependency_unavailable" &&
+    item.error.message === canonicalDataIncompleteMessage &&
+    item.error.retryable === false
+  ) {
+    return "canonical_data_incomplete"
+  }
+  if (
     item.error.category !== "not_found" ||
     typeof item.error.message !== "string" ||
     item.error.message === "" ||
@@ -534,6 +553,13 @@ function requireCanonicalDataIncomplete(body, name, expectedCorrelationId) {
     body.error.retryable !== false
   ) {
     throw new Error(`${name} did not return a canonical data-incomplete ErrorResponse`)
+  }
+}
+
+function requireExactCanonicalDataIncomplete(body, name, expectedCorrelationId, expectedMessage) {
+  requireCanonicalDataIncomplete(body, name, expectedCorrelationId)
+  if (body.error.message !== expectedMessage) {
+    throw new Error(`${name} did not return the expected canonical data-incomplete ErrorResponse`)
   }
 }
 
@@ -1010,6 +1036,7 @@ async function smokeLegislativeRecordsRoutes(root) {
       body: (id) => ({ ids: [id] }),
       fixture: "billId",
       kind: "batch",
+      batchCanonicalDataIncompleteMessage: "The bill is incomplete in canonical persistence",
       name: "bill batch",
       method: "POST",
       path: "/api/bills/batch"
@@ -1022,8 +1049,15 @@ async function smokeLegislativeRecordsRoutes(root) {
       method: "POST",
       path: "/api/bills/amendments/batch"
     },
-    { fixture: "billId", kind: "resource", name: "bill", path: (id) => `/api/bills/${encodeURIComponent(id)}` },
     {
+      canonicalDataIncompleteMessage: "Bill action canonical provenance is not persisted",
+      fixture: "billId",
+      kind: "resource",
+      name: "bill",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}`
+    },
+    {
+      canonicalDataIncompleteMessage: "timeline-complete row has incomplete ordering facts",
       fixture: "billId",
       kind: "page",
       name: "bill timeline",
@@ -1048,6 +1082,7 @@ async function smokeLegislativeRecordsRoutes(root) {
       path: (id) => `/api/bills/${encodeURIComponent(id)}/amendments?limit=1`
     },
     {
+      canonicalDataIncompleteMessage: "Vote canonical persistence is incomplete",
       fixture: "billId",
       kind: "page",
       name: "bill votes",
@@ -1067,6 +1102,7 @@ async function smokeLegislativeRecordsRoutes(root) {
     },
     {
       body: (id) => ({ ids: [id] }),
+      batchCanonicalDataIncompleteMessage: "The amendment is incomplete in canonical persistence",
       fixture: "amendmentId",
       kind: "batch",
       name: "amendment batch",
@@ -1074,6 +1110,7 @@ async function smokeLegislativeRecordsRoutes(root) {
       path: "/api/amendments/batch"
     },
     {
+      canonicalDataIncompleteMessage: "Structured amendment sponsor person canonical provenance is incomplete",
       fixture: "amendmentId",
       kind: "resource",
       name: "amendment",
@@ -1133,6 +1170,11 @@ async function smokeLegislativeRecordsRoutes(root) {
       skipped.push({ name: route.name, reason: "fixture_missing" })
       continue
     }
+    if (response.status === 422 && route.canonicalDataIncompleteMessage !== undefined) {
+      requireExactCanonicalDataIncomplete(body, name, correlationId, route.canonicalDataIncompleteMessage)
+      skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
+      continue
+    }
     if (response.status !== 200) {
       throw new Error(`${name} returned status ${response.status}, expected 200 or canonical fixture 404`)
     }
@@ -1152,10 +1194,22 @@ async function smokeLegislativeRecordsRoutes(root) {
     } else if (route.kind === "resource") {
       requireResourceEnvelope(body, name, correlationId, fixtureId)
       passed.push(route.name)
-    } else if (requireBatchEnvelope(body, name, correlationId, fixtureId, route.kind) === "passed") {
-      passed.push(route.name)
     } else {
-      skipped.push({ name: route.name, reason: "fixture_missing" })
+      const batchOutcome = requireBatchEnvelope(
+        body,
+        name,
+        correlationId,
+        fixtureId,
+        route.kind,
+        route.batchCanonicalDataIncompleteMessage
+      )
+      if (batchOutcome === "passed") {
+        passed.push(route.name)
+      } else if (batchOutcome === "canonical_data_incomplete") {
+        skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
+      } else {
+        skipped.push({ name: route.name, reason: "fixture_missing" })
+      }
     }
   }
 

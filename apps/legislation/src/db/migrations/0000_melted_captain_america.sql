@@ -219,6 +219,7 @@ CREATE INDEX "bill_documents_amendment_date_idx" ON "legislation"."bill_document
 CREATE INDEX "bill_relations_related_idx" ON "legislation"."bill_relations" USING btree ("related_bill_id","classification");--> statement-breakpoint
 CREATE UNIQUE INDEX "bill_sponsors_person_uidx" ON "legislation"."bill_sponsors" USING btree ("bill_id","person_id","classification") WHERE "legislation"."bill_sponsors"."person_id" is not null;--> statement-breakpoint
 CREATE INDEX "bill_sponsors_bill_idx" ON "legislation"."bill_sponsors" USING btree ("bill_id","is_primary");--> statement-breakpoint
+CREATE INDEX "bill_sponsors_name_search_gin_idx" ON "legislation"."bill_sponsors" USING gin (to_tsvector('english', "name"));--> statement-breakpoint
 CREATE UNIQUE INDEX "bills_identifier_uidx" ON "legislation"."bills" USING btree ("jurisdiction_id","session_id","identifier");--> statement-breakpoint
 CREATE INDEX "bills_identifier_lower_idx" ON "legislation"."bills" USING btree (lower("identifier"),"id");--> statement-breakpoint
 CREATE INDEX "bills_status_idx" ON "legislation"."bills" USING btree ("jurisdiction_id","session_id","status");--> statement-breakpoint
