@@ -603,10 +603,15 @@ export const embeddingIndexMaintenance = task({
 
 export function documentEmbeddingClassificationBackfillStatements() {
   return {
+    createHelperIndex:
+      "create index concurrently if not exists bill_documents_amendment_classification_backfill_idx on legislation.bill_documents (id) where classification = 'amendment'",
+    dropHelperIndex:
+      "drop index concurrently if exists legislation.bill_documents_amendment_classification_backfill_idx",
     updateBatch: `
       with candidates as (
         select
           embedding.ctid,
+          document.id as document_id,
           embedding.section_id,
           embedding.model,
           embedding.input_contract,
@@ -618,9 +623,10 @@ export function documentEmbeddingClassificationBackfillStatements() {
           and document.classification = 'amendment'
           and (
             $2::text is null
-            or (embedding.section_id, embedding.model, embedding.input_contract) > ($2::text, $3::text, $4::text)
+            or (document.id, embedding.section_id, embedding.model, embedding.input_contract)
+              > ($2::text, $3::text, $4::text, $5::text)
           )
-        order by embedding.section_id, embedding.model, embedding.input_contract
+        order by document.id, embedding.section_id, embedding.model, embedding.input_contract
         limit $1
         for update of embedding skip locked
       ), updated as (
@@ -632,11 +638,12 @@ export function documentEmbeddingClassificationBackfillStatements() {
       )
       select
         (select count(*)::integer from updated) as updated_count,
+        candidates.document_id,
         candidates.section_id,
         candidates.model,
         candidates.input_contract
       from candidates
-      order by candidates.section_id desc, candidates.model desc, candidates.input_contract desc
+      order by candidates.document_id desc, candidates.section_id desc, candidates.model desc, candidates.input_contract desc
       limit 1
     `,
     verify: `
@@ -664,18 +671,21 @@ export const documentEmbeddingClassificationBackfill = task({
     await withDerivedBackfillDatabase("embeddings", async (_database, pool) => {
       const client = await pool.connect()
       let acquired = false
-      let cursor: { input_contract: string; model: string; section_id: string } | undefined
+      let cursor: { document_id: string; input_contract: string; model: string; section_id: string } | undefined
       try {
         await acquireIndexMaintenanceLock(client)
         acquired = true
+        await client.query(statements.createHelperIndex)
         while (true) {
           const result = await client.query<{
+            document_id: string
             input_contract: string
             model: string
             section_id: string
             updated_count: number
           }>(statements.updateBatch, [
             payload.batchSize,
+            cursor?.document_id ?? null,
             cursor?.section_id ?? null,
             cursor?.model ?? null,
             cursor?.input_contract ?? null
@@ -703,6 +713,7 @@ export const documentEmbeddingClassificationBackfill = task({
         await client.query(
           "alter table legislation.document_section_embeddings validate constraint document_section_embeddings_classification_check"
         )
+        await client.query(statements.dropHelperIndex)
       } finally {
         try {
           if (acquired) {

@@ -43,10 +43,16 @@ describe("derived backfill task payload", () => {
   it("uses a restartable null-only classification backfill", () => {
     const statements = documentEmbeddingClassificationBackfillStatements()
 
+    expect(statements.createHelperIndex).toContain(
+      "on legislation.bill_documents (id) where classification = 'amendment'"
+    )
+    expect(statements.dropHelperIndex).toContain("bill_documents_amendment_classification_backfill_idx")
     expect(statements.updateBatch).toContain("where embedding.document_classification is null")
     expect(statements.updateBatch).toContain("document.classification = 'amendment'")
     expect(statements.updateBatch).toContain("limit $1")
-    expect(statements.updateBatch).toContain("(embedding.section_id, embedding.model, embedding.input_contract) >")
+    expect(statements.updateBatch).toContain(
+      "(document.id, embedding.section_id, embedding.model, embedding.input_contract)"
+    )
     expect(statements.updateBatch).toContain("for update of embedding skip locked")
     expect(statements.verify).toContain("embedding.document_classification is distinct from document.classification")
     expect(statements.verify).toContain("where document.classification = 'amendment'")
