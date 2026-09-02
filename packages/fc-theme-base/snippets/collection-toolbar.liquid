@@ -1,0 +1,39 @@
+{%- comment -%}
+  Renders the collection result count and sort control.
+
+  Accepts:
+  - results: {CollectionDrop} Collection to summarize and sort (required)
+  - enable_sorting: {Boolean} Show the sort control
+  - sort_label: {String} Visible prefix for the selected sort option
+  - count_label: {String} Optional result count override
+{%- endcomment -%}
+
+<div class="collection-toolbar">
+  <div
+    class="collection-toolbar__count product-count"
+    id="ProductCount"
+    role="status"
+    data-product-count="{{ results.products_count }}"
+    data-total-count="{{ results.all_products_count }}"
+  >
+    {%- if count_label != blank -%}
+      {{- count_label | escape -}}
+    {%- elsif results.products_count == results.all_products_count -%}
+      {{ 'products.facets.product_count_simple' | t: count: results.products_count }}
+    {%- else -%}
+      {{
+        'products.facets.product_count'
+        | t: product_count: results.products_count, count: results.all_products_count
+      }}
+    {%- endif -%}
+  </div>
+
+  {%- if enable_sorting -%}
+    {%- render 'ui-sort-dropdown',
+      results: results,
+      sort_label: sort_label,
+      default_label: 'Featured',
+      class: 'collection-toolbar__sort'
+    -%}
+  {%- endif -%}
+</div>

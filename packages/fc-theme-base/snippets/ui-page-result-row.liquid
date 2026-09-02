@@ -1,0 +1,31 @@
+{%- comment -%}
+  Renders a search result row for a page.
+
+  Pages carry no image, so they use a compact row rather than a card: a tinted
+  block standing in for a missing photo reads as a broken thumbnail.
+
+  Accepts:
+  - page: {Page} Page to render (required)
+  - heading_level: {Number} Heading level from 2 through 6 (default 3)
+{%- endcomment -%}
+{%- liquid
+  assign heading_level = heading_level | default: 3
+  assign heading_tag = 'h' | append: heading_level
+  assign excerpt = page.content | strip_html | truncatewords: 20
+-%}
+<li class="ui-page-result-row">
+  <span class="ui-page-result-row__icon" aria-hidden="true">
+    {%- render 'fc-icon', icon: 'file-text', size: 18 -%}
+  </span>
+  <span class="ui-page-result-row__body">
+    <{{ heading_tag }} class="ui-page-result-row__title">
+      <a class="ui-page-result-row__link" href="{{ page.url }}">{{ page.title | escape }}</a>
+    </{{ heading_tag }}>
+    {%- if excerpt != blank -%}
+      <span class="ui-page-result-row__excerpt">{{ excerpt }}</span>
+    {%- endif -%}
+  </span>
+  <span class="ui-page-result-row__arrow" aria-hidden="true">
+    {%- render 'fc-icon', icon: 'arrow-right', size: 18 -%}
+  </span>
+</li>

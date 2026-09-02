@@ -1,0 +1,917 @@
+.search-results {
+  color: #101012;
+}
+
+.search-results__band {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+  padding: 5.6rem 9.6rem 3rem;
+  border-bottom: 0.1rem solid #e3e3e0;
+}
+
+.search-results__title {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.1rem;
+  color: #101012;
+}
+
+.search-results__form {
+  width: 100%;
+}
+
+.search-results__summary {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #5a5a60;
+}
+
+.search-results__section {
+  padding: 4.8rem 9.6rem 0;
+}
+
+.search-results__section + .search-results__section {
+  padding-top: 6rem;
+}
+
+.search-results__section:last-child {
+  padding-bottom: 8.8rem;
+}
+
+.search-results__section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-results__eyebrow {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.2rem;
+  text-transform: uppercase;
+  color: #5a5a60;
+}
+
+.search-results__heading {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.1rem;
+  color: #101012;
+}
+
+.search-results__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem 2.4rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2.6rem;
+  padding-bottom: 2rem;
+  border-bottom: 0.1rem solid #e3e3e0;
+}
+
+/* Dawn pads the container 10px on top and the form 5px underneath, which pushes the
+   pills below the sort control. Zero both so the row shares one baseline. */
+.search-results__controls .facets-container {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.search-results__controls .facets__form {
+  margin-bottom: 0;
+}
+
+.search-results__sort {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.search-results__sort .collection-sort__trigger {
+  width: auto;
+  min-width: 19rem;
+}
+
+/* The band above already states the result count, so Dawn's copy is redundant.
+   It stays in the DOM because facets.js writes into it after every filter. */
+.search-results__controls .product-count {
+  display: none;
+}
+
+/* Below the facet breakpoint Dawn swaps to a drawer trigger. Match it to the
+   pills so it sits level with the sort control. */
+.search-results__controls .mobile-facets__wrapper {
+  margin: 0;
+}
+
+.search-results__controls .mobile-facets__open-wrapper {
+  display: block;
+}
+
+.search-results__controls .mobile-facets__open {
+  display: inline-flex;
+  gap: 1.2rem;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0 1.4rem;
+  border: 0.1rem solid #767676;
+  border-radius: 1.4rem;
+}
+
+.search-results__controls .mobile-facets__open-label {
+  font-size: 1.4rem;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+
+/* Dawn renders horizontal facets as bare text plus a caret; the design calls for
+   a bordered control that shows its own selection. */
+.search-results__controls .facets__disclosure {
+  margin-right: 1rem;
+}
+
+.search-results__controls .facets__summary {
+  padding: 0;
+  margin-bottom: 0;
+  color: #101012;
+}
+
+.search-results__controls .facets__summary > div {
+  display: inline-flex;
+  gap: 1.2rem;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0 1.4rem;
+  border: 0.1rem solid #767676;
+  border-radius: 1.4rem;
+}
+
+.search-results__controls .facets__summary:hover > div {
+  border-color: #101012;
+}
+
+.search-results__controls .facets__summary:hover .facets__summary-label {
+  text-decoration: none;
+}
+
+.search-results__controls .facets__summary .icon-caret {
+  position: static;
+  flex: 0 0 auto;
+}
+
+/* Dawn anchors the popup to the original bare-text summary height and holds a
+   -15px transform from its open animation, which overlaps the taller control. */
+.search-results__controls .facets__display {
+  display: flex;
+  flex-direction: column;
+  top: calc(100% + 0.6rem);
+  left: 0;
+  width: 28rem;
+  padding: 0.8rem;
+  border: 0.1rem solid #e3e3e0;
+  border-radius: 1.4rem;
+  box-shadow: 0 1.4rem 3.2rem rgba(16, 16, 18, 0.14);
+  transform: none;
+}
+
+/* The reset action reads better under the options, so the header is reordered
+   and reduced to that single control. */
+.search-results__controls .facets__header {
+  order: 2;
+  position: static;
+  justify-content: flex-start;
+  padding: 1rem;
+  border-top: 0.1rem solid #e3e3e0;
+  border-bottom: 0;
+  font-size: 1.4rem;
+}
+
+.search-results__controls .facets__selected {
+  display: none;
+}
+
+/* For a checkbox list the header only repeats the selection count, but the price
+   filter uses it to state the highest price, which is worth keeping. */
+.search-results__controls .facets__display:has(price-range) .facets__header {
+  justify-content: space-between;
+  gap: 1.6rem;
+}
+
+.search-results__controls .facets__display:has(price-range) .facets__selected {
+  display: block;
+  font-size: 1.3rem;
+  color: #5a5a60;
+}
+
+.search-results__controls .facets__reset {
+  color: #5a5a60;
+  text-decoration: none;
+}
+
+.search-results__controls .facets__reset:hover {
+  color: #101012;
+  text-decoration: underline;
+}
+
+.search-results__controls .facets__list {
+  padding: 0;
+}
+
+.search-results__controls .facet-checkbox {
+  gap: 1.2rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 0.8rem;
+  font-size: 1.4rem;
+}
+
+.search-results__controls .facets__item:hover .facet-checkbox,
+.search-results__controls .facet-checkbox.active {
+  background: #f4f4f2;
+}
+
+.search-results__controls .facets-layout-list .facets__label:hover .facet-checkbox__text-label,
+.search-results__controls .facets-layout-list input:focus ~ .facet-checkbox__text-label {
+  text-decoration: none;
+}
+
+.search-results__controls .facet-checkbox__text {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 1.2rem;
+  justify-content: space-between;
+}
+
+.search-results__controls .facet-checkbox__count {
+  color: #5a5a60;
+}
+
+/* Dawn draws the box with an inline square.svg and hides the real input behind it.
+   The input itself is styled instead so the control matches our other inputs. */
+.search-results__controls .facet-checkbox > svg {
+  display: none;
+}
+
+.search-results__controls .facets-layout-list--text input[type='checkbox'] {
+  position: static;
+  z-index: auto;
+  flex: 0 0 auto;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 0.1rem solid #767676;
+  border-radius: 0.5rem;
+}
+
+.search-results__controls .facets-layout-list--text input[type='checkbox']:checked {
+  border-color: #101012;
+  background: #101012;
+}
+
+.search-results__controls .facet-checkbox > .svg-wrapper {
+  left: 1.4rem;
+  top: 50%;
+  width: 1.1rem;
+  height: 0.8rem;
+  margin-right: 0;
+  background: transparent;
+  color: #ffffff;
+  transform: translateY(-50%);
+}
+
+/* Price range: label above the field, matching the designed inputs. */
+.search-results__controls .facets__price {
+  gap: 1rem;
+  align-items: flex-end;
+  padding: 1rem;
+}
+
+.search-results__controls .facets__price .field {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column-reverse;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+/* Dawn outlines the field with pseudo-elements sized to the whole field, which
+   now spans the label too. The input carries its own border instead. */
+.search-results__controls .facets__price .field::before,
+.search-results__controls .facets__price .field::after {
+  display: none;
+}
+
+.search-results__controls .facets__price .field + .field-currency,
+.search-results__controls .facets__price .field-currency {
+  align-self: flex-end;
+  margin: 0 0 1.2rem;
+  color: #5a5a60;
+}
+
+.search-results__controls .facets__price .field__input {
+  height: 4rem;
+  padding: 0 1.2rem;
+  border: 0.1rem solid #767676;
+  border-radius: 1rem;
+}
+
+.search-results__controls .facets__price .field__label {
+  position: static;
+  font-size: 1.3rem;
+  color: #5a5a60;
+  transform: none;
+}
+
+/* Mobile filter drawer.
+   Dawn ships this as a drill-in menu with no scrim; with only a couple of filters
+   it reads better as a single panel of inline accordions. */
+.search-results__controls .mobile-facets__disclosure[open] > summary::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  background: rgba(16, 16, 18, 0.35);
+}
+
+.search-results__controls .mobile-facets__inner {
+  max-width: 34rem;
+  border: 0;
+  box-shadow: -1.4rem 0 3.2rem rgba(16, 16, 18, 0.14);
+  filter: none;
+}
+
+.search-results__controls .mobile-facets__header {
+  align-items: flex-start;
+  padding: 2rem 2rem 1.8rem;
+  border-bottom: 0.1rem solid #e3e3e0;
+  text-align: left;
+}
+
+.search-results__controls .mobile-facets__header-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.search-results__controls .mobile-facets__heading {
+  font-size: 2.2rem;
+  letter-spacing: -0.04rem;
+}
+
+.search-results__controls .mobile-facets__count {
+  flex-grow: 0;
+  font-size: 1.4rem;
+  color: #5a5a60;
+}
+
+/* Dawn keeps this button in the trigger summary and toggles it with .menu-opening,
+   so only its appearance changes here. */
+.search-results__controls .mobile-facets__close {
+  top: 1.8rem;
+  right: 1.6rem;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 50%;
+  background: #f4f4f2;
+}
+
+.search-results__controls .mobile-facets__close .svg-wrapper {
+  width: 1.6rem;
+}
+
+.search-results__controls .mobile-facets__main {
+  padding: 0.8rem 1.2rem;
+}
+
+/* Flatten the drill-in sub-panel into an inline accordion. */
+.js .search-results__controls .mobile-facets__submenu {
+  position: static;
+  visibility: visible;
+  transform: none;
+}
+
+.search-results__controls .mobile-facets__close-button {
+  display: none;
+}
+
+.search-results__controls .mobile-facets__details + .mobile-facets__details {
+  border-top: 0.1rem solid #e3e3e0;
+}
+
+.search-results__controls .mobile-facets__summary {
+  padding: 1.4rem 0.8rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.search-results__controls .mobile-facets__arrow {
+  transition: transform 150ms ease;
+  transform: rotate(90deg);
+}
+
+.search-results__controls .mobile-facets__details[open] .mobile-facets__arrow {
+  transform: rotate(-90deg);
+}
+
+.search-results__controls .mobile-facets__list {
+  padding: 0 0 0.4rem;
+}
+
+/* Inline accordions make the per-group actions redundant; the drawer keeps one
+   set of footer actions at the bottom. */
+.search-results__controls .mobile-facets__submenu .mobile-facets__footer {
+  display: none;
+}
+
+.search-results__controls .mobile-facets__label {
+  gap: 1.2rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 0.8rem;
+  font-size: 1.4rem;
+}
+
+.search-results__controls .mobile-facets__label.active {
+  background: #f4f4f2;
+}
+
+/* Same treatment as the desktop popover: drop the drawn square and the separate
+   checkmark, and style the input itself. */
+.search-results__controls .mobile-facets__label > svg,
+.search-results__controls .mobile-facets__label .icon-checkmark,
+.search-results__controls .mobile-facets__highlight {
+  display: none;
+}
+
+.search-results__controls .mobile-facets__checkbox {
+  position: static;
+  z-index: auto;
+  flex: 0 0 auto;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 0.1rem solid #767676;
+  border-radius: 0.5rem;
+  appearance: none;
+}
+
+.search-results__controls .mobile-facets__checkbox:checked {
+  border-color: #101012;
+  background: #101012 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 9' fill='none'%3E%3Cpath d='M1 4.5 4 7.5 10 1.5' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 1.1rem 0.9rem no-repeat;
+}
+
+.search-results__controls .mobile-facets__footer {
+  gap: 1.2rem;
+  padding: 1.6rem 0.8rem 0.8rem;
+  border-top: 0.1rem solid #e3e3e0;
+}
+
+.search-results__controls .mobile-facets__footer > * + * {
+  margin-left: 0;
+}
+
+.search-results__controls .mobile-facets__footer > * {
+  width: auto;
+}
+
+.search-results__controls .mobile-facets__clear-wrapper {
+  flex: 0 0 auto;
+}
+
+.search-results__controls .mobile-facets__clear {
+  display: inline-flex;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0 1.8rem;
+  border: 0.1rem solid #767676;
+  border-radius: 1.4rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #101012;
+  text-decoration: none;
+}
+
+.search-results__controls .mobile-facets__footer .button--primary {
+  flex: 1 1 auto;
+  min-height: 4rem;
+  border-radius: 1.4rem;
+  font-size: 1.4rem;
+}
+
+.search-results__controls .facets__summary-value::before {
+  content: ': ';
+}
+
+.search-results__controls .facets__summary-label:has(.facets__summary-value) {
+  font-weight: 600;
+}
+
+.search-results__controls .facets__summary:has(.facets__summary-value) > div {
+  border-color: #101012;
+}
+
+/* The notice already offers Clear filters, so Dawn's duplicate pill row is hidden. */
+.search-results__controls .active-facets {
+  display: none;
+}
+
+.search-results__product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2.4rem;
+  margin: 2.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Loading. facets.js marks .collection while it fetches, and the whole container is
+   replaced on arrival, so the class clears itself. */
+.search-results__heading-loading,
+.search-results__skeleton {
+  display: none;
+}
+
+.collection.loading .search-results__heading-count {
+  display: none;
+}
+
+.collection.loading .search-results__heading-loading {
+  display: inline;
+  color: #5a5a60;
+}
+
+.collection.loading .search-results__skeleton {
+  display: grid;
+}
+
+.collection.loading #product-grid,
+.collection.loading .search-results__section--content,
+.collection.loading .search-results__section--pagination {
+  display: none;
+}
+
+/* The skeletons already signal the wait, so the spinner would double up. */
+.search-results__controls .loading__spinner {
+  display: none;
+}
+
+.ui-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+/* base.css hides empty divs, and that selector outranks a single class. */
+.ui-card-skeleton .ui-card-skeleton__media {
+  display: block;
+  height: 30rem;
+  border-radius: 1.4rem;
+  background: #f4f4f2;
+}
+
+.ui-card-skeleton__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ui-card-skeleton__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ui-card-skeleton__bar {
+  display: block;
+  border-radius: 0.6rem;
+  background: #f4f4f2;
+}
+
+.ui-card-skeleton__bar--tag {
+  width: 6.4rem;
+  height: 1.1rem;
+}
+
+.ui-card-skeleton__bar--title {
+  width: 100%;
+  height: 1.7rem;
+}
+
+.ui-card-skeleton__bar--price {
+  width: 7.2rem;
+  height: 1.5rem;
+}
+
+.ui-card-skeleton__bar--action {
+  width: 7.4rem;
+  height: 3.2rem;
+  border-radius: 10rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .collection.loading .ui-card-skeleton__media,
+  .collection.loading .ui-card-skeleton__bar {
+    animation: search-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes search-skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.search-results__pages {
+  margin: 2.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-results__articles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.4rem;
+  margin: 2.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-results__notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  padding: 1.6rem 1.8rem;
+  border-radius: 1.4rem;
+  background: #f4f4f2;
+  font-size: 1.4rem;
+  line-height: 1.5;
+  color: #5a5a60;
+}
+
+.search-results__notice a {
+  font-weight: 600;
+  color: #101012;
+  text-underline-offset: 0.3rem;
+}
+
+.search-results__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3.4rem;
+  padding: 7.2rem 9.6rem 9.6rem;
+}
+
+.search-results__empty-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-results__empty-heading {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.06rem;
+  color: #101012;
+}
+
+.search-results__empty-hint {
+  max-width: 56rem;
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.55;
+  color: #5a5a60;
+}
+
+.search-results__empty-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  width: 100%;
+  padding-top: 2.6rem;
+  border-top: 0.1rem solid #e3e3e0;
+}
+
+.search-results__empty-label {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.15rem;
+  text-transform: uppercase;
+  color: #5a5a60;
+}
+
+.search-results__empty-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-results__empty-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding-top: 2.6rem;
+  border-top: 0.1rem solid #e3e3e0;
+  font-size: 1.5rem;
+  color: #5a5a60;
+}
+
+/* Page result row */
+
+.ui-page-result-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  padding: 1.8rem 0;
+  border-top: 0.1rem solid #e3e3e0;
+}
+
+.ui-page-result-row:last-child {
+  border-bottom: 0.1rem solid #e3e3e0;
+}
+
+.ui-page-result-row__icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.8rem;
+  background: #f4f4f2;
+  color: #5a5a60;
+}
+
+.ui-page-result-row__body {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ui-page-result-row__title {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: #101012;
+}
+
+.ui-page-result-row__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-page-result-row__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.ui-page-result-row__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+.ui-page-result-row__link:focus-visible {
+  outline: 0.2rem solid #101012;
+  outline-offset: 0.4rem;
+}
+
+.ui-page-result-row__excerpt {
+  font-size: 1.35rem;
+  line-height: 1.45;
+  color: #5a5a60;
+}
+
+.ui-page-result-row__arrow {
+  display: flex;
+  flex: 0 0 auto;
+  color: #5a5a60;
+}
+
+@media screen and (max-width: 989px) {
+  .search-results__band {
+    padding: 4.4rem 4.8rem 2.6rem;
+  }
+
+  .search-results__title {
+    font-size: 3.4rem;
+  }
+
+  .search-results__section {
+    padding: 4rem 4.8rem 0;
+  }
+
+  .search-results__section + .search-results__section {
+    padding-top: 4.8rem;
+  }
+
+  .search-results__section:last-child {
+    padding-bottom: 6.4rem;
+  }
+
+  .search-results__heading {
+    font-size: 2.6rem;
+  }
+
+  .search-results__product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+  }
+
+  .search-results__articles {
+    gap: 2rem;
+  }
+
+  .search-results__empty {
+    gap: 2.8rem;
+    padding: 5.6rem 4.8rem 7.2rem;
+  }
+}
+
+@media screen and (max-width: 749px) {
+  .search-results__band {
+    gap: 1.4rem;
+    padding: 3.2rem 2rem 2.2rem;
+  }
+
+  /* Both controls have to share one row at 390px. */
+  .search-results__controls {
+    gap: 1.2rem;
+  }
+
+  .search-results__sort .collection-sort__trigger {
+    min-width: 0;
+  }
+
+  .search-results__title {
+    font-size: 2.8rem;
+    letter-spacing: -0.06rem;
+  }
+
+  .search-results__summary {
+    font-size: 1.4rem;
+  }
+
+  .search-results__section {
+    padding: 2.8rem 2rem 0;
+  }
+
+  .search-results__section + .search-results__section {
+    padding-top: 3.4rem;
+  }
+
+  .search-results__section:last-child {
+    padding-bottom: 4.4rem;
+  }
+
+  .search-results__heading {
+    font-size: 2.2rem;
+  }
+
+  .search-results__controls {
+    margin-top: 1.6rem;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .search-results__product-grid {
+    gap: 1.2rem;
+    margin-top: 1.8rem;
+  }
+
+  .search-results__articles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .search-results__empty {
+    gap: 2.4rem;
+    padding: 4rem 2rem 5.6rem;
+  }
+
+  .search-results__empty-heading {
+    font-size: 2.4rem;
+  }
+}

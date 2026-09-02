@@ -17,6 +17,13 @@
   - image_widths: {String} Responsive image widths
   - image_sizes: {String} Responsive image sizes
   - image_loading: {String} Image loading strategy
+  - trim_price: {Boolean} Remove insignificant trailing zeroes from prices
+  - title: {String} Optional title override
+  - url: {String} Optional destination override
+  - product_type: {String} Optional type override
+  - price_label: {String} Optional formatted price override
+  - image_asset: {String} Optional theme asset filename
+  - image_alt: {String} Optional theme asset alt text
 {%- endcomment -%}
 {%- liquid
   assign variant = variant | default: 'home'
@@ -24,22 +31,38 @@
   assign image_widths = image_widths | default: '294, 441, 588'
   assign image_sizes = image_sizes | default: '(min-width: 990px) 294px, 50vw'
   assign image_loading = image_loading | default: 'lazy'
+  assign card_title = title | default: product.title
+  assign card_url = url | default: product.url
+  assign card_type = product_type | default: product.type
   assign title_id = card_id
   if title_id == blank
+    assign title_handle = card_title | handle
     assign title_id = 'ProductCardTitle-' | append: product.id
+    if product.id == blank
+      assign title_id = 'ProductCardTitle-' | append: title_handle
+    endif
   endif
 -%}
 
 <article class="ui-product-card ui-product-card--{{ variant }}" {{ block_attributes }}>
   <a
     class="ui-product-card__media"
-    href="{{ product.url }}"
-    aria-label="{{ product.title | escape }}"
+    href="{{ card_url }}"
+    aria-label="{{ card_title | escape }}"
     {% if tabindex != blank %}
       tabindex="{{ tabindex }}"
     {% endif %}
   >
-    {%- if product.featured_image -%}
+    {%- if image_asset != blank -%}
+      <img
+        class="ui-product-card__image"
+        src="{{ image_asset | asset_url }}"
+        alt="{{ image_alt | default: card_title | escape }}"
+        width="{{ image_width }}"
+        height="{{ image_width }}"
+        loading="{{ image_loading }}"
+      >
+    {%- elsif product.featured_image -%}
       {{
         product.featured_image
         | image_url: width: image_width
@@ -47,7 +70,7 @@
           class: 'ui-product-card__image',
           widths: image_widths,
           sizes: image_sizes,
-          alt: product.featured_image.alt | default: product.title,
+          alt: product.featured_image.alt | default: card_title,
           loading: image_loading
       }}
     {%- else -%}
@@ -59,18 +82,18 @@
   </a>
 
   <div class="ui-product-card__info">
-    {%- if show_type and product.type != blank -%}
-      <p class="ui-product-card__tag">{{ product.type | upcase }}</p>
+    {%- if show_type and card_type != blank -%}
+      <p class="ui-product-card__tag">{{ card_type | upcase }}</p>
     {%- endif -%}
     <h3 class="ui-product-card__name" id="{{ title_id }}">
       <a
         class="ui-product-card__link"
-        href="{{ product.url }}"
+        href="{{ card_url }}"
         {% if tabindex != blank %}
           tabindex="{{ tabindex }}"
         {% endif %}
       >
-        {{- product.title | escape -}}
+        {{- card_title | escape -}}
       </a>
     </h3>
   </div>
@@ -78,7 +101,15 @@
   {%- if show_price or show_add -%}
     <div class="ui-product-card__price-row">
       {%- if show_price -%}
-        <span class="ui-product-card__price">{{ product.price | money }}</span>
+        <span class="ui-product-card__price">
+          {%- if price_label != blank -%}
+            {{- price_label | escape -}}
+          {%- elsif trim_price -%}
+            {{- product.price | money_without_trailing_zeros -}}
+          {%- else -%}
+            {{- product.price | money -}}
+          {%- endif -%}
+        </span>
       {%- endif -%}
       {%- if show_add -%}
         {%- liquid
@@ -110,7 +141,7 @@
             {%- endform -%}
           </product-form>
         {%- else -%}
-          <a class="ui-product-card__add" href="{{ product.url }}">
+          <a class="ui-product-card__add" href="{{ card_url }}">
             {%- render 'fc-icon', icon: 'plus', size: 15 -%}
             <span>{{ add_label | escape }}</span>
           </a>

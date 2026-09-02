@@ -5,7 +5,6 @@
   - article: {Article} Article to render (required)
   - read_label: {String} Read-more link label (required)
   - heading_level: {Number} Heading level from 2 through 6 (default 2)
-  - show_tag: {Boolean} Show the first article tag before the date (default true)
   - class: {String} Optional extra classes
 {%- endcomment -%}
 {%- assign heading_level = heading_level | default: 2 -%}
@@ -30,9 +29,6 @@
 
   <div class="ui-article-card__body">
     <p class="ui-article-card__meta">
-      {%- if show_tag != false and article.tags.first != blank -%}
-        <span>{{ article.tags.first | escape }}</span>
-      {%- endif -%}
       <span>{{ article.published_at | time_tag: format: 'date' }}</span>
     </p>
     <{{ heading_tag }} class="ui-article-card__title">

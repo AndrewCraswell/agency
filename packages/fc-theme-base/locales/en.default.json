@@ -253,6 +253,14 @@
       "article": "Article",
       "categories": "Categories",
       "guides": "Guides and support",
+      "matching_products_with_count": {
+        "one": "{{ count }} matching product",
+        "other": "{{ count }} matching products"
+      },
+      "related_reads_with_count": {
+        "one": "{{ count }} related read",
+        "other": "{{ count }} related reads"
+      },
       "recent_searches": "Recent searches",
       "clear_recent_searches": "Clear",
       "popular_categories": "Popular categories",

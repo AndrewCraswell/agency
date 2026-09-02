@@ -13,10 +13,13 @@
 <div class="fc-mega__columns">
   {%- for childlink in link.links -%}
     {%- if childlink.links != blank -%}
+      {%- capture child_context_url -%}
+        {%- render 'collection-context-url', url: childlink.url, current_label: childlink.title -%}
+      {%- endcapture -%}
       <div class="fc-mega__column">
         <a
           class="fc-mega__column-heading"
-          href="{{ childlink.url }}"
+          href="{{ child_context_url }}"
           {% if childlink.current %}
             aria-current="page"
           {% endif %}
@@ -26,15 +29,31 @@
 
         <ul class="fc-mega__column-links list-unstyled" role="list">
           {%- for grandchildlink in childlink.links -%}
+            {%- liquid
+              assign grandchild_label = grandchildlink.title
+              if grandchild_label == 'Mens'
+                assign grandchild_label = 'Men'
+              elsif grandchild_label == 'Womens'
+                assign grandchild_label = 'Women'
+              endif
+            -%}
+            {%- capture grandchild_context_url -%}
+              {%- render 'collection-context-url',
+                url: grandchildlink.url,
+                parent_label: childlink.title,
+                parent_url: child_context_url,
+                current_label: grandchild_label
+              -%}
+            {%- endcapture -%}
             <li>
               <a
                 class="fc-mega__link"
-                href="{{ grandchildlink.url }}"
+                href="{{ grandchild_context_url }}"
                 {% if grandchildlink.current %}
                   aria-current="page"
                 {% endif %}
               >
-                {{ grandchildlink.title | escape }}
+                {{ grandchild_label | escape }}
               </a>
             </li>
           {%- endfor -%}
@@ -56,9 +75,12 @@
     <div class="fc-mega__column fc-mega__column--standalone">
       {%- for childlink in link.links -%}
         {%- if childlink.links == blank -%}
+          {%- capture standalone_context_url -%}
+            {%- render 'collection-context-url', url: childlink.url, current_label: childlink.title -%}
+          {%- endcapture -%}
           <a
             class="fc-mega__column-heading"
-            href="{{ childlink.url }}"
+            href="{{ standalone_context_url }}"
             {% if childlink.current %}
               aria-current="page"
             {% endif %}

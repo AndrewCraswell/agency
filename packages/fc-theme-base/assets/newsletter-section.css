@@ -211,7 +211,8 @@
 
 @media screen and (min-width: 1200px) {
   .newsletter--split .newsletter__wrapper {
-    padding-inline: max(5rem, calc((100% - var(--page-width) + 10rem) / 2));
+    height: 22.8rem;
+    padding-inline: max(9.6rem, calc((100% - 124.8rem) / 2));
   }
 }
 
@@ -237,6 +238,7 @@
   }
 
   .newsletter--split .newsletter__wrapper h2 {
+    max-width: 44rem;
     font-size: 3rem;
     line-height: 1.1;
   }

@@ -1,0 +1,27 @@
+{%- comment -%}
+  Renders a URL carrying optional collection breadcrumb context.
+
+  Accepts:
+  - url: {String} Destination URL
+  - current_label: {String} Destination breadcrumb label
+  - parent_label: {String} Optional parent breadcrumb label
+  - parent_url: {String} Optional parent breadcrumb URL
+{%- endcomment -%}
+{%- liquid
+  assign query_separator = '?'
+  if url contains '?'
+    assign query_separator = '&'
+  endif
+
+  echo url
+  echo query_separator
+  if parent_label != blank and parent_url != blank
+    echo 'breadcrumb_parent='
+    echo parent_label | url_encode
+    echo '&breadcrumb_parent_url='
+    echo parent_url | url_encode
+    echo '&'
+  endif
+  echo 'breadcrumb_current='
+  echo current_label | url_encode
+-%}

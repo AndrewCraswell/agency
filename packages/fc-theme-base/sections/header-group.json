@@ -17,13 +17,13 @@
         "announcement-bar-0": {
           "type": "announcement",
           "settings": {
-            "text": "Price-match guarantee",
-            "message": "Priced competitively, matched to win",
+            "text": "Free shipping",
+            "message": "On orders over $150",
             "tone": "announcement",
             "text_alignment": "center",
             "color_scheme": "scheme-footer",
-            "link": "shopify://pages/price-match-guarantee",
-            "link_label": "Learn more"
+            "link": "shopify://collections/all",
+            "link_label": "Shop now"
           }
         },
         "announcement-bar-1": {

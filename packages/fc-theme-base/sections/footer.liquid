@@ -116,7 +116,7 @@
                         -%}
                           <li>
                             <a href="{{ faq_page.url }}" class="link link--text list-menu__item list-menu__item--link">
-                              Frequently asked questions
+                              FAQ
                             </a>
                           </li>
                         {%- endif -%}
@@ -321,7 +321,7 @@
     <div class="footer__content-bottom-wrapper page-width{% if section.settings.enable_country_selector == false and section.settings.enable_language_selector == false %} footer__content-bottom-wrapper--center{% endif %}">
       <div class="footer__copyright caption">
         <small class="copyright__content"
-          >&copy; {{ 'now' | date: '%Y' }} {{ shop.name | escape }}. {{ section.settings.rights_text | escape }}</small
+          >&copy; {{ 'now' | date: '%Y' }} {{ section.settings.copyright_name | default: shop.name | escape }}. {{ section.settings.rights_text | escape }}</small
         >
         {%- if section.settings.legal_menu != blank and section.settings.legal_menu.links.size > 0 -%}
           <ul class="policies list-unstyled">
@@ -519,6 +519,12 @@
       "id": "payment_enable",
       "default": true,
       "label": "t:sections.footer.settings.payment_enable.label"
+    },
+    {
+      "type": "text",
+      "id": "copyright_name",
+      "default": "Fencing Club",
+      "label": "Copyright name"
     },
     {
       "type": "text",

@@ -28,10 +28,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    height: 3.4rem;
     max-width: none;
-    /* Design: Utility Row padding [9, 96]; padding rather than a fixed height so the
-       controls cannot overflow into the announcement bar. */
-    padding-block: 0.9rem;
+    padding-block: 0;
     padding-inline: max(9.6rem, calc((100% - 124.8rem) / 2));
     border-bottom: 0.1rem solid rgba(var(--color-foreground), 0.12);
     background: rgb(var(--color-background));
@@ -180,7 +179,8 @@
 @media screen and (min-width: 990px) {
   /* Matches base.css's .header:not(.drawer-menu).page-width, which sets 5rem gutters. */
   .header:not(.drawer-menu).page-width {
-    min-height: 16.4rem;
+    height: 14rem;
+    min-height: 14rem;
     max-width: none;
     grid-template-columns: 11rem minmax(0, 1fr) auto;
     column-gap: 2.4rem;
@@ -198,7 +198,7 @@
 
   .header__heading-logo {
     width: 11rem;
-    max-height: 13.6rem;
+    max-height: 10rem;
     object-fit: contain;
   }
 
@@ -522,116 +522,110 @@
   opacity: 0;
 }
 
-@media screen and (min-width: 990px) {
-  .header-group--overlay {
-    display: block;
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    z-index: 4;
-  }
+.header-wrapper--translucent,
+.header-wrapper--translucent .header,
+.header-wrapper--translucent .header-utility {
+  background: transparent;
+}
 
-  /* The overlay needs a real box to float over the hero, which traps sticky again, so pin the
-     revealed header to the viewport instead. Dawn still drives `top` via its own classes. */
-  .header-group--overlay .shopify-section-header-sticky {
-    position: fixed;
-    right: 0;
-    left: 0;
-  }
+.header-wrapper--inverted,
+.header-wrapper--inverted .header,
+.header-wrapper--inverted .header-utility {
+  background: #0b0b0c;
+}
 
-  .header-group--overlay .header-wrapper {
-    border-bottom: 0;
-    background: transparent;
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) {
+  border-bottom: 0;
+}
 
-  .header-group--overlay .header-utility {
-    border-bottom: 0.1rem solid rgba(255, 255, 255, 0.08);
-    background: transparent;
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
 
-  .header-group--overlay .header-utility__link {
-    color: #a0a0a6;
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility__link {
+  color: #a0a0a6;
+}
 
-  .header-group--overlay .header-utility__link:hover,
-  .header-group--overlay .header-utility__link:focus-visible {
-    color: #f7f7f5;
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility__link:hover,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility__link:focus-visible,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__menu-item,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__menu-item:hover,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__active-menu-item,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__icon,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__icon .icon,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__heading-link,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility .localization-form__select {
+  color: #f7f7f5;
+}
 
-  .header-group--overlay .header-utility .localization-form__select {
-    color: #f7f7f5;
-    background: transparent;
-    border-color: transparent;
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__menu-item .icon-caret,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility .localization-form__select .svg-wrapper,
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header-utility .localization-form__select svg {
+  color: #a0a0a6;
+}
 
-  .header-group--overlay .header-utility .localization-form__select:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__heading-logo {
+  display: none;
+}
 
-  .header-group--overlay .header-utility .localization-form__select .svg-wrapper,
-  .header-group--overlay .header-utility .localization-form__select svg {
-    color: #a0a0a6;
-  }
+:is(.header-wrapper--translucent, .header-wrapper--inverted) .header__heading-logo--light {
+  display: block;
+}
 
-  .header-group--overlay .header {
-    background: transparent;
-  }
-
-  .header-group--overlay .header__menu-item,
-  .header-group--overlay .header__menu-item:hover,
-  .header-group--overlay .header__icon,
-  .header-group--overlay .header__icon .icon,
-  .header-group--overlay .header__heading-link {
-    color: #f7f7f5;
-  }
-
-  .header-group--overlay .header__menu-item .icon-caret {
-    color: #a0a0a6;
-  }
-
-  .header-group--overlay .header__icon .icon {
-    stroke: currentColor;
-  }
-
-  /* Swap to the light mark while the header floats over the hero. */
-  .header-group--overlay .header__heading-logo {
-    display: none;
-  }
-
-  .header-group--overlay .header__heading-logo--light {
-    display: block;
-  }
-
-  /* Once Dawn pins the header on scroll it needs its solid background back. */
-  .header-group--overlay .shopify-section-header-sticky .header-wrapper,
-  .header-group--overlay .shopify-section-header-sticky .header,
-  .header-group--overlay .shopify-section-header-sticky .header-utility {
+@media screen and (max-width: 989px) {
+  .header-wrapper--translucent,
+  .header-wrapper--translucent .header,
+  .header-wrapper--translucent .header-utility {
     background: rgb(var(--color-background));
   }
 
-  .header-group--overlay .shopify-section-header-sticky .header-utility {
+  .header-wrapper--translucent {
+    border-bottom: var(--header-border-thickness, 0.1rem) solid rgba(var(--color-foreground), 0.08);
+  }
+
+  .header-wrapper--translucent .header-utility {
     border-bottom-color: rgba(var(--color-foreground), 0.12);
   }
 
-  .header-group--overlay .shopify-section-header-sticky .header-utility__link {
-    color: rgba(var(--color-foreground), 0.68);
-  }
-
-  .header-group--overlay .shopify-section-header-sticky .header__menu-item,
-  .header-group--overlay .shopify-section-header-sticky .header__icon,
-  .header-group--overlay .shopify-section-header-sticky .header__icon .icon,
-  .header-group--overlay .shopify-section-header-sticky .header-utility .localization-form__select {
+  .header-wrapper--translucent .header-utility .localization-form__select,
+  .header-wrapper--translucent .header__icon,
+  .header-wrapper--translucent .header__icon .icon {
     color: rgb(var(--color-foreground));
   }
+}
 
-  .header-group--overlay .shopify-section-header-sticky .header__heading-logo {
-    display: block;
-  }
+.header-wrapper--translucent .header-utility .localization-form__select {
+  background: transparent;
+  border-color: transparent;
+}
 
-  .header-group--overlay .shopify-section-header-sticky .header__heading-logo--light {
-    display: none;
-  }
+.header-wrapper--translucent .header-utility .localization-form__select:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.header-group--overlay {
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 4;
+}
+
+.header-group--overlay .shopify-section-header-sticky {
+  position: fixed;
+  right: 0;
+  left: 0;
+}
+
+.header-group--overlay .shopify-section-header-sticky .header-wrapper,
+.header-group--overlay .shopify-section-header-sticky .header,
+.header-group--overlay .shopify-section-header-sticky .header-utility {
+  background: rgb(var(--color-background));
+}
+
+.header-group--overlay .shopify-section-header-sticky .header-utility {
+  border-bottom-color: rgba(var(--color-foreground), 0.12);
 }
 
 /* Dawn's bubble is near-black, which vanishes against the hero's dark header. The bubble is a

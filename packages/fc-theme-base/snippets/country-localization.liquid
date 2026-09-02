@@ -48,7 +48,7 @@
               aria-current="true"
             {% endif %}
             data-value="{{ country.iso_code }}"
-            id="{{ country.name }}"
+            id="{{ localPosition }}-country-{{ country.iso_code | downcase }}"
           >
             <span class="currency-flag currency-flag--{{ country.iso_code | downcase }}" aria-hidden="true"></span>
             <span class="country">

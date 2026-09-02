@@ -343,9 +343,6 @@
       {%- render 'cart-drawer' -%}
     {%- endif -%}
 
-    {%- comment -%}
-      On the homepage this wrapper lifts the header group out of flow so it overlays the hero.
-    {%- endcomment -%}
     <div class="header-group{% if request.page_type == 'index' %} header-group--overlay{% endif %}">
       {% sections 'header-group' %}
     </div>

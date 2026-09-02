@@ -1381,6 +1381,13 @@
         "default": false,
         "label": "t:settings_schema.search_input.settings.predictive_search_show_price.label",
         "info": "t:settings_schema.search_input.settings.predictive_search_show_price.info"
+      },
+      {
+        "type": "link_list",
+        "id": "popular_categories_menu",
+        "label": "Popular categories menu",
+        "info": "Shown in the search suggestions panel, the no-results panel, and the search results empty state.",
+        "default": "main-menu"
       }
     ]
   },

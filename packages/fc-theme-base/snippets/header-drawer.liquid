@@ -52,12 +52,24 @@
                             {{ link.title | escape }}
                           </button>
                           <ul class="menu-drawer__menu list-menu" role="list" tabindex="-1">
+                            <li>
+                              <a
+                                id="HeaderDrawer-{{ link.handle }}-collection"
+                                href="{{ link.url }}"
+                                class="menu-drawer__menu-item link link--text list-menu__item focus-inset"
+                              >
+                                {{ link.title | escape }}
+                              </a>
+                            </li>
                             {%- for childlink in link.links -%}
+                              {%- capture child_context_url -%}
+                                {%- render 'collection-context-url', url: childlink.url, current_label: childlink.title -%}
+                              {%- endcapture -%}
                               <li>
                                 {%- if childlink.links == blank -%}
                                   <a
                                     id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}"
-                                    href="{{ childlink.url }}"
+                                    href="{{ child_context_url }}"
                                     class="menu-drawer__menu-item link link--text list-menu__item focus-inset{% if childlink.current %} menu-drawer__menu-item--active{% endif %}"
                                     {% if childlink.current %}
                                       aria-current="page"
@@ -97,17 +109,42 @@
                                         role="list"
                                         tabindex="-1"
                                       >
+                                        <li>
+                                          <a
+                                            id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}-collection"
+                                            href="{{ child_context_url }}"
+                                            class="menu-drawer__menu-item link link--text list-menu__item focus-inset"
+                                          >
+                                            {{ childlink.title | escape }}
+                                          </a>
+                                        </li>
                                         {%- for grandchildlink in childlink.links -%}
+                                          {%- liquid
+                                            assign grandchild_label = grandchildlink.title
+                                            if grandchild_label == 'Mens'
+                                              assign grandchild_label = 'Men'
+                                            elsif grandchild_label == 'Womens'
+                                              assign grandchild_label = 'Women'
+                                            endif
+                                          -%}
+                                          {%- capture grandchild_context_url -%}
+                                            {%- render 'collection-context-url',
+                                              url: grandchildlink.url,
+                                              parent_label: childlink.title,
+                                              parent_url: child_context_url,
+                                              current_label: grandchild_label
+                                            -%}
+                                          {%- endcapture -%}
                                           <li>
                                             <a
                                               id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}-{{ grandchildlink.handle }}"
-                                              href="{{ grandchildlink.url }}"
+                                              href="{{ grandchild_context_url }}"
                                               class="menu-drawer__menu-item link link--text list-menu__item focus-inset{% if grandchildlink.current %} menu-drawer__menu-item--active{% endif %}"
                                               {% if grandchildlink.current %}
                                                 aria-current="page"
                                               {% endif %}
                                             >
-                                              {{ grandchildlink.title | escape }}
+                                              {{ grandchild_label | escape }}
                                             </a>
                                           </li>
                                         {%- endfor -%}

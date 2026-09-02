@@ -32,7 +32,7 @@
               >
                 <div class="fc-mega">
                   <div class="fc-mega__header">
-                    <p class="fc-mega__title">{{ link.title | escape }}</p>
+                    <a class="fc-mega__title" href="{{ link.url }}">{{ link.title | escape }}</a>
                     <a class="fc-mega__shop-all" href="{{ link.url }}">
                       Shop all {{ link.title | escape }}
                       {{- 'icon-arrow.svg' | inline_asset_content -}}

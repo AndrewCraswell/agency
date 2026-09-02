@@ -7,6 +7,8 @@
   - enable_sorting: {Boolean} Show sorting when true
   - filter_type: {String} Type of filter
   - paginate: {Object}
+  - expand_filters: {Boolean} Keep every desktop filter group open
+  - show_product_count: {Boolean} Render the default responsive result count (default true)
 
   Usage:
   {% render 'facets', results: collection, enable_filtering: true, enable_sorting: true, filter_type: 'vertical', paginate: paginate %}
@@ -134,17 +136,30 @@
                     id="Details-{{ filter.param_name | escape }}-{{ section.id }}"
                     class="{% if filter_type == 'horizontal' %}disclosure-has-popup facets__disclosure{% else %} facets__disclosure-vertical{% endif %} js-filter"
                     data-index="{{ forloop.index }}"
-                    {% if filter_type == 'vertical' and forloop.index == 1 %}
-                      open
+                    data-filter-label="{{ filter.label | handle }}"
+                    {% if filter_type == 'vertical' %}
+                      {% if expand_filters or forloop.index == 1 %}open{% endif %}
                     {% endif %}
                   >
                     <summary
                       class="facets__summary caption-large focus-offset"
                       aria-label="{{ filter.label | escape }} ({{ 'products.facets.filters_selected.one' | t: count: filter.active_values.size }})"
+                      {% if expand_filters %}
+                        tabindex="-1"
+                        aria-disabled="true"
+                      {% endif %}
                     >
                       <div>
                         <span class="facets__summary-label">
-                          {{- filter.label | escape }}
+                          {{- filter.label | escape -}}
+                          {%- if filter_type == 'horizontal' and filter.active_values.size > 0 -%}
+                            <span class="facets__summary-value">
+                              {{- filter.active_values.first.label | escape -}}
+                              {%- if filter.active_values.size > 1 -%}
+                                +{{ filter.active_values.size | minus: 1 }}
+                              {%- endif -%}
+                            </span>
+                          {%- endif -%}
                           {%- if filter_type == 'vertical' -%}
                             <span class="facets__selected{% if filter.active_values.size == 0 %} hidden{% endif %}">
                               ({{ filter.active_values.size }})</span
@@ -211,7 +226,8 @@
 
                             {%- capture text_value -%}
                               <span class="facet-checkbox__text" aria-hidden="true">
-                                <span class="facet-checkbox__text-label">{{- value.label | escape }}</span> ({{- value.count -}})
+                                <span class="facet-checkbox__text-label">{{- value.label | escape }}</span>
+                                <span class="facet-checkbox__count">({{- value.count -}})</span>
                               </span>
                               <span class="visually-hidden">
                                 {{- value.label | escape }} (
@@ -305,11 +321,18 @@
                     id="Details-{{ filter.param_name | escape }}-{{ section.id }}"
                     class="{% if filter_type == 'horizontal' %}disclosure-has-popup facets__disclosure{% else %} facets__disclosure-vertical{% endif %} js-filter"
                     data-index="{{ forloop.index }}"
-                    {% if filter_type == 'vertical' and forloop.index == 1 %}
-                      open
+                    data-filter-label="{{ filter.label | handle }}"
+                    {% if filter_type == 'vertical' %}
+                      {% if expand_filters or forloop.index == 1 %}open{% endif %}
                     {% endif %}
                   >
-                    <summary class="facets__summary caption-large focus-offset">
+                    <summary
+                      class="facets__summary caption-large focus-offset"
+                      {% if expand_filters %}
+                        tabindex="-1"
+                        aria-disabled="true"
+                      {% endif %}
+                    >
                       <div>
                         <span>{{ filter.label | escape }}</span>
                         {{- 'icon-caret.svg' | inline_asset_content -}}
@@ -580,7 +603,8 @@
 
                               {%- capture text_value -%}
                                 <span class="facet-checkbox__text" aria-hidden="true">
-                                  <span class="facet-checkbox__text-label">{{- value.label | escape }}</span> ({{- value.count -}})
+                                  <span class="facet-checkbox__text-label">{{- value.label | escape }}</span>
+                                  <span class="facet-checkbox__count">({{- value.count -}})</span>
                                 </span>
                                 <span class="visually-hidden">
                                   {{- value.label | escape }} (
@@ -873,30 +897,32 @@
       </form>
     </facet-filters-form>
   {%- endif -%}
-  <div
-    class="product-count light{% if filter_type == 'vertical' or filter_type == 'horizontal' %} medium-hide large-up-hide{% endif %}"
-    role="status"
-  >
-    <h2 class="product-count__text text-body">
-      <span
-        id="ProductCount"
-        data-product-count="{{ results.products_count | default: results.results_count }}"
-        data-total-count="{{ results.all_products_count | default: results.products_count | default: results.results_count }}"
-      >
-        {%- if results.results_count -%}
-          {{ 'templates.search.results_with_count' | t: terms: results.terms, count: results.results_count }}
-        {%- elsif results.products_count == results.all_products_count -%}
-          {{ 'products.facets.product_count_simple' | t: count: results.products_count }}
-        {%- else -%}
-          {{
-            'products.facets.product_count'
-            | t: product_count: results.products_count, count: results.all_products_count
-          }}
-        {%- endif -%}
-      </span>
-    </h2>
-    {%- render 'loading-spinner' -%}
-  </div>
+  {%- unless show_product_count == false -%}
+    <div
+      class="product-count light{% if filter_type == 'vertical' or filter_type == 'horizontal' %} medium-hide large-up-hide{% endif %}"
+      role="status"
+    >
+      <h2 class="product-count__text text-body">
+        <span
+          id="ProductCount"
+          data-product-count="{{ results.products_count | default: results.results_count }}"
+          data-total-count="{{ results.all_products_count | default: results.products_count | default: results.results_count }}"
+        >
+          {%- if results.results_count -%}
+            {{ 'templates.search.results_with_count' | t: terms: results.terms, count: results.results_count }}
+          {%- elsif results.products_count == results.all_products_count -%}
+            {{ 'products.facets.product_count_simple' | t: count: results.products_count }}
+          {%- else -%}
+            {{
+              'products.facets.product_count'
+              | t: product_count: results.products_count, count: results.all_products_count
+            }}
+          {%- endif -%}
+        </span>
+      </h2>
+      {%- render 'loading-spinner' -%}
+    </div>
+  {%- endunless -%}
   {%- if filter_type == 'drawer' -%}
     <facet-filters-form class="facets facets-pill small-hide">
       <form id="FacetFiltersPillsForm" class="facets__form">

@@ -1,0 +1,52 @@
+{%- comment -%}
+  Renders one tag-backed collection filter option.
+
+  Accepts:
+  - block: {Block} Filter option block
+  - presentation: {String} checkbox, chip, or swatch
+  - current_tags: {String[]} Active collection tags
+  - default_active_tags: {String} Delimited tags selected before filtering
+{%- endcomment -%}
+{%- liquid
+  assign option_tag = block.settings.tag | default: block.settings.label
+  assign option_active = false
+  if current_tags contains option_tag
+    assign option_active = true
+  elsif current_tags == blank
+    assign default_active_token = '|' | append: option_tag | append: '|'
+    if default_active_tags contains default_active_token
+      assign option_active = true
+    endif
+  endif
+
+  capture option_link
+    if current_tags contains option_tag
+      echo block.settings.label | link_to_remove_tag: option_tag
+    else
+      echo block.settings.label | link_to_add_tag: option_tag
+    endif
+  endcapture
+-%}
+
+<li
+  class="collection-filter-option collection-filter-option--{{ presentation }}{% if option_active %} collection-filter-option--active{% endif %}"
+  {{ block.shopify_attributes }}
+>
+  {%- case presentation -%}
+    {%- when 'chip' -%}
+      {{ option_link }}
+    {%- when 'swatch' -%}
+      <span class="collection-filter-option__swatch" style="--filter-swatch: {{ block.settings.swatch }}" aria-hidden="true"></span>
+      <span class="collection-filter-option__swatch-link">{{ option_link }}</span>
+    {%- else -%}
+      <span class="collection-filter-option__check" aria-hidden="true">
+        {%- if option_active -%}
+          <span class="svg-wrapper">{{- 'icon-checkmark.svg' | inline_asset_content -}}</span>
+        {%- endif -%}
+      </span>
+      <span class="collection-filter-option__label">{{ option_link }}</span>
+      {%- if block.settings.show_count -%}
+        <span class="collection-filter-option__count" aria-hidden="true">{{ block.settings.count }}</span>
+      {%- endif -%}
+  {%- endcase -%}
+</li>

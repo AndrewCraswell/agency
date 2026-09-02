@@ -15,6 +15,7 @@
   border-left: 0;
   border-radius: 0;
   border-right: 0;
+  box-shadow: 0 1.8rem 4.4rem -1rem rgba(var(--color-foreground), 0.28);
   left: 0;
   right: 0;
   overflow-y: auto;
@@ -111,6 +112,12 @@
   --fc-mega-ink-soft: #5a5a60;
   --fc-mega-line: #e3e3e0;
   --fc-mega-surface: #f4f4f2;
+  --fc-mega-tool-ink: #f7f7f5;
+  --fc-mega-tool-ink-soft: #a0a0a6;
+  --fc-mega-tool-surface: #101012;
+  --fc-mega-tool-button: #ffffff;
+  --fc-mega-tool-button-ink: #101012;
+  --fc-mega-tool-button-hover: #e3e3e0;
   --fc-mega-radius: 1.4rem;
   /* Panel chrome is 119px, so this pins every variant to a 349px panel. */
   --fc-mega-body-min: 23rem;
@@ -123,6 +130,44 @@
   padding-block: 2.4rem 2.8rem;
   padding-inline: 9.6rem;
   color: var(--fc-mega-ink);
+}
+
+.header-wrapper--inverted .mega-menu__content {
+  --color-background: 11, 11, 12;
+  --color-foreground: 247, 247, 245;
+  background: #0b0b0c;
+}
+
+.header-wrapper--translucent .mega-menu__content {
+  --color-background: 255, 255, 255;
+  --color-foreground: 18, 18, 18;
+  background: #ffffff;
+}
+
+.header-wrapper--translucent .fc-mega {
+  --fc-mega-ink: #101012;
+  --fc-mega-ink-soft: #5a5a60;
+  --fc-mega-line: #e3e3e0;
+  --fc-mega-surface: #f4f4f2;
+  --fc-mega-tool-ink: #f7f7f5;
+  --fc-mega-tool-ink-soft: #a0a0a6;
+  --fc-mega-tool-surface: #101012;
+  --fc-mega-tool-button: #ffffff;
+  --fc-mega-tool-button-ink: #101012;
+  --fc-mega-tool-button-hover: #e3e3e0;
+}
+
+.header-wrapper--inverted .fc-mega {
+  --fc-mega-ink: #f7f7f5;
+  --fc-mega-ink-soft: #a0a0a6;
+  --fc-mega-line: #ffffff1a;
+  --fc-mega-surface: #1b1b1d;
+  --fc-mega-tool-ink: #101012;
+  --fc-mega-tool-ink-soft: #5a5a60;
+  --fc-mega-tool-surface: #f7f7f5;
+  --fc-mega-tool-button: #101012;
+  --fc-mega-tool-button-ink: #f7f7f5;
+  --fc-mega-tool-button-hover: #29292c;
 }
 
 .fc-mega__header {
@@ -138,6 +183,14 @@
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
+  color: var(--fc-mega-ink);
+  text-decoration: none;
+}
+
+.fc-mega__title:hover,
+.fc-mega__title:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
 }
 
 .fc-mega__shop-all,
@@ -345,18 +398,18 @@
   padding: 1.8rem;
   border-color: transparent;
   border-radius: var(--fc-mega-radius);
-  background: var(--fc-mega-ink);
-  color: #f7f7f5;
+  background: var(--fc-mega-tool-surface);
+  color: var(--fc-mega-tool-ink);
 }
 
 .fc-mega-tool .fc-mega-tool__title,
 .fc-mega-panel--tool .fc-mega-panel__title {
-  color: #f7f7f5;
+  color: var(--fc-mega-tool-ink);
 }
 
 .fc-mega-tool .fc-mega-tool__copy,
 .fc-mega-panel--tool .fc-mega-panel__desc {
-  color: #a0a0a6;
+  color: var(--fc-mega-tool-ink-soft);
 }
 
 .fc-mega-feature__media {
@@ -384,13 +437,13 @@
 .fc-mega-tool__pill {
   align-self: flex-start;
   padding: 0.4rem 1rem;
-  border: 0.1rem solid #a0a0a6;
+  border: 0.1rem solid var(--fc-mega-tool-ink-soft);
   border-radius: 10rem;
   font-family: var(--font-body-family);
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: #f7f7f5;
+  color: var(--fc-mega-tool-ink);
   text-transform: uppercase;
 }
 
@@ -402,22 +455,22 @@
   margin-top: auto;
   padding: 1.1rem 0;
   border-radius: var(--fc-mega-radius);
-  background: #fff;
+  background: var(--fc-mega-tool-button);
   font-family: var(--font-body-family);
   font-size: 1.4rem;
   font-weight: 600;
-  color: var(--fc-mega-ink);
+  color: var(--fc-mega-tool-button-ink);
   text-decoration: none;
 }
 
 .fc-mega-tool__button:hover {
-  background: #e3e3e0;
+  background: var(--fc-mega-tool-button-hover);
 }
 
 .fc-mega-tool__button .icon {
   width: 1.4rem;
   height: 1.4rem;
-  color: var(--fc-mega-ink);
+  color: var(--fc-mega-tool-button-ink);
 }
 
 /* Starter kit panels ------------------------------------------------------- */

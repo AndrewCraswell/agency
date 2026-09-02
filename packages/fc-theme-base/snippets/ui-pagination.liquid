@@ -5,6 +5,8 @@
   - paginate: {PaginateDrop} Shopify pagination object (required)
   - anchor: {String} Optional fragment identifier without the leading hash
   - class: {String} Optional extra classes
+  - mode: {String} 'pages' or 'next' (default 'pages')
+  - next_label: {String} Label used by next mode
 
   Usage:
   {% render 'ui-pagination', paginate: paginate, anchor: 'Results' %}
@@ -14,7 +16,19 @@
   {%- if anchor != blank -%}
     {%- assign pagination_anchor = '#' | append: anchor -%}
   {%- endif -%}
+  {%- assign pagination_mode = mode | default: 'pages' -%}
   <nav class="ui-pagination{% if class %} {{ class }}{% endif %}" aria-label="{{ 'general.pagination.label' | t }}">
+    {%- if pagination_mode == 'next' -%}
+      {%- if paginate.next -%}
+        <a class="ui-pagination__next" href="{{ paginate.next.url }}{{ pagination_anchor }}">
+          {%- if next_label != blank -%}
+            {{- next_label | escape -}}
+          {%- else -%}
+            {{- 'general.pagination.next' | t -}}
+          {%- endif -%}
+        </a>
+      {%- endif -%}
+    {%- else -%}
     {%- if paginate.previous -%}
       <a
         href="{{ paginate.previous.url }}{{ pagination_anchor }}"
@@ -51,6 +65,7 @@
       >
         {%- render 'fc-icon', icon: 'chevron-right', size: 16 -%}
       </a>
+    {%- endif -%}
     {%- endif -%}
   </nav>
 {%- endif -%}

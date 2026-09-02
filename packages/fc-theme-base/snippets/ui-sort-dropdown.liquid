@@ -1,0 +1,69 @@
+{%- comment -%}
+  Renders the sort control shared by the collection and search pages.
+
+  Accepts:
+  - results: {Object} Collection or search object exposing sort_options (required)
+  - sort_label: {String} Visible prefix, for example "Sort by" (required)
+  - default_label: {String} Label to show when no sort is applied. Collections pass
+    "Featured"; search omits it so the real default option name is used.
+  - class: {String} Optional extra classes
+
+  Requires collection-sort.js.
+{%- endcomment -%}
+{%- liquid
+  assign sort_by = results.sort_by | default: results.default_sort_by
+  assign selected_sort_label = blank
+  for option in results.sort_options
+    if option.value == sort_by
+      assign selected_sort_label = option.name
+      if results.sort_by == blank and default_label != blank
+        assign selected_sort_label = default_label
+      endif
+      break
+    endif
+  endfor
+-%}
+<facet-filters-form class="ui-sort-dropdown{% if class %} {{ class }}{% endif %}">
+  <form class="collection-toolbar__sort-form sorting" id="FacetSortForm">
+    <collection-sort>
+      <input id="SortBy" type="hidden" name="sort_by" value="{{ sort_by | escape }}">
+      <details class="collection-sort">
+        <summary
+          class="collection-sort__trigger"
+          aria-label="{{ sort_label | escape }} {{ selected_sort_label | escape }}"
+        >
+          <span class="collection-sort__prefix">{{ sort_label | escape }}</span>
+          <span class="collection-sort__current" data-sort-current>{{ selected_sort_label | escape }}</span>
+          <span class="svg-wrapper">{{- 'icon-caret.svg' | inline_asset_content -}}</span>
+        </summary>
+        <div class="collection-sort__menu" role="listbox" aria-label="{{ sort_label | escape }}">
+          {%- for option in results.sort_options -%}
+            {%- if results.sort_by == blank
+              and default_label != blank
+              and option.name == default_label
+              and option.value != sort_by
+            -%}
+              {%- continue -%}
+            {%- endif -%}
+            {%- assign option_label = option.name -%}
+            {%- if results.sort_by == blank and default_label != blank and option.value == sort_by -%}
+              {%- assign option_label = default_label -%}
+            {%- endif -%}
+            <button
+              type="button"
+              class="collection-sort__option"
+              role="option"
+              aria-selected="{% if option.value == sort_by %}true{% else %}false{% endif %}"
+              data-sort-value="{{ option.value | escape }}"
+            >
+              <span>{{ option_label | escape }}</span>
+              <span class="collection-sort__check" aria-hidden="true">
+                {%- render 'fc-icon', icon: 'check', size: 15 -%}
+              </span>
+            </button>
+          {%- endfor -%}
+        </div>
+      </details>
+    </collection-sort>
+  </form>
+</facet-filters-form>

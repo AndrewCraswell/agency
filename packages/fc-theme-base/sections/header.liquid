@@ -138,17 +138,33 @@
 
 {% liquid
   assign header_tag = 'div'
+  assign header_style = 'default'
 
   if section.settings.sticky_header_type != 'none'
     assign header_tag = 'sticky-header'
   endif
+
+  if request.page_type == 'index'
+    assign header_style = 'translucent'
+  endif
+
+  assign header_modifier = blank
+  case header_style
+    when 'translucent'
+      assign header_modifier = 'header-wrapper--translucent'
+    when 'inverted'
+      assign header_modifier = 'header-wrapper--inverted'
+  endcase
 %}
 
 <{{ header_tag }}
   {% if header_tag == 'sticky-header' %}
     data-sticky-type="{{ section.settings.sticky_header_type }}"
   {% endif %}
-  class="header-wrapper color-{{ section.settings.color_scheme }} gradient{% if section.settings.show_line_separator %} header-wrapper--border-bottom{% endif %}"
+  {% if header_style == 'translucent' %}
+    data-translucent-at-top
+  {% endif %}
+  class="header-wrapper color-{{ section.settings.color_scheme }} gradient{% if section.settings.show_line_separator %} header-wrapper--border-bottom{% endif %}{% if header_modifier != blank %} {{ header_modifier }}{% endif %}"
 >
   {%- liquid
     assign social_links = false
@@ -235,7 +251,7 @@
                 sizes: sizes,
                 preload: true
             }}
-            {%- if request.page_type == 'index' -%}
+            {%- unless header_style == 'default' -%}
               {%- comment -%}Light mark for the transparent header over the hero.{%- endcomment -%}
               <img
                 src="{{ 'fencing-club-logo-light.png' | asset_url }}"
@@ -245,7 +261,7 @@
                 alt=""
                 loading="eager"
               >
-            {%- endif -%}
+            {%- endunless -%}
           </div>
         {%- else -%}
           <img
@@ -256,7 +272,7 @@
             alt="{{ shop.name | escape }}"
             loading="eager"
           >
-          {%- if request.page_type == 'index' -%}
+          {%- unless header_style == 'default' -%}
             {%- comment -%}Light mark for the transparent header over the hero.{%- endcomment -%}
             <img
               src="{{ 'fencing-club-logo-light.png' | asset_url }}"
@@ -266,7 +282,7 @@
               alt=""
               loading="eager"
             >
-          {%- endif -%}
+          {%- endunless -%}
         {%- endif -%}
       </a>
       </div>
@@ -303,6 +319,16 @@
                 sizes: sizes,
                 preload: true
             }}
+            {%- unless header_style == 'default' -%}
+              <img
+                src="{{ 'fencing-club-logo-light.png' | asset_url }}"
+                class="header__heading-logo header__heading-logo--light motion-reduce"
+                width="{{ settings.logo_width }}"
+                height="{{ logo_height }}"
+                alt=""
+                loading="eager"
+              >
+            {%- endunless -%}
           </div>
         {%- else -%}
           <img
@@ -313,6 +339,16 @@
             alt="{{ shop.name | escape }}"
             loading="eager"
           >
+          {%- unless header_style == 'default' -%}
+            <img
+              src="{{ 'fencing-club-logo-light.png' | asset_url }}"
+              class="header__heading-logo header__heading-logo--light motion-reduce"
+              width="80"
+              height="100"
+              alt=""
+              loading="eager"
+            >
+          {%- endunless -%}
         {%- endif -%}
       </a>
       </div>
@@ -398,6 +434,7 @@
         this.getAttribute('data-sticky-type') === 'always' ||
         this.getAttribute('data-sticky-type') === 'reduce-logo-size';
       this.headerBounds = {};
+      this.translucentAtTop = this.hasAttribute('data-translucent-at-top');
 
       this.setHeaderHeight();
 
@@ -422,6 +459,11 @@
 
     setHeaderHeight() {
       document.documentElement.style.setProperty('--header-height', `${this.header.offsetHeight}px`);
+    }
+
+    setTranslucentState(translucent) {
+      if (!this.translucentAtTop) return;
+      this.classList.toggle('header-wrapper--translucent', translucent);
     }
 
     disconnectedCallback() {
@@ -471,6 +513,7 @@
 
     hide() {
       if (this.headerIsAlwaysSticky) return;
+      this.setTranslucentState(false);
       this.header.classList.add('shopify-section-header-hidden', 'shopify-section-header-sticky');
       this.closeMenuDisclosure();
       this.closeSearchModal();
@@ -478,12 +521,14 @@
 
     reveal() {
       if (this.headerIsAlwaysSticky) return;
+      this.setTranslucentState(false);
       this.header.classList.add('shopify-section-header-sticky', 'animate');
       this.header.classList.remove('shopify-section-header-hidden');
     }
 
     reset() {
       if (this.headerIsAlwaysSticky) return;
+      this.setTranslucentState(true);
       this.header.classList.remove('shopify-section-header-hidden', 'shopify-section-header-sticky', 'animate');
     }
 

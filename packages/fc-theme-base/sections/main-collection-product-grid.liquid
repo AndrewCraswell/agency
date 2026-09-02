@@ -1,46 +1,46 @@
-{{ 'template-collection.css' | asset_url | stylesheet_tag }}
-{{ 'component-card.css' | asset_url | stylesheet_tag }}
-{{ 'component-price.css' | asset_url | stylesheet_tag }}
-
-{% if section.settings.image_shape == 'blob' %}
-  {{ 'mask-blobs.css' | asset_url | stylesheet_tag }}
-{%- endif -%}
-
+{{ 'component-facets.css' | asset_url | stylesheet_tag }}
+{{ 'section-main-collection.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'facets.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'collection-curated-products.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'collection-sort.js' | asset_url }}" defer="defer"></script>
 {%- unless section.settings.quick_add == 'none' -%}
-  {{ 'quick-add.css' | asset_url | stylesheet_tag }}
-{%- endunless -%}
-
-{%- if section.settings.quick_add == 'standard' -%}
-  <script src="{{ 'quick-add.js' | asset_url }}" defer="defer"></script>
   <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
-{%- endif -%}
-
-{%- if section.settings.quick_add == 'bulk' -%}
-  <script src="{{ 'quick-add-bulk.js' | asset_url }}" defer="defer"></script>
-  <script src="{{ 'quantity-popover.js' | asset_url }}" defer="defer"></script>
-  <script src="{{ 'price-per-item.js' | asset_url }}" defer="defer"></script>
-  <script src="{{ 'quick-order-list.js' | asset_url }}" defer="defer"></script>
-{%- endif -%}
+{%- endunless -%}
 
 {%- style -%}
   .section-{{ section.id }}-padding {
-    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
-    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
-  }
-
-  @media screen and (min-width: 750px) {
-    .section-{{ section.id }}-padding {
-      padding-top: {{ section.settings.padding_top }}px;
-      padding-bottom: {{ section.settings.padding_bottom }}px;
-    }
+    --collection-columns: {{ section.settings.columns_desktop }};
+    --collection-mobile-columns: {{ section.settings.columns_mobile }};
+    padding-top: {{ section.settings.padding_top }}px;
+    padding-bottom: {{ section.settings.padding_bottom }}px;
   }
 {%- endstyle -%}
+
+{%- liquid
+  assign use_curated_filters = false
+  if section.settings.enable_curated_filters
+    if section.settings.curated_filter_collection_handle == blank or section.settings.curated_filter_collection_handle == collection.handle
+      assign use_curated_filters = true
+    endif
+  endif
+  assign use_curated_products = false
+  if section.settings.enable_curated_products
+    if section.settings.curated_product_collection_handle == blank or section.settings.curated_product_collection_handle == collection.handle
+      assign use_curated_products = true
+    endif
+  endif
+  assign toolbar_count_label = blank
+  if use_curated_products
+    assign toolbar_count_label = section.settings.curated_product_count_label
+  endif
+  assign curated_product_blocks = section.blocks | where: 'type', 'curated_product'
+-%}
 
 <collection-component
   view-event-payload="{{ collection | standard_event_data: 'view' | escape }}"
   data-collection-id="{{ collection.id }}"
 >
-  <div class="section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}">
+  <div class="collection-product-area section-{{ section.id }}-padding">
     {%- paginate collection.products by section.settings.products_per_page -%}
       {%- if settings.structured_data_enabled -%}
         {%- assign structured_data_position_offset = paginate.current_page
@@ -54,162 +54,199 @@
           collection_position_offset: structured_data_position_offset
         -%}
       {%- endif -%}
-      {% comment %} Sort is the first tabbable element when filter type is vertical {% endcomment %}
-      {%- if section.settings.enable_sorting and section.settings.filter_type == 'vertical' -%}
-        <facet-filters-form class="facets facets-vertical-sort page-width small-hide">
-          <form class="facets-vertical-form" id="FacetSortForm">
-            <div class="facet-filters sorting caption">
-              <div class="facet-filters__field">
-                <h2 class="facet-filters__label caption-large text-body">
-                  <label for="SortBy">{{ 'products.facets.sort_by_label' | t }}</label>
-                </h2>
-                <div class="select">
-                  {%- assign sort_by = collection.sort_by | default: collection.default_sort_by -%}
-                  <select
-                    name="sort_by"
-                    class="facet-filters__sort select__select caption-large"
-                    id="SortBy"
-                    aria-describedby="a11y-refresh-page-message"
-                  >
-                    {%- for option in collection.sort_options -%}
-                      <option
-                        value="{{ option.value | escape }}"
-                        {% if option.value == sort_by %}
-                          selected="selected"
-                        {% endif %}
-                      >
-                        {{ option.name | escape }}
-                      </option>
-                    {%- endfor -%}
-                  </select>
-                  <span class="svg-wrapper">
-                    {{- 'icon-caret.svg' | inline_asset_content -}}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-count-vertical light" role="status">
-              <h2 class="product-count__text text-body">
-                <span id="ProductCountDesktop">
-                  {%- if collection.results_count -%}
-                    {{
-                      'templates.search.results_with_count'
-                      | t: terms: collection.terms, count: collection.results_count
-                    }}
-                  {%- elsif collection.products_count == collection.all_products_count -%}
-                    {{ 'products.facets.product_count_simple' | t: count: collection.products_count }}
-                  {%- else -%}
-                    {{
-                      'products.facets.product_count'
-                      | t: product_count: collection.products_count, count: collection.all_products_count
-                    }}
-                  {%- endif -%}
-                </span>
-              </h2>
-              {%- render 'loading-spinner' -%}
-            </div>
-          </form>
-        </facet-filters-form>
-      {%- endif -%}
-
-      <div class="{% if section.settings.filter_type == 'vertical' %} facets-vertical page-width{% endif %}">
-        {{ 'component-facets.css' | asset_url | stylesheet_tag }}
-        <script src="{{ 'facets.js' | asset_url }}" defer="defer"></script>
-        {%- if section.settings.enable_filtering or section.settings.enable_sorting -%}
+      <div class="collection-layout{% unless section.settings.enable_filtering %} collection-layout--no-filters{% endunless %} facets-vertical">
+        {%- if section.settings.enable_filtering -%}
           <aside
-            aria-labelledby="verticalTitle"
-            class="facets-wrapper{% unless section.settings.enable_filtering %} facets-wrapper--no-filters{% endunless %}{% if section.settings.filter_type != 'vertical' %} page-width{% endif %}"
+            aria-labelledby="CollectionFilters-{{ section.id }}"
+            class="collection-filter-panel facets-wrapper{% unless section.settings.enable_filtering %} facets-wrapper--no-filters{% endunless %}"
             id="main-collection-filters"
             data-id="{{ section.id }}"
           >
-            {% render 'facets',
-              results: collection,
-              enable_filtering: section.settings.enable_filtering,
-              enable_sorting: section.settings.enable_sorting,
-              filter_type: section.settings.filter_type,
-              paginate: paginate
-            %}
+            <div class="collection-filter-panel__header">
+              <h2 id="CollectionFilters-{{ section.id }}">{{ section.settings.filter_heading | escape }}</h2>
+              <facet-remove>
+                <a href="{{ collection.url }}">{{ section.settings.clear_all_label | escape }}</a>
+              </facet-remove>
+            </div>
+            {%- if use_curated_filters -%}
+              {%- liquid
+                assign desktop_filter_id = section.id | append: '-desktop'
+                assign mobile_filter_id = section.id | append: '-mobile'
+              -%}
+              <div class="collection-curated-filters-desktop">
+                {%- render 'collection-curated-filters',
+                  blocks: section.blocks,
+                  current_tags: current_tags,
+                  section_id: desktop_filter_id,
+                  default_active_tags: section.settings.default_active_filter_tags
+                -%}
+              </div>
+              <details class="collection-curated-filters-mobile">
+                <summary>
+                  <span class="svg-wrapper">{{- 'icon-filter.svg' | inline_asset_content -}}</span>
+                  <span>{{ section.settings.mobile_filter_label | escape }}</span>
+                </summary>
+                <div class="collection-curated-filters-mobile__panel">
+                  <div class="collection-curated-filters-mobile__header">
+                    <strong>{{ section.settings.filter_heading | escape }}</strong>
+                    <div class="collection-curated-filters-mobile__actions">
+                      <a href="{{ collection.url }}">{{ section.settings.clear_all_label | escape }}</a>
+                      <button
+                        type="button"
+                        aria-label="{{ 'accessibility.close' | t }}"
+                        onclick="this.closest('details').removeAttribute('open')"
+                      >
+                        {%- render 'fc-icon', icon: 'x', size: 20 -%}
+                      </button>
+                    </div>
+                  </div>
+                  {%- render 'collection-curated-filters',
+                    blocks: section.blocks,
+                    current_tags: current_tags,
+                    section_id: mobile_filter_id,
+                    default_active_tags: section.settings.default_active_filter_tags
+                  -%}
+                </div>
+              </details>
+            {%- else -%}
+              {% render 'facets',
+                results: collection,
+                enable_filtering: section.settings.enable_filtering,
+                enable_sorting: false,
+                filter_type: 'vertical',
+                paginate: paginate,
+                expand_filters: true,
+                show_product_count: false
+              %}
+            {%- endif -%}
           </aside>
         {%- endif -%}
 
         <div
-          class="product-grid-container{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}"
+          class="collection-grid-column product-grid-container"
           id="ProductGridContainer"
-          {% if settings.animations_reveal_on_scroll %}
-            data-cascade
-          {% endif %}
         >
-          {%- if collection.products.size == 0 -%}
-            <div class="collection collection--empty page-width" id="product-grid" data-id="{{ section.id }}">
-              <div class="loading-overlay gradient"></div>
-              <div class="title-wrapper center">
-                <h2 class="title title--primary">
-                  {{ 'sections.collection_template.empty' | t -}}
-                  <br>
-                  {{
-                    'sections.collection_template.use_fewer_filters_html'
-                    | t: link: collection.url, class: 'underlined-link link'
-                  }}
-                </h2>
+          <curated-collection-products
+            class="collection"
+            {% if use_curated_products %}data-curated{% endif %}
+          >
+            {%- render 'collection-toolbar',
+              results: collection,
+              enable_sorting: section.settings.enable_sorting,
+              sort_label: section.settings.sort_label,
+              count_label: toolbar_count_label
+            -%}
+
+            {%- if collection.products.size == 0 and use_curated_products == false -%}
+              <div class="collection--empty" id="product-grid" data-id="{{ section.id }}">
+                <div class="loading-overlay gradient"></div>
+                <div class="title-wrapper center">
+                  <h2 class="title title--primary">
+                    {{ 'sections.collection_template.empty' | t -}}
+                    <br>
+                    {{
+                      'sections.collection_template.use_fewer_filters_html'
+                      | t: link: collection.url, class: 'underlined-link link'
+                    }}
+                  </h2>
+                </div>
               </div>
-            </div>
-          {%- else -%}
-            <div
-              class="collection{% if section.settings.filter_type != 'vertical' %} page-width{% endif %}"
-            >
+            {%- else -%}
               <div class="loading-overlay gradient"></div>
               <ul
                 id="product-grid"
                 data-id="{{ section.id }}"
-                class="
-                  grid product-grid grid--{{ section.settings.columns_mobile }}-col-tablet-down
-                  grid--{{ section.settings.columns_desktop }}-col-desktop
-                  {% if section.settings.quick_add == 'bulk' %} collection-quick-add-bulk{% endif %}
-                "
+                class="collection-product-grid"
               >
-                {% assign skip_card_product_styles = false %}
+                {%- if use_curated_products -%}
+                  {%- for block in curated_product_blocks -%}
+                      {%- assign card_id = 'CollectionProduct-' | append: section.id | append: '-' | append: block.id -%}
+                      <li
+                        data-title="{{ block.settings.title | downcase | escape }}"
+                        data-price="{{ block.settings.price | remove: '$' | remove: ',' | escape }}"
+                        data-position="{{ forloop.index }}"
+                        {{ block.shopify_attributes }}
+                      >
+                        {%- render 'ui-product-card',
+                          title: block.settings.title,
+                          url: block.settings.link,
+                          product_type: block.settings.product_type,
+                          price_label: block.settings.price,
+                          image_asset: block.settings.image_asset,
+                          image_alt: block.settings.image_alt,
+                          variant: 'home',
+                          card_id: card_id,
+                          badge_label: block.settings.badge,
+                          show_type: true,
+                          show_price: true,
+                          show_add: true,
+                          add_label: section.settings.add_label,
+                          section_id: section.id,
+                          image_loading: 'eager'
+                        -%}
+                      </li>
+                  {%- endfor -%}
+                {%- else -%}
                 {%- for product in collection.products -%}
-                  {% assign lazy_load = false %}
-                  {%- if forloop.index > 2 -%}
-                    {%- assign lazy_load = true -%}
-                  {%- endif -%}
-                  <li
-                    class="grid__item{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}"
-                    {% if settings.animations_reveal_on_scroll %}
-                      data-cascade
-                      style="--animation-order: {{ forloop.index }};"
-                    {% endif %}
-                  >
-                    {% render 'card-product',
-                      card_product: product,
-                      media_aspect_ratio: section.settings.image_ratio,
-                      image_shape: section.settings.image_shape,
-                      show_secondary_image: section.settings.show_secondary_image,
-                      show_vendor: section.settings.show_vendor,
-                      show_rating: section.settings.show_rating,
-                      lazy_load: lazy_load,
-                      skip_styles: skip_card_product_styles,
-                      quick_add: section.settings.quick_add,
+                  {%- liquid
+                    assign badge_label = blank
+                    if product.compare_at_price > product.price
+                      assign badge_label = 'SALE'
+                    endif
+                    for product_tag in product.tags
+                      assign normalized_tag = product_tag | downcase
+                      if normalized_tag == 'best seller' or normalized_tag == 'new'
+                        assign badge_label = product_tag | upcase
+                        break
+                      endif
+                    endfor
+                    assign show_add = false
+                    unless section.settings.quick_add == 'none'
+                      assign show_add = true
+                    endunless
+                    assign card_id = 'CollectionProduct-' | append: section.id | append: '-' | append: product.id
+                  -%}
+                  <li>
+                    {%- render 'ui-product-card',
+                      product: product,
+                      variant: 'home',
+                      card_id: card_id,
+                      badge_label: badge_label,
+                      show_type: true,
+                      show_price: true,
+                      show_add: show_add,
+                      add_label: section.settings.add_label,
                       section_id: section.id,
-                      product_view_context: 'collection'
-                    %}
+                      trim_price: true,
+                      image_sizes: '(min-width: 990px) 300px, (min-width: 750px) calc((100vw - 104px) / 2), calc((100vw - 52px) / 2)',
+                      image_widths: '300, 450, 600',
+                      image_loading: 'lazy'
+                    -%}
                   </li>
-                  {%- assign skip_card_product_styles = true -%}
                 {%- endfor -%}
+                {%- endif -%}
               </ul>
 
-              {%- if paginate.pages > 1 -%}
-                {% render 'pagination', paginate: paginate, anchor: '' %}
+              {%- if use_curated_products and section.settings.curated_load_more_url != blank -%}
+                <nav class="ui-pagination collection-load-more" aria-label="{{ 'general.pagination.label' | t }}">
+                  <a class="ui-pagination__next" href="{{ section.settings.curated_load_more_url }}">
+                    {{- section.settings.load_more_label | escape -}}
+                  </a>
+                </nav>
+              {%- else -%}
+                {%- render 'ui-pagination',
+                  paginate: paginate,
+                  anchor: 'product-grid',
+                  mode: 'next',
+                  next_label: section.settings.load_more_label,
+                  class: 'collection-load-more'
+                -%}
               {%- endif -%}
-            </div>
-          {%- endif -%}
+            {%- endif -%}
+          </curated-collection-products>
         </div>
       </div>
     {%- endpaginate -%}
-    {% if section.settings.image_shape == 'arch' %}
-      {{ 'mask-arch.svg' | inline_asset_content }}
-    {%- endif -%}
   </div>
 </collection-component>
 
@@ -221,19 +258,19 @@
     {
       "type": "range",
       "id": "products_per_page",
-      "min": 8,
+      "min": 6,
       "max": 36,
-      "step": 4,
-      "default": 16,
+      "step": 3,
+      "default": 9,
       "label": "t:sections.main-collection-product-grid.settings.products_per_page.label"
     },
     {
       "type": "range",
       "id": "columns_desktop",
-      "min": 1,
-      "max": 6,
+      "min": 2,
+      "max": 4,
       "step": 1,
-      "default": 4,
+      "default": 3,
       "label": "t:sections.main-collection-product-grid.settings.columns_desktop.label"
     },
     {
@@ -253,99 +290,9 @@
       ]
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:sections.all.colors.label",
-      "info": "t:sections.all.colors.has_cards_info",
-      "default": "scheme-1"
-    },
-    {
-      "type": "header",
-      "content": "t:sections.main-collection-product-grid.settings.header__3.content"
-    },
-    {
-      "type": "select",
-      "id": "image_ratio",
-      "options": [
-        {
-          "value": "adapt",
-          "label": "t:sections.main-collection-product-grid.settings.image_ratio.options__1.label"
-        },
-        {
-          "value": "portrait",
-          "label": "t:sections.main-collection-product-grid.settings.image_ratio.options__2.label"
-        },
-        {
-          "value": "square",
-          "label": "t:sections.main-collection-product-grid.settings.image_ratio.options__3.label"
-        }
-      ],
-      "default": "adapt",
-      "label": "t:sections.main-collection-product-grid.settings.image_ratio.label"
-    },
-    {
-      "type": "select",
-      "id": "image_shape",
-      "options": [
-        {
-          "value": "default",
-          "label": "t:sections.all.image_shape.options__1.label"
-        },
-        {
-          "value": "arch",
-          "label": "t:sections.all.image_shape.options__2.label"
-        },
-        {
-          "value": "blob",
-          "label": "t:sections.all.image_shape.options__3.label"
-        },
-        {
-          "value": "chevronleft",
-          "label": "t:sections.all.image_shape.options__4.label"
-        },
-        {
-          "value": "chevronright",
-          "label": "t:sections.all.image_shape.options__5.label"
-        },
-        {
-          "value": "diamond",
-          "label": "t:sections.all.image_shape.options__6.label"
-        },
-        {
-          "value": "parallelogram",
-          "label": "t:sections.all.image_shape.options__7.label"
-        },
-        {
-          "value": "round",
-          "label": "t:sections.all.image_shape.options__8.label"
-        }
-      ],
-      "default": "default",
-      "label": "t:sections.all.image_shape.label"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_secondary_image",
-      "default": false,
-      "label": "t:sections.main-collection-product-grid.settings.show_secondary_image.label"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_vendor",
-      "default": false,
-      "label": "t:sections.main-collection-product-grid.settings.show_vendor.label"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_rating",
-      "default": false,
-      "label": "t:sections.main-collection-product-grid.settings.show_rating.label",
-      "info": "t:sections.main-collection-product-grid.settings.show_rating.info"
-    },
-    {
       "type": "select",
       "id": "quick_add",
-      "default": "none",
+      "default": "standard",
       "label": "t:sections.main-collection-product-grid.settings.quick_add.label",
       "options": [
         {
@@ -355,13 +302,20 @@
         {
           "value": "standard",
           "label": "t:sections.main-collection-product-grid.settings.quick_add.options.option_2"
-        },
-        {
-          "value": "bulk",
-          "label": "t:sections.main-collection-product-grid.settings.quick_add.options.option_3"
         }
       ]
     },
+    { "type": "text", "id": "add_label", "label": "Add button label", "default": "Add" },
+    { "type": "checkbox", "id": "enable_curated_products", "label": "Use curated products", "default": false },
+    {
+      "type": "text",
+      "id": "curated_product_collection_handle",
+      "label": "Curated product collection handle",
+      "info": "Curated product blocks appear only on this collection. Leave empty to use them on every collection.",
+      "default": "clothing"
+    },
+    { "type": "text", "id": "curated_product_count_label", "label": "Curated product count", "default": "48 products" },
+    { "type": "url", "id": "curated_load_more_url", "label": "Curated load more link" },
     {
       "type": "header",
       "content": "t:sections.main-collection-product-grid.settings.header__1.content"
@@ -373,25 +327,21 @@
       "label": "t:sections.main-collection-product-grid.settings.enable_filtering.label",
       "info": "t:sections.main-collection-product-grid.settings.enable_filtering.info"
     },
+    { "type": "checkbox", "id": "enable_curated_filters", "label": "Use curated filters", "default": false },
     {
-      "type": "select",
-      "id": "filter_type",
-      "options": [
-        {
-          "value": "horizontal",
-          "label": "t:sections.main-collection-product-grid.settings.filter_type.options__1.label"
-        },
-        {
-          "value": "vertical",
-          "label": "t:sections.main-collection-product-grid.settings.filter_type.options__2.label"
-        },
-        {
-          "value": "drawer",
-          "label": "t:sections.main-collection-product-grid.settings.filter_type.options__3.label"
-        }
-      ],
-      "default": "horizontal",
-      "label": "t:sections.main-collection-product-grid.settings.filter_type.label"
+      "type": "text",
+      "id": "curated_filter_collection_handle",
+      "label": "Curated filter collection handle",
+      "info": "Curated filter blocks appear only on this collection. Leave empty to use them on every collection.",
+      "default": "clothing"
+    },
+    { "type": "text", "id": "mobile_filter_label", "label": "Mobile filter label", "default": "Filter" },
+    {
+      "type": "text",
+      "id": "default_active_filter_tags",
+      "label": "Selected filter tags",
+      "info": "Wrap every tag in vertical bars. Used only before the customer filters.",
+      "default": "|Jackets|Plastrons|Foil|Women|Level 2 - 800N FIE|$100-$200|UNIC|"
     },
     {
       "type": "checkbox",
@@ -399,6 +349,10 @@
       "default": true,
       "label": "t:sections.main-collection-product-grid.settings.enable_sorting.label"
     },
+    { "type": "text", "id": "filter_heading", "label": "Filter heading", "default": "Filters" },
+    { "type": "text", "id": "clear_all_label", "label": "Clear filters label", "default": "Clear all" },
+    { "type": "text", "id": "sort_label", "label": "Sort prefix", "default": "Sort:" },
+    { "type": "text", "id": "load_more_label", "label": "Next page label", "default": "Load more" },
     {
       "type": "header",
       "content": "t:sections.all.padding.section_padding_heading"
@@ -408,20 +362,63 @@
       "id": "padding_top",
       "min": 0,
       "max": 100,
-      "step": 4,
+      "step": 2,
       "unit": "px",
       "label": "t:sections.all.padding.padding_top",
-      "default": 36
+      "default": 8
     },
     {
       "type": "range",
       "id": "padding_bottom",
       "min": 0,
       "max": 100,
-      "step": 4,
+      "step": 2,
       "unit": "px",
       "label": "t:sections.all.padding.padding_bottom",
-      "default": 36
+      "default": 90
+    }
+  ],
+  "blocks": [
+    {
+      "type": "filter_option",
+      "name": "Filter option",
+      "settings": [
+        {
+          "type": "select",
+          "id": "group",
+          "label": "Group",
+          "options": [
+            { "value": "sub-category", "label": "Sub-category" },
+            { "value": "discipline", "label": "Discipline" },
+            { "value": "gender", "label": "Gender" },
+            { "value": "size", "label": "Size" },
+            { "value": "level", "label": "Level" },
+            { "value": "price", "label": "Price" },
+            { "value": "brand", "label": "Brand" },
+            { "value": "color", "label": "Color" },
+            { "value": "experience", "label": "Experience" }
+          ],
+          "default": "sub-category"
+        },
+        { "type": "text", "id": "label", "label": "Label", "default": "Option" },
+        { "type": "text", "id": "tag", "label": "Product tag", "info": "Defaults to the label when empty." },
+        { "type": "checkbox", "id": "show_count", "label": "Show count", "default": false },
+        { "type": "range", "id": "count", "label": "Count", "min": 0, "max": 100, "step": 1, "default": 0 },
+        { "type": "color", "id": "swatch", "label": "Swatch color", "default": "#ffffff" }
+      ]
+    },
+    {
+      "type": "curated_product",
+      "name": "Curated product",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Product" },
+        { "type": "url", "id": "link", "label": "Link" },
+        { "type": "text", "id": "product_type", "label": "Product type", "default": "Foils" },
+        { "type": "text", "id": "price", "label": "Price", "default": "$0" },
+        { "type": "text", "id": "badge", "label": "Badge", "default": "BEST SELLER" },
+        { "type": "text", "id": "image_asset", "label": "Theme image asset filename" },
+        { "type": "text", "id": "image_alt", "label": "Image alt text" }
+      ]
     }
   ]
 }

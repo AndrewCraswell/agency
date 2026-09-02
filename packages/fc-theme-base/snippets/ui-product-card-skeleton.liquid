@@ -1,0 +1,22 @@
+{%- comment -%}
+  Renders placeholder product cards shown while filtered results are being fetched.
+
+  Accepts:
+  - count: {Number} How many placeholders to render (default 4)
+{%- endcomment -%}
+{%- assign placeholder_count = count | default: 4 -%}
+<ul class="search-results__product-grid search-results__skeleton" role="presentation" aria-hidden="true">
+  {%- for i in (1..placeholder_count) -%}
+    <li class="ui-card-skeleton">
+      <div class="ui-card-skeleton__media"></div>
+      <div class="ui-card-skeleton__info">
+        <span class="ui-card-skeleton__bar ui-card-skeleton__bar--tag"></span>
+        <span class="ui-card-skeleton__bar ui-card-skeleton__bar--title"></span>
+      </div>
+      <div class="ui-card-skeleton__footer">
+        <span class="ui-card-skeleton__bar ui-card-skeleton__bar--price"></span>
+        <span class="ui-card-skeleton__bar ui-card-skeleton__bar--action"></span>
+      </div>
+    </li>
+  {%- endfor -%}
+</ul>

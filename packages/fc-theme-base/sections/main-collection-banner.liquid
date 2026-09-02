@@ -1,59 +1,59 @@
-{% comment %}theme-check-disable ImgLazyLoading{% endcomment %}
-{{ 'component-collection-hero.css' | asset_url | stylesheet_tag }}
+{{ 'section-main-collection.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'collection-breadcrumbs.js' | asset_url }}" defer="defer"></script>
 
-{%- style -%}
-  @media screen and (max-width: 749px) {
-    .collection-hero--with-image .collection-hero__inner {
-      padding-bottom: calc({{ settings.media_shadow_vertical_offset | at_least: 0 }}px + 2rem);
-    }
-  }
-{%- endstyle -%}
+{%- liquid
+  assign show_curated_content = true
+  if section.settings.category_collection_handle != blank and section.settings.category_collection_handle != collection.handle
+    assign show_curated_content = false
+  endif
+-%}
 
-<div class="collection-hero{% if section.settings.show_collection_image and collection.image %} collection-hero--with-image{% endif %} color-{{ section.settings.color_scheme }} gradient">
-  <div class="collection-hero__inner page-width {% if settings.animations_reveal_on_scroll %} scroll-trigger animate--fade-in{% endif %}">
-    <div class="collection-hero__text-wrapper">
-      <h1 class="collection-hero__title">
-        <span class="visually-hidden">{{ 'sections.collection_template.title' | t }}: </span>
-        {{- collection.title | escape -}}
-      </h1>
+<header class="collection-intro">
+  {%- render 'ui-breadcrumbs',
+    root_label: section.settings.home_label,
+    root_url: routes.root_url,
+    current_label: collection.title,
+    contextual: true
+  -%}
 
-      {%- if section.settings.show_collection_description -%}
-        <div class="collection-hero__description rte">{{ collection.description }}</div>
-      {%- endif -%}
-    </div>
+  <h1 class="collection-intro__title">{{ collection.title | escape }}</h1>
 
-    {%- if section.settings.show_collection_image and collection.image -%}
-      <div class="collection-hero__image-container media gradient">
-        <img
-          srcset="
-            {%- if collection.image.width >= 165 -%}{{ collection.image | image_url: width: 165 }} 165w,{%- endif -%}
-            {%- if collection.image.width >= 360 -%}{{ collection.image | image_url: width: 360 }} 360w,{%- endif -%}
-            {%- if collection.image.width >= 535 -%}{{ collection.image | image_url: width: 535 }} 535w,{%- endif -%}
-            {%- if collection.image.width >= 750 -%}{{ collection.image | image_url: width: 750 }} 750w,{%- endif -%}
-            {%- if collection.image.width >= 1070 -%}{{ collection.image | image_url: width: 1070 }} 1070w,{%- endif -%}
-            {%- if collection.image.width >= 1500 -%}{{ collection.image | image_url: width: 1500 }} 1500w,{%- endif -%}
-            {{ collection.image | image_url }} {{ collection.image.width }}w
-          "
-          src="{{ collection.image | image_url: width: 750 }}"
-          sizes="(min-width: {{ settings.page_width }}px) {{ settings.page_width | minus: 100 | divided_by: 2 }}px, (min-width: 750px) calc(50vw - 130px), calc(50vw - 55px)"
-          alt="{{ collection.image.alt | escape }}"
-          width="{{ collection.image.width }}"
-          height="{{ collection.image.height }}"
-        >
-      </div>
+  {%- if section.settings.show_collection_description -%}
+    {%- assign collection_description = collection.description -%}
+    {%- if collection_description == blank and show_curated_content -%}
+      {%- assign collection_description = section.settings.fallback_description -%}
     {%- endif -%}
-  </div>
-</div>
+    {%- if collection_description != blank -%}
+      <div class="collection-intro__description rte">{{ collection_description }}</div>
+    {%- endif -%}
+  {%- endif -%}
+
+  {%- if section.settings.show_category_pills and show_curated_content -%}
+    <nav class="collection-intro__pills" aria-label="{{ section.settings.category_label | escape }}">
+      {%- for block in section.blocks -%}
+        {%- if block.settings.label != blank -%}
+          {%- capture category_url -%}
+            {%- render 'collection-context-url',
+              url: block.settings.link,
+              parent_label: collection.title,
+              parent_url: collection.url,
+              current_label: block.settings.label
+            -%}
+          {%- endcapture -%}
+          {%- render 'ui-pill', label: block.settings.label, url: category_url, block_attributes: block.shopify_attributes -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </nav>
+  {%- endif -%}
+</header>
 
 {% schema %}
 {
   "name": "t:sections.main-collection-banner.name",
   "class": "section",
+  "max_blocks": 10,
   "settings": [
-    {
-      "type": "paragraph",
-      "content": "t:sections.main-collection-banner.settings.paragraph.content"
-    },
+    { "type": "text", "id": "home_label", "label": "Home label", "default": "Home" },
     {
       "type": "checkbox",
       "id": "show_collection_description",
@@ -61,16 +61,30 @@
       "label": "t:sections.main-collection-banner.settings.show_collection_description.label"
     },
     {
-      "type": "checkbox",
-      "id": "show_collection_image",
-      "default": false,
-      "label": "t:sections.main-collection-banner.settings.show_collection_image.label"
+      "type": "textarea",
+      "id": "fallback_description",
+      "label": "Fallback description",
+      "info": "Shown when the collection has no description.",
+      "default": "Competition-ready fencing apparel: jackets, pants, plastrons, chest protectors, socks and gloves, built to FIE standards for every level of fencer."
     },
+    { "type": "checkbox", "id": "show_category_pills", "label": "Show category links", "default": true },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "t:sections.all.colors.label",
-      "default": "scheme-1"
+      "type": "text",
+      "id": "category_collection_handle",
+      "label": "Collection handle for category links",
+      "info": "Fallback copy and category links appear only on this collection. Leave empty to show them on every collection.",
+      "default": "clothing"
+    },
+    { "type": "text", "id": "category_label", "label": "Category navigation label", "default": "Shop clothing categories" }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Category link",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "Category" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
     }
   ]
 }

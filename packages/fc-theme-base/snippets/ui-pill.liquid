@@ -8,6 +8,7 @@
   - icon: {String} Optional trailing icon name
   - option: {Boolean} Removes a listbox option link from the tab order
   - class: {String} Optional extra classes
+  - block_attributes: {String} Optional Shopify block attributes
 
   Usage:
   {% render 'ui-pill', label: 'Gear', url: collection.url, active: true %}
@@ -22,6 +23,7 @@
     {% if option %}
       tabindex="-1"
     {% endif %}
+    {{ block_attributes }}
   >
     {{- label | escape -}}
     {%- if icon -%}
@@ -29,7 +31,10 @@
     {%- endif -%}
   </a>
 {%- else -%}
-  <span class="ui-pill{% if icon %} ui-pill--with-icon{% endif %}{% if active %} ui-pill--active{% endif %}{% if class %} {{ class }}{% endif %}">
+  <span
+    class="ui-pill{% if icon %} ui-pill--with-icon{% endif %}{% if active %} ui-pill--active{% endif %}{% if class %} {{ class }}{% endif %}"
+    {{ block_attributes }}
+  >
     {{- label | escape -}}
     {%- if icon -%}
       {%- render 'fc-icon', icon: icon, size: 14 -%}

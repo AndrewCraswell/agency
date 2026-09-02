@@ -17,7 +17,7 @@
   justify-content: center;
   min-height: 4rem;
   margin: 0;
-  padding: 1.1rem 0;
+  padding: 1.1rem 1.2rem;
   color: rgb(var(--color-foreground));
   font-family: var(--font-body-family);
   font-style: var(--font-body-style);
@@ -58,14 +58,23 @@
 
 /* Dawn's `.slider-button:not([disabled]):hover` outranks a plain class pair, so match it here. */
 .announcement-bar-slider .slider-button,
-.announcement-bar-slider .slider-button:not([disabled]):hover {
+.announcement-bar-slider .slider-button:hover,
+.announcement-bar-slider .slider-button:focus-visible,
+.announcement-bar-slider .slider-button[disabled] {
   color: #ffffff;
+  opacity: 1;
 }
 
 .announcement-bar-slider .slider-button .svg-wrapper {
   width: 1.4rem;
   height: 1.4rem;
   transition: transform var(--duration-short) ease;
+}
+
+.announcement-bar-slider .slider-button svg,
+.announcement-bar-slider .slider-button path {
+  color: #ffffff;
+  fill: currentColor;
 }
 
 /* Scaling rather than resizing keeps the chevron from nudging the bar's layout. */
@@ -76,7 +85,6 @@
 
 .utility-bar {
   min-height: 4rem;
-  padding-inline: 2.8rem;
   transition: background-color var(--duration-default) ease;
 }
 
