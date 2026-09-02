@@ -16,7 +16,7 @@ const optionalString = z.preprocess(
 )
 const memberSchema = z.object({ bioguideId: z.string().min(1), fullName: z.string().min(1) }).passthrough()
 const actionSchema = z
-  .object({ actionDate: optionalString, actionTime: optionalString, text: z.string().min(1) })
+  .object({ actionDate: optionalString, actionTime: optionalString, text: optionalString })
   .passthrough()
 const textVersionSchema = z.object({
   date: optionalString,
@@ -116,17 +116,23 @@ export function normalizeCongressBillBundle(
   const uniqueMembers = new Map(members.map((member) => [member.bioguideId, member]))
 
   return {
-    actions: source.actions.map((action, index) => ({
-      actionDate: action.actionDate,
-      billId: canonicalBillId,
-      description: action.text,
-      id: childId(
-        "action",
-        canonicalBillId,
-        `${index}:${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
-      ),
-      ordinal: index
-    })),
+    actions: source.actions.flatMap((action, index) =>
+      action.text === undefined
+        ? []
+        : [
+            {
+              actionDate: action.actionDate,
+              billId: canonicalBillId,
+              description: action.text,
+              id: childId(
+                "action",
+                canonicalBillId,
+                `${index}:${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
+              ),
+              ordinal: index
+            }
+          ]
+    ),
     bill: {
       chamber: canonicalChamber(source.bill.originChamber),
       classification: canonicalClassification(source.bill.type),

@@ -168,16 +168,14 @@ describe("executeSynchronization", () => {
       bioguideId,
       currentMember: true,
       officialUrl: "https://example.house.gov/",
-      terms: {
-        item: [
-          {
-            chamber: "House of Representatives",
-            congress: 119,
-            memberType: "Representative",
-            startYear: 2025
-          }
-        ]
-      }
+      terms: [
+        {
+          chamber: "House of Representatives",
+          congress: 119,
+          memberType: "Representative",
+          startYear: 2025
+        }
+      ]
     }))
     const congressClient = {
       getMember,

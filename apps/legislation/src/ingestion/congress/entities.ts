@@ -51,7 +51,7 @@ const memberDetailSchema = z
     firstName: optionalString,
     lastName: optionalString,
     officialUrl: optionalHttpsUrl,
-    terms: z.object({ item: z.array(memberDetailTermSchema).default([]) }).default({ item: [] }),
+    terms: z.array(memberDetailTermSchema).default([]),
     updateDate: optionalIsoDateTime
   })
   .passthrough()
@@ -216,7 +216,7 @@ export function normalizeCongressMemberDetails(
       sourceUpdatedAt,
       ...provenance
     })
-    for (const term of detail.terms.item) {
+    for (const term of detail.terms) {
       const normalizedChamber = chamber(term.chamber)
       if (normalizedChamber === undefined) {
         throw new Error(`Congress member detail has an unmappable chamber for ${detail.bioguideId}`)

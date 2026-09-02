@@ -75,6 +75,20 @@ describe("Congress.gov normalization", () => {
     expect(new Set(aggregate.actions?.map((action) => action.id)).size).toBe(aggregate.actions?.length)
   })
 
+  it("ignores actions without representable text while preserving source ordinals", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    const actions = source.actions as Array<Record<string, unknown>>
+    actions.splice(1, 0, { actionDate: "2025-02-04", type: "Committee" })
+
+    const aggregate = normalizeCongressBillBundle(source)
+
+    expect(aggregate.actions?.map(({ description, ordinal }) => ({ description, ordinal }))).toEqual([
+      { description: "Introduced in House", ordinal: 0 },
+      { description: "Referred to the Committee on House Administration", ordinal: 2 },
+      { description: "Ordered to be Reported", ordinal: 3 }
+    ])
+  })
+
   it("links structured committee identifiers without replacing source names", () => {
     const source = structuredClone(fixture) as Record<string, unknown>
     source.committees = [{ name: "House Administration", systemCode: "hsha00" }]

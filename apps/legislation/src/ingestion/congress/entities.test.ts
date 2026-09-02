@@ -110,27 +110,25 @@ describe("Congress entity normalization", () => {
             firstName: "James",
             lastName: "Gallagher",
             officialUrl: "https://gallagher.house.gov/",
-            terms: {
-              item: [
-                {
-                  chamber: "House of Representatives",
-                  congress: 118,
-                  district: 8,
-                  endYear: 2024,
-                  memberType: "Representative",
-                  partyName: "Republican",
-                  startYear: 2023
-                },
-                {
-                  chamber: "House of Representatives",
-                  congress: 119,
-                  district: 8,
-                  memberType: "Representative",
-                  partyName: "Republican",
-                  startYear: 2025
-                }
-              ]
-            },
+            terms: [
+              {
+                chamber: "House of Representatives",
+                congress: 118,
+                district: 8,
+                endYear: 2024,
+                memberType: "Representative",
+                partyName: "Republican",
+                startYear: 2023
+              },
+              {
+                chamber: "House of Representatives",
+                congress: 119,
+                district: 8,
+                memberType: "Representative",
+                partyName: "Republican",
+                startYear: 2025
+              }
+            ],
             updateDate: "2026-08-17T07:40:45Z"
           },
           member: {
@@ -184,6 +182,72 @@ describe("Congress entity normalization", () => {
     expect(result.termPersonIds).toEqual(["person:congress:g000607"])
   })
 
+  it("accepts the current member detail terms array", () => {
+    const result = normalizeCongressMemberDetails(
+      [
+        {
+          detail: {
+            bioguideId: "G000607",
+            currentMember: true,
+            terms: [
+              {
+                chamber: "House of Representatives",
+                congress: 119,
+                district: 8,
+                memberType: "Representative",
+                partyName: "Republican",
+                startYear: 2025
+              }
+            ]
+          },
+          member: {
+            bioguideId: "G000607",
+            district: 8,
+            name: "Gallagher, James",
+            partyName: "Republican",
+            terms: { item: [] },
+            url: "https://api.congress.gov/member/G000607"
+          }
+        }
+      ],
+      119,
+      organizationContext
+    )
+
+    expect(result.terms).toEqual([
+      expect.objectContaining({
+        district: "8",
+        isActive: true,
+        officeTitle: "Representative",
+        sourceId: "119:lower:2025:current"
+      })
+    ])
+  })
+
+  it("rejects the obsolete member detail terms object wrapper", () => {
+    expect(() =>
+      normalizeCongressMemberDetails(
+        [
+          {
+            detail: {
+              bioguideId: "G000607",
+              currentMember: true,
+              terms: { item: [] }
+            },
+            member: {
+              bioguideId: "G000607",
+              name: "Gallagher, James",
+              terms: { item: [] },
+              url: "https://api.congress.gov/member/G000607"
+            }
+          }
+        ],
+        119,
+        organizationContext
+      )
+    ).toThrow(/expected array/)
+  })
+
   it("rejects a detail term that omits its published member type", () => {
     expect(() =>
       normalizeCongressMemberDetails(
@@ -192,7 +256,7 @@ describe("Congress entity normalization", () => {
             detail: {
               bioguideId: "G000607",
               currentMember: true,
-              terms: { item: [{ chamber: "House", congress: 119, startYear: 2025 }] }
+              terms: [{ chamber: "House", congress: 119, startYear: 2025 }]
             },
             member: {
               bioguideId: "G000607",
@@ -216,9 +280,7 @@ describe("Congress entity normalization", () => {
             detail: {
               bioguideId: "G000607",
               currentMember: true,
-              terms: {
-                item: [{ chamber: "Joint", congress: 119, memberType: "Representative", startYear: 2025 }]
-              }
+              terms: [{ chamber: "Joint", congress: 119, memberType: "Representative", startYear: 2025 }]
             },
             member: {
               bioguideId: "G000607",
@@ -241,9 +303,7 @@ describe("Congress entity normalization", () => {
           detail: {
             bioguideId: "G000607",
             currentMember: true,
-            terms: {
-              item: [{ chamber: "House", congress: 119, memberType: "Representative", startYear: 2025 }]
-            }
+            terms: [{ chamber: "House", congress: 119, memberType: "Representative", startYear: 2025 }]
           },
           member: {
             bioguideId: "G000607",
@@ -269,7 +329,7 @@ describe("Congress entity normalization", () => {
             detail: {
               bioguideId: "G000607",
               currentMember: true,
-              terms: { item: [] },
+              terms: [],
               updateDate: "not-a-date"
             },
             member: {
