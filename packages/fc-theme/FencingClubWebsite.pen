@@ -81901,16 +81901,40 @@
               }
             },
             {
-              "id": "W05LZ",
-              "type": "ref",
-              "ref": "q2CfnG",
-              "name": "Filter and Sort",
+              "type": "frame",
+              "id": "OJYS0",
+              "name": "Product Controls",
               "width": "fill_container",
-              "descendants": {
-                "E7blG2": {
-                  "content": "Filter and sort"
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "KuUx5",
+                  "type": "ref",
+                  "ref": "q2CfnG",
+                  "name": "Filter",
+                  "descendants": {
+                    "E7blG2": {
+                      "content": "Filter"
+                    },
+                    "li4b8": {
+                      "icon": "sliders-horizontal"
+                    }
+                  }
+                },
+                {
+                  "id": "K87rf",
+                  "type": "ref",
+                  "ref": "l69Bf",
+                  "name": "Sort",
+                  "descendants": {
+                    "nf041": {
+                      "content": "Sort by Relevance"
+                    }
+                  }
                 }
-              }
+              ]
             },
             {
               "type": "frame",
@@ -85023,7 +85047,7 @@
                       "id": "eM5k9",
                       "name": "Title",
                       "fill": "$ink",
-                      "content": "Filters",
+                      "content": "Filter",
                       "fontFamily": "$font-display",
                       "fontSize": 22,
                       "fontWeight": "600"
@@ -85249,7 +85273,7 @@
                 {
                   "type": "frame",
                   "id": "gOWIX",
-                  "name": "Clear All",
+                  "name": "Remove All",
                   "cornerRadius": "$radius",
                   "stroke": "$line-strong",
                   "strokeWidth": 1,
@@ -85265,7 +85289,7 @@
                       "id": "JuyXx",
                       "name": "Label",
                       "fill": "$ink",
-                      "content": "Clear all",
+                      "content": "Remove all",
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "600"

@@ -171,7 +171,7 @@
                             {{ 'products.facets.filter_and_operator_subtitle' | t }}
                           </span>
                         {%- endif -%}
-                        {{- 'icon-caret.svg' | inline_asset_content -}}
+                        {%- render 'fc-icon', icon: 'chevron-down', size: 16 -%}
                       </div>
                     </summary>
                     <div
@@ -287,7 +287,7 @@
                                     {{- 'square.svg' | inline_asset_content -}}
 
                                     <div class="svg-wrapper">
-                                      {{- 'icon-checkmark.svg' | inline_asset_content -}}
+                                      {%- render 'fc-icon', icon: 'check', size: 14 -%}
                                     </div>
                                   {%- endif -%}
 
@@ -335,7 +335,7 @@
                     >
                       <div>
                         <span>{{ filter.label | escape }}</span>
-                        {{- 'icon-caret.svg' | inline_asset_content -}}
+                        {%- render 'fc-icon', icon: 'chevron-down', size: 16 -%}
                       </div>
                     </summary>
                     <div
@@ -475,7 +475,7 @@
       <summary class="mobile-facets__open-wrapper focus-offset">
         <span class="mobile-facets__open{% if filter_type == 'drawer' and enable_filtering == false %} medium-hide large-up-hide{% endif %}">
           <span class="svg-wrapper">
-            {{- 'icon-filter.svg' | inline_asset_content -}}
+            {%- render 'fc-icon', icon: 'sliders-horizontal', size: 16 -%}
           </span>
           <span class="mobile-facets__open-label button-label medium-hide large-up-hide">
             {%- if enable_filtering and enable_sorting -%}
@@ -494,7 +494,7 @@
         </span>
         <span tabindex="0" class="mobile-facets__close">
           <span class="svg-wrapper">
-            {{- 'icon-close.svg' | inline_asset_content -}}
+            {%- render 'fc-icon', icon: 'x', size: 16 -%}
           </span>
         </span>
       </summary>
@@ -557,7 +557,7 @@
                           <div>
                             <span>{{ filter.label | escape }}</span>
                             <span class="mobile-facets__arrow">
-                              {{- 'icon-arrow.svg' | inline_asset_content -}}
+                              {%- render 'fc-icon', icon: 'chevron-down', size: 18 -%}
                             </span>
                           </div>
                         </summary>
@@ -570,7 +570,7 @@
                             aria-expanded="true"
                             type="button"
                           >
-                            {{- 'icon-arrow.svg' | inline_asset_content -}}
+                            {%- render 'fc-icon', icon: 'chevron-left', size: 18 -%}
                             <span>{{ filter.label | escape }}</span>
                             {%- if filter.operator == 'AND' -%}
                               <span class="facets__and-helptext">
@@ -664,7 +664,7 @@
                                     {%- else -%}
                                       <span class="mobile-facets__highlight"></span>
                                       {{- 'square.svg' | inline_asset_content -}}
-                                      {{- 'icon-checkmark.svg' | inline_asset_content -}}
+                                      {%- render 'fc-icon', icon: 'check', size: 14 -%}
                                     {%- endif %}
 
                                     {{ text_value }}
@@ -700,7 +700,7 @@
                           <div>
                             <span>{{ filter.label | escape }}</span>
                             <span class="mobile-facets__arrow">
-                              {{- 'icon-arrow.svg' | inline_asset_content -}}
+                              {%- render 'fc-icon', icon: 'chevron-down', size: 18 -%}
                             </span>
                           </div>
                         </summary>
@@ -713,7 +713,7 @@
                             aria-expanded="true"
                             type="button"
                           >
-                            {{- 'icon-arrow.svg' | inline_asset_content -}}
+                            {%- render 'fc-icon', icon: 'chevron-left', size: 18 -%}
                             {{ filter.label | escape }}
                           </button>
 

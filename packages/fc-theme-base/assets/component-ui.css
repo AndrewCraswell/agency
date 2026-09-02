@@ -923,14 +923,14 @@ input[type='checkbox'].ui-checkbox:disabled + .ui-checkbox-field__copy {
   gap: 0.4rem;
   align-items: center;
   width: 100%;
-  height: 4rem;
-  padding: 0 1.4rem;
+  min-height: 3.5rem;
+  padding: 0.9rem 1.4rem;
   border: 0.1rem solid #767676;
   border-radius: 1.4rem;
   background: #ffffff;
   font-family: var(--font-body-family);
   font-size: 1.4rem;
-  line-height: 1;
+  line-height: 1.2;
   color: #101012;
   cursor: pointer;
   list-style: none;
@@ -957,11 +957,11 @@ input[type='checkbox'].ui-checkbox:disabled + .ui-checkbox-field__copy {
 }
 
 /* base.css absolutely positions `summary .icon-caret` and stretches any
-   `.svg-wrapper > svg` to 100%, which drags this caret out of its wrapper. */
-.collection-sort__trigger .svg-wrapper .icon-caret {
+   `.svg-wrapper > svg` to 100%, which drags a caret out of its wrapper. */
+.collection-sort__trigger .svg-wrapper .fc-icon {
   position: static;
-  width: 1rem;
-  height: 0.6rem;
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .collection-sort[open] .collection-sort__trigger .svg-wrapper {

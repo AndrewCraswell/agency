@@ -149,8 +149,8 @@
   display: inline-flex;
   gap: 1.2rem;
   align-items: center;
-  min-height: 4rem;
-  padding: 0 1.4rem;
+  min-height: 3.5rem;
+  padding: 0.9rem 1.4rem;
   border: 0.1rem solid #767676;
   border-radius: 1.4rem;
 }
@@ -163,9 +163,12 @@
   text-decoration: none;
 }
 
-.search-results__controls .facets__summary .icon-caret {
-  position: static;
+.search-results__controls .facets__summary .fc-icon {
   flex: 0 0 auto;
+}
+
+.search-results__controls .facets__summary-label {
+  line-height: 1.2;
 }
 
 /* Dawn anchors the popup to the original bare-text summary height and holds a
@@ -277,14 +280,19 @@
 }
 
 .search-results__controls .facet-checkbox > .svg-wrapper {
-  left: 1.4rem;
+  left: 1.6rem;
   top: 50%;
-  width: 1.1rem;
-  height: 0.8rem;
+  width: 1.4rem;
+  height: 1.4rem;
   margin-right: 0;
   background: transparent;
   color: #ffffff;
   transform: translateY(-50%);
+}
+
+/* Dawn reveals the tick with a rule keyed to its own icon class. */
+.search-results__controls .facet-checkbox > input[type='checkbox']:checked ~ .svg-wrapper > .fc-icon {
+  visibility: visible;
 }
 
 /* Price range: label above the field, matching the designed inputs. */
@@ -413,12 +421,14 @@
 }
 
 .search-results__controls .mobile-facets__arrow {
+  display: flex;
+  align-items: center;
+  color: #5a5a60;
   transition: transform 150ms ease;
-  transform: rotate(90deg);
 }
 
 .search-results__controls .mobile-facets__details[open] .mobile-facets__arrow {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
 }
 
 .search-results__controls .mobile-facets__list {

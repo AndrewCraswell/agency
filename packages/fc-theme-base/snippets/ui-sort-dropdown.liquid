@@ -34,7 +34,7 @@
         >
           <span class="collection-sort__prefix">{{ sort_label | escape }}</span>
           <span class="collection-sort__current" data-sort-current>{{ selected_sort_label | escape }}</span>
-          <span class="svg-wrapper">{{- 'icon-caret.svg' | inline_asset_content -}}</span>
+          <span class="svg-wrapper">{%- render 'fc-icon', icon: 'chevron-down', size: 16 -%}</span>
         </summary>
         <div class="collection-sort__menu" role="listbox" aria-label="{{ sort_label | escape }}">
           {%- for option in results.sort_options -%}
