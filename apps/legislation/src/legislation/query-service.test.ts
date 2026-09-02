@@ -8,6 +8,7 @@ import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
   amendmentSearchPageState,
+  buildDocumentAmendmentLexicalQuery,
   buildSupportingMaterialCollectionQuery,
   buildSemanticAmendmentCandidateQueries,
   buildStructuredAmendmentLexicalQuery,
@@ -166,6 +167,45 @@ describe("bill browse query", () => {
 })
 
 describe("amendment lexical search query", () => {
+  it("keeps indexed section matches separate from title-only matches before ranking each document", () => {
+    const query = buildDocumentAmendmentLexicalQuery(
+      database,
+      { limit: 20, mode: "lexical", query: "Medicare Part D premium" },
+      21
+    ).toSQL()
+
+    expect(query.sql).toContain('"amendment_document_lexical_candidates" as')
+    expect(query.sql).toContain(" union all ")
+    expect(query.sql).not.toMatch(/search_vector[^)]*@@[^)]* or to_tsvector/)
+    expect(query.sql).toContain("row_number() over (partition by")
+    expect(query.sql).toContain('"row_number" = $')
+    expect(query.sql.match(/ts_headline/g)).toHaveLength(1)
+    expect(query.sql.indexOf("ts_headline")).toBeGreaterThan(query.sql.indexOf("amendment_document_lexical_ranked"))
+  })
+
+  it("applies document filters and hybrid candidate IDs to both disjoint match branches", () => {
+    const query = buildDocumentAmendmentLexicalQuery(
+      database,
+      {
+        jurisdictionIds: ["jurisdiction:us"],
+        limit: 20,
+        mode: "hybrid",
+        query: "premium",
+        sessionIds: ["session:119"]
+      },
+      25,
+      ["document:first", "document:second"]
+    ).toSQL()
+
+    expect(query.sql.match(/"legislation"\."bill_documents"\."classification" =/g)).toHaveLength(2)
+    expect(query.sql.match(/"legislation"\."bill_documents"\."processing_status" =/g)).toHaveLength(2)
+    expect(query.sql.match(/"legislation"\."bill_documents"\."id" in/g)).toHaveLength(2)
+    expect(query.sql.match(/"legislation"\."bills"\."jurisdiction_id" in/g)).toHaveLength(2)
+    expect(query.sql.match(/"legislation"\."bills"\."session_id" in/g)).toHaveLength(2)
+    expect(query.params.filter((value) => value === "document:first")).toHaveLength(2)
+    expect(query.params.filter((value) => value === "document:second")).toHaveLength(2)
+  })
+
   it("uses full-text ranking and preserves every multi-value filter as bound parameters", () => {
     const query = buildStructuredAmendmentLexicalQuery(
       database,
@@ -346,14 +386,15 @@ describe("lexical supporting material candidate search", () => {
 
     expect(rendered.sql).toContain("with title_candidate_probe as")
     expect(rendered.sql).toContain("title_candidates as")
+    expect(rendered.sql).toContain("section_match_probe as materialized")
+    expect(rendered.sql).toContain("section_match_sample as materialized")
+    expect(rendered.sql).toContain("section_candidate_materials as materialized")
+    expect(rendered.sql).toContain("candidate_materials as materialized")
+    expect(rendered.sql).toContain("candidate_title_scores as")
     expect(rendered.sql).toContain("section_ranked_matches as")
     expect(rendered.sql).toContain("section_best_matches as")
-    expect(rendered.sql).toContain("section_candidate_probe as")
-    expect(rendered.sql).toContain("section_candidate_materials as")
-    expect(rendered.sql).toContain("candidate_materials as")
     expect(rendered.sql).toContain("ranked_candidate_scores as")
     expect(rendered.sql).toContain("ranked_candidate_prefix as")
-    expect(rendered.sql.match(/order by section_score desc, material_id asc/g)).toHaveLength(2)
     expect(rendered.sql).toContain("section_candidates as")
     expect(rendered.sql.match(/limit \$\d+/g)).toHaveLength(6)
     expect(rendered.sql).toContain('as "matchedSectionId"')
@@ -362,8 +403,14 @@ describe("lexical supporting material candidate search", () => {
     expect(rendered.sql).toContain("order by material_id asc, section_score desc, section_id asc")
     expect(rendered.sql).not.toContain("row_number() over")
     expect(rendered.sql.match(/"search_vector" @@/g)).toHaveLength(1)
+    expect(rendered.sql).toMatch(
+      /inner join "legislation"\."supporting_material_sections"\s+on "legislation"\."supporting_material_sections"\."id" = section_match_sample\.section_id/
+    )
     expect(rendered.sql).toContain(
       "left join section_best_matches on section_best_matches.material_id = candidate_materials.material_id"
+    )
+    expect(rendered.sql).toContain(
+      "left join candidate_title_scores on candidate_title_scores.material_id = candidate_materials.material_id"
     )
     expect(rendered.sql).toContain(
       'on "legislation"."supporting_material_sections"."id" = ranked_candidate_prefix.matched_section_id'
@@ -372,6 +419,29 @@ describe("lexical supporting material candidate search", () => {
     expect(rendered.sql.indexOf("section_candidates as")).toBeLessThan(rendered.sql.indexOf("ts_headline("))
     expect(rendered.sql).not.toContain('inner join "legislation"."supporting_materials" on')
     expect(rendered.sql).not.toContain('left join "legislation"."supporting_material_links"')
+  })
+
+  it("calculates exact best-section ranks only within the declared stable section sample", () => {
+    const rendered = renderCandidateSearch({ query: "Build the Wall" })
+    const sectionProbeStart = rendered.sql.indexOf("section_match_probe as materialized")
+    const sectionSampleStart = rendered.sql.indexOf("section_match_sample as materialized")
+    const sectionRankingStart = rendered.sql.indexOf("section_ranked_matches as")
+
+    expect(sectionProbeStart).toBeGreaterThan(-1)
+    expect(sectionProbeStart).toBeLessThan(sectionRankingStart)
+    expect(rendered.sql.slice(sectionProbeStart, sectionSampleStart)).not.toContain("ts_rank_cd")
+    expect(rendered.sql).toMatch(/order by "legislation"\."supporting_material_sections"\."id" asc\s+limit \$\d+/)
+    expect(rendered.sql).toContain("exists (select 1 from section_match_probe offset")
+    expect(rendered.sql).not.toContain("section_candidate_probe")
+  })
+
+  it("keeps source samples fixed across cursor pages before ranking", () => {
+    const firstPage = renderCandidateSearch({ query: "Build the Wall" }, 20, 0)
+    const secondPage = renderCandidateSearch({ query: "Build the Wall" }, 20, 20)
+    const numericParams = (params: readonly unknown[]) => params.filter((value) => typeof value === "number")
+
+    expect(numericParams(firstPage.params)).toEqual([251, 250, 251, 250, 25, 250, 250, 25, 21, 0])
+    expect(numericParams(secondPage.params)).toEqual([251, 250, 251, 250, 41, 250, 250, 41, 21, 20])
   })
 
   it("keeps link, session, date, update, status, and classification filters in both candidate sources", () => {
@@ -438,11 +508,21 @@ describe("lexical supporting material candidate search", () => {
     })
   })
 
-  it("keeps a cursor when a cap or an extra row proves another page may exist", () => {
+  it("reports an exactly full coverage-capped page without inventing a continuation", () => {
     expect(lexicalSupportingMaterialPageState(0, 25, 25, true)).toEqual({
-      nextCursor: "eyJvZmZzZXQiOjI1fQ",
+      nextCursor: undefined,
       truncated: true
     })
+  })
+
+  it("reports a sparse coverage-capped page without inventing an empty next page", () => {
+    expect(lexicalSupportingMaterialPageState(0, 20, 10, true)).toEqual({
+      nextCursor: undefined,
+      truncated: true
+    })
+  })
+
+  it("keeps a cursor when an extra retained row proves another page exists", () => {
     expect(lexicalSupportingMaterialPageState(0, 25, 26, false)).toEqual({
       nextCursor: "eyJvZmZzZXQiOjI1fQ",
       truncated: true

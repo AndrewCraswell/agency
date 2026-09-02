@@ -15,7 +15,7 @@ import {
   type SQL,
   type SQLWrapper
 } from "drizzle-orm"
-import { alias } from "drizzle-orm/pg-core"
+import { alias, unionAll } from "drizzle-orm/pg-core"
 import type { LegislationDatabase } from "../db/database.js"
 import { billActionTimestamp } from "../db/queries/bill-action-timestamp.js"
 import { findChangeEvents, type CanonicalChangeType } from "../db/queries/changes.js"
@@ -106,37 +106,6 @@ async function lexicalAmendmentCandidates(
   limit: number,
   candidateIds?: { document: readonly string[]; structured: readonly string[] }
 ): Promise<Array<AmendmentSearchCandidate[]>> {
-  const query = sql`websearch_to_tsquery('english', ${input.query})`
-  const documentTitleVector = sql`to_tsvector('english', coalesce(${billDocuments.title}, ''))`
-  const documentCandidates = database.$with("amendment_document_lexical_candidates").as(
-    database
-      .select({
-        documentId: billDocuments.id,
-        identifierMatches: sql<boolean>`${documentTitleVector} @@ ${query}`.as("identifier_matches"),
-        rank: sql<number>`ts_rank_cd(${documentSections.searchVector}, ${query}) + ts_rank_cd(${documentTitleVector}, ${query})`.as(
-          "rank"
-        ),
-        rowNumber:
-          sql<number>`row_number() over (partition by ${billDocuments.id} order by ts_rank_cd(${documentSections.searchVector}, ${query}) + ts_rank_cd(${documentTitleVector}, ${query}) desc, ${documentSections.id} asc)`.as(
-            "row_number"
-          ),
-        snippet:
-          sql<string>`left(ts_headline('english', ${documentSections.text}, ${query}, 'MaxWords=35, MinWords=10, MaxFragments=1'), 1000)`.as(
-            "snippet"
-          ),
-        textMatches: sql<boolean>`${documentSections.searchVector} @@ ${query}`.as("text_matches")
-      })
-      .from(documentSections)
-      .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
-      .innerJoin(bills, eq(bills.id, billDocuments.billId))
-      .where(
-        and(
-          documentSearchFilters(input),
-          candidateIds === undefined ? undefined : inArray(billDocuments.id, candidateIds.document),
-          sql`(${documentSections.searchVector} @@ ${query} or ${documentTitleVector} @@ ${query})`
-        )
-      )
-  )
   const [structuredRows, documentRows] = await Promise.all([
     input.recordTypes?.includes("document") || candidateIds?.structured.length === 0
       ? Promise.resolve([])
@@ -146,22 +115,7 @@ async function lexicalAmendmentCandidates(
     input.statuses !== undefined ||
     candidateIds?.document.length === 0
       ? Promise.resolve([])
-      : database
-          .with(documentCandidates)
-          .select({
-            bill: bills,
-            document: billDocuments,
-            identifierMatches: documentCandidates.identifierMatches,
-            rank: documentCandidates.rank,
-            snippet: documentCandidates.snippet,
-            textMatches: documentCandidates.textMatches
-          })
-          .from(documentCandidates)
-          .innerJoin(billDocuments, eq(billDocuments.id, documentCandidates.documentId))
-          .innerJoin(bills, eq(bills.id, billDocuments.billId))
-          .where(eq(documentCandidates.rowNumber, 1))
-          .orderBy(desc(documentCandidates.rank), asc(documentCandidates.documentId))
-          .limit(limit)
+      : buildDocumentAmendmentLexicalQuery(database, input, limit, candidateIds?.document)
   ])
   return [
     structuredRows.map(({ amendment, identifierMatches, metadataMatches, rank, snippet }) => ({
@@ -186,6 +140,98 @@ async function lexicalAmendmentCandidates(
       snippet
     }))
   ]
+}
+
+/**
+ * Keep the indexed section match separate from the computed title match. An OR
+ * between them makes PostgreSQL scan every document section before it can rank
+ * any candidate. The disjoint branches below produce the same candidate set:
+ * matching sections come from the GIN-backed branch, while title-only sections
+ * cover the remaining sections of title-matched documents. Expensive headline
+ * generation happens only after the best section per document is selected.
+ */
+export function buildDocumentAmendmentLexicalQuery(
+  database: LegislationDatabase,
+  input: ApiAmendmentSearchInput,
+  limit: number,
+  candidateDocumentIds?: readonly string[]
+) {
+  const query = sql`websearch_to_tsquery('english', ${input.query})`
+  const documentTitleVector = sql`to_tsvector('english', coalesce(${billDocuments.title}, ''))`
+  const titleMatches = sql<boolean>`${documentTitleVector} @@ ${query}`
+  const sectionMatches = sql<boolean>`${documentSections.searchVector} @@ ${query}`
+  const sectionRank = sql<number>`ts_rank_cd(${documentSections.searchVector}, ${query})`
+  const titleRank = sql<number>`ts_rank_cd(${documentTitleVector}, ${query})`
+  const filters = and(
+    documentSearchFilters(input),
+    candidateDocumentIds === undefined ? undefined : inArray(billDocuments.id, candidateDocumentIds)
+  )
+  const matchingSections = database
+    .select({
+      documentId: sql<string>`${billDocuments.id}`.as("document_id"),
+      identifierMatches: titleMatches.as("identifier_matches"),
+      rank: sql<number>`${sectionRank} + ${titleRank}`.as("rank"),
+      sectionId: sql<string>`${documentSections.id}`.as("section_id"),
+      textMatches: sql<boolean>`true`.as("text_matches")
+    })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+    .innerJoin(bills, eq(bills.id, billDocuments.billId))
+    .where(and(filters, sectionMatches))
+  const titleOnlySections = database
+    .select({
+      documentId: sql<string>`${billDocuments.id}`.as("document_id"),
+      identifierMatches: sql<boolean>`true`.as("identifier_matches"),
+      rank: titleRank.as("rank"),
+      sectionId: sql<string>`${documentSections.id}`.as("section_id"),
+      textMatches: sql<boolean>`false`.as("text_matches")
+    })
+    .from(billDocuments)
+    .innerJoin(bills, eq(bills.id, billDocuments.billId))
+    .innerJoin(documentSections, eq(documentSections.documentId, billDocuments.id))
+    .where(and(filters, titleMatches, sql`not (${sectionMatches})`))
+  const documentCandidates = database
+    .$with("amendment_document_lexical_candidates")
+    .as(unionAll(matchingSections, titleOnlySections))
+  const rankedCandidates = database.$with("amendment_document_lexical_ranked").as(
+    database
+      .select({
+        documentId: documentCandidates.documentId,
+        identifierMatches: documentCandidates.identifierMatches,
+        rank: documentCandidates.rank,
+        rowNumber:
+          sql<number>`row_number() over (partition by ${documentCandidates.documentId} order by ${documentCandidates.rank} desc, ${documentCandidates.sectionId} asc)`.as(
+            "row_number"
+          ),
+        sectionId: documentCandidates.sectionId,
+        textMatches: documentCandidates.textMatches
+      })
+      .from(documentCandidates)
+  )
+  const rankedDocumentId = sql<string>`"amendment_document_lexical_ranked"."document_id"`
+  const rankedIdentifierMatches = sql<boolean>`"amendment_document_lexical_ranked"."identifier_matches"`
+  const rankedRank = sql<number>`"amendment_document_lexical_ranked"."rank"`
+  const rankedRowNumber = sql<number>`"amendment_document_lexical_ranked"."row_number"`
+  const rankedSectionId = sql<string>`"amendment_document_lexical_ranked"."section_id"`
+  const rankedTextMatches = sql<boolean>`"amendment_document_lexical_ranked"."text_matches"`
+  const snippet = sql<string>`left(ts_headline('english', ${documentSections.text}, ${query}, 'MaxWords=35, MinWords=10, MaxFragments=1'), 1000)`
+  return database
+    .with(documentCandidates, rankedCandidates)
+    .select({
+      bill: bills,
+      document: billDocuments,
+      identifierMatches: rankedIdentifierMatches,
+      rank: rankedRank,
+      snippet,
+      textMatches: rankedTextMatches
+    })
+    .from(rankedCandidates)
+    .innerJoin(billDocuments, eq(billDocuments.id, rankedDocumentId))
+    .innerJoin(bills, eq(bills.id, billDocuments.billId))
+    .innerJoin(documentSections, eq(documentSections.id, rankedSectionId))
+    .where(eq(rankedRowNumber, 1))
+    .orderBy(desc(rankedRank), asc(rankedDocumentId))
+    .limit(limit)
 }
 
 export function buildStructuredAmendmentLexicalQuery(
@@ -864,7 +910,7 @@ export function lexicalSupportingMaterialPageState(
   const nextOffset = offset + pageLength
   return {
     nextCursor:
-      truncated && pageLength > 0 && nextOffset < LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT
+      rowCount > limit && pageLength > 0 && nextOffset < LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT
         ? encodeOffset(nextOffset)
         : undefined,
     truncated
@@ -1064,10 +1110,16 @@ interface LexicalSupportingMaterialCandidate {
 }
 
 /**
- * Retrieve bounded title and section candidate windows before material-level
- * ranking. Section headlines are calculated only after their rank window is
- * selected, because headline generation scans text and is too expensive for
- * common-term matches. Both candidate sources must complete: a timeout is
+ * Retrieve fixed, bounded title and section candidate windows before
+ * material-level ranking. A fixed source window is required because expanding
+ * a pre-rank sample with each cursor can introduce newly sampled materials
+ * ahead of rows already returned on earlier pages. Section candidates are
+ * sampled deterministically by section ID, then the retained section sample is
+ * ranked so the returned best-section evidence is exact within that declared
+ * sample. This avoids ranking the complete corpus for common-term searches
+ * while making a capped sample explicit through `truncated`. Section headlines
+ * are calculated only after the final rank window is selected because headline
+ * generation scans text. Both candidate sources must complete: a timeout is
  * surfaced as dependency_unavailable instead of returning title or section
  * matches selectively.
  */
@@ -1090,7 +1142,8 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       : sql`inner join ${supportingMaterials} on ${supportingMaterials.id} = ${supportingMaterialSections.materialId}`
   const sectionScope = scope ?? sql`true`
   const candidateLimit = lexicalSupportingMaterialCandidateLimit(limit, offset)
-  const candidateProbeLimit = candidateLimit + 1
+  const sourceCandidateLimit = LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT
+  const sourceCandidateProbeLimit = sourceCandidateLimit + 1
   return sql`
     with title_candidate_probe as (
       select
@@ -1099,22 +1152,58 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       from ${supportingMaterials}
       where ${titleMatches} and ${titleScope}
       order by ${titleRank} desc, ${supportingMaterials.id} asc
-      limit ${candidateProbeLimit}
+      limit ${sourceCandidateProbeLimit}
     ),
     title_candidates as (
       select material_id, title_score
       from title_candidate_probe
       order by title_score desc, material_id asc
-      limit ${candidateLimit}
+      limit ${sourceCandidateLimit}
+    ),
+    section_match_probe as materialized (
+      select
+        ${supportingMaterialSections.materialId} as material_id,
+        ${supportingMaterialSections.id} as section_id
+      from ${supportingMaterialSections}
+      ${sectionMaterialJoin}
+      where ${sectionMatches} and ${sectionScope}
+      order by ${supportingMaterialSections.id} asc
+      limit ${sourceCandidateProbeLimit}
+    ),
+    section_match_sample as materialized (
+      select material_id, section_id
+      from section_match_probe
+      order by section_id asc
+      limit ${sourceCandidateLimit}
+    ),
+    section_candidate_materials as materialized (
+      select material_id
+      from section_match_sample
+      group by material_id
+      order by material_id asc
+    ),
+    candidate_materials as materialized (
+      select material_id from title_candidates
+      union
+      select material_id from section_candidate_materials
+    ),
+    candidate_title_scores as (
+      select
+        ${supportingMaterials.id} as material_id,
+        ${titleRank} as title_score
+      from ${supportingMaterials}
+      inner join candidate_materials
+        on candidate_materials.material_id = ${supportingMaterials.id}
+      where ${titleMatches}
     ),
     section_ranked_matches as (
       select
         ${supportingMaterialSections.materialId} as material_id,
         ${supportingMaterialSections.id} as section_id,
         ${sectionRank} as section_score
-      from ${supportingMaterialSections}
-      ${sectionMaterialJoin}
-      where ${sectionMatches} and ${sectionScope}
+      from section_match_sample
+      inner join ${supportingMaterialSections}
+        on ${supportingMaterialSections.id} = section_match_sample.section_id
     ),
     section_best_matches as (
       select distinct on (material_id)
@@ -1124,32 +1213,15 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       from section_ranked_matches
       order by material_id asc, section_score desc, section_id asc
     ),
-    section_candidate_probe as (
-      select material_id, section_id, section_score
-      from section_best_matches
-      order by section_score desc, material_id asc
-      limit ${candidateProbeLimit}
-    ),
-    section_candidate_materials as (
-      select material_id
-      from section_candidate_probe
-      order by section_score desc, material_id asc
-      limit ${candidateLimit}
-    ),
-    candidate_materials as (
-      select material_id from title_candidates
-      union
-      select material_id from section_candidate_materials
-    ),
     ranked_candidate_scores as (
       select
         candidate_materials.material_id,
-        title_candidates.title_score,
+        candidate_title_scores.title_score,
         section_best_matches.section_score,
-        greatest(coalesce(title_candidates.title_score, 0), coalesce(section_best_matches.section_score, 0)) as lexical_score,
+        greatest(coalesce(candidate_title_scores.title_score, 0), coalesce(section_best_matches.section_score, 0)) as lexical_score,
         section_best_matches.section_id as matched_section_id
       from candidate_materials
-      left join title_candidates on title_candidates.material_id = candidate_materials.material_id
+      left join candidate_title_scores on candidate_title_scores.material_id = candidate_materials.material_id
       left join section_best_matches on section_best_matches.material_id = candidate_materials.material_id
     ),
     ranked_candidate_prefix as (
@@ -1174,8 +1246,8 @@ export function buildLexicalSupportingMaterialCandidateQuery(
     candidate_window as (
       select
         (
-          exists (select 1 from title_candidate_probe offset ${candidateLimit})
-          or exists (select 1 from section_candidate_probe offset ${candidateLimit})
+          exists (select 1 from title_candidate_probe offset ${sourceCandidateLimit})
+          or exists (select 1 from section_match_probe offset ${sourceCandidateLimit})
           or exists (select 1 from ranked_candidate_scores offset ${candidateLimit})
         ) as capped
     )
