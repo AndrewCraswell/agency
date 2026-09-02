@@ -1,12 +1,11 @@
 {{ 'section-main-collection.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'collection-breadcrumbs.js' | asset_url }}" defer="defer"></script>
 
-{%- liquid
-  assign show_curated_content = true
-  if section.settings.category_collection_handle != blank and section.settings.category_collection_handle != collection.handle
-    assign show_curated_content = false
-  endif
--%}
+{%- comment -%}
+  Category pills come from a menu whose handle matches the collection, so any
+  collection can offer them without section blocks.
+{%- endcomment -%}
+{%- assign category_links = linklists[collection.handle].links -%}
 
 <header class="collection-intro">
   {%- render 'ui-breadcrumbs',
@@ -18,30 +17,22 @@
 
   <h1 class="collection-intro__title">{{ collection.title | escape }}</h1>
 
-  {%- if section.settings.show_collection_description -%}
-    {%- assign collection_description = collection.description -%}
-    {%- if collection_description == blank and show_curated_content -%}
-      {%- assign collection_description = section.settings.fallback_description -%}
-    {%- endif -%}
-    {%- if collection_description != blank -%}
-      <div class="collection-intro__description rte">{{ collection_description }}</div>
-    {%- endif -%}
+  {%- if section.settings.show_collection_description and collection.description != blank -%}
+    <div class="collection-intro__description rte">{{ collection.description }}</div>
   {%- endif -%}
 
-  {%- if section.settings.show_category_pills and show_curated_content -%}
+  {%- if section.settings.show_category_pills and category_links.size > 0 -%}
     <nav class="collection-intro__pills" aria-label="{{ section.settings.category_label | escape }}">
-      {%- for block in section.blocks -%}
-        {%- if block.settings.label != blank -%}
-          {%- capture category_url -%}
-            {%- render 'collection-context-url',
-              url: block.settings.link,
-              parent_label: collection.title,
-              parent_url: collection.url,
-              current_label: block.settings.label
-            -%}
-          {%- endcapture -%}
-          {%- render 'ui-pill', label: block.settings.label, url: category_url, block_attributes: block.shopify_attributes -%}
-        {%- endif -%}
+      {%- for link in category_links -%}
+        {%- capture category_url -%}
+          {%- render 'collection-context-url',
+            url: link.url,
+            parent_label: collection.title,
+            parent_url: collection.url,
+            current_label: link.title
+          -%}
+        {%- endcapture -%}
+        {%- render 'ui-pill', label: link.title, url: category_url -%}
       {%- endfor -%}
     </nav>
   {%- endif -%}
@@ -51,7 +42,6 @@
 {
   "name": "t:sections.main-collection-banner.name",
   "class": "section",
-  "max_blocks": 10,
   "settings": [
     { "type": "text", "id": "home_label", "label": "Home label", "default": "Home" },
     {
@@ -60,32 +50,12 @@
       "default": true,
       "label": "t:sections.main-collection-banner.settings.show_collection_description.label"
     },
-    {
-      "type": "textarea",
-      "id": "fallback_description",
-      "label": "Fallback description",
-      "info": "Shown when the collection has no description.",
-      "default": "Competition-ready fencing apparel: jackets, pants, plastrons, chest protectors, socks and gloves, built to FIE standards for every level of fencer."
-    },
     { "type": "checkbox", "id": "show_category_pills", "label": "Show category links", "default": true },
     {
-      "type": "text",
-      "id": "category_collection_handle",
-      "label": "Collection handle for category links",
-      "info": "Fallback copy and category links appear only on this collection. Leave empty to show them on every collection.",
-      "default": "clothing"
+      "type": "paragraph",
+      "content": "Category links come from the navigation menu whose handle matches the collection handle."
     },
-    { "type": "text", "id": "category_label", "label": "Category navigation label", "default": "Shop clothing categories" }
-  ],
-  "blocks": [
-    {
-      "type": "category",
-      "name": "Category link",
-      "settings": [
-        { "type": "text", "id": "label", "label": "Label", "default": "Category" },
-        { "type": "url", "id": "link", "label": "Link" }
-      ]
-    }
+    { "type": "text", "id": "category_label", "label": "Category navigation label", "default": "Shop categories" }
   ]
 }
 {% endschema %}

@@ -1,0 +1,77 @@
+{%- comment -%}
+  Renders the collection's real Shopify filters in the curated filter styling.
+
+  Accepts:
+  - results: {Collection} Collection whose filters are rendered (required)
+  - section_id: {String} Owning section id, for unique ids (required)
+
+  Filter values carry their own add/remove URLs, so the markup stays a plain
+  link list and facets.js intercepts it.
+{%- endcomment -%}
+<nav class="collection-curated-filters" aria-label="{{ 'products.facets.filter_by_label' | t }}">
+  {%- for filter in results.filters -%}
+    {%- liquid
+      assign group_key = filter.label | handle
+      assign presentation = 'checkbox'
+      if filter.presentation == 'swatch'
+        assign presentation = 'swatch'
+      endif
+      if filter.type == 'price_range'
+        assign presentation = 'price'
+      endif
+    -%}
+    <section
+      class="collection-filter-group collection-filter-group--{{ presentation }}"
+      aria-labelledby="CollectionFilter-{{ section_id }}-{{ group_key }}"
+    >
+      <h3 id="CollectionFilter-{{ section_id }}-{{ group_key }}">{{ filter.label | escape | upcase }}</h3>
+
+      {%- if filter.type == 'price_range' -%}
+        <price-range class="collection-filter-group__price">
+          {%- render 'price-facet', filter: filter, id_prefix: 'CollectionFilter-', filter_type: 'vertical' -%}
+        </price-range>
+      {%- else -%}
+        <ul class="collection-filter-group__options list-unstyled">
+          {%- for value in filter.values -%}
+            {%- liquid
+              assign is_disabled = false
+              if value.count == 0 and value.active == false
+                assign is_disabled = true
+              endif
+              assign option_url = value.url_to_add
+              if value.active
+                assign option_url = value.url_to_remove
+              endif
+            -%}
+            <li
+              class="collection-filter-option collection-filter-option--{{ presentation }}
+                {%- if value.active %} collection-filter-option--active{% endif %}
+                {%- if is_disabled %} collection-filter-option--disabled{% endif %}"
+            >
+              {%- if presentation == 'swatch' -%}
+                <span
+                  class="collection-filter-option__swatch"
+                  style="--filter-swatch: {{ value.swatch.color | default: '#ffffff' }}"
+                  aria-hidden="true"
+                ></span>
+                <span class="collection-filter-option__swatch-link">
+                  <a href="{{ option_url }}" aria-pressed="{{ value.active }}">{{ value.label | escape }}</a>
+                </span>
+              {%- else -%}
+                <span class="collection-filter-option__check" aria-hidden="true">
+                  {%- if value.active -%}
+                    <span class="svg-wrapper">{%- render 'fc-icon', icon: 'check', size: 12 -%}</span>
+                  {%- endif -%}
+                </span>
+                <span class="collection-filter-option__label">
+                  <a href="{{ option_url }}" aria-pressed="{{ value.active }}">{{ value.label | escape }}</a>
+                </span>
+                <span class="collection-filter-option__count" aria-hidden="true">{{ value.count }}</span>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </section>
+  {%- endfor -%}
+</nav>

@@ -2,93 +2,22 @@
   "sections": {
     "banner": {
       "type": "main-collection-banner",
-      "blocks": {
-        "jackets": { "type": "category", "settings": { "label": "Jackets", "link": "/collections/jackets" } },
-        "pants": { "type": "category", "settings": { "label": "Pants", "link": "/collections/clothing/pants" } },
-        "plastrons": { "type": "category", "settings": { "label": "Plastrons", "link": "/collections/plastrons" } },
-        "chest-protectors": { "type": "category", "settings": { "label": "Chest Protectors", "link": "/collections/clothing/chest-protectors" } },
-        "socks": { "type": "category", "settings": { "label": "Socks", "link": "/collections/shoes-socks" } },
-        "gloves": { "type": "category", "settings": { "label": "Gloves", "link": "/collections/gloves" } }
-      },
-      "block_order": ["jackets", "pants", "plastrons", "chest-protectors", "socks", "gloves"],
       "settings": {
         "home_label": "Home",
         "show_collection_description": true,
-        "fallback_description": "Competition-ready fencing apparel: jackets, pants, plastrons, chest protectors, socks and gloves, built to FIE standards for every level of fencer.",
         "show_category_pills": true,
-        "category_collection_handle": "clothing",
-        "category_label": "Shop clothing categories"
+        "category_label": "Shop categories"
       }
     },
     "product-grid": {
       "type": "main-collection-product-grid",
-      "blocks": {
-        "sc-jackets": { "type": "filter_option", "settings": { "group": "sub-category", "label": "Jackets", "tag": "Jackets", "show_count": true, "count": 24, "swatch": "#ffffff" } },
-        "sc-pants": { "type": "filter_option", "settings": { "group": "sub-category", "label": "Pants", "tag": "Pants", "show_count": true, "count": 18, "swatch": "#ffffff" } },
-        "sc-plastrons": { "type": "filter_option", "settings": { "group": "sub-category", "label": "Plastrons", "tag": "Plastrons", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "sc-chest": { "type": "filter_option", "settings": { "group": "sub-category", "label": "Chest Protectors", "tag": "Chest Protectors", "show_count": true, "count": 9, "swatch": "#ffffff" } },
-        "sc-socks": { "type": "filter_option", "settings": { "group": "sub-category", "label": "Socks", "tag": "Socks", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "sc-gloves": { "type": "filter_option", "settings": { "group": "sub-category", "label": "Gloves", "tag": "Gloves", "show_count": true, "count": 12, "swatch": "#ffffff" } },
-        "d-foil": { "type": "filter_option", "settings": { "group": "discipline", "label": "Foil", "tag": "Foil", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "d-epee": { "type": "filter_option", "settings": { "group": "discipline", "label": "Epee", "tag": "Epee", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "d-saber": { "type": "filter_option", "settings": { "group": "discipline", "label": "Saber", "tag": "Saber", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "g-men": { "type": "filter_option", "settings": { "group": "gender", "label": "Men", "tag": "Men", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "g-women": { "type": "filter_option", "settings": { "group": "gender", "label": "Women", "tag": "Women", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "g-unisex": { "type": "filter_option", "settings": { "group": "gender", "label": "Unisex", "tag": "Unisex", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "s-xs": { "type": "filter_option", "settings": { "group": "size", "label": "XS", "tag": "XS", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "s-s": { "type": "filter_option", "settings": { "group": "size", "label": "S", "tag": "S", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "s-m": { "type": "filter_option", "settings": { "group": "size", "label": "M", "tag": "M", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "s-l": { "type": "filter_option", "settings": { "group": "size", "label": "L", "tag": "L", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "s-xl": { "type": "filter_option", "settings": { "group": "size", "label": "XL", "tag": "XL", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "s-xxl": { "type": "filter_option", "settings": { "group": "size", "label": "XXL", "tag": "XXL", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "l-350": { "type": "filter_option", "settings": { "group": "level", "label": "Level 1 - 350N", "tag": "Level 1 - 350N", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "l-800": { "type": "filter_option", "settings": { "group": "level", "label": "Level 2 - 800N FIE", "tag": "Level 2 - 800N FIE", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "l-1600": { "type": "filter_option", "settings": { "group": "level", "label": "Level 2 - 1600N", "tag": "Level 2 - 1600N", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "l-fie": { "type": "filter_option", "settings": { "group": "level", "label": "Level 2 - FIE", "tag": "Level 2 - FIE", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "p-under50": { "type": "filter_option", "settings": { "group": "price", "label": "Under $50", "tag": "Under $50", "show_count": true, "count": 31, "swatch": "#ffffff" } },
-        "p-50-100": { "type": "filter_option", "settings": { "group": "price", "label": "$50-$100", "tag": "$50-$100", "show_count": true, "count": 27, "swatch": "#ffffff" } },
-        "p-100-200": { "type": "filter_option", "settings": { "group": "price", "label": "$100-$200", "tag": "$100-$200", "show_count": true, "count": 19, "swatch": "#ffffff" } },
-        "p-200": { "type": "filter_option", "settings": { "group": "price", "label": "$200+", "tag": "$200+", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "b-fwf": { "type": "filter_option", "settings": { "group": "brand", "label": "FWF", "tag": "FWF", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "b-unic": { "type": "filter_option", "settings": { "group": "brand", "label": "UNIC", "tag": "UNIC", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "b-blaise": { "type": "filter_option", "settings": { "group": "brand", "label": "Blaise", "tag": "Blaise", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "b-favero": { "type": "filter_option", "settings": { "group": "brand", "label": "Favero", "tag": "Favero", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "c-white": { "type": "filter_option", "settings": { "group": "color", "label": "White", "tag": "White", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "c-black": { "type": "filter_option", "settings": { "group": "color", "label": "Black", "tag": "Black", "show_count": false, "count": 0, "swatch": "#101012" } },
-        "c-grey": { "type": "filter_option", "settings": { "group": "color", "label": "Grey", "tag": "Grey", "show_count": false, "count": 0, "swatch": "#9aa0a6" } },
-        "c-navy": { "type": "filter_option", "settings": { "group": "color", "label": "Navy", "tag": "Navy", "show_count": false, "count": 0, "swatch": "#1e2a44" } },
-        "c-red": { "type": "filter_option", "settings": { "group": "color", "label": "Red", "tag": "Red", "show_count": false, "count": 0, "swatch": "#b03a2e" } },
-        "c-blue": { "type": "filter_option", "settings": { "group": "color", "label": "Royal Blue", "tag": "Royal Blue", "show_count": false, "count": 0, "swatch": "#3e5c99" } },
-        "c-silver": { "type": "filter_option", "settings": { "group": "color", "label": "Silver", "tag": "Silver", "show_count": false, "count": 0, "swatch": "#c9cdd2" } },
-        "c-gold": { "type": "filter_option", "settings": { "group": "color", "label": "Gold", "tag": "Gold", "show_count": false, "count": 0, "swatch": "#b8912f" } },
-        "e-beginner": { "type": "filter_option", "settings": { "group": "experience", "label": "Beginner", "tag": "Beginner", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "e-intermediate": { "type": "filter_option", "settings": { "group": "experience", "label": "Intermediate", "tag": "Intermediate", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "e-advanced": { "type": "filter_option", "settings": { "group": "experience", "label": "Advanced", "tag": "Advanced", "show_count": false, "count": 0, "swatch": "#ffffff" } },
-        "product-aero": { "type": "curated_product", "settings": { "title": "Aero Competition Jacket", "link": "/collections/clothing", "product_type": "Foils", "price": "$129", "badge": "BEST SELLER", "image_asset": "collection-aero-competition-jacket.jpg", "image_alt": "White Aero competition fencing jacket" } },
-        "product-fie": { "type": "curated_product", "settings": { "title": "FIE 800N Jacket", "link": "/collections/clothing", "product_type": "Foils", "price": "$189", "badge": "BEST SELLER", "image_asset": "collection-fie-800n-jacket.jpg", "image_alt": "White FIE 800N fencing jacket" } },
-        "product-stretch": { "type": "curated_product", "settings": { "title": "Stretch Fencing Pants", "link": "/collections/clothing", "product_type": "Foils", "price": "$95", "badge": "BEST SELLER", "image_asset": "collection-stretch-fencing-pants.jpg", "image_alt": "White stretch fencing pants" } },
-        "product-knicker": { "type": "curated_product", "settings": { "title": "Knicker Pants 350N", "link": "/collections/clothing", "product_type": "Foils", "price": "$69", "badge": "BEST SELLER", "image_asset": "collection-knicker-pants-350n.jpg", "image_alt": "White 350N knicker fencing pants" } },
-        "product-mens-chest": { "type": "curated_product", "settings": { "title": "Men's Chest Protector", "link": "/collections/clothing", "product_type": "Foils", "price": "$34", "badge": "BEST SELLER", "image_asset": "collection-mens-chest-protector.jpg", "image_alt": "Men's white fencing chest protector" } },
-        "product-womens-chest": { "type": "curated_product", "settings": { "title": "Women's Chest Protector", "link": "/collections/clothing", "product_type": "Foils", "price": "$38", "badge": "BEST SELLER", "image_asset": "collection-womens-chest-protector.jpg", "image_alt": "Women's white fencing chest protector" } },
-        "product-plastron": { "type": "curated_product", "settings": { "title": "Underarm Plastron 800N", "link": "/collections/clothing", "product_type": "Foils", "price": "$42", "badge": "BEST SELLER", "image_asset": "collection-underarm-plastron-800n.jpg", "image_alt": "White 800N underarm fencing plastron" } },
-        "product-glove": { "type": "curated_product", "settings": { "title": "Grip Fencing Glove", "link": "/collections/clothing", "product_type": "Foils", "price": "$29", "badge": "BEST SELLER", "image_asset": "collection-grip-fencing-glove.jpg", "image_alt": "White grip fencing glove" } },
-        "product-socks": { "type": "curated_product", "settings": { "title": "Fencing Socks (2-pack)", "link": "/collections/clothing", "product_type": "Foils", "price": "$18", "badge": "BEST SELLER", "image_asset": "collection-fencing-socks-2-pack.jpg", "image_alt": "Two-pack of white fencing socks" } }
-      },
-      "block_order": ["sc-jackets", "sc-pants", "sc-plastrons", "sc-chest", "sc-socks", "sc-gloves", "d-foil", "d-epee", "d-saber", "g-men", "g-women", "g-unisex", "s-xs", "s-s", "s-m", "s-l", "s-xl", "s-xxl", "l-350", "l-800", "l-1600", "l-fie", "p-under50", "p-50-100", "p-100-200", "p-200", "b-fwf", "b-unic", "b-blaise", "b-favero", "c-white", "c-black", "c-grey", "c-navy", "c-red", "c-blue", "c-silver", "c-gold", "e-beginner", "e-intermediate", "e-advanced", "product-aero", "product-fie", "product-stretch", "product-knicker", "product-mens-chest", "product-womens-chest", "product-plastron", "product-glove", "product-socks"],
       "settings": {
         "products_per_page": 9,
         "columns_desktop": 3,
         "quick_add": "standard",
         "add_label": "Add",
-        "enable_curated_products": true,
-        "curated_product_collection_handle": "clothing",
-        "curated_product_count_label": "48 products",
-        "curated_load_more_url": "/collections/all",
         "enable_filtering": true,
-        "enable_curated_filters": true,
-        "curated_filter_collection_handle": "clothing",
         "mobile_filter_label": "Filter",
-        "default_active_filter_tags": "|Jackets|Plastrons|Foil|Women|Level 2 - 800N FIE|$100-$200|UNIC|",
         "enable_sorting": true,
         "filter_heading": "Filters",
         "clear_all_label": "Clear all",
@@ -100,8 +29,5 @@
       }
     }
   },
-  "order": [
-    "banner",
-    "product-grid"
-  ]
+  "order": ["banner", "product-grid"]
 }
