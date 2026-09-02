@@ -23,6 +23,7 @@ const peopleOrganizationsErrorPaths = new Map()
 const meetingsCalendarsErrorPaths = new Map()
 const meetingsCalendarsNotFoundPaths = new Set()
 const searchResearchErrorPaths = new Map()
+const searchResearchResponseMutators = new Map()
 const searchResearchTimeoutPaths = new Set()
 const searchResearchUnexpectedErrorPaths = new Set()
 let malformedSearchResearchPath
@@ -164,7 +165,7 @@ function searchResearchResponse(pathname, correlationId, requestBody) {
   if (pathname.startsWith("/api/search/")) {
     const mode = requestBody.mode
     const product = pathname.split("/").at(-1)
-    return {
+    const response = {
       data: [
         {
           match: {},
@@ -188,6 +189,15 @@ function searchResearchResponse(pathname, correlationId, requestBody) {
         warnings: []
       }
     }
+    if (product === "all") {
+      response.meta.groups = requestBody.recordTypes.map((recordType) => ({
+        nextCursor: null,
+        recordType,
+        returned: 1
+      }))
+    }
+    searchResearchResponseMutators.get(pathname)?.(response)
+    return response
   }
   if (pathname === "/api/document-diffs") {
     return {
@@ -1711,6 +1721,61 @@ describe("search and research deployed smoke profile", () => {
       expect(error.stderr).not.toContain(query)
     } finally {
       malformedSearchResearchPath = undefined
+      meetingsCalendarsNotFoundPaths.clear()
+    }
+  })
+
+  it.each([
+    {
+      mutate: (response) => {
+        delete response.meta.groups
+      },
+      name: "missing groups",
+      problem: "did not return an exact SearchPage envelope"
+    },
+    {
+      mutate: (response) => {
+        response.meta.groups.push({ nextCursor: null, recordType: "passage", returned: 0 })
+      },
+      name: "an extra group",
+      problem: "did not return one search group per requested record type"
+    },
+    {
+      mutate: (response) => {
+        response.meta.groups[1] = { nextCursor: "", recordType: "bill", returned: -1 }
+      },
+      name: "malformed group metadata",
+      problem: "returned invalid universal search group metadata"
+    }
+  ])("rejects universal search metadata with $name without leaking its query", async ({ mutate, problem }) => {
+    const query = "private universal group query must not escape"
+    searchResearchResponseMutators.set("/api/search/all", mutate)
+    addMeetingsCalendarsNotFoundFixtures()
+    try {
+      let error
+      try {
+        await runSmoke(searchResearchEnvironment({ LEGISLATION_WEB_SMOKE_SEARCH_ALL_QUERY: query }))
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain(`POST universal search ${problem}`)
+      expect(error.stderr).not.toContain(query)
+    } finally {
+      searchResearchResponseMutators.clear()
+      meetingsCalendarsNotFoundPaths.clear()
+    }
+  })
+
+  it("keeps non-universal search metadata strict when groups are present", async () => {
+    searchResearchResponseMutators.set("/api/search/bills", (response) => {
+      response.meta.groups = [{ nextCursor: null, recordType: "bill", returned: 1 }]
+    })
+    addMeetingsCalendarsNotFoundFixtures()
+    try {
+      await expect(runSmoke(searchResearchEnvironment())).rejects.toThrow("Command failed")
+    } finally {
+      searchResearchResponseMutators.clear()
       meetingsCalendarsNotFoundPaths.clear()
     }
   })

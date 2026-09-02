@@ -629,22 +629,50 @@ function requireSearchModels(models, name, mode, product) {
   }
 }
 
+function requireUniversalSearchGroups(groups, name, recordTypes) {
+  const expectedRecordTypes = new Set(recordTypes)
+  if (
+    !Array.isArray(groups) ||
+    groups.length !== expectedRecordTypes.size ||
+    expectedRecordTypes.size !== recordTypes.length
+  ) {
+    throw new Error(`${name} did not return one search group per requested record type`)
+  }
+  const seenRecordTypes = new Set()
+  for (const group of groups) {
+    if (
+      !isRecord(group) ||
+      !hasExactKeys(group, ["nextCursor", "recordType", "returned"]) ||
+      !expectedRecordTypes.has(group.recordType) ||
+      seenRecordTypes.has(group.recordType) ||
+      (group.nextCursor !== null && !isSafeNonEmptyMessage(group.nextCursor)) ||
+      !Number.isSafeInteger(group.returned) ||
+      group.returned < 0
+    ) {
+      throw new Error(`${name} returned invalid universal search group metadata`)
+    }
+    seenRecordTypes.add(group.recordType)
+  }
+}
+
 function requireSearchPageEnvelope(body, name, expectedCorrelationId, mode, product, recordTypes) {
+  const expectedMetaKeys = [
+    "correlationId",
+    ...(product === "all" ? ["groups"] : []),
+    "isReranked",
+    "limit",
+    "mode",
+    "models",
+    "nextCursor",
+    "truncated",
+    "warnings"
+  ]
   if (
     !hasExactKeys(body, ["data", "links", "meta"]) ||
     !Array.isArray(body.data) ||
     body.data.some((hit) => !isRecord(hit)) ||
     !hasExactKeys(body.links, ["next", "self"]) ||
-    !hasExactKeys(body.meta, [
-      "correlationId",
-      "isReranked",
-      "limit",
-      "mode",
-      "models",
-      "nextCursor",
-      "truncated",
-      "warnings"
-    ])
+    !hasExactKeys(body.meta, expectedMetaKeys)
   ) {
     throw new Error(`${name} did not return an exact SearchPage envelope`)
   }
@@ -662,6 +690,9 @@ function requireSearchPageEnvelope(body, name, expectedCorrelationId, mode, prod
   }
   requireStringArray(body.meta.warnings, `${name} meta.warnings`)
   requireSearchModels(body.meta.models, name, mode, product)
+  if (product === "all") {
+    requireUniversalSearchGroups(body.meta.groups, name, recordTypes)
+  }
   const expectedReranked = mode !== "lexical" && (product === "bills" || product === "passages")
   if (body.meta.isReranked !== expectedReranked) {
     throw new Error(`${name} reported an invalid reranking state`)
