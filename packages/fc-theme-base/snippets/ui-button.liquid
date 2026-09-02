@@ -4,23 +4,38 @@
   Accepts:
   - label: {String} Visible text. Optional when aria_label is supplied.
   - aria_label: {String} Accessible name for icon-only buttons.
+  - url: {String} Optional link destination. Renders an anchor when supplied.
   - variant: {String} primary | secondary | ghost | icon. Default: secondary.
   - type: {String} Native button type. Default: button.
   - icon: {String} Optional icon name passed to ui-icon.
   - action: {String} Optional token rendered as data-action for scripts to bind to.
   - full_width: {Boolean} Stretch to fill the container.
+  - class: {String} Optional extra classes.
 {% endcomment %}
 
-<button
-  type="{{ type | default: 'button' }}"
-  class="ui-button ui-button--{{ variant | default: 'secondary' }}{% if full_width %} ui-button--full-width{% endif %}"
-  {% if aria_label %}aria-label="{{ aria_label | escape }}"{% endif %}
-  {% if action %}data-action="{{ action | escape }}"{% endif %}
->
+{%- if url != blank -%}
+  <a
+    href="{{ url }}"
+    class="ui-button ui-button--{{ variant | default: 'secondary' }}{% if full_width %} ui-button--full-width{% endif %}{% if class %} {{ class }}{% endif %}"
+    {% if aria_label %}aria-label="{{ aria_label | escape }}"{% endif %}
+    {% if action %}data-action="{{ action | escape }}"{% endif %}
+  >
+{%- else -%}
+  <button
+    type="{{ type | default: 'button' }}"
+    class="ui-button ui-button--{{ variant | default: 'secondary' }}{% if full_width %} ui-button--full-width{% endif %}{% if class %} {{ class }}{% endif %}"
+    {% if aria_label %}aria-label="{{ aria_label | escape }}"{% endif %}
+    {% if action %}data-action="{{ action | escape }}"{% endif %}
+  >
+{%- endif -%}
   {%- if icon -%}
     {%- render 'ui-icon', icon: icon -%}
   {%- endif -%}
   {%- if label -%}
     {{ label | escape }}
   {%- endif -%}
-</button>
+{%- if url != blank -%}
+  </a>
+{%- else -%}
+  </button>
+{%- endif -%}

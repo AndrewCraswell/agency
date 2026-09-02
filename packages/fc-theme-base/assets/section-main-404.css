@@ -1,0 +1,128 @@
+.not-found {
+  color: #101012;
+}
+
+.not-found__hero {
+  display: flex;
+  justify-content: center;
+  padding: 7.2rem 9.6rem 8.4rem;
+}
+
+.not-found__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 62rem);
+  text-align: center;
+}
+
+.not-found__code {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: clamp(8.8rem, 9vw, 17.2rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #101012;
+}
+
+.not-found__heading {
+  margin: 2.2rem 0 0;
+  font-family: var(--font-heading-family);
+  font-size: 4.8rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0;
+  color: #101012;
+}
+
+.not-found__text {
+  max-width: 52rem;
+  margin: 2rem 0 0;
+  font-size: 1.6rem;
+  line-height: 1.55;
+  color: #5a5a60;
+}
+
+.not-found__search {
+  width: min(100%, 52rem);
+  margin-top: 2rem;
+}
+
+.not-found__home-link {
+  display: inline-flex;
+  gap: 0.8rem;
+  align-items: center;
+  margin-top: 3.6rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #101012;
+  text-underline-offset: 0.3rem;
+}
+
+.not-found__support {
+  width: calc(100% - 19.2rem);
+  max-width: 124.8rem;
+  margin: 0 auto;
+  padding-bottom: 8rem;
+}
+
+@media screen and (max-width: 989px) {
+  .not-found__hero {
+    padding: 5.6rem 4.8rem 6.4rem;
+  }
+
+  .not-found__code {
+    font-size: 12.8rem;
+  }
+
+  .not-found__heading {
+    font-size: 3.8rem;
+    line-height: 1.1;
+  }
+
+  .not-found__support {
+    width: auto;
+    margin-inline: 4.8rem;
+    padding-bottom: 5.6rem;
+  }
+}
+
+@media screen and (max-width: 749px) {
+  .not-found__hero {
+    padding: 3.6rem 2rem 4rem;
+  }
+
+  .not-found__content {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .not-found__code {
+    font-size: 8.8rem;
+  }
+
+  .not-found__heading {
+    margin-top: 1.4rem;
+    font-size: 2.8rem;
+    line-height: 1.12;
+  }
+
+  .not-found__text {
+    margin-top: 1.4rem;
+    font-size: 1.5rem;
+  }
+
+  .not-found__search {
+    margin-top: 1.4rem;
+  }
+
+  .not-found__home-link {
+    margin-top: 2.4rem;
+  }
+
+  .not-found__support {
+    margin-inline: 2rem;
+    padding-bottom: 3.6rem;
+  }
+}

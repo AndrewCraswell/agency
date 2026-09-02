@@ -1,0 +1,90 @@
+.ui-support-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4rem;
+  width: 100%;
+  min-height: 12.8rem;
+  padding: 3.6rem 4rem;
+  border-radius: 1.4rem;
+  background: #0b0b0c;
+  color: #f7f7f5;
+}
+
+.ui-support-band__copy {
+  min-width: 0;
+}
+
+.ui-support-band__heading {
+  margin: 0;
+  font-family: var(--font-heading-family);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.05rem;
+  color: #f7f7f5;
+}
+
+.ui-support-band__text {
+  margin: 0.8rem 0 0;
+  font-size: 1.5rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: #a0a0a6;
+}
+
+.ui-support-band__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 1.2rem;
+}
+
+.ui-support-band .ui-button {
+  min-height: 4.8rem;
+  padding-inline: 2.6rem;
+  border-radius: 1.4rem;
+  font-size: 1.5rem;
+}
+
+.ui-support-band__primary.ui-button {
+  border-color: #f7f7f5;
+  background: #f7f7f5;
+  color: #101012;
+}
+
+.ui-support-band__secondary.ui-button {
+  border-color: #a0a0a6;
+  color: #f7f7f5;
+}
+
+.ui-support-band .ui-button:focus-visible {
+  outline-color: #f7f7f5;
+}
+
+@media screen and (max-width: 989px) {
+  .ui-support-band {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media screen and (max-width: 749px) {
+  .ui-support-band {
+    gap: 2rem;
+    padding: 2.8rem 2.4rem;
+  }
+
+  .ui-support-band__heading {
+    font-size: 2.4rem;
+  }
+
+  .ui-support-band__actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 1rem;
+  }
+
+  .ui-support-band .ui-button {
+    width: 100%;
+  }
+}

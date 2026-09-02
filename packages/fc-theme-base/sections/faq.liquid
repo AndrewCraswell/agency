@@ -1,4 +1,5 @@
 {{ 'section-faq.css' | asset_url | stylesheet_tag }}
+{{ 'component-support-band.css' | asset_url | stylesheet_tag }}
 
 <div class="faq-page">
   <div class="faq-page__breadcrumb">
@@ -13,7 +14,6 @@
       {%- assign faq_categories = 'shipping::Shipping|returns::Returns|discounts::Discounts|programs::Programs|sizing-and-gear::Sizing & gear|about-us::About us'
         | split: '|'
       -%}
-      {%- assign first_topic_rendered = false -%}
       {%- for category_definition in faq_categories -%}
         {%- assign category_parts = category_definition | split: '::' -%}
         {%- assign category_key = category_parts[0] -%}
@@ -26,10 +26,9 @@
           {%- endif -%}
         {%- endfor -%}
         {%- if category_has_items -%}
-          <a class="ui-pill{% if first_topic_rendered == false %} faq-page__topic--active{% endif %}" href="#{{ category_key }}">
+          <a class="ui-pill" href="#{{ category_key }}">
             {{- category_label | escape -}}
           </a>
-          {%- assign first_topic_rendered = true -%}
         {%- endif -%}
       {%- endfor -%}
     </nav>
@@ -69,15 +68,15 @@
     </div>
   </div>
 
-  <aside class="faq-page__contact">
-    <div>
-      <h2>{{ section.settings.contact_heading | escape }}</h2>
-      <p>{{ section.settings.contact_text | escape }}</p>
-    </div>
-    <a href="{{ section.settings.contact_url | default: pages.contact.url }}">
-      {{- section.settings.contact_label | escape -}}
-    </a>
-  </aside>
+  <div class="faq-page__contact">
+    {%- assign faq_contact_url = section.settings.contact_url | default: pages.contact.url -%}
+    {%- render 'ui-support-band',
+      heading: section.settings.contact_heading,
+      text: section.settings.contact_text,
+      primary_label: section.settings.contact_label,
+      primary_url: faq_contact_url
+    -%}
+  </div>
 </div>
 
 {%- if settings.structured_data_enabled -%}

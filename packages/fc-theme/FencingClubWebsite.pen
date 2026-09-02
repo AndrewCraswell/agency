@@ -1530,7 +1530,7 @@
                   "name": "Pill Technique",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -1555,7 +1555,7 @@
                   "name": "Pill Gear",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -1580,7 +1580,7 @@
                   "name": "Pill Training",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -1605,7 +1605,7 @@
                   "name": "Pill Competition",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -1630,7 +1630,7 @@
                   "name": "Pill Club Life",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -3584,7 +3584,7 @@
                   "name": "Jackets Pill",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -3609,7 +3609,7 @@
                   "name": "Pants Pill",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -3634,7 +3634,7 @@
                   "name": "Plastrons Pill",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -3659,7 +3659,7 @@
                   "name": "Chest Protectors Pill",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -3684,7 +3684,7 @@
                   "name": "Socks Pill",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -3709,7 +3709,7 @@
                   "name": "Gloves Pill",
                   "fill": "#FFFFFF00",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -4504,7 +4504,7 @@
                           "width": "fill_container",
                           "height": 30,
                           "cornerRadius": 6,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -4528,7 +4528,7 @@
                           "width": "fill_container",
                           "height": 30,
                           "cornerRadius": 6,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -4552,7 +4552,7 @@
                           "width": "fill_container",
                           "height": 30,
                           "cornerRadius": 6,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -4576,7 +4576,7 @@
                           "width": "fill_container",
                           "height": 30,
                           "cornerRadius": 6,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -4600,7 +4600,7 @@
                           "width": "fill_container",
                           "height": 30,
                           "cornerRadius": 6,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -4624,7 +4624,7 @@
                           "width": "fill_container",
                           "height": 30,
                           "cornerRadius": 6,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -5360,7 +5360,7 @@
                                   "fill": "#FFFFFF",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5384,7 +5384,7 @@
                                   "fill": "#101012",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5406,7 +5406,7 @@
                                   "fill": "#9AA0A6",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5428,7 +5428,7 @@
                                   "fill": "#1E2A44",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5458,7 +5458,7 @@
                                   "fill": "#B03A2E",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5480,7 +5480,7 @@
                                   "fill": "#3E5C99",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5502,7 +5502,7 @@
                                   "fill": "#C9CDD2",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -5524,7 +5524,7 @@
                                   "fill": "#B8912F",
                                   "width": 24,
                                   "height": 24,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1
                                 }
                               ]
@@ -12723,7 +12723,7 @@
                       "id": "M5qkK",
                       "name": "Stepper",
                       "cornerRadius": 8,
-                      "stroke": "$line",
+                      "stroke": "$line-strong",
                       "strokeWidth": 1,
                       "alignItems": "center",
                       "children": [
@@ -13052,7 +13052,7 @@
                       "width": "fill_container",
                       "fill": "$surface",
                       "cornerRadius": "$radius",
-                      "stroke": "$line",
+                      "stroke": "$line-strong",
                       "strokeWidth": 1,
                       "padding": [
                         15,
@@ -13141,7 +13141,7 @@
                               "height": 46,
                               "fill": "$bg",
                               "cornerRadius": "$radius",
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "padding": [
                                 0,
@@ -14549,7 +14549,7 @@
                               "height": 18,
                               "fill": "$ink",
                               "cornerRadius": 4,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -14648,7 +14648,7 @@
                               "height": 18,
                               "fill": "$ink",
                               "cornerRadius": 4,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -14747,7 +14747,7 @@
                               "height": 18,
                               "fill": "#00000000",
                               "cornerRadius": 4,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "justifyContent": "center",
                               "alignItems": "center"
@@ -15106,7 +15106,7 @@
                   "height": 322,
                   "fill": "$surface",
                   "cornerRadius": "$radius",
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "layout": "vertical",
                   "gap": 14,
@@ -15513,7 +15513,7 @@
                   "height": 322,
                   "fill": "$surface",
                   "cornerRadius": "$radius",
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "layout": "vertical",
                   "gap": 14,
@@ -15923,7 +15923,7 @@
                   "height": 322,
                   "fill": "$surface",
                   "cornerRadius": "$radius",
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "layout": "vertical",
                   "gap": 14,
@@ -16086,7 +16086,7 @@
                   "height": 322,
                   "fill": "$surface",
                   "cornerRadius": "$radius",
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "layout": "vertical",
                   "gap": 14,
@@ -17034,7 +17034,7 @@
                           "height": 46,
                           "fill": "$bg",
                           "cornerRadius": "$radius",
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "padding": [
                             0,
@@ -17082,7 +17082,7 @@
                           "height": 46,
                           "fill": "$bg",
                           "cornerRadius": "$radius",
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "padding": [
                             0,
@@ -17130,7 +17130,7 @@
                           "height": 46,
                           "fill": "$bg",
                           "cornerRadius": "$radius",
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "padding": [
                             0,
@@ -18900,7 +18900,7 @@
                           "height": 48,
                           "fill": "$surface",
                           "cornerRadius": 24,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -19014,7 +19014,7 @@
                           "height": 48,
                           "fill": "$surface",
                           "cornerRadius": 24,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -19128,7 +19128,7 @@
                           "height": 48,
                           "fill": "$surface",
                           "cornerRadius": 24,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -21975,6 +21975,130 @@
         },
         {
           "type": "text",
+          "id": "p9BrV",
+          "name": "Caption — Support Band",
+          "fill": "$ink-soft",
+          "content": "Support Band",
+          "fontFamily": "$font-body",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "GTCFK",
+          "name": "Component/Support Band",
+          "reusable": true,
+          "width": 1248,
+          "fill": "$surface-dark",
+          "cornerRadius": "$radius",
+          "gap": 40,
+          "padding": [
+            36,
+            40
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "mup7J",
+              "name": "Copy",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "F5R0UZ",
+                  "name": "Title",
+                  "fill": "$on-dark",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Questions?",
+                  "fontFamily": "$font-display",
+                  "fontSize": 28,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.5
+                },
+                {
+                  "type": "text",
+                  "id": "rhf4h",
+                  "name": "Description",
+                  "fill": "$on-dark-soft",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Can't find the answer you're looking for? Contact us — we're happy to help.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ZzC7V",
+              "name": "Actions",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "a5CH9",
+                  "name": "Primary Button",
+                  "fill": "$on-dark",
+                  "cornerRadius": "$radius",
+                  "padding": [
+                    15,
+                    26
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "y5OEe",
+                      "name": "Primary Label",
+                      "fill": "$ink",
+                      "content": "Contact us",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "moWkh",
+                  "name": "Secondary Button",
+                  "cornerRadius": "$radius",
+                  "stroke": "$on-dark-soft",
+                  "strokeWidth": 1,
+                  "padding": [
+                    15,
+                    26
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CpZKC",
+                      "name": "Secondary Label",
+                      "fill": "$on-dark",
+                      "content": "Browse all gear",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
           "id": "s2Ixbb",
           "name": "Caption — Newsletter",
           "fill": "$ink-soft",
@@ -23946,7 +24070,7 @@
                       "id": "GCVno",
                       "name": "CTA 1",
                       "cornerRadius": 999,
-                      "stroke": "$line",
+                      "stroke": "$line-strong",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 6,
@@ -23983,7 +24107,7 @@
                       "id": "jw5ep",
                       "name": "CTA 2",
                       "cornerRadius": 999,
-                      "stroke": "$line",
+                      "stroke": "$line-strong",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 6,
@@ -24020,7 +24144,7 @@
                       "id": "KDuxq",
                       "name": "CTA 3",
                       "cornerRadius": 999,
-                      "stroke": "$line",
+                      "stroke": "$line-strong",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 6,
@@ -25909,7 +26033,7 @@
           "reusable": true,
           "width": 170,
           "cornerRadius": "$radius",
-          "stroke": "$line",
+          "stroke": "$line-strong",
           "strokeWidth": 1,
           "gap": 8,
           "padding": [
@@ -29201,7 +29325,7 @@
                   "name": "Chip Returns",
                   "fill": "$bg",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -29228,7 +29352,7 @@
                   "name": "Chip Discounts",
                   "fill": "$bg",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -29255,7 +29379,7 @@
                   "name": "Chip Programs",
                   "fill": "$bg",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -29282,7 +29406,7 @@
                   "name": "Chip Sizing & gear",
                   "fill": "$bg",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -29309,7 +29433,7 @@
                   "name": "Chip About us",
                   "fill": "$bg",
                   "cornerRadius": 999,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "padding": [
                     9,
@@ -29497,7 +29621,7 @@
                               "height": 26,
                               "fill": "$bg",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -30423,7 +30547,7 @@
                               "height": 26,
                               "fill": "$bg",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -31085,7 +31209,7 @@
                               "height": 26,
                               "fill": "$bg",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -31541,7 +31665,7 @@
                               "height": 26,
                               "fill": "$bg",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -32027,7 +32151,7 @@
                               "height": 26,
                               "fill": "$bg",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -32512,7 +32636,7 @@
                               "height": 26,
                               "fill": "$bg",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -32761,77 +32885,16 @@
           "alignItems": "center",
           "children": [
             {
-              "type": "frame",
-              "id": "p3KKB",
-              "name": "Questions Card",
+              "id": "Ml5jl",
+              "type": "ref",
+              "ref": "GTCFK",
+              "name": "Support Band",
               "width": "fill_container",
-              "fill": "$surface-dark",
-              "cornerRadius": "$radius",
-              "gap": 40,
-              "padding": [
-                36,
-                40
-              ],
-              "justifyContent": "space_between",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "p1QDO",
-                  "name": "Copy",
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 8,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "MA0k6",
-                      "name": "T",
-                      "fill": "$on-dark",
-                      "content": "Questions?",
-                      "fontFamily": "$font-display",
-                      "fontSize": 28,
-                      "fontWeight": "700",
-                      "letterSpacing": -0.5
-                    },
-                    {
-                      "type": "text",
-                      "id": "CxlFf",
-                      "name": "S",
-                      "fill": "$on-dark-soft",
-                      "content": "Can't find the answer you're looking for? Contact us — we're happy to help.",
-                      "fontFamily": "$font-body",
-                      "fontSize": 15,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "owCgW",
-                  "name": "CTA",
-                  "fill": "$on-dark",
-                  "cornerRadius": "$radius",
-                  "padding": [
-                    15,
-                    26
-                  ],
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "icqAs",
-                      "name": "L",
-                      "fill": "$ink",
-                      "content": "Contact us",
-                      "fontFamily": "$font-body",
-                      "fontSize": 15,
-                      "fontWeight": "600"
-                    }
-                  ]
+              "descendants": {
+                "moWkh": {
+                  "enabled": false
                 }
-              ]
+              }
             }
           ]
         },
@@ -33192,7 +33255,7 @@
                               "id": "u4HmE9",
                               "name": "Stepper",
                               "cornerRadius": 8,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "alignItems": "center",
                               "children": [
@@ -33389,7 +33452,7 @@
                               "id": "h87eNJ",
                               "name": "Stepper",
                               "cornerRadius": 8,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "alignItems": "center",
                               "children": [
@@ -33636,7 +33699,7 @@
                               "id": "pJNDn",
                               "name": "Stepper",
                               "cornerRadius": 8,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "alignItems": "center",
                               "children": [
@@ -34120,7 +34183,7 @@
                   "id": "JvzZ4",
                   "name": "Unit Toggle",
                   "cornerRadius": "$radius",
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "padding": 3,
@@ -37893,7 +37956,7 @@
                               "id": "uQH8N",
                               "name": "Unit Toggle",
                               "cornerRadius": 9,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": 2,
@@ -39629,7 +39692,7 @@
                           "id": "NUVef",
                           "name": "Unit Toggle",
                           "cornerRadius": "$radius",
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "padding": 3,
@@ -41593,7 +41656,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41658,7 +41721,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41685,7 +41748,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41750,7 +41813,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41777,7 +41840,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41842,7 +41905,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41907,7 +41970,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41934,7 +41997,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -41974,7 +42037,7 @@
                           "id": "bybKD",
                           "name": "Stepper",
                           "cornerRadius": 8,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "alignItems": "center",
                           "children": [
@@ -42263,7 +42326,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42290,7 +42353,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42317,7 +42380,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42382,7 +42445,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42409,7 +42472,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42474,7 +42537,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42539,7 +42602,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42604,7 +42667,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42669,7 +42732,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42734,7 +42797,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42799,7 +42862,7 @@
                                   "name": "chip",
                                   "fill": "$bg",
                                   "cornerRadius": 4,
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     2,
@@ -42839,7 +42902,7 @@
                           "id": "NOF2J",
                           "name": "Stepper",
                           "cornerRadius": 8,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "alignItems": "center",
                           "children": [
@@ -43843,7 +43906,7 @@
                           "height": 36,
                           "fill": "$bg",
                           "cornerRadius": 10,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -43912,7 +43975,7 @@
                           "height": 36,
                           "fill": "$bg",
                           "cornerRadius": 10,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -43981,7 +44044,7 @@
                           "height": 36,
                           "fill": "$bg",
                           "cornerRadius": 10,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -44050,7 +44113,7 @@
                           "height": 36,
                           "fill": "$bg",
                           "cornerRadius": 10,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -44119,7 +44182,7 @@
                           "height": 36,
                           "fill": "$bg",
                           "cornerRadius": 10,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -50985,7 +51048,7 @@
                           "name": "Chip PREMIUM YKK ZIPPER",
                           "fill": "$surface",
                           "cornerRadius": 999,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "padding": [
                             9,
@@ -51012,7 +51075,7 @@
                           "name": "Chip 4-WAY STRETCH",
                           "fill": "$surface",
                           "cornerRadius": 999,
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "padding": [
                             9,
@@ -61853,7 +61916,7 @@
                                   "width": 260,
                                   "fill": "$bg",
                                   "cornerRadius": "$radius",
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     12,
@@ -61911,7 +61974,7 @@
                                   "width": 260,
                                   "fill": "$bg",
                                   "cornerRadius": "$radius",
-                                  "stroke": "$line",
+                                  "stroke": "$line-strong",
                                   "strokeWidth": 1,
                                   "padding": [
                                     12,
@@ -61985,7 +62048,7 @@
                           "width": 260,
                           "fill": "$bg",
                           "cornerRadius": "$radius",
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "padding": [
                             12,
@@ -62024,7 +62087,7 @@
                           "width": 260,
                           "fill": "$bg",
                           "cornerRadius": "$radius",
-                          "stroke": "$line",
+                          "stroke": "$line-strong",
                           "strokeWidth": 1,
                           "effect": {
                             "type": "shadow",
@@ -63842,7 +63905,7 @@
                               "fill": "$bg",
                               "width": 20,
                               "height": 20,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -63943,7 +64006,7 @@
                               "fill": "$bg",
                               "width": 20,
                               "height": 20,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -64302,7 +64365,7 @@
                               "fill": "$bg",
                               "width": 20,
                               "height": 20,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -64682,7 +64745,7 @@
                               "height": 20,
                               "fill": "$bg",
                               "cornerRadius": 10,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -64793,7 +64856,7 @@
                               "height": 20,
                               "fill": "$bg",
                               "cornerRadius": 10,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -65252,7 +65315,7 @@
                               "height": 20,
                               "fill": "$bg",
                               "cornerRadius": 10,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -65584,7 +65647,7 @@
                               "fill": "$bg",
                               "width": 20,
                               "height": 20,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1.5
                             },
                             {
@@ -75034,7 +75097,7 @@
           "width": 1440,
           "fill": "$bg",
           "cornerRadius": "$radius",
-          "stroke": "$line",
+          "stroke": "$line-strong",
           "strokeWidth": 1,
           "strokeAlignment": "inner",
           "layout": "vertical",
@@ -75083,7 +75146,7 @@
                   "id": "R5Kr6S",
                   "name": "Esc Chip",
                   "cornerRadius": 6,
-                  "stroke": "$line",
+                  "stroke": "$line-strong",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "padding": [
@@ -76080,7 +76143,7 @@
               "width": 390,
               "fill": "$bg",
               "cornerRadius": "$radius",
-              "stroke": "$line",
+              "stroke": "$line-strong",
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
@@ -77611,7 +77674,7 @@
                               "id": "YwBxF",
                               "name": "Chip Masks",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
@@ -77636,7 +77699,7 @@
                               "id": "EpVDE",
                               "name": "Chip Blades",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
@@ -77661,7 +77724,7 @@
                               "id": "vY7YW",
                               "name": "Chip Clothing",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
@@ -77686,7 +77749,7 @@
                               "id": "OCXUP",
                               "name": "Chip Club Gear",
                               "cornerRadius": 999,
-                              "stroke": "$line",
+                              "stroke": "$line-strong",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "padding": [
@@ -78070,7 +78133,7 @@
                       "id": "OUGez",
                       "name": "Esc Chip",
                       "cornerRadius": 6,
-                      "stroke": "$line",
+                      "stroke": "$line-strong",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "padding": [
@@ -79055,6 +79118,1064 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "hpjvm",
+      "x": 18559,
+      "y": 3681,
+      "name": "404 — Page Not Found",
+      "clip": true,
+      "width": 1440,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "a8PZR",
+          "type": "ref",
+          "ref": "JNawB",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 212
+        },
+        {
+          "type": "frame",
+          "id": "e4qQy",
+          "name": "Hero",
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            72,
+            96,
+            84,
+            96
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "MJmwT",
+              "name": "Copy",
+              "width": 620,
+              "layout": "vertical",
+              "gap": 22,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "HDlbe",
+                  "name": "404 Mark",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "o7UOz",
+                      "name": "404 Numeral (decorative, aria-hidden)",
+                      "fill": "$ink",
+                      "content": "404",
+                      "lineHeight": 1,
+                      "fontFamily": "$font-display",
+                      "fontSize": 172,
+                      "fontWeight": "700",
+                      "letterSpacing": -5
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "T7r4hm",
+                  "name": "Title (h1)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "We couldn't find that page.",
+                  "lineHeight": 1.05,
+                  "textAlign": "center",
+                  "fontFamily": "$font-display",
+                  "fontSize": 48,
+                  "fontWeight": "700",
+                  "letterSpacing": -1.2
+                },
+                {
+                  "type": "text",
+                  "id": "Uziag",
+                  "name": "Subtitle",
+                  "fill": "$ink-soft",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "The product may have been discontinued or renamed, or the link may be out of date.",
+                  "lineHeight": 1.55,
+                  "textAlign": "center",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "Dlwfm",
+                  "name": "Search",
+                  "width": 520,
+                  "fill": "$bg",
+                  "cornerRadius": "$radius",
+                  "stroke": "$line-strong",
+                  "strokeWidth": 1,
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    10,
+                    10,
+                    18
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mtz1i",
+                      "name": "Search Icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$ink-soft"
+                    },
+                    {
+                      "type": "text",
+                      "id": "HDDBy",
+                      "name": "Placeholder",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Search for a product or page",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "meKgF",
+                      "name": "Search Button",
+                      "fill": "$ink",
+                      "cornerRadius": "$radius",
+                      "padding": [
+                        12,
+                        22
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "JToUR",
+                          "name": "Label",
+                          "fill": "$bg",
+                          "content": "Search",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PJ8d8",
+                  "name": "Back Link",
+                  "gap": 8,
+                  "padding": [
+                    16,
+                    0,
+                    0,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "c37Tz",
+                      "name": "Arrow",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "arrow-left",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DwxIj",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "content": "Back to homepage",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gvoFD",
+          "name": "Help Band",
+          "width": "fill_container",
+          "fill": "$bg",
+          "gap": 40,
+          "padding": [
+            0,
+            96,
+            80,
+            96
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "GxdHo",
+              "type": "ref",
+              "ref": "GTCFK",
+              "name": "Support Band",
+              "width": "fill_container",
+              "descendants": {
+                "F5R0UZ": {
+                  "content": "Looking for something we no longer stock?"
+                },
+                "rhf4h": {
+                  "content": "Tell us the model and we'll tell you what replaced it, or find you the closest equivalent."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "yKpqZ",
+          "type": "ref",
+          "ref": "q95Ka",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 509
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "JVrcy",
+      "x": 20199,
+      "y": 3681,
+      "name": "404 — Page Not Found (Mobile)",
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "hem9C",
+          "type": "ref",
+          "ref": "z2pZ5",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 152
+        },
+        {
+          "type": "frame",
+          "id": "waNA2",
+          "name": "Hero",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "padding": [
+            36,
+            20,
+            40,
+            20
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "Hxo9f",
+              "name": "404 Numeral (decorative, aria-hidden)",
+              "fill": "$ink",
+              "content": "404",
+              "lineHeight": 1,
+              "fontFamily": "$font-display",
+              "fontSize": 88,
+              "fontWeight": "700",
+              "letterSpacing": -3
+            },
+            {
+              "type": "text",
+              "id": "B1i6Pj",
+              "name": "Title (h1)",
+              "fill": "$ink",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "We couldn't find that page.",
+              "lineHeight": 1.12,
+              "fontFamily": "$font-display",
+              "fontSize": 28,
+              "fontWeight": "700",
+              "letterSpacing": -0.6
+            },
+            {
+              "type": "text",
+              "id": "r7bKN",
+              "name": "Subtitle",
+              "fill": "$ink-soft",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The product may have been discontinued or renamed, or the link may be out of date.",
+              "lineHeight": 1.55,
+              "fontFamily": "$font-body",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "YH5TW",
+              "name": "Search Field",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": "$radius",
+              "stroke": "$line-strong",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                14,
+                16
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "CJGZp",
+                  "name": "Search Icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "search",
+                  "library": "lucide",
+                  "fill": "$ink-soft"
+                },
+                {
+                  "type": "text",
+                  "id": "x3zIb",
+                  "name": "Placeholder",
+                  "fill": "$ink-soft",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Search for a product or page",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sOqQI",
+              "name": "Search Button",
+              "width": "fill_container",
+              "fill": "$ink",
+              "cornerRadius": "$radius",
+              "padding": [
+                15,
+                20
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sEXAX",
+                  "name": "Label",
+                  "fill": "$bg",
+                  "content": "Search",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xq7K1",
+              "name": "Back Link",
+              "gap": 8,
+              "padding": [
+                8,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "iwVP8",
+                  "name": "Arrow",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "arrow-left",
+                  "library": "lucide",
+                  "fill": "$ink"
+                },
+                {
+                  "type": "text",
+                  "id": "jEG48",
+                  "name": "Label",
+                  "fill": "$ink",
+                  "content": "Back to homepage",
+                  "fontFamily": "$font-body",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VZG1R",
+          "name": "Help Band",
+          "width": "fill_container",
+          "padding": [
+            0,
+            20,
+            36,
+            20
+          ],
+          "children": [
+            {
+              "id": "yZFCp",
+              "type": "ref",
+              "ref": "GTCFK",
+              "name": "Support Band",
+              "width": "fill_container",
+              "layout": "vertical",
+              "alignItems": "start",
+              "gap": 20,
+              "padding": [
+                28,
+                24
+              ],
+              "descendants": {
+                "F5R0UZ": {
+                  "fontSize": 24,
+                  "content": "Looking for something we no longer stock?"
+                },
+                "rhf4h": {
+                  "content": "Tell us the model and we'll tell you what replaced it, or find you the closest equivalent."
+                },
+                "ZzC7V": {
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10
+                },
+                "a5CH9": {
+                  "width": "fill_container"
+                },
+                "moWkh": {
+                  "width": "fill_container"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "a6WDD",
+          "type": "ref",
+          "ref": "UHrCH",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 831
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "j6jZOG",
+      "x": 20789,
+      "y": 3681,
+      "name": "404 — Page Not Found (Tablet)",
+      "clip": true,
+      "width": 768,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "SLpOE",
+          "type": "ref",
+          "ref": "s1q7Xo",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 140
+        },
+        {
+          "type": "frame",
+          "id": "yThlK",
+          "name": "Hero",
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            56,
+            48,
+            64,
+            48
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "OLuw8",
+              "name": "Copy",
+              "width": 560,
+              "layout": "vertical",
+              "gap": 20,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "RHiy3",
+                  "name": "404 Numeral (decorative, aria-hidden)",
+                  "fill": "$ink",
+                  "content": "404",
+                  "lineHeight": 1,
+                  "fontFamily": "$font-display",
+                  "fontSize": 128,
+                  "fontWeight": "700",
+                  "letterSpacing": -4
+                },
+                {
+                  "type": "text",
+                  "id": "KZLFg",
+                  "name": "Title (h1)",
+                  "fill": "$ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "We couldn't find that page.",
+                  "lineHeight": 1.1,
+                  "textAlign": "center",
+                  "fontFamily": "$font-display",
+                  "fontSize": 38,
+                  "fontWeight": "700",
+                  "letterSpacing": -1
+                },
+                {
+                  "type": "text",
+                  "id": "NO92q",
+                  "name": "Subtitle",
+                  "fill": "$ink-soft",
+                  "textGrowth": "fixed-width",
+                  "width": 460,
+                  "content": "The product may have been discontinued or renamed, or the link may be out of date.",
+                  "lineHeight": 1.55,
+                  "textAlign": "center",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "bliGw",
+                  "name": "Search",
+                  "width": 460,
+                  "fill": "$bg",
+                  "cornerRadius": "$radius",
+                  "stroke": "$line-strong",
+                  "strokeWidth": 1,
+                  "gap": 12,
+                  "padding": [
+                    10,
+                    10,
+                    10,
+                    18
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "d1S4G",
+                      "name": "Search Icon",
+                      "width": 20,
+                      "height": 20,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$ink-soft"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iHOep",
+                      "name": "Placeholder",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Search for a product or page",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "y9mwB",
+                      "name": "Search Button",
+                      "fill": "$ink",
+                      "cornerRadius": "$radius",
+                      "padding": [
+                        12,
+                        22
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Cknhh",
+                          "name": "Label",
+                          "fill": "$bg",
+                          "content": "Search",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ThJPq",
+                  "name": "Back Link",
+                  "gap": 8,
+                  "padding": [
+                    16,
+                    0,
+                    0,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "q6B49",
+                      "name": "Arrow",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "arrow-left",
+                      "library": "lucide",
+                      "fill": "$ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "lq6Dk",
+                      "name": "Label",
+                      "fill": "$ink",
+                      "content": "Back to homepage",
+                      "fontFamily": "$font-body",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tHnV5",
+          "name": "Help Band",
+          "width": "fill_container",
+          "padding": [
+            0,
+            48,
+            56,
+            48
+          ],
+          "children": [
+            {
+              "id": "jWxMq",
+              "type": "ref",
+              "ref": "GTCFK",
+              "name": "Support Band",
+              "width": "fill_container",
+              "layout": "vertical",
+              "alignItems": "start",
+              "gap": 20,
+              "padding": 32,
+              "descendants": {
+                "F5R0UZ": {
+                  "content": "Looking for something we no longer stock?"
+                },
+                "rhf4h": {
+                  "content": "Tell us the model and we'll tell you what replaced it, or find you the closest equivalent."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "syO7p",
+          "type": "ref",
+          "ref": "SbEAn",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 597
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "PkZfx",
+      "x": 23765,
+      "y": -7637,
+      "name": "Docs/404",
+      "width": 1568,
+      "fill": "#e9e8e4",
+      "cornerRadius": 24,
+      "layout": "vertical",
+      "gap": 48,
+      "padding": 64,
+      "children": [
+        {
+          "type": "frame",
+          "id": "DRA3W",
+          "name": "Board Title",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "Y5T91",
+              "name": "Title",
+              "fill": "$ink",
+              "content": "404",
+              "fontFamily": "$font-display",
+              "fontSize": 40,
+              "fontWeight": "800",
+              "letterSpacing": -1
+            },
+            {
+              "type": "text",
+              "id": "OSOFh",
+              "name": "Sub",
+              "fill": "$ink-soft",
+              "content": "Not found page — desktop, tablet, mobile",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Q9TPCx",
+          "name": "Spec",
+          "width": "fill_container",
+          "gap": 48,
+          "children": [
+            {
+              "type": "frame",
+              "id": "bhA9x",
+              "name": "Column A",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "L2uPF",
+                  "name": "Template",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uOy4j",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Template",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n2dtN",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "templates/404.json renders the main-404 section. Shopify returns the 404 status code; the template only controls presentation.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "owSYp",
+                  "name": "Structure",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "RBR02",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Structure",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BaBEE",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Header Light, hero, support band, footer. No breadcrumb: a missing page has no position in the hierarchy to show.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SmOmM",
+                  "name": "Breakpoints",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zAn6R",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Breakpoints",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Er89F",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Desktop 1440, tablet 768, mobile 390. One centred column at every size. Only the search control changes: the Search button sits inside the field from 768 up, and stacks full width beneath it below 768.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iDITE",
+                  "name": "Search",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Bssfz",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Search",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "k5osil",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Submits to /search?q=. Placeholder reads “Search for a product or page”. Never prefill the query — the requested handle is not a reliable search term.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AYbls",
+              "name": "Column B",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wt03Z",
+                  "name": "Copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r0cFd",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Copy",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "K2FgQ",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Headline and body are section settings so wording can change without a deploy. The default body names the most likely cause without asserting it: a discontinued or renamed product.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "X6PTd",
+                  "name": "Support band",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "d8HMP",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Support band",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "wCUxx",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Instance of Component/Support Band. Primary goes to Contact, secondary to all products. The same component carries the FAQ contact card, where the secondary button is disabled.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zFAI8",
+                  "name": "Accessibility",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "qY3gT",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Accessibility",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "C3B4x",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The h1 is “We couldn't find that page.” — never the numeral. The 404 numeral repeats the headline and carries no information, so it takes aria-hidden and is skipped by screen readers. The search input needs a visible or assistive label. Control borders use line-strong (#C9C9C4) for 3:1 against white.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "F7T2o",
+                  "name": "Not on this page",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "u0Y7eN",
+                      "name": "Heading",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Not on this page",
+                      "fontFamily": "$font-display",
+                      "fontSize": 17,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "B1HAp",
+                      "name": "Body",
+                      "fill": "$ink-soft",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "No popular categories and no closest matches. Neither can be computed reliably, and both pull attention from search and the footer, which already carries the full navigation.",
+                      "lineHeight": 1.6,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14.5,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {
@@ -79185,6 +80306,10 @@
     "atelier-radius": {
       "type": "number",
       "value": 4
+    },
+    "line-strong": {
+      "type": "color",
+      "value": "#C9C9C4"
     }
   },
   "fileToken": "0691df9b-bd13-4787-b128-647b5e262e6b"

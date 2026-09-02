@@ -1,0 +1,37 @@
+{% comment %}
+  Renders a dark support callout with up to two actions.
+
+  Accepts:
+  - heading: {String} Callout heading.
+  - text: {String} Supporting text.
+  - primary_label: {String} Primary action label.
+  - primary_url: {String} Primary action destination.
+  - secondary_label: {String} Optional secondary action label.
+  - secondary_url: {String} Optional secondary action destination.
+  - class: {String} Optional extra classes.
+{% endcomment %}
+
+<aside class="ui-support-band{% if class %} {{ class }}{% endif %}">
+  <div class="ui-support-band__copy">
+    <h2 class="ui-support-band__heading">{{ heading | escape }}</h2>
+    <p class="ui-support-band__text">{{ text | escape }}</p>
+  </div>
+  <div class="ui-support-band__actions">
+    {%- if primary_label != blank and primary_url != blank -%}
+      {%- render 'ui-button',
+        label: primary_label,
+        url: primary_url,
+        variant: 'primary',
+        class: 'ui-support-band__primary'
+      -%}
+    {%- endif -%}
+    {%- if secondary_label != blank and secondary_url != blank -%}
+      {%- render 'ui-button',
+        label: secondary_label,
+        url: secondary_url,
+        variant: 'secondary',
+        class: 'ui-support-band__secondary'
+      -%}
+    {%- endif -%}
+  </div>
+</aside>

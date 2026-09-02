@@ -1,0 +1,76 @@
+{% comment %}
+  Renders a compact search form with the theme's predictive-search behavior.
+
+  Accepts:
+  - input_id: {String} Unique input id.
+  - label: {String} Input label and placeholder.
+  - button_label: {String} Submit button label.
+  - value: {String} Optional initial query.
+  - class: {String} Optional extra classes.
+{% endcomment %}
+
+<div class="ui-search-form{% if class %} {{ class }}{% endif %}">
+  {%- if settings.predictive_search_enabled -%}
+    <predictive-search data-loading-text="{{ 'accessibility.loading' | t }}">
+  {%- else -%}
+    <search-form>
+  {%- endif -%}
+  <form action="{{ routes.search_url }}" method="get" role="search">
+    <div class="ui-search-form__field">
+      <span class="ui-search-form__icon" aria-hidden="true">
+        {%- render 'fc-icon', icon: 'search', size: 20 -%}
+      </span>
+      <label class="visually-hidden" for="{{ input_id }}">{{ label | escape }}</label>
+      <input
+        id="{{ input_id }}"
+        class="ui-search-form__input"
+        type="search"
+        name="q"
+        value="{{ value | escape }}"
+        placeholder="{{ label | escape }}"
+        {%- if settings.predictive_search_enabled -%}
+          role="combobox"
+          aria-expanded="false"
+          aria-owns="predictive-search-results"
+          aria-controls="predictive-search-results"
+          aria-haspopup="listbox"
+          aria-autocomplete="list"
+          autocomplete="off"
+        {%- endif -%}
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      >
+      <input name="options[prefix]" type="hidden" value="last">
+      <button
+        class="ui-search-form__clear{% if value == blank %} hidden{% endif %}"
+        type="reset"
+        aria-label="{{ 'general.search.reset' | t }}"
+      >
+        {%- render 'fc-icon', icon: 'x', size: 16 -%}
+      </button>
+      {%- render 'ui-button',
+        label: button_label,
+        type: 'submit',
+        variant: 'primary',
+        class: 'ui-search-form__submit'
+      -%}
+    </div>
+
+    {%- if settings.predictive_search_enabled -%}
+      <div class="predictive-search predictive-search--search-template" tabindex="-1" data-predictive-search>
+        {%- render 'predictive-search-skeleton' -%}
+      </div>
+      {%- render 'predictive-search-idle',
+        id_prefix: input_id,
+        modifier: 'predictive-search--search-template'
+      -%}
+      <span class="predictive-search-status visually-hidden" role="status" aria-hidden="true"></span>
+    {%- endif -%}
+  </form>
+  {%- if settings.predictive_search_enabled -%}
+    </predictive-search>
+  {%- else -%}
+    </search-form>
+  {%- endif -%}
+</div>
