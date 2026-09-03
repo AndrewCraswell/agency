@@ -1,7 +1,9 @@
 import { zipSync } from "fflate"
 import { describe, expect, it } from "vitest"
 import {
+  assessPdfOcrEligibility,
   assertPdfTextExtractionPageCount,
+  DocumentExtractionError,
   extractDocument,
   MAX_DOCUMENT_BYTES,
   MAX_PDF_TEXT_EXTRACTION_PAGES,
@@ -58,12 +60,60 @@ describe("legislative document extraction", () => {
     expect(pdf.sections[0]?.identifier).toBe("1.")
   }, 15_000)
 
-  it("routes PDFs above the local page limit to OCR", () => {
+  it("routes PDFs above the safe local extraction limit to managed OCR", () => {
     expect(() => assertPdfTextExtractionPageCount(MAX_PDF_TEXT_EXTRACTION_PAGES)).not.toThrow()
-    expect(() => assertPdfTextExtractionPageCount(MAX_PDF_TEXT_EXTRACTION_PAGES + 1)).toThrow("requires OCR")
-    expect(classifyDocumentFailure(`PDF has 751 pages and requires OCR`)).toMatchObject({
+    let failure: unknown
+    try {
+      assertPdfTextExtractionPageCount(MAX_PDF_TEXT_EXTRACTION_PAGES + 1)
+    } catch (error) {
+      failure = error
+    }
+    expect(failure).toBeInstanceOf(DocumentExtractionError)
+    expect(classifyDocumentFailure(failure)).toMatchObject({
       category: "ocr-required",
       retryable: false
+    })
+  })
+
+  it("distinguishes digital, image-only, mixed-scan, and unusable PDF pages locally", () => {
+    expect(
+      assessPdfOcrEligibility([
+        {
+          hasRasterImage: false,
+          text: "A complete page of digitally encoded legislative text suitable for extraction."
+        },
+        { hasRasterImage: false, text: "Another complete page of digitally encoded legislative text." }
+      ])
+    ).toEqual({ kind: "digital-text", scannedPageCount: 0 })
+    expect(
+      assessPdfOcrEligibility([
+        { hasRasterImage: true, text: "" },
+        { hasRasterImage: true, text: "page 2" }
+      ])
+    ).toEqual({ kind: "image-only", scannedPageCount: 2 })
+    expect(
+      assessPdfOcrEligibility([
+        {
+          hasRasterImage: false,
+          text: "A complete page of digitally encoded legislative text suitable for extraction."
+        },
+        { hasRasterImage: true, text: "scan" },
+        { hasRasterImage: false, text: "Another complete page of digitally encoded legislative text." },
+        { hasRasterImage: false, text: "A third complete page of digitally encoded legislative text." }
+      ])
+    ).toEqual({ kind: "mixed-scan", scannedPageCount: 1 })
+    expect(
+      assessPdfOcrEligibility([
+        ...Array.from({ length: 99 }, () => ({
+          hasRasterImage: false,
+          text: "A complete page of digitally encoded legislative text suitable for extraction."
+        })),
+        { hasRasterImage: true, text: "scan" }
+      ])
+    ).toEqual({ kind: "mixed-scan", scannedPageCount: 1 })
+    expect(assessPdfOcrEligibility([{ hasRasterImage: false, text: "page number" }])).toEqual({
+      kind: "unusable",
+      scannedPageCount: 0
     })
   })
 

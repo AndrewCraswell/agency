@@ -11,7 +11,7 @@
 - [Legislative data synchronization catalog](data-sync-catalog.md)
 - [Authentication](authentication.md)
 - [Supporting-material processing](supporting-material-processing.md)
-- [Document OCR](document-ocr.md)
+- [Document OCR implementation and operations](document-ocr.md)
 - [Embedding rollout and retrieval-quality gate](embedding-rollout-plan.md)
 - [Identity, entity, and representative roadmap](identity-and-representative-roadmap.md)
 - [Committee membership history](committee-membership-history.md)

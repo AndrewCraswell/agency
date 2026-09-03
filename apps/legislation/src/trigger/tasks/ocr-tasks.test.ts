@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { OcrDocumentBatchResult } from "../../ingestion/documents/ocr-jobs.js"
-import { runTargetedOcrItems } from "./ocr-tasks.js"
+import { handOffProcessedOcrDocumentsToEmbeddings, runTargetedOcrItems } from "./ocr-tasks.js"
 
 describe("runTargetedOcrItems", () => {
   it("waits for and owns transient retries when the caller requires self-contained completion", async () => {
@@ -66,5 +66,38 @@ describe("runTargetedOcrItems", () => {
 
     expect(result).toMatchObject({ complete: true, processed: 1, targeted: 1 })
     expect(waitUntil).not.toHaveBeenCalled()
+  })
+})
+
+describe("OCR embedding handoff", () => {
+  it("dispatches only documents whose authoritative OCR state is processed", async () => {
+    const listProcessed = vi
+      .fn<(documentIds: readonly string[]) => Promise<Array<Readonly<{ contentHash: string; id: string }>>>>()
+      .mockResolvedValue([{ contentHash: "a".repeat(64), id: "document-2" }])
+    const dispatch = vi
+      .fn<(documents: readonly Readonly<{ contentHash: string; id: string }>[], ocrRunId: string) => Promise<number>>()
+      .mockResolvedValue(1)
+
+    await expect(
+      handOffProcessedOcrDocumentsToEmbeddings(["document-1", "document-2"], "ocr-run-1", {
+        dispatch,
+        listProcessed
+      })
+    ).resolves.toBe(1)
+    expect(listProcessed).toHaveBeenCalledWith(["document-1", "document-2"])
+    expect(dispatch).toHaveBeenCalledWith([{ contentHash: "a".repeat(64), id: "document-2" }], "ocr-run-1")
+  })
+
+  it("rethrows dispatch failures so Trigger retries the OCR run and its stable handoff", async () => {
+    const failure = new Error("Trigger dispatch unavailable")
+
+    await expect(
+      handOffProcessedOcrDocumentsToEmbeddings(["document-1"], "ocr-run-1", {
+        dispatch: async () => {
+          throw failure
+        },
+        listProcessed: async () => [{ contentHash: "a".repeat(64), id: "document-1" }]
+      })
+    ).rejects.toBe(failure)
   })
 })

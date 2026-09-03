@@ -196,6 +196,30 @@ describe("derived backfill task payload", () => {
     ).toThrow("documentPartitionIndex must be less than documentPartitionCount")
   })
 
+  it("allows a bill-document worker to restrict a bounded recurring batch to pending records", () => {
+    expect(
+      derivedPayloadSchema.parse({
+        correlationId: "recurring-govinfo:documents",
+        documentStatus: "pending",
+        jurisdictionId: "jurisdiction:us",
+        kind: "bill-documents",
+        maxBatches: 1,
+        rebuildId: "recurring-govinfo:run-1",
+        shardCount: 64,
+        shardIndex: 52
+      })
+    ).toMatchObject({ documentStatus: "pending", kind: "bill-documents", maxBatches: 1 })
+
+    expect(() =>
+      derivedPayloadSchema.parse({
+        correlationId: "recurring-govinfo:embeddings",
+        documentStatus: "pending",
+        kind: "embeddings",
+        rebuildId: "recurring-govinfo:run-1"
+      })
+    ).toThrow("documentStatus is supported only for bill-document backfills")
+  })
+
   it("opens the material phase only after its federal document prerequisites are terminal", () => {
     expect(
       isMaterialPhaseGateOpen({

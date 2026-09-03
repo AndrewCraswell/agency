@@ -6,6 +6,8 @@ import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store
 import { AzureDocumentIntelligenceClient } from "../../ingestion/documents/ocr-client.js"
 import {
   findOcrDocumentRetryState,
+  listOcrProcessedDocuments,
+  type OcrProcessedDocumentIdentity,
   type OcrDocumentBatchResult,
   processOcrRequiredDocuments,
   recoverOwnedOcrDocuments
@@ -16,6 +18,7 @@ import {
   processOcrRequiredSupportingMaterials,
   recoverOwnedOcrSupportingMaterials
 } from "../../ingestion/documents/supporting-material-ocr-jobs.js"
+import { dispatchPostOcrEmbeddingRefreshes } from "./document-section-embedding-tasks.js"
 
 const ocrWorkerQueue = { concurrencyLimit: 12, name: "legislation-document-ocr" }
 const ocrTargetedPayloadSchema = z
@@ -31,6 +34,20 @@ interface TargetedOcrDependencies {
   process: (itemIds: readonly string[]) => Promise<OcrDocumentBatchResult | OcrSupportingMaterialBatchResult>
   retryState: (itemIds: readonly string[]) => Promise<Readonly<{ itemIds: string[]; nextAttemptAt?: Date }>>
   waitUntil: (date: Date) => Promise<void>
+}
+
+interface OcrEmbeddingHandoffDependencies {
+  dispatch: (documents: readonly OcrProcessedDocumentIdentity[], ocrRunId: string) => Promise<number>
+  listProcessed: (documentIds: readonly string[]) => Promise<OcrProcessedDocumentIdentity[]>
+}
+
+export async function handOffProcessedOcrDocumentsToEmbeddings(
+  documentIds: readonly string[],
+  ocrRunId: string,
+  dependencies: OcrEmbeddingHandoffDependencies
+): Promise<number> {
+  const processedDocumentIds = await dependencies.listProcessed(documentIds)
+  return await dependencies.dispatch(processedDocumentIds, ocrRunId)
 }
 
 export async function runTargetedOcrItems(itemIds: readonly string[], dependencies: TargetedOcrDependencies) {
@@ -101,7 +118,7 @@ export const ocrDocumentWorker = task({
       )
       const ocr = new AzureDocumentIntelligenceClient(config.ocr.endpoint)
       if ("documentIds" in payload) {
-        return await runTargetedOcrItems(payload.documentIds, {
+        const result = await runTargetedOcrItems(payload.documentIds, {
           process: async (documentIds) =>
             await processOcrRequiredDocuments(database, {
               artifactStore,
@@ -123,6 +140,15 @@ export const ocrDocumentWorker = task({
             await wait.until({ date })
           }
         })
+        const embeddingRefreshesScheduled = await handOffProcessedOcrDocumentsToEmbeddings(
+          payload.documentIds,
+          ctx.run.id,
+          {
+            dispatch: dispatchPostOcrEmbeddingRefreshes,
+            listProcessed: async (documentIds) => await listOcrProcessedDocuments(database, documentIds)
+          }
+        )
+        return { ...result, embeddingRefreshesScheduled }
       }
       if ("materialIds" in payload) {
         return await runTargetedOcrItems(payload.materialIds, {

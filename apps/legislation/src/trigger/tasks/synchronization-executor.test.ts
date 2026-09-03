@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { createJobCounts, type JobResult } from "../../ingestion/job.js"
-import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
+import {
+  recurringGovInfoBillDocumentDispatch,
+  requireSuccessfulSynchronizationResult
+} from "./synchronization-executor.js"
+import { createSynchronizationWorkerDispatchIntent } from "./worker-contract.js"
 
 function jobResult(status: JobResult["status"]): JobResult {
   return {
@@ -34,6 +38,41 @@ describe("synchronization task result postcondition", () => {
   it.each(["partial", "failed"] as const)("fails the Trigger task for a %s ingestion result", (status) => {
     expect(() => requireSuccessfulSynchronizationResult(jobResult(status))).toThrow(
       `Synchronization openstates incremental-sync completed with status ${status}`
+    )
+  })
+})
+
+describe("recurring GovInfo document processing", () => {
+  it("creates one pending-only federal document batch keyed to the schedule occurrence", () => {
+    const intent = createSynchronizationWorkerDispatchIntent("govinfo-bill-status-sync", {
+      correlationId: "govinfo:119:scheduled",
+      identity: "govinfo:bill-status:119",
+      occurrenceKey: "schedule-1:2026-09-03T12:00:00.000Z"
+    })
+
+    expect(recurringGovInfoBillDocumentDispatch(intent, "run-1")).toEqual({
+      idempotencyKey: "recurring-govinfo-documents:schedule-1:2026-09-03T12:00:00.000Z",
+      payload: {
+        batchSize: 100,
+        correlationId: "govinfo:119:scheduled:documents",
+        documentStatus: "pending",
+        jurisdictionId: "jurisdiction:us",
+        kind: "bill-documents",
+        maxBatches: 1,
+        rebuildId: "recurring-govinfo:run-1",
+        shardCount: 64,
+        shardIndex: 52
+      }
+    })
+  })
+
+  it("rejects a non-GovInfo intent", () => {
+    const intent = createSynchronizationWorkerDispatchIntent("openstates-bills-sync", {
+      identity: "openstates:bills:ca",
+      occurrenceKey: "schedule-1:2026-09-03T12:00:00.000Z"
+    })
+    expect(() => recurringGovInfoBillDocumentDispatch(intent, "run-1")).toThrow(
+      "requires a GovInfo synchronization intent"
     )
   })
 })

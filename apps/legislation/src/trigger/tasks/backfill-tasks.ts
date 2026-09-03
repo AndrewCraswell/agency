@@ -135,6 +135,7 @@ const currentCatchupPayloadSchema = baseWorkerSchema
 export const derivedPayloadSchema = baseWorkerSchema
   .extend({
     batchSize: z.number().int().positive().max(1_000).optional(),
+    documentStatus: z.enum(["pending", "failed", "unsupported"]).optional(),
     documentPartitionCount: z.number().int().positive().max(8).optional(),
     documentPartitionIndex: z.number().int().nonnegative().max(7).optional(),
     embeddingProducts: z.array(z.enum(EMBEDDING_JOB_KINDS)).min(1).optional(),
@@ -173,6 +174,13 @@ export const derivedPayloadSchema = baseWorkerSchema
         code: "custom",
         message: "jurisdictionId is supported only for bill-document backfills",
         path: ["jurisdictionId"]
+      })
+    }
+    if (payload.documentStatus !== undefined && payload.kind !== "bill-documents") {
+      context.addIssue({
+        code: "custom",
+        message: "documentStatus is supported only for bill-document backfills",
+        path: ["documentStatus"]
       })
     }
     if (payload.embeddingProducts !== undefined && payload.kind !== "embeddings") {
@@ -472,6 +480,7 @@ export const derivedShardBackfillController = task({
             batchSize: derivedBatchSizeFor(payload.kind),
             documentPartitionCount: payload.documentPartitionCount,
             documentPartitionIndex: payload.documentPartitionIndex,
+            documentStatus: payload.documentStatus,
             jurisdictionId: payload.jurisdictionId,
             kind: payload.kind,
             maxBatches: derivedWorkerMaxBatchesFor(payload.kind),
@@ -1139,7 +1148,8 @@ async function executeDerivedTask(
                 ? {
                     documentPartitionCount: payload.documentPartitionCount,
                     documentPartitionIndex: payload.documentPartitionIndex,
-                    jurisdictionId: payload.jurisdictionId
+                    jurisdictionId: payload.jurisdictionId,
+                    status: payload.documentStatus
                   }
                 : {}),
               ...(payload.kind === "embeddings" ? { products: payload.embeddingProducts } : {}),

@@ -1,10 +1,34 @@
-import { logger } from "@trigger.dev/sdk"
+import { logger, tasks } from "@trigger.dev/sdk"
 import { loadConfig } from "../../config/config.js"
 import { createDatabase } from "../../db/database.js"
+import { DERIVED_DOCUMENT_BATCH_SIZE } from "../../ingestion/backfill/derived.js"
+import { DOCUMENT_BACKFILL_SHARD_COUNT, documentBackfillJurisdictionLane } from "../../ingestion/documents/jobs.js"
 import { executeGovInfoCurrentSynchronization } from "../../ingestion/govinfo/sync.js"
 import { JobAlreadyRunningError, type JobResult } from "../../ingestion/job.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
+import type { derivedCorpusBackfill } from "./backfill-tasks.js"
 import type { SynchronizationWorkerDispatchIntent } from "./worker-contract.js"
+
+const federalJurisdictionId = "jurisdiction:us"
+
+export interface RecurringBillDocumentDispatch {
+  idempotencyKey: string
+  payload: {
+    batchSize: number
+    correlationId: string
+    documentStatus: "pending"
+    jurisdictionId: string
+    kind: "bill-documents"
+    maxBatches: 1
+    rebuildId: string
+    shardCount: number
+    shardIndex: number
+  }
+}
+
+interface SynchronizationTaskDependencies {
+  dispatchRecurringBillDocuments?: (dispatch: RecurringBillDocumentDispatch) => Promise<unknown>
+}
 
 export type SynchronizationTaskResult =
   | JobResult
@@ -18,7 +42,8 @@ export type SynchronizationTaskResult =
 
 export async function executeSynchronizationTask(
   intent: SynchronizationWorkerDispatchIntent,
-  triggerRunId: string
+  triggerRunId: string,
+  dependencies: SynchronizationTaskDependencies = {}
 ): Promise<SynchronizationTaskResult> {
   const config = loadConfig()
   const { database, pool } = createDatabase(config.database)
@@ -40,7 +65,12 @@ export async function executeSynchronizationTask(
             onProgress: (event) => logger.info("Congress.gov synchronization progress", event),
             workflowExecutionId: triggerRunId
           })
-    return requireSuccessfulSynchronizationResult(result)
+    const successful = requireSuccessfulSynchronizationResult(result)
+    if (intent.identity.provider === "govinfo" && successful.status === "succeeded") {
+      const dispatch = recurringGovInfoBillDocumentDispatch(intent, triggerRunId)
+      await (dependencies.dispatchRecurringBillDocuments ?? dispatchRecurringBillDocuments)(dispatch)
+    }
+    return successful
   } catch (error) {
     if (error instanceof JobAlreadyRunningError) {
       return requireSuccessfulSynchronizationResult({
@@ -55,6 +85,42 @@ export async function executeSynchronizationTask(
   } finally {
     await pool.end()
   }
+}
+
+/**
+ * Hands a successful recurring GovInfo import to one bounded document batch.
+ * It deliberately selects only pending rows and never starts a shard controller,
+ * so one schedule occurrence cannot turn into a historical corpus drain.
+ */
+export function recurringGovInfoBillDocumentDispatch(
+  intent: SynchronizationWorkerDispatchIntent,
+  triggerRunId: string
+): RecurringBillDocumentDispatch {
+  if (intent.identity.provider !== "govinfo") {
+    throw new Error("Recurring GovInfo document processing requires a GovInfo synchronization intent")
+  }
+  const rebuildId = `recurring-govinfo:${triggerRunId}`
+  return {
+    idempotencyKey: `recurring-govinfo-documents:${intent.occurrenceKey}`,
+    payload: {
+      batchSize: DERIVED_DOCUMENT_BATCH_SIZE,
+      correlationId: `${intent.correlationId ?? `trigger:${triggerRunId}`}:documents`,
+      documentStatus: "pending",
+      jurisdictionId: federalJurisdictionId,
+      kind: "bill-documents",
+      maxBatches: 1,
+      rebuildId,
+      shardCount: DOCUMENT_BACKFILL_SHARD_COUNT,
+      shardIndex: documentBackfillJurisdictionLane(federalJurisdictionId)
+    }
+  }
+}
+
+async function dispatchRecurringBillDocuments(dispatch: RecurringBillDocumentDispatch): Promise<unknown> {
+  return await tasks.trigger<typeof derivedCorpusBackfill>("backfill-derived-corpus", dispatch.payload, {
+    idempotencyKey: dispatch.idempotencyKey,
+    tags: ["provider:govinfo", "derived:bill-documents", "sync:recurring"]
+  })
 }
 
 /**

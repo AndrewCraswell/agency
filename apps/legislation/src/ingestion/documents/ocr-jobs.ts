@@ -30,6 +30,35 @@ export interface OcrDocumentRetryState {
   nextAttemptAt?: Date
 }
 
+export interface OcrProcessedDocumentIdentity {
+  contentHash: string
+  id: string
+}
+
+export async function listOcrProcessedDocuments(
+  database: LegislationDatabase,
+  documentIds: readonly string[]
+): Promise<OcrProcessedDocumentIdentity[]> {
+  if (documentIds.length === 0) {
+    return []
+  }
+  const records = await database
+    .select({ contentHash: billDocuments.contentHash, id: billDocuments.id })
+    .from(billDocuments)
+    .where(
+      and(
+        inArray(billDocuments.id, [...new Set(documentIds)]),
+        isNotNull(billDocuments.contentHash),
+        eq(billDocuments.ocrStatus, "processed"),
+        eq(billDocuments.processingStatus, "processed")
+      )
+    )
+    .orderBy(asc(billDocuments.id))
+  return records.flatMap((record) =>
+    record.contentHash === null ? [] : [{ contentHash: record.contentHash, id: record.id }]
+  )
+}
+
 const permanentUnsupportedOcrFailureCategories = new Set([
   "download-permanent",
   "malformed-document",

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { and, eq, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, documentSections } from "../../db/schema/schema.js"
-import { extractDocument, sanitizeDatabaseText } from "./extract.js"
+import { DocumentExtractionError, extractDocument, sanitizeDatabaseText } from "./extract.js"
 import { mapOcrPagesToDocumentSections, type OcrPageSpan } from "./ocr-page-mapping.js"
 
 export const DOCUMENT_FAILURE_CATEGORIES = [
@@ -37,6 +37,10 @@ export function classifyDocumentFailure(error: unknown, sourceUrl?: string): Doc
   }
   const message = boundedProcessingError(failureMessage)
   const normalized = message.toLowerCase()
+  if (error instanceof DocumentExtractionError) {
+    return { category: error.category, message, retryable: false }
+  }
+  const errorName = error instanceof Error ? error.name.toLowerCase() : ""
   const status = /document download failed with http (\d{3})/i.exec(message)?.[1]
   const statusCode = status === undefined ? undefined : Number(status)
   let sourceHost: string | undefined
@@ -71,6 +75,15 @@ export function classifyDocumentFailure(error: unknown, sourceUrl?: string): Doc
   if (normalized.includes("unsupported document content type")) {
     return { category: "unsupported-format", message, retryable: false }
   }
+  if (
+    errorName === "passwordexception" ||
+    normalized.includes("no password given") ||
+    normalized.includes("incorrect password") ||
+    normalized.includes("password required") ||
+    normalized.includes("encrypted pdf")
+  ) {
+    return { category: "unsupported-format", message, retryable: false }
+  }
   if (normalized.includes("document source is inaccessible")) {
     return { category: "source-inaccessible", message, retryable: false }
   }
@@ -84,6 +97,7 @@ export function classifyDocumentFailure(error: unknown, sourceUrl?: string): Doc
     return { category: "ocr-required", message, retryable: false }
   }
   if (
+    errorName === "invalidpdfexception" ||
     normalized.includes("invalid pdf structure") ||
     normalized.includes("invalid root reference") ||
     normalized.includes("bad uncompressed block length in flate stream") ||

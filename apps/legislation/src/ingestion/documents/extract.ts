@@ -8,8 +8,25 @@ import { documentSectionId } from "../../legislation/identifiers.js"
 
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 export const MAX_PDF_TEXT_EXTRACTION_PAGES = 750
+export const MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS = 40
 const MAX_OFFICE_ARCHIVE_ENTRIES = 5_000
 const MAX_OFFICE_UNCOMPRESSED_BYTES = 4 * MAX_DOCUMENT_BYTES
+
+export type DocumentExtractionFailureCategory =
+  | "malformed-document"
+  | "ocr-required"
+  | "oversized"
+  | "unsupported-format"
+
+export class DocumentExtractionError extends Error {
+  readonly category: DocumentExtractionFailureCategory
+
+  constructor(category: DocumentExtractionFailureCategory, message: string) {
+    super(message)
+    this.category = category
+    this.name = "DocumentExtractionError"
+  }
+}
 
 export interface ExtractedSection {
   contentHash: string
@@ -54,7 +71,7 @@ export function normalizeLegalText(value: string): string {
 
 function assertUsefulDocumentText(text: string): void {
   if (text.length < 20) {
-    throw new Error("Document produced too little usable text")
+    throw new DocumentExtractionError("malformed-document", "Document produced too little usable text")
   }
   const normalized = text.toLowerCase()
   if (
@@ -62,7 +79,10 @@ function assertUsefulDocumentText(text: string): void {
     (normalized.includes("for full functionality of this site it is necessary to enable javascript") &&
       normalized.includes("california legislative information"))
   ) {
-    throw new Error("Document contains publisher navigation instead of legislative text")
+    throw new DocumentExtractionError(
+      "malformed-document",
+      "Document contains publisher navigation instead of legislative text"
+    )
   }
 }
 
@@ -111,7 +131,7 @@ function officeXmlText(bytes: Uint8Array, mediaType: string): string {
       entries += 1
       uncompressedBytes += entry.originalSize
       if (entries > MAX_OFFICE_ARCHIVE_ENTRIES || uncompressedBytes > MAX_OFFICE_UNCOMPRESSED_BYTES) {
-        throw new Error("Office document archive exceeds safe expansion limits")
+        throw new DocumentExtractionError("oversized", "Office document archive exceeds safe expansion limits")
       }
       return selected(entry.name)
     }
@@ -159,6 +179,38 @@ function officeXmlText(bytes: Uint8Array, mediaType: string): string {
     .join("\n\n")
 }
 
+export interface PdfPageExtractionEvidence {
+  hasRasterImage: boolean
+  text: string
+}
+
+export interface PdfOcrAssessment {
+  kind: "digital-text" | "image-only" | "mixed-scan" | "unusable"
+  scannedPageCount: number
+}
+
+export function assessPdfOcrEligibility(pages: readonly PdfPageExtractionEvidence[]): PdfOcrAssessment {
+  const pageEvidence = pages.map((page) => ({
+    hasRasterImage: page.hasRasterImage,
+    textLength: normalizeLegalText(page.text).length
+  }))
+  const scannedPageCount = pageEvidence.filter(
+    (page) => page.hasRasterImage && page.textLength < MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS
+  ).length
+  const totalTextLength = pageEvidence.reduce((total, page) => total + page.textLength, 0)
+
+  if (totalTextLength < 20) {
+    return {
+      kind: scannedPageCount > 0 ? "image-only" : "unusable",
+      scannedPageCount
+    }
+  }
+  if (scannedPageCount > 0) {
+    return { kind: "mixed-scan", scannedPageCount }
+  }
+  return { kind: "digital-text", scannedPageCount }
+}
+
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
   // PDF.js loads optional canvas bindings at module initialization. Keep that
   // initialization off the server and CLI startup path so deployments that do
@@ -169,33 +221,64 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
     ImageData: { configurable: true, value: ImageData, writable: true },
     Path2D: { configurable: true, value: Path2D, writable: true }
   })
-  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs")
+  const { getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs")
   const standardFontDataUrl = fileURLToPath(
     new URL("standard_fonts/", import.meta.resolve("pdfjs-dist/package.json"))
   ).replaceAll("\\", "/")
   const loadingTask = getDocument({ data: Uint8Array.from(bytes), standardFontDataUrl })
   const document = await loadingTask.promise
-  const pages: string[] = []
+  const rasterImageOperators = new Set([
+    OPS.paintImageMaskXObject,
+    OPS.paintImageMaskXObjectGroup,
+    OPS.paintImageXObject,
+    OPS.paintImageXObjectRepeat,
+    OPS.paintInlineImageXObject,
+    OPS.paintInlineImageXObjectGroup,
+    OPS.paintSolidColorImageMask
+  ])
+  const pages: PdfPageExtractionEvidence[] = []
   try {
     assertPdfTextExtractionPageCount(document.numPages)
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber)
       const content = await page.getTextContent()
-      pages.push(content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" "))
+      const text = content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" ")
+      if (normalizeLegalText(text).length >= MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS) {
+        pages.push({ hasRasterImage: false, text })
+        continue
+      }
+      const operators = await page.getOperatorList()
+      pages.push({ hasRasterImage: operators.fnArray.some((operator) => rasterImageOperators.has(operator)), text })
     }
   } finally {
     await loadingTask.destroy()
   }
-  const text = pages.join("\n\n")
-  if (text.trim().length < 20) {
-    throw new Error("PDF is image-only or contains too little usable text")
+  const assessment = assessPdfOcrEligibility(pages)
+  if (assessment.kind === "image-only") {
+    throw new DocumentExtractionError(
+      "ocr-required",
+      `PDF is image-only; ${assessment.scannedPageCount} of ${pages.length} pages require OCR`
+    )
   }
-  return text
+  if (assessment.kind === "mixed-scan") {
+    throw new DocumentExtractionError(
+      "ocr-required",
+      `PDF materially mixes scanned and digital content; ${assessment.scannedPageCount} of ${pages.length} pages require OCR`
+    )
+  }
+  if (assessment.kind === "unusable") {
+    throw new DocumentExtractionError(
+      "malformed-document",
+      "PDF produced too little usable text and contains no raster pages"
+    )
+  }
+  return pages.map((page) => page.text).join("\n\n")
 }
 
 export function assertPdfTextExtractionPageCount(pageCount: number): void {
   if (pageCount > MAX_PDF_TEXT_EXTRACTION_PAGES) {
-    throw new Error(
+    throw new DocumentExtractionError(
+      "ocr-required",
       `PDF has ${pageCount} pages, exceeding the ${MAX_PDF_TEXT_EXTRACTION_PAGES}-page local extraction limit, and requires OCR`
     )
   }
@@ -312,10 +395,10 @@ export async function extractDocument(
   contentType: string
 ): Promise<DocumentExtraction> {
   if (bytes.byteLength === 0) {
-    throw new Error("Document is empty")
+    throw new DocumentExtractionError("malformed-document", "Document is empty")
   }
   if (bytes.byteLength > MAX_DOCUMENT_BYTES) {
-    throw new Error(`Document exceeds the ${MAX_DOCUMENT_BYTES} byte limit`)
+    throw new DocumentExtractionError("oversized", `Document exceeds the ${MAX_DOCUMENT_BYTES} byte limit`)
   }
 
   const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase()
@@ -335,9 +418,9 @@ export async function extractDocument(
   ) {
     extracted = officeXmlText(bytes, mediaType)
   } else if (mediaType?.startsWith("image/") === true) {
-    throw new Error(`Document is image-only (${mediaType}) and requires OCR`)
+    throw new DocumentExtractionError("ocr-required", `Document is image-only (${mediaType}) and requires OCR`)
   } else {
-    throw new Error(`Unsupported document content type: ${contentType}`)
+    throw new DocumentExtractionError("unsupported-format", `Unsupported document content type: ${contentType}`)
   }
 
   const text = normalizeLegalText(extracted)
