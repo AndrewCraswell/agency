@@ -91,6 +91,17 @@ describe("createOcrPageRangeRepairPlan", () => {
       })
     ).rejects.toThrow("complete page-span sequence")
   })
+
+  it("includes the safe provider page-span diagnostic in a repair refusal", async () => {
+    await expect(
+      createOcrPageRangeRepairPlan(snapshot(), sourceBytes, {
+        pageCount: 2,
+        pageSpanIssue: "page 1 span 2 has a meaningful gap of 3 UTF-16 code units before it",
+        provider: "azure-document-intelligence",
+        text: sourceText
+      })
+    ).rejects.toThrow("page 1 span 2 has a meaningful gap of 3 UTF-16 code units before it")
+  })
 })
 
 describe("hasCompleteOcrPageRanges", () => {

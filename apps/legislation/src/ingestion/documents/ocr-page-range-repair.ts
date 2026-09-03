@@ -114,7 +114,12 @@ export async function createOcrPageRangeRepairPlan(
     throw new OcrPageRangeRepairError(snapshot.id, "provider page count does not match stored OCR page count")
   }
   if (ocrResult.pages === undefined || ocrResult.pages.length !== ocrResult.pageCount) {
-    throw new OcrPageRangeRepairError(snapshot.id, "provider did not return a complete page-span sequence")
+    throw new OcrPageRangeRepairError(
+      snapshot.id,
+      `provider did not return a complete page-span sequence${
+        ocrResult.pageSpanIssue === undefined ? "" : `: ${ocrResult.pageSpanIssue}`
+      }`
+    )
   }
 
   const extraction = await extractDocument(snapshot.id, new TextEncoder().encode(ocrResult.text), "text/plain")

@@ -7,6 +7,7 @@ const documentIntelligenceApiVersion = "2024-11-30"
 
 export interface OcrResult {
   pageCount?: number
+  pageSpanIssue?: string
   pages?: readonly OcrPageSpan[]
   provider: "azure-document-intelligence"
   text: string
@@ -127,7 +128,7 @@ export class AzureDocumentIntelligenceClient implements OcrClient {
       const pageSpans = parsePageSpans(pages, content)
       return {
         ...(Array.isArray(pages) && pages.length > 0 ? { pageCount: pages.length } : {}),
-        ...(pageSpans === undefined ? {} : { pages: pageSpans }),
+        ...(pageSpans.ok ? { pages: pageSpans.pages } : { pageSpanIssue: pageSpans.issue }),
         provider: "azure-document-intelligence",
         text: content
       }
@@ -183,49 +184,64 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
 
-function parsePageSpans(value: unknown, content: string): readonly OcrPageSpan[] | undefined {
+type PageSpanParseResult =
+  | Readonly<{ issue: string; ok: false }>
+  | Readonly<{ ok: true; pages: readonly OcrPageSpan[] }>
+
+function parsePageSpans(value: unknown, content: string): PageSpanParseResult {
   if (!Array.isArray(value) || value.length === 0) {
-    return undefined
+    return { issue: "provider pages are missing or empty", ok: false }
   }
   const spans: OcrPageSpan[] = []
   let previousEnd = 0
   for (const [index, page] of value.entries()) {
-    if (!isRecord(page) || !Number.isSafeInteger(page.pageNumber) || page.pageNumber !== index + 1) {
-      return undefined
+    const expectedPageNumber = index + 1
+    if (!isRecord(page)) {
+      return { issue: `page ${expectedPageNumber} is not an object`, ok: false }
+    }
+    if (!Number.isSafeInteger(page.pageNumber) || page.pageNumber !== expectedPageNumber) {
+      return { issue: `page ${expectedPageNumber} has an invalid page number`, ok: false }
     }
     const pageSpans = page.spans
     if (!Array.isArray(pageSpans) || pageSpans.length === 0) {
-      return undefined
+      return { issue: `page ${expectedPageNumber} has no spans`, ok: false }
     }
 
     let pageStart: number | undefined
-    for (const span of pageSpans) {
+    for (const [spanIndex, span] of pageSpans.entries()) {
+      const spanLabel = `page ${expectedPageNumber} span ${spanIndex + 1}`
       if (!isRecord(span)) {
-        return undefined
+        return { issue: `${spanLabel} is not an object`, ok: false }
       }
       const offset = span.offset
       const length = span.length
-      if (
-        typeof offset !== "number" ||
-        typeof length !== "number" ||
-        !Number.isSafeInteger(offset) ||
-        !Number.isSafeInteger(length) ||
-        offset < previousEnd ||
-        length < 1 ||
-        offset > Number.MAX_SAFE_INTEGER - length ||
-        offset + length > content.length ||
-        content.slice(previousEnd, offset).trim() !== ""
-      ) {
-        return undefined
+      if (typeof offset !== "number" || !Number.isSafeInteger(offset) || offset < 0) {
+        return { issue: `${spanLabel} has an invalid offset`, ok: false }
+      }
+      if (typeof length !== "number" || !Number.isSafeInteger(length) || length < 1) {
+        return { issue: `${spanLabel} has an invalid length`, ok: false }
+      }
+      if (offset > Number.MAX_SAFE_INTEGER - length || offset + length > content.length) {
+        return { issue: `${spanLabel} has an offset or length outside OCR content`, ok: false }
+      }
+      if (offset < previousEnd) {
+        return { issue: `${spanLabel} overlaps or precedes the previous span`, ok: false }
+      }
+      const gapLength = offset - previousEnd
+      if (content.slice(previousEnd, offset).trim() !== "") {
+        return { issue: `${spanLabel} has a meaningful gap of ${gapLength} UTF-16 code units before it`, ok: false }
       }
       pageStart ??= offset
       previousEnd = offset + length
     }
 
     if (pageStart === undefined) {
-      return undefined
+      return { issue: `page ${expectedPageNumber} has no spans`, ok: false }
     }
     spans.push({ endOffset: previousEnd, pageNumber: page.pageNumber, startOffset: pageStart })
   }
-  return content.slice(previousEnd).trim() === "" ? spans : undefined
+  const trailingGapLength = content.length - previousEnd
+  return content.slice(previousEnd).trim() === ""
+    ? { ok: true, pages: spans }
+    : { issue: `page spans have a trailing meaningful gap of ${trailingGapLength} UTF-16 code units`, ok: false }
 }

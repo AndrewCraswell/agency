@@ -133,15 +133,17 @@ describe("AzureDocumentIntelligenceClient", () => {
       client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
     ).resolves.toEqual({
       pageCount: 1,
+      pageSpanIssue: "page 1 span 2 has a meaningful gap of 1 UTF-16 code units before it",
       provider: "azure-document-intelligence",
       text: "firstXsecond"
     })
   })
 
   it("omits page spans rather than guessing when provider spans overlap or are out of order", async () => {
-    for (const { content, pageSpans } of [
+    for (const { content, issue, pageSpans } of [
       {
         content: "first second",
+        issue: "page 1 span 2 overlaps or precedes the previous span",
         pageSpans: [
           { length: 6, offset: 0 },
           { length: 6, offset: 5 }
@@ -149,6 +151,7 @@ describe("AzureDocumentIntelligenceClient", () => {
       },
       {
         content: "      secondfirst",
+        issue: "page 1 span 2 overlaps or precedes the previous span",
         pageSpans: [
           { length: 6, offset: 6 },
           { length: 5, offset: 0 }
@@ -177,6 +180,7 @@ describe("AzureDocumentIntelligenceClient", () => {
         client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
       ).resolves.toEqual({
         pageCount: 1,
+        pageSpanIssue: issue,
         provider: "azure-document-intelligence",
         text: content
       })
@@ -184,9 +188,15 @@ describe("AzureDocumentIntelligenceClient", () => {
   })
 
   it("omits page spans whose provider offsets overflow or exceed OCR content", async () => {
-    for (const span of [
-      { length: 2, offset: Number.MAX_SAFE_INTEGER },
-      { length: 100, offset: 0 }
+    for (const { issue, span } of [
+      {
+        issue: "page 1 span 1 has an offset or length outside OCR content",
+        span: { length: 2, offset: Number.MAX_SAFE_INTEGER }
+      },
+      {
+        issue: "page 1 span 1 has an offset or length outside OCR content",
+        span: { length: 100, offset: 0 }
+      }
     ]) {
       let requestCount = 0
       const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
@@ -210,9 +220,59 @@ describe("AzureDocumentIntelligenceClient", () => {
         client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
       ).resolves.toEqual({
         pageCount: 1,
+        pageSpanIssue: issue,
         provider: "azure-document-intelligence",
         text: "Recognized legislative text"
       })
+    }
+  })
+
+  it("reports safe, precise diagnostics for other invalid page-span shapes", async () => {
+    for (const { content, issue, pages } of [
+      {
+        content: "text",
+        issue: "page 1 has an invalid page number",
+        pages: [{ pageNumber: 2, spans: [{ length: 4, offset: 0 }] }]
+      },
+      {
+        content: "text",
+        issue: "page 1 has no spans",
+        pages: [{ pageNumber: 1, spans: [] }]
+      },
+      {
+        content: "text",
+        issue: "page 1 span 1 has an invalid offset",
+        pages: [{ pageNumber: 1, spans: [{ length: 4, offset: -1 }] }]
+      },
+      {
+        content: "text",
+        issue: "page 1 span 1 has an invalid length",
+        pages: [{ pageNumber: 1, spans: [{ length: 0, offset: 0 }] }]
+      },
+      {
+        content: "text remains",
+        issue: "page spans have a trailing meaningful gap of 8 UTF-16 code units",
+        pages: [{ pageNumber: 1, spans: [{ length: 4, offset: 0 }] }]
+      }
+    ]) {
+      let requestCount = 0
+      const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+        credential,
+        fetch: vi.fn<typeof fetch>(async () => {
+          requestCount += 1
+          return requestCount === 1
+            ? new Response(null, {
+                headers: { "operation-location": "https://ocr.example/operations/123?api-version=2024-11-30" },
+                status: 202
+              })
+            : Response.json({ analyzeResult: { content, pages }, status: "succeeded" })
+        }) as typeof fetch,
+        pollIntervalMs: 0
+      })
+
+      await expect(
+        client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
+      ).resolves.toEqual({ pageCount: 1, pageSpanIssue: issue, provider: "azure-document-intelligence", text: content })
     }
   })
 
