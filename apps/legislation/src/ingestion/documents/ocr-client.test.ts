@@ -55,7 +55,7 @@ describe("AzureDocumentIntelligenceClient", () => {
     expect(JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body))).toEqual({ base64Source: "JVBERg==" })
   })
 
-  it("omits page spans rather than guessing when Azure returns ambiguous layout spans", async () => {
+  it("combines multiple ordered page spans when absorbed gaps contain only whitespace", async () => {
     let requestCount = 0
     const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
       credential,
@@ -68,13 +68,57 @@ describe("AzureDocumentIntelligenceClient", () => {
             })
           : Response.json({
               analyzeResult: {
-                content: "Recognized legislative text",
+                content: "Alpha \nBeta\nGamma",
                 pages: [
                   {
                     pageNumber: 1,
                     spans: [
-                      { length: 10, offset: 0 },
-                      { length: 10, offset: 11 }
+                      { length: 5, offset: 0 },
+                      { length: 4, offset: 7 }
+                    ]
+                  },
+                  { pageNumber: 2, spans: [{ length: 5, offset: 12 }] }
+                ]
+              },
+              status: "succeeded"
+            })
+      }) as typeof fetch,
+      pollIntervalMs: 0
+    })
+
+    await expect(
+      client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
+    ).resolves.toEqual({
+      pageCount: 2,
+      pages: [
+        { endOffset: 11, pageNumber: 1, startOffset: 0 },
+        { endOffset: 17, pageNumber: 2, startOffset: 12 }
+      ],
+      provider: "azure-document-intelligence",
+      text: "Alpha \nBeta\nGamma"
+    })
+  })
+
+  it("omits page spans rather than absorbing meaningful content between provider spans", async () => {
+    let requestCount = 0
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: vi.fn<typeof fetch>(async () => {
+        requestCount += 1
+        return requestCount === 1
+          ? new Response(null, {
+              headers: { "operation-location": "https://ocr.example/operations/123?api-version=2024-11-30" },
+              status: 202
+            })
+          : Response.json({
+              analyzeResult: {
+                content: "firstXsecond",
+                pages: [
+                  {
+                    pageNumber: 1,
+                    spans: [
+                      { length: 5, offset: 0 },
+                      { length: 6, offset: 6 }
                     ]
                   }
                 ]
@@ -90,8 +134,53 @@ describe("AzureDocumentIntelligenceClient", () => {
     ).resolves.toEqual({
       pageCount: 1,
       provider: "azure-document-intelligence",
-      text: "Recognized legislative text"
+      text: "firstXsecond"
     })
+  })
+
+  it("omits page spans rather than guessing when provider spans overlap or are out of order", async () => {
+    for (const { content, pageSpans } of [
+      {
+        content: "first second",
+        pageSpans: [
+          { length: 6, offset: 0 },
+          { length: 6, offset: 5 }
+        ]
+      },
+      {
+        content: "      secondfirst",
+        pageSpans: [
+          { length: 6, offset: 6 },
+          { length: 5, offset: 0 }
+        ]
+      }
+    ]) {
+      let requestCount = 0
+      const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+        credential,
+        fetch: vi.fn<typeof fetch>(async () => {
+          requestCount += 1
+          return requestCount === 1
+            ? new Response(null, {
+                headers: { "operation-location": "https://ocr.example/operations/123?api-version=2024-11-30" },
+                status: 202
+              })
+            : Response.json({
+                analyzeResult: { content, pages: [{ pageNumber: 1, spans: pageSpans }] },
+                status: "succeeded"
+              })
+        }) as typeof fetch,
+        pollIntervalMs: 0
+      })
+
+      await expect(
+        client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
+      ).resolves.toEqual({
+        pageCount: 1,
+        provider: "azure-document-intelligence",
+        text: content
+      })
+    }
   })
 
   it("omits page spans whose provider offsets overflow or exceed OCR content", async () => {

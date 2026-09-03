@@ -124,7 +124,7 @@ export class AzureDocumentIntelligenceClient implements OcrClient {
         })
       }
       const pages = body.analyzeResult.pages
-      const pageSpans = parsePageSpans(pages, content.length)
+      const pageSpans = parsePageSpans(pages, content)
       return {
         ...(Array.isArray(pages) && pages.length > 0 ? { pageCount: pages.length } : {}),
         ...(pageSpans === undefined ? {} : { pages: pageSpans }),
@@ -183,35 +183,49 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
 
-function parsePageSpans(value: unknown, contentLength: number): readonly OcrPageSpan[] | undefined {
+function parsePageSpans(value: unknown, content: string): readonly OcrPageSpan[] | undefined {
   if (!Array.isArray(value) || value.length === 0) {
     return undefined
   }
   const spans: OcrPageSpan[] = []
+  let previousEnd = 0
   for (const [index, page] of value.entries()) {
     if (!isRecord(page) || !Number.isSafeInteger(page.pageNumber) || page.pageNumber !== index + 1) {
       return undefined
     }
     const pageSpans = page.spans
-    if (!Array.isArray(pageSpans) || pageSpans.length !== 1 || !isRecord(pageSpans[0])) {
+    if (!Array.isArray(pageSpans) || pageSpans.length === 0) {
       return undefined
     }
-    const span = pageSpans[0]
-    const offset = span.offset
-    const length = span.length
-    if (
-      typeof offset !== "number" ||
-      typeof length !== "number" ||
-      !Number.isSafeInteger(offset) ||
-      !Number.isSafeInteger(length) ||
-      offset < 0 ||
-      length < 1 ||
-      offset > Number.MAX_SAFE_INTEGER - length ||
-      offset + length > contentLength
-    ) {
+
+    let pageStart: number | undefined
+    for (const span of pageSpans) {
+      if (!isRecord(span)) {
+        return undefined
+      }
+      const offset = span.offset
+      const length = span.length
+      if (
+        typeof offset !== "number" ||
+        typeof length !== "number" ||
+        !Number.isSafeInteger(offset) ||
+        !Number.isSafeInteger(length) ||
+        offset < previousEnd ||
+        length < 1 ||
+        offset > Number.MAX_SAFE_INTEGER - length ||
+        offset + length > content.length ||
+        content.slice(previousEnd, offset).trim() !== ""
+      ) {
+        return undefined
+      }
+      pageStart ??= offset
+      previousEnd = offset + length
+    }
+
+    if (pageStart === undefined) {
       return undefined
     }
-    spans.push({ endOffset: offset + length, pageNumber: page.pageNumber, startOffset: offset })
+    spans.push({ endOffset: previousEnd, pageNumber: page.pageNumber, startOffset: pageStart })
   }
-  return spans
+  return content.slice(previousEnd).trim() === "" ? spans : undefined
 }
