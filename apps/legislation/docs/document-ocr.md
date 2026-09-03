@@ -13,7 +13,7 @@ claims are not proof that the end-to-end recurring path is currently complete.
 Each delivery stage must satisfy its own acceptance gate before production
 backfill is authorized.
 
-## Verified production baseline
+## Verified pre-delivery production baseline
 
 The following snapshot was measured on 2026-09-03 and is the baseline for this
 work:
@@ -234,24 +234,26 @@ Required configuration:
 
 - maximum provider pages per document;
 - maximum provider bytes per document;
-- daily recurring OCR page budget;
-- per-run historical OCR page budget;
-- per-run historical document budget;
+- per-backfill OCR page ceiling;
+- per-backfill document ceiling;
+- per-backfill estimated-spend ceiling;
 - maximum provider attempts per content hash; and
 - an alert threshold for pending OCR work without an owner.
 
 The coordinator reserves estimated pages atomically before dispatch and records
 actual analyzed pages afterward. Exhausted budgets leave work durably pending;
-they do not convert it to failure. Recurring new-content work and historical
-backfill have separate budgets so an archive wave cannot starve daily ingestion.
+they do not convert it to failure. Recurring new-content OCR is not subject to a
+daily spend limit. Historical backfill must remain separately approval-gated so
+an archive wave cannot silently exceed its reviewed page and spend ceiling or
+starve current ingestion.
 
 Every approval estimate must report candidate documents, estimated pages,
 unknown-page documents, current unit meters, expected OCR charge, and excluded
 compute, storage, transfer, and embedding charges.
 
-## Observability
+## Operational reconciliation
 
-Each run must emit structured measurements for:
+Backfill and repair runs must retain enough structured evidence to reconcile:
 
 - documents detected as `not-required`, OCR-required, failed, or unsupported;
 - detection reason and source distribution;
@@ -262,12 +264,12 @@ Each run must emit structured measurements for:
 - sections awaiting embeddings, stale embeddings, and current embeddings;
 - end-to-end time from source discovery to lexical readiness and semantic
   readiness; and
-- budget remaining for recurring and historical work.
+- the approved historical page and spend ceiling.
 
-Alert when an OCR-required row remains unowned beyond the configured threshold,
-when a completed OCR document lacks sections, when an OCR section remains
-unembedded beyond the embedding service-level target, or when actual pages
-materially exceed the reservation estimate.
+Detailed OCR dashboards and daily spend alerts are not a prerequisite for the
+first bounded backfill. A run must still stop when it reaches its approved
+historical ceiling, and incomplete or inconsistent durable states must remain
+queryable for operator reconciliation.
 
 ## Production canary
 
@@ -329,12 +331,10 @@ production backfill is authorized by this specification.
    extraction, targeted OCR handoff, and targeted embedding handoff.
 3. **Embedding repair:** embed the 9,199 existing OCR sections and reconcile
    their freshness without repeating OCR.
-4. **Observability:** add the run metrics, owner-leak checks, page accounting,
-   and budget alerts.
-5. **Production canary:** deploy and pass the bounded fixture matrix above.
-6. **Historical inventory:** classify unresolved records locally and produce
+4. **Production canary:** deploy and pass the bounded fixture matrix above.
+5. **Historical inventory:** classify unresolved records locally and produce
    an approval-ready page and cost report.
-7. **Approved backfill:** process only an explicitly approved scope in bounded
+6. **Approved backfill:** process only an explicitly approved scope in bounded
    waves.
 
 ## Final acceptance criteria
@@ -356,7 +356,5 @@ OCR implementation is complete only when all of the following are true:
   production smoke with canonical mapping.
 - Azure page totals reconcile with application metrics and stay within the
   approved recurring or backfill budget.
-- Production alerts cover unowned work, failed processing, missing sections,
-  stale embeddings, throttling, and budget exhaustion.
 - A historical inventory and explicit approval exist before any broad archive
   backfill begins.
