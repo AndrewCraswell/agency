@@ -16,6 +16,8 @@ section embeddings.
 | Nonempty sections | 1,233 |
 | Current section embeddings | 1,233 |
 | Missing or stale embeddings | 0 |
+| Sections with valid page ranges after repair | 1,233 |
+| Null or invalid page ranges after repair | 0 |
 | Base OCR charge at the verified meter | $2.2275 |
 
 One four-page document needed a second application attempt after the first
@@ -134,11 +136,25 @@ Authoritative references:
 - [Azure Document Intelligence pricing](https://azure.microsoft.com/en-us/pricing/details/document-intelligence/)
 - [Azure Retail Prices API](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices)
 
-## Known limitation
+## Page-range repair cost and outcome
 
-The OCR text, sections, and embeddings are complete and searchable, but the
-1,233 generated sections currently have null page-range metadata. Do not make
-page-specific API claims from this cohort until provider page spans are mapped
-and verified. Correcting page ranges is a separate fidelity improvement and
-does not require repeating the OCR backfill unless the provider response must
-be regenerated.
+Azure operation responses were not retained, so repairing the page metadata
+required re-analyzing the retained artifacts. The repair was constrained to the
+same 319 documents and 1,485 persisted pages. Three failed diagnostic canaries
+submitted two pages each before the implementation learned to preserve Azure's
+valid zero-length span for a blank page. Using the conservative assumption that
+Azure billed all 1,491 submitted page units, the additional repair charge is at
+most:
+
+`1,491 / 1,000 * $1.50 = $2.2365`
+
+Combining the original backfill upper bound and this conservative repair bound
+gives a total application estimate of at most `$4.4700`. Azure billing data is
+authoritative.
+
+Trigger version `20260903.7` completed the successful canary and bounded repair
+waves. Final reconciliation found all 1,233 sections with non-null, valid,
+one-based inclusive page ranges. The document digest, section-content digest,
+and embedding digest exactly matched the pre-repair baseline, proving that the
+operation changed page metadata only. The deployed authenticated API then
+returned the canary section with `pageStart: 1` and `pageEnd: 1`.

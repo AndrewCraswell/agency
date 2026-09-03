@@ -110,7 +110,7 @@ export async function markSupportingMaterialProcessingFailure(
     category: DocumentFailureCategory
     nextAttemptAt?: Date
     processingError: string
-    status: "failed" | "unsupported"
+    status: "failed" | "pending" | "unsupported"
   }>
 ): Promise<void> {
   await database

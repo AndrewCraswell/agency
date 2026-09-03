@@ -6,7 +6,7 @@ import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
 import { downloadDocument } from "./download.js"
 import type { DocumentHostLimiter } from "./host-limiter.js"
-import { documentRetryAt } from "./jobs.js"
+import { documentRetryAt, documentStatusForFailure } from "./jobs.js"
 import { createPdfExtractionLimiter } from "./pdf-extraction-limiter.js"
 import { classifyDocumentFailure } from "./process.js"
 import {
@@ -253,15 +253,17 @@ export async function processPendingSupportingMaterials(
       }
     } catch (error) {
       const failure = classifyDocumentFailure(error, record.sourceUrl)
-      const nextAttemptAt = failure.retryable ? documentRetryAt(record.processingAttempts + 1) : undefined
+      const attempt = record.processingAttempts + 1
+      const status = documentStatusForFailure(failure, attempt, maximumAttempts)
+      const nextAttemptAt = status === "pending" ? documentRetryAt(attempt) : undefined
       await markSupportingMaterialProcessingFailure(database, record.id, {
         category: failure.category,
         nextAttemptAt,
         processingError: failure.message,
-        status: failure.retryable ? "failed" : "unsupported"
+        status
       })
       counts.failed += 1
-      if (!failure.retryable) {
+      if (status === "unsupported") {
         counts.unsupported += 1
       }
       if (failure.category === "ocr-required") {

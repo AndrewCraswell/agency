@@ -7,9 +7,9 @@ and operating OCR-backed legislative documents. OCR is a derived-processing
 step for a retained source artifact. It does not create a second document or a
 second source record.
 
-The recurring workflow is deployed, and the approved historical backfill
-completed on 2026-09-03. The remaining known fidelity gap is page-range mapping
-for OCR-generated sections; text, sections, and embeddings are complete.
+The recurring workflow is deployed, and the approved historical backfill and
+page-range repair completed on 2026-09-03. OCR text, sections, embeddings, and
+page-specific citation metadata are complete for the approved cohort.
 
 ## Verified pre-delivery production baseline
 
@@ -114,6 +114,12 @@ Additional invariants:
 - Provider metadata must be null unless OCR actually ran.
 - A missing retained artifact returns the row to ordinary acquisition instead
   of repeatedly calling the OCR provider.
+- A retryable download, provider, or persistence failure below the configured
+  attempt limit returns `processing_status` to `pending` with a future
+  `next_attempt_at`. Only an exhausted retryable failure becomes `failed`; a
+  deterministic unsupported input becomes `unsupported`. The recurring
+  pending-document controller therefore recovers eligible transient failures
+  without reopening exhausted or deterministic outcomes.
 - An older attempt must never overwrite results for a newer content hash.
 
 ## OCR detection
@@ -358,6 +364,15 @@ archive cohort requires its own evidence-based selection and approval.
    page-priced scope were reviewed before mutation.
 6. **Approved backfill — complete:** all 319 approved documents completed in 13
    bounded waves with zero terminal failures.
+7. **Page-range repair — complete:** Trigger version `20260903.7` re-analyzed
+   the retained artifacts and updated only `document_sections.page_start` and
+   `page_end`. The canary `run_06g6g9f3mh3f22o3p47ab4lv01` proved a two-page
+   document with a blank second page, after which 13 bounded runs repaired the
+   remaining cohort. Final reconciliation found 1,233 sections with zero null
+   or invalid ranges. Document, section-content, and embedding digests remained
+   unchanged. An authenticated production request for the canary document's
+   section list returned `200`, echoed correlation ID
+   `ocr-page-range-production-smoke`, and projected page range `1-1`.
 
 ## Final acceptance criteria
 
@@ -381,6 +396,6 @@ OCR implementation is complete only when all of the following are true:
 - A historical inventory and explicit approval exist before any broad archive
   backfill begins.
 
-All criteria are satisfied for the approved backfill except usable page spans.
-The OCR-generated sections are searchable, but their page-range fields remain
-null and must be corrected before page-specific citation claims are enabled.
+All criteria are satisfied for the approved backfill. Page-specific citation
+claims are enabled for this cohort because every nonempty OCR section now has a
+validated, one-based inclusive page range.

@@ -18,7 +18,7 @@ An endpoint is not Next-route **Done** merely because the standalone Node handle
 the source of truth for request and response bodies. The existing local smoke checklist is reusable test input, but the
 release gate also requires block-by-block deployed Railway smoke.
 
-This ledger was updated on 2026-09-02 after the authenticated API performance release was verified. `apps/legislation` is the canonical
+This ledger was updated on 2026-09-03 after the OCR page-range repair was verified. `apps/legislation` is the canonical
 application and documentation home; Railway retains the `legislation-web` service name. All 88 rows have reviewed
 domain/query/projection evidence, so the **Domain state** is 88 **Done**. Reviewed source now has 88/88 explicit Next.js
 handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 68
@@ -35,7 +35,8 @@ unsupported methods returned `404`. A throwaway Railway receiver deployment comp
 the webhook to `active`, and was deleted after its redacted acceptance receipt was observed. The final cumulative
 authenticated smoke passed all seven search, document-difference, and research operations without a search skip. All
 five embedding HNSW indexes are valid and ready, all four embedding tables are analyzed, and both page-range constraints
-are valid.
+are valid. The approved 319-document OCR cohort now has valid page metadata on all 1,233 sections; authenticated
+production document-section retrieval projected the repaired range successfully.
 The old Railway `legislation-api` service is deleted and is not a rollback target. Authentication enforcement is live;
 the remaining route blockers are named production-data gates. MCP cutover and smoke are the next deferred step, and work
 stopped before that step as requested.

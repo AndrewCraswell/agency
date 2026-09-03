@@ -11,7 +11,7 @@ import {
   visitCaliforniaPubinfoLobs
 } from "./california-pubinfo.js"
 import { detectDocumentContentType } from "./download.js"
-import { documentRetryAt } from "./jobs.js"
+import { documentRetryAt, documentStatusForFailure } from "./jobs.js"
 import { classifyDocumentFailure, markDocumentProcessingFailure, persistProcessedDocument } from "./process.js"
 
 export interface CaliforniaPubinfoJobResult {
@@ -153,13 +153,13 @@ export async function processCaliforniaPubinfoArchive(
         } catch (error) {
           const failure = classifyDocumentFailure(error, record.sourceUrl)
           const attempt = record.processingAttempts + 1
-          const retryable = failure.retryable && attempt < options.maximumAttempts
+          const status = documentStatusForFailure(failure, attempt, options.maximumAttempts)
           await markDocumentProcessingFailure(database, record.id, {
             category: failure.category,
             ...persistedArtifact,
-            ...(retryable ? { nextAttemptAt: documentRetryAt(attempt) } : {}),
+            ...(status === "pending" ? { nextAttemptAt: documentRetryAt(attempt) } : {}),
             processingError: failure.message,
-            status: retryable ? "failed" : "unsupported"
+            status
           })
           failed += 1
         }
