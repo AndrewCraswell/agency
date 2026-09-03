@@ -60,7 +60,7 @@
     },
     "packages/fc-templates": {
       "entry": ["src/emails/marketing/*.tsx", "src/emails/notifications/*.tsx", "src/emails/printouts/*/*.tsx"],
-      "ignoreDependencies": ["@repo/oxlint-config"]
+      "ignoreDependencies": ["@repo/oxlint-config", "@react-email/ui"]
     },
     "packages/scoring-circuit": {
       "entry": ["src/*.test.{ts,tsx}"],

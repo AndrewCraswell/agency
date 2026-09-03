@@ -144,7 +144,7 @@ export const SplitCallout = ({ children, figure, kicker, spacing = 28, unit }: S
             {children}
           </div>
         </Column>
-        <Column className="stack" style={{ textAlign: "right", verticalAlign: "middle", width: 110 }}>
+        <Column className="stack stack-left" style={{ textAlign: "right", verticalAlign: "middle", width: 110 }}>
           <div
             className="dk-text"
             style={{ color: color.ink, fontFamily: font.display, fontSize: 26, fontWeight: 700, lineHeight: "30px" }}

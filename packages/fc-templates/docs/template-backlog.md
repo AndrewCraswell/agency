@@ -100,8 +100,6 @@ every anchor has a non-empty `href`, every image has `alt` and `width`, every ma
 
 ## Dark mode and accessibility
 
-- `Timeline` dots in `Status.tsx` use raw colours with no `dk-` class, so the pending dot (`color.line`) is a bright
-  spot on a dark background.
 - `StatusStrip` and `NoticeBox` carry no `dk-` class, so Outlook.com's `[data-ogsc]` inversion recolours their text
   without recolouring the tinted background behind it.
 - `IconChip` always renders `alt=""`. That is correct everywhere it is used today, because a label always follows it.

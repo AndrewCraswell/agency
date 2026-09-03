@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@react-email/render": "^2.1.0",
+    "@react-email/ui": "6.9.1",
     "@repo/oxlint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
