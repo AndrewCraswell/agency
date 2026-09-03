@@ -7,11 +7,9 @@ and operating OCR-backed legislative documents. OCR is a derived-processing
 step for a retained source artifact. It does not create a second document or a
 second source record.
 
-The workflow described below is the target implementation. Existing task names
-and database fields are reused where they are sound, but historical rollout
-claims are not proof that the end-to-end recurring path is currently complete.
-Each delivery stage must satisfy its own acceptance gate before production
-backfill is authorized.
+The recurring workflow is deployed, and the approved historical backfill
+completed on 2026-09-03. The remaining known fidelity gap is page-range mapping
+for OCR-generated sections; text, sections, and embeddings are complete.
 
 ## Verified pre-delivery production baseline
 
@@ -53,9 +51,23 @@ canary justifies a change.
 - Reconciliation found 9,199 OCR-derived sections, 9,199 matching embedding
   rows, and zero missing embeddings. The repair did not invoke Azure OCR.
 
-This proves the deployed OCR-to-embedding repair path. It does not authorize a
-historical OCR sweep and does not satisfy the paid OCR canary, budget,
-observability, or authenticated retrieval gates below.
+At the time, this proved the deployed OCR-to-embedding repair path but did not
+authorize a historical OCR sweep. The subsequently approved and completed
+cohort is recorded below.
+
+### 2026-09-03 historical backfill evidence
+
+- Commit `8d1a6f0` deployed as Trigger version `20260903.2` and Railway
+  deployment `beb4920f-470a-423d-8fef-0e5a87062fa4`.
+- The exact retained-PDF cohort contained 319 documents and 1,485 pages.
+- Thirteen bounded OCR runs processed all 319 documents with zero terminal
+  failures.
+- Reconciliation found 1,233 nonempty sections, 1,233 current embeddings, and
+  zero stale embedding input hashes.
+- The expected OCR charge is $2.2275. One four-page request timed out once and
+  was retried, so the upper estimate is $2.2335 if Azure billed both attempts.
+- The full execution evidence is recorded in
+  [ocr-backfill-cost-report.md](ocr-backfill-cost-report.md).
 
 ## Required outcome
 
@@ -139,9 +151,11 @@ all 280,732 unresolved records as OCR candidates.
 The recurring post-sync coordinator owns the complete derived-processing chain:
 
 1. Receive a successful source-sync outcome.
-2. Dispatch a bounded pending-document batch immediately; the existing
-   recurring document coordinator remains the durable continuation path for
-   work beyond that batch.
+2. Dispatch the federal pending-document shard controller immediately. It
+   processes at most 100 documents per child run and carries the same federal
+   jurisdiction, pending status, and shard lane across durable continuations.
+   One synchronization occurrence is capped at 1,000 continuations, or 100,000
+   documents.
 3. Submit the resulting OCR-required IDs to `ocr-document-worker` in batches of
    at most 100.
 4. Wait for or reconcile terminal OCR outcomes without holding a database
@@ -196,9 +210,9 @@ persisted text is available. It is eligible for semantic or hybrid retrieval
 only when each eligible section has an embedding whose model, input contract,
 and input hash match the current route configuration and section content.
 
-The 2026-09-03 baseline of 9,199 OCR sections with zero embeddings is the first
-repair cohort. It should be processed after the embedding handoff is implemented
-and before the OCR production canary is considered complete.
+The 2026-09-03 baseline of 9,199 OCR sections with zero embeddings was the first
+repair cohort. All 9,199 received current embeddings before the historical OCR
+backfill began.
 
 ## Failure and retry policy
 
@@ -301,7 +315,8 @@ The canary exit gate is:
 
 ## Historical inventory and backfill
 
-Historical work begins only after the canary exit gate passes.
+Historical work begins only after the canary exit gate passes. The first
+approved cohort completed on 2026-09-03.
 
 1. Classify unresolved records locally without calling Azure.
 2. Produce counts by decision, source, jurisdiction, media type, error category,
@@ -314,28 +329,32 @@ Historical work begins only after the canary exit gate passes.
    account offer.
 6. Obtain explicit approval for the candidate scope, page ceiling, estimated
    spend, and rollback or stop conditions.
-7. Run bounded waves, preserving capacity and a separate budget for current
-   recurring synchronization.
+7. Run bounded waves, preserving capacity for current recurring
+   synchronization.
 8. Reconcile each wave through OCR, embeddings, retrieval, page metrics, and
    cost before launching the next wave.
 
-Do not infer a historical backfill size from the full 4,360,171-document corpus.
-Do not relabel all unsupported or failed records as OCR-required. No broad
-production backfill is authorized by this specification.
+Do not infer a future historical backfill size from the full document corpus.
+Do not relabel all unsupported or failed records as OCR-required. Any future
+archive cohort requires its own evidence-based selection and approval.
 
-## Delivery sequence
+## Delivery status
 
-1. **Contract and tests:** codify state invariants, deterministic detection
-   fixtures, content-hash idempotency, stale-write rejection, and budget rules.
-2. **Recurring coordinator:** connect successful source synchronization to
-   extraction, targeted OCR handoff, and targeted embedding handoff.
-3. **Embedding repair:** embed the 9,199 existing OCR sections and reconcile
-   their freshness without repeating OCR.
-4. **Production canary:** deploy and pass the bounded fixture matrix above.
-5. **Historical inventory:** classify unresolved records locally and produce
-   an approval-ready page and cost report.
-6. **Approved backfill:** process only an explicitly approved scope in bounded
-   waves.
+1. **Contract and tests — complete:** state invariants, deterministic detection,
+   content-hash idempotency, and stale-write rejection are covered.
+2. **Recurring federal coordinator — complete:** every successful GovInfo sync
+   launches a durable pending-document drain, followed by targeted OCR and
+   embedding work.
+3. **Embedding repair — complete:** all 9,199 pre-existing OCR sections received
+   current embeddings without repeating OCR.
+4. **Paid production execution canary — complete:** the first 25-document batch
+   completed before the remaining waves were released. The broader fixture
+   matrix above remains the regression gate for claiming complete page-specific
+   OCR fidelity.
+5. **Historical inventory — complete:** the retained-artifact cohort and exact
+   page-priced scope were reviewed before mutation.
+6. **Approved backfill — complete:** all 319 approved documents completed in 13
+   bounded waves with zero terminal failures.
 
 ## Final acceptance criteria
 
@@ -358,3 +377,7 @@ OCR implementation is complete only when all of the following are true:
   approved recurring or backfill budget.
 - A historical inventory and explicit approval exist before any broad archive
   backfill begins.
+
+All criteria are satisfied for the approved backfill except usable page spans.
+The OCR-generated sections are searchable, but their page-range fields remain
+null and must be corrected before page-specific citation claims are enabled.

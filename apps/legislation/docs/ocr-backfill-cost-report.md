@@ -1,69 +1,92 @@
-# OCR canary and historical backfill cost report
+# OCR historical backfill report
 
-## Decision summary
+## Outcome
 
-The production inventory does not support OCRing the full document corpus or
-the full unresolved-document population. The defensible historical backfill is
-319 retained PDFs totaling exactly 1,485 pages. At the current Azure Document
-Intelligence S0 Read price for West US 2, the projected OCR charge is $2.2275.
+The approved historical OCR cohort completed in production on 2026-09-03.
+All 319 retained PDFs were processed by Azure Document Intelligence, producing
+1,485 billed page units, 1,233 nonempty document sections, and 1,233 current
+section embeddings.
 
-No historical backfill was started as part of this report. The recommended
-approval boundary is exactly 319 canonical document IDs and no more than 1,485
-submitted pages. OpenRouter embedding charges are excluded because they use a
-separate provider account with its own spending limit.
+| Result | Value |
+| --- | ---: |
+| Documents selected | 319 |
+| Documents OCR-processed | 319 |
+| Terminal failures | 0 |
+| Provider pages persisted | 1,485 |
+| Nonempty sections | 1,233 |
+| Current section embeddings | 1,233 |
+| Missing or stale embeddings | 0 |
+| Base OCR charge at the verified meter | $2.2275 |
 
-## Paid production canary
+One four-page document needed a second application attempt after the first
+Azure operation timed out. If Azure billed both submissions, the OCR total is
+at most $2.2335. Azure billing data, rather than the application estimate, is
+authoritative for the final invoice.
 
-The successful canary used this retained, image-only legislative amendment:
+OpenRouter embedding charges are excluded because they use a separate provider
+account with its own spending limit. No daily OCR spend limit is required for
+normal ingestion; the measured daily volume is expected to be negligible
+relative to this one-time backfill.
 
-- canonical document ID:
-  `bill:ak:33:hb:145:document:45af061c2ce5e4bd5887c481`;
-- source title: `HB 145 Amendment 1 Coulombe 042924`;
-- artifact: 41,674-byte, two-page PDF;
-- detector result: two of two pages required OCR;
-- OCR result: `processed` using `azure-document-intelligence`;
-- provider pages: 2;
-- persisted text: 993 characters;
-- persisted sections: 1;
-- current section embeddings: 1; and
-- projected OCR charge: $0.003 at $1.50 per 1,000 pages.
+## Production evidence
 
-Production job evidence:
+The implementation was committed as `8d1a6f0` and deployed as:
 
-- detector run `1e93607d-f64d-401f-bbee-40f314393d6f`;
-- OCR run `3d90f918-096f-4bbf-b6c5-c1a0d6a5b5da`; and
-- embedding run `e47b4070-d280-4f38-a513-e1c9e0b8a447`.
+- Trigger version `20260903.2`; and
+- Railway deployment `beb4920f-470a-423d-8fef-0e5a87062fa4`.
 
-The canary also exposed two operational facts:
+Production health and readiness both returned HTTP 200 before the backfill was
+prepared. The exact cohort was selected by all of these conditions:
 
-1. The Azure identity configured for the Railway web service lacks the
-   `Microsoft.CognitiveServices/accounts/FormRecognizer/documentmodels:analyze/action`
-   data action. Trigger's production Azure identity is distinct and completed
-   the same OCR request successfully. OCR must continue to run with the Trigger
-   identity unless Railway is intentionally granted the narrower data-plane
-   permission.
-2. Trigger run `run_06g6dfsu6qv5gdl10gdru5kc01` remained queued and expired
-   after its ten-minute TTL with zero attempts and zero task cost while Trigger
-   reported stale control-plane telemetry. The canary was completed through the
-   same production processor locally, using Trigger's production Azure identity
-   and the production database. Durable state prevented a duplicate OCR call.
+- processing status `unsupported`;
+- processing error category `malformed-document`;
+- exact error `Bad uncompressed block length in flate stream`;
+- content type `application/pdf`;
+- retained Blob path present;
+- content hash absent; and
+- no previous OCR provider, completion time, or page count.
 
-The OCR output is usable and embedded, but its single generated section has no
-page range. Page-span preservation should be corrected before page-specific API
-claims are made; it does not change the measured provider-page count or this
-backfill price.
+Before mutation, the sorted 319 document IDs and 319 unique Blob paths were
+saved to an operator manifest. Its canonical digest is:
+
+`SHA-256(UTF-8(sorted IDs joined by LF, without a trailing LF)) = c5ef120c1bc53fda6c1fa52a660a68918ab50a26b69390f99f8b2a4b171b944c`
+
+Preparation job `7dee3c28-9096-4803-ad38-bbc2e283a543` changed exactly 319
+records to OCR pending while preserving their retained artifacts.
+
+The first 25-document production batch, Trigger run
+`run_06g6dvve2b3c35fbrge07asr01`, was held as the execution canary. It
+completed 25 documents and 95 pages, produced nonempty text, and handed all 65
+generated sections to current embeddings before the remaining batches were
+released.
+
+The remaining runs were:
+
+- `run_06g6e30ljng203s4dbilkr1q01`
+- `run_06g6e30m6ikm1gt3vfjfrud601`
+- `run_06g6e30movte9engksnkgcvd01`
+- `run_06g6e30nbbi55osc62agol8n01`
+- `run_06g6e3lbfcj2bvt1rpk06guj01`
+- `run_06g6e3lc3f2mdr751fbnosto01`
+- `run_06g6e3lcmighqlo0k3l15csd01`
+- `run_06g6e3ldac0rbfpffespk6nj01`
+- `run_06g6e46g6hb6gg0quup1rofs01`
+- `run_06g6e46gokur919ej9uj5cd701`
+- `run_06g6e46hb0u7ail1nmkugf3b01`
+- `run_06g6e46hsuen421arquh3v4701`
+
+They ran in groups of at most four concurrent workers. Every run completed on
+Trigger version `20260903.2`; all 319 saved IDs ended with provider
+`azure-document-intelligence`, a completion time, a positive page count,
+nonempty text, at least one section, and a current 1,536-dimension embedding for
+every section. Recomputing every section embedding input hash found zero stale
+rows.
+
+The canary's one timeout was retried within the same run. Document
+`bill:nh:2024:hb:1046:document:096f9c32e33d9aed51401c91` succeeded on its
+second attempt with four pages. The other 318 documents required one attempt.
 
 ## Historical inventory
-
-The candidate cohort is defined by all of the following evidence:
-
-- terminal processing error `Bad uncompressed block length in flate stream`;
-- a retained, nonempty PDF artifact;
-- readable PDF page metadata; and
-- no previous successful or exhausted Azure OCR result.
-
-All 319 candidates have an OpenStates upstream identifier and an official state
-document URL. There are no unresolved federal or GovInfo bill documents.
 
 | Jurisdiction and session | Documents | Pages | Estimated OCR charge |
 | --- | ---: | ---: | ---: |
@@ -77,21 +100,13 @@ document URL. There are no unresolved federal or GovInfo bill documents.
 | Vermont 2025-2026 | 1 | 85 | $0.1275 |
 | **Total** | **319** | **1,485** | **$2.2275** |
 
-Artifact and page-count characteristics:
-
-- total retained bytes: 39,270,487;
-- minimum pages per document: 2;
-- median pages per document: 4;
-- average pages per document: 4.66; and
-- maximum pages in one document: 85.
-
-The inventory downloaded and inspected retained artifacts without submitting
-them to Azure. Azure analyzes every PDF page because the current client does not
-send a page range.
+The retained artifacts totaled 39,270,487 bytes. Documents ranged from 2 to 85
+pages, with a median of 4 pages and an average of 4.66 pages.
 
 ## Excluded populations
 
-These records should not be submitted merely because they are unresolved:
+These unresolved records were not submitted because their evidence does not
+justify OCR:
 
 | Population | Records | Reason excluded |
 | --- | ---: | --- |
@@ -107,22 +122,11 @@ These records should not be submitted merely because they are unresolved:
 
 ## Price calculation
 
-The current standard-commercial S0 Read meter is:
-
-- first 1,000,000 pages in a billing month: $1.50 per 1,000 pages; and
-- pages over 1,000,000 in the same month: $0.60 per 1,000 pages.
-
-For `P` pages:
-
-`cost(P) = 1.50 * min(P, 1,000,000) / 1,000 + 0.60 * max(P - 1,000,000, 0) / 1,000`
-
-The candidate cohort remains in the first tier:
+The verified standard-commercial S0 Read meter for West US 2 is $1.50 per
+1,000 pages for the first 1,000,000 pages in a billing month and $0.60 per 1,000
+pages above that tier.
 
 `1,485 / 1,000 * $1.50 = $2.2275`
-
-The estimate excludes compute, storage, transfer, and embedding charges. It
-also excludes retry charges; the backfill controller must not resubmit a content
-hash whose OCR result is already durable.
 
 Authoritative references:
 
@@ -130,17 +134,11 @@ Authoritative references:
 - [Azure Document Intelligence pricing](https://azure.microsoft.com/en-us/pricing/details/document-intelligence/)
 - [Azure Retail Prices API](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices)
 
-## Recommended approval gate
+## Known limitation
 
-Before starting the historical run, approve or revise this exact boundary:
-
-- candidate documents: 319;
-- maximum submitted pages: 1,485;
-- expected OCR charge: $2.2275 at the verified meter;
-- suggested hard spend ceiling: $3.00 to cover price rounding without allowing
-  scope expansion; and
-- no automatic addition of newly classified records to this historical wave.
-
-The production worker should process these IDs in bounded batches, skip any
-content hash that has become complete, persist actual pages after every batch,
-and stop when the approved document, page, or spend ceiling is reached.
+The OCR text, sections, and embeddings are complete and searchable, but the
+1,233 generated sections currently have null page-range metadata. Do not make
+page-specific API claims from this cohort until provider page spans are mapped
+and verified. Correcting page ranges is a separate fidelity improvement and
+does not require repeating the OCR backfill unless the provider response must
+be regenerated.
