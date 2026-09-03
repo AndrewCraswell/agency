@@ -6,6 +6,7 @@ import { DOCUMENT_BACKFILL_SHARD_COUNT, documentBackfillJurisdictionLane } from 
 import { executeGovInfoCurrentSynchronization } from "../../ingestion/govinfo/sync.js"
 import { JobAlreadyRunningError, type JobResult } from "../../ingestion/job.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
+import { jurisdictionId as canonicalJurisdictionId } from "../../legislation/identifiers.js"
 import type { derivedShardBackfillController } from "./backfill-tasks.js"
 import type { SynchronizationWorkerDispatchIntent } from "./worker-contract.js"
 
@@ -71,6 +72,14 @@ export async function executeSynchronizationTask(
       const dispatch = recurringGovInfoBillDocumentDispatch(intent, triggerRunId)
       await (dependencies.dispatchRecurringBillDocuments ?? dispatchRecurringBillDocuments)(dispatch)
     }
+    if (
+      intent.identity.provider === "openstates" &&
+      intent.identity.domain === "bills" &&
+      successful.status === "succeeded"
+    ) {
+      const dispatch = recurringOpenStatesBillDocumentDispatch(intent, triggerRunId)
+      await (dependencies.dispatchRecurringBillDocuments ?? dispatchRecurringOpenStatesBillDocuments)(dispatch)
+    }
     return successful
   } catch (error) {
     if (error instanceof JobAlreadyRunningError) {
@@ -119,10 +128,48 @@ export function recurringGovInfoBillDocumentDispatch(
   }
 }
 
+/**
+ * Hands a successful recurring OpenStates bills import to a durable sequence
+ * of bounded document batches. The controller retains the synchronization's
+ * exact state jurisdiction and pending status across every continuation.
+ */
+export function recurringOpenStatesBillDocumentDispatch(
+  intent: SynchronizationWorkerDispatchIntent,
+  triggerRunId: string
+): RecurringBillDocumentDispatch {
+  if (intent.identity.provider !== "openstates" || intent.identity.domain !== "bills") {
+    throw new Error("Recurring OpenStates bill document processing requires an OpenStates bills synchronization intent")
+  }
+  const jurisdictionId = canonicalJurisdictionId(intent.identity.scope)
+  const rebuildId = `recurring-openstates:${intent.identity.scope}:${triggerRunId}`
+  return {
+    idempotencyKey: `recurring-openstates-documents:${intent.occurrenceKey}`,
+    payload: {
+      batchSize: DERIVED_DOCUMENT_BATCH_SIZE,
+      correlationId: `${intent.correlationId ?? `trigger:${triggerRunId}`}:documents`,
+      documentStatus: "pending",
+      jurisdictionId,
+      kind: "bill-documents",
+      maxContinuations: 1_000,
+      rebuildId,
+      shardCount: DOCUMENT_BACKFILL_SHARD_COUNT,
+      shardIndex: documentBackfillJurisdictionLane(jurisdictionId)
+    },
+    taskIdentifier: "backfill-derived-shard-controller"
+  }
+}
+
 async function dispatchRecurringBillDocuments(dispatch: RecurringBillDocumentDispatch): Promise<unknown> {
   return await tasks.trigger<typeof derivedShardBackfillController>(dispatch.taskIdentifier, dispatch.payload, {
     idempotencyKey: dispatch.idempotencyKey,
     tags: ["provider:govinfo", "derived:bill-documents", "sync:recurring"]
+  })
+}
+
+async function dispatchRecurringOpenStatesBillDocuments(dispatch: RecurringBillDocumentDispatch): Promise<unknown> {
+  return await tasks.trigger<typeof derivedShardBackfillController>(dispatch.taskIdentifier, dispatch.payload, {
+    idempotencyKey: dispatch.idempotencyKey,
+    tags: ["provider:openstates", dispatch.payload.jurisdictionId, "derived:bill-documents", "sync:recurring"]
   })
 }
 

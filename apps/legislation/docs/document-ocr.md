@@ -151,11 +151,12 @@ all 280,732 unresolved records as OCR candidates.
 The recurring post-sync coordinator owns the complete derived-processing chain:
 
 1. Receive a successful source-sync outcome.
-2. Dispatch the federal pending-document shard controller immediately. It
-   processes at most 100 documents per child run and carries the same federal
-   jurisdiction, pending status, and shard lane across durable continuations.
-   One synchronization occurrence is capped at 1,000 continuations, or 100,000
-   documents.
+2. Dispatch the pending-document shard controller immediately after a successful
+   GovInfo sync or OpenStates bills sync. It processes at most 100 documents per
+   child run and carries the exact federal or state jurisdiction, pending
+   status, and reserved shard lane across durable continuations. One
+   synchronization occurrence is capped at 1,000 continuations, or 100,000
+   documents. OpenStates schedules remain separately opt-in.
 3. Submit the resulting OCR-required IDs to `ocr-document-worker` in batches of
    at most 100.
 4. Wait for or reconcile terminal OCR outcomes without holding a database
@@ -342,9 +343,10 @@ archive cohort requires its own evidence-based selection and approval.
 
 1. **Contract and tests — complete:** state invariants, deterministic detection,
    content-hash idempotency, and stale-write rejection are covered.
-2. **Recurring federal coordinator — complete:** every successful GovInfo sync
-   launches a durable pending-document drain, followed by targeted OCR and
-   embedding work.
+2. **Recurring source coordinator — complete:** every successful GovInfo sync
+   and OpenStates bills sync launches a jurisdiction-scoped pending-document
+   drain, followed by targeted OCR and embedding work. OpenStates schedules
+   remain separately opt-in.
 3. **Embedding repair — complete:** all 9,199 pre-existing OCR sections received
    current embeddings without repeating OCR.
 4. **Paid production execution canary — complete:** the first 25-document batch
