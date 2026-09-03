@@ -40,6 +40,23 @@ provider request at a time, and shares a queue capped at twelve concurrent
 workers. Those limits remain the starting safety boundary unless a measured
 canary justifies a change.
 
+### 2026-09-03 delivery evidence
+
+- Commit `d5f25a5` deployed as Trigger version `20260903.1` and Railway
+  deployment `43030469-b94d-49e2-b95e-f6d696b03305`.
+- Production health and readiness returned HTTP 200; an unauthenticated
+  document-detail request returned the required HTTP 401.
+- Three content-hash-deduplicated embedding repair runs completed for the
+  existing OCR documents: `run_06g6d6onva56gu3eee03m74q01`,
+  `run_06g6d6ookqpcurdlh17rfrv701`, and
+  `run_06g6d6op79tu0s81e75fo0k301`.
+- Reconciliation found 9,199 OCR-derived sections, 9,199 matching embedding
+  rows, and zero missing embeddings. The repair did not invoke Azure OCR.
+
+This proves the deployed OCR-to-embedding repair path. It does not authorize a
+historical OCR sweep and does not satisfy the paid OCR canary, budget,
+observability, or authenticated retrieval gates below.
+
 ## Required outcome
 
 Every newly discovered or changed document must reach one durable outcome:
