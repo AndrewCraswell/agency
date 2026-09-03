@@ -70,7 +70,7 @@ function mapPagesToCanonicalText(
       !Number.isSafeInteger(page.startOffset) ||
       !Number.isSafeInteger(page.endOffset) ||
       page.startOffset < previousSourceEnd ||
-      page.endOffset <= page.startOffset ||
+      page.endOffset < page.startOffset ||
       page.endOffset > sourceText.length ||
       normalizeLegalText(sourceText.slice(previousSourceEnd, page.startOffset)) !== ""
     ) {
@@ -79,7 +79,13 @@ function mapPagesToCanonicalText(
 
     const pageText = normalizeLegalText(sourceText.slice(page.startOffset, page.endOffset))
     if (pageText === "") {
-      return undefined
+      mapped.push({
+        endOffset: previousCanonicalEnd,
+        pageNumber: page.pageNumber,
+        startOffset: previousCanonicalEnd
+      })
+      previousSourceEnd = page.endOffset
+      continue
     }
     const canonicalStart = canonicalText.indexOf(pageText, previousCanonicalEnd)
     if (canonicalStart === -1 || normalizeLegalText(canonicalText.slice(previousCanonicalEnd, canonicalStart)) !== "") {

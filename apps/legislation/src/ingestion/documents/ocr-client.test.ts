@@ -99,6 +99,44 @@ describe("AzureDocumentIntelligenceClient", () => {
     })
   })
 
+  it("preserves a trailing blank page represented by one zero-length span", async () => {
+    let requestCount = 0
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: vi.fn<typeof fetch>(async () => {
+        requestCount += 1
+        return requestCount === 1
+          ? new Response(null, {
+              headers: { "operation-location": "https://ocr.example/operations/123?api-version=2024-11-30" },
+              status: 202
+            })
+          : Response.json({
+              analyzeResult: {
+                content: "Recognized text",
+                pages: [
+                  { pageNumber: 1, spans: [{ length: 15, offset: 0 }] },
+                  { pageNumber: 2, spans: [{ length: 0, offset: 15 }] }
+                ]
+              },
+              status: "succeeded"
+            })
+      }) as typeof fetch,
+      pollIntervalMs: 0
+    })
+
+    await expect(
+      client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
+    ).resolves.toEqual({
+      pageCount: 2,
+      pages: [
+        { endOffset: 15, pageNumber: 1, startOffset: 0 },
+        { endOffset: 15, pageNumber: 2, startOffset: 15 }
+      ],
+      provider: "azure-document-intelligence",
+      text: "Recognized text"
+    })
+  })
+
   it("omits page spans rather than absorbing meaningful content between provider spans", async () => {
     let requestCount = 0
     const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
@@ -247,7 +285,33 @@ describe("AzureDocumentIntelligenceClient", () => {
       {
         content: "text",
         issue: "page 1 span 1 has an invalid length",
-        pages: [{ pageNumber: 1, spans: [{ length: 0, offset: 0 }] }]
+        pages: [{ pageNumber: 1, spans: [{ length: -1, offset: 0 }] }]
+      },
+      {
+        content: "text",
+        issue: "page 1 has a zero-length span mixed with other spans",
+        pages: [
+          {
+            pageNumber: 1,
+            spans: [
+              { length: 0, offset: 0 },
+              { length: 4, offset: 0 }
+            ]
+          }
+        ]
+      },
+      {
+        content: "text",
+        issue: "page 1 has a zero-length span mixed with other spans",
+        pages: [
+          {
+            pageNumber: 1,
+            spans: [
+              { length: 0, offset: 0 },
+              { length: 0, offset: 0 }
+            ]
+          }
+        ]
       },
       {
         content: "text remains",

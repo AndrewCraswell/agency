@@ -218,8 +218,11 @@ function parsePageSpans(value: unknown, content: string): PageSpanParseResult {
       if (typeof offset !== "number" || !Number.isSafeInteger(offset) || offset < 0) {
         return { issue: `${spanLabel} has an invalid offset`, ok: false }
       }
-      if (typeof length !== "number" || !Number.isSafeInteger(length) || length < 1) {
+      if (typeof length !== "number" || !Number.isSafeInteger(length) || length < 0) {
         return { issue: `${spanLabel} has an invalid length`, ok: false }
+      }
+      if (length === 0 && pageSpans.length !== 1) {
+        return { issue: `page ${expectedPageNumber} has a zero-length span mixed with other spans`, ok: false }
       }
       if (offset > Number.MAX_SAFE_INTEGER - length || offset + length > content.length) {
         return { issue: `${spanLabel} has an offset or length outside OCR content`, ok: false }

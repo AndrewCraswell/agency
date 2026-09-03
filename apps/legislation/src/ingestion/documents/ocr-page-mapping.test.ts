@@ -106,6 +106,37 @@ describe("mapOcrPagesToDocumentSections", () => {
     )
   })
 
+  it("preserves a trailing blank page without assigning content to it", () => {
+    const text = "SECTION 1. TITLE.\nRecognized text."
+    const sections = segmentLegalText("document:example", text)
+
+    expect(
+      mapOcrPagesToDocumentSections(text, text, sections, [
+        { endOffset: text.length, pageNumber: 1, startOffset: 0 },
+        { endOffset: text.length, pageNumber: 2, startOffset: text.length }
+      ])
+    ).toEqual(new Map([[sections[0]!.id, { pageEnd: 1, pageStart: 1 }]]))
+  })
+
+  it("preserves a blank page between content pages and keeps later page numbers", () => {
+    const text = "SECTION 1. TITLE.\nFirst page.\n\nSECTION 2. DATA.\nThird page."
+    const sections = segmentLegalText("document:example", text)
+    const thirdPageStart = text.indexOf("SECTION 2")
+
+    expect(
+      mapOcrPagesToDocumentSections(text, text, sections, [
+        { endOffset: thirdPageStart, pageNumber: 1, startOffset: 0 },
+        { endOffset: thirdPageStart, pageNumber: 2, startOffset: thirdPageStart },
+        { endOffset: text.length, pageNumber: 3, startOffset: thirdPageStart }
+      ])
+    ).toEqual(
+      new Map([
+        [sections[0]!.id, { pageEnd: 1, pageStart: 1 }],
+        [sections[1]!.id, { pageEnd: 3, pageStart: 3 }]
+      ])
+    )
+  })
+
   it("allows whitespace-only gaps between provider page spans", () => {
     const sourceText = "SECTION 1. TITLE.\nFirst page text.\n\nSECTION 2. DATA.\nSecond page text."
     const sections = segmentLegalText("document:example", sourceText)
@@ -146,6 +177,12 @@ describe("mapOcrPagesToDocumentSections", () => {
     expect(
       mapOcrPagesToDocumentSections(text, text, sections, [
         { endOffset: text.length + 1, pageNumber: 1, startOffset: 0 }
+      ])
+    ).toEqual(new Map())
+    expect(
+      mapOcrPagesToDocumentSections(text, text, sections, [
+        { endOffset: 20, pageNumber: 1, startOffset: 0 },
+        { endOffset: 19, pageNumber: 2, startOffset: 19 }
       ])
     ).toEqual(new Map())
   })
