@@ -346,7 +346,8 @@ archive cohort requires its own evidence-based selection and approval.
 2. **Recurring source coordinator — complete:** every successful GovInfo sync
    and OpenStates bills sync launches a jurisdiction-scoped pending-document
    drain, followed by targeted OCR and embedding work. OpenStates schedules
-   remain separately opt-in.
+   remain separately opt-in. The OpenStates handoff is deployed in Trigger
+   version `20260903.3`.
 3. **Embedding repair — complete:** all 9,199 pre-existing OCR sections received
    current embeddings without repeating OCR.
 4. **Paid production execution canary — complete:** the first 25-document batch
