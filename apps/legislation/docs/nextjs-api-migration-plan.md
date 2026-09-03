@@ -28,7 +28,7 @@ placeholder needed to prove the application runtime.
 | --- | --- | --- |
 | Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `819a0fc` deployed as `9824b674-c55e-4933-8cec-a68475746f5f` and reached terminal `SUCCESS`. Health/readiness, rejection behavior, the earlier subscription and webhook lifecycles, and the final cumulative authenticated search, document-difference, and research profile passed. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 66 are Done and 22 have named data, fixture, or dependency blockers. No route remains In progress. | 88 of 88 deployed; every route with available canonical production data remotely smoked |
+| Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 68 are Done and 20 have named data, fixture, or dependency blockers. No route remains In progress. | 88 of 88 deployed; every route with available canonical production data remotely smoked |
 | Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `9824b674-c55e-4933-8cec-a68475746f5f` from source snapshot `819a0fc` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. Health and readiness returned `200`; unknown routes and unsupported methods returned `404`. Five embedding HNSW indexes are valid and ready, all four embedding tables are analyzed, and no index build is active. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
 | Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. Authenticated subscription and webhook lifecycle smoke and the cumulative seven-operation search, document-difference, and research profile passed. Remaining skips are named canonical-fixture gaps rather than authentication failures. | Complete for the released API surface |
 | MCP transport | In-process access remains | HTTP client cutover only after every API endpoint and authentication gate passes |
@@ -188,12 +188,12 @@ not yet safe. This is not MCP scope.
 
 #### Documents, supporting material, and canonical resources (10 endpoints)
 
-Next route state: **8 Done; 2 Blocked by production data**. Deployed smoke passed all four supporting-material routes,
-`GET /api/documents/{documentId}/sections/{sectionId}`, mixed-result `POST /api/resources/batch`, and both global change
-routes. The two document routes remain Blocked and do not receive Done credit:
-
-- `GET /api/documents/{documentId}` and `GET /api/documents/{documentId}/sections`: every section-bearing production
-  `bill_documents` row has `ocr_status = NULL`, so canonical document/OCR projection fails closed.
+Next route state: **10 Done**. Deployed smoke passed all four supporting-material routes, all three document routes,
+mixed-result `POST /api/resources/batch`, and both global change routes. On 2026-09-02, authenticated production
+verification used a real processed, section-bearing document whose persisted OCR value is null and confirmed that the
+deployed projection correctly returns OCR `not-required`. `GET /api/documents/{documentId}` returned `200` in 157 ms and
+`GET /api/documents/{documentId}/sections` returned `200` in 46 ms; both also passed correlation-ID, cache, ETag, and
+conditional-request checks.
 The global change collection and canonical detail route are Done. Both expose only events with complete immutable
 provenance; the detail route returns `404 not_found` for incomplete legacy rows. Standard Congress vote ingestion created
 one genuine provenance-complete change fixture, and authenticated collection/detail smoke passed against deployment
@@ -423,10 +423,10 @@ Progress reports must always present both numbers:
 - **Reusable domain implementation:** 88/88.
 - **Explicit Next.js handler coverage:** 88/88 in reviewed source and the current production deployment. All 14
   subscription/webhook operations have passed their authenticated lifecycle smoke.
-- **Next.js Route Handler release state:** 66/88 Done; 0 In progress; 0 Ready; 22 Blocked. The states sum to all 88
+- **Next.js Route Handler release state:** 68/88 Done; 0 In progress; 0 Ready; 20 Blocked. The states sum to all 88
   public API operations.
-- **Blocked-route accounting:** 22 routes are Blocked by named production-data, canonical-fixture, or dependency
-  deficiencies: document detail and sections, 14 people/organization operations, five
+- **Blocked-route accounting:** 20 routes are Blocked by named production-data, canonical-fixture, or dependency
+  deficiencies: 14 people/organization operations, five
   meeting/calendar fixture operations, and the representative lookup Alaska canary. The plural `OPENSTATES_API_KEY` is
   corrected in Railway and Trigger; the canary remains a separate production-fixture gate now that the HNSW build is
   complete.

@@ -61,7 +61,7 @@ search, document-difference, and research smoke and production query plans are r
 The 14 subscription/webhook handlers are deployed, and Railway has separate WorkOS M2M and AuthKit session authorities plus
 both application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
 the seven subscription and all seven webhook operations are **Done** after authenticated lifecycle smoke. Across all 88
-operations, release state is 66 **Done** and 22 **Blocked** by named production prerequisites. No route remains In
+operations, release state is 68 **Done** and 20 **Blocked** by named production prerequisites. No route remains In
 progress; each remaining promotion gate is a named production-fixture blocker.
 The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger. The Alaska canary remains a separate
 production-data gate; no HNSW build is active. Do not claim representative lookup completion from configuration alone.
@@ -115,14 +115,15 @@ the incomplete nationwide audit does not reduce the passed 11-operation deployed
 
 | Outcome | Result |
 | --- | --- |
-| **Done** | 6 document/resource operations passed deployed smoke against the current `legislation-web` deployment. |
-| Production-data blocked | Native processed documents may legitimately have `NULL` OCR status because no OCR run was required. Source `6d807c6` projects those rows as `not-required` while preserving fail-closed behavior for unprocessed rows. Passage search needs an authenticated production probe before this gate is promoted. |
+| **Done** | All eight document/resource operations passed deployed smoke against the current `legislation-web` deployment. |
+| Current document verification | On 2026-09-02, production contained 4,076,412 processed documents with a persisted null OCR value. Source `6d807c6` correctly projects that state as `not-required` while preserving fail-closed behavior for unprocessed rows. Authenticated verification used real document `bill:ak:30:hb:100:document:0ebd633b2a73802af6b33d7e`: detail returned `200` in 157 ms with one section and 2,748 text characters; its section list returned `200` in 46 ms. Both routes echoed correlation IDs, returned private/no-store caching and ETags, and honored conditional requests with `304`. |
 | Resolved in current release | Global changes were blocked in this historical release; standard vote ingestion later created a genuine provenance-complete event, and both change routes passed authenticated smoke in `e419978a-d839-41c5-897b-d9d536a60dc3`. |
 | Next endpoint block | People/organization and meeting/calendar delivery subsequently completed; their remaining operation-specific data gates are recorded below. |
 | MCP | MCP remains last. Its browser-consent canary is blocked until a live Next.js MCP route exists. |
 
-The two document operations remain production-data blocked and are not **Done**. They require production data that satisfies their
-documented contract, followed by a fresh deployed smoke, rather than a route or deployment change.
+Document detail and document sections are **Done**. The earlier blocker conflated a persisted null OCR value with an
+incomplete document even when `processing_status = 'processed'`; the deployed projection and current production data
+correctly distinguish that case as OCR `not-required`.
 
 ## People and organizations deployed smoke
 
@@ -167,7 +168,7 @@ them Done until the fixture or OpenStates production-canary prerequisite is reso
 
 | Outcome | Result |
 | --- | --- |
-| Historical handler coverage at `0a2748b` | 88 of 88 public operations had explicit deployed Next.js handlers. At that snapshot, 53 routes had Done release credit, 25 were blocked by named production prerequisites, and 10 awaited their documented release gates. Current 66/0/22 accounting is recorded above. |
+| Historical handler coverage at `0a2748b` | 88 of 88 public operations had explicit deployed Next.js handlers. At that snapshot, 53 routes had Done release credit, 25 were blocked by named production prerequisites, and 10 awaited their documented release gates. Current 68/0/20 accounting is recorded above. |
 | Deployment | Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5`; terminal `SUCCESS`. |
 | Operational smoke | Production `GET /health` and `GET /ready` returned `200`. |
 | Production endpoint smoke | The final cumulative authenticated profile passed bill, amendment, passage, supporting-material, and universal search, document diff, and research answer without a search skip. |
@@ -200,7 +201,7 @@ detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, pos
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API sets PostgreSQL
 `statement_timeout` to `15s`. These probes promote the six webhook operations covered by the lifecycle smoke plus the verified
 challenge operation. The final cumulative smoke promotes all seven search, document-difference, and research operations;
-the endpoint ledger is now 66 Done and 22 Blocked. The browse
+the endpoint ledger is now 68 Done and 20 Blocked. The browse
 index release additionally returned authenticated canonical one-item pages for bills in 609/158/77 ms and amendments in
 345/108/88 ms, with correlation-ID echo on all six requests.
 
