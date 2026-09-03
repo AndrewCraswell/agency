@@ -43,7 +43,7 @@ describe("synchronization task result postcondition", () => {
 })
 
 describe("recurring GovInfo document processing", () => {
-  it("creates one pending-only federal document batch keyed to the schedule occurrence", () => {
+  it("creates a durable pending-only federal document drain keyed to the schedule occurrence", () => {
     const intent = createSynchronizationWorkerDispatchIntent("govinfo-bill-status-sync", {
       correlationId: "govinfo:119:scheduled",
       identity: "govinfo:bill-status:119",
@@ -58,11 +58,12 @@ describe("recurring GovInfo document processing", () => {
         documentStatus: "pending",
         jurisdictionId: "jurisdiction:us",
         kind: "bill-documents",
-        maxBatches: 1,
+        maxContinuations: 1_000,
         rebuildId: "recurring-govinfo:run-1",
         shardCount: 64,
         shardIndex: 52
-      }
+      },
+      taskIdentifier: "backfill-derived-shard-controller"
     })
   })
 

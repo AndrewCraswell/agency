@@ -6,7 +6,7 @@ import { DOCUMENT_BACKFILL_SHARD_COUNT, documentBackfillJurisdictionLane } from 
 import { executeGovInfoCurrentSynchronization } from "../../ingestion/govinfo/sync.js"
 import { JobAlreadyRunningError, type JobResult } from "../../ingestion/job.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
-import type { derivedCorpusBackfill } from "./backfill-tasks.js"
+import type { derivedShardBackfillController } from "./backfill-tasks.js"
 import type { SynchronizationWorkerDispatchIntent } from "./worker-contract.js"
 
 const federalJurisdictionId = "jurisdiction:us"
@@ -19,11 +19,12 @@ export interface RecurringBillDocumentDispatch {
     documentStatus: "pending"
     jurisdictionId: string
     kind: "bill-documents"
-    maxBatches: 1
+    maxContinuations: 1_000
     rebuildId: string
     shardCount: number
     shardIndex: number
   }
+  taskIdentifier: "backfill-derived-shard-controller"
 }
 
 interface SynchronizationTaskDependencies {
@@ -88,9 +89,10 @@ export async function executeSynchronizationTask(
 }
 
 /**
- * Hands a successful recurring GovInfo import to one bounded document batch.
- * It deliberately selects only pending rows and never starts a shard controller,
- * so one schedule occurrence cannot turn into a historical corpus drain.
+ * Hands a successful recurring GovInfo import to a durable sequence of bounded
+ * document batches. The controller retains the exact federal jurisdiction,
+ * pending status, and federal shard lane across every continuation, so it can
+ * drain newly ingested GovInfo documents without widening into a corpus sweep.
  */
 export function recurringGovInfoBillDocumentDispatch(
   intent: SynchronizationWorkerDispatchIntent,
@@ -108,16 +110,17 @@ export function recurringGovInfoBillDocumentDispatch(
       documentStatus: "pending",
       jurisdictionId: federalJurisdictionId,
       kind: "bill-documents",
-      maxBatches: 1,
+      maxContinuations: 1_000,
       rebuildId,
       shardCount: DOCUMENT_BACKFILL_SHARD_COUNT,
       shardIndex: documentBackfillJurisdictionLane(federalJurisdictionId)
-    }
+    },
+    taskIdentifier: "backfill-derived-shard-controller"
   }
 }
 
 async function dispatchRecurringBillDocuments(dispatch: RecurringBillDocumentDispatch): Promise<unknown> {
-  return await tasks.trigger<typeof derivedCorpusBackfill>("backfill-derived-corpus", dispatch.payload, {
+  return await tasks.trigger<typeof derivedShardBackfillController>(dispatch.taskIdentifier, dispatch.payload, {
     idempotencyKey: dispatch.idempotencyKey,
     tags: ["provider:govinfo", "derived:bill-documents", "sync:recurring"]
   })

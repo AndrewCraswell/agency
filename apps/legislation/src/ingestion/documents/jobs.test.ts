@@ -38,6 +38,7 @@ describe("document backfill jurisdiction lanes", () => {
       "new-hampshire-legacy-amendments",
       "ohio-legislature-tls",
       "oklahoma-legacy-archive",
+      "pdf-flate-stream-ocr",
       "pennsylvania-fiscal-notes",
       "pennsylvania-legacy-bill-text",
       "rhode-island-legacy-bill-text",
@@ -101,6 +102,22 @@ describe("document backfill jurisdiction lanes", () => {
     expect(statementFor("oklahoma-legacy-archive")).toContain(
       "^http://webserver1.lsb.state.ok.us/cf_pdf/[0-9]{4}-[0-9]{2}"
     )
+    const pdfFlateStreamOcr = statementFor("pdf-flate-stream-ocr")
+    expect(pdfFlateStreamOcr).toContain("processing_status = 'unsupported'")
+    expect(pdfFlateStreamOcr).toContain("content_type = 'application/pdf'")
+    expect(pdfFlateStreamOcr).toContain("blob_path is not null")
+    expect(pdfFlateStreamOcr).toContain("content_hash is null")
+    expect(pdfFlateStreamOcr).toContain("processing_error_category = 'malformed-document'")
+    expect(pdfFlateStreamOcr).toContain("processing_error = 'Bad uncompressed block length in flate stream'")
+    expect(pdfFlateStreamOcr).toContain("ocr_status is null or ocr_status = 'not-required'")
+    expect(pdfFlateStreamOcr).toContain("ocr_provider is null")
+    expect(pdfFlateStreamOcr).toContain("ocr_completed_at is null")
+    expect(pdfFlateStreamOcr).toContain("ocr_page_count is null")
+    expect(pdfFlateStreamOcr).toContain("processing_error_category = 'ocr-required'")
+    expect(pdfFlateStreamOcr).toContain("ocr_status = 'pending'")
+    expect(pdfFlateStreamOcr).not.toContain("blob_path = null")
+    expect(pdfFlateStreamOcr).not.toContain("content_type = null")
+    expect(pdfFlateStreamOcr).not.toContain("source_url =")
     expect(statementFor("pennsylvania-fiscal-notes")).toContain("WU01/LI/BI/(FN|SFN)/20[0-9]{2}")
     expect(statementFor("pennsylvania-legacy-bill-text")).toContain("txtType=(HTM|PDF)")
     expect(statementFor("rhode-island-legacy-bill-text")).toContain(
@@ -122,6 +139,7 @@ describe("document backfill jurisdiction lanes", () => {
         expectedCohorts[index] === "image-ocr-stale-artifact" ||
         expectedCohorts[index] === "michigan-document-redirect" ||
         expectedCohorts[index] === "minnesota-senate-resolutions" ||
+        expectedCohorts[index] === "pdf-flate-stream-ocr" ||
         expectedCohorts[index] === "texas-legacy-witness-list" ||
         expectedCohorts[index] === "vermont-legacy-assets"
       ) {

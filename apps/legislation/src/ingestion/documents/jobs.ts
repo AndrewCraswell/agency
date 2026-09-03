@@ -84,6 +84,7 @@ export const DOCUMENT_REMEDIATION_COHORTS = [
   "office-open-xml",
   "oklahoma-legacy-archive",
   "ohio-legislature-tls",
+  "pdf-flate-stream-ocr",
   "pennsylvania-fiscal-notes",
   "pennsylvania-legacy-bill-text",
   "rhode-island-legacy-bill-text",
@@ -977,6 +978,46 @@ export async function prepareDocumentRemediation(
                 processing_error = null,
                 processing_error_category = null,
                 processing_status = 'pending',
+                updated_at = now()
+              from candidates
+              where documents.id = candidates.id
+              returning documents.id
+            )
+            select count(*)::int as prepared,
+              coalesce((array_agg(id order by id))[1:20], array[]::text[]) as identifiers
+            from updated
+          `)
+  } else if (cohort === "pdf-flate-stream-ocr") {
+    result = await database.execute<{ identifiers: string[]; prepared: number }>(sql`
+            -- These retained PDFs failed native extraction because their Flate
+            -- stream cannot be decoded. Preserve the verified artifact and
+            -- route only this exact audited failure to OCR. Documents with a
+            -- completed or terminal OCR disposition are deliberately excluded.
+            with candidates as materialized (
+              select id
+              from legislation.bill_documents
+              where processing_status = 'unsupported'
+                and content_type = 'application/pdf'
+                and blob_path is not null
+                and content_hash is null
+                and processing_error_category = 'malformed-document'
+                and processing_error = 'Bad uncompressed block length in flate stream'
+                and (ocr_status is null or ocr_status = 'not-required')
+                and ocr_provider is null
+                and ocr_completed_at is null
+                and ocr_page_count is null
+              order by id
+              limit ${boundedLimit}
+              for update skip locked
+            ), updated as (
+              update legislation.bill_documents documents
+              set last_attempt_at = null,
+                next_attempt_at = null,
+                processing_attempts = 0,
+                processing_error = 'Retained PDF has an unreadable Flate stream and requires OCR',
+                processing_error_category = 'ocr-required',
+                ocr_status = 'pending',
+                processing_status = 'unsupported',
                 updated_at = now()
               from candidates
               where documents.id = candidates.id

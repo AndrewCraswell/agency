@@ -13,10 +13,48 @@ import {
   FULL_EMBEDDING_PRODUCT_ORDER,
   isMaterialPhaseGateOpen,
   prepareDocumentEmbeddingClassificationBackfill,
+  reconcilePendingDocumentCheckpoint,
   reconcileSupportingMaterialOcrCheckpoint
 } from "./backfill-tasks.js"
 
 describe("derived backfill task payload", () => {
+  it("continues a pending-only document drain without being held open by failed rows", () => {
+    const result = {
+      checkpoint: { complete: false, kind: "bill-documents" },
+      correlationId: "trigger:test",
+      counts: {
+        discovered: 0,
+        failed: 0,
+        inserted: 0,
+        read: 0,
+        skipped: 0,
+        unchanged: 0,
+        updated: 0
+      },
+      failures: [],
+      operation: "process-documents-jurisdiction-jurisdiction:us",
+      runId: "run-test",
+      source: "documents",
+      status: "succeeded" as const
+    }
+
+    expect(reconcilePendingDocumentCheckpoint(result, { hasWork: false }).checkpoint).toEqual({
+      complete: true,
+      kind: "bill-documents",
+      nextAttemptAt: undefined
+    })
+    expect(
+      reconcilePendingDocumentCheckpoint(result, {
+        hasWork: true,
+        nextAttemptAt: new Date("2026-09-04T12:00:00.000Z")
+      }).checkpoint
+    ).toEqual({
+      complete: false,
+      kind: "bill-documents",
+      nextAttemptAt: "2026-09-04T12:00:00.000Z"
+    })
+  })
+
   it("narrows an embedding wave to the strict index-maintenance contract", () => {
     expect(
       embeddingIndexMaintenancePayload({

@@ -1,10 +1,11 @@
 import { idempotencyKeys, logger, queue, task, wait } from "@trigger.dev/sdk"
-import { sql } from "drizzle-orm"
+import { and, asc, eq, lt, sql } from "drizzle-orm"
 import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { generateCoverageReport } from "../../coverage/report.js"
 import { createDatabase, type LegislationDatabase } from "../../db/database.js"
 import { acquireIndexMaintenanceLock, releaseIndexMaintenanceLock } from "../../db/index-maintenance.js"
+import { billDocuments, bills } from "../../db/schema/schema.js"
 import {
   executeGovInfoHistoricalImport,
   executeOpenStatesArchiveImport,
@@ -1160,7 +1161,63 @@ async function executeDerivedTask(
           },
           { documentHostLimiter }
         )
+  if (
+    payload.kind === "bill-documents" &&
+    payload.documentStatus === "pending" &&
+    payload.jurisdictionId !== undefined &&
+    payload.documentPartitionCount === undefined &&
+    payload.documentPartitionIndex === undefined
+  ) {
+    const nextAttempt = await nextPendingDocumentAttempt(database, {
+      jurisdictionId: payload.jurisdictionId,
+      maximumAttempts: input.config.ingestion.maxAttempts
+    })
+    return {
+      ...reconcilePendingDocumentCheckpoint(result, nextAttempt),
+      shard: { shardCount: payload.shardCount, shardIndex: payload.shardIndex }
+    }
+  }
   return { ...result, shard: { shardCount: payload.shardCount, shardIndex: payload.shardIndex } }
+}
+
+async function nextPendingDocumentAttempt(
+  database: LegislationDatabase,
+  options: Readonly<{ jurisdictionId: string; maximumAttempts: number }>
+): Promise<Readonly<{ hasWork: boolean; nextAttemptAt?: Date }>> {
+  const records = await database
+    .select({ nextAttemptAt: billDocuments.nextAttemptAt })
+    .from(billDocuments)
+    .innerJoin(bills, eq(bills.id, billDocuments.billId))
+    .where(
+      and(
+        eq(billDocuments.processingStatus, "pending"),
+        lt(billDocuments.processingAttempts, options.maximumAttempts),
+        eq(bills.jurisdictionId, options.jurisdictionId)
+      )
+    )
+    .orderBy(sql`${billDocuments.nextAttemptAt} nulls first`, asc(billDocuments.updatedAt), asc(billDocuments.id))
+    .limit(1)
+  const record = records[0]
+  if (record === undefined) {
+    return { hasWork: false }
+  }
+  return record.nextAttemptAt === null ? { hasWork: true } : { hasWork: true, nextAttemptAt: record.nextAttemptAt }
+}
+
+export function reconcilePendingDocumentCheckpoint<Result extends JobResult>(
+  result: Result,
+  nextAttempt: Readonly<{ hasWork: boolean; nextAttemptAt?: Date }>
+): Result & Readonly<{ checkpoint: Readonly<Record<string, unknown>> }> {
+  return {
+    ...result,
+    checkpoint: {
+      ...result.checkpoint,
+      complete: !nextAttempt.hasWork,
+      ...(nextAttempt.nextAttemptAt === undefined
+        ? { nextAttemptAt: undefined }
+        : { nextAttemptAt: nextAttempt.nextAttemptAt.toISOString() })
+    }
+  }
 }
 
 function derivedDocumentPartitionId(
