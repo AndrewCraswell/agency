@@ -6,11 +6,19 @@ import {
   DOCUMENT_REMEDIATION_COHORTS,
   documentBackfillCanonicalJurisdictionIds,
   documentBackfillJurisdictionLane,
+  documentStatusForFailure,
   prepareDocumentRemediation,
   type DocumentRemediationCohort
 } from "./jobs.js"
 
 describe("document backfill jurisdiction lanes", () => {
+  it("keeps scheduled retries pending and reserves failed for exhausted transient attempts", () => {
+    expect(documentStatusForFailure({ retryable: true }, 1, 4)).toBe("pending")
+    expect(documentStatusForFailure({ retryable: true }, 3, 4)).toBe("pending")
+    expect(documentStatusForFailure({ retryable: true }, 4, 4)).toBe("failed")
+    expect(documentStatusForFailure({ retryable: false }, 1, 4)).toBe("unsupported")
+  })
+
   it("reserves a unique lane for every supported canonical jurisdiction", () => {
     const lanes = documentBackfillCanonicalJurisdictionIds.map(documentBackfillJurisdictionLane)
 

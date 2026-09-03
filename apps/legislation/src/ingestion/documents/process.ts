@@ -276,7 +276,7 @@ export async function markDocumentProcessingFailure(
     nextAttemptAt?: Date
     ocrStatus?: "failed" | "pending" | "unsupported"
     processingError: string
-    status: "failed" | "unsupported"
+    status: "failed" | "pending" | "unsupported"
   }>
 ): Promise<void> {
   const ocrStatus = ocrStatusForDocumentFailure(input)
@@ -307,7 +307,7 @@ export function ocrStatusForDocumentFailure(
   input: Readonly<{
     category: DocumentFailureCategory
     ocrStatus?: "failed" | "pending" | "unsupported"
-    status: "failed" | "unsupported"
+    status: "failed" | "pending" | "unsupported"
   }>
 ): "failed" | "pending" | "unsupported" | undefined {
   if (input.ocrStatus !== undefined) {

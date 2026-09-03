@@ -12,10 +12,10 @@ export interface DocumentSectionPageRange {
 }
 
 /**
- * Returns page ranges only when OCR offsets can be carried into the canonical
- * text without transformation. The Read service offsets describe its original
- * content string, whereas persisted section offsets describe normalized legal
- * text. Treat any normalization change as unknown instead of guessing a page.
+ * Carries provider page spans through the same normalization used by document
+ * extraction. Each normalized page must be the next meaningful content in the
+ * canonical text, with only whitespace allowed between pages. This supports
+ * harmless whitespace and Unicode normalization without estimating offsets.
  */
 export function mapOcrPagesToDocumentSections(
   sourceText: string,
@@ -23,17 +23,21 @@ export function mapOcrPagesToDocumentSections(
   sections: readonly ExtractedSection[],
   pages: readonly OcrPageSpan[]
 ): ReadonlyMap<string, DocumentSectionPageRange> {
-  if (
-    normalizeLegalText(sourceText) !== sourceText ||
-    canonicalText !== sourceText ||
-    !hasContiguousPageSpans(sourceText, pages)
-  ) {
+  if (canonicalText !== normalizeLegalText(sourceText)) {
+    return new Map()
+  }
+
+  const canonicalPages = mapPagesToCanonicalText(sourceText, canonicalText, pages)
+  if (canonicalPages === undefined) {
     return new Map()
   }
 
   const mapped = new Map<string, DocumentSectionPageRange>()
   for (const section of sections) {
-    const matchingPages = pages.filter(
+    if (!isValidSection(section, canonicalText.length)) {
+      return new Map()
+    }
+    const matchingPages = canonicalPages.filter(
       (page) => section.startOffset < page.endOffset && section.endOffset > page.startOffset
     )
     if (matchingPages.length === 0) {
@@ -47,23 +51,61 @@ export function mapOcrPagesToDocumentSections(
   return mapped
 }
 
-function hasContiguousPageSpans(sourceText: string, pages: readonly OcrPageSpan[]): boolean {
+function mapPagesToCanonicalText(
+  sourceText: string,
+  canonicalText: string,
+  pages: readonly OcrPageSpan[]
+): readonly OcrPageSpan[] | undefined {
   if (pages.length === 0) {
-    return false
+    return undefined
   }
-  let nextOffset = 0
+
+  const mapped: OcrPageSpan[] = []
+  let previousSourceEnd = 0
+  let previousCanonicalEnd = 0
   for (const [index, page] of pages.entries()) {
     if (
       !Number.isSafeInteger(page.pageNumber) ||
       page.pageNumber !== index + 1 ||
       !Number.isSafeInteger(page.startOffset) ||
       !Number.isSafeInteger(page.endOffset) ||
-      page.startOffset !== nextOffset ||
-      page.endOffset <= page.startOffset
+      page.startOffset < previousSourceEnd ||
+      page.endOffset <= page.startOffset ||
+      page.endOffset > sourceText.length ||
+      normalizeLegalText(sourceText.slice(previousSourceEnd, page.startOffset)) !== ""
     ) {
-      return false
+      return undefined
     }
-    nextOffset = page.endOffset
+
+    const pageText = normalizeLegalText(sourceText.slice(page.startOffset, page.endOffset))
+    if (pageText === "") {
+      return undefined
+    }
+    const canonicalStart = canonicalText.indexOf(pageText, previousCanonicalEnd)
+    if (canonicalStart === -1 || normalizeLegalText(canonicalText.slice(previousCanonicalEnd, canonicalStart)) !== "") {
+      return undefined
+    }
+    mapped.push({
+      endOffset: canonicalStart + pageText.length,
+      pageNumber: page.pageNumber,
+      startOffset: canonicalStart
+    })
+    previousSourceEnd = page.endOffset
+    previousCanonicalEnd = canonicalStart + pageText.length
   }
-  return nextOffset === sourceText.length
+
+  return normalizeLegalText(sourceText.slice(previousSourceEnd)) === "" &&
+    normalizeLegalText(canonicalText.slice(previousCanonicalEnd)) === ""
+    ? mapped
+    : undefined
+}
+
+function isValidSection(section: ExtractedSection, canonicalLength: number): boolean {
+  return (
+    Number.isSafeInteger(section.startOffset) &&
+    Number.isSafeInteger(section.endOffset) &&
+    section.startOffset >= 0 &&
+    section.endOffset > section.startOffset &&
+    section.endOffset <= canonicalLength
+  )
 }

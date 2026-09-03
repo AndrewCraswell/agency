@@ -5,6 +5,7 @@ import { classifyDocumentFailure, ocrStatusForDocumentFailure } from "./process.
 describe("document failure classification", () => {
   it("does not fabricate an OCR failure for a generic retryable extraction failure", () => {
     expect(ocrStatusForDocumentFailure({ category: "download-transient", status: "failed" })).toBeUndefined()
+    expect(ocrStatusForDocumentFailure({ category: "download-transient", status: "pending" })).toBeUndefined()
     expect(ocrStatusForDocumentFailure({ category: "ocr-required", status: "unsupported" })).toBe("pending")
     expect(ocrStatusForDocumentFailure({ category: "unsupported-format", status: "unsupported" })).toBe("unsupported")
     expect(

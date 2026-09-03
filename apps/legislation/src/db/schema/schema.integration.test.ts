@@ -1821,7 +1821,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
 
   it("persists only source-backed OCR status and page ranges", async () => {
     const documentId = "bill:us:119:hr:1234:document:ocr-page-mapping"
-    const sourceText = "SECTION 1. TITLE.\nFirst page text.\nSECTION 2. DATA.\nSecond page text."
+    const sourceText =
+      "  SECTION 1. CAFE\u0301.  \r\n First  page text. \r\n\r\n SECTION 2. DATA.\r\n Second\tpage text.  "
     const secondPageStart = sourceText.indexOf("SECTION 2")
     await database.insert(schema.billDocuments).values({
       billId: "bill:us:119:hr:1234",
@@ -2553,7 +2554,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(persisted).toMatchObject({
       processingAttempts: 1,
       processingErrorCategory: "download-transient",
-      processingStatus: "failed"
+      processingStatus: "pending"
     })
     expect(persisted?.nextAttemptAt?.getTime()).toBeGreaterThan(Date.now())
 
@@ -2564,9 +2565,53 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       failureCategory: "download-transient",
       fetch: async () => new Response("SECTION 1. DEFERRED."),
       maximumAttempts: 3,
-      status: "failed"
+      status: "pending"
     })
     expect(deferred).toMatchObject({ counts: { discovered: 0 } })
+
+    await database
+      .update(schema.billDocuments)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(schema.billDocuments.id, documentId))
+    const recovered = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      failureCategory: "download-transient",
+      fetch: async () => new Response("SECTION 1. RECOVERED."),
+      maximumAttempts: 3,
+      status: "pending"
+    })
+    expect(recovered).toMatchObject({ counts: { processed: 1 } })
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({ processingAttempts: 2, processingStatus: "processed" })
+
+    await database
+      .update(schema.billDocuments)
+      .set({
+        nextAttemptAt: null,
+        processingAttempts: 2,
+        processingError: null,
+        processingErrorCategory: null,
+        processingStatus: "pending"
+      })
+      .where(eq(schema.billDocuments.id, documentId))
+    const exhausted = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      fetch: async () => {
+        throw new TypeError("fetch failed")
+      },
+      maximumAttempts: 3
+    })
+    expect(exhausted.failures).toEqual([
+      expect.objectContaining({ category: "download-transient", identifier: documentId, retryable: false })
+    ])
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({ nextAttemptAt: null, processingAttempts: 3, processingStatus: "failed" })
   })
 
   it("prepares only the selected known document defect cohort for bounded reprocessing", async () => {

@@ -110,6 +110,17 @@ export function documentRetryAt(attempt: number, from = new Date()): Date {
   return new Date(from.getTime() + delay)
 }
 
+export function documentStatusForFailure(
+  failure: Readonly<{ retryable: boolean }>,
+  attempt: number,
+  maximumAttempts: number
+): "failed" | "pending" | "unsupported" {
+  if (!failure.retryable) {
+    return "unsupported"
+  }
+  return attempt < maximumAttempts ? "pending" : "failed"
+}
+
 /**
  * The legacy California publisher does not expose PDFs for these complete
  * pre-1999 session ranges. A live bounded sample returned the publisher
@@ -1487,14 +1498,15 @@ export async function processPendingDocuments(
       }
       const failure = classifyDocumentFailure(error, record.sourceUrl)
       const attempt = record.processingAttempts + 1
-      const retryable = failure.retryable && attempt < options.maximumAttempts
-      const unsupported = !failure.retryable
+      const status = documentStatusForFailure(failure, attempt, options.maximumAttempts)
+      const retryable = status === "pending"
+      const unsupported = status === "unsupported"
       await markDocumentProcessingFailure(database, record.id, {
         ...persistedArtifact,
         category: failure.category,
         nextAttemptAt: retryable ? documentRetryAt(attempt) : undefined,
         processingError: failure.message,
-        status: unsupported ? "unsupported" : "failed"
+        status
       })
       counts.failed += 1
       if (unsupported) {
