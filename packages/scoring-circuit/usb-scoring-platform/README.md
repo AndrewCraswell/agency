@@ -72,6 +72,35 @@ support effort.
 - J3/J4 are three-wire harness landings for off-board female banana sockets, not banana receptacles themselves. J5 is
   the metal-piste reference connection, not protective earth. The user's compatible Ok Fencing cable remains unchanged.
 
+## Sensing checkpoint
+
+Each conductor now uses the existing 330-ohm excitation resistor, a 3.3k series sense resistor, and a 3.3k sense
+pull-down, all 1%. This replaces the weak 1-megohm pull-down and produces approximately half the conductor voltage at
+the MCU. Excitation input pull-downs and output-enable pull-ups are now 10k, keeping the buffers disabled during reset
+even with their specified input leakage. No components were added and no footprint positions changed.
+
+The seven comparator positive inputs are already correctly assigned: COMP1/2/3/4/5/6/7 use
+PA1/PA3/PA0/PB0/PB13/PB11/PB14 respectively, for LEFT_A/LEFT_B/LEFT_C/RIGHT_A/RIGHT_B/RIGHT_C/PISTE. The continuity
+candidate uses internal VREFINT/2 and the lowest nonzero hysteresis setting (HYST=1). Allow 200us reference-scaler
+startup plus 5us comparator startup before accepting observations. A conservative threshold envelope is 0.556-0.651V,
+including reference variation, scaler offset, comparator offset and hysteresis from DS12288 Rev 6, tables 20 and 79.
+
+Run `pnpm --filter @repo/scoring-circuit simulate` for the actual circuit model in
+[stm32-sensing-interface.cir](../simulation/stm32-sensing-interface.cir). Its bounded cases passed:
+
+- Disconnected input: 0.403V with a chosen 121uA leakage stress, below the 0.556V low boundary.
+- 500-ohm contact: 0.714V with weak 2.25V excitation, resistor tolerance and opposing leakage stress, above 0.651V.
+- Opposed board outputs: 5.51mA; reset enable/input levels: 2.798V and 0.202V.
+- Chosen 10nF cable load: active-low discharge crossed the low boundary after 6.23us. Passive contact release left a
+  **66.29us tail**, so observation blanking and deliberate discharge must be included in scan timing.
+
+The leakage and capacitance are explicit engineering stresses, not guaranteed worst cases or FIE test evidence. BAT54S
+hot-leakage curves are typical, not maximum ratings. The model does not prove external-overvoltage clamps, power-off
+injection, full weapon/contact combinations, accurate resistance diagnostics or capture timing. The smaller sense
+resistor increases external-fault injection relative to the former 10k part; that protection review remains open. Do not
+treat a continuity threshold as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring error. This
+remains a sensing candidate until the excitation sequence and complete per-weapon behavior are validated.
+
 ## Current state and remaining work
 
 The current draft contains 151 components across eleven functional/support sheets plus the cover. Every component has a
@@ -80,10 +109,10 @@ passive support, clamps, decoupling, and defined reset-state resistors; their ph
 
 Before routing and fabrication:
 
-1. Finish the sensing design: excitation sequence, comparator reference and hysteresis, per-weapon thresholds, capture
-   timing, loading, and simultaneous-contact behavior. The 330-ohm excitation resistors, 10k sense resistors, and BAT54S
-   clamps are characterization candidates, not evidence of correct FIE behavior. Check clamp-rail injection and
-   unpowered faults. Do not infer patent clearance from component selection or this topology.
+1. Finish the sensing design: excitation sequence, per-weapon thresholds, capture timing, loading, and simultaneous-
+   contact behavior. The continuity reference and bias have a bounded simulation, not evidence of correct FIE behavior.
+   The 330-ohm excitation resistors, 3.3k sense dividers and BAT54S clamps remain candidates. Check clamp-rail injection
+   and unpowered faults. Do not infer patent clearance from component selection or this topology.
 2. Validate single-cable USB acquisition power, startup/current/suspend behavior, supply handover, and the electrical-
    safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
    keepouts separate computer ground from board ground; acquisition and application still share board ground. The
@@ -110,14 +139,20 @@ hole-clearance errors, and nine silkscreen warnings. The connector's 0.1944mm pa
 review of individual pin seating and electrical design work are not complete. USB acquisition power is now connected in
 the schematic and unrouted netlist; operation and power-transition behavior still require firmware and bench work.
 
-Repository verification on September 5, 2026 passed formatting, lint, types, unused-code checks, and all five existing
-prototype simulations. Scoring application tests reported 770 passes and three failures in unchanged files: a mutation
-test timeout and canonical-corpus failure in `scenario-runner.test.ts`, plus a 29-versus-28 scenario-count assertion in
-`observatory-integration.test.ts`. Those existing simulations do not validate this new STM32 front end. No software-test
-failures were suppressed or repaired as part of this draft.
+At the sensing checkpoint on September 5, 2026, ERC again reported zero violations and schematic-to-PCB parity zero
+mismatches. DRC still reports the same 449 unrouted items and 25 other findings listed above. Native KiCad visual review
+confirmed the updated input/bias sheets; the resistor-only update preserves all placement, footprints and net
+assignments.
+
+Repository verification passed formatting, lint, types and unused-code checks. All six electrical models passed. The
+full verification run still fails on the same three unchanged scoring tests: a mutation-test timeout and
+canonical-corpus failure in `scenario-runner.test.ts`, plus a 29-versus-28 scenario-count assertion in
+`observatory-integration.test.ts` (770 passes, three failures). No failures were suppressed or repaired here. The five
+earlier electrical models remain checks of the original prototype, not validation of this new board.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [SN74LVC125A](https://www.ti.com/lit/ds/symlink/sn74lvc125a.pdf),
+[BAT54S](https://assets.nexperia.com/documents/data-sheet/BAT54S.pdf),
 [SN74AXC1T45](https://www.ti.com/lit/ds/symlink/sn74axc1t45.pdf),
 [AP63203](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), and
 [XAL5030-472](https://www.coilcraft.com/en-us/products/power/shielded-inductors/molded-inductor/xal/xal5030-472/).

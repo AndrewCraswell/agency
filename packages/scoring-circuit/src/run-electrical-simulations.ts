@@ -23,6 +23,25 @@ const simulationDirectory = join(packageDirectory, "simulation")
 
 const simulations: readonly SimulationCase[] = [
   {
+    title: "New STM32 platform: continuity and reset-bias characterization (not complete weapon validation)",
+    file: "stm32-sensing-interface.cir",
+    limits: [
+      { name: "open_input", maximum: 0.556, unit: "V" },
+      { name: "weak_contact", minimum: 0.651, unit: "V" },
+      { name: "weak_driver_current", absolute: true, maximum: 0.012, unit: "A" },
+      { name: "nominal_zero", minimum: 0.651, unit: "V" },
+      { name: "nominal_100", minimum: 0.651, unit: "V" },
+      { name: "nominal_500", minimum: 0.651, unit: "V" },
+      { name: "opposed_current", absolute: true, maximum: 0.012, unit: "A" },
+      { name: "reset_disabled", minimum: 2, unit: "V" },
+      { name: "reset_drive_low", maximum: 0.8, unit: "V" },
+      { name: "active_clear_low", maximum: 0.556, unit: "V" },
+      { name: "active_clear_delay", maximum: 20e-6, unit: "s" },
+      // A characterization sanity bound, NOT an allowable scoring pulse extension.
+      { name: "passive_release_tail", minimum: 50e-6, maximum: 100e-6, unit: "s" }
+    ]
+  },
+  {
     title: "ESP32 scoring-conductor interface",
     file: "scoring-conductor-interface.cir",
     limits: [

@@ -1824,7 +1824,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2120,7 +2120,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3539,7 +3539,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3983,7 +3983,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5506,7 +5506,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5802,7 +5802,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8205,7 +8205,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8501,7 +8501,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10844,7 +10844,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11140,7 +11140,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12525,7 +12525,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -15643,7 +15643,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -15791,7 +15791,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16873,7 +16873,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17845,7 +17845,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17993,7 +17993,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -18953,7 +18953,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -20513,7 +20513,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22115,7 +22115,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23032,7 +23032,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24002,7 +24002,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24446,7 +24446,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24594,7 +24594,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24742,7 +24742,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -26070,7 +26070,7 @@
 				)
 			)
 		)
-		(property "Value" "10k 1%"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -27181,7 +27181,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -27993,7 +27993,7 @@
 				)
 			)
 		)
-		(property "Value" "47k"
+		(property "Value" "10k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -29757,7 +29757,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "3.3k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
