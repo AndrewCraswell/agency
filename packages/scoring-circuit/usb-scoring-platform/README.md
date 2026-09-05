@@ -10,6 +10,28 @@ libraries.
 **Not ready for fabrication, sale, or connection to fencers.** The schematic is a candidate circuit and the PCB is an
 unrouted floorplan, not a completed design. This folder is not consumed by the existing prototype export commands.
 
+## Low-volume build scope
+
+Design for **3-10 units per month**. Prioritize dependable operation, straightforward assembly and repair, and
+inexpensive design changes. A higher module cost is acceptable when it saves meaningful engineering, assembly, or
+support effort.
+
+- Keep the agreed STM32 acquisition / ESP32 application split and existing required interfaces. No extra processor,
+  redundant supply, or speculative expansion interface without a concrete need.
+- Prefer proven, available modules and manufacturer reference circuits. Replace a module with discrete circuitry only
+  for a demonstrated electrical, mechanical, availability, or overall cost benefit at this sales volume.
+- Desktop acquisition must ultimately use **one computer USB cable for both power and data**. PD powers the full display
+  system. The current PD-powered, isolated-data draft is an intermediate state, not a completed substitute for USB
+  power. Evaluate a proven isolated USB/power solution before designing a custom isolated supply.
+- Each added component must serve a required function, satisfy an applicable requirement, or address a specific failure
+  mode. Keep necessary protection, decoupling, reset defaults, isolation, and practical programming access; low volume
+  does not reduce electrical-safety or scoring-correctness requirements.
+- Concentrate verification on the actual circuit: pin/footprint fit, ERC/DRC, power behavior, sensing and timing, and
+  end-to-end operation. Keep the existing scoring-logic tests. Do not add documentation/BOM validators, speculative
+  qualification frameworks, or elaborate automated factory fixtures for this build.
+- Maintain this short design note and the native KiCad source. Prefer changes that remain easy to inspect and repair;
+  propose any substantial increase in parts, custom circuitry, or assembly steps before implementing it.
+
 ## Design decisions
 
 - STM32G474RET6 handles excitation, seven internal comparator inputs, timestamps, and native USB. Desktop software runs
@@ -20,9 +42,10 @@ unrouted floorplan, not a completed design. This folder is not consumed by the e
   and unpowered logic rails. These are **not galvanic isolators**.
 - Keep the WIZ850io Ethernet module, TSOP38438 receiver, two TE 5520250-2 Favero DATA-LINE connectors with optocoupler
   outputs, HUB75 signal/power connectors, and sounder from the prototype. Favero ports are not Ethernet or RS-422.
-- Separate USB-C connectors serve computer USB data and USB-C PD power. Diode ORing feeds the acquisition supply from
-  computer USB or the PD-derived 5V rail. The display, ESP32, and Ethernet require PD power. USB power limits, suspend,
-  inrush, and power transitions remain to be verified.
+- Separate USB-C connectors serve computer USB and USB-C PD power. The current uncommitted circuit uses ADuM3160BRWZ for
+  isolated USB data and powers acquisition from the PD-derived 5V rail. The former direct USB supply connection and VBUS
+  divider were removed because they crossed the intended isolation boundary. USB-only acquisition power remains
+  unimplemented, including its start-up, current-limit, suspend, and power-transition behavior.
 - J1 uses GCT USB4105-GF-A for computer USB: a documented 16-contact USB 2.0 receptacle with a matching native KiCad
   footprint and STEP model. It replaces the initial HRO candidate in this new design only. See the
   [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf).
@@ -34,8 +57,8 @@ unrouted floorplan, not a completed design. This folder is not consumed by the e
 
 ## Current state and remaining work
 
-The schematic contains 150 components across ten functional/support sheets plus the cover. Every component has a
-footprint, and all 154 schematic nets were transferred to the initial 160 x 100mm, four-layer PCB. Most components are
+The current draft contains 157 components across eleven functional/support sheets plus the cover. Every component has a
+footprint, and all 162 schematic nets were transferred to the initial 160 x 100mm, four-layer PCB. Most components are
 passive support, clamps, decoupling, and defined reset-state resistors; their physical arrangement is still provisional.
 
 Before routing and fabrication:
@@ -44,9 +67,9 @@ Before routing and fabrication:
    timing, loading, and simultaneous-contact behavior. The 330-ohm excitation resistors, 10k sense resistors, and BAT54S
    clamps are characterization candidates, not evidence of correct FIE behavior. Check clamp-rail injection and
    unpowered faults. Do not infer patent clearance from component selection or this topology.
-2. Resolve the isolation and electrical-safety boundary for USB, PD, Ethernet, piste, and weapon conductors. This draft
-   shares acquisition and application ground and does not implement galvanic USB or power isolation. Do not connect it
-   to people on the strength of schematic checks.
+2. Complete single-cable USB acquisition power and review the electrical-safety boundary for USB, PD, Ethernet, piste,
+   and weapon conductors. The USB data isolator and PCB copper keepouts now separate computer ground from board ground;
+   acquisition and application still share board ground. These draft changes do not establish complete board safety.
 3. Finish local placement, decoupling, connector access, mounting, antenna clearance, and power/current paths. Review
    every retained footprint and 3D transform against its exact part drawing. Resolve the ESP32 footprint's 0.2mm thermal
    drills versus the current 0.3mm board rule with the intended fabrication process; do not merely suppress the warning.
@@ -55,15 +78,16 @@ Before routing and fabrication:
 
 ## Checks performed
 
-KiCad 10.0.6 loaded the schematic and PCB in its native editors. Native schematic ERC reported zero violations; netlist
-export succeeded and the PCB transfer checked every explicitly connected schematic pin against that export. These checks
-establish connectivity consistency, not analog performance or compliance. Module symbols use passive pins where the
-retained interface lacks detailed electrical pin types, which limits what ERC can diagnose.
+At the preceding 150-component checkpoint, KiCad 10.0.6 loaded the schematic and PCB in its native editors. ERC reported
+zero violations; netlist export succeeded and the PCB transfer checked every explicitly connected schematic pin against
+that export. These checks establish connectivity consistency, not analog performance or compliance. Module symbols use
+passive pins where the retained interface lacks detailed electrical pin types, which limits what ERC can diagnose.
 
-Current PCB DRC reports 411 unconnected items, 12 thermal-drill size errors, four USB connector hole-clearance errors,
-and nine silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default 0.25mm rule and needs
-fabricator review. These findings are open, not waived. The board has no routed copper. Visual review and electrical
-design work are not complete.
+That checkpoint's PCB DRC reported 411 unconnected items, 12 thermal-drill size errors, four USB connector
+hole-clearance errors, and nine silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default
+0.25mm rule and needs fabricator review. These findings are open, not waived. The board has no routed copper. Visual
+review and electrical design work are not complete. The subsequent USB-isolation edits are awaiting final ERC/DRC and
+root review; the baseline results above are not a validation of those edits.
 
 Repository verification on September 5, 2026 passed formatting, lint, types, unused-code checks, and the existing
 prototype simulations, but failed three tests in unchanged scoring application files: two timeouts and a canonical
