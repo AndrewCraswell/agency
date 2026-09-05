@@ -7,8 +7,9 @@ models without changing or duplicating them in Git. Their sources and license no
 [CAD model sources](../assets/cad/SOURCES.md). Native library parts require the installed KiCad footprint and 3D
 libraries.
 
-**Not ready for fabrication, sale, or connection to fencers.** The schematic is a candidate circuit and the PCB is an
-unrouted floorplan, not a completed design. This folder is not consumed by the existing prototype export commands.
+**Not ready for fabrication, sale, or connection to fencers.** The schematic is a candidate circuit and the PCB is a
+partially routed engineering draft, not a completed design. This folder is not consumed by the existing prototype export
+commands.
 
 ## Low-volume build scope
 
@@ -155,15 +156,15 @@ generic diode simulation for those guarantees. See STM32 DS12288 tables 15/17 an
 Leakage and capacitance are chosen stresses, not guaranteed worst cases or FIE evidence. BAT54S hot-leakage curves are
 typical, not maximum ratings. The models do not prove exhaustive contacts, resistance diagnostics, clamp behavior or
 capture timing. Do not treat continuity as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring
-error. The PCB remains unrouted.
+error. Most PCB routing remains unfinished.
 
 ## Current state and remaining work
 
 The current draft contains 151 components across eleven functional/support sheets plus the cover. Every component has a
-footprint, and all 160 schematic nets were transferred to the initial 160 x 100mm, four-layer PCB. Most components are
-passive support, clamps, decoupling, and defined reset-state resistors; their physical arrangement is still provisional.
+footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
+regulator section and its 5V feed are now routed. Most other parts remain in provisional positions.
 
-Before routing and fabrication:
+Remaining before fabrication:
 
 1. Finish the sensing design: check the MCU clamp-rail/unpowered path and establish a sampling/excitation schedule that
    preserves the required contact-duration boundaries. The seven-input settled stress now passes, but timing, full
@@ -174,21 +175,33 @@ Before routing and fabrication:
    safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
    keepouts separate computer ground from board ground; acquisition and application still share board ground. The
    keepout spans the gap between the module's primary and secondary ball rows. This is not complete board safety proof.
-3. Finish local placement, decoupling, connector access, mounting, antenna clearance, and power/current paths. Review
-   every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's tight
-   pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
-4. Route the board, define stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and manufacturing
-   outputs, and then perform hardware bring-up. No routing, purchase, or assembly release has been performed.
+3. Finish the remaining local placement, decoupling, connector access, mounting, antenna clearance, and power/current
+   paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
+   tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
+4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
+   manufacturing outputs, and then perform hardware bring-up. The PD input, acquisition supplies, load distribution and
+   signal interfaces still need routing. No purchase or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **449 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **432 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
 DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
 are unavailable, limiting ERC's fault detection.
+
+The application buck section contains 31 track segments, eight 0.6/0.3mm vias, and three ground-copper zones. U7, L1 and
+C4-C7 are grouped below the ESP32 antenna keepout. The 5V feeder connects both U6 output pins to C5; short top-layer
+connections close the input, switch and bootstrap paths. C6/C7 connect the inductor output to ground, and a separate
+feedback route returns from C6 on In2.Cu beneath In1.Cu ground. Ground stitching connects the input/output capacitor
+returns, U7 ground and U6 ground pins. Native KiCad connectivity confirms every local regulator pin reaches its intended
+parts; placement, copper and 3D exports were visually checked. No parts, pad assignments or connector positions changed.
+This follows the
+[AP63203 layout guidance, page 15](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), not a
+measured supply qualification: effective capacitor values, final copper weight, startup, load-step and thermal behavior
+still need verification. The other supply rails and application loads are not yet connected to this section.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
