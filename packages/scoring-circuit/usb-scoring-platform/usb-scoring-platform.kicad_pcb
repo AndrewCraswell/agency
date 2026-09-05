@@ -5950,7 +5950,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6363,7 +6363,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10252,7 +10252,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10400,7 +10400,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12821,7 +12821,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21405,7 +21405,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22478,7 +22478,7 @@
 				)
 			)
 		)
-		(property "Value" "SN74LVC125APWR"
+		(property "Value" "74LVC125APW"
 			(at 0 3.45 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22490,7 +22490,8 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Manufacturer" "Nexperia" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "79e6bee1-00e9-4e97-868d-1763697e5c96") (effects (font (size 1 1))))
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23328,7 +23329,7 @@
 				)
 			)
 		)
-		(property "Value" "SN74LVC125APWR"
+		(property "Value" "74LVC125APW"
 			(at 0 3.45 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23340,7 +23341,8 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Manufacturer" "Nexperia" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "31db6f4a-ed12-48e1-8d31-9e777da28ad2") (effects (font (size 1 1))))
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28141,7 +28143,7 @@
 				)
 			)
 		)
-		(property "Value" "330R 1%"
+		(property "Value" "220R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)

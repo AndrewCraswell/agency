@@ -82,10 +82,16 @@ support effort.
 
 ## Sensing checkpoint
 
-Each conductor now uses the existing 330-ohm excitation resistor, a 3.3k series sense resistor, and a 3.3k sense
-pull-down, all 1%. This replaces the weak 1-megohm pull-down and produces approximately half the conductor voltage at
-the MCU. Excitation input pull-downs and output-enable pull-ups are now 10k, keeping the buffers disabled during reset
-even with their specified input leakage. No components were added and no footprint positions changed.
+Each conductor uses a 220-ohm excitation resistor, a 3.3k series sense resistor, and a 3.3k sense pull-down, all 1%.
+Excitation input pull-downs and output-enable pull-ups are 10k. U8/U9 are **Nexperia 74LVC125APW**, replacing TI
+SN74LVC125APWR; R7/R10/R13/R16/R19/R22/R25 change from 330 to 220 ohms. The manufacturer's
+[Rev. 12 data sheet](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf), pages 3, 5, 6 and 10, confirms
+matching pin functions and the TSSOP14 package, a 2.25V minimum high output at 18mA with a 3V supply through 125 C, and
+specified power-off output leakage. No components, nets or footprint positions were added or moved.
+
+The model requires CORE_3V3 to be at least 3V during acquisition; invalidate observations during startup/brownout. At
+3.6V and minimum resistor tolerance, a grounded conductor draws 16.53mA, below the 18mA condition used for the
+high-output bound. Opposed outputs draw 8.26mA. These are own-board low-voltage cases, not arbitrary external faults.
 
 The seven comparator positive inputs are already correctly assigned: COMP1/2/3/4/5/6/7 use
 PA1/PA3/PA0/PB0/PB13/PB11/PB14 respectively, for LEFT_A/LEFT_B/LEFT_C/RIGHT_A/RIGHT_B/RIGHT_C/PISTE. The continuity
@@ -97,25 +103,25 @@ Run `pnpm --filter @repo/scoring-circuit simulate`. The [pair/reset model](../si
 checks:
 
 - Disconnected input: 0.403V with a chosen 121uA leakage stress, below the 0.556V low boundary.
-- 500-ohm contact: 0.714V with weak 2.25V excitation, resistor tolerance and opposing leakage stress, above 0.651V.
-- Opposed board outputs: 5.51mA; reset enable/input levels: 2.798V and 0.202V.
-- Chosen 10nF cable load: active-low discharge crossed the low boundary after 6.23us. Passive contact release left a
-  **66.29us tail**, so observation blanking and deliberate discharge must be included in scan timing.
+- 500-ohm contact: 0.748V with weak 2.25V excitation, resistor tolerance and opposing leakage stress, above 0.651V.
+- Reset enable/input levels: 2.798V and 0.202V.
+- Chosen 10nF cable load: active-low discharge crossed the low boundary after 4.35us. Passive contact release left a
+  **68.33us tail**, so observation blanking and deliberate discharge must be included in scan timing.
 
 The [seven-conductor model](../simulation/stm32-conductor-scan.cir) adds foil rest/target/off-target/piste paths, both
 epee tip contacts, tip-plus-piste, sabre target/blade/reciprocal contacts, and a seven-way short. It clears all seven
 conductors low, disables all outputs, then sources exactly one conductor while the others remain high impedance. The
 next slot repeats the clear before selecting another source. Nominal cases pass the comparator envelope, including
 unrelated lines after source handover. The seven-way short passes with each of the seven sources selected; peak modeled
-source current is 10.00mA. A separate 2.25V source/tolerance case with a chosen 4uA load per input reads 0.762V at the
-observation point and clears below 0.387V. These are modeled results, not bench measurements.
+source current is 15.00mA. A separate 2.25V source/tolerance case with a chosen 4uA load per input reads 0.866V at the
+observation point and clears below 0.381V. These are modeled results, not bench measurements.
 
-**The leakage stress exposes insufficient margin:** applying the previous 121uA-per-input load to all seven shorted
-inputs gives only **0.572V even after settling**, inside the 0.556-0.651V uncertainty band. The runner labels this
-`OBSERVE`, not `PASS`; the single-pair result is not a seven-channel worst-case guarantee. Separately, the model's 50us
-slots take 350us per sweep and can miss contacts between observations. That characterization schedule is **not approved
-scoring firmware timing**. Qualification of pulse-duration boundaries requires the actual acquisition/capture algorithm,
-not just settled voltages or an assumption that every short pulse must produce a hit.
+**The settled leakage-stress gap is corrected:** with the same 121uA-per-input load, weak 2.25V source and resistor
+tolerances, seven shorted inputs now settle at **0.664V**, above the unchanged 0.651V criterion. The 13mV margin is
+small, and this result does not establish settling time under that leakage or a guaranteed hot-temperature envelope. The
+scan model's 50us slots take 350us per sweep and can miss contacts between observations. This characterization schedule
+is **not approved scoring firmware timing**; qualifying pulse-duration boundaries needs the actual acquisition/capture
+algorithm, not settled voltages alone.
 
 Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
 
@@ -132,12 +138,16 @@ ground. The foil/epee contact roles and unequal spacing follow m.29.2(a) and m.3
 establish reachable paths, not which redundant physical contact caused them: reciprocal sabre targets plus crossed
 blades can join all six cord wires. Scoring interpretation and the physical-to-core adapter remain unimplemented.
 
+**Power-off protection is not closed.** The selected buffer specifies at most 20uA power-off leakage per input/output at
+5.5V and 125 C; that protects its output path, not the whole conductor interface. D3-D9 still connect the sense nodes to
+CORE_3V3 through BAT54S clamps. An externally driven conductor can inject into that rail when it is off, and AP2112K
+must not be assumed to sink that current. Review that path before powered external-fault or fencer testing. Neither the
+buffer's power-off specification nor the clamps authorize applying 20V PD to any conductor.
+
 Leakage and capacitance are chosen stresses, not guaranteed worst cases or FIE evidence. BAT54S hot-leakage curves are
-typical, not maximum ratings. Neither model proves external-overvoltage clamps, unpowered rail injection, exhaustive
-contact combinations, accurate resistance diagnostics, or capture timing. The smaller sense resistor increases
-external-fault injection relative to the former 10k part; that protection review remains open. Do not treat continuity
-as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring error. No new parts were added for this
-simulation checkpoint, and the PCB remains unrouted.
+typical, not maximum ratings. The models do not prove exhaustive contacts, resistance diagnostics, clamp behavior or
+capture timing. Do not treat continuity as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring
+error. The PCB remains unrouted.
 
 ## Current state and remaining work
 
@@ -147,11 +157,11 @@ passive support, clamps, decoupling, and defined reset-state resistors; their ph
 
 Before routing and fabrication:
 
-1. Finish the sensing design: resolve the seven-input leakage margin and establish a sampling/excitation schedule that
-   preserves the required contact-duration boundaries. Basic simultaneous-contact paths now have electrical fixtures,
-   but full weapon behavior and capture timing are unproven. The 330-ohm excitation resistors, 3.3k sense dividers and
-   BAT54S clamps remain candidates. Check clamp-rail injection and unpowered faults. Do not infer patent clearance from
-   component selection or this topology.
+1. Finish the sensing design: check the MCU clamp-rail/unpowered path and establish a sampling/excitation schedule that
+   preserves the required contact-duration boundaries. The seven-input settled stress now passes, but timing, full
+   weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
+   dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
+   selection or this topology.
 2. Validate single-cable USB acquisition power, startup/current/suspend behavior, supply handover, and the electrical-
    safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
    keepouts separate computer ground from board ground; acquisition and application still share board ground. The
@@ -174,17 +184,18 @@ KiCad loaded the current schematic/PCB and rendered the assembly. Native 3D cabl
 Favero openings toward the top edge and Ethernet toward the bottom; measured CAD tail/board-lock centres match their
 holes. Left/right harnesses are separated and piste is on the bottom edge. No footprint bounding boxes collide, but
 enclosure cutouts, real plug/latch access, complete pin seating and electrical design still need review. These checks
-establish placement/connectivity consistency, not fabrication approval. The scan-model update does not change CAD.
+establish placement/connectivity consistency, not fabrication approval. The buffer/resistor substitutions preserve
+placement, footprint geometry and every pad's net assignment.
 
-Focused electrical simulation, package type-check and runner lint pass. All seven models' acceptance limits pass; the
-seven-input leakage result remains an observation with insufficient threshold margin, not a passed operating corner. The
-five older models concern the original prototype only. The latest repository verification passed formatting, lint, types
-and unused-code checks but failed three unchanged scoring tests: a mutation-test timeout and canonical-corpus failure in
-`scenario-runner.test.ts`, plus a 29-versus-28 scenario-count assertion in `observatory-integration.test.ts` (770
-passes, three failures). No failures are suppressed or repaired by the hardware work.
+All seven models' acceptance limits pass, including the corrected seven-input settled leakage stress; this remains
+bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
+The latest repository verification passed formatting, lint, types and unused-code checks but failed three unchanged
+scoring tests: a mutation-test timeout and canonical-corpus failure in `scenario-runner.test.ts`, plus a 29-versus-28
+scenario-count assertion in `observatory-integration.test.ts` (770 passes, three failures). No failures are suppressed
+or repaired by the hardware work.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
-[SN74LVC125A](https://www.ti.com/lit/ds/symlink/sn74lvc125a.pdf),
+[Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
 [BAT54S](https://assets.nexperia.com/documents/data-sheet/BAT54S.pdf),
 [SN74AXC1T45](https://www.ti.com/lit/ds/symlink/sn74axc1t45.pdf),
 [AP63203](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), and

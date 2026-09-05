@@ -9,15 +9,16 @@ pnpm --filter @repo/scoring-circuit simulate
 
 The runner uses `NGSPICE_BIN` when set, otherwise it checks the normal command path and the user-local Windows ngspice
 47 installation. A missing measurement or failed acceptance limit exits unsuccessfully so the command can be used
-locally and in CI. `OBSERVE` reports a finite characterization result without asserting that it is acceptable.
+locally and in CI.
 The repository `pnpm verify` command runs the suite, and CI installs ngspice before verification.
 
 ## Models and limits
 
 - The separate native KiCad STM32 draft has a pair/reset sensing model and a seven-conductor scan model. The latter
   checks physical foil, epee, sabre, piste and simultaneous-contact paths, source handover, and seven-input loading.
-  Its 350us characterization sweep is not an approved scoring schedule. The 121uA-per-input, seven-way-short stress
-  settles inside the comparator uncertainty band and is reported as `OBSERVE`, not a pass. See the
+  Its 350us characterization sweep is not an approved scoring schedule. Nexperia 74LVC125APW buffers and 220-ohm
+  drive resistors bring the settled seven-input leakage stress above the unchanged comparator threshold; unpowered
+  MCU clamp behavior and actual capture timing remain unvalidated. See the
   [native design's sensing checkpoint](../usb-scoring-platform/README.md#sensing-checkpoint) for values and remaining work.
 - The five models below concern the original ESP32 prototype, not validation of the new KiCad design.
 - The scoring-conductor model checks the 33 ohm and 470 ohm paths against the ESP32-S3 0.75 VDD high threshold,

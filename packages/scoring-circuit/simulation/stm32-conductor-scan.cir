@@ -1,5 +1,5 @@
 STM32 seven-conductor scan - electrical paths, loading and source handover
-* Matches the native KiCad 330R / 3.3k / 3.3k sensing channels. Buffers are
+* Matches the native KiCad 220R / 3.3k / 3.3k sensing channels. Buffers are
 * bounded voltage sources and switches, NOT manufacturer transistor models.
 * Each 50us characterization slot: clear all lines for 10us, disable for 1us,
 * source ONE line for 38us, disable for 1us. Observe at 48us within each slot.
@@ -24,7 +24,7 @@ Vphase6 phase6 0 PULSE(0 1 261u 0.01u 0.01u 37.98u 350u)
 Vphase7 phase7 0 PULSE(0 1 311u 0.01u 0.01u 37.98u 350u)
 .model buffer_switch SW(Ron=0.01 Roff=1e12 Vt=0.5 Vh=0)
 
-.subckt channel line sense power low enable params: rd=330 rs=3300 rp=3300 leak=0
+.subckt channel line sense power low enable params: rd=220 rs=3300 rp=3300 leak=0
 Shigh power output enable 0 buffer_switch
 Slow low output clear 0 buffer_switch
 Rdrive output line {rd}
@@ -38,7 +38,7 @@ Ileak sense 0 {leak}
 .ends channel
 
 .subckt front_end la lb lc ra rb rc p sa sb sc sd se sf sp current
-+ params: rail=3.3 low=0 rd=330 rs=3300 rp=3300 leak=0
++ params: rail=3.3 low=0 rd=220 rs=3300 rp=3300 leak=0
 Vpower power 0 {rail}
 Vlow low_driver 0 {low}
 Bcurrent current 0 V=-i(Vpower)
@@ -137,7 +137,7 @@ Bshort_high short_high 0 V=min(v(sa11),min(v(sb11),min(v(sc11),min(v(sd11),min(v
 * Lower output-voltage/tolerance corner, with an explicit 4uA sense-node load.
 * 4uA is a chosen load, not a bound over temperature or all external faults.
 Xcorner a12 b12 c12 d12 e12 f12 p12 sa12 sb12 sc12 sd12 se12 sf12 sp12 i12 front_end
-+ rail=2.25 low=0.8 rd=333.3 rs=3333 rp=3267 leak=4u
++ rail=2.25 low=0.8 rd=222.2 rs=3333 rp=3267 leak=4u
 Rcorner_ab a12 b12 0.01
 Rcorner_bc b12 c12 0.01
 Rcorner_cd c12 d12 0.01
@@ -149,9 +149,11 @@ Bcorner_low corner_low 0 V=max(v(sa12),max(v(sb12),max(v(sc12),max(v(sd12),max(v
 
 * Repeat the existing 121uA/channel leakage STRESS with seven-way loading.
 * Hold excitation on in a separate static fixture to expose settled margin,
-* independent of scan timing. No threshold pass is asserted for this result.
+* independent of scan timing. Require the SAME 0.651V high boundary as before;
+* 220R now addresses the failed margin of the former 330R candidate.
+* Settled acceptance does not establish settling time under this leakage.
 Vstress stress_driver 0 2.25
-Rstress_drive stress_driver stress_line 333.3
+Rstress_drive stress_driver stress_line 222.2
 .subckt stress_load line sense
 Rseries line sense 3333
 Rpull sense 0 3267

@@ -1,10 +1,11 @@
 STM32 USB scoring platform - bounded continuity and reset-bias characterization
-* Actual candidate values: SN74LVC125A -> 330R -> conductor -> 3.3k -> SENSE,
+* Actual candidate values: Nexperia 74LVC125APW -> 220R -> conductor -> 3.3k -> SENSE,
 * with 3.3k SENSE pull-down. Seven identical channels; no new external comparator.
 * Comparator uses internal VREFINT/2, HYST=1. Conservative decision envelope:
 * 0.556..0.651 V from DS12288 Rev6 VREFINT 1.182..1.232 V, scaler +/-10 mV,
 * comparator +/-9 mV allowance and full 16 mV hysteresis allowance each way.
-* TI SCAS290T: VOH >=2.25 V at VCC=3 V, 12 mA, -40..125 C; VOL <=0.8 V.
+* Nexperia 74LVC125A Rev12 Table6: VOH >=2.25 V at VCC=3 V, 18 mA,
+* -40..125 C; VOL <=0.8 V at 24 mA. Require CORE_3V3 >=3 V before acquisition.
 * 121 uA leakage is an ENGINEERING STRESS (100 uA clamp + 20 uA buffer +
 * 1 uA MCU allowance), not a guaranteed BAT54S temperature limit. Nexperia
 * specifies 2 uA at 25 C / 25 V; hot curves are typical only. Bench work remains.
@@ -19,7 +20,7 @@ Ropen open_sense 0 3333
 * Closed pair: both conductor sense branches load the source. 500R is a
 * continuity stress only, not proof of per-weapon resistance discrimination.
 Vweak weak_driver 0 2.25
-Rweak_drive weak_driver weak_a 333.3
+Rweak_drive weak_driver weak_a 222.2
 Rweak_contact weak_a weak_b 500
 Rweak_series_a weak_a weak_sense_a 3333
 Rweak_series_b weak_b weak_sense_b 3333
@@ -29,7 +30,7 @@ Iweak_a weak_sense_a 0 121u
 Iweak_b weak_sense_b 0 121u
 
 .subckt nominal_pair driver contact_sense params: contact=0.01
-Rdrive driver a 330
+Rdrive driver a 220
 Rcontact a b {contact}
 Rseries_a a sense_a 3300
 Rpull_a sense_a 0 3300
@@ -43,8 +44,13 @@ Xfivehundred nominal_driver fivehundred_sense nominal_pair contact=500
 
 * Opposed own-board outputs: highest supply, both minimum source resistors.
 Vshort short_driver 0 3.6
-Rshort_source short_driver short_line 326.7
-Rshort_sink short_line 0 326.7
+Rshort_source short_driver short_line 217.8
+Rshort_sink short_line 0 217.8
+
+* Maximum own-board voltage into a grounded conductor, minimum 220R tolerance.
+* This also bounds initial charging current into an empty cable capacitor.
+Vgrounded grounded_driver 0 3.6
+Rgrounded grounded_driver 0 217.8
 
 * Reset defaults with buffer input leakage directed AGAINST each pull.
 Vlogic logic_supply 0 3.0
@@ -55,7 +61,7 @@ Idrive_default 0 drive_default 20u
 
 * Active-low discharge of one cable: low-output bound is deliberately 0.8 V.
 Vclear clear_driver 0 PWL(0 3.3 100u 3.3 100.01u 0.8 400u 0.8)
-Rclear clear_driver clear_line 333.3
+Rclear clear_driver clear_line 222.2
 Cclear_cable clear_line 0 10n
 Rclear_series clear_line clear_sense 3267
 Rclear_pull clear_sense 0 3333
@@ -64,7 +70,7 @@ Cclear_input clear_sense 0 30p
 * Passive contact release for comparison: sense loading must discharge cable.
 * This deliberately exposes the pulse tail, not a passed scoring timing test.
 Vrelease release_driver 0 3.3
-Rrelease_drive release_driver release_a 330
+Rrelease_drive release_driver release_a 220
 Rrelease_source_series release_a release_source_sense 3300
 Rrelease_source_pull release_source_sense 0 3300
 Vcontact contact_control 0 PWL(0 1 100u 1 100.01u 0 400u 0)
@@ -85,6 +91,7 @@ meas tran nominal_zero FIND v(zero_sense) AT=50u
 meas tran nominal_100 FIND v(hundred_sense) AT=50u
 meas tran nominal_500 FIND v(fivehundred_sense) AT=50u
 meas tran opposed_current MAX i(Vshort)
+meas tran grounded_conductor_current MAX i(Vgrounded)
 meas tran reset_disabled MIN v(oe_n)
 meas tran reset_drive_low MAX v(drive_default)
 meas tran active_clear_low FIND v(clear_sense) AT=150u

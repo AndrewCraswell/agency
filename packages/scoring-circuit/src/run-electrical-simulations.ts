@@ -28,11 +28,13 @@ const simulations: readonly SimulationCase[] = [
     limits: [
       { name: "open_input", maximum: 0.556, unit: "V" },
       { name: "weak_contact", minimum: 0.651, unit: "V" },
-      { name: "weak_driver_current", absolute: true, maximum: 0.012, unit: "A" },
+      // Nexperia 74LVC125APW specifies the modeled 2.25V VOH at 18mA, VCC=3V.
+      { name: "weak_driver_current", absolute: true, maximum: 0.018, unit: "A" },
       { name: "nominal_zero", minimum: 0.651, unit: "V" },
       { name: "nominal_100", minimum: 0.651, unit: "V" },
       { name: "nominal_500", minimum: 0.651, unit: "V" },
       { name: "opposed_current", absolute: true, maximum: 0.012, unit: "A" },
+      { name: "grounded_conductor_current", absolute: true, maximum: 0.018, unit: "A" },
       { name: "reset_disabled", minimum: 2, unit: "V" },
       { name: "reset_drive_low", maximum: 0.8, unit: "V" },
       { name: "active_clear_low", maximum: 0.556, unit: "V" },
@@ -82,10 +84,10 @@ const simulations: readonly SimulationCase[] = [
         "targets_and_blades_piste",
         "weak_seven_short_clear"
       ].map((name) => ({ name, maximum: 0.556, unit: "V" })),
-      { name: "seven_short_current", absolute: true, maximum: 0.012, unit: "A" },
-      { name: "weak_seven_short_current", absolute: true, maximum: 0.012, unit: "A" },
-      // Characterization only: no asserted operating envelope for this leakage stress.
-      { name: "settled_leakage_stress", unit: "V" }
+      { name: "seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
+      { name: "weak_seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
+      // Fixed voltage criterion; the hardware changed, not the comparator threshold.
+      { name: "settled_leakage_stress", minimum: 0.651, unit: "V" }
     ]
   },
   {
@@ -206,10 +208,6 @@ function run(): void {
           continue
         }
         const compared = limit.absolute ? Math.abs(measured) : measured
-        if (limit.minimum === undefined && limit.maximum === undefined) {
-          console.log(`  OBSERVE ${limit.name}: ${formatValue(compared, limit.unit)} (no acceptance limit asserted)`)
-          continue
-        }
         const passedMinimum = limit.minimum === undefined || compared >= limit.minimum
         const passedMaximum = limit.maximum === undefined || compared <= limit.maximum
         const status = passedMinimum && passedMaximum ? "PASS" : "FAIL"
@@ -230,7 +228,7 @@ function run(): void {
   if (failedLimits > 0)
     throw new Error(`${failedLimits} electrical simulation limit${failedLimits === 1 ? "" : "s"} failed.`)
   console.log(
-    `\nElectrical simulation acceptance limits passed: ${simulations.length} models. Observations are not approvals.`
+    `\nElectrical simulation acceptance limits passed: ${simulations.length} models. Not a compliance approval.`
   )
 }
 
