@@ -163,8 +163,8 @@ error. Most PCB routing remains unfinished.
 The current draft contains 153 components across eleven functional/support sheets plus the cover. Every component has a
 footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
 regulator section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass
-capacitors. Computer USB power, protection, isolation, data and USB-present sensing are now routed. Most other parts
-remain in provisional positions.
+capacitors. Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32
+crystal, boot pull-down, reset network/button and programming header. Most other parts remain in provisional positions.
 
 Remaining before fabrication:
 
@@ -181,14 +181,14 @@ Remaining before fabrication:
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. The PD input, remaining load distribution, clocks,
-   reset/debug and other signal interfaces still need routing. USB impedance must be checked against the selected
-   fabricator stackup before release. No purchase or assembly release has been performed.
+   manufacturing outputs, and then perform hardware bring-up. The PD input, remaining load distribution, ESP32
+   support/programming and other signal interfaces still need routing. USB impedance must be checked against the
+   selected fabricator stackup before release. No purchase or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **328 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **306 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -218,9 +218,9 @@ C15 **1uF**. New C34 **100nF** bypasses VBAT, which remains tied to CORE_3V3 wit
 [AN5093 Rev 2, section 1.1.2](https://www.st.com/resource/en/application_note/an5093-getting-started-with-stm32g4-series--hardware-development-boards-stmicroelectronics.pdf).
 Keep **VREFBUF disabled** because VREF+ is externally supplied; the comparator's internal VREFINT selection is separate.
 The SWD header, reset switch and one crystal capacitor moved locally to clear this routing; processors and external
-connectors did not move. Other acquisition loads, clock and reset/debug connections remain unrouted. This is not an
-operating supply qualification: exact capacitor selection/effective capacitance, regulator current/thermal margin,
-startup and handover still need verification.
+connectors did not move. Other acquisition loads remain unrouted. This is not an operating supply qualification: exact
+capacitor selection/effective capacitance, regulator current/thermal margin, startup and handover still need
+verification.
 
 The USB routing connects both USB-C data-contact copies through U3 to U18, each CC pull-down independently, and all
 VBUS/ground contacts. U18's isolated 5V output reaches D1 and the R3/R4 USB-present divider at the STM32. Its VLO output
@@ -228,9 +228,10 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-The board now has 185 track segments, 71 ordinary 0.6/0.3mm vias and nine copper zones. The prior power routing and
-isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended board-ground pours provide return
-paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA pads. This follows the
+After the STM32 support routing below, the board has 248 track segments, 82 ordinary 0.6/0.3mm vias and ten copper
+zones. The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the
+extended board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside
+the BGA pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
 including its integrated bypass/termination, and keeps the
 [USBLC6 protection](https://www.st.com/resource/en/datasheet/usblc6-2.pdf) close to the connector. Native top-copper,
@@ -241,6 +242,25 @@ crossovers resolve the connector/package pin order. U18-to-STM32 path lengths ar
 D-, including two 1.6mm via traversals on D-. These are routing measurements, not an impedance or eye-diagram pass.
 Confirm the 90-ohm differential target with the fabricator's actual stackup, then verify enumeration, signal integrity,
 ESD, current, suspend/resume and USB/PD handover on hardware. Firmware and physical USB operation remain unverified.
+
+The STM32 support routing connects Y1/C17/C18 to PF0/PF1, R6 to PB8/BOOT0, and R5/C16/SW1/J2 to NRST. J2's five pins are
+**1 target 3.3V reference, 2 SWDIO, 3 SWCLK, 4 GND, 5 NRST**; this is a custom header, not a standard keyed debug
+connector. Use the reference as a programmer voltage sense, not a competing supply. SWD is unisolated service access:
+disconnect fencers/piste and use bench-only programming, since a grounded debugger bypasses computer-USB isolation. Keep
+NRST in reset mode and retain SWD access in firmware/option bytes; programming and recovery are not bench-proven.
+
+Y1 and both load capacitors moved beside the oscillator pins. HSE_IN/HSE_OUT remain top-layer-only, approximately
+4.75/11.51mm from MCU to crystal, with a grounded guard and uninterrupted In1 ground beneath the loop. No unrelated
+signal crosses beneath it. C16/R5 moved nearer the MCU and R6 beside BOOT0; C8/C34 labels moved, but their parts and the
+existing 256 power/USB tracks/vias did not. Native copper connectivity checked both clock branches, the boot pull-down,
+every reset/programming connection and all returns, including both reset-button ground pads. Top/back copper and native
+3D renders were visually reviewed; no components, values, footprints, nets, processors or connectors changed.
+
+The [Abracon ABM3B](https://abracon.com/Resonators/abm3b.pdf) crystal remains the 8MHz/18pF candidate. The existing two
+27pF capacitors imply 18pF loading only with about 4.5pF stray capacitance; they remain tuning values. Placement follows
+[ST's oscillator/reset guidance, Figures 21 and 27](https://www.st.com/resource/en/datasheet/stm32g474re.pdf), not a
+clock qualification. Confirm startup margin, crystal drive, frequency across supply/temperature and the final load
+capacitors on hardware. No speculative oscillator model or extra support parts were added.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
