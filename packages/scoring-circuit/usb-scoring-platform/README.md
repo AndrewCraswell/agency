@@ -23,6 +23,8 @@ support effort.
   for a demonstrated electrical, mechanical, availability, or overall cost benefit at this sales volume.
 - Desktop acquisition uses **one computer USB cable for both power and data**, through the integrated LTM2884 module. PD
   powers the full display system. Computer sleep may shut off acquisition; reconnecting after wake is accepted.
+  Laptop-only units ship **without a HUB75 panel connected**. The laptop provides the display; the populated ESP32,
+  Ethernet and IR application branch stays unpowered in acquisition-only mode.
 - Each added component must serve a required function, satisfy an applicable requirement, or address a specific failure
   mode. Keep necessary protection, decoupling, reset defaults, isolation, and practical programming access; low volume
   does not reduce electrical-safety or scoring-correctness requirements.
@@ -57,12 +59,15 @@ support effort.
   pull-up. The 100k/150k divider senses the board-side isolated output, never computer VBUS. Firmware is not implemented
   in this hardware change. See the
   [manufacturer's suspend and compliance notes, pages 15-17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf).
-- **USB power limits:** the module can supply up to 200mA at 5V from a 4.4-5.5V bus, not enough for the ESP32, Ethernet,
-  and HUB75 stack. Keep those on PD. Follow the manufacturer's less-than-25mA isolated-load guidance before enumeration
-  to stay within 100mA host input: low-power MCU startup, excitation disabled, sound and Favero outputs off. A USB
-  configuration requests up to 500mA host current; retain output-current headroom after configuration. Measure startup,
-  configured load, suspend current, and USB/PD handover before use. This is a firmware and bench requirement, not an
-  already-proven power budget or USB compliance claim. Never apply the 20V PD rail to LTM2884.
+- **USB power budget:** target 20mA isolated load before configuration and 75mA during acquisition, against U18's 200mA
+  bus-powered output rating. The [laptop acquisition budget](usb-acquisition-power.md) accounts for the MCU, all seven
+  comparators, one high excitation source, bias resistors, translators and regulator overhead, with explicit margin.
+  Host limits remain 100mA before configuration and 500mA afterward; the isolated-output allocation does not prove those
+  input limits. Keep sound/Favero off and the ESP32/Ethernet/IR/HUB75 branch on PD only. Firmware enforcement and
+  physical startup/current/suspend/handover checks remain unfinished. Never apply the 20V PD rail to LTM2884.
+- **Single-receptacle status:** the agreed shared power/data USB-C conversion is not yet implemented. The current two
+  connectors and nonisolated PD converter cannot simply be joined without bypassing computer isolation. The laptop
+  budget above does not select or implement the replacement isolated full-display power path.
 - U18 uses the manufacturer's 44-ball, 15 x 15mm BGA land pattern with 1.27mm pitch and 0.63mm copper lands. The custom
   footprint follows the
   [05-08-1881 Rev B package drawing](https://mds.analog.com/api/public/content/BGA_44_05-08-1881_Rev_B.pdf), including
@@ -176,10 +181,12 @@ Remaining before fabrication:
    weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
    dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
    selection or this topology.
-2. Validate single-cable USB acquisition power, startup/current/suspend behavior, supply handover, and the electrical-
-   safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
-   keepouts separate computer ground from board ground; acquisition and application still share board ground. The
-   keepout spans the gap between the module's primary and secondary ball rows. This is not complete board safety proof.
+2. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when implementing USB acquisition, and
+   finish the shared USB-C conversion while preserving isolation. Bench-check startup/current/suspend behavior, supply
+   handover, and the electrical safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated
+   isolator and all-layer copper keepouts separate computer ground from board ground; acquisition and application still
+   share board ground. The keepout spans the gap between the module's primary and secondary ball rows. This is not
+   complete board safety proof.
 3. Finish the remaining local placement, decoupling, connector access, mounting, antenna clearance, and power/current
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
