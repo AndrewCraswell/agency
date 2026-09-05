@@ -160,9 +160,10 @@ error. Most PCB routing remains unfinished.
 
 ## Current state and remaining work
 
-The current draft contains 151 components across eleven functional/support sheets plus the cover. Every component has a
+The current draft contains 153 components across eleven functional/support sheets plus the cover. Every component has a
 footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
-regulator section and its 5V feed are now routed. Most other parts remain in provisional positions.
+regulator section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass
+capacitors. Most other parts remain in provisional positions.
 
 Remaining before fabrication:
 
@@ -179,29 +180,46 @@ Remaining before fabrication:
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. The PD input, acquisition supplies, load distribution and
-   signal interfaces still need routing. No purchase or assembly release has been performed.
+   manufacturing outputs, and then perform hardware bring-up. The PD input, isolated USB input/feed, remaining load
+   distribution, clocks, reset/debug and signal interfaces still need routing. No purchase or assembly release has been
+   performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **432 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **394 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
 DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
 are unavailable, limiting ERC's fault detection.
 
-The application buck section contains 31 track segments, eight 0.6/0.3mm vias, and three ground-copper zones. U7, L1 and
-C4-C7 are grouped below the ESP32 antenna keepout. The 5V feeder connects both U6 output pins to C5; short top-layer
-connections close the input, switch and bootstrap paths. C6/C7 connect the inductor output to ground, and a separate
-feedback route returns from C6 on In2.Cu beneath In1.Cu ground. Ground stitching connects the input/output capacitor
-returns, U7 ground and U6 ground pins. Native KiCad connectivity confirms every local regulator pin reaches its intended
-parts; placement, copper and 3D exports were visually checked. No parts, pad assignments or connector positions changed.
-This follows the
+The application buck section retains its 31 track segments and eight 0.6/0.3mm vias. U7, L1 and C4-C7 are grouped below
+the ESP32 antenna keepout. The 5V feeder connects both U6 output pins to C5; short top-layer connections close the
+input, switch and bootstrap paths. C6/C7 connect the inductor output to ground, and a separate feedback route returns
+from C6 on In2.Cu beneath In1.Cu ground. Ground stitching connects the input/output capacitor returns, U7 ground and U6
+ground pins. Native KiCad connectivity confirms every local regulator pin reaches its intended parts; placement, copper
+and 3D exports were visually checked. No parts, pad assignments or connector positions changed. This follows the
 [AP63203 layout guidance, page 15](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), not a
 measured supply qualification: effective capacitor values, final copper weight, startup, load-step and thermal behavior
-still need verification. The other supply rails and application loads are not yet connected to this section.
+still need verification. Application loads are not yet connected to its 3.3V output.
+
+The STM32 supply routing adds 62 track segments and 29 ordinary 0.6/0.3mm vias. D2 now branches from PANEL_5V; both
+diode cathodes feed C2 and U4's input/enable pins. U4's output reaches C3, C14 and all seven MCU supply pins through an
+In2.Cu CORE_3V3 pour. The existing In1.Cu/back-layer ground pours extend beneath this section; supply and ground vias
+sit off component pads. Native connectivity confirms each MCU supply/ground pin and all twelve local capacitor returns
+reach the intended rail. The board now has 93 track segments, 37 vias and five copper zones, with no new DRC findings.
+Copper, component placement and the edited schematic were visually checked using native KiCad exports.
+
+C8-C11 provide one 100nF bypass per VDD pin. VDDA uses C12 **10nF** plus new C33 **1uF**; VREF+ uses C13 **100nF** plus
+C15 **1uF**. New C34 **100nF** bypasses VBAT, which remains tied to CORE_3V3 without a battery. These follow
+[DS12288 Rev 6, Figure 16, page 81](https://www.st.com/resource/en/datasheet/stm32g474re.pdf) and
+[AN5093 Rev 2, section 1.1.2](https://www.st.com/resource/en/application_note/an5093-getting-started-with-stm32g4-series--hardware-development-boards-stmicroelectronics.pdf).
+Keep **VREFBUF disabled** because VREF+ is externally supplied; the comparator's internal VREFINT selection is separate.
+The SWD header, reset switch and one crystal capacitor moved locally to clear this routing; processors and external
+connectors did not move. D1's isolated-USB input, other acquisition loads, clock and reset/debug connections remain
+unrouted. This is not an operating supply qualification: exact capacitor selection/effective capacitance, regulator
+current/thermal margin, startup and handover still need verification.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
