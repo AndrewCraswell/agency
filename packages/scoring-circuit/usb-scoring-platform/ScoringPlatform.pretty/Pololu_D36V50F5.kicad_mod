@@ -87,21 +87,21 @@
 		)
 	)
 	(pad "" np_thru_hole circle
-		(at -10.541 -10.541)
+		(at -9.271 -10.541)
 		(size 2.18 2.18)
 		(drill 2.18)
 		(layers "*.Cu" "*.Mask")
 		(uuid "20b3ba76-3a4f-4a5f-b53e-c1704ac95aa3")
 	)
 	(pad "" np_thru_hole circle
-		(at -10.541 10.541)
+		(at -9.271 10.541)
 		(size 2.18 2.18)
 		(drill 2.18)
 		(layers "*.Cu" "*.Mask")
 		(uuid "dd67dfca-6f4b-4b78-a7d4-054cf02b5dc7")
 	)
 	(pad "" np_thru_hole circle
-		(at 10.541 -10.541)
+		(at 11.811 10.541)
 		(size 2.18 2.18)
 		(drill 2.18)
 		(layers "*.Cu" "*.Mask")
@@ -174,13 +174,13 @@
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/../assets/cad/pololu-d36v50f5.step"
 		(offset
-			(xyz 11.43 -12.7 6)
+			(xyz -11.43 -12.7 7.5748)
 		)
 		(scale
 			(xyz 1 1 1)
 		)
 		(rotate
-			(xyz 0 0 270)
+			(xyz 180 0 270)
 		)
 	)
 )

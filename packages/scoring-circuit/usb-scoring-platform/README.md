@@ -166,7 +166,8 @@ regulator section and its 5V feed are routed, as are the STM32 regulator, PD-der
 capacitors. Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32
 crystal, boot pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75
 power contacts, both display buffers and their supply-side pull-ups are now routed. Most other parts remain in
-provisional positions.
+provisional positions. The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header
+are also routed; the processor-to-processor link and peripheral signals are not.
 
 Remaining before fabrication:
 
@@ -183,14 +184,14 @@ Remaining before fabrication:
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. The remaining 3.3V load distribution, ESP32
-   support/programming and other signal interfaces still need routing. USB impedance must be checked against the
+   manufacturing outputs, and then perform hardware bring-up. The remaining peripheral supply distribution,
+   processor-to-processor link and other signal interfaces still need routing. USB impedance must be checked against the
    selected fabricator stackup before release. No purchase or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **276 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **250 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -205,7 +206,7 @@ ground pins. Native KiCad connectivity confirms every local regulator pin reache
 and 3D exports were visually checked. No parts, pad assignments or connector positions changed. This follows the
 [AP63203 layout guidance, page 15](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), not a
 measured supply qualification: effective capacitor values, final copper weight, startup, load-step and thermal behavior
-still need verification. Application loads are not yet connected to its 3.3V output.
+still need verification. The ESP32 is now connected to its 3.3V output; peripheral loads remain unfinished.
 
 The STM32 supply routing adds 62 track segments and 29 ordinary 0.6/0.3mm vias. D2 now branches from PANEL_5V; both
 diode cathodes feed C2 and U4's input/enable pins. U4's output reaches C3, C14 and all seven MCU supply pins through an
@@ -230,7 +231,7 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the PD/display power routing below, the board has 277 track segments, 89 ordinary 0.6/0.3mm vias and eleven copper
+After the ESP32 support routing below, the board has 332 track segments, 110 ordinary 0.6/0.3mm vias and twelve copper
 zones. The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the
 extended board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside
 the BGA pads. This follows the
@@ -273,10 +274,15 @@ vias; R34 moved clear of them. No connector, module, pad/hole position, part val
 
 Native copper checks confirm all sixteen PANEL_5V pad endpoints, both PD input contacts and the panel/buffer grounds;
 the prior 330 tracks/vias and three board/footprint keepouts are unchanged. Filled power/ground layers, display-buffer
-placement and the native 3D render were inspected. **U6's existing STEP orientation still needs correction:** the render
-shows its underside upward, unlike the manufacturer's labeled top view. Its electrical pad map matches the
-[manufacturer's VOUT/GND/GND/VIN row order](https://www.pololu.com/product/4091); do not approve assembly from that
-model.
+placement and the native 3D render were inspected. U6's retained manufacturer STEP is now right-side up. Its native
+KiCad transform is rotation `(180, 0, 270)` and offset `(-11.43, -12.7, 7.5748)` mm; all eight electrical pads remain
+fixed. The three carrier mounting holes were corrected to local `(-9.271, -10.541)`, `(-9.271, 10.541)` and
+`(11.811, 10.541)` mm, including the previously mirrored third hole. Measurements of the native KiCad STEP export
+confirm all eight power-pin centres and three mounting-hole centres coincide within 0.001mm. The library footprint and
+board agree. This matches the [manufacturer's VOUT/GND/GND/VIN row order](https://www.pololu.com/product/4091), not a
+physical assembly approval. The model assumes 6mm clearance between carrier top and module PCB underside; select
+matching header/spacer hardware and confirm seating and fastening on the real module. No STEP geometry was altered or
+invented.
 
 For full-system bring-up, use a USB-PD adapter supporting 20V/3A and a 3A cable. On U5, open every voltage jumper and
 both current jumpers, as described in the
@@ -287,6 +293,23 @@ overcurrent, short-circuit, thermal and soft-start protection; unused VRP/EN/PG 
 both pins of each power pair (3A per pin, 6A per pair). Final copper weight, thermal necks, module temperature, adapter
 negotiation, panel/cable current and full-white display load still require verification; these routes do not establish a
 5A continuous system rating. Computer USB still powers acquisition only, not the panel.
+
+The ESP32 routing adds 55 track segments, 21 ordinary vias and an In2.Cu APP_3V3 pour. C22 (10uF) and C27 (100nF) sit
+next to the module supply pad with short ground returns; R28 (10k) and C21 (1uF) provide the existing enable delay, and
+R29 (10k) pulls GPIO0 high. These follow the
+[Espressif supply and reset guidance](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/schematic-checklist.html).
+The antenna keepout, processors, external connectors and all 366 prior tracks/vias are unchanged. Only those five
+support parts moved; L1's label moved for clearance. Native copper checks confirm the supply, every module
+ground/thermal pad, enable/reset, boot and programming connections; top/back/inner copper and 3D placement were visually
+reviewed. Supply startup, RF-current transients, reset timing and actual programming still need bench verification.
+
+J6 is a custom unisolated service header: **1 target 3.3V reference, 2 GND, 3 ESP32 TX, 4 ESP32 RX, 5 EN/reset, 6
+GPIO0/BOOT**. Cross TX/RX to a 3.3V USB-UART adapter; do not apply 5V logic or power the board from the adapter's
+reference connection. Power the application from PD, hold SW3/BOOT while pressing and releasing SW2/RESET, then release
+BOOT to enter the ROM downloader. This is manual recovery, without an added auto-reset circuit. Disconnect fencers and
+piste before service: adapter ground bypasses the isolated computer-USB path. The main computer USB connector belongs to
+STM32 acquisition, not this ESP32 programming port. The two interprocessor UART translators and remaining peripheral
+interfaces are still unrouted.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
