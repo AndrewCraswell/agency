@@ -1,0 +1,133 @@
+(footprint "HUB75_POWER"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -3 270)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "02f75969-e1f9-4bc2-a969-35af66b6eb1a")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "HUB75_POWER"
+		(at 0 3 270)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "417ccfd7-3664-4b62-871b-d123f33ac3c0")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 270)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "7fb20450-b82f-4e4c-88e2-8e590c729902")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 270)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "068fd7a4-645e-4e5f-a49c-993507d09173")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Supplier Part Number" ""
+		(at 0 0 270)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "2f154e20-7ab1-247f-2477-971e31c1f643")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_rect
+		(start -8.2 -5.75)
+		(end 8.2 5.75)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "ef3e0dca-582c-4174-a307-7dae50c42a9e")
+	)
+	(fp_text user "HUB75 5V"
+		(at 0 -4.6 0)
+		(layer "F.SilkS")
+		(uuid "a2b2e61a-da17-44e9-bf5c-3f0e4c7ea8c8")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at -5.94 0)
+		(size 2.8 2.8)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "454bc940-4cbb-4a61-213d-a1fe70c971a3")
+	)
+	(pad "2" thru_hole rect
+		(at -1.98 0)
+		(size 2.8 2.8)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "44d41ecc-0c50-80d4-5d75-207451663fec")
+	)
+	(pad "3" thru_hole rect
+		(at 1.98 0)
+		(size 2.8 2.8)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "2eca04ee-7fee-a48e-2eec-bbd22237e3ce")
+	)
+	(pad "4" thru_hole rect
+		(at 5.94 0)
+		(size 2.8 2.8)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "4611a9a0-27e7-42bf-6a1f-d0e203d91b7d")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/../assets/cad/wurth-645004114822.step"
+		(offset
+			(xyz 0 -3.625 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

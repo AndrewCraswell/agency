@@ -9,6 +9,8 @@ The active design documents are:
 
 - [Clean-sheet board architecture](docs/clean-sheet-board-architecture.md)
 - [Prototype delivery checklist](docs/esp32-prototype-backlog.md)
+- [Separate USB/STM32 scoring platform draft](usb-scoring-platform/README.md): native KiCad exploration with the
+  original prototype preserved; not a fabrication-ready replacement.
 
 Useful commands:
 
