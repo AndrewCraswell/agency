@@ -71,9 +71,9 @@ support effort.
 - J1 uses GCT USB4105-GF-A for computer USB: a documented 16-contact USB 2.0 receptacle with a matching native KiCad
   footprint and STEP model. It replaces the initial HRO candidate in this new design only. See the
   [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf).
-- Retain Adafruit 5807 fixed-20V PD and Pololu D36V50F5 modules initially. Use AP63203 with a Coilcraft XAL5030-472MEC
-  inductor for application 3.3V. Module substitutions remain possible if footprint, power, cost, and availability
-  justify them; this is not a locked procurement BOM.
+- Retain Adafruit 5807 configured to request 20V/3A and Pololu D36V50F5 modules initially. Use AP63203 with a Coilcraft
+  XAL5030-472MEC inductor for application 3.3V. Module substitutions remain possible if footprint, power, cost, and
+  availability justify them; this is not a locked procurement BOM.
 - J3/J4 are three-wire harness landings for off-board female banana sockets, not banana receptacles themselves. J5 is
   the metal-piste reference connection, not protective earth. The user's compatible Ok Fencing cable remains unchanged.
   Viewed from the component side with computer USB/Ethernet along the bottom edge, J3 is on the left and J4 on the
@@ -164,7 +164,9 @@ The current draft contains 153 components across eleven functional/support sheet
 footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
 regulator section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass
 capacitors. Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32
-crystal, boot pull-down, reset network/button and programming header. Most other parts remain in provisional positions.
+crystal, boot pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75
+power contacts, both display buffers and their supply-side pull-ups are now routed. Most other parts remain in
+provisional positions.
 
 Remaining before fabrication:
 
@@ -181,14 +183,14 @@ Remaining before fabrication:
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. The PD input, remaining load distribution, ESP32
+   manufacturing outputs, and then perform hardware bring-up. The remaining 3.3V load distribution, ESP32
    support/programming and other signal interfaces still need routing. USB impedance must be checked against the
    selected fabricator stackup before release. No purchase or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **306 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **276 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -228,7 +230,7 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the STM32 support routing below, the board has 248 track segments, 82 ordinary 0.6/0.3mm vias and ten copper
+After the PD/display power routing below, the board has 277 track segments, 89 ordinary 0.6/0.3mm vias and eleven copper
 zones. The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the
 extended board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside
 the BGA pads. This follows the
@@ -261,6 +263,30 @@ The [Abracon ABM3B](https://abracon.com/Resonators/abm3b.pdf) crystal remains th
 [ST's oscillator/reset guidance, Figures 21 and 27](https://www.st.com/resource/en/datasheet/stm32g474re.pdf), not a
 clock qualification. Confirm startup margin, crystal drive, frequency across supply/temperature and the final load
 capacitors on hardware. No speculative oscillator model or extra support parts were added.
+
+The PD/display power routing connects U5 V+ to both U6 VIN contacts with a 2mm top trace. A dedicated In2.Cu 5V pour,
+mostly 6mm wide, connects both U6 output contacts to both J8 positive contacts; it does not send display current through
+the earlier 1mm application-buck feeder. In1/back ground extends to U5, the display header and panel return contacts,
+without entering the Favero output-side region or changing USB/antenna keepouts. Power-contact thermal spokes are 0.8mm;
+the crowded HUB75 ground contacts use diagonal spokes. C31/C32 now sit beside U14/U15 supply pins, with local ground
+vias; R34 moved clear of them. No connector, module, pad/hole position, part value or net assignment changed.
+
+Native copper checks confirm all sixteen PANEL_5V pad endpoints, both PD input contacts and the panel/buffer grounds;
+the prior 330 tracks/vias and three board/footprint keepouts are unchanged. Filled power/ground layers, display-buffer
+placement and the native 3D render were inspected. **U6's existing STEP orientation still needs correction:** the render
+shows its underside upward, unlike the manufacturer's labeled top view. Its electrical pad map matches the
+[manufacturer's VOUT/GND/GND/VIN row order](https://www.pololu.com/product/4091); do not approve assembly from that
+model.
+
+For full-system bring-up, use a USB-PD adapter supporting 20V/3A and a 3A cable. On U5, open every voltage jumper and
+both current jumpers, as described in the
+[Adafruit pinout guide](https://learn.adafruit.com/adafruit-husb238-usb-type-c-power-delivery-breakout/pinouts). This
+requests 20V/3A, not a guaranteed 20V output: the adapter can supply a lower available voltage. A 5V-only source does
+not meet the D36V50F5's 5.5V minimum input. U6 remains enabled by default and retains its built-in reverse-input,
+overcurrent, short-circuit, thermal and soft-start protection; unused VRP/EN/PG module contacts stay unpopulated. Use
+both pins of each power pair (3A per pin, 6A per pair). Final copper weight, thermal necks, module temperature, adapter
+negotiation, panel/cable current and full-white display load still require verification; these routes do not establish a
+5A continuous system rating. Computer USB still powers acquisition only, not the panel.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
