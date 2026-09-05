@@ -20,9 +20,8 @@ support effort.
   redundant supply, or speculative expansion interface without a concrete need.
 - Prefer proven, available modules and manufacturer reference circuits. Replace a module with discrete circuitry only
   for a demonstrated electrical, mechanical, availability, or overall cost benefit at this sales volume.
-- Desktop acquisition must ultimately use **one computer USB cable for both power and data**. PD powers the full display
-  system. The current PD-powered, isolated-data draft is an intermediate state, not a completed substitute for USB
-  power. Evaluate a proven isolated USB/power solution before designing a custom isolated supply.
+- Desktop acquisition uses **one computer USB cable for both power and data**, through the integrated LTM2884 module. PD
+  powers the full display system. Computer sleep may shut off acquisition; reconnecting after wake is accepted.
 - Each added component must serve a required function, satisfy an applicable requirement, or address a specific failure
   mode. Keep necessary protection, decoupling, reset defaults, isolation, and practical programming access; low volume
   does not reduce electrical-safety or scoring-correctness requirements.
@@ -42,15 +41,28 @@ support effort.
   and unpowered logic rails. These are **not galvanic isolators**.
 - Keep the WIZ850io Ethernet module, TSOP38438 receiver, two TE 5520250-2 Favero DATA-LINE connectors with optocoupler
   outputs, HUB75 signal/power connectors, and sounder from the prototype. Favero ports are not Ethernet or RS-422.
-- Separate USB-C connectors serve computer USB and USB-C PD power. The current circuit uses ADuM3160BRWZ for isolated
-  USB data and powers acquisition from the PD-derived 5V rail. The former direct USB supply connection and VBUS divider
-  were removed because they crossed the intended isolation boundary. USB-only acquisition power remains unimplemented,
-  including its start-up, current-limit, suspend, and power-transition behavior.
-- The integrated LTM2884 USB/power module was evaluated but is not selected. Its low-current suspend mode removes
-  downstream power and requires USB re-enumeration after host resume; its keep-powered mode exceeds the USB suspend
-  current allowance when bus powered. Decide whether a desktop reconnect after computer sleep is acceptable before
-  adopting that tradeoff. See the
-  [manufacturer's suspend and compliance notes, pages 15-16](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf).
+- Separate USB-C connectors serve computer USB and USB-C PD power. **LTM2884IY#PBF** supplies isolated USB full-speed
+  data and 5V acquisition power. It replaces ADuM3160 and its external termination/bypass parts. D1 and D2 (SS14) OR the
+  isolated USB output and the PD-derived 5V rail into CORE_5V without backfeeding either source. AP2112K supplies
+  CORE_3V3; the module's auxiliary 3.3V LDOs are not MCU supplies. Host USB ground remains separate from board ground.
+- **Accepted sleep behavior:** SPNDPWR is high, so USB idle/suspend shuts off the module's isolated output. With USB
+  alone, acquisition powers down. Host resume requires USB re-enumeration; remote wake is unavailable in this mode.
+  Desktop software must preserve bout state but discard the previous capture session and reconnect before accepting new
+  observations. If PD keeps the STM32 alive, PB5 must still detect loss of USB_ISOLATED_5V and disable its USB D+
+  pull-up. The 100k/150k divider senses the board-side isolated output, never computer VBUS. Firmware is not implemented
+  in this hardware change. See the
+  [manufacturer's suspend and compliance notes, pages 15-17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf).
+- **USB power limits:** the module can supply up to 200mA at 5V from a 4.4-5.5V bus, not enough for the ESP32, Ethernet,
+  and HUB75 stack. Keep those on PD. Follow the manufacturer's less-than-25mA isolated-load guidance before enumeration
+  to stay within 100mA host input: low-power MCU startup, excitation disabled, sound and Favero outputs off. A USB
+  configuration requests up to 500mA host current; retain output-current headroom after configuration. Measure startup,
+  configured load, suspend current, and USB/PD handover before use. This is a firmware and bench requirement, not an
+  already-proven power budget or USB compliance claim. Never apply the 20V PD rail to LTM2884.
+- U18 uses the manufacturer's 44-ball, 15 x 15mm BGA land pattern with 1.27mm pitch and 0.63mm copper lands. The custom
+  footprint follows the
+  [05-08-1881 Rev B package drawing](https://mds.analog.com/api/public/content/BGA_44_05-08-1881_Rev_B.pdf), including
+  top-view A1 orientation. Its manufacturer STEP model has not been obtained; the 3D view deliberately has no invented
+  placeholder body for this part. Footprint and reflow-process review remain necessary for assembly.
 - J1 uses GCT USB4105-GF-A for computer USB: a documented 16-contact USB 2.0 receptacle with a matching native KiCad
   footprint and STEP model. It replaces the initial HRO candidate in this new design only. See the
   [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf).
@@ -62,8 +74,8 @@ support effort.
 
 ## Current state and remaining work
 
-The current draft contains 157 components across eleven functional/support sheets plus the cover. Every component has a
-footprint, and all 162 schematic nets were transferred to the initial 160 x 100mm, four-layer PCB. Most components are
+The current draft contains 151 components across eleven functional/support sheets plus the cover. Every component has a
+footprint, and all 160 schematic nets were transferred to the initial 160 x 100mm, four-layer PCB. Most components are
 passive support, clamps, decoupling, and defined reset-state resistors; their physical arrangement is still provisional.
 
 Before routing and fabrication:
@@ -72,9 +84,10 @@ Before routing and fabrication:
    timing, loading, and simultaneous-contact behavior. The 330-ohm excitation resistors, 10k sense resistors, and BAT54S
    clamps are characterization candidates, not evidence of correct FIE behavior. Check clamp-rail injection and
    unpowered faults. Do not infer patent clearance from component selection or this topology.
-2. Complete single-cable USB acquisition power and review the electrical-safety boundary for USB, PD, Ethernet, piste,
-   and weapon conductors. The USB data isolator and PCB copper keepouts now separate computer ground from board ground;
-   acquisition and application still share board ground. These draft changes do not establish complete board safety.
+2. Validate single-cable USB acquisition power, startup/current/suspend behavior, supply handover, and the electrical-
+   safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
+   keepouts separate computer ground from board ground; acquisition and application still share board ground. The
+   keepout spans the gap between the module's primary and secondary ball rows. This is not complete board safety proof.
 3. Finish local placement, decoupling, connector access, mounting, antenna clearance, and power/current paths. Review
    every retained footprint and 3D transform against its exact part drawing. Resolve the ESP32 footprint's 0.2mm thermal
    drills versus the current 0.3mm board rule with the intended fabrication process; do not merely suppress the warning.
@@ -83,18 +96,19 @@ Before routing and fabrication:
 
 ## Checks performed
 
-At the 157-component USB-isolation checkpoint, KiCad 10.0.6 loaded the schematic and PCB in its native editors and
-rendered the assembly in its native 3D viewer. ERC reported zero violations; netlist export succeeded and the PCB
-transfer checked every explicitly connected schematic pin against that export. The host connector, ESD device, isolator
-bypasses and series resistors occupy a separate USB-ground island with all-copper-layer keepouts. These checks establish
-connectivity consistency, not analog performance or compliance. Module symbols use passive pins where the retained
-interface lacks detailed electrical pin types, which limits what ERC can diagnose.
+At the 151-component USB power/data checkpoint, KiCad 10.0.6 loaded the updated native schematic and PCB and rendered
+the assembly in its 3D viewer. ERC and schematic-to-PCB parity each reported zero issues; netlist export succeeded and
+the PCB transfer checked every explicitly connected schematic pin against that export. No footprint bounding boxes
+collide. The host connector, ESD device, and primary module pins occupy a separate USB-ground island with
+all-copper-layer keepouts. These checks establish connectivity consistency, not analog performance or compliance. Module
+symbols use passive pins where the retained interface lacks detailed electrical pin types, which limits what ERC can
+diagnose.
 
-That checkpoint's PCB DRC reported 431 unconnected items, 12 thermal-drill size errors, four USB connector
-hole-clearance errors, and 13 silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default
+That checkpoint's PCB DRC reported 449 unconnected items, 12 thermal-drill size errors, four USB connector
+hole-clearance errors, and nine silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default
 0.25mm rule and needs fabricator review. These findings are open, not waived. The board has no routed copper. Visual
-review of individual pin seating and electrical design work are not complete. The isolated-data circuit has been
-reviewed as an intermediate draft only; single-cable acquisition power remains open.
+review of individual pin seating and electrical design work are not complete. USB acquisition power is now connected in
+the schematic and unrouted netlist; operation and power-transition behavior still require firmware and bench work.
 
 Repository verification on September 5, 2026 passed formatting, lint, types, unused-code checks, and all five existing
 prototype simulations. Scoring application tests reported 770 passes and three failures in unchanged files: a mutation

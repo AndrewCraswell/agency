@@ -100,7 +100,7 @@
 (no_connect (at 107.95 120.65) (uuid c895ca89-7d7e-4702-a8e5-4e42f7756147))
 (no_connect (at 107.95 123.19) (uuid 20d0d056-b92e-47f3-a244-9f8a07eb6391))
 (wire (pts (xy 107.95 125.73) (xy 113.03 125.73)) (stroke (width 0) (type default)) (uuid fe2d2234-3bc7-4964-aaa2-b934dda783d1))
-(global_label "USB_CONNECT" (shape bidirectional) (at 113.03 125.73 0) (effects (font (size 0.9 0.9)) (justify left)) (uuid 46236073-8326-47ca-a1ea-bb7594172d55) (property "Intersheetrefs" "" (at 113.03 125.73 0) (effects (font (size 1 1)) (hide yes))))
+(global_label "USB_PRESENT" (shape bidirectional) (at 113.03 125.73 0) (effects (font (size 0.9 0.9)) (justify left)) (uuid 46236073-8326-47ca-a1ea-bb7594172d55) (property "Intersheetrefs" "" (at 113.03 125.73 0) (effects (font (size 1 1)) (hide yes))))
 (no_connect (at 107.95 128.27) (uuid 4936be0c-4fc4-42ac-add9-7c7f9badd838))
 (no_connect (at 107.95 130.81) (uuid 5b905c22-de83-4d5c-abcc-75be7db5ce37))
 (wire (pts (xy 107.95 133.35) (xy 113.03 133.35)) (stroke (width 0) (type default)) (uuid a5acb547-df62-4da4-ad32-07a466f55b6b))
