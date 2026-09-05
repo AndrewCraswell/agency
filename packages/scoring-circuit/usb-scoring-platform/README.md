@@ -144,6 +144,14 @@ CORE_3V3 through BAT54S clamps. An externally driven conductor can inject into t
 must not be assumed to sink that current. Review that path before powered external-fault or fencer testing. Neither the
 buffer's power-off specification nor the clamps authorize applying 20V PD to any conductor.
 
+All seven selected comparator pins are STM32 **TT_a analog inputs**, not power-off-tolerant digital inputs. Their
+operating input ceiling follows the analog supply; the absolute-maximum table does not grant normal operation while
+unpowered. AP2112's typical 60-ohm output discharge applies with EN low, not as a guaranteed rail clamp after input
+power disappears. Keep passive-cable power-down and sustained external-voltage fault tests separate. Do not substitute a
+generic diode simulation for those guarantees. See STM32 DS12288 tables 15/17 and
+[AN4899 section 5.2.1](https://www.st.com/resource/en/application_note/DM00315319-.pdf), and
+[AP2112 electrical characteristics](https://www.diodes.com/datasheet/download/AP2112.pdf).
+
 Leakage and capacitance are chosen stresses, not guaranteed worst cases or FIE evidence. BAT54S hot-leakage curves are
 typical, not maximum ratings. The models do not prove exhaustive contacts, resistance diagnostics, clamp behavior or
 capture timing. Do not treat continuity as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring
@@ -167,18 +175,28 @@ Before routing and fabrication:
    keepouts separate computer ground from board ground; acquisition and application still share board ground. The
    keepout spans the gap between the module's primary and secondary ball rows. This is not complete board safety proof.
 3. Finish local placement, decoupling, connector access, mounting, antenna clearance, and power/current paths. Review
-   every retained footprint and 3D transform against its exact part drawing. Resolve the ESP32 footprint's 0.2mm thermal
-   drills versus the current 0.3mm board rule with the intended fabrication process; do not merely suppress the warning.
+   every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's tight
+   pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Route the board, define stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and manufacturing
    outputs, and then perform hardware bring-up. No routing, purchase, or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC still reports **449 unrouted items** and **25 other findings**:
-12 ESP32 thermal-drill size errors, four USB connector hole-clearance errors, and nine silkscreen warnings. The USB
-connector's 0.1944mm pad-to-hole clearance is below the default 0.25mm rule and needs fabricator review. None is waived.
-Module symbols use passive pins where detailed electrical pin types are unavailable, limiting ERC's fault detection.
+export and connected-pin transfer checks succeeded. DRC reports **449 unrouted items** and **four other findings**, all
+at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
+ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
+NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
+DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
+are unavailable, limiting ERC's fault detection.
+
+The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
+is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
+ordinary routing vias remain 0.6/0.3mm. This resolves the previous twelve drill-setting findings without changing the
+ESP32 footprint. Nine silkscreen findings were corrected by relocating the Favero labels, optocoupler/buzzer pin-1
+markers, and U14/D2 references off pads or neighboring outlines. The three project-local footprint masters match the
+board. Native KiCad copper/silkscreen exports were visually reviewed; these edits do not move any component, hole or
+model and do not establish solder-paste/thermal-via assembly acceptance.
 
 KiCad loaded the current schematic/PCB and rendered the assembly. Native 3D cable-side and underside views confirmed
 Favero openings toward the top edge and Ethernet toward the bottom; measured CAD tail/board-lock centres match their

@@ -4192,7 +4192,7 @@
 			(uuid "4bcc395c-7abd-48d6-b6cd-5bbc7ef0a72a")
 		)
 		(fp_text user "FA-05 DATA"
-			(at 0 5.1375 180)
+			(at 0 9.5 180)
 			(layer "F.SilkS")
 			(uuid "a415b8a6-e55e-49e5-80c8-7c9dff76ebd0")
 			(effects
@@ -6857,8 +6857,8 @@
 		(path "/20cc8167-128c-446a-a106-f942323e143f/8eb01a97-00e8-4fc9-a0dc-2c04f64b61fc/4a496bba-e919-4a27-a708-5cbeb7bcf358")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
-			(center -2.5 0)
-			(end -1.25 0)
+			(center -2.5 -2.5)
+			(end -2.1 -2.5)
 			(stroke
 				(width 0.2)
 				(type default)
@@ -8100,8 +8100,8 @@
 		(path "/20cc8167-128c-446a-a106-f942323e143f/19a689f6-051a-47d6-a064-26f29b455422/4e522c80-c0aa-49ed-a0ef-bffaee01a8a3")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
-			(center -3.2 -2.5)
-			(end -2.7 -2.5)
+			(center -3.2 -4.7)
+			(end -2.8 -4.7)
 			(stroke
 				(width 0.2)
 				(type default)
@@ -11634,8 +11634,8 @@
 		(path "/20cc8167-128c-446a-a106-f942323e143f/19a689f6-051a-47d6-a064-26f29b455422/761159c2-8b05-40f2-ae77-27c81f021d2e")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
-			(center -3.2 -2.5)
-			(end -2.7 -2.5)
+			(center -3.2 -4.7)
+			(end -2.8 -4.7)
 			(stroke
 				(width 0.2)
 				(type default)
@@ -21691,7 +21691,7 @@
 		(descr "TSSOP, 20 Pin (JEDEC MO-153 Var AC https://www.jedec.org/document_search?search_api_views_fulltext=MO-153)")
 		(tags "TSSOP SO")
 		(property "Reference" "U14"
-			(at 0 -4.2 0)
+			(at 0 4.2 0)
 			(layer "F.SilkS")
 			(uuid "0e73e523-89b4-471d-a51e-c838fd4a51f4")
 			(effects
@@ -23726,7 +23726,7 @@
 		(descr "Diode SMA (DO-214AC)")
 		(tags "Diode SMA (DO-214AC)")
 		(property "Reference" "D2"
-			(at 0 -2.5 0)
+			(at 0 2.5 0)
 			(layer "F.SilkS")
 			(uuid "c9c2bd08-c678-4cf4-bfbd-e2129045a834")
 			(effects
@@ -26429,7 +26429,7 @@
 			(uuid "f0720b7f-e8e4-4591-bd2e-f60ad41f879c")
 		)
 		(fp_text user "FA-05 DATA"
-			(at 0 5.1375 180)
+			(at 0 9.5 180)
 			(layer "F.SilkS")
 			(uuid "1ae22679-a3ab-4040-a0d0-558463a1ef01")
 			(effects

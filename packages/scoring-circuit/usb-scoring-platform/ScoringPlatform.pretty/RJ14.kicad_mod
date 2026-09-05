@@ -76,7 +76,7 @@
 		(uuid "62a44792-01ff-4b8f-9c04-ee03ff15be28")
 	)
 	(fp_text user "FA-05 DATA"
-		(at 0 5.1375 0)
+		(at 0 9.5 0)
 		(layer "F.SilkS")
 		(uuid "5961ae60-bd48-43ae-b05e-197f25e0bab6")
 		(effects
