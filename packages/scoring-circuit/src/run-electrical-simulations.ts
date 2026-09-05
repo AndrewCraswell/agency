@@ -42,6 +42,53 @@ const simulations: readonly SimulationCase[] = [
     ]
   },
   {
+    title: "New STM32 platform: seven-conductor paths and scan loading (not a scoring timing approval)",
+    file: "stm32-conductor-scan.cir",
+    limits: [
+      ...[
+        "foil_rest_high",
+        "foil_target_high",
+        "foil_open_source",
+        "foil_piste_high",
+        "epee_left_high",
+        "epee_right_high",
+        "epee_piste_high",
+        "sabre_target_high",
+        "crossed_blades_high",
+        "reciprocal_left_high",
+        "reciprocal_right_high",
+        "targets_and_blades_high",
+        "seven_short_left_a",
+        "seven_short_left_b",
+        "seven_short_left_c",
+        "seven_short_right_a",
+        "seven_short_right_b",
+        "seven_short_right_c",
+        "seven_short_piste",
+        "weak_seven_short_high"
+      ].map((name) => ({ name, minimum: 0.651, unit: "V" })),
+      ...[
+        "foil_rest_unrelated",
+        "foil_target_unrelated",
+        "foil_open_unrelated",
+        "foil_piste_unrelated",
+        "epee_left_unrelated",
+        "epee_right_unrelated",
+        "epee_piste_unrelated",
+        "sabre_target_unrelated",
+        "crossed_blades_unrelated",
+        "reciprocal_left_unrelated",
+        "reciprocal_right_unrelated",
+        "targets_and_blades_piste",
+        "weak_seven_short_clear"
+      ].map((name) => ({ name, maximum: 0.556, unit: "V" })),
+      { name: "seven_short_current", absolute: true, maximum: 0.012, unit: "A" },
+      { name: "weak_seven_short_current", absolute: true, maximum: 0.012, unit: "A" },
+      // Characterization only: no asserted operating envelope for this leakage stress.
+      { name: "settled_leakage_stress", unit: "V" }
+    ]
+  },
+  {
     title: "ESP32 scoring-conductor interface",
     file: "scoring-conductor-interface.cir",
     limits: [
@@ -159,6 +206,10 @@ function run(): void {
           continue
         }
         const compared = limit.absolute ? Math.abs(measured) : measured
+        if (limit.minimum === undefined && limit.maximum === undefined) {
+          console.log(`  OBSERVE ${limit.name}: ${formatValue(compared, limit.unit)} (no acceptance limit asserted)`)
+          continue
+        }
         const passedMinimum = limit.minimum === undefined || compared >= limit.minimum
         const passedMaximum = limit.maximum === undefined || compared <= limit.maximum
         const status = passedMinimum && passedMaximum ? "PASS" : "FAIL"
@@ -178,7 +229,9 @@ function run(): void {
 
   if (failedLimits > 0)
     throw new Error(`${failedLimits} electrical simulation limit${failedLimits === 1 ? "" : "s"} failed.`)
-  console.log(`\nElectrical simulations passed: ${simulations.length} models.`)
+  console.log(
+    `\nElectrical simulation acceptance limits passed: ${simulations.length} models. Observations are not approvals.`
+  )
 }
 
 run()

@@ -93,8 +93,8 @@ candidate uses internal VREFINT/2 and the lowest nonzero hysteresis setting (HYS
 startup plus 5us comparator startup before accepting observations. A conservative threshold envelope is 0.556-0.651V,
 including reference variation, scaler offset, comparator offset and hysteresis from DS12288 Rev 6, tables 20 and 79.
 
-Run `pnpm --filter @repo/scoring-circuit simulate` for the actual circuit model in
-[stm32-sensing-interface.cir](../simulation/stm32-sensing-interface.cir). Its bounded cases passed:
+Run `pnpm --filter @repo/scoring-circuit simulate`. The [pair/reset model](../simulation/stm32-sensing-interface.cir)
+checks:
 
 - Disconnected input: 0.403V with a chosen 121uA leakage stress, below the 0.556V low boundary.
 - 500-ohm contact: 0.714V with weak 2.25V excitation, resistor tolerance and opposing leakage stress, above 0.651V.
@@ -102,12 +102,42 @@ Run `pnpm --filter @repo/scoring-circuit simulate` for the actual circuit model 
 - Chosen 10nF cable load: active-low discharge crossed the low boundary after 6.23us. Passive contact release left a
   **66.29us tail**, so observation blanking and deliberate discharge must be included in scan timing.
 
-The leakage and capacitance are explicit engineering stresses, not guaranteed worst cases or FIE test evidence. BAT54S
-hot-leakage curves are typical, not maximum ratings. The model does not prove external-overvoltage clamps, power-off
-injection, full weapon/contact combinations, accurate resistance diagnostics or capture timing. The smaller sense
-resistor increases external-fault injection relative to the former 10k part; that protection review remains open. Do not
-treat a continuity threshold as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring error. This
-remains a sensing candidate until the excitation sequence and complete per-weapon behavior are validated.
+The [seven-conductor model](../simulation/stm32-conductor-scan.cir) adds foil rest/target/off-target/piste paths, both
+epee tip contacts, tip-plus-piste, sabre target/blade/reciprocal contacts, and a seven-way short. It clears all seven
+conductors low, disables all outputs, then sources exactly one conductor while the others remain high impedance. The
+next slot repeats the clear before selecting another source. Nominal cases pass the comparator envelope, including
+unrelated lines after source handover. The seven-way short passes with each of the seven sources selected; peak modeled
+source current is 10.00mA. A separate 2.25V source/tolerance case with a chosen 4uA load per input reads 0.762V at the
+observation point and clears below 0.387V. These are modeled results, not bench measurements.
+
+**The leakage stress exposes insufficient margin:** applying the previous 121uA-per-input load to all seven shorted
+inputs gives only **0.572V even after settling**, inside the 0.556-0.651V uncertainty band. The runner labels this
+`OBSERVE`, not `PASS`; the single-pair result is not a seven-channel worst-case guarantee. Separately, the model's 50us
+slots take 350us per sweep and can miss contacts between observations. That characterization schedule is **not approved
+scoring firmware timing**. Qualification of pulse-duration boundaries requires the actual acquisition/capture algorithm,
+not just settled voltages or an assumption that every short pulse must produce a hit.
+
+Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
+
+| Harness pin | Our physical name                     | Foil / sabre                 | Epee            |
+| ----------- | ------------------------------------- | ---------------------------- | --------------- |
+| 1           | A, outer contact 15mm from the centre | Conductive jacket            | First tip wire  |
+| 2           | B, centre contact                     | Foil tip wire / sabre weapon | Second tip wire |
+| 3           | C, outer contact 20mm from the centre | Guard / weapon return        | Guard           |
+
+Foil normally closes B-C and opens it when the tip is pressed; a target connects B to the opposing A. Epee closes A-B at
+the tip. Sabre uses B-C for the weapon and opposing A for the jacket. PISTE is a separate observed conductor, not board
+ground. The foil/epee contact roles and unequal spacing follow m.29.2(a) and m.31.3 in the retained
+[FIE material rules](../../../apps/scoring/docs/specifications/fie-material-rules-2026-08-en.pdf). The fixtures
+establish reachable paths, not which redundant physical contact caused them: reciprocal sabre targets plus crossed
+blades can join all six cord wires. Scoring interpretation and the physical-to-core adapter remain unimplemented.
+
+Leakage and capacitance are chosen stresses, not guaranteed worst cases or FIE evidence. BAT54S hot-leakage curves are
+typical, not maximum ratings. Neither model proves external-overvoltage clamps, unpowered rail injection, exhaustive
+contact combinations, accurate resistance diagnostics, or capture timing. The smaller sense resistor increases
+external-fault injection relative to the former 10k part; that protection review remains open. Do not treat continuity
+as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring error. No new parts were added for this
+simulation checkpoint, and the PCB remains unrouted.
 
 ## Current state and remaining work
 
@@ -117,10 +147,11 @@ passive support, clamps, decoupling, and defined reset-state resistors; their ph
 
 Before routing and fabrication:
 
-1. Finish the sensing design: excitation sequence, per-weapon thresholds, capture timing, loading, and simultaneous-
-   contact behavior. The continuity reference and bias have a bounded simulation, not evidence of correct FIE behavior.
-   The 330-ohm excitation resistors, 3.3k sense dividers and BAT54S clamps remain candidates. Check clamp-rail injection
-   and unpowered faults. Do not infer patent clearance from component selection or this topology.
+1. Finish the sensing design: resolve the seven-input leakage margin and establish a sampling/excitation schedule that
+   preserves the required contact-duration boundaries. Basic simultaneous-contact paths now have electrical fixtures,
+   but full weapon behavior and capture timing are unproven. The 330-ohm excitation resistors, 3.3k sense dividers and
+   BAT54S clamps remain candidates. Check clamp-rail injection and unpowered faults. Do not infer patent clearance from
+   component selection or this topology.
 2. Validate single-cable USB acquisition power, startup/current/suspend behavior, supply handover, and the electrical-
    safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
    keepouts separate computer ground from board ground; acquisition and application still share board ground. The
@@ -133,38 +164,24 @@ Before routing and fabrication:
 
 ## Checks performed
 
-At the 151-component USB power/data checkpoint, KiCad 10.0.6 loaded the updated native schematic and PCB and rendered
-the assembly in its 3D viewer. ERC and schematic-to-PCB parity each reported zero issues; netlist export succeeded and
-the PCB transfer checked every explicitly connected schematic pin against that export. No footprint bounding boxes
-collide. The host connector, ESD device, and primary module pins occupy a separate USB-ground island with
-all-copper-layer keepouts. These checks establish connectivity consistency, not analog performance or compliance. Module
-symbols use passive pins where the retained interface lacks detailed electrical pin types, which limits what ERC can
-diagnose.
+The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
+export and connected-pin transfer checks succeeded. DRC still reports **449 unrouted items** and **25 other findings**:
+12 ESP32 thermal-drill size errors, four USB connector hole-clearance errors, and nine silkscreen warnings. The USB
+connector's 0.1944mm pad-to-hole clearance is below the default 0.25mm rule and needs fabricator review. None is waived.
+Module symbols use passive pins where detailed electrical pin types are unavailable, limiting ERC's fault detection.
 
-That checkpoint's PCB DRC reported 449 unconnected items, 12 thermal-drill size errors, four USB connector
-hole-clearance errors, and nine silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default
-0.25mm rule and needs fabricator review. These findings are open, not waived. The board has no routed copper. Visual
-review of individual pin seating and electrical design work are not complete. USB acquisition power is now connected in
-the schematic and unrouted netlist; operation and power-transition behavior still require firmware and bench work.
+KiCad loaded the current schematic/PCB and rendered the assembly. Native 3D cable-side and underside views confirmed
+Favero openings toward the top edge and Ethernet toward the bottom; measured CAD tail/board-lock centres match their
+holes. Left/right harnesses are separated and piste is on the bottom edge. No footprint bounding boxes collide, but
+enclosure cutouts, real plug/latch access, complete pin seating and electrical design still need review. These checks
+establish placement/connectivity consistency, not fabrication approval. The scan-model update does not change CAD.
 
-At the sensing checkpoint on September 5, 2026, ERC again reported zero violations and schematic-to-PCB parity zero
-mismatches. DRC still reports the same 449 unrouted items and 25 other findings listed above. Native KiCad visual review
-confirmed the updated input/bias sheets; the resistor-only update preserves all placement, footprints and net
-assignments.
-
-The connector-placement checkpoint separates the left/right harness headers and puts the piste header on the bottom
-edge. KiCad's native 3D renders were inspected from both cable sides and underneath: the Favero ports open toward the
-top outer edge and Ethernet toward the bottom outer edge. The retained TE STEP's four contact-tail centers and two
-board-lock centers per Favero port coincide with the corrected holes. Favero reference positions, contact numbers and
-nets are unchanged. Parity remains clean, with 449 unrouted items and the same 25 DRC findings. Enclosure cutouts,
-plug/latch access with actual cables, and the rest of the assembly still need mechanical review; these views are not a
-fabrication approval.
-
-Repository verification passed formatting, lint, types and unused-code checks. All six electrical models passed. The
-full verification run still fails on the same three unchanged scoring tests: a mutation-test timeout and
-canonical-corpus failure in `scenario-runner.test.ts`, plus a 29-versus-28 scenario-count assertion in
-`observatory-integration.test.ts` (770 passes, three failures). No failures were suppressed or repaired here. The five
-earlier electrical models remain checks of the original prototype, not validation of this new board.
+Focused electrical simulation, package type-check and runner lint pass. All seven models' acceptance limits pass; the
+seven-input leakage result remains an observation with insufficient threshold margin, not a passed operating corner. The
+five older models concern the original prototype only. The latest repository verification passed formatting, lint, types
+and unused-code checks but failed three unchanged scoring tests: a mutation-test timeout and canonical-corpus failure in
+`scenario-runner.test.ts`, plus a 29-versus-28 scenario-count assertion in `observatory-integration.test.ts` (770
+passes, three failures). No failures are suppressed or repaired by the hardware work.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [SN74LVC125A](https://www.ti.com/lit/ds/symlink/sn74lvc125a.pdf),

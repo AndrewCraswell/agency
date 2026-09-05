@@ -1,0 +1,209 @@
+STM32 seven-conductor scan - electrical paths, loading and source handover
+* Matches the native KiCad 330R / 3.3k / 3.3k sensing channels. Buffers are
+* bounded voltage sources and switches, NOT manufacturer transistor models.
+* Each 50us characterization slot: clear all lines for 10us, disable for 1us,
+* source ONE line for 38us, disable for 1us. Observe at 48us within each slot.
+* Order: LEFT_A, LEFT_B, LEFT_C, RIGHT_A, RIGHT_B, RIGHT_C, PISTE.
+* This 350us sweep is NOT an approved scoring schedule: it can miss a short
+* contact between observations. Firmware timing and FIE pulse tests remain.
+* All non-selected outputs are high impedance, not actively driven low.
+* Cable load 10nF per conductor and input load 30pF are chosen stress values.
+* Physical cord convention: foil B-C at rest, B to opposing A for target;
+* epee A-B for tip contact, C guard; sabre B-C weapon, opposing A jacket.
+* These are electrical fixtures, not scoring decisions or exhaustive weapons.
+* No clamp, rail back-power, comparator propagation, or digital capture model.
+
+.global clear phase1 phase2 phase3 phase4 phase5 phase6 phase7
+Vclear clear 0 PULSE(1 0 10u 0.01u 0.01u 39.98u 50u)
+Vphase1 phase1 0 PULSE(0 1 11u 0.01u 0.01u 37.98u 350u)
+Vphase2 phase2 0 PULSE(0 1 61u 0.01u 0.01u 37.98u 350u)
+Vphase3 phase3 0 PULSE(0 1 111u 0.01u 0.01u 37.98u 350u)
+Vphase4 phase4 0 PULSE(0 1 161u 0.01u 0.01u 37.98u 350u)
+Vphase5 phase5 0 PULSE(0 1 211u 0.01u 0.01u 37.98u 350u)
+Vphase6 phase6 0 PULSE(0 1 261u 0.01u 0.01u 37.98u 350u)
+Vphase7 phase7 0 PULSE(0 1 311u 0.01u 0.01u 37.98u 350u)
+.model buffer_switch SW(Ron=0.01 Roff=1e12 Vt=0.5 Vh=0)
+
+.subckt channel line sense power low enable params: rd=330 rs=3300 rp=3300 leak=0
+Shigh power output enable 0 buffer_switch
+Slow low output clear 0 buffer_switch
+Rdrive output line {rd}
+Rseries line sense {rs}
+Rpull sense 0 {rp}
+Cwire line 0 10n
+Cinput sense 0 30p
+* Sink leakage is a deliberately lumped sense-node stress, not a physical
+* model of buffer leakage at the conductor or guaranteed hot diode leakage.
+Ileak sense 0 {leak}
+.ends channel
+
+.subckt front_end la lb lc ra rb rc p sa sb sc sd se sf sp current
++ params: rail=3.3 low=0 rd=330 rs=3300 rp=3300 leak=0
+Vpower power 0 {rail}
+Vlow low_driver 0 {low}
+Bcurrent current 0 V=-i(Vpower)
+Xla la sa power low_driver phase1 channel rd={rd} rs={rs} rp={rp} leak={leak}
+Xlb lb sb power low_driver phase2 channel rd={rd} rs={rs} rp={rp} leak={leak}
+Xlc lc sc power low_driver phase3 channel rd={rd} rs={rs} rp={rp} leak={leak}
+Xra ra sd power low_driver phase4 channel rd={rd} rs={rs} rp={rp} leak={leak}
+Xrb rb se power low_driver phase5 channel rd={rd} rs={rs} rp={rp} leak={leak}
+Xrc rc sf power low_driver phase6 channel rd={rd} rs={rs} rp={rp} leak={leak}
+Xp p sp power low_driver phase7 channel rd={rd} rs={rs} rp={rp} leak={leak}
+.ends front_end
+
+* Foil, both tips at rest. Only the selected fencer's B-C pair is reachable.
+Xrest a1 b1 c1 d1 e1 f1 p1 sa1 sb1 sc1 sd1 se1 sf1 sp1 i1 front_end
+Rrest_left b1 c1 0.01
+Rrest_right e1 f1 0.01
+Brest_low rest_low 0 V=max(v(sa1),max(v(sd1),max(v(se1),max(v(sf1),v(sp1)))))
+
+* Foil target: own tip opened B-C, B touches opposing jacket A through 500R.
+Xfoil a2 b2 c2 d2 e2 f2 p2 sa2 sb2 sc2 sd2 se2 sf2 sp2 i2 front_end
+Rfoil_target b2 d2 500
+Rfoil_opponent_rest e2 f2 0.01
+Bfoil_low foil_low 0 V=max(v(sa2),max(v(sc2),max(v(se2),max(v(sf2),v(sp2)))))
+
+* Foil off-target: own B-C opens without another conducting path.
+Xoff a3 b3 c3 d3 e3 f3 p3 sa3 sb3 sc3 sd3 se3 sf3 sp3 i3 front_end
+Roff_opponent_rest e3 f3 0.01
+Boff_low off_low 0 V=max(v(sa3),max(v(sc3),max(v(sd3),max(v(se3),max(v(sf3),v(sp3))))))
+
+* Foil piste contact is observable on P, not on either jacket or guard.
+Xfoilp a4 b4 c4 d4 e4 f4 p4 sa4 sb4 sc4 sd4 se4 sf4 sp4 i4 front_end
+Rfoil_piste b4 p4 100
+Bfoilp_low foilp_low 0 V=max(v(sa4),max(v(sc4),max(v(sd4),max(v(se4),v(sf4)))))
+
+* Simultaneous epee tip closures remain two independent A-B pairs.
+Xepee a5 b5 c5 d5 e5 f5 p5 sa5 sb5 sc5 sd5 se5 sf5 sp5 i5 front_end
+Repee_left a5 b5 500
+Repee_right d5 e5 500
+Bepee_left_low epee_left_low 0 V=max(v(sc5),max(v(sd5),max(v(se5),max(v(sf5),v(sp5)))))
+Bepee_right_low epee_right_low 0 V=max(v(sa5),max(v(sb5),max(v(sc5),max(v(sf5),v(sp5)))))
+
+* Epee tip plus piste: a path to P is present even through the closed tip.
+Xground a6 b6 c6 d6 e6 f6 p6 sa6 sb6 sc6 sd6 se6 sf6 sp6 i6 front_end
+Rground_tip a6 b6 500
+Rground_piste b6 p6 100
+Bground_high ground_high 0 V=min(v(sb6),v(sp6))
+Bground_low ground_low 0 V=max(v(sc6),max(v(sd6),max(v(se6),v(sf6))))
+
+* Sabre target with B-C weapon connections intact on both sides.
+Xsabre a7 b7 c7 d7 e7 f7 p7 sa7 sb7 sc7 sd7 se7 sf7 sp7 i7 front_end
+Rsabre_left b7 c7 0.01
+Rsabre_right e7 f7 0.01
+Rsabre_target b7 d7 500
+Bsabre_high sabre_high 0 V=min(v(sc7),v(sd7))
+Bsabre_low sabre_low 0 V=max(v(sa7),max(v(se7),max(v(sf7),v(sp7))))
+
+* Crossed sabre blades join the weapons, but neither jacket A nor piste.
+Xblade a8 b8 c8 d8 e8 f8 p8 sa8 sb8 sc8 sd8 se8 sf8 sp8 i8 front_end
+Rblade_left b8 c8 0.01
+Rblade_right e8 f8 0.01
+Rblade_cross b8 e8 33
+Bblade_high blade_high 0 V=min(v(sc8),min(v(se8),v(sf8)))
+Bblade_low blade_low 0 V=max(v(sa8),max(v(sd8),v(sp8)))
+
+* Reciprocal sabre targets: two independent clusters, until blades also touch.
+Xdouble a9 b9 c9 d9 e9 f9 p9 sa9 sb9 sc9 sd9 se9 sf9 sp9 i9 front_end
+Rdouble_left b9 c9 0.01
+Rdouble_right e9 f9 0.01
+Rdouble_left_target b9 d9 500
+Rdouble_right_target e9 a9 500
+Bdouble_left_high double_left_high 0 V=min(v(sc9),v(sd9))
+Bdouble_left_low double_left_low 0 V=max(v(sa9),max(v(se9),max(v(sf9),v(sp9))))
+Bdouble_right_high double_right_high 0 V=min(v(sa9),v(sf9))
+Bdouble_right_low double_right_low 0 V=max(v(sb9),max(v(sc9),max(v(sd9),v(sp9))))
+
+* Same reciprocal targets WITH blade crossing: all six cord wires reachable.
+* Reachability cannot identify redundant paths; this is not a scoring oracle.
+Xcombined a10 b10 c10 d10 e10 f10 p10 sa10 sb10 sc10 sd10 se10 sf10 sp10 i10 front_end
+Rcombined_left b10 c10 0.01
+Rcombined_right e10 f10 0.01
+Rcombined_left_target b10 d10 500
+Rcombined_right_target e10 a10 500
+Rcombined_blades b10 e10 33
+Bcombined_high combined_high 0 V=min(v(sa10),min(v(sb10),min(v(sc10),min(v(sd10),min(v(se10),v(sf10))))))
+
+* Seven-way short (fault fixture), all seven channels load a single source.
+Xshort a11 b11 c11 d11 e11 f11 p11 sa11 sb11 sc11 sd11 se11 sf11 sp11 i11 front_end
+Rshort_ab a11 b11 0.01
+Rshort_bc b11 c11 0.01
+Rshort_cd c11 d11 0.01
+Rshort_de d11 e11 0.01
+Rshort_ef e11 f11 0.01
+Rshort_fp f11 p11 0.01
+Bshort_high short_high 0 V=min(v(sa11),min(v(sb11),min(v(sc11),min(v(sd11),min(v(se11),min(v(sf11),v(sp11)))))))
+
+* Lower output-voltage/tolerance corner, with an explicit 4uA sense-node load.
+* 4uA is a chosen load, not a bound over temperature or all external faults.
+Xcorner a12 b12 c12 d12 e12 f12 p12 sa12 sb12 sc12 sd12 se12 sf12 sp12 i12 front_end
++ rail=2.25 low=0.8 rd=333.3 rs=3333 rp=3267 leak=4u
+Rcorner_ab a12 b12 0.01
+Rcorner_bc b12 c12 0.01
+Rcorner_cd c12 d12 0.01
+Rcorner_de d12 e12 0.01
+Rcorner_ef e12 f12 0.01
+Rcorner_fp f12 p12 0.01
+Bcorner_high corner_high 0 V=min(v(sa12),min(v(sb12),min(v(sc12),min(v(sd12),min(v(se12),min(v(sf12),v(sp12)))))))
+Bcorner_low corner_low 0 V=max(v(sa12),max(v(sb12),max(v(sc12),max(v(sd12),max(v(se12),max(v(sf12),v(sp12)))))))
+
+* Repeat the existing 121uA/channel leakage STRESS with seven-way loading.
+* Hold excitation on in a separate static fixture to expose settled margin,
+* independent of scan timing. No threshold pass is asserted for this result.
+Vstress stress_driver 0 2.25
+Rstress_drive stress_driver stress_line 333.3
+.subckt stress_load line sense
+Rseries line sense 3333
+Rpull sense 0 3267
+Ileak sense 0 121u
+.ends stress_load
+Xstress_a stress_line stress_a stress_load
+Xstress_b stress_line stress_b stress_load
+Xstress_c stress_line stress_c stress_load
+Xstress_d stress_line stress_d stress_load
+Xstress_e stress_line stress_e stress_load
+Xstress_f stress_line stress_f stress_load
+Xstress_p stress_line stress_p stress_load
+
+.control
+set noaskquit
+tran 0.05u 350u
+meas tran foil_rest_high FIND v(sc1) AT=98u
+meas tran foil_rest_unrelated FIND v(rest_low) AT=98u
+meas tran foil_target_high FIND v(sd2) AT=98u
+meas tran foil_target_unrelated FIND v(foil_low) AT=98u
+meas tran foil_open_source FIND v(sb3) AT=98u
+meas tran foil_open_unrelated FIND v(off_low) AT=98u
+meas tran foil_piste_high FIND v(sp4) AT=98u
+meas tran foil_piste_unrelated FIND v(foilp_low) AT=98u
+meas tran epee_left_high FIND v(sb5) AT=48u
+meas tran epee_left_unrelated FIND v(epee_left_low) AT=48u
+meas tran epee_right_high FIND v(se5) AT=198u
+meas tran epee_right_unrelated FIND v(epee_right_low) AT=198u
+meas tran epee_piste_high FIND v(ground_high) AT=48u
+meas tran epee_piste_unrelated FIND v(ground_low) AT=48u
+meas tran sabre_target_high FIND v(sabre_high) AT=98u
+meas tran sabre_target_unrelated FIND v(sabre_low) AT=98u
+meas tran crossed_blades_high FIND v(blade_high) AT=98u
+meas tran crossed_blades_unrelated FIND v(blade_low) AT=98u
+meas tran reciprocal_left_high FIND v(double_left_high) AT=98u
+meas tran reciprocal_left_unrelated FIND v(double_left_low) AT=98u
+meas tran reciprocal_right_high FIND v(double_right_high) AT=248u
+meas tran reciprocal_right_unrelated FIND v(double_right_low) AT=248u
+meas tran targets_and_blades_high FIND v(combined_high) AT=98u
+meas tran targets_and_blades_piste FIND v(sp10) AT=98u
+meas tran seven_short_left_a FIND v(short_high) AT=48u
+meas tran seven_short_left_b FIND v(short_high) AT=98u
+meas tran seven_short_left_c FIND v(short_high) AT=148u
+meas tran seven_short_right_a FIND v(short_high) AT=198u
+meas tran seven_short_right_b FIND v(short_high) AT=248u
+meas tran seven_short_right_c FIND v(short_high) AT=298u
+meas tran seven_short_piste FIND v(short_high) AT=348u
+meas tran seven_short_current MAX v(i11)
+meas tran weak_seven_short_high FIND v(corner_high) AT=48u
+meas tran weak_seven_short_clear FIND v(corner_low) AT=60u
+meas tran weak_seven_short_current MAX v(i12)
+meas tran settled_leakage_stress FIND v(stress_p) AT=48u
+quit
+.endc
+.end
