@@ -42,10 +42,15 @@ support effort.
   and unpowered logic rails. These are **not galvanic isolators**.
 - Keep the WIZ850io Ethernet module, TSOP38438 receiver, two TE 5520250-2 Favero DATA-LINE connectors with optocoupler
   outputs, HUB75 signal/power connectors, and sounder from the prototype. Favero ports are not Ethernet or RS-422.
-- Separate USB-C connectors serve computer USB and USB-C PD power. The current uncommitted circuit uses ADuM3160BRWZ for
-  isolated USB data and powers acquisition from the PD-derived 5V rail. The former direct USB supply connection and VBUS
-  divider were removed because they crossed the intended isolation boundary. USB-only acquisition power remains
-  unimplemented, including its start-up, current-limit, suspend, and power-transition behavior.
+- Separate USB-C connectors serve computer USB and USB-C PD power. The current circuit uses ADuM3160BRWZ for isolated
+  USB data and powers acquisition from the PD-derived 5V rail. The former direct USB supply connection and VBUS divider
+  were removed because they crossed the intended isolation boundary. USB-only acquisition power remains unimplemented,
+  including its start-up, current-limit, suspend, and power-transition behavior.
+- The integrated LTM2884 USB/power module was evaluated but is not selected. Its low-current suspend mode removes
+  downstream power and requires USB re-enumeration after host resume; its keep-powered mode exceeds the USB suspend
+  current allowance when bus powered. Decide whether a desktop reconnect after computer sleep is acceptable before
+  adopting that tradeoff. See the
+  [manufacturer's suspend and compliance notes, pages 15-16](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf).
 - J1 uses GCT USB4105-GF-A for computer USB: a documented 16-contact USB 2.0 receptacle with a matching native KiCad
   footprint and STEP model. It replaces the initial HRO candidate in this new design only. See the
   [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf).
@@ -78,21 +83,24 @@ Before routing and fabrication:
 
 ## Checks performed
 
-At the preceding 150-component checkpoint, KiCad 10.0.6 loaded the schematic and PCB in its native editors. ERC reported
-zero violations; netlist export succeeded and the PCB transfer checked every explicitly connected schematic pin against
-that export. These checks establish connectivity consistency, not analog performance or compliance. Module symbols use
-passive pins where the retained interface lacks detailed electrical pin types, which limits what ERC can diagnose.
+At the 157-component USB-isolation checkpoint, KiCad 10.0.6 loaded the schematic and PCB in its native editors and
+rendered the assembly in its native 3D viewer. ERC reported zero violations; netlist export succeeded and the PCB
+transfer checked every explicitly connected schematic pin against that export. The host connector, ESD device, isolator
+bypasses and series resistors occupy a separate USB-ground island with all-copper-layer keepouts. These checks establish
+connectivity consistency, not analog performance or compliance. Module symbols use passive pins where the retained
+interface lacks detailed electrical pin types, which limits what ERC can diagnose.
 
-That checkpoint's PCB DRC reported 411 unconnected items, 12 thermal-drill size errors, four USB connector
-hole-clearance errors, and nine silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default
+That checkpoint's PCB DRC reported 431 unconnected items, 12 thermal-drill size errors, four USB connector
+hole-clearance errors, and 13 silkscreen warnings. The connector's 0.1944mm pad-to-hole clearance is below the default
 0.25mm rule and needs fabricator review. These findings are open, not waived. The board has no routed copper. Visual
-review and electrical design work are not complete. The subsequent USB-isolation edits are awaiting final ERC/DRC and
-root review; the baseline results above are not a validation of those edits.
+review of individual pin seating and electrical design work are not complete. The isolated-data circuit has been
+reviewed as an intermediate draft only; single-cable acquisition power remains open.
 
-Repository verification on September 5, 2026 passed formatting, lint, types, unused-code checks, and the existing
-prototype simulations, but failed three tests in unchanged scoring application files: two timeouts and a canonical
-scenario-corpus assertion (`scenario-runner.test.ts` and `observatory-integration.test.ts`). Those existing simulations
-do not validate this new STM32 front end. No software-test failures were suppressed or repaired as part of this draft.
+Repository verification on September 5, 2026 passed formatting, lint, types, unused-code checks, and all five existing
+prototype simulations. Scoring application tests reported 770 passes and three failures in unchanged files: a mutation
+test timeout and canonical-corpus failure in `scenario-runner.test.ts`, plus a 29-versus-28 scenario-count assertion in
+`observatory-integration.test.ts`. Those existing simulations do not validate this new STM32 front end. No software-test
+failures were suppressed or repaired as part of this draft.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [SN74LVC125A](https://www.ti.com/lit/ds/symlink/sn74lvc125a.pdf),
