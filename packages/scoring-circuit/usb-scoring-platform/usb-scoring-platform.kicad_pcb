@@ -4203,21 +4203,21 @@
 			)
 		)
 		(pad "" np_thru_hole circle
-			(at -5.08 -3.9825)
+			(at -5.08 3.9825)
 			(size 3.25 3.25)
 			(drill 3.25)
 			(layers "*.Cu" "*.Mask")
 			(uuid "9ca2aab5-e7b5-4197-a558-76f3474515b1")
 		)
 		(pad "" np_thru_hole circle
-			(at 5.08 -3.9825)
+			(at 5.08 3.9825)
 			(size 3.25 3.25)
 			(drill 3.25)
 			(layers "*.Cu" "*.Mask")
 			(uuid "a11d140f-c97b-4b68-93a9-0405eead9a5f")
 		)
 		(pad "2" thru_hole circle
-			(at -1.905 2.3675)
+			(at -1.905 -2.3675)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -4226,7 +4226,7 @@
 			(uuid "a3a0aad3-eddd-4a76-baa2-90dfc742e28d")
 		)
 		(pad "3" thru_hole circle
-			(at -0.635 4.9075)
+			(at -0.635 -4.9075)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -4235,7 +4235,7 @@
 			(uuid "aae864de-7419-43a3-becd-0fce944004f4")
 		)
 		(pad "4" thru_hole circle
-			(at 0.635 2.3675)
+			(at 0.635 -2.3675)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -4244,7 +4244,7 @@
 			(uuid "1819c256-b7e4-4afb-aef0-c1b101d937ff")
 		)
 		(pad "5" thru_hole circle
-			(at 1.905 4.9075)
+			(at 1.905 -4.9075)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -4255,20 +4255,20 @@
 		(embedded_fonts no)
 		(model "${KIPRJMOD}/../assets/cad/te-5520250-2-rj14.step"
 			(offset
-				(xyz 0 14.5235 8.637)
+				(xyz 0 -14.5235 8.637)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz -90 0 180)
+				(xyz -90 0 0)
 			)
 		)
 	)
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "297031bb-9f27-43a9-aa79-b8417f46eb11")
-		(at 61 125)
+		(at 120 145)
 		(descr "Through hole straight pin header, 1x01, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x01 2.54mm single row")
 		(property "Reference" "J5"
@@ -13635,7 +13635,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "897e60c7-376a-4806-a48f-7ccd7a1388be")
-		(at 55 100)
+		(at 55 115)
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "J3"
@@ -19597,7 +19597,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "b45d5357-6405-4a1b-a0bc-f86bb61ae6ae")
-		(at 55 119)
+		(at 205 115)
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "J4"
@@ -26438,21 +26438,21 @@
 			)
 		)
 		(pad "" np_thru_hole circle
-			(at -5.08 -3.9825)
+			(at -5.08 3.9825)
 			(size 3.25 3.25)
 			(drill 3.25)
 			(layers "*.Cu" "*.Mask")
 			(uuid "292e809f-7434-4b0e-a392-d3f72a1faa53")
 		)
 		(pad "" np_thru_hole circle
-			(at 5.08 -3.9825)
+			(at 5.08 3.9825)
 			(size 3.25 3.25)
 			(drill 3.25)
 			(layers "*.Cu" "*.Mask")
 			(uuid "98b40700-606b-4312-a3bf-24800e07c784")
 		)
 		(pad "2" thru_hole circle
-			(at -1.905 2.3675)
+			(at -1.905 -2.3675)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -26461,7 +26461,7 @@
 			(uuid "93bf08b6-4bf7-48fd-a1f8-46b782c2a5c9")
 		)
 		(pad "3" thru_hole circle
-			(at -0.635 4.9075)
+			(at -0.635 -4.9075)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -26470,7 +26470,7 @@
 			(uuid "b2c000f1-94d5-4fc2-bd6f-3b692acb200b")
 		)
 		(pad "4" thru_hole circle
-			(at 0.635 2.3675)
+			(at 0.635 -2.3675)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -26479,7 +26479,7 @@
 			(uuid "2f154884-bdf8-4c3c-81d5-4506fe8327fd")
 		)
 		(pad "5" thru_hole circle
-			(at 1.905 4.9075)
+			(at 1.905 -4.9075)
 			(size 1.4 1.4)
 			(drill 0.9)
 			(layers "*.Cu" "*.Mask")
@@ -26490,13 +26490,13 @@
 		(embedded_fonts no)
 		(model "${KIPRJMOD}/../assets/cad/te-5520250-2-rj14.step"
 			(offset
-				(xyz 0 14.5235 8.637)
+				(xyz 0 -14.5235 8.637)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz -90 0 180)
+				(xyz -90 0 0)
 			)
 		)
 	)
@@ -31077,6 +31077,39 @@
 		)
 		(layer "Edge.Cuts")
 		(uuid "5c9a382c-0ed1-44d1-b80a-81f9312d22c0")
+	)
+	(gr_text "PISTE"
+		(at 120 141.5 0)
+		(layer "F.SilkS")
+		(uuid "0c090409-a1b5-411c-8638-e630ff85a513")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "LEFT A B C"
+		(at 51.5 117.54 90)
+		(layer "F.SilkS")
+		(uuid "e570bd46-974c-4172-ac70-e08023e9db90")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(gr_text "RIGHT A B C"
+		(at 208.5 117.54 90)
+		(layer "F.SilkS")
+		(uuid "e0ab5ce0-fb4a-46c6-b8b6-ceb511fa523c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
 	)
 	(gr_text "USB HOST / ISOLATION"
 		(at 66 131 0)

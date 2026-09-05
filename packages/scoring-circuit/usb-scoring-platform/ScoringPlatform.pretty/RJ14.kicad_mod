@@ -87,21 +87,21 @@
 		)
 	)
 	(pad "" np_thru_hole circle
-		(at -5.08 -3.9825 180)
+		(at -5.08 3.9825 180)
 		(size 3.25 3.25)
 		(drill 3.25)
 		(layers "*.Cu" "*.Mask")
 		(uuid "acbb5790-be8a-4aa6-82c9-2ee62ffb97ae")
 	)
 	(pad "" np_thru_hole circle
-		(at 5.08 -3.9825 180)
+		(at 5.08 3.9825 180)
 		(size 3.25 3.25)
 		(drill 3.25)
 		(layers "*.Cu" "*.Mask")
 		(uuid "a374fd24-e5fa-4619-b71a-49aaeac70368")
 	)
 	(pad "2" thru_hole circle
-		(at -1.905 2.3675 180)
+		(at -1.905 -2.3675 180)
 		(size 1.4 1.4)
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
@@ -109,7 +109,7 @@
 		(uuid "0ebb6380-6df9-eedf-32c7-85c22c77059d")
 	)
 	(pad "3" thru_hole circle
-		(at -0.635 4.9075 180)
+		(at -0.635 -4.9075 180)
 		(size 1.4 1.4)
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
@@ -117,7 +117,7 @@
 		(uuid "0cd2a7a0-413b-2381-75a3-9f6255f3e4bd")
 	)
 	(pad "4" thru_hole circle
-		(at 0.635 2.3675 180)
+		(at 0.635 -2.3675 180)
 		(size 1.4 1.4)
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
@@ -125,7 +125,7 @@
 		(uuid "5d8f90a0-2927-14bf-0b41-67223fa9e303")
 	)
 	(pad "5" thru_hole circle
-		(at 1.905 4.9075 180)
+		(at 1.905 -4.9075 180)
 		(size 1.4 1.4)
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
@@ -135,13 +135,13 @@
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/../assets/cad/te-5520250-2-rj14.step"
 		(offset
-			(xyz 0 14.5235 8.637)
+			(xyz 0 -14.5235 8.637)
 		)
 		(scale
 			(xyz 1 1 1)
 		)
 		(rotate
-			(xyz -90 0 180)
+			(xyz -90 0 0)
 		)
 	)
 )

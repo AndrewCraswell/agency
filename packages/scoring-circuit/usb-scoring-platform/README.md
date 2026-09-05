@@ -41,6 +41,10 @@ support effort.
   and unpowered logic rails. These are **not galvanic isolators**.
 - Keep the WIZ850io Ethernet module, TSOP38438 receiver, two TE 5520250-2 Favero DATA-LINE connectors with optocoupler
   outputs, HUB75 signal/power connectors, and sounder from the prototype. Favero ports are not Ethernet or RS-422.
+  Ethernet accepts its cable from the bottom edge; both Favero sockets accept theirs from the top edge. The native RJ14
+  footprint's mirrored contact/board-lock Y coordinates and STEP transform were corrected together using the
+  [TE 5520250 D3 component-side drawing](https://www.te.com/commerce/DocumentDelivery/DDEController?Action=srchrtrv&DocFormat=pdf&DocLang=English&DocNm=5520250&DocType=Customer+Drawing&PartCntxt=5520250-2).
+  Keep the drawing's contact numbering; rotating a model alone must never be used to conceal a hole-pattern mismatch.
 - Separate USB-C connectors serve computer USB and USB-C PD power. **LTM2884IY#PBF** supplies isolated USB full-speed
   data and 5V acquisition power. It replaces ADuM3160 and its external termination/bypass parts. D1 and D2 (SS14) OR the
   isolated USB output and the PD-derived 5V rail into CORE_5V without backfeeding either source. AP2112K supplies
@@ -71,6 +75,10 @@ support effort.
   justify them; this is not a locked procurement BOM.
 - J3/J4 are three-wire harness landings for off-board female banana sockets, not banana receptacles themselves. J5 is
   the metal-piste reference connection, not protective earth. The user's compatible Ok Fencing cable remains unchanged.
+  Viewed from the component side with computer USB/Ethernet along the bottom edge, J3 is on the left and J4 on the
+  right, 150mm apart. J5 is on the bottom edge. The enclosure's banana sockets must follow this same left/right
+  arrangement with room to grip both plugs; do not group the two fencer sockets together. Silkscreen identifies LEFT,
+  RIGHT and PISTE. This placement does not change A/B/C pin assignments or establish the off-board socket spacing.
 
 ## Sensing checkpoint
 
@@ -143,6 +151,14 @@ At the sensing checkpoint on September 5, 2026, ERC again reported zero violatio
 mismatches. DRC still reports the same 449 unrouted items and 25 other findings listed above. Native KiCad visual review
 confirmed the updated input/bias sheets; the resistor-only update preserves all placement, footprints and net
 assignments.
+
+The connector-placement checkpoint separates the left/right harness headers and puts the piste header on the bottom
+edge. KiCad's native 3D renders were inspected from both cable sides and underneath: the Favero ports open toward the
+top outer edge and Ethernet toward the bottom outer edge. The retained TE STEP's four contact-tail centers and two
+board-lock centers per Favero port coincide with the corrected holes. Favero reference positions, contact numbers and
+nets are unchanged. Parity remains clean, with 449 unrouted items and the same 25 DRC findings. Enclosure cutouts,
+plug/latch access with actual cables, and the rest of the assembly still need mechanical review; these views are not a
+fabrication approval.
 
 Repository verification passed formatting, lint, types and unused-code checks. All six electrical models passed. The
 full verification run still fails on the same three unchanged scoring tests: a mutation-test timeout and
