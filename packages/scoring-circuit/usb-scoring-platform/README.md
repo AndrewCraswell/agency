@@ -197,8 +197,8 @@ crystal, boot pull-down, reset network/button and programming header. The PD inp
 power contacts, both display buffers and their supply-side pull-ups are now routed. Most other parts remain in
 provisional positions. The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header
 are also routed. The two-way processor UART, its translators, four bypass capacitors and idle pulls are connected. The
-IR receiver's filtered supply, ground and output to ESP32 GPIO42 are routed; the other peripheral interfaces remain
-unfinished.
+IR receiver's filtered supply, ground and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus,
+reset and interrupt are also connected; HUB75 signals, sound, Favero and conductor interfaces remain unfinished.
 
 Remaining before fabrication:
 
@@ -224,7 +224,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **220 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **208 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -264,10 +264,10 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the IR routing, the board has 444 track segments, 140 ordinary 0.6/0.3mm vias and twelve copper zones. The prior
-power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended board-ground
-pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA pads. This
-follows the
+After the Ethernet routing, the board has 521 track segments, 165 ordinary 0.6/0.3mm vias and twelve copper zones. The
+prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
+board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
+pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
 including its integrated bypass/termination, and keeps the
 [TPD2E2U06 protection](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf) close to the connector. Native top-copper,
@@ -366,6 +366,18 @@ its internal pull-up disabled, so it does not bypass the filtered supply through
 laptop acquisition-only mode. Remote burst/gap compatibility, enclosure sightline, range and operation during full
 display/Ethernet activity still need hardware verification.
 
+The WIZ850io interface is routed without adding parts: U12 contacts 3/4/5/6/11/12 connect to ESP32 module pads
+21/22/32/33/34/31 for MOSI/clock/chip-select/interrupt/reset/MISO respectively. Both 3.3V contacts and all three ground
+contacts are connected; contact 10 stays NC. C28/C29 moved beside the power header, outside the module outline. The
+module, all external connectors and all 584 prior tracks/vias stayed fixed. Native continuity, copper and 3D review
+passed, including the earlier circuits and isolation boundaries. The
+[WIZnet module schematic](https://docs.wiznet.io/assets/files/wiz850io_sch_v110-3fcc19fc2acaf16f15c5f08f9c8330cb.pdf)
+already contains 4.7k pull-ups on chip-select, interrupt and reset; do not duplicate them on the carrier. Follow the
+[module startup requirement](https://docs.wiznet.io/Product/ioModule/WIZ850io): assert reset for at least 500us, then
+wait at least 50ms after release before SPI access. Begin bench bring-up at a conservative 1MHz SPI clock and verify
+waveforms before increasing it; these routes do not establish the chip's maximum SPI rate. Ethernet is application/PD
+powered only. Physical link, Cyrano traffic, simultaneous display activity and power/reset recovery remain untested.
+
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
 ordinary routing vias remain 0.6/0.3mm. This resolves the previous twelve drill-setting findings without changing the
@@ -385,13 +397,13 @@ All seven models' acceptance limits pass, including the corrected seven-input se
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link and IR routing reduced unconnected items from 250 to 220, with no new DRC findings. Schematic, copper and
-native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero
-schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks but
-failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion
-(770 scoring tests passed). The previously failing live-rebuild and workflow-deletion tests passed this run. These tests
-are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain
-required; native connectivity and the protector's component ratings do not establish board-level immunity.
+processor-link, IR and Ethernet routing reduced unconnected items from 250 to 208, with no new DRC findings. Schematic,
+copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and
+zero schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks
+but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count
+assertion (770 scoring tests passed). The previously failing live-rebuild and workflow-deletion tests passed this run.
+These tests are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing
+remain required; native connectivity and the protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
