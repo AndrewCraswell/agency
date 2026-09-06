@@ -199,6 +199,19 @@ At 25 C, maximum DCR is 40/99.65 milliohms respectively. Listed 30%-inductance-d
 currents 4.3/2.5A. These reference test values are not guaranteed in-board thermal limits: ripple, converter
 current-limit tolerance, loss and temperature still need the power review. Neither inductor was downsized or rerouted.
 
+### Service buttons
+
+SW1 (STM reset), SW2 (ESP reset) and SW3 (ESP boot) specify **E-Switch TL3342F160QG**, retaining their readable function
+labels. The
+[manufacturer drawing P010632 Rev J](https://configured-product-images.s3.amazonaws.com/2D/specs/TL3342F160QG.pdf) was
+visually checked against all three native footprints: four 1.7 x 1.0mm pads on 6.3 x 3.8mm centres, matching the 8.0 x
+4.8mm outer land envelope. Its circuit joins the two legs in each row internally; the footprint groups those rows as
+pads 1 and 2, rather than using the drawing's four reference terminal numbers. One row joins the reset/boot signal and
+the other GND, so the existing wiring does not short the signal without a press.
+
+This is a normally-open, momentary 160gf button rated 50mA at 12VDC, with 1.5mm nominal overall height. No button,
+model, label or copper moved. The drawing supplies nominal package fit, not an enclosure-access or assembly trial.
+
 ## Low-volume build scope
 
 Design for **3-10 units per month**. Prioritize dependable operation, straightforward assembly and repair, and
@@ -473,10 +486,11 @@ which alone are not complete board safety proof.
 
 The native BOM exports exact selections for all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now
 export DMN2056U-7, matching the PCB fields. Both retained Coilcraft inductors also have explicit ordering fields and
-manufacturer-matched pad geometry. This does not finish the remaining component or electrical review.
+manufacturer-matched pad geometry. All three service buttons now export TL3342F160QG; their land geometry and internal
+contact grouping were reviewed. This does not finish the remaining component or electrical review.
 
-After the inductor ordering update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted items and
-zero schematic-parity issues**. All 744 retained pad-continuity checks and 2,843 tracks/vias pass unchanged; hole
+After the service-button ordering update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted items
+and zero schematic-parity issues**. All 744 retained pad-continuity checks and 2,843 tracks/vias pass unchanged; hole
 geometry, component/model positions and isolation rules are preserved. The fresh native 3D rendering was visually
 inspected. U18's missing body model remains visible as an empty footprint; no placeholder or placement change was
 introduced.
