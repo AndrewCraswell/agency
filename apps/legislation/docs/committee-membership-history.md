@@ -60,9 +60,10 @@ edition availability must be inventoried before promising transitions: live disc
 package each for Congresses 105 and 118. A single retained edition supports a roster snapshot, not a complete sequence
 of historical joins and departures. Earlier directories likewise require format validation.
 
-The [live edition inventory](committee-directory-inventory.md) identifies 23 historical editions. None yet passes the
-whole-package ingestion path: older editions need granule-based parsing, and the 118th needs layout support. Do not run
-a destructive restart before these format gates and current-organization preservation are verified.
+The [live edition inventory](committee-directory-inventory.md) identifies 23 historical editions. The 118th has passed
+production import and API verification; the 116th passes source reconciliation and its import is running. The 117th
+and 105th–115th remain gated on the documented source/layout discrepancies. Historical writes preserve current
+organization metadata. Do not run a destructive restart across unvalidated editions.
 
 The historical reconstruction command (not yet validated for production) is:
 
@@ -110,7 +111,7 @@ Thom Tillis alias resolves to `person:congress:t000476`. Ambiguous names still a
 Membership inserts use batches of 1,000 within the same snapshot transaction to stay below PostgreSQL's bind-parameter
 limit. The production canary completed with 3,871 distinct memberships covering 530 people; repeated source entries
 collapse to their canonical membership identity. All memberships belong to `session:us:119`, have detected start
-`2026-02-20`, and leave unknown effective dates and end reasons null. Historical Congresses are not yet imported.
+`2026-02-20`, and leave unknown effective dates and end reasons null. Historical rollout evidence follows below.
 
 The `govinfo-committee-directory-sync` Trigger task runs at 09:30 UTC daily in production, using
 `FEDERAL_END_CONGRESS`. It has concurrency one and retains the database ingestion lease shared with the CLI. Schedule
@@ -125,7 +126,8 @@ automatically replayed by the daily current-Congress poll.
 An existing checkpoint without a fingerprint is initialized only when the published roster matches the source.
 Snapshot writes and their observation checkpoint commit atomically. The workstation production canary
 `a7b0796a-1221-4d33-a702-28cd5e3549a1` succeeded on 2026-09-06: one edition read, one skipped, zero membership writes.
-Trigger rollout of the correction handling is pending. Historical format coverage and backfill remain incomplete.
+Trigger correction handling is deployed in `20260906.3`; its current-Congress canary completed with zero writes.
+Historical format coverage and backfill remain incomplete.
 
 Release evidence:
 
@@ -140,3 +142,28 @@ Release evidence:
   membership IDs and detected/effective date separation were verified. House Agriculture returned 54 members.
 - `apps/legislation` verification passed: 1,965 tests plus four webhook-receiver tests; 58 database-dependent tests
   skipped. Root `pnpm verify` remained blocked by unrelated scoring test timeouts; hooks were not bypassed.
+
+### Historical and correction rollout (2026-09-06)
+
+- Code `f34d82e` and `0e381f7` is committed and pushed to main. Trigger `20260906.2` deployed as `x7uyo2g4`;
+  `20260906.3` is confirmed live by completed current-Congress canary `run_06g7i56lq218trshdb8cnrnr01`.
+  That canary read one edition, skipped one, and wrote zero memberships.
+- The 118th backfill `run_06g7i13co48jljhahd9u9uo401` completed successfully. Its 3,670 source entries reduce to
+  3,669 distinct memberships across 222 organizations. All historical memberships have session `session:us:118`,
+  detected start `2024-04-25`, `endedReason=congress_ended`, `isCurrent=false`, and no invented detected end date.
+  The duplicate is Juan Ciscomani on House Appropriations / State, Foreign Operations, and Related Programs;
+  both printed entries have identical identity, district, and role.
+- Both current-roster fingerprints were unchanged after import: 221 active organizations
+  (`e812699a8fe9960e07779433fa580ce2`) and 3,871 119th memberships (`cd1930c034a3ad02ed39aa07149304ab`).
+- Authenticated deployed person membership history and organization member lists returned HTTP 200. Following the
+  returned historical membership `canonicalUrl` also returned HTTP 200 with matching ID, session, detected date,
+  and Congress-end semantics. Membership detail is organization-scoped, not `/api/memberships/{id}`.
+- The validated 116th import is running as `run_06g7i596qkn4k2lf1rtcln6701`. The 118th unchanged rerun is queued as
+  `run_06g7i5dnnrs89n46ilvj8ip601`. Neither is claimed complete here; both use the serial historical task queue.
+- Verification: 2,032 legislation tests and four receiver tests passed; 60 database-dependent tests skipped.
+  Lint, types, and unused-code checks passed. Latest root `pnpm verify` is blocked by unrelated
+  `@repo/fc-theme-base` coverage thresholds (not legislation failures). Git hooks were not bypassed.
+
+Final review also tightened historical publication: incoming memberships for ended Congresses are closed before
+the snapshot/checkpoint transaction, avoiding a temporary active state if follow-up cleanup is interrupted.
+The cleanup remains for recovery of older rows; current-Congress membership behavior is unchanged.

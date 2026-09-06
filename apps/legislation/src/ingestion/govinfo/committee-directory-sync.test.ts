@@ -159,11 +159,31 @@ describe("committee directory observation synchronization", () => {
     expect(mocks.replace).toHaveBeenCalledOnce()
     const call = mocks.replace.mock.calls[0]!
     expect(call[2].organizations.every((organization) => organization.isActive === false)).toBe(true)
+    expect(call[2].memberships.length).toBeGreaterThan(0)
+    for (const membership of call[2].memberships) {
+      expect(membership).toMatchObject({
+        isActive: false,
+        endedReason: "congress_ended",
+        detectedEndDate: null,
+        detectedStartDate: "2026-02-20"
+      })
+    }
     expect(call[3]).toMatchObject({
       membershipSessionId: "session:us:119",
       preserveExistingOrganizations: true,
       replacePeople: false
     })
+  })
+
+  it("keeps current-Congress memberships active without a fabricated closure", async () => {
+    await run()
+    const call = mocks.replace.mock.calls[0]!
+    expect(call[2].memberships.length).toBeGreaterThan(0)
+    for (const membership of call[2].memberships) {
+      expect(membership.isActive).toBe(true)
+      expect(membership.endedReason).toBeUndefined()
+      expect(membership.detectedEndDate).toBeUndefined()
+    }
   })
 
   it("bootstraps only an identical published roster without replacing memberships", async () => {

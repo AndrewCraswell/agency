@@ -1,7 +1,8 @@
 # GovInfo committee edition inventory
 
 Read-only discovery on 2026-09-06 used the CDIR collection endpoint with a modification window beginning
-1970-01-01 and a Congress filter. All collection pages were exhausted. No historical memberships were written.
+1970-01-01 and a Congress filter. All collection pages were exhausted. Discovery itself wrote no historical memberships;
+subsequent validated production imports are recorded in [rollout evidence](committee-membership-history.md).
 
 | Congress | Available package issue dates | Whole-package text |
 | --- | --- | --- |
@@ -113,6 +114,13 @@ The subsequent conservative formatting pass accepts the explicit No Vice Chairma
 wrapped vice-chair annotations, and `of the District of Columbia`. Remaining older PDF blockers include
 `Bob Graham. of Florida.` (106), `Masschusetts` (107), No Subcommittees (108), a party-organization boundary (109),
 the heading/staff issues above (110–114), and a standalone accent (115 October). Those editions remain unpublished.
+
+A direct 117th source review confirms Tom Udall is actually printed in the Senate committee granule, PDF page 4
+(printed page 352), under Appropriations. This is not a parser mix-up and cannot be safely assigned to a 117th term
+or silently replaced with another senator. The Bowman issue is redundant `, NY` text on House granule PDF page 43,
+Science, Space, and Technology / Energy; it is separately resolvable without guessing. Publishing the 117th while
+omitting the stale Udall entry would require an explicit incomplete-roster/quarantine policy; current import remains
+fail-closed rather than silently omitting it.
 
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.

@@ -175,6 +175,11 @@ export async function executeGovInfoCommitteeSynchronization(
         for (const membership of normalized.snapshot.memberships) {
           membership.detectedStartDate = detectedAt.toISOString().slice(0, 10)
           membership.lastObservedDate = membership.detectedStartDate
+          if (session.hasEnded) {
+            membership.isActive = false
+            membership.endedReason = "congress_ended"
+            membership.detectedEndDate = null
+          }
         }
         if (session.hasEnded) {
           for (const organization of normalized.snapshot.organizations) {
