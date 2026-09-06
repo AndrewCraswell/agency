@@ -93,6 +93,13 @@ support effort.
 - J1 uses GCT USB4105-GF-A for computer USB: a documented 16-contact USB 2.0 receptacle with a matching native KiCad
   footprint and STEP model. It replaces the initial HRO candidate in this new design only. See the
   [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf).
+- U3 is **TPD2E2U06DCKR**, a supply-independent two-channel USB ESD protector. Pin 1 protects D+, pin 2 protects D-, and
+  pin 3 returns to USB_GND. There is no VBUS supply/clamp pin. Its SC70-3 footprint uses TI's DCK0003A lands: 0.95 x
+  0.4mm, 2.2mm row spacing and 1.3mm pin-1/pin-2 pitch. See the
+  [TI pinout and package drawing](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf). It replaces USBLC6-2SC6 and its VBUS
+  trace branch; C1 remains input decoupling, with its required rating raised from 10V to 50V. Effective capacitance and
+  the final capacitor MPN still need selection. This prepares the data protection for shared USB-C PD power; it does
+  **not** make U18 or the existing two-input power circuit tolerant of raw 20V.
 - Retain Adafruit 5807 configured to request 20V/3A and Pololu D36V50F5 modules initially. Use AP63203 with a Coilcraft
   XAL5030-472MEC inductor for application 3.3V. Module substitutions remain possible if footprint, power, cost, and
   availability justify them; this is not a locked procurement BOM.
@@ -255,13 +262,13 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the ESP32 support routing below, the board has 332 track segments, 110 ordinary 0.6/0.3mm vias and twelve copper
-zones. The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the
-extended board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside
-the BGA pads. This follows the
+After the USB ESD update, the board has 330 track segments, 109 ordinary 0.6/0.3mm vias and twelve copper zones. The
+prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
+board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
+pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
 including its integrated bypass/termination, and keeps the
-[USBLC6 protection](https://www.st.com/resource/en/datasheet/usblc6-2.pdf) close to the connector. Native top-copper,
+[TPD2E2U06 protection](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf) close to the connector. Native top-copper,
 ground-layer and 3D exports were visually reviewed; U18 still has no retained 3D body, as noted above.
 
 The board-side USB pair uses 0.20mm traces with 0.25mm edge spacing on its main top-layer run. Short back-layer
@@ -352,12 +359,16 @@ placement, footprint geometry and every pad's net assignment.
 
 All seven models' acceptance limits pass, including the corrected seven-input settled leakage stress; this remains
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
-The branding checkpoint passed native KiCad rendering and silkscreen Gerber export. All 153 components, pad assignments,
-positions and routing are unchanged; DRC still reports four USB connector hole-clearance findings, 250 unconnected items
-and zero schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code
-checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count
-assertion (770 scoring tests passed). The previously failing live-rebuild and workflow-deletion tests passed this run.
-These tests are outside the branding edits; none was suppressed or modified.
+The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The subsequent USB protection
+checkpoint changes only U3's protector/land pattern, its local USB traces and C1's voltage rating; all 153 component
+positions remain fixed. Native connectivity checks confirm both data lines, the isolated USB power/control nets and
+separation of the two grounds. U3 has no VBUS connection. Schematic and 3D renders were reviewed; ERC is clean, and DRC
+still reports four USB connector hole-clearance findings, 250 unconnected items and zero schematic-parity issues. The
+latest repository verification passed formatting, lint, types and unused-code checks but failed three scoring tests: a
+mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The
+previously failing live-rebuild and workflow-deletion tests passed this run. These tests are outside the board edits;
+none was suppressed or modified. Physical USB signal, surge and ESD testing remain required; native connectivity and the
+protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
