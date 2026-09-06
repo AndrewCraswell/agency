@@ -144,7 +144,7 @@ still require effective-capacitance review at their actual bias, including toler
 regulator requirements. Do not assume the two 22uF parts supply 44uF under bias or use the nominal BOM to approve
 stability, startup or load steps. Exact 3D height/assembly clearance and procurement review remain open.
 
-### Diode selection and open switch finding
+### Diode selection
 
 All eleven diodes have exact ordering fields in both native files: D1/D2 use Vishay **SS14-E3/61T** (40V SMA), D3-D9 use
 Nexperia **BAT54S,215** (dual-series SOT23), and D10/D11 retain Vishay **1N4004-E3/54** (400V DO-41). Manufacturer
@@ -160,11 +160,31 @@ rating, not protection against an unspecified external source. Existing unpowere
 remain open. The [1N4004 sheet](https://www.vishay.com/docs/88503/1n4001.pdf), pages 1-2, binds the existing part and
 cathode band; this does not qualify repeater waveforms.
 
-**Next electrical correction to assess:** Q1-Q5 currently use BSS138. The
-[Diodes Incorporated BSS138 sheet](https://www.diodes.com/datasheet/download/BSS138.pdf), pages 1-2, guarantees
-on-resistance at VGS=10V, not at the actual lower control voltages. Its threshold voltage and typical curves are not
-substitutes for that guarantee. Review each sink load/control voltage and choose a same-pinout logic-level part if the
-required low voltage cannot be bounded. No transistor was changed or approved by the diode-selection pass.
+### Low-voltage switches
+
+Q1-Q5 now specify **Diodes Incorporated DMN2056U-7**, replacing BSS138 selections whose low-voltage on-resistance was
+not established. The [manufacturer sheet](https://www.diodes.com/datasheet/download/DMN2056U.pdf), pages 1-3, binds the
+orderable SOT-23 part, G/S/D orientation, 20V drain rating, +/-8V gate rating and maximum on-resistance of 45 milliohms
+at 2.5V gate drive (85 milliohms at 1.5V), at the stated pulsed 25 C test conditions. Gate/source/drain remain pads
+1/2/3; existing footprints, models, holes, positions and copper are unchanged.
+
+| Switch | Function and load bound                                                                                                | Gate supply                                         |
+| ------ | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Q1     | Pull HUB75 buffer enable low; under 0.56mA through its 10k pull-up at 5.5V, excluding input leakage                    | ESP32 3.3V                                          |
+| Q2     | Drive the piezo sounder; under 3.64mA through its parallel 1k resistor at 3.6V, plus piezo charging current            | STM32 3.3V through 1k                               |
+| Q3     | Sink both Favero optocoupler LEDs; under 50.6mA at 5.5V even ignoring LED forward drops, with two 220-ohm 1% resistors | STM32 3.3V                                          |
+| Q4/Q5  | Inhibit the PD eFuse; each can sink the entire 140k feed (under 0.18mA even at 24V)                                    | Regulated primary 5V through 100k, not raw USB VBUS |
+
+These normal-load bounds are small relative to the part's capability; they are not fault or temperature qualification.
+At the stated 2.5V/25 C on-resistance, Q3's conservative load gives about 2.3mV drain drop. The 20V drain rating is
+adequate for these local low-voltage nodes, not permission to connect a drain or gate directly to raw PD power. The
+symbol graphic retains the pin-compatible BSS138 library identifier; **Value and MPN fields select DMN2056U-7**.
+
+**Open timing check:** typical input capacitance is 339pF, so Q4/Q5's 100k pull-ups give an indicative 34us RC time
+constant. This is not a maximum switching-time guarantee: nonlinear capacitance, threshold spread, primary-rail ramp and
+STUSB4500 output timing must be checked together before accepting eFuse startup/disconnect behavior. Also check Q2 piezo
+edge current and Q3 repeater waveforms on the assembled prototype. No new routing or protection circuit was added merely
+to close the part-selection gap.
 
 ## Low-volume build scope
 
@@ -438,417 +458,18 @@ which alone are not complete board safety proof.
 
 ### Latest verification
 
-The eight local-supply/reset selections bring the capacitor BOM to 37 exact selections out of 50, matching PCB fields.
-Native ERC, DRC, unrouted and parity counts remain zero. All 744 previous pad-continuity checks, 2,843 tracks/vias,
-holes, component/model positions and isolation rules are retained; the actual KiCad 3D render was inspected. A temporary
-README file-mapping error cleared on formatting retry. The subsequent `pnpm verify` passed checks, then stopped at the
-same three scoring-software failures (770 passed). No test or rule was suppressed; 13 capacitor selections and the
-electrical/assembly review remain open.
+The native BOM exports exact selections for all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now
+export DMN2056U-7, matching the PCB fields. This does not finish the remaining component or electrical review.
 
-The small-capacitor batch adds 28 ordering selections; the native BOM and PCB agree on 29 selected capacitors including
-C1, with 21 still unspecified. Native ERC, DRC, unrouted and parity counts are zero. The 744 prior pad connections,
-2,843 tracks/vias, holes, component/model positions and isolation rules are unchanged, and the native 3D render was
-inspected. Repository verification passed the check stage but again failed the same three scoring-software tests listed
-below (770 passed). No checks were suppressed. Capacitor selection is not electrical or assembly approval.
+After the switch replacement, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted items and zero
+schematic-parity issues**. All 744 retained pad-continuity checks and 2,843 tracks/vias pass unchanged; hole geometry,
+component/model positions and isolation rules are preserved. The fresh native 3D rendering was visually inspected. U18's
+missing body model remains visible as an empty footprint; no placeholder or placement change was introduced.
 
-The resistor-selection batch exports all 83 resistor MPNs in the native BOM, matching their PCB fields. Native DRC, ERC,
-unrouted and schematic-parity counts remain zero. All 744 retained pad connections, 2,843 tracks/vias, hole geometry,
-component/model positions and isolation rules are preserved; the unchanged native 3D layout was reviewed. `pnpm verify`
-passed its check stage, then stopped at the same three scoring-software tests (770 passed): observatory weapon
-execution, scalar/container mutation timeout, and the canonical-corpus assertion. These failures are outside the
-hardware metadata changes and have not been bypassed or suppressed. This is a component-selection checkpoint, not
-completion of the electrical or assembly review.
-
-The J1 ground-land correction passes native DRC with **zero violations, zero unconnected items and zero schematic parity
-issues**; ERC is zero. All 744 prior pad-continuity comparisons and all 2,843 existing tracks/vias are preserved. The
-native 3D render was inspected. Checks confirm no changed hole positions/sizes, other pad geometries, models, component
-positions or isolation rules. Older four-finding reports below describe the previous footprint.
-
-C1's manufacturer/MPN selection is present in the native schematic BOM export and the PCB fields. ERC remains zero; DRC
-retains zero unconnected nets, zero schematic parity mismatches and the same four J1 hole-clearance findings. All 744
-previous continuity checks and 3,765 USB reference-plane samples pass. The unchanged native 3D layout was rendered and
-inspected. No pads, components, traces or isolation areas moved. Repository verification still fails in the same three
-scoring-software tests (770 passing); this component-selection checkpoint is not assembly release.
-
-The isolated USB trunk revision passed all 744 prior pad-continuity comparisons and cross-net checks. All
-non-isolated-USB copper, part positions, models and existing keepouts remain unchanged. DRC reports zero unrouted items,
-zero schematic parity mismatches and the same four J1 hole-clearance findings. Native copper and 3D renders were
-inspected; paired width/spacing and filled In1 return copper were checked. ERC is zero. The board now contains 2,843
-tracks/vias. Required repository verification again stopped at the same three scoring-software failures (770 passing
-tests), not a native PCB failure; it is not a clean repository pass.
-
-The host USB reroute passed 744 prior pad-continuity comparisons, cross-net copper checks, and 1,404 filled In2 USB_GND
-samples under the shared trunk (excluding terminal via fanouts). All previous non-host copper, part positions, models
-and isolation keepouts are unchanged. Native DRC retains zero unrouted items, zero parity mismatches and only the four
-existing J1 hole-clearance findings; ERC is zero. Front/back copper and native 3D views were reviewed. This is a routing
-improvement, not USB signal-integrity or power qualification. The new `pnpm verify` run again stopped in scoring
-software with the same three failures listed below (770 passing tests); normal commit hooks were retained.
-
-The manufacturing-stackup update passed native parsing, ERC (zero), connectivity (zero unrouted), and schematic parity
-(zero); the same four J1 hole-clearance findings remain. Native 3D rendering was reviewed. The board diff changes only
-stackup entries: all part positions, footprints, copper routes and isolation areas are unchanged. The required
-repository `pnpm verify` run still failed in scoring software: 770 tests passed and three failed (observatory report
-expectations, scenario mutation timeout, and canonical corpus exit status). This is not a clean repository verification
-result.
-
-The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **zero unrouted items** and **four other findings**, all
-at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
-ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
-NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
-DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
-are unavailable, limiting ERC's fault detection.
-
-The final upper-clamp wiring adds **76 tracks/vias**, bringing the board to **2834**. All 2758 prior copper items and
-744 prior pad-continuity comparisons remain intact. All seven upper diode cathodes reach the existing regulated CORE_3V3
-supply; their GND and sense connections are unchanged. No parts, values, models or isolation keepouts moved. One
-redundant new via was merged before final DRC. The routes use top/back copper and unused In2 space without adding
-signals to In1 or changing existing power-zone outlines. Native ERC and schematic parity remain clear, with only the
-four existing J1 clearance findings. This completes candidate wiring, not the unresolved protection qualification.
-
-The conductor-interface routing checkpoint adds **371 tracks/vias**, bringing the board to **2758**, without changing
-any of the 2387 previously committed copper items, component placements, models, net assignments or isolation keepouts.
-All 744 prior pad-continuity comparisons pass. Native connectivity verifies each header's three-part resistor junction
-and each comparator's four-part sense group, plus all seven clamp ground returns. New routes stay on the outer copper
-layers; no internal signal tracks were added. Four redundant/overlapping new vias were merged before final DRC. Unrouted
-items fell from 42 to seven. The long right-hand harness runs and routed high-impedance sense paths still need
-noise/coupling and acquisition-timing review; connectivity alone does not qualify them. No protection behavior, scoring
-accuracy, or fabrication readiness is claimed by this routing checkpoint.
-
-The U19 primary buck now has 54 additional tracks/vias. Nine local support placements were tightened around its input,
-BOOT/VCC and feedback pins, following the
-[TI LMR36510 layout guidance, pages 26-28](https://www.ti.com/lit/ds/symlink/lmr36510.pdf). The fast input/switch paths
-stay on top copper; a short output-sense trace runs on the back beneath the uninterrupted In1 USB_GND plane. Local
-ground stitching and the existing package thermal holes connect the returns. Native checks passed all seven local net
-groups and **768 prior pad-continuity comparisons**, with all **1377 previous tracks/vias** unchanged. No parts, values,
-nets, connectors, isolation keepouts or branding were added or changed. Actual copper layers and the native 3D render
-were inspected; a resistor courtyard conflict was corrected before acceptance. Unrouted items fell from 221 to 202, with
-no new ERC, parity or DRC finding. This does not qualify regulation, dropout, transient response, effective capacitance,
-copper weight or temperature; the low-input-voltage concern remains unresolved.
-
-The STUSB4500 local control wiring adds 108 tracks/vias and moves only C36/C37/R88/R89. Both internal-regulator outputs
-have their own bypass capacitor and no external load. Reset, address straps and unused VSYS return to primary ground.
-J12 exposes primary ground, SDA and SCL; the external 3.3V programmer must supply I2C pull-ups. POWER_OK2 and
-VBUS_EN_SNK independently control the two default-on enable clamps, following the
-[ST pin functions and power-flag guidance, pages 4-10](https://www.st.com/resource/en/datasheet/stusb4500.pdf). No
-component, net, external connector, isolation boundary or crest geometry changed. Native continuity passed all 15 local
-control net groups and 768 previous pad comparisons; all 1431 earlier tracks/vias stayed fixed. Copper and native 3D
-views were inspected, and the overlapping same-ground pours were merged before acceptance. Unrouted items fell from 202
-to 172 with no new ERC, parity or DRC finding. This is local wiring, not working PD negotiation or NVM programming; the
-connector feeds remain unfinished.
-
-U20's eFuse power and support network adds 80 tracks/vias and C50, a 100nF/50V input bypass. Eight existing support
-parts moved locally; Q5's printed reference moved clear of the resistors. Both ends of each narrow power land escape to
-nearby vias and top/back copper areas. C46/C47 bypass the protected output feeding U6. ILM and dVdt have short top-side
-routes and a shared ground branch at U20; divider returns use the primary ground plane. This follows the
-[TI input bypass and layout guidance, pages 62-63](https://www.ti.com/lit/ds/symlink/tps25947.pdf). All seven local net
-groups and 768 previous pad-continuity comparisons pass, with all 1539 previous tracks/vias unchanged. Native schematic,
-copper and 3D views were reviewed; trace/via crossings, courtyard clearances and a label overlap were corrected before
-acceptance. Unrouted items fell from 172 to 154 with no new ERC, parity or DRC finding. The crest, external connectors,
-processors and isolation keepouts stayed fixed. Final capacitor selection, copper weight/current capacity, temperature,
-inrush/short-circuit transients and actual converter startup remain unverified; these local routes do not close the
-power-system bring-up or safety requirements.
-
-The primary corridor adds 77 tracks/vias and connects both J1 VBUS contact groups, U5/U19/U20 input branches, CC1/CC2
-and every U18 primary-supply pad. Four existing short 5V back-layer tracks were widened to 0.6mm for the added feeder
-load; all 1619 prior track/via paths remain in place. Native continuity passes every pad on the five completed primary
-nets and 770 earlier pad comparisons. No part, net or value was added. J3 moved 7mm inward, still on the left, and the
-unrouted R24/D9 moved clear of it. Other component positions, connector orientations and the crest stayed fixed.
-
-The two primary ground areas now join along the left edge. The old lower horizontal keepout was reshaped into a
-continuous all-copper exclusion beside that corridor; the actual U18 and U6 isolation-barrier keepouts are unchanged.
-The corridor's exclusion is 2.8mm wide along its straight section and 2mm at the existing lower horizontal boundary.
-These are provisional layout dimensions, **not qualified creepage, clearance or FIE safety ratings**. Do not route
-weapon/board-ground copper into the primary corridor. No signal trace was added to In1.Cu. Root review of front/back/
-inner copper and the native 3D render caught and corrected new crossings and via clearances. Final ERC and parity are
-clean; DRC fell from 154 to 141 unrouted items with only the same four J1 findings. Copper thickness, feeder heating/
-drop, CC noise susceptibility, loaded regulation, negotiation and isolation testing remain open.
-
-The application buck section retains its local routing. U7, L1 and C4-C7 are grouped below the ESP32 antenna keepout.
-The 5V feeder connects U6's isolated output to C5; short top-layer connections close the input, switch and bootstrap
-paths. C6/C7 connect the inductor output to ground, and a separate feedback route returns from C6 on In2.Cu beneath
-In1.Cu ground. Ground stitching connects the input/output capacitor returns, U7 ground and U6's isolated return. Native
-KiCad connectivity confirms every local regulator pin reaches its intended parts; placement, copper and 3D exports were
-visually checked. This follows the
-[AP63203 layout guidance, page 15](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), not a
-measured supply qualification: effective capacitor values, final copper weight, startup, load-step and thermal behavior
-still need verification. The ESP32 and its peripherals are connected to this output; the replacement primary supply is
-unverified on hardware.
-
-The STM32 supply routing adds 62 track segments and 29 ordinary 0.6/0.3mm vias. D2 now branches from PANEL_5V; both
-diode cathodes feed C2 and U4's input/enable pins. U4's output reaches C3, C14 and all seven MCU supply pins through an
-In2.Cu CORE_3V3 pour. The existing In1.Cu/back-layer ground pours extend beneath this section; supply and ground vias
-sit off component pads. Native connectivity confirms each MCU supply/ground pin and all twelve local capacitor returns
-reach the intended rail. Copper, component placement and the edited schematic were visually checked using native KiCad
-exports.
-
-C8-C11 provide one 100nF bypass per VDD pin. VDDA uses C12 **10nF** plus new C33 **1uF**; VREF+ uses C13 **100nF** plus
-C15 **1uF**. New C34 **100nF** bypasses VBAT, which remains tied to CORE_3V3 without a battery. These follow
-[DS12288 Rev 6, Figure 16, page 81](https://www.st.com/resource/en/datasheet/stm32g474re.pdf) and
-[AN5093 Rev 2, section 1.1.2](https://www.st.com/resource/en/application_note/an5093-getting-started-with-stm32g4-series--hardware-development-boards-stmicroelectronics.pdf).
-Keep **VREFBUF disabled** because VREF+ is externally supplied; the comparator's internal VREFINT selection is separate.
-The SWD header, reset switch and one crystal capacitor moved locally to clear this routing; processors and external
-connectors did not move. Other acquisition loads remain unrouted. This is not an operating supply qualification: exact
-capacitor selection/effective capacitance, regulator current/thermal margin, startup and handover still need
-verification.
-
-The retained USB data routing connects both USB-C data-contact copies through U3 to U18. U18's isolated 5V output
-reaches D1 and the R3/R4 USB-present divider at the STM32. Its VLO output drives ON/SPNDPWR only; VLO2 stays unused.
-R1/R2 have been removed: U5's local CC/CCDB pairs are joined for the sink terminations, but their traces to J1 are not
-yet routed. The old raw-VBUS feed to U18 was removed for the required regulated supply. Native copper comparisons
-confirm the retained data, isolated-output and PB5 connections; they do not establish continuity of the new primary
-power.
-
-Separate host-ground and board-ground pours retain the USB isolation boundary. Ground-ball rows escape to vias outside
-the BGA pads. This follows the
-[LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
-including its integrated bypass/termination, and keeps the
-[TPD2E2U06 protection](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf) close to the connector. Native top-copper,
-ground-layer and 3D exports were visually reviewed; U18 still has no retained 3D body, as noted above.
-
-The board-side USB pair uses 0.20mm traces with 0.25mm edge spacing on its main top-layer run. Short back-layer
-crossovers resolve the connector/package pin order. U18-to-STM32 path lengths are approximately 78.03mm D+ and 81.18mm
-D-, including two 1.6mm via traversals on D-. These are routing measurements, not an impedance or eye-diagram pass.
-Confirm the 90-ohm differential target with the fabricator's actual stackup, then verify enumeration, signal integrity,
-ESD, current, suspend/resume and USB/PD handover on hardware. Firmware and physical USB operation remain unverified.
-
-The STM32 support routing connects Y1/C17/C18 to PF0/PF1, R6 to PB8/BOOT0, and R5/C16/SW1/J2 to NRST. J2's five pins are
-**1 target 3.3V reference, 2 SWDIO, 3 SWCLK, 4 GND, 5 NRST**; this is a custom header, not a standard keyed debug
-connector. Use the reference as a programmer voltage sense, not a competing supply. SWD is unisolated service access:
-disconnect fencers/piste and use bench-only programming, since a grounded debugger bypasses computer-USB isolation. Keep
-NRST in reset mode and retain SWD access in firmware/option bytes; programming and recovery are not bench-proven.
-
-Y1 and both load capacitors moved beside the oscillator pins. HSE_IN/HSE_OUT remain top-layer-only, approximately
-4.75/11.51mm from MCU to crystal, with a grounded guard and uninterrupted In1 ground beneath the loop. No unrelated
-signal crosses beneath it. C16/R5 moved nearer the MCU and R6 beside BOOT0; C8/C34 labels moved, but their parts and the
-existing 256 power/USB tracks/vias did not. Native copper connectivity checked both clock branches, the boot pull-down,
-every reset/programming connection and all returns, including both reset-button ground pads. Top/back copper and native
-3D renders were visually reviewed; no components, values, footprints, nets, processors or connectors changed.
-
-The [Abracon ABM3B](https://abracon.com/Resonators/abm3b.pdf) crystal remains the 8MHz/18pF candidate. The existing two
-27pF capacitors imply 18pF loading only with about 4.5pF stray capacitance; they remain tuning values. Placement follows
-[ST's oscillator/reset guidance, Figures 21 and 27](https://www.st.com/resource/en/datasheet/stm32g474re.pdf), not a
-clock qualification. Confirm startup margin, crystal drive, frequency across supply/temperature and the final load
-capacitors on hardware. No speculative oscillator model or extra support parts were added.
-
-The shared-input replacement removes the Adafruit PD connector module, Pololu converter and external CC resistors.
-Native continuity comparisons passed for **634 retained pads**; **1365 previous tracks/vias** stayed geometrically
-unchanged and **34 obsolete input/module stubs** were removed. The replacement U6 secondary, C48/C49 and existing
-PANEL_5V distribution are connected, including the U7/D2 feeder formerly linked through the old module's pads. The
-primary island and its feeds are now routed. The later corridor adjustment moves only J3/R24/D9 among the non-power
-parts; pin assignments remain unchanged. Dense power-support references are on F.Fab for assembly inspection.
-
-The new [RECOM REC30K-2405SZ](https://recom-power.com/en/rec-s-REC30K.html) footprint follows its six-pin top-view
-pattern. The retained manufacturer STEP uses rotation `(90, 0, 0)` and offset `(0, 0, 0.6108)` mm. A native KiCad STEP
-export places all six model pin axes within 0.000003mm of their corresponding hole centres. The model's SHA-256 is
-`4dd6309726ab6e64aac9acbfc641f70db7001182d952ef02c4de8f90458b2559`. No substitute geometry was invented. This is a
-model/footprint consistency check, not physical sample-fit approval. The module's 2000VDC, one-minute basic-isolation
-rating does not establish board safety or FIE approval.
-
-U5's QFN and U20's RPW land patterns were reviewed against the manufacturer drawings:
-[STUSB4500](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
-[TPS25947](https://www.ti.com/lit/ds/symlink/tps25947.pdf). U19 uses the native TI HTSOP thermal-via footprint and the
-[LMR36510 reference circuit](https://www.ti.com/lit/ds/symlink/lmr36510.pdf). U20's current-limit value is nominal, not
-an absolute peak-current guarantee. Startup slew, loaded PD negotiation, detach, current-limit tolerance, capacitor
-effective values, isolation, thermal behavior and full-white panel load remain untested. The source must offer 20V/3A
-for full-system operation; a 5V-only source leaves that branch disabled.
-
-The ESP32 routing adds 55 track segments, 21 ordinary vias and an In2.Cu APP_3V3 pour. C22 (10uF) and C27 (100nF) sit
-next to the module supply pad with short ground returns; R28 (10k) and C21 (1uF) provide the existing enable delay, and
-R29 (10k) pulls GPIO0 high. These follow the
-[Espressif supply and reset guidance](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/schematic-checklist.html).
-The antenna keepout, processors, external connectors and all 366 prior tracks/vias are unchanged. Only those five
-support parts moved; L1's label moved for clearance. Native copper checks confirm the supply, every module
-ground/thermal pad, enable/reset, boot and programming connections; top/back/inner copper and 3D placement were visually
-reviewed. Supply startup, RF-current transients, reset timing and actual programming still need bench verification.
-
-J6 is a custom unisolated service header: **1 target 3.3V reference, 2 GND, 3 ESP32 TX, 4 ESP32 RX, 5 EN/reset, 6
-GPIO0/BOOT**. Cross TX/RX to a 3.3V USB-UART adapter; do not apply 5V logic or power the board from the adapter's
-reference connection. Power the application from PD, hold SW3/BOOT while pressing and releasing SW2/RESET, then release
-BOOT to enter the ROM downloader. This is manual recovery, without an added auto-reset circuit. Disconnect fencers and
-piste before service: adapter ground bypasses the isolated computer-USB path. The main computer USB connector belongs to
-STM32 acquisition, not this ESP32 programming port. The peripheral routing described below is retained.
-
-The processor link now connects STM32 PA9/TX (U1.43) through U10 to ESP32 GPIO48/RX (U2.25), and ESP32 GPIO47/TX (U2.24)
-through U11 to STM32 PA10/RX (U1.44). U10 DIR is tied to CORE_3V3; U11 DIR is grounded. C23-C26 sit beside their
-respective supply pins, with short ground returns. R72/R73 add 10k transmit idle pulls on each local rail so processor
-reset does not leave translator inputs floating; the existing 47k receive pulls retain idle levels when the opposite
-rail is off. This follows the
-[TI pin, power-down and layout guidance](https://www.ti.com/lit/ds/symlink/sn74axc1t45.pdf). The added acquisition-side
-pull is included in the unchanged 20mA/75mA power targets. Native copper checks confirm both directions, all translator
-supply/ground/direction pins, bypass and bias connections, with no rail or UART0-recovery bridge. Only eight existing
-link components moved; every previous track/via and the processors/connectors stayed fixed. No galvanic isolation was
-added by these translators. Firmware framing, baud rate, reset/reconnect behavior and physical power-off leakage and
-signal testing remain unfinished.
-
-The TSOP38438 receiver now connects pin 1 OUT to ESP32 GPIO42 (U2.35), pin 2 to board ground, and pin 3 to APP_3V3
-through the existing R32 (100 ohms), with C30 (100nF) beside the receiver. Only R32/C30 moved; the receiver, connectors
-and all 552 previous tracks/vias stayed fixed. This follows the
-[Vishay pinout and supply-filter topology, page 2](https://www.vishay.com/docs/82491/tsop382.pdf); the existing filter
-values remain candidates, not measured noise rejection. Ground extends beneath the route without grounding Favero's
-output pins or crossing USB isolation. Native continuity and copper/3D review passed. The active-low output is a
-demodulated 38kHz signal, not decrypted commands: firmware must decode and authenticate it. Keep GPIO42 input-only with
-its internal pull-up disabled, so it does not bypass the filtered supply through the receiver output. IR remains off in
-laptop acquisition-only mode. Remote burst/gap compatibility, enclosure sightline, range and operation during full
-display/Ethernet activity still need hardware verification.
-
-The WIZ850io interface is routed without adding parts: U12 contacts 3/4/5/6/11/12 connect to ESP32 module pads
-21/22/32/33/34/31 for MOSI/clock/chip-select/interrupt/reset/MISO respectively. Both 3.3V contacts and all three ground
-contacts are connected; contact 10 stays NC. C28/C29 moved beside the power header, outside the module outline. The
-module, all external connectors and all 584 prior tracks/vias stayed fixed. Native continuity, copper and 3D review
-passed, including the earlier circuits and isolation boundaries. The
-[WIZnet module schematic](https://docs.wiznet.io/assets/files/wiz850io_sch_v110-3fcc19fc2acaf16f15c5f08f9c8330cb.pdf)
-already contains 4.7k pull-ups on chip-select, interrupt and reset; do not duplicate them on the carrier. Follow the
-[module startup requirement](https://docs.wiznet.io/Product/ioModule/WIZ850io): assert reset for at least 500us, then
-wait at least 50ms after release before SPI access. Begin bench bring-up at a conservative 1MHz SPI clock and verify
-waveforms before increasing it; these routes do not establish the chip's maximum SPI rate. Ethernet is application/PD
-powered only. Physical link, Cyrano traffic, simultaneous display activity and power/reset recovery remain untested.
-
-The HUB75 output-side routing connects U14's eight outputs and U15's five used outputs to all thirteen J7 signal
-contacts, preserving their pin order. Q1, R33/R34 and both buffer-enable pins are connected; R35 pulls panel OE high
-while the buffer outputs are disabled. The existing 5V distribution, bypass and connector grounds remain connected. The
-five inner-layer control traces run beside, not through, the high-current 5V strip. A short enable-control crossover
-uses In1.Cu; the surrounding ground remains connected. No part, connector, footprint, net or prior track/via moved.
-Native continuity checked every output and the earlier USB, power, processor, Ethernet and IR circuits; copper layers
-and the actual KiCad 3D render were reviewed. This slice reduced unrouted items from 208 to 188 with no new DRC finding.
-
-U14/U15 are now **SN74AHCT541PWR one-way buffers**, not bidirectional AHCT245 transceivers. Their 20-pin TSSOP footprint
-and all data/output pin positions are unchanged; pin 1 is now grounded OE1 rather than a 5V direction input. R74-R86 are
-thirteen 10k, 1% input-to-ground pulls. These keep every used buffer input defined while the ESP32 is in reset; U15's
-three unused inputs remain grounded and its unused outputs remain NC. R34 still pulls OE2 high, Q1/R33 disable the
-buffers by default, and R35 pulls panel OE high. This follows the
-[TI pinout, control table and input guidance, pages 3-8](https://www.ti.com/lit/ds/symlink/sn74ahct541.pdf). Each high
-3.3V signal draws about 0.33mA through its pull; this is on the PD-only application branch, not the laptop acquisition
-budget. No new processor, power rail or interface was added.
-
-R52-R64, the duplicate 100k display pull-downs on the reset-defaults sheet, have been removed from schematic and PCB.
-Each was unconnected in copper and duplicated one of the connected R74-R86 10k pulls on the same RGB input and ground.
-The retained pulls reach both ESP32 and their buffer inputs; output blanking and enable defaults are unchanged. This
-removes thirteen unnecessary placements and 26 unrouted items, not a display function. All 2174 prior tracks/vias and
-744 retained-pad connectivity comparisons pass unchanged; native ERC/parity, copper and 3D review found no new issue.
-
-The thirteen resistors sit beside the buffers. The still-unwired BZ1/Q2/R36/R37 sound group moved into the free
-lower-right area to provide assembly clearance. Six obsolete DIR-feed track segments were removed and one shared supply
-stub shortened; all other 772 prior tracks/vias, external connectors, processors and keepouts are unchanged. Native
-ERC/parity, all bias/output/prior-circuit continuity checks, and copper/schematic/3D review passed, with no new DRC
-finding. Unrouted count remains 188 because this change resolves input defaults, not the processor bus.
-
-The ESP32 display bus is now routed: module pads 4-12 and 17-20 reach all thirteen buffer inputs and their pull-downs;
-pad 23 reaches Q1's DISPLAY_ENABLE gate and R33. Top/back routes use inner-layer crossovers outside the power pours; no
-signal trace was added to the In1.Cu ground layer. All 832 previous tracks/vias, parts, connectors and keepouts stayed
-fixed. Native continuity of the complete input/buffer-output wiring and earlier circuits passed; copper and native 3D
-views were inspected. This reduced unrouted items from 188 to 174 without a new ERC, parity or DRC finding.
-
-**Display bring-up:** configure all display signals with RGB_OE high before asserting DISPLAY_ENABLE; deassert
-DISPLAY_ENABLE before releasing GPIOs. The input routes are not delay-matched or timing-qualified. That firmware
-sequence, startup and brownout blanking, display timing and cable signal integrity still require implementation and
-physical verification. Next board routing: sensing connections.
-
-The sounder is routed from STM32 pad 42 through R36 to Q2, with R37 holding the gate low during reset. BZ1 remains the
-PS1240P02BT on CORE_3V3. R87 adds the missing 1k parallel discharge path from BUZZER_LOW to CORE_3V3, following
-[TDK's operating-circuit guidance, page 2](https://product.tdk.com/system/files/dam/doc/product/sw_piezo/sw_piezo/piezo-buzzer/catalog/piezoelectronic_buzzer_ps_en.pdf).
-C35 provides 100nF local supply bypass, and ground extends beneath the sounder without entering the Favero output
-region. All 1126 prior tracks/vias and existing component positions stayed fixed. Native continuity, ERC/parity, copper,
-schematic and 3D review passed; unrouted items dropped from 174 to 167 with no new DRC finding. Drive with 4kHz PWM,
-then stop low; holding the gate high is not a tone. R87 draws about 3.3mA while Q2 is on, plus the piezo's transient
-charging current. Keep sound disabled in laptop acquisition mode. Output amplitude, acoustic level, supply disturbance
-and scoring-timing interaction still need bench checks; the wiring is not an acoustic or FIE qualification.
-
-Both Favero circuits are routed after correcting the draft against the
-[FA-05/FA-07 interface drawing, page 2, mirrored by Super Fencing System](https://superfencingsystem.com/Favero_Serial.pdf):
-each socket's outer contacts 2+5 join through its 82-ohm resistor to the collector; centre contacts 3+4 join the
-emitter. The 680k resistor belongs between base and emitter, not between base and an outer contact. The 1N4004 cathode
-connects to collector and anode to emitter. The two repeater-supplied loops have no connection to one another or board
-ground. The same earlier wiring error remains in the separate, unchanged tscircuit prototype; do not manufacture that
-older repeater circuit without correcting it too.
-
-STM32 pad 14 drives Q3 and its 100k reset pull-down. The two 220-ohm optocoupler input resistors now use PANEL_5V,
-making the LED drive PD-only in hardware. Their current does not consume the laptop acquisition allocation. The twelve
-existing support parts moved into two local groups, with output pins facing the sockets and input pins facing the
-controller. No parts were added; socket bodies, holes, models and all 1194 previous tracks/vias stayed fixed. Native
-continuity confirms all contact pairs, protection/bias paths, the common driver and prior circuits. ERC/parity are
-clean; DRC is down from 167 to 141 unrouted items with no new finding. Copper, schematic and native 3D views were
-reviewed. The optocoupler's specified transfer ratio does not guarantee saturation or release time at our actual loop
-conditions; 2400-baud waveform/polarity, two real repeaters, cable length and isolation withstand still require bench
-verification. The old prototype's behavioral simulation is not verification of this corrected native circuit.
-
-The acquisition buffers U8/U9 now have CORE_3V3 and ground, with C19/C20 beside their supply pins. All seven 10k
-output-enable pull-ups and seven 10k input pull-downs are connected to their buffer pins and local rails. U8's unused
-fourth channel has its enable high, input low and output NC, matching the
-[Nexperia pinout and control table, pages 3-4](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf). The two
-capacitors and fourteen resistors moved; no chip, connector, model, net, part value or earlier track/via changed. The
-board-side ground extends beneath this section. A short front-layer supply crossover joins the CORE_3V3 pour across the
-retained isolated-5V feeder; continuity review caught and corrected that initially split pour. Native checks passed all
-770 earlier pad-connectivity comparisons and the new supply/default connections, with all 1696 earlier tracks/vias
-intact and 190 added. ERC/parity are clean; unrouted items fell from 141 to 103 with only the same four J1 findings.
-Copper layers and native top/underside 3D renders were reviewed. MCU control routes, conductor paths, startup behavior,
-scan timing and physical protection remain unfinished; this wiring is not a passed sensing system.
-
-The following controller-routing slice connects all seven STM32 drive outputs and seven active-low enables to their
-matching buffer input/enable and pull resistor. All fourteen three-pad control nets pass native copper continuity, along
-with 770 retained-pad comparisons; all 1886 prior tracks/vias, component positions, models and isolation barriers remain
-unchanged. The 288 added track/via items use only front/back signal traces, with no signal routed through the
-crystal/load-capacitor region or on either inner plane. Copper layers and the native 3D render were reviewed. ERC and
-parity remain clean; unrouted items fell from 103 to 89 with only the four existing J1 findings. Configure all enables
-high and drive data low before starting acquisition. This routing does not implement firmware, prove edge timing, or
-close the unpowered clamp issue; conductor/sense connections remain unfinished.
-
-The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
-is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
-ordinary routing vias remain 0.6/0.3mm. This resolves the previous twelve drill-setting findings without changing the
-ESP32 footprint. Nine silkscreen findings were corrected by relocating the Favero labels, optocoupler/buzzer pin-1
-markers, and U14/D2 references off pads or neighboring outlines. The three project-local footprint masters match the
-board. Native KiCad copper/silkscreen exports were visually reviewed; these edits do not move any component, hole or
-model and do not establish solder-paste/thermal-via assembly acceptance.
-
-KiCad loaded the current schematic/PCB and rendered the assembly. Native 3D cable-side and underside views confirmed
-Favero openings toward the top edge and Ethernet toward the bottom; measured CAD tail/board-lock centres match their
-holes. Left/right harnesses are separated and piste is on the bottom edge. No footprint bounding boxes collide, but
-enclosure cutouts, real plug/latch access, complete pin seating and electrical design still need review. These checks
-establish placement/connectivity consistency, not fabrication approval. The display-buffer replacement preserves its
-footprint and signal positions; pin 1 changes from the old 5V direction input to a grounded output-enable input.
-
-All seven models' acceptance limits pass, including the corrected seven-input settled leakage stress; this remains
-bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
-The crest and its group have been removed, leaving the small component-side text. The USB protection update changed U3's
-protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link, IR, Ethernet, HUB75, sounder and Favero routing is retained. The local buck, PD-control and eFuse
-circuits and the primary corridor complete the shared-input routing. Acquisition-buffer power and reset defaults are
-also connected, together with their fourteen STM32 control lines. Duplicate display pulls are removed, leaving 187
-components. Seven buffer-to-220-ohm output routes add 37 tracks/vias and leave 56 unconnected items. Only the seven
-series resistors moved; R11's reference label moved clear of its neighbor. No parts, values or nets changed. Native
-continuity checked all seven new buffer nets and 744 retained pad connections, with all 2174 earlier tracks/vias
-unchanged. The conductor sides remain unrouted pending the clamp/unpowered review; these routes do not resolve that
-electrical issue. R65-R71 now each have a 1.2mm front-layer ground escape and a 0.6/0.3mm via into the existing ground
-planes, reducing the current unrouted count to 49. No component or artwork moved; all 2211 previous tracks/vias and 744
-prior pad connections were retained. Each new return reaches the STM32 ground.
-
-STM32 PA1/LEFT_A and PA0/LEFT_C now connect to R65/R67's sense-node pads. Thirty added track/via items bring the total
-to 2255 and reduce unrouted items to 47. Four existing RIGHT_A_DRIVE fanout items were repositioned locally, retaining
-that three-pad connection; the other 2221 old tracks/vias and all 744 prior pad connections pass unchanged. No
-component, model, label or isolation keepout moved. Two short In2.Cu crossovers beneath the STM32 avoid blocked
-front/back exits; the CORE_3V3 pour remains connected, and no new signal trace enters In1.Cu or the crystal region. The
-next slice connects PB13/RIGHT_B, PB11/RIGHT_C and PB14/PISTE to R69/R70/R71. It adds 61 track/via items, bringing the
-total to 2316 and reducing unrouted items to 44. All 2255 earlier copper items and 744 retained pad connections remain
-unchanged. The new routes use front/back and In2.Cu crossovers; ground and supply connectivity is retained, with no new
-In1.Cu signal trace or moved part. PB0/RIGHT_A is now also routed to R68 on front/back copper, adding nine track/via
-items. One redundant front-side CORE_3V3 link between C12/C13 was removed to open that exit; both capacitors retain
-their individual supply-plane feeds, local MCU connections and unchanged ground returns. All 744 prior pad connections
-and the other 2315 old copper items pass unchanged. No component or capacitor via moved. The total is 2324 copper items
-and 43 unrouted connections. PA3/LEFT_B now also reaches R66, completing all seven comparator-to-pull-down routes. Three
-RIGHT_B_OE_N front segments were replaced to open its exit; the revised enable route retains the MCU, buffer and pull-up
-connection. Short copper links reconnect the supply areas divided by the new inner-layer routing. All 744 prior pad
-connections and 2321 retained copper items pass unchanged; 66 added items bring the total to 2387 and unrouted count
-to 42. No component, capacitor return, model, label or isolation keepout moved, and no new signal uses In1.Cu. LEFT_B's
-approximately 54.6mm route and the revised enable routing still need noise/timing review during bring-up; connectivity
-is not signal-integrity qualification. Conductor/clamp connections remain unfinished. This is routing only, not
-protection or sensing qualification. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC
-retains four USB connector hole-clearance findings and zero schematic-parity issues. The latest repository verification
-passed formatting, lint, types and unused-code checks but failed three scoring tests: a 29-versus-28 scenario-count
-assertion, a mutation timeout and a canonical-corpus assertion (770 scoring tests passed). The run stopped before every
-other package completed. These tests are outside the board edits; none was suppressed or modified. Physical USB signal,
-surge and ESD testing remain required; native connectivity and the protector's component ratings do not establish
-board-level immunity.
+Repository `pnpm verify` passed its check stage, then failed the same three scoring-software tests: observatory weapon
+execution, scalar/container mutation timeout, and the canonical-corpus assertion (770 passed). The run stopped before
+all other packages finished. No tests or rules were suppressed. These failures are outside the native hardware changes;
+repository-wide verification is not clean. The board is not yet released for fabrication.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
