@@ -203,7 +203,7 @@ shunt against an invented fault envelope. Do not substitute a generic diode simu
 Leakage and capacitance are chosen stresses, not guaranteed worst cases or FIE evidence. BAT54S hot-leakage curves are
 typical, not maximum ratings. The models do not prove exhaustive contacts, resistance diagnostics, clamp behavior or
 capture timing. Do not treat continuity as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring
-error. Conductor routing remains unfinished; completed power routing is not a measured operating result.
+error. The seven upper-clamp rail connections remain unfinished; completed routing is not a measured operating result.
 
 ## Current state and remaining work
 
@@ -221,7 +221,10 @@ supplies, local bypass and all seven reset-default resistor networks. All fourte
 those buffers and resistors. Thirteen redundant, unconnected display pull-downs have been removed; the connected 10k
 pull-downs beside the display buffers remain. All seven buffer outputs now reach their existing 220-ohm series
 resistors. All seven 3.3k sense pull-downs now have ground returns, and all seven comparator inputs reach those
-pull-downs. The remaining 42 unrouted items concern the conductor/clamp interface, not the MCU-to-pull-down routes.
+pull-downs. Both fencer headers and the piste header now reach their excitation/sense resistor junctions. Every sense
+series resistor connects to its BAT54S signal pad and its own MCU/pull-down path; all seven clamp ground returns are
+connected. The remaining **seven unrouted items are D3-D9's upper-clamp CORE_3V3 connections**, deliberately unfinished
+until the power-off protection decision is resolved. This is not permission to power or use the incomplete interface.
 
 The existing USB data/protection, isolated output and USB-present sensing remain routed, along with the STM32 regulator,
 crystal, boot pull-down, reset network/button and programming header. The 5V distribution to both HUB75 power contacts,
@@ -231,8 +234,7 @@ UART, its translators, four bypass capacitors and idle pulls are connected. The 
 and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus, reset and interrupt are also connected.
 All thirteen HUB75 buffer outputs now reach the display connector, together with the local buffer-disable and
 panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined reset defaults. The
-ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed. Conductor interfaces
-remain unfinished.
+ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
 
 Remaining before fabrication:
 
@@ -241,32 +243,41 @@ Remaining before fabrication:
    weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
    dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
    selection or this topology.
-2. **Next: resolve the sensing-protection decision before final conductor routing.** STM32's seven drive and seven
-   output-enable signals, buffer supplies, bypass, local reset defaults and buffer-side series resistors are connected.
-   Keep the unfinished conductor/clamp paths separate from these completed routes. The USB primary corridor is
-   connected; resolve the buck's low-input-voltage corner and program/read back U5 before powered bring-up. Use the
-   [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when implementing USB acquisition. Bench-check
-   startup/current/suspend behavior, supply handover, and the electrical safety boundary for USB, PD, Ethernet, piste,
-   and weapon conductors. The integrated isolator and all-layer copper keepouts separate computer ground from board
-   ground; acquisition and application still share board ground. The keepout spans the gap between the module's primary
-   and secondary ball rows. This is not complete board safety proof.
+2. **Next: resolve the sensing-protection decision before connecting the seven upper clamps.** STM32's seven drive and
+   seven output-enable signals, buffer supplies, bypass, local reset defaults and buffer-side series resistors are
+   connected. The conductor paths and clamp grounds are connected; keep the unfinished upper-clamp rail separate. The
+   USB primary corridor is connected; resolve the buck's low-input-voltage corner and program/read back U5 before
+   powered bring-up. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when implementing USB
+   acquisition. Bench-check startup/current/suspend behavior, supply handover, and the electrical safety boundary for
+   USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper keepouts separate
+   computer ground from board ground; acquisition and application still share board ground. The keepout spans the gap
+   between the module's primary and secondary ball rows. This is not complete board safety proof.
 3. Finish the remaining local placement, decoupling, connector access, mounting, antenna clearance, and power/current
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. Conductor connections still need routing. USB impedance
-   must be checked against the selected fabricator stackup before release. No purchase or assembly release has been
-   performed.
+   manufacturing outputs, and then perform hardware bring-up. Upper-clamp rail connections still need resolution. USB
+   impedance must be checked against the selected fabricator stackup before release. No purchase or assembly release has
+   been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **42 unrouted items** and **four other findings**, all
-at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
-ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
-NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
-DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
-are unavailable, limiting ERC's fault detection.
+export and connected-pin transfer checks succeeded. DRC reports **seven unrouted items** and **four other findings**,
+all at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm
+outer ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published
+0.2mm NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector
+change. No DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical
+pin types are unavailable, limiting ERC's fault detection.
+
+The conductor-interface routing checkpoint adds **371 tracks/vias**, bringing the board to **2758**, without changing
+any of the 2387 previously committed copper items, component placements, models, net assignments or isolation keepouts.
+All 744 prior pad-continuity comparisons pass. Native connectivity verifies each header's three-part resistor junction
+and each comparator's four-part sense group, plus all seven clamp ground returns. New routes stay on the outer copper
+layers; no internal signal tracks were added. Four redundant/overlapping new vias were merged before final DRC. Unrouted
+items fell from 42 to seven. The long right-hand harness runs and routed high-impedance sense paths still need
+noise/coupling and acquisition-timing review; connectivity alone does not qualify them. No protection behavior, scoring
+accuracy, or fabrication readiness is claimed by this routing checkpoint.
 
 The U19 primary buck now has 54 additional tracks/vias. Nine local support placements were tightened around its input,
 BOOT/VCC and feedback pins, following the
