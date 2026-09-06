@@ -126,7 +126,7 @@ automatically replayed by the daily current-Congress poll.
 An existing checkpoint without a fingerprint is initialized only when the published roster matches the source.
 Snapshot writes and their observation checkpoint commit atomically. The workstation production canary
 `a7b0796a-1221-4d33-a702-28cd5e3549a1` succeeded on 2026-09-06: one edition read, one skipped, zero membership writes.
-Trigger correction handling is deployed in `20260906.3`; its current-Congress canary completed with zero writes.
+Trigger correction handling is deployed in `20260906.4`; its current-Congress canary completed with zero writes.
 Historical format coverage and backfill remain incomplete.
 
 Release evidence:
@@ -160,10 +160,14 @@ Release evidence:
   and Congress-end semantics. Membership detail is organization-scoped, not `/api/memberships/{id}`.
 - The validated 116th import is running as `run_06g7i596qkn4k2lf1rtcln6701`. The 118th unchanged rerun is queued as
   `run_06g7i5dnnrs89n46ilvj8ip601`. Neither is claimed complete here; both use the serial historical task queue.
-- Verification: 2,032 legislation tests and four receiver tests passed; 60 database-dependent tests skipped.
-  Lint, types, and unused-code checks passed. Latest root `pnpm verify` is blocked by unrelated
-  `@repo/fc-theme-base` coverage thresholds (not legislation failures). Git hooks were not bypassed.
+- Verification: 2,033 legislation tests and four receiver tests passed; 60 database-dependent tests skipped.
+  Lint, types, and unused-code checks passed. Latest root `pnpm verify` failed on two unrelated
+  `@repo/fc-theme-base` size-chart Liquid test timeouts; an earlier run failed that package's coverage thresholds.
+  Git hooks were not bypassed.
 
 Final review also tightened historical publication: incoming memberships for ended Congresses are closed before
 the snapshot/checkpoint transaction, avoiding a temporary active state if follow-up cleanup is interrupted.
 The cleanup remains for recovery of older rows; current-Congress membership behavior is unchanged.
+This safeguard is committed as `c63d24a`, pushed to main, and deployed in Trigger `20260906.4` (`gd3wutzu`).
+The deployed current-Congress canary `run_06g7i6u9hho6slbl3qcq11gs01` completed successfully with one edition skipped
+and zero membership writes.
