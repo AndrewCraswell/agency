@@ -2,6 +2,13 @@ import { describe, expect, it, vi } from "vitest"
 import { ProviderHttpError, readBounded, RetryingHttpClient } from "./http-client.js"
 
 describe("RetryingHttpClient", () => {
+  it("preserves an explicit redirect policy for credentialed requests", async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response("ok"))
+    const client = new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    await client.get(new URL("https://provider.example/data"), { redirect: "error" })
+    expect(request).toHaveBeenCalledWith(expect.any(URL), expect.objectContaining({ redirect: "error" }))
+  })
+
   it("retries transient failures and returns the eventual response", async () => {
     const request = vi
       .fn<typeof fetch>()

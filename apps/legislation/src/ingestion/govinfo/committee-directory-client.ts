@@ -168,6 +168,20 @@ export class GovInfoCommitteeDirectoryClient {
     return parseGovInfoCommitteeDirectory(await this.getText(directoryPackage))
   }
 
+  async getMemberAliases(
+    directoryPackage: GovInfoDirectoryPackage,
+    candidates: readonly { state: string; chamber: "upper" | "lower" }[]
+  ) {
+    const { getGovInfoCommitteeMemberAliases } = await import("./committee-member-aliases.js")
+    return getGovInfoCommitteeMemberAliases({
+      apiKey: this.#apiKey,
+      http: this.#http,
+      packageId: directoryPackage.packageId,
+      congress: directoryPackage.congress,
+      candidates
+    })
+  }
+
   #collectionUrl(congress: number, offsetMark: string): URL {
     // Collection bounds filter lastModified, not publication dates. Older
     // Congresses may have been republished years after their session ended.

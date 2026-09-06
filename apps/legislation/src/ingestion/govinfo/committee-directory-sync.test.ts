@@ -110,7 +110,40 @@ function run(packages = [directory()], getText = async () => fixture()) {
   )
 }
 
+function runWithAlias(personId: string) {
+  const getMemberAliases = vi
+    .fn<() => Promise<{ name: string; personId: string }[]>>()
+    .mockResolvedValue([{ name: "Janey Senator", personId }])
+  const operation = executeGovInfoCommitteeSynchronization(
+    { config, database, congress: 119, correlationId: "alias-test" },
+    {
+      client: {
+        discover: async () => [directory()],
+        getRecords: async () => parseGovInfoCommitteeDirectory(fixture().replaceAll("Jane Senator", "Janey Senator")),
+        getMemberAliases
+      },
+      loadCatalog: async () => catalog,
+      now: () => now
+    }
+  )
+  return { operation, getMemberAliases }
+}
+
 describe("committee directory observation synchronization", () => {
+  it("uses same-edition aliases for existing Congress-scoped people", async () => {
+    const { operation, getMemberAliases } = runWithAlias("person:congress:s1")
+    await operation
+    expect(mocks.replace).toHaveBeenCalledOnce()
+    expect(getMemberAliases).toHaveBeenCalledOnce()
+  })
+
+  it("does not invent a person or term from a directory alias", async () => {
+    const { operation, getMemberAliases } = runWithAlias("person:congress:unknown")
+    await expect(operation).rejects.toThrow("unmatched committee members")
+    expect(mocks.replace).not.toHaveBeenCalled()
+    expect(getMemberAliases).toHaveBeenCalledOnce()
+  })
+
   it("preserves existing organizations when importing an ended Congress", async () => {
     await executeGovInfoCommitteeSynchronization(
       { config, database, congress: 119, correlationId: "historical-test" },

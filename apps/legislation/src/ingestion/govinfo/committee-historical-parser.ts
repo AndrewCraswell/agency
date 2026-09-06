@@ -16,7 +16,7 @@ states.set("northern mariana islands", "MP")
 // Printed state typo in the 115th Senate directory; it is not a new jurisdiction.
 states.set("nebraksa", "NE")
 const stateNames = [...states.keys()].sort((a, b) => b.length - a.length).join("|")
-const fullMember = new RegExp(`^(.+?), (?:of )?(${stateNames})(?:[.,]?\\s*(.*))?$`, "i")
+const fullMember = new RegExp(`^(.+?), (?:of (?:the )?)?(${stateNames})(?:[.,]?\\s*(.*))?$`, "i")
 const memberWithoutOf = new RegExp(`^.+?, (${stateNames})\\.?$`, "i")
 export type HistoricalCommitteeParserOptions = {
   resolveAbbreviatedMember?: (context: {
@@ -56,6 +56,8 @@ function parseGranule(
     .slice(granule.text.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
     .replaceAll(/\[[\s\S]*?\]/g, "")
+    .replaceAll(/\(No Vice Chairman\)\.?/gi, "")
+    .replaceAll(/,´(?=\s+of\b)/g, ",")
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
     .replaceAll(/^[ \t]*SUBCOMMITTEES[ \t]*$/gm, "\n\nSUBCOMMITTEES\n\n")
   const partyBoundary =
@@ -105,7 +107,7 @@ function parseGranule(
     const firstMemberLine = lines.findIndex(
       (line) =>
         !/\.—|\.\s*--/.test(line) &&
-        (/,\s+of [A-Z]|^(?:Mr|Mrs|Ms|Miss)\./.test(line.trim()) ||
+        (/,\s+of (?:the )?[A-Z]|^(?:Mr|Mrs|Ms|Miss)\./.test(line.trim()) ||
           (!/\d/.test(line) && memberWithoutOf.test(line.trim())))
     )
     const rosterLines = firstMemberLine > 0 ? lines.slice(firstMemberLine) : lines
@@ -126,7 +128,9 @@ function parseGranule(
       }
     }
     const cells = firstMemberLine < 0 ? [] : memberCells(rosterLines)
-    const hasMembers = cells.some((cell) => /,\s+of [A-Z]|^(?:Mr|Mrs|Ms|Miss)\./.test(cell) || fullMember.test(cell))
+    const hasMembers = cells.some(
+      (cell) => /,\s+of (?:the )?[A-Z]|^(?:Mr|Mrs|Ms|Miss)\./.test(cell) || fullMember.test(cell)
+    )
     if (hasMembers && isStaff && !isPartyOrganization && !/\.\s*--/.test(joined)) {
       throw new Error(`GovInfo historical member block remains in staff scope: ${joined.slice(0, 100)}`)
     }
@@ -220,6 +224,9 @@ function memberCells(lines: readonly string[]): string[] {
       .split(/\s{2,}/)
     const cells: string[] = []
     for (const cell of rawCells) {
+      if (/^\.$/.test(cell)) {
+        continue
+      }
       if (
         (/^[.,]*\s*of\b/.test(cell) ||
           /^(?:Chair(?:man|woman)?|Vice Chair(?:man|woman)?|Ranking (?:Minority )?Member)\.?$/i.test(cell)) &&
@@ -245,7 +252,7 @@ function memberCells(lines: readonly string[]): string[] {
       const isWrappedRole =
         /^(?:Ranking (?:Minority )?Member|Vice Chair(?:man|woman)?|Member|Chairman|Chairwoman|Chair|officio|Leader|Whip)\.?$/i.test(
           cell
-        )
+        ) || /^\(Speaker[’']s Designee\s*\/\s*Vice Chairman\)\.?$/i.test(cell)
       if (
         /^(?:[A-Za-z].*?, of(?: |$)|(?:Mr|Mrs|Ms|Miss)\.|Vacan)/.test(cell) ||
         column.length === 0 ||

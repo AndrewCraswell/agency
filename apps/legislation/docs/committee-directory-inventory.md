@@ -86,10 +86,33 @@ Robert Menendez's 1993–2006 House career no longer competes with his son's val
 Historical committee publication is a separate acceptance gate from identity backfill completion.
 
 Final 118th reconciliation passed with 222 organizations, 3,670 source memberships, and zero unmatched people.
-The 116th and 117th PDF paths pass hierarchy checks but remain unpublished: 116 has 15 unmatched entries
-(Patrick J. Toomey and Roger W. Marshall); 117 has 14 (including Tom Udall, C. Scott Franklin, and a state suffix
-printed inside Jamaal Bowman's name). Exact source-backed identity resolution is still required. Congresses 105–115
+The 116th and 117th PDF paths pass hierarchy checks. Same-edition individual member summaries expose Congress,
+chamber, state, Bioguide ID, and exact printed-name aliases. The bounded alias fallback resolves Patrick J. Toomey,
+Roger W. Marshall, and C. Scott Franklin without fuzzy matching or another source. Final 116th reconciliation passes
+with 215 organizations, 3,678 entries, and zero unmatched people. The 117th retains two unresolved entries: Tom Udall
+in Appropriations and a state suffix printed inside Jamaal Bowman's name. Congresses 105–115
 remain gated on older layout support; all 20 advertised-HTML editions failed strict parsing during the bounded inventory.
+
+A second read-only pass checked all 20 older editions' advertised PDFs with the assignment resolver enabled:
+
+- 105: unresolved printed `Aschcroft` abbreviation.
+- 106: `(No Vice Chairman)` annotation.
+- 107: standalone punctuation in a roster.
+- 108: wrapped Speaker's Designee / Vice Chairman annotation.
+- 109: `of the District of Columbia` variant.
+- 110–111: Retirement and Aging heading joined to the preceding roster.
+- 112–113: Primary Health and Aging heading joined to the preceding roster.
+- 114: a member roster remained in staff scope.
+- 115 July edition: provisional 210 organizations / 41 parents / 3,643 entries; hierarchy and identity audit still required.
+- 115 October edition: detached acute accent following Peter J. Visclosky's name.
+
+No older PDF edition was published from this diagnostic. Font-data warnings also require review before accepting the
+older PDF extraction path. A parser returning records is not, by itself, evidence of complete or correctly nested rosters.
+
+The subsequent conservative formatting pass accepts the explicit No Vice Chairman note, isolated punctuation,
+wrapped vice-chair annotations, and `of the District of Columbia`. Remaining older PDF blockers include
+`Bob Graham. of Florida.` (106), `Masschusetts` (107), No Subcommittees (108), a party-organization boundary (109),
+the heading/staff issues above (110–114), and a standalone accent (115 October). Those editions remain unpublished.
 
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.

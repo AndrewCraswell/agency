@@ -21,7 +21,8 @@ import {
   readDirectoryObservation
 } from "./committee-directory-observation.js"
 
-type CommitteeDirectoryClient = Pick<GovInfoCommitteeDirectoryClient, "discover" | "getRecords">
+type CommitteeDirectoryClient = Pick<GovInfoCommitteeDirectoryClient, "discover" | "getRecords"> &
+  Partial<Pick<GovInfoCommitteeDirectoryClient, "getMemberAliases">>
 
 export interface GovInfoCommitteeSynchronizationInput {
   config: LegislationConfig
@@ -83,7 +84,23 @@ export async function executeGovInfoCommitteeSynchronization(
       for (const directoryPackage of packages) {
         const records = await client.getRecords(directoryPackage)
         counts.read += 1
-        const normalized = normalizeGovInfoCommitteeDirectory(records, directoryPackage, catalog, runAt)
+        let normalized = normalizeGovInfoCommitteeDirectory(records, directoryPackage, catalog, runAt)
+        if (normalized.unmatched.length > 0 && client.getMemberAliases !== undefined) {
+          const unmatched = new Set(normalized.unmatched.map((member) => `${member.chamber}:${member.name}`))
+          const candidates = records
+            .flatMap((record) => record.members)
+            .filter((member) => unmatched.has(`${member.chamber}:${member.name}`))
+          const aliases = await client.getMemberAliases(directoryPackage, candidates)
+          normalized = normalizeGovInfoCommitteeDirectory(
+            records,
+            directoryPackage,
+            {
+              ...catalog,
+              aliases: [...catalog.aliases, ...aliases]
+            },
+            runAt
+          )
+        }
         if (normalized.unmatched.length > 0) {
           const examples = normalized.unmatched
             .slice(0, 5)

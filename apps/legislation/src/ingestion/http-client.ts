@@ -266,7 +266,7 @@ export class RetryingHttpClient {
       const response = await this.#fetch(url, {
         ...init,
         method: "GET",
-        redirect: "follow",
+        redirect: init.redirect ?? "follow",
         signal:
           init.signal === null || init.signal === undefined
             ? AbortSignal.timeout(this.#requestTimeoutMs)
