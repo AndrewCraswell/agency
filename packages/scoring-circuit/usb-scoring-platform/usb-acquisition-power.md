@@ -1,5 +1,26 @@
 # Laptop acquisition power
 
+## Approved replacement requirement
+
+Laptop mode may require a USB-C source advertising sufficient power; ordinary USB-A adapter compatibility is no longer
+required. The HUB75 remains disconnected. The existing circuit and calculations below are the retained LTM2884
+checkpoint, not the specification or budget of a completed cheaper replacement.
+
+The replacement still needs source-power detection. With STUSB4500, Type-C current flags report the CC pull-up, whereas
+an explicit PD contract takes precedence. Its source-capability message, including the suspend flag, must be read
+promptly over I2C; the static power-ready outputs do not report that flag. See
+[ST's programming guide, sections 1.7-1.9](https://www.st.com/resource/en/user_manual/um2650-the-stusb4500-software-programing-guide-stmicroelectronics.pdf).
+The existing J12 service header is not a running controller. Do not assume that a powered USB-C requirement by itself
+allows an always-on isolated converter on every PD-capable laptop.
+
+A component-option alternative is the [STUSB4500L](https://www.st.com/resource/en/datasheet/stusb4500l.pdf), which
+reports Type-C current without entering PD contracts. That is a 5V-only option and cannot also negotiate the full
+system's 20V supply. It is not approved as a replacement for U5: doing so would split laptop-only and full-display
+populations. The owner has been asked whether to permit that distinction or retain one interchangeable board with
+additional power-control circuitry. No USB components, footprints or wiring have changed pending that decision.
+
+## Retained circuit budget
+
 **Paper budget, not a measured operating result.** Retain the current LTM2884 acquisition supply for now; this review
 does not justify a larger converter. Laptop-only units ship **without a HUB75 panel connected**. The laptop supplies
 power and runs the scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero
@@ -19,8 +40,9 @@ mode control has been implemented here.
 
 ## Limits and calculated load
 
-Target an ordinary USB 2.0 host: at most 100mA before configuration and 500mA after the host accepts that configuration
-(`bMaxPower = 250`, in 2mA units). Do not assume 900mA because the receptacle is USB 3, or require laptop PD. The
+The previous LTM2884 budget targeted an ordinary USB 2.0 host: at most 100mA before configuration and 500mA after the
+host accepts that configuration (`bMaxPower = 250`, in 2mA units). These legacy targets do not override the approved
+USB-C requirement above. The
 [USB-IF power policy](https://compliance.usb.org/index.asp?Format=Standard&UpdateFile=Policies) distinguishes these
 limits.
 

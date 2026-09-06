@@ -67,6 +67,15 @@ while leaving an always-on isolated converter: its specified L2 suspend maxima a
 before converter losses or board load. A complete bus-powered design must address that budget rather than assuming the
 isolator's upstream-only suspend compliance covers both sides.
 
+The remaining USB decision is compatibility, not PCB placement. Keeping the one-board laptop/20V-PD functionality
+requires control of the actual negotiated power and suspend behavior; STUSB4500's static flags are not enough to expose
+both. Its
+[programming guide](https://www.st.com/resource/en/user_manual/um2650-the-stusb4500-software-programing-guide-stmicroelectronics.pdf)
+requires reading source capabilities through I2C. The simpler STUSB4500L alternative is Type-C/5V only and would require
+different laptop-only and full-display component populations. That additional product distinction has not been approved.
+The USB circuit remains unchanged while the owner chooses between those populations and additional power-control
+circuitry. Do not mark the USB replacement complete. See [the current power handoff](usb-acquisition-power.md).
+
 Reference circuits reviewed:
 [W5500 magnetic-RJ45 reference](https://docs.wiznet.io/Product/Chip/Ethernet/W5500/ref-schematic),
 [CETUS J1B1211CCD drawing](https://docs.wiznet.io/img/products/w5500/2.j1b1211ccd.pdf),
