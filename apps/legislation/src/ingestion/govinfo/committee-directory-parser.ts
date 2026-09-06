@@ -100,6 +100,15 @@ function parseChamber(text: string, chamber: CongressionalChamber): GovInfoCommi
     }
     pendingHeading = heading
   }
+  const expectedMembers = [
+    ...text.slice(start + startMarker.length, end).matchAll(/\((?!ph\))[a-z]{2}(?:-[a-z0-9]{1,2})?\)/gi)
+  ].length
+  const parsedMembers = records.reduce((count, record) => count + record.members.length, 0)
+  if (parsedMembers !== expectedMembers) {
+    throw new Error(
+      `GovInfo ${chamber} roster completeness mismatch: ${parsedMembers} parsed of ${expectedMembers} annotations`
+    )
+  }
   return records
 }
 
@@ -107,7 +116,10 @@ function parseChamber(text: string, chamber: CongressionalChamber): GovInfoCommi
 function parseMemberColumns(lines: readonly string[], chamber: CongressionalChamber): GovInfoCommitteeMember[] {
   const columns: string[][] = [[], []]
   for (const line of lines) {
-    const cells = line.trim().split(/\s{2,}/)
+    const cells = line
+      .replaceAll(/(?<=\S)[ \t]+(?=\((?!ph\))[a-z]{2}(?:-[a-z0-9]{1,2})?\))/gi, " ")
+      .trim()
+      .split(/\s{2,}/)
     for (const [index, cell] of cells.entries()) {
       const column = columns[index]
       if (column !== undefined) {

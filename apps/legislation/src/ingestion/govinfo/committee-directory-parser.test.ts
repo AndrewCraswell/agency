@@ -52,6 +52,24 @@ describe("parseGovInfoCommitteeDirectory", () => {
       { chamber: "lower", district: "9", name: "Marcy Kaptur", state: "OH" }
     ])
   })
+
+  it("preserves both columns when a name has extra spacing before its district", () => {
+    const fixture = directoryFixture().replace(
+      "Alex Representative (ca-03) chairman",
+      "Sheri Biggs  (sc-03)                 Bill Foster (il-11)"
+    )
+    expect(
+      parseGovInfoCommitteeDirectory(fixture).find((value) => value.name === "House Committee 1")?.members
+    ).toEqual([
+      { chamber: "lower", district: "3", name: "Sheri Biggs", state: "SC" },
+      { chamber: "lower", district: "11", name: "Bill Foster", state: "IL" }
+    ])
+  })
+
+  it("rejects annotations that cannot be assigned to a parsed member", () => {
+    const fixture = directoryFixture().replace("Alex Representative (ca-03) chairman", "??? (ca-03)")
+    expect(() => parseGovInfoCommitteeDirectory(fixture)).toThrow("roster completeness mismatch")
+  })
 })
 
 function directoryFixture(): string {

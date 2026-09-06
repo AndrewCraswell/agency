@@ -8,7 +8,7 @@ import { requireSuccessfulSynchronizationResult } from "./synchronization-execut
 /** New directory editions are infrequent; poll daily without replaying historical Congresses. */
 export const committeeDirectorySync = schedules.task({
   id: "govinfo-committee-directory-sync",
-  cron: { pattern: "30 9 * * *", timezone: "UTC", environments: ["PRODUCTION"] },
+  // Create the production schedule only after a deployed canary succeeds.
   maxDuration: 3_600,
   queue: { concurrencyLimit: 1 },
   run: async (_payload, { ctx }) => {
