@@ -6422,7 +6422,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+	(footprint "ScoringPlatform:Samtec_HTSW-101-07-L-S"
 		(layer "F.Cu")
 		(uuid "297031bb-9f27-43a9-aa79-b8417f46eb11")
 		(at 120 145)
@@ -6451,7 +6451,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6482,6 +6482,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a667582d-09a7-4199-86cc-acc3115fb53a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "HTSW-101-07-L-S"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "6d4cfd9b-e3c4-4389-8066-a3362784696f")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -6623,7 +6645,7 @@
 		(pad "1" thru_hole rect
 			(at 0 0)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PISTE")
@@ -10001,6 +10023,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10012,6 +10035,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10668,6 +10692,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10679,6 +10704,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10752,7 +10778,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical"
+	(footprint "ScoringPlatform:Samtec_HTSW-105-07-L-S"
 		(layer "F.Cu")
 		(uuid "4abf2f42-4c39-4748-af2b-50d9e9cc1ea1")
 		(at 99.5 92)
@@ -10781,7 +10807,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10812,6 +10838,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "961e7c6e-08cb-4719-b5ef-28142a8d43ab")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "HTSW-105-07-L-S"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a90355da-9b04-4afc-9969-86f27fd94721")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -10953,7 +11001,7 @@
 		(pad "1" thru_hole rect
 			(at 0 0)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "CORE_3V3")
@@ -10964,7 +11012,7 @@
 		(pad "2" thru_hole circle
 			(at 0 2.54)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "SWDIO")
@@ -10975,7 +11023,7 @@
 		(pad "3" thru_hole circle
 			(at 0 5.08)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "SWCLK")
@@ -10986,7 +11034,7 @@
 		(pad "4" thru_hole circle
 			(at 0 7.62)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -10997,7 +11045,7 @@
 		(pad "5" thru_hole circle
 			(at 0 10.16)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "STM_RESET_N")
@@ -19594,7 +19642,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
+	(footprint "ScoringPlatform:Samtec_HTSW-103-07-L-S"
 		(layer "F.Cu")
 		(uuid "897e60c7-376a-4806-a48f-7ccd7a1388be")
 		(at 62 115)
@@ -19623,7 +19671,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -19654,6 +19702,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "337369db-f2d9-40f0-acf7-b8a98baa05df")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "HTSW-103-07-L-S"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ed18d1d0-73b2-4d85-ab6b-641374beac2b")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -19795,7 +19865,7 @@
 		(pad "1" thru_hole rect
 			(at 0 0)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "LEFT_A")
@@ -19806,7 +19876,7 @@
 		(pad "2" thru_hole circle
 			(at 0 2.54)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "LEFT_B")
@@ -19817,7 +19887,7 @@
 		(pad "3" thru_hole circle
 			(at 0 5.08)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "LEFT_C")
@@ -28180,7 +28250,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
+	(footprint "ScoringPlatform:Samtec_HTSW-103-07-L-S"
 		(layer "F.Cu")
 		(uuid "b45d5357-6405-4a1b-a0bc-f86bb61ae6ae")
 		(at 205 115)
@@ -28209,7 +28279,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28240,6 +28310,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "43294b35-f20e-4e66-947d-0f5016fda8e7")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "HTSW-103-07-L-S"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "64a8b4df-1e35-47f0-abcb-aad131316146")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -28381,7 +28473,7 @@
 		(pad "1" thru_hole rect
 			(at 0 0)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "RIGHT_A")
@@ -28392,7 +28484,7 @@
 		(pad "2" thru_hole circle
 			(at 0 2.54)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "RIGHT_B")
@@ -28403,7 +28495,7 @@
 		(pad "3" thru_hole circle
 			(at 0 5.08)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "RIGHT_C")
@@ -28599,7 +28691,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
+	(footprint "ScoringPlatform:Samtec_HTSW-103-07-L-S"
 		(layer "F.Cu")
 		(uuid "b7f307ea-87ee-4a7d-ae08-0f892e726543")
 		(at 52.5 76.5)
@@ -28628,7 +28720,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28659,6 +28751,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "180cada4-0c5a-40b7-9f35-c3567bc8184a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "HTSW-103-07-L-S"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e70a4110-0005-4187-b4d2-2065ccec3000")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -28800,7 +28914,7 @@
 		(pad "1" thru_hole rect
 			(at 0 0)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "USB_GND")
@@ -28811,7 +28925,7 @@
 		(pad "2" thru_hole circle
 			(at 0 2.54)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PD_SDA")
@@ -28822,7 +28936,7 @@
 		(pad "3" thru_hole circle
 			(at 0 5.08)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PD_SCL")
@@ -32215,6 +32329,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -32226,6 +32341,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -39657,7 +39773,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical"
+	(footprint "ScoringPlatform:Samtec_HTSW-106-07-L-S"
 		(layer "F.Cu")
 		(uuid "f2819ce1-5f5f-4017-aaf3-dd9412861bdd")
 		(at 145 99)
@@ -39686,7 +39802,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -39717,6 +39833,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bc8225da-4690-4202-9be6-7c29a40ce348")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "HTSW-106-07-L-S"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "939c05a0-4225-43d0-8055-ef715cc6c9e4")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -39858,7 +39996,7 @@
 		(pad "1" thru_hole rect
 			(at 0 0)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "APP_3V3")
@@ -39869,7 +40007,7 @@
 		(pad "2" thru_hole circle
 			(at 0 2.54)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -39880,7 +40018,7 @@
 		(pad "3" thru_hole circle
 			(at 0 5.08)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "ESP_PROGRAM_TX")
@@ -39891,7 +40029,7 @@
 		(pad "4" thru_hole circle
 			(at 0 7.62)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "ESP_PROGRAM_RX")
@@ -39902,7 +40040,7 @@
 		(pad "5" thru_hole circle
 			(at 0 10.16)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "ESP_EN")
@@ -39913,7 +40051,7 @@
 		(pad "6" thru_hole circle
 			(at 0 12.7)
 			(size 1.7 1.7)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "ESP_BOOT0")

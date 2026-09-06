@@ -71,6 +71,25 @@ Inspect the final manufacturing geometry and validate the assembled interface, i
 coupling. Bottom-layer escapes reference In2 rather than In1; preserve their local GND return and the isolation gap. The
 non-coplanar calculator does not model every adjacent trace, pad, via or package discontinuity.
 
+### Service and harness headers
+
+The six single-row headers now have explicit Samtec ordering fields: J2 uses **HTSW-105-07-L-S** (STM32 SWD), J6
+**HTSW-106-07-L-S** (ESP32 UART recovery), J3/J4/J12 **HTSW-103-07-L-S** (left/right cord harnesses and PD service), and
+J5 **HTSW-101-07-L-S** (piste harness). These are straight, 2.54mm-pitch headers with 0.635mm square posts, 5.84mm
+exposed mating length and approximately 2.54mm solder tails. The high-temperature LCP HTSW series supports lead-free
+processing; do not substitute the ordinary PBT TSW series without checking the assembly process. See the
+[Samtec catalogue](https://suddendocs.samtec.com/catalog_english/tsw_th.pdf) and
+[series print](https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf), revision BQ, sheets 1, 2 and 6.
+
+Local footprints retain the existing pin centres and 1.7mm copper lands, but use the manufacturer's
+[1.02mm hole recommendation](https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-footprint.pdf), revision B,
+sheet 1. All 21 affected holes were previously 1.00mm. No routes, net assignments or connector positions move. The
+retained stock KiCad header models are illustrative, not exact Samtec bodies. The existing body outline is conservative
+relative to the 2.489mm nominal single-row width. Confirm finished-hole tolerance with fabrication. These unkeyed
+internal headers require correctly oriented harnesses and strain relief; J3/J4 are not the external banana sockets, and
+their 2.54mm pitch does not specify the enclosure socket spacing. J12 is on USB primary ground: do not attach its
+programmer ground to the isolated scoring-side headers.
+
 ### Resistor ordering selections
 
 All 83 populated resistors now have exact `Manufacturer`, `MPN` and `Datasheet` properties in the native schematic and
@@ -510,11 +529,12 @@ contact grouping were reviewed. Crystal, IR and sounder ordering fields are now 
 reviewed, while the sounder drawing check remains open. This does not finish the remaining component or electrical
 review.
 
-After the peripheral ordering update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted items and
-zero schematic-parity issues**. All 744 retained pad-continuity checks and 2,843 tracks/vias pass unchanged; hole
-geometry, component/model positions and isolation rules are preserved. The fresh native 3D rendering was visually
-inspected. U18's missing body model remains visible as an empty footprint; no placeholder or placement change was
-introduced.
+After the header ordering/footprint update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted
+items and zero schematic-parity issues**. All six header ordering codes export correctly. All 744 retained
+pad-continuity checks and 2,843 tracks/vias pass unchanged; only the 21 header drill diameters change to 1.02mm. Pad
+centres, copper lands, other holes, component/model positions and isolation rules are preserved. The fresh native 3D
+rendering was visually inspected. U18's missing body model remains visible as an empty footprint; no placeholder or
+placement change was introduced.
 
 Repository `pnpm verify` passed its check stage and all 950 scoring-domain tests after restoring the missing scenario
 manifest entry and replacing the ineffective batched mutation test with independent rejection cases. The three prior
