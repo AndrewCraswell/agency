@@ -11,6 +11,21 @@ libraries.
 partially routed engineering draft, not a completed design. This folder is not consumed by the existing prototype export
 commands.
 
+## Board appearance and ordering
+
+Use **black solder mask on both sides and white silkscreen**. These colors are saved in the native board; in KiCad's 3D
+viewer enable **Use board stackup colors**. The component side carries `Fencing Club` text. The underside carries the
+user's supplied crest, traced from `Fencing Club-09.png` into a 32 x 38.9mm native silkscreen graphic with its
+transparent cutouts preserved. It is grouped as `Fencing Club crest`, reads normally from below, and adds no component
+or electrical connection. The original logo file is not needed to open the board or export its silkscreen.
+
+When ordering, explicitly select **Black** for PCB color and **White** for silkscreen in
+[JLCPCB's quote](https://jlcpcb.com/help/article/instructions-for-ordering). The silkscreen Gerbers contain the
+lettering/artwork, but ordinary Gerber layers do not select solder-mask ink color. Include both silkscreen layers and
+inspect the fabrication preview, particularly the crest's fine details. Confirm the final black-mask manufacturing
+clearances with the fabricator; this appearance change is not fabrication approval. The stackup color entries do not
+specify the still-unconfirmed copper/dielectric construction.
+
 ## Low-volume build scope
 
 Design for **3-10 units per month**. Prioritize dependable operation, straightforward assembly and repair, and
@@ -335,10 +350,12 @@ placement, footprint geometry and every pad's net assignment.
 
 All seven models' acceptance limits pass, including the corrected seven-input settled leakage stress; this remains
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
-The latest repository verification passed formatting, lint, types and unused-code checks but failed three unchanged
-scoring tests: a mutation-test timeout and canonical-corpus failure in `scenario-runner.test.ts`, plus a 29-versus-28
-scenario-count assertion in `observatory-integration.test.ts` (770 passes, three failures). No failures are suppressed
-or repaired by the hardware work.
+The branding checkpoint passed native KiCad rendering and silkscreen Gerber export. All 153 components, pad assignments,
+positions and routing are unchanged; DRC still reports four USB connector hole-clearance findings, 250 unconnected items
+and zero schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code
+checks but failed four scoring tests: mutation and live-rebuild timeouts, a canonical-corpus failure and a 29-versus-28
+scenario-count assertion (769 scoring tests passed). A workflow-deletion test in `apps/web` also failed before the run
+stopped. These tests are outside the branding edits; none was suppressed or modified.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
