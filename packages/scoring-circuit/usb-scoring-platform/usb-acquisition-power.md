@@ -2,6 +2,11 @@
 
 ## Approved replacement requirement
 
+**Current interface decision: one USB-C receptacle, no physical mode switch.** The owner declined the switch and raised
+cost/usability concerns about two ports. Neither alternative is selected. Keep the current PCB unchanged until the
+complete one-port replacement, including power control, is justified. USB enumeration, its absence, or a timeout alone
+must not be treated as proof that a charger is connected.
+
 Laptop mode may require a USB-C source advertising sufficient power; ordinary USB-A adapter compatibility is no longer
 required. The HUB75 remains disconnected. The existing circuit and calculations below are the retained LTM2884
 checkpoint, not the specification or budget of a completed cheaper replacement.
@@ -19,6 +24,41 @@ standalone PD power. In laptop mode, keep the application/display branch off; en
 sufficient source power are both established. Do not use source voltage alone to choose the mode. Add the necessary
 power control with the simplest suitable circuit; do not introduce separate laptop-only component populations. This
 choice is resolved. USB component selection and implementation remain unfinished, rather than blocked on owner input.
+
+## Replacement cost review
+
+Reviewed 2026-09-06. USD advertised distributor prices, not a JLCPCB assembly quote or a completed replacement BOM. The
+30-board column uses the published 25-piece tier for 30 of each part, not a reel discount. Stock and checkout pricing
+need reconfirmation. Shipping, tax, tariffs, assembly and engineering time are excluded.
+
+| Part / function                                                     |  One board | Per board at 30 | Source                                                                                                     |
+| ------------------------------------------------------------------- | ---------: | --------------: | ---------------------------------------------------------------------------------------------------------- |
+| Existing LTM2884IY#PBF, integrated USB isolation and isolated power |     $56.82 |        $44.2720 | [DigiKey](https://www.digikey.com/en/products/detail/analog-devices-inc/LTM2884IY-PBF/4864070)             |
+| Candidate ISOUSB111DWR, USB data isolation                          |      $8.36 |         $6.0032 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/ISOUSB111DWR/16676088)              |
+| Candidate SN6505BDBVR, transformer driver                           |      $2.23 |         $1.5076 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/SN6505BDBVR/296-47311-1-ND/7688321) |
+| Candidate Wurth 750313626, isolation transformer                    |      $3.60 |         $3.1252 | [DigiKey](https://www.digikey.com/en/products/detail/w%C3%BCrth-elektronik/750313626/4725693)              |
+| Candidate TPS70950DBVR, secondary 5V regulator                      |      $1.51 |         $0.9996 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/TPS70950DBVR/3767569)               |
+| Candidate LMR36506RF3RPER, primary 3.3V buck replacing U19          |      $4.83 |         $3.3800 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/LMR36506RF3RPER/15857191)           |
+| **Five candidate parts only**                                       | **$20.53** |    **$15.0156** | Not a complete circuit                                                                                     |
+
+The difference is **$36.29 at one board / $29.2564 per board at 30**, before the unpriced replacement circuitry. This is
+available cost headroom, **not confirmed savings**. The comparison conservatively includes the candidate primary buck
+without crediting removal of the current U19. A final like-for-like comparison must include both complete supply
+circuits: inductors, rectifiers, capacitors, source qualification, suspend/resume control, isolated control signals,
+protection and assembly. Retain common USB-C/PD and application-supply costs on both sides; do not count them as
+savings.
+
+An older
+[Newark listing](https://www.newark.com/analog-devices/ltm2884iy-pbf/isolated-usb-transceiver-12mbps/dp/51AK7495) also
+displayed $27.04 for the existing module. Its retrieved content was dated last year, so it is an unconfirmed procurement
+lead, not the current baseline. If obtainable, the one-board headroom against the five candidate parts falls to just
+$6.51 before remaining circuitry. Do not redesign around either assumed pricing extreme.
+
+**Assessment:** the discrete option deserves consideration at the verified DigiKey prices, but is not yet an approved
+electrical substitute. Its full BOM cannot be priced until its one-port power-control circuit is selected. Retaining
+LTM2884 avoids the discrete isolation redesign, but does not by itself resolve the existing primary buck's low-input
+voltage limitation or the unfinished mode-control implementation. Neither option is fabrication-ready. Do not add
+another port, a switch, or another processor just to preserve an earlier savings estimate.
 
 ## Retained circuit budget
 

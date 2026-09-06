@@ -14,6 +14,10 @@ existing prototype export commands.
 
 ## Cost-reduction work in progress
 
+**USB interface decision: retain one port and no physical mode switch.** The latest owner discussion does not authorize
+adding a second port. The [replacement cost review](usb-acquisition-power.md#replacement-cost-review) separates priced
+candidate parts from the still-unpriced power-control circuit; no complete USB savings or replacement is claimed.
+
 The owner approved replacing WIZ850io with direct W5500 Ethernet and replacing LTM2884 with separate USB data isolation
 and isolated power. These changes are **not complete or released**. The Ethernet schematic now contains the W5500,
 reference termination/filtering and crystal circuit, with the existing ESP32 SPI/reset/interrupt nets retained. J13 is a
