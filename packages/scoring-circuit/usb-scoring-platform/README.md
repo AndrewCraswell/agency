@@ -119,8 +119,30 @@ The raw-input parts C36/C39/C40 now also have exact ordering fields: respectivel
 are TDK X7R, 50V, 10% parts matching the existing 1uF/0805, 2.2uF/1206 and 220nF/0805 positions. Their manufacturer
 pages list them in production. This selects nominal parts, not guaranteed effective capacitance at 20V: those bias
 curves have not been visually verified, and input ripple, hot-plug/inrush and PD-transition review remain open. No
-value, land, model, placement or routing changed. **40 of 50 capacitors now have ordering codes; ten bulk capacitors
-remain unselected.**
+value, land, model, placement or routing changed.
+
+**All 50 capacitors now have exact ordering fields.** The final ten bulk positions use the following parts; this closes
+nominal BOM selection, not the electrical or full assembly review. Existing schematic voltages remain minimum ratings.
+
+| Positions     | Selected part                                                                                                                            | Rating and existing package |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| C5/C22/C28    | [TDK C1608X5R1C106M080AB](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X5R1C106M080AB)                     | 10uF, 16V, 20%, X5R, 0603   |
+| C14           | [TDK C1608X7S1A475K080AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7S1A475K080AC)                     | 4.7uF, 10V, 10%, X7S, 0603  |
+| C6/C7/C43/C44 | [Murata GRM32ER71E226KE15L](https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23) | 22uF, 25V, 10%, X7R, 1210   |
+| C47           | [TDK C3225X7R1H106K250AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3225X7R1H106K250AC)                     | 10uF, 50V, 10%, X7R, 1210   |
+| C49           | [TDK C3216X7R1C106K160AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3216X7R1C106K160AC)                     | 10uF, 16V, 10%, X7R, 1206   |
+
+The four 22uF positions share one code rather than separate 10V/25V parts. Murata's
+[manufacturer sheet mirrored by Farnell](https://www.farnell.com/datasheets/3799575.pdf), pages 1-2, was visually
+reviewed: the L/K suffix changes reel packaging, not the 3.2 x 2.5 x 2.5mm nominal body or electrical rating. That
+retained online sheet is dated 2022; recheck current availability before ordering. TDK's pages list the four selected
+TDK parts in production. No component position, net, nominal capacitance, footprint or model changed.
+
+**Outstanding electrical limits:** X5R C5/C22/C28 have an 85 C component-temperature limit, including local heating;
+this is not an 85 C ambient product rating. C14's X7S temperature allowance is +/-22%, not X7R's +/-15%. All bulk parts
+still require effective-capacitance review at their actual bias, including tolerance/temperature/ageing, against the
+regulator requirements. Do not assume the two 22uF parts supply 44uF under bias or use the nominal BOM to approve
+stability, startup or load steps. Exact 3D height/assembly clearance and procurement review remain open.
 
 ## Low-volume build scope
 

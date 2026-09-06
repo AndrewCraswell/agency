@@ -3174,6 +3174,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -3185,6 +3186,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -5413,6 +5415,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -5424,6 +5427,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -12185,7 +12189,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X5R1C106M080AB"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12216,6 +12220,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "b9e2ead3-06c6-4257-9360-0a39bd618547")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X5R1C106M080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "903068df-a944-4d6e-b86c-dc39e475dc18")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -12509,7 +12535,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X5R1C106M080AB"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -12540,6 +12566,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "28c05f06-18f9-4039-b0e5-7cc4fc0a2c43")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X5R1C106M080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a36fd460-bba3-4635-aa44-ee9cf014cbba")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -15310,7 +15358,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X5R1C106M080AB"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -15341,6 +15389,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2683f082-5e3c-4e05-860e-90bafcd65552")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X5R1C106M080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff87fec-4aea-417d-bddf-dcbe98a0d82e")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -16671,7 +16741,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3216X7R1C106K160AC"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16702,6 +16772,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0f274bb0-26c1-4433-9202-8f977e54613e")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C3216X7R1C106K160AC"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0713a1cd-8b84-4fed-9b4a-cc7989f708aa")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -20051,6 +20143,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -20062,6 +20155,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -22502,7 +22596,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7S1A475K080AC"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22533,6 +22627,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "41bac7bc-3ee8-48ff-ab1d-9a5ee52ef6f4")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7S1A475K080AC"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "80215620-cc99-4ea3-9318-0efe82e70af1")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -33727,7 +33843,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -33758,6 +33874,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Murata"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f9390d96-945c-4e05-bd4d-ef050c53b58d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "GRM32ER71E226KE15L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "81b330cd-53c6-4ac9-b2e9-bef5408e75a7")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -33877,7 +34015,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3225X7R1H106K250AC"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33908,6 +34046,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "b2654be2-a2d7-4a17-8394-ad4ba6d8ffaa")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C3225X7R1H106K250AC"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "25247621-283a-452e-9cbc-e26fbda719b7")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -38642,7 +38802,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -38673,6 +38833,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Murata"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "906d3366-8af4-4af3-a2ed-52630c14efd5")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "GRM32ER71E226KE15L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c83a79f4-d7a1-44b6-ae85-dbf94360d7b9")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -38792,7 +38974,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -38823,6 +39005,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Murata"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "54c10fc8-a435-4a28-bd47-c11fd5e99376")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "GRM32ER71E226KE15L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9265b552-06fc-4d28-a9a0-68e29b4f64dc")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -41409,7 +41613,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -41440,6 +41644,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Murata"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "853e787e-273e-4ec1-8384-8cc09364f01e")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "GRM32ER71E226KE15L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "cff5e7d5-36af-486e-81d7-84aa561ee8be")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
