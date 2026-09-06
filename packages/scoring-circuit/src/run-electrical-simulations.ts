@@ -80,7 +80,11 @@ const simulations: readonly SimulationCase[] = [
         "priority_corner_piste",
         "priority_epee_left",
         "priority_epee_right",
-        "priority_epee_piste"
+        "priority_epee_piste",
+        // Counterexample: repeated positive samples do not prove continuous contact.
+        "interrupted_target_first",
+        "interrupted_target_second",
+        "interrupted_target_third"
       ].map((name) => ({ name, minimum: 0.651, unit: "V" })),
       ...[
         "foil_rest_unrelated",
@@ -106,6 +110,9 @@ const simulations: readonly SimulationCase[] = [
       { name: "seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
       { name: "weak_seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
       { name: "priority_source_current", absolute: true, maximum: 0.018, unit: "A" },
+      { name: "interrupted_target_open", maximum: 0, unit: "V" },
+      { name: "interrupted_target_duration", minimum: 59.9e-6, maximum: 60.1e-6, unit: "s" },
+      { name: "interrupted_target_gap", minimum: 164.9e-6, maximum: 165.1e-6, unit: "s" },
       // Fixed voltage criterion; the hardware changed, not the comparator threshold.
       { name: "settled_leakage_stress", minimum: 0.651, unit: "V" }
     ]

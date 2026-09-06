@@ -169,6 +169,17 @@ Xstress_e stress_line stress_e stress_load
 Xstress_f stress_line stress_f stress_load
 Xstress_p stress_line stress_p stress_load
 
+* Adversarial interrupted sabre target: 60us contacts separated by 165us gaps.
+* Their phase coincides with the candidate LEFT_B observation slot. Repeated
+* positive samples must NOT be interpreted as one continuous scoring contact.
+* The switch is an ideal contact, not a comparator/capture implementation.
+Xpulse ap bp cp dp ep fp pp sap sbp scp sdp sep sfp spp ip front_end
+Rpulse_left bp cp 0.01
+Rpulse_right ep fp 0.01
+Rpulse_target bp pulse_contact 500
+Spulse_target pulse_contact dp contact_closed 0 buffer_switch
+Vcontact contact_closed 0 PULSE(0 1 20u 0.01u 0.01u 59.99u 225u)
+
 .control
 set noaskquit
 tran 0.05u 525u
@@ -234,6 +245,14 @@ meas tran priority_corner_right FIND v(corner_high) AT=598u
 meas tran priority_corner_piste FIND v(corner_high) AT=673u
 meas tran priority_corner_clear FIND v(corner_low) AT=535u
 meas tran priority_source_current MAX v(i11)
+* A passing result below reproduces a sampling counterexample, not an
+* acceptable scoring response: three highs despite two intervening breaks.
+meas tran interrupted_target_first FIND v(sdp) AT=73u
+meas tran interrupted_target_second FIND v(sdp) AT=298u
+meas tran interrupted_target_third FIND v(sdp) AT=523u
+meas tran interrupted_target_open FIND v(contact_closed) AT=150u
+meas tran interrupted_target_duration TRIG v(contact_closed) VAL=0.5 RISE=1 TARG v(contact_closed) VAL=0.5 FALL=1
+meas tran interrupted_target_gap TRIG v(contact_closed) VAL=0.5 FALL=1 TARG v(contact_closed) VAL=0.5 RISE=2
 * Candidate epee schedule uses A rather than B as the tip excitation wire.
 alter @vphase1[pulse] [ 0 1 11u 0.01u 0.01u 62.98u 225u ]
 alter @vphase2[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]

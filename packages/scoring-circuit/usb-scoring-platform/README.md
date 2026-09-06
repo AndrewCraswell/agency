@@ -428,8 +428,22 @@ The same model now also runs two **225us candidate schedules**, retaining the 75
 target, rest, blade, reciprocal-target and piste paths still pass the unchanged voltage limits. The heavier seven-way
 leakage case remains at 0.661V high and 0.182V after discharge; peak nominal source current remains 15mA. No circuit
 change is needed for these faster revisit intervals. This is electrical schedule feasibility, not proof of duration
-qualification: switched-contact phase sweeps, contact interruptions, timestamp handling and scoring firmware remain
-unimplemented. In particular, do not infer continuous contact from separated positive samples.
+qualification. An added switched-contact counterexample now demonstrates the problem: a nominal 500-ohm sabre target
+closes for **60us**, opens for **165us**, and repeats. With those closures starting 20us into each 225us cycle, all
+three observations at 73/298/523us still exceed 0.651V. The simulation separately verifies the contact duration and open
+interval. Counting these positive samples as one 450us contact would hide two real interruptions. Passing this
+regression means the counterexample is reproduced, not that the acquisition algorithm is approved. No scoring firmware
+exists here yet, so this is a rejected algorithm assumption rather than a demonstrated firmware bug.
+
+Do not implement a consecutive-positive-sample qualifier on this schedule. The next timing decision must account for
+breaks during the unobserved intervals, for example by testing a held-excitation/capture approach while preserving
+opponent/piste discrimination. That alternative is not yet implemented or approved and must not silently replace the
+current electrical contract. Broader pulse-phase/duration sweeps, timestamp handling and scoring firmware remain open.
+No comparator, resistor, connector or route changed for this test.
+
+Verification of this addition passed all seven existing simulation models, focused lint/format and circuit-package
+type-checking. Fresh native ERC/DRC/parity remain zero, all 744 continuity checks pass, and the unchanged native 3D
+render was inspected. Repository verification still stops at the scoring coverage shortfall recorded below.
 
 Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
 
