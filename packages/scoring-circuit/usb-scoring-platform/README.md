@@ -71,6 +71,25 @@ Inspect the final manufacturing geometry and validate the assembled interface, i
 coupling. Bottom-layer escapes reference In2 rather than In1; preserve their local GND return and the isolation gap. The
 non-coplanar calculator does not model every adjacent trace, pad, via or package discontinuity.
 
+### Resistor ordering selections
+
+All 83 populated resistors now have exact `Manufacturer`, `MPN` and `Datasheet` properties in the native schematic and
+PCB, using 16 ordering codes. Export these fields with the BOM. Values, footprints, models and routing are unchanged.
+Ordinary 0603 resistors use YAGEO RC, 1%, 0.1W at 70 C; the four precision protection-divider resistors use YAGEO RT,
+0.1%, 25ppm/C. R88/R89 use
+[RC2512FK-071KL](https://www.yageogroup.com/component-documentation/download/specsheet/RC2512FK-071KL), 1k, 1%, 1W at 70
+C, in their existing 2512 footprints. These ratings require temperature derating, not constant power through the entire
+operating-temperature range.
+
+The nine 220-ohm excitation/optocoupler resistors use Panasonic **ERJPA3F2200V**; the two 82-ohm repeater resistors use
+**ERJPA3F82R0V**. The
+[manufacturer ratings and derating curves](https://industrial.panasonic.com/cdbs/www-data/pdf/RDO0000/AOA0000C331.pdf),
+pages 2-3, specify 0.25W at 105 C ambient or 0.33W at 130 C terminal temperature, with derating to 155 C. This improves
+margin without larger footprints. A grounded conductor at 3.6V dissipates at most approximately 60mW in its 220-ohm
+resistor before temperature-coefficient allowance. External repeater fault loads, discharge pulses and assembled
+temperatures still need their circuit-specific checks; choosing these parts does not close those electrical findings.
+Remaining capacitor selections and full assembly review are still open.
+
 ## Low-volume build scope
 
 Design for **3-10 units per month**. Prioritize dependable operation, straightforward assembly and repair, and
@@ -342,6 +361,14 @@ which alone are not complete board safety proof.
   stop the remaining footprint, component-selection and manufacturing review.
 
 ### Latest verification
+
+The resistor-selection batch exports all 83 resistor MPNs in the native BOM, matching their PCB fields. Native DRC, ERC,
+unrouted and schematic-parity counts remain zero. All 744 retained pad connections, 2,843 tracks/vias, hole geometry,
+component/model positions and isolation rules are preserved; the unchanged native 3D layout was reviewed. `pnpm verify`
+passed its check stage, then stopped at the same three scoring-software tests (770 passed): observatory weapon
+execution, scalar/container mutation timeout, and the canonical-corpus assertion. These failures are outside the
+hardware metadata changes and have not been bypassed or suppressed. This is a component-selection checkpoint, not
+completion of the electrical or assembly review.
 
 The J1 ground-land correction passes native DRC with **zero violations, zero unconnected items and zero schematic parity
 issues**; ERC is zero. All 744 prior pad-continuity comparisons and all 2,843 existing tracks/vias are preserved. The

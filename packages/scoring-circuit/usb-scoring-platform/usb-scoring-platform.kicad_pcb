@@ -178,7 +178,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -208,6 +208,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ab385607-290d-43f5-a59f-6b539e8fe12d")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "30a68f46-1c76-4558-aa57-c22a33e051d9")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -328,7 +352,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -358,6 +382,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "4a03778c-ef5d-460a-a901-0ead0d09142f")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "994431f4-26f7-4904-8682-81b5cfc7a8d6")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -2014,7 +2062,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -2044,6 +2092,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9c722a56-fa9b-4859-924f-bcbd9c03cb07")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ca7683d5-371b-43b6-97fe-ac1ec7db0b70")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -2164,7 +2236,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603BRD0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2194,6 +2266,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "884ba9ff-b2a3-4fd6-96ca-2447dd19602f")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RT0603BRD0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "596f453e-e88a-427f-92a6-a2da90d602f7")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -2688,7 +2784,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07680KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2718,6 +2814,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a064df34-2277-4595-81c2-a9a3274fdde9")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07680KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9cf692c5-bfce-48a3-8759-6cfb4bb0eddd")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -2838,7 +2958,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2868,6 +2988,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0ac43d7c-3f3f-4312-b21a-66c001001710")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "418f3288-5d77-420a-9ba6-aff1853fa86f")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -3288,7 +3432,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3318,6 +3462,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0a4e3346-c572-42f2-952f-45cff580315b")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a8ecaed5-6c4c-431d-99c9-c51bb2ecb71f")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -4761,7 +4929,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4791,6 +4959,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "64826656-43ab-462a-8abe-4ea8470f0b5b")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "030e9ea2-a3d3-464e-97d0-6a59953e8e9e")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -5212,7 +5404,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -5242,6 +5434,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "91fc3f2c-f411-4e32-926f-11295f3f6cd3")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8acdeea4-8408-4575-a717-7071b6c48cf6")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -5362,7 +5578,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -5392,6 +5608,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a88696ab-5fc6-45f4-8746-8abefbd1693d")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2c0ee49e-0d5f-4aac-a0a9-1699b05df289")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -5512,7 +5752,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5542,6 +5782,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1a84abc3-8e10-488a-ad17-8c772d65a125")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-071KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7ecc0a19-0722-4a4e-94f2-2c7b076a3837")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -5662,7 +5926,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5692,6 +5956,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "73f18b79-6829-4924-8458-7361f8747203")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a3c5512d-c9ab-4477-9ca4-8725dd9010c2")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -6344,7 +6632,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -6374,6 +6662,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "87a76995-084f-454d-81bf-07ec0372f8d2")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d0e8d360-35e0-4391-8fcd-666f95052130")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -6494,7 +6806,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07150KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6524,6 +6836,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "b49262b2-002d-48cf-8d53-ea7954ace37e")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07150KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "98bd47b0-4e86-46ce-8ddf-584dba438051")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -6645,7 +6981,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -6675,6 +7011,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c82223ce-996a-46d6-8c0d-943d2a356b8d")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "cf921f8d-83f5-422a-b4c6-f61f17f65ad1")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -7326,7 +7686,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC2512FK-071KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -7356,6 +7716,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "86c7c2fb-5fda-4b35-a944-25d5f3a7b068")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC2512FK-071KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8cc16e5d-4847-4dc1-8a88-926ce1ffa6f6")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -7776,7 +8160,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7806,6 +8190,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9476ba98-c6c1-4eba-83e7-b8c1182a1119")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "668923e7-0b0c-4dd9-b9fe-645b843640d7")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -8194,7 +8602,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8224,6 +8632,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "47c022a7-e536-486b-b37e-3b1adbe631ee")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a187a3fd-a848-4628-8a15-59585f19f5f5")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -8494,7 +8926,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8524,6 +8956,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8c6b141a-40fc-4a10-bde5-5e24ad88b748")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "6b3270c4-4fe2-469b-9501-a1b4ac7b7845")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -8644,7 +9100,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8674,6 +9130,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "19d78d00-a8c6-43bf-bd29-533d8e103a8f")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "dc7e180f-15d5-4d99-a020-1c5d0f7289eb")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -9217,7 +9697,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -9247,6 +9727,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a4bc02a9-6730-4fda-8b26-65f3b53b4d87")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f1dcdfaf-c55f-4952-946a-488ceb32f6f7")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -9367,7 +9871,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -9397,6 +9901,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bd03060c-0bb3-4956-963d-a55bf5d06204")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "069acbc1-e5c2-4709-9a95-4789ccd8bde0")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -10636,7 +11164,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10666,6 +11194,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "27815eea-a81f-4c7e-95fc-45200ee5cda9")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100RL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5757080d-adc5-42bf-8435-b290a0ed65b2")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -11103,7 +11655,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11133,6 +11685,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "837a0764-1ed6-45be-a053-e24d2cbaafc5")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "35e7109a-8e9c-4c7b-babe-29a9cc91509b")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -11403,7 +11979,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11433,6 +12009,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "087c0e6d-458e-4143-9f65-658c62d10ffa")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "57976e4a-42f9-4d0b-84f4-276ec7f30795")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -11703,7 +12303,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F82R0V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11733,6 +12333,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "438a7f1b-aa21-4263-b8d3-0272e349cc17")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F82R0V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8500b4bd-370e-4159-b69a-1ca34dc8f78a")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -12818,7 +13442,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12848,6 +13472,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8a27f672-5e9a-44cd-9ec9-e500686d3156")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "99443a1e-a388-495f-809d-a67ffb0159b6")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -12969,7 +13617,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -12999,6 +13647,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "36634802-7210-4943-bdb9-9ea51a8534f1")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "832fc2cd-6051-4972-a5b6-6cd096c8cc94")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -13388,7 +14060,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -13418,6 +14090,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5ce2db43-bb0b-4081-8f77-c330bc5da226")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5f7f692a-5545-4f6f-a57f-0c558fe055c5")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -13538,7 +14234,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -13568,6 +14264,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7e69ffd8-8d56-4cd2-bfb4-a8140c06218a")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bc78048f-cb14-47b0-81c7-26e4d0f17521")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -13688,7 +14408,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -13718,6 +14438,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "49f68a90-f258-4a76-9c8d-fa4fe582f36a")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "863f92d4-9383-497e-bfaa-70c8737a8fbc")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -13988,7 +14732,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14018,6 +14762,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e2314669-9110-4c24-9c54-aad244ac3796")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9052f335-83ec-4796-9750-c0d95e4da4e0")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -14288,7 +15056,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14318,6 +15086,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c452da55-0c4c-44a1-a01d-9e46e36dd05c")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ccea222c-9152-4199-a02f-fa7611dbd334")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -14438,7 +15230,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14468,6 +15260,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "25a1ca24-e93a-41d6-9419-d2ad6498f264")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "aeadfb87-906a-4463-80b6-0467af1eb96c")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -14588,7 +15404,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14618,6 +15434,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "cc2c417d-86a7-47d4-be96-6ef7b725eb55")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2d8e259d-b24c-4891-ac75-2c63910020fa")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -14888,7 +15728,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14918,6 +15758,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "185dd7ce-17d6-4779-b6df-e3b19adfca9a")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "243f3818-7ecd-49d2-9f5e-2792eb80ad92")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -15506,7 +16370,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -15536,6 +16400,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a3071813-0da8-4d22-a254-707da2b858e3")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "88058a83-296a-4d23-a1af-1673748984c2")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -16161,7 +17049,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -16191,6 +17079,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d49cc655-5228-4305-9295-09f026227b53")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "97ef3f9e-2131-4c0d-8097-1c5056e89638")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -16311,7 +17223,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16341,6 +17253,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "4676b596-1378-4058-ab5c-f264d858f4c9")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9d172b54-a6d2-48cc-bb42-649619f10c68")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -16611,7 +17547,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -16641,6 +17577,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "33f8d5a0-ead4-4bfc-a83d-436af600b018")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "4d929285-6881-41bb-a4db-0199300b7800")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -16911,7 +17871,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -16941,6 +17901,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "3d70e7ea-a3b4-4cf4-9bb7-731b151f9450")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1a66cfe8-545f-450c-ab0a-59ec0ffe2e34")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -17999,7 +18983,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0747KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -18029,6 +19013,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "91284d9c-7c11-43e6-9431-3697ecc38795")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0747KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "b8a52699-b9d8-49cd-97cc-e27ef49b5148")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -19307,7 +20315,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603BRD07140KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -19337,6 +20345,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c2f9eff1-48f9-47d6-bf40-48d70209d1a8")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RT0603BRD07140KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "27f39a3f-ff84-4a59-88f9-6beca129c3a6")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -19457,7 +20489,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -19487,6 +20519,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "deb651e8-a170-476b-b281-95cfbf108460")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c590f80c-d7dc-47c4-8658-d4556d5b7c9b")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -20130,7 +21186,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -20160,6 +21216,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1948b9d0-53e8-4fee-869c-5e0df3cb9330")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e04c32de-8955-4e04-94f5-aa32e2e4ee2e")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -20654,7 +21734,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -20684,6 +21764,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "6ea16550-d5c7-4209-b99c-0cb3a9764961")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c8e5867f-3ac1-449b-87a1-f039d220dd5d")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -21104,7 +22208,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F82R0V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21134,6 +22238,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0f368d2b-b852-472c-a709-1ccd0a0c2c9c")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F82R0V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ecc42e12-2fc6-42c0-a214-b22d5e5a491b")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -21254,7 +22382,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21284,6 +22412,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c1d4aaf3-7f57-43f7-bc6e-c2ac9d147271")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-071KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f6c9b0e6-336c-4afe-93ff-3e9b011c9387")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -21905,7 +23057,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0724K9L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21935,6 +23087,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0072fae4-f66e-4d41-9372-bdc879372b83")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0724K9L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2cb8fcc2-56dd-48f2-b99b-413e4fcf7f0e")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -22055,7 +23231,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22085,6 +23261,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0f46d35b-4b69-4547-a1af-54178605bd9e")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "53285238-d73a-4732-8e17-a2eee527cd23")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -23285,7 +24485,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23315,6 +24515,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d89dff8d-370d-4f62-928a-a35507121f15")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bca5d4c2-2bc7-4cbe-9480-a5872cd9e7a9")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -23435,7 +24659,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23465,6 +24689,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d114349a-3fbc-4729-b3ac-ee6525de6780")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d2420c12-e898-4cc4-af15-60bb8e7bbb9c")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -24109,7 +25357,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24139,6 +25387,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "3126645c-e254-43c0-9e03-b78eee413981")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "60771d4b-d3ae-4551-8247-215177c90fd5")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -24259,7 +25531,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071K37L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24289,6 +25561,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "76f7153c-564c-43da-b7a7-7976ac5a264c")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-071K37L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "241a4b5b-5b00-48c8-9e16-7f6ea619979d")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -24783,7 +26079,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24813,6 +26109,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d9328147-0267-4772-b089-62fd19576c40")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8c8bbfed-e722-4ab8-b928-9c74a7359e98")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -25519,7 +26839,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -25549,6 +26869,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "6537c5f5-bdc7-4492-aee6-210f1898f3a2")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c6d8ff9d-e9bd-4895-bdda-3f96c5613eeb")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -25914,7 +27258,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -25944,6 +27288,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c9833dcc-eb6a-4f3c-b35a-de98b5ffab00")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c4fc7eb1-befa-4fac-8b9a-31e47149ca56")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -26308,7 +27676,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603BRD07172KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -26338,6 +27706,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "54958681-4ce3-4bc2-83f7-a249ef08456a")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RT0603BRD07172KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5608da87-bf97-489d-acfb-2d19a366f52e")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -26458,7 +27850,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -26488,6 +27880,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "799813d2-3778-4ccb-9a82-ce9acfb1f297")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2be938c6-e9d9-41cc-90cb-8622758e9621")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -26608,7 +28024,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -26638,6 +28054,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "841898f0-d649-4f11-93c4-9f87ae66ea4a")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "3ba48997-e10f-4ca3-b05f-02b4bf438ae5")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -27132,7 +28572,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -27162,6 +28602,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "843fe6ad-54b6-4c0f-bcde-57c9ec50c5b9")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1fbbcb06-0bb4-4da1-9af9-985838a52d0b")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -27432,7 +28896,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC2512FK-071KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -27462,6 +28926,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ef2ffb32-c3f0-46b2-b53e-205c4accb7b6")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC2512FK-071KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1c277f38-1f90-4473-a40e-199bee38a833")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -28268,7 +29756,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28298,6 +29786,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "057a02f3-1273-439f-bc10-8aeb4e7c742c")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7f245a89-8946-4a0a-9c82-ecffaf233543")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -28568,7 +30080,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0747KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -28598,6 +30110,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "22d937b3-2bd4-40ea-9bba-910f3c33cd81")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0747KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "840a938f-a94f-4e71-9060-dca3731283fc")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -29172,7 +30708,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -29202,6 +30738,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f3c097a7-65b3-488d-9f74-1a202a920d92")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e434a16a-2e80-45b3-bc19-8ed929b95187")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -30129,7 +31689,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -30159,6 +31719,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "19aa06e2-a6aa-43bd-a984-1f17befe6f89")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8a43882d-ed2d-4055-a40b-d2dbee176113")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -30279,7 +31863,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -30309,6 +31893,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1bed968f-2c2d-4430-ac8b-8f53f5ffd766")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ea747cae-1637-40b1-ae9c-d27060a52888")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -31135,7 +32743,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -31166,6 +32774,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f3413c24-eb7b-4ea8-a0ff-d7fe59b0b8c5")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ad3daa69-203d-4299-bd23-0961cda57cba")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -31585,7 +33215,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -31615,6 +33245,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c70497ca-0396-4252-94e1-319efcbf94f6")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "25c303b8-bbd3-4744-874b-74e8c266d1c7")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -31735,7 +33389,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -31765,6 +33419,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d02d99cf-3ec1-4ff2-8e61-dcd7e0f49757")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9fe78366-d3dc-4912-b1b0-01b694e9a2e0")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -31885,7 +33563,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -31915,6 +33593,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d348e629-2166-4d02-be81-81eb3689af5b")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "47be62df-817e-41e5-9e42-6d7f77fe17e1")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -32035,7 +33737,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -32065,6 +33767,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bb43f625-3445-4351-9bcd-728f0f6867c9")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "73d951fb-e4f9-47ba-850c-6fd286e02bdc")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -33083,7 +34809,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07680KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33113,6 +34839,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1dbbfe72-16bd-462a-b023-7f59642e2424")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07680KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2a9df283-1369-4984-876b-45e60d5ed4a7")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -33233,7 +34983,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33263,6 +35013,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "57eb0d54-1bb4-4158-966e-9afe7d4824d4")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "762c6f9a-ea26-4578-9235-5587accbea82")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -33383,7 +35157,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -33413,6 +35187,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "01fda830-71c5-4412-b7ca-3887dde2c029")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "fe7b7a63-a027-49f0-a231-90b701d2701f")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -33534,7 +35332,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -33564,6 +35362,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "14874b54-0452-44bb-90d6-c800c0dfcfb2")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8c6aeae2-749f-438b-8f80-3f769bad1fa5")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -34217,7 +36039,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -34247,6 +36069,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "791a5248-398f-4cf4-8916-12209c847a59")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a5910d75-6ca8-4ba1-be8e-7ca0f5be4c95")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -34741,7 +36587,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603BRD0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -34771,6 +36617,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ec0130c9-6868-48c7-9e0d-d06891cf183f")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RT0603BRD0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c595c8cb-bab0-4916-ae60-7468b2b2e077")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -35041,7 +36911,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -35071,6 +36941,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "43e3c746-e789-4e2f-a869-ac6995fbeabf")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "75ef6661-bc45-4091-9910-8a69b480d9df")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -35192,7 +37086,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -35222,6 +37116,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "aac27c9c-e9ee-483c-bd5b-b9efad4d98ba")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a1653872-0002-4a6c-9499-428f06c2c6f4")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -35492,7 +37410,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/ww/products/pt/small-and-high-power-chip-resistors/models/ERJPA3F2200V"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -35522,6 +37440,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Panasonic"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7482a6df-3d85-4bee-a94a-1f3d81a0bdc6")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "ERJPA3F2200V"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2c797bf3-5aba-49d5-ab0f-3252ed319763")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -36591,7 +38533,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -36621,6 +38563,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0182a63c-9903-4467-a464-0c9735d5700e")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5e0bf8a0-a14d-4d94-b192-04b647ab15af")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
@@ -37310,7 +39276,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -37340,6 +39306,30 @@
 			(effects
 				(font
 					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "YAGEO"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "b3bf89d9-5172-4db6-854f-e41e1db330e5")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "RC0603FR-073K3L"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c3a4dde4-5dce-4793-a83a-0a15c859da1f")
+			(effects
+				(font
+					(size 1.27 1.27)
 					(thickness 0.15)
 				)
 			)
