@@ -23,20 +23,21 @@ neither the typical efficiency curve nor the following output budget proves the 
 
 Currents below are mA drawn from `USB_ISOLATED_5V`, including loads behind D1/U4. AP2112K is a **linear** regulator:
 3.3V output current passes through its 5V input approximately one-for-one, plus regulator current. Do not multiply the
-200mA rating by 5/3.3. Basis: native schematic netlist at `48314a0`, 3.0-3.6V acquisition rail and up to 85 C.
-Temperature, firmware and component allowances below are design conditions, not a product environmental rating.
+200mA rating by 5/3.3. Basis: current native schematic, including the R72 transmit idle pull, 3.0-3.6V acquisition rail
+and up to 85 C. Temperature, firmware and component allowances below are design conditions, not a product environmental
+rating.
 
-| Load                                           | Before configuration | Active acquisition | Basis                                                                                                                     |
-| ---------------------------------------------- | -------------------: | -----------------: | ------------------------------------------------------------------------------------------------------------------------- |
-| U1 CPU/Flash baseline                          |                12.00 |              19.00 | 16MHz startup, 48MHz running, voltage Range 1, cache on/prefetch off; characterized maximum at 85 C                       |
-| Seven comparators and reference scalers        |                    0 |               5.05 | Disabled at startup; 7 x (720uA + 1uA), rounded up                                                                        |
-| MCU clocks, USB, timer/DMA and I/O switching   |                 4.00 |               8.00 | Engineering allowance, not a published combined maximum; excludes the CPU/comparators above                               |
-| Excitation through the seven 220-ohm resistors |                    0 |              16.53 | At most one high source at a time: 3.6V / (220 x 0.99), including a grounded conductor or initially discharged cable      |
-| DRIVE/OE, reset and receive bias resistors     |                 0.50 |               3.00 | Active bound: seven OE pull-ups plus one DRIVE pull-down, 8 x 3.6V / 9.9k = 2.91mA; receive pull-up adds less than 0.08mA |
-| U8/U9 buffer overhead and U10/U11 translators  |                 0.20 |               2.00 | Allowance above static currents, with defined input levels; excludes conductor load and external pulls already counted    |
-| U4, R3/R4 and residual leakage                 |                 0.50 |               0.50 | Allowance; R3/R4 consumes at most 5.5V / 247.5k = 0.023mA; loaded regulator and backfeed need measurement                 |
-| Unallocated margin                             |                 2.80 |              20.92 | Reserved for measured departures, not accessories                                                                         |
-| **Isolated-output target**                     |            **20.00** |          **75.00** | **5mA below the startup guidance; 125mA below the configured output rating**                                              |
+| Load                                           | Before configuration | Active acquisition | Basis                                                                                                                               |
+| ---------------------------------------------- | -------------------: | -----------------: | ----------------------------------------------------------------------------------------------------------------------------------- |
+| U1 CPU/Flash baseline                          |                12.00 |              19.00 | 16MHz startup, 48MHz running, voltage Range 1, cache on/prefetch off; characterized maximum at 85 C                                 |
+| Seven comparators and reference scalers        |                    0 |               5.05 | Disabled at startup; 7 x (720uA + 1uA), rounded up                                                                                  |
+| MCU clocks, USB, timer/DMA and I/O switching   |                 4.00 |               8.00 | Engineering allowance, not a published combined maximum; excludes the CPU/comparators above                                         |
+| Excitation through the seven 220-ohm resistors |                    0 |              16.53 | At most one high source at a time: 3.6V / (220 x 0.99), including a grounded conductor or initially discharged cable                |
+| DRIVE/OE, reset and UART bias resistors        |                 0.90 |               3.40 | Prior 0.50/3.00mA allocation plus R72 at 3.6V / 9.9k = 0.364mA when TX is low, rounded up; R73 is on the unpowered application rail |
+| U8/U9 buffer overhead and U10/U11 translators  |                 0.20 |               2.00 | Allowance above static currents, with defined input levels; excludes conductor load and external pulls already counted              |
+| U4, R3/R4 and residual leakage                 |                 0.50 |               0.50 | Allowance; R3/R4 consumes at most 5.5V / 247.5k = 0.023mA; loaded regulator and backfeed need measurement                           |
+| Unallocated margin                             |                 2.40 |              20.52 | Reserved for measured departures, not accessories                                                                                   |
+| **Isolated-output target**                     |            **20.00** |          **75.00** | **5mA below the startup guidance; 125mA below the configured output rating**                                                        |
 
 The MCU values come from [DS12288 Rev 6](https://www.st.com/resource/en/datasheet/stm32g474re.pdf), tables 21/22 and 79.
 The baseline uses an external clock with peripherals off, not our complete firmware. HSI16/HSI48, PLL/HSE, USB traffic,
@@ -92,7 +93,8 @@ hardware measurements have been performed.
 **Decision:** no new power components from this review. Firmware enforcement, physical USB/current checks and the
 single-receptacle isolated PD conversion remain unfinished. This budget is not USB certification or FIE safety proof.
 
-Review checks: KiCad ERC reports zero findings and the exported 153 components/160 nets are unchanged. All seven
-existing simulation models pass, including the 16.53mA grounded-conductor bound; none simulates the complete USB supply.
+Review checks: KiCad ERC reports zero findings. The native draft now has 155 components and 160 nets; the two new UART
+transmit pulls add no nets, and the acquisition-side pull fits within the existing power targets. All seven existing
+simulation models pass, including the 16.53mA grounded-conductor bound; none simulates the complete USB supply.
 Repository verification still fails three unchanged scoring tests, as listed in the
 [design status](README.md#checks-performed).

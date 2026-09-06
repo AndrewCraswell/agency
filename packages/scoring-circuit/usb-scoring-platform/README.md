@@ -189,14 +189,15 @@ error. Most PCB routing remains unfinished.
 
 ## Current state and remaining work
 
-The current draft contains 153 components across eleven functional/support sheets plus the cover. Every component has a
+The current draft contains 155 components across eleven functional/support sheets plus the cover. Every component has a
 footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
 regulator section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass
 capacitors. Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32
 crystal, boot pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75
 power contacts, both display buffers and their supply-side pull-ups are now routed. Most other parts remain in
 provisional positions. The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header
-are also routed; the processor-to-processor link and peripheral signals are not.
+are also routed. The two-way processor UART, its translators, four bypass capacitors and idle pulls are now connected;
+peripheral signal routing remains unfinished.
 
 Remaining before fabrication:
 
@@ -215,14 +216,14 @@ Remaining before fabrication:
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. The remaining peripheral supply distribution,
-   processor-to-processor link and other signal interfaces still need routing. USB impedance must be checked against the
-   selected fabricator stackup before release. No purchase or assembly release has been performed.
+   manufacturing outputs, and then perform hardware bring-up. The remaining peripheral supply distribution and other
+   signal interfaces still need routing. USB impedance must be checked against the selected fabricator stackup before
+   release. No purchase or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **250 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **226 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -262,8 +263,8 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the USB ESD update, the board has 330 track segments, 109 ordinary 0.6/0.3mm vias and twelve copper zones. The
-prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
+After the processor-link routing, the board has 415 track segments, 137 ordinary 0.6/0.3mm vias and twelve copper zones.
+The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
 board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
 pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
@@ -339,8 +340,19 @@ GPIO0/BOOT**. Cross TX/RX to a 3.3V USB-UART adapter; do not apply 5V logic or p
 reference connection. Power the application from PD, hold SW3/BOOT while pressing and releasing SW2/RESET, then release
 BOOT to enter the ROM downloader. This is manual recovery, without an added auto-reset circuit. Disconnect fencers and
 piste before service: adapter ground bypasses the isolated computer-USB path. The main computer USB connector belongs to
-STM32 acquisition, not this ESP32 programming port. The two interprocessor UART translators and remaining peripheral
-interfaces are still unrouted.
+STM32 acquisition, not this ESP32 programming port. Remaining peripheral interfaces are still unrouted.
+
+The processor link now connects STM32 PA9/TX (U1.43) through U10 to ESP32 GPIO48/RX (U2.25), and ESP32 GPIO47/TX (U2.24)
+through U11 to STM32 PA10/RX (U1.44). U10 DIR is tied to CORE_3V3; U11 DIR is grounded. C23-C26 sit beside their
+respective supply pins, with short ground returns. R72/R73 add 10k transmit idle pulls on each local rail so processor
+reset does not leave translator inputs floating; the existing 47k receive pulls retain idle levels when the opposite
+rail is off. This follows the
+[TI pin, power-down and layout guidance](https://www.ti.com/lit/ds/symlink/sn74axc1t45.pdf). The added acquisition-side
+pull is included in the unchanged 20mA/75mA power targets. Native copper checks confirm both directions, all translator
+supply/ground/direction pins, bypass and bias connections, with no rail or UART0-recovery bridge. Only eight existing
+link components moved; every previous track/via and the processors/connectors stayed fixed. No galvanic isolation was
+added by these translators. Firmware framing, baud rate, reset/reconnect behavior and physical power-off leakage and
+signal testing remain unfinished.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
@@ -359,16 +371,15 @@ placement, footprint geometry and every pad's net assignment.
 
 All seven models' acceptance limits pass, including the corrected seven-input settled leakage stress; this remains
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
-The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The subsequent USB protection
-checkpoint changes only U3's protector/land pattern, its local USB traces and C1's voltage rating; all 153 component
-positions remain fixed. Native connectivity checks confirm both data lines, the isolated USB power/control nets and
-separation of the two grounds. U3 has no VBUS connection. Schematic and 3D renders were reviewed; ERC is clean, and DRC
-still reports four USB connector hole-clearance findings, 250 unconnected items and zero schematic-parity issues. The
-latest repository verification passed formatting, lint, types and unused-code checks but failed three scoring tests: a
-mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The
-previously failing live-rebuild and workflow-deletion tests passed this run. These tests are outside the board edits;
-none was suppressed or modified. Physical USB signal, surge and ESD testing remain required; native connectivity and the
-protector's component ratings do not establish board-level immunity.
+The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
+protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
+processor-link routing reduced unconnected items from 250 to 226, with no new DRC findings. Schematic, copper and native
+3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero
+schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks but
+failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion
+(770 scoring tests passed). The previously failing live-rebuild and workflow-deletion tests passed this run. These tests
+are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain
+required; native connectivity and the protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
