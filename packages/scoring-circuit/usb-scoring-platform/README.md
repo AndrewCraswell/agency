@@ -200,7 +200,8 @@ are also routed. The two-way processor UART, its translators, four bypass capaci
 IR receiver's filtered supply, ground and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus,
 reset and interrupt are also connected. All thirteen HUB75 buffer outputs now reach the display connector, together with
 the local buffer-disable and panel-blanking network. The one-way display buffers and thirteen input pull-downs now have
-defined reset defaults. The ESP32-to-buffer input bus/enable, sound, Favero and conductor interfaces remain unfinished.
+defined reset defaults. The ESP32 input bus and display-enable line are also routed; sound, Favero and conductor
+interfaces remain unfinished.
 
 Remaining before fabrication:
 
@@ -226,7 +227,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **188 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **174 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -266,10 +267,10 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the display reset-bias update, the board has 631 track segments, 201 ordinary 0.6/0.3mm vias and twelve copper
-zones. The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the
-extended board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside
-the BGA pads. This follows the
+After the display input routing, the board has 874 track segments, 252 ordinary 0.6/0.3mm vias and twelve copper zones.
+The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
+board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
+pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
 including its integrated bypass/termination, and keeps the
 [TPD2E2U06 protection](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf) close to the connector. Native top-copper,
@@ -403,9 +404,16 @@ stub shortened; all other 772 prior tracks/vias, external connectors, processors
 ERC/parity, all bias/output/prior-circuit continuity checks, and copper/schematic/3D review passed, with no new DRC
 finding. Unrouted count remains 188 because this change resolves input defaults, not the processor bus.
 
-**Next display handoff:** route the ESP32 input bus and DISPLAY_ENABLE. Configure all display signals with RGB_OE high
-before asserting DISPLAY_ENABLE; deassert DISPLAY_ENABLE before releasing GPIOs. That firmware sequence, startup and
-brownout blanking, display timing and cable signal integrity still require implementation and physical verification.
+The ESP32 display bus is now routed: module pads 4-12 and 17-20 reach all thirteen buffer inputs and their pull-downs;
+pad 23 reaches Q1's DISPLAY_ENABLE gate and R33. Top/back routes use inner-layer crossovers outside the power pours; no
+signal trace was added to the In1.Cu ground layer. All 832 previous tracks/vias, parts, connectors and keepouts stayed
+fixed. Native continuity of the complete input/buffer-output wiring and earlier circuits passed; copper and native 3D
+views were inspected. This reduced unrouted items from 188 to 174 without a new ERC, parity or DRC finding.
+
+**Display bring-up:** configure all display signals with RGB_OE high before asserting DISPLAY_ENABLE; deassert
+DISPLAY_ENABLE before releasing GPIOs. The input routes are not delay-matched or timing-qualified. That firmware
+sequence, startup and brownout blanking, display timing and cable signal integrity still require implementation and
+physical verification. Next board routing: the sounder, then Favero and sensing connections.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
@@ -426,13 +434,13 @@ All seven models' acceptance limits pass, including the corrected seven-input se
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link, IR, Ethernet and HUB75 output routing reduced unconnected items from 250 to 188, with no new DRC
-findings. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector
-hole-clearance findings and zero schematic-parity issues. The latest repository verification passed formatting, lint,
-types and unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a
-29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed.
-These tests are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing
-remain required; native connectivity and the protector's component ratings do not establish board-level immunity.
+processor-link, IR, Ethernet and HUB75 routing reduced unconnected items from 250 to 174, with no new DRC findings.
+Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance
+findings and zero schematic-parity issues. The latest repository verification passed formatting, lint, types and
+unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28
+scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed. These tests
+are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain
+required; native connectivity and the protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
