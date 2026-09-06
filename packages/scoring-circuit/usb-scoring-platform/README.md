@@ -211,9 +211,9 @@ layout is connected, but power behavior and safety remain unverified. The acquis
 supplies, local bypass and all seven reset-default resistor networks. All fourteen STM32 drive/enable signals reach
 those buffers and resistors. Thirteen redundant, unconnected display pull-downs have been removed; the connected 10k
 pull-downs beside the display buffers remain. All seven buffer outputs now reach their existing 220-ohm series
-resistors. All seven 3.3k sense pull-downs now have ground returns. LEFT_A and LEFT_C comparator inputs reach their
-pull-downs; the other five inputs remain unrouted. The remaining 47 unrouted items concern the conductor/sense
-interface.
+resistors. All seven 3.3k sense pull-downs now have ground returns. Five comparator inputs (LEFT_A, LEFT_C, RIGHT_B,
+RIGHT_C and PISTE) reach their pull-downs. LEFT_B and RIGHT_A still need local escape routing around the existing
+controller wiring and bypass capacitors. The remaining 44 unrouted items concern the conductor/sense interface.
 
 The existing USB data/protection, isolated output and USB-present sensing remain routed, along with the STM32 regulator,
 crystal, boot pull-down, reset network/button and programming header. The 5V distribution to both HUB75 power contacts,
@@ -253,7 +253,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **47 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **44 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -572,14 +572,18 @@ STM32 PA1/LEFT_A and PA0/LEFT_C now connect to R65/R67's sense-node pads. Thirty
 to 2255 and reduce unrouted items to 47. Four existing RIGHT_A_DRIVE fanout items were repositioned locally, retaining
 that three-pad connection; the other 2221 old tracks/vias and all 744 prior pad connections pass unchanged. No
 component, model, label or isolation keepout moved. Two short In2.Cu crossovers beneath the STM32 avoid blocked
-front/back exits; the CORE_3V3 pour remains connected, and no new signal trace enters In1.Cu or the crystal region. Five
-comparator inputs and the conductor/clamp connections remain unfinished. This is routing only, not protection or sensing
-qualification. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector
-hole-clearance findings and zero schematic-parity issues. The latest repository verification passed formatting, lint,
-types and unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a
-29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed.
-These tests are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing
-remain required; native connectivity and the protector's component ratings do not establish board-level immunity.
+front/back exits; the CORE_3V3 pour remains connected, and no new signal trace enters In1.Cu or the crystal region. The
+next slice connects PB13/RIGHT_B, PB11/RIGHT_C and PB14/PISTE to R69/R70/R71. It adds 61 track/via items, bringing the
+total to 2316 and reducing unrouted items to 44. All 2255 earlier copper items and 744 retained pad connections remain
+unchanged. The new routes use front/back and In2.Cu crossovers; ground and supply connectivity is retained, with no new
+In1.Cu signal trace or moved part. LEFT_B and RIGHT_A remain boxed in by local routing and require revised escapes;
+conductor/clamp connections remain unfinished. This is routing only, not protection or sensing qualification. Schematic,
+copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and
+zero schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks
+but failed four scoring tests: mutation and command-ledger timeouts, a canonical-corpus failure and a 29-versus-28
+scenario-count assertion (769 scoring tests passed). The run stopped before every other package completed. These tests
+are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain
+required; native connectivity and the protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
