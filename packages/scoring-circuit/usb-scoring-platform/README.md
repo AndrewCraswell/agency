@@ -18,21 +18,25 @@ The owner approved replacing WIZ850io with direct W5500 Ethernet and replacing L
 and isolated power. These changes are **not complete or released**. The Ethernet schematic now contains the W5500,
 reference termination/filtering and crystal circuit, with the existing ESP32 SPI/reset/interrupt nets retained. J13 is a
 CETUS J1B1211CCD magnetic RJ45, matching WIZnet's reference circuit and KiCad's existing exact-part footprint. Its
-separate centre taps and LED polarities are mapped explicitly. The ABM8 crystal is an 18pF-load part; the two 18pF
-external capacitors follow WIZnet's reference circuit, with final frequency/startup to be checked on the assembled
-board. W5500 reserved pin 23 is grounded as required; reserved pins 38-42 remain unconnected. Its internal CS/reset
-pull-ups are retained; firmware must assert reset for at least 500us and wait at least 1ms after releasing it before SPI
-access. New Ethernet resistors use R99-R107 to avoid the existing R84-R98 components. The PCB now replaces the WIZ850io
-module with this circuit. The routed checkpoint passes native KiCad ERC and DRC with zero violations and zero
-unconnected items; all 214 components and 815 schematic pin/net assignments match. The existing 753 non-U12 pad
-positions/net assignments are preserved. The filtered analog supply uses a local inner-power-layer pour, leaving the
-inner ground-reference layer intact. These checks establish connectivity and clearance, not Ethernet signal integrity or
-fabrication approval. An all-layer copper-plane keepout covers the magnetic jack body. Differential impedance/skew,
-final shield coupling, exact jack availability and mechanical review remain open. In particular, the current TX+ and RX-
-paths have layer changes, contrary to the
-[WIZnet layout guide](https://docs.wiznet.io/Design-Guide/hardware_design_guide). Total routed copper, including
-branches, is 35.306/26.395mm for TX+/TX- and 23.356/33.271mm for RX+/RX-; these are not matched end-to-end pair lengths.
-Rework the PHY fanout and paired geometry before release, rather than treating a clean clearance check as
+separate centre taps and LED polarities are mapped explicitly. C52/C53 are now correctly in series with the receive
+pair: chip RX+/RX- connect through 6.8nF to jack pins 4/6. Jack pin 5 connects to the R101/R102 termination junction and
+C54, not to the capacitor outputs. This corrects the earlier erroneous shunt connection; the old ERC/DRC pass did not
+establish circuit correctness. The corrected schematic/PCB passes native ERC and DRC with zero violations and zero
+unconnected items, with all 214 components and 815 schematic pin/net assignments matching. The ABM8 crystal is an
+18pF-load part; the two 18pF external capacitors follow WIZnet's reference circuit, with final frequency/startup to be
+checked on the assembled board. W5500 reserved pin 23 is grounded as required; reserved pins 38-42 remain unconnected.
+Its internal CS/reset pull-ups are retained; firmware must assert reset for at least 500us and wait at least 1ms after
+releasing it before SPI access. New Ethernet resistors use R99-R107 to avoid the existing R84-R98 components. The PCB
+now replaces the WIZ850io module with this circuit. The routed checkpoint passes native KiCad ERC and DRC with zero
+violations and zero unconnected items; all 214 components and 815 schematic pin/net assignments match. The existing 753
+non-U12 pad positions/net assignments are preserved. The filtered analog supply uses a local inner-power-layer pour,
+leaving the inner ground-reference layer intact. These checks establish connectivity and clearance, not Ethernet signal
+integrity or fabrication approval. An all-layer copper-plane keepout covers the magnetic jack body. Differential
+impedance/skew, final shield coupling, exact jack availability and mechanical review remain open. The TX+ fanout now
+runs entirely on F.Cu; its two former vias were removed without moving components. RX- still has layer changes, contrary
+to the [WIZnet layout guide](https://docs.wiznet.io/Design-Guide/hardware_design_guide). The new capacitor-to-jack
+receive traces are on F.Cu without vias. Their individual routing lengths are not proof of matched, impedance-controlled
+pairs. Rework the PHY fanout and paired geometry before release, rather than treating a clean clearance check as
 signal-integrity approval. Do not swap differential polarity merely to simplify routing without a supported electrical
 basis.
 
@@ -43,13 +47,18 @@ stock STEP file is absent from the installed library. Do not mistake the missing
 footprint or claim that its 3D mechanical fit has been verified.
 
 The USB circuit and PCB remain unchanged while the complete replacement is selected. Do not apply the earlier estimated
-savings as a confirmed BOM total. R05C1TF05S is not a solution for the existing 5V rail's low-input problem: its 3V
-input headline applies to 3.3V output; the manufacturer's 5V-output specification requires at least 4.5V input. Preserve
-USB suspend/startup behavior and the isolation barrier when choosing the replacement. REC30K application power is
-retained. ISOUSB111 cannot simply replace the USB data portion while leaving an always-on isolated converter: its
-specified L2 suspend maxima are 1.55mA upstream and 7.5mA downstream, before converter losses or board load. A complete
-bus-powered design must address that budget rather than assuming the isolator's upstream-only suspend compliance covers
-both sides.
+savings as a confirmed BOM total. The owner now permits a powered USB-C requirement for laptop mode; ordinary USB-A
+adapter compatibility is no longer required. Implement detection of adequate advertised Type-C current or an appropriate
+PD contract before enabling the replacement supply. A USB-C connector alone is not sufficient. Follow advertised-current
+changes and PD suspend flags; do not assume every USB-C port waives suspend limits. See the
+[USB-IF power precedence and suspend assertions](https://www.usb.org/sites/default/files/USB%20Type%20C%20Functional%20Test%20Specification%202024%2003%2003.pdf),
+pages 25-26. This is an approved requirement change, not an implemented replacement. R05C1TF05S is not a solution for
+the existing 5V rail's low-input problem: its 3V input headline applies to 3.3V output; the manufacturer's 5V-output
+specification requires at least 4.5V input. Preserve USB suspend/startup behavior and the isolation barrier when
+choosing the replacement. REC30K application power is retained. ISOUSB111 cannot simply replace the USB data portion
+while leaving an always-on isolated converter: its specified L2 suspend maxima are 1.55mA upstream and 7.5mA downstream,
+before converter losses or board load. A complete bus-powered design must address that budget rather than assuming the
+isolator's upstream-only suspend compliance covers both sides.
 
 Reference circuits reviewed:
 [W5500 magnetic-RJ45 reference](https://docs.wiznet.io/Product/Chip/Ethernet/W5500/ref-schematic),
