@@ -1,0 +1,53 @@
+{{ 'section-main-policy.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'policy-page.js' | asset_url }}" defer="defer"></script>
+
+<policy-page class="policy-page" data-section-id="{{ section.id }}">
+  <div class="policy-page__breadcrumbs">
+    {%- render 'ui-breadcrumbs',
+      root_label: section.settings.home_label,
+      root_url: routes.root_url,
+      current_label: page.title,
+      aria_label: section.settings.breadcrumb_label
+    -%}
+  </div>
+
+  <div class="policy-page__main">
+    <h1 id="PolicyTitle-{{ section.id }}" class="policy-page__title" tabindex="-1">{{ page.title | escape }}</h1>
+
+    <div class="policy-page__columns">
+      <nav class="policy-page__contents" aria-label="{{ section.settings.contents_label | escape }}" hidden>
+        <p class="policy-page__contents-heading">{{ section.settings.contents_label | escape }}</p>
+        <details class="policy-page__disclosure">
+          <summary>
+            <span>{{ section.settings.contents_label | escape }}</span>
+            {%- render 'fc-icon', icon: 'chevron-down', size: 16 -%}
+          </summary>
+          <ol class="policy-page__contents-list"></ol>
+        </details>
+      </nav>
+
+      <article class="policy-page__article" aria-labelledby="PolicyTitle-{{ section.id }}">
+        {{ page.content }}
+      </article>
+    </div>
+
+    <div class="policy-page__support">
+      <a href="#PolicyTitle-{{ section.id }}">{{ section.settings.top_label | escape }}</a>
+    </div>
+  </div>
+</policy-page>
+
+{% schema %}
+{
+  "name": "Policy page",
+  "tag": "section",
+  "class": "section",
+  "enabled_on": { "templates": ["page"] },
+  "settings": [
+    { "type": "text", "id": "home_label", "label": "Home link", "default": "Home" },
+    { "type": "text", "id": "breadcrumb_label", "label": "Breadcrumb navigation label", "default": "Breadcrumb" },
+    { "type": "text", "id": "contents_label", "label": "Contents heading", "default": "On this page" },
+    { "type": "text", "id": "top_label", "label": "Back to top link", "default": "Back to top" }
+  ]
+}
+{% endschema %}

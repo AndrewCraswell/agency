@@ -8,9 +8,14 @@
     "dev": "shopify theme dev --path .",
     "package": "shopify theme package --path .",
     "pull": "shopify theme pull --path .",
-    "push": "shopify theme push --path ."
+    "push": "shopify theme push --path .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@shopify/cli": "^4.6.1"
+    "@shopify/cli": "^4.6.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "happy-dom": "^20.11.1",
+    "vitest": "^4.1.10"
   }
 }
