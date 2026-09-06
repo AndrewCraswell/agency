@@ -506,17 +506,17 @@ ESP32 input bus, display-enable line, sounder and both Favero repeater circuits 
 
 Remaining before ordering the prototype:
 
-1. **Completed design correction:** J1 now clears the unchanged 0.25mm rule using the local ground-land adjustment
-   described above. All holes and connector/model positions are unchanged; no DRC suppression or rule reduction.
-2. Close the circuit-design questions: the buck's low-input-voltage corner, unpowered sensing protection, and a feasible
+1. Close the circuit-design questions: the buck's low-input-voltage corner, unpowered sensing protection, and a feasible
    acquisition schedule for the required contact-duration boundaries. Keep the 220-ohm excitation resistors, 3.3k sense
    dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not infer patent
    clearance or FIE conformity from the topology.
-3. Finish the component/assembly review: exact purchasable parts, footprints and models, connector access, mounting,
-   antenna clearance, decoupling and power-current paths. U18's manufacturer 3D body is still missing; its actual land
-   pattern and assembly process need review, not an invented placeholder.
-4. Inspect the final USB manufacturing geometry and remaining DRC findings, then export and review Gerbers, drill files,
-   assembly BOM and placement files against the selected stackup. Zero airwires is not fabrication approval. No order or
+2. Finish the component/assembly review: remaining footprint/model checks, connector access, mounting, antenna
+   clearance, decoupling and power-current paths. Ordering fields are populated for all 187 components. U18's land
+   pattern and pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly
+   requirements need to be accepted by the assembler. The sounder drawing check remains open.
+3. Visually review final USB and manufacturing geometry, Gerbers, drills and assembly placement against the selected
+   stackup and supplier conventions. Native ERC/DRC/parity are currently clean, including the completed J1 correction.
+   Temporary Gerber/drill/BOM/placement exports succeed; export success is not fabrication approval. No order or
    assembly release has been performed.
 
 After the assembled prototype arrives, program/read back U5 and bring up the supplies under controlled bench conditions.
@@ -563,6 +563,11 @@ A temporary manufacturing export successfully produced all four copper layers, b
 outline, and separate plated/unplated drill files. The drill report contains 642 plated holes (including four slots) and
 six unplated holes; all 21 revised header holes appear as 1.02mm. This checks exportability and drill selection only.
 The outputs remain temporary review files, not a released order package or a completed visual Gerber/assembly review.
+
+The temporary all-component placement CSV contains exactly the same 187 unique references as the BOM, all on top. Every
+exported coordinate, rotation and side matches the native board (CSV Y is negated to use Cartesian coordinates).
+Through-hole parts are included rather than silently omitted by an SMD-only export. These are footprint origins;
+supplier-specific placement centres and rotation conventions still need the assembler's preview review.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
