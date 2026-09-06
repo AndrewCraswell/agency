@@ -4514,6 +4514,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -4525,6 +4526,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -9955,7 +9957,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/82491/tsop382.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9988,6 +9990,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Vishay"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "080bd0cf-28dd-4ffa-97de-66580a1d8f56")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TSOP38438"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "a6e60bca-437b-4dda-b999-0c93e3024f62")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -10600,7 +10624,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/info/en/catalog/datasheets/piezoelectronic_buzzer_ps_en.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10633,6 +10657,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "cc75defe-63a0-4cdf-8039-89ef6812c8d7")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "PS1240P02BT"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "772e0bf8-58eb-4720-81be-f5bbde07593a")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -11035,6 +11081,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -11046,6 +11093,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -32125,7 +32173,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://abracon.com/Resonators/abm3b.pdf"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -32156,6 +32204,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Abracon"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "642b8294-2b1e-4ac0-856c-e33159a36165")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "ABM3B-8.000MHZ-B2-T"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c3c14e3e-7e1d-493c-a779-9f71268bf3d2")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -40323,6 +40393,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -40334,6 +40405,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
