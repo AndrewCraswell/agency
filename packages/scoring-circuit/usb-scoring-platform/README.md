@@ -183,11 +183,20 @@ CORE_3V3 through BAT54S clamps. An externally driven conductor can inject into t
 must not be assumed to sink that current. Review that path before powered external-fault or fencer testing. Neither the
 buffer's power-off specification nor the clamps authorize applying 20V PD to any conductor.
 
-All seven selected comparator pins are STM32 **TT_a analog inputs**, not power-off-tolerant digital inputs. Their
-operating input ceiling follows the analog supply; the absolute-maximum table does not grant normal operation while
-unpowered. AP2112's typical 60-ohm output discharge applies with EN low, not as a guaranteed rail clamp after input
-power disappears. Keep passive-cable power-down and sustained external-voltage fault tests separate. Do not substitute a
-generic diode simulation for those guarantees. See STM32 DS12288 tables 15/17 and
+All seven selected comparator pins are STM32 **TT_a analog inputs**. The
+[STM32 DS12288 Rev 6](https://www.st.com/resource/en/datasheet/stm32g474re.pdf), tables 14-17, distinguishes the 4.0V
+absolute input limit from the TT_xx operating ceiling of VDD + 0.3V; comparator operation also requires its specified
+analog supply and input range. Table 15's zero positive-injection entry is not evidence of an internal upper clamp:
+footnote 3 says positive injection does not occur below the specified maximum input voltage. Neither statement qualifies
+comparator operation while unpowered. The identified rail-feed path is the **external BAT54S upper diode**, not an
+assumed STM32 protection diode. Removing that diode alone would not establish a protected interface.
+
+AP2112's typical 60-ohm output discharge applies with EN low, not as a guaranteed rail clamp after input power
+disappears. Keep passive-cable power-down and sustained external-voltage fault tests separate. The former has finite
+stored cable charge; the latter can continuously raise CORE_3V3 through D3-D9 even with series resistance. Before
+choosing replacement protection, specify the external fault voltage, source resistance, polarity and duration; the
+existing own-board short-circuit model supplies none of those requirements. Do not add a fault-protection IC or rail
+shunt against an invented fault envelope. Do not substitute a generic diode simulation for those guarantees. See
 [AN4899 section 5.2.1](https://www.st.com/resource/en/application_note/DM00315319-.pdf), and
 [AP2112 electrical characteristics](https://www.diodes.com/datasheet/download/AP2112.pdf).
 
