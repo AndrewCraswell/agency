@@ -534,8 +534,8 @@ Remaining before ordering the prototype:
 3. Visually review final USB and manufacturing geometry, Gerbers, drills and assembly placement against the selected
    stackup and supplier conventions. Native ERC/DRC/parity are currently clean, including the completed J1 correction.
    Temporary Gerber/drill/BOM/placement exports succeed. The first native GerbView layer/drill review is complete as
-   described below; USB close-up artwork and supplier-specific assembly review remain. No order or assembly release has
-   been performed.
+   described below, including the USB close-up; supplier-specific assembly review remains. No order or assembly release
+   has been performed.
 
 After the assembled prototype arrives, program/read back U5 and bring up the supplies under controlled bench conditions.
 Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply handover, sensing/leakage/timing,
@@ -582,8 +582,18 @@ outline, and separate plated/unplated drill files. The drill report contains 642
 six unplated holes; all 21 revised header holes appear as 1.02mm. GerbView loaded all eleven Gerber layers and both
 drill files. The outline, four separate copper layers and top silkscreen were visually inspected. A magnified
 top-mask/PTH/NPTH overlay showed the two Favero connector contact and locating-hole patterns registered without a layer
-shift. This does not establish every pad's annular ring, USB mask web or solderability. The outputs remain temporary
-review files, not a released order package or completed assembly review.
+shift. This does not establish every pad's annular ring or solderability. The outputs remain temporary review files, not
+a released order package or completed assembly review.
+
+The J1 close-up was also inspected in GerbView with top copper, top mask, plated slots and non-plated locating holes
+toggled separately. Its four shell slots register inside their copper lands, with nominal 0.20mm radial copper margin;
+both locating holes remain clear of the adjacent rounded ground lands. The 0.50mm-pitch signal lands are 0.30mm wide,
+leaving 0.20mm between them. Native J1 mask expansion is zero, so these exported mask gaps are also 0.20mm. This exceeds
+JLCPCB's currently published 0.13mm pad-spacing minimum for black/white mask with 1oz copper; their multilayer LDI
+process supports 1:1 mask openings. See [capabilities](https://jlcpcb.com/capabilities/pcb-capabilities/) and
+[mask process guidance](https://jlcpcb.com/blog/basic-design-of-solder-mask), checked 6 September 2026. No pad, hole,
+mask or routing change was required. Supplier CAM must retain or explicitly review these openings; nominal geometry does
+not guarantee mask registration, stencil paste volume or finished solder-joint quality.
 
 The open PCB/3D editor had retained an obsolete in-memory board with two USB connectors and unrouted nets. It was closed
 without saving the board and reopened from the current source, displaying 187 nets and zero unrouted items. Closing that
