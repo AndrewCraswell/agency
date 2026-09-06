@@ -27,8 +27,14 @@ module with this circuit. The routed checkpoint passes native KiCad ERC and DRC 
 unconnected items; all 214 components and 815 schematic pin/net assignments match. The existing 753 non-U12 pad
 positions/net assignments are preserved. The filtered analog supply uses a local inner-power-layer pour, leaving the
 inner ground-reference layer intact. These checks establish connectivity and clearance, not Ethernet signal integrity or
-fabrication approval. Differential impedance/skew, final shield coupling, exact jack availability and mechanical review
-remain open.
+fabrication approval. An all-layer copper-plane keepout covers the magnetic jack body. Differential impedance/skew,
+final shield coupling, exact jack availability and mechanical review remain open. In particular, the current TX+ and RX-
+paths have layer changes, contrary to the
+[WIZnet layout guide](https://docs.wiznet.io/Design-Guide/hardware_design_guide). Total routed copper, including
+branches, is 35.306/26.395mm for TX+/TX- and 23.356/33.271mm for RX+/RX-; these are not matched end-to-end pair lengths.
+Rework the PHY fanout and paired geometry before release, rather than treating a clean clearance check as
+signal-integrity approval. Do not swap differential polarity merely to simplify routing without a supported electrical
+basis.
 
 The local `ScoringPlatform:J1B1211CCD` footprint derives from KiCad's exact-part `Connector_RJ:RJ45_Cetus_J1B1211CCD`,
 under the [KiCad library license](https://www.kicad.org/libraries/license/). Pads, mounting holes and fabrication
