@@ -481,10 +481,11 @@ geometry, component/model positions and isolation rules are preserved. The fresh
 inspected. U18's missing body model remains visible as an empty footprint; no placeholder or placement change was
 introduced.
 
-Repository `pnpm verify` passed its check stage, then failed the same three scoring-software tests: observatory weapon
-execution, scalar/container mutation timeout, and the canonical-corpus assertion (770 passed). The run stopped before
-all other packages finished. No tests or rules were suppressed. These failures are outside the native hardware changes;
-repository-wide verification is not clean. The board is not yet released for fabrication.
+Repository `pnpm verify` passed its check stage and all 950 scoring-domain tests after restoring the missing scenario
+manifest entry and replacing the ineffective batched mutation test with independent rejection cases. The three prior
+test failures are resolved. Verification now stops at the scoring-domain 100% coverage gate: 95.98% lines, 95.34%
+statements, 93.62% branches and 99.79% functions. No thresholds were lowered or checks suppressed; the full repository
+run is not clean and did not complete all other packages. The board is not yet released for fabrication.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),

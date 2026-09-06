@@ -54,34 +54,34 @@ function reportBytes(report: ScenarioRunReport): string {
   return serializeScenarioRunReport(report)
 }
 
-function invalidMutations(value: unknown, path: string[] = []): unknown[] {
+function invalidMutations(value: unknown): unknown[] {
   const mutations: unknown[] = []
   if (Array.isArray(value)) {
-    mutations.push([])
+    mutations.push({})
     value.forEach((child, index) => {
-      for (const mutation of invalidMutations(child, [...path, String(index)])) {
+      for (const mutation of invalidMutations(child)) {
         const copy = structuredClone(value)
         copy[index] = mutation
         mutations.push(copy)
       }
     })
   } else if (value !== null && typeof value === "object") {
-    mutations.push({})
+    mutations.push(null)
     for (const [key, child] of Object.entries(value)) {
-      for (const mutation of invalidMutations(child, [...path, key])) {
+      for (const mutation of invalidMutations(child)) {
         const copy = structuredClone(value) as Record<string, unknown>
         copy[key] = mutation
         mutations.push(copy)
       }
     }
   } else if (typeof value === "string") {
-    mutations.push("", "invalid value")
+    mutations.push({})
   } else if (typeof value === "number") {
-    mutations.push(-1, 1.5, Number.MAX_SAFE_INTEGER + 1)
+    mutations.push("not a number")
   } else if (typeof value === "boolean") {
-    mutations.push("true", null)
+    mutations.push("not a boolean")
   } else {
-    mutations.push("invalid")
+    mutations.push([])
   }
   return mutations
 }
@@ -675,17 +675,17 @@ describe("golden scenario runner", () => {
     expect(runScenario(path)).toMatchObject({ exitCode: 2, report: { error: { code: "invalid-schema" } } })
   })
 
-  it("fails closed for scalar and container mutations across the contract", () => {
-    const directory = temporaryDirectory()
-    const fixture = readFixture("epee-contact-boundaries.json")
-    const mutations = invalidMutations(fixture)
-    expect(mutations.length).toBeGreaterThan(50)
-    for (const [index, mutation] of mutations.entries()) {
-      const path = join(directory, `mutation-${index}.json`)
-      writeJson(path, mutation)
-      const run = runScenario(path)
-      if (run.exitCode !== 0) expect(run.exitCode, `mutation ${index}`).toBeGreaterThan(0)
-    }
+  // Each replacement has an incompatible JSON type, unlike empty containers or
+  // arbitrary strings which can still be valid contract values.
+  it.each(
+    invalidMutations(readFixture("epee-contact-boundaries.json")).map((mutation, index) => ({ mutation, index }))
+  )("rejects incompatible JSON type mutation $index", ({ mutation }) => {
+    const path = join(temporaryDirectory(), "mutation.json")
+    writeJson(path, mutation)
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 2,
+      report: { status: "invalid-input", error: { code: "invalid-schema" } }
+    })
   })
 
   it("reports unexpected manifest execution failures separately from missing input paths", () => {
@@ -1533,7 +1533,7 @@ describe("golden scenario runner", () => {
     const secondRun = runScenario(manifestPath)
 
     expect(firstRun.exitCode).toBe(0)
-    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 28, scenarioCount: 28 })
+    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 29, scenarioCount: 29 })
     expect(firstRun.report.scenarios.every((scenario) => scenario.status === "passed")).toBe(true)
     expect(firstRun.report.scenarios.map((scenario) => scenario.scenarioId)).toEqual([
       "epee.audio-visual-correlation",
@@ -1543,6 +1543,7 @@ describe("golden scenario runner", () => {
       "epee.grounded-material-100-ohm",
       "epee.grounded-rejection",
       "epee.non-monotonic-time",
+      "epee.resistance-near-lockout-both-sides",
       "epee.resistance-uncertainty-near-lockout",
       "foil.break-boundaries",
       "foil.grounded-contact",
