@@ -186,6 +186,19 @@ STUSB4500 output timing must be checked together before accepting eFuse startup/
 edge current and Q3 repeater waveforms on the assembled prototype. No new routing or protection circuit was added merely
 to close the part-selection gap.
 
+### Power inductors
+
+L1 **Coilcraft XAL5030-472MEC** (4.7uH) and L2 **XAL5050-223MEC** (22uH) now have explicit Manufacturer/MPN fields in
+both schematic and PCB; their existing values and placement are retained. The
+[manufacturer drawing](https://www.coilcraft.com/getmedia/49bc46c8-4b2c-45b9-9b6c-2eaa235ea698/xal50xx.pdf) (908,
+revised 2026-02-26, pages 1/4) matches both boardside land patterns: 1.18 x 4.70mm pads, 3.31mm centre spacing. Maximum
+body heights are 3.1mm and 5.1mm respectively. These are non-polarized; place the marked short winding end toward the
+switch node for the manufacturer's preferred EMI orientation (pad 1 on both footprints).
+
+At 25 C, maximum DCR is 40/99.65 milliohms respectively. Listed 30%-inductance-drop currents are 6.7/3.6A, and 20 C-rise
+currents 4.3/2.5A. These reference test values are not guaranteed in-board thermal limits: ripple, converter
+current-limit tolerance, loss and temperature still need the power review. Neither inductor was downsized or rerouted.
+
 ## Low-volume build scope
 
 Design for **3-10 units per month**. Prioritize dependable operation, straightforward assembly and repair, and
@@ -459,12 +472,14 @@ which alone are not complete board safety proof.
 ### Latest verification
 
 The native BOM exports exact selections for all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now
-export DMN2056U-7, matching the PCB fields. This does not finish the remaining component or electrical review.
+export DMN2056U-7, matching the PCB fields. Both retained Coilcraft inductors also have explicit ordering fields and
+manufacturer-matched pad geometry. This does not finish the remaining component or electrical review.
 
-After the switch replacement, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted items and zero
-schematic-parity issues**. All 744 retained pad-continuity checks and 2,843 tracks/vias pass unchanged; hole geometry,
-component/model positions and isolation rules are preserved. The fresh native 3D rendering was visually inspected. U18's
-missing body model remains visible as an empty footprint; no placeholder or placement change was introduced.
+After the inductor ordering update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted items and
+zero schematic-parity issues**. All 744 retained pad-continuity checks and 2,843 tracks/vias pass unchanged; hole
+geometry, component/model positions and isolation rules are preserved. The fresh native 3D rendering was visually
+inspected. U18's missing body model remains visible as an empty footprint; no placeholder or placement change was
+introduced.
 
 Repository `pnpm verify` passed its check stage, then failed the same three scoring-software tests: observatory weapon
 execution, scalar/container mutation timeout, and the canonical-corpus assertion (770 passed). The run stopped before
