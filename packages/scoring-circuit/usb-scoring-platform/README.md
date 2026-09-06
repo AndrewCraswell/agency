@@ -42,14 +42,14 @@ referenced to L2 with 9.8425mil (0.25mm) edge spacing. The `USB data` net class 
 / 0.25mm gap** for both host and isolated data nets. This is the next routing target, not a measurement or a
 manufacturing impedance guarantee. The calculator's displayed solver tolerance is not a fabrication tolerance.
 
-**USB route revision is in progress.** The host-side routing has been replaced; the isolated-side routing is unchanged:
+**Both USB trunks have been revised to the routing target; electrical qualification remains open.**
 
 | Net         | F.Cu length | B.Cu length |                   Existing width |
 | ----------- | ----------: | ----------: | -------------------------------: |
 | USB_HOST_DP |    11.140mm |     6.062mm | 0.32mm, 0.20mm connector escapes |
 | USB_HOST_DM |     7.564mm |     9.118mm | 0.32mm, 0.20mm connector escapes |
-| USB_DP      |    78.031mm |           0 |                           0.20mm |
-| USB_DM      |    74.230mm |     3.746mm |                           0.20mm |
+| USB_DP      |    78.362mm |           0 |     0.32mm trunk, 0.20mm escapes |
+| USB_DM      |    74.363mm |     3.746mm |     0.32mm trunk, 0.20mm escapes |
 
 Lengths above total all track branches and exclude vias and pad-internal paths; they are not end-to-end pair skew. The
 host trunk now runs on B.Cu with 0.32mm width / 0.25mm gap above the existing In2 USB_GND plane. The selected stackup is
@@ -59,12 +59,17 @@ sampling confirms the shared horizontal trunk's reference plane; the terminal vi
 USB-C/protection/isolator escapes remain discontinuities, not a uniform 90-ohm line. No components, isolation barriers,
 or non-host signal routes moved. All four USB-C data contacts still reach U3 and U18.
 
-Next, revise the longer isolated-side paired trunk to the target with short pad escapes; inspect continuous reference
-copper in each isolation domain and return paths at layer transitions. The B.Cu portions cannot simply inherit the L1/L2
-calculation: their adjacent layer is In2.Cu, which contains power and signal areas as well as ground. Preserve the
-isolation gap. Recheck physical pair spacing, skew and discontinuities before calling USB routing complete; a net class
-and zero airwires do not establish any of these properties. Keep nearby same-layer copper out of the paired trunk's
-field or recalculate it as a coplanar structure; the non-coplanar result does not model that coupling.
+The isolated-side F.Cu trunks now use 0.32mm width / 0.25mm gap, including their diagonal section, referenced to In1
+GND. Approximately 62mm of each path uses that geometry. Native filled-copper checks covered the center and both edges
+of every wide segment: 3,765 samples, with no missing reference copper. The 0.20mm MCU/isolator fanouts and the 3.746mm
+bottom D- crossover remain explicit discontinuities. A ground stitching via was added beside the isolator crossover; the
+existing ground via at its other end remains connected. The copper layout and all non-USB routes are otherwise
+preserved. There are no new parts or board-size changes.
+
+This does not establish uniform 90-ohm impedance through the fanouts, an eye-diagram pass, or enumeration reliability.
+Inspect the final manufacturing geometry and validate the assembled interface, including nearby conductor-trace
+coupling. Bottom-layer escapes reference In2 rather than In1; preserve their local GND return and the isolation gap. The
+non-coplanar calculator does not model every adjacent trace, pad, via or package discontinuity.
 
 ## Low-volume build scope
 
@@ -291,29 +296,37 @@ All thirteen HUB75 buffer outputs now reach the display connector, together with
 panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined reset defaults. The
 ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
 
-Remaining before fabrication:
+Remaining before ordering the prototype:
 
-1. Finish the sensing design: check the MCU clamp-rail/unpowered path and establish a sampling/excitation schedule that
-   preserves the required contact-duration boundaries. The seven-input settled stress now passes, but timing, full
-   weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
-   dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
-   selection or this topology.
-2. **The prototype clamp choice and its wiring are complete; electrical qualification is not.** All conductor and clamp
-   paths are connected. Resolve the buck's low-input-voltage corner and program/read back U5 before powered bring-up.
-   Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when implementing USB acquisition.
-   Bench-check startup/current/suspend behavior, supply handover, and the electrical safety boundary for USB, PD,
-   Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper keepouts separate computer
-   ground from board ground; acquisition and application still share board ground. The keepout spans the gap between the
-   module's primary and secondary ball rows. This is not complete board safety proof.
-3. Finish the remaining local placement, decoupling, connector access, mounting, antenna clearance, and power/current
-   paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
-   tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
-4. Apply the defined manufacturing stackup/USB net-class target to the actual USB routes, finish DRC review, inspect 3D
-   and manufacturing outputs, and then perform hardware bring-up. Routing has no remaining airwires, but that is not
-   assembly or electrical release. USB impedance must be checked against the selected fabricator stackup before release.
-   No purchase or assembly release has been performed.
+1. Resolve J1's tight pad-to-locating-hole clearance with the fabricator or a justified connector/footprint change. Do
+   not move manufacturer mechanical holes or suppress warnings to obtain a clean report.
+2. Close the circuit-design questions: the buck's low-input-voltage corner, unpowered sensing protection, and a feasible
+   acquisition schedule for the required contact-duration boundaries. Keep the 220-ohm excitation resistors, 3.3k sense
+   dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not infer patent
+   clearance or FIE conformity from the topology.
+3. Finish the component/assembly review: exact purchasable parts, footprints and models, connector access, mounting,
+   antenna clearance, decoupling and power-current paths. U18's manufacturer 3D body is still missing; its actual land
+   pattern and assembly process need review, not an invented placeholder.
+4. Inspect the final USB manufacturing geometry and remaining DRC findings, then export and review Gerbers, drill files,
+   assembly BOM and placement files against the selected stackup. Zero airwires is not fabrication approval. No order or
+   assembly release has been performed.
+
+After the assembled prototype arrives, program/read back U5 and bring up the supplies under controlled bench conditions.
+Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply handover, sensing/leakage/timing,
+protection and the application interfaces. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md).
+Those measurements are not prerequisites to ordering the prototype needed to perform them; they remain prerequisites to
+claims about validated operation, safety or sale. Keep fencers disconnected until the appropriate electrical checks
+pass. Acquisition and application share board ground; the computer side is isolated by the modules and copper keepouts,
+which alone are not complete board safety proof.
 
 ## Checks performed
+
+The isolated USB trunk revision passed all 744 prior pad-continuity comparisons and cross-net checks. All
+non-isolated-USB copper, part positions, models and existing keepouts remain unchanged. DRC reports zero unrouted items,
+zero schematic parity mismatches and the same four J1 hole-clearance findings. Native copper and 3D renders were
+inspected; paired width/spacing and filled In1 return copper were checked. ERC is zero. The board now contains 2,843
+tracks/vias. Required repository verification again stopped at the same three scoring-software failures (770 passing
+tests), not a native PCB failure; it is not a clean repository pass.
 
 The host USB reroute passed 744 prior pad-continuity comparisons, cross-net copper checks, and 1,404 filled In2 USB_GND
 samples under the shared trunk (excluding terminal via fanouts). All previous non-host copper, part positions, models
