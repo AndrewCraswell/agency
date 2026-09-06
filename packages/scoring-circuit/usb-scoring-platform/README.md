@@ -150,9 +150,15 @@ support effort.
   pin 3 returns to USB_GND. There is no VBUS supply/clamp pin. Its SC70-3 footprint uses TI's DCK0003A lands: 0.95 x
   0.4mm, 2.2mm row spacing and 1.3mm pin-1/pin-2 pitch. See the
   [TI pinout and package drawing](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf). It replaces USBLC6-2SC6 and its VBUS
-  trace branch; C1 remains input decoupling, with its required rating raised from 10V to 50V. Effective capacitance and
-  the final capacitor MPN still need selection. The data protector is independent of raw VBUS, but U18 must receive
-  regulated USB_PRIMARY_5V, never negotiated 20V.
+  trace branch; C1 remains input decoupling and now specifies TDK **C1608X7R1H105K080AB**, 1uF, 50V, X7R, +/-10%, 0603.
+  The exact MPN and manufacturer link are retained in both schematic and PCB properties, without moving or rerouting it.
+  Its [manufacturer data](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB) and
+  [TDK characteristic sheet](https://www.farnell.com/datasheets/4491452.pdf), pages 1-2, show the rated dimensions and
+  substantial DC-bias loss: roughly half nominal capacitance at 20V in the reference curve. That is typical data, not a
+  guaranteed effective-capacitance minimum. The existing IPC nominal 0603 footprint is retained; its lands are not
+  claimed to reproduce TDK's recommended reflow geometry exactly. C36/C39/C40 selection, aggregate input behavior, and
+  assembly review remain open. The data protector is independent of raw VBUS, but U18 must receive regulated
+  USB_PRIMARY_5V, never negotiated 20V.
 - Retain AP63203 with Coilcraft XAL5030-472MEC for application 3.3V. The replacement REC30K's 30W/6A rating is a module
   rating, not a measured full-board load allowance. U20 limits input current and startup slew; test converter startup
   under the actual load before enabling the panel. Component substitution remains possible when justified by footprint,
@@ -330,6 +336,12 @@ which alone are not complete board safety proof.
   stop the remaining footprint, component-selection and manufacturing review.
 
 ### Latest verification
+
+C1's manufacturer/MPN selection is present in the native schematic BOM export and the PCB fields. ERC remains zero; DRC
+retains zero unconnected nets, zero schematic parity mismatches and the same four J1 hole-clearance findings. All 744
+previous continuity checks and 3,765 USB reference-plane samples pass. The unchanged native 3D layout was rendered and
+inspected. No pads, components, traces or isolation areas moved. Repository verification still fails in the same three
+scoring-software tests (770 passing); this component-selection checkpoint is not assembly release.
 
 The isolated USB trunk revision passed all 744 prior pad-continuity comparisons and cross-net checks. All
 non-isolated-USB copper, part positions, models and existing keepouts remain unchanged. DRC reports zero unrouted items,
