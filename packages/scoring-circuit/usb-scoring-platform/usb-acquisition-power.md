@@ -111,8 +111,9 @@ hardware measurements have been performed.
    laptop-only NVM profile to confirm the populated application branch stays off.
 
 **Decision:** retain the 20mA/75mA isolated-load targets, but re-establish the host-side budget for the replacement
-shared-input circuit. Primary routing, low-input margin, NVM programming, firmware enforcement and physical checks
-remain unfinished. This budget is not USB certification or FIE safety proof.
+shared-input circuit. Primary power routing and both USB data trunks are complete at the layout checkpoint; low-input
+margin, NVM programming, firmware enforcement and physical checks remain unfinished. This budget is not USB
+certification or FIE safety proof.
 
 The UART transmit pulls add no nets, and the acquisition-side pull fits within the existing power targets. The populated
 sounder now has a 1k piezo discharge resistor and local bypass; these do not authorize sound in laptop mode. Keep its

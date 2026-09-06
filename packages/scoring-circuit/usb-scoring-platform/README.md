@@ -321,6 +321,16 @@ which alone are not complete board safety proof.
 
 ## Checks performed
 
+### Questions retained for the owner
+
+- Laptop compatibility: is a specified cable and measured minimum input voltage acceptable for the first prototype, or
+  must the eventual product support low-voltage USB sources across the full supported USB input range? The current buck
+  cannot guarantee the isolator's 4.4V minimum when J1 itself is at 4.4V. Keep the initial >=4.75V bench condition; do
+  not silently add a larger buck-boost power circuit or claim universal laptop compatibility. This question does not
+  stop the remaining footprint, component-selection and manufacturing review.
+
+### Latest verification
+
 The isolated USB trunk revision passed all 744 prior pad-continuity comparisons and cross-net checks. All
 non-isolated-USB copper, part positions, models and existing keepouts remain unchanged. DRC reports zero unrouted items,
 zero schematic parity mismatches and the same four J1 hole-clearance findings. Native copper and 3D renders were
