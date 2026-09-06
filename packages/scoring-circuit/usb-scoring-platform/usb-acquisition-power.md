@@ -5,9 +5,16 @@ does not justify a larger converter. Laptop-only units ship **without a HUB75 pa
 power and runs the scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero
 transmission are disabled in this acquisition-only budget, even though their circuits are populated.
 
-The native board still has separate computer and PD connectors. The agreed single-receptacle conversion remains
-unimplemented; it must preserve computer isolation and the acquisition-only behavior below. An absent panel is not
-automatic charger detection, nor permission to turn on the other application loads.
+The native schematic and placement now use **one J1 USB-C receptacle**. STUSB4500 negotiates power, LMR36510 supplies
+the LTM2884 primary, and the separately enabled TPS25947/REC30K branch supplies isolated application power. **The
+replacement primary power and CC traces remain unrouted. Do not power this draft.** An absent panel is not automatic
+charger detection, nor permission to turn on the other application loads.
+
+Laptop-only units require U5's **5V PDO1-only** NVM profile. The full-system profile additionally requests **20V/3A** as
+PDO2; Q4/Q5 require both its power-ready and VBUS-enable flags before enabling the application converter. Program and
+read back these profiles before bring-up. A PD-capable laptop can supply 20V too, so negotiation is not automatic
+laptop-versus-charger identification. USB enumeration establishes the data session. Neither NVM programming nor firmware
+mode control has been implemented here.
 
 ## Limits and calculated load
 
@@ -19,7 +26,9 @@ limits.
 [LTM2884 Rev D](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf), pages 3 and 15-17,
 specifies 200mA isolated output with 4.4V input and recommends less than 25mA output before enumeration. That guidance
 is not an enforced host-current limit. The original and revised `(a)` silicon have different no-load consumption;
-neither the typical efficiency curve nor the following output budget proves the host-input limit. Measure at J1.
+neither the typical efficiency curve nor the following output budget proves the host-input limit. Measure at J1. The new
+PD controller, primary buck, eFuse, their bias networks and converter losses are **additional host-side load**, not
+included in the isolated-output table. Their combined startup, active and suspend consumption remains unmeasured.
 
 Currents below are mA drawn from `USB_ISOLATED_5V`, including loads behind D1/U4. AP2112K is a **linear** regulator:
 3.3V output current passes through its 5V input approximately one-for-one, plus regulator current. Do not multiply the
@@ -78,20 +87,31 @@ Use an assembled board, current measurement at J1 **and** U18 output, and a pass
 hardware measurements have been performed.
 
 1. Cold plug, delayed/denied configuration, reset and deconfiguration: <=100mA host and <=20mA isolated steady load;
-   capture inrush separately. U18's 4.7uF + 2.2uF input bypass plus C1's 1uF totals 7.9uF nominal, but capacitance
-   tolerance, reflected secondary charging and hot-plug overshoot still need a current trace.
+   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40 sums to **4.42uF nominal**. U19's 44uF output bank,
+   U18's input bypass and secondary charging are behind the regulator but still contribute startup current. Tolerance,
+   effective capacitance, PD transitions and hot-plug overshoot require measurement; the nominal sum is not proof of USB
+   input-capacitance compliance.
 2. Accepted configuration with maximum USB traffic and scan activity: <=500mA host and <=75mA isolated target. Exercise
    open cords, all conductors joined, grounded selected conductor and cable capacitance. If 75mA is exceeded, reconcile
    the measured budget before raising it; 200mA is not our operating target.
 3. Suspend/resume and unplug/replug, both with and without PD: verify the host suspend limit of 2.5mA, loss of old
-   captures, bounded restart, no false observations and no unwanted application-rail power. Include D2/U10/U11 leakage.
+   captures, bounded restart, no false observations and no unwanted application-rail power. Include D2/U10/U11 leakage
+   and the new host-side controller/regulator consumption; U18's suspend behavior alone cannot prove the whole limit.
    The [USB-IF electrical update](https://compliance.usb.org/index.asp?UpdateFile=Electrical) also requires truthful
    bus/self-power reporting and re-enumeration before changing from self-powered to high-power bus operation.
-4. Sweep device input from 4.4V to 5.25V with representative cables and temperature/load corners; observe CORE_3V3,
-   dropout and temperature. Below the isolator's 4.4V operating minimum, stop capture rather than promise operation.
+4. Start at >=4.75V at J1 and measure loaded U19 output, CORE_3V3 and temperature with representative cables. **U19
+   cannot boost:** it operates in dropout near 5V input, and U18 requires >=4.4V at its own pins. A 4.4V input at J1
+   therefore no longer establishes adequate isolator voltage. Sweep downward to determine the operating boundary and
+   resolve this corner before release, including a different regulator if necessary. Stop capture on undervoltage; do
+   not claim support for all laptop/cable combinations.
+5. With the full-system NVM profile, verify 5V-only sources leave application power off; test 20V negotiation, the
+   nominal 18.0V UVLO/21.84V OVLO thresholds, current limit, loaded startup, PD fallback and detach. Confirm both
+   control flags release correctly and the isolated supplies never connect USB_GND to board GND. Repeat with the
+   laptop-only NVM profile to confirm the populated application branch stays off.
 
-**Decision:** no new power components from this review. Firmware enforcement, physical USB/current checks and the
-single-receptacle isolated PD conversion remain unfinished. This budget is not USB certification or FIE safety proof.
+**Decision:** retain the 20mA/75mA isolated-load targets, but re-establish the host-side budget for the replacement
+shared-input circuit. Primary routing, low-input margin, NVM programming, firmware enforcement and physical checks
+remain unfinished. This budget is not USB certification or FIE safety proof.
 
 The UART transmit pulls add no nets, and the acquisition-side pull fits within the existing power targets. The populated
 sounder now has a 1k piezo discharge resistor and local bypass; these do not authorize sound in laptop mode. Keep its

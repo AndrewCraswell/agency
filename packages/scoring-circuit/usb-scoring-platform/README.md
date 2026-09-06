@@ -3,7 +3,8 @@
 Separate native KiCad engineering draft. The existing ESP32 prototype, browser preview, and fabrication files are
 unchanged. Open `usb-scoring-platform.kicad_pro` in KiCad 10. The schematic and PCB files are editable source; no
 generator is needed to maintain this project. Project-local footprints reference the existing package's retained STEP
-models without changing or duplicating them in Git. Their sources and license notes are in
+models without changing or duplicating them in Git. The new RECOM module has its own retained manufacturer STEP under
+`models/recom-rec30k.step`. Other existing model sources and license notes are in
 [CAD model sources](../assets/cad/SOURCES.md). Native library parts require the installed KiCad footprint and 3D
 libraries.
 
@@ -65,10 +66,13 @@ support effort.
   footprint's mirrored contact/board-lock Y coordinates and STEP transform were corrected together using the
   [TE 5520250 D3 component-side drawing](https://www.te.com/commerce/DocumentDelivery/DDEController?Action=srchrtrv&DocFormat=pdf&DocLang=English&DocNm=5520250&DocType=Customer+Drawing&PartCntxt=5520250-2).
   Keep the drawing's contact numbering; rotating a model alone must never be used to conceal a hole-pattern mismatch.
-- Separate USB-C connectors serve computer USB and USB-C PD power. **LTM2884IY#PBF** supplies isolated USB full-speed
-  data and 5V acquisition power. It replaces ADuM3160 and its external termination/bypass parts. D1 and D2 (SS14) OR the
-  isolated USB output and the PD-derived 5V rail into CORE_5V without backfeeding either source. AP2112K supplies
-  CORE_3V3; the module's auxiliary 3.3V LDOs are not MCU supplies. Host USB ground remains separate from board ground.
+- **J1 is the only USB-C receptacle**, for laptop power/data or standalone PD power. U5 **STUSB4500QTR** replaces the
+  Adafruit connector module. U19 **LMR36510ADDAR** and L2 **XAL5050-223MEC** provide a nominal 5.016V primary supply for
+  **LTM2884IY#PBF**; raw negotiated VBUS must never reach that isolator. U6 **REC30K-2405SZ**, behind U20
+  **TPS259470LRPWR**, replaces the nonisolated Pololu converter with isolated display/application power. D1/D2 retain
+  the isolated-source OR into CORE_5V and AP2112K supplies CORE_3V3. USB_GND remains separate from board GND.
+  **Schematic and placement are implemented; the replacement primary power/CC circuits still need routing. Do not power
+  or manufacture this draft.**
 - **Accepted sleep behavior:** SPNDPWR is high, so USB idle/suspend shuts off the module's isolated output. With USB
   alone, acquisition powers down. Host resume requires USB re-enumeration; remote wake is unavailable in this mode.
   Desktop software must preserve bout state but discard the previous capture session and reconnect before accepting new
@@ -82,9 +86,16 @@ support effort.
   Host limits remain 100mA before configuration and 500mA afterward; the isolated-output allocation does not prove those
   input limits. Keep sound/Favero off and the ESP32/Ethernet/IR/HUB75 branch on PD only. Firmware enforcement and
   physical startup/current/suspend/handover checks remain unfinished. Never apply the 20V PD rail to LTM2884.
-- **Single-receptacle status:** the agreed shared power/data USB-C conversion is not yet implemented. The current two
-  connectors and nonisolated PD converter cannot simply be joined without bypassing computer isolation. The laptop
-  budget above does not select or implement the replacement isolated full-display power path.
+- **Mode configuration:** program and read back U5's NVM before bring-up. Full-system profile: PDO1 5V/0.5A, PDO2
+  20V/3A, two PDOs, POWER_OK_CFG=10b, USB_COMM_CAPABLE=1, REQ_SRC_CURRENT=0. Laptop-only units use a PDO1-only profile,
+  with no HUB75 connected and the application branch off. Q4/Q5 require both the PDO2 power flag and the VBUS-path
+  enable flag before releasing U20; its nominal UVLO is 18.0V, OVLO 21.84V and current limit 2.43A. A 20V contract is
+  **not** proof of a charger: a laptop can also offer PD. USB enumeration, not bus silence or PD voltage, establishes a
+  data session. NVM programming and firmware behavior are not implemented or tested here.
+- **Low-voltage caveat:** U19 is a buck, not a boost converter. At approximately 5V input it operates in dropout; U18
+  still needs at least 4.4V at its own pins. Target at least 4.75V at J1 for initial bench work and measure the loaded
+  drop and transitions. The earlier assumption that 4.4V at J1 is sufficient is no longer established. Do not claim all
+  laptop/cable combinations are supported; resolve this corner before releasing the power design.
 - U18 uses the manufacturer's 44-ball, 15 x 15mm BGA land pattern with 1.27mm pitch and 0.63mm copper lands. The custom
   footprint follows the
   [05-08-1881 Rev B package drawing](https://mds.analog.com/api/public/content/BGA_44_05-08-1881_Rev_B.pdf), including
@@ -98,11 +109,12 @@ support effort.
   0.4mm, 2.2mm row spacing and 1.3mm pin-1/pin-2 pitch. See the
   [TI pinout and package drawing](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf). It replaces USBLC6-2SC6 and its VBUS
   trace branch; C1 remains input decoupling, with its required rating raised from 10V to 50V. Effective capacitance and
-  the final capacitor MPN still need selection. This prepares the data protection for shared USB-C PD power; it does
-  **not** make U18 or the existing two-input power circuit tolerant of raw 20V.
-- Retain Adafruit 5807 configured to request 20V/3A and Pololu D36V50F5 modules initially. Use AP63203 with a Coilcraft
-  XAL5030-472MEC inductor for application 3.3V. Module substitutions remain possible if footprint, power, cost, and
-  availability justify them; this is not a locked procurement BOM.
+  the final capacitor MPN still need selection. The data protector is independent of raw VBUS, but U18 must receive
+  regulated USB_PRIMARY_5V, never negotiated 20V.
+- Retain AP63203 with Coilcraft XAL5030-472MEC for application 3.3V. The replacement REC30K's 30W/6A rating is a module
+  rating, not a measured full-board load allowance. U20 limits input current and startup slew; test converter startup
+  under the actual load before enabling the panel. Component substitution remains possible when justified by footprint,
+  power, availability and low-volume cost; this is not a released procurement BOM.
 - J3/J4 are three-wire harness landings for off-board female banana sockets, not banana receptacles themselves. J5 is
   the metal-piste reference connection, not protective earth. The user's compatible Ok Fencing cable remains unchanged.
   Viewed from the component side with computer USB/Ethernet along the bottom edge, J3 is on the left and J4 on the
@@ -185,23 +197,27 @@ generic diode simulation for those guarantees. See STM32 DS12288 tables 15/17 an
 Leakage and capacitance are chosen stresses, not guaranteed worst cases or FIE evidence. BAT54S hot-leakage curves are
 typical, not maximum ratings. The models do not prove exhaustive contacts, resistance diagnostics, clamp behavior or
 capture timing. Do not treat continuity as a 450/475-ohm diagnostic or the passive-release tail as acceptable scoring
-error. Most PCB routing remains unfinished.
+error. Conductor and replacement power routing remain unfinished.
 
 ## Current state and remaining work
 
-The current draft contains 170 components across eleven functional/support sheets plus the cover. Every component has a
-footprint, and all 158 schematic nets are transferred to the 160 x 100mm, four-layer PCB. The application 3.3V regulator
-section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass capacitors.
-Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32 crystal, boot
-pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75 power contacts,
-both display buffers and their supply-side pull-ups are now routed. Most other parts remain in provisional positions.
-The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header are also routed. The
-two-way processor UART, its translators, four bypass capacitors and idle pulls are connected. The IR receiver's filtered
-supply, ground and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus, reset and interrupt are
-also connected. All thirteen HUB75 buffer outputs now reach the display connector, together with the local
-buffer-disable and panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined
-reset defaults. The ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
-Conductor interfaces remain unfinished.
+The current draft contains **199 components**, twelve functional/support sheets plus the cover, and 187 named nets
+(including explicit no-connect nets) on the unchanged **160 x 100mm**, four-layer PCB. The shared USB-C schematic,
+footprints and initial power placement are present. The new converter's secondary output and local bypass connect to the
+retained display/application/core distribution. **J1-to-controller CC, raw input, primary 5V regulator and eFuse
+circuits are not yet copper-connected; USB acquisition power is therefore unfinished again.** The extra unrouted items
+are real replacement-power work, not a completed conversion or a stale preview.
+
+The existing USB data/protection, isolated output and USB-present sensing remain routed, along with the STM32 regulator,
+crystal, boot pull-down, reset network/button and programming header. The 5V distribution to both HUB75 power contacts,
+display buffers and application regulator remains connected. Sensing placement is still provisional. The ESP32 supply,
+local bypass, enable/boot networks, buttons and manual UART programming header are also routed. The two-way processor
+UART, its translators, four bypass capacitors and idle pulls are connected. The IR receiver's filtered supply, ground
+and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus, reset and interrupt are also connected.
+All thirteen HUB75 buffer outputs now reach the display connector, together with the local buffer-disable and
+panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined reset defaults. The
+ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed. Conductor interfaces
+remain unfinished.
 
 Remaining before fabrication:
 
@@ -210,39 +226,41 @@ Remaining before fabrication:
    weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
    dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
    selection or this topology.
-2. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when implementing USB acquisition, and
-   finish the shared USB-C conversion while preserving isolation. Bench-check startup/current/suspend behavior, supply
-   handover, and the electrical safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated
-   isolator and all-layer copper keepouts separate computer ground from board ground; acquisition and application still
-   share board ground. The keepout spans the gap between the module's primary and secondary ball rows. This is not
-   complete board safety proof.
+2. **Next deliverable: route the replacement shared-USB power and CC circuits**, including an isolated primary corridor
+   between J1/U18 and the new power group without crossing the weapon-input copper. Resolve the buck's low-input-voltage
+   corner and program/read back U5. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when
+   implementing USB acquisition. Bench-check startup/current/suspend behavior, supply handover, and the electrical
+   safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
+   keepouts separate computer ground from board ground; acquisition and application still share board ground. The
+   keepout spans the gap between the module's primary and secondary ball rows. This is not complete board safety proof.
 3. Finish the remaining local placement, decoupling, connector access, mounting, antenna clearance, and power/current
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
 4. Complete routing, define the manufacturing stackup/net classes, run schematic-to-PCB parity and DRC, inspect 3D and
-   manufacturing outputs, and then perform hardware bring-up. The remaining peripheral supply distribution and other
-   signal interfaces still need routing. USB impedance must be checked against the selected fabricator stackup before
-   release. No purchase or assembly release has been performed.
+   manufacturing outputs, and then perform hardware bring-up. Conductor connections and the replacement primary power
+   circuits still need routing. USB impedance must be checked against the selected fabricator stackup before release. No
+   purchase or assembly release has been performed.
 
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **141 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **221 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
 DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
 are unavailable, limiting ERC's fault detection.
 
-The application buck section retains its 31 track segments and eight 0.6/0.3mm vias. U7, L1 and C4-C7 are grouped below
-the ESP32 antenna keepout. The 5V feeder connects both U6 output pins to C5; short top-layer connections close the
-input, switch and bootstrap paths. C6/C7 connect the inductor output to ground, and a separate feedback route returns
-from C6 on In2.Cu beneath In1.Cu ground. Ground stitching connects the input/output capacitor returns, U7 ground and U6
-ground pins. Native KiCad connectivity confirms every local regulator pin reaches its intended parts; placement, copper
-and 3D exports were visually checked. No parts, pad assignments or connector positions changed. This follows the
+The application buck section retains its local routing. U7, L1 and C4-C7 are grouped below the ESP32 antenna keepout.
+The 5V feeder connects U6's isolated output to C5; short top-layer connections close the input, switch and bootstrap
+paths. C6/C7 connect the inductor output to ground, and a separate feedback route returns from C6 on In2.Cu beneath
+In1.Cu ground. Ground stitching connects the input/output capacitor returns, U7 ground and U6's isolated return. Native
+KiCad connectivity confirms every local regulator pin reaches its intended parts; placement, copper and 3D exports were
+visually checked. This follows the
 [AP63203 layout guidance, page 15](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf), not a
 measured supply qualification: effective capacitor values, final copper weight, startup, load-step and thermal behavior
-still need verification. The ESP32 is now connected to its 3.3V output; peripheral loads remain unfinished.
+still need verification. The ESP32 and its peripherals are connected to this output; the replacement primary supply is
+unfinished.
 
 The STM32 supply routing adds 62 track segments and 29 ordinary 0.6/0.3mm vias. D2 now branches from PANEL_5V; both
 diode cathodes feed C2 and U4's input/enable pins. U4's output reaches C3, C14 and all seven MCU supply pins through an
@@ -261,16 +279,14 @@ connectors did not move. Other acquisition loads remain unrouted. This is not an
 capacitor selection/effective capacitance, regulator current/thermal margin, startup and handover still need
 verification.
 
-The USB routing connects both USB-C data-contact copies through U3 to U18, each CC pull-down independently, and all
-VBUS/ground contacts. U18's isolated 5V output reaches D1 and the R3/R4 USB-present divider at the STM32. Its VLO output
-drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignments or external connector positions
-changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
-connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
+The retained USB data routing connects both USB-C data-contact copies through U3 to U18. U18's isolated 5V output
+reaches D1 and the R3/R4 USB-present divider at the STM32. Its VLO output drives ON/SPNDPWR only; VLO2 stays unused.
+R1/R2 have been removed: U5's CC/CCDB connections now provide the sink terminations, but their new traces are not yet
+routed. The old raw-VBUS feed to U18 was removed for the required regulated supply. Native copper comparisons confirm
+the retained data, isolated-output and PB5 connections; they do not establish continuity of the new primary power.
 
-After the Favero routing, the board has 1116 track segments, 283 ordinary 0.6/0.3mm vias and twelve copper zones. The
-prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
-board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
-pads. This follows the
+Separate host-ground and board-ground pours retain the USB isolation boundary. Ground-ball rows escape to vias outside
+the BGA pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
 including its integrated bypass/termination, and keeps the
 [TPD2E2U06 protection](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf) close to the connector. Native top-copper,
@@ -301,34 +317,27 @@ The [Abracon ABM3B](https://abracon.com/Resonators/abm3b.pdf) crystal remains th
 clock qualification. Confirm startup margin, crystal drive, frequency across supply/temperature and the final load
 capacitors on hardware. No speculative oscillator model or extra support parts were added.
 
-The PD/display power routing connects U5 V+ to both U6 VIN contacts with a 2mm top trace. A dedicated In2.Cu 5V pour,
-mostly 6mm wide, connects both U6 output contacts to both J8 positive contacts; it does not send display current through
-the earlier 1mm application-buck feeder. In1/back ground extends to U5, the display header and panel return contacts,
-without entering the Favero output-side region or changing USB/antenna keepouts. Power-contact thermal spokes are 0.8mm;
-the crowded HUB75 ground contacts use diagonal spokes. C31/C32 now sit beside U14/U15 supply pins, with local ground
-vias; R34 moved clear of them. No connector, module, pad/hole position, part value or net assignment changed.
+The shared-input replacement removes the Adafruit PD connector module, Pololu converter and external CC resistors.
+Native continuity comparisons passed for **634 retained pads**; **1365 previous tracks/vias** stayed geometrically
+unchanged and **34 obsolete input/module stubs** were removed. The replacement U6 secondary, C48/C49 and existing
+PANEL_5V distribution are connected, including the U7/D2 feeder formerly linked through the old module's pads. The
+primary island and its clearance region are placed, not fully routed. All non-power component positions and pin
+assignments remain unchanged. Dense power-support references are on F.Fab for assembly inspection.
 
-Native copper checks confirm all fourteen PANEL_5V pad endpoints, both PD input contacts and the panel/buffer grounds;
-the prior 330 tracks/vias and three board/footprint keepouts are unchanged. Filled power/ground layers, display-buffer
-placement and the native 3D render were inspected. U6's retained manufacturer STEP is now right-side up. Its native
-KiCad transform is rotation `(180, 0, 270)` and offset `(-11.43, -12.7, 7.5748)` mm; all eight electrical pads remain
-fixed. The three carrier mounting holes were corrected to local `(-9.271, -10.541)`, `(-9.271, 10.541)` and
-`(11.811, 10.541)` mm, including the previously mirrored third hole. Measurements of the native KiCad STEP export
-confirm all eight power-pin centres and three mounting-hole centres coincide within 0.001mm. The library footprint and
-board agree. This matches the [manufacturer's VOUT/GND/GND/VIN row order](https://www.pololu.com/product/4091), not a
-physical assembly approval. The model assumes 6mm clearance between carrier top and module PCB underside; select
-matching header/spacer hardware and confirm seating and fastening on the real module. No STEP geometry was altered or
-invented.
+The new [RECOM REC30K-2405SZ](https://recom-power.com/en/rec-s-REC30K.html) footprint follows its six-pin top-view
+pattern. The retained manufacturer STEP uses rotation `(90, 0, 0)` and offset `(0, 0, 0.6108)` mm. A native KiCad STEP
+export places all six model pin axes within 0.000003mm of their corresponding hole centres. The model's SHA-256 is
+`4dd6309726ab6e64aac9acbfc641f70db7001182d952ef02c4de8f90458b2559`. No substitute geometry was invented. This is a
+model/footprint consistency check, not physical sample-fit approval. The module's 2000VDC, one-minute basic-isolation
+rating does not establish board safety or FIE approval.
 
-For full-system bring-up, use a USB-PD adapter supporting 20V/3A and a 3A cable. On U5, open every voltage jumper and
-both current jumpers, as described in the
-[Adafruit pinout guide](https://learn.adafruit.com/adafruit-husb238-usb-type-c-power-delivery-breakout/pinouts). This
-requests 20V/3A, not a guaranteed 20V output: the adapter can supply a lower available voltage. A 5V-only source does
-not meet the D36V50F5's 5.5V minimum input. U6 remains enabled by default and retains its built-in reverse-input,
-overcurrent, short-circuit, thermal and soft-start protection; unused VRP/EN/PG module contacts stay unpopulated. Use
-both pins of each power pair (3A per pin, 6A per pair). Final copper weight, thermal necks, module temperature, adapter
-negotiation, panel/cable current and full-white display load still require verification; these routes do not establish a
-5A continuous system rating. Computer USB still powers acquisition only, not the panel.
+U5's QFN and U20's RPW land patterns were reviewed against the manufacturer drawings:
+[STUSB4500](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
+[TPS25947](https://www.ti.com/lit/ds/symlink/tps25947.pdf). U19 uses the native TI HTSOP thermal-via footprint and the
+[LMR36510 reference circuit](https://www.ti.com/lit/ds/symlink/lmr36510.pdf). U20's current-limit value is nominal, not
+an absolute peak-current guarantee. Startup slew, loaded PD negotiation, detach, current-limit tolerance, capacitor
+effective values, isolation, thermal behavior and full-white panel load remain untested. The source must offer 20V/3A
+for full-system operation; a 5V-only source leaves that branch disabled.
 
 The ESP32 routing adds 55 track segments, 21 ordinary vias and an In2.Cu APP_3V3 pour. C22 (10uF) and C27 (100nF) sit
 next to the module supply pad with short ground returns; R28 (10k) and C21 (1uF) provide the existing enable delay, and
@@ -462,13 +471,14 @@ All seven models' acceptance limits pass, including the corrected seven-input se
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link, IR, Ethernet, HUB75, sounder and Favero routing reduced unconnected items from 250 to 141, with no new
-DRC findings. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector
-hole-clearance findings and zero schematic-parity issues. The latest repository verification passed formatting, lint,
-types and unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a
-29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed.
-These tests are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing
-remain required; native connectivity and the protector's component ratings do not establish board-level immunity.
+processor-link, IR, Ethernet, HUB75, sounder and Favero routing is retained. The shared-input replacement adds genuine
+unfinished power routing, bringing the current unconnected count to 221. Schematic, copper and native 3D renders were
+reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero schematic-parity issues. The
+latest repository verification passed formatting, lint, types and unused-code checks but failed three scoring tests: a
+mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The
+run stopped before every other package completed. These tests are outside the board edits; none was suppressed or
+modified. Physical USB signal, surge and ESD testing remain required; native connectivity and the protector's component
+ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
