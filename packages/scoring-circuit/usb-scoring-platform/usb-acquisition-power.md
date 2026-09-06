@@ -73,7 +73,7 @@ capturing; do not claim margin just because the MCU has not reset.
   excitation OE_N high, and hold SOUNDER_PWM/FAVERO_TX low. No startup chirp, comparator scan, radio or network startup.
 - Only after a nonzero configuration is accepted may firmware enter the 75mA allocation. Source one conductor high at a
   time, with break-before-make; low discharge phases may enable several outputs. The existing scan model follows this
-  topology, but its 350us characterization sweep is **not** an approved scoring schedule. Budget a faster real schedule
+  topology, but its 525us characterization sweep is **not** an approved scoring schedule. Budget a faster real schedule
   and verify contact timing separately. Desktop acquisition must explicitly start a new capture session.
 - USB reset, deconfiguration or loss of USB_PRESENT returns to the startup allocation and invalidates capture. Bus
   silence is not evidence of a charger. With SPNDPWR high, suspend removes acquisition power on USB alone; retain the

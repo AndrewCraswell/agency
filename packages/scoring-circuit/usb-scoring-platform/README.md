@@ -264,8 +264,12 @@ Manufacturer/MPN fields. No component, model, hole or routing changed.
   lead shoulder above the PCB. Receiver selection does not validate remote protocol, range or ambient-light immunity.
 - [TDK's product page](https://product.tdk.com/en/search/sw_piezo/sw_piezo/piezo-buzzer/info?part_no=PS1240P02BT)
   identifies the sounder as a production, externally driven 4kHz part with a 3V(0-p) rating and wave-solder assembly.
-  Its datasheet endpoint was unavailable during this pass; the existing 5mm pin-spacing footprint and lead clearance
-  still need direct drawing review. Do not send it through the SMT reflow step by assuming it is reflow-compatible.
+  The [TDK drawing retained by Farnell](https://www.farnell.com/datasheets/2820462.pdf), page 4, dated 2019-04-11, was
+  visually reviewed: 5mm nominal lead spacing, 12.2mm nominal diameter and 6.5mm height match the retained footprint and
+  model. The lower lead section is at most 0.65 x 0.45mm (0.79mm diagonal), compatible nominally with the existing 1mm
+  holes; the flexible leads have a +/-0.5mm pitch tolerance and may need forming. No holes or parts moved. This closes
+  the drawing check, not acoustic performance or assembly-process qualification. Keep its opening clear and do not send
+  it through SMT reflow by assuming it is reflow-compatible.
 
 ## Low-volume build scope
 
@@ -405,15 +409,18 @@ epee tip contacts, tip-plus-piste, sabre target/blade/reciprocal contacts, and a
 conductors low, disables all outputs, then sources exactly one conductor while the others remain high impedance. The
 next slot repeats the clear before selecting another source. Nominal cases pass the comparator envelope, including
 unrelated lines after source handover. The seven-way short passes with each of the seven sources selected; peak modeled
-source current is 15.00mA. A separate 2.25V source/tolerance case with a chosen 4uA load per input reads 0.866V at the
-observation point and clears below 0.381V. These are modeled results, not bench measurements.
+source current is 15.00mA. A separate 2.25V source/tolerance case now applies the heavier chosen 121uA load per input
+during the scan, rather than only in the static fixture. These are modeled results, not bench measurements.
 
 **The settled leakage-stress gap is corrected:** with the same 121uA-per-input load, weak 2.25V source and resistor
 tolerances, seven shorted inputs now settle at **0.664V**, above the unchanged 0.651V criterion. The 13mV margin is
-small, and this result does not establish settling time under that leakage or a guaranteed hot-temperature envelope. The
-scan model's 50us slots take 350us per sweep and can miss contacts between observations. This characterization schedule
-is **not approved scoring firmware timing**; qualifying pulse-duration boundaries needs the actual acquisition/capture
-algorithm, not settled voltages alone.
+small and is not a guaranteed hot-temperature envelope. The transient review found that the former 50us slot sampled
+only **0.638V** under this same stress, failing the unchanged 0.651V criterion. The characterization now uses 75us slots
+(10us discharge, 1us break, 63us excitation, 1us break), sampled at 73us: **0.661V** high and **0.182V** after
+discharge. No board parts or thresholds changed. A complete sweep now takes 525us and can miss contacts between
+observations. This schedule is **not approved scoring firmware timing**; a simple two-sample qualifier on the full sweep
+can take 1.05ms before analog delays, so it is not sufficient evidence for the sabre window. A weapon-specific schedule
+must prioritize the relevant sources and validate pulse phase, duration and discharge behavior before closure.
 
 Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
 
@@ -513,7 +520,8 @@ Remaining before ordering the prototype:
 2. Finish the component/assembly review: remaining footprint/model checks, connector access, mounting, antenna
    clearance, decoupling and power-current paths. Ordering fields are populated for all 187 components. U18's land
    pattern and pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly
-   requirements need to be accepted by the assembler. The sounder drawing check remains open.
+   requirements need to be accepted by the assembler. The sounder drawing check is complete; fit and soldering remain
+   assembly checks.
 3. Visually review final USB and manufacturing geometry, Gerbers, drills and assembly placement against the selected
    stackup and supplier conventions. Native ERC/DRC/parity are currently clean, including the completed J1 correction.
    Temporary Gerber/drill/BOM/placement exports succeed; export success is not fabrication approval. No order or
@@ -543,8 +551,8 @@ The native BOM exports manufacturer and part-number fields for all 187 component
 includes all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now export DMN2056U-7, matching the PCB
 fields. Both retained Coilcraft inductors also have explicit ordering fields and manufacturer-matched pad geometry. All
 three service buttons now export TL3342F160QG; their land geometry and internal contact grouping were reviewed. Crystal,
-IR and sounder ordering fields are now explicit; crystal/IR pad mapping is reviewed, while the sounder drawing check
-remains open. This does not finish the remaining component or electrical review.
+IR and sounder ordering fields are now explicit; their drawing/pad reviews are complete. This does not finish the
+remaining component or electrical review.
 
 After the header ordering/footprint update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted
 items and zero schematic-parity issues**. All six header ordering codes export correctly. All 744 retained
