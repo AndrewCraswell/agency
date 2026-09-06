@@ -112,7 +112,15 @@ raw 20V VBUS. The [TDK characteristic sheet](https://www.farnell.com/datasheets/
 capacitance near nominal at these low biases, unlike its substantial loss at 20V. That curve is not a guaranteed minimum
 across tolerance, temperature and ageing. Nominal values, reset timing targets and land patterns are unchanged;
 regulator stability and reset/startup timing still require bench checks. Reusing C1's part avoids another ordering code.
-The remaining 13 capacitors, especially regulator bulk capacitance under bias, remain open.
+The raw-input parts C36/C39/C40 now also have exact ordering fields: respectively
+[C2012X7R1H105K125AB](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C2012X7R1H105K125AB),
+[C3216X7R1H225K160AB](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3216X7R1H225K160AB) and
+[C2012X7R1H224K125AA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C2012X7R1H224K125AA). These
+are TDK X7R, 50V, 10% parts matching the existing 1uF/0805, 2.2uF/1206 and 220nF/0805 positions. Their manufacturer
+pages list them in production. This selects nominal parts, not guaranteed effective capacitance at 20V: those bias
+curves have not been visually verified, and input ripple, hot-plug/inrush and PD-transition review remain open. No
+value, land, model, placement or routing changed. **40 of 50 capacitors now have ordering codes; ten bulk capacitors
+remain unselected.**
 
 ## Low-volume build scope
 
