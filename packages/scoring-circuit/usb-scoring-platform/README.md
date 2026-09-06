@@ -12,14 +12,32 @@ libraries.
 routed engineering draft with unresolved release checks, not a completed design. This folder is not consumed by the
 existing prototype export commands.
 
-## Cost-reduction work in progress
+## Current power decision and progress
 
-**USB interface decision: retain one port and no physical mode switch.** The latest owner discussion does not authorize
-adding a second port. The [replacement cost review](usb-acquisition-power.md#replacement-cost-review) separates priced
-candidate parts from the still-unpriced power-control circuit; no complete USB savings or replacement is claimed.
+The owner removed the $36 savings target on 2026-09-06: finish the reliable one-port board rather than add circuitry to
+meet that estimate. **Keep LTM2884 USB isolation and REC30K application power.** The cheaper discrete USB-isolator
+proposal is not selected. The direct W5500 Ethernet change is retained.
 
-The owner approved replacing WIZ850io with direct W5500 Ethernet and replacing LTM2884 with separate USB data isolation
-and isolated power. These changes are **not complete or released**. The Ethernet schematic now contains the W5500,
+U19 is now **LTC3115IDHD-1#PBF**, a 5V buck-boost regulator replacing the buck-only LMR36510. The schematic, support
+parts and local PCB routing are implemented. Its 10uH/750kHz reference network follows the
+[ADI datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ltc3115-1.pdf), not an improvised
+dropout workaround. C44 is removed; C66-C68 and R108-R110 complete the replacement network. Exact ordering fields are
+included for all 15 parts in this section. Low-input regulation still requires measurement on the assembled prototype.
+
+Native ERC and DRC pass with zero violations and zero unconnected items. All **219 components / 833 schematic pin
+assignments** match the PCB. The **814 other pads** retain their positions/nets; **3,222 prior tracks/vias** remain
+unchanged and 57 obsolete local power tracks/vias were retired. The primary USB ground remains isolated. This is a
+verified layout checkpoint, not powered validation or fabrication approval.
+
+The circuit package type-check and 13 tests pass. A fresh native KiCad 3D render was inspected; the previously missing
+U18 and J13 body models remain absent, so this does not establish their mechanical fit. `pnpm verify` was attempted but
+stopped on three unrelated legislation lint errors; no repository-wide pass is claimed.
+
+**Still unfinished:** automatic source-power qualification and application-branch control, a complete startup/suspend
+budget, and final manufacturing review. No owner decision is blocking that implementation. One USB-C port, one
+population and no physical mode switch remain the requirements. See [power design](usb-acquisition-power.md).
+
+The owner approved replacing WIZ850io with direct W5500 Ethernet. The Ethernet schematic now contains the W5500,
 reference termination/filtering and crystal circuit, with the existing ESP32 SPI/reset/interrupt nets retained. J13 is a
 CETUS J1B1211CCD magnetic RJ45, matching WIZnet's reference circuit and KiCad's existing exact-part footprint. Its
 separate centre taps and LED polarities are mapped explicitly. C52/C53 are now correctly in series with the receive
@@ -57,11 +75,11 @@ outline are unchanged; front silkscreen stops before the board edge where the co
 stock STEP file is absent from the installed library. Do not mistake the missing jack in a 3D render for an omitted
 footprint or claim that its 3D mechanical fit has been verified.
 
-The USB circuit and PCB remain unchanged while the complete replacement is selected. Do not apply the earlier estimated
-savings as a confirmed BOM total. The owner now permits a powered USB-C requirement for laptop mode; ordinary USB-A
-adapter compatibility is no longer required. Implement detection of adequate advertised Type-C current or an appropriate
-PD contract before enabling the replacement supply. A USB-C connector alone is not sufficient. Follow advertised-current
-changes and PD suspend flags; do not assume every USB-C port waives suspend limits. See the
+The earlier discrete-USB savings estimate is not a BOM reduction. The owner permits a powered USB-C requirement for
+laptop mode; ordinary USB-A adapter compatibility is no longer required. Implement detection of adequate advertised
+Type-C current or an appropriate PD contract before enabling the replacement supply. A USB-C connector alone is not
+sufficient. Follow advertised-current changes and PD suspend flags; do not assume every USB-C port waives suspend
+limits. See the
 [USB-IF power precedence and suspend assertions](https://www.usb.org/sites/default/files/USB%20Type%20C%20Functional%20Test%20Specification%202024%2003%2003.pdf),
 pages 25-26. This is an approved requirement change, not an implemented replacement. R05C1TF05S is not a solution for
 the existing 5V rail's low-input problem: its 3V input headline applies to 3.3V output; the manufacturer's 5V-output
@@ -241,15 +259,16 @@ value, land, model, placement or routing changed.
 **All 50 capacitors now have exact ordering fields.** The final ten bulk positions use the following parts; this closes
 nominal BOM selection, not the electrical or full assembly review. Existing schematic voltages remain minimum ratings.
 
-| Positions     | Selected part                                                                                                                            | Rating and existing package |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| C5/C22/C28    | [TDK C1608X5R1C106M080AB](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X5R1C106M080AB)                     | 10uF, 16V, 20%, X5R, 0603   |
-| C14           | [TDK C1608X7S1A475K080AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7S1A475K080AC)                     | 4.7uF, 10V, 10%, X7S, 0603  |
-| C6/C7/C43/C44 | [Murata GRM32ER71E226KE15L](https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23) | 22uF, 25V, 10%, X7R, 1210   |
-| C47           | [TDK C3225X7R1H106K250AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3225X7R1H106K250AC)                     | 10uF, 50V, 10%, X7R, 1210   |
-| C49           | [TDK C3216X7R1C106K160AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3216X7R1C106K160AC)                     | 10uF, 16V, 10%, X7R, 1206   |
+| Positions  | Selected part                                                                                                                            | Rating and existing package |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| C5/C22/C28 | [TDK C1608X5R1C106M080AB](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X5R1C106M080AB)                     | 10uF, 16V, 20%, X5R, 0603   |
+| C14        | [TDK C1608X7S1A475K080AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7S1A475K080AC)                     | 4.7uF, 10V, 10%, X7S, 0603  |
+| C6/C7      | [Murata GRM32ER71E226KE15L](https://www.murata.com/en-global/api/pdfdownloadapi?cate=luCeramicCapacitorsSMD&partno=GRM32ER71E226KE15%23) | 22uF, 25V, 10%, X7R, 1210   |
+| C47        | [TDK C3225X7R1H106K250AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3225X7R1H106K250AC)                     | 10uF, 50V, 10%, X7R, 1210   |
+| C49        | [TDK C3216X7R1C106K160AC](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C3216X7R1C106K160AC)                     | 10uF, 16V, 10%, X7R, 1206   |
 
-The four 22uF positions share one code rather than separate 10V/25V parts. Murata's
+The two retained 22uF positions share one code. C43 now uses TDK C4532X5R1A476M280KA, 47uF/10V/1812; C44 was removed
+with the old regulator. Murata's
 [manufacturer sheet mirrored by Farnell](https://www.farnell.com/datasheets/3799575.pdf), pages 1-2, was visually
 reviewed: the L/K suffix changes reel packaging, not the 3.2 x 2.5 x 2.5mm nominal body or electrical rating. That
 retained online sheet is dated 2022; recheck current availability before ordering. TDK's pages list the four selected
@@ -383,15 +402,15 @@ support effort.
   threshold and timing characterization.
 - ESP32-S3-WROOM-1-N8R8 handles the HUB75 display, Ethernet, and IR. Two SN74AXC1T45 UART translators separate powered
   and unpowered logic rails. These are **not galvanic isolators**.
-- Keep the WIZ850io Ethernet module, TSOP38438 receiver, two TE 5520250-2 Favero DATA-LINE connectors with optocoupler
-  outputs, HUB75 signal/power connectors, and sounder from the prototype. Favero ports are not Ethernet or RS-422.
-  Ethernet accepts its cable from the bottom edge; both Favero sockets accept theirs from the top edge. The native RJ14
+- Keep direct W5500 Ethernet, TSOP38438 receiver, two TE 5520250-2 Favero DATA-LINE connectors with optocoupler outputs,
+  HUB75 signal/power connectors, and sounder from the prototype. Favero ports are not Ethernet or RS-422. Ethernet
+  accepts its cable from the bottom edge; both Favero sockets accept theirs from the top edge. The native RJ14
   footprint's mirrored contact/board-lock Y coordinates and STEP transform were corrected together using the
   [TE 5520250 D3 component-side drawing](https://www.te.com/commerce/DocumentDelivery/DDEController?Action=srchrtrv&DocFormat=pdf&DocLang=English&DocNm=5520250&DocType=Customer+Drawing&PartCntxt=5520250-2).
   Keep the drawing's contact numbering; rotating a model alone must never be used to conceal a hole-pattern mismatch.
 - **J1 is the only USB-C receptacle**, for laptop power/data or standalone PD power. U5 **STUSB4500QTR** replaces the
-  Adafruit connector module. U19 **LMR36510ADDAR** and L2 **XAL5050-223MEC** provide a nominal 5.016V primary supply for
-  **LTM2884IY#PBF**; raw negotiated VBUS must never reach that isolator. U6 **REC30K-2405SZ**, behind U20
+  Adafruit connector module. U19 **LTC3115IDHD-1#PBF** and L2 **XAL5050-103MEC** provide a nominal 5.016V primary supply
+  for **LTM2884IY#PBF**; raw negotiated VBUS must never reach that isolator. U6 **REC30K-2405SZ**, behind U20
   **TPS259470LRPWR**, replaces the nonisolated Pololu converter with isolated display/application power. D1/D2 retain
   the isolated-source OR into CORE_5V and AP2112K supplies CORE_3V3. USB_GND remains separate from board GND. **The
   shared USB power circuits, connector feeds, CC lines and U19-to-U18 supply feeder are routed. Regulation, negotiation,
@@ -415,10 +434,9 @@ support effort.
   enable flag before releasing U20; its nominal UVLO is 18.0V, OVLO 21.84V and current limit 2.43A. A 20V contract is
   **not** proof of a charger: a laptop can also offer PD. USB enumeration, not bus silence or PD voltage, establishes a
   data session. NVM programming and firmware behavior are not implemented or tested here.
-- **Low-voltage caveat:** U19 is a buck, not a boost converter. At approximately 5V input it operates in dropout; U18
-  still needs at least 4.4V at its own pins. Target at least 4.75V at J1 for initial bench work and measure the loaded
-  drop and transitions. The earlier assumption that 4.4V at J1 is sufficient is no longer established. Do not claim all
-  laptop/cable combinations are supported; resolve this corner before releasing the power design.
+- **Low-voltage regulation:** U19 now bucks or boosts to supply U18, which needs at least 4.4V at its pins. The ADI
+  reference is rated for 5V/1A output above 3.6V input. This removes the previous buck-only topology limitation; measure
+  startup, ripple, loaded voltage and 5V/20V transitions before claiming supported laptop/cable combinations.
 - U18 uses the manufacturer's 44-ball, 15 x 15mm BGA land pattern with 1.27mm pitch and 0.63mm copper lands. The custom
   footprint follows the
   [05-08-1881 Rev B package drawing](https://mds.analog.com/api/public/content/BGA_44_05-08-1881_Rev_B.pdf), including
@@ -617,10 +635,10 @@ ESP32 input bus, display-enable line, sounder and both Favero repeater circuits 
 
 Remaining before ordering the prototype:
 
-1. Close the circuit-design questions: the buck's low-input-voltage corner, unpowered sensing protection, and a feasible
-   acquisition schedule for the required contact-duration boundaries. Keep the 220-ohm excitation resistors, 3.3k sense
-   dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not infer patent
-   clearance or FIE conformity from the topology.
+1. Finish automatic USB power qualification/control and its startup/suspend budget, unpowered sensing protection, and a
+   feasible acquisition schedule for the required contact-duration boundaries. Keep the 220-ohm excitation resistors,
+   3.3k sense dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not
+   infer patent clearance or FIE conformity from the topology.
 2. Finish the component/assembly review: remaining footprint/model checks, connector access, mounting, antenna
    clearance, decoupling and power-current paths. Ordering fields are populated for all 187 components. U18's land
    pattern and pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly
@@ -642,15 +660,13 @@ which alone are not complete board safety proof.
 
 ## Checks performed
 
-### Questions retained for the owner
+### Resolved owner decisions
 
-- Laptop compatibility: is a specified cable and measured minimum input voltage acceptable for the first prototype, or
-  must the eventual product support low-voltage USB sources across the full supported USB input range? The current buck
-  cannot guarantee the isolator's 4.4V minimum when J1 itself is at 4.4V. Keep the initial >=4.75V bench condition; do
-  not silently add a larger buck-boost power circuit or claim universal laptop compatibility. This question does not
-  stop the remaining footprint, component-selection and manufacturing review.
+Use a sufficiently powered USB-C source, one port and one component population. The owner permits higher cost to finish
+a reliable design; there is no fixed $36 savings target. U19 now uses a buck-boost regulator. No further owner approval
+is needed for those choices; the unfinished power-control circuit is implementation work, not a deferred question.
 
-### Latest verification
+### Earlier component-review checkpoints
 
 The native BOM exports manufacturer and part-number fields for all 187 components, with no blank ordering fields. This
 includes all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now export DMN2056U-7, matching the PCB

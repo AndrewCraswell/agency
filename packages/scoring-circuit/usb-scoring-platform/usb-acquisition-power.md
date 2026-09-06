@@ -3,13 +3,13 @@
 ## Approved replacement requirement
 
 **Current interface decision: one USB-C receptacle, no physical mode switch.** The owner declined the switch and raised
-cost/usability concerns about two ports. Neither alternative is selected. Keep the current PCB unchanged until the
-complete one-port replacement, including power control, is justified. USB enumeration, its absence, or a timeout alone
-must not be treated as proof that a charger is connected.
+cost/usability concerns about two ports. Neither alternative is selected. The owner has now removed the $36 savings
+target: retain LTM2884 and finish the power circuit. USB enumeration, its absence, or a timeout alone must not be
+treated as proof that a charger is connected.
 
 Laptop mode may require a USB-C source advertising sufficient power; ordinary USB-A adapter compatibility is no longer
-required. The HUB75 remains disconnected. The existing circuit and calculations below are the retained LTM2884
-checkpoint, not the specification or budget of a completed cheaper replacement.
+required. The HUB75 remains disconnected. The calculations below allocate the isolated LTM2884 load, not a complete
+host-input power budget. U19's replacement is implemented; automatic source qualification/control remains unfinished.
 
 The replacement still needs source-power detection. With STUSB4500, Type-C current flags report the CC pull-up, whereas
 an explicit PD contract takes precedence. Its source-capability message, including the suspend flag, must be read
@@ -23,51 +23,45 @@ is rejected because it cannot negotiate the full system's 20V supply. Use one US
 standalone PD power. In laptop mode, keep the application/display branch off; enable it only after full-display mode and
 sufficient source power are both established. Do not use source voltage alone to choose the mode. Add the necessary
 power control with the simplest suitable circuit; do not introduce separate laptop-only component populations. This
-choice is resolved. USB component selection and implementation remain unfinished, rather than blocked on owner input.
+choice is resolved. Power-control implementation remains unfinished, rather than blocked on owner input.
 
-## Replacement cost review
+## Selected supply
 
-Reviewed 2026-09-06. USD advertised distributor prices, not a JLCPCB assembly quote or a completed replacement BOM. The
-30-board column uses the published 25-piece tier for 30 of each part, not a reel discount. Stock and checkout pricing
-need reconfirmation. Shipping, tax, tariffs, assembly and engineering time are excluded.
+**Retain LTM2884IY#PBF.** Do not pursue the discrete ISOUSB111/transformer option solely to preserve the earlier savings
+estimate. The 2026-09-06 price comparison omitted necessary power-control circuitry and was not a completed BOM saving.
+The current LTM2884 reference listing was $56.82 at one piece / $44.2720 at the 25-piece tier; these are dated
+[DigiKey part prices](https://www.digikey.com/en/products/detail/analog-devices-inc/LTM2884IY-PBF/4864070), not an
+assembly quote. Reprice the complete board after the remaining power-control implementation, without applying the $36
+credit.
 
-| Part / function                                                     |  One board | Per board at 30 | Source                                                                                                     |
-| ------------------------------------------------------------------- | ---------: | --------------: | ---------------------------------------------------------------------------------------------------------- |
-| Existing LTM2884IY#PBF, integrated USB isolation and isolated power |     $56.82 |        $44.2720 | [DigiKey](https://www.digikey.com/en/products/detail/analog-devices-inc/LTM2884IY-PBF/4864070)             |
-| Candidate ISOUSB111DWR, USB data isolation                          |      $8.36 |         $6.0032 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/ISOUSB111DWR/16676088)              |
-| Candidate SN6505BDBVR, transformer driver                           |      $2.23 |         $1.5076 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/SN6505BDBVR/296-47311-1-ND/7688321) |
-| Candidate Wurth 750313626, isolation transformer                    |      $3.60 |         $3.1252 | [DigiKey](https://www.digikey.com/en/products/detail/w%C3%BCrth-elektronik/750313626/4725693)              |
-| Candidate TPS70950DBVR, secondary 5V regulator                      |      $1.51 |         $0.9996 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/TPS70950DBVR/3767569)               |
-| Candidate LMR36506RF3RPER, primary 3.3V buck replacing U19          |      $4.83 |         $3.3800 | [DigiKey](https://www.digikey.com/en/products/detail/texas-instruments/LMR36506RF3RPER/15857191)           |
-| **Five candidate parts only**                                       | **$20.53** |    **$15.0156** | Not a complete circuit                                                                                     |
+U19 is **LTC3115IDHD-1#PBF**, replacing LMR36510ADDAR. It can regulate through the low-input region where the old buck
+could only drop voltage. The native circuit follows the
+[ADI Rev E 5V reference](https://www.analog.com/media/en/technical-documentation/data-sheets/ltc3115-1.pdf): 10uH L2,
+47uF output, 4.7uF input and VCC bypass, 100nF bootstrap capacitors, 47.5k RT (750kHz), 1M/249k feedback, 60.4k/3.3nF
+compensation and 15k/33pF feed-forward. PWM/SYNC is low for Burst mode; RUN is connected to VBUS. The reference
+specifies 5V/1A for input above 3.6V. That is component-level capability, not a guaranteed board input budget.
 
-The difference is **$36.29 at one board / $29.2564 per board at 30**, before the unpriced replacement circuitry. This is
-available cost headroom, **not confirmed savings**. The comparison conservatively includes the candidate primary buck
-without crediting removal of the current U19. A final like-for-like comparison must include both complete supply
-circuits: inductors, rectifiers, capacitors, source qualification, suspend/resume control, isolated control signals,
-protection and assembly. Retain common USB-C/PD and application-supply costs on both sides; do not count them as
-savings.
+C39 is TDK C4532X7R1H475K200KB; C43 is
+[TDK C4532X5R1A476M280KA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C4532X5R1A476M280KA),
+the full ordering code for the 47uF/10V/1812 reference family. C41 uses a 16V-rated 4.7uF/0805 part; C42/C66 are
+50V-rated 100nF/0603. L2 is
+[Coilcraft XAL5050-103MEC](https://www.coilcraft.com/en-us/products/power/high-voltage-inductors/xal/xal50xx/xal5050-103/).
+All 15 replacement-section components have manufacturer/MPN fields. C44 is removed. The schematic and local routing pass
+native ERC/DRC with zero violations and zero unconnected items; all 219 components and 833 netlist pins match. This does
+not establish loop stability, transient response, hot-plug behavior or fault-temperature performance.
 
-An older
-[Newark listing](https://www.newark.com/analog-devices/ltm2884iy-pbf/isolated-usb-transceiver-12mbps/dp/51AK7495) also
-displayed $27.04 for the existing module. Its retrieved content was dated last year, so it is an unconfirmed procurement
-lead, not the current baseline. If obtainable, the one-board headroom against the five candidate parts falls to just
-$6.51 before remaining circuitry. Do not redesign around either assumed pricing extreme.
-
-**Assessment:** the discrete option deserves consideration at the verified DigiKey prices, but is not yet an approved
-electrical substitute. Its full BOM cannot be priced until its one-port power-control circuit is selected. Retaining
-LTM2884 avoids the discrete isolation redesign, but does not by itself resolve the existing primary buck's low-input
-voltage limitation or the unfinished mode-control implementation. Neither option is fabrication-ready. Do not add
-another port, a switch, or another processor just to preserve an earlier savings estimate.
+Automatic input-current qualification, the application-power enable policy and the complete startup/suspend budget
+remain to be implemented. Keeping the integrated isolator avoids a separate transformer/rectifier/data-isolator
+redesign; it does not eliminate those system-level responsibilities.
 
 ## Retained circuit budget
 
-**Paper budget, not a measured operating result.** Retain the current LTM2884 acquisition supply for now; this review
-does not justify a larger converter. Laptop-only units ship **without a HUB75 panel connected**. The laptop supplies
-power and runs the scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero
-transmission are disabled in this acquisition-only budget, even though their circuits are populated.
+**Paper budget, not a measured operating result.** Retain the LTM2884 acquisition supply; this review does not justify a
+larger converter. Laptop-only units ship **without a HUB75 panel connected**. The laptop supplies power and runs the
+scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero transmission are
+disabled in this acquisition-only budget, even though their circuits are populated.
 
-The native schematic and placement now use **one J1 USB-C receptacle**. STUSB4500 negotiates power, LMR36510 supplies
+The native schematic and placement now use **one J1 USB-C receptacle**. STUSB4500 negotiates power, LTC3115-1 supplies
 the LTM2884 primary, and the separately enabled TPS25947/REC30K branch supplies isolated application power. **The local
 circuits, J1 feeds, CC lines, primary distribution and regulated isolator feeder are routed. They have not been powered
 or characterized; do not power this draft.** The left-edge primary return remains separate from board ground. An absent
@@ -91,8 +85,8 @@ limits.
 specifies 200mA isolated output with 4.4V input and recommends less than 25mA output before enumeration. That guidance
 is not an enforced host-current limit. The original and revised `(a)` silicon have different no-load consumption;
 neither the typical efficiency curve nor the following output budget proves the host-input limit. Measure at J1. The new
-PD controller, primary buck, eFuse, their bias networks and converter losses are **additional host-side load**, not
-included in the isolated-output table. Their combined startup, active and suspend consumption remains unmeasured.
+PD controller, primary buck-boost, eFuse, their bias networks and converter losses are **additional host-side load**,
+not included in the isolated-output table. Their combined startup, active and suspend consumption remains unmeasured.
 
 Currents below are mA drawn from `USB_ISOLATED_5V`, including loads behind D1/U4. AP2112K is a **linear** regulator:
 3.3V output current passes through its 5V input approximately one-for-one, plus regulator current. Do not multiply the
@@ -151,10 +145,10 @@ Use an assembled board, current measurement at J1 **and** U18 output, and a pass
 hardware measurements have been performed.
 
 1. Cold plug, delayed/denied configuration, reset and deconfiguration: <=100mA host and <=20mA isolated steady load;
-   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40 sums to **4.42uF nominal**. U19's 44uF output bank,
-   U18's input bypass and secondary charging are behind the regulator but still contribute startup current. Tolerance,
-   effective capacitance, PD transitions and hot-plug overshoot require measurement; the nominal sum is not proof of USB
-   input-capacitance compliance.
+   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40 sums to **6.8uF nominal**. U19's 47uF output
+   capacitor, U18's input bypass and secondary charging are behind the regulator but still contribute startup current.
+   Tolerance, effective capacitance, PD transitions and hot-plug overshoot require measurement; the nominal sum is not
+   proof of USB input-capacitance compliance.
 2. Accepted configuration with maximum USB traffic and scan activity: <=500mA host and <=75mA isolated target. Exercise
    open cords, all conductors joined, grounded selected conductor and cable capacitance. If 75mA is exceeded, reconcile
    the measured budget before raising it; 200mA is not our operating target.
@@ -163,11 +157,10 @@ hardware measurements have been performed.
    and the new host-side controller/regulator consumption; U18's suspend behavior alone cannot prove the whole limit.
    The [USB-IF electrical update](https://compliance.usb.org/index.asp?UpdateFile=Electrical) also requires truthful
    bus/self-power reporting and re-enumeration before changing from self-powered to high-power bus operation.
-4. Start at >=4.75V at J1 and measure loaded U19 output, CORE_3V3 and temperature with representative cables. **U19
-   cannot boost:** it operates in dropout near 5V input, and U18 requires >=4.4V at its own pins. A 4.4V input at J1
-   therefore no longer establishes adequate isolator voltage. Sweep downward to determine the operating boundary and
-   resolve this corner before release, including a different regulator if necessary. Stop capture on undervoltage; do
-   not claim support for all laptop/cable combinations.
+4. Measure loaded U19 output, CORE_3V3 and temperature with representative cables. Sweep through 4.1-5.5V and the
+   negotiated 20V operating point, including startup and transitions; U18 must remain above 4.4V at its pins. The new
+   buck-boost topology addresses dropout but has not been measured. Stop capture on undervoltage; do not claim support
+   for all laptop/cable combinations or treat the nominal reference circuit as measured loop-stability proof.
 5. With the full-system NVM profile, verify 5V-only sources leave application power off; test 20V negotiation, the
    nominal 18.0V UVLO/21.84V OVLO thresholds, current limit, loaded startup, PD fallback and detach. Confirm both
    control flags release correctly and the isolated supplies never connect USB_GND to board GND. Repeat with the
