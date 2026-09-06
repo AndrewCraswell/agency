@@ -71,6 +71,14 @@ Inspect the final manufacturing geometry and validate the assembled interface, i
 coupling. Bottom-layer escapes reference In2 rather than In1; preserve their local GND return and the isolation gap. The
 non-coplanar calculator does not model every adjacent trace, pad, via or package discontinuity.
 
+### Assembly BOM fields
+
+All 187 components now export separate manufacturer and part-number fields. For the processors, ICs, modules and
+remaining connectors, this normalizes the already-selected part numbers from their labels; it does not substitute
+components or approve their footprints. Keep the connector function labels readable. U8/U9 retain the selected
+74LVC125APW device; confirm the supplier's packaging suffix when placing the order. Availability, assembly sourcing and
+the remaining mechanical/electrical review are still separate from a nonempty BOM.
+
 ### Service and harness headers
 
 The six single-row headers now have explicit Samtec ordering fields: J2 uses **HTSW-105-07-L-S** (STM32 SWD), J6
@@ -522,12 +530,12 @@ which alone are not complete board safety proof.
 
 ### Latest verification
 
-The native BOM exports exact selections for all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now
-export DMN2056U-7, matching the PCB fields. Both retained Coilcraft inductors also have explicit ordering fields and
-manufacturer-matched pad geometry. All three service buttons now export TL3342F160QG; their land geometry and internal
-contact grouping were reviewed. Crystal, IR and sounder ordering fields are now explicit; crystal/IR pad mapping is
-reviewed, while the sounder drawing check remains open. This does not finish the remaining component or electrical
-review.
+The native BOM exports manufacturer and part-number fields for all 187 components, with no blank ordering fields. This
+includes all 83 resistors, 50 capacitors, 11 diodes and five transistors. Q1-Q5 now export DMN2056U-7, matching the PCB
+fields. Both retained Coilcraft inductors also have explicit ordering fields and manufacturer-matched pad geometry. All
+three service buttons now export TL3342F160QG; their land geometry and internal contact grouping were reviewed. Crystal,
+IR and sounder ordering fields are now explicit; crystal/IR pad mapping is reviewed, while the sounder drawing check
+remains open. This does not finish the remaining component or electrical review.
 
 After the header ordering/footprint update, KiCad reports **zero ERC violations, zero DRC violations, zero unrouted
 items and zero schematic-parity issues**. All six header ordering codes export correctly. All 744 retained
@@ -541,6 +549,11 @@ manifest entry and replacing the ineffective batched mutation test with independ
 test failures are resolved. Verification now stops at the scoring-domain 100% coverage gate: 95.98% lines, 95.34%
 statements, 93.62% branches and 99.79% functions. No thresholds were lowered or checks suppressed; the full repository
 run is not clean and did not complete all other packages. The board is not yet released for fabrication.
+
+A temporary manufacturing export successfully produced all four copper layers, both mask/silkscreen/paste layers, the
+outline, and separate plated/unplated drill files. The drill report contains 642 plated holes (including four slots) and
+six unplated holes; all 21 revised header holes appear as 1.02mm. This checks exportability and drill selection only.
+The outputs remain temporary review files, not a released order package or a completed visual Gerber/assembly review.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),

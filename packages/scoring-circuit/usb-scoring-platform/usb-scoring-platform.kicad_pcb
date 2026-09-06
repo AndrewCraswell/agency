@@ -547,6 +547,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d6f2f564-b161-4db5-8435-87f4c65ac194")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TPS259470LRPWR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f7d7eb2b-e33c-4929-bcbf-2511e6d17a33")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/972b77fe-bd38-49a7-88fc-3c741d64cdb1/03b60959-4b4e-4b2e-a16f-05c5798d0e53")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -1058,6 +1080,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "STMicroelectronics"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "dd2301c0-6f6d-4248-87ff-aa721438ce3e")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "STM32G474RET6"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9d4d76cb-dbbb-4179-85c2-150f3ae447af")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -4060,6 +4104,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "447c4cfb-cf9c-421d-af1b-9358212daa72")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "SN74AHCT541PWR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "074040b2-2654-4e52-a6e0-1f429bd7dedd")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/8eb01a97-00e8-4fc9-a0dc-2c04f64b61fc/151d9832-14b9-4645-a171-a3dbf03c68c7")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -6327,6 +6393,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "TE Connectivity"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "12a77175-d848-497a-a8f4-b0ad3f0fd01d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "5520250-2"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "4e4d995a-0e16-4819-83f4-ebe195cf99c9")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/19a689f6-051a-47d6-a064-26f29b455422/28fba578-4d4b-4ffd-ae6c-8e1d313a15dd")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -6493,6 +6581,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6504,6 +6593,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -7590,6 +7680,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e21c46a7-35f1-49ce-b8a9-93f9d1b00645")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "LMR36510ADDAR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "8acbb7b4-1305-4ec4-a521-7e34fad290fb")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -10849,6 +10961,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10860,6 +10973,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -12068,6 +12182,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "onsemi"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "869ab569-c9cf-4043-9d8b-4a865d566059")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "4N32M"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "56c97ded-652a-40c9-8552-25b1acec94cb")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -13590,6 +13726,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "GCT"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2e61736e-04fd-40f5-b507-6c5011b1bc33")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "USB4105-GF-A"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2f1e7800-6430-4633-9750-7663963f13f8")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -16701,6 +16859,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "onsemi"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9f467e2d-b28f-4c9e-8420-9a4a95541d94")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "4N32M"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "79595b20-7ed8-49d1-a6f4-ccf88608a191")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/19a689f6-051a-47d6-a064-26f29b455422/761159c2-8b05-40f2-ae77-27c81f021d2e")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_circle
@@ -17561,6 +17741,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Diodes Incorporated"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "06271f7c-b3cb-4696-806c-dd614d50f7f8")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "AP63203WU-7"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bd29a8c9-8a94-43ae-bc14-6daca6aff331")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -19311,6 +19513,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "Diodes Incorporated"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "2ab38783-99ed-4625-8b3d-23ccad2883d2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "AP2112K-3.3TRG1"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1b775c31-11f0-4454-ab01-f31056693326")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/36d13c9b-c278-4925-a3f2-4480b5a41043/896671a4-cec9-4477-a7af-4558726eb45d")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -19713,6 +19937,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -19724,6 +19949,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -20143,6 +20369,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Samtec"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5302d0ce-edb5-4654-abfa-ba932ad1780e")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TST-108-02-G-D"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "061d3fae-c39c-49bf-affc-abdc92b4075c")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -20596,6 +20844,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "5ee849a0-5b33-472a-917d-ac08a286df3c")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "SN74AXC1T45DCKR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d231504f-1dfd-4d15-9cc6-4f72117b622f")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -22095,6 +22365,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Würth Elektronik"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7d871e5c-2ff3-4de3-b90e-f710621b6e61")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "645004114822"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "ee00e06f-8a29-445a-8c2e-87a74756bb57")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -23688,6 +23980,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "cad2a94d-21c5-4419-b8b3-6354b3b1c795")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TPD2E2U06DCKR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "3543105e-e9d1-4284-b7a5-79ed5ddc9557")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/36d13c9b-c278-4925-a3f2-4480b5a41043/a2bcf47a-a14e-46b2-a866-17c6e21845ab")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -24552,6 +24866,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Espressif Systems"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "160fe5a8-2960-4b5f-b9c0-a982e78da1fb")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "ESP32-S3-WROOM-1-N8R8"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "d5734dcf-84e4-4a42-aeb4-3d31741c28c5")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -27492,6 +27828,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "RECOM"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7c7a9b54-76b3-4fe0-ad2c-d62c46e8f673")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "REC30K-2405SZ"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0cd94cc0-55a6-42f6-bf05-617b55a4e16a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/972b77fe-bd38-49a7-88fc-3c741d64cdb1/b240b9ae-e17c-4f1f-a394-10182e4c7feb")
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -28321,6 +28679,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -28332,6 +28691,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -28762,6 +29122,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -28773,6 +29134,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -30625,6 +30987,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "Analog Devices"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "1ed0617c-7d13-4eef-a43b-db2cd954b1af")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "LTM2884IY#PBF"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bfe1622d-ac1f-4590-8996-a7d323fa60bd")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/e55d854e-24ef-4e48-a304-9dbb04dce049/c1b9aa0f-ef5b-46a0-a7f5-3d22b83ea70d")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -31694,6 +32078,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "90bd0b09-d1ab-49cc-b03c-fc651cb60cb1")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "SN74AHCT541PWR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "9376c02a-b2ce-48e9-9b23-141bb73b7ce2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/8eb01a97-00e8-4fc9-a0dc-2c04f64b61fc/c912805f-9a62-4a04-a31c-9c40e2b3d7ff")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -32578,6 +32984,17 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "74LVC125APW"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "b112fd76-bf9a-413e-ba74-dc4f4e544863")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -33534,6 +33951,17 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "MPN" "74LVC125APW"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "321abd76-9ecb-4b3d-99c9-23969644ae3c")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -37141,6 +37569,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "TE Connectivity"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "6b524de4-6af2-4756-80b2-14183c0b3289")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "5520250-2"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "37775743-c383-4d3b-b96f-068e8a6f68e2")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/19a689f6-051a-47d6-a064-26f29b455422/e061a6cd-5fef-47a9-a568-a428e462147d")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
@@ -39844,6 +40294,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -39855,6 +40306,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -40133,6 +40585,28 @@
 				(font
 					(size 1.27 1.27)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "WIZnet"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "88009ab4-3a52-4e80-b233-13c3e6856d24")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "WIZ850io"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "c45658bf-716e-4898-9398-2a8901652b58")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -41298,6 +41772,28 @@
 				)
 			)
 		)
+		(property "Manufacturer" "STMicroelectronics"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "035954b3-30a5-4d6d-990a-96e207b70961")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "STUSB4500QTR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "fe4a91dc-e19c-4bc1-a4d6-15064e50c523")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/972b77fe-bd38-49a7-88fc-3c741d64cdb1/fa2b73c6-1411-46a0-a3a4-e11af6b688cd")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -41992,6 +42488,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e46029c7-8364-4333-bedd-bb8b022a829c")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "SN74AXC1T45DCKR"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "173de917-91cd-4e16-85e5-5f11b34ef11d")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
