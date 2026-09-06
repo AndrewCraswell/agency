@@ -196,8 +196,9 @@ capacitors. Computer USB power, protection, isolation, data and USB-present sens
 crystal, boot pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75
 power contacts, both display buffers and their supply-side pull-ups are now routed. Most other parts remain in
 provisional positions. The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header
-are also routed. The two-way processor UART, its translators, four bypass capacitors and idle pulls are now connected;
-peripheral signal routing remains unfinished.
+are also routed. The two-way processor UART, its translators, four bypass capacitors and idle pulls are connected. The
+IR receiver's filtered supply, ground and output to ESP32 GPIO42 are routed; the other peripheral interfaces remain
+unfinished.
 
 Remaining before fabrication:
 
@@ -223,7 +224,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **226 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **220 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -263,10 +264,10 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the processor-link routing, the board has 415 track segments, 137 ordinary 0.6/0.3mm vias and twelve copper zones.
-The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
-board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
-pads. This follows the
+After the IR routing, the board has 444 track segments, 140 ordinary 0.6/0.3mm vias and twelve copper zones. The prior
+power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended board-ground
+pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA pads. This
+follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
 including its integrated bypass/termination, and keeps the
 [TPD2E2U06 protection](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf) close to the connector. Native top-copper,
@@ -354,6 +355,17 @@ link components moved; every previous track/via and the processors/connectors st
 added by these translators. Firmware framing, baud rate, reset/reconnect behavior and physical power-off leakage and
 signal testing remain unfinished.
 
+The TSOP38438 receiver now connects pin 1 OUT to ESP32 GPIO42 (U2.35), pin 2 to board ground, and pin 3 to APP_3V3
+through the existing R32 (100 ohms), with C30 (100nF) beside the receiver. Only R32/C30 moved; the receiver, connectors
+and all 552 previous tracks/vias stayed fixed. This follows the
+[Vishay pinout and supply-filter topology, page 2](https://www.vishay.com/docs/82491/tsop382.pdf); the existing filter
+values remain candidates, not measured noise rejection. Ground extends beneath the route without grounding Favero's
+output pins or crossing USB isolation. Native continuity and copper/3D review passed. The active-low output is a
+demodulated 38kHz signal, not decrypted commands: firmware must decode and authenticate it. Keep GPIO42 input-only with
+its internal pull-up disabled, so it does not bypass the filtered supply through the receiver output. IR remains off in
+laptop acquisition-only mode. Remote burst/gap compatibility, enclosure sightline, range and operation during full
+display/Ethernet activity still need hardware verification.
+
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
 ordinary routing vias remain 0.6/0.3mm. This resolves the previous twelve drill-setting findings without changing the
@@ -373,8 +385,8 @@ All seven models' acceptance limits pass, including the corrected seven-input se
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link routing reduced unconnected items from 250 to 226, with no new DRC findings. Schematic, copper and native
-3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero
+processor-link and IR routing reduced unconnected items from 250 to 220, with no new DRC findings. Schematic, copper and
+native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero
 schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks but
 failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion
 (770 scoring tests passed). The previously failing live-rebuild and workflow-deletion tests passed this run. These tests
