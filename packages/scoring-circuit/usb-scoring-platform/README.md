@@ -12,6 +12,34 @@ libraries.
 routed engineering draft with unresolved release checks, not a completed design. This folder is not consumed by the
 existing prototype export commands.
 
+## Cost-reduction work in progress
+
+The owner approved replacing WIZ850io with direct W5500 Ethernet and replacing LTM2884 with separate USB data isolation
+and isolated power. These changes are **not complete or released**. The Ethernet schematic now contains the W5500,
+reference termination/filtering and crystal circuit, with the existing ESP32 SPI/reset/interrupt nets retained. J13 is a
+CETUS J1B1211CCD magnetic RJ45, matching WIZnet's reference circuit and KiCad's existing exact-part footprint. Its
+separate centre taps and LED polarities are mapped explicitly. The ABM8 crystal is an 18pF-load part; the two 18pF
+external capacitors follow WIZnet's reference circuit, with final frequency/startup to be checked on the assembled
+board. W5500 reserved pin 23 is grounded as required; reserved pins 38-42 remain unconnected. Its internal CS/reset
+pull-ups are retained; firmware must assert reset for at least 500us and wait at least 1ms after releasing it before SPI
+access. New Ethernet resistors use R99-R107 to avoid the existing R84-R98 components. Final shield coupling, placement
+and routing review remain unfinished. The PCB still contains the former WIZ850io module and therefore does **not** match
+this in-progress schematic.
+
+The USB circuit and PCB remain unchanged while the complete replacement is selected. Do not apply the earlier estimated
+savings as a confirmed BOM total. R05C1TF05S is not a solution for the existing 5V rail's low-input problem: its 3V
+input headline applies to 3.3V output; the manufacturer's 5V-output specification requires at least 4.5V input. Preserve
+USB suspend/startup behavior and the isolation barrier when choosing the replacement. REC30K application power is
+retained.
+
+Reference circuits reviewed:
+[W5500 magnetic-RJ45 reference](https://docs.wiznet.io/Product/Chip/Ethernet/W5500/ref-schematic),
+[CETUS J1B1211CCD drawing](https://docs.wiznet.io/img/products/w5500/2.j1b1211ccd.pdf),
+[W5500 pin and timing requirements](https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf) and
+[RECOM RxxC1TFxxS](https://recom-power.com/en/rec-s-RxxC1TFxxS.html). The verification records below describe the
+previous routed checkpoint, not completion of these replacements. Do not export an order package from this mixed
+checkpoint.
+
 ## Board appearance and ordering
 
 Use **black solder mask on both sides and white silkscreen**. These colors are saved in the native board; in KiCad's 3D
