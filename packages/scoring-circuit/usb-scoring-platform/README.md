@@ -23,8 +23,40 @@ When ordering, explicitly select **Black** for PCB color and **White** for silks
 [JLCPCB's quote](https://jlcpcb.com/help/article/instructions-for-ordering). The silkscreen Gerbers contain the
 lettering, but ordinary Gerber layers do not select solder-mask ink color. Include both silkscreen layers and inspect
 the fabrication preview. Confirm the final black-mask manufacturing clearances with the fabricator; this appearance
-change is not fabrication approval. The stackup color entries do not specify the still-unconfirmed copper/dielectric
-construction.
+change is not fabrication approval. The manufacturing target below supplies the copper/dielectric construction; ordering
+must explicitly select that stackup, not an unspecified four-layer build.
+
+### Manufacturing target and USB routing
+
+Use JLCPCB's standard **JLC04161H-7628**, nominal 1.6mm, outer 1oz and inner 0.5oz copper. KiCad now retains the
+[published stackup](https://jlcpcb.com/impedance): top to bottom, copper/dielectric thicknesses in mm are **0.035 /
+0.2104 / 0.0152 / 1.065 / 0.0152 / 0.2104 / 0.035**. Prepreg is 7628 (Er 4.4); core Er is 4.6. These published layers
+sum to 1.5862mm before mask; the calculator labels the finished build 1.59mm +/-10% under its nominal 1.6mm option. Keep
+the manufacturer dimensions rather than inventing a thicker core to force a nominal sum. Black mask and white printing
+remain unchanged. Mask thickness in the 3D file is illustrative, not a process tolerance.
+
+On 2026-09-06 the [JLCPCB calculator](https://jlcpcb.com/pcb-impedance-calculator), set to four layers, nominal 1.6mm,
+1oz outer / 0.5oz inner, returned **12.58mil (0.3195mm) width** for a **90-ohm non-coplanar differential pair** on L1
+referenced to L2 with 9.8425mil (0.25mm) edge spacing. The `USB data` net class therefore uses a rounded **0.32mm width
+/ 0.25mm gap** for both host and isolated data nets. This is the next routing target, not a measurement or a
+manufacturing impedance guarantee. The calculator's displayed solver tolerance is not a fabrication tolerance.
+
+**USB route revision remains open.** The existing tracks have not been widened by changing the net class:
+
+| Net         | F.Cu length | B.Cu length | Existing width |
+| ----------- | ----------: | ----------: | -------------: |
+| USB_HOST_DP |    25.579mm |           0 |         0.20mm |
+| USB_HOST_DM |     9.469mm |    10.702mm |         0.20mm |
+| USB_DP      |    78.031mm |           0 |         0.20mm |
+| USB_DM      |    74.230mm |     3.746mm |         0.20mm |
+
+Lengths above exclude vias and pad-internal paths. Reroute the paired trunks to the target with short pad escapes;
+inspect continuous reference copper in each isolation domain and return paths at layer transitions. The B.Cu portions
+cannot simply inherit the L1/L2 calculation: their adjacent layer is In2.Cu, which contains power and signal areas as
+well as ground. Preserve the isolation gap. Recheck physical pair spacing, skew and discontinuities before calling USB
+routing complete; a net class and zero airwires do not establish any of these properties. Keep nearby same-layer copper
+out of the paired trunk's field or recalculate it as a coplanar structure; the non-coplanar result does not model that
+coupling.
 
 ## Low-volume build scope
 
@@ -268,12 +300,19 @@ Remaining before fabrication:
 3. Finish the remaining local placement, decoupling, connector access, mounting, antenna clearance, and power/current
    paths. Review every retained footprint and 3D transform against its exact part drawing. Resolve the USB connector's
    tight pad-to-locating-hole clearance with the fabricator; do not move its mechanical holes or suppress the warning.
-4. Define the manufacturing stackup/net classes, finish DRC review, inspect 3D and manufacturing outputs, and then
-   perform hardware bring-up. Routing has no remaining airwires, but that is not assembly or electrical release. USB
-   impedance must be checked against the selected fabricator stackup before release. No purchase or assembly release has
-   been performed.
+4. Apply the defined manufacturing stackup/USB net-class target to the actual USB routes, finish DRC review, inspect 3D
+   and manufacturing outputs, and then perform hardware bring-up. Routing has no remaining airwires, but that is not
+   assembly or electrical release. USB impedance must be checked against the selected fabricator stackup before release.
+   No purchase or assembly release has been performed.
 
 ## Checks performed
+
+The manufacturing-stackup update passed native parsing, ERC (zero), connectivity (zero unrouted), and schematic parity
+(zero); the same four J1 hole-clearance findings remain. Native 3D rendering was reviewed. The board diff changes only
+stackup entries: all part positions, footprints, copper routes and isolation areas are unchanged. The required
+repository `pnpm verify` run still failed in scoring software: 770 tests passed and three failed (observatory report
+expectations, scenario mutation timeout, and canonical corpus exit status). This is not a clean repository verification
+result.
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
 export and connected-pin transfer checks succeeded. DRC reports **zero unrouted items** and **four other findings**, all
