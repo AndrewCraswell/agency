@@ -201,7 +201,7 @@ error. Conductor routing remains unfinished; completed power routing is not a me
 
 ## Current state and remaining work
 
-The current draft contains **200 components**, twelve functional/support sheets plus the cover, and 187 named nets
+The current draft contains **187 components**, twelve functional/support sheets plus the cover, and 187 named nets
 (including explicit no-connect nets) on the unchanged **160 x 100mm**, four-layer PCB. The shared USB-C schematic,
 footprints and initial power placement are present. The new converter's secondary output and local bypass connect to the
 retained display/application/core distribution. U19's input bypass, switch/inductor, bootstrap, internal-supply bypass,
@@ -212,8 +212,8 @@ input bypass, protected output to U6, voltage dividers, current limit and soft-s
 primary corridor.** Primary ground returns join through that corridor without joining board ground. The shared-input
 layout is connected, but power behavior and safety remain unverified. The acquisition buffers now have connected
 supplies, local bypass and all seven reset-default resistor networks. All fourteen STM32 drive/enable signals reach
-those buffers and resistors. The remaining 89 unrouted items concern other unfinished connections, principally the
-conductor/sense interface and remaining support resistors.
+those buffers and resistors. Thirteen redundant, unconnected display pull-downs have been removed; the connected 10k
+pull-downs beside the display buffers remain. The remaining 63 unrouted items concern the conductor/sense interface.
 
 The existing USB data/protection, isolated output and USB-present sensing remain routed, along with the STM32 regulator,
 crystal, boot pull-down, reset network/button and programming header. The 5V distribution to both HUB75 power contacts,
@@ -233,10 +233,10 @@ Remaining before fabrication:
    weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
    dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
    selection or this topology.
-2. **Next: review remaining support resistors and resolve the sensing-protection decision before final conductor
-   routing.** STM32's seven drive and seven output-enable signals, buffer supplies, bypass and local reset defaults are
-   connected. Keep the unfinished conductor/clamp paths separate from these completed routes. The USB primary corridor
-   is connected; resolve the buck's low-input-voltage corner and program/read back U5 before powered bring-up. Use the
+2. **Next: resolve the sensing-protection decision before final conductor routing.** STM32's seven drive and seven
+   output-enable signals, buffer supplies, bypass and local reset defaults are connected. Keep the unfinished
+   conductor/clamp paths separate from these completed routes. The USB primary corridor is connected; resolve the buck's
+   low-input-voltage corner and program/read back U5 before powered bring-up. Use the
    [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when implementing USB acquisition. Bench-check
    startup/current/suspend behavior, supply handover, and the electrical safety boundary for USB, PD, Ethernet, piste,
    and weapon conductors. The integrated isolator and all-layer copper keepouts separate computer ground from board
@@ -253,7 +253,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **89 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **63 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -466,6 +466,12 @@ buffers by default, and R35 pulls panel OE high. This follows the
 3.3V signal draws about 0.33mA through its pull; this is on the PD-only application branch, not the laptop acquisition
 budget. No new processor, power rail or interface was added.
 
+R52-R64, the duplicate 100k display pull-downs on the reset-defaults sheet, have been removed from schematic and PCB.
+Each was unconnected in copper and duplicated one of the connected R74-R86 10k pulls on the same RGB input and ground.
+The retained pulls reach both ESP32 and their buffer inputs; output blanking and enable defaults are unchanged. This
+removes thirteen unnecessary placements and 26 unrouted items, not a display function. All 2174 prior tracks/vias and
+744 retained-pad connectivity comparisons pass unchanged; native ERC/parity, copper and 3D review found no new issue.
+
 The thirteen resistors sit beside the buffers. The still-unwired BZ1/Q2/R36/R37 sound group moved into the free
 lower-right area to provide assembly clearance. Six obsolete DIR-feed track segments were removed and one shared supply
 stub shortened; all other 772 prior tracks/vias, external connectors, processors and keepouts are unchanged. Native
@@ -553,13 +559,14 @@ The enlarged branding passed native KiCad rendering and silkscreen Gerber export
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
 processor-link, IR, Ethernet, HUB75, sounder and Favero routing is retained. The local buck, PD-control and eFuse
 circuits and the primary corridor complete the shared-input routing. Acquisition-buffer power and reset defaults are
-also connected, together with their fourteen STM32 control lines. The current unconnected count is 89. Schematic, copper
-and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero
-schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks but
-failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion
-(770 scoring tests passed). The run stopped before every other package completed. These tests are outside the board
-edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain required; native connectivity
-and the protector's component ratings do not establish board-level immunity.
+also connected, together with their fourteen STM32 control lines. Duplicate display pulls are removed, leaving 187
+components and 63 unconnected items. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC
+retains four USB connector hole-clearance findings and zero schematic-parity issues. The latest repository verification
+passed formatting, lint, types and unused-code checks but failed three scoring tests: a mutation timeout, a
+canonical-corpus failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before
+every other package completed. These tests are outside the board edits; none was suppressed or modified. Physical USB
+signal, surge and ESD testing remain required; native connectivity and the protector's component ratings do not
+establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
