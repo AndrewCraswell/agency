@@ -22,23 +22,37 @@ separate centre taps and LED polarities are mapped explicitly. The ABM8 crystal 
 external capacitors follow WIZnet's reference circuit, with final frequency/startup to be checked on the assembled
 board. W5500 reserved pin 23 is grounded as required; reserved pins 38-42 remain unconnected. Its internal CS/reset
 pull-ups are retained; firmware must assert reset for at least 500us and wait at least 1ms after releasing it before SPI
-access. New Ethernet resistors use R99-R107 to avoid the existing R84-R98 components. Final shield coupling, placement
-and routing review remain unfinished. The PCB still contains the former WIZ850io module and therefore does **not** match
-this in-progress schematic.
+access. New Ethernet resistors use R99-R107 to avoid the existing R84-R98 components. The PCB now replaces the WIZ850io
+module with this circuit. The routed checkpoint passes native KiCad ERC and DRC with zero violations and zero
+unconnected items; all 214 components and 815 schematic pin/net assignments match. The existing 753 non-U12 pad
+positions/net assignments are preserved. The filtered analog supply uses a local inner-power-layer pour, leaving the
+inner ground-reference layer intact. These checks establish connectivity and clearance, not Ethernet signal integrity or
+fabrication approval. Differential impedance/skew, final shield coupling, exact jack availability and mechanical review
+remain open.
+
+The local `ScoringPlatform:J1B1211CCD` footprint derives from KiCad's exact-part `Connector_RJ:RJ45_Cetus_J1B1211CCD`,
+under the [KiCad library license](https://www.kicad.org/libraries/license/). Pads, mounting holes and fabrication
+outline are unchanged; front silkscreen stops before the board edge where the connector mouth overhangs. Its referenced
+stock STEP file is absent from the installed library. Do not mistake the missing jack in a 3D render for an omitted
+footprint or claim that its 3D mechanical fit has been verified.
 
 The USB circuit and PCB remain unchanged while the complete replacement is selected. Do not apply the earlier estimated
 savings as a confirmed BOM total. R05C1TF05S is not a solution for the existing 5V rail's low-input problem: its 3V
 input headline applies to 3.3V output; the manufacturer's 5V-output specification requires at least 4.5V input. Preserve
 USB suspend/startup behavior and the isolation barrier when choosing the replacement. REC30K application power is
-retained.
+retained. ISOUSB111 cannot simply replace the USB data portion while leaving an always-on isolated converter: its
+specified L2 suspend maxima are 1.55mA upstream and 7.5mA downstream, before converter losses or board load. A complete
+bus-powered design must address that budget rather than assuming the isolator's upstream-only suspend compliance covers
+both sides.
 
 Reference circuits reviewed:
 [W5500 magnetic-RJ45 reference](https://docs.wiznet.io/Product/Chip/Ethernet/W5500/ref-schematic),
 [CETUS J1B1211CCD drawing](https://docs.wiznet.io/img/products/w5500/2.j1b1211ccd.pdf),
 [W5500 pin and timing requirements](https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf) and
-[RECOM RxxC1TFxxS](https://recom-power.com/en/rec-s-RxxC1TFxxS.html). The verification records below describe the
-previous routed checkpoint, not completion of these replacements. Do not export an order package from this mixed
-checkpoint.
+[RECOM RxxC1TFxxS](https://recom-power.com/en/rec-s-RxxC1TFxxS.html), plus
+[ISOUSB111 electrical characteristics](https://www.ti.com/lit/ds/symlink/isousb111.pdf). The verification records below
+describe the previous routed checkpoint, not completion of these replacements. Do not export an order package from this
+mixed checkpoint.
 
 ## Board appearance and ordering
 
