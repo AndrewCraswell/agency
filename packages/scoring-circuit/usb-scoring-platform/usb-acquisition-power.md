@@ -93,8 +93,8 @@ hardware measurements have been performed.
 **Decision:** no new power components from this review. Firmware enforcement, physical USB/current checks and the
 single-receptacle isolated PD conversion remain unfinished. This budget is not USB certification or FIE safety proof.
 
-Review checks: KiCad ERC reports zero findings. The native draft now has 155 components and 160 nets; the two new UART
-transmit pulls add no nets, and the acquisition-side pull fits within the existing power targets. All seven existing
-simulation models pass, including the 16.53mA grounded-conductor bound; none simulates the complete USB supply.
-Repository verification still fails three unchanged scoring tests, as listed in the
+The UART transmit pulls add no nets, and the acquisition-side pull fits within the existing power targets. The populated
+sounder now has a 1k piezo discharge resistor and local bypass; these do not authorize sound in laptop mode. Keep its
+PWM output low as required above. The seven existing simulation models include the 16.53mA grounded-conductor bound;
+none simulates the complete USB supply. Current native checks and repository verification results are recorded in the
 [design status](README.md#checks-performed).

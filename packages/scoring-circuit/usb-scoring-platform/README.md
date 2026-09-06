@@ -189,7 +189,7 @@ error. Most PCB routing remains unfinished.
 
 ## Current state and remaining work
 
-The current draft contains 168 components across eleven functional/support sheets plus the cover. Every component has a
+The current draft contains 170 components across eleven functional/support sheets plus the cover. Every component has a
 footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
 regulator section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass
 capacitors. Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32
@@ -200,8 +200,8 @@ are also routed. The two-way processor UART, its translators, four bypass capaci
 IR receiver's filtered supply, ground and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus,
 reset and interrupt are also connected. All thirteen HUB75 buffer outputs now reach the display connector, together with
 the local buffer-disable and panel-blanking network. The one-way display buffers and thirteen input pull-downs now have
-defined reset defaults. The ESP32 input bus and display-enable line are also routed; sound, Favero and conductor
-interfaces remain unfinished.
+defined reset defaults. The ESP32 input bus, display-enable line and sounder circuit are also routed. Favero and
+conductor interfaces remain unfinished.
 
 Remaining before fabrication:
 
@@ -227,7 +227,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **174 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **167 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -267,8 +267,8 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the display input routing, the board has 874 track segments, 252 ordinary 0.6/0.3mm vias and twelve copper zones.
-The prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
+After the sounder routing, the board has 932 track segments, 262 ordinary 0.6/0.3mm vias and twelve copper zones. The
+prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
 board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
 pads. This follows the
 [LTM2884 layout guidance, page 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
@@ -413,7 +413,17 @@ views were inspected. This reduced unrouted items from 188 to 174 without a new 
 **Display bring-up:** configure all display signals with RGB_OE high before asserting DISPLAY_ENABLE; deassert
 DISPLAY_ENABLE before releasing GPIOs. The input routes are not delay-matched or timing-qualified. That firmware
 sequence, startup and brownout blanking, display timing and cable signal integrity still require implementation and
-physical verification. Next board routing: the sounder, then Favero and sensing connections.
+physical verification. Next board routing: Favero and sensing connections.
+
+The sounder is routed from STM32 pad 42 through R36 to Q2, with R37 holding the gate low during reset. BZ1 remains the
+PS1240P02BT on CORE_3V3. R87 adds the missing 1k parallel discharge path from BUZZER_LOW to CORE_3V3, following
+[TDK's operating-circuit guidance, page 2](https://product.tdk.com/system/files/dam/doc/product/sw_piezo/sw_piezo/piezo-buzzer/catalog/piezoelectronic_buzzer_ps_en.pdf).
+C35 provides 100nF local supply bypass, and ground extends beneath the sounder without entering the Favero output
+region. All 1126 prior tracks/vias and existing component positions stayed fixed. Native continuity, ERC/parity, copper,
+schematic and 3D review passed; unrouted items dropped from 174 to 167 with no new DRC finding. Drive with 4kHz PWM,
+then stop low; holding the gate high is not a tone. R87 draws about 3.3mA while Q2 is on, plus the piezo's transient
+charging current. Keep sound disabled in laptop acquisition mode. Output amplitude, acoustic level, supply disturbance
+and scoring-timing interaction still need bench checks; the wiring is not an acoustic or FIE qualification.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
@@ -434,13 +444,13 @@ All seven models' acceptance limits pass, including the corrected seven-input se
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link, IR, Ethernet and HUB75 routing reduced unconnected items from 250 to 174, with no new DRC findings.
-Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance
-findings and zero schematic-parity issues. The latest repository verification passed formatting, lint, types and
-unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28
-scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed. These tests
-are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain
-required; native connectivity and the protector's component ratings do not establish board-level immunity.
+processor-link, IR, Ethernet, HUB75 and sounder routing reduced unconnected items from 250 to 167, with no new DRC
+findings. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector
+hole-clearance findings and zero schematic-parity issues. The latest repository verification passed formatting, lint,
+types and unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a
+29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed.
+These tests are outside the board edits; none was suppressed or modified. Physical USB signal, surge and ESD testing
+remain required; native connectivity and the protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
