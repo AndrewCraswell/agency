@@ -73,6 +73,15 @@ non-coplanar calculator does not model every adjacent trace, pad, via or package
 
 ### Assembly BOM fields
 
+**U18 assembly instruction:** the selected LTM2884IY#PBF is MSL 4 with SAC305 balls and a **245 C peak body reflow
+limit** ([ADI Rev. D, page 2](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf)). The
+assembler must follow its moisture handling and reflow requirements rather than a generic 260 C profile. Its 44 lands
+were checked against drawing 05-08-1881 Rev B: 0.63mm circles, 1.27mm pitch, rows A/B/K/L only. The native 90-degree
+placement keeps A1 at board coordinates (75.65, 146.35)mm. The page-8 functions match all 44 assigned pads: host data
+A1/A2, ON/suspend tied to VLO, separate upstream/downstream grounds, regulated primary input A7-A11 and isolated output
+L8-L11. L5 is intentionally unused. No pad or circuit change was needed. The manufacturer body model remains missing;
+this land/pin review does not replace the assembly process or whole-board isolation review.
+
 All 187 components now export separate manufacturer and part-number fields. For the processors, ICs, modules and
 remaining connectors, this normalizes the already-selected part numbers from their labels; it does not substitute
 components or approve their footprints. Keep the connector function labels readable. U8/U9 retain the selected
