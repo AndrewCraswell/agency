@@ -55,12 +55,12 @@ At the end of a historical Congress, every otherwise-open membership in that ses
 `congress_ended`. The session end date is a scope boundary, not an inferred departure date. A person listed again in the
 next Congress receives a new Congress-scoped tenure.
 
-The 105th Congress onward supports the useful reconstruction window because GovInfo publishes electronically created
-editions and retains interim revisions. Earlier directories can provide Congress-level snapshots when parsable, but do
-not promise detected transitions. The initial supported reconstruction range is therefore the 105th Congress through
-the current Congress.
+The 105th Congress onward is the candidate reconstruction window for electronically created directories. Actual
+edition availability must be inventoried before promising transitions: live discovery on 2026-09-06 returned one
+package each for Congresses 105 and 118. A single retained edition supports a roster snapshot, not a complete sequence
+of historical joins and departures. Earlier directories likewise require format validation.
 
-The historical reconstruction command is:
+The historical reconstruction command (not yet validated for production) is:
 
 ```powershell
 pnpm --filter legislation cli govinfo:committees --start-congress 105 --end-congress 119 --restart
@@ -97,16 +97,33 @@ database writes and still requires a bounded canary with adequate production I/O
 ### Current-Congress rollout (2026-09-06)
 
 The live 119th-Congress edition is `CDIR-2026-02-20`. Its text parses into 42 committees and 179 subcommittees.
-All roster names match existing Congress.gov people after repairing independently wrapped text columns. Matching
+All 3,875 roster entries match existing Congress.gov people after repairing independently wrapped text columns. The
+parser also reconciles the total roster annotations against parsed members so silently omitted entries abort import. Matching
 requires a unique normalized full name in the requested Congress and chamber; district annotations are not identity
 keys because this edition has inconsistent districts and some canonical at-large terms have no district. The explicit
 Thom Tillis alias resolves to `person:congress:t000476`. Ambiguous names still abort the edition.
 
 Membership inserts use batches of 1,000 within the same snapshot transaction to stay below PostgreSQL's bind-parameter
-limit. The initial production import and API reconciliation are in progress; historical Congresses are not yet imported.
+limit. The production canary completed with 3,871 distinct memberships covering 530 people; repeated source entries
+collapse to their canonical membership identity. All memberships belong to `session:us:119`, have detected start
+`2026-02-20`, and leave unknown effective dates and end reasons null. Historical Congresses are not yet imported.
 
-The `govinfo-committee-directory-sync` Trigger task is configured for 09:30 UTC daily in production, using
-`FEDERAL_END_CONGRESS`. It has concurrency one and retains the database ingestion lease shared with the CLI. Deployment
-and activation are gated on the initial canary. It imports newly dated editions, not historical Congresses. Same-package
+The `govinfo-committee-directory-sync` Trigger task runs at 09:30 UTC daily in production, using
+`FEDERAL_END_CONGRESS`. It has concurrency one and retains the database ingestion lease shared with the CLI. Schedule
+creation followed the successful canary and API checks. It imports newly dated editions, not historical Congresses. Same-package
 revisions with unchanged issue dates are not yet replayed; that and historical edition-format coverage remain follow-up
 work before claiming complete historical reconstruction.
+
+Release evidence:
+
+- Code: `49e2a8e`, `f9c435b`; Trigger deployment `20260906.1` (`ieo7my8o`).
+- Canary: `run_06g7fdvrophjjjne395ctfou01`, `COMPLETED`, no failures. The earlier workstation canary was rolled back
+  after the count cross-check identified omitted entries; no partial memberships were published.
+- Unchanged rerun: `run_06g7fiv0q3ftn5v1kehnmvj101`, `COMPLETED`, one edition skipped and zero writes.
+- Production schedule: `sched_qxezm85n7mjzjt4u7n585`, active; first scheduled run `2026-09-07T09:30:00Z`.
+  Its deduplication key is `committee-directory:production:daily`; it is separate from the bill-sync schedule manifest.
+- Deployed API smoke: HTTP 200 for Senate Agriculture, House Agriculture, and its Livestock/Dairy/Poultry subcommittee
+  detail and member lists; canonical membership detail and person membership history also returned 200. Canonical
+  membership IDs and detected/effective date separation were verified. House Agriculture returned 54 members.
+- `apps/legislation` verification passed: 1,965 tests plus four webhook-receiver tests; 58 database-dependent tests
+  skipped. Root `pnpm verify` remained blocked by unrelated scoring test timeouts; hooks were not bypassed.
