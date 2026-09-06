@@ -4,6 +4,50 @@ import { normalizeCongressMemberDetails, normalizeCongressMembers } from "./enti
 const organizationContext = { retrievedAt: new Date("2026-08-20T15:00:00.000Z") }
 
 describe("Congress entity normalization", () => {
+  it("does not assign career terms outside the requested Congress to that Congress", () => {
+    const result = normalizeCongressMembers(
+      [
+        {
+          bioguideId: "M000639",
+          name: "Menendez, Robert",
+          terms: {
+            item: [
+              { chamber: "House of Representatives", startYear: 1993, endYear: 2006 },
+              { chamber: "Senate", startYear: 2006, endYear: 2024 },
+              { chamber: "House of Representatives", startYear: 2026 }
+            ]
+          }
+        }
+      ],
+      118,
+      organizationContext
+    )
+    expect(result.people).toHaveLength(1)
+    expect(result.terms).toHaveLength(1)
+    expect(result.terms[0]).toMatchObject({ chamber: "upper", sourceId: "118:upper:2006:2024" })
+  })
+
+  it("retains year-only boundary terms rather than guessing their precise appointment dates", () => {
+    const result = normalizeCongressMembers(
+      [
+        {
+          bioguideId: "M000001",
+          name: "Boundary Member",
+          terms: {
+            item: [
+              { chamber: "House of Representatives", startYear: 2021, endYear: 2023 },
+              { chamber: "Senate", startYear: 2025 }
+            ]
+          }
+        }
+      ],
+      118,
+      organizationContext
+    )
+    expect(result.terms.map((term) => term.sourceId)).toEqual(["118:lower:2021:2023", "118:upper:2025:current"])
+    expect(result.terms.every((term) => term.startDate === undefined && term.endDate === undefined)).toBe(true)
+  })
+
   it("normalizes member identities and year-granularity terms without fabricating dates", () => {
     const result = normalizeCongressMembers(
       [

@@ -8,7 +8,8 @@ const directoryPackage: GovInfoDirectoryPackage = {
   issuedAt: new Date("2026-02-20T00:00:00Z"),
   lastModified: new Date("2026-02-21T00:00:00Z"),
   packageId: "CDIR-2026-02-20",
-  textUrl: new URL("https://www.govinfo.gov/content/pkg/CDIR-2026-02-20/text/CDIR-2026-02-20.txt")
+  textUrl: new URL("https://www.govinfo.gov/content/pkg/CDIR-2026-02-20/text/CDIR-2026-02-20.txt"),
+  sourceUrl: new URL("https://www.govinfo.gov/content/pkg/CDIR-2026-02-20/text/CDIR-2026-02-20.txt")
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
@@ -82,6 +83,52 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     expect(normalizeGovInfoCommitteeDirectory(records(), directoryPackage, source, new Date()).unmatched[0]?.name).toBe(
       "Jane Q. Senator"
     )
+  })
+
+  it("matches detached PDF acute accents without splitting a surname", () => {
+    const source = catalog()
+    source.people[0]!.name = "Ben Ray Luján"
+    source.people[0]!.givenName = "Ben Ray"
+    source.people[0]!.familyName = "Luján"
+    const input = records()
+    input[0]!.members[0]!.name = "Ben Ray Luja´n"
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, source, new Date()).unmatched).toEqual([])
+  })
+
+  it.each(["Jane ‘‘Buddy’’ Q. Senator", "Jane Q. Senator, Jr.,", "Jane (Buddy) Q. Senator"])(
+    "normalizes printed nicknames and suffix punctuation: %s",
+    (name) => {
+      const input = records()
+      input[0]!.members[0]!.name = name
+      expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, catalog(), new Date()).unmatched).toEqual([])
+    }
+  )
+
+  it.each([
+    ["John P. Sarbanes", "Paul P. Sarbanes", "MD", "3"],
+    ["Lori Chavez-DeRemer", "Lori Chaves-DeRemer", "OR", "5"]
+  ])("requires same-edition district corroboration for %s", (correct, printed, state, district) => {
+    const source = catalog()
+    source.people[0]!.name = correct
+    source.people[0]!.givenName = correct
+    source.people[0]!.familyName = ""
+    source.terms[0]!.sourceId = "118:lower:2023:2025"
+    source.terms[0]!.chamber = "lower"
+    const input: GovInfoCommitteeRecord[] = [
+      {
+        name: "Energy and Commerce",
+        chamber: "lower",
+        classification: "committee",
+        members: [
+          { name: correct, chamber: "lower", state, district },
+          { name: printed, chamber: "lower", state, district }
+        ]
+      }
+    ]
+    const edition = { ...directoryPackage, congress: 118, packageId: "CDIR-2024-04-25" }
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
+    input[0]!.members.shift()
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
   })
 })
 

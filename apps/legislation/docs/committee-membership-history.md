@@ -60,6 +60,10 @@ edition availability must be inventoried before promising transitions: live disc
 package each for Congresses 105 and 118. A single retained edition supports a roster snapshot, not a complete sequence
 of historical joins and departures. Earlier directories likewise require format validation.
 
+The [live edition inventory](committee-directory-inventory.md) identifies 23 historical editions. None yet passes the
+whole-package ingestion path: older editions need granule-based parsing, and the 118th needs layout support. Do not run
+a destructive restart before these format gates and current-organization preservation are verified.
+
 The historical reconstruction command (not yet validated for production) is:
 
 ```powershell
@@ -110,9 +114,18 @@ collapse to their canonical membership identity. All memberships belong to `sess
 
 The `govinfo-committee-directory-sync` Trigger task runs at 09:30 UTC daily in production, using
 `FEDERAL_END_CONGRESS`. It has concurrency one and retains the database ingestion lease shared with the CLI. Schedule
-creation followed the successful canary and API checks. It imports newly dated editions, not historical Congresses. Same-package
-revisions with unchanged issue dates are not yet replayed; that and historical edition-format coverage remain follow-up
-work before claiming complete historical reconstruction.
+creation followed the successful canary and API checks. It imports newly dated editions, not historical Congresses.
+
+Same-package revision handling now uses canonical roster fingerprints for the latest imported edition. Identical
+rosters skip membership writes even when metadata changes. Changed rosters use a strictly later GovInfo modification
+date, never retrieval time. Changes dated after Congress ends or newly discovered editions preceding an already
+observed correction require historical replay instead of inventing transitions. Older superseded editions are not
+automatically replayed by the daily current-Congress poll.
+
+An existing checkpoint without a fingerprint is initialized only when the published roster matches the source.
+Snapshot writes and their observation checkpoint commit atomically. The workstation production canary
+`a7b0796a-1221-4d33-a702-28cd5e3549a1` succeeded on 2026-09-06: one edition read, one skipped, zero membership writes.
+Trigger rollout of the correction handling is pending. Historical format coverage and backfill remain incomplete.
 
 Release evidence:
 

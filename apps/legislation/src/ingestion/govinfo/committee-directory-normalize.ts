@@ -61,7 +61,7 @@ export function normalizeGovInfoCommitteeDirectory(
       sourceProvider: "govinfo",
       sourceRetrievedAt: retrievedAt,
       sourceUpdatedAt: directoryPackage.lastModified,
-      sourceUrl: directoryPackage.textUrl.href,
+      sourceUrl: directoryPackage.sourceUrl.href,
       upstreamIds: { govinfo: `${directoryPackage.packageId}:${sourceId}` }
     }
   })
@@ -71,7 +71,7 @@ export function normalizeGovInfoCommitteeDirectory(
   for (const record of records) {
     const canonicalOrganizationId = organizationId("govinfo", organizationSourceId(record))
     for (const member of record.members) {
-      const match = matchPerson(member, people)
+      const match = matchPerson({ ...member, name: crossCheckedPrintedName(member, records, directoryPackage) }, people)
       if (match === undefined) {
         unmatched.push({ chamber: record.chamber, name: member.name, organization: record.name })
         continue
@@ -94,7 +94,7 @@ export function normalizeGovInfoCommitteeDirectory(
         sourceProvider: "govinfo",
         sourceRetrievedAt: retrievedAt,
         sourceUpdatedAt: directoryPackage.lastModified,
-        sourceUrl: directoryPackage.textUrl.href,
+        sourceUrl: directoryPackage.sourceUrl.href,
         title: member.role ?? null
       })
     }
@@ -110,6 +110,38 @@ export function normalizeGovInfoCommitteeDirectory(
     },
     unmatched
   }
+}
+
+/** These printed 118th-edition errors are contradicted by other rosters in that same edition. */
+function crossCheckedPrintedName(
+  member: GovInfoCommitteeMember,
+  records: readonly GovInfoCommitteeRecord[],
+  directory: GovInfoDirectoryPackage
+): string {
+  if (directory.packageId !== "CDIR-2024-04-25" || directory.congress !== 118 || member.chamber !== "lower") {
+    return member.name
+  }
+  const corrections = new Map([
+    ["Paul P. Sarbanes", { name: "John P. Sarbanes", state: "MD", district: "3" }],
+    ["Debbie Pingell", { name: "Debbie Dingell", state: "MI", district: "6" }],
+    ["Vicente Gonzales", { name: "Vicente Gonzalez", state: "TX", district: "34" }],
+    ["Garret Graves T4", { name: "Garret Graves", state: "LA", district: "6" }],
+    ["Lori Chaves-DeRemer", { name: "Lori Chavez-DeRemer", state: "OR", district: "5" }]
+  ])
+  const correction = corrections.get(member.name)
+  if (correction === undefined || correction.state !== member.state || correction.district !== member.district) {
+    return member.name
+  }
+  const corroborated = records.some((record) =>
+    record.members.some(
+      (candidate) =>
+        candidate.chamber === "lower" &&
+        candidate.name === correction.name &&
+        candidate.state === correction.state &&
+        candidate.district === correction.district
+    )
+  )
+  return corroborated ? correction.name : member.name
 }
 
 interface IndexedPerson {
@@ -166,7 +198,9 @@ function termAppliesToCongress(term: TermRow, congress: number): boolean {
 }
 
 function nameVariants(value: string): string[] {
-  const withoutNickname = value.replaceAll(/\s+["“][^"”]+["”]\s*/g, " ")
+  const withoutNickname = value
+    .replaceAll(/\s+(?:["“][^"”]+["”]|[‘’]{2}[^‘’]+[‘’]{2}|\([^()]+\))\s*/g, " ")
+    .replace(/,+$/, "")
   const withoutSuffix = withoutNickname.replace(/,?\s+(jr\.?|sr\.?|ii|iii|iv)$/i, "")
   const normalized = normalizeName(withoutSuffix)
   const comma = withoutSuffix.split(",").map((part) => part.trim())
@@ -174,13 +208,19 @@ function nameVariants(value: string): string[] {
 }
 
 function normalizeName(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replaceAll(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9 ]/g, " ")
-    .replaceAll(/\s+/g, " ")
-    .trim()
+  return (
+    value
+      // PDF text may emit a spacing acute accent separately (Luja´n).
+      // Remove it before NFKD expands it into a space and combining mark.
+      .replaceAll("\u00b4", "")
+      .replaceAll("\u0131", "i")
+      .normalize("NFKD")
+      .replaceAll(/\p{Diacritic}/gu, "")
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9 ]/g, " ")
+      .replaceAll(/\s+/g, " ")
+      .trim()
+  )
 }
 
 function canonicalChamber(value: string | null): CongressionalChamber | undefined {

@@ -9,7 +9,8 @@ import {
   personAliases,
   personDetails,
   personExternalIdentifiers,
-  personJurisdictions
+  personJurisdictions,
+  syncCheckpoints
 } from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
@@ -87,9 +88,11 @@ export async function replaceEntitySnapshot(
   jurisdictionId: string,
   snapshot: EntitySnapshot,
   options: Readonly<{
+    checkpoint?: { source: string; stream: string; cursor: Record<string, unknown> }
     membershipDetectionDate?: string
     membershipSessionId?: string
     organizationSourceProvider?: string
+    preserveExistingOrganizations?: boolean
     replaceOrganizations?: boolean
     replacePeople?: boolean
   }> = {}
@@ -168,7 +171,7 @@ export async function replaceEntitySnapshot(
         .set({ isActive: false, updatedAt: new Date() })
         .where(eq(legislativeTerms.jurisdictionId, jurisdictionId))
     }
-    if (options.replaceOrganizations !== false) {
+    if (options.replaceOrganizations !== false && options.preserveExistingOrganizations !== true) {
       await transaction
         .update(organizations)
         .set({ isActive: false, updatedAt: new Date() })
@@ -325,8 +328,9 @@ export async function replaceEntitySnapshot(
           )
         )
     }
+    const writtenOrganizationIds = new Set<string>()
     if (organizationValues.length > 0) {
-      await transaction
+      const writtenOrganizations = await transaction
         .insert(organizations)
         .values(organizationValues)
         .onConflictDoUpdate({
@@ -359,13 +363,18 @@ export async function replaceEntitySnapshot(
             upstreamIds: sql`excluded.upstream_ids`,
             websiteUrl: sql`excluded.website_url`
           },
-          target: organizations.id
+          target: organizations.id,
+          ...(options.preserveExistingOrganizations === true ? { setWhere: sql`false` } : {})
         })
+        .returning({ id: organizations.id })
+      for (const organization of writtenOrganizations) {
+        writtenOrganizationIds.add(organization.id)
+      }
     }
-    if (termValues.length > 0) {
+    for (let offset = 0; offset < termValues.length; offset += 1_000) {
       await transaction
         .insert(legislativeTerms)
-        .values(termValues)
+        .values(termValues.slice(offset, offset + 1_000))
         .onConflictDoUpdate({
           set: {
             chamber: sql`excluded.chamber`,
@@ -487,6 +496,9 @@ export async function replaceEntitySnapshot(
       })
     }
     for (const organization of organizationValues) {
+      if (options.preserveExistingOrganizations === true && !writtenOrganizationIds.has(organization.id)) {
+        continue
+      }
       await observeCanonicalRecord(transaction, {
         fields: {
           chamber: organization.chamber,
@@ -532,6 +544,18 @@ export async function replaceEntitySnapshot(
         recordId: membership.id,
         recordType: "organization-membership"
       })
+    }
+    if (options.checkpoint !== undefined) {
+      await transaction
+        .insert(syncCheckpoints)
+        .values({
+          ...options.checkpoint,
+          watermark: new Date()
+        })
+        .onConflictDoUpdate({
+          target: [syncCheckpoints.source, syncCheckpoints.stream],
+          set: { cursor: options.checkpoint.cursor, watermark: new Date(), updatedAt: new Date() }
+        })
     }
   })
 }

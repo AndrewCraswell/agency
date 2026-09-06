@@ -117,6 +117,8 @@ export function normalizeCongressMembers(
 ): Pick<CongressEntitySnapshot, "people" | "terms"> {
   const federalJurisdictionId = jurisdictionId("us")
   const normalized = inputs.map((input) => memberSchema.parse(input))
+  const congressStartYear = 1789 + (congress - 1) * 2
+  const congressEndYear = congressStartYear + 2
   return {
     people: normalized.map((member) => ({
       id: personId("congress", member.bioguideId),
@@ -134,6 +136,12 @@ export function normalizeCongressMembers(
     terms: normalized.flatMap((member) => {
       const canonicalPersonId = personId("congress", member.bioguideId)
       return member.terms.item.flatMap((term) => {
+        // Collection terms cover a member's entire career. Do not label an
+        // unrelated chamber tenure with the requested Congress. Keep boundary
+        // years because year-only dates cannot prove absence before January 3.
+        if (term.startYear > congressEndYear || (term.endYear !== undefined && term.endYear < congressStartYear)) {
+          return []
+        }
         const normalizedChamber = chamber(term.chamber)
         if (normalizedChamber === undefined) {
           return []

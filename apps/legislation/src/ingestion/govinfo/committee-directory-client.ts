@@ -1,5 +1,10 @@
 import { z } from "zod"
 import { readBounded, RetryingHttpClient } from "../http-client.js"
+import { createGovInfoAssignmentResolver } from "./committee-assignment-index.js"
+import { parseGovInfoCompactCommitteeDirectory } from "./committee-compact-parser.js"
+import { parseGovInfoCommitteeDirectory } from "./committee-directory-parser.js"
+import { getGovInfoCommitteeGranules } from "./committee-granule-text.js"
+import { parseGovInfoHistoricalCommitteeText } from "./committee-historical-parser.js"
 
 const MAXIMUM_API_PAGE_BYTES = 5 * 1024 * 1024
 const MAXIMUM_DIRECTORY_BYTES = 8 * 1024 * 1024
@@ -23,6 +28,7 @@ export interface GovInfoDirectoryPackage {
   issuedAt: Date
   lastModified: Date
   packageId: string
+  sourceUrl: URL
   textUrl: URL
 }
 
@@ -72,7 +78,7 @@ export class GovInfoCommitteeDirectoryClient {
         throw new Error("GovInfo CDIR API returned a repeated pagination cursor")
       }
       seenCursors.add(offsetMark)
-      const response = await this.#http.get(this.#collectionUrl(congress, from, through, offsetMark), {
+      const response = await this.#http.get(this.#collectionUrl(congress, offsetMark), {
         headers: { "X-Api-Key": this.#apiKey, accept: "application/json" }
       })
       const parsed = directoryCollectionSchema.safeParse(
@@ -92,6 +98,10 @@ export class GovInfoCommitteeDirectoryClient {
           issuedAt,
           lastModified,
           packageId: record.packageId,
+          sourceUrl:
+            congress < 119
+              ? new URL(`https://www.govinfo.gov/app/details/${record.packageId}`)
+              : new URL(`${record.packageId}/text/${record.packageId}.txt`, this.#contentUrl),
           textUrl: new URL(`${record.packageId}/text/${record.packageId}.txt`, this.#contentUrl)
         })
       }
@@ -117,8 +127,51 @@ export class GovInfoCommitteeDirectoryClient {
     return text
   }
 
-  #collectionUrl(congress: number, from: Date, through: Date, offsetMark: string): URL {
-    const url = new URL(`collections/CDIR/${apiTimestamp(from)}/${apiTimestamp(through)}`, this.#apiUrl)
+  async getRecords(directoryPackage: GovInfoDirectoryPackage) {
+    if (directoryPackage.congress < 118) {
+      const granules = await getGovInfoCommitteeGranules({
+        apiKey: this.#apiKey,
+        http: this.#http,
+        packageId: directoryPackage.packageId,
+        includeAssignments: true,
+        // These editions' advertised HTML loses portions of printed names.
+        // Read the same official granules from their coordinate-preserving PDFs.
+        ...(directoryPackage.congress >= 116 ? { rendition: "pdf" } : {})
+      })
+      return parseGovInfoHistoricalCommitteeText(
+        granules.filter((granule) => !granule.title.startsWith("ASSIGNMENTS OF")),
+        {
+          resolveAbbreviatedMember: createGovInfoAssignmentResolver(
+            granules.filter((granule) => granule.title.startsWith("ASSIGNMENTS OF"))
+          )
+        }
+      )
+    }
+    if (directoryPackage.congress === 118) {
+      const headers = { "X-Api-Key": this.#apiKey, accept: "application/json" }
+      const response = await this.#http.get(new URL(`packages/${directoryPackage.packageId}/summary`, this.#apiUrl), {
+        headers
+      })
+      const summary = z
+        .object({ download: z.object({ pdfLink: z.url() }) })
+        .parse(JSON.parse(new TextDecoder().decode(await readBounded(response, MAXIMUM_API_PAGE_BYTES))))
+      const pdfUrl = new URL(summary.download.pdfLink)
+      if (pdfUrl.origin !== this.#apiUrl.origin || pdfUrl.pathname !== `/packages/${directoryPackage.packageId}/pdf`) {
+        throw new Error("GovInfo directory PDF link escaped its package")
+      }
+      const pdf = await this.#http.getBytes(pdfUrl, 100 * 1024 * 1024, {
+        headers: { ...headers, accept: "application/pdf" }
+      })
+      const { extractGovInfoCommitteePdfText } = await import("./committee-pdf-text.js")
+      return parseGovInfoCompactCommitteeDirectory(await extractGovInfoCommitteePdfText(pdf))
+    }
+    return parseGovInfoCommitteeDirectory(await this.getText(directoryPackage))
+  }
+
+  #collectionUrl(congress: number, offsetMark: string): URL {
+    // Collection bounds filter lastModified, not publication dates. Older
+    // Congresses may have been republished years after their session ended.
+    const url = new URL("collections/CDIR/1970-01-01T00:00:00Z", this.#apiUrl)
     url.searchParams.set("congress", String(congress))
     url.searchParams.set("offsetMark", offsetMark)
     url.searchParams.set("pageSize", String(this.#pageSize))
@@ -131,10 +184,6 @@ function congressStartYear(congress: number): number {
     throw new Error("GovInfo committee Congress must be a positive integer")
   }
   return 1789 + (congress - 1) * 2
-}
-
-function apiTimestamp(value: Date): string {
-  return value.toISOString().replace(/\.\d{3}Z$/, "Z")
 }
 
 function packageIssueDate(packageId: string): Date {

@@ -70,6 +70,35 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     expect(rows.filter((row) => row.sourceId?.startsWith("large:") && row.isActive)).toHaveLength(4_000)
   }, 120_000)
 
+  it("imports a historical term range exceeding one statement's bind parameter budget", async () => {
+    const input = snapshot({ complete: true, role: "member" })
+    const term = input.terms[0]!
+    const largeSnapshot = {
+      ...input,
+      terms: Array.from({ length: 4_001 }, (_, index) => ({
+        ...term,
+        chamber: "lower",
+        district: "1",
+        endDate: "2025-01-03",
+        id: `${termId}:large:${index}`,
+        organizationId,
+        party: "Independent",
+        sourceId: `large-term:${index}`,
+        startDate: "2023-01-03"
+      }))
+    }
+    // Prove this fixture exercises the PostgreSQL limit, not only a batch boundary.
+    expect(database.insert(schema.legislativeTerms).values(largeSnapshot.terms).toSQL().params.length).toBeGreaterThan(
+      65_535
+    )
+    await replaceEntitySnapshot(database, jurisdictionId, largeSnapshot)
+    const rows = await database
+      .select()
+      .from(schema.legislativeTerms)
+      .where(eq(schema.legislativeTerms.personId, personId))
+    expect(rows.filter((row) => row.sourceId?.startsWith("large-term:") && row.isActive)).toHaveLength(4_001)
+  }, 120_000)
+
   it("refreshes canonical provenance and completeness when snapshot records conflict", async () => {
     await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: false, role: "member" }))
     await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: true, role: "chair" }))
@@ -108,6 +137,65 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       sourceUpdatedAt: new Date("2026-08-25T12:00:00.000Z"),
       sourceUrl: "https://legislature.example.test/entity-refresh/membership"
     })
+  })
+
+  it("preserves current organizations and memberships while checkpointing a historical snapshot", async () => {
+    await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: true, role: "chair" }))
+    const [before] = await database
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId))
+    const sessionId = "session:entity-refresh:historical"
+    await database.insert(schema.legislativeSessions).values({
+      id: sessionId,
+      jurisdictionId,
+      identifier: "historical",
+      name: "Historical session",
+      classification: "congress"
+    })
+    const historical = snapshot({ complete: true, role: "member" })
+    await replaceEntitySnapshot(
+      database,
+      jurisdictionId,
+      {
+        ...historical,
+        people: [],
+        terms: [],
+        personAliases: [],
+        personAliasPersonIds: [],
+        organizations: historical.organizations.map((organization) => ({
+          ...organization,
+          name: "Old name",
+          isActive: false
+        })),
+        memberships: historical.memberships.map((membership) => ({
+          ...membership,
+          id: `${membership.id}:historical`,
+          sourceId: "historical",
+          legislativeSessionId: sessionId
+        }))
+      },
+      {
+        preserveExistingOrganizations: true,
+        replacePeople: false,
+        membershipSessionId: sessionId,
+        checkpoint: { source: "govinfo", stream: "historical-test", cursor: { fingerprint: "saved" } }
+      }
+    )
+    const [after] = await database
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId))
+    expect(after).toEqual(before)
+    const [current] = await database
+      .select()
+      .from(schema.organizationMemberships)
+      .where(eq(schema.organizationMemberships.id, membershipId))
+    expect(current?.isActive).toBe(true)
+    const checkpoint = await database.query.syncCheckpoints.findFirst({
+      where: eq(schema.syncCheckpoints.stream, "historical-test")
+    })
+    expect(checkpoint?.cursor).toEqual({ fingerprint: "saved" })
   })
 
   it("refreshes Congress-owned person details on a subsequent snapshot", async () => {

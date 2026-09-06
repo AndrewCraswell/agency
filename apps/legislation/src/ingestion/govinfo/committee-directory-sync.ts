@@ -15,9 +15,13 @@ import { RetryingHttpClient } from "../http-client.js"
 import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
 import { GovInfoCommitteeDirectoryClient } from "./committee-directory-client.js"
 import { normalizeGovInfoCommitteeDirectory, type GovInfoPersonCatalog } from "./committee-directory-normalize.js"
-import { parseGovInfoCommitteeDirectory } from "./committee-directory-parser.js"
+import {
+  committeeRosterFingerprint,
+  directoryDetectionDate,
+  readDirectoryObservation
+} from "./committee-directory-observation.js"
 
-type CommitteeDirectoryClient = Pick<GovInfoCommitteeDirectoryClient, "discover" | "getText">
+type CommitteeDirectoryClient = Pick<GovInfoCommitteeDirectoryClient, "discover" | "getRecords">
 
 export interface GovInfoCommitteeSynchronizationInput {
   config: LegislationConfig
@@ -70,15 +74,15 @@ export async function executeGovInfoCommitteeSynchronization(
       }
       const checkpoint = input.restart === true ? undefined : await readCheckpoint(input.database, stream)
       const packages = discovered.filter(
-        (directoryPackage) => checkpoint === undefined || directoryPackage.issuedAt > checkpoint
+        (directoryPackage) => checkpoint === undefined || directoryPackage.issuedAt >= checkpoint.issuedAt
       )
-      let applied = checkpoint
-      let packageId: string | undefined
+      let observation = checkpoint?.observation
+      let applied = checkpoint?.issuedAt
+      let packageId = checkpoint?.packageId
       const catalog = await loadCatalog(input.database)
       for (const directoryPackage of packages) {
-        const text = await client.getText(directoryPackage)
+        const records = await client.getRecords(directoryPackage)
         counts.read += 1
-        const records = parseGovInfoCommitteeDirectory(text)
         const normalized = normalizeGovInfoCommitteeDirectory(records, directoryPackage, catalog, runAt)
         if (normalized.unmatched.length > 0) {
           const examples = normalized.unmatched
@@ -89,10 +93,92 @@ export async function executeGovInfoCommitteeSynchronization(
             `GovInfo package ${directoryPackage.packageId} has ${normalized.unmatched.length} unmatched committee members: ${examples}`
           )
         }
+        const fingerprint = committeeRosterFingerprint(normalized.snapshot.memberships)
+        if (
+          observation === undefined &&
+          checkpoint !== undefined &&
+          directoryPackage.issuedAt.getTime() === checkpoint.issuedAt.getTime()
+        ) {
+          // Bootstrap the deployed checkpoint only if today's source agrees with
+          // the already-published roster. Never invent a previously unseen change.
+          const existing = await input.database
+            .select({
+              organizationId: organizationMemberships.organizationId,
+              personId: organizationMemberships.personId,
+              role: organizationMemberships.role
+            })
+            .from(organizationMemberships)
+            .where(
+              and(
+                eq(organizationMemberships.sourceProvider, "govinfo"),
+                eq(organizationMemberships.legislativeSessionId, session.id),
+                or(
+                  eq(organizationMemberships.isActive, true),
+                  eq(organizationMemberships.endedReason, "congress_ended")
+                )
+              )
+            )
+          if (committeeRosterFingerprint(existing) !== fingerprint) {
+            throw new Error(
+              "GovInfo roster differs from the published checkpoint without a saved observation; review is required"
+            )
+          }
+          observation = {
+            detectedAt: directoryPackage.issuedAt.toISOString(),
+            fingerprint,
+            issuedAt: directoryPackage.issuedAt.toISOString(),
+            lastModified: directoryPackage.lastModified.toISOString(),
+            packageId: directoryPackage.packageId
+          }
+        }
+        const detectedAt = directoryDetectionDate({
+          fingerprint,
+          issuedAt: directoryPackage.issuedAt,
+          lastModified: directoryPackage.lastModified,
+          now: runAt,
+          packageId: directoryPackage.packageId,
+          sessionEnd: session.endDate,
+          ...(observation === undefined ? {} : { previous: observation })
+        })
+        if (detectedAt === undefined) {
+          packageId = directoryPackage.packageId
+          if (observation !== undefined && directoryPackage.lastModified > new Date(observation.lastModified)) {
+            observation.lastModified = directoryPackage.lastModified.toISOString()
+          }
+          counts.skipped += 1
+          continue
+        }
+        observation = {
+          detectedAt: detectedAt.toISOString(),
+          fingerprint,
+          issuedAt: directoryPackage.issuedAt.toISOString(),
+          lastModified: directoryPackage.lastModified.toISOString(),
+          packageId: directoryPackage.packageId
+        }
+        for (const membership of normalized.snapshot.memberships) {
+          membership.detectedStartDate = detectedAt.toISOString().slice(0, 10)
+          membership.lastObservedDate = membership.detectedStartDate
+        }
+        if (session.hasEnded) {
+          for (const organization of normalized.snapshot.organizations) {
+            organization.isActive = false
+          }
+        }
         await replaceEntitySnapshot(input.database, jurisdictionId("us"), normalized.snapshot, {
-          membershipDetectionDate: directoryPackage.issuedAt.toISOString().slice(0, 10),
+          checkpoint: {
+            source: "govinfo",
+            stream,
+            cursor: {
+              congress: input.congress,
+              issuedAt: directoryPackage.issuedAt.toISOString(),
+              packageId: directoryPackage.packageId,
+              observation
+            }
+          },
+          membershipDetectionDate: detectedAt.toISOString().slice(0, 10),
           membershipSessionId: session.id,
           organizationSourceProvider: "govinfo",
+          preserveExistingOrganizations: session.hasEnded,
           replacePeople: false
         })
         counts.updated += normalized.snapshot.organizations.length + normalized.snapshot.memberships.length
@@ -102,12 +188,13 @@ export async function executeGovInfoCommitteeSynchronization(
       if (session.hasEnded) {
         await endCongressMemberships(input.database, session.id)
       }
-      counts.skipped = discovered.length - packages.length
+      counts.skipped += discovered.length - packages.length
       return {
         checkpoint: {
           congress: input.congress,
           issuedAt: applied?.toISOString(),
-          packageId
+          packageId,
+          observation
         },
         counts,
         failures: []
@@ -248,7 +335,7 @@ async function loadFederalPersonCatalog(database: LegislationDatabase): Promise<
   return { aliases: aliasRows, people: personRows, terms: termRows }
 }
 
-async function readCheckpoint(database: LegislationDatabase, stream: string): Promise<Date | undefined> {
+async function readCheckpoint(database: LegislationDatabase, stream: string) {
   const checkpoint = await database.query.syncCheckpoints.findFirst({
     where: and(eq(syncCheckpoints.source, "govinfo"), eq(syncCheckpoints.stream, stream))
   })
@@ -257,7 +344,14 @@ async function readCheckpoint(database: LegislationDatabase, stream: string): Pr
     return undefined
   }
   const issuedAt = new Date(value)
-  return Number.isNaN(issuedAt.getTime()) ? undefined : issuedAt
+  if (Number.isNaN(issuedAt.getTime())) {
+    throw new Error("GovInfo committee checkpoint has an invalid issue date")
+  }
+  return {
+    issuedAt,
+    packageId: typeof checkpoint?.cursor.packageId === "string" ? checkpoint.cursor.packageId : undefined,
+    observation: readDirectoryObservation(checkpoint?.cursor.observation)
+  }
 }
 
 function createClient(config: LegislationConfig): CommitteeDirectoryClient {

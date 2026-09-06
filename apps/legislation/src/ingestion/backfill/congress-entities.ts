@@ -57,6 +57,9 @@ export async function executeCongressEntityRangeBackfill(
         for await (const page of client.members(congress)) {
           members.push(...page)
         }
+        if (members.length === 0) {
+          throw new Error(`Congress ${congress} returned no members; refusing to replace the federal entity snapshot`)
+        }
         const context = { retrievedAt: new Date() }
         const memberSnapshot = await hydrateCongressMemberSnapshot(
           members,

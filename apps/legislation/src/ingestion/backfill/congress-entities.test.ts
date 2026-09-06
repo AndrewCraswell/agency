@@ -1,8 +1,41 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterAll, describe, expect, it, vi } from "vitest"
+import { loadConfig } from "../../config/config.js"
+import { createDatabase } from "../../db/database.js"
 import { createJobCounts, runIngestionJob as runIngestionJobType } from "../job.js"
 import { executeCongressEntityRangeBackfill } from "./congress-entities.js"
 
+const config = loadConfig({ NODE_ENV: "test" })
+const { database, pool } = createDatabase(config.database)
+afterAll(async () => pool.end())
+
 describe("Congress entity range backfill", () => {
+  it.each([118, 119])("refuses replacement when Congress %i has an empty collection", async (emptyCongress) => {
+    const replaceEntitySnapshot = vi.fn<() => Promise<void>>()
+    const runIngestionJob = vi.fn<typeof runIngestionJobType>(async (_database, input, execute) => ({
+      ...(await execute("empty-range-test")),
+      correlationId: input.correlationId,
+      operation: input.operation,
+      runId: "empty-range-test",
+      source: input.source,
+      status: "succeeded"
+    }))
+    const client = {
+      async *members(congress: number) {
+        yield congress === emptyCongress
+          ? []
+          : [{ bioguideId: "M000001", name: "Member One", url: "https://api.congress.gov/member/M000001" }]
+      },
+      getMember: async () => ({ bioguideId: "M000001", currentMember: true, terms: [] })
+    }
+    await expect(
+      executeCongressEntityRangeBackfill(
+        { config, database, correlationId: "test", startCongress: 118, endCongress: 119 },
+        { client, replaceEntitySnapshot, runIngestionJob }
+      )
+    ).rejects.toThrow(`Congress ${emptyCongress} returned no members`)
+    expect(replaceEntitySnapshot).not.toHaveBeenCalled()
+  })
+
   it("uses the all-range lease and visits every Congress", async () => {
     const members = vi.fn<(congress: number) => AsyncGenerator<readonly unknown[]>>(async function* (congress: number) {
       yield [

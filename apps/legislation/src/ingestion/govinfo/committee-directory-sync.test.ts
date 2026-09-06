@@ -1,0 +1,207 @@
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { loadConfig } from "../../config/config.js"
+import { createDatabase } from "../../db/database.js"
+import type { replaceEntitySnapshot } from "../../db/queries/entities.js"
+import type { runIngestionJob } from "../job.js"
+import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
+import { normalizeGovInfoCommitteeDirectory } from "./committee-directory-normalize.js"
+import { committeeRosterFingerprint } from "./committee-directory-observation.js"
+import { parseGovInfoCommitteeDirectory } from "./committee-directory-parser.js"
+import { executeGovInfoCommitteeSynchronization } from "./committee-directory-sync.js"
+
+const mocks = vi.hoisted(() => ({
+  replace: vi.fn<typeof replaceEntitySnapshot>(),
+  run: vi.fn<typeof runIngestionJob>()
+}))
+vi.mock("../../db/queries/entities.js", () => ({ replaceEntitySnapshot: mocks.replace }))
+vi.mock("../job.js", async (original) => ({
+  ...(await original<typeof import("../job.js")>()),
+  runIngestionJob: mocks.run
+}))
+
+const config = loadConfig({ NODE_ENV: "test" })
+const { database, pool } = createDatabase(config.database)
+const now = new Date("2026-09-06T12:00:00Z")
+let cursor: Record<string, unknown> | undefined
+let existing: string[][] = []
+const catalog = {
+  aliases: [],
+  people: [
+    { id: "person:congress:s1", name: "Jane Senator", givenName: "Jane", familyName: "Senator" },
+    { id: "person:congress:r1", name: "Alex Representative", givenName: "Alex", familyName: "Representative" }
+  ],
+  terms: [
+    {
+      personId: "person:congress:s1",
+      chamber: "upper",
+      district: null,
+      isActive: true,
+      sourceId: "119:upper:2025:2027"
+    },
+    { personId: "person:congress:r1", chamber: "lower", district: "3", isActive: true, sourceId: "119:lower:2025:2027" }
+  ]
+}
+
+afterAll(async () => pool.end())
+
+beforeEach(() => {
+  vi.restoreAllMocks()
+  mocks.replace.mockReset()
+  cursor = undefined
+  existing = []
+  vi.spyOn(pool, "query").mockImplementation(vi.fn(async () => ({ rows: existing })))
+  const checkpointQuery = database.query.syncCheckpoints.findFirst()
+  vi.spyOn(checkpointQuery, "execute").mockImplementation(async () =>
+    cursor === undefined
+      ? undefined
+      : { cursor, source: "govinfo", stream: "govinfo:committee-directory:119", watermark: now, updatedAt: now }
+  )
+  vi.spyOn(database.query.syncCheckpoints, "findFirst").mockReturnValue(checkpointQuery)
+  mocks.run.mockImplementation(async (_database, input, operation) => {
+    const result = await operation("test-run")
+    cursor = result.checkpoint === undefined ? cursor : { ...result.checkpoint }
+    return {
+      ...result,
+      correlationId: input.correlationId,
+      operation: input.operation,
+      runId: "test-run",
+      source: input.source,
+      status: "succeeded"
+    }
+  })
+  mocks.replace.mockImplementation(async (_database, _jurisdiction, _snapshot, options) => {
+    cursor = options?.checkpoint?.cursor
+  })
+})
+
+function directory(issued = "2026-02-20", modified = "2026-07-14"): GovInfoDirectoryPackage {
+  return {
+    congress: 119,
+    packageId: `CDIR-${issued}`,
+    issuedAt: new Date(issued),
+    lastModified: new Date(modified),
+    textUrl: new URL(`https://www.govinfo.gov/${issued}.txt`),
+    sourceUrl: new URL(`https://www.govinfo.gov/${issued}.txt`)
+  }
+}
+
+function fixture(role = "chairman"): string {
+  const senate = Array.from({ length: 10 }, (_, i) => `Senate Committee ${i + 1}\n\nJane Senator (wa) ${role}`).join(
+    "\n\n"
+  )
+  const house = Array.from(
+    { length: 10 },
+    (_, i) => `House Committee ${i + 1}\n\nAlex Representative (ca-03) chairman`
+  ).join("\n\n")
+  return `STANDING COMMITTEES OF THE SENATE\n\n${senate}\n\nSTANDING COMMITTEES OF THE HOUSE\n\n${house}\n\nJOINT COMMITTEES`
+}
+
+function run(packages = [directory()], getText = async () => fixture()) {
+  return executeGovInfoCommitteeSynchronization(
+    { config, database, congress: 119, correlationId: "test-correlation" },
+    {
+      client: {
+        discover: async () => packages,
+        getRecords: async () => parseGovInfoCommitteeDirectory(await getText())
+      },
+      loadCatalog: async () => catalog,
+      now: () => now
+    }
+  )
+}
+
+describe("committee directory observation synchronization", () => {
+  it("preserves existing organizations when importing an ended Congress", async () => {
+    await executeGovInfoCommitteeSynchronization(
+      { config, database, congress: 119, correlationId: "historical-test" },
+      {
+        client: {
+          discover: async () => [directory()],
+          getRecords: async () => parseGovInfoCommitteeDirectory(fixture())
+        },
+        loadCatalog: async () => catalog,
+        now: () => new Date("2028-01-01T00:00:00Z")
+      }
+    )
+    expect(mocks.replace).toHaveBeenCalledOnce()
+    const call = mocks.replace.mock.calls[0]!
+    expect(call[2].organizations.every((organization) => organization.isActive === false)).toBe(true)
+    expect(call[3]).toMatchObject({
+      membershipSessionId: "session:us:119",
+      preserveExistingOrganizations: true,
+      replacePeople: false
+    })
+  })
+
+  it("bootstraps only an identical published roster without replacing memberships", async () => {
+    cursor = { issuedAt: directory().issuedAt.toISOString(), packageId: directory().packageId }
+    const members = normalizeGovInfoCommitteeDirectory(
+      parseGovInfoCommitteeDirectory(fixture()),
+      directory(),
+      catalog,
+      now
+    ).snapshot.memberships
+    existing = members.map((m) => [m.organizationId, m.personId, m.role ?? "member"])
+    const result = await run()
+    expect(mocks.replace).not.toHaveBeenCalled()
+    expect(result.counts.skipped).toBe(1)
+    expect(result.checkpoint?.observation).toMatchObject({
+      fingerprint: committeeRosterFingerprint(members),
+      detectedAt: directory().issuedAt.toISOString()
+    })
+  })
+
+  it("fails closed when an unobserved checkpoint disagrees with published memberships", async () => {
+    cursor = { issuedAt: directory().issuedAt.toISOString(), packageId: directory().packageId }
+    await expect(run()).rejects.toThrow("without a saved observation")
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+
+  it("skips unchanged fingerprints, including metadata-only updates", async () => {
+    await run()
+    mocks.replace.mockClear()
+    const result = await run([directory("2026-02-20", "2026-08-01")])
+    expect(mocks.replace).not.toHaveBeenCalled()
+    expect(result.counts.skipped).toBe(1)
+    expect(result.checkpoint?.observation).toMatchObject({
+      lastModified: "2026-08-01T00:00:00.000Z",
+      detectedAt: "2026-02-20T00:00:00.000Z"
+    })
+  })
+
+  it("forwards the changed roster and modification-date checkpoint together", async () => {
+    await run()
+    mocks.replace.mockClear()
+    await run([directory("2026-02-20", "2026-08-02")], async () => fixture("ranking member"))
+    expect(mocks.replace).toHaveBeenCalledOnce()
+    const call = mocks.replace.mock.calls[0]!
+    expect(call[2].memberships.every((m) => m.detectedStartDate === "2026-08-02")).toBe(true)
+    expect(call[3]).toMatchObject({
+      membershipDetectionDate: "2026-08-02",
+      checkpoint: {
+        stream: "govinfo:committee-directory:119",
+        cursor: { observation: { detectedAt: "2026-08-02T00:00:00.000Z" } }
+      }
+    })
+  })
+
+  it("retains a completed edition checkpoint when a later edition fails and safely replays", async () => {
+    const packages = [directory(), directory("2026-08-20", "2026-08-21")]
+    let reads = 0
+    await expect(
+      run(packages, async () => {
+        reads += 1
+        if (reads === 2) {
+          throw new Error("source unavailable")
+        }
+        return fixture()
+      })
+    ).rejects.toThrow("source unavailable")
+    expect(cursor?.packageId).toBe("CDIR-2026-02-20")
+    mocks.replace.mockClear()
+    const result = await run(packages)
+    expect(result.counts.skipped).toBe(1)
+    expect(mocks.replace).toHaveBeenCalledOnce()
+    expect(cursor?.packageId).toBe("CDIR-2026-08-20")
+  })
+})
