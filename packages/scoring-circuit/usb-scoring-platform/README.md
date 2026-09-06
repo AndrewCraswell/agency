@@ -144,6 +144,28 @@ still require effective-capacitance review at their actual bias, including toler
 regulator requirements. Do not assume the two 22uF parts supply 44uF under bias or use the nominal BOM to approve
 stability, startup or load steps. Exact 3D height/assembly clearance and procurement review remain open.
 
+### Diode selection and open switch finding
+
+All eleven diodes have exact ordering fields in both native files: D1/D2 use Vishay **SS14-E3/61T** (40V SMA), D3-D9 use
+Nexperia **BAT54S,215** (dual-series SOT23), and D10/D11 retain Vishay **1N4004-E3/54** (400V DO-41). Manufacturer
+package/polarity drawings were visually reviewed. Native pad connections match: SS14 cathodes join CORE_5V; BAT54S pin 1
+is GND, pin 2 CORE_3V3, pin 3 the respective sense input; repeater diode cathodes join their isolated collector nodes.
+No footprint, pin assignment, component position or routing changed.
+
+The [SS14 sheet](https://www.vishay.com/doc?88746), pages 1-2, specifies 0.50V maximum at a pulsed 1A/25 C test and
+reverse leakage up to 0.2mA at 25 C or 6mA at 100 C at rated reverse voltage. Those conditions do not establish our
+low-current forward drop or actual off-rail leakage. The
+[BAT54S sheet](https://assets.nexperia.com/documents/data-sheet/BAT54S.pdf), pages 1-3, confirms pin polarity and 30V
+rating, not protection against an unspecified external source. Existing unpowered backfeed and power-budget findings
+remain open. The [1N4004 sheet](https://www.vishay.com/docs/88503/1n4001.pdf), pages 1-2, binds the existing part and
+cathode band; this does not qualify repeater waveforms.
+
+**Next electrical correction to assess:** Q1-Q5 currently use BSS138. The
+[Diodes Incorporated BSS138 sheet](https://www.diodes.com/datasheet/download/BSS138.pdf), pages 1-2, guarantees
+on-resistance at VGS=10V, not at the actual lower control voltages. Its threshold voltage and typical curves are not
+substitutes for that guarantee. Review each sink load/control voltage and choose a same-pinout logic-level part if the
+required low voltage cannot be bounded. No transistor was changed or approved by the diode-selection pass.
+
 ## Low-volume build scope
 
 Design for **3-10 units per month**. Prioritize dependable operation, straightforward assembly and repair, and
@@ -235,9 +257,9 @@ support effort.
   [TDK characteristic sheet](https://www.farnell.com/datasheets/4491452.pdf), pages 1-2, show the rated dimensions and
   substantial DC-bias loss: roughly half nominal capacitance at 20V in the reference curve. That is typical data, not a
   guaranteed effective-capacitance minimum. The existing IPC nominal 0603 footprint is retained; its lands are not
-  claimed to reproduce TDK's recommended reflow geometry exactly. C36/C39/C40 selection, aggregate input behavior, and
-  assembly review remain open. The data protector is independent of raw VBUS, but U18 must receive regulated
-  USB_PRIMARY_5V, never negotiated 20V.
+  claimed to reproduce TDK's recommended reflow geometry exactly. C36/C39/C40 ordering codes are now selected; aggregate
+  input behavior and assembly review remain open. The data protector is independent of raw VBUS, but U18 must receive
+  regulated USB_PRIMARY_5V, never negotiated 20V.
 - Retain AP63203 with Coilcraft XAL5030-472MEC for application 3.3V. The replacement REC30K's 30W/6A rating is a module
   rating, not a measured full-board load allowance. U20 limits input current and startup slew; test converter startup
   under the actual load before enabling the panel. Component substitution remains possible when justified by footprint,
