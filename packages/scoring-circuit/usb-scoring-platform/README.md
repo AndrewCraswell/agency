@@ -33,7 +33,8 @@ Use JLCPCB's standard **JLC04161H-7628**, nominal 1.6mm, outer 1oz and inner 0.5
 0.2104 / 0.0152 / 1.065 / 0.0152 / 0.2104 / 0.035**. Prepreg is 7628 (Er 4.4); core Er is 4.6. These published layers
 sum to 1.5862mm before mask; the calculator labels the finished build 1.59mm +/-10% under its nominal 1.6mm option. Keep
 the manufacturer dimensions rather than inventing a thicker core to force a nominal sum. Black mask and white printing
-remain unchanged. Mask thickness in the 3D file is illustrative, not a process tolerance.
+remain unchanged. Mask thickness in the 3D file is illustrative, not a process tolerance. KiCad's saved loss tangent of
+0.02 is its default, not a manufacturer-qualified material value.
 
 On 2026-09-06 the [JLCPCB calculator](https://jlcpcb.com/pcb-impedance-calculator), set to four layers, nominal 1.6mm,
 1oz outer / 0.5oz inner, returned **12.58mil (0.3195mm) width** for a **90-ohm non-coplanar differential pair** on L1
@@ -41,22 +42,29 @@ referenced to L2 with 9.8425mil (0.25mm) edge spacing. The `USB data` net class 
 / 0.25mm gap** for both host and isolated data nets. This is the next routing target, not a measurement or a
 manufacturing impedance guarantee. The calculator's displayed solver tolerance is not a fabrication tolerance.
 
-**USB route revision remains open.** The existing tracks have not been widened by changing the net class:
+**USB route revision is in progress.** The host-side routing has been replaced; the isolated-side routing is unchanged:
 
-| Net         | F.Cu length | B.Cu length | Existing width |
-| ----------- | ----------: | ----------: | -------------: |
-| USB_HOST_DP |    25.579mm |           0 |         0.20mm |
-| USB_HOST_DM |     9.469mm |    10.702mm |         0.20mm |
-| USB_DP      |    78.031mm |           0 |         0.20mm |
-| USB_DM      |    74.230mm |     3.746mm |         0.20mm |
+| Net         | F.Cu length | B.Cu length |                   Existing width |
+| ----------- | ----------: | ----------: | -------------------------------: |
+| USB_HOST_DP |    11.140mm |     6.062mm | 0.32mm, 0.20mm connector escapes |
+| USB_HOST_DM |     7.564mm |     9.118mm | 0.32mm, 0.20mm connector escapes |
+| USB_DP      |    78.031mm |           0 |                           0.20mm |
+| USB_DM      |    74.230mm |     3.746mm |                           0.20mm |
 
-Lengths above exclude vias and pad-internal paths. Reroute the paired trunks to the target with short pad escapes;
-inspect continuous reference copper in each isolation domain and return paths at layer transitions. The B.Cu portions
-cannot simply inherit the L1/L2 calculation: their adjacent layer is In2.Cu, which contains power and signal areas as
-well as ground. Preserve the isolation gap. Recheck physical pair spacing, skew and discontinuities before calling USB
-routing complete; a net class and zero airwires do not establish any of these properties. Keep nearby same-layer copper
-out of the paired trunk's field or recalculate it as a coplanar structure; the non-coplanar result does not model that
-coupling.
+Lengths above total all track branches and exclude vias and pad-internal paths; they are not end-to-end pair skew. The
+host trunk now runs on B.Cu with 0.32mm width / 0.25mm gap above the existing In2 USB_GND plane. The selected stackup is
+symmetric, so the same outer-layer geometry applies to L4/L3. A local B.Cu pour-only keepout removes nearby same-layer
+ground around that trunk, and two primary-ground stitching vias support the layer transitions. Native filled-copper
+sampling confirms the shared horizontal trunk's reference plane; the terminal via antipads and unpaired
+USB-C/protection/isolator escapes remain discontinuities, not a uniform 90-ohm line. No components, isolation barriers,
+or non-host signal routes moved. All four USB-C data contacts still reach U3 and U18.
+
+Next, revise the longer isolated-side paired trunk to the target with short pad escapes; inspect continuous reference
+copper in each isolation domain and return paths at layer transitions. The B.Cu portions cannot simply inherit the L1/L2
+calculation: their adjacent layer is In2.Cu, which contains power and signal areas as well as ground. Preserve the
+isolation gap. Recheck physical pair spacing, skew and discontinuities before calling USB routing complete; a net class
+and zero airwires do not establish any of these properties. Keep nearby same-layer copper out of the paired trunk's
+field or recalculate it as a coplanar structure; the non-coplanar result does not model that coupling.
 
 ## Low-volume build scope
 
@@ -306,6 +314,13 @@ Remaining before fabrication:
    No purchase or assembly release has been performed.
 
 ## Checks performed
+
+The host USB reroute passed 744 prior pad-continuity comparisons, cross-net copper checks, and 1,404 filled In2 USB_GND
+samples under the shared trunk (excluding terminal via fanouts). All previous non-host copper, part positions, models
+and isolation keepouts are unchanged. Native DRC retains zero unrouted items, zero parity mismatches and only the four
+existing J1 hole-clearance findings; ERC is zero. Front/back copper and native 3D views were reviewed. This is a routing
+improvement, not USB signal-integrity or power qualification. The new `pnpm verify` run again stopped in scoring
+software with the same three failures listed below (770 passing tests); normal commit hooks were retained.
 
 The manufacturing-stackup update passed native parsing, ERC (zero), connectivity (zero unrouted), and schematic parity
 (zero); the same four J1 hole-clearance findings remain. Native 3D rendering was reviewed. The board diff changes only
