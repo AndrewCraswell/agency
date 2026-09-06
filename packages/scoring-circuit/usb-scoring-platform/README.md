@@ -71,8 +71,8 @@ support effort.
   **LTM2884IY#PBF**; raw negotiated VBUS must never reach that isolator. U6 **REC30K-2405SZ**, behind U20
   **TPS259470LRPWR**, replaces the nonisolated Pololu converter with isolated display/application power. D1/D2 retain
   the isolated-source OR into CORE_5V and AP2112K supplies CORE_3V3. USB_GND remains separate from board GND.
-  **Schematic and placement are implemented; the replacement primary power/CC circuits still need routing. Do not power
-  or manufacture this draft.**
+  **Schematic, placement and U19's local regulator routing are implemented. The connector feeds, PD control and eFuse
+  routing remain unfinished. Do not power or manufacture this draft.**
 - **Accepted sleep behavior:** SPNDPWR is high, so USB idle/suspend shuts off the module's isolated output. With USB
   alone, acquisition powers down. Host resume requires USB re-enumeration; remote wake is unavailable in this mode.
   Desktop software must preserve bout state but discard the previous capture session and reconnect before accepting new
@@ -204,9 +204,10 @@ error. Conductor and replacement power routing remain unfinished.
 The current draft contains **199 components**, twelve functional/support sheets plus the cover, and 187 named nets
 (including explicit no-connect nets) on the unchanged **160 x 100mm**, four-layer PCB. The shared USB-C schematic,
 footprints and initial power placement are present. The new converter's secondary output and local bypass connect to the
-retained display/application/core distribution. **J1-to-controller CC, raw input, primary 5V regulator and eFuse
-circuits are not yet copper-connected; USB acquisition power is therefore unfinished again.** The extra unrouted items
-are real replacement-power work, not a completed conversion or a stale preview.
+retained display/application/core distribution. U19's input bypass, switch/inductor, bootstrap, internal-supply bypass,
+output capacitors and feedback divider are now locally connected. **J1-to-controller CC, input distribution, PD/eFuse
+control and the U19-to-U18 supply feeder remain unrouted; USB acquisition power is still unfinished.** The remaining
+unrouted items are real work, not a completed conversion or a stale preview.
 
 The existing USB data/protection, isolated output and USB-present sensing remain routed, along with the STM32 regulator,
 crystal, boot pull-down, reset network/button and programming header. The 5V distribution to both HUB75 power contacts,
@@ -226,9 +227,9 @@ Remaining before fabrication:
    weapon behavior and physical leakage margin remain unproven. Keep the 220-ohm excitation resistors and 3.3k sense
    dividers as the current candidate; BAT54S protection still needs review. Do not infer patent clearance from component
    selection or this topology.
-2. **Next deliverable: route the replacement shared-USB power and CC circuits**, including an isolated primary corridor
-   between J1/U18 and the new power group without crossing the weapon-input copper. Resolve the buck's low-input-voltage
-   corner and program/read back U5. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when
+2. **Next deliverable: route the PD controller and eFuse circuits**, followed by an isolated primary corridor between
+   J1/U18 and the new power group without crossing the weapon-input copper. Resolve the buck's low-input-voltage corner
+   and program/read back U5. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md) when
    implementing USB acquisition. Bench-check startup/current/suspend behavior, supply handover, and the electrical
    safety boundary for USB, PD, Ethernet, piste, and weapon conductors. The integrated isolator and all-layer copper
    keepouts separate computer ground from board ground; acquisition and application still share board ground. The
@@ -244,12 +245,23 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **221 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **202 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
 DRC exclusions or severity reductions were added. Module symbols use passive pins where detailed electrical pin types
 are unavailable, limiting ERC's fault detection.
+
+The U19 primary buck now has 54 additional tracks/vias. Nine local support placements were tightened around its input,
+BOOT/VCC and feedback pins, following the
+[TI LMR36510 layout guidance, pages 26-28](https://www.ti.com/lit/ds/symlink/lmr36510.pdf). The fast input/switch paths
+stay on top copper; a short output-sense trace runs on the back beneath the uninterrupted In1 USB_GND plane. Local
+ground stitching and the existing package thermal holes connect the returns. Native checks passed all seven local net
+groups and **768 prior pad-continuity comparisons**, with all **1377 previous tracks/vias** unchanged. No parts, values,
+nets, connectors, isolation keepouts or branding were added or changed. Actual copper layers and the native 3D render
+were inspected; a resistor courtyard conflict was corrected before acceptance. Unrouted items fell from 221 to 202, with
+no new ERC, parity or DRC finding. This does not qualify regulation, dropout, transient response, effective capacitance,
+copper weight or temperature; the low-input-voltage concern remains unresolved.
 
 The application buck section retains its local routing. U7, L1 and C4-C7 are grouped below the ESP32 antenna keepout.
 The 5V feeder connects U6's isolated output to C5; short top-layer connections close the input, switch and bootstrap
@@ -472,13 +484,13 @@ bounded simulation, not a passed physical operating corner. The five older model
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
 processor-link, IR, Ethernet, HUB75, sounder and Favero routing is retained. The shared-input replacement adds genuine
-unfinished power routing, bringing the current unconnected count to 221. Schematic, copper and native 3D renders were
-reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero schematic-parity issues. The
-latest repository verification passed formatting, lint, types and unused-code checks but failed three scoring tests: a
-mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The
-run stopped before every other package completed. These tests are outside the board edits; none was suppressed or
-modified. Physical USB signal, surge and ESD testing remain required; native connectivity and the protector's component
-ratings do not establish board-level immunity.
+unfinished power routing; local buck completion brings the current unconnected count to 202. Schematic, copper and
+native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector hole-clearance findings and zero
+schematic-parity issues. The latest repository verification passed formatting, lint, types and unused-code checks but
+failed three scoring tests: a mutation timeout, a canonical-corpus failure and a 29-versus-28 scenario-count assertion
+(770 scoring tests passed). The run stopped before every other package completed. These tests are outside the board
+edits; none was suppressed or modified. Physical USB signal, surge and ESD testing remain required; native connectivity
+and the protector's component ratings do not establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
