@@ -15,12 +15,13 @@ commands.
 ## Board appearance and ordering
 
 Use **black solder mask on both sides and white silkscreen**. These colors are saved in the native board; in KiCad's 3D
-viewer enable **Use board stackup colors**. The component side carries `Fencing Club` text. The underside carries the
-user's supplied crest, traced from `Fencing Club-09.png` into a native silkscreen graphic with its transparent cutouts
-preserved. It is rotated 90 degrees along the board's long axis and uniformly enlarged to 108 x 88.8mm, without changing
-the logo's proportions. The artwork spans pads and holes, with 0.3mm ink clearances around exposed back-side pads and
-their holes. It is grouped as `Fencing Club crest`, reads normally from below, and adds no component or electrical
-connection. The original logo file is not needed to open the board or export its silkscreen.
+viewer enable **Use board stackup colors**. The component side carries both `Fencing Club` text and the user's supplied
+crest, traced from `Fencing Club-09.png` into native front-silkscreen graphics with its transparent cutouts preserved.
+The crest is rotated 90 degrees along the board's long axis and uniformly enlarged to 108 x 88.8mm, without changing the
+logo's proportions. It reads normally from above, not mirrored. Ink is clipped 0.3mm clear of exposed front pads and
+their holes, and 0.25mm clear of existing silkscreen labels and outlines. Populated components naturally obscure some
+artwork. There is no underside copy. It remains grouped as `Fencing Club crest` and adds no electrical connection. The
+original logo file is not needed to open the board or export its silkscreen.
 
 When ordering, explicitly select **Black** for PCB color and **White** for silkscreen in
 [JLCPCB's quote](https://jlcpcb.com/help/article/instructions-for-ordering). The silkscreen Gerbers contain the
@@ -556,22 +557,23 @@ footprint and signal positions; pin 1 changes from the old 5V direction input to
 
 All seven models' acceptance limits pass, including the corrected seven-input settled leakage stress; this remains
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
-The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
-protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link, IR, Ethernet, HUB75, sounder and Favero routing is retained. The local buck, PD-control and eFuse
-circuits and the primary corridor complete the shared-input routing. Acquisition-buffer power and reset defaults are
-also connected, together with their fourteen STM32 control lines. Duplicate display pulls are removed, leaving 187
-components. Seven buffer-to-220-ohm output routes add 37 tracks/vias and leave 56 unconnected items. Only the seven
-series resistors moved; R11's reference label moved clear of its neighbor. No parts, values or nets changed. Native
-continuity checked all seven new buffer nets and 744 retained pad connections, with all 2174 earlier tracks/vias
-unchanged. The conductor sides remain unrouted pending the clamp/unpowered review; these routes do not resolve that
-electrical issue. Schematic, front/back copper and native 3D renders were reviewed; ERC is clean, and DRC retains four
-USB connector hole-clearance findings and zero schematic-parity issues. The latest repository verification passed
-formatting, lint, types and unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus
-failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before every other
-package completed. These tests are outside the board edits; none was suppressed or modified. Physical USB signal, surge
-and ESD testing remain required; native connectivity and the protector's component ratings do not establish board-level
-immunity.
+The top-side crest passed native KiCad rendering, front-silkscreen export and DRC without adding findings. All 187
+components, pad geometries and 2211 tracks/vias remained unchanged; 744 prior pad-continuity comparisons passed. The USB
+protection update changed U3's protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS
+connection. The following processor-link, IR, Ethernet, HUB75, sounder and Favero routing is retained. The local buck,
+PD-control and eFuse circuits and the primary corridor complete the shared-input routing. Acquisition-buffer power and
+reset defaults are also connected, together with their fourteen STM32 control lines. Duplicate display pulls are
+removed, leaving 187 components. Seven buffer-to-220-ohm output routes add 37 tracks/vias and leave 56 unconnected
+items. Only the seven series resistors moved; R11's reference label moved clear of its neighbor. No parts, values or
+nets changed. Native continuity checked all seven new buffer nets and 744 retained pad connections, with all 2174
+earlier tracks/vias unchanged. The conductor sides remain unrouted pending the clamp/unpowered review; these routes do
+not resolve that electrical issue. Schematic, front/back copper and native 3D renders were reviewed; ERC is clean, and
+DRC retains four USB connector hole-clearance findings and zero schematic-parity issues. The latest repository
+verification passed formatting, lint, types and unused-code checks but failed three scoring tests: a mutation timeout, a
+canonical-corpus failure and a 29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before
+every other package completed. These tests are outside the board edits; none was suppressed or modified. Physical USB
+signal, surge and ESD testing remain required; native connectivity and the protector's component ratings do not
+establish board-level immunity.
 
 Reference component data: [STM32G474](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
 [Nexperia 74LVC125A](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf),
