@@ -306,6 +306,19 @@
         "via_diameter": 0.6,
         "via_drill": 0.3,
         "wire_width": 6
+      },
+      {
+        "name": "Ethernet data",
+        "priority": 1,
+        "clearance": 0.2,
+        "track_width": 0.25,
+        "diff_pair_width": 0.25,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6,
+        "bus_width": 12
       }
     ],
     "meta": {
@@ -317,7 +330,13 @@
       { "netclass": "USB data", "pattern": "USB_DP" },
       { "netclass": "USB data", "pattern": "USB_DM" },
       { "netclass": "USB data", "pattern": "USB_HOST_DP" },
-      { "netclass": "USB data", "pattern": "USB_HOST_DM" }
+      { "netclass": "USB data", "pattern": "USB_HOST_DM" },
+      { "netclass": "Ethernet data", "pattern": "ETH_TX_P" },
+      { "netclass": "Ethernet data", "pattern": "ETH_TX_N" },
+      { "netclass": "Ethernet data", "pattern": "ETH_RX_P" },
+      { "netclass": "Ethernet data", "pattern": "ETH_RX_N" },
+      { "netclass": "Ethernet data", "pattern": "ETH_RX_JACK_P" },
+      { "netclass": "Ethernet data", "pattern": "ETH_RX_JACK_N" }
     ]
   },
   "pcbnew": {

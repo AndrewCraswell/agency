@@ -33,12 +33,19 @@ non-U12 pad positions/net assignments are preserved. The filtered analog supply 
 leaving the inner ground-reference layer intact. These checks establish connectivity and clearance, not Ethernet signal
 integrity or fabrication approval. An all-layer copper-plane keepout covers the magnetic jack body. Differential
 impedance/skew, final shield coupling, exact jack availability and mechanical review remain open. The TX+ fanout now
-runs entirely on F.Cu; its two former vias were removed without moving components. RX- still has layer changes, contrary
-to the [WIZnet layout guide](https://docs.wiznet.io/Design-Guide/hardware_design_guide). The new capacitor-to-jack
-receive traces are on F.Cu without vias. Their individual routing lengths are not proof of matched, impedance-controlled
-pairs. Rework the PHY fanout and paired geometry before release, rather than treating a clean clearance check as
-signal-integrity approval. Do not swap differential polarity merely to simplify routing without a supported electrical
-basis.
+runs entirely on F.Cu. The receive fanout and both paired routes have now been reworked: all six data nets stay on F.Cu
+with no vias and unchanged polarity. Seven local support parts moved; the PHY, jack and every external connector retain
+their positions. TX end-to-end copper lengths are 30.268mm / 30.268mm; RX paths are 32.422mm / 32.422mm, including the
+same 1.55mm pad-centre span through each series capacitor. These are connected-path measurements, excluding termination
+branches, not sums of every track on a net. Tuning brings geometric mismatch below 0.01mm. Main tracks use 0.25mm width
+and nominal 0.25mm pair gap, with 0.20mm package/contact escapes; the Ethernet net class retains those editing defaults.
+The contact fanouts and tuning sections are not uniformly coupled. Native DRC reports zero violations and zero
+unconnected items; all 214 components and 815 schematic pin/net assignments match. The 857 pads outside the seven moved
+parts retain their locations and nets. Native 3D inspection covers the changed support-part placement, not the absent
+jack model. The [WIZnet layout guide](https://docs.wiznet.io/Design-Guide/hardware_design_guide) remains the design
+basis. This closes the layer-change and routed-length work, not Ethernet electrical qualification: final 100-ohm
+impedance confirmation against the fabricator's stackup and a powered link test still remain. The all-layer magnetics
+plane keepout is retained. Do not swap differential polarity merely to simplify routing.
 
 The local `ScoringPlatform:J1B1211CCD` footprint derives from KiCad's exact-part `Connector_RJ:RJ45_Cetus_J1B1211CCD`,
 under the [KiCad library license](https://www.kicad.org/libraries/license/). Pads, mounting holes and fabrication
