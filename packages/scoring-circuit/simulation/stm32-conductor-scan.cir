@@ -208,6 +208,43 @@ meas tran weak_seven_short_high FIND v(corner_high) AT=73u
 meas tran weak_seven_short_clear FIND v(corner_low) AT=85u
 meas tran weak_seven_short_current MAX v(i12)
 meas tran settled_leakage_stress FIND v(stress_p) AT=73u
+* Candidate foil/sabre schedule: LEFT_B, RIGHT_B, PISTE only, repeated.
+* All seven receivers remain observed. This checks unchanged electrical paths
+* at 225us revisit intervals, NOT contact-duration qualification or firmware.
+alter @vphase1[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase2[pulse] [ 0 1 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase3[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase4[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase5[pulse] [ 0 1 86u 0.01u 0.01u 62.98u 225u ]
+alter @vphase6[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase7[pulse] [ 0 1 161u 0.01u 0.01u 62.98u 225u ]
+tran 0.05u 675u
+meas tran priority_foil_rest FIND v(sc1) AT=523u
+meas tran priority_foil_target FIND v(sd2) AT=523u
+meas tran priority_foil_piste FIND v(sp4) AT=523u
+meas tran priority_sabre_target FIND v(sabre_high) AT=523u
+meas tran priority_blades FIND v(blade_high) AT=523u
+meas tran priority_reciprocal_left FIND v(double_left_high) AT=523u
+meas tran priority_reciprocal_right FIND v(double_right_high) AT=598u
+meas tran priority_foil_unrelated FIND v(foil_low) AT=523u
+meas tran priority_sabre_unrelated FIND v(sabre_low) AT=523u
+meas tran priority_blades_unrelated FIND v(blade_low) AT=523u
+meas tran priority_corner_left FIND v(corner_high) AT=523u
+meas tran priority_corner_right FIND v(corner_high) AT=598u
+meas tran priority_corner_piste FIND v(corner_high) AT=673u
+meas tran priority_corner_clear FIND v(corner_low) AT=535u
+meas tran priority_source_current MAX v(i11)
+* Candidate epee schedule uses A rather than B as the tip excitation wire.
+alter @vphase1[pulse] [ 0 1 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase2[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
+alter @vphase4[pulse] [ 0 1 86u 0.01u 0.01u 62.98u 225u ]
+alter @vphase5[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
+tran 0.05u 675u
+meas tran priority_epee_left FIND v(sb5) AT=523u
+meas tran priority_epee_right FIND v(se5) AT=598u
+meas tran priority_epee_piste FIND v(ground_high) AT=523u
+meas tran priority_epee_left_unrelated FIND v(epee_left_low) AT=523u
+meas tran priority_epee_right_unrelated FIND v(epee_right_low) AT=598u
 quit
 .endc
 .end

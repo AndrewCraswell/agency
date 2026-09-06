@@ -342,7 +342,8 @@ support effort.
   footprint follows the
   [05-08-1881 Rev B package drawing](https://mds.analog.com/api/public/content/BGA_44_05-08-1881_Rev_B.pdf), including
   top-view A1 orientation. Its manufacturer STEP model has not been obtained; the 3D view deliberately has no invented
-  placeholder body for this part. Footprint and reflow-process review remain necessary for assembly.
+  placeholder body for this part. The land/pin review is complete; the assembler must still accept the documented MSL-4
+  handling and 245 C peak-body reflow requirement.
 - J1 uses GCT USB4105-GF-A for computer USB, with project-local `USB4105_GF_A` footprint and the existing STEP model.
   The [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf), Rev B4, retains authority for contact
   numbering, connector position, shell slots and locating holes; none of these moved. To clear the locating holes, the
@@ -421,6 +422,14 @@ discharge. No board parts or thresholds changed. A complete sweep now takes 525u
 observations. This schedule is **not approved scoring firmware timing**; a simple two-sample qualifier on the full sweep
 can take 1.05ms before analog delays, so it is not sufficient evidence for the sabre window. A weapon-specific schedule
 must prioritize the relevant sources and validate pulse phase, duration and discharge behavior before closure.
+
+The same model now also runs two **225us candidate schedules**, retaining the 75us slot and all seven receivers: LEFT_B
+/ RIGHT_B / PISTE for foil and sabre, and LEFT_A / RIGHT_A / PISTE for epee. After three repetitions, the modeled
+target, rest, blade, reciprocal-target and piste paths still pass the unchanged voltage limits. The heavier seven-way
+leakage case remains at 0.661V high and 0.182V after discharge; peak nominal source current remains 15mA. No circuit
+change is needed for these faster revisit intervals. This is electrical schedule feasibility, not proof of duration
+qualification: switched-contact phase sweeps, contact interruptions, timestamp handling and scoring firmware remain
+unimplemented. In particular, do not infer continuous contact from separated positive samples.
 
 Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
 
@@ -524,8 +533,9 @@ Remaining before ordering the prototype:
    assembly checks.
 3. Visually review final USB and manufacturing geometry, Gerbers, drills and assembly placement against the selected
    stackup and supplier conventions. Native ERC/DRC/parity are currently clean, including the completed J1 correction.
-   Temporary Gerber/drill/BOM/placement exports succeed; export success is not fabrication approval. No order or
-   assembly release has been performed.
+   Temporary Gerber/drill/BOM/placement exports succeed. The first native GerbView layer/drill review is complete as
+   described below; USB close-up artwork and supplier-specific assembly review remain. No order or assembly release has
+   been performed.
 
 After the assembled prototype arrives, program/read back U5 and bring up the supplies under controlled bench conditions.
 Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply handover, sensing/leakage/timing,
@@ -569,8 +579,22 @@ run is not clean and did not complete all other packages. The board is not yet r
 
 A temporary manufacturing export successfully produced all four copper layers, both mask/silkscreen/paste layers, the
 outline, and separate plated/unplated drill files. The drill report contains 642 plated holes (including four slots) and
-six unplated holes; all 21 revised header holes appear as 1.02mm. This checks exportability and drill selection only.
-The outputs remain temporary review files, not a released order package or a completed visual Gerber/assembly review.
+six unplated holes; all 21 revised header holes appear as 1.02mm. GerbView loaded all eleven Gerber layers and both
+drill files. The outline, four separate copper layers and top silkscreen were visually inspected. A magnified
+top-mask/PTH/NPTH overlay showed the two Favero connector contact and locating-hole patterns registered without a layer
+shift. This does not establish every pad's annular ring, USB mask web or solderability. The outputs remain temporary
+review files, not a released order package or completed assembly review.
+
+The open PCB/3D editor had retained an obsolete in-memory board with two USB connectors and unrouted nets. It was closed
+without saving the board and reopened from the current source, displaying 187 nets and zero unrouted items. Closing that
+stale session nevertheless wrote obsolete project settings (a 0.3mm drill minimum and missing USB data netclass). After
+exiting the entire project, the committed settings were restored exactly, not relaxed; fresh native ERC, DRC,
+unconnected and schematic-parity checks all returned zero. Restart KiCad after external project-file edits so cached
+settings cannot overwrite reviewed rules on exit. The refreshed 3D view uses the saved black stackup colors, one USB-C
+port and current component placement. Ethernet and Favero cable mouths face their respective board edges. U18 still has
+no body model. There are no dedicated chassis mounting holes; the six unplated holes are connector locating features,
+not standoff positions. Prototype support and enclosure mounting must not place conductive hardware across the isolation
+regions.
 
 The temporary all-component placement CSV contains exactly the same 187 unique references as the BOM, all on top. Every
 exported coordinate, rotation and side matches the native board (CSV Y is negated to use Cartesian coordinates).

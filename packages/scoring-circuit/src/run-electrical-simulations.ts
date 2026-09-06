@@ -67,7 +67,20 @@ const simulations: readonly SimulationCase[] = [
         "seven_short_right_b",
         "seven_short_right_c",
         "seven_short_piste",
-        "weak_seven_short_high"
+        "weak_seven_short_high",
+        "priority_foil_rest",
+        "priority_foil_target",
+        "priority_foil_piste",
+        "priority_sabre_target",
+        "priority_blades",
+        "priority_reciprocal_left",
+        "priority_reciprocal_right",
+        "priority_corner_left",
+        "priority_corner_right",
+        "priority_corner_piste",
+        "priority_epee_left",
+        "priority_epee_right",
+        "priority_epee_piste"
       ].map((name) => ({ name, minimum: 0.651, unit: "V" })),
       ...[
         "foil_rest_unrelated",
@@ -82,10 +95,17 @@ const simulations: readonly SimulationCase[] = [
         "reciprocal_left_unrelated",
         "reciprocal_right_unrelated",
         "targets_and_blades_piste",
-        "weak_seven_short_clear"
+        "weak_seven_short_clear",
+        "priority_foil_unrelated",
+        "priority_sabre_unrelated",
+        "priority_blades_unrelated",
+        "priority_corner_clear",
+        "priority_epee_left_unrelated",
+        "priority_epee_right_unrelated"
       ].map((name) => ({ name, maximum: 0.556, unit: "V" })),
       { name: "seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
       { name: "weak_seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
+      { name: "priority_source_current", absolute: true, maximum: 0.018, unit: "A" },
       // Fixed voltage criterion; the hardware changed, not the comparator threshold.
       { name: "settled_leakage_stress", minimum: 0.651, unit: "V" }
     ]
