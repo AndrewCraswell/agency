@@ -84,9 +84,12 @@ this land/pin review does not replace the assembly process or whole-board isolat
 
 All 187 components now export separate manufacturer and part-number fields. For the processors, ICs, modules and
 remaining connectors, this normalizes the already-selected part numbers from their labels; it does not substitute
-components or approve their footprints. Keep the connector function labels readable. U8/U9 retain the selected
-74LVC125APW device; confirm the supplier's packaging suffix when placing the order. Availability, assembly sourcing and
-the remaining mechanical/electrical review are still separate from a nonempty BOM.
+components or approve their footprints. Keep the connector function labels readable. U8/U9 now specify the complete
+**74LVC125APW,118** ordering code in every schematic unit and the PCB. Nexperia lists this TSSOP14/SOT402-1 option as
+active (12NC 935231720118); the older ,112 option is discontinued. See the
+[manufacturer ordering table](https://www.nexperia.com/products/analog-logic-ics/logic/buffers-inverters-transceivers/buffers/serie/74lvc125a/),
+checked 6 September 2026. This resolves packaging identity without changing the device, lands, models or circuit.
+Availability, assembly sourcing and the remaining mechanical/electrical review are still separate from a nonempty BOM.
 
 ### Service and harness headers
 

@@ -32987,7 +32987,7 @@
 				)
 			)
 		)
-		(property "MPN" "74LVC125APW"
+		(property "MPN" "74LVC125APW,118"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -33954,7 +33954,7 @@
 				)
 			)
 		)
-		(property "MPN" "74LVC125APW"
+		(property "MPN" "74LVC125APW,118"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
