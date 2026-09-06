@@ -67,14 +67,15 @@ while leaving an always-on isolated converter: its specified L2 suspend maxima a
 before converter losses or board load. A complete bus-powered design must address that budget rather than assuming the
 isolator's upstream-only suspend compliance covers both sides.
 
-The remaining USB decision is compatibility, not PCB placement. Keeping the one-board laptop/20V-PD functionality
-requires control of the actual negotiated power and suspend behavior; STUSB4500's static flags are not enough to expose
-both. Its
+**Confirmed: one populated board must operate in both laptop and standalone-display modes.** Retain one USB-C port; do
+not split component populations or require component swaps to change modes. The replacement must control actual
+negotiated power and suspend behavior; STUSB4500's static flags do not expose both. Its
 [programming guide](https://www.st.com/resource/en/user_manual/um2650-the-stusb4500-software-programing-guide-stmicroelectronics.pdf)
-requires reading source capabilities through I2C. The simpler STUSB4500L alternative is Type-C/5V only and would require
-different laptop-only and full-display component populations. That additional product distinction has not been approved.
-The USB circuit remains unchanged while the owner chooses between those populations and additional power-control
-circuitry. Do not mark the USB replacement complete. See [the current power handoff](usb-acquisition-power.md).
+describes reading source capabilities through I2C. The 5V-only STUSB4500L alternative is rejected. Keep the application
+and display branch off until full-display mode and sufficient source power are both established; a 20V contract alone
+does not distinguish a charger from a laptop. Implement the necessary power control with the simplest suitable circuit.
+The product-mode decision is resolved; component selection and implementation remain open, not awaiting another mode
+decision. Do not mark the USB replacement complete. See [the current power handoff](usb-acquisition-power.md).
 
 Reference circuits reviewed:
 [W5500 magnetic-RJ45 reference](https://docs.wiznet.io/Product/Chip/Ethernet/W5500/ref-schematic),

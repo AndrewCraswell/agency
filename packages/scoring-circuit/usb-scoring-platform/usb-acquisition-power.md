@@ -13,11 +13,12 @@ promptly over I2C; the static power-ready outputs do not report that flag. See
 The existing J12 service header is not a running controller. Do not assume that a powered USB-C requirement by itself
 allows an always-on isolated converter on every PD-capable laptop.
 
-A component-option alternative is the [STUSB4500L](https://www.st.com/resource/en/datasheet/stusb4500l.pdf), which
-reports Type-C current without entering PD contracts. That is a 5V-only option and cannot also negotiate the full
-system's 20V supply. It is not approved as a replacement for U5: doing so would split laptop-only and full-display
-populations. The owner has been asked whether to permit that distinction or retain one interchangeable board with
-additional power-control circuitry. No USB components, footprints or wiring have changed pending that decision.
+**The owner confirmed one populated board for both modes, without component swaps.** The 5V-only STUSB4500L alternative
+is rejected because it cannot negotiate the full system's 20V supply. Use one USB-C port for laptop power/data or
+standalone PD power. In laptop mode, keep the application/display branch off; enable it only after full-display mode and
+sufficient source power are both established. Do not use source voltage alone to choose the mode. Add the necessary
+power control with the simplest suitable circuit; do not introduce separate laptop-only component populations. This
+choice is resolved. USB component selection and implementation remain unfinished, rather than blocked on owner input.
 
 ## Retained circuit budget
 
@@ -32,11 +33,11 @@ circuits, J1 feeds, CC lines, primary distribution and regulated isolator feeder
 or characterized; do not power this draft.** The left-edge primary return remains separate from board ground. An absent
 panel is not automatic charger detection, nor permission to turn on the other application loads.
 
-Laptop-only units require U5's **5V PDO1-only** NVM profile. The full-system profile additionally requests **20V/3A** as
-PDO2; Q4/Q5 require both its power-ready and VBUS-enable flags before enabling the application converter. Program and
-read back these profiles before bring-up. A PD-capable laptop can supply 20V too, so negotiation is not automatic
-laptop-versus-charger identification. USB enumeration establishes the data session. Neither NVM programming nor firmware
-mode control has been implemented here.
+The retained draft proposed separate **5V PDO1-only** and **20V/3A PDO2** programming profiles. That is not the final
+mode-selection implementation: the replacement must support both modes on the same populated board. Q4/Q5 currently
+require PDO2's power-ready and VBUS-enable flags before enabling the application converter; they do not enforce a
+user-selected laptop mode. A PD-capable laptop can supply 20V too. USB enumeration establishes the data session, not
+permission to enable the display. NVM programming and firmware mode control remain unimplemented.
 
 ## Limits and calculated load
 
