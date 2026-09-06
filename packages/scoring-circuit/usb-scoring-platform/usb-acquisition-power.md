@@ -7,9 +7,9 @@ transmission are disabled in this acquisition-only budget, even though their cir
 
 The native schematic and placement now use **one J1 USB-C receptacle**. STUSB4500 negotiates power, LMR36510 supplies
 the LTM2884 primary, and the separately enabled TPS25947/REC30K branch supplies isolated application power. **The local
-buck, PD control and eFuse circuits are routed, but J1 feeds, primary distribution and the isolator supply feeder are
-not. Do not power this draft.** An absent panel is not automatic charger detection, nor permission to turn on the other
-application loads.
+circuits, J1 feeds, CC lines, primary distribution and regulated isolator feeder are routed. They have not been powered
+or characterized; do not power this draft.** The left-edge primary return remains separate from board ground. An absent
+panel is not automatic charger detection, nor permission to turn on the other application loads.
 
 Laptop-only units require U5's **5V PDO1-only** NVM profile. The full-system profile additionally requests **20V/3A** as
 PDO2; Q4/Q5 require both its power-ready and VBUS-enable flags before enabling the application converter. Program and
