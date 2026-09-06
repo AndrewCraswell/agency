@@ -190,18 +190,18 @@ error. Most PCB routing remains unfinished.
 ## Current state and remaining work
 
 The current draft contains 170 components across eleven functional/support sheets plus the cover. Every component has a
-footprint, and all 160 schematic nets were transferred to the 160 x 100mm, four-layer PCB. The application 3.3V
-regulator section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass
-capacitors. Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32
-crystal, boot pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75
-power contacts, both display buffers and their supply-side pull-ups are now routed. Most other parts remain in
-provisional positions. The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header
-are also routed. The two-way processor UART, its translators, four bypass capacitors and idle pulls are connected. The
-IR receiver's filtered supply, ground and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus,
-reset and interrupt are also connected. All thirteen HUB75 buffer outputs now reach the display connector, together with
-the local buffer-disable and panel-blanking network. The one-way display buffers and thirteen input pull-downs now have
-defined reset defaults. The ESP32 input bus, display-enable line and sounder circuit are also routed. Favero and
-conductor interfaces remain unfinished.
+footprint, and all 158 schematic nets are transferred to the 160 x 100mm, four-layer PCB. The application 3.3V regulator
+section and its 5V feed are routed, as are the STM32 regulator, PD-derived supply branch and local bypass capacitors.
+Computer USB power, protection, isolation, data and USB-present sensing are routed, along with the STM32 crystal, boot
+pull-down, reset network/button and programming header. The PD input and 5V distribution to both HUB75 power contacts,
+both display buffers and their supply-side pull-ups are now routed. Most other parts remain in provisional positions.
+The ESP32 supply, local bypass, enable/boot networks, buttons and manual UART programming header are also routed. The
+two-way processor UART, its translators, four bypass capacitors and idle pulls are connected. The IR receiver's filtered
+supply, ground and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus, reset and interrupt are
+also connected. All thirteen HUB75 buffer outputs now reach the display connector, together with the local
+buffer-disable and panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined
+reset defaults. The ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
+Conductor interfaces remain unfinished.
 
 Remaining before fabrication:
 
@@ -227,7 +227,7 @@ Remaining before fabrication:
 ## Checks performed
 
 The latest native KiCad 10.0.6 checks reported zero ERC violations and zero schematic-to-PCB parity mismatches. Netlist
-export and connected-pin transfer checks succeeded. DRC reports **167 unrouted items** and **four other findings**, all
+export and connected-pin transfer checks succeeded. DRC reports **141 unrouted items** and **four other findings**, all
 at J1. GCT's USB4105 drawing matches the existing land pattern, including 0.65mm locating holes and 0.6 x 1.15mm outer
 ground pads; its resulting 0.1944mm pad-to-hole clearance is below the 0.25mm board rule and JLCPCB's published 0.2mm
 NPTH-to-track figure. Retain the manufacturer's geometry pending fabrication review or a justified connector change. No
@@ -267,7 +267,7 @@ drives ON/SPNDPWR only; VLO2 stays unused. No components, values, pad assignment
 changed. U3, C1, R1/R2 and R3/R4 moved locally; one neighboring silkscreen label moved for clearance. Native copper
 connectivity confirms every USB pin, the regulator feed and PB5 sensing; host/board grounds remain separate.
 
-After the sounder routing, the board has 932 track segments, 262 ordinary 0.6/0.3mm vias and twelve copper zones. The
+After the Favero routing, the board has 1116 track segments, 283 ordinary 0.6/0.3mm vias and twelve copper zones. The
 prior power/USB routing and isolation/antenna keepouts are unchanged. Separate host-ground pours and the extended
 board-ground pours provide return paths without crossing the barrier. Ground-ball rows escape to vias outside the BGA
 pads. This follows the
@@ -413,7 +413,7 @@ views were inspected. This reduced unrouted items from 188 to 174 without a new 
 **Display bring-up:** configure all display signals with RGB_OE high before asserting DISPLAY_ENABLE; deassert
 DISPLAY_ENABLE before releasing GPIOs. The input routes are not delay-matched or timing-qualified. That firmware
 sequence, startup and brownout blanking, display timing and cable signal integrity still require implementation and
-physical verification. Next board routing: Favero and sensing connections.
+physical verification. Next board routing: sensing connections.
 
 The sounder is routed from STM32 pad 42 through R36 to Q2, with R37 holding the gate low during reset. BZ1 remains the
 PS1240P02BT on CORE_3V3. R87 adds the missing 1k parallel discharge path from BUZZER_LOW to CORE_3V3, following
@@ -424,6 +424,24 @@ schematic and 3D review passed; unrouted items dropped from 174 to 167 with no n
 then stop low; holding the gate high is not a tone. R87 draws about 3.3mA while Q2 is on, plus the piezo's transient
 charging current. Keep sound disabled in laptop acquisition mode. Output amplitude, acoustic level, supply disturbance
 and scoring-timing interaction still need bench checks; the wiring is not an acoustic or FIE qualification.
+
+Both Favero circuits are routed after correcting the draft against the
+[FA-05/FA-07 interface drawing, page 2, mirrored by Super Fencing System](https://superfencingsystem.com/Favero_Serial.pdf):
+each socket's outer contacts 2+5 join through its 82-ohm resistor to the collector; centre contacts 3+4 join the
+emitter. The 680k resistor belongs between base and emitter, not between base and an outer contact. The 1N4004 cathode
+connects to collector and anode to emitter. The two repeater-supplied loops have no connection to one another or board
+ground. The same earlier wiring error remains in the separate, unchanged tscircuit prototype; do not manufacture that
+older repeater circuit without correcting it too.
+
+STM32 pad 14 drives Q3 and its 100k reset pull-down. The two 220-ohm optocoupler input resistors now use PANEL_5V,
+making the LED drive PD-only in hardware. Their current does not consume the laptop acquisition allocation. The twelve
+existing support parts moved into two local groups, with output pins facing the sockets and input pins facing the
+controller. No parts were added; socket bodies, holes, models and all 1194 previous tracks/vias stayed fixed. Native
+continuity confirms all contact pairs, protection/bias paths, the common driver and prior circuits. ERC/parity are
+clean; DRC is down from 167 to 141 unrouted items with no new finding. Copper, schematic and native 3D views were
+reviewed. The optocoupler's specified transfer ratio does not guarantee saturation or release time at our actual loop
+conditions; 2400-baud waveform/polarity, two real repeaters, cable length and isolation withstand still require bench
+verification. The old prototype's behavioral simulation is not verification of this corrected native circuit.
 
 The ESP32 thermal holes remain 0.2mm inside 0.6mm copper lands (0.2mm nominal annular ring). The minimum drill setting
 is now 0.2mm, supported by [JLCPCB's multilayer drilling capabilities](https://jlcpcb.com/capabilities/Capabilities);
@@ -444,8 +462,8 @@ All seven models' acceptance limits pass, including the corrected seven-input se
 bounded simulation, not a passed physical operating corner. The five older models concern the original prototype only.
 The enlarged branding passed native KiCad rendering and silkscreen Gerber export. The USB protection update changed U3's
 protector/land pattern, its local USB traces and C1's voltage rating. U3 has no VBUS connection. The following
-processor-link, IR, Ethernet, HUB75 and sounder routing reduced unconnected items from 250 to 167, with no new DRC
-findings. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector
+processor-link, IR, Ethernet, HUB75, sounder and Favero routing reduced unconnected items from 250 to 141, with no new
+DRC findings. Schematic, copper and native 3D renders were reviewed; ERC is clean, and DRC retains four USB connector
 hole-clearance findings and zero schematic-parity issues. The latest repository verification passed formatting, lint,
 types and unused-code checks but failed three scoring tests: a mutation timeout, a canonical-corpus failure and a
 29-versus-28 scenario-count assertion (770 scoring tests passed). The run stopped before every other package completed.
