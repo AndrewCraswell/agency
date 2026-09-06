@@ -54,6 +54,22 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     await pool.end()
   })
 
+  it("imports a complete directory exceeding one statement's bind parameter budget", async () => {
+    const input = snapshot({ complete: true, role: "member" })
+    const member = input.memberships[0]!
+    const largeSnapshot = {
+      ...input,
+      memberships: Array.from({ length: 4_000 }, (_, index) => ({
+        ...member,
+        id: `${membershipId}:large:${index}`,
+        sourceId: `large:${index}`
+      }))
+    }
+    await replaceEntitySnapshot(database, jurisdictionId, largeSnapshot)
+    const rows = await membershipsForTenure(organizationId)
+    expect(rows.filter((row) => row.sourceId?.startsWith("large:") && row.isActive)).toHaveLength(4_000)
+  }, 120_000)
+
   it("refreshes canonical provenance and completeness when snapshot records conflict", async () => {
     await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: false, role: "member" }))
     await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: true, role: "chair" }))

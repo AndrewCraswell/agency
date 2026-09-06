@@ -61,8 +61,7 @@ function parseChamber(text: string, chamber: CongressionalChamber): GovInfoCommi
   let inSubcommittees = false
 
   for (const lines of blocks) {
-    const joined = repairWrappedMembers(lines).join("\n")
-    const members = parseMembers(joined, chamber)
+    const members = parseMemberColumns(lines, chamber)
     if (members.length > 0) {
       if (pendingHeading === undefined) {
         const previous = records.at(-1)
@@ -104,6 +103,21 @@ function parseChamber(text: string, chamber: CongressionalChamber): GovInfoCommi
   return records
 }
 
+/** Repair each printed column independently so a wrapped name cannot absorb its neighbor. */
+function parseMemberColumns(lines: readonly string[], chamber: CongressionalChamber): GovInfoCommitteeMember[] {
+  const columns: string[][] = [[], []]
+  for (const line of lines) {
+    const cells = line.trim().split(/\s{2,}/)
+    for (const [index, cell] of cells.entries()) {
+      const column = columns[index]
+      if (column !== undefined) {
+        column.push(cell)
+      }
+    }
+  }
+  return columns.flatMap((column) => parseMembers(repairWrappedMembers(column).join("\n"), chamber))
+}
+
 function repairWrappedMembers(lines: readonly string[]): string[] {
   const repaired: string[] = []
   for (const line of lines) {
@@ -111,8 +125,9 @@ function repairWrappedMembers(lines: readonly string[]): string[] {
     const previousIndex = repaired.length - 1
     if (/^\([a-z]{2}(?:-[a-z0-9]{1,2})?\)/i.test(trimmed) && previousIndex >= 0) {
       repaired[previousIndex] = `${repaired[previousIndex]} ${trimmed}`
-    } else if (/^(member|chair)$/i.test(trimmed) && previousIndex >= 0) {
-      repaired[previousIndex] = `${repaired[previousIndex]} ${trimmed}`
+    } else if (/^(member|chair|man|sistant chair)$/i.test(trimmed) && previousIndex >= 0) {
+      const previous = repaired[previousIndex] ?? ""
+      repaired[previousIndex] = previous.endsWith("-") ? `${previous.slice(0, -1)}${trimmed}` : `${previous} ${trimmed}`
     } else {
       repaired.push(line)
     }

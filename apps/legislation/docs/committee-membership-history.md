@@ -93,3 +93,20 @@ fields into an ambiguous `startDate` or `endDate`.
 Schema work, importer implementation, and local verification were safe to perform while embedding HNSW indexes built.
 The index build is now complete. The production historical backfill remains a separate gate because it creates sustained
 database writes and still requires a bounded canary with adequate production I/O headroom.
+
+### Current-Congress rollout (2026-09-06)
+
+The live 119th-Congress edition is `CDIR-2026-02-20`. Its text parses into 42 committees and 179 subcommittees.
+All roster names match existing Congress.gov people after repairing independently wrapped text columns. Matching
+requires a unique normalized full name in the requested Congress and chamber; district annotations are not identity
+keys because this edition has inconsistent districts and some canonical at-large terms have no district. The explicit
+Thom Tillis alias resolves to `person:congress:t000476`. Ambiguous names still abort the edition.
+
+Membership inserts use batches of 1,000 within the same snapshot transaction to stay below PostgreSQL's bind-parameter
+limit. The initial production import and API reconciliation are in progress; historical Congresses are not yet imported.
+
+The `govinfo-committee-directory-sync` Trigger task is configured for 09:30 UTC daily in production, using
+`FEDERAL_END_CONGRESS`. It has concurrency one and retains the database ingestion lease shared with the CLI. Deployment
+and activation are gated on the initial canary. It imports newly dated editions, not historical Congresses. Same-package
+revisions with unchanged issue dates are not yet replayed; that and historical edition-format coverage remain follow-up
+work before claiming complete historical reconstruction.

@@ -36,6 +36,22 @@ describe("parseGovInfoCommitteeDirectory", () => {
       )
     ).toThrow("completeness threshold")
   })
+
+  it("repairs wrapped names and roles without merging the neighboring printed column", () => {
+    const fixture = directoryFixture().replace(
+      "Alex Representative (ca-03) chairman",
+      'Charles J. "Chuck" Fleischmann     Mike Quigley (il-05)\n        (tn-03)                      Grace Meng (ny-06)\nMario Diaz-Balart (fl-26) vice       Steny H. Hoyer (md-05)\n        chair                        Marcy Kaptur (oh-09)'
+    )
+    const record = parseGovInfoCommitteeDirectory(fixture).find((value) => value.name === "House Committee 1")
+    expect(record?.members).toEqual([
+      { chamber: "lower", district: "3", name: 'Charles J. "Chuck" Fleischmann', state: "TN" },
+      { chamber: "lower", district: "26", name: "Mario Diaz-Balart", role: "vice-chair", state: "FL" },
+      { chamber: "lower", district: "5", name: "Mike Quigley", state: "IL" },
+      { chamber: "lower", district: "6", name: "Grace Meng", state: "NY" },
+      { chamber: "lower", district: "5", name: "Steny H. Hoyer", state: "MD" },
+      { chamber: "lower", district: "9", name: "Marcy Kaptur", state: "OH" }
+    ])
+  })
 })
 
 function directoryFixture(): string {

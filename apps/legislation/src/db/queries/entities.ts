@@ -434,10 +434,12 @@ export async function replaceEntitySnapshot(
           )
         )
     }
-    if (membershipValues.length > 0) {
+    // A complete federal directory exceeds PostgreSQL's 65,535 bind parameters.
+    // Keep all batches in this snapshot transaction so partial imports cannot escape.
+    for (let offset = 0; offset < membershipValues.length; offset += 1_000) {
       await transaction
         .insert(organizationMemberships)
-        .values(membershipValues)
+        .values(membershipValues.slice(offset, offset + 1_000))
         .onConflictDoUpdate({
           set: {
             classification: sql`excluded.classification`,

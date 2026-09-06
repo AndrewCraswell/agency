@@ -114,7 +114,6 @@ export function normalizeGovInfoCommitteeDirectory(
 
 interface IndexedPerson {
   chamber: CongressionalChamber
-  district?: string
   names: Set<string>
   personId: string
 }
@@ -135,13 +134,14 @@ function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): Inde
     }
     const names = [
       person.name,
+      // GovInfo prints the senator's preferred first name; Congress.gov uses Thomas.
+      ...(person.id === "person:congress:t000476" ? ["Thom Tillis"] : []),
       person.givenName !== null && person.familyName !== null ? `${person.givenName} ${person.familyName}` : undefined,
       ...(aliasesByPerson.get(person.id) ?? [])
     ]
     return [
       {
         chamber,
-        ...(term.district === null ? {} : { district: normalizeDistrict(term.district) }),
         names: new Set(names.flatMap((name) => (name === undefined ? [] : nameVariants(name)))),
         personId: person.id
       }
@@ -150,25 +150,19 @@ function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): Inde
 }
 
 function matchPerson(member: GovInfoCommitteeMember, people: readonly IndexedPerson[]): string | undefined {
+  // Directory district annotations contain typos and Congress.gov omits some at-large
+  // districts. Require a unique full-name identity within the Congress and chamber.
   const names = nameVariants(member.name)
   const matches = new Set(
     people
-      .filter(
-        (person) =>
-          person.chamber === member.chamber &&
-          (member.district === undefined || person.district === member.district) &&
-          names.some((name) => person.names.has(name))
-      )
+      .filter((person) => person.chamber === member.chamber && names.some((name) => person.names.has(name)))
       .map((person) => person.personId)
   )
   return matches.size === 1 ? [...matches][0] : undefined
 }
 
 function termAppliesToCongress(term: TermRow, congress: number): boolean {
-  if (term.sourceId?.startsWith(`${congress}:`) === true) {
-    return true
-  }
-  return term.isActive === true
+  return term.sourceId?.startsWith(`${congress}:`) === true
 }
 
 function nameVariants(value: string): string[] {
@@ -191,14 +185,6 @@ function normalizeName(value: string): string {
 
 function canonicalChamber(value: string | null): CongressionalChamber | undefined {
   return value === "lower" || value === "upper" ? value : undefined
-}
-
-function normalizeDistrict(value: string): string {
-  const normalized = value.trim().toLowerCase()
-  if (normalized === "at" || normalized === "al" || normalized === "dl") {
-    return "0"
-  }
-  return /^\d+$/.test(normalized) ? String(Number(normalized)) : normalized
 }
 
 function organizationSourceId(

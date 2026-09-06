@@ -59,6 +59,30 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     expect(result.snapshot.memberships).toEqual([])
     expect(result.unmatched).toHaveLength(2)
   })
+
+  it("requires the requested Congress even when an unrelated term is active", () => {
+    const source = catalog()
+    source.terms[0]!.sourceId = "118:upper:2023:2025"
+    expect(normalizeGovInfoCommitteeDirectory(records(), directoryPackage, source, new Date()).unmatched).toHaveLength(
+      2
+    )
+  })
+
+  it("matches a unique full name without treating an absent district as a different person", () => {
+    const source = catalog()
+    const input = records()
+    input[0]!.members[0]!.district = "0"
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, source, new Date()).unmatched).toEqual([])
+  })
+
+  it("fails closed on two same-name people in the same Congress and chamber", () => {
+    const source = catalog()
+    source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+    source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+    expect(normalizeGovInfoCommitteeDirectory(records(), directoryPackage, source, new Date()).unmatched[0]?.name).toBe(
+      "Jane Q. Senator"
+    )
+  })
 })
 
 function records(): GovInfoCommitteeRecord[] {
