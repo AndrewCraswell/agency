@@ -143,9 +143,15 @@ support effort.
   [05-08-1881 Rev B package drawing](https://mds.analog.com/api/public/content/BGA_44_05-08-1881_Rev_B.pdf), including
   top-view A1 orientation. Its manufacturer STEP model has not been obtained; the 3D view deliberately has no invented
   placeholder body for this part. Footprint and reflow-process review remain necessary for assembly.
-- J1 uses GCT USB4105-GF-A for computer USB: a documented 16-contact USB 2.0 receptacle with a matching native KiCad
-  footprint and STEP model. It replaces the initial HRO candidate in this new design only. See the
-  [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf).
+- J1 uses GCT USB4105-GF-A for computer USB, with project-local `USB4105_GF_A` footprint and the existing STEP model.
+  The [manufacturer drawing](https://gct.co/files/drawings/usb4105.pdf), Rev B4, retains authority for contact
+  numbering, connector position, shell slots and locating holes; none of these moved. To clear the locating holes, the
+  two outer ground lands (A1/B12 and A12/B1) use 0.60 x 1.10mm copper with 0.30mm corner radius, centred 0.025mm away
+  from the holes. The rear extent stays unchanged; the hole-facing toe retreats 0.05mm. Width and length remain within
+  the drawing's +/-0.05mm layout dimensions, but the rounded solder-area shape is an engineering adaptation, not a
+  manufacturer-approved copy. Nominal copper-to-hole separation is approximately 0.280mm, exceeding the unchanged 0.25mm
+  board rule. Other contacts, mounting features, paste/mask policy, nets and routes are unchanged. Assembly inspection
+  must still check wetting of the ground contacts; a clean clearance check is not a solder-joint test.
 - U3 is **TPD2E2U06DCKR**, a supply-independent two-channel USB ESD protector. Pin 1 protects D+, pin 2 protects D-, and
   pin 3 returns to USB_GND. There is no VBUS supply/clamp pin. Its SC70-3 footprint uses TI's DCK0003A lands: 0.95 x
   0.4mm, 2.2mm row spacing and 1.3mm pin-1/pin-2 pitch. See the
@@ -304,8 +310,8 @@ ESP32 input bus, display-enable line, sounder and both Favero repeater circuits 
 
 Remaining before ordering the prototype:
 
-1. Resolve J1's tight pad-to-locating-hole clearance with the fabricator or a justified connector/footprint change. Do
-   not move manufacturer mechanical holes or suppress warnings to obtain a clean report.
+1. **Completed design correction:** J1 now clears the unchanged 0.25mm rule using the local ground-land adjustment
+   described above. All holes and connector/model positions are unchanged; no DRC suppression or rule reduction.
 2. Close the circuit-design questions: the buck's low-input-voltage corner, unpowered sensing protection, and a feasible
    acquisition schedule for the required contact-duration boundaries. Keep the 220-ohm excitation resistors, 3.3k sense
    dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not infer patent
@@ -336,6 +342,11 @@ which alone are not complete board safety proof.
   stop the remaining footprint, component-selection and manufacturing review.
 
 ### Latest verification
+
+The J1 ground-land correction passes native DRC with **zero violations, zero unconnected items and zero schematic parity
+issues**; ERC is zero. All 744 prior pad-continuity comparisons and all 2,843 existing tracks/vias are preserved. The
+native 3D render was inspected. Checks confirm no changed hole positions/sizes, other pad geometries, models, component
+positions or isolation rules. Older four-finding reports below describe the previous footprint.
 
 C1's manufacturer/MPN selection is present in the native schematic BOM export and the PCB fields. ERC remains zero; DRC
 retains zero unconnected nets, zero schematic parity mismatches and the same four J1 hole-clearance findings. All 744
