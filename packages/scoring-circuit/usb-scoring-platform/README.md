@@ -88,7 +88,25 @@ pages 2-3, specify 0.25W at 105 C ambient or 0.33W at 130 C terminal temperature
 margin without larger footprints. A grounded conductor at 3.6V dissipates at most approximately 60mW in its 220-ohm
 resistor before temperature-coefficient allowance. External repeater fault loads, discharge pulses and assembled
 temperatures still need their circuit-specific checks; choosing these parts does not close those electrical findings.
-Remaining capacitor selections and full assembly review are still open.
+Full assembly review is still open.
+
+### Small-capacitor ordering selections
+
+Another 28 capacitors have exact TDK ordering fields in schematic and PCB, with no capacitance, footprint or routing
+changes. The voltage shown in the existing value is the design minimum; the selected part may have a higher rating.
+
+| Quantity | Existing function/value          | Selected MPN                                                                                                                    |
+| -------: | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+|       22 | 100nF bypass/bootstrap, 0603     | [C1608X7R1H104K080AA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA), 50V X7R, 10%  |
+|        2 | 100nF primary input bypass, 0805 | [C2012X7R2A104K125AA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C2012X7R2A104K125AA), 100V X7R, 10% |
+|        2 | 10nF timing/bypass, 0603         | [C1608X7R1H103K080AA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H103K080AA), 50V X7R, 10%  |
+|        2 | 27pF crystal loads, 0603         | [CGA3E2C0G1H270J080AA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E2C0G1H270J080AA), 50V C0G, 5% |
+
+Manufacturer pages list these four parts in production. The commercial C1608C0G1H270J080AA candidate is obsolete and was
+not selected. The crystal's existing `tune` note remains: ordering a 27pF part does not validate oscillator margin or
+frequency. TDK's 0603 X7R characteristic sheet was visually reviewed; its bias curves are typical, not guaranteed
+effective-capacitance bounds. Existing IPC footprints are retained, not represented as exact manufacturer land patterns.
+C1 was selected previously; the other 21 capacitors, especially regulator bulk capacitance under bias, remain open.
 
 ## Low-volume build scope
 
@@ -361,6 +379,12 @@ which alone are not complete board safety proof.
   stop the remaining footprint, component-selection and manufacturing review.
 
 ### Latest verification
+
+The small-capacitor batch adds 28 ordering selections; the native BOM and PCB agree on 29 selected capacitors including
+C1, with 21 still unspecified. Native ERC, DRC, unrouted and parity counts are zero. The 744 prior pad connections,
+2,843 tracks/vias, holes, component/model positions and isolation rules are unchanged, and the native 3D render was
+inspected. Repository verification passed the check stage but again failed the same three scoring-software tests listed
+below (770 passed). No checks were suppressed. Capacitor selection is not electrical or assembly approval.
 
 The resistor-selection batch exports all 83 resistor MPNs in the native BOM, matching their PCB fields. Native DRC, ERC,
 unrouted and schematic-parity counts remain zero. All 744 retained pad connections, 2,843 tracks/vias, hole geometry,
