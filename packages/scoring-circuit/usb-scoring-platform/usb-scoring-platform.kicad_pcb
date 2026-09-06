@@ -3324,6 +3324,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -3335,6 +3336,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -3670,6 +3672,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -3681,6 +3684,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -3800,7 +3804,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -3831,6 +3835,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "7053aa87-0563-455d-8b78-c528c750265a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "62ec5298-f1d9-49a2-a3d6-ac89b3f27fad")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -5189,6 +5215,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -5200,6 +5227,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6589,6 +6617,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6600,6 +6629,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -7285,6 +7315,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -7296,6 +7327,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8012,6 +8044,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8023,6 +8056,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8184,6 +8218,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8195,6 +8230,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8972,6 +9008,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8983,6 +9020,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -9450,7 +9488,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9481,6 +9519,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e68c2dc8-dd90-4fcd-9d7d-9339f0f2272a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "bd09ab04-d6d6-413f-914a-90d25b55ff1d")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -9600,7 +9660,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9631,6 +9691,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "88959061-55a7-41f8-ac43-14e415cc1238")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "30eee4d1-e26b-4d2a-ab05-028c40fc56a7")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -10263,6 +10345,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10274,6 +10357,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -11578,6 +11662,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -11589,6 +11674,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -13512,7 +13598,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -13543,6 +13629,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f469c784-91b5-410f-b062-de38fe0bd532")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "e6cc9d95-88ee-419d-a235-d22cb44c7a5a")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -14844,6 +14952,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -14855,6 +14964,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -15862,6 +15972,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -15873,6 +15984,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -16375,6 +16487,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -16386,6 +16499,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -16872,6 +16986,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -16883,6 +16998,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -17747,6 +17863,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -17758,6 +17875,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18093,6 +18211,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18104,6 +18223,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18439,6 +18559,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18450,6 +18571,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18611,6 +18733,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18622,6 +18745,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -22454,7 +22578,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22485,6 +22609,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "224d0e79-7c6c-4426-aba0-41ab8f9259b9")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "63978e9a-2acd-45f1-9331-e96f13f44bb9")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -23303,7 +23449,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23334,6 +23480,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "33eb26b8-7b02-488e-a844-d968121ace4c")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "af7fd813-3824-4820-bbb6-8cf1712fd13a")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -24773,6 +24941,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -24784,6 +24953,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -25293,6 +25463,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -25304,6 +25475,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -27170,6 +27342,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -27181,6 +27354,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29250,6 +29424,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29261,6 +29436,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29596,6 +29772,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29607,6 +29784,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -30436,7 +30614,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -30467,6 +30645,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "f383cfef-ad93-4931-a85e-1836cf89ff1a")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "82743236-334e-42a2-bb89-11b28dc57685")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
@@ -32087,6 +32287,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -32098,6 +32299,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -34857,6 +35059,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -34868,6 +35071,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -37355,6 +37559,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -37366,6 +37571,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -37876,6 +38082,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -37887,6 +38094,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -38222,6 +38430,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -38233,6 +38442,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -41269,7 +41479,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -41300,6 +41510,28 @@
 				(font
 					(size 1 1)
 					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "0389e628-3f3a-4bef-ae79-6e423323886d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "C1608X7R1H105K080AB"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "67e95990-b4ef-48d1-9ba4-a6f98622cfb8")
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)

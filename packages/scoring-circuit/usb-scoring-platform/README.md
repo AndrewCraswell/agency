@@ -106,7 +106,13 @@ Manufacturer pages list these four parts in production. The commercial C1608C0G1
 not selected. The crystal's existing `tune` note remains: ordering a 27pF part does not validate oscillator margin or
 frequency. TDK's 0603 X7R characteristic sheet was visually reviewed; its bias curves are typical, not guaranteed
 effective-capacitance bounds. Existing IPC footprints are retained, not represented as exact manufacturer land patterns.
-C1 was selected previously; the other 21 capacitors, especially regulator bulk capacitance under bias, remain open.
+C1 was selected previously. C2/C3/C15/C21/C33/C37/C38/C41 now also use its **C1608X7R1H105K080AB** ordering code: 1uF,
+50V, X7R, 10%, 0603. These eight local-supply/reset positions operate on the approximately 1.2-5V rails or ESP_EN, not
+raw 20V VBUS. The [TDK characteristic sheet](https://www.farnell.com/datasheets/4491452.pdf), page 2, shows typical
+capacitance near nominal at these low biases, unlike its substantial loss at 20V. That curve is not a guaranteed minimum
+across tolerance, temperature and ageing. Nominal values, reset timing targets and land patterns are unchanged;
+regulator stability and reset/startup timing still require bench checks. Reusing C1's part avoids another ordering code.
+The remaining 13 capacitors, especially regulator bulk capacitance under bias, remain open.
 
 ## Low-volume build scope
 
@@ -379,6 +385,13 @@ which alone are not complete board safety proof.
   stop the remaining footprint, component-selection and manufacturing review.
 
 ### Latest verification
+
+The eight local-supply/reset selections bring the capacitor BOM to 37 exact selections out of 50, matching PCB fields.
+Native ERC, DRC, unrouted and parity counts remain zero. All 744 previous pad-continuity checks, 2,843 tracks/vias,
+holes, component/model positions and isolation rules are retained; the actual KiCad 3D render was inspected. A temporary
+README file-mapping error cleared on formatting retry. The subsequent `pnpm verify` passed checks, then stopped at the
+same three scoring-software failures (770 passed). No test or rule was suppressed; 13 capacitor selections and the
+electrical/assembly review remain open.
 
 The small-capacitor batch adds 28 ordering selections; the native BOM and PCB agree on 29 selected capacitors including
 C1, with 21 still unspecified. Native ERC, DRC, unrouted and parity counts are zero. The 744 prior pad connections,
