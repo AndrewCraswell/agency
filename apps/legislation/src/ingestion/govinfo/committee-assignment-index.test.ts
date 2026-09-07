@@ -21,6 +21,49 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("requires the printed comma initial and state for the 105th Maloney assignment", () => {
+    const roster: GovInfoCommitteeRecord = {
+      chamber: "lower",
+      classification: "committee",
+      name: "Banking and Financial Services",
+      members: [
+        { chamber: "lower", name: "Carolyn B. Maloney", state: "NY" },
+        { chamber: "lower", name: "Jim Maloney", state: "CT" }
+      ]
+    }
+    // Positive clauses from the same directory's assignment table; the Jim
+    // Maloney excerpt is not intended to reproduce his complete assignment row.
+    const assignments = `Maloney, C. of New York (D)                 Banking and Financial Services -- Financial Institutions and Consumer Credit; Domestic and International Monetary Policy.
+Maloney, J. of Connecticut (D)              Banking and Financial Services -- Housing and Community Opportunity.`
+    const resolveText = (source: string) =>
+      createGovInfoAssignmentResolver([{ chamber: "lower", title: "assignments", text: source }])
+    const context = {
+      name: "Maloney",
+      parent: roster,
+      chamber: "lower",
+      subcommitteeName: "Domestic and International Monetary Policy"
+    } satisfies Parameters<ReturnType<typeof resolveText>>[0]
+    expect(resolveText(assignments)(context)).toEqual(roster.members[0])
+    expect(resolveText(assignments)({ ...context, subcommitteeName: "Housing and Community Opportunity" })).toEqual(
+      roster.members[1]
+    )
+    for (const identity of [
+      "Maloney, J. of New York",
+      "Maloney, C. of Connecticut",
+      "Maloney, C.",
+      "Maloney, C. B. of New York"
+    ]) {
+      expect(resolveText(assignments.replace("Maloney, C. of New York", identity))(context)).toBeUndefined()
+    }
+    expect(resolveText("")(context)).toBeUndefined()
+    expect(resolveText(assignments)({ ...context, subcommitteeName: "Unknown Subcommittee" })).toBeUndefined()
+    expect(
+      resolveText(assignments)({
+        ...context,
+        parent: { ...roster, members: [...roster.members, { chamber: "lower", name: "Chris Maloney", state: "NY" }] }
+      })
+    ).toBeUndefined()
+  })
   it("does not use a positive Ney assignment to resolve a different surname ending in ney", () => {
     const roster: GovInfoCommitteeRecord = {
       chamber: "lower",

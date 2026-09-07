@@ -251,6 +251,15 @@ The surname-boundary batch passes 58 focused tests and the root check stage (for
 checks). Root coverage remains blocked by unrelated scoring thresholds. The Commerce leave note is confirmed in
 each edition's advertised `HOUSECOMMITTEES` PDF; it covers the Congress without specifying exact calendar dates.
 
+The 105th assignment table explicitly lists `Maloney, C. of New York` under Banking and Financial Services /
+Domestic and International Monetary Policy. `Maloney, J. of Connecticut` instead lists Housing and Community
+Opportunity. The lookup rejected the comma-initial identity before checking the assignment. The bounded repair
+recognizes that printed format while requiring surname, given-name initial, state and positive assignment to agree
+with the parent roster. It does not infer identity from the `Ms.` honorific or add an alias.
+The repair passes 59 focused tests, scoped lint/format and service/web types. The live full-edition retry passes
+Maloney and reaches a numeric `1` role marker in Commerce. That marker needs source-footnote review before any
+normalization; no complete 105th acceptance, deployment or import is claimed.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains

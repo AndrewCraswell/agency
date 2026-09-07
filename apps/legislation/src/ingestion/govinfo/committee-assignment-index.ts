@@ -62,8 +62,19 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
           return false
         }
         const identity = /^(.*?)\s+of\s+(.+)$/.exec(entry.identity)
-        const surname = identity?.[1] ?? (context.chamber === "upper" ? entry.identity : undefined)
+        const printedName = identity?.[1] ?? (context.chamber === "upper" ? entry.identity : undefined)
+        // Some House assignment rows distinguish same-surname members with a
+        // comma and given-name initial. Require the printed state as well;
+        // neither an honorific nor an initial alone establishes identity.
+        const qualifiedName = printedName === undefined ? undefined : /^([^,]+),\s*([A-Za-z])\.$/.exec(printedName)
+        const surname = qualifiedName?.[1] ?? printedName
         if (!surname || normalize(surname) !== normalize(requestedName)) {
+          return false
+        }
+        if (
+          qualifiedName &&
+          (identity?.[2] === undefined || normalize(member.name).charAt(0) !== qualifiedName[2]?.toLowerCase())
+        ) {
           return false
         }
         const state = Object.entries(openStatesJurisdictionNames).find(
