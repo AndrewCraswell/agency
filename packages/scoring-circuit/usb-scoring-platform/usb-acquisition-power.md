@@ -15,8 +15,8 @@ The replacement still needs source-power detection. With STUSB4500, Type-C curre
 an explicit PD contract takes precedence. Its source-capability message, including the suspend flag, must be read
 promptly over I2C; the static power-ready outputs do not report that flag. See
 [ST's programming guide, sections 1.7-1.9](https://www.st.com/resource/en/user_manual/um2650-the-stusb4500-software-programing-guide-stmicroelectronics.pdf).
-The existing J12 service header is not a running controller. Do not assume that a powered USB-C requirement by itself
-allows an always-on isolated converter on every PD-capable laptop.
+U21 now provides the controller hardware; its firmware is still required. Do not assume that a powered USB-C requirement
+by itself allows an always-on isolated converter on every PD-capable laptop.
 
 **The owner confirmed one populated board for both modes, without component swaps.** The 5V-only STUSB4500L alternative
 is rejected because it cannot negotiate the full system's 20V supply. Use one USB-C port for laptop power/data or
@@ -47,12 +47,35 @@ the full ordering code for the 47uF/10V/1812 reference family. C41 uses a 16V-ra
 50V-rated 100nF/0603. L2 is
 [Coilcraft XAL5050-103MEC](https://www.coilcraft.com/en-us/products/power/high-voltage-inductors/xal/xal50xx/xal5050-103/).
 All 15 replacement-section components have manufacturer/MPN fields. C44 is removed. The schematic and local routing pass
-native ERC/DRC with zero violations and zero unconnected items; all 219 components and 833 netlist pins match. This does
+native ERC/DRC with zero violations and zero unconnected items; all 231 footprints and 879 netlist pins match. This does
 not establish loop stability, transient response, hot-plug behavior or fault-temperature performance.
 
 Automatic input-current qualification, the application-power enable policy and the complete startup/suspend budget
 remain to be implemented. Keeping the integrated isolator avoids a separate transformer/rectifier/data-isolator
 redesign; it does not eliminate those system-level responsibilities.
+
+## Primary-side control hardware
+
+U21 is [STM32C011F6P6](https://www.st.com/resource/en/datasheet/stm32c011f6.pdf), TSSOP-20, powered by U18 VLO
+(`USB_HOST_3V3`). Use the internal HSI48 divided by eight (6MHz); no external oscillator is needed. It is a power
+supervisor, separate from the STM32G474 scoring processor and ESP32 application processor.
+
+| U21 pin                   | Signal               | Function and reset state                                                    |
+| ------------------------- | -------------------- | --------------------------------------------------------------------------- |
+| 1 PB7 / 20 PB6            | PD_SDA / PD_SCL      | U5 I2C with 4.7k pull-ups                                                   |
+| 13 PA6                    | PD_ALERT_N           | U5 alert input with 47k pull-up                                             |
+| 11 PA4                    | USB_ISO_EN           | U18 ON, 100k pull-down: acquisition off                                     |
+| 12 PA5                    | APP_INHIBIT          | Q6 gate, 100k pull-up: application inhibited; drive low only when qualified |
+| 16 PA11                   | USB_SUSPEND_EN       | U18 SPNDPWR, 100k pull-up: automatic suspend shutdown enabled               |
+| 18 PA13 / 19 PA14 / 6 PF2 | SWDIO / SWCLK / NRST | J14 underside service pads                                                  |
+
+Q6 pulls `PD_EFUSE_EN` low when inhibited; the existing Q4/Q5 PD hardware gates remain in series with software
+permission. J14 pads are 1=VLO reference, 2=USB_GND, 3=SWDIO, 4=SWCLK, 5=NRST. Do not inject debugger power into VLO or
+bridge the isolation barrier with a grounded debugger. J14 is excluded from the assembled BOM.
+
+VLO's 10mA external allowance must cover U21, I2C and control pulls. The full VBUS budget still includes U19 and U5;
+this allowance is not a measured startup/suspend result. Both source qualification and U5 configuration are required
+before the reset-safe board can operate.
 
 ## Retained circuit budget
 

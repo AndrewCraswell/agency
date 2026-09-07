@@ -24,14 +24,20 @@ parts and local PCB routing are implemented. Its 10uH/750kHz reference network f
 dropout workaround. C44 is removed; C66-C68 and R108-R110 complete the replacement network. Exact ordering fields are
 included for all 15 parts in this section. Low-input regulation still requires measurement on the assembled prototype.
 
-Native ERC and DRC pass with zero violations and zero unconnected items. All **219 components / 833 schematic pin
-assignments** match the PCB. The **814 other pads** retain their positions/nets; **3,222 prior tracks/vias** remain
-unchanged and 57 obsolete local power tracks/vias were retired. The primary USB ground remains isolated. This is a
-verified layout checkpoint, not powered validation or fabrication approval.
+The power-control hardware is routed: U21 **STM32C011F6P6**, Q6 application inhibit, six bias resistors, three
+bypass/reset capacitors and J14 underside programming pads. U21 is powered from LTM2884's primary-side VLO and controls
+power only, not scoring. Reset defaults hold acquisition off and application power inhibited. The board is now **165 x
+100mm**; the USB-side edge extends 5mm while existing connector positions remain unchanged. There is still one USB-C
+port.
+
+Native ERC and DRC pass with zero violations and zero unconnected items. All **231 footprints / 879 schematic pin
+assignments** match the PCB; J14 is bare service pads, not an installed connector. The primary USB ground remains
+isolated. This is a layout checkpoint, not powered validation or fabrication approval.
 
 The circuit package type-check and 13 tests pass. A fresh native KiCad 3D render was inspected; the previously missing
-U18 and J13 body models remain absent, so this does not establish their mechanical fit. `pnpm verify` was attempted but
-stopped on three unrelated legislation lint errors; no repository-wide pass is claimed.
+U18 and J13 body models remain absent, so this does not establish their mechanical fit. `pnpm verify` passed its check
+stage but stopped on the existing scoring TypeScript coverage thresholds (95.98% lines versus 100% required); no
+repository-wide pass is claimed. Those executable sources were not changed by this hardware checkpoint.
 
 **Still unfinished:** automatic source-power qualification and application-branch control, a complete startup/suspend
 budget, and final manufacturing review. No owner decision is blocking that implementation. One USB-C port, one
@@ -603,33 +609,32 @@ error. The seven upper-clamp rail connections are now routed; completed routing 
 
 ## Current state and remaining work
 
-The current draft contains **187 components**, twelve functional/support sheets plus the cover, and 187 named nets
-(including explicit no-connect nets) on the unchanged **160 x 100mm**, four-layer PCB. The shared USB-C schematic,
-footprints and initial power placement are present. The new converter's secondary output and local bypass connect to the
-retained display/application/core distribution. U19's input bypass, switch/inductor, bootstrap, internal-supply bypass,
-output capacitors and feedback divider are now locally connected. U5's local supply, internal-regulator bypass, CC/CCDB
-pairs, sensing, discharge and I2C service port are connected. Both PD flags reach Q4/Q5 and U20's enable pin. U20's
-input bypass, protected output to U6, voltage dividers, current limit and soft-start components are locally connected.
-**J1-to-controller CC, primary input distribution and the U19-to-U18 supply feeder are now connected through a left-edge
-primary corridor.** Primary ground returns join through that corridor without joining board ground. The shared-input
-layout is connected, but power behavior and safety remain unverified. The acquisition buffers now have connected
-supplies, local bypass and all seven reset-default resistor networks. All fourteen STM32 drive/enable signals reach
-those buffers and resistors. Thirteen redundant, unconnected display pull-downs have been removed; the connected 10k
-pull-downs beside the display buffers remain. All seven buffer outputs now reach their existing 220-ohm series
-resistors. All seven 3.3k sense pull-downs now have ground returns, and all seven comparator inputs reach those
-pull-downs. Both fencer headers and the piste header now reach their excitation/sense resistor junctions. Every sense
-series resistor connects to its BAT54S signal pad and its own MCU/pull-down path; all seven clamp ground returns are
-connected. D3-D9's upper-clamp CORE_3V3 connections are now routed too: **zero unrouted items remain**. The circuit
-retains the passive-cable prototype candidate described above; protection, timing and manufacturing checks are still
-open.
+The current draft contains **231 footprints**, twelve functional/support sheets plus the cover, on a **165 x 100mm**,
+four-layer PCB. J14 is unpopulated service pads. The shared USB-C schematic, footprints and initial power placement are
+present. The new converter's secondary output and local bypass connect to the retained display/application/core
+distribution. U19's input bypass, switch/inductor, bootstrap, internal-supply bypass, output capacitors and feedback
+divider are now locally connected. U5's local supply, internal-regulator bypass, CC/CCDB pairs, sensing, discharge and
+I2C service port are connected. Both PD flags reach Q4/Q5 and U20's enable pin. U20's input bypass, protected output to
+U6, voltage dividers, current limit and soft-start components are locally connected. **J1-to-controller CC, primary
+input distribution and the U19-to-U18 supply feeder are now connected through a left-edge primary corridor.** Primary
+ground returns join through that corridor without joining board ground. The shared-input layout is connected, but power
+behavior and safety remain unverified. The acquisition buffers now have connected supplies, local bypass and all seven
+reset-default resistor networks. All fourteen STM32 drive/enable signals reach those buffers and resistors. Thirteen
+redundant, unconnected display pull-downs have been removed; the connected 10k pull-downs beside the display buffers
+remain. All seven buffer outputs now reach their existing 220-ohm series resistors. All seven 3.3k sense pull-downs now
+have ground returns, and all seven comparator inputs reach those pull-downs. Both fencer headers and the piste header
+now reach their excitation/sense resistor junctions. Every sense series resistor connects to its BAT54S signal pad and
+its own MCU/pull-down path; all seven clamp ground returns are connected. D3-D9's upper-clamp CORE_3V3 connections are
+now routed too: **zero unrouted items remain**. The circuit retains the passive-cable prototype candidate described
+above; protection, timing and manufacturing checks are still open.
 
 The existing USB data/protection, isolated output and USB-present sensing remain routed, along with the STM32 regulator,
 crystal, boot pull-down, reset network/button and programming header. The 5V distribution to both HUB75 power contacts,
 display buffers and application regulator remains connected. Sensing placement is still provisional. The ESP32 supply,
 local bypass, enable/boot networks, buttons and manual UART programming header are also routed. The two-way processor
 UART, its translators, four bypass capacitors and idle pulls are connected. The IR receiver's filtered supply, ground
-and output to ESP32 GPIO42 are routed. The WIZ850io Ethernet supply, SPI bus, reset and interrupt are also connected.
-All thirteen HUB75 buffer outputs now reach the display connector, together with the local buffer-disable and
+and output to ESP32 GPIO42 are routed. The direct W5500 Ethernet supply, SPI bus, reset and interrupt are also
+connected. All thirteen HUB75 buffer outputs now reach the display connector, together with the local buffer-disable and
 panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined reset defaults. The
 ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
 
@@ -640,10 +645,9 @@ Remaining before ordering the prototype:
    3.3k sense dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not
    infer patent clearance or FIE conformity from the topology.
 2. Finish the component/assembly review: remaining footprint/model checks, connector access, mounting, antenna
-   clearance, decoupling and power-current paths. Ordering fields are populated for all 187 components. U18's land
-   pattern and pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly
-   requirements need to be accepted by the assembler. The sounder drawing check is complete; fit and soldering remain
-   assembly checks.
+   clearance, decoupling and power-current paths. J14 service pads are excluded from assembly. U18's land pattern and
+   pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly requirements need
+   to be accepted by the assembler. The sounder drawing check is complete; fit and soldering remain assembly checks.
 3. Visually review final USB and manufacturing geometry, Gerbers, drills and assembly placement against the selected
    stackup and supplier conventions. Native ERC/DRC/parity are currently clean, including the completed J1 correction.
    Temporary Gerber/drill/BOM/placement exports succeed. The first native GerbView layer/drill review is complete as
