@@ -18,6 +18,10 @@ The target uses HSI48 divided to 6MHz, PB6/PB7 AF6 I2C, bounded polling and an i
 acquisition, PA5 inhibits application power, and PA11 controls suspend shutdown. Reset pulls enforce the safe state
 before firmware starts. No heap, RTOS or external firmware library is required.
 
+PA6 is a digital ALERT_N input. Once laptop/display power is qualified, register traffic occurs on an asserted alert or
+a 10ms health check, rather than continuously pulling I2C lines low. The CPU still polls alerts and refreshes the
+watchdog; this is not a low-power sleep implementation or a measured USB suspend result.
+
 ## Build and verify
 
 Run from the repository root with Clang, LLD, LLVM tools, CMake and Ninja on PATH:

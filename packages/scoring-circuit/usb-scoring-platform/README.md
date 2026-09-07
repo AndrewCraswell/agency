@@ -37,6 +37,37 @@ shortfall; no threshold was lowered.
 
 ## Current power decision and progress
 
+### Electrical and assembly review outcome
+
+The input-side allocation and passive-cable protection disposition are recorded in
+[the power review](usb-acquisition-power.md#input-side-review) and the sensing section below. Retain the clamps for
+passive-cord bench work; powered external conductors and shared/externally driven pistes are outside that disposition.
+No protection component was removed. Suspend acceptance is source-dependent, not a universal 2.5mA number; U21 now
+avoids continuous I2C traffic after qualification. Actual input/inrush/suspend power still needs bench measurement.
+
+The **acquisition timing item is not closed**. The existing 225us schedule's 60us-on/165us-off counterexample still
+prevents treating repeated sampled highs as one valid sabre contact. The retained FIE appendix requires rejection below
+100us and assured registration within its 100us-1ms sensitivity window. A held-excitation/continuous-edge-capture
+candidate needs both-fencer and piste tests, and separate foil/epee qualification, before approval. Faster firmware
+alone is not a demonstrated repair. This is a concrete engineering item, not an assembler or owner-information blocker.
+
+Assembly inspection found a real solder-wicking risk: C69's ground via was inside its paste land. It is now outside the
+land at (57.9,136.85)mm with a 0.5mm diameter/0.2mm drill and a short 0.2mm ground trace. It uses existing process
+dimensions, not a new filled-via requirement. Fresh DRC/parity pass with zero violations or unconnected items. All 230
+populated footprints have courtyards; pairwise inspection found no courtyard collisions. J14 alone has no courtyard
+because it is bare underside service pads. No via centres remain inside top SMD paste pads after the fix. That check
+does not replace solder-mask/stencil review or three-dimensional cable-envelope checks.
+
+The native 3D render was inspected for overall placement, connector access and antenna space. Ethernet's body model is
+unavailable in the installed library; U18 and U20 also lack body models, so their empty render locations are not
+evidence of physical clearance. U18's retained manufacturer drawing was inspected: 15x15mm body, 5.22mm maximum height,
+44 lands at 1.27mm pitch and 0.63mm nominal pad diameter match its native footprint. Do not invent replacement bodies.
+Reserve those actual envelopes during enclosure design. The existing antenna keepout is retained. The board has no
+chassis standoff holes: use an insulating prototype carrier, not connector locator holes or conductive supports over the
+isolation regions. Supplier review must explicitly cover LTM2884 MSL-4/245 C handling, exposed-pad soldering,
+through-hole connectors, and footprint-origin versus pick-and-place-centre conventions. This review does not approve
+supplier substitutions or claim a completed enclosure.
+
 The owner removed the $36 savings target on 2026-09-06: finish the reliable one-port board rather than add circuitry to
 meet that estimate. **Keep LTM2884 USB isolation and REC30K application power.** The cheaper discrete USB-isolator
 proposal is not selected. The direct W5500 Ethernet change is retained.

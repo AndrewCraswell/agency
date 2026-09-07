@@ -81,6 +81,31 @@ before the reset-safe board can operate.
 
 ## Retained circuit budget
 
+### Input-side review
+
+The prototype retains a **5V / at least 1.5A advertised or contracted source** for laptop acquisition. A conservative
+active allocation is 0.60A at J1, not 1.5A of normal consumption. With 75mA isolated load, assume 40% incremental
+LTM2884 efficiency, 100mA converter overhead, 9mA transceiver overhead and 4mA VLO load: the 5V input is approximately
+0.3005A. At 70% U19 efficiency and 4.1V cable-end voltage this becomes 0.524A; a further 10mA primary allowance gives
+0.534A, below the 0.60A allocation. The two efficiency floors are **engineering assumptions to measure**, not guaranteed
+data-sheet minima. This closes the allocation, not inrush, thermal or all-corners performance qualification.
+
+U21's HSI48/8 flash-running characterization at 85 C is 1.4mA maximum with peripherals disabled
+([ST DS13866 table 27](https://www.st.com/resource/en/datasheet/stm32c011f6.pdf)). Allocate 0.6mA for peripherals and
+switching, 1.483mA for both 4.7k I2C pull-ups continuously low at VLO=3.45V and -1% resistance, and 0.179mA for
+control/alert pulls: **3.662mA**, rounded to 4mA, versus VLO's 10mA allowance. This is a steady-load allocation;
+debugger loading and capacitor charging are separate. The actual firmware now checks a qualified contract on ALERT_N or
+every 10ms, avoiding continuous I2C pull-up current while retaining immediate alert polling and the watchdog.
+
+**Suspend criteria correction:** USB-C non-PD 1.5A/3A advertisement is not subject to the blanket 2.5mA legacy limit.
+The USB-IF functional test TD 4.10.3 permits those advertised currents and uses **25mW** for a non-hub PD sink when the
+source supports USB suspend. See the
+[official test specification, pages 104-105](https://usb.org/sites/default/files/USB%20Type%20C%20Functional%20Test%20Specification%202021%2005%2020.pdf).
+Keep LTM2884 suspend shutdown enabled in laptop mode. Measure the complete J1 power against the applicable source/PD
+condition, including U21, U5 and U19; an isolated-output shutdown is not proof of the total. The 4mA worst-case VLO
+allocation is not itself a demonstrated PD suspend budget. Lower I2C duty improves margin but does not establish a
+measured 25mW pass. Default-current USB-A operation remains outside the supported product configuration.
+
 **Paper budget, not a measured operating result.** Retain the LTM2884 acquisition supply; this review does not justify a
 larger converter. Laptop-only units ship **without a HUB75 panel connected**. The laptop supplies power and runs the
 scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero transmission are
@@ -176,11 +201,12 @@ hardware measurements have been performed.
 2. Accepted configuration with maximum USB traffic and scan activity: <=500mA host and <=75mA isolated target. Exercise
    open cords, all conductors joined, grounded selected conductor and cable capacitance. If 75mA is exceeded, reconcile
    the measured budget before raising it; 200mA is not our operating target.
-3. Suspend/resume and unplug/replug, both with and without PD: verify the host suspend limit of 2.5mA, loss of old
-   captures, bounded restart, no false observations and no unwanted application-rail power. Include D2/U10/U11 leakage
-   and the new host-side controller/regulator consumption; U18's suspend behavior alone cannot prove the whole limit.
-   The [USB-IF electrical update](https://compliance.usb.org/index.asp?UpdateFile=Electrical) also requires truthful
-   bus/self-power reporting and re-enumeration before changing from self-powered to high-power bus operation.
+3. Suspend/resume and unplug/replug, both with and without PD: verify the applicable suspend-current/power limit above,
+   loss of old captures, bounded restart, no false observations and no unwanted application-rail power. Include
+   D2/U10/U11 leakage and the new host-side controller/regulator consumption; U18's suspend behavior alone cannot prove
+   the whole limit. The [USB-IF electrical update](https://compliance.usb.org/index.asp?UpdateFile=Electrical) also
+   requires truthful bus/self-power reporting and re-enumeration before changing from self-powered to high-power bus
+   operation.
 4. Measure loaded U19 output, CORE_3V3 and temperature with representative cables. Sweep through 4.1-5.5V and the
    negotiated 20V operating point, including startup and transitions; U18 must remain above 4.4V at its pins. The new
    buck-boost topology addresses dropout but has not been measured. Stop capture on undervoltage; do not claim support

@@ -9,6 +9,7 @@
 #define IWDG UINT32_C(0x40003000)
 #define SYSTICK UINT32_C(0xe000e010)
 static power_control control;
+static unsigned health_ticks;
 static void wr(uintptr_t reg, uint32_t value) { power_register_write(reg, value); }
 static uint32_t rd(uintptr_t reg) { return power_register_read(reg); }
 static void replace(uintptr_t reg, uint32_t mask, uint32_t value) { wr(reg, (rd(reg) & ~mask) | value); }
@@ -64,6 +65,7 @@ void power_target_fault(void) {
     /* Startup vector's fault loop does not refresh IWDG, so hardware reset follows. */
 }
 void power_target_initialize(void) {
+    health_ticks = 0;
     /* HSI48 / 8 = 6MHz, reset clock source; all support clocks remain internal. */
     replace(RCC, 0x3800u, 3u << 11);
     replace(RCC + 0x34u, 0, 3u);
@@ -71,6 +73,7 @@ void power_target_initialize(void) {
     outputs(NULL, false, false, true);
     replace(GPIOA + 4u, 0, 1u << 5); /* Q6 gate open drain, external pull-up inhibits. */
     replace(GPIOA, (3u << 8) | (3u << 10) | (3u << 22), (1u << 8) | (1u << 10) | (1u << 22));
+    replace(GPIOA, 3u << 12, 0); /* PA6 digital ALERT_N input; external 47k pull-up. */
     /* PB6/PB7 AF6 open-drain I2C; PA13/PA14 retain reset SWD function. */
     replace(GPIOB + 4u, 0, 0xc0u);
     replace(GPIOB + 8u, 0xf000u, 0xa000u);
@@ -91,6 +94,14 @@ void power_target_initialize(void) {
     power_control_init(&control, (power_io){NULL, read_pd, write_pd, outputs});
 }
 void power_target_poll(void) {
+    /* A qualified contract is stable until ALERT_N changes. Avoid continuously sinking the I2C
+       pull-ups during USB suspend. Still inspect status every 10ms; no USB-session inference. */
+    if ((control.mode == POWER_LAPTOP || control.mode == POWER_DISPLAY) &&
+        (rd(GPIOA + 0x10u) & (1u << 6)) != 0) {
+        if ((rd(SYSTICK) & (1u << 16)) != 0) ++health_ticks;
+        if (health_ticks < 10u) { wr(IWDG, 0xaaaau); return; }
+    }
+    health_ticks = 0;
     (void)power_control_poll(&control);
     wr(IWDG, 0xaaaau);
 }

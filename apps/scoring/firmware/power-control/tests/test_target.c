@@ -14,6 +14,11 @@ static void remember(uintptr_t a,uint32_t v) {
     assert(register_count<40);registers[register_count++]=(slot){a,v};
 }
 uint32_t power_register_read(uintptr_t a) {
+    if(a==0xe000e010u) {
+        for(size_t i=0;i<register_count;++i)if(registers[i].address==a) {
+            uint32_t value=registers[i].value;registers[i].value&=~(1u<<16);return value;
+        }
+    }
     if(a==0x40005418u) {
         if(force_busy)return 0x8000;
         if(force_timeout)return 0;
@@ -61,6 +66,12 @@ static void reset(void) {
 int main(void) {
     reset();power_target_poll();assert((gpio&0x830u)==0x830u); /* qualified Type-C */
     source(&pd,true,2);contract(&pd,1,150);power_target_poll();assert((gpio&0x830u)==0x830u);
+    remember(0x50000010u,1u<<6);
+    unsigned before=status_reads;
+    power_target_poll();assert(status_reads==before);
+    for(unsigned tick=0;tick<9;++tick){remember(0xe000e010u,5u|(1u<<16));power_target_poll();assert(status_reads==before);}
+    remember(0xe000e010u,5u|(1u<<16));power_target_poll();assert(status_reads>before);
+    remember(0x50000010u,0); /* Alerts always bypass the periodic check. */
     source(&pd,false,2);power_target_poll();assert((gpio&0x830u)==0x820u);
     source(&pd,false,2);contract(&pd,2,300);power_target_poll();assert((gpio&0x830u)==0x10u);
     power_target_fault();assert((gpio&0x830u)==0x820u);

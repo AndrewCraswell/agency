@@ -57674,7 +57674,7 @@
 	)
 	(segment
 		(start 59.2 136)
-		(end 59 136.175)
+		(end 59.2 136.85)
 		(width 0.2)
 		(layer "F.Cu")
 		(net "USB_GND")
@@ -58369,12 +58369,17 @@
 		(uuid "84e2218a-08cc-4665-aaec-885e73ca85cd")
 	)
 	(via
-		(at 59 136.175)
-		(size 0.6)
-		(drill 0.3)
+		(at 57.9 136.85)
+		(size 0.5)
+		(drill 0.2)
 		(layers "F.Cu" "B.Cu")
 		(net "USB_GND")
 		(uuid "88047463-3702-4814-832b-f89fb3fcae89")
+	)
+	(segment
+		(start 59.2 136.85) (end 57.9 136.85)
+		(width 0.2) (layer "F.Cu") (net "USB_GND")
+		(uuid "4157a01f-f6a8-4c5d-9f34-e543b4b84c38")
 	)
 	(via
 		(at 69.5 63.65)
