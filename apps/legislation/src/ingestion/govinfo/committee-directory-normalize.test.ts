@@ -61,7 +61,82 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     input[0]!.members[0]!.name = "Timothy Q. Walberg"
     expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
     input[0]!.members[0]!.name = "Tim Walberg"
-    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toEqual([])
+  })
+
+  it.each(["JOHN J.H. (JOE) SCHWARZ", 'John J.H. "Joe" Schwarz', "John J.H. “Joe” Schwarz"])(
+    "uses only an explicit first-name-order source nickname: %s",
+    (name) => {
+      const source = catalog()
+      const input = [records()[0]!]
+      input[0]!.members[0]!.name = "Joe Schwarz"
+      const scoped = {
+        ...source,
+        aliases: [{ name, personId: source.people[0]!.id, state: "WA", chamber: "upper" as const }]
+      }
+      expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toEqual([])
+      scoped.aliases[0]!.state = "MI"
+      expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
+      scoped.aliases[0]!.state = "WA"
+      input[0]!.members[0]!.chamber = "lower"
+      expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
+    }
+  )
+
+  it.each([
+    "John J.H. Schwarz",
+    'Schwarz, John J.H. "Joe"',
+    "John (Joe) Schwarz; Republican",
+    "John (Joe) Schwarz of Michigan"
+  ])("does not infer an absent or unstructured source nickname: %s", (name) => {
+    const source = catalog()
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Joe Schwarz"
+    const aliases = [{ name, personId: source.people[0]!.id, state: "WA", chamber: "upper" as const }]
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
+  })
+
+  it("retains the whole surname and does not expand unscoped canonical nicknames", () => {
+    const source = catalog()
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Joe de la Cruz, Jr."
+    const name = "John J.H. (Joe) de la Cruz, Jr."
+    const aliases = [{ name, personId: source.people[0]!.id, state: "WA", chamber: "upper" as const }]
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toEqual([])
+    input[0]!.members[0]!.name = "Joe Cruz"
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
+    input[0]!.members[0]!.name = "Joe de la Cruz, Jr."
+    expect(
+      normalizeGovInfoCommitteeDirectory(
+        input,
+        directoryPackage,
+        { ...source, aliases: [{ name, personId: source.people[0]!.id }] },
+        new Date()
+      ).unmatched
+    ).toHaveLength(1)
+  })
+
+  it("rejects explicitly identical nicknames belonging to two scoped source identities", () => {
+    const source = catalog()
+    source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+    source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Joe Schwarz"
+    const aliases = source.people.map((person) => ({
+      name: "John (Joe) Schwarz",
+      personId: person.id,
+      state: "WA",
+      chamber: "upper" as const
+    }))
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
   })
 
   it("rejects ambiguous omitted-middle names in the same source state and chamber", () => {

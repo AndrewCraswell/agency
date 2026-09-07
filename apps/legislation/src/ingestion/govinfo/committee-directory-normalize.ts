@@ -295,12 +295,28 @@ function nameVariants(value: string): string[] {
   return [...new Set([normalized, ...(comma.length === 2 ? [normalizeName(`${comma[1]} ${comma[0]}`)] : [])])]
 }
 
-/** Keep the explicit first/surname, optionally omitting only intervening initials.
- * These variants are accepted only for unique same-state/chamber source IDs.
- * Never expand a nickname or replace a spelled-out middle name.
+/** Keep explicit source names, optionally omitting intervening initials or using
+ * an explicitly quoted nickname with its unchanged surname. These variants are
+ * accepted only for unique same-state/chamber source IDs; never guess nicknames.
  */
 function scopedSourceNameVariants(value: string): string[] {
-  return [...new Set(nameVariants(value).flatMap((name) => [name, name.replace(/^(\S+) (?:[a-z] )+(.+)$/, "$1 $2")]))]
+  // First-name-order metadata only: reject surname-first commas and prose.
+  // Keep compound surnames and printed suffixes together after the nickname.
+  const explicit =
+    /^[\p{L}\p{M}.'’ -]+?\s+(?:"([\p{L}\p{M}'’-]+)"|“([\p{L}\p{M}'’-]+)”|\(([\p{L}\p{M}'’-]+)\))\s+([\p{L}\p{M}.'’ -]+(?:,\s*(?:Jr\.?|Sr\.?|II|III|IV))?)$/u.exec(
+      value.trim()
+    )
+  const nickname = explicit?.[1] ?? explicit?.[2] ?? explicit?.[3]
+  const surname = explicit?.[4]
+  const explicitNames = nickname === undefined || surname === undefined ? [] : nameVariants(`${nickname} ${surname}`)
+  return [
+    ...new Set(
+      [...nameVariants(value), ...explicitNames].flatMap((name) => [
+        name,
+        name.replace(/^(\S+) (?:[a-z] )+(.+)$/, "$1 $2")
+      ])
+    )
+  ]
 }
 
 function normalizeName(value: string): string {

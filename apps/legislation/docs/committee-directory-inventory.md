@@ -314,6 +314,17 @@ it does not use general transposition matching. Original source text and neighbo
 All 66 focused parser/assignment tests, scoped lint/format and service/web types pass. The live retry passes Military
 Procurement and stops at `Mr. Abercombie` in National Security / Special Oversight Panel on the Merchant Marine.
 That further discrepancy remains unchanged; no full 105th acceptance or import is claimed.
+Both the advertised HTML and PDF text layer print `Abercombie`, while the parent lists Neil Abercrombie. His
+assignment row confirms two other National Security subcommittees, not the Merchant Marine panel. The exact spelling
+correction using only the unique parent match is awaiting user direction; no correction has been applied.
+
+An independent 109th identity check found structured same-edition evidence for Joe Schwarz: the advertised
+`CDIR-2005-07-11-MI-H-7` summary identifies `S001161`, Congress 109, House, Michigan, with parsed
+`JOHN J.H. (JOE) SCHWARZ` and authority first-name-order `John J.H. "Joe" Schwarz`. The loader already returns these
+fields; normalization had discarded the explicit nickname. Scoped source-name matching now retains explicitly
+quoted or parenthesized nicknames with the unchanged surname, requiring state/chamber and unique source identity.
+It does not infer nicknames, parse biography prose or expand unscoped canonical aliases. All 50 focused normalization
+and alias tests, legislation lint and types pass. A full 109th canonical re-audit remains required before import.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
