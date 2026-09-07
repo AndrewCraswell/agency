@@ -259,3 +259,9 @@ The follow-up edition-year identity and corroborated early-spelling batch passes
 files plus four receiver tests; four database-dependent files remain skipped. One earlier coverage attempt lost
 a temporary coverage artifact and had a router assertion failure; the full isolated rerun passed. Root verification
 remains blocked in the unrelated Shopify package. No hooks were bypassed.
+
+Code `38fe0d1` is committed and pushed. Its Trigger deployment attempt `20260907.8` failed during build-context
+transfer with a keepalive timeout / host connection abort. The latest successful release remains `20260907.7`.
+The 112th import has not been dispatched because the required edition-year filter is not deployed yet.
+The remaining 108th read-only audit also encountered GovInfo timeouts before normalization; no partial roster
+was published. Resume the release and bounded audit after connectivity stabilizes.
