@@ -104,6 +104,26 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     }
   )
 
+  it("removes a corroborated redundant state suffix only in the reviewed 117th edition", () => {
+    const source = catalog()
+    source.terms[0]!.sourceId = "117:upper:2021:2023"
+    const input = records()
+    input[0]!.members[0]!.name = "Jane Q. Senator, WA"
+    input[1]!.members[0]!.name = "Jane Q. Senator"
+    const edition = { ...directoryPackage, congress: 117, packageId: "CDIR-2022-10-26" }
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2021-01-01" }, source, new Date())
+        .unmatched
+    ).toHaveLength(1)
+    input[1]!.members[0]!.state = "NY"
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+    input[1]!.members[0]!.state = "WA"
+    source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+    source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(2)
+  })
+
   it.each([
     ["John P. Sarbanes", "Paul P. Sarbanes", "MD", "3"],
     ["Lori Chavez-DeRemer", "Lori Chaves-DeRemer", "OR", "5"]

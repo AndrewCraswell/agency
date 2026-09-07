@@ -61,7 +61,7 @@ package each for Congresses 105 and 118. A single retained edition supports a ro
 of historical joins and departures. Earlier directories likewise require format validation.
 
 The [live edition inventory](committee-directory-inventory.md) identifies 23 historical editions. The 118th has passed
-production import and API verification; the 116th passes source reconciliation and its import is running. The 117th
+production import and API verification, as has the 116th. The 117th
 and 105th–115th remain gated on the documented source/layout discrepancies. Historical writes preserve current
 organization metadata. Do not run a destructive restart across unvalidated editions.
 
@@ -158,8 +158,15 @@ Release evidence:
 - Authenticated deployed person membership history and organization member lists returned HTTP 200. Following the
   returned historical membership `canonicalUrl` also returned HTTP 200 with matching ID, session, detected date,
   and Congress-end semantics. Membership detail is organization-scoped, not `/api/memberships/{id}`.
-- The validated 116th import is running as `run_06g7i596qkn4k2lf1rtcln6701`. The 118th unchanged rerun is queued as
-  `run_06g7i5dnnrs89n46ilvj8ip601`. Neither is claimed complete here; both use the serial historical task queue.
+- The 116th import `run_06g7i596qkn4k2lf1rtcln6701` completed successfully: 3,678 memberships across 215 organizations
+  and 531 people. Database verification on 2026-09-07 confirmed detected start `2020-07-22`, all rows inactive with
+  `congress_ended`, and no detected end dates. Both 119th fingerprints above remain unchanged. Deployed person history
+  and its returned organization-scoped membership canonical URL passed HTTP 200 and historical-field assertions.
+- The 118th unchanged rerun `run_06g7i5dnnrs89n46ilvj8ip601` completed successfully: one edition skipped, zero writes.
+  The 116th unchanged rerun `run_06g7llrsemli8bbavset1ura01` also completed successfully with one edition skipped
+  and zero writes.
+- Schedule readback on 2026-09-07 confirmed the production daily schedule remains active. Its first scheduled run is
+  still due at 09:30 UTC on 2026-09-07; a successful manual canary is not evidence that this scheduled run has fired.
 - Verification: 2,033 legislation tests and four receiver tests passed; 60 database-dependent tests skipped.
   Lint, types, and unused-code checks passed. Latest root `pnpm verify` failed on two unrelated
   `@repo/fc-theme-base` size-chart Liquid test timeouts; an earlier run failed that package's coverage thresholds.

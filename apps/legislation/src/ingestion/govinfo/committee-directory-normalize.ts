@@ -112,12 +112,28 @@ export function normalizeGovInfoCommitteeDirectory(
   }
 }
 
-/** These printed 118th-edition errors are contradicted by other rosters in that same edition. */
+/** Correct only printed artifacts corroborated by another roster in the same edition. */
 function crossCheckedPrintedName(
   member: GovInfoCommitteeMember,
   records: readonly GovInfoCommitteeRecord[],
   directory: GovInfoDirectoryPackage
 ): string {
+  if (directory.packageId === "CDIR-2022-10-26" && directory.congress === 117) {
+    const suffix = `, ${member.state}`
+    if (member.name.endsWith(suffix)) {
+      const name = member.name.slice(0, -suffix.length)
+      if (
+        records.some((record) =>
+          record.members.some(
+            (candidate) =>
+              candidate.name === name && candidate.state === member.state && candidate.chamber === member.chamber
+          )
+        )
+      ) {
+        return name
+      }
+    }
+  }
   if (directory.packageId !== "CDIR-2024-04-25" || directory.congress !== 118 || member.chamber !== "lower") {
     return member.name
   }

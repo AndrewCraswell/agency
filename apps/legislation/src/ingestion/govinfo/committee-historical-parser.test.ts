@@ -134,4 +134,51 @@ describe("historical GovInfo printed rosters", () => {
     expect(() => extractGovInfoPreformattedText("<html>Not found</html>", title)).toThrow("preformatted")
     expect(() => extractGovInfoPreformattedText("<pre>Other document</pre>", title)).toThrow("heading")
   })
+  it("ignores the explicit no-subcommittees note without changing roster members", () => {
+    const source = fixture.replace(
+      "Mary L. Landrieu, of Louisiana.",
+      "(No Subcommittees)\nMary L. Landrieu, of Louisiana."
+    )
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    const baseline = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: fixture })
+    expect(result).toHaveLength(baseline.length)
+    expect(result[0]?.members).toHaveLength(5)
+    expect(result[0]?.members).toEqual(expect.arrayContaining(baseline[0]?.members ?? []))
+    expect(result[1]).toEqual(baseline[1])
+  })
+  it("ignores an isolated PDF accent glyph without losing a member", () => {
+    const source = fixture.replace(
+      "Rick Santorum, of Pennsylvania.",
+      "                      ´\nRick Santorum, of Pennsylvania."
+    )
+    expect(parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })).toEqual(
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: fixture })
+    )
+  })
+  it.each(["Retirement and Aging", "Primary Health and Aging"])("separates the touching HELP heading %s", (name) => {
+    const source = fixture.replace(
+      "\n\n                                  STAFF",
+      `\n                    ${name}\n                  Mr. Santorum, Chairman\n\nMs. Landrieu\n\n                                  STAFF`
+    )
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result).toHaveLength(3)
+    expect(result[1]?.members).toHaveLength(3)
+    expect(result[2]).toMatchObject({ name, parentName: "Agriculture", classification: "subcommittee" })
+    expect(result[2]?.members).toHaveLength(2)
+  })
+  it("excludes the National Republican Senatorial Committee at its explicit boundary", () => {
+    const source = fixture + "\n National Republican Senatorial Committee\n\nJohn Person, of Iowa, Chair\n"
+    expect(parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })).toHaveLength(2)
+  })
+  it("retains the year in a multiline legislative select committee heading after staff", () => {
+    const source =
+      fixture +
+      "\n     Select Committee on the Events Surrounding the 2012\n                 Terrorist Attack in Benghazi\n\n 1036 Longworth House Office Building\n phone 226-7100\n\nTrey Gowdy, of South Carolina, Chair\nElijah E. Cummings, of Maryland, Ranking Member\n"
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
+    expect(result.at(-1)).toMatchObject({
+      name: "Select Committee on the Events Surrounding the 2012 Terrorist Attack in Benghazi",
+      classification: "committee"
+    })
+    expect(result.at(-1)?.members).toHaveLength(2)
+  })
 })

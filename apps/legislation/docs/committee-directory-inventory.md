@@ -122,6 +122,28 @@ Science, Space, and Technology / Energy; it is separately resolvable without gue
 omitting the stale Udall entry would require an explicit incomplete-roster/quarantine policy; current import remains
 fail-closed rather than silently omitting it.
 
+### Follow-up parser verification (2026-09-07)
+
+Conservative formatting fixes now handle explicit no-subcommittee notes, isolated accent glyphs, the National
+Republican Senatorial Committee boundary, touching HELP headings, and the multiline Benghazi select-committee title.
+Bounded advertised-PDF diagnostics produced:
+
+| Edition | Organizations | Parents | Source memberships | Acceptance |
+| --- | --- | --- | --- | --- |
+| 2005-07-11 | 209 | 41 | 3,781 | Structure and identity audit pending |
+| 2007-08-09 | 217 | 42 | 3,743 | Structure and identity audit pending |
+| 2016-02-12 | 210 | 42 | 3,545 | Structure and identity audit pending |
+| 2018-07-27 | 210 | 41 | 3,643 | All 210 organization names/parent attachments reviewed; identity audit pending |
+
+These diagnostic successes do not enable the older production import path. Remaining first parser failures include
+Calvin Dooley's missing comma (108), a touching Western Hemisphere heading (112), merged Mike Quigley member cells
+(113), and `Peter Welch,´of` without spacing (115 October). Earlier inventory failures above describe earlier passes,
+not regressions. None of these older editions has been published.
+
+The redundant state suffix in the reviewed 117th edition now has a normalization fix requiring same-edition,
+same-state/chamber corroboration and a unique canonical identity. This does not resolve the stale Udall entry or
+authorize incomplete publication.
+
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.
 

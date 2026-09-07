@@ -57,11 +57,15 @@ function parseGranule(
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
     .replaceAll(/\[[\s\S]*?\]/g, "")
     .replaceAll(/\(No Vice Chairman\)\.?/gi, "")
+    .replaceAll(/\(No Subcommittees\)\.?/gi, "")
     .replaceAll(/,´(?=\s+of\b)/g, ",")
+    .replaceAll(/^[ \t]*´[ \t]*$/gm, "")
+    // These printed HELP headings touch the preceding roster at a page boundary.
+    .replaceAll(/^[ \t]+(Retirement and Aging|Primary Health and Aging)[ \t]*$/gm, "\n\n$1\n\n")
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
     .replaceAll(/^[ \t]*SUBCOMMITTEES[ \t]*$/gm, "\n\nSUBCOMMITTEES\n\n")
   const partyBoundary =
-    /^[ \t]*(?:National (?:Republican|Democratic) Congressional Committee|(?:(?:House|Senate) )?(?:Democratic|Republican) (?:Conference|Caucus|Policy|Steering|Senatorial|Congressional|Campaign|National))\b/m.exec(
+    /^[ \t]*(?:National (?:Republican|Democratic) (?:Congressional|Senatorial) Committee|(?:(?:House|Senate) )?(?:Democratic|Republican) (?:Conference|Caucus|Policy|Steering|Senatorial|Congressional|Campaign|National))\b/m.exec(
       body
     )
   const text = partyBoundary ? body.slice(0, partyBoundary.index) : body
@@ -80,7 +84,7 @@ function parseGranule(
       continue
     }
     if (
-      /^(?:National (?:Republican|Democratic) Congressional Committee|(?:(?:House|Senate) )?(?:Democratic|Republican) (?:Conference|Caucus|Policy|Steering|Senatorial|Congressional|Campaign|National))\b/i.test(
+      /^(?:National (?:Republican|Democratic) (?:Congressional|Senatorial) Committee|(?:(?:House|Senate) )?(?:Democratic|Republican) (?:Conference|Caucus|Policy|Steering|Senatorial|Congressional|Campaign|National))\b/i.test(
         lines[0]?.trim() ?? ""
       )
     ) {
@@ -190,7 +194,10 @@ function parseGranule(
       }
       continue
     }
-    if (!/\b\d{3,}\b|:|\.--|\.—|^\(|\.$/.test(joined) && !/^\(?The (?:chair|committee)/i.test(joined)) {
+    if (
+      (!/\b\d{3,}\b|:|\.--|\.—|^\(|\.$/.test(joined) || /^Select Committee on [A-Za-z0-9 ,’'-]+$/.test(joined)) &&
+      !/^\(?The (?:chair|committee)/i.test(joined)
+    ) {
       heading = joined
       isExOfficioBlock = false
       isPartyOrganization = /^(?:(?:Senate|House) )?(?:Democratic|Republican)\b/i.test(joined)
