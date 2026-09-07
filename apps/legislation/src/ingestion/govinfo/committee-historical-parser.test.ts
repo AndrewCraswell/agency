@@ -5,6 +5,35 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("keeps Dr. Frist separate from the preceding Gregg row and resolves only the unique parent", () => {
+    const source = `${title}\n\nLabor and Human Resources\n\nJudd Gregg, of New Hampshire.    Christopher J. Dodd, of Connecticut.\nBill Frist, of Tennessee.    Jeff Bingaman, of New Mexico.\n\nSUBCOMMITTEES\n\nChildren and Families\n\nMr. Gregg    Mr. Dodd\nDr. Frist    Mr. Bingaman\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[1]?.members).toEqual([
+      { chamber: "upper", name: "Judd Gregg", state: "NH" },
+      { chamber: "upper", name: "Bill Frist", state: "TN" },
+      { chamber: "upper", name: "Christopher J. Dodd", state: "CT" },
+      { chamber: "upper", name: "Jeff Bingaman", state: "NM" }
+    ])
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "upper",
+        title,
+        text: source.replace("SUBCOMMITTEES", "Another Frist, of Ohio.\n\nSUBCOMMITTEES")
+      })
+    ).toThrow("Ambiguous GovInfo abbreviated member Dr. Frist")
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "upper",
+        title,
+        text: source.replace("Bill Frist, of Tennessee.", "Another Person, of Tennessee.")
+      })
+    ).toThrow("Ambiguous GovInfo abbreviated member Dr. Frist")
+  })
+  it("recognizes a standalone Dr. chair block and preserves its role", () => {
+    const source = fixture.replace("Mr. Santorum, Chairman", "Dr. Santorum, Chairman")
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[1]?.members[0]).toEqual({ chamber: "upper", name: "Rick Santorum", state: "PA", role: "chair" })
+  })
   it("keeps state-spelling corroboration inside the printed name's column", () => {
     const source = `${title}\n\nCommittee on Indian Affairs\n\nJohn McCain, of Arizona.    Michael E. Capuano, of Masschusetts.\nMichael E. Capuano, of Massachusetts.\n`
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })

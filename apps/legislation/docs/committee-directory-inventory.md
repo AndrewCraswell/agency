@@ -213,6 +213,15 @@ The subsequent 107th identity audit remains blocked: December 2001 maps 3,675 en
 October 2002 maps 3,656 uniquely with 65 unresolved. Neither has mapped duplicates. No 107th rows were imported.
 These counts supersede the earlier network-only blocker; source-name reconciliation and structural acceptance remain open.
 
+The 105th source review reached a missing honorific: `Dr. Frist` in Children and Families was concatenated to the
+preceding `Mr. Gregg` row. `Dr.` is now recognized consistently alongside the existing honorifics, including standalone
+chair blocks. Resolution still requires a unique matching parent member; missing and ambiguous parents are rejected.
+This parser correction does not establish full 105th structural or identity acceptance.
+The 48 focused parser/assignment tests, scoped lint/format, and both type checks pass. The next live 105th failure
+is an Indian Affairs staff label, `Majority Staff Director.—Gary Bohnee.`, touching the roster; the existing explicit
+staff boundary recognizes only the Director/Chief Counsel variant. No import or identity inference was performed.
+Root verification passed its check stage but remains blocked by the unrelated scoring coverage thresholds.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains

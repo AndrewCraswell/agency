@@ -136,7 +136,7 @@ function parseGranule(
     const firstMemberLine = lines.findIndex(
       (line) =>
         !/\.—|\.\s*--/.test(line) &&
-        (/^(?:Mr|Mrs|Ms|Miss)\./.test(line.trim()) ||
+        (/^(?:Mr|Mrs|Ms|Miss|Dr)\./.test(line.trim()) ||
           memberWithOf.test(line.trim()) ||
           (!/\d/.test(line) && memberWithoutOf.test(line.trim().split(/\s{2,}/)[0] ?? "")))
     )
@@ -159,7 +159,7 @@ function parseGranule(
     }
     const cells = firstMemberLine < 0 ? [] : memberCells(rosterLines)
     const hasMembers = cells.some(
-      (cell) => /^(?:Mr|Mrs|Ms|Miss)\./.test(cell) || memberWithOf.test(cell) || memberWithoutOf.test(cell)
+      (cell) => /^(?:Mr|Mrs|Ms|Miss|Dr)\./.test(cell) || memberWithOf.test(cell) || memberWithoutOf.test(cell)
     )
     if (hasMembers && isStaff && !isPartyOrganization && !/\.\s*--/.test(joined)) {
       throw new Error(`GovInfo historical member block remains in staff scope: ${joined.slice(0, 100)}`)
@@ -293,7 +293,7 @@ function memberCells(lines: readonly string[]): string[] {
           cell
         ) || /^\(Speaker[’']s Designee\s*\/\s*Vice Chairman\)\.?$/i.test(cell)
       if (
-        /^(?:[A-Za-z].*?, of(?: |$)|(?:Mr|Mrs|Ms|Miss)\.|Vacan)/.test(cell) ||
+        /^(?:[A-Za-z].*?, of(?: |$)|(?:Mr|Mrs|Ms|Miss|Dr)\.|Vacan)/.test(cell) ||
         column.length === 0 ||
         (previous && fullMember.test(previous) && !isWrappedRole)
       ) {
@@ -322,7 +322,7 @@ function parseMember(
     const role = memberRole(full[3])
     return { chamber, name: full[1].replace(/,$/, "").trim(), state, ...(role ? { role } : {}) }
   }
-  const abbreviated = /^(?:Mr|Mrs|Ms|Miss)\.\s+([^,]+)(?:,\s*(.*))?$/.exec(cell.trim())
+  const abbreviated = /^(?:Mr|Mrs|Ms|Miss|Dr)\.\s+([^,]+)(?:,\s*(.*))?$/.exec(cell.trim())
   if (!abbreviated?.[1] || !parent) {
     throw new Error(`Unparsed GovInfo historical roster entry: ${cell}`)
   }
