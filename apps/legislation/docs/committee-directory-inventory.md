@@ -294,6 +294,13 @@ whole surname and a unique parent-roster match; assignment fallback cannot overr
 All 63 focused parser/assignment tests, scoped lint/format and service/web types pass. The live retry passes Davis
 and next stops where `Mr. Hastings`, a vacancy and `Asia and the Pacific` are joined in International Relations.
 That layout boundary remains unresolved; no complete 105th acceptance or import is claimed.
+The complete International Relations section review found three touching standalone headings: Asia and the Pacific,
+International Operations and Human Rights, and International Economic Policy and Trade. Their explicit boundaries
+now preserve adjacent members; bare `vacancy` cells retain empty column positions rather than joining a member name.
+Unknown vacancy annotations still reject. All five subcommittee boundaries are covered by the regression fixture.
+The batch passes 64 focused parser/assignment tests, scoped lint/format and service/web types. A live full-edition
+retry passes International Relations and stops at the printed `Ms. Lofgen` in Judiciary / Immigration and Claims.
+That name discrepancy requires positive source evidence; no inferred alias or historical import was added.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation

@@ -5,6 +5,32 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("keeps all five 105th International Relations subcommittees separate across touching headings and vacancies", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nInternational Relations\n\nEdward A. Royce, of California.\nTom Campbell, of California.\nJohn McHugh, of New York.\nRobert Menendez, of New Jersey.\nDoug Bereuter, of Nebraska.\nChristopher H. Smith, of New Jersey.\nIleana Ros-Lehtinen, of Florida.\nElton Gallegly, of California.\nKevin Brady, of Texas.\nDana Rohrabacher, of California.\nTom Lantos, of California.\n\nSUBCOMMITTEES\n\n                              Africa\n                         Mr. Royce, Chairman\n\n           Mr. Campbell    vacancy\n           Mr. McHugh    Mr. Menendez\n                         Asia and the Pacific\n                        Mr. Bereuter, Chairman\n\n           Mr. Royce\n                International Operations and Human Rights\n                         Mr. Smith, Chairman\n\n           Ms. Ros-Lehtinen    Mr. Lantos\n\n                         Western Hemisphere\n                        Mr. Gallegly, Chairman\n\n           Mr. Brady\n                 International Economic Policy and Trade\n                     Ms. Ros-Lehtinen, Chairwoman\n\n           Mr. Bereuter    1 vacancy\n           Mr. Rohrabacher\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text })
+    const result = parse(source)
+    expect(result.slice(1).map((record) => [record.name, record.parentName, record.members.length])).toEqual([
+      ["Africa", "International Relations", 4],
+      ["Asia and the Pacific", "International Relations", 2],
+      ["International Operations and Human Rights", "International Relations", 3],
+      ["Western Hemisphere", "International Relations", 2],
+      ["International Economic Policy and Trade", "International Relations", 3]
+    ])
+    expect(result[1]?.members.map((member) => member.name)).toEqual([
+      "Edward A. Royce",
+      "Tom Campbell",
+      "John McHugh",
+      "Robert Menendez"
+    ])
+    expect(result[2]?.members.at(-1)?.name).toBe("Edward A. Royce")
+    expect(result[4]?.members.at(-1)?.name).toBe("Kevin Brady")
+    expect(result[5]?.members.at(-1)?.name).toBe("Dana Rohrabacher")
+    expect(() => parse(source.replace("    vacancy", "    vacancy pending appointment"))).toThrow(
+      "Unrecognized GovInfo vacancy annotation"
+    )
+  })
   it("resolves printed T. Davis and D. Davis only against unique initial-qualified parent surnames", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nGovernment Reform and Oversight\n\nThomas M. Davis, III, of Virginia.\nDanny K. Davis, of Illinois.\nTaylor McDavis, of Ohio.\n\nSUBCOMMITTEES\n\nDistrict of Columbia\n\nMr. T. Davis, Chairman\n\nGovernment Management, Information and Technology\n\nMr. T. Davis\nMr. D. Davis\n`

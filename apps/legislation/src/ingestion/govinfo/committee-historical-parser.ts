@@ -107,7 +107,7 @@ function parseGranule(
     // These printed subcommittee headings touch the preceding roster. Match
     // only complete standalone lines, preserving every preceding member cell.
     .replaceAll(
-      /^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere|Employer-Employee Relations|Oversight and Investigations)[ \t]*$/gm,
+      /^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere|Employer-Employee Relations|Oversight and Investigations|Asia and the Pacific|International Operations and Human Rights|International Economic Policy and Trade)[ \t]*$/gm,
       "\n\n$1\n\n"
     )
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
@@ -305,9 +305,12 @@ function memberCells(lines: readonly string[]): string[] {
         cells.push("")
         continue
       }
-      if (cell === "´" || /^[1-9]\d* vacanc(?:y|ies)\.?$/i.test(cell)) {
+      if (cell === "´" || /^(?:[1-9]\d* vacanc(?:y|ies)|vacancy)\.?$/i.test(cell)) {
         cells.push("")
         continue
+      }
+      if (/^vacancy\b/i.test(cell)) {
+        throw new Error(`Unrecognized GovInfo vacancy annotation: ${cell}`)
       }
       if (
         (/^[.,]*\s*of\b/.test(cell) ||
