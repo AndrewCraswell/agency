@@ -5,6 +5,38 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("repairs the exact National Security McIntrye parent cell only with unique same-granule full-name evidence", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nAgriculture\n\nJo Ann Emerson, of Missouri.    Mike McIntyre, of North Carolina.\n\nSTAFF\n\nNational Security\n\nLindsey Graham, of South Carolina.    Mike McIntrye, of North Carolina.\nSonny Bono, of California.    Ciro D. Rodriguez, of Texas.\n\nSUBCOMMITTEES\n\nMilitary Procurement\n\nMr. Bono    Mr. McIntyre\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text })
+    const records = parse(source)
+    expect(records[1]?.members).toEqual([
+      { chamber: "lower", name: "Lindsey Graham", state: "SC" },
+      { chamber: "lower", name: "Sonny Bono", state: "CA" },
+      { chamber: "lower", name: "Mike McIntyre", state: "NC" },
+      { chamber: "lower", name: "Ciro D. Rodriguez", state: "TX" }
+    ])
+    expect(records[2]).toMatchObject({ name: "Military Procurement", parentName: "National Security" })
+    expect(records[2]?.members).toEqual([
+      { chamber: "lower", name: "Sonny Bono", state: "CA" },
+      { chamber: "lower", name: "Mike McIntyre", state: "NC" }
+    ])
+    for (const changed of [
+      source.replace("    Mike McIntyre, of North Carolina.", ""),
+      source.replace("Mike McIntyre, of North Carolina.", "John Mike McIntyre, of North Carolina."),
+      source.replace("Mike McIntyre, of North Carolina.", "Mike McIntyre, of New York."),
+      source.replace("\n\nSTAFF", "\nMike McIntyre, of New York.\n\nSTAFF"),
+      source.replace("National Security", "Resources"),
+      source.replace("Mike McIntrye, of North Carolina.", "Mike McIntrye, of New York."),
+      source.replace("Mike McIntrye", "Another McIntrye")
+    ]) {
+      expect(() => parse(changed)).toThrow("Ambiguous GovInfo abbreviated member Mr. McIntyre")
+    }
+    expect(() => parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title: houseTitle, text: source })).toThrow(
+      "Ambiguous GovInfo abbreviated member Mr. McIntyre"
+    )
+  })
   it("keeps all five 105th International Relations subcommittees separate across touching headings and vacancies", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nInternational Relations\n\nEdward A. Royce, of California.\nTom Campbell, of California.\nJohn McHugh, of New York.\nRobert Menendez, of New Jersey.\nDoug Bereuter, of Nebraska.\nChristopher H. Smith, of New Jersey.\nIleana Ros-Lehtinen, of Florida.\nElton Gallegly, of California.\nKevin Brady, of Texas.\nDana Rohrabacher, of California.\nTom Lantos, of California.\n\nSUBCOMMITTEES\n\n                              Africa\n                         Mr. Royce, Chairman\n\n           Mr. Campbell    vacancy\n           Mr. McHugh    Mr. Menendez\n                         Asia and the Pacific\n                        Mr. Bereuter, Chairman\n\n           Mr. Royce\n                International Operations and Human Rights\n                         Mr. Smith, Chairman\n\n           Ms. Ros-Lehtinen    Mr. Lantos\n\n                         Western Hemisphere\n                        Mr. Gallegly, Chairman\n\n           Mr. Brady\n                 International Economic Policy and Trade\n                     Ms. Ros-Lehtinen, Chairwoman\n\n           Mr. Bereuter    1 vacancy\n           Mr. Rohrabacher\n`

@@ -87,6 +87,12 @@ function parseGranule(
       match[1]?.toLowerCase()
     )
   )
+  // National Security prints McIntrye, while Agriculture in this same granule
+  // prints the exact full name Mike McIntyre with North Carolina. Keep this
+  // one parent-cell repair bounded; never apply general transposition matching.
+  const mcIntyreStates = new Set(
+    [...source.matchAll(/(?:^|[ \t]{2,})Mike McIntyre, of ([A-Za-z ]+?)[.,]/gm)].map((match) => match[1]?.toLowerCase())
+  )
   const body = rosterSource
     .slice(rosterSource.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
@@ -211,6 +217,16 @@ function parseGranule(
               sandersStates.has("vermont")
             ) {
               memberCell = "Bernard Sanders, of Vermont."
+            } else if (
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              !isSubcommittee &&
+              rosterName === "National Security" &&
+              cell === "Mike McIntrye, of North Carolina." &&
+              mcIntyreStates.size === 1 &&
+              mcIntyreStates.has("north carolina")
+            ) {
+              memberCell = "Mike McIntyre, of North Carolina."
             }
             const member = parseMember(memberCell, granule.chamber, parent, rosterName, options)
             return isExOfficioBlock ? { ...member, role: "ex-officio" } : member

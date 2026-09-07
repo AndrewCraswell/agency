@@ -307,6 +307,13 @@ positive assignment clause. Its bare-surname House assignment exception does not
 All 65 focused parser/assignment tests, scoped lint/format and service/web types pass. The live full-edition retry
 passes this entry and next stops at `Mr. McIntyre` in National Security / Military Procurement. That discrepancy
 remains unmodified; no full 105th acceptance, deployment or import is claimed.
+National Security prints `Mike McIntrye, of North Carolina.`, while the same House granule's Agriculture roster
+prints `Mike McIntyre, of North Carolina.` and its assignment table confirms Military Procurement. The exact
+National Security parent-cell repair requires unique, non-conflicting same-granule full-name/state corroboration;
+it does not use general transposition matching. Original source text and neighboring members are preserved.
+All 66 focused parser/assignment tests, scoped lint/format and service/web types pass. The live retry passes Military
+Procurement and stops at `Mr. Abercombie` in National Security / Special Oversight Panel on the Merchant Marine.
+That further discrepancy remains unchanged; no full 105th acceptance or import is claimed.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
