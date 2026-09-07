@@ -5,6 +5,43 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("resolves printed T. Davis and D. Davis only against unique initial-qualified parent surnames", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nGovernment Reform and Oversight\n\nThomas M. Davis, III, of Virginia.\nDanny K. Davis, of Illinois.\nTaylor McDavis, of Ohio.\n\nSUBCOMMITTEES\n\nDistrict of Columbia\n\nMr. T. Davis, Chairman\n\nGovernment Management, Information and Technology\n\nMr. T. Davis\nMr. D. Davis\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text })
+    const records = parse(source)
+    expect(records[1]?.members).toEqual([
+      { chamber: "lower", name: "Thomas M. Davis, III", state: "VA", role: "chair" }
+    ])
+    expect(records[2]?.members).toEqual([
+      { chamber: "lower", name: "Thomas M. Davis, III", state: "VA" },
+      { chamber: "lower", name: "Danny K. Davis", state: "IL" }
+    ])
+    for (const changed of [
+      source.replace("Thomas M. Davis, III, of Virginia.\n", ""),
+      source.replace("Mr. T. Davis, Chairman", "Mr. X. Davis, Chairman"),
+      source.replace("Mr. T. Davis, Chairman", "Mr. T. M. Davis, Chairman"),
+      source.replace("Mr. T. Davis, Chairman", "Mr. Davis, Chairman"),
+      source.replace("\n\nSUBCOMMITTEES", "\nTim Davis, of New York.\n\nSUBCOMMITTEES")
+    ]) {
+      expect(() => parse(changed)).toThrow("Ambiguous GovInfo abbreviated member")
+    }
+    // An external assignment resolver cannot override the explicit initial or
+    // choose between two equally qualified parent members.
+    for (const changed of [
+      source.replace("Thomas M. Davis, III, of Virginia.\n", ""),
+      source.replace("\n\nSUBCOMMITTEES", "\nTim Davis, of New York.\n\nSUBCOMMITTEES"),
+      source.replace("Mr. T. Davis, Chairman", "Mr. T. M. Davis, Chairman")
+    ]) {
+      expect(() =>
+        parseGovInfoHistoricalCommitteeGranule(
+          { chamber: "lower", title: houseTitle, text: changed },
+          { resolveAbbreviatedMember: () => ({ chamber: "lower", name: "Danny K. Davis", state: "IL" }) }
+        )
+      ).toThrow("Ambiguous GovInfo abbreviated member")
+    }
+  })
   it("requires unique same-granule state evidence for the incomplete Sanders Government Reform row", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nBanking and Financial Services\n\nDonald A. Manzullo, of Illinois.    Bernard Sanders, of Vermont.\n\nSTAFF\n\nGovernment Reform and Oversight\n\nBob Barr, of Georgia.    Bernard Sanders\nRob Portman, of Ohio.\n`

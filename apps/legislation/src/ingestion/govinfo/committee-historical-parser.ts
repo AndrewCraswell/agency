@@ -371,13 +371,23 @@ function parseMember(
   if (!abbreviated?.[1] || !parent) {
     throw new Error(`Unparsed GovInfo historical roster entry: ${cell}`)
   }
-  const key = normalizeName(abbreviated[1])
+  // The printed 105th roster distinguishes T. Davis and D. Davis. Match
+  // a single explicit given-name initial against the parent roster, never
+  // infer it from an honorific or use it without the whole surname boundary.
+  const initialQualified = /^([A-Z])\.\s+([^.]+)$/.exec(abbreviated[1])
+  if (/^[A-Z]\./.test(abbreviated[1]) && !initialQualified) {
+    throw new Error(`Ambiguous GovInfo abbreviated member ${cell}: unsupported initial format`)
+  }
+  const key = normalizeName(initialQualified?.[2] ?? abbreviated[1])
   const matches = parent.members.filter((member) => {
     const name = normalizeName(member.name)
-    return name === key || name.endsWith(` ${key}`)
+    return (
+      (name === key || name.endsWith(` ${key}`)) &&
+      (!initialQualified || name.charAt(0) === initialQualified[1]?.toLowerCase())
+    )
   })
   const resolved =
-    matches.length !== 1
+    matches.length !== 1 && !initialQualified
       ? options.resolveAbbreviatedMember?.({ name: abbreviated[1], parent, subcommitteeName, chamber })
       : undefined
   const member = resolved ?? matches[0]

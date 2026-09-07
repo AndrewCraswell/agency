@@ -288,6 +288,12 @@ The live retry passes this entry and reaches `Mr. T. Davis, Chairman` in the Dis
 that initial-qualified abbreviation remains unresolved. No import or 106th leave-policy change was made.
 The Sanders batch passes 62 focused parser/assignment tests, scoped lint/format and service/web types.
 Repository verification passes the check stage but remains blocked by the unrelated scoring coverage thresholds.
+The 105th Government Reform parent explicitly lists Thomas M. Davis III (Virginia) and Danny K. Davis (Illinois).
+Subcommittees distinguish them as `T. Davis` and `D. Davis`. The parser now requires the printed single initial,
+whole surname and a unique parent-roster match; assignment fallback cannot override those constraints.
+All 63 focused parser/assignment tests, scoped lint/format and service/web types pass. The live retry passes Davis
+and next stops where `Mr. Hastings`, a vacancy and `Asia and the Pacific` are joined in International Relations.
+That layout boundary remains unresolved; no complete 105th acceptance or import is claimed.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
