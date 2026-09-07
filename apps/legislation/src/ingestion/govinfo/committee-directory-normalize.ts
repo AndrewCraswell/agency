@@ -122,6 +122,26 @@ function crossCheckedPrintedName(
   directory: GovInfoDirectoryPackage
 ): string {
   if (
+    ["CDIR-2005-07-11", "CDIR-2006-09-01"].includes(directory.packageId) &&
+    directory.congress === 109 &&
+    member.chamber === "lower"
+  ) {
+    const correction = new Map([
+      ["Eni Faleomaveaga", { name: "Eni F.H. Faleomavaega", state: "AS" }],
+      ["Willliam Jefferson", { name: "William J. Jefferson", state: "LA" }]
+    ]).get(member.name)
+    const corroborators = records
+      .flatMap((record) => record.members)
+      .filter((candidate) => candidate.name === correction?.name)
+    if (
+      correction?.state === member.state &&
+      corroborators.length > 0 &&
+      corroborators.every((candidate) => candidate.state === member.state && candidate.chamber === "lower")
+    ) {
+      return correction.name
+    }
+  }
+  if (
     ["CDIR-2007-08-09", "CDIR-2008-08-01"].includes(directory.packageId) &&
     directory.congress === 110 &&
     member.chamber === "lower" &&

@@ -13,6 +13,70 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it.each([
+    ["Eni Faleomaveaga", "Eni F.H. Faleomavaega", "AS"],
+    ["Willliam Jefferson", "William J. Jefferson", "LA"]
+  ])("bounds the reviewed 109th printed correction %s to corroborated source identity", (printed, correct, state) => {
+    for (const packageId of ["CDIR-2005-07-11", "CDIR-2006-09-01"]) {
+      const source = catalog()
+      source.people[0]!.name = correct
+      source.people[0]!.givenName = correct
+      source.people[0]!.familyName = ""
+      source.terms[0]!.chamber = "lower"
+      source.terms[0]!.sourceId = "109:lower:2005:2007"
+      const input = [records()[0]!]
+      input[0]!.chamber = "lower"
+      input[0]!.members = [
+        { name: printed, state, chamber: "lower", role: "chair" },
+        { name: correct, state, chamber: "lower" }
+      ]
+      const edition = { ...directoryPackage, congress: 109, packageId, issuedAt: new Date("2005-07-11T00:00:00Z") }
+      const normalized = normalizeGovInfoCommitteeDirectory(input, edition, source, new Date())
+      expect(normalized.unmatched).toEqual([])
+      expect(normalized.snapshot.memberships).toHaveLength(2)
+      expect(normalized.snapshot.memberships[0]?.role).toBe("chair")
+      expect(normalized.snapshot.memberships[0]?.personId).toBe(source.people[0]!.id)
+      expect(
+        normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2006-09-02" }, source, new Date())
+          .unmatched
+      ).toHaveLength(1)
+      expect(
+        normalizeGovInfoCommitteeDirectory(input, { ...edition, congress: 110 }, source, new Date()).unmatched
+      ).toHaveLength(2)
+      input[0]!.members[0]!.name = `${printed} Extra`
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[0]!.name = printed
+      input[0]!.members[0]!.state = "CA"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[0]!.state = state
+      input[0]!.members[0]!.chamber = "upper"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[0]!.chamber = "lower"
+      input[0]!.members[1]!.state = "CA"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[1]!.state = state
+      input[0]!.members[1]!.chamber = "upper"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(2)
+      input[0]!.members[1]!.chamber = "lower"
+      input[0]!.members.push({ name: correct, state: "CA", chamber: "lower" })
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members.pop()
+      input[0]!.members.push({ name: correct, state, chamber: "upper" })
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(2)
+      input[0]!.members.pop()
+      input[0]!.members.push({ name: correct, state, chamber: "lower" })
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
+      input[0]!.members.pop()
+      source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+      source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(2)
+      source.people.pop()
+      source.terms.pop()
+      input[0]!.members.pop()
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+    }
+  })
+
   it.each(["2012:2013", "2011:2013", "unknown:2013", ":2013", "2012-or-2011:2013"])(
     "excludes only unambiguously future-starting same-name identities: %s",
     (years) => {

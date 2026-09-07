@@ -347,6 +347,16 @@ The live July 2005 loader check returns four explicit name forms, each linked to
 This does not correct the roster's `Faleomaveaga` spelling. Further same-edition evidence to review separately includes
 six correctly spelled `Eni F.H. Faleomavaega` entries (AS) versus three misspelled Small Business entries, and correctly
 spelled `William J. Jefferson` (LA) in Ways and Means/Trade versus `Willliam Jefferson` in Budget.
+Both editions confirm those exact counterpart entries. The two corrections now apply only to Congress 109 and the
+reviewed July 2005/September 2006 packages. At least one exact corrected-name occurrence must corroborate the entry,
+and every such occurrence must agree on House and the expected state; conflicting evidence rejects the correction.
+Repeated same-scope entries are allowed. Roles and source counts are preserved, with no general spelling rule.
+All 64 focused alias/normalization tests, legislation lint and types pass. Full canonical re-audit follows before
+any publication decision.
+Both post-correction canonical audits complete with 209 organizations, 3,781 source entries, 3,736 distinct mapped
+memberships, 45 unresolved entries and no duplicates. The intended three Faleomavaega entries and one Jefferson entry
+now resolve in each edition (49 to 45 unresolved). The remaining 11 names and their counts are unchanged. Neither
+edition has been imported; the unrelated scoring coverage thresholds still block repository-wide verification.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
