@@ -225,3 +225,37 @@ The following jobs were dispatched to the backfill task's concurrency-one queue.
 
 - 110, both fully reconciled editions: `run_06g7n589dc4hcob593mhsr6n01`.
 - 111, fully reconciled 218 organizations / 3,896 memberships: `run_06g7n58abmjnfvn5vipq50qj01`.
+
+### Reconnected release and 110th import (2026-09-07)
+
+Trigger builds `20260907.5` and `20260907.6` failed during remote build-context transfer with connection reset /
+keepalive timeout errors. After reconnection, code `0a74690` deployed successfully as `20260907.7` (`s0nzpv0l`).
+The release includes the final same-edition-corroborated October 2018 Cardin/Tillis corrections.
+
+The 110th run `run_06g7n589dc4hcob593mhsr6n01` completed on `20260907.4`, processing both editions without failures.
+Database checks confirm 3,742 memberships across 217 organizations and 531 people, detected start `2007-08-09`,
+all inactive with `congress_ended`, and zero detected end dates. The 119th membership fingerprint remains unchanged.
+Deployed API smoke and unchanged rerun `run_06g7nf9430qlok3er69bnqet01` remain verification gates.
+
+The validated 115th import `run_06g7nfjouuouo0uhpf0uudlo01` is queued behind the 111th import and 110th rerun.
+No queued run is recorded as completed until its terminal result and database/API checks are verified.
+
+The 111th run `run_06g7n58abmjnfvn5vipq50qj01` completed: database verification confirms 3,896 memberships,
+218 organizations and 535 people, detected start `2009-12-01`, all inactive with `congress_ended`, and zero detected
+end dates. Its unchanged rerun is `run_06g7nouklut7lkj4fm212t3r01` (not yet verified).
+The 110th unchanged rerun completed on `20260907.7`, skipped both editions and wrote zero rows.
+After one transient Railway credential-refresh failure, authenticated API verification passed for both Congresses:
+Daniel Lipinski's person history and each returned canonical membership detail returned HTTP 200 with matching IDs,
+expected detected starts, `congress_ended`, `isCurrent=false`, and null detected ends. The 110th verification gate is closed.
+
+The 111th unchanged rerun completed on `20260907.7`, skipped its edition and wrote zero rows. Its verification gate
+is closed. The 115th import also completed on `20260907.7`; database checks confirm 3,643 memberships across
+210 organizations and 530 people, detected start `2018-07-27`, all closed with `congress_ended`, and no detected end
+dates. The 119th fingerprint remains unchanged. Authenticated Cardin history and canonical detail checks passed
+HTTP 200 with the expected historical fields. The 115th unchanged rerun is `run_06g7nqsi3iqbieu5jj1jmgmg01`;
+it completed, skipped both editions and wrote zero rows. The 115th verification gate is closed.
+
+The follow-up edition-year identity and corroborated early-spelling batch passes all 244 executed legislation test
+files plus four receiver tests; four database-dependent files remain skipped. One earlier coverage attempt lost
+a temporary coverage artifact and had a router assertion failure; the full isolated rerun passed. Root verification
+remains blocked in the unrelated Shopify package. No hooks were bypassed.

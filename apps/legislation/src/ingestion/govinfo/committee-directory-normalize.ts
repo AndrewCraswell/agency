@@ -38,7 +38,7 @@ export function normalizeGovInfoCommitteeDirectory(
   catalog: GovInfoPersonCatalog,
   retrievedAt: Date
 ): GovInfoCommitteeNormalizationResult {
-  const people = buildPersonIndex(catalog, directoryPackage.congress)
+  const people = buildPersonIndex(catalog, directoryPackage.congress, directoryPackage.issuedAt.getUTCFullYear())
   const organizations = records.map((record) => {
     const sourceId = organizationSourceId(record)
     return {
@@ -210,7 +210,7 @@ interface IndexedPerson {
   personId: string
 }
 
-function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): IndexedPerson[] {
+function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number, editionYear: number): IndexedPerson[] {
   const aliasesByPerson = new Map<string, string[]>()
   for (const alias of catalog.aliases) {
     if (alias.state !== undefined || alias.chamber !== undefined) {
@@ -224,7 +224,7 @@ function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): Inde
   return catalog.terms.flatMap((term) => {
     const person = peopleById.get(term.personId)
     const chamber = canonicalChamber(term.chamber)
-    if (person === undefined || chamber === undefined || !termAppliesToCongress(term, congress)) {
+    if (person === undefined || chamber === undefined || !termAppliesToCongress(term, congress, editionYear)) {
       return []
     }
     const names = [
@@ -275,8 +275,14 @@ function matchPerson(member: GovInfoCommitteeMember, people: readonly IndexedPer
   return matches.size === 1 ? [...matches][0] : undefined
 }
 
-function termAppliesToCongress(term: TermRow, congress: number): boolean {
-  return term.sourceId?.startsWith(`${congress}:`) === true
+function termAppliesToCongress(term: TermRow, congress: number, editionYear: number): boolean {
+  if (term.sourceId?.startsWith(`${congress}:`) !== true) {
+    return false
+  }
+  // Canonical source IDs retain Congress.gov's term years. A future start
+  // cannot support this edition; unknown years and same-year ties stay ambiguous.
+  const years = /^\d+:(?:upper|lower):(\d{4}):(?:\d{4}|current)$/.exec(term.sourceId)
+  return years === null || Number(years[1]) <= editionYear
 }
 
 function nameVariants(value: string): string[] {

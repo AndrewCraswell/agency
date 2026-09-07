@@ -13,6 +13,40 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it.each(["2012:2013", "2011:2013", "unknown:2013", ":2013", "2012-or-2011:2013"])(
+    "excludes only unambiguously future-starting same-name identities: %s",
+    (years) => {
+      const source = catalog()
+      source.people[0] = {
+        id: "person:congress:p000149",
+        name: "Payne, Donald M.",
+        givenName: "Donald",
+        familyName: "Payne"
+      }
+      source.people.push({ ...source.people[0]!, id: "person:congress:p000604" })
+      source.terms[0] = {
+        ...source.terms[0]!,
+        chamber: "lower",
+        personId: "person:congress:p000149",
+        sourceId: "112:lower:2011:2012"
+      }
+      source.terms.push({ ...source.terms[0]!, personId: "person:congress:p000604", sourceId: `112:lower:${years}` })
+      const input = [records()[0]!]
+      input[0]!.chamber = "lower"
+      input[0]!.members = [{ chamber: "lower", name: "Donald M. Payne", state: "NJ" }]
+      const edition = {
+        ...directoryPackage,
+        congress: 112,
+        packageId: "CDIR-2011-12-01",
+        issuedAt: new Date("2011-12-01T00:00:00Z")
+      }
+      const result = normalizeGovInfoCommitteeDirectory(input, edition, source, new Date())
+      const expectedPeople = years === "2012:2013" ? ["person:congress:p000149"] : []
+      expect(result.unmatched).toHaveLength(1 - expectedPeople.length)
+      expect(result.snapshot.memberships.map((member) => member.personId)).toEqual(expectedPeople)
+    }
+  )
+
   it("permits omitted middle initials only from unique same-state/chamber source names", () => {
     const source = catalog()
     const input = [records()[0]!]

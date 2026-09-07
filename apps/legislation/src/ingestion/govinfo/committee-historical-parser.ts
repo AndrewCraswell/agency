@@ -56,8 +56,20 @@ function parseGranule(
   granule: GovInfoCommitteeGranuleText,
   options: HistoricalCommitteeParserOptions
 ): GovInfoCommitteeRecord[] {
-  const body = granule.text
-    .slice(granule.text.indexOf(granule.title) + granule.title.length)
+  const source = granule.text.replaceAll(
+    /([A-Za-z][A-Za-z .’'-]*), of (Mississppi|Masschusetts)(?=[.,])/g,
+    (entry: string, name: string, misspelling: string) => {
+      const state = misspelling === "Mississppi" ? "Mississippi" : "Massachusetts"
+      // Correct only when this exact printed person has the correctly spelled state
+      // elsewhere in this same granule. Uncorroborated misspellings still fail closed.
+      if (!granule.text.includes(`${name}, of ${state}`)) {
+        throw new Error(`Uncorroborated GovInfo state spelling: ${entry}`)
+      }
+      return `${name}, of ${state}`
+    }
+  )
+  const body = source
+    .slice(source.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
     .replaceAll(/\[[\s\S]*?\]/g, "")
     .replaceAll(/\(No Vice Chairman\)\.?/gi, "")

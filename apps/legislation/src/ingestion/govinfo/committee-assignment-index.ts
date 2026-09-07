@@ -22,8 +22,17 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
     return rows
   })
   return (context: AssignmentContext) => {
+    // The 105th roster prints Aschcroft here, while its own assignment table
+    // explicitly assigns Ashcroft to this subcommittee. Never use edit distance.
+    const requestedName =
+      context.chamber === "upper" &&
+      context.name === "Aschcroft" &&
+      normalize(context.parent.name) === "commerce science and transportation" &&
+      normalize(context.subcommitteeName) === "manufacturing and competitiveness"
+        ? "Ashcroft"
+        : context.name
     const candidates = context.parent.members.filter((member) => {
-      if (!normalize(member.name).endsWith(normalize(context.name))) {
+      if (!normalize(member.name).endsWith(normalize(requestedName))) {
         return false
       }
       return entries.some((entry) => {
@@ -31,13 +40,14 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
           return false
         }
         const identity = /^(.*?)\s+of\s+(.+)$/.exec(entry.identity)
-        if (!identity?.[1] || !identity[2] || normalize(identity[1]) !== normalize(context.name)) {
+        const surname = identity?.[1] ?? (context.chamber === "upper" ? entry.identity : undefined)
+        if (!surname || normalize(surname) !== normalize(requestedName)) {
           return false
         }
         const state = Object.entries(openStatesJurisdictionNames).find(
-          ([, name]) => normalize(name) === normalize(identity[2] ?? "")
+          ([, name]) => normalize(name) === normalize(identity?.[2] ?? "")
         )?.[0]
-        if (state?.toUpperCase() !== member.state.toUpperCase()) {
+        if (identity?.[2] !== undefined && state?.toUpperCase() !== member.state.toUpperCase()) {
           return false
         }
         return entry.assignments.split(/\.\s+/).some((clause) => {

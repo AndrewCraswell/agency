@@ -5,6 +5,24 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it.each([
+    ["Mississppi", "Mississippi", "MS"],
+    ["Masschusetts", "Massachusetts", "MA"]
+  ])("corrects printed %s only with the same person's corroborating state", (typo, state, code) => {
+    const source = fixture
+      .replace("Richard G. Lugar, of Indiana, Chairman", `Richard G. Lugar, of ${typo}, Chairman`)
+      .replace("Mary L. Landrieu, of Louisiana.", `Richard G. Lugar, of ${state}.`)
+    const parentOnly = source.split("                              SUBCOMMITTEES")[0] ?? ""
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: parentOnly })
+    expect(result[0]?.members[0]).toMatchObject({ name: "Richard G. Lugar", state: code, role: "chair" })
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "upper",
+        title,
+        text: parentOnly.replace(`Richard G. Lugar, of ${state}.`, `Unrelated Person, of ${state}.`)
+      })
+    ).toThrow("Uncorroborated GovInfo state spelling")
+  })
   it("resolves abbreviations only against the parent roster and preserves roles", () => {
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: fixture })
     expect(result).toHaveLength(2)

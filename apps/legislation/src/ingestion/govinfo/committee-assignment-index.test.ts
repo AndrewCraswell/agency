@@ -21,6 +21,36 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("corrects Aschcroft only with a positive same-edition assignment and unique parent member", () => {
+    const senate: GovInfoCommitteeRecord = {
+      chamber: "upper",
+      classification: "committee",
+      name: "Commerce, Science and Transportation",
+      members: [{ chamber: "upper", name: "John Ashcroft", state: "MO" }]
+    }
+    const resolve = createGovInfoAssignmentResolver([
+      {
+        chamber: "upper",
+        title: "assignments",
+        text: "Ashcroft (R)                               Commerce, Science and Transportation -- Manufacturing and Competitiveness."
+      }
+    ])
+    const context = {
+      name: "Aschcroft",
+      parent: senate,
+      chamber: "upper",
+      subcommitteeName: "Manufacturing and Competitiveness"
+    } satisfies Parameters<typeof resolve>[0]
+    expect(resolve(context)).toEqual(senate.members[0])
+    expect(createGovInfoAssignmentResolver([])(context)).toBeUndefined()
+    expect(resolve({ ...context, subcommitteeName: "Communications" })).toBeUndefined()
+    expect(
+      resolve({
+        ...context,
+        parent: { ...senate, members: [...senate.members, { chamber: "upper", name: "Another Ashcroft", state: "OR" }] }
+      })
+    ).toBeUndefined()
+  })
   it("resolves Smith through a positive state-qualified subcommittee assignment", () => {
     const resolve = createGovInfoAssignmentResolver([{ chamber: "lower", title: "assignments", text }])
     expect(

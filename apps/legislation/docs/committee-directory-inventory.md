@@ -162,8 +162,18 @@ corrected truncated Transportation and Small Business headings. Production impor
 
 The bounded biography scan permits 600 summaries and uses explicit state/chamber identity constraints. Missing
 BioGuide IDs provide no aliases; they do not bypass final unmatched-member rejection. Current unresolved gates:
-105 `Aschcroft`; 106 `Mississppi`; 107 `Masschusetts`; 109 52 unmatched assignments;
-112 six Donald M. Payne assignments; 113 nine Horsford/Nadler assignments; 117 stale Udall source entry.
+105 `Nickels` under Permanent Subcommittee on Investigations; 106 Indian Affairs staff boundary;
+107 complete-source verification interrupted by GovInfo timeouts; 109 52 unmatched assignments;
+113 nine Horsford/Nadler assignments; 117 stale Udall source entry.
+
+The 105th `Aschcroft` spelling is resolved only through the exact parent/subcommittee assignment and a unique
+matching parent member. The 106th `Mississppi` and 107th `Masschusetts` spellings require the same exact printed
+person with the correct state elsewhere in that granule. These bounded repairs do not authorize importing incomplete editions.
+
+The 112th now fully reconciles: 218 organizations and 3,580 distinct memberships, zero unmatched or duplicates.
+Canonical terms whose explicit start year is later than the edition year cannot identify an edition member.
+This separates the two Donald M. Payne identities for the 2011 edition, while preserving same-year and unknown-start
+ambiguity. No exact committee appointment or departure date is inferred.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
