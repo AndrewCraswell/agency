@@ -178,3 +178,19 @@ The cleanup remains for recovery of older rows; current-Congress membership beha
 This safeguard is committed as `c63d24a`, pushed to main, and deployed in Trigger `20260906.4` (`gd3wutzu`).
 The deployed current-Congress canary `run_06g7i6u9hho6slbl3qcq11gs01` completed successfully with one edition skipped
 and zero membership writes.
+
+### Follow-up verification (2026-09-07)
+
+The 116th and 118th imports and their unchanged reruns are verified above. Code `364211a` adds bounded historical
+layout fixes and the corroborated 117th state-suffix normalization; Trigger `20260907.1` deployed as `5enfmwcu`.
+Code `b2c8460` adds strict string-or-string-array GovInfo names and corroborated July 2018 printed-name corrections.
+July 2018 now reconciles fully without production writes; October still blocks the 115th import. Other older-edition
+source/parser gates remain in the [inventory](committee-directory-inventory.md).
+
+The full repository verification on this date is blocked by unrelated `apps/scoring` coverage thresholds; legislation
+lint, types, and focused parser/name tests passed. No hooks were bypassed.
+
+Final deployment: Trigger `20260907.2` (`6h6szqlk`) from `b2c8460`. Current-Congress smoke
+`run_06g7lojvhe8kll1kqhc9a14001` completed with one edition skipped and zero writes. Final legislation tests passed
+in split runs: 1,788 tests plus 256 Next router acceptance tests and four receiver tests; 60 database-dependent tests
+remain skipped. The router suite initially collided with a concurrent Next build, then passed when rerun alone.

@@ -133,7 +133,7 @@ Bounded advertised-PDF diagnostics produced:
 | 2005-07-11 | 209 | 41 | 3,781 | Structure and identity audit pending |
 | 2007-08-09 | 217 | 42 | 3,743 | Structure and identity audit pending |
 | 2016-02-12 | 210 | 42 | 3,545 | Structure and identity audit pending |
-| 2018-07-27 | 210 | 41 | 3,643 | All 210 organization names/parent attachments reviewed; identity audit pending |
+| 2018-07-27 | 210 | 41 | 3,643 | Full structure and identity reconciliation passed; October edition still blocks Congress import |
 
 These diagnostic successes do not enable the older production import path. Remaining first parser failures include
 Calvin Dooley's missing comma (108), a touching Western Hemisphere heading (112), merged Mike Quigley member cells
@@ -143,6 +143,12 @@ not regressions. None of these older editions has been published.
 The redundant state suffix in the reviewed 117th edition now has a normalization fix requiring same-edition,
 same-state/chamber corroboration and a unique canonical identity. This does not resolve the stale Udall entry or
 authorize incomplete publication.
+
+Final July 2018 reconciliation used 192 exact same-package aliases and yielded 3,643 distinct memberships with zero
+unmatched people. GovInfo's known name fields accept strings or arrays of strings; non-string array elements still
+fail validation. The printed `Benajmin L. Cardin` and `Thom Tills` corrections are limited to this edition and require
+correctly spelled names elsewhere in the same edition, same state/chamber, and a unique canonical identity.
+No 115th memberships were written; the October edition remains unvalidated.
 
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.
