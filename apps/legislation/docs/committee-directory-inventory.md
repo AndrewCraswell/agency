@@ -325,6 +325,14 @@ fields; normalization had discarded the explicit nickname. Scoped source-name ma
 quoted or parenthesized nicknames with the unchanged surname, requiring state/chamber and unique source identity.
 It does not infer nicknames, parse biography prose or expand unscoped canonical aliases. All 50 focused normalization
 and alias tests, legislation lint and types pass. A full 109th canonical re-audit remains required before import.
+The post-fix July 2005 canonical audit completes with 209 organizations, 3,781 source entries, 3,732 distinct mapped
+memberships and 49 unresolved entries, with no mapped duplicates. Exactly three Joe Schwarz memberships now resolve
+compared with the preceding 52-unmatched result. The remaining entries are Steven King (4), Cathy McMorris (9),
+Michael Conaway (3), Marty Meehan (3), Mike Conaway (1), Willliam Jefferson (1), Timothy J. Ryan (3), Mary Bono (5),
+Dave G. Reichert (8), Charlie Dent (4), Robert D. Inglis (3), Eni Faleomaveaga (3), and Mike Bilirakis (2).
+The September 2006 re-audit completes with the identical counts and remaining names: 209 organizations, 3,781 entries,
+3,732 distinct mapped memberships, 49 unresolved entries and no mapped duplicates. Both source audits completed
+without timeouts. Neither edition is publication-ready; no partial edition was imported.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
