@@ -5,6 +5,41 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("keeps state-spelling corroboration inside the printed name's column", () => {
+    const source = `${title}\n\nCommittee on Indian Affairs\n\nJohn McCain, of Arizona.    Michael E. Capuano, of Masschusetts.\nMichael E. Capuano, of Massachusetts.\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[0]?.members).toEqual([
+      { chamber: "upper", name: "John McCain", state: "AZ" },
+      { chamber: "upper", name: "Michael E. Capuano", state: "MA" },
+      { chamber: "upper", name: "Michael E. Capuano", state: "MA" }
+    ])
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "upper",
+        title,
+        text: source.replace("Michael E. Capuano, of Massachusetts.", "Unrelated Person, of Massachusetts.")
+      })
+    ).toThrow("Uncorroborated GovInfo state spelling: Michael E. Capuano")
+  })
+  it("separates explicit staff labels touching a roster without dropping the last member", () => {
+    const source = `${title}\n\nCommittee on Indian Affairs\n\nBen Nighthorse Campbell, of Colorado, Chairman.\nJames M. Inhofe, of Oklahoma.\n   Majority Staff Director/Chief Counsel.—Paul Moorehead.\n   Legislative Aide.—Theresa Rosier.\n\nSelect Committee on Ethics\n\nBOB SMITH, of New Hampshire, Chairman.\nHarry Reid, of Nevada, Vice Chairman.\n  Staff Director/Chief Counsel.—Victor Baird.\n   Counsels: Elizabeth A. Ryan.\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result.map((record) => [record.name, record.classification, record.members.length])).toEqual([
+      ["Committee on Indian Affairs", "committee", 2],
+      ["Select Committee on Ethics", "committee", 2]
+    ])
+    expect(result[0]?.members.at(-1)).toEqual({ chamber: "upper", name: "James M. Inhofe", state: "OK" })
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "upper",
+        title,
+        text: source.replace(
+          "   Majority Staff Director/Chief Counsel.—Paul Moorehead.",
+          "   Unexplained roster entry."
+        )
+      })
+    ).toThrow("Unparsed GovInfo historical roster entry")
+  })
   it.each([
     ["Mississppi", "Mississippi", "MS"],
     ["Masschusetts", "Massachusetts", "MA"]
@@ -277,5 +312,31 @@ describe("historical GovInfo printed rosters", () => {
       classification: "committee"
     })
     expect(result.at(-1)?.members).toHaveLength(2)
+  })
+  it("keeps Aging and the Year 2000 committee separate from the printed reauthorization note", () => {
+    const source = `${title}\n\nSpecial Committee on Aging\n\nReauthorized pursuant to S. Res. 4, 95th Congress\n\nG–31 Dirksen Senate Office Building, phone 224–5364\n\nCharles E. Grassley, of Iowa, Chairman.\nJohn B. Breaux, of Louisiana.\n\n   Staff Director.—Ted Totman.\n\nSpecial Committee on the Year 2000 Technology Problem\n\nB–40 Dirksen Senate Office Building, phone 224–5224\n\nBob Bennett, of Utah, Chairman.\nChristopher J. Dodd, of Connecticut, Vice Chairman.\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result.map((record) => [record.name, record.classification, record.members.length])).toEqual([
+      ["Special Committee on Aging", "committee", 2],
+      ["Special Committee on the Year 2000 Technology Problem", "committee", 2]
+    ])
+    expect(result[0]?.members[0]).toMatchObject({ name: "Charles E. Grassley", role: "chair" })
+    expect(result[1]?.members[0]).toMatchObject({ name: "Bob Bennett", role: "chair" })
+  })
+  it("preserves the right column when a detached period precedes a wrapped state", () => {
+    const source = `${title}\n\nDistrict of Columbia\n\nThomas M. Davis III, of Virginia.    Eleanor Holmes Norton, of the District of\n.    Columbia.\n                                 Diane E. Watson, of California.\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
+    expect(result[0]?.members).toEqual([
+      { chamber: "lower", name: "Thomas M. Davis III", state: "VA" },
+      { chamber: "lower", name: "Eleanor Holmes Norton", state: "DC" },
+      { chamber: "lower", name: "Diane E. Watson", state: "CA" }
+    ])
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "lower",
+        title,
+        text: source.replace(".    Columbia.", ".    Unknown.")
+      })
+    ).toThrow("Unparsed GovInfo historical roster entry")
   })
 })

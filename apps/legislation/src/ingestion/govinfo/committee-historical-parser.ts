@@ -57,7 +57,7 @@ function parseGranule(
   options: HistoricalCommitteeParserOptions
 ): GovInfoCommitteeRecord[] {
   const source = granule.text.replaceAll(
-    /([A-Za-z][A-Za-z .’'-]*), of (Mississppi|Masschusetts)(?=[.,])/g,
+    /([A-Za-z][A-Za-z.’'-]*(?: [A-Za-z][A-Za-z.’'-]*)*), of (Mississppi|Masschusetts)(?=[.,])/g,
     (entry: string, name: string, misspelling: string) => {
       const state = misspelling === "Mississppi" ? "Mississippi" : "Massachusetts"
       // Correct only when this exact printed person has the correctly spelled state
@@ -72,12 +72,19 @@ function parseGranule(
     .slice(source.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
     .replaceAll(/\[[\s\S]*?\]/g, "")
+    .replaceAll(/^[ \t]*Reauthorized pursuant to S\. Res\. 4, 95th Congress[ \t]*$/gm, "")
     .replaceAll(/\(No Vice Chairman\)\.?/gi, "")
     .replaceAll(/\(No Subcommittees\)\.?/gi, "")
     .replaceAll(/,´\s*(?=of\b)/g, ", ")
     .replaceAll(/^[ \t]*´[ \t]*$/gm, "")
     .replaceAll(/^([ \t]*)\*([ \t]+Children and Families[ \t]*)$/gm, "$1$2")
     .replaceAll(/^[ \t]*(?:Vacant|TBD), (?:Chair|Chairman|Chairwoman)\.?[ \t]*$/gim, "")
+    // The 106th Senate select rosters run directly into these explicit staff labels.
+    // Preserve the member prefix rather than treating the staff tail as another member.
+    .replaceAll(
+      /^([ \t]*(?:(?:Majority|Minority) )?Staff Director\/Chief Counsel\.(?:—|--)[^\n]*)$/gm,
+      "\n\nSTAFF\n\n$1"
+    )
     // These printed HELP headings touch the preceding roster at a page boundary.
     .replaceAll(/^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere)[ \t]*$/gm, "\n\n$1\n\n")
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
@@ -214,7 +221,8 @@ function parseGranule(
       continue
     }
     if (
-      (!/\b\d{3,}\b|:|\.--|\.—|^\(|\.$/.test(joined) || /^Select Committee on [A-Za-z0-9 ,’'-]+$/.test(joined)) &&
+      (!/\b\d{3,}\b|:|\.--|\.—|^\(|\.$/.test(joined) ||
+        /^(?:Select|Special) Committee on [A-Za-z0-9 ,’'-]+$/.test(joined)) &&
       !/^\(?The (?:chair|committee)/i.test(joined)
     ) {
       heading = heading && /(?:,|\b(?:and|the))$/.test(heading) ? `${heading} ${joined}` : joined
@@ -251,6 +259,7 @@ function memberCells(lines: readonly string[]): string[] {
     const cells: string[] = []
     for (const cell of rawCells) {
       if (/^\.$/.test(cell)) {
+        cells.push("")
         continue
       }
       if (cell === "´") {

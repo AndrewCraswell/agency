@@ -187,6 +187,29 @@ Steven King (3), Ed Schrock (4), Marty Meehan (3), Gresham Barrett (1), Thomas C
 Eni Faleomaveaga (1), Chris Smith (1), Mike Bilirakis (2), and Richard M. Burr (4). No mapped duplicates were found.
 The other three editions failed source transport. This is not complete 108th acceptance; no partial roster was imported.
 
+The reconnected 113th source check confirms the nine unresolved entries are not missing metadata downloads:
+GovInfo's Bioguide-backed biographies identify Steven Horsford (`H001066`) and Jerrold Nadler (`N000002`), but
+all eight Horsford roster entries print `Steven A. Horsford`, and one Nadler subcommittee prints `Jerry Nadler`.
+Five other Nadler rosters print Jerrold. Assignment tables supply surnames, not explicit equivalence between these
+full names. No additional alias or surname-based identity inference has been introduced; the edition remains unpublished.
+
+Reconnected 106th/107th source checks exposed two parser boundaries, now covered by regression tests:
+the 106th Senate select rosters touch explicit `Staff Director/Chief Counsel` labels without a blank line;
+the 107th state-spelling matcher crossed a multi-space column gap and included a neighboring Arizona cell in
+Capuano's name. The parser now separates the explicit staff boundary and confines spelling corroboration to one
+printed name. Unexplained roster text and uncorroborated misspellings still fail. Full-edition acceptance remains separate.
+Further source review corrected the exact unbracketed Senate reauthorization note being read as a heading and
+recognized year-bearing Special Committee headings. A detached period in a PDF cell now retains its column slot,
+so Norton's wrapped District of Columbia state does not attach to the neighboring Davis entry; Watson is preserved too.
+Both 107th editions now parse completely: 205 organizations / 3,732 printed entries (December 2001), and
+205 / 3,721 (October 2002). These are parser counts, not yet full structural and canonical-identity acceptance.
+The combined boundary regressions and assignment tests pass 46 tests; service and web type checks pass.
+Targeted live rereads of all three 106th Senate select sections confirm five separate committees with source counts:
+Indian Affairs 14, Ethics 6, Intelligence 19, Aging 20, and Year 2000 Technology Problem 9. Staff entries and the
+reauthorization annotation no longer enter the rosters. This verifies these sections only, not the whole Congress.
+The final isolated legislation coverage run passed 2,092 tests across 244 files plus four receiver tests; 60
+database-dependent tests remain skipped. Root verification is blocked by unrelated scoring coverage thresholds.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains
