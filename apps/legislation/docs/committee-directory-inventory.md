@@ -178,7 +178,9 @@ same-edition corroboration. They are not generic nickname substitutions.
 October 2018 now passes full structural review at 210 organizations / 3,643 entries. Its separately positioned
 acute-accent glyph is ignored for PDF column spacing; all base letters remain. The package legitimately advertises
 October 29 granule IDs despite its October 1 package ID. Biography lookup accepts these advertised IDs while
-retaining exact requested-package URL and returned identity checks. Final canonical re-audit remains required.
+retaining exact requested-package URL and returned identity checks. Final October canonical re-audit passes:
+3,643 distinct memberships, zero unmatched and no duplicates. The Cardin/Tillis corrections are enabled only for
+the two reviewed 115th package IDs, with correct same-edition, state/chamber corroboration required.
 
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.

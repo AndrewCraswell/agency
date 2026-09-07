@@ -208,6 +208,20 @@ schedule on version `20260907.2`. Its payload identifies schedule `sched_qxezm85
 skipped it unchanged, and reported zero writes and zero failures. The next execution is September 8 at 09:30 UTC.
 This closes the first-scheduled-run verification gate.
 
-The 114th backfill `run_06g7n0k81r2g3nnrddsggdt501` was launched on `20260907.3` after full source structure and
-canonical identity reconciliation (210 organizations, 3,546 memberships). Production completion, database checks,
-and unchanged-rerun verification remain pending; launching the task does not close that gate.
+The 114th backfill `run_06g7n0k81r2g3nnrddsggdt501` completed on `20260907.3`. Database verification confirms
+210 organizations, 3,546 memberships and 534 people; all memberships are inactive with `congress_ended`, detected
+start `2016-02-12`, and null detected end. Both current-Congress fingerprints recorded above remain unchanged.
+Deployed person history and LoBiondo's recovered CIA chair canonical membership detail returned HTTP 200 and
+passed role, session/date and historical-closure assertions.
+
+Code `5125ae3` is committed and pushed; Trigger `20260907.4` deployed successfully as `1tj08lv5`. Final legislation
+coverage passed 2,078 tests and four receiver tests, with 60 database-dependent tests skipped. Root verification
+again stopped on three unrelated Shopify Liquid test timeouts; hooks passed normally.
+
+The 114 unchanged rerun `run_06g7n588c9r763fetruvt2k901` completed on `20260907.4`: one edition read and skipped,
+zero writes, zero failures. This closes the 114th import verification gate.
+
+The following jobs were dispatched to the backfill task's concurrency-one queue. Completion is not yet verified:
+
+- 110, both fully reconciled editions: `run_06g7n589dc4hcob593mhsr6n01`.
+- 111, fully reconciled 218 organizations / 3,896 memberships: `run_06g7n58abmjnfvn5vipq50qj01`.

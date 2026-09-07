@@ -231,14 +231,24 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     const input = records()
     input[0]!.members[0] = { chamber: "upper", name: printed, state }
     input[1]!.members[0] = { chamber: "upper", name: correct, state }
-    const edition = { ...directoryPackage, congress: 115, packageId: "CDIR-2018-07-27" }
-    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
-    expect(
-      normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2018-10-01" }, source, new Date())
-        .unmatched
-    ).toHaveLength(1)
-    input[1]!.members = []
-    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+    for (const packageId of ["CDIR-2018-07-27", "CDIR-2018-10-01"]) {
+      const edition = { ...directoryPackage, congress: 115, packageId }
+      input[1]!.members = [{ chamber: "upper", name: correct, state }]
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
+      expect(
+        normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2018-10-02" }, source, new Date())
+          .unmatched
+      ).toHaveLength(1)
+      expect(
+        normalizeGovInfoCommitteeDirectory(input, { ...edition, congress: 116 }, source, new Date()).unmatched
+      ).toHaveLength(2)
+      input[1]!.members[0]!.state = "CA"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[1]!.members[0] = { chamber: "lower", name: correct, state }
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(2)
+      input[1]!.members = []
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+    }
   })
 
   it("removes a corroborated redundant state suffix only in the reviewed 117th edition", () => {

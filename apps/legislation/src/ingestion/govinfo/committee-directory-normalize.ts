@@ -140,7 +140,11 @@ function crossCheckedPrintedName(
       return corroboration.name
     }
   }
-  if (directory.packageId === "CDIR-2018-07-27" && directory.congress === 115 && member.chamber === "upper") {
+  if (
+    ["CDIR-2018-07-27", "CDIR-2018-10-01"].includes(directory.packageId) &&
+    directory.congress === 115 &&
+    member.chamber === "upper"
+  ) {
     const correction = new Map([
       ["Benajmin L. Cardin", { name: "Benjamin L. Cardin", state: "MD" }],
       ["Thom Tills", { name: "Thom Tillis", state: "NC" }]
