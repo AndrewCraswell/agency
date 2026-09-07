@@ -265,3 +265,10 @@ transfer with a keepalive timeout / host connection abort. The latest successful
 The 112th import has not been dispatched because the required edition-year filter is not deployed yet.
 The remaining 108th read-only audit also encountered GovInfo timeouts before normalization; no partial roster
 was published. Resume the release and bounded audit after connectivity stabilizes.
+
+The subsequent connectivity retry succeeded: Trigger `20260907.10`, deployment `z2y8dwnw`, deployed all 26 tasks.
+Its source includes the edition-year filter and the reviewed Nickles correction committed and pushed as `cbe5425`.
+The 112th import was dispatched exactly once with idempotency key `committee-history-112-cbe5425-20260907`:
+`run_06g7og0ks5c063bg116s683a01`. Terminal completion, database/API checks and an unchanged rerun remain required.
+The Nickles batch passes 41 focused tests, lint/format and service/web types. This root verification attempt stopped
+on an unrelated scoring golden-scenario test timeout; no hooks were bypassed.
