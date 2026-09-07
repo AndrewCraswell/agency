@@ -21,6 +21,37 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("resolves Thumond only through the positive Thurmond Antitrust assignment", () => {
+    const senate: GovInfoCommitteeRecord = {
+      chamber: "upper",
+      classification: "committee",
+      name: "Judiciary",
+      members: [{ chamber: "upper", name: "Strom Thurmond", state: "SC" }]
+    }
+    const resolve = createGovInfoAssignmentResolver([
+      {
+        chamber: "upper",
+        title: "assignments",
+        text: "Thurmond (R)                               Judiciary -- Administrative Oversight and the Courts; Antitrust, Business Rights and Competition; Constitution, Federalism and Property Rights."
+      }
+    ])
+    const context = {
+      name: "Thumond",
+      parent: senate,
+      chamber: "upper",
+      subcommitteeName: "Antitrust, Business Rights and Competition"
+    } satisfies Parameters<typeof resolve>[0]
+    expect(resolve(context)).toEqual(senate.members[0])
+    expect(createGovInfoAssignmentResolver([])(context)).toBeUndefined()
+    expect(resolve({ ...context, subcommitteeName: "Administrative Oversight and the Courts" })).toBeUndefined()
+    expect(resolve({ ...context, parent: { ...senate, name: "Other Committee" } })).toBeUndefined()
+    expect(
+      resolve({
+        ...context,
+        parent: { ...senate, members: [...senate.members, { chamber: "upper", name: "Another Thurmond", state: "OR" }] }
+      })
+    ).toBeUndefined()
+  })
   it("resolves Nickels only with the source's positive Nickles Investigations assignment", () => {
     const senate: GovInfoCommitteeRecord = {
       chamber: "upper",

@@ -32,6 +32,14 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
         ? "Ashcroft"
         : context.name
     let requestedSubcommittee = context.subcommitteeName
+    if (
+      context.chamber === "upper" &&
+      context.name === "Thumond" &&
+      normalize(context.parent.name) === "judiciary" &&
+      normalize(context.subcommitteeName) === "antitrust business rights and competition"
+    ) {
+      requestedName = "Thurmond"
+    }
     // The same directory's positive Nickles assignment abbreviates PSI as
     // Investigations; the roster prints Nickels. Keep this exact context bounded.
     if (

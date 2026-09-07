@@ -272,3 +272,16 @@ The 112th import was dispatched exactly once with idempotency key `committee-his
 `run_06g7og0ks5c063bg116s683a01`. Terminal completion, database/API checks and an unchanged rerun remain required.
 The Nickles batch passes 41 focused tests, lint/format and service/web types. This root verification attempt stopped
 on an unrelated scoring golden-scenario test timeout; no hooks were bypassed.
+
+The 112th import completed on `20260907.10`. Database verification confirms 3,580 memberships across 218
+organizations and 534 people, all inactive with `congress_ended`, detected start `2011-12-01`, and no detected ends.
+Authenticated Donald M. Payne (`p000149`) history and canonical membership detail passed, including the expected
+historical fields and identity. The 119th membership and active-organization fingerprints remain unchanged.
+Unchanged rerun `run_06g7omrr9o2mo08budvpns7901` completed, skipped the edition and wrote zero rows.
+The 112th verification gate is closed. The isolated legislation suite passed 2,087 tests in 244 files, with 60 tests
+in four database-dependent files skipped; all four receiver tests also passed.
+
+The following Thurmond spelling batch passed 42 focused committee tests. Root verification passed its check stage,
+then failed the unrelated scoring package's 100% coverage thresholds. This is distinct from the earlier scoring timeout.
+The isolated legislation coverage run passed all 244 executed test files and all four receiver tests; four
+database-dependent test files remain skipped. The correction is not yet deployed or a complete 105th acceptance.

@@ -171,11 +171,21 @@ matching parent member. The 106th `Mississppi` and 107th `Masschusetts` spelling
 person with the correct state elsewhere in that granule. These bounded repairs do not authorize importing incomplete editions.
 The 105th `Nickels` repair likewise requires the same-edition positive Nickles Investigations assignment and a unique
 parent member, restricted to Governmental Affairs / Permanent Subcommittee on Investigations.
+The next 105th correction handles printed `Thumond` only in Judiciary / Antitrust, Business Rights and Competition,
+where the same directory explicitly assigns Thurmond and has a unique Strom Thurmond parent member. Absence of
+that assignment, a different committee/subcommittee, or multiple parent candidates still fails closed.
 
 The 112th now fully reconciles: 218 organizations and 3,580 distinct memberships, zero unmatched or duplicates.
 Canonical terms whose explicit start year is later than the edition year cannot identify an edition member.
 This separates the two Donald M. Payne identities for the 2011 edition, while preserving same-year and unknown-start
 ambiguity. No exact committee appointment or departure date is inferred.
+
+The 112th production import and unchanged rerun are verified; see the membership-history release record.
+The resumed 108th audit reached August 2004: 206 organizations and 3,856 source entries, of which 3,817 map uniquely
+and 39 remain unresolved across 13 printed names. These are Lindsey O. Graham (7), John W. Warner (1), Bill Frist (6),
+Steven King (3), Ed Schrock (4), Marty Meehan (3), Gresham Barrett (1), Thomas Cole (3), Timothy J. Ryan (3),
+Eni Faleomaveaga (1), Chris Smith (1), Mike Bilirakis (2), and Richard M. Burr (4). No mapped duplicates were found.
+The other three editions failed source transport. This is not complete 108th acceptance; no partial roster was imported.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
