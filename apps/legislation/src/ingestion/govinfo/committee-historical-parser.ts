@@ -79,6 +79,14 @@ function parseGranule(
     palloneNote?.replaceAll(/\s+/g, " ").trim() ===
       "1 Representative Frank Pallone, Jr. (D–NJ) was elected to the Committee on Commerce for the 105th Congress on February 13, 1997, pursuant to H. Res. 58, which passed the House on February 13, 1997. Previously, Mr. Pallone had been on sabbatical leave from the Committee since the beginning of the 105th Congress."
   const rosterSource = palloneElected && palloneNote ? source.replace(palloneNote, "") : source
+  // The 105th Government Reform roster omits Sanders's state in both text
+  // renditions. His exact full name has an explicit state elsewhere in this
+  // granule; any missing or conflicting state evidence keeps the row invalid.
+  const sandersStates = new Set(
+    [...source.matchAll(/(?:^|[ \t]{2,})Bernard Sanders, of ([A-Za-z ]+?)[.,]/gm)].map((match) =>
+      match[1]?.toLowerCase()
+    )
+  )
   const body = rosterSource
     .slice(rosterSource.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
@@ -185,13 +193,25 @@ function parseGranule(
         .map((cell) => {
           try {
             const rosterName = heading ?? current?.name ?? ""
-            const memberCell =
+            let memberCell = cell
+            if (
               palloneElected &&
               !isSubcommittee &&
               rosterName === "Commerce" &&
               cell === "Frank Pallone, Jr., of New Jersey.1"
-                ? "Frank Pallone, Jr., of New Jersey."
-                : cell
+            ) {
+              memberCell = "Frank Pallone, Jr., of New Jersey."
+            } else if (
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              !isSubcommittee &&
+              rosterName === "Government Reform and Oversight" &&
+              cell === "Bernard Sanders" &&
+              sandersStates.size === 1 &&
+              sandersStates.has("vermont")
+            ) {
+              memberCell = "Bernard Sanders, of Vermont."
+            }
             const member = parseMember(memberCell, granule.chamber, parent, rosterName, options)
             return isExOfficioBlock ? { ...member, role: "ex-officio" } : member
           } catch (error) {

@@ -5,6 +5,29 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("requires unique same-granule state evidence for the incomplete Sanders Government Reform row", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nBanking and Financial Services\n\nDonald A. Manzullo, of Illinois.    Bernard Sanders, of Vermont.\n\nSTAFF\n\nGovernment Reform and Oversight\n\nBob Barr, of Georgia.    Bernard Sanders\nRob Portman, of Ohio.\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text })
+    const result = parse(source)
+    expect(result[1]).toMatchObject({ name: "Government Reform and Oversight", classification: "committee" })
+    expect(result[1]?.members).toEqual([
+      { chamber: "lower", name: "Bob Barr", state: "GA" },
+      { chamber: "lower", name: "Rob Portman", state: "OH" },
+      { chamber: "lower", name: "Bernard Sanders", state: "VT" }
+    ])
+    for (const changed of [
+      source.replace("    Bernard Sanders, of Vermont.", ""),
+      source.replace("Bernard Sanders, of Vermont.", "Bernard Sanders, of New York."),
+      source.replace("Bernard Sanders, of Vermont.", "John Bernard Sanders, of Vermont."),
+      source.replace("\n\nSTAFF", "\nBernard Sanders, of New York.\n\nSTAFF"),
+      source.replace("Government Reform and Oversight", "Resources"),
+      source.replace("    Bernard Sanders\n", "    Bernie Sanders\n")
+    ]) {
+      expect(() => parse(changed)).toThrow("Unparsed GovInfo historical roster entry")
+    }
+  })
   it("preserves Roemer and both touching 105th Education subcommittee boundaries", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nEducation and the Workforce\n\nTim Roemer, of Indiana.\nCass Ballenger, of North Carolina.\nHarris W. Fawell, of Illinois.\nJohn F. Tierney, of Massachusetts.\n\nSUBCOMMITTEES\n\nEarly Childhood, Youth and Families\n\n           Mr. Ballenger    Mr. Roemer\n                     Employer-Employee Relations\n                        Mr. Fawell, Chairman\n\n           Mr. Ballenger    Mr. Tierney\n                      Oversight and Investigations\n                        Mr. Ballenger, Chairman\n\nMr. Roemer\n`

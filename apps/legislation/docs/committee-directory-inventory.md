@@ -281,6 +281,13 @@ after Roemer, and Oversight and Investigations after Tierney. Exact standalone-l
 preceding members and keep both subcommittees under their parent. A live full-edition retry passes these boundaries
 and reaches an unparsed `Bernard Sanders` entry in Government Reform and Oversight; no identity or state is inferred.
 The heading batch passes 61 focused parser/assignment tests, scoped lint/format and service/web types.
+Both 105th renditions omit Sanders's state in Government Reform and Oversight, while the same granule's Banking
+roster explicitly prints `Bernard Sanders, of Vermont.`. The repair is limited to that exact parent/person cell and
+requires unique, non-conflicting same-granule state evidence. It is not a general full-name lookup or nickname alias.
+The live retry passes this entry and reaches `Mr. T. Davis, Chairman` in the District of Columbia subcommittee;
+that initial-qualified abbreviation remains unresolved. No import or 106th leave-policy change was made.
+The Sanders batch passes 62 focused parser/assignment tests, scoped lint/format and service/web types.
+Repository verification passes the check stage but remains blocked by the unrelated scoring coverage thresholds.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
