@@ -68,8 +68,19 @@ function parseGranule(
       return `${name}, of ${state}`
     }
   )
-  const body = source
-    .slice(source.indexOf(granule.title) + granule.title.length)
+  // This 105th snapshot explicitly records Pallone's election after his prior
+  // leave. It does not authorize stripping other markers or active-leave notes.
+  const palloneNote = source.match(
+    /^[ \t]*1 Representative Frank Pallone, Jr\. \(D–NJ\)[\s\S]*?since the beginning of the 105th Congress\./m
+  )?.[0]
+  const palloneElected =
+    granule.chamber === "lower" &&
+    granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+    palloneNote?.replaceAll(/\s+/g, " ").trim() ===
+      "1 Representative Frank Pallone, Jr. (D–NJ) was elected to the Committee on Commerce for the 105th Congress on February 13, 1997, pursuant to H. Res. 58, which passed the House on February 13, 1997. Previously, Mr. Pallone had been on sabbatical leave from the Committee since the beginning of the 105th Congress."
+  const rosterSource = palloneElected && palloneNote ? source.replace(palloneNote, "") : source
+  const body = rosterSource
+    .slice(rosterSource.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
     .replaceAll(/\[[\s\S]*?\]/g, "")
     .replaceAll(/^[ \t]*Reauthorized pursuant to S\. Res\. 4, 95th Congress[ \t]*$/gm, "")
@@ -169,7 +180,15 @@ function parseGranule(
         .filter((cell) => !/^Vacan(?:t|cy)/i.test(cell))
         .map((cell) => {
           try {
-            const member = parseMember(cell, granule.chamber, parent, heading ?? current?.name ?? "", options)
+            const rosterName = heading ?? current?.name ?? ""
+            const memberCell =
+              palloneElected &&
+              !isSubcommittee &&
+              rosterName === "Commerce" &&
+              cell === "Frank Pallone, Jr., of New Jersey.1"
+                ? "Frank Pallone, Jr., of New Jersey."
+                : cell
+            const member = parseMember(memberCell, granule.chamber, parent, rosterName, options)
             return isExOfficioBlock ? { ...member, role: "ex-officio" } : member
           } catch (error) {
             throw new Error(

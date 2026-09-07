@@ -270,6 +270,12 @@ the California delegation summary supplies no Bioguide member metadata. These ar
 exact aliases accidentally omitted by the loader. No inferred aliases or partial imports were added.
 The 105th Commerce `1` marker refers to Pallone's election on February 13, 1997 after an earlier sabbatical;
 unlike the 106th Davis note, it describes ended leave. It must not be discarded through generic digit stripping.
+The Pallone correction now requires the complete, exact same-granule election-after-leave paragraph, the House
+Commerce parent, and the exact Pallone/New Jersey/marker-1 cell. It emits an ordinary snapshot member without
+adding actual tenure dates. Missing or changed evidence, other members, markers and committees still reject.
+All 60 focused parser/assignment tests, scoped lint/format and service/web types pass. Live 105th parsing passes
+Commerce and next encounters `Employer-Employee Relations` touching the preceding Roemer roster entry in Education
+and the Workforce. No complete 105th acceptance or import is claimed; 106th active-leave handling remains unchanged.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation

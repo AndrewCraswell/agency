@@ -5,6 +5,34 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("accepts Pallone's Commerce snapshot only with its exact 105th election footnote", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const note =
+      "1 Representative Frank Pallone, Jr. (D–NJ) was elected to the Committee on Commerce for the 105th Congress on\nFebruary 13, 1997, pursuant to H. Res. 58, which passed the House on February 13, 1997. Previously, Mr. Pallone\nhad been on sabbatical leave from the Committee since the beginning of the 105th Congress."
+    const source = `${houseTitle}\n\nCommerce\n\nCliff Stearns, of Florida.    Frank Pallone, Jr., of New Jersey.1\n\n${note}\n\nSUBCOMMITTEES\n\nHealth and Environment\n\nMr. Pallone\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text })
+    const records = parse(source)
+    expect(records.map((record) => record.name)).toEqual(["Commerce", "Health and Environment"])
+    expect(records[0]?.members).toEqual([
+      { chamber: "lower", name: "Cliff Stearns", state: "FL" },
+      { chamber: "lower", name: "Frank Pallone, Jr.", state: "NJ" }
+    ])
+    expect(records[1]?.members).toEqual([{ chamber: "lower", name: "Frank Pallone, Jr.", state: "NJ" }])
+    for (const changed of [
+      source.replace(note, ""),
+      source.replace("was elected", "was not elected"),
+      source.replace("February 13, 1997", "February 14, 1997"),
+      source.replace("had been on sabbatical leave", "remains on sabbatical leave"),
+      source.replace("Frank Pallone, Jr., of", "Another Pallone, Jr., of"),
+      source.replace("of New Jersey.1", "of New York.1"),
+      source.replace("\n\nCommerce\n", "\n\nResources\n"),
+      source.replace("New Jersey.1", "New Jersey.2"),
+      source.replace("1 Representative", "2 Representative")
+    ]) {
+      expect(() => parse(changed)).toThrow("Unrecognized GovInfo membership role")
+    }
+  })
   it("matches Ney only at a whole surname boundary, not McKinney, Feeney, or Tierney", () => {
     const source = `${title}\n\nBanking and Financial Services\n\nRobert W. Ney, of Ohio.\nCynthia McKinney, of Georgia.\nTom Feeney, of Florida.\nJohn F. Tierney, of Massachusetts.\n\nSUBCOMMITTEES\n\nHousing\n\nMr. Ney, Chairman\n`
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
