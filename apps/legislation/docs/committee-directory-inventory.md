@@ -239,6 +239,18 @@ The live 105th retry passes the vacancy boundary and reaches ambiguous `Mr. Ney`
 the next investigation is surname-boundary matching, not an alias. All three 106th retries pass the designation
 and reach an unhandled `*` role annotation in Commerce. No database writes or deployment were performed.
 
+The Ney blocker is a suffix-boundary defect: `Ney` also matched surnames such as `McKinney`.
+Abbreviated roster and positive-assignment candidate matching now require a whole normalized name boundary,
+preserving compound surnames and rejecting absent or genuinely ambiguous people. This adds no aliases.
+The 106th Commerce marker is substantive: all three editions say Thomas M. Davis III was assigned to Commerce
+and placed on sabbatical leave for the 106th Congress. It must not be stripped as a generic footnote.
+How to represent that leave remains a product/schema decision; the 106th remains unpublished pending resolution.
+Live 105th parsing now passes Ney and stops at two `Ms. Maloney` candidates in Domestic and International
+Monetary Policy. Positive source disambiguation remains required; no memberships were guessed or imported.
+The surname-boundary batch passes 58 focused tests and the root check stage (format, lint, types and unused-code
+checks). Root coverage remains blocked by unrelated scoring thresholds. The Commerce leave note is confirmed in
+each edition's advertised `HOUSECOMMITTEES` PDF; it covers the Congress without specifying exact calendar dates.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains

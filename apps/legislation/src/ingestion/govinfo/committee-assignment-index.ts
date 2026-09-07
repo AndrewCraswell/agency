@@ -52,7 +52,9 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
       requestedSubcommittee = "Investigations"
     }
     const candidates = context.parent.members.filter((member) => {
-      if (!normalize(member.name).endsWith(normalize(requestedName))) {
+      const memberName = normalize(member.name)
+      const surname = normalize(requestedName)
+      if (memberName !== surname && !memberName.endsWith(` ${surname}`)) {
         return false
       }
       return entries.some((entry) => {

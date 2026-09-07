@@ -329,7 +329,10 @@ function parseMember(
     throw new Error(`Unparsed GovInfo historical roster entry: ${cell}`)
   }
   const key = normalizeName(abbreviated[1])
-  const matches = parent.members.filter((member) => normalizeName(member.name).endsWith(key))
+  const matches = parent.members.filter((member) => {
+    const name = normalizeName(member.name)
+    return name === key || name.endsWith(` ${key}`)
+  })
   const resolved =
     matches.length !== 1
       ? options.resolveAbbreviatedMember?.({ name: abbreviated[1], parent, subcommitteeName, chamber })

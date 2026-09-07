@@ -5,6 +5,34 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("matches Ney only at a whole surname boundary, not McKinney, Feeney, or Tierney", () => {
+    const source = `${title}\n\nBanking and Financial Services\n\nRobert W. Ney, of Ohio.\nCynthia McKinney, of Georgia.\nTom Feeney, of Florida.\nJohn F. Tierney, of Massachusetts.\n\nSUBCOMMITTEES\n\nHousing\n\nMr. Ney, Chairman\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
+    expect(result[1]?.members).toEqual([{ chamber: "lower", name: "Robert W. Ney", state: "OH", role: "chair" }])
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "lower",
+        title,
+        text: source.replace("Robert W. Ney, of Ohio.\n", "")
+      })
+    ).toThrow("Ambiguous GovInfo abbreviated member Mr. Ney")
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "lower",
+        title,
+        text: source.replace("SUBCOMMITTEES", "Another Ney, of Oregon.\n\nSUBCOMMITTEES")
+      })
+    ).toThrow("Ambiguous GovInfo abbreviated member Mr. Ney")
+  })
+  it.each([
+    ["Lucille Roybal-Allard", "Roybal-Allard"],
+    ["Eligio de la Garza", "de la Garza"],
+    ["Robert W. Ney, Jr.", "Ney"]
+  ])("preserves the complete normalized surname boundary for %s", (full, abbreviated) => {
+    const source = `${title}\n\nAgriculture\n\n${full}, of Texas.\n\nSUBCOMMITTEES\n\nResearch\n\nMr. ${abbreviated}\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
+    expect(result[1]?.members).toEqual([{ chamber: "lower", name: full, state: "TX" }])
+  })
   it.each(["’", "'"])("joins the same-column Speaker%ss Designee wrap without assigning a chair role", (apostrophe) => {
     const source = `${title}\n\nBudget\n\nSaxby Chambliss, of Georgia (Speaker${apostrophe}s    John M. Spratt Jr., of South Carolina.\n  Designee).    Jim McDermott, of Washington.\nChristopher Shays, of Connecticut.    Lynn N. Rivers, of Michigan.\n`
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })

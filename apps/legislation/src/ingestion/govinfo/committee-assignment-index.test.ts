@@ -21,6 +21,37 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("does not use a positive Ney assignment to resolve a different surname ending in ney", () => {
+    const roster: GovInfoCommitteeRecord = {
+      chamber: "lower",
+      classification: "committee",
+      name: "Banking and Financial Services",
+      members: [
+        { chamber: "lower", name: "Robert W. Ney", state: "OH" },
+        { chamber: "lower", name: "Cynthia McKinney", state: "OH" },
+        { chamber: "lower", name: "Tom Feeney", state: "OH" },
+        { chamber: "lower", name: "John F. Tierney", state: "OH" }
+      ]
+    }
+    const resolve = createGovInfoAssignmentResolver([
+      {
+        chamber: "lower",
+        title: "assignments",
+        text: "Ney of Ohio (R)                           Banking and Financial Services -- Housing."
+      }
+    ])
+    const context = { name: "Ney", parent: roster, chamber: "lower", subcommitteeName: "Housing" } satisfies Parameters<
+      typeof resolve
+    >[0]
+    expect(resolve(context)).toEqual(roster.members[0])
+    expect(resolve({ ...context, parent: { ...roster, members: roster.members.slice(1) } })).toBeUndefined()
+    expect(
+      resolve({
+        ...context,
+        parent: { ...roster, members: [...roster.members, { chamber: "lower", name: "Another Ney", state: "OH" }] }
+      })
+    ).toBeUndefined()
+  })
   it("resolves Thumond only through the positive Thurmond Antitrust assignment", () => {
     const senate: GovInfoCommitteeRecord = {
       chamber: "upper",
