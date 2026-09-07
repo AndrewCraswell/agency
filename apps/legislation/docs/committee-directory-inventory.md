@@ -209,6 +209,9 @@ Indian Affairs 14, Ethics 6, Intelligence 19, Aging 20, and Year 2000 Technology
 reauthorization annotation no longer enter the rosters. This verifies these sections only, not the whole Congress.
 The final isolated legislation coverage run passed 2,092 tests across 244 files plus four receiver tests; 60
 database-dependent tests remain skipped. Root verification is blocked by unrelated scoring coverage thresholds.
+The subsequent 107th identity audit remains blocked: December 2001 maps 3,675 entries uniquely with 57 unresolved;
+October 2002 maps 3,656 uniquely with 65 unresolved. Neither has mapped duplicates. No 107th rows were imported.
+These counts supersede the earlier network-only blocker; source-name reconciliation and structural acceptance remain open.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
