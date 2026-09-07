@@ -21,6 +21,44 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("corrects Lofgen only with the exact unique Zoe Lofgren parent identity and positive assignment clause", () => {
+    const judiciary: GovInfoCommitteeRecord = {
+      chamber: "lower",
+      classification: "committee",
+      name: "Judiciary",
+      members: [{ chamber: "lower", name: "Zoe Lofgren", state: "CA" }]
+    }
+    const assignment = `Lofgren (D)                                Judiciary -- Courts and
+                                            Intellectual Property;
+                                            Immigration and Claims.
+                                           Science -- Energy and
+                                            Environment; Space and
+                                            Aeronautics.`
+    const resolveText = (source: string) =>
+      createGovInfoAssignmentResolver([{ chamber: "lower", title: "assignments", text: source }])
+    const resolve = resolveText(assignment)
+    const context = {
+      name: "Lofgen",
+      parent: judiciary,
+      chamber: "lower",
+      subcommitteeName: "Immigration and Claims"
+    } satisfies Parameters<typeof resolve>[0]
+    expect(resolve(context)).toEqual(judiciary.members[0])
+    expect(resolveText("")(context)).toBeUndefined()
+    expect(resolveText(assignment.replace("Immigration and Claims", "Other Claims"))(context)).toBeUndefined()
+    expect(resolveText(assignment.replace("Judiciary --", "Other Committee --"))(context)).toBeUndefined()
+    expect(resolve({ ...context, name: "Lofgren" })).toBeUndefined()
+    expect(resolve({ ...context, subcommitteeName: "Courts and Intellectual Property" })).toBeUndefined()
+    expect(resolve({ ...context, chamber: "upper" })).toBeUndefined()
+    expect(resolve({ ...context, parent: { ...judiciary, name: "Other Committee" } })).toBeUndefined()
+    for (const members of [
+      [{ chamber: "lower", name: "Another Lofgren", state: "CA" }],
+      [{ chamber: "lower", name: "Zoe Lofgren", state: "NY" }],
+      [...judiciary.members, { chamber: "lower", name: "Another Lofgren", state: "NY" }]
+    ] satisfies GovInfoCommitteeRecord["members"][]) {
+      expect(resolve({ ...context, parent: { ...judiciary, members } })).toBeUndefined()
+    }
+  })
   it("requires the printed comma initial and state for the 105th Maloney assignment", () => {
     const roster: GovInfoCommitteeRecord = {
       chamber: "lower",

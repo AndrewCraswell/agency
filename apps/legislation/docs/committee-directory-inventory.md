@@ -301,6 +301,12 @@ Unknown vacancy annotations still reject. All five subcommittee boundaries are c
 The batch passes 64 focused parser/assignment tests, scoped lint/format and service/web types. A live full-edition
 retry passes International Relations and stops at the printed `Ms. Lofgen` in Judiciary / Immigration and Claims.
 That name discrepancy requires positive source evidence; no inferred alias or historical import was added.
+The same edition explicitly lists `Zoe Lofgren, of California.` in Judiciary and assigns `Lofgren` to Immigration
+and Claims in its assignment table. The bounded `Lofgen` correction requires that exact unique parent identity and
+positive assignment clause. Its bare-surname House assignment exception does not apply to other names or contexts.
+All 65 focused parser/assignment tests, scoped lint/format and service/web types pass. The live full-edition retry
+passes this entry and next stops at `Mr. McIntyre` in National Security / Military Procurement. That discrepancy
+remains unmodified; no full 105th acceptance, deployment or import is claimed.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation

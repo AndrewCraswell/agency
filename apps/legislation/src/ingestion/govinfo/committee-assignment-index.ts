@@ -22,6 +22,27 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
     return rows
   })
   return (context: AssignmentContext) => {
+    // The 105th House prints Lofgen in this child roster, while the same
+    // directory's bare-surname assignment explicitly lists Lofgren here.
+    // This is not permission to resolve other bare House assignment identities.
+    const isLofgenCorrection =
+      context.chamber === "lower" &&
+      context.name === "Lofgen" &&
+      normalize(context.parent.name) === "judiciary" &&
+      normalize(context.subcommitteeName) === "immigration and claims"
+    if (isLofgenCorrection) {
+      const parentLofgrens = context.parent.members.filter((member) => {
+        const name = normalize(member.name)
+        return name === "lofgren" || name.endsWith(" lofgren")
+      })
+      if (
+        parentLofgrens.length !== 1 ||
+        parentLofgrens[0]?.name !== "Zoe Lofgren" ||
+        parentLofgrens[0]?.state !== "CA"
+      ) {
+        return undefined
+      }
+    }
     // The 105th roster prints Aschcroft here, while its own assignment table
     // explicitly assigns Ashcroft to this subcommittee. Never use edit distance.
     let requestedName =
@@ -31,6 +52,9 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
       normalize(context.subcommitteeName) === "manufacturing and competitiveness"
         ? "Ashcroft"
         : context.name
+    if (isLofgenCorrection) {
+      requestedName = "Lofgren"
+    }
     let requestedSubcommittee = context.subcommitteeName
     if (
       context.chamber === "upper" &&
@@ -62,7 +86,8 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
           return false
         }
         const identity = /^(.*?)\s+of\s+(.+)$/.exec(entry.identity)
-        const printedName = identity?.[1] ?? (context.chamber === "upper" ? entry.identity : undefined)
+        const printedName =
+          identity?.[1] ?? (context.chamber === "upper" || isLofgenCorrection ? entry.identity : undefined)
         // Some House assignment rows distinguish same-surname members with a
         // comma and given-name initial. Require the printed state as well;
         // neither an honorific nor an initial alone establishes identity.
