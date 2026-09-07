@@ -5,6 +5,24 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("preserves Roemer and both touching 105th Education subcommittee boundaries", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nEducation and the Workforce\n\nTim Roemer, of Indiana.\nCass Ballenger, of North Carolina.\nHarris W. Fawell, of Illinois.\nJohn F. Tierney, of Massachusetts.\n\nSUBCOMMITTEES\n\nEarly Childhood, Youth and Families\n\n           Mr. Ballenger    Mr. Roemer\n                     Employer-Employee Relations\n                        Mr. Fawell, Chairman\n\n           Mr. Ballenger    Mr. Tierney\n                      Oversight and Investigations\n                        Mr. Ballenger, Chairman\n\nMr. Roemer\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text: source })
+    expect(result.map((record) => [record.name, record.parentName])).toEqual([
+      ["Education and the Workforce", undefined],
+      ["Early Childhood, Youth and Families", "Education and the Workforce"],
+      ["Employer-Employee Relations", "Education and the Workforce"],
+      ["Oversight and Investigations", "Education and the Workforce"]
+    ])
+    expect(result[1]?.members.map((member) => member.name)).toEqual(["Cass Ballenger", "Tim Roemer"])
+    expect(result[2]?.members.map((member) => member.name)).toEqual([
+      "Harris W. Fawell",
+      "Cass Ballenger",
+      "John F. Tierney"
+    ])
+    expect(result[3]?.members.map((member) => member.name)).toEqual(["Cass Ballenger", "Tim Roemer"])
+  })
   it("accepts Pallone's Commerce snapshot only with its exact 105th election footnote", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const note =

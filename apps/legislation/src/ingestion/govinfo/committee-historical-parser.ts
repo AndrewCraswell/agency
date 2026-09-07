@@ -96,8 +96,12 @@ function parseGranule(
       /^([ \t]*(?:(?:Majority|Minority) )?Staff Director(?:\/Chief Counsel)?\.(?:—|--)[^\n]*)$/gm,
       "\n\nSTAFF\n\n$1"
     )
-    // These printed HELP headings touch the preceding roster at a page boundary.
-    .replaceAll(/^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere)[ \t]*$/gm, "\n\n$1\n\n")
+    // These printed subcommittee headings touch the preceding roster. Match
+    // only complete standalone lines, preserving every preceding member cell.
+    .replaceAll(
+      /^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere|Employer-Employee Relations|Oversight and Investigations)[ \t]*$/gm,
+      "\n\n$1\n\n"
+    )
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
     .replaceAll(/^[ \t]*SUBCOMMITTEES[ \t]*$/gm, "\n\nSUBCOMMITTEES\n\n")
   const partyBoundary =

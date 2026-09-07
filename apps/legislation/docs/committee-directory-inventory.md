@@ -276,6 +276,11 @@ adding actual tenure dates. Missing or changed evidence, other members, markers 
 All 60 focused parser/assignment tests, scoped lint/format and service/web types pass. Live 105th parsing passes
 Commerce and next encounters `Employer-Employee Relations` touching the preceding Roemer roster entry in Education
 and the Workforce. No complete 105th acceptance or import is claimed; 106th active-leave handling remains unchanged.
+The next source check confirms two touching headings in Education and the Workforce: Employer-Employee Relations
+after Roemer, and Oversight and Investigations after Tierney. Exact standalone-line boundaries now preserve those
+preceding members and keep both subcommittees under their parent. A live full-edition retry passes these boundaries
+and reaches an unparsed `Bernard Sanders` entry in Government Reform and Oversight; no identity or state is inferred.
+The heading batch passes 61 focused parser/assignment tests, scoped lint/format and service/web types.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
