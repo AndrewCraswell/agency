@@ -118,6 +118,23 @@ function crossCheckedPrintedName(
   records: readonly GovInfoCommitteeRecord[],
   directory: GovInfoDirectoryPackage
 ): string {
+  if (directory.packageId === "CDIR-2018-07-27" && directory.congress === 115 && member.chamber === "upper") {
+    const correction = new Map([
+      ["Benajmin L. Cardin", { name: "Benjamin L. Cardin", state: "MD" }],
+      ["Thom Tills", { name: "Thom Tillis", state: "NC" }]
+    ]).get(member.name)
+    if (
+      correction?.state === member.state &&
+      records.some((record) =>
+        record.members.some(
+          (candidate) =>
+            candidate.name === correction.name && candidate.state === member.state && candidate.chamber === "upper"
+        )
+      )
+    ) {
+      return correction.name
+    }
+  }
   if (directory.packageId === "CDIR-2022-10-26" && directory.congress === 117) {
     const suffix = `, ${member.state}`
     if (member.name.endsWith(suffix)) {

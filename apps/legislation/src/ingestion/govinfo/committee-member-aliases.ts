@@ -6,6 +6,7 @@ const pageSchema = z.object({
   nextPage: z.string().nullable(),
   granules: z.array(z.object({ granuleId: z.string(), granuleLink: z.string() }))
 })
+const nameFieldSchema = z.union([z.string(), z.array(z.string())]).optional()
 const summarySchema = z.object({
   packageId: z.string(),
   granuleId: z.string(),
@@ -18,10 +19,10 @@ const summarySchema = z.object({
         bioGuideId: z.string().regex(/^[A-Za-z]\d{6}$/),
         name: z.array(
           z.object({
-            parsed: z.string().optional(),
-            "authority-fnf": z.string().optional(),
-            "authority-lnf": z.string().optional(),
-            "authority-other": z.string().optional()
+            parsed: nameFieldSchema,
+            "authority-fnf": nameFieldSchema,
+            "authority-lnf": nameFieldSchema,
+            "authority-other": nameFieldSchema
           })
         )
       })
@@ -117,7 +118,7 @@ export async function getGovInfoCommitteeMemberAliases(options: {
       }
       const personId = `person:congress:${member.bioGuideId.toLowerCase()}`
       for (const names of member.name) {
-        for (const name of Object.values(names)) {
+        for (const name of Object.values(names).flatMap((value) => (Array.isArray(value) ? value : [value]))) {
           if (name !== undefined && name.trim() !== "") {
             aliases.set(JSON.stringify([personId, name]), { name, personId })
           }

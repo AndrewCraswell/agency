@@ -37,6 +37,33 @@ function harness(responses: unknown[]) {
 }
 
 describe("same-directory committee member aliases", () => {
+  it("flattens exact source name arrays and deduplicates repeated values", async () => {
+    const { run } = harness([
+      { nextPage: null, granules: [granule] },
+      {
+        ...summary,
+        members: [
+          {
+            ...summary.members[0],
+            name: [{ parsed: "C. SCOTT FRANKLIN", "authority-other": ["C. SCOTT FRANKLIN", "Scott Franklin", ""] }]
+          }
+        ]
+      }
+    ])
+    expect(await run()).toEqual([
+      { name: "C. SCOTT FRANKLIN", personId: "person:congress:f000472" },
+      { name: "Scott Franklin", personId: "person:congress:f000472" }
+    ])
+  })
+
+  it("rejects non-string values inside a source name array", async () => {
+    const { run } = harness([
+      { nextPage: null, granules: [granule] },
+      { ...summary, members: [{ ...summary.members[0], name: [{ "authority-other": ["Scott Franklin", 42] }] }] }
+    ])
+    await expect(run()).rejects.toThrow(/authority-other/)
+  })
+
   it("exhausts advertised pages and returns exact names linked to explicit IDs only", async () => {
     const { request, run } = harness([
       {

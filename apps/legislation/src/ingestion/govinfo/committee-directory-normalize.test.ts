@@ -104,6 +104,26 @@ describe("normalizeGovInfoCommitteeDirectory", () => {
     }
   )
 
+  it.each([
+    ["Benajmin L. Cardin", "Benjamin L. Cardin", "MD"],
+    ["Thom Tills", "Thom Tillis", "NC"]
+  ])("requires same-edition corroboration for the 115th printed name %s", (printed, correct, state) => {
+    const source = catalog()
+    source.people[0]!.name = correct
+    source.terms[0]!.sourceId = "115:upper:2017:2019"
+    const input = records()
+    input[0]!.members[0] = { chamber: "upper", name: printed, state }
+    input[1]!.members[0] = { chamber: "upper", name: correct, state }
+    const edition = { ...directoryPackage, congress: 115, packageId: "CDIR-2018-07-27" }
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2018-10-01" }, source, new Date())
+        .unmatched
+    ).toHaveLength(1)
+    input[1]!.members = []
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+  })
+
   it("removes a corroborated redundant state suffix only in the reviewed 117th edition", () => {
     const source = catalog()
     source.terms[0]!.sourceId = "117:upper:2021:2023"
