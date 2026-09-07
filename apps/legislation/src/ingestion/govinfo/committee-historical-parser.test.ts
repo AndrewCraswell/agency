@@ -50,25 +50,26 @@ describe("historical GovInfo printed rosters", () => {
       })
     ).toThrow("Uncorroborated GovInfo state spelling: Michael E. Capuano")
   })
-  it("separates explicit staff labels touching a roster without dropping the last member", () => {
-    const source = `${title}\n\nCommittee on Indian Affairs\n\nBen Nighthorse Campbell, of Colorado, Chairman.\nJames M. Inhofe, of Oklahoma.\n   Majority Staff Director/Chief Counsel.—Paul Moorehead.\n   Legislative Aide.—Theresa Rosier.\n\nSelect Committee on Ethics\n\nBOB SMITH, of New Hampshire, Chairman.\nHarry Reid, of Nevada, Vice Chairman.\n  Staff Director/Chief Counsel.—Victor Baird.\n   Counsels: Elizabeth A. Ryan.\n`
-    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
-    expect(result.map((record) => [record.name, record.classification, record.members.length])).toEqual([
-      ["Committee on Indian Affairs", "committee", 2],
-      ["Select Committee on Ethics", "committee", 2]
-    ])
-    expect(result[0]?.members.at(-1)).toEqual({ chamber: "upper", name: "James M. Inhofe", state: "OK" })
-    expect(() =>
-      parseGovInfoHistoricalCommitteeGranule({
-        chamber: "upper",
-        title,
-        text: source.replace(
-          "   Majority Staff Director/Chief Counsel.—Paul Moorehead.",
-          "   Unexplained roster entry."
-        )
-      })
-    ).toThrow("Unparsed GovInfo historical roster entry")
-  })
+  it.each(["Majority Staff Director/Chief Counsel.—Paul Moorehead.", "Majority Staff Director.—Gary Bohnee."])(
+    "separates the touching staff label %s without dropping the last member",
+    (staffLabel) => {
+      const source = `${title}\n\nCommittee on Indian Affairs\n\nBen Nighthorse Campbell, of Colorado, Chairman.\nJames M. Inhofe, of Oklahoma.\n   Majority Staff Director/Chief Counsel.—Paul Moorehead.\n   Legislative Aide.—Theresa Rosier.\n\nSelect Committee on Ethics\n\nBOB SMITH, of New Hampshire, Chairman.\nHarry Reid, of Nevada, Vice Chairman.\n  Staff Director/Chief Counsel.—Victor Baird.\n   Counsels: Elizabeth A. Ryan.\n`
+      const printedSource = source.replace("Majority Staff Director/Chief Counsel.—Paul Moorehead.", staffLabel)
+      const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: printedSource })
+      expect(result.map((record) => [record.name, record.classification, record.members.length])).toEqual([
+        ["Committee on Indian Affairs", "committee", 2],
+        ["Select Committee on Ethics", "committee", 2]
+      ])
+      expect(result[0]?.members.at(-1)).toEqual({ chamber: "upper", name: "James M. Inhofe", state: "OK" })
+      expect(() =>
+        parseGovInfoHistoricalCommitteeGranule({
+          chamber: "upper",
+          title,
+          text: printedSource.replace(staffLabel, "Unexplained roster entry.")
+        })
+      ).toThrow("Unparsed GovInfo historical roster entry")
+    }
+  )
   it.each([
     ["Mississppi", "Mississippi", "MS"],
     ["Masschusetts", "Massachusetts", "MA"]

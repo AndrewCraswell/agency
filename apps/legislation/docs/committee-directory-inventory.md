@@ -222,6 +222,11 @@ is an Indian Affairs staff label, `Majority Staff Director.—Gary Bohnee.`, tou
 staff boundary recognizes only the Director/Chief Counsel variant. No import or identity inference was performed.
 Root verification passed its check stage but remains blocked by the unrelated scoring coverage thresholds.
 
+The 105th touching `Majority Staff Director.—Gary Bohnee.` boundary is now handled alongside the 106th
+Director/Chief Counsel form. Regression coverage preserves the last member and following committee while
+rejecting an unexplained replacement line. All 43 historical parser tests, scoped lint/format, and service/web
+type checks pass. Full 105th source and canonical reconciliation remain pending; this change authorizes no import.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains

@@ -79,10 +79,10 @@ function parseGranule(
     .replaceAll(/^[ \t]*´[ \t]*$/gm, "")
     .replaceAll(/^([ \t]*)\*([ \t]+Children and Families[ \t]*)$/gm, "$1$2")
     .replaceAll(/^[ \t]*(?:Vacant|TBD), (?:Chair|Chairman|Chairwoman)\.?[ \t]*$/gim, "")
-    // The 106th Senate select rosters run directly into these explicit staff labels.
+    // The 105th/106th Senate rosters run directly into these explicit staff labels.
     // Preserve the member prefix rather than treating the staff tail as another member.
     .replaceAll(
-      /^([ \t]*(?:(?:Majority|Minority) )?Staff Director\/Chief Counsel\.(?:—|--)[^\n]*)$/gm,
+      /^([ \t]*(?:(?:Majority|Minority) )?Staff Director(?:\/Chief Counsel)?\.(?:—|--)[^\n]*)$/gm,
       "\n\nSTAFF\n\n$1"
     )
     // These printed HELP headings touch the preceding roster at a page boundary.
