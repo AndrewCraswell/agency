@@ -333,6 +333,20 @@ Dave G. Reichert (8), Charlie Dent (4), Robert D. Inglis (3), Eni Faleomaveaga (
 The September 2006 re-audit completes with the identical counts and remaining names: 209 organizations, 3,781 entries,
 3,732 distinct mapped memberships, 49 unresolved entries and no mapped duplicates. Both source audits completed
 without timeouts. Neither edition is publication-ready; no partial edition was imported.
+The next structured identity audit confirms that both editions print `CATHY McMORRIS` without a Bioguide ID; the
+canonical catalog has Cathy McMorris Rodgers but no historical alias. Reichert's linked metadata and biography say
+David, not Dave. The July metadata likewise supplies Steve King, K. Michael Conaway, Martin Meehan, William Jefferson,
+Tim Ryan, Charles Dent, Bob Inglis and Michael Bilirakis, not the remaining roster variants; none supplies an explicit
+quoted nickname for those variants. No advertised Bono/Mack individual granule was found for the expected district.
+These observations do not authorize inferred aliases.
+The audit also found a concrete loader omission: advertised `CDIR-2005-07-11-AS-H` identifies delegate `F000010`
+in House/AS/Congress 109 but lacks the numeric district required by the loader. The exact districtless `AS-H` format
+is now supported, retaining package, URL, Congress, chamber, state and Bioguide validation. Other districtless formats
+remain unsupported until evidenced. All 62 focused alias/normalization tests, legislation lint and types pass.
+The live July 2005 loader check returns four explicit name forms, each linked to `person:congress:f000010` in House/AS.
+This does not correct the roster's `Faleomaveaga` spelling. Further same-edition evidence to review separately includes
+six correctly spelled `Eni F.H. Faleomavaega` entries (AS) versus three misspelled Small Business entries, and correctly
+spelled `William J. Jefferson` (LA) in Ways and Means/Trade versus `Willliam Jefferson` in Budget.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation

@@ -20,7 +20,10 @@ const summary = {
   ]
 }
 
-function harness(responses: unknown[]) {
+function harness(
+  responses: unknown[],
+  candidates: readonly { state: string; chamber: "upper" | "lower" }[] = [{ state: "FL", chamber: "lower" }]
+) {
   const request = vi.fn<typeof fetch>()
   for (const response of responses) {
     request.mockResolvedValueOnce(new Response(JSON.stringify(response)))
@@ -30,13 +33,91 @@ function harness(responses: unknown[]) {
       apiKey: "test-key",
       congress: 117,
       packageId,
-      candidates: [{ state: "FL", chamber: "lower" }],
+      candidates,
       http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
     })
   return { request, run }
 }
 
 describe("same-directory committee member aliases", () => {
+  const territorialId = `${packageId}-AS-H`
+  const territorialGranule = { granuleId: territorialId, granuleLink: `${base}/${territorialId}/summary` }
+  const territorialMember = {
+    congress: "117",
+    chamber: "H",
+    state: "AS",
+    bioGuideId: "F000010",
+    name: [{ parsed: "ENI F.H. FALEOMAVAEGA" }]
+  }
+  const territorialSummary = { packageId, granuleId: territorialId, members: [territorialMember] }
+  const territorialCandidates = [{ state: "AS", chamber: "lower" as const }]
+
+  it("accepts the advertised American Samoa delegate without a numeric district", async () => {
+    const { run } = harness(
+      [{ nextPage: null, granules: [territorialGranule] }, territorialSummary],
+      territorialCandidates
+    )
+    expect(await run()).toEqual([
+      { name: "ENI F.H. FALEOMAVAEGA", personId: "person:congress:f000010", state: "AS", chamber: "lower" }
+    ])
+  })
+
+  it.each(["AS", "AS-S", "AS-H-", "AS-H-extra", "FL-H"])(
+    "does not expand the observed territorial format to %s",
+    async (suffix) => {
+      const { run, request } = harness(
+        [{ nextPage: null, granules: [{ granuleId: `${packageId}-${suffix}`, granuleLink: "https://unused.test" }] }],
+        [...territorialCandidates, { state: "AS", chamber: "upper" }, { state: "FL", chamber: "lower" }]
+      )
+      expect(await run()).toEqual([])
+      expect(request).toHaveBeenCalledOnce()
+    }
+  )
+
+  it.each([{ state: "FL" }, { chamber: "S" }, { congress: "116" }])(
+    "validates territorial member scope %j",
+    async (mismatch) => {
+      const { run } = harness(
+        [
+          { nextPage: null, granules: [territorialGranule] },
+          { ...territorialSummary, members: [{ ...territorialMember, ...mismatch }] }
+        ],
+        territorialCandidates
+      )
+      await expect(run()).rejects.toThrow("differs from its requested scope")
+    }
+  )
+
+  it.each([{ packageId: "CDIR-2021-01-01" }, { granuleId: `${packageId}-AS-H-1` }])(
+    "validates territorial returned identity %j",
+    async (mismatch) => {
+      const { run } = harness(
+        [
+          { nextPage: null, granules: [territorialGranule] },
+          { ...territorialSummary, ...mismatch }
+        ],
+        territorialCandidates
+      )
+      await expect(run()).rejects.toThrow("identity differs")
+    }
+  )
+
+  it("keeps territorial requests inside the advertised package", async () => {
+    const { run, request } = harness(
+      [
+        {
+          nextPage: null,
+          granules: [
+            { ...territorialGranule, granuleLink: "https://api.govinfo.gov/packages/other/granules/AS-H/summary" }
+          ]
+        }
+      ],
+      territorialCandidates
+    )
+    await expect(run()).rejects.toThrow("escaped its package")
+    expect(request).toHaveBeenCalledOnce()
+  })
+
   it("emits no aliases for an unlinked member alongside explicitly identified members", async () => {
     const { run } = harness([
       { nextPage: null, granules: [granule] },
