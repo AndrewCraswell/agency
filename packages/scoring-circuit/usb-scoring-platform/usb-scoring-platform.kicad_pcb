@@ -3784,7 +3784,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3796,7 +3796,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3842,7 +3842,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4306,7 +4306,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4318,7 +4318,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4364,7 +4364,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12209,7 +12209,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12221,7 +12221,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12267,7 +12267,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12557,7 +12557,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12569,7 +12569,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12615,7 +12615,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -21011,7 +21011,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21023,7 +21023,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21069,7 +21069,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -28951,7 +28951,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28963,7 +28963,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -29009,7 +29009,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -32832,7 +32832,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -32844,7 +32844,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -32890,7 +32890,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -33006,7 +33006,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33018,7 +33018,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33064,7 +33064,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -34696,7 +34696,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -34708,7 +34708,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -34754,7 +34754,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -37677,7 +37677,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -37689,7 +37689,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -37735,7 +37735,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -40303,7 +40303,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -40315,7 +40315,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -40361,7 +40361,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -45362,7 +45362,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "390R 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -45374,7 +45374,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -45420,7 +45420,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-07390RL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -46836,7 +46836,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -46848,7 +46848,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -46894,7 +46894,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -50999,7 +50999,7 @@
 				)
 			)
 		)
-		(property "Value" "3.3k 1%"
+		(property "Value" "1k 1%"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -51011,7 +51011,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-073K3L"
+		(property "Datasheet" "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -51057,7 +51057,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-073K3L"
+		(property "MPN" "RC0603FR-071KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)

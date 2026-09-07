@@ -1,6 +1,6 @@
 STM32 USB scoring platform - bounded continuity and reset-bias characterization
-* Actual candidate values: Nexperia 74LVC125APW -> 220R -> conductor -> 3.3k -> SENSE,
-* with 3.3k SENSE pull-down. Seven identical channels; no new external comparator.
+* Actual candidate values: Nexperia 74LVC125APW -> 220R -> conductor -> 390R -> SENSE,
+* with 1k SENSE pull-down. Seven identical channels; no new external comparator.
 * Comparator uses internal VREFINT/2, HYST=1. Conservative decision envelope:
 * 0.556..0.651 V from DS12288 Rev6 VREFINT 1.182..1.232 V, scaler +/-10 mV,
 * comparator +/-9 mV allowance and full 16 mV hysteresis allowance each way.
@@ -15,27 +15,27 @@ STM32 USB scoring platform - bounded continuity and reset-bias characterization
 
 * Open-input worst pull-down tolerance and positive leakage stress.
 Iopen 0 open_sense 121u
-Ropen open_sense 0 3333
+Ropen open_sense 0 1010
 
 * Closed pair: both conductor sense branches load the source. 500R is a
 * continuity stress only, not proof of per-weapon resistance discrimination.
 Vweak weak_driver 0 2.25
 Rweak_drive weak_driver weak_a 222.2
 Rweak_contact weak_a weak_b 500
-Rweak_series_a weak_a weak_sense_a 3333
-Rweak_series_b weak_b weak_sense_b 3333
-Rweak_pull_a weak_sense_a 0 3267
-Rweak_pull_b weak_sense_b 0 3267
+Rweak_series_a weak_a weak_sense_a 393.9
+Rweak_series_b weak_b weak_sense_b 393.9
+Rweak_pull_a weak_sense_a 0 990
+Rweak_pull_b weak_sense_b 0 990
 Iweak_a weak_sense_a 0 121u
 Iweak_b weak_sense_b 0 121u
 
 .subckt nominal_pair driver contact_sense params: contact=0.01
 Rdrive driver a 220
 Rcontact a b {contact}
-Rseries_a a sense_a 3300
-Rpull_a sense_a 0 3300
-Rseries_b b contact_sense 3300
-Rpull_b contact_sense 0 3300
+Rseries_a a sense_a 390
+Rpull_a sense_a 0 1000
+Rseries_b b contact_sense 390
+Rpull_b contact_sense 0 1000
 .ends nominal_pair
 Vnom nominal_driver 0 3.3
 Xzero nominal_driver zero_sense nominal_pair contact=0.01
@@ -63,22 +63,24 @@ Idrive_default 0 drive_default 20u
 Vclear clear_driver 0 PWL(0 3.3 100u 3.3 100.01u 0.8 400u 0.8)
 Rclear clear_driver clear_line 222.2
 Cclear_cable clear_line 0 10n
-Rclear_series clear_line clear_sense 3267
-Rclear_pull clear_sense 0 3333
+Rclear_series clear_line clear_sense 386.1
+Rclear_pull clear_sense 0 1010
 Cclear_input clear_sense 0 30p
 
 * Passive contact release for comparison: sense loading must discharge cable.
 * This deliberately exposes the pulse tail, not a passed scoring timing test.
-Vrelease release_driver 0 3.3
+Vrelease release_driver 0 3.6
 Rrelease_drive release_driver release_a 220
-Rrelease_source_series release_a release_source_sense 3300
-Rrelease_source_pull release_source_sense 0 3300
+Rrelease_source_series release_a release_source_sense 390
+Rrelease_source_pull release_source_sense 0 1000
 Vcontact contact_control 0 PWL(0 1 100u 1 100.01u 0 400u 0)
 Scontact release_a release_b contact_control 0 contact_switch
 .model contact_switch SW(Ron=0.01 Roff=1e12 Vt=0.5 Vh=0)
 Crelease_cable release_b 0 10n
-Rrelease_series release_b release_sense 3333
-Rrelease_pull release_sense 0 3333
+Rrelease_series release_b release_sense 393.9
+Rrelease_pull release_sense 0 1010
+* Source-positive leakage opposes decay after the contact opens.
+Irelease_leak 0 release_sense 121u
 Crelease_input release_sense 0 30p
 
 .control

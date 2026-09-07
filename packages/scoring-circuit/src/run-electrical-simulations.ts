@@ -39,8 +39,9 @@ const simulations: readonly SimulationCase[] = [
       { name: "reset_drive_low", maximum: 0.8, unit: "V" },
       { name: "active_clear_low", maximum: 0.556, unit: "V" },
       { name: "active_clear_delay", maximum: 20e-6, unit: "s" },
-      // A characterization sanity bound, NOT an allowable scoring pulse extension.
-      { name: "passive_release_tail", minimum: 50e-6, maximum: 100e-6, unit: "s" }
+      // 390R/1k sensing, 3.6V and positive leakage stress. The scan qualifier
+      // must account for up to this modeled release tail, not count it as contact.
+      { name: "passive_release_tail", minimum: 0, maximum: 30e-6, unit: "s" }
     ]
   },
   {
@@ -81,9 +82,7 @@ const simulations: readonly SimulationCase[] = [
         "priority_epee_left",
         "priority_epee_right",
         "priority_epee_piste",
-        // Counterexample: repeated positive samples do not prove continuous contact.
         "interrupted_target_first",
-        "interrupted_target_second",
         "interrupted_target_third"
       ].map((name) => ({ name, minimum: 0.651, unit: "V" })),
       ...[
@@ -105,7 +104,9 @@ const simulations: readonly SimulationCase[] = [
         "priority_blades_unrelated",
         "priority_corner_clear",
         "priority_epee_left_unrelated",
-        "priority_epee_right_unrelated"
+        "priority_epee_right_unrelated",
+        "interrupted_target_second",
+        "positive_leakage_clear"
       ].map((name) => ({ name, maximum: 0.556, unit: "V" })),
       { name: "seven_short_current", absolute: true, maximum: 0.018, unit: "A" },
       { name: "weak_seven_short_current", absolute: true, maximum: 0.018, unit: "A" },

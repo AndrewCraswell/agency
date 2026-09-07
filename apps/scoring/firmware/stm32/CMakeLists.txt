@@ -16,6 +16,7 @@ if(SCORING_ENABLE_LLVM_COVERAGE)
 endif()
 
 add_library(scoring_stm32_host STATIC
+  core/stm32_contact_filter.c
   core/stm32_scoring_core.c
   core/stm32_scoring_host.c
   core/stm32_target_startup.c
@@ -40,6 +41,11 @@ add_executable(scoring_stm32_transport_tests
 add_executable(scoring_stm32_core_tests
   tests/test_stm32_scoring_core.c
 )
+
+add_executable(scoring_stm32_contact_filter_tests tests/test_stm32_contact_filter.c)
+target_link_libraries(scoring_stm32_contact_filter_tests PRIVATE scoring_stm32_host)
+scoring_native_apply_baseline_warnings(scoring_stm32_contact_filter_tests)
+add_test(NAME scoring_stm32_contact_filter_tests COMMAND scoring_stm32_contact_filter_tests)
 
 add_executable(scoring_stm32_target_startup_tests
   tests/test_stm32_target_startup.c

@@ -10,7 +10,7 @@ import {
 } from "./check-coverage.mjs"
 
 test("coverage policy keeps the scoring core at 100 percent", () => {
-  assert.deepEqual(CORE_SOURCES, ["stm32/core/stm32_scoring_core.c"])
+  assert.deepEqual(CORE_SOURCES, ["stm32/core/stm32_scoring_core.c", "stm32/core/stm32_contact_filter.c"])
   assert.deepEqual(COVERAGE_POLICY.core, { branches: 100, functions: 100, lines: 100 })
   assert.deepEqual(COVERAGE_POLICY.other, { branches: 80, functions: 80, lines: 80 })
 })

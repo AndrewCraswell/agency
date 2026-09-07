@@ -1,11 +1,11 @@
 STM32 seven-conductor scan - electrical paths, loading and source handover
-* Matches the native KiCad 220R / 3.3k / 3.3k sensing channels. Buffers are
+* Matches the native KiCad 220R / 390R / 1k sensing channels. Buffers are
 * bounded voltage sources and switches, NOT manufacturer transistor models.
-* Each 75us characterization slot: clear all lines for 10us, disable for 1us,
-* source ONE line for 63us, disable for 1us. Observe at 73us within each slot.
+* Each 40us slot: clear all lines for 10us, disable for 1us,
+* source ONE line for 28us, disable for 1us. Observe at 38us within each slot.
 * Order: LEFT_A, LEFT_B, LEFT_C, RIGHT_A, RIGHT_B, RIGHT_C, PISTE.
-* This 525us sweep is NOT an approved scoring schedule: it can miss a short
-* contact between observations. Firmware timing and FIE pulse tests remain.
+* The 280us full sweep is characterization only. The 120us weapon schedule
+* below is paired with the C contact filter; full physical decoding remains.
 * All non-selected outputs are high impedance, not actively driven low.
 * Cable load 10nF per conductor and input load 30pF are chosen stress values.
 * Physical cord convention: foil B-C at rest, B to opposing A for target;
@@ -14,17 +14,17 @@ STM32 seven-conductor scan - electrical paths, loading and source handover
 * No clamp, rail back-power, comparator propagation, or digital capture model.
 
 .global clear phase1 phase2 phase3 phase4 phase5 phase6 phase7
-Vclear clear 0 PULSE(1 0 10u 0.01u 0.01u 64.98u 75u)
-Vphase1 phase1 0 PULSE(0 1 11u 0.01u 0.01u 62.98u 525u)
-Vphase2 phase2 0 PULSE(0 1 86u 0.01u 0.01u 62.98u 525u)
-Vphase3 phase3 0 PULSE(0 1 161u 0.01u 0.01u 62.98u 525u)
-Vphase4 phase4 0 PULSE(0 1 236u 0.01u 0.01u 62.98u 525u)
-Vphase5 phase5 0 PULSE(0 1 311u 0.01u 0.01u 62.98u 525u)
-Vphase6 phase6 0 PULSE(0 1 386u 0.01u 0.01u 62.98u 525u)
-Vphase7 phase7 0 PULSE(0 1 461u 0.01u 0.01u 62.98u 525u)
+Vclear clear 0 PULSE(1 0 10u 0.01u 0.01u 29.98u 40u)
+Vphase1 phase1 0 PULSE(0 1 11u 0.01u 0.01u 27.98u 280u)
+Vphase2 phase2 0 PULSE(0 1 51u 0.01u 0.01u 27.98u 280u)
+Vphase3 phase3 0 PULSE(0 1 91u 0.01u 0.01u 27.98u 280u)
+Vphase4 phase4 0 PULSE(0 1 131u 0.01u 0.01u 27.98u 280u)
+Vphase5 phase5 0 PULSE(0 1 171u 0.01u 0.01u 27.98u 280u)
+Vphase6 phase6 0 PULSE(0 1 211u 0.01u 0.01u 27.98u 280u)
+Vphase7 phase7 0 PULSE(0 1 251u 0.01u 0.01u 27.98u 280u)
 .model buffer_switch SW(Ron=0.01 Roff=1e12 Vt=0.5 Vh=0)
 
-.subckt channel line sense power low enable params: rd=220 rs=3300 rp=3300 leak=0
+.subckt channel line sense power low enable params: rd=220 rs=390 rp=1000 leak=0
 Shigh power output enable 0 buffer_switch
 Slow low output clear 0 buffer_switch
 Rdrive output line {rd}
@@ -38,7 +38,7 @@ Ileak sense 0 {leak}
 .ends channel
 
 .subckt front_end la lb lc ra rb rc p sa sb sc sd se sf sp current
-+ params: rail=3.3 low=0 rd=220 rs=3300 rp=3300 leak=0
++ params: rail=3.3 low=0 rd=220 rs=390 rp=1000 leak=0
 Vpower power 0 {rail}
 Vlow low_driver 0 {low}
 Bcurrent current 0 V=-i(Vpower)
@@ -136,10 +136,9 @@ Bshort_high short_high 0 V=min(v(sa11),min(v(sb11),min(v(sc11),min(v(sd11),min(v
 
 * Lower output-voltage/tolerance corner, with the same 121uA sense-node stress used below.
 * This is a chosen stress, not a bound over temperature or all external faults.
-* The former 50us slot sampled 0.638V under this stress and failed 0.651V;
-* the 75us slot allows additional charging time without changing components.
+* The lower sense impedance enables 40us slots with the original thresholds.
 Xcorner a12 b12 c12 d12 e12 f12 p12 sa12 sb12 sc12 sd12 se12 sf12 sp12 i12 front_end
-+ rail=2.25 low=0.8 rd=222.2 rs=3333 rp=3267 leak=121u
++ rail=2.25 low=0.8 rd=222.2 rs=393.9 rp=990 leak=121u
 Rcorner_ab a12 b12 0.01
 Rcorner_bc b12 c12 0.01
 Rcorner_cd c12 d12 0.01
@@ -149,16 +148,28 @@ Rcorner_fp f12 p12 0.01
 Bcorner_high corner_high 0 V=min(v(sa12),min(v(sb12),min(v(sc12),min(v(sd12),min(v(se12),min(v(sf12),v(sp12)))))))
 Bcorner_low corner_low 0 V=max(v(sa12),max(v(sb12),max(v(sc12),max(v(sd12),max(v(se12),max(v(sf12),v(sp12)))))))
 
+* Opposite leakage/tolerance direction during active clear; unlike the high
+* test, this injects current into the sense nodes and uses the 3.6V rail.
+Xpositive ax bx cx dx ex fx px sax sbx scx sdx sex sfx spx ix front_end
++ rail=3.6 low=0.8 rd=217.8 rs=386.1 rp=1010 leak=-121u
+Rpositive_ab ax bx 0.01
+Rpositive_bc bx cx 0.01
+Rpositive_cd cx dx 0.01
+Rpositive_de dx ex 0.01
+Rpositive_ef ex fx 0.01
+Rpositive_fp fx px 0.01
+Bpositive_low positive_low 0 V=max(v(sax),max(v(sbx),max(v(scx),max(v(sdx),max(v(sex),max(v(sfx),v(spx)))))))
+
 * Repeat the existing 121uA/channel leakage STRESS with seven-way loading.
 * Hold excitation on in a separate static fixture to expose settled margin,
 * independent of scan timing. Require the SAME 0.651V high boundary as before;
-* 220R now addresses the failed margin of the former 330R candidate.
+* The same source-current constraint is retained with the 220R drive resistor.
 * The dynamic corner above now includes this stress and cable capacitance.
 Vstress stress_driver 0 2.25
 Rstress_drive stress_driver stress_line 222.2
 .subckt stress_load line sense
-Rseries line sense 3333
-Rpull sense 0 3267
+Rseries line sense 393.9
+Rpull sense 0 990
 Ileak sense 0 121u
 .ends stress_load
 Xstress_a stress_line stress_a stress_load
@@ -170,8 +181,8 @@ Xstress_f stress_line stress_f stress_load
 Xstress_p stress_line stress_p stress_load
 
 * Adversarial interrupted sabre target: 60us contacts separated by 165us gaps.
-* Their phase coincides with the candidate LEFT_B observation slot. Repeated
-* positive samples must NOT be interpreted as one continuous scoring contact.
+* The faster LEFT_B observation now includes a low between positive samples.
+* See the C contact-filter tests for pulse-phase and qualification checks.
 * The switch is an ideal contact, not a comparator/capture implementation.
 Xpulse ap bp cp dp ep fp pp sap sbp scp sdp sep sfp spp ip front_end
 Rpulse_left bp cp 0.01
@@ -182,88 +193,88 @@ Vcontact contact_closed 0 PULSE(0 1 20u 0.01u 0.01u 59.99u 225u)
 
 .control
 set noaskquit
-tran 0.05u 525u
-meas tran foil_rest_high FIND v(sc1) AT=148u
-meas tran foil_rest_unrelated FIND v(rest_low) AT=148u
-meas tran foil_target_high FIND v(sd2) AT=148u
-meas tran foil_target_unrelated FIND v(foil_low) AT=148u
-meas tran foil_open_source FIND v(sb3) AT=148u
-meas tran foil_open_unrelated FIND v(off_low) AT=148u
-meas tran foil_piste_high FIND v(sp4) AT=148u
-meas tran foil_piste_unrelated FIND v(foilp_low) AT=148u
-meas tran epee_left_high FIND v(sb5) AT=73u
-meas tran epee_left_unrelated FIND v(epee_left_low) AT=73u
-meas tran epee_right_high FIND v(se5) AT=298u
-meas tran epee_right_unrelated FIND v(epee_right_low) AT=298u
-meas tran epee_piste_high FIND v(ground_high) AT=73u
-meas tran epee_piste_unrelated FIND v(ground_low) AT=73u
-meas tran sabre_target_high FIND v(sabre_high) AT=148u
-meas tran sabre_target_unrelated FIND v(sabre_low) AT=148u
-meas tran crossed_blades_high FIND v(blade_high) AT=148u
-meas tran crossed_blades_unrelated FIND v(blade_low) AT=148u
-meas tran reciprocal_left_high FIND v(double_left_high) AT=148u
-meas tran reciprocal_left_unrelated FIND v(double_left_low) AT=148u
-meas tran reciprocal_right_high FIND v(double_right_high) AT=373u
-meas tran reciprocal_right_unrelated FIND v(double_right_low) AT=373u
-meas tran targets_and_blades_high FIND v(combined_high) AT=148u
-meas tran targets_and_blades_piste FIND v(sp10) AT=148u
-meas tran seven_short_left_a FIND v(short_high) AT=73u
-meas tran seven_short_left_b FIND v(short_high) AT=148u
-meas tran seven_short_left_c FIND v(short_high) AT=223u
-meas tran seven_short_right_a FIND v(short_high) AT=298u
-meas tran seven_short_right_b FIND v(short_high) AT=373u
-meas tran seven_short_right_c FIND v(short_high) AT=448u
-meas tran seven_short_piste FIND v(short_high) AT=523u
+tran 0.05u 280u
+meas tran foil_rest_high FIND v(sc1) AT=78u
+meas tran foil_rest_unrelated FIND v(rest_low) AT=78u
+meas tran foil_target_high FIND v(sd2) AT=78u
+meas tran foil_target_unrelated FIND v(foil_low) AT=78u
+meas tran foil_open_source FIND v(sb3) AT=78u
+meas tran foil_open_unrelated FIND v(off_low) AT=78u
+meas tran foil_piste_high FIND v(sp4) AT=78u
+meas tran foil_piste_unrelated FIND v(foilp_low) AT=78u
+meas tran epee_left_high FIND v(sb5) AT=38u
+meas tran epee_left_unrelated FIND v(epee_left_low) AT=38u
+meas tran epee_right_high FIND v(se5) AT=158u
+meas tran epee_right_unrelated FIND v(epee_right_low) AT=158u
+meas tran epee_piste_high FIND v(ground_high) AT=38u
+meas tran epee_piste_unrelated FIND v(ground_low) AT=38u
+meas tran sabre_target_high FIND v(sabre_high) AT=78u
+meas tran sabre_target_unrelated FIND v(sabre_low) AT=78u
+meas tran crossed_blades_high FIND v(blade_high) AT=78u
+meas tran crossed_blades_unrelated FIND v(blade_low) AT=78u
+meas tran reciprocal_left_high FIND v(double_left_high) AT=78u
+meas tran reciprocal_left_unrelated FIND v(double_left_low) AT=78u
+meas tran reciprocal_right_high FIND v(double_right_high) AT=198u
+meas tran reciprocal_right_unrelated FIND v(double_right_low) AT=198u
+meas tran targets_and_blades_high FIND v(combined_high) AT=78u
+meas tran targets_and_blades_piste FIND v(sp10) AT=78u
+meas tran seven_short_left_a FIND v(short_high) AT=38u
+meas tran seven_short_left_b FIND v(short_high) AT=78u
+meas tran seven_short_left_c FIND v(short_high) AT=118u
+meas tran seven_short_right_a FIND v(short_high) AT=158u
+meas tran seven_short_right_b FIND v(short_high) AT=198u
+meas tran seven_short_right_c FIND v(short_high) AT=238u
+meas tran seven_short_piste FIND v(short_high) AT=278u
 meas tran seven_short_current MAX v(i11)
-meas tran weak_seven_short_high FIND v(corner_high) AT=73u
-meas tran weak_seven_short_clear FIND v(corner_low) AT=85u
+meas tran weak_seven_short_high FIND v(corner_high) AT=38u
+meas tran weak_seven_short_clear FIND v(corner_low) AT=50u
+meas tran positive_leakage_clear FIND v(positive_low) AT=50u
 meas tran weak_seven_short_current MAX v(i12)
-meas tran settled_leakage_stress FIND v(stress_p) AT=73u
+meas tran settled_leakage_stress FIND v(stress_p) AT=38u
 * Candidate foil/sabre schedule: LEFT_B, RIGHT_B, PISTE only, repeated.
 * All seven receivers remain observed. This checks unchanged electrical paths
-* at 225us revisit intervals, NOT contact-duration qualification or firmware.
-alter @vphase1[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase2[pulse] [ 0 1 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase3[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase4[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase5[pulse] [ 0 1 86u 0.01u 0.01u 62.98u 225u ]
-alter @vphase6[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase7[pulse] [ 0 1 161u 0.01u 0.01u 62.98u 225u ]
-tran 0.05u 675u
-meas tran priority_foil_rest FIND v(sc1) AT=523u
-meas tran priority_foil_target FIND v(sd2) AT=523u
-meas tran priority_foil_piste FIND v(sp4) AT=523u
-meas tran priority_sabre_target FIND v(sabre_high) AT=523u
-meas tran priority_blades FIND v(blade_high) AT=523u
-meas tran priority_reciprocal_left FIND v(double_left_high) AT=523u
-meas tran priority_reciprocal_right FIND v(double_right_high) AT=598u
-meas tran priority_foil_unrelated FIND v(foil_low) AT=523u
-meas tran priority_sabre_unrelated FIND v(sabre_low) AT=523u
-meas tran priority_blades_unrelated FIND v(blade_low) AT=523u
-meas tran priority_corner_left FIND v(corner_high) AT=523u
-meas tran priority_corner_right FIND v(corner_high) AT=598u
-meas tran priority_corner_piste FIND v(corner_high) AT=673u
-meas tran priority_corner_clear FIND v(corner_low) AT=535u
+* at 120us revisit intervals, NOT full scoring firmware or FIE approval.
+alter @vphase1[pulse] [ 0 0 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase2[pulse] [ 0 1 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase3[pulse] [ 0 0 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase4[pulse] [ 0 0 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase5[pulse] [ 0 1 51u 0.01u 0.01u 27.98u 120u ]
+alter @vphase6[pulse] [ 0 0 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase7[pulse] [ 0 1 91u 0.01u 0.01u 27.98u 120u ]
+tran 0.05u 360u
+meas tran priority_foil_rest FIND v(sc1) AT=278u
+meas tran priority_foil_target FIND v(sd2) AT=278u
+meas tran priority_foil_piste FIND v(sp4) AT=278u
+meas tran priority_sabre_target FIND v(sabre_high) AT=278u
+meas tran priority_blades FIND v(blade_high) AT=278u
+meas tran priority_reciprocal_left FIND v(double_left_high) AT=278u
+meas tran priority_reciprocal_right FIND v(double_right_high) AT=318u
+meas tran priority_foil_unrelated FIND v(foil_low) AT=278u
+meas tran priority_sabre_unrelated FIND v(sabre_low) AT=278u
+meas tran priority_blades_unrelated FIND v(blade_low) AT=278u
+meas tran priority_corner_left FIND v(corner_high) AT=278u
+meas tran priority_corner_right FIND v(corner_high) AT=318u
+meas tran priority_corner_piste FIND v(corner_high) AT=358u
+meas tran priority_corner_clear FIND v(corner_low) AT=290u
 meas tran priority_source_current MAX v(i11)
-* A passing result below reproduces a sampling counterexample, not an
-* acceptable scoring response: three highs despite two intervening breaks.
-meas tran interrupted_target_first FIND v(sdp) AT=73u
-meas tran interrupted_target_second FIND v(sdp) AT=298u
-meas tran interrupted_target_third FIND v(sdp) AT=523u
+* High/low/high: the formerly hidden interruption must now be visible.
+meas tran interrupted_target_first FIND v(sdp) AT=38u
+meas tran interrupted_target_second FIND v(sdp) AT=158u
+meas tran interrupted_target_third FIND v(sdp) AT=278u
 meas tran interrupted_target_open FIND v(contact_closed) AT=150u
 meas tran interrupted_target_duration TRIG v(contact_closed) VAL=0.5 RISE=1 TARG v(contact_closed) VAL=0.5 FALL=1
 meas tran interrupted_target_gap TRIG v(contact_closed) VAL=0.5 FALL=1 TARG v(contact_closed) VAL=0.5 RISE=2
 * Candidate epee schedule uses A rather than B as the tip excitation wire.
-alter @vphase1[pulse] [ 0 1 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase2[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
-alter @vphase4[pulse] [ 0 1 86u 0.01u 0.01u 62.98u 225u ]
-alter @vphase5[pulse] [ 0 0 11u 0.01u 0.01u 62.98u 225u ]
-tran 0.05u 675u
-meas tran priority_epee_left FIND v(sb5) AT=523u
-meas tran priority_epee_right FIND v(se5) AT=598u
-meas tran priority_epee_piste FIND v(ground_high) AT=523u
-meas tran priority_epee_left_unrelated FIND v(epee_left_low) AT=523u
-meas tran priority_epee_right_unrelated FIND v(epee_right_low) AT=598u
+alter @vphase1[pulse] [ 0 1 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase2[pulse] [ 0 0 11u 0.01u 0.01u 27.98u 120u ]
+alter @vphase4[pulse] [ 0 1 51u 0.01u 0.01u 27.98u 120u ]
+alter @vphase5[pulse] [ 0 0 11u 0.01u 0.01u 27.98u 120u ]
+tran 0.05u 360u
+meas tran priority_epee_left FIND v(sb5) AT=278u
+meas tran priority_epee_right FIND v(se5) AT=318u
+meas tran priority_epee_piste FIND v(ground_high) AT=278u
+meas tran priority_epee_left_unrelated FIND v(epee_left_low) AT=278u
+meas tran priority_epee_right_unrelated FIND v(epee_right_low) AT=318u
 quit
 .endc
 .end

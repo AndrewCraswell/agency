@@ -14,6 +14,15 @@ existing prototype export commands.
 
 ## Current manufacturing export
 
+The sensing-resistor repair was re-exported to `output/manufacturing-20260907-011820/`: native ERC, DRC,
+unconnected-item and schematic-parity counts are zero; the 230-reference BOM contains the fourteen updated resistor
+ordering codes. PCB diff review confirms only value/ordering properties changed, with no geometry changes. The fresh
+black-board 3D render was inspected; the previously noted missing body models remain, not newly removed parts. All seven
+electrical models and the C/C++ coverage gate pass; both the new contact filter and existing scoring core have 100%
+line/function/branch coverage. The filter also compiles for Cortex-M4 as a freestanding object, not a complete
+acquisition firmware image. Circuit type-check/lint pass. The latest `pnpm verify` stopped on two lint errors in
+concurrently edited legislation tests before coverage ran; unrelated files were not changed to bypass that failure.
+
 Run `./export-manufacturing.ps1` in this directory with KiCad 10 installed. It checks native ERC/DRC and schematic
 parity, then exports the four-layer Gerbers, separate plated/unplated drills, BOM and all-component placement files. It
 stops on missing ordering fields or mismatched assembly references. Through-hole parts are included; bare J14 service
@@ -45,11 +54,11 @@ passive-cord bench work; powered external conductors and shared/externally drive
 No protection component was removed. Suspend acceptance is source-dependent, not a universal 2.5mA number; U21 now
 avoids continuous I2C traffic after qualification. Actual input/inrush/suspend power still needs bench measurement.
 
-The **acquisition timing item is not closed**. The existing 225us schedule's 60us-on/165us-off counterexample still
-prevents treating repeated sampled highs as one valid sabre contact. The retained FIE appendix requires rejection below
-100us and assured registration within its 100us-1ms sensitivity window. A held-excitation/continuous-edge-capture
-candidate needs both-fencer and piste tests, and separate foil/epee qualification, before approval. Faster firmware
-alone is not a demonstrated repair. This is a concrete engineering item, not an assembler or owner-information blocker.
+The acquisition review now has a concrete modeled implementation: 390-ohm/1k sensing, 40us source slots, 120us frames
+and a tested C input filter before the existing weapon core. It repairs the demonstrated interrupted- contact case
+without adding parts or changing routes. See the sensing section for limits and integration rules. The electrical paper
+review and assembly-layout pass are complete for the passive-cable prototype scope. Physical acquisition-driver
+integration, full weapon decoding and bench measurements remain; this is not finished scoring firmware.
 
 Assembly inspection found a real solder-wicking risk: C69's ground via was inside its paste land. It is now outside the
 land at (57.9,136.85)mm with a 0.5mm diameter/0.2mm drill and a short 0.2mm ground trace. It uses existing process
@@ -540,71 +549,53 @@ support effort.
 
 ## Sensing checkpoint
 
-Each conductor uses a 220-ohm excitation resistor, a 3.3k series sense resistor, and a 3.3k sense pull-down, all 1%.
-Excitation input pull-downs and output-enable pull-ups are 10k. U8/U9 are **Nexperia 74LVC125APW**, replacing TI
-SN74LVC125APWR; R7/R10/R13/R16/R19/R22/R25 change from 330 to 220 ohms. The manufacturer's
-[Rev. 12 data sheet](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf), pages 3, 5, 6 and 10, confirms
-matching pin functions and the TSSOP14 package, a 2.25V minimum high output at 18mA with a 3V supply through 125 C, and
-specified power-off output leakage. No components, nets or footprint positions were added or moved.
+Each channel now uses **220-ohm excitation, 390-ohm sense series and 1k sense pull-down**, all 1%.
+R8/R11/R14/R17/R20/R23/R26 use
+[YAGEO RC0603FR-07390RL](https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07390RL);
+R65-R71 use [RC0603FR-071KL](https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL). Only
+fourteen existing resistor values/order codes changed: no added components, pads, routes or placement changes. The lower
+sense impedance shortens cable discharge; the unchanged excitation resistors still bound a grounded 3.6V source to
+16.53mA. Keep the BAT54S clamps and require CORE_3V3 >=3V.
 
-The model requires CORE_3V3 to be at least 3V during acquisition; invalidate observations during startup/brownout. At
-3.6V and minimum resistor tolerance, a grounded conductor draws 16.53mA, below the 18mA condition used for the
-high-output bound. Opposed outputs draw 8.26mA. These are own-board low-voltage cases, not arbitrary external faults.
+U8/U9 remain Nexperia 74LVC125APW. Its
+[Rev. 12 datasheet](https://assets.nexperia.com/documents/data-sheet/74LVC125A.pdf) specifies 2.25V minimum high output
+at 18mA with VCC=3V through 125 C. COMP1-7 receive PA1/PA3/PA0/PB0/PB13/PB11/PB14, respectively: LEFT_A/B/C, RIGHT_A/B/C
+and PISTE. Use VREFINT/2 and HYST=1, with 200us reference-scaler plus 5us comparator startup. The unchanged 0.556-0.651V
+threshold envelope includes reference, offset and hysteresis allowances from DS12288 Rev 6.
 
-The seven comparator positive inputs are already correctly assigned: COMP1/2/3/4/5/6/7 use
-PA1/PA3/PA0/PB0/PB13/PB11/PB14 respectively, for LEFT_A/LEFT_B/LEFT_C/RIGHT_A/RIGHT_B/RIGHT_C/PISTE. The continuity
-candidate uses internal VREFINT/2 and the lowest nonzero hysteresis setting (HYST=1). Allow 200us reference-scaler
-startup plus 5us comparator startup before accepting observations. A conservative threshold envelope is 0.556-0.651V,
-including reference variation, scaler offset, comparator offset and hysteresis from DS12288 Rev 6, tables 20 and 79.
+### Acquisition timing
 
-Run `pnpm --filter @repo/scoring-circuit simulate`. The [pair/reset model](../simulation/stm32-sensing-interface.cir)
-checks:
+Use **40us slots**: clear every output low for 10us, disable for 1us, enable one high source for 28us, disable for 1us.
+Sample all seven receivers 38us into each slot. Foil/sabre source order is LEFT_B, RIGHT_B, PISTE; epee uses LEFT_A,
+RIGHT_A, PISTE. This is **120us per source-identified frame**. The 280us seven-source sweep is for characterization
+only. Never power both fencers' sources simultaneously: that loses piste-side discrimination.
 
-- Disconnected input: 0.403V with a chosen 121uA leakage stress, below the 0.556V low boundary.
-- 500-ohm contact: 0.748V with weak 2.25V excitation, resistor tolerance and opposing leakage stress, above 0.651V.
-- Reset enable/input levels: 2.798V and 0.202V.
-- Chosen 10nF cable load: active-low discharge crossed the low boundary after 4.35us. Passive contact release left a
-  **68.33us tail**, so observation blanking and deliberate discharge must be included in scan timing.
+Preserve source identity and timestamps; decode only complete frames and never mix guard/piste data across frames.
+Guard/piste inhibition acts immediately, not through the positive-contact filter. Brownout, capture loss, invalid frames
+and ambiguous topology inhibit scoring and reset qualification.
 
-The [seven-conductor model](../simulation/stm32-conductor-scan.cir) adds foil rest/target/off-target/piste paths, both
-epee tip contacts, tip-plus-piste, sabre target/blade/reciprocal contacts, and a seven-way short. It clears all seven
-conductors low, disables all outputs, then sources exactly one conductor while the others remain high impedance. The
-next slot repeats the clear before selecting another source. Nominal cases pass the comparator envelope, including
-unrelated lines after source handover. The seven-way short passes with each of the seven sources selected; peak modeled
-source current is 15.00mA. A separate 2.25V source/tolerance case now applies the heavier chosen 121uA load per input
-during the scan, rather than only in the static fixture. These are modeled results, not bench measurements.
+The [C contact filter](../../../apps/scoring/firmware/stm32/core/stm32_contact_filter.c) requires at least 250us of
+asserted input before passing it to the existing weapon core. False inputs reset immediately. Invalid, duplicate or
+backward timestamps reset it; sample intervals above 125us restart qualification. **Do not backdate filtered
+assertions.** The core then applies its existing 100us sabre, 2ms epee and 13ms foil minimum.
 
-**The settled leakage-stress gap is corrected:** with the same 121uA-per-input load, weak 2.25V source and resistor
-tolerances, seven shorted inputs now settle at **0.664V**, above the unchanged 0.651V criterion. The 13mV margin is
-small and is not a guaranteed hot-temperature envelope. The transient review found that the former 50us slot sampled
-only **0.638V** under this same stress, failing the unchanged 0.651V criterion. The characterization now uses 75us slots
-(10us discharge, 1us break, 63us excitation, 1us break), sampled at 73us: **0.661V** high and **0.182V** after
-discharge. No board parts or thresholds changed. A complete sweep now takes 525us and can miss contacts between
-observations. This schedule is **not approved scoring firmware timing**; a simple two-sample qualifier on the full sweep
-can take 1.05ms before analog delays, so it is not sufficient evidence for the sabre window. A weapon-specific schedule
-must prioritize the relevant sources and validate pulse phase, duration and discharge behavior before closure.
+Native tests exercise both fencers at every integer-microsecond phase for frame periods 120-125us. They reject 99us
+sabre, 1,999us epee and 12,999us foil pulses, and register 1ms sabre, 10ms epee and 15ms foil pulses before they end.
+Rejection includes 30us analog release extension; detection includes 120us onset/frame-assembly delay. Repeated 60us
+contacts with 165us gaps never qualify, including that tail. This is a bounded filter-plus-core timing test, not a full
+electrical-to-weapon decoder or proof against arbitrarily short interruptions.
 
-The same model now also runs two **225us candidate schedules**, retaining the 75us slot and all seven receivers: LEFT_B
-/ RIGHT_B / PISTE for foil and sabre, and LEFT_A / RIGHT_A / PISTE for epee. After three repetitions, the modeled
-target, rest, blade, reciprocal-target and piste paths still pass the unchanged voltage limits. The heavier seven-way
-leakage case remains at 0.661V high and 0.182V after discharge; peak nominal source current remains 15mA. No circuit
-change is needed for these faster revisit intervals. This is electrical schedule feasibility, not proof of duration
-qualification. An added switched-contact counterexample now demonstrates the problem: a nominal 500-ohm sabre target
-closes for **60us**, opens for **165us**, and repeats. With those closures starting 20us into each 225us cycle, all
-three observations at 73/298/523us still exceed 0.651V. The simulation separately verifies the contact duration and open
-interval. Counting these positive samples as one 450us contact would hide two real interruptions. Passing this
-regression means the counterexample is reproduced, not that the acquisition algorithm is approved. No scoring firmware
-exists here yet, so this is a rejected algorithm assumption rather than a demonstrated firmware bug.
+Run `pnpm --filter @repo/scoring-circuit simulate`. The pair/reset and seven-conductor models cover rest, target,
+off-target, piste, reciprocal targets, crossed blades, seven-way shorts, source changes and both leakage directions.
+With 10nF cable/30pF input stress, the weak seven-short sample is 0.6715V and settled value 0.6784V. The
+positive-leakage clear case reaches 0.5498V, the 500-ohm pair 0.8543V, and disconnected input 0.1222V. The 3.6V
+positive-leakage release tail is 20.72us, below the timing test's 30us allowance. The original 60us/165us interrupted
+fixture now produces high/low/high rather than hiding the interruption.
 
-Do not implement a consecutive-positive-sample qualifier on this schedule. The next timing decision must account for
-breaks during the unobserved intervals, for example by testing a held-excitation/capture approach while preserving
-opponent/piste discrimination. That alternative is not yet implemented or approved and must not silently replace the
-current electrical contract. Broader pulse-phase/duration sweeps, timestamp handling and scoring firmware remain open.
-No comparator, resistor, connector or route changed for this test.
-
-Verification of this addition passed all seven existing simulation models, focused lint/format and circuit-package
-type-checking. Fresh native ERC/DRC/parity remain zero, all 744 continuity checks pass, and the unchanged native 3D
-render was inspected. Repository verification still stops at the scoring coverage shortfall recorded below.
+**The 121uA leakage and 10nF capacitance are chosen stresses, not guaranteed temperature limits.** Clear margin is only
+6mV under that stress. Characterize real cables, thresholds, capture latency, leakage and current on the prototype. The
+filter is implemented and host-tested; physical STM32 capture/driver integration and full weapon/topology decoding are
+not implemented by this change. These checks are not FIE approval or safe externally powered/shared-piste operation.
 
 Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
 
@@ -677,7 +668,7 @@ ground returns join through that corridor without joining board ground. The shar
 behavior and safety remain unverified. The acquisition buffers now have connected supplies, local bypass and all seven
 reset-default resistor networks. All fourteen STM32 drive/enable signals reach those buffers and resistors. Thirteen
 redundant, unconnected display pull-downs have been removed; the connected 10k pull-downs beside the display buffers
-remain. All seven buffer outputs now reach their existing 220-ohm series resistors. All seven 3.3k sense pull-downs now
+remain. All seven buffer outputs now reach their existing 220-ohm series resistors. All seven 1k sense pull-downs now
 have ground returns, and all seven comparator inputs reach those pull-downs. Both fencer headers and the piste header
 now reach their excitation/sense resistor junctions. Every sense series resistor connects to its BAT54S signal pad and
 its own MCU/pull-down path; all seven clamp ground returns are connected. D3-D9's upper-clamp CORE_3V3 connections are
@@ -694,21 +685,14 @@ connected. All thirteen HUB75 buffer outputs now reach the display connector, to
 panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined reset defaults. The
 ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
 
-Remaining before ordering the prototype:
+Before ordering the prototype:
 
-1. Automatic USB power qualification/control is implemented and host-tested. Finish the input-side paper budget,
-   unpowered sensing protection review, and a feasible acquisition schedule for the required contact-duration
-   boundaries. Keep the 220-ohm excitation resistors, 3.3k sense dividers and wired BAT54S prototype candidate unless
-   this review identifies a concrete defect. Do not infer patent clearance or FIE conformity from the topology.
-2. Finish the component/assembly review: remaining footprint/model checks, connector access, mounting, antenna
-   clearance, decoupling and power-current paths. J14 service pads are excluded from assembly. U18's land pattern and
-   pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly requirements need
-   to be accepted by the assembler. The sounder drawing check is complete; fit and soldering remain assembly checks.
-3. Visually review final USB and manufacturing geometry, Gerbers, drills and assembly placement against the selected
-   stackup and supplier conventions. Native ERC/DRC/parity are currently clean, including the completed J1 correction.
-   Temporary Gerber/drill/BOM/placement exports succeed. The first native GerbView layer/drill review is complete as
-   described below, including the USB close-up; supplier-specific assembly review remains. No order or assembly release
-   has been performed.
+1. Electrical paper and assembly-layout reviews are complete for the passive-cable prototype scope. The resistor/timing
+   repair is implemented and tested within the bounded cases above. This is not patent clearance or FIE approval.
+2. Obtain supplier acceptance of the stackup, LTM2884 MSL-4/245 C handling, exposed pads, through-hole assembly and
+   placement-origin conventions. Use an insulating prototype carrier, not connector locator holes as mounts.
+3. Review the supplier's final Gerber/drill/placement preview against the current native export. Local ERC/DRC/parity
+   and assembly review do not approve substitutions or constitute an order. No order has been submitted.
 
 After the assembled prototype arrives, flash U21, verify U5 configuration defaults and bring up the supplies under
 controlled bench conditions. Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply
