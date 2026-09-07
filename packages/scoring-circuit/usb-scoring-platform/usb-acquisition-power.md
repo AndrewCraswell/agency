@@ -9,21 +9,23 @@ treated as proof that a charger is connected.
 
 Laptop mode may require a USB-C source advertising sufficient power; ordinary USB-A adapter compatibility is no longer
 required. The HUB75 remains disconnected. The calculations below allocate the isolated LTM2884 load, not a complete
-host-input power budget. U19's replacement is implemented; automatic source qualification/control remains unfinished.
+host-input power budget. U19's replacement and U21 automatic source qualification/control are implemented and
+host-tested; the assembled-board current and timing measurements remain outstanding.
 
 The replacement still needs source-power detection. With STUSB4500, Type-C current flags report the CC pull-up, whereas
 an explicit PD contract takes precedence. Its source-capability message, including the suspend flag, must be read
 promptly over I2C; the static power-ready outputs do not report that flag. See
 [ST's programming guide, sections 1.7-1.9](https://www.st.com/resource/en/user_manual/um2650-the-stusb4500-software-programing-guide-stmicroelectronics.pdf).
-U21 now provides the controller hardware; its firmware is still required. Do not assume that a powered USB-C requirement
-by itself allows an always-on isolated converter on every PD-capable laptop.
+U21 provides the controller hardware and [firmware](../../../apps/scoring/firmware/power-control/README.md). Do not
+assume that a powered USB-C requirement by itself allows an always-on isolated converter on every PD-capable laptop.
 
 **The owner confirmed one populated board for both modes, without component swaps.** The 5V-only STUSB4500L alternative
 is rejected because it cannot negotiate the full system's 20V supply. Use one USB-C port for laptop power/data or
 standalone PD power. In laptop mode, keep the application/display branch off; enable it only after full-display mode and
 sufficient source power are both established. Do not use source voltage alone to choose the mode. Add the necessary
 power control with the simplest suitable circuit; do not introduce separate laptop-only component populations. This
-choice is resolved. Power-control implementation remains unfinished, rather than blocked on owner input.
+choice is resolved. The implemented policy keeps laptop suspend shutdown enabled and only permits application power
+after a fresh power-only source declaration and accepted 20V/3A contract.
 
 ## Selected supply
 
@@ -50,9 +52,9 @@ All 15 replacement-section components have manufacturer/MPN fields. C44 is remov
 native ERC/DRC with zero violations and zero unconnected items; all 231 footprints and 879 netlist pins match. This does
 not establish loop stability, transient response, hot-plug behavior or fault-temperature performance.
 
-Automatic input-current qualification, the application-power enable policy and the complete startup/suspend budget
-remain to be implemented. Keeping the integrated isolator avoids a separate transformer/rectifier/data-isolator
-redesign; it does not eliminate those system-level responsibilities.
+Automatic source-current qualification and the application-power policy are implemented. The complete startup/suspend
+budget still requires physical measurements. Keeping the integrated isolator avoids a separate
+transformer/rectifier/data-isolator redesign; it does not eliminate those system-level responsibilities.
 
 ## Primary-side control hardware
 
@@ -90,11 +92,10 @@ circuits, J1 feeds, CC lines, primary distribution and regulated isolator feeder
 or characterized; do not power this draft.** The left-edge primary return remains separate from board ground. An absent
 panel is not automatic charger detection, nor permission to turn on the other application loads.
 
-The retained draft proposed separate **5V PDO1-only** and **20V/3A PDO2** programming profiles. That is not the final
-mode-selection implementation: the replacement must support both modes on the same populated board. Q4/Q5 currently
-require PDO2's power-ready and VBUS-enable flags before enabling the application converter; they do not enforce a
-user-selected laptop mode. A PD-capable laptop can supply 20V too. USB enumeration establishes the data session, not
-permission to enable the display. NVM programming and firmware mode control remain unimplemented.
+U21 writes and reads back volatile **5V/1.5A PDO1** and **20V/3A PDO2** profiles on the same populated board. Q4/Q5
+require PDO2's power-ready and VBUS-enable flags; Q6 adds firmware inhibition. A PD-capable laptop can supply 20V too,
+so U21 requires fresh source capabilities declaring no USB communications before requesting display power. It then
+checks the accepted contract. NVM is not rewritten at boot; verify POWER_OK_CFG=10b and REQ_SRC_CURRENT=0 defaults.
 
 ## Limits and calculated load
 
@@ -184,15 +185,15 @@ hardware measurements have been performed.
    negotiated 20V operating point, including startup and transitions; U18 must remain above 4.4V at its pins. The new
    buck-boost topology addresses dropout but has not been measured. Stop capture on undervoltage; do not claim support
    for all laptop/cable combinations or treat the nominal reference circuit as measured loop-stability proof.
-5. With the full-system NVM profile, verify 5V-only sources leave application power off; test 20V negotiation, the
-   nominal 18.0V UVLO/21.84V OVLO thresholds, current limit, loaded startup, PD fallback and detach. Confirm both
-   control flags release correctly and the isolated supplies never connect USB_GND to board GND. Repeat with the
-   laptop-only NVM profile to confirm the populated application branch stays off.
+5. With U21 firmware installed, verify 5V-only sources leave application power off; test 20V negotiation, the nominal
+   18.0V UVLO/21.84V OVLO thresholds, current limit, loaded startup, PD fallback and detach. Confirm both control flags
+   release correctly and the isolated supplies never connect USB_GND to board GND. Repeat with the laptop source
+   advertising USB communications to confirm the populated application branch stays off.
 
 **Decision:** retain the 20mA/75mA isolated-load targets, but re-establish the host-side budget for the replacement
 shared-input circuit. Primary power routing and both USB data trunks are complete at the layout checkpoint; low-input
-margin, NVM programming, firmware enforcement and physical checks remain unfinished. This budget is not USB
-certification or FIE safety proof.
+margin and physical checks remain unfinished; firmware enforcement is implemented and host-tested. This budget is not
+USB certification or FIE safety proof.
 
 The UART transmit pulls add no nets, and the acquisition-side pull fits within the existing power targets. The populated
 sounder now has a 1k piezo discharge resistor and local bypass; these do not authorize sound in laptop mode. Keep its

@@ -39,9 +39,11 @@ U18 and J13 body models remain absent, so this does not establish their mechanic
 stage but stopped on the existing scoring TypeScript coverage thresholds (95.98% lines versus 100% required); no
 repository-wide pass is claimed. Those executable sources were not changed by this hardware checkpoint.
 
-**Still unfinished:** automatic source-power qualification and application-branch control, a complete startup/suspend
-budget, and final manufacturing review. No owner decision is blocking that implementation. One USB-C port, one
-population and no physical mode switch remain the requirements. See [power design](usb-acquisition-power.md).
+**Implemented:** automatic source-power qualification and application-branch control in the
+[U21 firmware](../../../apps/scoring/firmware/power-control/README.md), with native policy/driver tests and an ARM
+cross-build. **Still outstanding:** assembled-board startup/suspend measurements and final manufacturing review. One
+USB-C port, one population and no physical mode switch remain the requirements. See
+[power design](usb-acquisition-power.md).
 
 The owner approved replacing WIZ850io with direct W5500 Ethernet. The Ethernet schematic now contains the W5500,
 reference termination/filtering and crystal circuit, with the existing ESP32 SPI/reset/interrupt nets retained. J13 is a
@@ -434,12 +436,12 @@ support effort.
   Host limits remain 100mA before configuration and 500mA afterward; the isolated-output allocation does not prove those
   input limits. Keep sound/Favero off and the ESP32/Ethernet/IR/HUB75 branch on PD only. Firmware enforcement and
   physical startup/current/suspend/handover checks remain unfinished. Never apply the 20V PD rail to LTM2884.
-- **Mode configuration:** program and read back U5's NVM before bring-up. Full-system profile: PDO1 5V/0.5A, PDO2
-  20V/3A, two PDOs, POWER_OK_CFG=10b, USB_COMM_CAPABLE=1, REQ_SRC_CURRENT=0. Laptop-only units use a PDO1-only profile,
-  with no HUB75 connected and the application branch off. Q4/Q5 require both the PDO2 power flag and the VBUS-path
-  enable flag before releasing U20; its nominal UVLO is 18.0V, OVLO 21.84V and current limit 2.43A. A 20V contract is
-  **not** proof of a charger: a laptop can also offer PD. USB enumeration, not bus silence or PD voltage, establishes a
-  data session. NVM programming and firmware behavior are not implemented or tested here.
+- **Mode configuration:** U21 writes/read-backs volatile PDO1 5V/1.5A and PDO2 20V/3A profiles, enabling PDO2 only after
+  fresh source capabilities declare no USB communications and sufficient fixed 20V power. The accepted RDO is validated
+  before outputs are enabled. Q4/Q5 retain the PDO2/VBUS hardware gates and Q6 adds default-on inhibition. Verify U5
+  factory POWER_OK_CFG=10b and REQ_SRC_CURRENT=0; no boot-time NVM writes or separate board populations. U20 nominal
+  UVLO is 18.0V, OVLO 21.84V and current limit 2.43A. Laptop mode leaves the populated application branch off, with
+  HUB75 disconnected and automatic USB suspend shutdown enabled. Voltage or bus silence never proves a charger.
 - **Low-voltage regulation:** U19 now bucks or boosts to supply U18, which needs at least 4.4V at its pins. The ADI
   reference is rated for 5V/1A output above 3.6V input. This removes the previous buck-only topology limitation; measure
   startup, ripple, loaded voltage and 5V/20V transitions before claiming supported laptop/cable combinations.
@@ -668,7 +670,7 @@ which alone are not complete board safety proof.
 
 Use a sufficiently powered USB-C source, one port and one component population. The owner permits higher cost to finish
 a reliable design; there is no fixed $36 savings target. U19 now uses a buck-boost regulator. No further owner approval
-is needed for those choices; the unfinished power-control circuit is implementation work, not a deferred question.
+is needed for those choices. The power-control circuit and U21 firmware are implemented; physical qualification remains.
 
 ### Earlier component-review checkpoints
 

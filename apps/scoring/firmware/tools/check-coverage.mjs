@@ -20,6 +20,10 @@ export const COVERAGE_POLICY = Object.freeze({
 
 const projects = Object.freeze([
   {
+    name: "power-control",
+    sourceDirectory: join(firmwareRoot, "power-control")
+  },
+  {
     name: "stm32",
     sourceDirectory: join(firmwareRoot, "stm32")
   },
