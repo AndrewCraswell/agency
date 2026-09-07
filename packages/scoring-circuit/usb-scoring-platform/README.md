@@ -12,6 +12,29 @@ libraries.
 routed engineering draft with unresolved release checks, not a completed design. This folder is not consumed by the
 existing prototype export commands.
 
+## Current manufacturing export
+
+Run `./export-manufacturing.ps1` in this directory with KiCad 10 installed. It checks native ERC/DRC and schematic
+parity, then exports the four-layer Gerbers, separate plated/unplated drills, BOM and all-component placement files. It
+stops on missing ordering fields or mismatched assembly references. Through-hole parts are included; bare J14 service
+pads are excluded. Generated files go into a new ignored `output/` directory, never the earlier prototype's
+manufacturing folder. The ZIP contains PCB fabrication layers only; BOM and placement are separate assembly inputs.
+
+The current assembly export has **230 populated references**, each with manufacturer, MPN and footprint. There are 231
+board footprints including J14. This replaces earlier export counts below. No substitutions or supplier part matches are
+approved by this export. Specify **black solder mask** separately in the fabricator's order options; a KiCad 3D color
+does not set the order color. Review supplier rotation conventions, through-hole assembly, U18 handling and programming
+before submitting an order. Do not use the older tscircuit fabrication package for this design.
+
+The current export passed ERC, DRC and native schematic parity with zero reported violations/unconnected items under the
+saved project rules. This pass corrected J14's missing ordering metadata and KiCad's escaped name for unused U21 pad 17;
+no copper geometry or component placement changed. The drill report contains **774 plated holes (four slots) and eight
+unplated holes**. The ZIP was inspected for eleven layer files, both drill files and the Gerber job file. Its nominal
+board is 165 x 100mm, 1.6mm, four copper layers. Supplier stackup approval and placement-preview review remain separate.
+The saved rules ignore missing courtyards and several footprint advisories, so a clean DRC is not proof of every
+component's mechanical clearance. Repository verification still stops at the existing scoring-domain TypeScript coverage
+shortfall; no threshold was lowered.
+
 ## Current power decision and progress
 
 The owner removed the $36 savings target on 2026-09-06: finish the reliable one-port board rather than add circuitry to
@@ -642,10 +665,10 @@ ESP32 input bus, display-enable line, sounder and both Favero repeater circuits 
 
 Remaining before ordering the prototype:
 
-1. Finish automatic USB power qualification/control and its startup/suspend budget, unpowered sensing protection, and a
-   feasible acquisition schedule for the required contact-duration boundaries. Keep the 220-ohm excitation resistors,
-   3.3k sense dividers and wired BAT54S prototype candidate unless this review identifies a concrete defect. Do not
-   infer patent clearance or FIE conformity from the topology.
+1. Automatic USB power qualification/control is implemented and host-tested. Finish the input-side paper budget,
+   unpowered sensing protection review, and a feasible acquisition schedule for the required contact-duration
+   boundaries. Keep the 220-ohm excitation resistors, 3.3k sense dividers and wired BAT54S prototype candidate unless
+   this review identifies a concrete defect. Do not infer patent clearance or FIE conformity from the topology.
 2. Finish the component/assembly review: remaining footprint/model checks, connector access, mounting, antenna
    clearance, decoupling and power-current paths. J14 service pads are excluded from assembly. U18's land pattern and
    pin mapping are reviewed; its manufacturer body model is still missing and its MSL-4/245 C assembly requirements need
@@ -656,13 +679,13 @@ Remaining before ordering the prototype:
    described below, including the USB close-up; supplier-specific assembly review remains. No order or assembly release
    has been performed.
 
-After the assembled prototype arrives, program/read back U5 and bring up the supplies under controlled bench conditions.
-Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply handover, sensing/leakage/timing,
-protection and the application interfaces. Use the [20mA startup / 75mA acquisition budget](usb-acquisition-power.md).
-Those measurements are not prerequisites to ordering the prototype needed to perform them; they remain prerequisites to
-claims about validated operation, safety or sale. Keep fencers disconnected until the appropriate electrical checks
-pass. Acquisition and application share board ground; the computer side is isolated by the modules and copper keepouts,
-which alone are not complete board safety proof.
+After the assembled prototype arrives, flash U21, verify U5 configuration defaults and bring up the supplies under
+controlled bench conditions. Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply
+handover, sensing/leakage/timing, protection and the application interfaces. Use the
+[20mA startup / 75mA acquisition budget](usb-acquisition-power.md). Those measurements are not prerequisites to ordering
+the prototype needed to perform them; they remain prerequisites to claims about validated operation, safety or sale.
+Keep fencers disconnected until the appropriate electrical checks pass. Acquisition and application share board ground;
+the computer side is isolated by the modules and copper keepouts, which alone are not complete board safety proof.
 
 ## Checks performed
 

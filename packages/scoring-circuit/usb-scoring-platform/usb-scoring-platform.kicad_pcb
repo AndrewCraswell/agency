@@ -13112,7 +13112,7 @@
 			(size 1.475 0.4)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "unconnected-(U21-PA10/PA12-Pad17)")
+			(net "unconnected-(U21-PA10{slash}PA12-Pad17)")
 			(uuid "3fa39792-ec7a-4ab2-b49b-74516760e560")
 		)
 		(pad "18" smd roundrect
@@ -53252,6 +53252,14 @@
 				)
 				(justify mirror)
 			)
+		)
+		(property "Manufacturer" "PCB fabrication"
+			(at 0 0 180) (layer "B.Fab") (hide yes)
+			(effects (font (size 1 1)) (justify mirror))
+		)
+		(property "MPN" "Not populated - service pads"
+			(at 0 0 180) (layer "B.Fab") (hide yes)
+			(effects (font (size 1 1)) (justify mirror))
 		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/972b77fe-bd38-49a7-88fc-3c741d64cdb1/441fd316-c9cc-43a2-ba91-69e9b8ee18f5")
 		(attr smd exclude_from_pos_files exclude_from_bom)
