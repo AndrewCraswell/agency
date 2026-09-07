@@ -260,6 +260,14 @@ The repair passes 59 focused tests, scoped lint/format and service/web types. Th
 Maloney and reaches a numeric `1` role marker in Commerce. That marker needs source-footnote review before any
 normalization; no complete 105th acceptance, deployment or import is claimed.
 
+The next read-only 107th alias audit checked Schrock, Lamar Smith and Issa in both editions. Schrock's individual
+summary (`S001151`) and biography supply Edward, not the roster's Ed. Lamar Smith's summary (`S000583`) and
+biography do not supply the roster's middle initial S. Neither edition advertises an Issa individual granule;
+the California delegation summary supplies no Bioguide member metadata. These are source-evidence gaps, not
+exact aliases accidentally omitted by the loader. No inferred aliases or partial imports were added.
+The 105th Commerce `1` marker refers to Pallone's election on February 13, 1997 after an earlier sabbatical;
+unlike the 106th Davis note, it describes ended leave. It must not be discarded through generic digit stripping.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains
