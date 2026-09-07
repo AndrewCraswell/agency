@@ -8,9 +8,11 @@ models without changing or duplicating them in Git. The new RECOM module has its
 [CAD model sources](../assets/cad/SOURCES.md). Native library parts require the installed KiCad footprint and 3D
 libraries.
 
-**Not ready for fabrication, sale, or connection to fencers.** The schematic is a candidate circuit and the PCB is a
-routed engineering draft with unresolved release checks, not a completed design. This folder is not consumed by the
-existing prototype export commands.
+**Ready for prototype supplier review, not released for fabrication, sale, or connection to fencers.** Local electrical
+paper and assembly-layout reviews are complete for the passive-cable bench prototype. Supplier part matching, process
+acceptance and final placement/CAM review are still required before ordering. Finished scoring firmware and physical
+measurements are not prerequisites to ordering the prototype needed for that development. This folder is not consumed by
+the existing ESP32 prototype export commands.
 
 ## Current manufacturing export
 
@@ -712,14 +714,21 @@ connected. All thirteen HUB75 buffer outputs now reach the display connector, to
 panel-blanking network. The one-way display buffers and thirteen input pull-downs now have defined reset defaults. The
 ESP32 input bus, display-enable line, sounder and both Favero repeater circuits are also routed.
 
-Before ordering the prototype:
+Remaining before ordering the prototype:
 
-1. Electrical paper and assembly-layout reviews are complete for the passive-cable prototype scope. The resistor/timing
-   repair is implemented and tested within the bounded cases above. This is not patent clearance or FIE approval.
-2. Obtain supplier acceptance of the stackup, LTM2884 MSL-4/245 C handling, exposed pads, through-hole assembly and
+1. Obtain supplier acceptance of the stackup, LTM2884 MSL-4/245 C handling, exposed pads, through-hole assembly and
    placement-origin conventions. Use an insulating prototype carrier, not connector locator holes as mounts.
-3. Review the supplier's final Gerber/drill/placement preview against the current native export. Local ERC/DRC/parity
-   and assembly review do not approve substitutions or constitute an order. No order has been submitted.
+2. Match every supplier component to the exact BOM MPN/package and review the final Gerber/drill/placement preview
+   against the current native export. Confirm black mask, white silkscreen, four layers and nominal 1.6mm thickness in
+   the order itself. Local ERC/DRC/parity and assembly review do not approve substitutions or constitute an order. No
+   order has been submitted. Follow
+   [JLCPCB's BOM/CPL requirements](https://jlcpcb.com/help/article/advice-for-bom-and-cpl-files-preparation) when
+   importing the native assembly exports; imported footprint origins still need supplier placement review.
+
+The electrical paper and assembly-layout tasks are complete for the passive-cable prototype scope, including the
+resistor/timing repair and C69 via correction. Do not reopen them solely because firmware integration or measurements on
+an assembled board are unfinished. New concrete electrical or layout findings still require correction. This local
+review is not patent clearance, FIE approval or permission to connect fencers.
 
 After the assembled prototype arrives, flash U21, verify U5 configuration defaults and bring up the supplies under
 controlled bench conditions. Measure startup/current/suspend behavior, USB enumeration and signal integrity, supply
