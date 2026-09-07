@@ -17,6 +17,7 @@ endif()
 
 add_library(scoring_stm32_host STATIC
   core/stm32_contact_filter.c
+  core/stm32_conductor_decode.c
   core/stm32_scoring_core.c
   core/stm32_scoring_host.c
   core/stm32_target_startup.c
@@ -55,6 +56,20 @@ add_executable(scoring_stm32g474_target_adapter_tests
   tests/test_stm32g474_target_adapter.c
   target/stm32g474_target_adapter.c
 )
+
+add_executable(scoring_stm32g474_acquisition_tests
+  tests/test_stm32g474_acquisition.c
+  target/stm32g474_acquisition.c
+)
+target_include_directories(scoring_stm32g474_acquisition_tests PRIVATE
+  "${SCORING_FIRMWARE_ROOT}/target" "${SCORING_FIRMWARE_ROOT}/tests" "${SCORING_FIRMWARE_ROOT}/include")
+scoring_native_apply_baseline_warnings(scoring_stm32g474_acquisition_tests)
+add_test(NAME scoring_stm32g474_acquisition_tests COMMAND scoring_stm32g474_acquisition_tests)
+
+add_executable(scoring_stm32_conductor_decode_tests tests/test_stm32_conductor_decode.c)
+target_link_libraries(scoring_stm32_conductor_decode_tests PRIVATE scoring_stm32_host)
+scoring_native_apply_baseline_warnings(scoring_stm32_conductor_decode_tests)
+add_test(NAME scoring_stm32_conductor_decode_tests COMMAND scoring_stm32_conductor_decode_tests)
 
 target_include_directories(scoring_stm32_host_tests PRIVATE
   "${SCORING_FIRMWARE_ROOT}/include"
@@ -133,6 +148,7 @@ if(SCORING_BUILD_STM32G474RE_TARGET)
   add_executable(scoring_stm32g474re
     core/stm32_target_startup.c
     target/stm32g474_target_adapter.c
+    target/stm32g474_acquisition.c
     target/stm32g474_target_main.c
     "${SCORING_STM32_DEVICE_ROOT}/Source/Templates/system_stm32g4xx.c"
     "${SCORING_STM32_DEVICE_ROOT}/Source/Templates/gcc/startup_stm32g474xx.s"

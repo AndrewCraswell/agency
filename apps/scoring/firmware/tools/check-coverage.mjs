@@ -11,7 +11,11 @@ const coverageRoot = resolve(firmwareRoot, "out", "coverage")
 const sourceExtensions = new Set([".c", ".cc", ".cpp", ".cxx"])
 const excludedDirectoryNames = new Set([".cache", "generated", "out", "tests", "vendor"])
 
-export const CORE_SOURCES = Object.freeze(["stm32/core/stm32_scoring_core.c", "stm32/core/stm32_contact_filter.c"])
+export const CORE_SOURCES = Object.freeze([
+  "stm32/core/stm32_scoring_core.c",
+  "stm32/core/stm32_contact_filter.c",
+  "stm32/core/stm32_conductor_decode.c"
+])
 
 export const COVERAGE_POLICY = Object.freeze({
   core: Object.freeze({ lines: 100, functions: 100, branches: 100 }),

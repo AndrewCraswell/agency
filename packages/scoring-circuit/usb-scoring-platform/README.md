@@ -20,8 +20,12 @@ ordering codes. PCB diff review confirms only value/ordering properties changed,
 black-board 3D render was inspected; the previously noted missing body models remain, not newly removed parts. All seven
 electrical models and the C/C++ coverage gate pass; both the new contact filter and existing scoring core have 100%
 line/function/branch coverage. The filter also compiles for Cortex-M4 as a freestanding object, not a complete
-acquisition firmware image. Circuit type-check/lint pass. The latest `pnpm verify` stopped on two lint errors in
-concurrently edited legislation tests before coverage ran; unrelated files were not changed to bypass that failure.
+acquisition firmware image. The subsequent scan driver, conductor decoder and corrected startup adapter also compile as
+freestanding Cortex-M4 objects against the pinned ST CMSIS headers. Decoder/core/filter line, function and branch
+coverage is 100%; driver coverage is 98.21% lines and 100% functions/branches. The C/C++ coverage gate passes. The
+latest `pnpm verify` passed its check stage and all seven electrical models, then failed in concurrently edited
+`fc-theme-base` size-chart Liquid tests (timeouts). Unrelated files and coverage thresholds were not changed to bypass
+it.
 
 Run `./export-manufacturing.ps1` in this directory with KiCad 10 installed. It checks native ERC/DRC and schematic
 parity, then exports the four-layer Gerbers, separate plated/unplated drills, BOM and all-component placement files. It
@@ -57,8 +61,9 @@ avoids continuous I2C traffic after qualification. Actual input/inrush/suspend p
 The acquisition review now has a concrete modeled implementation: 390-ohm/1k sensing, 40us source slots, 120us frames
 and a tested C input filter before the existing weapon core. It repairs the demonstrated interrupted- contact case
 without adding parts or changing routes. See the sensing section for limits and integration rules. The electrical paper
-review and assembly-layout pass are complete for the passive-cable prototype scope. Physical acquisition-driver
-integration, full weapon decoding and bench measurements remain; this is not finished scoring firmware.
+review and assembly-layout pass are complete for the passive-cable prototype scope. Physical acquisition-driver timer
+integration and bench measurements remain; this is not finished scoring firmware. The register-level scan driver and
+conservative frame decoder are now implemented as described below.
 
 Assembly inspection found a real solder-wicking risk: C69's ground via was inside its paste land. It is now outside the
 land at (57.9,136.85)mm with a 0.5mm diameter/0.2mm drill and a short 0.2mm ground trace. It uses existing process
@@ -594,8 +599,29 @@ fixture now produces high/low/high rather than hiding the interruption.
 
 **The 121uA leakage and 10nF capacitance are chosen stresses, not guaranteed temperature limits.** Clear margin is only
 6mV under that stress. Characterize real cables, thresholds, capture latency, leakage and current on the prototype. The
-filter is implemented and host-tested; physical STM32 capture/driver integration and full weapon/topology decoding are
-not implemented by this change. These checks are not FIE approval or safe externally powered/shared-piste operation.
+filter is implemented and host-tested. These checks are not FIE approval or safe externally powered/shared-piste
+operation.
+
+The [STM32 scan driver](../../../apps/scoring/firmware/stm32/target/stm32g474_acquisition.c) now configures the seven
+comparators and performs the clear/break/source/sample/release sequence. It returns only complete three-source frames
+after releasing the outputs. A late transition, backward clock, lost supply permission, locked comparator or timestamp
+overflow shuts down the drive outputs; it never fabricates missed samples. Calls must be serialized and scheduled from
+an actual hardware timer at the returned deadline. Interrupt latency and sequential comparator-read skew still require
+measurement; this is not a claim that a desktop poll loop can meet those deadlines.
+
+The [conductor decoder](../../../apps/scoring/firmware/stm32/core/stm32_conductor_decode.c) maps complete frames to raw
+epee, foil and sabre observations. It rejects missing source responses, incorrect timing/source order, nonreciprocal
+readings and ambiguous crossed-blade/target networks. Guard and piste readings inhibit immediately. Its output still
+requires the existing positive-contact filter before scoring; invalid frames require resetting qualification. This
+conservative prototype interpretation can suppress ambiguous legitimate contacts and is not complete FIE behavior.
+
+Startup output masks were also corrected to match this PCB: PC0-PC6 drive low, PC7-PC12 and PD2 hold active-low buffer
+enables high, and PA2/PA8 hold Favero/audio inactive. USB, UART, SWD and comparator pins are not driven as outputs. The
+previous masks came from an obsolete board and included current USB/comparator pins. The normal target entry point still
+fails closed at its unimplemented startup checks; neither this driver nor decoder is silently enabled in a customer
+firmware image. Hardware-timer dispatch, measured supply validation and USB capture delivery remain integration work. ST
+register selections follow the pinned CMSIS device header and
+[ST's comparator input definitions](https://github.com/STMicroelectronics/stm32g4xx-hal-driver/blob/master/Inc/stm32g4xx_ll_comp.h).
 
 Use physical cord roles when implementing acquisition; older software's abstract conductor names are not a pinout:
 
@@ -610,7 +636,8 @@ the tip. Sabre uses B-C for the weapon and opposing A for the jacket. PISTE is a
 ground. The foil/epee contact roles and unequal spacing follow m.29.2(a) and m.31.3 in the retained
 [FIE material rules](../../../apps/scoring/docs/specifications/fie-material-rules-2026-08-en.pdf). The fixtures
 establish reachable paths, not which redundant physical contact caused them: reciprocal sabre targets plus crossed
-blades can join all six cord wires. Scoring interpretation and the physical-to-core adapter remain unimplemented.
+blades can join all six cord wires. The decoder rejects that ambiguous topology rather than attributing a hit without
+sufficient evidence.
 
 **Prototype decision: retain and wire the existing BAT54S clamps for passive-cable bench development.** No extra
 fault-protection subsystem is added. This is a circuit-selection decision, not power-off/ESD qualification or approval

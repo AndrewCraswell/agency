@@ -18,7 +18,27 @@ typedef struct {
   volatile uint32_t CFGR;
   volatile uint32_t AHB2ENR;
   volatile uint32_t CSR;
+  volatile uint32_t APB2ENR;
 } RCC_TypeDef;
+
+typedef struct { volatile uint32_t CSR; } COMP_TypeDef;
+extern COMP_TypeDef scoring_test_comp[7];
+#define COMP1 (&scoring_test_comp[0])
+#define COMP2 (&scoring_test_comp[1])
+#define COMP3 (&scoring_test_comp[2])
+#define COMP4 (&scoring_test_comp[3])
+#define COMP5 (&scoring_test_comp[4])
+#define COMP6 (&scoring_test_comp[5])
+#define COMP7 (&scoring_test_comp[6])
+#define COMP_CSR_EN (1U << 0U)
+#define COMP_CSR_INMSEL_0 (1U << 4U)
+#define COMP_CSR_INPSEL (1U << 8U)
+#define COMP_CSR_HYST_0 (1U << 16U)
+#define COMP_CSR_BRGEN (1U << 22U)
+#define COMP_CSR_SCALEN (1U << 23U)
+#define COMP_CSR_VALUE (1U << 30U)
+#define COMP_CSR_LOCK (1U << 31U)
+#define RCC_APB2ENR_SYSCFGEN (1U << 0U)
 
 typedef struct {
   volatile uint32_t CTRL;
@@ -41,6 +61,7 @@ typedef struct {
 extern GPIO_TypeDef scoring_test_gpioa;
 extern GPIO_TypeDef scoring_test_gpiob;
 extern GPIO_TypeDef scoring_test_gpioc;
+extern GPIO_TypeDef scoring_test_gpiod;
 extern RCC_TypeDef scoring_test_rcc;
 extern MPU_Type scoring_test_mpu;
 extern SCB_Type scoring_test_scb;
@@ -49,6 +70,7 @@ extern IWDG_TypeDef scoring_test_iwdg;
 #define GPIOA (&scoring_test_gpioa)
 #define GPIOB (&scoring_test_gpiob)
 #define GPIOC (&scoring_test_gpioc)
+#define GPIOD (&scoring_test_gpiod)
 #define RCC (&scoring_test_rcc)
 #define MPU (&scoring_test_mpu)
 #define SCB (&scoring_test_scb)
@@ -57,6 +79,7 @@ extern IWDG_TypeDef scoring_test_iwdg;
 #define RCC_AHB2ENR_GPIOAEN (1U << 0U)
 #define RCC_AHB2ENR_GPIOBEN (1U << 1U)
 #define RCC_AHB2ENR_GPIOCEN (1U << 2U)
+#define RCC_AHB2ENR_GPIODEN (1U << 3U)
 #define RCC_CR_HSION (1U << 8U)
 #define RCC_CR_HSIRDY (1U << 10U)
 #define RCC_CFGR_SW (3U << 0U)

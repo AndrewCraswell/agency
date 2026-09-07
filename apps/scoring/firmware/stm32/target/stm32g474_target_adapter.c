@@ -12,10 +12,11 @@ enum {
   SCORING_STM32_IWDG_UPDATE_LIMIT = 100000U
 };
 
-typedef struct scoring_stm32_candidate_output_group {
+typedef struct scoring_stm32_output_group {
   GPIO_TypeDef *port;
   uint16_t pins;
-} scoring_stm32_candidate_output_group_t;
+  uint16_t high_pins;
+} scoring_stm32_output_group_t;
 
 typedef struct scoring_stm32_target_observations {
   uint32_t reset_flags;
@@ -23,16 +24,18 @@ typedef struct scoring_stm32_target_observations {
 
 static scoring_stm32_target_observations_t target_observations;
 
-/* M0-08 candidate-only ownership: lamps/buzzer and fourteen source/sink enables. */
-static const scoring_stm32_candidate_output_group_t CANDIDATE_SAFE_OUTPUTS[] = {
-  { .port = GPIOA, .pins = 0x1F00U },
-  { .port = GPIOB, .pins = 0x96FCU },
-  { .port = GPIOC, .pins = 0x000FU }
+/* Native USB scoring board: PC0-6 drive low, PC7-12/PD2 OE_N high.
+ * PA2 Favero and PA8 sounder are inactive low. Leave USB, UART, SWD and
+ * every comparator input untouched. Preload levels before enabling outputs.
+ */
+static const scoring_stm32_output_group_t SAFE_OUTPUTS[] = {
+  { .port = GPIOC, .pins = 0x1FFFU, .high_pins = 0x1F80U },
+  { .port = GPIOD, .pins = 0x0004U, .high_pins = 0x0004U },
+  { .port = GPIOA, .pins = 0x0104U, .high_pins = 0U }
 };
 
 _Static_assert(SCORING_STM32_OUTPUT_STATE_SAFE_INACTIVE == 0, "reset output state must be inactive");
-_Static_assert((0x1F00U & 0x0003U) == 0U, "SWD pins are not candidate outputs");
-_Static_assert((0x96FCU & 0x0002U) == 0U, "watchdog service pin is not a scoring output");
+_Static_assert((0x0104U & 0x7E0BU) == 0U, "USB/UART/SWD/analog PA pins must not be outputs");
 
 static uint32_t gpio_mode_mask(uint16_t pins) {
   uint32_t mode_mask = 0U;
@@ -64,21 +67,22 @@ static scoring_status_t assert_safe_outputs(void *context) {
   size_t index;
   (void)context;
 
-  RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN;
+  RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN | RCC_AHB2ENR_GPIODEN;
   (void)RCC->AHB2ENR;
 
-  for (index = 0U; index < (sizeof(CANDIDATE_SAFE_OUTPUTS) / sizeof(CANDIDATE_SAFE_OUTPUTS[0])); index += 1U) {
-    const scoring_stm32_candidate_output_group_t *group = &CANDIDATE_SAFE_OUTPUTS[index];
+  for (index = 0U; index < (sizeof(SAFE_OUTPUTS) / sizeof(SAFE_OUTPUTS[0])); index += 1U) {
+    const scoring_stm32_output_group_t *group = &SAFE_OUTPUTS[index];
     uint32_t mode_mask = gpio_mode_mask(group->pins);
     uint32_t output_mode = gpio_output_mode(group->pins);
+    uint32_t levels = group->high_pins | ((uint32_t)(group->pins & ~group->high_pins) << 16U);
 
-    group->port->BSRR = (uint32_t)group->pins << 16U;
+    group->port->BSRR = levels;
     group->port->MODER &= ~mode_mask;
     group->port->OTYPER &= ~(uint32_t)group->pins;
     group->port->OSPEEDR &= ~mode_mask;
     group->port->PUPDR &= ~mode_mask;
     group->port->MODER |= output_mode;
-    group->port->BSRR = (uint32_t)group->pins << 16U;
+    group->port->BSRR = levels;
   }
 
   return SCORING_STATUS_OK;
@@ -143,7 +147,7 @@ static scoring_status_t validate_supervisor(void *context) {
   target_observations.reset_flags = RCC->CSR;
   RCC->CSR |= RCC_CSR_RMVF;
 
-  /* M0-10 has not selected a readable supervisor-good signal or reset path. */
+  /* The native board does not provide a readable supervisor-good input here. */
   return SCORING_STATUS_UNAVAILABLE;
 }
 
@@ -161,7 +165,7 @@ static scoring_status_t validate_integrity(void *context) {
 static scoring_status_t validate_acquisition_safety(void *context) {
   (void)context;
 
-  /* M0-08/M3-07 still own CubeMX routing, reference, and line-state proof. */
+  /* Bench threshold, rail and interrupt-latency qualification is outstanding. */
   return SCORING_STATUS_UNAVAILABLE;
 }
 
@@ -169,12 +173,12 @@ static scoring_status_t verify_safe_outputs(void *context) {
   size_t index;
   (void)context;
 
-  for (index = 0U; index < (sizeof(CANDIDATE_SAFE_OUTPUTS) / sizeof(CANDIDATE_SAFE_OUTPUTS[0])); index += 1U) {
-    const scoring_stm32_candidate_output_group_t *group = &CANDIDATE_SAFE_OUTPUTS[index];
+  for (index = 0U; index < (sizeof(SAFE_OUTPUTS) / sizeof(SAFE_OUTPUTS[0])); index += 1U) {
+    const scoring_stm32_output_group_t *group = &SAFE_OUTPUTS[index];
     uint32_t mode_mask = gpio_mode_mask(group->pins);
     uint32_t output_mode = gpio_output_mode(group->pins);
 
-    if ((group->port->ODR & group->pins) != 0U || (group->port->MODER & mode_mask) != output_mode) {
+    if ((group->port->ODR & group->pins) != group->high_pins || (group->port->MODER & mode_mask) != output_mode) {
       return SCORING_STATUS_HARDWARE_FAULT;
     }
   }

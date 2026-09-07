@@ -19,6 +19,7 @@
 GPIO_TypeDef scoring_test_gpioa;
 GPIO_TypeDef scoring_test_gpiob;
 GPIO_TypeDef scoring_test_gpioc;
+GPIO_TypeDef scoring_test_gpiod;
 RCC_TypeDef scoring_test_rcc;
 MPU_Type scoring_test_mpu;
 SCB_Type scoring_test_scb;
@@ -45,6 +46,7 @@ static void reset_registers(void) {
   (void)memset(&scoring_test_gpioa, 0, sizeof(scoring_test_gpioa));
   (void)memset(&scoring_test_gpiob, 0, sizeof(scoring_test_gpiob));
   (void)memset(&scoring_test_gpioc, 0, sizeof(scoring_test_gpioc));
+  (void)memset(&scoring_test_gpiod, 0, sizeof(scoring_test_gpiod));
   (void)memset(&scoring_test_rcc, 0, sizeof(scoring_test_rcc));
   (void)memset(&scoring_test_mpu, 0, sizeof(scoring_test_mpu));
   (void)memset(&scoring_test_scb, 0, sizeof(scoring_test_scb));
@@ -101,9 +103,9 @@ static void test_platform_declares_all_startup_gates(void) {
 
 static void test_safe_output_setup_resets_every_candidate_output(void) {
   const scoring_stm32_target_platform_t *platform = scoring_stm32g474_target_platform();
-  const uint16_t pins_a = 0x1F00U;
-  const uint16_t pins_b = 0x96FCU;
-  const uint16_t pins_c = 0x000FU;
+  const uint16_t pins_a = 0x0104U;
+  const uint16_t pins_c = 0x1FFFU;
+  const uint16_t pins_d = 0x0004U;
 
   reset_registers();
   GPIOA->MODER = UINT32_MAX;
@@ -111,21 +113,27 @@ static void test_safe_output_setup_resets_every_candidate_output(void) {
   GPIOC->OSPEEDR = UINT32_MAX;
   GPIOC->PUPDR = UINT32_MAX;
   GPIOA->ODR = pins_a;
-  GPIOB->ODR = pins_b;
+  GPIOB->MODER = UINT32_MAX;
+  GPIOB->ODR = UINT32_MAX;
   GPIOC->ODR = pins_c;
 
   CHECK(platform->assert_safe_outputs(NULL) == SCORING_STATUS_OK);
   CHECK((RCC->AHB2ENR & (RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN)) ==
     (RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN));
   CHECK((GPIOA->MODER & mode_mask(pins_a)) == output_mode(pins_a));
-  CHECK((GPIOB->MODER & mode_mask(pins_b)) == output_mode(pins_b));
+  CHECK(GPIOB->MODER == UINT32_MAX);
+  CHECK(GPIOB->ODR == UINT32_MAX);
+  CHECK(GPIOB->BSRR == 0U);
+  CHECK((GPIOA->MODER & ~mode_mask(pins_a)) == (UINT32_MAX & ~mode_mask(pins_a)));
+  CHECK((GPIOD->MODER & mode_mask(pins_d)) == output_mode(pins_d));
   CHECK((GPIOC->MODER & mode_mask(pins_c)) == output_mode(pins_c));
   CHECK((GPIOA->OTYPER & pins_a) == 0U);
-  CHECK((GPIOB->OTYPER & pins_b) == 0U);
+  CHECK(GPIOB->OTYPER == UINT32_MAX);
   CHECK((GPIOC->OTYPER & pins_c) == 0U);
   CHECK(GPIOA->BSRR == ((uint32_t)pins_a << 16U));
-  CHECK(GPIOB->BSRR == ((uint32_t)pins_b << 16U));
-  CHECK(GPIOC->BSRR == ((uint32_t)pins_c << 16U));
+  CHECK(GPIOC->BSRR == 0x007F1F80U);
+  CHECK(GPIOD->BSRR == 4U);
+  CHECK((RCC->AHB2ENR & RCC_AHB2ENR_GPIODEN) != 0U);
 }
 
 static void test_clock_mpu_and_watchdog_fail_closed_on_unready_hardware(void) {
@@ -178,10 +186,13 @@ static void test_unproven_safety_gates_never_claim_ready(void) {
   CHECK(platform->validate_acquisition_safety(NULL) == SCORING_STATUS_UNAVAILABLE);
 
   CHECK(platform->assert_safe_outputs(NULL) == SCORING_STATUS_OK);
+  /* Register fixture does not implement BSRR side effects. */
+  GPIOC->ODR = 0x1F80U;
+  GPIOD->ODR = 4U;
   CHECK(platform->verify_safe_outputs(NULL) == SCORING_STATUS_OK);
-  GPIOB->ODR = 0x0004U;
+  GPIOD->ODR = 0U;
   CHECK(platform->verify_safe_outputs(NULL) == SCORING_STATUS_HARDWARE_FAULT);
-  GPIOB->ODR = 0U;
+  GPIOD->ODR = 4U;
   GPIOC->MODER = 3U;
   CHECK(platform->verify_safe_outputs(NULL) == SCORING_STATUS_HARDWARE_FAULT);
 }
