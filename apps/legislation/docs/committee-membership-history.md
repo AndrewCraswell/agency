@@ -194,3 +194,20 @@ Final deployment: Trigger `20260907.2` (`6h6szqlk`) from `b2c8460`. Current-Cong
 `run_06g7lojvhe8kll1kqhc9a14001` completed with one edition skipped and zero writes. Final legislation tests passed
 in split runs: 1,788 tests plus 256 Next router acceptance tests and four receiver tests; 60 database-dependent tests
 remain skipped. The router suite initially collided with a concurrent Next build, then passed when rerun alone.
+
+### Prevalidation release and scheduled execution (2026-09-07)
+
+Code `5d19822` is committed and pushed; Trigger `20260907.3` deployed successfully as `yhrw1lnq`.
+All pending historical editions are now parsed and identity-validated before the first roster publication.
+Final legislation coverage run passed 2,068 tests plus four receiver tests; 60 database-dependent tests skipped.
+Root verification passed format, lint, types and unused-code checks but stopped on three unrelated Shopify Liquid
+test timeouts. Pre-commit and pre-push hooks passed without bypass.
+
+The first actual scheduled execution, `run_06g7mcvghtduksemlkqnq8b801`, completed at the September 7 09:30 UTC
+schedule on version `20260907.2`. Its payload identifies schedule `sched_qxezm85n7mjzjt4u7n585`; it read one edition,
+skipped it unchanged, and reported zero writes and zero failures. The next execution is September 8 at 09:30 UTC.
+This closes the first-scheduled-run verification gate.
+
+The 114th backfill `run_06g7n0k81r2g3nnrddsggdt501` was launched on `20260907.3` after full source structure and
+canonical identity reconciliation (210 organizations, 3,546 memberships). Production completion, database checks,
+and unchanged-rerun verification remain pending; launching the task does not close that gate.
