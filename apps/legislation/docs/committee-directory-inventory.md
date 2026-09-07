@@ -185,7 +185,10 @@ The resumed 108th audit reached August 2004: 206 organizations and 3,856 source 
 and 39 remain unresolved across 13 printed names. These are Lindsey O. Graham (7), John W. Warner (1), Bill Frist (6),
 Steven King (3), Ed Schrock (4), Marty Meehan (3), Gresham Barrett (1), Thomas Cole (3), Timothy J. Ryan (3),
 Eni Faleomaveaga (1), Chris Smith (1), Mike Bilirakis (2), and Richard M. Burr (4). No mapped duplicates were found.
-The other three editions failed source transport. This is not complete 108th acceptance; no partial roster was imported.
+The September 7 retry completed the other three editions (2003-07-11, 2003-11-01 and 2004-01-01).
+All four have the identical counts and unresolved-name profile above, with no mapped duplicates. Source transport
+is no longer the blocker. These completed canonical diagnostics do not establish full structural acceptance or
+resolve the 39 identity gaps; no partial roster was imported.
 
 The reconnected 113th source check confirms the nine unresolved entries are not missing metadata downloads:
 GovInfo's Bioguide-backed biographies identify Steven Horsford (`H001066`) and Jerrold Nadler (`N000002`), but
