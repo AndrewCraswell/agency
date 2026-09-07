@@ -5,6 +5,50 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it.each(["’", "'"])("joins the same-column Speaker%ss Designee wrap without assigning a chair role", (apostrophe) => {
+    const source = `${title}\n\nBudget\n\nSaxby Chambliss, of Georgia (Speaker${apostrophe}s    John M. Spratt Jr., of South Carolina.\n  Designee).    Jim McDermott, of Washington.\nChristopher Shays, of Connecticut.    Lynn N. Rivers, of Michigan.\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
+    expect(result[0]?.members).toEqual([
+      { chamber: "lower", name: "Saxby Chambliss", state: "GA" },
+      { chamber: "lower", name: "Christopher Shays", state: "CT" },
+      { chamber: "lower", name: "John M. Spratt Jr.", state: "SC" },
+      { chamber: "lower", name: "Jim McDermott", state: "WA" },
+      { chamber: "lower", name: "Lynn N. Rivers", state: "MI" }
+    ])
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "lower",
+        title,
+        text: source.replace(` (Speaker${apostrophe}s`, "")
+      })
+    ).toThrow("Unparsed GovInfo historical roster entry: Designee).")
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule({
+        chamber: "lower",
+        title,
+        text: source.replace("Designee).", "Unknown).")
+      })
+    ).toThrow("Unrecognized GovInfo membership role")
+  })
+  it.each(["1 vacancy", "2 vacancies"])(
+    "keeps the numbered vacancy %s out of a member name and preserves the neighboring column",
+    (annotation) => {
+      const source = `${title}\n\nBanking and Financial Services\n\nTom Campbell, of California.    Melvin L. Watt, of North Carolina.\nGary L. Ackerman, of New York.\n\nSUBCOMMITTEES\n\nCapital Markets, Securities and Government Sponsored Enterprises\n\nMr. Campbell    Mr. Watt\n${annotation}      Mr. Ackerman\n`
+      const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title, text: source })
+      expect(result[1]?.members).toEqual([
+        { chamber: "lower", name: "Tom Campbell", state: "CA" },
+        { chamber: "lower", name: "Melvin L. Watt", state: "NC" },
+        { chamber: "lower", name: "Gary L. Ackerman", state: "NY" }
+      ])
+      expect(() =>
+        parseGovInfoHistoricalCommitteeGranule({
+          chamber: "lower",
+          title,
+          text: source.replace(annotation, "1 unexplained entry")
+        })
+      ).toThrow("Ambiguous GovInfo abbreviated member Mr. Campbell 1 unexplained entry")
+    }
+  )
   it("keeps Dr. Frist separate from the preceding Gregg row and resolves only the unique parent", () => {
     const source = `${title}\n\nLabor and Human Resources\n\nJudd Gregg, of New Hampshire.    Christopher J. Dodd, of Connecticut.\nBill Frist, of Tennessee.    Jeff Bingaman, of New Mexico.\n\nSUBCOMMITTEES\n\nChildren and Families\n\nMr. Gregg    Mr. Dodd\nDr. Frist    Mr. Bingaman\n`
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })

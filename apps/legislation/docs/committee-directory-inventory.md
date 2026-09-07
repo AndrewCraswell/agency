@@ -227,6 +227,18 @@ Director/Chief Counsel form. Regression coverage preserves the last member and f
 rejecting an unexplained replacement line. All 43 historical parser tests, scoped lint/format, and service/web
 type checks pass. Full 105th source and canonical reconciliation remain pending; this change authorizes no import.
 
+The subsequent live check reaches a 105th numbered vacancy cell (`1 vacancy`) attached to `Mr. Campbell`.
+All three 106th full-edition checks reach the same Budget annotation wrap: Saxby Chambliss's `(Speaker's`
+continues as `Designee).` in the same column. These are formatting blockers, not missing people.
+The bounded parser repair ignores only exact numbered vacancy cells and joins the designation only with its
+matching preceding fragment. A Speaker's designation alone is not a chair role; explicit vice-chair text remains
+a vice-chair role. Unknown continuations still fail closed. Neither Congress is accepted for import yet.
+This batch passes 53 focused parser/assignment tests, scoped lint/format, and service/web type checks.
+Root verification passes the check stage, then stops at the unrelated scoring coverage thresholds.
+The live 105th retry passes the vacancy boundary and reaches ambiguous `Mr. Ney` matching four parent candidates;
+the next investigation is surname-boundary matching, not an alias. All three 106th retries pass the designation
+and reach an unhandled `*` role annotation in Commerce. No database writes or deployment were performed.
+
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
 accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains

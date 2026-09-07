@@ -262,7 +262,7 @@ function memberCells(lines: readonly string[]): string[] {
         cells.push("")
         continue
       }
-      if (cell === "´") {
+      if (cell === "´" || /^[1-9]\d* vacanc(?:y|ies)\.?$/i.test(cell)) {
         cells.push("")
         continue
       }
@@ -291,7 +291,9 @@ function memberCells(lines: readonly string[]): string[] {
       const isWrappedRole =
         /^(?:Ranking (?:Minority )?Member|Vice Chair(?:man|woman)?|Member|Chairman|Chairwoman|Chair|officio|Leader|Whip)\.?$/i.test(
           cell
-        ) || /^\(Speaker[’']s Designee\s*\/\s*Vice Chairman\)\.?$/i.test(cell)
+        ) ||
+        /^\(Speaker[’']s Designee\s*\/\s*Vice Chairman\)\.?$/i.test(cell) ||
+        (/\(Speaker[’']s$/.test(previous ?? "") && /^Designee\)\.?$/.test(cell))
       if (
         /^(?:[A-Za-z].*?, of(?: |$)|(?:Mr|Mrs|Ms|Miss|Dr)\.|Vacan)/.test(cell) ||
         column.length === 0 ||
@@ -355,6 +357,10 @@ function normalizeName(name: string) {
 }
 function memberRole(value: string | undefined): string | undefined {
   if (!value) {
+    return undefined
+  }
+  // This identifies the appointing authority, not a chair or vice-chair office.
+  if (/^\(Speaker[’']s Designee\)\.?$/i.test(value.trim())) {
     return undefined
   }
   if (/ranking/i.test(value)) {
