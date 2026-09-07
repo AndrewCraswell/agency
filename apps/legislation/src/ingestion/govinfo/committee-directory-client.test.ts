@@ -3,6 +3,44 @@ import { RetryingHttpClient } from "../http-client.js"
 import { GovInfoCommitteeDirectoryClient } from "./committee-directory-client.js"
 
 describe("GovInfoCommitteeDirectoryClient", () => {
+  it.each([105, 114, 115])("requires advertised committee PDFs for historical Congress %i", async (congress) => {
+    const packageId = "CDIR-2018-07-27"
+    const base = `https://api.govinfo.gov/packages/${packageId}/granules`
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            nextPage: null,
+            granules: [
+              {
+                granuleId: "senate",
+                granuleLink: `${base}/senate/summary`,
+                title: "STANDING COMMITTEES OF THE SENATE"
+              },
+              { granuleId: "house", granuleLink: `${base}/house/summary`, title: "STANDING COMMITTEES OF THE HOUSE" }
+            ]
+          })
+        )
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ download: { txtLink: `${base}/senate/text` } })))
+    const client = new GovInfoCommitteeDirectoryClient({
+      apiKey: "test-key",
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+    await expect(
+      client.getRecords({
+        congress,
+        packageId,
+        issuedAt: new Date("2018-07-27"),
+        lastModified: new Date("2026-07-14"),
+        sourceUrl: new URL(base),
+        textUrl: new URL(base)
+      })
+    ).rejects.toThrow("no advertised PDF")
+    expect(request).toHaveBeenCalledTimes(2)
+  })
+
   it("discovers historical editions modified after their Congress ended", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(

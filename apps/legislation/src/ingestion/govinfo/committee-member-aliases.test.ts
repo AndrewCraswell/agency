@@ -37,6 +37,38 @@ function harness(responses: unknown[]) {
 }
 
 describe("same-directory committee member aliases", () => {
+  it("emits no aliases for an unlinked member alongside explicitly identified members", async () => {
+    const { run } = harness([
+      { nextPage: null, granules: [granule] },
+      {
+        ...summary,
+        members: [
+          { congress: "117", chamber: "H", state: "FL", name: [{ parsed: "Unlinked Person" }] },
+          ...summary.members
+        ]
+      }
+    ])
+    const aliases = await run()
+    expect(aliases.map((alias) => alias.name)).toEqual(["C. SCOTT FRANKLIN", "Scott Franklin"])
+    expect(aliases.every((alias) => alias.personId === "person:congress:f000472")).toBe(true)
+  })
+
+  it("still validates scope for unlinked members", async () => {
+    const { run } = harness([
+      { nextPage: null, granules: [granule] },
+      { ...summary, members: [{ congress: "116", chamber: "H", state: "FL", name: [{ parsed: "Unlinked Person" }] }] }
+    ])
+    await expect(run()).rejects.toThrow("differs from its requested scope")
+  })
+
+  it("rejects a malformed provided BioGuide ID", async () => {
+    const { run } = harness([
+      { nextPage: null, granules: [granule] },
+      { ...summary, members: [{ ...summary.members[0], bioGuideId: "not-an-id" }] }
+    ])
+    await expect(run()).rejects.toThrow(/bioGuideId/)
+  })
+
   it("flattens exact source name arrays and deduplicates repeated values", async () => {
     const { run } = harness([
       { nextPage: null, granules: [granule] },
@@ -51,8 +83,8 @@ describe("same-directory committee member aliases", () => {
       }
     ])
     expect(await run()).toEqual([
-      { name: "C. SCOTT FRANKLIN", personId: "person:congress:f000472" },
-      { name: "Scott Franklin", personId: "person:congress:f000472" }
+      { name: "C. SCOTT FRANKLIN", personId: "person:congress:f000472", state: "FL", chamber: "lower" },
+      { name: "Scott Franklin", personId: "person:congress:f000472", state: "FL", chamber: "lower" }
     ])
   })
 
@@ -80,8 +112,8 @@ describe("same-directory committee member aliases", () => {
       summary
     ])
     expect(await run()).toEqual([
-      { name: "C. SCOTT FRANKLIN", personId: "person:congress:f000472" },
-      { name: "Scott Franklin", personId: "person:congress:f000472" }
+      { name: "C. SCOTT FRANKLIN", personId: "person:congress:f000472", state: "FL", chamber: "lower" },
+      { name: "Scott Franklin", personId: "person:congress:f000472", state: "FL", chamber: "lower" }
     ])
     expect(request).toHaveBeenCalledTimes(3)
     expect(new Headers(request.mock.calls[0]?.[1]?.headers).get("X-Api-Key")).toBe("test-key")
@@ -136,13 +168,13 @@ describe("same-directory committee member aliases", () => {
     const { request, run } = harness([
       {
         nextPage: null,
-        granules: Array.from({ length: 201 }, (_, index) => ({
+        granules: Array.from({ length: 601 }, (_, index) => ({
           granuleId: `${packageId}-FL-H-${index}`,
           granuleLink: `${base}/${packageId}-FL-H-${index}/summary`
         }))
       }
     ])
-    await expect(run()).rejects.toThrow("exceeds 200 individual summaries")
+    await expect(run()).rejects.toThrow("exceeds 600 individual summaries")
     expect(request).toHaveBeenCalledOnce()
   })
 })

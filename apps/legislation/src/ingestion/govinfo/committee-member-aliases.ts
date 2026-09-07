@@ -16,7 +16,10 @@ const summarySchema = z.object({
         congress: z.string(),
         chamber: z.enum(["H", "S"]),
         state: z.string(),
-        bioGuideId: z.string().regex(/^[A-Za-z]\d{6}$/),
+        bioGuideId: z
+          .string()
+          .regex(/^[A-Za-z]\d{6}$/)
+          .optional(),
         name: z.array(
           z.object({
             parsed: nameFieldSchema,
@@ -37,7 +40,7 @@ export async function getGovInfoCommitteeMemberAliases(options: {
   packageId: string
   congress: number
   candidates: readonly { state: string; chamber: CongressionalChamber }[]
-}): Promise<{ name: string; personId: string }[]> {
+}): Promise<{ name: string; personId: string; state: string; chamber: CongressionalChamber }[]> {
   if (
     !/^CDIR-\d{4}-\d{2}-\d{2}$/.test(options.packageId) ||
     !Number.isSafeInteger(options.congress) ||
@@ -95,14 +98,14 @@ export async function getGovInfoCommitteeMemberAliases(options: {
       const chamber = match[2] === "S" ? "S" : "H"
       if (requested.has(`${state}-${chamber}`)) {
         selected.set(granule.granuleId, { url: granule.granuleLink, state, chamber })
-        if (selected.size > 200) {
-          throw new Error("GovInfo member alias request exceeds 200 individual summaries")
+        if (selected.size > 600) {
+          throw new Error("GovInfo member alias request exceeds 600 individual summaries")
         }
       }
     }
     next = page.nextPage
   }
-  const aliases = new Map<string, { name: string; personId: string }>()
+  const aliases = new Map<string, { name: string; personId: string; state: string; chamber: CongressionalChamber }>()
   for (const [granuleId, granule] of selected) {
     const summary = summarySchema.parse(await getJson(granule.url, `${basePath}/${granuleId}/summary`))
     if (summary.packageId !== options.packageId || summary.granuleId !== granuleId) {
@@ -116,11 +119,20 @@ export async function getGovInfoCommitteeMemberAliases(options: {
       ) {
         throw new Error("GovInfo member alias Congress, chamber, or state differs from its requested scope")
       }
+      if (member.bioGuideId === undefined) {
+        continue
+      }
       const personId = `person:congress:${member.bioGuideId.toLowerCase()}`
       for (const names of member.name) {
         for (const name of Object.values(names).flatMap((value) => (Array.isArray(value) ? value : [value]))) {
           if (name !== undefined && name.trim() !== "") {
-            aliases.set(JSON.stringify([personId, name]), { name, personId })
+            const chamber = member.chamber === "S" ? "upper" : "lower"
+            aliases.set(JSON.stringify([personId, name, member.state, chamber]), {
+              name,
+              personId,
+              state: member.state,
+              chamber
+            })
           }
         }
       }

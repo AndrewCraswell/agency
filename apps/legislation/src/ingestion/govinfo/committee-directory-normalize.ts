@@ -14,7 +14,10 @@ import type {
 } from "./committee-directory-parser.js"
 
 type PersonRow = Pick<typeof people.$inferSelect, "familyName" | "givenName" | "id" | "name">
-type AliasRow = Pick<typeof personAliases.$inferSelect, "name" | "personId">
+type AliasRow = Pick<typeof personAliases.$inferSelect, "name" | "personId"> & {
+  state?: string
+  chamber?: CongressionalChamber
+}
 type TermRow = Pick<typeof legislativeTerms.$inferSelect, "chamber" | "district" | "isActive" | "personId" | "sourceId">
 
 export interface GovInfoPersonCatalog {
@@ -180,12 +183,16 @@ function crossCheckedPrintedName(
 interface IndexedPerson {
   chamber: CongressionalChamber
   names: Set<string>
+  scopedNames: { names: Set<string>; state: string }[]
   personId: string
 }
 
 function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): IndexedPerson[] {
   const aliasesByPerson = new Map<string, string[]>()
   for (const alias of catalog.aliases) {
+    if (alias.state !== undefined || alias.chamber !== undefined) {
+      continue
+    }
     const aliases = aliasesByPerson.get(alias.personId) ?? []
     aliases.push(alias.name)
     aliasesByPerson.set(alias.personId, aliases)
@@ -208,6 +215,11 @@ function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): Inde
       {
         chamber,
         names: new Set(names.flatMap((name) => (name === undefined ? [] : nameVariants(name)))),
+        scopedNames: catalog.aliases.flatMap((alias) =>
+          alias.personId === person.id && alias.state !== undefined && alias.chamber === chamber
+            ? [{ names: new Set(nameVariants(alias.name)), state: alias.state }]
+            : []
+        ),
         personId: person.id
       }
     ]
@@ -218,6 +230,20 @@ function matchPerson(member: GovInfoCommitteeMember, people: readonly IndexedPer
   // Directory district annotations contain typos and Congress.gov omits some at-large
   // districts. Require a unique full-name identity within the Congress and chamber.
   const names = nameVariants(member.name)
+  const scopedMatches = new Set(
+    people
+      .filter(
+        (person) =>
+          person.chamber === member.chamber &&
+          person.scopedNames.some(
+            (alias) => alias.state === member.state && names.some((name) => alias.names.has(name))
+          )
+      )
+      .map((person) => person.personId)
+  )
+  if (scopedMatches.size > 0) {
+    return scopedMatches.size === 1 ? [...scopedMatches][0] : undefined
+  }
   const matches = new Set(
     people
       .filter((person) => person.chamber === member.chamber && names.some((name) => person.names.has(name)))
@@ -246,6 +272,8 @@ function normalizeName(value: string): string {
       // PDF text may emit a spacing acute accent separately (Luja´n).
       // Remove it before NFKD expands it into a space and combining mark.
       .replaceAll("\u00b4", "")
+      // A detached spacing tilde can separate the letters in Fortun˜ o.
+      .replaceAll(/([A-Za-z])\u02dc\s*(?=[A-Za-z])/g, "$1")
       .replaceAll("\u0131", "i")
       .normalize("NFKD")
       .replaceAll(/\p{Diacritic}/gu, "")

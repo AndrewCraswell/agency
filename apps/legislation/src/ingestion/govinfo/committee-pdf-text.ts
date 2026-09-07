@@ -55,7 +55,7 @@ export async function extractGovInfoCommitteePdfText(bytes: Uint8Array): Promise
           spaces = gap > 15 ? 4 : 1
         }
         if (
-          row.text.includes(", of ") &&
+          /, (?:of )?[A-Za-z]/.test(row.text) &&
           /^[A-Z]/.test(item.text) &&
           rightColumnStart !== undefined &&
           row.right < rightColumnStart + 1 &&

@@ -16,8 +16,12 @@ states.set("northern mariana islands", "MP")
 // Printed state typo in the 115th Senate directory; it is not a new jurisdiction.
 states.set("nebraksa", "NE")
 const stateNames = [...states.keys()].sort((a, b) => b.length - a.length).join("|")
-const fullMember = new RegExp(`^(.+?), (?:of (?:the )?)?(${stateNames})(?:[.,]?\\s*(.*))?$`, "i")
-const memberWithoutOf = new RegExp(`^.+?, (${stateNames})\\.?$`, "i")
+const fullMember = new RegExp(`^(.+?)(?:,|\\.)? (?:of (?:the )?)?(${stateNames})(?:[.,]?\\s*(.*))?$`, "i")
+const memberWithoutOf = new RegExp(
+  `^.+?, (${stateNames})(?:\\.|, (?:Chair(?:man|woman)?|Vice Chair(?:man|woman)?|Ranking (?:Minority )?Member)\\.?)?$`,
+  "i"
+)
+const memberWithOf = new RegExp(`^.+?[,\\.]?\\s+of (?:the )?(?:${stateNames})(?=[.,\\s]|$)`, "i")
 export type HistoricalCommitteeParserOptions = {
   resolveAbbreviatedMember?: (context: {
     name: string
@@ -58,10 +62,10 @@ function parseGranule(
     .replaceAll(/\[[\s\S]*?\]/g, "")
     .replaceAll(/\(No Vice Chairman\)\.?/gi, "")
     .replaceAll(/\(No Subcommittees\)\.?/gi, "")
-    .replaceAll(/,´(?=\s+of\b)/g, ",")
+    .replaceAll(/,´\s*(?=of\b)/g, ", ")
     .replaceAll(/^[ \t]*´[ \t]*$/gm, "")
     // These printed HELP headings touch the preceding roster at a page boundary.
-    .replaceAll(/^[ \t]+(Retirement and Aging|Primary Health and Aging)[ \t]*$/gm, "\n\n$1\n\n")
+    .replaceAll(/^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere)[ \t]*$/gm, "\n\n$1\n\n")
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
     .replaceAll(/^[ \t]*SUBCOMMITTEES[ \t]*$/gm, "\n\nSUBCOMMITTEES\n\n")
   const partyBoundary =
@@ -80,7 +84,7 @@ function parseGranule(
   for (const block of text.split(/\n\s*\n/).filter((part) => part.trim())) {
     const lines = block.split("\n").filter((line) => line.trim())
     const joined = lines.map((line) => line.trim()).join(" ")
-    if (/^Vacant(?:,|\s|$)/i.test(joined)) {
+    if (/^Vacant(?:,|\s|$)/i.test(joined) || /^TBD, (?:Chair|Chairman|Chairwoman)\.?$/i.test(joined)) {
       continue
     }
     if (
@@ -111,8 +115,9 @@ function parseGranule(
     const firstMemberLine = lines.findIndex(
       (line) =>
         !/\.—|\.\s*--/.test(line) &&
-        (/,\s+of (?:the )?[A-Z]|^(?:Mr|Mrs|Ms|Miss)\./.test(line.trim()) ||
-          (!/\d/.test(line) && memberWithoutOf.test(line.trim())))
+        (/^(?:Mr|Mrs|Ms|Miss)\./.test(line.trim()) ||
+          memberWithOf.test(line.trim()) ||
+          (!/\d/.test(line) && memberWithoutOf.test(line.trim().split(/\s{2,}/)[0] ?? "")))
     )
     const rosterLines = firstMemberLine > 0 ? lines.slice(firstMemberLine) : lines
     if (firstMemberLine > 0) {
@@ -133,7 +138,7 @@ function parseGranule(
     }
     const cells = firstMemberLine < 0 ? [] : memberCells(rosterLines)
     const hasMembers = cells.some(
-      (cell) => /,\s+of (?:the )?[A-Z]|^(?:Mr|Mrs|Ms|Miss)\./.test(cell) || fullMember.test(cell)
+      (cell) => /^(?:Mr|Mrs|Ms|Miss)\./.test(cell) || memberWithOf.test(cell) || memberWithoutOf.test(cell)
     )
     if (hasMembers && isStaff && !isPartyOrganization && !/\.\s*--/.test(joined)) {
       throw new Error(`GovInfo historical member block remains in staff scope: ${joined.slice(0, 100)}`)
@@ -198,7 +203,7 @@ function parseGranule(
       (!/\b\d{3,}\b|:|\.--|\.—|^\(|\.$/.test(joined) || /^Select Committee on [A-Za-z0-9 ,’'-]+$/.test(joined)) &&
       !/^\(?The (?:chair|committee)/i.test(joined)
     ) {
-      heading = joined
+      heading = heading?.endsWith(",") && joined.startsWith("and ") ? `${heading} ${joined}` : joined
       isExOfficioBlock = false
       isPartyOrganization = /^(?:(?:Senate|House) )?(?:Democratic|Republican)\b/i.test(joined)
       if (isPartyOrganization) {
@@ -340,7 +345,7 @@ function memberRole(value: string | undefined): string | undefined {
   if (/^(?:Democratic|Republican|Majority|Minority) (?:Leader|Whip)\.?$/i.test(value)) {
     return value.toLowerCase().replace(/\.$/, "").replaceAll(" ", "-")
   }
-  if (value.trim() === "") {
+  if (value.trim() === "" || value.trim() === "´") {
     return undefined
   }
   throw new Error(`Unrecognized GovInfo membership role: ${value}`)

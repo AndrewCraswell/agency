@@ -134,9 +134,9 @@ export class GovInfoCommitteeDirectoryClient {
         http: this.#http,
         packageId: directoryPackage.packageId,
         includeAssignments: true,
-        // These editions' advertised HTML loses portions of printed names.
+        // Historical editions' advertised HTML loses portions of printed names.
         // Read the same official granules from their coordinate-preserving PDFs.
-        ...(directoryPackage.congress >= 116 ? { rendition: "pdf" } : {})
+        rendition: "pdf"
       })
       return parseGovInfoHistoricalCommitteeText(
         granules.filter((granule) => !granule.title.startsWith("ASSIGNMENTS OF")),

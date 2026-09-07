@@ -13,6 +13,60 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it("joins a detached PDF tilde to its word without changing the person's name", () => {
+    const source = catalog()
+    source.people[0] = {
+      id: source.people[0]!.id,
+      name: "Luis G. Fortuño",
+      givenName: "Luis G.",
+      familyName: "Fortuño"
+    }
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Luis G. Fortun˜ o"
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, source, new Date()).unmatched).toEqual([])
+  })
+
+  it("disambiguates identical names only with exact same-directory state and chamber aliases", () => {
+    const source = catalog()
+    source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+    source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+    const scopedCatalog = {
+      ...source,
+      aliases: [
+        { name: "Jane Q. Senator", personId: "person:congress:s000001", state: "WA", chamber: "upper" as const },
+        { name: "Jane Q. Senator", personId: "person:congress:s000002", state: "OR", chamber: "upper" as const }
+      ]
+    }
+    const input = [records()[0]!]
+    const result = normalizeGovInfoCommitteeDirectory(input, directoryPackage, scopedCatalog, new Date())
+    expect(result.unmatched).toEqual([])
+    expect(result.snapshot.memberships[0]?.personId).toBe("person:congress:s000001")
+    input[0]!.members[0]!.state = "CA"
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, scopedCatalog, new Date()).unmatched
+    ).toHaveLength(1)
+  })
+
+  it("does not apply a source-scoped alias to another state or chamber", () => {
+    const source = catalog()
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Janey Senator"
+    const wrongState = {
+      ...source,
+      aliases: [{ name: "Janey Senator", personId: "person:congress:s000001", state: "OR", chamber: "upper" as const }]
+    }
+    const wrongChamber = {
+      ...source,
+      aliases: [{ name: "Janey Senator", personId: "person:congress:s000001", state: "WA", chamber: "lower" as const }]
+    }
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, wrongState, new Date()).unmatched).toHaveLength(
+      1
+    )
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, wrongChamber, new Date()).unmatched
+    ).toHaveLength(1)
+  })
+
   it("matches existing people and emits a complete organization-only snapshot", () => {
     const result = normalizeGovInfoCommitteeDirectory(records(), directoryPackage, catalog(), new Date("2026-08-26"))
 

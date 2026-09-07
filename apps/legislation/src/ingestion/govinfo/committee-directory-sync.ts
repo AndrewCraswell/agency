@@ -13,8 +13,12 @@ import {
 import { jurisdictionId, legislativeSessionId } from "../../legislation/identifiers.js"
 import { RetryingHttpClient } from "../http-client.js"
 import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
-import { GovInfoCommitteeDirectoryClient } from "./committee-directory-client.js"
-import { normalizeGovInfoCommitteeDirectory, type GovInfoPersonCatalog } from "./committee-directory-normalize.js"
+import { GovInfoCommitteeDirectoryClient, type GovInfoDirectoryPackage } from "./committee-directory-client.js"
+import {
+  normalizeGovInfoCommitteeDirectory,
+  type GovInfoCommitteeNormalizationResult,
+  type GovInfoPersonCatalog
+} from "./committee-directory-normalize.js"
 import {
   committeeRosterFingerprint,
   directoryDetectionDate,
@@ -81,6 +85,10 @@ export async function executeGovInfoCommitteeSynchronization(
       let applied = checkpoint?.issuedAt
       let packageId = checkpoint?.packageId
       const catalog = await loadCatalog(input.database)
+      const validated: {
+        directoryPackage: GovInfoDirectoryPackage
+        normalized: GovInfoCommitteeNormalizationResult
+      }[] = []
       for (const directoryPackage of packages) {
         const records = await client.getRecords(directoryPackage)
         counts.read += 1
@@ -110,6 +118,11 @@ export async function executeGovInfoCommitteeSynchronization(
             `GovInfo package ${directoryPackage.packageId} has ${normalized.unmatched.length} unmatched committee members: ${examples}`
           )
         }
+        validated.push({ directoryPackage, normalized })
+      }
+      // Reject source/identity failures in later editions before publishing any roster.
+      // Individual snapshot/checkpoint commits still make database failures resumable.
+      for (const { directoryPackage, normalized } of validated) {
         const fingerprint = committeeRosterFingerprint(normalized.snapshot.memberships)
         if (
           observation === undefined &&

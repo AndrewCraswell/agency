@@ -150,6 +150,22 @@ fail validation. The printed `Benajmin L. Cardin` and `Thom Tills` corrections a
 correctly spelled names elsewhere in the same edition, same state/chamber, and a unique canonical identity.
 No 115th memberships were written; the October edition remains unvalidated.
 
+### Complete-edition prevalidation (2026-09-07)
+
+Historical Congresses now use their advertised coordinate-ordered PDFs. Before publishing any pending edition,
+the importer parses and reconciles every pending edition for that Congress. Source or identity failures therefore
+write no roster snapshots; database failures remain resumable through atomic per-edition checkpoints.
+
+The corrected 114th edition passes full structure and identity review: 210 organizations, 42 parents, and 3,546
+distinct memberships, with zero unmatched people. Review recovered LoBiondo's CIA subcommittee chair entry and
+corrected truncated Transportation and Small Business headings. Production import is still a separate gate.
+
+The bounded biography scan permits 600 summaries and uses explicit state/chamber identity constraints. Missing
+BioGuide IDs provide no aliases; they do not bypass final unmatched-member rejection. Current unresolved gates:
+105 `Aschcroft`; 106 `Mississppi`; 107 `Masschusetts`; 108 truncated District of Columbia heading;
+109 52 unmatched assignments; 110 nine unmatched assignments; 111–112 full review pending;
+113 two malformed annotated headings; 115 October isolated accent cell; 117 stale Udall source entry.
+
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.
 

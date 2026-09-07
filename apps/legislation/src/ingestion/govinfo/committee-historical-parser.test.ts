@@ -155,16 +155,62 @@ describe("historical GovInfo printed rosters", () => {
       parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: fixture })
     )
   })
-  it.each(["Retirement and Aging", "Primary Health and Aging"])("separates the touching HELP heading %s", (name) => {
+  it.each(["Retirement and Aging", "Primary Health and Aging", "The Western Hemisphere"])(
+    "separates the touching heading %s",
+    (name) => {
+      const source = fixture.replace(
+        "\n\n                                  STAFF",
+        `\n                    ${name}\n                  Mr. Santorum, Chairman\n\nMs. Landrieu\n\n                                  STAFF`
+      )
+      const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+      expect(result).toHaveLength(3)
+      expect(result[1]?.members).toHaveLength(3)
+      expect(result[2]).toMatchObject({ name, parentName: "Agriculture", classification: "subcommittee" })
+      expect(result[2]?.members).toHaveLength(2)
+    }
+  )
+  it.each(["Calvin M. Dooley of California.", "Bob Graham. of Florida.", "Peter Welch,´of Vermont."])(
+    "reads the full printed name despite separator formatting: %s",
+    (member) => {
+      const source = fixture.replace("Richard G. Lugar, of Indiana, Chairman", member)
+      const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+      expect(result[0]?.members).toHaveLength(5)
+      expect(result[0]?.members[0]?.name).toBe(member.split(/(?:,|\. of| of)/)[0])
+    }
+  )
+  it.each(["Department of Defense", "District of Columbia", "Indian, Insular and Alaska Native Affairs"])(
+    "does not mistake a heading containing of or a state name for a person: %s",
+    (name) => {
+      const source = fixture.replace("Forestry and Conservation", name)
+      const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+      expect(result).toHaveLength(2)
+      expect(result[1]).toMatchObject({ name, parentName: "Agriculture", classification: "subcommittee" })
+      expect(result[1]?.members).toHaveLength(3)
+    }
+  )
+  it("preserves a chair whose printed state omits 'of'", () => {
+    const source = fixture.replace("Richard G. Lugar, of Indiana, Chairman", "Frank A. LoBiondo, New Jersey, Chair")
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[0]?.members[0]).toEqual({ chamber: "upper", name: "Frank A. LoBiondo", state: "NJ", role: "chair" })
+  })
+  it("retains the organization heading across a TBD chair placeholder", () => {
+    const source = fixture.replace("Mr. Santorum, Chairman", "TBD, Chair")
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[1]?.name).toBe("Forestry and Conservation")
+    expect(result[1]?.members).toHaveLength(2)
+  })
+  it("joins the comma-ended heading continuation across a printed blank line", () => {
     const source = fixture.replace(
-      "\n\n                                  STAFF",
-      `\n                    ${name}\n                  Mr. Santorum, Chairman\n\nMs. Landrieu\n\n                                  STAFF`
+      "Forestry and Conservation",
+      "Transportation, Housing and Urban Development,\n\n                  and Related Agencies"
     )
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
-    expect(result).toHaveLength(3)
-    expect(result[1]?.members).toHaveLength(3)
-    expect(result[2]).toMatchObject({ name, parentName: "Agriculture", classification: "subcommittee" })
-    expect(result[2]?.members).toHaveLength(2)
+    expect(result[1]?.name).toBe("Transportation, Housing and Urban Development, and Related Agencies")
+  })
+  it("ignores a detached accent after an otherwise complete member", () => {
+    const source = fixture.replace("Tom Harkin, of Iowa.", "Tom Harkin, of Iowa.´")
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[0]?.members).toContainEqual({ chamber: "upper", name: "Tom Harkin", state: "IA" })
   })
   it("excludes the National Republican Senatorial Committee at its explicit boundary", () => {
     const source = fixture + "\n National Republican Senatorial Committee\n\nJohn Person, of Iowa, Chair\n"

@@ -29,4 +29,24 @@ describe("GovInfo PDF coordinate reading order", () => {
     expect(result).toContain("Jane Person (WA) CHAIR    John Person (OR)")
     expect(destroy).toHaveBeenCalledOnce()
   })
+  it("separates a touching right column when the left member omits 'of'", async () => {
+    mocks.getDocument.mockReturnValue({
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: async () => ({
+          view: [0, 0, 612, 792],
+          getTextContent: async () => ({
+            items: [
+              { str: "Charles J. Fleischmann, Tennessee.", transform: [1, 0, 0, 1, 90, 600], width: 212, height: 8 },
+              { str: "Mike Quigley, of Illinois.", transform: [1, 0, 0, 1, 304, 600], width: 150, height: 8 },
+              { str: "Other Member, of Ohio.", transform: [1, 0, 0, 1, 304, 588], width: 150, height: 8 }
+            ]
+          }),
+          cleanup: vi.fn<() => void>()
+        })
+      }),
+      destroy: vi.fn<() => void>()
+    })
+    expect(await extractGovInfoCommitteePdfText(new Uint8Array([1]))).toContain("Tennessee.    Mike Quigley")
+  })
 })

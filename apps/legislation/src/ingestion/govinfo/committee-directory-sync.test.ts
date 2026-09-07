@@ -112,8 +112,8 @@ function run(packages = [directory()], getText = async () => fixture()) {
 
 function runWithAlias(personId: string) {
   const getMemberAliases = vi
-    .fn<() => Promise<{ name: string; personId: string }[]>>()
-    .mockResolvedValue([{ name: "Janey Senator", personId }])
+    .fn<() => Promise<{ name: string; personId: string; state: string; chamber: "upper" }[]>>()
+    .mockResolvedValue([{ name: "Janey Senator", personId, state: "WA", chamber: "upper" }])
   const operation = executeGovInfoCommitteeSynchronization(
     { config, database, congress: 119, correlationId: "alias-test" },
     {
@@ -130,6 +130,34 @@ function runWithAlias(personId: string) {
 }
 
 describe("committee directory observation synchronization", () => {
+  it("prevalidates all pending editions and then commits their checkpoints in order", async () => {
+    await run([directory(), directory("2026-08-01", "2026-08-02")], async () => {
+      expect(mocks.replace).not.toHaveBeenCalled()
+      return fixture()
+    })
+    expect(mocks.replace).toHaveBeenCalledTimes(2)
+    expect(mocks.replace.mock.calls.map((call) => call[3]?.checkpoint?.cursor.packageId)).toEqual([
+      "CDIR-2026-02-20",
+      "CDIR-2026-08-01"
+    ])
+    expect(cursor?.packageId).toBe("CDIR-2026-08-01")
+  })
+
+  it.each(["parse", "identity"])("validates later editions before any snapshot write: %s", async (failure) => {
+    let reads = 0
+    const operation = run([directory(), directory("2026-08-01", "2026-08-02")], async () => {
+      reads += 1
+      if (reads === 1) {
+        return fixture()
+      }
+      return failure === "parse" ? "Invalid directory" : fixture().replaceAll("Jane Senator", "Unknown Senator")
+    })
+    await expect(operation).rejects.toThrow(failure === "parse" ? /lacks/ : /unmatched/)
+    expect(reads).toBe(2)
+    expect(mocks.replace).not.toHaveBeenCalled()
+    expect(cursor).toBeUndefined()
+  })
+
   it("uses same-edition aliases for existing Congress-scoped people", async () => {
     const { operation, getMemberAliases } = runWithAlias("person:congress:s1")
     await operation
@@ -238,18 +266,14 @@ describe("committee directory observation synchronization", () => {
     })
   })
 
-  it("retains a completed edition checkpoint when a later edition fails and safely replays", async () => {
+  it("retains a completed edition checkpoint when a later database write fails and safely replays", async () => {
     const packages = [directory(), directory("2026-08-20", "2026-08-21")]
-    let reads = 0
-    await expect(
-      run(packages, async () => {
-        reads += 1
-        if (reads === 2) {
-          throw new Error("source unavailable")
-        }
-        return fixture()
+    mocks.replace
+      .mockImplementationOnce(async (_database, _jurisdiction, _snapshot, options) => {
+        cursor = options?.checkpoint?.cursor
       })
-    ).rejects.toThrow("source unavailable")
+      .mockRejectedValueOnce(new Error("database unavailable"))
+    await expect(run(packages)).rejects.toThrow("database unavailable")
     expect(cursor?.packageId).toBe("CDIR-2026-02-20")
     mocks.replace.mockClear()
     const result = await run(packages)
