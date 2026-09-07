@@ -121,6 +121,25 @@ function crossCheckedPrintedName(
   records: readonly GovInfoCommitteeRecord[],
   directory: GovInfoDirectoryPackage
 ): string {
+  if (
+    ["CDIR-2007-08-09", "CDIR-2008-08-01"].includes(directory.packageId) &&
+    directory.congress === 110 &&
+    member.chamber === "lower" &&
+    member.state === "PR" &&
+    normalizeName(member.name) === "louis g fortuno"
+  ) {
+    const corroboration = records
+      .flatMap((record) => record.members)
+      .find(
+        (candidate) =>
+          candidate.chamber === "lower" &&
+          candidate.state === "PR" &&
+          normalizeName(candidate.name) === "luis g fortuno"
+      )
+    if (corroboration !== undefined) {
+      return corroboration.name
+    }
+  }
   if (directory.packageId === "CDIR-2018-07-27" && directory.congress === 115 && member.chamber === "upper") {
     const correction = new Map([
       ["Benajmin L. Cardin", { name: "Benjamin L. Cardin", state: "MD" }],
@@ -217,7 +236,7 @@ function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number): Inde
         names: new Set(names.flatMap((name) => (name === undefined ? [] : nameVariants(name)))),
         scopedNames: catalog.aliases.flatMap((alias) =>
           alias.personId === person.id && alias.state !== undefined && alias.chamber === chamber
-            ? [{ names: new Set(nameVariants(alias.name)), state: alias.state }]
+            ? [{ names: new Set(scopedSourceNameVariants(alias.name)), state: alias.state }]
             : []
         ),
         personId: person.id
@@ -264,6 +283,14 @@ function nameVariants(value: string): string[] {
   const normalized = normalizeName(withoutSuffix)
   const comma = withoutSuffix.split(",").map((part) => part.trim())
   return [...new Set([normalized, ...(comma.length === 2 ? [normalizeName(`${comma[1]} ${comma[0]}`)] : [])])]
+}
+
+/** Keep the explicit first/surname, optionally omitting only intervening initials.
+ * These variants are accepted only for unique same-state/chamber source IDs.
+ * Never expand a nickname or replace a spelled-out middle name.
+ */
+function scopedSourceNameVariants(value: string): string[] {
+  return [...new Set(nameVariants(value).flatMap((name) => [name, name.replace(/^(\S+) (?:[a-z] )+(.+)$/, "$1 $2")]))]
 }
 
 function normalizeName(value: string): string {

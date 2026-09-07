@@ -207,6 +207,39 @@ describe("historical GovInfo printed rosters", () => {
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
     expect(result[1]?.name).toBe("Transportation, Housing and Urban Development, and Related Agencies")
   })
+  it.each([
+    ["Oversight of Government Management, the Federal Workforce and the", "District of Columbia (OGM)"],
+    ["Federal Financial Management, Government Information, Federal Services, and", "International Security (FFM)"]
+  ])("preserves a conjunction-ended printed heading across blank lines: %s", (first, second) => {
+    const source = fixture.replace("Forestry and Conservation", `${first}\n\n                  ${second}`)
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[1]?.name).toBe(`${first} ${second}`)
+    expect(result[1]?.members).toHaveLength(3)
+  })
+  it("removes the footnote marker from the printed Children and Families heading", () => {
+    const source = fixture.replace("Forestry and Conservation", "* Children and Families")
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[1]?.name).toBe("Children and Families")
+    expect(result[1]?.members).toHaveLength(3)
+  })
+  it("keeps a touching vacant-chair annotation out of the heading", () => {
+    const source = fixture.replace(
+      "Forestry and Conservation\n\n                         Mr. Santorum, Chairman",
+      "Investigations, Oversight and Regulations\n               Vacant, Chair"
+    )
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[1]?.name).toBe("Investigations, Oversight and Regulations")
+    expect(result[1]?.members).toHaveLength(2)
+  })
+  it("ignores a standalone accent cell without dropping its adjacent member", () => {
+    const source = fixture.replace(
+      "Mary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.",
+      "Mary L. Landrieu, of Louisiana.      ´\n                                      Patrick J. Leahy, of Vermont."
+    )
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })
+    expect(result[0]?.members).toHaveLength(5)
+    expect(result[0]?.members).toContainEqual({ chamber: "upper", name: "Patrick J. Leahy", state: "VT" })
+  })
   it("ignores a detached accent after an otherwise complete member", () => {
     const source = fixture.replace("Tom Harkin, of Iowa.", "Tom Harkin, of Iowa.´")
     const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "upper", title, text: source })

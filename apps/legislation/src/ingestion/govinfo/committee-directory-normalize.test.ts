@@ -13,6 +13,69 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it("permits omitted middle initials only from unique same-state/chamber source names", () => {
+    const source = catalog()
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Timothy Walberg"
+    const scoped = {
+      ...source,
+      aliases: [
+        { name: 'TIMOTHY "TIM" L. WALBERG', personId: source.people[0]!.id, state: "WA", chamber: "upper" as const }
+      ]
+    }
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toEqual([])
+    input[0]!.members[0]!.name = "Timothy Q. Walberg"
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
+    input[0]!.members[0]!.name = "Tim Walberg"
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
+  })
+
+  it("rejects ambiguous omitted-middle names in the same source state and chamber", () => {
+    const source = catalog()
+    source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+    source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = "Timothy Walberg"
+    const scoped = {
+      ...source,
+      aliases: [
+        { name: "Timothy L. Walberg", personId: source.people[0]!.id, state: "WA", chamber: "upper" as const },
+        { name: "Timothy Q. Walberg", personId: source.people[1]!.id, state: "WA", chamber: "upper" as const }
+      ]
+    }
+    expect(normalizeGovInfoCommitteeDirectory(input, directoryPackage, scoped, new Date()).unmatched).toHaveLength(1)
+  })
+
+  it("corrects the reviewed Louis typo only with same-edition Luis corroboration", () => {
+    const source = catalog()
+    source.people[0] = {
+      id: source.people[0]!.id,
+      name: "Luis G. Fortuño",
+      givenName: "Luis G.",
+      familyName: "Fortuño"
+    }
+    source.terms[0] = { ...source.terms[0]!, chamber: "lower", sourceId: "110:lower:2007:2009" }
+    const input: GovInfoCommitteeRecord[] = [
+      {
+        name: "Foreign Affairs",
+        classification: "committee",
+        chamber: "lower",
+        members: [
+          { name: "Louis G. Fortun˜ o", chamber: "lower", state: "PR" },
+          { name: "Luis G. Fortun˜ o", chamber: "lower", state: "PR" }
+        ]
+      }
+    ]
+    const edition = { ...directoryPackage, congress: 110, packageId: "CDIR-2007-08-09" }
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toEqual([])
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2006-09-01" }, source, new Date())
+        .unmatched
+    ).toHaveLength(1)
+    input[0]!.members.pop()
+    expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+  })
+
   it("joins a detached PDF tilde to its word without changing the person's name", () => {
     const source = catalog()
     source.people[0] = {

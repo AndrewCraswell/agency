@@ -5,6 +5,31 @@ const mocks = vi.hoisted(() => ({ getDocument: vi.fn<() => unknown>() }))
 vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({ getDocument: mocks.getDocument }))
 
 describe("GovInfo PDF coordinate reading order", () => {
+  it("keeps all base letters together when a detached accent overlays the previous printed row", async () => {
+    mocks.getDocument.mockReturnValue({
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: async () => ({
+          view: [0, 0, 612, 792],
+          getTextContent: async () => ({
+            items: [
+              { str: "Paul Cook, of California.", transform: [1, 0, 0, 1, 147, 190.2], width: 82.58, height: 8 },
+              { str: "Garret Graves, of Louisiana.", transform: [1, 0, 0, 1, 147, 182.2], width: 93.22, height: 8 },
+              { str: "Nanette Diaz Barraga", transform: [1, 0, 0, 1, 309, 182.2], width: 72.392, height: 8 },
+              { str: "´", transform: [1, 0, 0, 1, 378.06, 190.272], width: 2.664, height: 8 },
+              { str: "n,", transform: [1, 0, 0, 1, 381.392, 182.2], width: 6, height: 8 },
+              { str: "of California.", transform: [1, 0, 0, 1, 390.032, 182.2], width: 43.74, height: 8 },
+              { str: "´", transform: [1, 0, 0, 1, 353.388, 182.272], width: 2.664, height: 8 }
+            ]
+          }),
+          cleanup: vi.fn<() => void>()
+        })
+      }),
+      destroy: vi.fn<() => void>()
+    })
+    const result = await extractGovInfoCommitteePdfText(new Uint8Array([1]))
+    expect(result).toContain("Garret Graves, of Louisiana.    Nanette Diaz Barragan, of California.")
+  })
   it("orders a heading before its roster even when the content stream emits members first", async () => {
     const destroy = vi.fn<() => void>()
     mocks.getDocument.mockReturnValue({

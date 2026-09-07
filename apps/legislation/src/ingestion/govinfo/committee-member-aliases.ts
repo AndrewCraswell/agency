@@ -87,10 +87,9 @@ export async function getGovInfoCommitteeMemberAliases(options: {
     pages.add(next)
     const page = pageSchema.parse(await getJson(next, basePath))
     for (const granule of page.granules) {
-      if (!granule.granuleId.startsWith(`${options.packageId}-`)) {
-        continue
-      }
-      const match = /^([A-Z]{2})-(S|H)-\d+$/.exec(granule.granuleId.slice(options.packageId.length + 1))
+      // The October 2018 package advertises October 29 granule IDs. The
+      // advertised URL and returned package ID, not the date prefix, bind scope.
+      const match = /^CDIR-\d{4}-\d{2}-\d{2}-([A-Z]{2})-(S|H)-\d+$/.exec(granule.granuleId)
       if (match === null) {
         continue
       }

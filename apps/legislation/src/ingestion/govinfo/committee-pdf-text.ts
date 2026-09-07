@@ -13,7 +13,9 @@ export async function extractGovInfoCommitteePdfText(bytes: Uint8Array): Promise
       const page = await document.getPage(pageNumber)
       const content = await page.getTextContent()
       const items = content.items
-        .filter((item) => "str" in item && item.str.trim())
+        // A separately positioned acute is a glyph overlay, not a text-column boundary.
+        // Keep every base letter; inline/composed diacritics remain unchanged.
+        .filter((item) => "str" in item && item.str.trim() && item.str.trim() !== "´")
         .map((item) => {
           if (!("str" in item)) {
             throw new Error("Unexpected PDF marked content")

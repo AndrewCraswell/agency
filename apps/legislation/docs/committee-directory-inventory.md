@@ -162,9 +162,23 @@ corrected truncated Transportation and Small Business headings. Production impor
 
 The bounded biography scan permits 600 summaries and uses explicit state/chamber identity constraints. Missing
 BioGuide IDs provide no aliases; they do not bypass final unmatched-member rejection. Current unresolved gates:
-105 `Aschcroft`; 106 `Mississppi`; 107 `Masschusetts`; 108 truncated District of Columbia heading;
-109 52 unmatched assignments; 110 nine unmatched assignments; 111–112 full review pending;
-113 two malformed annotated headings; 115 October isolated accent cell; 117 stale Udall source entry.
+105 `Aschcroft`; 106 `Mississppi`; 107 `Masschusetts`; 109 52 unmatched assignments;
+112 six Donald M. Payne assignments; 113 nine Horsford/Nadler assignments; 117 stale Udall source entry.
+
+The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
+All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation
+accepts 111 at 218 organizations / 3,896 entries and both 110 editions at 217 / 3,743. Each 110 edition contains
+one identical Daniel Lipinski entry in House Small Business, producing 3,742 distinct memberships. Both 110
+editions also pass canonical identity reconciliation with zero unmatched people.
+
+Source-scoped name variants may omit intervening initials while retaining explicit first/surname and unique
+state/chamber identity. Louis/Luis Fortuño corrections are limited to the two reviewed 110th editions and require
+same-edition corroboration. They are not generic nickname substitutions.
+
+October 2018 now passes full structural review at 210 organizations / 3,643 entries. Its separately positioned
+acute-accent glyph is ignored for PDF column spacing; all base letters remain. The package legitimately advertises
+October 29 granule IDs despite its October 1 package ID. Biography lookup accepts these advertised IDs while
+retaining exact requested-package URL and returned identity checks. Final canonical re-audit remains required.
 
 Source endpoints: `https://api.govinfo.gov/collections/CDIR/1970-01-01T00:00:00Z?congress=105&offsetMark=*&pageSize=100`
 and `https://api.govinfo.gov/packages/CDIR-1997-06-04/summary`. Credentials are supplied only in request headers.

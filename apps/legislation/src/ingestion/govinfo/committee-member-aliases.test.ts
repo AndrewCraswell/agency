@@ -107,7 +107,7 @@ describe("same-directory committee member aliases", () => {
       },
       {
         nextPage: null,
-        granules: [granule, granule, { granuleId: "CDIR-2020-07-22-FL-H-15", granuleLink: "https://unused.test" }]
+        granules: [granule, granule, { granuleId: "CDIR-2020-07-22-CA-H-15", granuleLink: "https://unused.test" }]
       },
       summary
     ])
@@ -117,6 +117,16 @@ describe("same-directory committee member aliases", () => {
     ])
     expect(request).toHaveBeenCalledTimes(3)
     expect(new Headers(request.mock.calls[0]?.[1]?.headers).get("X-Api-Key")).toBe("test-key")
+  })
+
+  it("accepts an advertised granule with a different date prefix under the same package", async () => {
+    const advertisedId = "CDIR-2022-10-29-FL-H-15"
+    const { request, run } = harness([
+      { nextPage: null, granules: [{ granuleId: advertisedId, granuleLink: `${base}/${advertisedId}/summary` }] },
+      { ...summary, granuleId: advertisedId }
+    ])
+    expect(await run()).toHaveLength(2)
+    expect(String(request.mock.calls[1]?.[0])).toBe(`${base}/${advertisedId}/summary`)
   })
 
   it.each([{ congress: "116" }, { chamber: "S" }, { state: "PA" }])(

@@ -64,6 +64,8 @@ function parseGranule(
     .replaceAll(/\(No Subcommittees\)\.?/gi, "")
     .replaceAll(/,´\s*(?=of\b)/g, ", ")
     .replaceAll(/^[ \t]*´[ \t]*$/gm, "")
+    .replaceAll(/^([ \t]*)\*([ \t]+Children and Families[ \t]*)$/gm, "$1$2")
+    .replaceAll(/^[ \t]*(?:Vacant|TBD), (?:Chair|Chairman|Chairwoman)\.?[ \t]*$/gim, "")
     // These printed HELP headings touch the preceding roster at a page boundary.
     .replaceAll(/^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere)[ \t]*$/gm, "\n\n$1\n\n")
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")
@@ -203,7 +205,7 @@ function parseGranule(
       (!/\b\d{3,}\b|:|\.--|\.—|^\(|\.$/.test(joined) || /^Select Committee on [A-Za-z0-9 ,’'-]+$/.test(joined)) &&
       !/^\(?The (?:chair|committee)/i.test(joined)
     ) {
-      heading = heading?.endsWith(",") && joined.startsWith("and ") ? `${heading} ${joined}` : joined
+      heading = heading && /(?:,|\b(?:and|the))$/.test(heading) ? `${heading} ${joined}` : joined
       isExOfficioBlock = false
       isPartyOrganization = /^(?:(?:Senate|House) )?(?:Democratic|Republican)\b/i.test(joined)
       if (isPartyOrganization) {
@@ -237,6 +239,10 @@ function memberCells(lines: readonly string[]): string[] {
     const cells: string[] = []
     for (const cell of rawCells) {
       if (/^\.$/.test(cell)) {
+        continue
+      }
+      if (cell === "´") {
+        cells.push("")
         continue
       }
       if (
