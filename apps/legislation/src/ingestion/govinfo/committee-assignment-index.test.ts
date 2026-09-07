@@ -21,6 +21,36 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("resolves Nickels only with the source's positive Nickles Investigations assignment", () => {
+    const senate: GovInfoCommitteeRecord = {
+      chamber: "upper",
+      classification: "committee",
+      name: "Governmental Affairs",
+      members: [{ chamber: "upper", name: "Don Nickles", state: "OK" }]
+    }
+    const resolve = createGovInfoAssignmentResolver([
+      {
+        chamber: "upper",
+        title: "assignments",
+        text: "Nickles (R)                                Governmental Affairs -- International Security, Proliferation and Federal Services; Investigations."
+      }
+    ])
+    const context = {
+      name: "Nickels",
+      parent: senate,
+      chamber: "upper",
+      subcommitteeName: "Permanent Subcommittee on Investigations"
+    } satisfies Parameters<typeof resolve>[0]
+    expect(resolve(context)).toEqual(senate.members[0])
+    expect(createGovInfoAssignmentResolver([])(context)).toBeUndefined()
+    expect(resolve({ ...context, subcommitteeName: "Other Investigations" })).toBeUndefined()
+    expect(
+      resolve({
+        ...context,
+        parent: { ...senate, members: [...senate.members, { chamber: "upper", name: "Another Nickles", state: "OR" }] }
+      })
+    ).toBeUndefined()
+  })
   it("corrects Aschcroft only with a positive same-edition assignment and unique parent member", () => {
     const senate: GovInfoCommitteeRecord = {
       chamber: "upper",

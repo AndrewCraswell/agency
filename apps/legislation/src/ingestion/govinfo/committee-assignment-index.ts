@@ -24,13 +24,25 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
   return (context: AssignmentContext) => {
     // The 105th roster prints Aschcroft here, while its own assignment table
     // explicitly assigns Ashcroft to this subcommittee. Never use edit distance.
-    const requestedName =
+    let requestedName =
       context.chamber === "upper" &&
       context.name === "Aschcroft" &&
       normalize(context.parent.name) === "commerce science and transportation" &&
       normalize(context.subcommitteeName) === "manufacturing and competitiveness"
         ? "Ashcroft"
         : context.name
+    let requestedSubcommittee = context.subcommitteeName
+    // The same directory's positive Nickles assignment abbreviates PSI as
+    // Investigations; the roster prints Nickels. Keep this exact context bounded.
+    if (
+      context.chamber === "upper" &&
+      context.name === "Nickels" &&
+      normalize(context.parent.name) === "governmental affairs" &&
+      normalize(context.subcommitteeName) === "permanent subcommittee on investigations"
+    ) {
+      requestedName = "Nickles"
+      requestedSubcommittee = "Investigations"
+    }
     const candidates = context.parent.members.filter((member) => {
       if (!normalize(member.name).endsWith(normalize(requestedName))) {
         return false
@@ -56,7 +68,7 @@ export function createGovInfoAssignmentResolver(granules: readonly GovInfoCommit
             committee !== undefined &&
             subcommittees !== undefined &&
             normalize(committee) === normalize(context.parent.name) &&
-            subcommittees.split(";").some((name) => normalize(name) === normalize(context.subcommitteeName))
+            subcommittees.split(";").some((name) => normalize(name) === normalize(requestedSubcommittee))
           )
         })
       })
