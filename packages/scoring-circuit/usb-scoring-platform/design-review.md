@@ -281,6 +281,25 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**U12 W5500 package/pin review:** visually checked manufacturer datasheet 1.1.0 pages 7/64/65 and compared all 48 native
+pad nets, including the footprint's 90-degree rotation. Its 0.5mm pitch, 1.475 by 0.3mm lands and 8.325mm opposing-row
+spacing cover the nominal lead regions; drawing lead width is at most 0.27mm. The body envelope fits the saved
+courtyard. The changed bottom molding mark described in the datasheet is not an exposed electrical pad or a requirement
+for an extra PCB hole. No package replacement or reroute is justified by this check.
+
+Analog/digital supplies, TX/RX pairs, SPI, crystal and reset pins agree. Reserved pin 23 is grounded as required; 38-42
+are NC. PMODE2/1/0 are high for all-capable auto-negotiation. DNC/NC and unused LED outputs are intentionally
+unconnected. This closes the pin/package comparison, not physical Ethernet signal integrity or reset/startup testing.
+[WIZnet exact device drawing and pin descriptions](https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf).
+
+Scoped formatting/diff checks passed. The follow-up `pnpm verify` stopped at unrelated Shopify-content lint; no
+full-suite pass is claimed. Native geometry and the current manufacturing package are unchanged.
+
+U1/U21 native pitch and pad dimensions were extracted, but visual comparison of their ST package drawings is not
+complete: direct ST downloads timed out, and the web screenshot returned no usable image. Text-only source access is not
+recorded as a visual pass. Use a manufacturer-datasheet mirror or retained copy for the next attempt, not repeated
+unchanged download calls. No processor footprint was modified.
+
 **U10/U11 translator follow-up:** native VCCA/GND/A/B/DIR/VCCB pin order matches TI SCES882E. U10 DIR selects STM_TX to
 ESP_RX; U11 selects ESP_TX to STM_RX. Their 0.65mm-pitch lands cover nominal leads, but the original body courtyard had
 minimal margin. A local SN74AXC1T45DCKR footprint now has a 3.2 by 3.0mm courtyard covering the 2.15 by 1.4mm maximum
@@ -596,7 +615,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U9        | 74LVC125APW,118       | Right A/B/C and piste LVC125 conductor drivers.                                  | Retain; all four channels used. OE pulls prevent reset drive.                                                                                                          |
 | U10       | SN74AXC1T45DCKR       | CORE-to-APP UART level translator.                                               | Retain; dual power-domain isolation behavior, not galvanic isolation. A-to-B DIR correct.                                                                              |
 | U11       | SN74AXC1T45DCKR       | APP-to-CORE UART level translator.                                               | Retain; B-to-A DIR correct; power-off leakage remains budgeted.                                                                                                        |
-| U12       | W5500                 | W5500 Ethernet controller.                                                       | Retain; SCSn/RSTn internal pull-ups rule out missing-pull-up claim. Ensure firmware reset >=500us and startup wait.                                                    |
+| U12       | W5500                 | W5500 Ethernet controller.                                                       | All 48 pad nets and nominal package fit checked. Retain; firmware reset >=500us, startup and physical Ethernet tests remain.                                           |
 | U13       | TSOP38438             | Pin/lead check passed; reversed body courtyard corrected, model/pads unchanged.  | Native ERC/DRC/parity/connectivity pass. Assembly height, lead trim and enclosure window remain open.                                                                  |
 | U14       | SN74AHCT541PWR        | Eight HUB75 3.3-to-5V AHCT buffer channels.                                      | Retain; OE1 grounded, OE2 under Q1 control.                                                                                                                            |
 | U15       | SN74AHCT541PWR        | Remaining five HUB75 AHCT buffer channels.                                       | Retain; three unused inputs grounded, outputs NC. Second IC is needed for 13 signals.                                                                                  |
