@@ -2,6 +2,24 @@ import type { IdentityReview } from "./committee-reviewed-identities.js"
 
 const congress106Identities: IdentityReview["identities"] = [
   {
+    // The Directory's Armed Services section prints H.; M000472 and 106th
+    // hearing rosters identify John Michael McHugh of New York instead.
+    printedName: "John H. McHugh",
+    state: "NY",
+    chamber: "lower",
+    personId: "person:congress:m000472",
+    canonicalName: "McHugh, John M.",
+    givenName: "JOHN",
+    familyName: "MCHUGH",
+    district: "24",
+    contexts: [
+      { name: "Armed Services" },
+      { name: "Military Installations and Facilities", parentName: "Armed Services" },
+      { name: "Military Research and Development", parentName: "Armed Services" },
+      { name: "Special Oversight Panel on Morale, Welfare and Recreation", parentName: "Armed Services" }
+    ]
+  },
+  {
     // F000328 identifies Tillie Kidd Fowler; her biography confirms both
     // parent committees and 106th oversight chairmanship. Target cells only.
     printedName: "Tillie K. Fowler",

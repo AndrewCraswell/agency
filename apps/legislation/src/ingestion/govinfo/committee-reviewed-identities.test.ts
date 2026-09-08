@@ -114,7 +114,8 @@ describe("offline-reviewed GovInfo identity validation", () => {
     "Shelia Jackson Lee",
     "Samuel Dale Brownback",
     "Bob Bennett",
-    "Tillie K. Fowler"
+    "Tillie K. Fowler",
+    "John H. McHugh"
   ])("validates the exact reviewed %s cells", (printedName) => {
     const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
     const identity = manifest.identities.find((candidate) => candidate.printedName === printedName)!
@@ -169,7 +170,7 @@ describe("offline-reviewed GovInfo identity validation", () => {
       identity.contexts.map(() => identity.personId)
     )
     expect(validateGovInfoIdentityReview(review, records, directory, { ...catalog, terms: [] }).size).toBe(0)
-    records[0]!.members[0]!.state = "NY"
+    records[0]!.members[0]!.state = identity.state === "NY" ? "CA" : "NY"
     expect(
       validateGovInfoIdentityReview({ ...review, fingerprint: digest(records) }, records, directory, catalog).size
     ).toBe(0)

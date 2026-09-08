@@ -339,3 +339,22 @@ preserving roles and requiring the exact parents, state, chamber and canonical t
 middle-initial matching rule. Other unresolved identities continue to block publication; no import was launched.
 Fresh source parsing and the production catalog validated all 18 appearances; 111 focused identity,
 historical-observation, normalization and synchronization tests passed.
+
+### Reviewed McHugh middle initial, September 8, 2026
+
+All three 106th editions print `John H. McHugh`, New York, in Armed Services, Military Installations and
+Facilities, Military Research and Development, and Special Oversight Panel on Morale, Welfare and Recreation.
+The panel entry is chair. Other committees correctly use John McHugh or John M. McHugh.
+
+The [official biography M000472](https://history.house.gov/People/Listing/M/MCHUGH,-John-Michael-(M000472)/)
+identifies John Michael McHugh. Contemporary [Research and Development hearing rosters](https://commdocs.house.gov/committees/security/has070010.000/has070010_0.HTM)
+and [Military Installations hearing proceedings](https://commdocs.house.gov/committees/security/has182040.000/has182040_0.HTM)
+corroborate his service. The [March 10, 1999 panel hearing](https://commdocs.house.gov/committees/security/has069120.000/has069120_0.HTM)
+explicitly identifies John M. McHugh of New York as chairman. These are manual validation references, not new
+ingestion providers or evidence of precise tenure boundaries.
+
+Production identity `person:congress:m000472`, `McHugh, John M.`, has consistent 106th House terms for district 24.
+The fingerprinted manifest resolves only these four cells per edition, preserving the original roles and exact
+parent, state, chamber and term checks. Fresh source parsing against the production catalog validated all 12
+appearances. All 112 focused identity, historical-observation, normalization and synchronization tests passed.
+Other unresolved identities still block publication; this correction does not launch an import.
