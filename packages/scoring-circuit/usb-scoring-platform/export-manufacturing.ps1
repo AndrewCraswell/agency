@@ -26,4 +26,13 @@ if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
 Invoke-KiCad @('pcb', 'export', 'gerbers', $board, '--layers', 'F.Cu,In1.Cu,In2.Cu,B.Cu,F.Mask,B.Mask,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,Edge.Cuts', '--check-zones', '--subtract-soldermask', '--output', "$exportDirectory/gerbers/")
 Invoke-KiCad @('pcb', 'export', 'drill', $board, '--format', 'excellon', '--excellon-units', 'mm', '--excellon-separate-th', '--generate-report', '--report-path', "$exportDirectory/drill-report.txt", '--output', "$exportDirectory/gerbers/")
 Compress-Archive -Path "$exportDirectory/gerbers/*" -DestinationPath "$exportDirectory/pcb-fabrication.zip"
+# U21 must be programmed before the board can qualify either power mode. Build from current source,
+# never copy a possibly stale image from a previous firmware/out directory.
+$controllerDirectory = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../../apps/scoring/firmware/power-control'))
+$programmingDirectory = Join-Path $exportDirectory 'programming/U21'
+& (Join-Path $controllerDirectory 'build-target.ps1') -OutputDirectory $programmingDirectory
+Copy-Item -LiteralPath (Join-Path $controllerDirectory 'README.md') -Destination (Join-Path $programmingDirectory 'README.md')
+Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $programmingDirectory 'power-control.hex') |
+    Format-List Algorithm, Hash, Path | Out-String | Write-Output
 Write-Output "Exported $($bom.Count) assembly parts to $exportDirectory. These are review files, not manufacturing approval."
+Write-Output 'U21 programming image is included separately from Gerbers. Factory programming and fixture acceptance are still required; no firmware has been flashed.'

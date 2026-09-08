@@ -43,6 +43,26 @@ scoring-core requirements remain 100%.
 J14 underside pads: 1=VLO reference, 2=USB_GND, 3=SWDIO, 4=SWCLK, 5=NRST. Do not inject debugger power into VLO or
 bridge the isolation barrier with grounded equipment. Flash the HEX using an appropriately isolated SWD setup.
 
+Current native J14 geometry: five 1.2mm square underside pads on 2mm pitch. In KiCad board coordinates, pads 1 through 5
+are at x=55.5mm and y=113, 111, 109, 107, 105mm respectively. The fixture designer must use the native underside view
+and board datums, not mirror these coordinates a second time. No fixture or physical probe fit has been tested.
+
+The native board's manufacturing exporter now cross-builds the current image into `programming/U21/`, with this
+instruction sheet. `power-control.hex` is for **U21 STM32C011F6P6 only**, not U1 STM32G474 or the ESP32. The HEX carries
+its load addresses; do not reinterpret it as an unaddressed binary or change option bytes/readout protection. Keep SWD
+available for owner firmware development.
+
+For the requested no-owner-soldering prototype, ask the assembler to program U21 through a pogo fixture on J14 and
+verify flash readback before shipment. Fixture/service acceptance is outstanding; including a HEX does not purchase or
+confirm that service. Use current-limited, isolated power at J1; VLO is the programmer's voltage reference, not a power
+injection point. Leave all fencer, piste, repeater and HUB75 connections disconnected during programming. Confirm a
+stable VLO and SWD connection before attempting flash; do not bridge USB_GND to secondary GND to make a probe work.
+Record the programmed HEX hash, readback result and reset behavior for each board. Check U5 POWER_OK_CFG=10b and
+REQ_SRC_CURRENT=0 as above without blindly writing NVM. Qualified power/USB operation remains a separate bring-up test.
+
+This is the first-programming handoff, not complete application firmware or a tested factory fixture. If the assembler
+cannot provide it, obtain a no-solder probe-fixture solution before representing the delivery as ready for programming.
+
 The image is cross-built and host-tested, not flashed or bench-qualified. Measure VLO consumption against its 10mA
 allowance, I2C rise times/message-capture latency, watchdog timing, startup/input current, USB suspend/resume, hot
 unplug, and 5V/20V transitions on the assembled prototype. Verify laptop sources never release the application branch.
