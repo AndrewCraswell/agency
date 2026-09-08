@@ -295,6 +295,17 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**J2/J3/J4/J5/J6/J12 header check:** visually checked Samtec F-224 Rev 01OCT24. Selected HTSW straight -07, -L,
+single-row parts have 2.54mm pitch, nominal 0.635mm square pins, 2.54mm tails and 5.84mm mating posts. Native holes are
+1.02mm throughout, exceeding the nominal pin diagonal of 0.898mm; no drill change indicated. The catalog's explicit 1.02
++/-0.03mm recommendation is under the optional -LL locking-lead section, not an unconditional tolerance guarantee for
+our plain parts. Finished-hole/insertion tolerances remain the assembler's responsibility.
+
+Native numbering agrees with the handoff: J3/J4 pins 1/2/3 are A/B/C; J5 is PISTE. J2 is CORE_3V3/SWDIO/SWCLK/GND/
+RESET; J6 is APP_3V3/GND/TX/RX/EN/BOOT; J12 is USB_GND/SDA/SCL. These unshrouded headers are not polarized: retain pin-1
+identification and explicit harness wiring rather than claiming they prevent reversed insertion. No part removed.
+[Samtec series and lead-style drawing](https://suddendocs.samtec.com/catalog_english/htsw_th.pdf).
+
 **U5 electrical pin check:** compared all 24 numbered pins and grounded exposed pad against DS12499 Rev 8 table 1.
 CC1DB/CC2DB join their corresponding CC inputs; RESET, address inputs and unused VSYS are grounded. C37/C38 provide the
 specified 1uF bypasses on VREG_1V2/VREG_2V7. Pin 16 VBUS_EN_SNK carries the board's PD_ATTACH_N net; it is not pin 11
