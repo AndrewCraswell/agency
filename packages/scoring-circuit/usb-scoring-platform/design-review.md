@@ -23,8 +23,9 @@ recorded, but attached-PD suspend consumption cannot be closed from the availabl
 geometry is checked and the prototype operating constraints are explicit; system insulation approval is not established.
 The refreshed `output/mechanical-isolation-review/` package passes ERC, DRC, parity and connectivity with 223 matching
 assembly rows and the unchanged rebuilt U21 image. This is not closure of all four items or permission to manufacture.
-The latest `pnpm verify` stopped on unrelated legislation temporary-script lint failures; it did not reach tests in this
-run. Those files and the existing coverage thresholds were left unchanged.
+The switch/ESD follow-up `pnpm verify` reached tests: all 46 scoring domain test files passed, but the existing 100%
+coverage gate failed (95.98% lines, 99.79% functions, 95.34% statements, 93.62% branches). No threshold or unrelated
+project file was changed. The native manufacturing package is unchanged by these documentation-only package checks.
 
 **Current supplier upload files:** the native exporter now generates `jlcpcb-bom.csv` and `jlcpcb-placement.csv`
 alongside the original KiCad exports. All 223 rows were compared field by field: exact MPN/manufacturer/footprint and
@@ -265,6 +266,20 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**Switch/USB-protection package pass:** SW1/SW2/SW3 each use four 1.7 by 1.0mm lands at local x=+/-3.15, y=+/-1.90mm,
+matching E-Switch P010632 revision J's 8.0/4.6mm outer/inner horizontal and 4.8/2.8mm vertical edges. The duplicated
+KiCad pad numbers group each horizontal pair, consistent with the manufacturer's SPST drawing; pressing connects
+STM_RESET_N, ESP_EN or ESP_BOOT0 respectively to GND, not an already-shorted contact pair. The drawing was visually
+reviewed; no placement, copper or BOM changes were required.
+[Exact TL3342F160QG drawing](https://configured-product-images.s3.amazonaws.com/2D/specs/TL3342F160QG.pdf).
+
+U3's three 0.95 by 0.4mm lands match TI DCK0003A: local centers (-1.1,-0.65), (-1.1,0.65), (1.1,0)mm. Visually checked
+both TI's top-view pin diagram and board-layout drawing: 1/2 protect USB_HOST_DP/DM and 3 is USB_GND. This is the
+selected three-pin DCK package, not the five-pin DRL alternative. No footprint change is needed.
+[TI TPD2E2U06 revision C, page 3 and DCK0003A board layout](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf). U16/U17's
+native 2.54mm pitch, 7.62mm rows and 0.9mm holes were extracted, but the onsemi drawing could not be retrieved for
+visual inspection in this pass; no new mechanical approval is recorded for those two parts.
+
 Source: current native schematic netlist, board pad nets and the 223-row manufacturing BOM. Exact MPNs are retained here
 to prevent a nominal-value substitution from being mistaken for the reviewed part. Each row records electrical purpose
 and present disposition. Shared open checks in the findings table apply to all affected rows. This is an inventory of
@@ -472,12 +487,12 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | R114      | RC0603FR-074K7L       | Primary-domain PD I2C SDA pull-up                                                | Retain; circuit role checked. Power/timing or startup behavior must be evaluated with its associated IC.                                                               |
 | R115      | RC0603FR-074K7L       | Primary-domain PD I2C SCL pull-up                                                | Retain; circuit role checked. Power/timing or startup behavior must be evaluated with its associated IC.                                                               |
 | R116      | RC0603FR-0747KL       | Primary-domain PD ALERT pull-up                                                  | Retain; circuit role checked. Power/timing or startup behavior must be evaluated with its associated IC.                                                               |
-| SW1       | TL3342F160QG          | STM32 reset to ground.                                                           | Retain; recovery aid, not unused I/O.                                                                                                                                  |
-| SW2       | TL3342F160QG          | ESP32 EN reset to ground.                                                        | Retain; recovery aid.                                                                                                                                                  |
-| SW3       | TL3342F160QG          | ESP32 BOOT to ground.                                                            | Retain; manual programming recovery.                                                                                                                                   |
+| SW1       | TL3342F160QG          | STM32 reset to ground.                                                           | Exact E-Switch drawing J land pattern and normally-open contact grouping checked. Retain; physical actuation/recovery still untested.                                  |
+| SW2       | TL3342F160QG          | ESP32 EN reset to ground.                                                        | Exact E-Switch drawing J land pattern and normally-open contact grouping checked. Retain; physical actuation/recovery still untested.                                  |
+| SW3       | TL3342F160QG          | ESP32 BOOT to ground.                                                            | Exact E-Switch drawing J land pattern and normally-open contact grouping checked. Retain; physical actuation/recovery still untested.                                  |
 | U1        | STM32G474RET6         | STM32G474 scoring/acquisition; USB isolated side, seven comparator sense inputs. | Retain; supplies, USB, SWD, sense and drive nets inspected. Timing, thresholds and physical current budget remain separate verification.                               |
 | U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; memory-reserved pins, boot/UART wiring and four-layer antenna keepout checked. Substrate/enclosure RF effects require physical testing.                        |
-| U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | Retain; not a VBUS/CC surge protector or isolation component.                                                                                                          |
+| U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | DCK0003A land pattern and pin map checked: 1=DP, 2=DM, 3=USB_GND. Retain; physical ESD performance remains untested.                                                   |
 | U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Retain; nominal 75mA at 5V implies about 0.128W before diode-drop adjustment, not a thermal measurement.                                                               |
 | U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; matching CC dead-battery pins connected. Verify exact NVM/configuration at first programming.                                                                  |
 | U6        | REC30K-2405SZ         | Isolated application/panel supply.                                               | Pin/land/body drawing check passed; assembler must confirm finished-hole tolerance. Thermal/startup capability remains a bench check. CTRL/TRIM intentionally unused.  |
