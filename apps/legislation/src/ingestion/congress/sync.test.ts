@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { LegislationDatabase } from "../../db/database.js"
 import { ProviderHttpError } from "../http-client.js"
 import type { CongressBillReference } from "./client.js"
+import { CongressRequestBudgetExhaustedError } from "./request-budget.js"
 
 const billMocks = vi.hoisted(() => ({
   getBillById: vi.fn<() => Promise<undefined>>(),
@@ -21,6 +22,93 @@ const NULL_DATE_ERROR = new ProviderHttpError(
   `Provider request failed with HTTP 500: {"error":"'NoneType' object has no attribute 'date'"}`,
   { retryable: true, status: 500 }
 )
+
+beforeEach(() => vi.clearAllMocks())
+
+describe("Congress bill scan continuation", () => {
+  const from = new Date("2026-09-01T00:00:00.000Z")
+  const to = new Date("2026-09-02T00:00:00.000Z")
+  const reference = (number: string, updateDate = "2026-09-01"): CongressBillReference => ({
+    congress: 119,
+    number,
+    type: "hr",
+    updateDate,
+    url: `https://api.congress.gov/v3/bill/119/hr/${number}`
+  })
+  const bundle = (record: CongressBillReference) => ({ bill: { ...record, title: "Test bill" } })
+
+  it("resumes tied dates in changed order without downloading already committed bills", async () => {
+    const harness = createDatabaseHarness()
+    const first = reference("9")
+    const second = reference("1")
+    const exhausted = new CongressRequestBudgetExhaustedError(new Date(), "allocation_exhausted")
+    let isResumed = false
+    const ranges: Array<[string, string]> = []
+    const getBillBundle = vi.fn<(record: CongressBillReference) => Promise<unknown>>(async (record) => {
+      if (!isResumed && record.number === "1") {
+        throw exhausted
+      }
+      return bundle(record)
+    })
+    const client = {
+      getBillBundle,
+      async *listUpdated(start: Date, end: Date) {
+        ranges.push([start.toISOString(), end.toISOString()])
+        yield* isResumed ? [second, first] : [first, second]
+      }
+    }
+    await expect(synchronizeCongress(harness.database, client, { from, to })).rejects.toBe(exhausted)
+    expect(harness.cursors.at(-1)).toMatchObject({
+      pendingScan: {
+        from: from.toISOString(),
+        to: to.toISOString(),
+        completedReferences: [JSON.stringify(["bill:us:119:hr:9", "2026-09-01"])]
+      }
+    })
+    isResumed = true
+    getBillBundle.mockClear()
+    const result = await synchronizeCongress(harness.database, client)
+    expect(ranges).toEqual([
+      [from.toISOString(), to.toISOString()],
+      [from.toISOString(), to.toISOString()]
+    ])
+    expect(getBillBundle).toHaveBeenCalledExactlyOnceWith(second)
+    expect(result.counts).toMatchObject({ inserted: 1, skipped: 1, failed: 0 })
+    expect(result.checkpoint).not.toHaveProperty("pendingScan")
+    expect(result.checkpoint).toMatchObject({ scannedThrough: to.toISOString() })
+  })
+
+  it("retries failed records and refetches a changed reference instead of trusting an old receipt", async () => {
+    const harness = createDatabaseHarness()
+    let isResumed = false
+    const getBillBundle = vi.fn<(record: CongressBillReference) => Promise<unknown>>(async (record) => {
+      if (!isResumed && record.number === "2") {
+        throw new Error("Transient bundle failure")
+      }
+      return bundle(record)
+    })
+    const client = {
+      getBillBundle,
+      async *listUpdated() {
+        yield reference("1", isResumed ? "2026-09-01T12:00:00Z" : "2026-09-01")
+        yield reference("2")
+      }
+    }
+    const failed = await synchronizeCongress(harness.database, client, { from, to })
+    expect(failed.counts.failed).toBe(1)
+    expect(harness.cursors.at(-1)).toHaveProperty("pendingScan")
+    isResumed = true
+    getBillBundle.mockClear()
+    const recovered = await synchronizeCongress(harness.database, client)
+    expect(getBillBundle).toHaveBeenCalledTimes(2)
+    expect(recovered.counts.failed).toBe(0)
+    expect(recovered.checkpoint).not.toHaveProperty("pendingScan")
+    // A later explicit replay never inherits the previous scan's receipts.
+    getBillBundle.mockClear()
+    await synchronizeCongress(harness.database, client, { from, to })
+    expect(getBillBundle).toHaveBeenCalledTimes(2)
+  })
+})
 
 describe("Congress bill synchronization gap isolation", () => {
   it("continues around a poisoned provider minute and reports that minute for durable replay", async () => {

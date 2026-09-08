@@ -59,6 +59,27 @@ source-backed alias/identifier population. These are explicit gaps, not reasons 
 
 ## Verification
 
+### Bills scan continuation correction
+
+The September 8 bills child consumed 3,250 requests in about 37 minutes and returned `incomplete`. Its successor
+started listing the same range again. Previously every reference downloaded its bundle before checking for unchanged
+data; the canonical-ID/date checkpoint was not a safe resume position because the provider does not promise ID
+ordering among tied dates.
+
+The scan now persists a fixed `pendingScan` date range and successful reference receipts in the existing checkpoint.
+Receipts contain the canonical bill ID and source update value, are recorded only after successful processing, and
+are discarded when that scan finishes. Continuations still enumerate the source list, but skip bundle downloads for
+receipted references regardless of order. Failed records and changed update values are fetched again. Later scans and
+explicit date-range replays do not inherit completed-scan receipts. Existing deferred source-gap handling remains.
+This trades temporary checkpoint growth proportional to the scan's processed references for avoiding repeated bundle
+requests; it does not promise to eliminate listing requests or establish an ETA from request count alone.
+Receipt checkpoints are batched every 100 successes and flushed at budget handoff and range completion. An abrupt
+process loss may replay up to 99 successfully processed references; it cannot skip an uncommitted record.
+
+Focused continuation, synchronization and coordinator coverage passed 19 tests; service and web types passed.
+The already-running worker remains on its original deployment. Production continuation behavior must be verified
+on a run using the corrected code before this gate is considered complete.
+
 ### Federal identity population implementation (2026-09-08)
 
 Congress member detail hydration now emits the published Bioguide identifier and distinct collection,

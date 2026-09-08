@@ -24,11 +24,19 @@ export interface CongressSyncGap {
 type CongressSyncCursor = Readonly<{
   canonicalId: string
   gaps?: readonly CongressSyncGap[]
+  pendingScan?: CongressPendingScan
   scannedThrough?: string
   updateDate: string
 }>
 
+type CongressPendingScan = Readonly<{
+  from: string
+  to: string
+  completedReferences: readonly string[]
+}>
+
 const CONGRESS_GAP_ISOLATION_MINIMUM_MILLISECONDS = 60_000
+const CONGRESS_RECEIPT_CHECKPOINT_BATCH_SIZE = 100
 const CONGRESS_GAP_ISOLATION_MAXIMUM_RANGE_MILLISECONDS = 7 * 24 * 60 * 60 * 1000
 
 export async function synchronizeCongress(
@@ -53,8 +61,13 @@ export async function synchronizeCongress(
     checkpoint?.watermark === null || checkpoint?.watermark === undefined
       ? undefined
       : new Date(checkpoint.watermark.getTime() - overlapMilliseconds)
-  const from = options.from ?? checkpointFrom ?? new Date(0)
-  const to = options.to ?? new Date()
+  const pendingScan =
+    options.dryRun !== true && options.from === undefined && options.to === undefined
+      ? parsePendingScan(checkpoint?.cursor)
+      : undefined
+  const from = options.from ?? (pendingScan === undefined ? checkpointFrom : new Date(pendingScan.from)) ?? new Date(0)
+  const to = options.to ?? (pendingScan === undefined ? new Date() : new Date(pendingScan.to))
+  const completedReferences = new Set(pendingScan?.completedReferences ?? [])
   const counts = createJobCounts()
   const failures: CongressSyncResult["failures"] = []
   const gaps = new Map(parseCongressSyncGaps(checkpoint?.cursor).map((gap) => [congressSyncGapKey(gap), gap]))
@@ -73,14 +86,43 @@ export async function synchronizeCongress(
     if (options.dryRun === true) {
       return undefined
     }
-    const cursor = withCongressSyncGaps(committedCursor, gaps.values())
+    const cursor = withCongressSyncGaps(
+      committedCursor.pendingScan === undefined
+        ? committedCursor
+        : {
+            ...committedCursor,
+            pendingScan: {
+              from: from.toISOString(),
+              to: to.toISOString(),
+              completedReferences: [...completedReferences]
+            }
+          },
+      gaps.values()
+    )
     await saveCongressCheckpoint(database, stream, cursor)
     persistedCheckpoint = cursor
     return cursor
   }
 
-  const processReference = async (reference: CongressBillReference) => {
+  // Keep the scan cutoff fixed across budget handoffs. A high-water date alone
+  // cannot resume records tied on that date, and provider ordering is not an ID
+  // ordering. Receipts are written only after processing succeeds.
+  committedCursor = {
+    ...committedCursor,
+    pendingScan: { from: from.toISOString(), to: to.toISOString(), completedReferences: [...completedReferences] }
+  }
+  await persistCheckpoint()
+
+  const processReference = async (reference: CongressBillReference, isCurrentRange: boolean) => {
     counts.discovered += 1
+    const referenceKey = JSON.stringify([
+      federalBillId(reference.congress, reference.type, reference.number),
+      reference.updateDate ?? null
+    ])
+    if (isCurrentRange && completedReferences.has(referenceKey)) {
+      counts.skipped += 1
+      return
+    }
     try {
       const bundle = await client.getBillBundle(reference)
       await options.sourceStore?.put("congress", stream, new TextEncoder().encode(JSON.stringify(bundle)), {
@@ -119,13 +161,22 @@ export async function synchronizeCongress(
       ) {
         proposed = { canonicalId, updateDate }
       }
-      if (canAdvanceCheckpoint && options.dryRun !== true && proposed !== undefined) {
-        committedCursor = { ...committedCursor, ...proposed }
-        await persistCheckpoint()
+      if (options.dryRun !== true) {
+        if (isCurrentRange) {
+          completedReferences.add(referenceKey)
+        }
+        committedCursor = {
+          ...committedCursor,
+          ...(canAdvanceCheckpoint ? proposed : undefined)
+        }
+        if (!isCurrentRange || completedReferences.size % CONGRESS_RECEIPT_CHECKPOINT_BATCH_SIZE === 0) {
+          await persistCheckpoint()
+        }
       }
       options.onProgress?.({ canonicalId, event: "record_committed", proposedCheckpoint: proposed })
     } catch (error) {
       if (isCongressRequestBudgetExhaustedError(error)) {
+        await persistCheckpoint()
         throw error
       }
       canAdvanceCheckpoint = false
@@ -144,7 +195,7 @@ export async function synchronizeCongress(
     }
   }
 
-  const processRange = async (range: CongressSyncGap) => {
+  const processRange = async (range: CongressSyncGap, isCurrentRange: boolean) => {
     const captured = new Map<string, Readonly<{ error: ProviderHttpError; gap: CongressSyncGap }>>()
     for await (const reference of listUpdatedWithGapIsolation(
       client,
@@ -154,7 +205,7 @@ export async function synchronizeCongress(
         captured.set(congressSyncGapKey(gap), { error, gap })
       }
     )) {
-      await processReference(reference)
+      await processReference(reference, isCurrentRange)
     }
 
     for (const [key, gap] of gaps) {
@@ -184,10 +235,19 @@ export async function synchronizeCongress(
   const currentRange = congressSyncGap(from, to)
   for (const gap of Array.from(gaps.values())) {
     if (!congressSyncGapContains(currentRange, gap)) {
-      await processRange(gap)
+      await processRange(gap, false)
     }
   }
-  await processRange(currentRange)
+  await processRange(currentRange, true)
+
+  // Deferred listing gaps have their own durable ranges. Failed records keep
+  // this scan open; successful records remain skippable on its next attempt.
+  if (failures.length === 0) {
+    const finishedCursor = { ...committedCursor }
+    delete finishedCursor.pendingScan
+    committedCursor = finishedCursor
+    await persistCheckpoint()
+  }
 
   if (failures.length === 0 && gaps.size === 0 && options.dryRun !== true) {
     const watermark = proposed === undefined ? to : new Date(proposed.updateDate)
@@ -292,6 +352,29 @@ function parseCongressSyncCursor(
         : fallback.toISOString(),
     updateDate: typeof cursor?.updateDate === "string" ? cursor.updateDate : fallback.toISOString()
   }
+}
+
+function parsePendingScan(cursor: Readonly<Record<string, unknown>> | undefined): CongressPendingScan | undefined {
+  const value = cursor?.pendingScan
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("from" in value) ||
+    !("to" in value) ||
+    !("completedReferences" in value)
+  ) {
+    return undefined
+  }
+  const ranges = parseCongressSyncGaps({ gaps: [value] })
+  const range = ranges[0]
+  if (
+    range === undefined ||
+    !Array.isArray(value.completedReferences) ||
+    !value.completedReferences.every((key): key is string => typeof key === "string")
+  ) {
+    return undefined
+  }
+  return { ...range, completedReferences: value.completedReferences }
 }
 
 export function parseCongressSyncGaps(cursor: Readonly<Record<string, unknown>> | undefined): CongressSyncGap[] {
