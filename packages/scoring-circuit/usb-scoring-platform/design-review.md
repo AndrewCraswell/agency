@@ -299,9 +299,15 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 CC1DB/CC2DB join their corresponding CC inputs; RESET, address inputs and unused VSYS are grounded. C37/C38 provide the
 specified 1uF bypasses on VREG_1V2/VREG_2V7. Pin 16 VBUS_EN_SNK carries the board's PD_ATTACH_N net; it is not pin 11
 ATTACH, which is intentionally unused. ALERT and POWER_OK2 reach their named nets; VDD is USB_VBUS and pin 18 senses it
-through R88. No pin mismatch found. This does not verify NVM contents, attached-source behavior or package geometry: ST
-and Mouser PDF downloads timed out, so no new visual package pass is recorded.
+through R88. No pin mismatch found. Physical NVM contents and attached-source behavior remain unverified.
 [ST pin-function table](https://www.st.com/resource/en/datasheet/stusb4500.pdf).
+
+U5's package comparison is complete: visually inspected the ST-authored Rev 5 mirror, pages 31/32, and compared table 23
+against current Rev 8. The QFN dimensions agree. Native 0.6 by 0.25mm lands on 0.5mm pitch, 4.4mm overall land span and
+2.7mm grounded exposed pad match the recommended pattern. The four unnumbered 1.09mm-square paste windows are not extra
+electrical terminals. No footprint change is needed; stencil/process acceptance and solder-joint inspection remain
+assembly responsibilities. The drawing's bottom view was distinguished from the board's top view.
+[ST-authored visual mirror](https://static.chipdip.ru/lib/202/DOC012202661.pdf).
 
 **D1/D2 and D10/D11 package/polarity check:** visually compared Vishay drawings 88746 (23-Apr-2020) and 88503
 (29-Apr-2020), pages 1/4, with native pads. D1/D2's 2.5 by 1.8mm SMA lands exceed the 1.52 by 1.68mm minima; their 1.5mm
@@ -663,7 +669,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; memory-reserved pins, boot/UART wiring and four-layer antenna keepout checked. Substrate/enclosure RF effects require physical testing.                        |
 | U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | DCK0003A land pattern and pin map checked: 1=DP, 2=DM, 3=USB_GND. Retain; physical ESD performance remains untested.                                                   |
 | U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
-| U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; all numbered pins/EP and regulator bypasses checked against ST table. Visual package comparison and physical NVM/configuration remain open.                    |
+| U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; electrical pin map and recommended QFN land pattern checked. Physical NVM/configuration and assembly process remain open.                                      |
 | U6        | REC30K-2405SZ         | Isolated application/panel supply.                                               | Pin/land/body drawing check passed; assembler must confirm finished-hole tolerance. Thermal/startup capability remains a bench check. CTRL/TRIM intentionally unused.  |
 | U7        | AP63203WU-7           | AP63203 application 3.3V buck regulator.                                         | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
 | U8        | 74LVC125APW,118       | Three left-channel LVC125 conductor drivers.                                     | Retain; fourth channel input tied low, OE high, output NC intentionally.                                                                                               |
