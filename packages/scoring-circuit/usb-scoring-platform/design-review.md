@@ -347,7 +347,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | D10       | 1N4004-E3/54          | Favero port 1 reverse-polarity shunt across optotransistor.                      | Retain; does not establish tolerance to arbitrary powered-port faults.                                                                                                 |
 | D11       | 1N4004-E3/54          | Favero port 2 reverse-polarity shunt across optotransistor.                      | Retain; same circuit evaluated separately on second port.                                                                                                              |
 | FB1       | BLM18AG121SN1D        | APP_3V3 to Ethernet analog supply filter.                                        | Retain; check DC resistance/current derating and analog-rail droop.                                                                                                    |
-| J1        | USB4105-GF-A          | Single USB-C power/data receptacle; CC and both USB2 orientations connected.     | Retain; USB-A/default-current operation not promised. Mechanical pin-map and assembly review still required.                                                           |
+| J1        | USB4105-GF-A          | GCT B4 pin map, slots and locators checked; opening faces outward.               | Retain. Ground lands 1.10mm versus nominal 1.15mm; details below. Assembler acceptance and enclosure/cable fit remain open.                                            |
 | J2        | HTSW-105-07-L-S       | STM32 3.3V SWD/recovery header.                                                  | Retain; do not connect a grounded debugger across the isolation barrier unknowingly.                                                                                   |
 | J3        | HTSW-103-07-L-S       | Left fencer A/B/C internal harness header.                                       | Retain; not a 3-pin banana socket. External socket/harness assembly is separate.                                                                                       |
 | J4        | HTSW-103-07-L-S       | Right fencer A/B/C internal harness header.                                      | Retain; preserve left/right separation and verify harness pin identity.                                                                                                |
@@ -683,6 +683,15 @@ and nominal model checks above do not establish physical DC-bias, thermal or who
 guide retains the implemented 40us slots / 120us frames and now accounts for 7.8uF nominal raw-VBUS capacitance.
 
 ## Verification limits and next review order
+
+J1 mechanical source: [GCT USB4105 drawing B4, sheet 1](https://gct.co/files/drawings/usb4105.pdf), visually reviewed
+against saved native pad coordinates. Locators are 0.65mm holes spaced 5.78mm; shell slots have 8.64mm horizontal
+spacing and 4.18mm row spacing. The mouth is 0.675mm beyond the bottom edge. CC1/CC2 are separate, paired D+/D-
+connections agree, and the shell connects to USB_GND. The 1.0mm shell lands use 0.6mm-wide slots, with rear/front
+lengths 1.7/1.4mm; signal lands are 0.3mm wide and power lands 0.6mm. Ground lands share the other lands' rear edge but
+end 0.05mm earlier. The default GF-A ordering code has 0.95mm shell stakes; do not silently substitute the 060/120
+suffixes. This is a geometry/pin-map review, not a solder-joint or finished enclosure qualification. No PCB or schematic
+changes were made.
 
 ### Crystal selection calculation
 
