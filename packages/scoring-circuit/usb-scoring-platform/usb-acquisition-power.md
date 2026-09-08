@@ -83,10 +83,10 @@ cable and contacts still contribute resistance. Neither clean DRC nor the 7A con
 board-path rating. Measure voltage at J8 and at the panel, plus converter/connector temperature, during the assembled
 maximum-load and startup tests. No speculative trace change was made from the overview alone.
 
-Before approving maximum-brightness operation, close
-`4A + I_application_input + I_acquisition_feed + I_other_5V <= I_U6_derated`. Application input means the 5V input to
-U7, not its 3.3V output current. Panel selection is resolved; shared-load, startup and thermal qualification remain
-open. This does not affect the panel-disconnected laptop mode.
+The desk-review decision is to retain this supply for the single-panel prototype under the load and temperature envelope
+below. It is not an unrestricted maximum-brightness approval in an untested sealed enclosure. Startup, actual loaded
+voltage and enclosure temperature remain commissioning measurements, not reasons to select another converter now. This
+does not affect the panel-disconnected laptop mode.
 
 ### Selected-panel wiring and load check
 
@@ -96,22 +96,68 @@ existing 5V AHCT buffers. J8 pins 1/2 are PANEL_5V and pins 3/4 are GND. Connect
 cascade output; use a separate power harness from J8. Do not assume matching connector pitch proves either harness's
 polarity or pin-one orientation.
 
-The manufacturer's
-[ESP32 wiring diagram](https://docs.waveshare.com/assets/images/HUB75-GPIO-define-4fcc7f8b11b60a490cceddd451d7ec8f.webp)
-shows the same physical signal-pair sequence, but labels the B2 partner **E**, whereas our J7 pin 8 is grounded. It also
-numbers the illustrated cable from 16 at R1 down to 1 at GND, opposite our footprint pin numbers. This generic diagram
-is not exact-P5 revision proof. For the selected 1/16-scan panel, confirm that the position opposite B2 is GND or an
-unused E input allowed low. Do not reverse the PCB pins or add an E GPIO from this diagram alone. Before powering a
-sample, compare its connector labels and continuity with the sequence above. The panel remains selected, but
-plug-and-play compatibility is not yet established.
+**Pin decision: retain J7 pin 8 grounded; no extra E GPIO or reroute.** The exact
+[P5 manual](https://m.media-amazon.com/images/I/B1Kclbfte1L.pdf) identifies E as an address input, not an output or
+power pin. Its 1/16-scan operation needs A-D. In the linked
+[manufacturer demo](https://files.waveshare.com/wiki/RGB-Matrix-P5-64x32/RGB-Matrix-P5-64x32_Demo.zip),
+`ESP32/BouncingSquares/ESP32-HUB75-MatrixPanel-I2S-DMA.h` sets `E_PIN_DEFAULT = -1` for height 32;
+`Pico/CircuitPython/main.py` sets height 32 and supplies only four address pins. Holding an unused address input low is
+the engineering basis for retaining our ground connection; this is an inference from the documented interface and
+examples, not a supplier statement explicitly approving our PCB. It is also correct if that position is GND. The generic
+rainbow cable's reverse numbering is not permission to reverse the cable: match physical signal positions and the keyed
+input, with a straight-through 16-way cable. Received-part identity and cable continuity remain normal incoming
+inspection; there is no remaining evidence of a missing address signal in this design.
 
-A practical provisional load envelope is 4A panel + 1A at APP_3V3 + the existing 75mA acquisition target + 100mA
-reserved for other direct 5V loads. At an assumed 80% U7 efficiency, this is
-`4 + (3.3 * 1 / (5 * 0.8)) + 0.075 + 0.100 = 5.000A`, or 25W at U6's output. This leaves 1A against its nominal 6A
-rating. The 1A application and 100mA other-load figures are design allocations, not measured consumption or guaranteed
-component maxima; 80% is an analysis assumption, not a guaranteed efficiency. Accept that envelope only after confirming
-the component load sum and U6 temperature derating, then measuring startup and maximum-load behavior. No converter
-replacement or brightness reduction is justified by this calculation alone.
+**Firmware handoff: initialize FM6127 before enabling normal scanning.** The P5 manual names this panel type. The same
+download's `RPI/lib/framebuffer.cc::InitFM6127` supplies three 16-bit patterns, repeated across 64 clocks on all six RGB
+lines: `1111111111001110`, `1110000001100010`, `0101111100000000`. LAT is high on the final 11, 12 and 10 clocks
+respectively (the source conditions are `i > columns - 12`, `i > columns - 13`, `i > columns - 11`), and low between
+writes. Keep panel OE high during initialization, then use 64x32, one panel, A-D row addressing. Do not substitute the
+Pico example's two-register initialization or assume FM6126A and FM6127 are interchangeable. This records the
+implementation requirement; no target driver has been added or hardware-tested by this review. Retain source
+licensing/attribution if incorporating library code.
+
+### Shared supply decision and limits
+
+The native pad-net review includes PANEL_5V, APP_3V3, ETH_AVDD through FB1 and IR_3V3 through R32. The following are
+design allocations, not a sum of guaranteed all-corner device maxima:
+
+| Load                                                         | Allocation    | Basis                                                                                                      |
+| ------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| Selected P5 panel                                            | 4.00A at 5V   | Manufacturer 20W rating; no chained second panel                                                           |
+| U2 ESP32-S3-WROOM-1-N8R8                                     | 0.65A at 3.3V | Above Espressif's >=500mA supply recommendation; includes module memory/activity reserve                   |
+| U12 W5500 including ETH_AVDD                                 | 0.20A at 3.3V | Above the published 132mA typical 100M transmit figure, not a guaranteed maximum                           |
+| J13 LEDs, U10/U11 translators, U13 IR and bias networks      | 0.05A at 3.3V | Board-load allowance; external UART adapter must not draw supply power                                     |
+| Additional application switching reserve                     | 0.10A at 3.3V | Brings the total APP_3V3 envelope to 1A; below U7's 2A output rating                                       |
+| D2 acquisition feed, including U4/core/input drivers/sounder | 0.20A at 5V   | Raised above the 75mA laptop operating target for this standalone calculation; not a new laptop allocation |
+| R38/R41 Favero optocoupler LEDs                              | 0.05A at 5V   | Two 220-ohm 1% resistors bound current below 46mA at 5V even ignoring LED voltage                          |
+| U14/U15, OE pulls and other direct 5V switching/leakage      | 0.15A at 5V   | Includes dynamic buffer/cable-load allowance; not an unrestricted clock/cable-length guarantee             |
+
+[Espressif supply guidance](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/schematic-checklist.html),
+[W5500 datasheet](https://docs.wiznet.io/assets/files/W5500_ds_v110k-8a79ea6cf98a804f93c7deb2398cb53f.pdf),
+[AP63203 datasheet](https://www.diodes.com/datasheet/download/AP63200-AP63201-AP63203-AP63205.pdf).
+
+Use a deliberately reduced **75% assumed U7 efficiency** (not a datasheet guarantee):
+`I_U6 = 4 + 3.3 * 1 / (5 * 0.75) + 0.20 + 0.05 + 0.15 = 5.28A`. This is **26.4W**, leaving **3.6W / 0.72A** against the
+nominal 30W/6A output. U7 losses are included; do not add its 3.3V output current directly to the 5V rail. At 80% U7
+efficiency the same load is 26.125W. No claim is made that firmware or hardware already enforces these allocations.
+
+The visually reviewed RECOM Rev. 1-2025 page 8 **REC30K-2405SZ, 9-24Vin** curve applies to our 20V input: 30W through
+about **50C local ambient**, falling to zero at 105C. Thus the reference curve allows about 27.27W at 55C and only
+24.55W at 60C; our 26.4W envelope does **not** pass at 60C. Use **50C maximum local ambient around U6** as the prototype
+full-load design boundary, with a 45C commissioning target for margin. This is not room temperature. RECOM's test uses
+natural convection 0.1m/s and a 160x100mm, 70um-copper two-layer PCB; our four-layer PCB is different, so the curve does
+not certify our enclosure's thermal performance.
+
+At an assumed 75% U6 efficiency, 26.4W requires 35.2W from the 20V input. Reserving another 5W for the separate
+primary/control/isolated-USB branch gives 40.2W (2.01A at 20V), below the required 20V/3A contract. These input
+efficiency and branch allowances are sizing assumptions, not USB compliance or measured startup proof.
+
+**Outcome: retain the existing converter and single P5 panel; desk sizing passes within this explicit envelope.** Before
+sustained full-white operation, measure each rail against its allocation, voltage at J8 and the panel, startup/restart
+behavior, local ambient and converter/connector temperature with Ethernet, radio, sound and repeaters active. If the
+envelope fails, do not treat this calculation as approval: resolve cooling, excessive load or supply capacity. No
+additional power hardware or automatic brightness cap is introduced by this review.
 
 ## Primary-side control hardware
 

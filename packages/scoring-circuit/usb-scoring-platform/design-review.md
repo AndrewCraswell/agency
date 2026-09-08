@@ -35,22 +35,24 @@ acceptance remains open. Do not purchase components independently without an acc
 pins 1/2 use the filled plane, with nominal 6mm main trunks, rather than relying on the narrow surface branches. No
 disconnected panel supply or demonstrated reason to reroute it was found. The power guide now explicitly separates the
 converter's shared 6A rating from the panel allowance. The user has now selected Waveshare RGB-Matrix-P5-64x32 (SKU
-25848, Amazon B0CLV5MHPX); manufacturer specifications list 5V/4A and <=20W. The selection question is resolved.
-Received revision/pinout, full-white load, startup, shared-load headroom and thermal performance remain unverified. The
-remaining P1 budget question is not a demonstrated defect or purchase authorization. See
+25848, Amazon B0CLV5MHPX); manufacturer specifications list 5V/4A and <=20W. The selection question is resolved. The
+desk review below resolves the interface decision and supplies an explicit shared-load/temperature envelope. Physical
+startup and thermal qualification remain unverified; this is not purchase authorization. See
 [standalone power boundary](usb-acquisition-power.md#standalone-display-power-boundary).
 
-**Selected-panel follow-up:** J7/J8 native pad-net assignments were inspected. The generic Waveshare diagram uses
-reverse cable numbering and labels the B2 partner E rather than our grounded pin 8; no speculative PCB change was made.
-Exact received-P5 labels/continuity and cable polarity need checking before power-up. A provisional 25W shared load
-envelope leaves 5W nominal U6 headroom, but depends on explicit application-load and efficiency assumptions. See
-[wiring and load check](usb-acquisition-power.md#selected-panel-wiring-and-load-check). No purchase, fabrication
-approval or physical qualification is implied. The preceding repository verification finished unsuccessfully in scoring
-coverage; it also reported a web workflow test failure. Electrical simulation passed all eight models.
-
-This follow-up's direct `pnpm --filter @repo/scoring-circuit simulate` passed. `pnpm verify` failed on unrelated
-Shopify-content lint and cancelled concurrent checks; it is not a full pass. No schematic, footprint, route or BOM
-changed.
+**Selected-panel desk review completed:** the exact manual and ESP32/Pico examples establish A-D addressing for 64x32,
+with E unused. Root's engineering decision is to retain pin 8 grounded as an unused address input; no E GPIO or routing
+change. The FM6127 requirement and three-register initialization reference are recorded for firmware work. The actual
+supply branches have allocations totaling 26.4W at assumed 75% U7 efficiency, leaving 3.6W nominal U6 margin. The
+visually reviewed 20V-input derating curve requires a 50C local-ambient design ceiling; at 60C the reference capacity is
+insufficient. The 45C commissioning target and load/thermal/startup checks remain physical tests. This closes desk
+selection/sizing only, not unrestricted enclosure performance. See
+[wiring and load check](usb-acquisition-power.md#selected-panel-wiring-and-load-check) and
+[shared supply limits](usb-acquisition-power.md#shared-supply-decision-and-limits). No purchase, fabrication approval or
+physical qualification is implied. Fresh `pnpm verify` passed checks and all eight electrical models; scoring's 46 test
+files / 950 tests passed, but its 100% coverage gate failed (95.98% lines, 99.79% functions, 95.34% statements, 93.62%
+branches), cancelling the overall run. No threshold was lowered. Documentation format and scoped diff checks passed. No
+schematic, footprint, route or BOM changed.
 
 **Current four-item disposition:** mechanical review has corrected J7/J8 hole sizing and U13/BZ1 body clearances;
 remaining exact-package overlays and installed cable fit are still open. Power sizing and nominal simulations are

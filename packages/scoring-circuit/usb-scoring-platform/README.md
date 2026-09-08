@@ -44,16 +44,21 @@ nominal manufacturer-model load steps pass; that is not proof of these whole-boa
 | Favero DATA ports      | Two TE 5520250-2 sockets, optocoupler outputs | FA-05-compatible lamp repeater interface; mouths face the top edge. These are neither Ethernet nor RS-422. Actual repeater loading/timing still needs testing.                                                    |
 | HUB75 signal and power | Fitted connectors identified in the BOM       | Selected external display: Waveshare RGB-Matrix-P5-64x32 (SKU 25848), 320x160mm, 5V, 1/16 scan. Panel, ribbon and power harness are separate from the bare PCB assembly. Do not connect the panel in laptop mode. |
 
-The user selected the [Waveshare P5 panel on Amazon (ASIN B0CLV5MHPX)](https://www.amazon.com/dp/B0CLV5MHPX). Selection
-is not purchase or qualification approval. See the
-[display power boundary](usb-acquisition-power.md#standalone-display-power-boundary) for manufacturer ratings and the
-remaining sample checks. | J3 / J4 | HTSW-103-07-L-S, 3-pin internal headers | Left/right fencer harnesses, on opposite
-board edges. These are not the external female banana sockets. | | J5 | HTSW-101-07-L-S internal header | Harness to the
-metal-piste reference socket; not protective earth. | | J2 | HTSW-105-07-L-S | STM32 SWD programming access. | | J6 |
-HTSW-106-07-L-S | ESP32 UART recovery/programming access. | | J12 | HTSW-103-07-L-S | Primary-side PD service; do not
-bridge its USB_GND to scoring-side programmer ground. | | J14 | Bare underside pads, no fitted connector | U21 pogo
-programming: VLO reference, USB_GND, SWDIO, SWCLK, NRST. | | U13 / BZ1 | TSOP38438 / PS1240P02BT | 38kHz IR receiver and
-externally driven sounder. Remote protocol/range and acoustic operation remain bench checks. |
+| Internal connection | Part                                     | Purpose                                                                                                            |
+| ------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| J3 / J4             | HTSW-103-07-L-S, 3-pin internal headers  | Left/right fencer harnesses, on opposite board edges. These are not the external female banana sockets.            |
+| J5                  | HTSW-101-07-L-S internal header          | Harness to the metal-piste reference socket; not protective earth.                                                 |
+| J2                  | HTSW-105-07-L-S                          | STM32 SWD programming access.                                                                                      |
+| J6                  | HTSW-106-07-L-S                          | ESP32 UART recovery/programming access.                                                                            |
+| J12                 | HTSW-103-07-L-S                          | Primary-side PD service; do not bridge its USB_GND to scoring-side programmer ground.                              |
+| J14                 | Bare underside pads, no fitted connector | U21 pogo programming: VLO reference, USB_GND, SWDIO, SWCLK, NRST.                                                  |
+| U13 / BZ1           | TSOP38438 / PS1240P02BT                  | 38kHz IR receiver and externally driven sounder. Remote protocol/range and acoustic operation remain bench checks. |
+
+The user selected the [Waveshare P5 panel on Amazon (ASIN B0CLV5MHPX)](https://www.amazon.com/dp/B0CLV5MHPX). Desk
+review retains J7 with unused E held low and records FM6127 initialization for display firmware. The shared-power design
+envelope is 26.4W, one panel, with at most 50C local ambient around U6; target 45C or less during commissioning. These
+are reviewed design limits, not measured performance or an automatic thermal cutoff. See
+[load allocations and derating](usb-acquisition-power.md#shared-supply-decision-and-limits). No order is authorized.
 
 The owner's Ok Fencing cable is already validated; do not reopen that compatibility decision. The mating banana sockets,
 harness termination, strain relief and enclosure attachment still need an explicit supplier responsibility and quote. J3
