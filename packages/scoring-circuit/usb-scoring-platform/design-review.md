@@ -436,6 +436,16 @@ footprint, affected passives, local routing, effective capacitance/inrush, compe
 Keep the USB-C interface and isolated modules unchanged. No converter substitution is approved by this candidate note.
 [ADI LTC3114-1 pin functions and automatic mode behavior](https://www.analog.com/media/en/technical-documentation/data-sheets/ltc3114-1.pdf).
 
+**Input-path constraint found before migration:** replacing C39's 4.7uF with 10uF would raise the directly connected
+VBUS bank from 6.9uF to 12.2uF nominal (C1/C36/C39/C40/C50), before tolerances and IC capacitance. TI's USB-C guidance
+limits directly exposed sink capacitance to 10uF and calls for a power-path switch to isolate additional bulk
+capacitance. Do not apply this replacement with its input reservoir directly on VBUS. A complete replacement must
+include controlled capacitor charging, startup sequencing and suspend overhead, not merely the regulator and its
+compensation. This finding concerns the proposed replacement, not a demonstrated over-capacitance defect in the current
+6.9uF board. ADI's input-selection section says at least 6.8uF while its PVIN pin instruction says 10uF or larger; do
+not silently use the smaller number to waive the input-path check. No schematic or PCB migration has been made.
+[TI USB-C power-path guidance](https://www.ti.com/document-viewer/lit/html/SSZTA47/GUID-A5D68CC9-512A-4829-8D81-C0708D7A7836).
+
 Package check: visually inspected Rev D pages 1 and 31 from the distributor-hosted manufacturer PDF. The installed KiCad
 `Package_DFN_QFN:DFN-16-1EP_3x5mm_P0.5mm_EP1.66x4.4mm` matches the DHC drawing: 0.50mm pitch, 0.65x0.25mm lands, 2.85mm
 row-center spacing (3.50mm outer span), and 1.66x4.40mm exposed land within the drawing's 1.65+/-0.05mm width. Its pin 1
