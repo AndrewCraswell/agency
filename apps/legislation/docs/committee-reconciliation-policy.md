@@ -72,3 +72,20 @@ that a state field was validated on the term itself.
 
 Contradictory 107th Spence and 117th Udall entries are not repaired by name matching. A source-semantic explanation is
 required before publishing those editions; missing or stale terms are not permission to create a fictional tenure.
+
+### Retained historical entries: subsequent source review
+
+The 106th full-directory notes explicitly identify George E. Brown Jr.'s death on July 15, 1999 and say earlier
+information was retained. The `CDIR-1999-06-15` PDF therefore reports an event after its own package issue date.
+The February 2000 edition repeats that compilation context. Using June 15 as a detected departure would be wrong.
+
+Both reviewed 107th full-directory notes explicitly identify Floyd Spence's death on August 16, 2001 and explain
+that information is retained for historical purposes. This establishes historical rather than current information,
+but not an exact committee departure date or an observed start. No general roster-bracket legend was established.
+The evidence is in the advertised full PDFs for `CDIR-1999-06-15` and `CDIR-2000-02-01` (PDF page 3), and
+`CDIR-2001-12-07` and `CDIR-2002-10-01` (PDF page 1).
+
+These are a separate unresolved observation contract, not remaining nickname errors. A future implementation must
+represent an assignment first encountered as already historical, allow genuinely unknown observed dates, and prevent
+retrospective notes from being backdated to the package issue date. Do not synthesize a zero-duration tenure or
+silently remove the historical assignment merely to pass the current active-roster importer.

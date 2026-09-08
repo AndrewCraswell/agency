@@ -7,18 +7,19 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 ## Current acceptance status
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
-Reviewed reconciliation code `509d46d` is deployed as Trigger `20260908.2`. Historical import gates remain separate:
+Reviewed reconciliation through `d03e968` is deployed as Trigger `20260908.3` (deployment `sskqndkl`).
+The already-running 108th import remains on `20260908.2`; do not restart it. Historical import gates remain separate:
 
 | Congress | Current gate |
 | --- | --- |
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
-| 107 | Parsed; historical identity corrections and the bracketed, stale Spence entries remain unresolved |
+| 107 | Parsed; identity corrections and the observation contract for explicitly retained historical Spence entries remain unresolved |
 | 108 | All four editions pass: 206 organizations and 3,856 uniquely mapped memberships each; production import in progress |
 | 109 | Both editions pass: 209 organizations and 3,781 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
 | 113 | Imported: 3,530 memberships, 210 organizations, 531 people; database dates/current preservation and zero-write rerun verified; fresh authenticated API smoke pending |
 | 105 | Complete canonical audit passes: 196 organizations, 3,155 uniquely mapped memberships, zero gaps or duplicates; reviewed hierarchy checks pass; import pending |
-| 106 | Leave-note policy resolved; all three editions parse to 199 organizations and 3,331 source memberships; canonical audit still finds unresolved identities |
+| 106 | All three editions parse to 199 organizations and 3,331 source memberships; remaining identities and retrospective Brown observation dates remain unresolved |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 
 The user's explicit 2026-09-08 request authorized the [reviewed reconciliation strategy](committee-reconciliation-policy.md).

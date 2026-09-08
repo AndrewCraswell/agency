@@ -358,3 +358,13 @@ hierarchy labels and visually confirmed the unusual two-member Standards roster 
 this was not an all-row visual census. The combined GovInfo suite passes 341 tests. The latest root verification
 passes its check stage, then fails the unrelated scoring coverage thresholds. The earlier locked-file issue did not
 recur in that run. Historical 105th import is not yet dispatched.
+
+The 105th reconciliation is committed and pushed as `d03e968`, and Trigger `20260908.3` (deployment `sskqndkl`)
+successfully deployed all 26 tasks. The final isolated legislation coverage run passes 2,291 tests in 247 files,
+with 60 database-dependent tests skipped in four files; all four receiver tests also pass. Pre-push types pass.
+The full repository gate remains blocked by unrelated scoring coverage thresholds, not by legislation test failures.
+The 108th import continues on its original `20260908.2` deployment; no replacement run was launched.
+
+Independent full-directory source review explains the retained Brown/Spence information but exposes an observation-date
+contract gap: a June 1999 package reports Brown's July 1999 death. These editions remain unpublished pending a model
+for already-historical observations and genuinely unknown dates; details are in the reconciliation policy.
