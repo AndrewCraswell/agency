@@ -285,3 +285,20 @@ The following Thurmond spelling batch passed 42 focused committee tests. Root ve
 then failed the unrelated scoring package's 100% coverage thresholds. This is distinct from the earlier scoring timeout.
 The isolated legislation coverage run passed all 244 executed test files and all four receiver tests; four
 database-dependent test files remain skipped. The correction is not yet deployed or a complete 105th acceptance.
+
+The cumulative reviewed parser and source-name matching changes through `8ead90d` deployed successfully as
+Trigger `20260908.1`, deployment `2ijb02kj`, with all 26 tasks detected. All 192 focused committee-ingestion tests
+pass. Repository verification passes the check stage but still fails the unrelated scoring coverage thresholds;
+no hooks were bypassed. This deployment does not clear any incomplete historical Congress for import.
+
+Before the release smoke, no active or pending Trigger runs or PostgreSQL index builds were present. Congress 119
+had 3,871 active GovInfo memberships and 221 active federal GovInfo organizations; the canonical roster fingerprint
+matched its checkpoint. Current-sync smoke `run_06g7sver1nvfnl2phic41k5801` was dispatched once using idempotency key
+`committee-current-smoke-8ead90d-20260908` and completed on `20260908.1`: one edition discovered/read/skipped,
+zero inserts, updates or failures. Exact full-row fingerprints before/after match: memberships
+`f816c7c2779dd228415c2cfa3fe30bfe`, active organizations `cd0e72ce5182f227de0d1b92f4159310`.
+The canonical roster SHA-256 remains `46974dffd94861943d235bc10df7049fe6cea409d9625551ae67513a4ebc6812`.
+The existing deployed API returns 200 for `/health` and `/ready`, and 401 for anonymous `/api/people` as expected.
+The Trigger current-sync release smoke is verified. A fresh authenticated membership-API smoke remains pending:
+no API smoke bearer token is configured in the local environment. This is not a fresh authenticated API acceptance
+or a Railway API deployment; no historical import gate was promoted.
