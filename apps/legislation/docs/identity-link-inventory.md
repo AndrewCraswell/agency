@@ -68,7 +68,9 @@ The earlier 20260908.7 attempt failed on a Depot network timeout and is not acce
 The 16 focused normalization/hydration tests and repository pre-push types passed. Full repository verification
 is not a green acceptance gate: an earlier pass failed in scoring, and a later pass was invalidated by overlapping
 coverage runs sharing an output directory. An isolated smoke-foundation rerun passed all 51 tests. The final
-legislation coverage rerun uses a separate report directory and two workers to avoid that collision.
+legislation coverage rerun used a separate report directory and two workers to avoid that collision: **2,438
+tests passed, 60 skipped**, across 254 passing files and four skipped files. The four standalone webhook
+verification receiver tests also passed. This does not retroactively make the repository-wide run green.
 
 Production replay and authenticated response verification remain open: the pre-write guard again observed the
 active Congress wave and prevented overlapping writes. Do not mark the inventory or data repair complete solely
