@@ -33,6 +33,8 @@ the corroborating granule ID in the reviewed decision. Missing biography links a
 
 The subsequent [person-by-person research audit](committee-identity-research-audit.md) separates fresh biography
 corroboration from independent event/date verification and records the ingestion performance findings.
+The [ingestion performance policy](committee-ingestion-performance.md) describes batching, preparation concurrency,
+transaction deadlines and safe timeout recovery.
 
 - The safety reviewer accepted Warner/Abercombie identity-only repairs: the target roster is positive assignment
   evidence; matching to a uniquely corroborated parent does not create an assignment. Generic fuzzy matching was rejected.

@@ -9,8 +9,8 @@ import { requireSuccessfulSynchronizationResult } from "./synchronization-execut
 export const committeeDirectorySync = schedules.task({
   id: "govinfo-committee-directory-sync",
   // Create the production schedule only after a deployed canary succeeds.
-  maxDuration: 3_600,
-  queue: { concurrencyLimit: 1 },
+  maxDuration: 86_400,
+  queue: { concurrencyLimit: 1, name: "govinfo-committee-publication" },
   run: async (_payload, { ctx }) => {
     const config = loadConfig()
     const { database, pool } = createDatabase(config.database)

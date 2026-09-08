@@ -12,7 +12,7 @@ import {
   personJurisdictions,
   syncCheckpoints
 } from "../schema/schema.js"
-import { observeCanonicalRecord } from "./changes.js"
+import { observeCanonicalSnapshot, type CanonicalSnapshotChangeInput } from "./changes.js"
 
 type OrganizationMembershipInsert = typeof organizationMemberships.$inferInsert
 type OrganizationMembershipRow = typeof organizationMemberships.$inferSelect
@@ -95,9 +95,18 @@ export async function replaceEntitySnapshot(
     preserveExistingOrganizations?: boolean
     replaceOrganizations?: boolean
     replacePeople?: boolean
+    statementTimeoutMs?: number
   }> = {}
 ): Promise<void> {
   const personValues = uniqueById(snapshot.people)
+  if (
+    options.statementTimeoutMs !== undefined &&
+    (!Number.isSafeInteger(options.statementTimeoutMs) ||
+      options.statementTimeoutMs < 1000 ||
+      options.statementTimeoutMs > 60000)
+  ) {
+    throw new Error("Snapshot statement timeout must be between 1000 and 60000 milliseconds")
+  }
   const organizationValues = uniqueById(snapshot.organizations)
   const termValues = uniqueById(snapshot.terms)
   const incomingMembershipValues = uniqueById(snapshot.memberships)
@@ -147,6 +156,10 @@ export async function replaceEntitySnapshot(
   const termSourceProvider = snapshot.termSourceProvider
 
   await database.transaction(async (transaction) => {
+    if (options.statementTimeoutMs !== undefined) {
+      await transaction.execute(sql`select set_config('statement_timeout', ${String(options.statementTimeoutMs)}, true),
+        set_config('lock_timeout', '10000', true), set_config('idle_in_transaction_session_timeout', '120000', true)`)
+    }
     const replacedOrganizationIds =
       options.replaceOrganizations === false
         ? []
@@ -479,8 +492,10 @@ export async function replaceEntitySnapshot(
           target: organizationMemberships.id
         })
     }
+    const observations: CanonicalSnapshotChangeInput[] = []
     for (const person of personValues) {
-      await observeCanonicalRecord(transaction, {
+      observations.push({
+        source: person,
         fields: {
           familyName: person.familyName,
           givenName: person.givenName,
@@ -499,7 +514,8 @@ export async function replaceEntitySnapshot(
       if (options.preserveExistingOrganizations === true && !writtenOrganizationIds.has(organization.id)) {
         continue
       }
-      await observeCanonicalRecord(transaction, {
+      observations.push({
+        source: organization,
         fields: {
           chamber: organization.chamber,
           childRelationsComplete: organization.childRelationsComplete,
@@ -524,7 +540,8 @@ export async function replaceEntitySnapshot(
       })
     }
     for (const membership of membershipValues) {
-      await observeCanonicalRecord(transaction, {
+      observations.push({
+        source: membership,
         fields: {
           classification: membership.classification,
           detectedEndDate: membership.detectedEndDate,
@@ -545,6 +562,7 @@ export async function replaceEntitySnapshot(
         recordType: "organization-membership"
       })
     }
+    await observeCanonicalSnapshot(transaction, observations)
     if (options.checkpoint !== undefined) {
       await transaction
         .insert(syncCheckpoints)

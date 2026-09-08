@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, desc, eq, gte, lte, lt, or } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm"
 import { currentIngestionRunId } from "../../ingestion/run-context.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -200,6 +200,97 @@ export async function observeCanonicalRecord(
   return "changed"
 }
 
+export type CanonicalSnapshotChangeInput = CanonicalChangeInput & { source: SourceRecord }
+
+/** Caller supplies the snapshot transaction and its source rows. No per-record database round trips. */
+export async function observeCanonicalSnapshot(
+  database: Omit<LegislationDatabase, "$client">,
+  inputs: readonly CanonicalSnapshotChangeInput[]
+): Promise<void> {
+  const ingestionRunId = currentIngestionRunId()
+  if (ingestionRunId === undefined || inputs.length === 0) {
+    return
+  }
+  const groups = new Map<string, CanonicalSnapshotChangeInput[]>()
+  const identities = new Set<string>()
+  for (const input of inputs) {
+    const key = JSON.stringify([input.recordType, input.recordId])
+    if (identities.has(key)) {
+      throw new Error(`Duplicate canonical snapshot identity: ${key}`)
+    }
+    identities.add(key)
+    const group = groups.get(input.recordType) ?? []
+    group.push(input)
+    groups.set(input.recordType, group)
+  }
+  for (const [recordType, group] of groups) {
+    for (let offset = 0; offset < group.length; offset += 250) {
+      const batch = group.slice(offset, offset + 250)
+      const previous = await database
+        .select()
+        .from(canonicalRecordFingerprints)
+        .where(
+          and(
+            eq(canonicalRecordFingerprints.recordType, recordType),
+            inArray(
+              canonicalRecordFingerprints.recordId,
+              batch.map((input) => input.recordId)
+            )
+          )
+        )
+      const byId = new Map(previous.map((row) => [row.recordId, row]))
+      const events: (typeof changeEvents.$inferInsert)[] = []
+      const fingerprints: (typeof canonicalRecordFingerprints.$inferInsert)[] = []
+      const observedAt = new Date()
+      for (const input of batch) {
+        const planned = planCanonicalChange(input, byId.get(input.recordId))
+        if (planned === undefined) {
+          continue
+        }
+        const source = capturedSource(input.source, observedAt)
+        events.push({
+          after: planned.after,
+          before: planned.before,
+          changeType: planned.changeType,
+          changedFields: planned.changedFields,
+          id: planned.id,
+          ingestionRunId,
+          jurisdictionId: input.jurisdictionId,
+          organizationId: input.organizationId,
+          personId: input.personId,
+          recordId: input.recordId,
+          recordType,
+          sourceUpdatedAt: input.sourceUpdatedAt,
+          ...source,
+          observedAt
+        })
+        fingerprints.push({
+          fields: planned.after,
+          fingerprint: planned.fingerprint,
+          observedAt,
+          recordId: input.recordId,
+          recordType
+        })
+      }
+      if (events.length === 0) {
+        continue
+      }
+      await database.insert(changeEvents).values(events).onConflictDoNothing({ target: changeEvents.id })
+      await database
+        .insert(canonicalRecordFingerprints)
+        .values(fingerprints)
+        .onConflictDoUpdate({
+          target: [canonicalRecordFingerprints.recordType, canonicalRecordFingerprints.recordId],
+          set: {
+            fields: sql`excluded.fields`,
+            fingerprint: sql`excluded.fingerprint`,
+            observedAt: sql`excluded.observed_at`
+          }
+        })
+    }
+  }
+}
+
 async function captureSource(
   database: Omit<LegislationDatabase, "$client">,
   recordType: string,
@@ -207,6 +298,10 @@ async function captureSource(
   observedAt: Date
 ): Promise<CapturedSource | undefined> {
   const record = await sourceRecord(database, recordType, recordId)
+  return capturedSource(record, observedAt)
+}
+
+function capturedSource(record: SourceRecord | undefined, observedAt: Date): CapturedSource | undefined {
   if (record === undefined || typeof record.sourceUrl !== "string") {
     return undefined
   }

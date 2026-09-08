@@ -11,8 +11,10 @@ export const committeeDirectoryBackfillPayload = z.strictObject({ congress: z.nu
 export const committeeDirectoryBackfill = schemaTask({
   id: "govinfo-committee-directory-backfill",
   schema: committeeDirectoryBackfillPayload,
-  maxDuration: 3_600,
-  queue: { concurrencyLimit: 1 },
+  // Editions checkpoint atomically; retries resume instead of replaying committed editions.
+  // The old one-hour ceiling interrupted a four-edition Congress.
+  maxDuration: 86_400,
+  queue: { concurrencyLimit: 1, name: "govinfo-committee-publication" },
   run: async (payload, { ctx }) => runCommitteeDirectoryBackfill(payload, ctx.run.id)
 })
 

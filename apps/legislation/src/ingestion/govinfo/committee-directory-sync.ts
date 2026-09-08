@@ -12,13 +12,9 @@ import {
 } from "../../db/schema/schema.js"
 import { jurisdictionId, legislativeSessionId } from "../../legislation/identifiers.js"
 import { RetryingHttpClient } from "../http-client.js"
-import { createJobCounts, runIngestionJob, type JobResult } from "../job.js"
-import { GovInfoCommitteeDirectoryClient, type GovInfoDirectoryPackage } from "./committee-directory-client.js"
-import {
-  normalizeGovInfoCommitteeDirectory,
-  type GovInfoCommitteeNormalizationResult,
-  type GovInfoPersonCatalog
-} from "./committee-directory-normalize.js"
+import { createJobCounts, mapConcurrent, runIngestionJob, type JobResult } from "../job.js"
+import { GovInfoCommitteeDirectoryClient } from "./committee-directory-client.js"
+import { normalizeGovInfoCommitteeDirectory, type GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import {
   committeeRosterFingerprint,
   directoryDetectionDate,
@@ -85,11 +81,7 @@ export async function executeGovInfoCommitteeSynchronization(
       let applied = checkpoint?.issuedAt
       let packageId = checkpoint?.packageId
       const catalog = await loadCatalog(input.database)
-      const validated: {
-        directoryPackage: GovInfoDirectoryPackage
-        normalized: GovInfoCommitteeNormalizationResult
-      }[] = []
-      for (const directoryPackage of packages) {
+      const validated = await mapConcurrent(packages, 2, async (directoryPackage) => {
         const records = await client.getRecords(directoryPackage)
         counts.read += 1
         let normalized = normalizeGovInfoCommitteeDirectory(records, directoryPackage, catalog, runAt)
@@ -118,8 +110,8 @@ export async function executeGovInfoCommitteeSynchronization(
             `GovInfo package ${directoryPackage.packageId} has ${normalized.unmatched.length} unmatched committee members: ${examples}`
           )
         }
-        validated.push({ directoryPackage, normalized })
-      }
+        return { directoryPackage, normalized }
+      })
       // Reject source/identity failures in later editions before publishing any roster.
       // Individual snapshot/checkpoint commits still make database failures resumable.
       for (const { directoryPackage, normalized } of validated) {
@@ -214,7 +206,8 @@ export async function executeGovInfoCommitteeSynchronization(
           membershipSessionId: session.id,
           organizationSourceProvider: "govinfo",
           preserveExistingOrganizations: session.hasEnded,
-          replacePeople: false
+          replacePeople: false,
+          statementTimeoutMs: 60_000
         })
         counts.updated += normalized.snapshot.organizations.length + normalized.snapshot.memberships.length
         applied = directoryPackage.issuedAt

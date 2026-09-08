@@ -130,6 +130,35 @@ function runWithAlias(personId: string) {
 }
 
 describe("committee directory observation synchronization", () => {
+  it("prepares two editions concurrently but publishes in source order", async () => {
+    const first = directory()
+    const second = directory("2026-08-01", "2026-08-02")
+    const gate = Promise.withResolvers<void>()
+    const prepared: string[] = []
+    await executeGovInfoCommitteeSynchronization(
+      { config, database, congress: 119, correlationId: "parallel-test" },
+      {
+        client: {
+          discover: async () => [first, second],
+          getRecords: async (edition) => {
+            if (edition.packageId === first.packageId) {
+              await gate.promise
+            }
+            prepared.push(edition.packageId)
+            gate.resolve()
+            return parseGovInfoCommitteeDirectory(fixture(edition === first ? "member" : "chairman"))
+          }
+        },
+        loadCatalog: async () => catalog,
+        now: () => now
+      }
+    )
+    expect(prepared).toEqual([second.packageId, first.packageId])
+    expect(mocks.replace.mock.calls.map((call) => call[3]?.checkpoint?.cursor.packageId)).toEqual([
+      first.packageId,
+      second.packageId
+    ])
+  })
   it("prevalidates all pending editions and then commits their checkpoints in order", async () => {
     await run([directory(), directory("2026-08-01", "2026-08-02")], async () => {
       expect(mocks.replace).not.toHaveBeenCalled()
@@ -199,7 +228,8 @@ describe("committee directory observation synchronization", () => {
     expect(call[3]).toMatchObject({
       membershipSessionId: "session:us:119",
       preserveExistingOrganizations: true,
-      replacePeople: false
+      replacePeople: false,
+      statementTimeoutMs: 60_000
     })
   })
 
