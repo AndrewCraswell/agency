@@ -597,6 +597,10 @@ export const organizationMemberships = legislationSchema.table(
     ),
     check("organization_memberships_tenure_ordinal_check", sql`${table.tenureOrdinal} > 0`),
     check(
+      "organization_memberships_historical_observation_check",
+      sql`${table.endedReason} is distinct from 'historical_at_first_observation' or (${table.legislativeSessionId} is not null and ${table.isActive} is false and ${table.detectedStartDate} is null and ${table.detectedEndDate} is null and ${table.lastObservedDate} is null)`
+    ),
+    check(
       "organization_memberships_provenance_complete_check",
       sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),

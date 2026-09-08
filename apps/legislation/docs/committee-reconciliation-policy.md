@@ -169,3 +169,16 @@ environment. Do not weaken authentication or manufacture production checkpoint e
 The import guard remains active, and no 117th roster was published. Next complete authenticated response verification
 when the approved credential is available; meanwhile continue the independently actionable 106th/107th historical
 observation and identity work. Trigger was not redeployed by this API-only release.
+
+### Historical first-observation contract
+
+`historical_at_first_observation` is the explicit end-reason value for a source assignment first encountered as already
+historical. It requires a Congress/session, an inactive membership, and null detected start, detected end and last-observed
+dates. Effective dates remain independently nullable: this value does not invent them. Repeated archived observations
+reuse the historical tenure; a later positive active assignment creates a new tenure instead of reactivating it. A
+previously observed active tenure cannot be relabeled as historical at first observation.
+
+The application schema, original migration baseline, API projection and reconciliation now support this contract.
+Production schema application and exact-source Brown/Spence normalization are still pending; no historical import is
+enabled by this schema-only change. An already-applied baseline is not rerun automatically: verify the deployed enum
+and constraint before enabling ingestion, preserving valid indexes and unrelated data.

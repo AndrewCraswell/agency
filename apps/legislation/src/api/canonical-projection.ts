@@ -1,4 +1,4 @@
-import { isOrganizationMembershipEndReason } from "../legislation/membership.js"
+import { isOrganizationMembershipEndReason, type OrganizationMembershipEndReason } from "../legislation/membership.js"
 
 export type DateValue = Date | string
 
@@ -128,7 +128,7 @@ export interface Membership extends CanonicalFields {
   detectedStartDate: string | null
   detectedEndDate: string | null
   lastObservedDate: string | null
-  endedReason: "roster_removal_detected" | "congress_ended" | null
+  endedReason: OrganizationMembershipEndReason | null
   isCurrent: boolean
 }
 
@@ -908,6 +908,15 @@ export function projectMembership(input: MembershipProjectionInput, context: Pro
   }
   if (input.isCurrent && input.endedReason !== null) {
     throw new CanonicalProjectionError("current membership must not have an endedReason")
+  }
+  if (
+    input.endedReason === "historical_at_first_observation" &&
+    (input.legislativeSessionId === null ||
+      detectedStartDate !== null ||
+      detectedEndDate !== null ||
+      lastObservedDate !== null)
+  ) {
+    throw new CanonicalProjectionError("historical first observation requires a session and unknown detected dates")
   }
   return {
     ...canonical(

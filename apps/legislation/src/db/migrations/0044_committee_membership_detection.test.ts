@@ -16,7 +16,7 @@ describe("committee membership detection migration", () => {
 
   it("separates effective dates from detected dates and scopes tenures to sessions", () => {
     expect(migration).toContain(
-      "CREATE TYPE \"legislation\".\"organization_membership_end_reason\" AS ENUM('roster_removal_detected', 'congress_ended')"
+      "CREATE TYPE \"legislation\".\"organization_membership_end_reason\" AS ENUM('roster_removal_detected', 'congress_ended', 'historical_at_first_observation')"
     )
     expect(migration).toContain('RENAME COLUMN "start_date" TO "effective_start_date"')
     expect(migration).toContain('RENAME COLUMN "end_date" TO "effective_end_date"')

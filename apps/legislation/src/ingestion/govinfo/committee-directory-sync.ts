@@ -189,6 +189,13 @@ export async function executeGovInfoCommitteeSynchronization(
           packageId: directoryPackage.packageId
         }
         for (const membership of normalized.snapshot.memberships) {
+          if (membership.endedReason === "historical_at_first_observation") {
+            membership.isActive = false
+            membership.detectedStartDate = null
+            membership.detectedEndDate = null
+            membership.lastObservedDate = null
+            continue
+          }
           membership.detectedStartDate = detectedAt.toISOString().slice(0, 10)
           membership.lastObservedDate = membership.detectedStartDate
           if (session.hasEnded) {

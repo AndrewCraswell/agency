@@ -28,12 +28,25 @@ function membershipContinuityKey(
   return `${membership.organizationId}\u0000${membership.legislativeSessionId ?? ""}\u0000${sourceIdentity}`
 }
 
-function resolveMembershipTenures(
+export function resolveMembershipTenures(
   incomingMemberships: readonly OrganizationMembershipInsert[],
-  existingMemberships: readonly OrganizationMembershipRow[]
+  existingMemberships: readonly Pick<
+    OrganizationMembershipRow,
+    | "id"
+    | "organizationId"
+    | "legislativeSessionId"
+    | "sourceId"
+    | "isActive"
+    | "endedReason"
+    | "tenureOrdinal"
+    | "detectedStartDate"
+    | "effectiveStartDate"
+    | "effectiveEndDate"
+    | "lastObservedDate"
+  >[]
 ): OrganizationMembershipInsert[] {
   const incomingKeys = new Set<string>()
-  const existingByKey = new Map<string, OrganizationMembershipRow[]>()
+  const existingByKey = new Map<string, (typeof existingMemberships)[number][]>()
   for (const membership of existingMemberships) {
     const key = membershipContinuityKey(membership)
     const group = existingByKey.get(key) ?? []
@@ -51,6 +64,12 @@ function resolveMembershipTenures(
     incomingKeys.add(key)
 
     const history = existingByKey.get(key) ?? []
+    if (
+      membership.endedReason === "historical_at_first_observation" &&
+      (history.length > 1 || history.some((existing) => existing.endedReason !== "historical_at_first_observation"))
+    ) {
+      throw new Error("Historical first observation conflicts with previously observed membership history")
+    }
     const activeTenures = history.filter((existing) => existing.isActive === true)
     if (activeTenures.length > 1) {
       throw new Error(
@@ -58,10 +77,12 @@ function resolveMembershipTenures(
       )
     }
     const continuableTenure =
-      activeTenures[0] ??
-      history
-        .filter((existing) => existing.endedReason === "congress_ended")
-        .sort((left, right) => right.tenureOrdinal - left.tenureOrdinal)[0]
+      membership.endedReason === "historical_at_first_observation"
+        ? history.find((existing) => existing.endedReason === "historical_at_first_observation")
+        : (activeTenures[0] ??
+          history
+            .filter((existing) => existing.endedReason === "congress_ended")
+            .sort((left, right) => right.tenureOrdinal - left.tenureOrdinal)[0])
     if (continuableTenure !== undefined) {
       return {
         ...membership,

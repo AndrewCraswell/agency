@@ -1,4 +1,4 @@
-CREATE TYPE "legislation"."organization_membership_end_reason" AS ENUM('roster_removal_detected', 'congress_ended');
+CREATE TYPE "legislation"."organization_membership_end_reason" AS ENUM('roster_removal_detected', 'congress_ended', 'historical_at_first_observation');
 --> statement-breakpoint
 ALTER TABLE "legislation"."organization_memberships" RENAME COLUMN "start_date" TO "effective_start_date";
 --> statement-breakpoint
@@ -27,6 +27,8 @@ ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organizatio
 ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_roster_removal_check" CHECK ("legislation"."organization_memberships"."ended_reason" is distinct from 'roster_removal_detected' or "legislation"."organization_memberships"."detected_end_date" is not null) NOT VALID;
 --> statement-breakpoint
 ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_congress_end_check" CHECK ("legislation"."organization_memberships"."ended_reason" is distinct from 'congress_ended' or ("legislation"."organization_memberships"."legislative_session_id" is not null and "legislation"."organization_memberships"."detected_end_date" is null)) NOT VALID;
+--> statement-breakpoint
+ALTER TABLE "legislation"."organization_memberships" ADD CONSTRAINT "organization_memberships_historical_observation_check" CHECK ("ended_reason" is distinct from 'historical_at_first_observation' or ("legislative_session_id" is not null and "is_active" is false and "detected_start_date" is null and "detected_end_date" is null and "last_observed_date" is null)) NOT VALID;
 --> statement-breakpoint
 DROP INDEX "legislation"."organization_memberships_person_idx";
 --> statement-breakpoint

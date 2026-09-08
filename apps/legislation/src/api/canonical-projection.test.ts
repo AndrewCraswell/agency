@@ -380,6 +380,33 @@ describe("canonical legislative projections", () => {
       context
     )
 
+    const historicalInput = {
+      id: "membership:historical",
+      sourceUrl: personInput.sourceUrl,
+      person,
+      organization,
+      role: "member",
+      label: null,
+      legislativeSessionId: "session:us:107",
+      effectiveStartDate: null,
+      effectiveEndDate: null,
+      detectedStartDate: null,
+      detectedEndDate: null,
+      lastObservedDate: null,
+      endedReason: "historical_at_first_observation",
+      isCurrent: false
+    } as const
+    expect(projectMembership(historicalInput, context)).toMatchObject({
+      endedReason: "historical_at_first_observation",
+      detectedStartDate: null,
+      detectedEndDate: null,
+      isCurrent: false
+    })
+    expect(() => projectMembership({ ...historicalInput, detectedStartDate: "2001-12-07" }, context)).toThrow(
+      "unknown detected dates"
+    )
+    expect(() => projectMembership({ ...historicalInput, isCurrent: true }, context)).toThrow("current membership")
+
     expect(
       projectPersonDetail(
         {
