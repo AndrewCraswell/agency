@@ -7,7 +7,7 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 ## Current acceptance status
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
-Batching and bounded preparation are deployed as Trigger `20260908.4` (deployment `w5qf9huj`).
+Batching, bounded preparation and reviewed identities are deployed as Trigger `20260908.5` (deployment `mts2zctp`).
 The 108th recovered from its committed checkpoint after PostgreSQL confirmed no orphan transaction.
 The 105th and 109th subsequently imported successfully; all three passed unchanged reruns.
 Historical import gates remain separate:
@@ -16,22 +16,23 @@ Historical import gates remain separate:
 | --- | --- |
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
-| 107 | Parsed; identity corrections and the observation contract for explicitly retained historical Spence entries remain unresolved |
+| 107 | Imported both editions: 3,750 cumulative tenures, 207 organizations and 533 people; unchanged rerun verified; Spence's four already-historical assignments retain unknown dates |
 | 108 | Imported through August 2004; 3,857 historical tenures; unchanged rerun verified |
 | 109 | Imported through September 2006: 209 organizations and 3,781 memberships; unchanged rerun verified |
 | 113 | Imported: 3,530 memberships, 210 organizations, 531 people; database dates/current preservation and zero-write rerun verified; fresh authenticated API smoke pending |
 | 105 | Imported June 1997: 196 organizations and 3,155 memberships; unchanged rerun verified |
-| 106 | All three editions parse to 199 organizations and 3,331 source memberships; remaining identities and retrospective Brown observation dates remain unresolved |
+| 106 | Imported all three editions: 199 organizations, 3,331 memberships and 535 people; unchanged rerun verified; Brown's four already-historical assignments retain unknown dates |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 
 The user's explicit 2026-09-08 request authorized the [reviewed reconciliation strategy](committee-reconciliation-policy.md).
 No incomplete historical roster is published.
 State committee ingestion remains deferred until the approved Open States scrapers are self-hosted.
 
-### Fresh remaining-edition audit, 2026-09-08
+### Earlier remaining-edition audit, 2026-09-08
 
 Read-only discovery, parsing, canonical matching and advertised biography-alias lookup completed for every remaining
-edition on the current source. No 106th, 107th or 117th membership was written.
+edition on the current source. At this earlier audit, no 106th, 107th or 117th membership was written.
+The current acceptance table above supersedes these initial unresolved counts.
 
 | Edition | Organizations | Mapped memberships | Unresolved source entries |
 | --- | --- | --- | --- |

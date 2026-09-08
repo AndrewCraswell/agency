@@ -39,3 +39,9 @@ completed in 162 seconds, advanced through August 2004 and passed a zero-write r
 imports completed in 82 and 88 seconds, respectively, and passed zero-write reruns. Current membership and active
 organization fingerprints were preserved. See the exact run IDs in [rollout evidence](committee-membership-history.md).
 These are successful live runs, not a controlled old/new benchmark or a guarantee against future network failures.
+
+The subsequent reviewed-identity release `20260908.5` (`mts2zctp`) imported all three 106th editions in 179 seconds
+wall time and both 107th editions in 90 seconds, each on its first attempt. Their unchanged reruns completed in
+82 and 55 seconds with zero writes. Full historical membership-row hashes and the current-Congress hash were
+preserved. This confirms the bounded pipeline on both newly reconciled Congresses; it does not guarantee
+success through arbitrary upstream outages. Exact run IDs and source/database checks are in the rollout evidence.

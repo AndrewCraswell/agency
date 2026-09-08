@@ -393,5 +393,45 @@ The same-expression 119th hash remains `f1e55f8a2bd85676714edf02e75d6120`, with 
 The existing active-organization baseline remains `e6816e2fd02d046f435f01fdd235638a` (221 records, using the
 earlier `to_jsonb` expression). No authenticated API acceptance is claimed by these database checks.
 
-Eleven of the fourteen historical Congresses are now imported (105, 108, 109, 110, 111, 112, 113, 114, 115, 116
-and 118). The 106th, 107th and 117th remain blocked.
+At that checkpoint, eleven of the fourteen historical Congresses were imported. The following release closes
+the 106th and 107th; only the 117th remains blocked.
+
+### Completed 106th and 107th reconciliation and imports, 2026-09-08
+
+Reviewed identity data and generic annotation handling are committed as `ac4ff2b`; the quarantine test-double
+update is `e43aa68`. Both are pushed to main. Trigger version `20260908.5`, deployment `mts2zctp`, deployed
+all 26 tasks successfully. The [identity research audit](committee-identity-research-audit.md) records exact
+source evidence and the limits of independent corroboration. Corrections are replayable reviewed data, not
+manual production-row patches or person-specific engine branches.
+
+| Congress | Import run | Wall time | Stored tenures | Organizations | People | Zero-write rerun |
+| --- | --- | --- | --- | --- | --- | --- |
+| 106 | `run_06g83pjcmmj6nd877drlcq3i01` | 179 seconds | 3,331 | 199 | 535 | `run_06g83qksup5ffh5gmbj6mh1p01` |
+| 107 | `run_06g83ri320j62k3ooekji12o01` | 90 seconds | 3,750 | 207 | 533 | `run_06g83s7pj5gv8glfoqjk6l1601` |
+
+All four runs completed successfully on their first attempt, without overlapping publication or index builds.
+Both reruns report zero inserted and updated records, zero failures and all editions skipped. The checkpoints
+are `CDIR-2000-10-01` and `CDIR-2002-10-01`, with complete coverage and no quarantined entries.
+Post-rerun full membership-row hashes match the initial successful import:
+106 `2329b56160d977d3e53c25d19b705939`; 107 `320cb8b1b7943ea33f051c1dade06557`.
+The 119th retains 3,871 active memberships and unchanged hash `f1e55f8a2bd85676714edf02e75d6120`.
+
+Fresh source-to-database comparison checked every latest-edition assignment (3,331 for the 106th and 3,721
+for the 107th), with zero unmatched identities, quarantined entries or person/organization/role/label mismatches.
+The 107th cumulative counts exceed its latest roster because history preserves earlier assignments and
+organizations: 29 removals were detected on `2002-10-01`, and 18 assignments first appeared that day.
+These dates describe GovInfo observations, not actual appointment or departure dates.
+
+Both historical Congresses contain no active memberships, invented effective dates or duplicate source/tenure
+keys. Brown's four 106th and Spence's four 107th explicitly retrospective assignments use
+`historical_at_first_observation`, with unknown detected start/end and last-observed dates. Other retained
+assignments use `congress_ended`, with no invented detected departure date. Dixon's reviewed ranking-member
+role retains the source label `Ranking Democratic Member (leave of absence).` without inventing a leave date.
+
+Thirteen of fourteen historical Congresses in the 105th–118th inventory are now imported and rerun-verified.
+The 117th remains unpublished because of the separate Tom Udall source contradiction.
+
+Verification: isolated legislation coverage passes 2,436 tests in 253 files, with 60 database-dependent tests
+skipped in four files; all four receiver tests pass. Pre-push types pass. Root `pnpm verify` passes its check
+stage but is not green because of unrelated scoring observatory integration failures. Health/readiness return
+200; authenticated API acceptance is not claimed by these database checks.
