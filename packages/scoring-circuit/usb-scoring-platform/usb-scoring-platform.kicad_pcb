@@ -13726,8 +13726,8 @@
 		(path "/20cc8167-128c-446a-a106-f942323e143f/bd387e31-6da9-4a92-aed7-12491d1f9509/467eb2ee-05c6-4354-ae89-b60f0247c680")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
-			(start -4 -5.3)
-			(end 4 0.5)
+			(start -4 -2)
+			(end 4 4.5)
 			(stroke
 				(width 0.05)
 				(type default)

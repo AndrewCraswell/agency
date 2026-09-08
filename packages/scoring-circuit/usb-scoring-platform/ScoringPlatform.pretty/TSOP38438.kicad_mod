@@ -65,8 +65,8 @@
 	)
 	(duplicate_pad_numbers_are_jumpers no)
 	(fp_rect
-		(start -4 -5.3)
-		(end 4 0.5)
+		(start -4 -2)
+		(end 4 4.5)
 		(stroke
 			(width 0.05)
 			(type default)

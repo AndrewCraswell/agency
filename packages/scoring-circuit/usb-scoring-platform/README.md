@@ -59,7 +59,9 @@ Internal header pitch is 2.54mm; it does not define the external banana spacing.
 **No-owner-soldering delivery requires more than an SMT quote:**
 
 1. Assemble every fitted BOM reference, including through-hole connectors, headers, modules, IR receiver and sounder.
-   Accept appropriate separate assembly processes; do not assume all through-hole parts tolerate SMT reflow.
+   Accept appropriate separate assembly processes; do not assume all through-hole parts tolerate SMT reflow. Set U13's
+   body height and trim its long supplied leads during assembly; the retained CAD shows untrimmed leads, not the
+   finished underside clearance. Confirm the enclosure's optical window before final mounting height is frozen.
 2. Accept U18's **MSL4 handling and 245 C maximum peak-body reflow** requirement, including SAC305 balls. Review U19/U20
    exposed-pad paste windows and final stencil/process choices.
 3. Program U21 using the included HEX and the linked underside-pogo instructions, verify readback, preserve SWD/option

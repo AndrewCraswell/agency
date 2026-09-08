@@ -1,8 +1,8 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/hub75-signal-fit-review/` assembly
-export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
-backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
+Started 8 September 2026. Review the current native KiCad board and the `output/ir-courtyard-review/` assembly export,
+not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation backlog.
+Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
 ## Priority and evidence
 
@@ -478,7 +478,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U10       | SN74AXC1T45DCKR       | CORE-to-APP UART level translator.                                               | Retain; dual power-domain isolation behavior, not galvanic isolation. A-to-B DIR correct.                                                                              |
 | U11       | SN74AXC1T45DCKR       | APP-to-CORE UART level translator.                                               | Retain; B-to-A DIR correct; power-off leakage remains budgeted.                                                                                                        |
 | U12       | W5500                 | W5500 Ethernet controller.                                                       | Retain; SCSn/RSTn internal pull-ups rule out missing-pull-up claim. Ensure firmware reset >=500us and startup wait.                                                    |
-| U13       | TSOP38438             | Vishay pin order OUT/GND/VS and 2.54mm pitch match native pads.                  | 1.1mm holes exceed the 0.7 by 0.5mm maximum straight lead section. Body/lens seating and optical window still need review; range/flood testing remains.                |
+| U13       | TSOP38438             | Pin/lead check passed; reversed body courtyard corrected, model/pads unchanged.  | Native ERC/DRC/parity/connectivity pass. Assembly height, lead trim and enclosure window remain open.                                                                  |
 | U14       | SN74AHCT541PWR        | Eight HUB75 3.3-to-5V AHCT buffer channels.                                      | Retain; OE1 grounded, OE2 under Q1 control.                                                                                                                            |
 | U15       | SN74AHCT541PWR        | Remaining five HUB75 AHCT buffer channels.                                       | Retain; three unused inputs grounded, outputs NC. Second IC is needed for 13 signals.                                                                                  |
 | U16       | 4N32M                 | Favero port 1 optodarlington.                                                    | Retain; base resistor and reverse diode intentional. Cable load, CTR and release time need sample testing.                                                             |
@@ -685,9 +685,19 @@ guide retains the implemented 40us slots / 120us frames and now accounts for 7.8
 ## Verification limits and next review order
 
 U13's [Vishay drawing, revision 2.1, page 7](https://www.vishay.com/docs/82491/tsop382.pdf) was visually compared with
-native pad positions: 2.54mm pitch, 1=IR_RX, 2=GND, 3=IR_3V3. This closes the lead/pin-map check only, not body/lens
-seating or window orientation. BZ1's TDK drawing remains unavailable from both official download paths in this pass; its
-5mm native lead pitch and 1mm holes are not newly approved from search snippets. No geometry changed.
+native pad positions: 2.54mm pitch, 1=IR_RX, 2=GND, 3=IR_3V3. BZ1's TDK drawing remains unavailable from both official
+download paths in this pass; its 5mm native lead pitch and 1mm holes are not newly approved from search snippets.
+
+U13's follow-up native render and exported model bounds identified a reversed courtyard: the model projects
+approximately x=202.035–207.965mm, y=97.65–102.45mm, while the old courtyard covered y=100.5–106.3mm. The revised
+native/library courtyard is x=201–209mm, y=96.5–103mm. It also contains the drawing's tolerance envelope (up to 4mm
+lens-side projection and 1.4mm rear projection from the lead plane), with at least 0.5mm allowance. No pad, model
+transform, component or track moved. Lens points toward the board's top, not its right edge; enclosure window design
+must use that orientation. Exported untrimmed leads extend about 20.1mm below the seating plane, so factory
+height-setting/lead trimming is explicit in the handoff. This is not measured installed clearance. Fresh
+`output/ir-courtyard-review/` passes ERC, DRC, parity and connectivity with 223 matching assembly references. The
+[native top render](output/ir-body-top.png) shows the unchanged body/pad orientation; courtyard-only correction does not
+alter that image. Exact model transforms and all copper remain unchanged.
 
 **J7 footprint correction:** Samtec's TST double-row drawing specifies 1.02mm holes, replacing the previous 1.00mm
 drill. The TST-108 body is `8 × 2.54 + 7.62 = 27.94mm` long, longer than the previous 26mm courtyard in that direction.
