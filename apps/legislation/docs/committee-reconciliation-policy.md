@@ -138,3 +138,9 @@ Congress, so an organization-only incomplete flag cannot describe historical com
 session-scoped completeness and quarantined-cell persistence, expose it in the API, and test transactional checkpoint
 and rerun behavior before deploying/importing 117. Brown/Spence historical-observation handling and the remaining
 106/107 identity reviews follow; their approval no longer needs to be requested.
+
+Coverage persistence uses the existing per-Congress atomic roster checkpoint, rather than a global organization
+flag or a second independently committed record. New observations retain a validated coverage assessment and
+quarantined-cell details. An observation without an assessment remains unknown, not implicitly complete. Unchanged
+reruns preserve the saved assessment. The API still needs to expose Congress-scoped coverage before the publication
+guard can be removed; checkpoint persistence alone does not make quarantined imports safe to publish.

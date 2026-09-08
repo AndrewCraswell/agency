@@ -178,6 +178,10 @@ export async function executeGovInfoCommitteeSynchronization(
           continue
         }
         observation = {
+          coverage: {
+            status: normalized.quarantined.length === 0 ? "complete" : "incomplete",
+            quarantined: [...normalized.quarantined]
+          },
           detectedAt: detectedAt.toISOString(),
           fingerprint,
           issuedAt: directoryPackage.issuedAt.toISOString(),

@@ -136,6 +136,17 @@ function run(packages = [directory()], getText = async () => fixture()) {
   )
 }
 
+it("commits coverage with the roster checkpoint and preserves it during an unchanged rerun", async () => {
+  await run()
+  const first = cursor
+  expect(first).toMatchObject({ observation: { coverage: { status: "complete", quarantined: [] } } })
+  expect(mocks.replace.mock.calls[0]?.[3]?.checkpoint?.cursor).toEqual(first)
+  mocks.replace.mockClear()
+  await run()
+  expect(mocks.replace).not.toHaveBeenCalled()
+  expect(cursor).toEqual(first)
+})
+
 function runWithAlias(personId: string) {
   const getMemberAliases = vi
     .fn<() => Promise<{ name: string; personId: string; state: string; chamber: "upper" }[]>>()

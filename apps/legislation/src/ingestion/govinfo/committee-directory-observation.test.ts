@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { committeeRosterFingerprint, directoryDetectionDate } from "./committee-directory-observation.js"
+import {
+  committeeRosterFingerprint,
+  directoryDetectionDate,
+  readDirectoryObservation
+} from "./committee-directory-observation.js"
 
 const fingerprint = "a".repeat(64)
 const previous = {
@@ -20,6 +24,25 @@ const input = {
 }
 
 describe("committee directory observations", () => {
+  it("never treats missing coverage evidence as a complete roster", () => {
+    expect(readDirectoryObservation(previous)?.coverage).toBeUndefined()
+  })
+  it("retains incomplete coverage evidence across checkpoint serialization", () => {
+    const coverage = {
+      status: "incomplete",
+      quarantined: [
+        { chamber: "upper", name: "Tom Udall", organization: "Appropriations", reason: "source_term_contradiction" }
+      ]
+    }
+    const serialized = JSON.stringify({ ...previous, coverage })
+    expect(readDirectoryObservation(JSON.parse(serialized))?.coverage).toEqual(coverage)
+    expect(() => readDirectoryObservation({ ...previous, coverage: { ...coverage, status: "complete" } })).toThrow(
+      "Incomplete committee coverage"
+    )
+    expect(() => readDirectoryObservation({ ...previous, coverage: { ...coverage, quarantined: [] } })).toThrow(
+      "Incomplete committee coverage"
+    )
+  })
   it("uses publication dates for first observations", () => {
     const { previous: _previous, ...first } = input
     expect(directoryDetectionDate(first)).toEqual(input.issuedAt)
