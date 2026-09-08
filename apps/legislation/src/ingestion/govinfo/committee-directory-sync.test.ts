@@ -276,8 +276,8 @@ describe("committee directory observation synchronization", () => {
     expect(call[2].memberships.length).toBeGreaterThan(0)
     for (const membership of call[2].memberships) {
       expect(membership.isActive).toBe(true)
-      expect(membership.endedReason).toBeUndefined()
-      expect(membership.detectedEndDate).toBeUndefined()
+      expect(membership.endedReason).toBeNull()
+      expect(membership.detectedEndDate).toBeNull()
     }
   })
 
