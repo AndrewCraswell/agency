@@ -320,3 +320,22 @@ The Directory remains the ingestion source; the Senate statement is manual valid
 identities still block publication, and no import was launched.
 Fresh parsing against the production catalog validated all three appearances; the focused identity,
 historical-observation, normalization and synchronization suite passed 110 tests.
+
+### Reviewed Fowler middle initial, September 8, 2026
+
+All three 106th editions print `Tillie K. Fowler`, Florida, in Armed Services, Military Installations and Facilities,
+Military Readiness, Transportation and Infrastructure, Ground Transportation, and Oversight, Investigations and
+Emergency Management. The last assignment is explicitly chair; the remaining cells carry no leadership role.
+
+[Official biography F000328](https://history.house.gov/People/Listing/F/FOWLER,-Tillie-Kidd-(F000328)/) identifies
+Tillie Kidd Fowler, her 103rd–106th House service, both parent committees, and her 106th oversight chairmanship.
+A contemporary [March 1, 2000 Military Readiness hearing roster](https://commdocs.house.gov/committees/security/has061030.000/has061030_0.HTM)
+also prints Tillie K. Fowler of Florida. The target Directory supplies all six assignments; the biography and
+hearing are manual validation references, not new ingestion providers or sources of invented dates.
+
+The production catalog identifies `person:congress:f000328`, `Fowler, Tillie`, with consistent 106th House terms
+for district 4. The edition-fingerprinted manifest resolves six original cells per edition (18 appearances),
+preserving roles and requiring the exact parents, state, chamber and canonical term. It does not add a global
+middle-initial matching rule. Other unresolved identities continue to block publication; no import was launched.
+Fresh source parsing and the production catalog validated all 18 appearances; 111 focused identity,
+historical-observation, normalization and synchronization tests passed.

@@ -108,68 +108,72 @@ function digest(records: readonly GovInfoCommitteeRecord[]) {
 }
 
 describe("offline-reviewed GovInfo identity validation", () => {
-  it.each(["Mike McIntrye", "David Drier", "Shelia Jackson Lee", "Samuel Dale Brownback", "Bob Bennett"])(
-    "validates the exact reviewed %s cells",
-    (printedName) => {
-      const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
-      const identity = manifest.identities.find((candidate) => candidate.printedName === printedName)!
-      const records: GovInfoCommitteeRecord[] = identity.contexts.map((context) => ({
-        ...context,
-        chamber: identity.chamber,
-        classification: context.parentName === undefined ? "committee" : "subcommittee",
-        members: [{ name: printedName, state: identity.state, chamber: identity.chamber }]
-      }))
-      if (identity.corroboration) {
-        records.push({
-          name: "Armed Services",
-          chamber: "lower",
-          classification: "committee",
-          members: [{ name: identity.corroboration.name, state: identity.state, chamber: "lower" }]
-        })
-      }
-      const directory = {
-        ...fixture().directory,
-        packageId: manifest.packageId,
-        congress: 106,
-        issuedAt: new Date("1999-06-15")
-      }
-      const catalog: GovInfoPersonCatalog = {
-        aliases: [],
-        people: [
-          {
-            id: identity.personId,
-            name: identity.canonicalName,
-            givenName: identity.givenName,
-            familyName: identity.familyName
-          }
-        ],
-        terms: [
-          {
-            personId: identity.personId,
-            chamber: identity.chamber,
-            district: identity.district,
-            isActive: false,
-            sourceId: `106:${identity.chamber}:1999:2001`
-          }
-        ]
-      }
-      const review = {
-        ...manifest,
-        identities: [identity],
-        organizations: records.length,
-        entries: records.length,
-        fingerprint: digest(records)
-      }
-      expect([...validateGovInfoIdentityReview(review, records, directory, catalog).values()]).toEqual(
-        identity.contexts.map(() => identity.personId)
-      )
-      expect(validateGovInfoIdentityReview(review, records, directory, { ...catalog, terms: [] }).size).toBe(0)
-      records[0]!.members[0]!.state = "NY"
-      expect(
-        validateGovInfoIdentityReview({ ...review, fingerprint: digest(records) }, records, directory, catalog).size
-      ).toBe(0)
+  it.each([
+    "Mike McIntrye",
+    "David Drier",
+    "Shelia Jackson Lee",
+    "Samuel Dale Brownback",
+    "Bob Bennett",
+    "Tillie K. Fowler"
+  ])("validates the exact reviewed %s cells", (printedName) => {
+    const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
+    const identity = manifest.identities.find((candidate) => candidate.printedName === printedName)!
+    const records: GovInfoCommitteeRecord[] = identity.contexts.map((context) => ({
+      ...context,
+      chamber: identity.chamber,
+      classification: context.parentName === undefined ? "committee" : "subcommittee",
+      members: [{ name: printedName, state: identity.state, chamber: identity.chamber }]
+    }))
+    if (identity.corroboration) {
+      records.push({
+        name: "Armed Services",
+        chamber: "lower",
+        classification: "committee",
+        members: [{ name: identity.corroboration.name, state: identity.state, chamber: "lower" }]
+      })
     }
-  )
+    const directory = {
+      ...fixture().directory,
+      packageId: manifest.packageId,
+      congress: 106,
+      issuedAt: new Date("1999-06-15")
+    }
+    const catalog: GovInfoPersonCatalog = {
+      aliases: [],
+      people: [
+        {
+          id: identity.personId,
+          name: identity.canonicalName,
+          givenName: identity.givenName,
+          familyName: identity.familyName
+        }
+      ],
+      terms: [
+        {
+          personId: identity.personId,
+          chamber: identity.chamber,
+          district: identity.district,
+          isActive: false,
+          sourceId: `106:${identity.chamber}:1999:2001`
+        }
+      ]
+    }
+    const review = {
+      ...manifest,
+      identities: [identity],
+      organizations: records.length,
+      entries: records.length,
+      fingerprint: digest(records)
+    }
+    expect([...validateGovInfoIdentityReview(review, records, directory, catalog).values()]).toEqual(
+      identity.contexts.map(() => identity.personId)
+    )
+    expect(validateGovInfoIdentityReview(review, records, directory, { ...catalog, terms: [] }).size).toBe(0)
+    records[0]!.members[0]!.state = "NY"
+    expect(
+      validateGovInfoIdentityReview({ ...review, fingerprint: digest(records) }, records, directory, catalog).size
+    ).toBe(0)
+  })
   it("accepts only reviewed name-and-state contradictions under the same corroborated parent", () => {
     const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
     const identity = manifest.identities.find((candidate) => candidate.printedName === "Kent Cochran")!

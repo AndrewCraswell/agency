@@ -2,6 +2,26 @@ import type { IdentityReview } from "./committee-reviewed-identities.js"
 
 const congress106Identities: IdentityReview["identities"] = [
   {
+    // F000328 identifies Tillie Kidd Fowler; her biography confirms both
+    // parent committees and 106th oversight chairmanship. Target cells only.
+    printedName: "Tillie K. Fowler",
+    state: "FL",
+    chamber: "lower",
+    personId: "person:congress:f000328",
+    canonicalName: "Fowler, Tillie",
+    givenName: "TILLIE",
+    familyName: "FOWLER",
+    district: "4",
+    contexts: [
+      { name: "Armed Services" },
+      { name: "Military Installations and Facilities", parentName: "Armed Services" },
+      { name: "Military Readiness", parentName: "Armed Services" },
+      { name: "Transportation and Infrastructure" },
+      { name: "Ground Transportation", parentName: "Transportation and Infrastructure" },
+      { name: "Oversight, Investigations and Emergency Management", parentName: "Transportation and Infrastructure" }
+    ]
+  },
+  {
     // The Senate's February 23, 2000 statement identifies Robert F. Bennett
     // as this committee's chair. Only the Directory's Bob Bennett cell applies.
     printedName: "Bob Bennett",
