@@ -281,6 +281,19 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**D1/D2 and D10/D11 package/polarity check:** visually compared Vishay drawings 88746 (23-Apr-2020) and 88503
+(29-Apr-2020), pages 1/4, with native pads. D1/D2's 2.5 by 1.8mm SMA lands exceed the 1.52 by 1.68mm minima; their 1.5mm
+inner gap is below the 1.88mm maximum. Cathode pad 1 goes to CORE_5V on both, and anodes go to the two isolated
+supplies. No footprint or polarity correction is indicated. Reverse leakage is not zero; retain the existing
+unpowered-domain measurement requirement.
+
+D10/D11 have 1.1mm holes for the 1N4004's maximum 0.86mm lead, with 2.2mm lands on 10.16mm centers. Do not apply the
+smaller 0.66mm lead specification of 1N4004E to the selected 1N4004-E3/54: E3 denotes finish, not that reduced-lead
+variant. Factory lead forming/trim is required. Cathode pad 1 is at each optocoupler collector, anode 2 at its emitter,
+correct for the reverse shunt. This does not establish arbitrary powered-port fault survival or cable compatibility.
+[SS14 drawing](https://www.vishay.com/docs/88746/ss12.pdf),
+[1N4004 drawing](https://www.vishay.com/docs/88503/1n4001.pdf).
+
 **U16/U17 optocoupler package check:** visually reviewed onsemi H11B1M/D Rev 2 (April 2022), ordering table page 8 and
 CASE 646BX drawing page 9. The orderable-system footnote explicitly includes 4N32M: plain DIP-6, not the SMT S suffix or
 0.4-inch T suffix. Both native footprints have 2.54mm pitch, 7.62mm rows, 0.9mm holes and 1.8mm lands. The maximum 0.51
@@ -412,9 +425,7 @@ reviewed; no placement, copper or BOM changes were required.
 U3's three 0.95 by 0.4mm lands match TI DCK0003A: local centers (-1.1,-0.65), (-1.1,0.65), (1.1,0)mm. Visually checked
 both TI's top-view pin diagram and board-layout drawing: 1/2 protect USB_HOST_DP/DM and 3 is USB_GND. This is the
 selected three-pin DCK package, not the five-pin DRL alternative. No footprint change is needed.
-[TI TPD2E2U06 revision C, page 3 and DCK0003A board layout](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf). U16/U17's
-native 2.54mm pitch, 7.62mm rows and 0.9mm holes were extracted, but the onsemi drawing could not be retrieved for
-visual inspection in this pass; no new mechanical approval is recorded for those two parts.
+[TI TPD2E2U06 revision C, page 3 and DCK0003A board layout](https://www.ti.com/lit/ds/symlink/tpd2e2u06.pdf).
 
 Source: current native schematic netlist, board pad nets and the 223-row manufacturing BOM. Exact MPNs are retained here
 to prevent a nominal-value substitution from being mistaken for the reviewed part. Each row records electrical purpose
@@ -495,8 +506,8 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | C69       | C1608X7R1H104K080AA   | Power-controller VLO bypass                                                      | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C70       | C1608X5R1A105K080AC   | Power-controller VLO reservoir                                                   | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C71       | C1608X7R1H104K080AA   | Power-controller NRST filter                                                     | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
-| D1        | SS14-E3/61T           | Isolated USB 5V anode to CORE_5V cathode.                                        | Retain; prevents reverse sourcing. Forward drop and reverse leakage belong in power budget.                                                                            |
-| D2        | SS14-E3/61T           | PANEL_5V anode to CORE_5V cathode.                                               | Retain; permits display-mode core power. Check leakage into unpowered panel domain.                                                                                    |
+| D1        | SS14-E3/61T           | Isolated USB 5V anode to CORE_5V cathode.                                        | Retain; SMA land dimensions and cathode-to-CORE_5V polarity checked. Forward drop and unpowered-domain leakage remain power/bench checks.                              |
+| D2        | SS14-E3/61T           | PANEL_5V anode to CORE_5V cathode.                                               | Retain; SMA land dimensions and cathode-to-CORE_5V polarity checked. Forward drop and unpowered-domain leakage remain power/bench checks.                              |
 | D3        | BAT54S,215            | left A sense rail clamp: BAT54S midpoint to sense, ends to GND/CORE_3V3.         | Retain; topology checked. Clamp injection and unpowered external-voltage tolerance require bounded testing.                                                            |
 | D4        | BAT54S,215            | left B sense rail clamp: BAT54S midpoint to sense, ends to GND/CORE_3V3.         | Retain; topology checked. Clamp injection and unpowered external-voltage tolerance require bounded testing.                                                            |
 | D5        | BAT54S,215            | left C sense rail clamp: BAT54S midpoint to sense, ends to GND/CORE_3V3.         | Retain; topology checked. Clamp injection and unpowered external-voltage tolerance require bounded testing.                                                            |
@@ -504,8 +515,8 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | D7        | BAT54S,215            | right B sense rail clamp: BAT54S midpoint to sense, ends to GND/CORE_3V3.        | Retain; topology checked. Clamp injection and unpowered external-voltage tolerance require bounded testing.                                                            |
 | D8        | BAT54S,215            | right C sense rail clamp: BAT54S midpoint to sense, ends to GND/CORE_3V3.        | Retain; topology checked. Clamp injection and unpowered external-voltage tolerance require bounded testing.                                                            |
 | D9        | BAT54S,215            | piste sense rail clamp: BAT54S midpoint to sense, ends to GND/CORE_3V3.          | Retain; topology checked. Clamp injection and unpowered external-voltage tolerance require bounded testing.                                                            |
-| D10       | 1N4004-E3/54          | Favero port 1 reverse-polarity shunt across optotransistor.                      | Retain; does not establish tolerance to arbitrary powered-port faults.                                                                                                 |
-| D11       | 1N4004-E3/54          | Favero port 2 reverse-polarity shunt across optotransistor.                      | Retain; same circuit evaluated separately on second port.                                                                                                              |
+| D10       | 1N4004-E3/54          | Favero port 1 reverse-polarity shunt across optotransistor.                      | Retain; 0.86mm maximum lead fits nominal 1.1mm hole; reverse-shunt polarity checked. Factory forming/trim and port fault tests remain.                                 |
+| D11       | 1N4004-E3/54          | Favero port 2 reverse-polarity shunt across optotransistor.                      | Retain; 0.86mm maximum lead fits nominal 1.1mm hole; reverse-shunt polarity checked. Factory forming/trim and port fault tests remain.                                 |
 | FB1       | BLM18AG121SN1D        | APP_3V3 to Ethernet analog supply filter.                                        | Retain; check DC resistance/current derating and analog-rail droop.                                                                                                    |
 | J1        | USB4105-GF-A          | GCT B4 pin map, slots and locators checked; opening faces outward.               | Retain. Ground lands 1.10mm versus nominal 1.15mm; details below. Assembler acceptance and enclosure/cable fit remain open.                                            |
 | J2        | HTSW-105-07-L-S       | STM32 3.3V SWD/recovery header.                                                  | Retain; do not connect a grounded debugger across the isolation barrier unknowingly.                                                                                   |
