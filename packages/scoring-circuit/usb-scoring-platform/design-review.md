@@ -1,8 +1,8 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/ir-courtyard-review/` assembly export,
-not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation backlog.
-Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
+Started 8 September 2026. Review the current native KiCad board and the `output/mechanical-isolation-review/` assembly
+export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
+backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
 ## Priority and evidence
 
@@ -16,6 +16,15 @@ Bench tests requiring this prototype do not block ordering it, but do block clai
 confirmed P0 finding has been established in this initial pass; that is not an all-clear.
 
 ## Findings and opportunities
+
+**Current four-item disposition:** mechanical review has corrected J7/J8 hole sizing and U13/BZ1 body clearances;
+remaining exact-package overlays and installed cable fit are still open. Power sizing and nominal simulations are
+recorded, but attached-PD suspend consumption cannot be closed from the available guaranteed data. All-layer isolation
+geometry is checked and the prototype operating constraints are explicit; system insulation approval is not established.
+The refreshed `output/mechanical-isolation-review/` package passes ERC, DRC, parity and connectivity with 223 matching
+assembly rows and the unchanged rebuilt U21 image. This is not closure of all four items or permission to manufacture.
+The latest `pnpm verify` stopped on unrelated legislation temporary-script lint failures; it did not reach tests in this
+run. Those files and the existing coverage thresholds were left unchanged.
 
 **Current supplier upload files:** the native exporter now generates `jlcpcb-bom.csv` and `jlcpcb-placement.csv`
 alongside the original KiCad exports. All 223 rows were compared field by field: exact MPN/manufacturer/footprint and
@@ -62,14 +71,14 @@ unchanged. Fresh U21 HEX SHA256 is `80349F8D523EF5FF46FE6D8545EC02A0561F47238633
 | P1       | U18/U19/U21 whole-input suspend budget — margin not established                        | [Power guide](usb-acquisition-power.md#input-side-review) retains a conservative 4mA VLO allowance. U21 shallow sleep is implemented, but total input power and the calculation requiring 96.3% efficiency remain unvalidated.                                              | Potential unsupported laptop/source combinations. No measured saving from firmware yet.                                                           | Complete enabled-load and regulator analysis; measure whole-input current and tick/alert/watchdog behavior. Do not assume firmware sleep closes the budget.                                                     |
 | P1       | U21 initial programming and U5 configuration — image handoff implemented; service open | Fresh controller-sleep-review export: 230 refs, zero ERC/DRC/parity/unconnected issues; ARM image 2476 text bytes / 60 BSS. Controller suites 2/2 and C/C++ coverage gate passed. J14 geometry checked.                                                                     | A fully soldered board still needs programming. Fixture/service charge unknown.                                                                   | Obtain assembler confirmation for pogo programming, stable VLO, HEX readback and U5 defaults. No service purchased or board flashed.                                                                            |
 | P1       | U18 LTM2884 assembly profile — assembler confirmation                                  | Existing supplier handoff records MSL4 and 245 C maximum peak; supplier engineering acceptance remains absent. Exact export uses LTM2884IY#PBF.                                                                                                                             | Risk of assembly damage or rejected assembly. No justified replacement or cost saving yet.                                                        | Recheck exact package handling documentation and obtain assembler process acceptance. LLM review cannot certify their oven profile or moisture handling.                                                        |
-| P1       | Isolation and unpowered paths — all-layer geometry checked; requirement unresolved     | Removed unused secondary-ground pour extension on In1.Cu/B.Cu that left 0.5mm to USB_GND. Current approximate same-layer minima: F.Cu 2.65mm, In1.Cu 2.60mm, In2.Cu 2.60mm, B.Cu 2.50mm. U18 keepout remains clear on all four layers.                                      | Removes avoidable narrow spacing with no components or tracks moved. These distances are not an isolation rating.                                 | Establish working-voltage, clearance/creepage and external-interface safety basis; physical and cross-layer insulation remain separate checks.                                                                  |
+| P1       | Isolation and unpowered paths — local geometry complete; system rating open            | All-layer projected copper gap is 2.50mm with no primary/secondary overlap; only U6/U18 span domains. Prototype source and grounding constraints are recorded below.                                                                                                        | No new components or routing. This is not a certified board insulation rating.                                                                    | Obtain system safety/assembler acceptance; verify external grounds, enclosure and assembled insulation before fencer use.                                                                                       |
 | P1       | Supplier substitutions across the entire BOM — open review                             | Prior matching session found X5R proposed for specified X7R; current canonical export retains selected MPNs. Supplier matches are not approved design substitutions.                                                                                                        | Capacitance, bias, temperature or footprint mismatch. Savings not yet established.                                                                | Review exact alternate datasheets and each circuit role, including effective capacitance and package dimensions. Approve explicit substitutions only, then reconcile BOM, schematic and supplier selection.     |
 | P2       | Power guide scan timing — corrected                                                    | Guide now describes 40us slots / 120us frames, checked against the decoder and acquisition tests. Physical timing remains a bench check.                                                                                                                                    | Misleading firmware handoff; no component cost.                                                                                                   | Correction implemented in this review slice; no timing or resistor changes.                                                                                                                                     |
 | P2       | Prototype order color conflicts with README — resolved                                 | Consolidated handoff specifies standard green mask and white silkscreen, independent of black 3D rendering.                                                                                                                                                                 | Removes conflicting order instructions; no circuit change.                                                                                        | Verify green in the final supplier order; no order submitted.                                                                                                                                                   |
 | P2       | Stocked same-footprint headers and capacitor alternatives — proposal                   | C64/C65 changed to reviewed Yageo CC0603JRNPO9BN180; ERC/DRC/parity/unconnected all zero; fresh 230-part export matches. C56 now selects production TDK C1608X5R1C475K080AC; native ERC/DRC/parity/unconnected checks pass. J2/J6 remain open. JLCPCB draft is unchanged.   | May reduce minimum-order waste and delay without adding components. Savings unpriced until equivalent parts and assembly quantities are verified. | Reconcile C107040 in the supplier draft before ordering. Confirm C56 supplier quantity; continue J2/J6 reviews.                                                                                                 |
 | P2       | U21 idle CPU power — shallow sleep implemented                                         | Qualified, alert-free target now sleeps until nominal 1ms SysTick. Unknown supplies, transactions and error paths remain awake. Native policy/transport tests pass; ARM vector and WFI instructions inspected. The P1 total suspend budget remains open.                    | No BOM increase; reduces idle CPU activity without new USB-state detection. No measured current saving claimed.                                   | Measure tick/wake and PA6 alert response, watchdog recovery and whole-input current. Preserve the conservative 4mA allowance until measured.                                                                    |
 | P3       | Broader power-module consolidation — unassessed opportunity                            | Current decision intentionally retains LTM2884 and REC30K to avoid a discrete isolation redesign. No equivalent simpler replacement has been established.                                                                                                                   | Potential BOM savings versus isolation, layout, sourcing and revalidation cost; estimate pending evidence.                                        | Critic may propose exact alternatives with a complete replacement BOM and preserved functionality. Do not reopen the settled topology solely because individual module prices look high.                        |
-| P1       | Physical footprints and assembly orientation — partial geometry pass                   | Fresh check: all 223 fitted components have top courtyards and none overlap. J14 alone has none. U18 has 44 circular 0.63mm lands. Full manufacturer footprint overlays and cable-envelope checks remain incomplete.                                                        | Gross 2D placement concern reduced; no proof of exact mechanical fit. Cost unknown.                                                               | Complete exact connector/package drawing comparisons, pin 1 and cable entry checks. Missing models do not imply missing BOM parts.                                                                              |
+| P1       | Physical footprints and assembly orientation — corrected connector/body defects        | J7/J8 drill corrections and U13/BZ1 courtyard corrections pass native DRC. Exact connector checks are below; full manufacturer overlays and installed cable envelopes are not all complete.                                                                                 | Removes identified fit/clearance defects without changing circuit functions.                                                                      | Finish remaining package overlays and assembler placement/cable acceptance; do not treat missing CAD as a missing BOM part.                                                                                     |
 | P1       | U19 primary regulator — migration implemented, margins still open                      | LTC3130-1 fixed 5V automatic Burst/PWM replaces the Burst-only circuit. Seven support parts removed. Native ERC/DRC/parity pass; both nominal manufacturer-model load steps pass.                                                                                           | Removes the operating-mode mismatch and external compensation; no complete price saving claimed.                                                  | Finish whole-input suspend and physical startup/thermal verification; reconcile assembly quote for the exact new parts.                                                                                         |
 | P1       | J3/J4/J5 external harness assembly — handoff gap                                       | These are internal Samtec headers, not the fencer banana sockets or piste socket.                                                                                                                                                                                           | A soldered PCB alone is not a finished cable-ready scoring box. Harness/socket quote is separate and unknown.                                     | Include mating sockets, harness pinout and assembly responsibility in the order if the delivered unit must need no soldering. Existing owner-validated weapon cable is not being reopened.                      |
 | P2       | USB_GND copper island — resolved in saved native board                                 | Refilled and saved the canonical PCB. Reloaded board preserves all 231 footprint placements/pad nets and 3823 track/via identities and endpoints. Saved-board DRC without automatic refill now reports zero violations, unconnected items and parity errors; ERC also zero. | Stale floating copper corrected; no component or routing change and zero BOM cost.                                                                | Re-export manufacturing files after remaining circuit fixes; older ZIPs are not updated by this saved-board correction.                                                                                         |
@@ -554,9 +563,28 @@ unchanged; native DRC reports zero violations, unconnected items and schematic-p
 bottom-copper plot was visually inspected. The U18 inset rectangle x77.236–86.764mm, y130.001–149.999mm still has zero
 filled-copper area on each copper layer.
 
-These are same-layer geometric separations, not measured surface creepage, inter-layer insulation, dielectric withstand
-or an FIE/safety-standard acceptance criterion. The board-level working-voltage and clearance/creepage basis remains
-open. No new safety rating or permission to connect fencers is implied.
+The follow-up union of native pad, track, via and saved filled-zone polygons across **all four layers** has no
+primary/secondary projected overlap. Its projected edge separation is 2.4994–2.5000mm at 1um polygon resolution. Thus
+this layout does not rely on a thin inter-layer dielectric where those domains overlap. The only packages with pads in
+both domains are U6 (REC30K) and U18 (LTM2884); no ordinary resistor, diode or connector bridges them. This is a native
+geometry/net assignment check, not a measured surface-creepage or dielectric-withstand test.
+
+**Prototype isolation basis:** J1 accepts only an appropriately isolated, current-limited USB-C source, with 5V laptop
+or 20V nominal standalone operation. There is no direct mains input. Maintain separate USB_GND and secondary GND, the
+existing 2.50mm projected copper gap, and U18's larger manufacturer-required copper-free region. The 2.50mm value is
+this prototype's layout constraint, **not an asserted FIE or safety-standard minimum**. Source mains protection must not
+depend on this board. Do not infer a 400V board working rating from U18's component rating: U6's separate
+basic-insulation rating and the PCB, connectors, enclosure and contamination paths must all be assessed together.
+[ADI LTM2884 Rev D, pages 4–5 and 17](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf),
+[RECOM REC30K Rev 1-2025, page 7](<https://recom-power.com/pdf/Econoline/REC30K(-Z).pdf>).
+
+J14 and its programmer are primary-side; J2/J6 and their debuggers are secondary-side. A common grounded programmer,
+scope, USB-UART adapter or conductive enclosure can bypass isolation outside the PCB. During bring-up disconnect
+fencers, piste and repeaters; use a current-limited isolated source and an insulating support, and do not connect
+grounded instruments across both domains. U6's metal case and protruding through-hole leads must not contact the carrier
+or adjacent conductors. Assembler stackup/process acceptance and an assembled insulation check remain open. Competition
+homologation and a product electrical-safety rating require a qualified system review; this desk check does not
+authorize use with fencers or set a high-voltage test procedure.
 
 Fresh `output/isolation-extension-review/` contains 223 matching BOM/placement entries, Gerbers/drills and a rebuilt U21
 programming image. ERC, DRC, unconnected and parity counts are zero. No order was submitted. This slice's `pnpm verify`
@@ -685,8 +713,18 @@ guide retains the implemented 40us slots / 120us frames and now accounts for 7.8
 ## Verification limits and next review order
 
 U13's [Vishay drawing, revision 2.1, page 7](https://www.vishay.com/docs/82491/tsop382.pdf) was visually compared with
-native pad positions: 2.54mm pitch, 1=IR_RX, 2=GND, 3=IR_3V3. BZ1's TDK drawing remains unavailable from both official
-download paths in this pass; its 5mm native lead pitch and 1mm holes are not newly approved from search snippets.
+native pad positions: 2.54mm pitch, 1=IR_RX, 2=GND, 3=IR_3V3.
+
+**BZ1 mechanical check:** visually reviewed TDK's September 2017 PS-series drawing, page 4, obtained from a mirror after
+the official download returned access errors. The PS1240P02BT body is 12.2 +/-0.5mm diameter and 6.5 +/-0.5mm high.
+Expanded the native/library courtyard from 12.7mm to 13.7mm square, allowing 0.5mm around the maximum body; the sound
+opening faces upward and must remain unobstructed. Nominal lead pitch is 5mm, matching the PCB. Maximum lead section is
+0.65 by 0.45mm (0.79mm diagonal), smaller than the existing 1mm holes. The drawing's +/-0.5mm pitch tolerance still
+requires assembler lead forming and finished-hole acceptance, not forced insertion. No hole, land, model transform,
+electrical net or route changed. Factory lead trimming is required; 15mm depicted free leads are not the intended
+clearance below the assembled PCB. This externally driven piezo retains Q2 and the 1k discharge resistor; firmware must
+generate the tone, rather than apply DC and expect a continuous sound.
+[TDK manufacturer-authored drawing, mirrored copy](https://www.datasheets.com/tdk/ps1240p02bt/datasheet.pdf).
 
 U13's follow-up native render and exported model bounds identified a reversed courtyard: the model projects
 approximately x=202.035–207.965mm, y=97.65–102.45mm, while the old courtyard covered y=100.5–106.3mm. The revised

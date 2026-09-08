@@ -110,6 +110,14 @@ condition, including U21, U5 and U19; an isolated-output shutdown is not proof o
 allocation is not itself a demonstrated PD suspend budget. Lower I2C duty improves margin but does not establish a
 measured 25mW pass. Default-current USB-A operation remains outside the supported product configuration.
 
+The current source audit does not justify a tighter guaranteed suspend allowance: the no-alert pass has 216 I2C clocks,
+but `wait_flag` bounds each wait by 4000 register polls, not a measured bus time. Clock stretching and alert/error paths
+can extend activity; continuously low pull-ups cannot simply be discounted by the nominal 0.54ms/10ms ratio. Retain the
+4mA allocation for power sizing. The approximately 96.3% U19 efficiency required by the conservative 25mW screen is
+**not a demonstrated pass or a demonstrated hardware failure**. Resolve this using whole-J1 current measurements with an
+attached PD host in suspend; source operating conditions and U5 current must be included. Do not substitute a
+disconnected U5 typical current, the U19 no-load figure, or a firmware WFI instruction for that measurement.
+
 **Paper budget, not a measured operating result.** Retain the LTM2884 acquisition supply; this review does not justify a
 larger converter. Laptop-only units ship **without a HUB75 panel connected**. The laptop supplies power and runs the
 scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero transmission are

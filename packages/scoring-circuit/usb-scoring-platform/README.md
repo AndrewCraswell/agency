@@ -61,7 +61,8 @@ Internal header pitch is 2.54mm; it does not define the external banana spacing.
 1. Assemble every fitted BOM reference, including through-hole connectors, headers, modules, IR receiver and sounder.
    Accept appropriate separate assembly processes; do not assume all through-hole parts tolerate SMT reflow. Set U13's
    body height and trim its long supplied leads during assembly; the retained CAD shows untrimmed leads, not the
-   finished underside clearance. Confirm the enclosure's optical window before final mounting height is frozen.
+   finished underside clearance. Confirm the enclosure's optical window before final mounting height is frozen. Form and
+   trim BZ1's leads to its 5mm hole pitch; keep the upward sound opening clear and allow its 7mm maximum body height.
 2. Accept U18's **MSL4 handling and 245 C maximum peak-body reflow** requirement, including SAC305 balls. Review U19/U20
    exposed-pad paste windows and final stencil/process choices.
 3. Program U21 using the included HEX and the linked underside-pogo instructions, verify readback, preserve SWD/option
@@ -112,9 +113,9 @@ assembly ordering fields and reference agreement, and exports:
 - `programming/U21/`: freshly built controller image and programming instructions.
 - `README.md`, `design-review.md` and `usb-acquisition-power.md`: the matching handoff and open findings.
 
-The latest checked board export before this documentation consolidation is `output/isolation-extension-review/`: 223
-matching assembly references and zero ERC, DRC, unconnected or schematic-parity findings. An export is a review package,
-not authorization to manufacture. Re-export after any subsequent design change.
+The latest checked board export is `output/mechanical-isolation-review/`: 223 matching assembly references and zero ERC,
+DRC, unconnected or schematic-parity findings. An export is a review package, not authorization to manufacture.
+Re-export after any subsequent design change.
 
 ### Supplier draft status
 
@@ -135,8 +136,10 @@ LCP HTSW without process review, or automatically replace a specified X7R capaci
 
 Use [design-review.md](design-review.md) for prioritized remaining work, exact part checks and evidence. Local
 electrical simulations, native board checks and firmware tests do not establish FIE homologation or safe field use. The
-unused isolation pour extensions have been removed; approximate same-layer separation is now 2.50–2.65mm. Required
-clearance/creepage basis, cross-layer insulation and physical tests remain separate questions.
+unused isolation pour extensions have been removed; approximate same-layer separation is now 2.50–2.65mm. The union of
+copper across all four layers has no primary/secondary projected overlap and a 2.50mm projected gap. The review records
+the low-voltage prototype source/grounding constraints; a certified system insulation rating and physical tests remain
+separate requirements, not consequences of a clean DRC.
 
 Supplier matching, assembly/programming acceptance and final CAM/placement review remain before ordering.
 Startup/current/suspend, sensing/timing, USB behavior, repeaters and other physical measurements require the assembled
