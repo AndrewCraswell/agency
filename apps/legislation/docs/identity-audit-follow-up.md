@@ -80,6 +80,12 @@ Focused continuation, synchronization and coordinator coverage passed 19 tests; 
 The already-running worker remains on its original deployment. Production continuation behavior must be verified
 on a run using the corrected code before this gate is considered complete.
 
+Commit `6f14a11` was pushed and deployed successfully as Trigger `20260908.10`, deployment `j733552e` (26 tasks),
+after the live API contract check passed. Repository verification passed checks but remains blocked by unrelated
+scoring coverage thresholds. The isolated legislation run exposed a replay-test flake comparing HTTP `Date` across
+a second boundary (2,450 tests passed, one failed, 61 skipped). Replay assertions now permit only the generated Date
+header to differ; response status, body and every other header remain compared. No webhook runtime behavior changed.
+
 ### Federal identity population implementation (2026-09-08)
 
 Congress member detail hydration now emits the published Bioguide identifier and distinct collection,

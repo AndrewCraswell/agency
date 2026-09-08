@@ -354,7 +354,7 @@ describe("webhook mutation routes", () => {
       headers
     )
     expect(first.statusCode).toBe(201)
-    expect(replay).toEqual(first)
+    expect(replay).toEqual({ ...first, headers: { ...first.headers, date: expect.any(String) } })
     expect(conflict.statusCode).toBe(409)
     expect(resolverCalls).toBe(1)
   })
@@ -394,7 +394,7 @@ describe("webhook mutation routes", () => {
       headers
     )
     expect(first.statusCode).toBe(200)
-    expect(replay).toEqual(first)
+    expect(replay).toEqual({ ...first, headers: { ...first.headers, date: expect.any(String) } })
     expect(conflict.statusCode).toBe(409)
     expect(resolverCalls).toBe(1)
   })
@@ -473,7 +473,7 @@ describe("webhook mutation routes", () => {
     const replay = await call(baseUrl, path, "POST", "{}", headers)
     const conflict = await call(baseUrl, path, "POST", "{}", { ...headers, "if-match": "different-revision" })
     expect(first.statusCode).toBe(200)
-    expect(replay).toEqual(first)
+    expect(replay).toEqual({ ...first, headers: { ...first.headers, date: expect.any(String) } })
     expect(conflict.statusCode).toBe(409)
     expect(requests).toBe(1)
   })
