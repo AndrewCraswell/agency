@@ -33,6 +33,48 @@ This bounded key audit is not a full contextual name-conflict review.
 
 No records were changed by this inventory, and no additional providers were introduced.
 
+## Follow-up findings and release, September 8
+
+All 416 amendment detail URLs were fetched successfully from Congress.gov: 416 contained a sponsor entry,
+zero lacked one, and zero requests failed. The affected rows are House amendments in Congresses 113–119
+(47, 45, 67, 44, 78, 48 and 87 respectively). Committee entries use `name`, whereas individual sponsors use
+`fullName` and a Bioguide ID. The parser discarded `name`. Examples include Rules Committee on
+113/HAMDT/17, Ways and Means Committee on 114/HAMDT/1437, and Judiciary Committee on 114/HAMDT/214.
+The correction preserves either source name; it does not manufacture a person ID for a committee.
+Commit `936e828` includes the normalizer regression test. Existing stored names still require a source replay.
+
+The exact `(jurisdiction_id, lower(name))` census found one collision: `PAYNE, Donald M.` maps to
+`P000149` and `P000604`. The [House biography of Donald Payne Jr.](https://history.house.gov/People/Detail/15032387602)
+explicitly identifies him as the son of Donald Milford Payne and describes succeeding his father. These are
+two different people, not duplicate identities. No merge or display-name rewrite was performed.
+
+Term checks found zero reversed exact dates, zero person/term jurisdiction mismatches, zero duplicated
+`(person_id, source_provider, source_id)` keys, and zero same-person/chamber duplicate intervals with a known
+start date. Grouping unknown dates alone is not evidence of duplication. A more specific check did find
+career-wide collection summaries combined with Congress-specific detail terms for the same person/Congress.
+For example, A000014 had both `105:lower:1991:2011` and `105:lower:1997:1999`.
+The [official House biography](https://history.house.gov/People/Detail/8268) confirms Neil Abercrombie served in
+the 105th Congress; it does not justify inventing exact dates from either year-only API representation.
+
+The hydration code unioned collection and detail terms by ID, despite their different identities. Commit
+`57d1916` makes the complete member-detail snapshot authoritative. Existing provider-scoped replacement in
+`upsertEntitySnapshot` can remove superseded collection terms when those people are replayed. No manual
+term deletion, date inference, or person-specific exception was added. A regression test covers a career
+summary and its Congress-specific detail, duplicate member input, and preservation of unknown exact dates.
+
+Both runtime corrections deployed successfully to Trigger production **20260908.8**, deployment
+[`og3wxg18`](https://cloud.trigger.dev/projects/v3/proj_bsjukvltatwjsyczuatb/deployments/og3wxg18), with 26 tasks.
+The earlier 20260908.7 attempt failed on a Depot network timeout and is not accepted as a successful release.
+The 16 focused normalization/hydration tests and repository pre-push types passed. Full repository verification
+has unrelated scoring failures; it is not a green acceptance gate.
+
+Production replay and authenticated response verification remain open: the pre-write guard again observed the
+active Congress wave and prevented overlapping writes. Do not mark the inventory or data repair complete solely
+because the importer fixes are deployed. Replay the one vote, affected amendments with full action/text bundles,
+and affected people through their standard importers after the wave is idle; verify canonical IDs, unchanged vote
+choices, preserved amendment content, and removal of superseded terms. Broader fuzzy/contextual alias checks
+remain outside the exact-name census above.
+
 ## Vote-gap diagnosis, September 8
 
 All 432 null links belong to `vote:congress:house-119-2-74`, the February 24, 2026 House vote on H. Res. 1075.

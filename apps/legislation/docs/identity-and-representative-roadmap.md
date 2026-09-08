@@ -189,7 +189,7 @@ together only after the contract document is accepted.
 
 | Task | Status | Deliverable and acceptance gate |
 | --- | --- | --- |
-| IDN-101 | In progress | [Read-only link inventory](identity-link-inventory.md) records exact null-link counts and stable-ID checks. Next classify 432 vote gaps, 416 unnamed amendment gaps and contextual name/term conflicts; the all-vote row total is an estimate, not a completed census. |
+| IDN-101 | In progress | [Identity inventory](identity-link-inventory.md) diagnosed 432 stale vote links, checked all 416 amendment source records, and found collection/detail term duplication. Importer fixes deployed as Trigger 20260908.8; guarded data replay and authenticated verification await the active Congress wave. Exact-name collision is the distinct Payne father/son pair; broader contextual checks remain open. |
 | IDN-102 | Planned | Write the canonical person, office, district, identifier, alias, term, and provenance contracts, including merge and split rules. |
 | IDN-103 | Planned | Add `external_identifiers` and uniqueness rules for Bioguide, OpenStates, Wikidata, and provider-native IDs. |
 | IDN-104 | Planned | Add `entity_aliases` with normalization, validity dates, language, and provenance. |
