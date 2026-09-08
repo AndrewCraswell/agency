@@ -302,3 +302,29 @@ The existing deployed API returns 200 for `/health` and `/ready`, and 401 for an
 The Trigger current-sync release smoke is verified. A fresh authenticated membership-API smoke remains pending:
 no API smoke bearer token is configured in the local environment. This is not a fresh authenticated API acceptance
 or a Railway API deployment; no historical import gate was promoted.
+
+### Reviewed reconciliation release, 2026-09-08
+
+Code `509d46d` is committed and pushed to main, with pre-commit lint/format and pre-push types passing.
+Trigger `20260908.2`, deployment `6kxcbhz3`, successfully deployed all 26 tasks. The
+[reconciliation policy](committee-reconciliation-policy.md) records the independent LLM reviews and deterministic
+acceptance rules; no runtime LLM or global nickname matching was introduced.
+
+The isolated legislation Vitest run passed 2,260 tests in 246 files, with 60 database-dependent tests in four files
+skipped. Four receiver tests, service/web types and package unused-code checks passed. Final focused parser/assignment
+tests passed after the fail-closed correction review. Repository `pnpm verify` was attempted: its latest run is blocked
+by Windows error 1224 while formatting the unrelated scoring-circuit README (a user-mapped section is open).
+An earlier attempt also exhausted local compiler threads; the bounded retry removed that resource issue.
+The full repository verification gate is not green; no hooks were bypassed.
+
+Fresh 113th source-to-catalog verification on the frozen code confirms 210 organizations, 3,530 uniquely mapped
+memberships, zero unmatched entries and zero duplicate identifiers. All four 108th editions independently confirm
+206 organizations and 3,856 uniquely mapped memberships each, also with zero gaps or duplicate identifiers.
+Both 109th editions also independently confirm 209 organizations and 3,781 uniquely mapped memberships each,
+with zero gaps or duplicate identifiers. These are read-only acceptance results, not production import claims.
+
+At release time the recurring Congress bill-import wave was still active, so no historical import was dispatched.
+No PostgreSQL index build was present. The pre-import baseline uses `md5(string_agg(to_jsonb(row)::text, '' order by id))`:
+119th GovInfo memberships: 3,871 total/active, `942a816915e3734aaa4b0f8cdaeaa6ca`; active federal GovInfo organizations:
+221, `e6816e2fd02d046f435f01fdd235638a`. Compare using this same expression after a historical import.
+The stopped Codex schedule remains stopped. Authenticated API acceptance still requires a working smoke token.

@@ -6,6 +6,27 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("separates the 105th Water Resources heading without attaching it to McGovern", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nTransportation and Infrastructure\n\nThomas E. Petri, of Wisconsin.\nSherwood L. Boehlert, of New York.\nJames P. McGovern, of Massachusetts.\nJ. C. Watts, Jr., of Oklahoma.\n\nSUBCOMMITTEES\n\nSurface Transportation\nMr. Petri, Chairman\n\n         Mr. Watts    Mr. McGovern\n                  Water Resources and Environment\n                      Mr. Boehlert, Chairman\n\n         Mr. Petri    Mr. McGovern\n\nSTAFF\n\nDirector.--Somebody Else.\n`
+    const result = parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text: source })
+    expect(result.map((record) => [record.name, record.members.length])).toEqual([
+      ["Transportation and Infrastructure", 4],
+      ["Surface Transportation", 3],
+      ["Water Resources and Environment", 3]
+    ])
+    expect(result[1]?.members.map((member) => member.name)).toEqual([
+      "Thomas E. Petri",
+      "J. C. Watts, Jr.",
+      "James P. McGovern"
+    ])
+    expect(result[2]?.members.map((member) => member.name)).toEqual([
+      "Sherwood L. Boehlert",
+      "Thomas E. Petri",
+      "James P. McGovern"
+    ])
+    expect(result[2]?.parentName).toBe("Transportation and Infrastructure")
+  })
   it("repairs the reviewed Randovich panel row only against unique Radanovich parent evidence", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nResources\n\nGeorge P. Radanovich, of California.\n\nSUBCOMMITTEES\n\nForests and Forest Health\n\nMr. Randovich\n`

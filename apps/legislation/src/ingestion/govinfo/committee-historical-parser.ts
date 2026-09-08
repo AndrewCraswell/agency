@@ -130,7 +130,7 @@ function parseGranule(
     // These printed subcommittee headings touch the preceding roster. Match
     // only complete standalone lines, preserving every preceding member cell.
     .replaceAll(
-      /^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere|Employer-Employee Relations|Oversight and Investigations|Asia and the Pacific|International Operations and Human Rights|International Economic Policy and Trade)[ \t]*$/gm,
+      /^[ \t]+(Retirement and Aging|Primary Health and Aging|The Western Hemisphere|Employer-Employee Relations|Oversight and Investigations|Asia and the Pacific|International Operations and Human Rights|International Economic Policy and Trade|Water Resources and Environment)[ \t]*$/gm,
       "\n\n$1\n\n"
     )
     .replaceAll(/^[ \t]*(?:COMMITTEE )?STAFF[ \t]*$/gm, "\n\nSTAFF\n\n")

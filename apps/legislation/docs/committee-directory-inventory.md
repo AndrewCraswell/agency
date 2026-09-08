@@ -7,16 +7,17 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 ## Current acceptance status
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
-Production remains on verified Trigger release `20260908.1`; the 2026-09-08 reviewed-reconciliation work below is not yet deployed:
+Reviewed reconciliation code `509d46d` is deployed as Trigger `20260908.2`. Historical import gates remain separate:
 
 | Congress | Current gate |
 | --- | --- |
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
 | 107 | Parsed; historical identity corrections and the bracketed, stale Spence entries remain unresolved |
-| 108, 109 | Source-bound identity manifests in implementation; full canonical acceptance remains required |
+| 108 | All four editions pass: 206 organizations and 3,856 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
+| 109 | Both editions pass: 209 organizations and 3,781 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
 | 113 | Read-only canonical audit passes: 210 organizations, 3,530 entries mapped uniquely, zero gaps or duplicate IDs; not yet imported |
-| 105 | Reviewed spelling and assignment punctuation corrections implemented; a touching Water Resources heading still prevents full acceptance |
+| 105 | Reviewed spelling, assignment punctuation and Water Resources heading corrections implemented; Ways and Means / Health Johnson ambiguity remains |
 | 106 | Leave-note policy resolved; all three editions parse to 199 organizations and 3,331 source memberships; canonical audit still finds unresolved identities |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 
