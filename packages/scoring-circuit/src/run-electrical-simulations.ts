@@ -23,6 +23,16 @@ const simulationDirectory = join(packageDirectory, "simulation")
 
 const simulations: readonly SimulationCase[] = [
   {
+    title: "LTC3130 candidate: stated cable/input-capacitor scenarios only (not converter stability or USB approval)",
+    file: "primary-regulator-input.cir",
+    limits: [
+      { name: "laptop_min", minimum: 4.1, unit: "V" },
+      { name: "laptop_settled", minimum: 4.1, unit: "V" },
+      { name: "attach_peak", maximum: 25, unit: "V" },
+      { name: "transition_peak", maximum: 25, unit: "V" }
+    ]
+  },
+  {
     title: "New STM32 platform: continuity and reset-bias characterization (not complete weapon validation)",
     file: "stm32-sensing-interface.cir",
     limits: [

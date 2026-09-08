@@ -14,6 +14,12 @@ The repository `pnpm verify` command runs the suite, and CI installs ngspice bef
 
 ## Models and limits
 
+- The LTC3130 candidate input-network model checks three explicitly assumed scenarios: a 4.75V source with
+  0.5-ohm/2uH leads and a 10mA-to-524mA load step; a fast 5V attachment with 0.05-ohm/2uH leads; and a 5V-to-20V
+  transition over 500us. Effective input capacitance is 6uF, 8.58uF and 4uF respectively. Limits preserve the 4.1V
+  load-budget input floor and the candidate's 25V operating ceiling. This is a passive input-network screen, not a
+  converter control-loop model, exhaustive corner sweep or guarantee about customer cables/USB sources. It does not
+  validate current limiting, PD negotiation, startup into the real load, output stability, or suspend power.
 - The separate native KiCad STM32 draft has a pair/reset sensing model and a seven-conductor scan model. The latter
   checks physical foil, epee, sabre, piste and simultaneous-contact paths, source handover, and seven-input loading.
   Its 350us characterization sweep is not an approved scoring schedule. Nexperia 74LVC125APW buffers and 220-ohm
