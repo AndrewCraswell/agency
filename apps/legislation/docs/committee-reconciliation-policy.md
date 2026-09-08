@@ -153,3 +153,19 @@ same historical warning using the reviewed canonical person ID, including when t
 The disputed cell retains `person:congress:u000039`, independently confirmed as `Udall, Tom` in the production catalog;
 this identifies the quarantined claim, not an accepted 117th membership. Other people and current-only reads do not
 inherit that warning. Deployment verification remains before the quarantined-publication guard can be removed.
+
+### Coverage API release, September 8
+
+Committed source `3a0c95b` was deployed from a clean git archive to production `legislation-web` as
+`c5c397c8-4c45-4ff7-9561-9d66da55305d`; Railway reported terminal `SUCCESS`. The prior deployment was
+`beb4920f-470a-423d-8fef-0e5a87062fa4` (now `REMOVED`; do not assume it is immediately redeployable).
+The live origin is `https://legislation-web-production-b024.up.railway.app`.
+
+Fresh probes: `/health` 200, `/ready` 200 with an unsaturated database pool; the Appropriations organization-members
+and Udall person-memberships routes both returned canonical 401 errors without a token. These are health/auth-boundary
+checks, not authenticated membership acceptance. The provisioned `LEGISLATION_SMOKE_TOKEN` was unavailable in the local
+environment. Do not weaken authentication or manufacture production checkpoint evidence to pass the smoke test.
+
+The import guard remains active, and no 117th roster was published. Next complete authenticated response verification
+when the approved credential is available; meanwhile continue the independently actionable 106th/107th historical
+observation and identity work. Trigger was not redeployed by this API-only release.
