@@ -380,7 +380,15 @@ one identical Daniel Lipinski entry in House Small Business, producing 3,742 dis
 editions also pass canonical identity reconciliation with zero unmatched people.
 
 Source-scoped name variants may omit intervening initials while retaining explicit first/surname and unique
-state/chamber identity. Louis/Luis Fortuño corrections are limited to the two reviewed 110th editions and require
+state/chamber identity. A literal dotted leading initial may also be omitted when at least two spelled-out name
+tokens remain: reviewed structured metadata links `J. Gresham Barrett` to B001239 (108th, lower SC) and
+`K. Michael Conaway` to C001062 (109th, lower TX). This does not remove spelled-out given names, accept undotted
+initials, reduce a name to a surname, infer `Mike`, or expand unscoped canonical aliases. Publication still requires
+full canonical reconciliation; this matching change alone does not close either Congress's import gate.
+All 79 focused alias/normalization tests and legislation lint/types pass. Repository `pnpm verify` passes its
+check stage but remains blocked by unrelated scoring coverage thresholds (lines 95.98%, functions 99.79%,
+statements 95.34%, branches 93.62%, each requiring 100%); it does not establish full legislation-suite completion.
+Louis/Luis Fortuño corrections are limited to the two reviewed 110th editions and require
 same-edition corroboration. They are not generic nickname substitutions.
 
 October 2018 now passes full structural review at 210 organizations / 3,643 entries. Its separately positioned

@@ -13,6 +13,67 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it.each([
+    ["J. GRESHAM BARRETT", "Gresham Barrett"],
+    ["K. Michael Conaway", "Michael Conaway"],
+    ["J. Gresham de la Barrett", "Gresham de la Barrett"]
+  ])("omits only a scoped explicit dotted leading initial: %s", (name, printed) => {
+    const source = catalog()
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = printed
+    const aliases = [{ name, personId: source.people[0]!.id, state: "WA", chamber: "upper" as const }]
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toEqual([])
+    aliases[0]!.state = "SC"
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
+    aliases[0]!.state = "WA"
+    input[0]!.members[0]!.chamber = "lower"
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
+    input[0]!.members[0]!.chamber = "upper"
+    expect(
+      normalizeGovInfoCommitteeDirectory(
+        input,
+        directoryPackage,
+        { ...source, aliases: [{ name, personId: source.people[0]!.id }] },
+        new Date()
+      ).unmatched
+    ).toHaveLength(1)
+    source.people[0]!.name = name
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases: [] }, new Date()).unmatched
+    ).toHaveLength(1)
+    source.people.push({ ...source.people[0]!, id: "person:congress:s000002" })
+    source.terms.push({ ...source.terms[0]!, personId: "person:congress:s000002" })
+    aliases.push({ ...aliases[0]!, personId: "person:congress:s000002" })
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
+  })
+
+  it.each([
+    ["K Michael Conaway", "Michael Conaway"],
+    ["Kenneth Michael Conaway", "Michael Conaway"],
+    ["Conaway, K. Michael", "Michael Conaway"],
+    ["K. Conaway", "Conaway"],
+    ["K. Conaway Jr", "Conaway"],
+    ["K. M. Conaway", "M. Conaway"],
+    ["K. Michael Conaway", "Mike Conaway"],
+    ["J. Gresham de la Barrett", "Gresham Barrett"]
+  ])("does not infer a leading-initial variant from %s to %s", (name, printed) => {
+    const source = catalog()
+    const input = [records()[0]!]
+    input[0]!.members[0]!.name = printed
+    const aliases = [{ name, personId: source.people[0]!.id, state: "WA", chamber: "upper" as const }]
+    expect(
+      normalizeGovInfoCommitteeDirectory(input, directoryPackage, { ...source, aliases }, new Date()).unmatched
+    ).toHaveLength(1)
+  })
+
   it.each(["CDIR-2003-07-11", "CDIR-2003-11-01", "CDIR-2004-01-01", "CDIR-2004-08-01"])(
     "limits the 108th Eni correction to reviewed and nonconflicting evidence: %s",
     (packageId) => {

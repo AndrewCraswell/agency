@@ -315,8 +315,8 @@ function nameVariants(value: string): string[] {
   return [...new Set([normalized, ...(comma.length === 2 ? [normalizeName(`${comma[1]} ${comma[0]}`)] : [])])]
 }
 
-/** Keep explicit source names, optionally omitting intervening initials or using
- * an explicitly quoted nickname with its unchanged surname. These variants are
+/** Keep explicit source names, optionally omitting intervening initials, a dotted
+ * leading initial, or using an explicit nickname with its unchanged surname. These variants are
  * accepted only for unique same-state/chamber source IDs; never guess nicknames.
  */
 function scopedSourceNameVariants(value: string): string[] {
@@ -329,9 +329,18 @@ function scopedSourceNameVariants(value: string): string[] {
   const nickname = explicit?.[1] ?? explicit?.[2] ?? explicit?.[3]
   const surname = explicit?.[4]
   const explicitNames = nickname === undefined || surname === undefined ? [] : nameVariants(`${nickname} ${surname}`)
+  // Preserve all spelled-out names. Only raw first-name-order metadata with a
+  // literal dotted initial and at least two remaining full tokens qualifies.
+  const withoutLeadingInitial = /^[A-Za-z]\.\s+([\p{L}][\p{L}\p{M}'’-]+(?:\s+[\p{L}][\p{L}\p{M}'’-]+)+)$/u.exec(
+    value.trim()
+  )?.[1]
+  const leadingInitialNames =
+    withoutLeadingInitial === undefined || /(?:^|\s)(?:jr|sr|ii|iii|iv)$/i.test(withoutLeadingInitial)
+      ? []
+      : nameVariants(withoutLeadingInitial)
   return [
     ...new Set(
-      [...nameVariants(value), ...explicitNames].flatMap((name) => [
+      [...nameVariants(value), ...explicitNames, ...leadingInitialNames].flatMap((name) => [
         name,
         name.replace(/^(\S+) (?:[a-z] )+(.+)$/, "$1 $2")
       ])
