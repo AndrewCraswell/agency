@@ -89,6 +89,19 @@ After the assertion correction, isolated `pnpm test:coverage` completed successf
 61 skipped, and all four webhook receiver tests passed. PostgreSQL integration tests remain among the skips;
 this does not establish live continuation or production identity-population acceptance.
 
+### Approved production handoff (2026-09-08)
+
+With explicit user approval, coordinator `run_06g853d10it3r9rilcrepa7h01` and bills worker
+`run_06g85c072clbgudo71eii3gn01` were canceled. Both reached `CANCELED`; PostgreSQL then showed no non-idle
+session or index build. No checkpoint was deleted or rewritten. Exactly one replacement coordinator,
+`run_06g85oh7uodjjsfv32j65hoi01`, started on `20260908.10` using idempotency key
+`bill-scan-continuation-handoff-20260908-2117`.
+
+The first replacement bills child safely deferred with zero provider attempts until `2026-09-08T21:22:01.641Z`,
+respecting the previous job's lease. The new member refresh is executing; amendments, events, House votes and
+committee reports completed. Resumable scan initialization and population verification remain pending; do not
+bypass the lease or launch another coordinator to accelerate the handoff.
+
 ### Federal identity population implementation (2026-09-08)
 
 Congress member detail hydration now emits the published Bioguide identifier and distinct collection,
