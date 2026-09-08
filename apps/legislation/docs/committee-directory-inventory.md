@@ -7,9 +7,9 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 ## Current acceptance status
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
-Reviewed reconciliation through `d03e968` is deployed as Trigger `20260908.3` (deployment `sskqndkl`).
-The 108th import on `20260908.2` subsequently timed out at one hour. Database/checkpoint inspection is blocked
-by connection timeouts; do not restart it until committed progress and active backends are checked.
+Batching and bounded preparation are deployed as Trigger `20260908.4` (deployment `w5qf9huj`).
+The 108th recovered from its committed checkpoint after PostgreSQL confirmed no orphan transaction.
+The 105th and 109th subsequently imported successfully; all three passed unchanged reruns.
 Historical import gates remain separate:
 
 | Congress | Current gate |
@@ -17,16 +17,39 @@ Historical import gates remain separate:
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
 | 107 | Parsed; identity corrections and the observation contract for explicitly retained historical Spence entries remain unresolved |
-| 108 | All four editions pass source validation; Trigger import timed out; committed progress and recovery pending database access |
-| 109 | Both editions pass: 209 organizations and 3,781 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
+| 108 | Imported through August 2004; 3,857 historical tenures; unchanged rerun verified |
+| 109 | Imported through September 2006: 209 organizations and 3,781 memberships; unchanged rerun verified |
 | 113 | Imported: 3,530 memberships, 210 organizations, 531 people; database dates/current preservation and zero-write rerun verified; fresh authenticated API smoke pending |
-| 105 | Complete canonical audit passes: 196 organizations, 3,155 uniquely mapped memberships, zero gaps or duplicates; reviewed hierarchy checks pass; import pending |
+| 105 | Imported June 1997: 196 organizations and 3,155 memberships; unchanged rerun verified |
 | 106 | All three editions parse to 199 organizations and 3,331 source memberships; remaining identities and retrospective Brown observation dates remain unresolved |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 
 The user's explicit 2026-09-08 request authorized the [reviewed reconciliation strategy](committee-reconciliation-policy.md).
 No incomplete historical roster is published.
 State committee ingestion remains deferred until the approved Open States scrapers are self-hosted.
+
+### Fresh remaining-edition audit, 2026-09-08
+
+Read-only discovery, parsing, canonical matching and advertised biography-alias lookup completed for every remaining
+edition on the current source. No 106th, 107th or 117th membership was written.
+
+| Edition | Organizations | Mapped memberships | Unresolved source entries |
+| --- | --- | --- | --- |
+| 1999-06-15 | 199 | 3,261 | 70 |
+| 2000-02-01 | 199 | 3,261 | 70 |
+| 2000-10-01 | 199 | 3,261 | 70 |
+| 2001-12-07 | 205 | 3,675 | 57 |
+| 2002-10-01 | 205 | 3,656 | 65 |
+| 2022-10-26 | 219 | 3,771 | 1 |
+
+These are unresolved assignment cells, not counts of different people. The 106th combines source spelling/name
+forms (including Kent Cochran, Mike McIntrye and David Drier), bracketed Brown entries and Dixon's leave marker.
+The 107th combines scoped name forms with retained Spence entries; October also adds Michael D. Enzi and Hilda A.
+Solis variants. Previously approved identities in another edition are not reused without exact source review.
+The sole 117th unresolved cell is Tom Udall in Appropriations. Source-policy findings and the required decisions
+are in [historical reconciliation](committee-reconciliation-policy.md#fresh-source-review-after-the-105th109th-imports).
+Parser completion is not publication acceptance. PDF extraction emitted standard-font warnings; no new all-row
+visual certification is claimed.
 
 ## Discovered editions
 

@@ -18,13 +18,13 @@ its checkpoint together. A retry resumes from committed edition checkpoints; no 
 No finite timeout guarantees arbitrary outages will succeed: the goal is bounded failure with safe recovery,
 not leaving a stalled database operation running for 24 hours.
 
-The existing 108th timeout must be inspected in PostgreSQL before another run is dispatched. A Trigger timeout
-alone does not establish whether a database transaction remains active or which edition checkpoint committed.
-The new limits apply only to new executions; they do not change the already-timed-out execution.
+A Trigger timeout alone does not establish whether a database transaction remains active or which edition
+checkpoint committed. Check PostgreSQL before dispatching a replacement. The new limits apply only to new
+executions; they do not change an already-timed-out execution.
 
 Acceptance: focused tests cover batch statement counts, deterministic events, unchanged batches, duplicate rejection,
 database error propagation, and out-of-order preparation followed by ordered publication. Production acceptance
-still requires database access, a measured import, unchanged rerun, and current-Congress preservation checks.
+requires a measured import, unchanged rerun, and current-Congress preservation checks; these passed below.
 
 ## Release evidence
 
@@ -33,7 +33,9 @@ completed successfully. Focused verification passed 36 tests; legislation covera
 and four receiver tests. Sixty database-dependent tests remain skipped. Types and lint pass. Root `pnpm verify`
 passes the check stage but fails unrelated scoring coverage thresholds; the repository-wide gate is not green.
 
-The 108th retry was not dispatched: the database connection timed out, service-side SSH has no configured key,
-and the Railway MCP read was unauthorized. CLI PgBouncer logs show recent successful query traffic, but those
-logs cannot establish the historical checkpoint or absence of an orphan transaction. No restart, cancellation,
-new credentials, or database configuration change was performed to bypass these checks.
+Initial recovery was blocked by database connection timeouts. Connectivity later recovered without configuration
+changes; PostgreSQL confirmed no orphan transaction and the November 2003 checkpoint. The resumed 108th import
+completed in 162 seconds, advanced through August 2004 and passed a zero-write rerun. Subsequent 105th and 109th
+imports completed in 82 and 88 seconds, respectively, and passed zero-write reruns. Current membership and active
+organization fingerprints were preserved. See the exact run IDs in [rollout evidence](committee-membership-history.md).
+These are successful live runs, not a controlled old/new benchmark or a guarantee against future network failures.

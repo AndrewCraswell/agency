@@ -368,3 +368,30 @@ The 108th import continues on its original `20260908.2` deployment; no replaceme
 Independent full-directory source review explains the retained Brown/Spence information but exposes an observation-date
 contract gap: a June 1999 package reports Brown's July 1999 death. These editions remain unpublished pending a model
 for already-historical observations and genuinely unknown dates; details are in the reconciliation policy.
+
+### Sequential imports and live batching verification, 2026-09-08
+
+Trigger `20260908.4` completed the resumed 108th import in 162 seconds after checking PostgreSQL for orphan
+transactions. Run `run_06g814b3dt1o8j3cfsia8g5v01` reached `CDIR-2004-08-01` with zero failures.
+Rerun `run_06g81527stfq81g21a02lkkd01` wrote zero rows. There are 3,857 historical tenures across its editions;
+the earlier 3,856 count was a per-edition roster count, not the accumulated tenure count.
+
+The following imports ran sequentially on the same deployment, preserving checkpoints and current records:
+
+| Congress | Import run | Duration | Memberships | Organizations | People | Zero-write rerun |
+| --- | --- | --- | --- | --- | --- | --- |
+| 105 | `run_06g817b3qt89ebf4s36s8o8b01` | 82 seconds | 3,155 | 196 | 535 | `run_06g817sjlottulj5ji345pmg01` |
+| 109 | `run_06g8188nf9k1sro6en1fonbr01` | 88 seconds | 3,781 | 209 | 536 | `run_06g818ppp96o2q9ck06gfdsi01` |
+
+All four runs are terminal `COMPLETED` with zero failures. Database checks confirm both historical Congresses
+have no active memberships, use `congress_ended`, and have null effective dates and detected departure dates.
+The final checkpoints are `CDIR-1997-06-04` and `CDIR-2006-09-01`. No duplicate organization/person/session/tenure
+keys were found. Reruns preserve the full membership-row hashes:
+105 `be38369de2dcfedba6759d9e572f62ee`; 109 `a9394aae347643bf97c3921605274ea6`.
+These hashes use `md5(string_agg(md5(row_to_json(m)::text), '' order by id))`.
+The same-expression 119th hash remains `f1e55f8a2bd85676714edf02e75d6120`, with 3,871 active memberships.
+The existing active-organization baseline remains `e6816e2fd02d046f435f01fdd235638a` (221 records, using the
+earlier `to_jsonb` expression). No authenticated API acceptance is claimed by these database checks.
+
+Eleven of the fourteen historical Congresses are now imported (105, 108, 109, 110, 111, 112, 113, 114, 115, 116
+and 118). The 106th, 107th and 117th remain blocked.

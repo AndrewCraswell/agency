@@ -94,3 +94,29 @@ These are a separate unresolved observation contract, not remaining nickname err
 represent an assignment first encountered as already historical, allow genuinely unknown observed dates, and prevent
 retrospective notes from being backdated to the package issue date. Do not synthesize a zero-duration tenure or
 silently remove the historical assignment merely to pass the current active-roster importer.
+
+### Fresh source review after the 105th/109th imports
+
+The [June 1999 House committee granule](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-HOUSECOMMITTEES.htm)
+explicitly dates its assignments to July 19, 1999 (printed page 387), later than the package date. The Brown cells
+are bracketed. On printed page 391, Julian C. Dixon's marker is explained as ranking Democratic member on leave
+of absence. Treat this like the approved Davis participation note, not a deletion or a disposable numeric suffix.
+These observations do not authorize a global bracket-removal or numeric-marker rule.
+
+The [October 2002 House committee granule](https://www.govinfo.gov/content/pkg/CDIR-2002-10-01/html/CDIR-2002-10-01-HOUSECOMMITTEES.htm)
+retains bracketed Spence entries, including Military Procurement alongside Curt Weldon as chairman. It is not a
+single contemporaneous active roster. The [117th Senate committee granule](https://www.govinfo.gov/content/pkg/CDIR-2022-10-26/html/CDIR-2022-10-26-SENATECOMMITTEES.htm)
+still prints Tom Udall in Appropriations. A matching surname, adjacent successor, or another New Mexico senator
+does not authorize replacing that printed person.
+
+Remaining work is separated into two decisions:
+
+1. Identity-only corrections can follow the existing exact-edition manifest contract after individual corroboration.
+   Previously reviewed names in another Congress are research leads, not automatically approved overrides.
+2. Already-historical assignments need an explicit representation with unknown dates allowed. Proposed behavior:
+   retain the source assignment, mark it historical at first observation, do not invent a detected start or a
+   Congress-end departure, and distinguish an explicit roster-as-of date from the package issue date. This is not
+   implemented or approved by this audit. The 117th contradiction separately requires either source-backed correction
+   or an explicitly approved incomplete-roster policy; do not silently omit Udall.
+
+Until those contracts are settled and all identities reconcile, the 106th, 107th and 117th remain unpublished.
