@@ -3,7 +3,10 @@ import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import { normalizeGovInfoCommitteeDirectory } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
 
-vi.mock("./committee-reviewed-identities.js", () => ({ reviewedGovInfoIdentities: () => new Map() }))
+vi.mock("./committee-reviewed-identities.js", () => ({
+  reviewedGovInfoIdentities: () => new Map(),
+  reviewedGovInfoAnnotations: () => new Map()
+}))
 
 function fixture() {
   const directory: GovInfoDirectoryPackage = {
