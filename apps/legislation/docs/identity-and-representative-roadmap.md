@@ -188,7 +188,7 @@ together only after the contract document is accepted.
 
 | Task | Status | Deliverable and acceptance gate |
 | --- | --- | --- |
-| IDN-101 | In progress | [Identity inventory](identity-link-inventory.md) records repaired 432 vote links, 416 source-backed committee sponsor names, and authoritative term replay for 1,407 people. Importer corrections are deployed as Trigger 20260908.8. Exact-name collision is the distinct Payne father/son pair; broader contextual alias checks remain open. The inventory contains deployed API acceptance and sync-resumption evidence. |
+| IDN-101 | Inventory complete; source gaps open | [Repair inventory](identity-link-inventory.md) and [follow-up classification](identity-audit-follow-up.md) cover stable IDs, term conflicts and all 17 normalized-name groups. The Payne pair is distinct; the other 16 groups are unverified state vote stubs, not approved merges. Empty alias/identifier tables and state acquisition remain explicit population gaps. Full-wave acceptance is tracked separately. |
 | IDN-102 | Planned | Write the canonical person, office, district, identifier, alias, term, and provenance contracts, including merge and split rules. |
 | IDN-103 | Partial | Reuse `person_external_identifiers`, `people.source_id` and `upstream_ids`; do not create a parallel identifier table. The external-identifier table has no production rows. Provider-scoped uniqueness and accepted-source population remain open; this row does not approve a new provider. |
 | IDN-104 | Partial | Reuse `person_aliases` and OpenStates detail normalization. The table has no production rows. Source-backed population, validity dates and language remain open; names alone cannot merge people. |

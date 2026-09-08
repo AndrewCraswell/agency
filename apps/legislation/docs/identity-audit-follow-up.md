@@ -56,3 +56,25 @@ from missing production population, unverified archival behavior and unimplement
 
 Remaining gates: terminal full-wave verification; approved OpenStates stable-ID acquisition and state reconciliation;
 source-backed alias/identifier population. These are explicit gaps, not reasons to merge ambiguous records today.
+
+## Verification
+
+Focused contract/readiness/member/amendment checks passed 22 tests. The 18 PostgreSQL entity integration tests,
+including the strengthened persistence replay case, were skipped: the local Docker daemon is unavailable and no
+test database was configured. They were not pointed at production. Service and Next type checks passed.
+The deployment gate rejected the pre-contract production API as intended before the new API was uploaded.
+
+After correcting lint errors in the new guard, `pnpm verify` passed its check stage but stopped at unrelated
+scoring coverage thresholds (lines 96.09%, functions 99.79%, statements 95.44%, branches 93.78%, against 100%).
+The repository-wide verification gate is not green; the interrupted legislation coverage run is not a complete pass.
+
+Railway deployment `57197853-4d0e-4072-8e9f-d27ca154adeb`, source commit `5548045`, reached **SUCCESS**.
+The live release gate then passed against the new `/ready` contract. Authenticated person details returned 200 for
+Brown (`B000918`, 18 terms), Spence (`S000718`, 16), Abercrombie (`A000014`, 11), and Slotkin (`S001208`, 4).
+The preceding successful API artifact was `5b83e53a-7af3-4588-98cd-9e99b4bee9d8`; it lacks the advertised
+contract and would intentionally block subsequent gated importer deployment until the API is brought forward again.
+No Trigger redeploy or interruption of the running sync was necessary.
+
+The local Docker startup attempt did not expose a working engine within the bounded check. Persistence regression
+execution therefore remains unverified. The resumed full wave also remains pending; do not treat these release and
+member-refresh checks as a terminal result for bills, amendments or the entire recurring coordinator.
