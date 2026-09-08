@@ -1,0 +1,6 @@
+{
+  "directoryPage": "size-charts",
+  "groups": ["masks", "jackets", "pants", "gloves", "underarm-protectors", "chest-protectors", "footwear"],
+  "headerMenu": "main-menu",
+  "footerMenus": { "shop": "footer-shop", "support": "footer-support", "company": "footer-company" }
+}

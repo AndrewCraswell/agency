@@ -1,0 +1,98 @@
+{
+  "sourceUrl": "https://fencing.club/pages/size-charts",
+  "capturedAt": "2026-09-06",
+  "groups": [
+    { "handle": "masks", "title": "Masks", "category": "Masks" },
+    { "handle": "jackets", "title": "Jackets", "category": "Jackets" },
+    { "handle": "pants", "title": "Pants", "category": "Pants" },
+    { "handle": "gloves", "title": "Gloves", "category": "Gloves" },
+    { "handle": "underarm-protectors", "title": "Underarm Protectors", "category": "Underarm Protectors" },
+    { "handle": "chest-protectors", "title": "Chest Protectors", "category": "Chest Protectors" },
+    { "handle": "footwear", "title": "Footwear", "category": "Footwear" }
+  ],
+  "guides": [
+    { "key": "body", "title": "Chest and height", "image": "media/body.png", "alt": "Fencer showing chest circumference and standing height measurements.", "instructions": "Chest: Wrap a soft tape around the fullest part of your chest, under your arms. Keep it level and breathe normally.\n\nHeight: Stand upright and measure from the floor to the top of your head." },
+    { "key": "pants", "title": "Waist and hips", "image": "media/pants.png", "alt": "Fencer showing where to measure waist and hip circumference.", "instructions": "Waist: Measure around your natural waist.\nHips: Measure around the fullest part of your hips.\nThen check your height against the same size." },
+    { "key": "head", "title": "Head circumference", "image": "media/head.png", "alt": "Measuring tape passing beneath the chin and over the crown of the head.", "instructions": "Wrap a soft tape under your chin, up one side of your face, over your head, and down the other side to your chin. Keep it snug." },
+    { "key": "hand", "title": "Hand circumference", "image": "media/hand.png", "alt": "Tape around the widest part of the hand below the knuckles, with the thumb outside the loop.", "instructions": "Wrap a soft tape around the widest part of your fencing hand, just below the knuckles. Keep your thumb outside the loop and the tape snug." },
+    { "key": "socks", "title": "Sole and leg length", "image": "media/socks.png", "alt": "Sock measurements: A marks the sole from heel to toe; B marks the leg from heel upwards.", "instructions": "A - Sole length: Measure from your heel to your longest toe.\n\nB - Leg length: Measure from your heel to the height you want above your knee." }
+  ],
+  "advice": {
+    "jackets": { "heading": "Between sizes?", "text": "For a close, athletic fit, choose the size that matches your measurements. Choose one size larger for extra shoulder room or a looser layer underneath.\n\nLamé jackets fit over a fencing jacket of the same size. No extra sizing adjustment is needed." },
+    "pants": { "heading": "Between sizes?", "text": "If your hips fall in a larger size range, choose that size for room to move. Between sizes, choose larger for more room or smaller for a closer fit." },
+    "underarm": { "heading": "Start with your height", "text": "Match your height first. If you're between sizes, use your chest measurement to help choose." },
+    "chest": { "heading": "Between sizes?", "text": "Choose the larger size when your chest measurement falls between two sizes." },
+    "masks": { "heading": "Adjust the fit", "text": "Between sizes, choose the larger size. If your mask feels loose or tight, ask your coach or an experienced teammate to help adjust it before exchanging sizes." },
+    "gloves": { "heading": "Between sizes?", "text": "Choose the larger size when your hand measurement falls between two sizes." },
+    "socks": { "heading": "Shoe size reference", "text": "Shoe sizes are US Mens sizes. The length columns give the sock's sole (A) and leg (B) measurements. If you're between sizes, choose the larger size." }
+  },
+  "charts": [
+    {
+      "handle": "mens-jackets", "title": "Mens jackets", "navigationLabel": "Mens", "group": "Jackets", "guide": "body", "advice": "jackets",
+      "measurements": [["chest_cm", "Chest (cm)"], ["height_cm", "Height (cm)"]],
+      "rows": [["44", "84 - 88", "164 - 170"], ["46", "88 - 92", "164 - 170"], ["48", "92 - 96", "170 - 176"], ["50", "96 - 100", "170 - 176"], ["52", "100 - 104", "176 - 182"], ["54", "104 - 108", "176 - 182"], ["56", "108 - 112", "176 - 182"], ["58", "112 - 116", "182 - 188"], ["60", "116 - 120", "182 - 188"]],
+      "imperialMeasurements": [["chest_in", "Chest (in)"], ["height_ft_in", "Height (ft/in)"]],
+      "imperialRows": [["44", "33 - 35", "5'4\" - 5'7\""], ["46", "35 - 36", "5'4\" - 5'7\""], ["48", "36 - 38", "5'7\" - 5'9\""], ["50", "38 - 39", "5'7\" - 5'9\""], ["52", "39 - 41", "5'9\" - 6'0\""], ["54", "41 - 43", "5'9\" - 6'0\""], ["56", "43 - 44", "5'9\" - 6'0\""], ["58", "44 - 46", "6'0\" - 6'2\""], ["60", "46 - 47", "6'0\" - 6'2\""]]
+    },
+    {
+      "handle": "womens-jackets", "title": "Womens jackets", "navigationLabel": "Womens", "group": "Jackets", "guide": "body", "advice": "jackets",
+      "measurements": [["chest_cm", "Chest (cm)"], ["height_cm", "Height (cm)"]],
+      "rows": [["36", "80 - 84", "158 - 164"], ["38", "84 - 88", "158 - 164"], ["40", "88 - 92", "158 - 164"], ["42", "92 - 96", "164 - 170"], ["44", "96 - 100", "164 - 170"], ["46", "100 - 104", "164 - 170"], ["48", "104 - 108", "170 - 176"], ["50", "108 - 112", "170 - 176"]]
+    },
+    {
+      "handle": "kids-jackets", "title": "Kids jackets", "navigationLabel": "Kids", "group": "Jackets", "guide": "body", "advice": "jackets",
+      "measurements": [["age", "Age"], ["chest_cm", "Chest (cm)"], ["height_cm", "Height (cm)"]],
+      "rows": [["128", "7, 8", "64 - 68", "122 - 128"], ["134", "8, 9", "67 - 71", "128 - 134"], ["140", "9, 10", "70 - 74", "134 - 140"], ["146", "10, 11", "73 - 77", "140 - 146"], ["152", "11, 12", "76 - 80", "146 - 152"], ["158 (40)", "12, 13", "79 - 83", "152 - 158"], ["164 (42)", "13, 14", "82 - 86", "158 - 164"], ["170 (44)", "15", "85 - 89", "164 - 170"]]
+    },
+    {
+      "handle": "mens-pants", "title": "Mens pants", "navigationLabel": "Mens", "group": "Pants", "guide": "pants", "advice": "pants",
+      "measurements": [["waist_cm", "Waist (cm)"], ["hip_cm", "Hip (cm)"], ["height_cm", "Height (cm)"]],
+      "rows": [["44", "73 - 77", "88 - 92", "164 - 170"], ["46", "77 - 80", "92 - 96", "164 - 170"], ["48", "80 - 84", "96 - 100", "170 - 176"], ["50", "84 - 88", "100 - 104", "170 - 176"], ["52", "88 - 92", "104 - 108", "176 - 182"], ["54", "92 - 96", "108 - 112", "176 - 182"], ["56", "96 - 100", "112 - 116", "176 - 182"], ["58", "100 - 104", "116 - 120", "182 - 188"], ["60", "104 - 108", "120 - 124", "182 - 188"]]
+    },
+    {
+      "handle": "womens-pants", "title": "Womens pants", "navigationLabel": "Womens", "group": "Pants", "guide": "pants", "advice": "pants",
+      "measurements": [["waist_cm", "Waist (cm)"], ["hip_cm", "Hip (cm)"], ["height_cm", "Height (cm)"]],
+      "rows": [["36", "64 - 68", "87 - 91", "158 - 164"], ["38", "68 - 76", "91 - 95", "158 - 164"], ["40", "72 - 76", "95 - 99", "158 - 164"], ["42", "76 - 80", "99 - 103", "164 - 170"], ["44", "80 - 84", "103 - 107", "164 - 170"], ["46", "84 - 88", "107 - 111", "164 - 170"], ["48", "88 - 92", "111 - 115", "170 - 176"], ["50", "92 - 96", "115 - 119", "170 - 176"]]
+    },
+    {
+      "handle": "kids-pants", "title": "Kids pants", "navigationLabel": "Kids", "group": "Pants", "guide": "pants", "advice": "pants",
+      "measurements": [["age", "Age"], ["waist_cm", "Waist (cm)"], ["hip_cm", "Hip (cm)"], ["height_cm", "Height (cm)"]],
+      "rows": [["128", "7, 8", "58 - 62", "70 - 74", "122 - 128"], ["134", "8, 9", "59 - 63", "72 - 76", "128 - 134"], ["140", "9, 10", "60 - 64", "74 - 78", "134 - 140"], ["146", "10, 11", "61 - 65", "76 - 80", "140 - 146"], ["152", "11, 12", "62 - 66", "78 - 82", "146 - 152"], ["158 (40)", "12, 13", "63 - 67", "81 - 85", "152 - 158"], ["164 (42)", "13, 14", "64 - 68", "84 - 88", "158 - 164"], ["170 (44)", "15", "68 - 72", "87 - 91", "164 - 170"]]
+    },
+    {
+      "handle": "underarm-protectors", "title": "Underarm protectors", "group": "Underarm Protectors", "guide": "body", "advice": "underarm",
+      "measurements": [["height_cm", "Height (cm)"], ["chest_cm", "Chest (cm)"]],
+      "rows": [["2XS", "<158", "<88"], ["XS", "158 - 164", "88 - 92"], ["S", "164 - 170", "92 - 96"], ["M", "170 - 176", "96 - 100"], ["L", "176 - 182", "104 - 108"], ["XL", "182 - 188", "108 - 112"], ["2XL", ">188", ">112"]]
+    },
+    {
+      "handle": "mens-chest-protectors", "title": "Mens chest protectors", "navigationLabel": "Mens", "group": "Chest Protectors", "guide": "body", "advice": "chest",
+      "measurements": [["chest_cm", "Chest (cm)"]],
+      "rows": [["XS", "64 - 80"], ["S", "84 - 92"], ["M", "92 - 100"], ["L", "100 - 108"], ["XL", "108 - 120"]]
+    },
+    {
+      "handle": "womens-chest-protectors", "title": "Womens chest protectors", "navigationLabel": "Womens", "group": "Chest Protectors", "guide": "body", "advice": "chest",
+      "measurements": [["chest_cm", "Chest (cm)"], ["cup_size", "Cup size"]],
+      "rows": [["XS", "80 - 83", "A - B"], ["S", "85", "A"], ["M", "85", "B - C"], ["L", "90 - 95", "C"], ["XL", "90 - 105", "D"]]
+    },
+    {
+      "handle": "masks", "title": "Masks", "group": "Masks", "guide": "head", "advice": "masks",
+      "measurements": [["head_cm", "Head circumference (cm)"]],
+      "rows": [["XS", "<53"], ["S", "53 - 59"], ["M", "61 - 64"], ["L", "66 - 69"], ["XL", "73 - 76"]]
+    },
+    {
+      "handle": "gloves", "title": "Gloves", "group": "Gloves", "guide": "hand", "advice": "gloves",
+      "measurements": [["hand_cm", "Hand circumference (cm)"]],
+      "rows": [["6", "<15.5"], ["6.5", "15.5 - 16.5"], ["7", "16.5 - 18"], ["7.5", "18 - 19"], ["8", "19 - 20.5"], ["8.5", "20.5 - 21.5"], ["9", "21.5 - 23"], ["9.5", "23 - 24.5"], ["10", "24.5 - 25.5"], ["10.5", "25.5 - 26.5"], ["11", "26.5 - 28"]]
+    },
+    {
+      "handle": "standard-socks", "title": "Standard socks", "group": "Footwear", "guide": "socks", "advice": "socks",
+      "measurements": [["shoe_us_men", "US Mens size"], ["sole_cm", "Sole (cm)"], ["leg_cm", "Leg (cm)"]],
+      "rows": [["XL", "9.5 - 10.5", "24", "47"], ["L", "8.5 - 9", "22", "45"], ["M", "7.5 - 8", "20", "43"], ["S", "6.5 - 7", "18", "41"], ["XS", "5.5 - 6", "16", "39"], ["2XS", "4 - 5", "14", "35"]]
+    },
+    {
+      "handle": "elite-socks", "title": "Elite competition socks", "group": "Footwear", "guide": "socks", "advice": "socks",
+      "measurements": [["shoe_us_men", "US Mens size"], ["sole_cm", "Sole (cm)"], ["leg_cm", "Leg (cm)"]],
+      "rows": [["XL", "9.5 - 10.5", "24", "47"], ["L", "8.5 - 9", "22", "46"], ["M", "7.5 - 8", "21", "43"], ["S", "6.5 - 7", "19", "39"], ["XS", "5.5 - 6", "17", "34"]]
+    }
+  ]
+}

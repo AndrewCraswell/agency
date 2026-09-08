@@ -1,0 +1,53 @@
+{% doc %}
+  Checks the shared chart contract before rendering a page or product trigger.
+  @param {metaobject} chart - A size_chart entry.
+{% enddoc %}
+{%- liquid
+  assign valid = true
+  assign entries = chart.entries.value
+  assign keys = chart.measurement_keys.value
+  assign labels = chart.measurement_labels.value
+  assign imperial_keys = chart.imperial_keys.value
+  assign imperial_labels = chart.imperial_labels.value
+  assign guide = chart.guide.value
+  assign unique_keys = keys | uniq
+  if chart == blank or chart.system.type != 'size_chart' or chart.system.url == blank or chart.title.value == blank
+    assign valid = false
+  endif
+  if entries == blank or keys == blank or keys.size != labels.size or unique_keys.size != keys.size or entries.size > 50
+    assign valid = false
+  endif
+  if guide.system.type != 'measurement_guide' or guide.instructions.value == blank or guide.image.value == blank or guide.alt_text.value == blank
+    assign valid = false
+  endif
+  assign entry_handles = entries | map: 'system' | map: 'handle' | uniq
+  if entry_handles.size != entries.size
+    assign valid = false
+  endif
+  if imperial_keys != blank or imperial_labels != blank
+    if imperial_keys.size != keys.size or imperial_labels.size != keys.size
+      assign valid = false
+    endif
+  endif
+  for entry in entries
+    if entry.system.type != 'size_chart_entry' or entry.size_label.value == blank
+      assign valid = false
+    endif
+    for label in labels
+      if label == blank
+        assign valid = false
+      endif
+    endfor
+    for key in keys
+      if entry[key].value == blank
+        assign valid = false
+      endif
+    endfor
+    for key in imperial_keys
+      if entry[key].value == blank
+        assign valid = false
+      endif
+    endfor
+  endfor
+  echo valid
+-%}

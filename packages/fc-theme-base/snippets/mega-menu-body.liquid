@@ -34,7 +34,14 @@
       {%- render 'mega-menu-columns', link: link -%}
 
       {%- if link.handle == 'clothing' -%}
-        <a class="fc-mega-feature" href="{{ routes.root_url }}pages/sizing-guide">
+        {%- liquid
+          assign sizing_page = settings.size_chart_index_page | default: pages['size-charts']
+          assign sizing_url = sizing_page.url
+          if sizing_url == blank
+            assign sizing_url = routes.root_url | append: 'pages/size-charts'
+          endif
+        -%}
+        <a class="fc-mega-feature" href="{{ sizing_url }}">
           <span class="fc-mega-feature__media">
             <img
               src="{{ 'mega-sizing-guide.jpg' | asset_url }}"

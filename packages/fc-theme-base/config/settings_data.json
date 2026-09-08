@@ -2,6 +2,16 @@
   "current": "Dawn",
   "presets": {
     "Dawn": {
+      "size_chart_groups": [
+        "masks",
+        "jackets",
+        "pants",
+        "gloves",
+        "underarm-protectors",
+        "chest-protectors",
+        "footwear"
+      ],
+      "size_chart_index_page": "size-charts",
       "logo": "shopify://shop_images/Fencing_Club-05.png",
       "logo_width": 90,
       "customer_account_menu": "customer-account-main-menu",

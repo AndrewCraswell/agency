@@ -1,0 +1,32 @@
+{% doc %}
+  Reusable modal drawer. Content and trigger are caller-rendered HTML.
+  @param {string} id - Unique dialog ID.
+  @param {string} title - Accessible drawer title.
+  @param {string} close_label - Accessible close-button label.
+  @param {string} content - Drawer body HTML.
+  @param {string} [trigger] - HTML with data-drawer-open and aria-controls matching id.
+  @param {string} [description] - Optional plain-text subtitle.
+  @param {string} [footer] - Optional persistent footer HTML.
+  @param {string} [size] - wide for 600px; default is 400px, both capped by the viewport.
+  @param {string} [side] - start or end; defaults to end.
+  @param {string} [attributes] - Shopify block editor attributes.
+{% enddoc %}
+{{ 'component-drawer.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'ui-drawer.js' | asset_url }}" defer="defer"></script>
+<ui-drawer {{ attributes }}>
+  {{ trigger }}
+  <dialog id="{{ id | escape }}" class="ui-drawer{% if size == 'wide' %} ui-drawer--wide{% endif %}{% if side == 'start' %} ui-drawer--start{% endif %}" aria-labelledby="{{ id | escape }}-Title">
+    <div class="ui-drawer__backdrop" data-drawer-backdrop aria-hidden="true"></div>
+    <div class="ui-drawer__panel" data-drawer-panel>
+      <header class="ui-drawer__header">
+        <div class="ui-drawer__heading">
+          <h2 class="ui-drawer__title" id="{{ id | escape }}-Title">{{ title | escape }}</h2>
+          {% if description != blank %}<p class="ui-drawer__description">{{ description | escape }}</p>{% endif %}
+        </div>
+        <button class="ui-drawer__close" type="button" data-drawer-close aria-label="{{ close_label | escape }}">{% render 'fc-icon', icon: 'x', size: 20 %}</button>
+      </header>
+      <div class="ui-drawer__body">{{ content }}</div>
+      {% if footer != blank %}<footer class="ui-drawer__footer">{{ footer }}</footer>{% endif %}
+    </div>
+  </dialog>
+</ui-drawer>

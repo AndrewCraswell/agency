@@ -1,0 +1,54 @@
+{% doc %}
+  Renders the shared measuring-tape PDF downloads for sizing pages and product sizing help.
+{% enddoc %}
+
+{%- liquid
+  assign a4_url = 'measuring-tape-a4.pdf' | asset_url
+  assign letter_url = 'measuring-tape-letter.pdf' | asset_url
+-%}
+<details class="size-chart__help measuring-tape-downloads">
+  <summary><h2>Printable measuring tape</h2>{% render 'fc-icon', icon: 'chevron-down', size: 18 %}</summary>
+  <div class="measuring-tape-downloads__links">
+    {% render 'ui-link',
+      label: 'A4 PDF', url: a4_url, icon: 'arrow-right',
+      class: 'measuring-tape-downloads__link', download: 'fencing-club-measuring-tape-a4.pdf',
+      type: 'application/pdf', aria_label: 'Download A4 PDF measuring tape'
+    %}
+    {% render 'ui-link',
+      label: 'US Letter PDF', url: letter_url, icon: 'arrow-right',
+      class: 'measuring-tape-downloads__link', download: 'fencing-club-measuring-tape-letter.pdf',
+      type: 'application/pdf', aria_label: 'Download US Letter PDF measuring tape'
+    %}
+  </div>
+  <p class="measuring-tape-downloads__note">
+    Print at Actual size (100%). Check the 10 cm line before cutting.
+  </p>
+</details>
+
+{% stylesheet %}
+  .measuring-tape-downloads {
+    margin-block: 2.4rem;
+    letter-spacing: 0;
+  }
+
+  .measuring-tape-downloads__links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .measuring-tape-downloads__link {
+    min-height: 3.2rem;
+    max-width: 100%;
+    line-height: 1.5;
+  }
+
+  .measuring-tape-downloads .measuring-tape-downloads__note {
+    margin: 0.8rem 0 0;
+    max-width: 60ch;
+    font-size: 1.3rem;
+    line-height: 1.5;
+    color: rgba(var(--color-foreground), 0.75);
+  }
+{% endstylesheet %}

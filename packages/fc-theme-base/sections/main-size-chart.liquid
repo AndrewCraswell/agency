@@ -1,0 +1,24 @@
+{{ 'size-chart.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'size-chart.js' | asset_url }}" defer="defer"></script>
+
+<div class="size-charts-page">
+  <div class="size-charts-page__main size-charts-page__columns">
+    <size-chart-navigation>
+      <nav class="size-charts-page__navigation" aria-label="Size chart navigation">
+        <details data-size-navigation open>
+          <summary class="size-charts-page__browse"><span>Browse size charts</span>{% render 'fc-icon', icon: 'chevron-down', size: 16 %}</summary>
+          {% render 'size-chart-directory', current_chart: metaobject, is_navigation: true %}
+        </details>
+      </nav>
+    </size-chart-navigation>
+    {% render 'size-chart-content', chart: metaobject, instance_id: section.id %}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Size chart",
+  "tag": "section",
+  "settings": [{ "type": "paragraph", "content": "Edit measurements and guidance in Content > Metaobjects. This section shares its chart content with product size-chart flyouts." }]
+}
+{% endschema %}

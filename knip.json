@@ -69,6 +69,9 @@
     "packages/shopify-emails": {
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
+    "packages/shopify-content": {
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    },
     "packages/storybook-config": {
       "ignoreDependencies": [
         "@repo/oxlint-config",

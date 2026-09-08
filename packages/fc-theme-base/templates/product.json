@@ -23,6 +23,10 @@
             "swatch_shape": "circle"
           }
         },
+        "size_chart": {
+          "type": "size_chart",
+          "settings": { "label": "Size chart" }
+        },
         "quantity_selector": {
           "type": "quantity_selector"
         },
@@ -48,6 +52,7 @@
         "title",
         "price",
         "variant_picker",
+        "size_chart",
         "quantity_selector",
         "buy_buttons",
         "description",

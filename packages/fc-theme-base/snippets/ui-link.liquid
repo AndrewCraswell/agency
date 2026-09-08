@@ -10,13 +10,29 @@
   - class: {String} Optional extra classes for section-level sizing.
   - label_class: {String} Optional class for the label span.
   - tabindex: {String} Optional tabindex value.
+  - download: {String} Optional download filename.
+  - type: {String} Optional destination MIME type.
+  - aria_label: {String} Optional accessible name.
+  - id: {String} Optional unique link ID.
 {% endcomment %}
 
 <a
   class="ui-link{% if icon %} ui-link--with-icon{% endif %}{% if icon_position == 'before' %} ui-link--icon-before{% endif %}{% if reverse_icon %} ui-link--icon-reversed{% endif %}{% if class %} {{ class }}{% endif %}"
   href="{{ url }}"
+  {% if id != blank %}
+    id="{{ id | escape }}"
+  {% endif %}
   {% if tabindex != blank %}
     tabindex="{{ tabindex }}"
+  {% endif %}
+  {% if download != blank %}
+    download="{{ download | escape }}"
+  {% endif %}
+  {% if type != blank %}
+    type="{{ type | escape }}"
+  {% endif %}
+  {% if aria_label != blank %}
+    aria-label="{{ aria_label | escape }}"
   {% endif %}
 >
   {%- if icon and icon_position == 'before' -%}

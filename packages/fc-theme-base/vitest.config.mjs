@@ -7,7 +7,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: `coverage/${process.pid}`,
-      include: ['assets/policy-page.js'],
+      include: ['assets/policy-page.js', 'assets/size-chart.js', 'assets/ui-drawer.js'],
       thresholds: {
         statements: 90,
         branches: 80,

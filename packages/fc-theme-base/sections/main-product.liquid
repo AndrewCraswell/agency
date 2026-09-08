@@ -455,6 +455,8 @@
                       </volume-pricing>
                     {%- endif -%}
                   </div>
+                {%- when 'size_chart' -%}
+                  {% render 'size-chart-flyout', product: product, block: block, section_id: section.id %}
                 {%- when 'popup' -%}
                   <modal-opener
                     class="product-popup-modal__opener quick-add-hidden"
@@ -1209,6 +1211,15 @@
           "id": "page",
           "label": "t:sections.main-product.blocks.collapsible_tab.settings.page.label"
         }
+      ]
+    },
+    {
+      "type": "size_chart",
+      "name": "Size chart",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "label", "label": "Link label", "default": "Size chart" },
+        { "type": "paragraph", "content": "Uses this product's custom.size_chart metafield. Only published, complete charts are shown. Configure shared chart options in Theme settings > Size charts." }
       ]
     },
     {

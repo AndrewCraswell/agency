@@ -1,0 +1,3291 @@
+{
+  "name": "fencing-club-sizing",
+  "resources": [
+    {
+      "key": "definition.guide",
+      "kind": "metaobject-definition",
+      "data": {
+        "type": "measurement_guide",
+        "name": "Measuring guide",
+        "displayNameKey": "title",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        },
+        "fieldDefinitions": [
+          {
+            "key": "title",
+            "name": "Title",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "image",
+            "name": "Illustration",
+            "type": "file_reference",
+            "required": true
+          },
+          {
+            "key": "alt_text",
+            "name": "Alternative text",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "instructions",
+            "name": "Instructions",
+            "type": "multi_line_text_field",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "key": "definition.size",
+      "kind": "metaobject-definition",
+      "data": {
+        "type": "size_chart_entry",
+        "name": "Size entry",
+        "displayNameKey": "title",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        },
+        "fieldDefinitions": [
+          {
+            "key": "title",
+            "name": "Entry name",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "size_label",
+            "name": "Size",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "chest_cm",
+            "name": "Chest (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "height_cm",
+            "name": "Height (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "chest_in",
+            "name": "Chest (in)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "height_ft_in",
+            "name": "Height (ft/in)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "age",
+            "name": "Age",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "waist_cm",
+            "name": "Waist (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "hip_cm",
+            "name": "Hip (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "cup_size",
+            "name": "Cup size",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "head_cm",
+            "name": "Head circumference (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "hand_cm",
+            "name": "Hand circumference (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "shoe_us_men",
+            "name": "US Mens size",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "sole_cm",
+            "name": "Sole (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "leg_cm",
+            "name": "Leg (cm)",
+            "type": "single_line_text_field",
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "key": "definition.chart",
+      "kind": "metaobject-definition",
+      "data": {
+        "type": "size_chart",
+        "name": "Size chart",
+        "displayNameKey": "title",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        },
+        "fieldDefinitions": [
+          {
+            "key": "title",
+            "name": "Title",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "category",
+            "name": "Category",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "navigation_label",
+            "name": "Navigation label",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "measurement_keys",
+            "name": "Measurement field keys",
+            "type": "list.single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "measurement_labels",
+            "name": "Measurement labels",
+            "type": "list.single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "imperial_keys",
+            "name": "Imperial field keys",
+            "type": "list.single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "imperial_labels",
+            "name": "Imperial labels",
+            "type": "list.single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "entries",
+            "name": "Sizes in display order",
+            "type": "list.metaobject_reference",
+            "required": true,
+            "validations": [
+              {
+                "name": "metaobject_definition_id",
+                "value": {
+                  "$ref": "definition.size",
+                  "field": "id"
+                }
+              }
+            ]
+          },
+          {
+            "key": "guide",
+            "name": "Measuring guide",
+            "type": "metaobject_reference",
+            "required": true,
+            "validations": [
+              {
+                "name": "metaobject_definition_id",
+                "value": {
+                  "$ref": "definition.guide",
+                  "field": "id"
+                }
+              }
+            ]
+          },
+          {
+            "key": "fit_heading",
+            "name": "Fit heading",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "fit_advice",
+            "name": "Fit advice",
+            "type": "multi_line_text_field",
+            "required": false
+          },
+          {
+            "key": "source_url",
+            "name": "Source URL",
+            "type": "url",
+            "required": false
+          },
+          {
+            "key": "source_date",
+            "name": "Source date",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "capabilities": {
+          "publishable": {
+            "enabled": true
+          },
+          "translatable": {
+            "enabled": true
+          },
+          "renderable": {
+            "enabled": true,
+            "data": {
+              "metaTitleKey": "title"
+            }
+          },
+          "onlineStore": {
+            "enabled": true,
+            "data": {
+              "urlHandle": "size-charts"
+            }
+          }
+        }
+      }
+    },
+    {
+      "key": "definition.group",
+      "kind": "metaobject-definition",
+      "data": {
+        "type": "size_chart_group",
+        "name": "Size chart group",
+        "displayNameKey": "title",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        },
+        "fieldDefinitions": [
+          {
+            "key": "title",
+            "name": "Heading",
+            "type": "single_line_text_field",
+            "required": true
+          },
+          {
+            "key": "selection",
+            "name": "Chart selection",
+            "type": "single_line_text_field",
+            "required": true,
+            "validations": [
+              {
+                "name": "choices",
+                "value": "[\"category\",\"manual\"]"
+              }
+            ]
+          },
+          {
+            "key": "category",
+            "name": "Category to match",
+            "type": "single_line_text_field",
+            "required": false
+          },
+          {
+            "key": "charts",
+            "name": "Charts in display order",
+            "type": "list.metaobject_reference",
+            "required": false,
+            "validations": [
+              {
+                "name": "metaobject_definition_id",
+                "value": {
+                  "$ref": "definition.chart",
+                  "field": "id"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "definition.product-chart",
+      "kind": "product-metafield-definition",
+      "data": {
+        "namespace": "custom",
+        "key": "size_chart",
+        "name": "Size chart",
+        "type": "metaobject_reference",
+        "ownerType": "PRODUCT",
+        "validations": [
+          {
+            "name": "metaobject_definition_id",
+            "value": {
+              "$ref": "definition.chart",
+              "field": "id"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "image.body",
+      "kind": "file",
+      "data": {
+        "filename": "fc-measuring-body.png",
+        "path": "media/body.png",
+        "alt": "Fencer showing chest circumference and standing height measurements."
+      }
+    },
+    {
+      "key": "guide.body",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.guide"
+      ],
+      "data": {
+        "type": "measurement_guide",
+        "handle": "body",
+        "fields": {
+          "title": "Chest and height",
+          "image": {
+            "$ref": "image.body",
+            "field": "id"
+          },
+          "alt_text": "Fencer showing chest circumference and standing height measurements.",
+          "instructions": "Chest: Wrap a soft tape around the fullest part of your chest, under your arms. Keep it level and breathe normally.\n\nHeight: Stand upright and measure from the floor to the top of your head."
+        }
+      }
+    },
+    {
+      "key": "image.pants",
+      "kind": "file",
+      "data": {
+        "filename": "fc-measuring-pants.png",
+        "path": "media/pants.png",
+        "alt": "Fencer showing where to measure waist and hip circumference."
+      }
+    },
+    {
+      "key": "guide.pants",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.guide"
+      ],
+      "data": {
+        "type": "measurement_guide",
+        "handle": "pants",
+        "fields": {
+          "title": "Waist and hips",
+          "image": {
+            "$ref": "image.pants",
+            "field": "id"
+          },
+          "alt_text": "Fencer showing where to measure waist and hip circumference.",
+          "instructions": "Waist: Measure around your natural waist.\nHips: Measure around the fullest part of your hips.\nThen check your height against the same size."
+        }
+      }
+    },
+    {
+      "key": "image.head",
+      "kind": "file",
+      "data": {
+        "filename": "fc-measuring-head.png",
+        "path": "media/head.png",
+        "alt": "Measuring tape passing beneath the chin and over the crown of the head."
+      }
+    },
+    {
+      "key": "guide.head",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.guide"
+      ],
+      "data": {
+        "type": "measurement_guide",
+        "handle": "head",
+        "fields": {
+          "title": "Head circumference",
+          "image": {
+            "$ref": "image.head",
+            "field": "id"
+          },
+          "alt_text": "Measuring tape passing beneath the chin and over the crown of the head.",
+          "instructions": "Wrap a soft tape under your chin, up one side of your face, over your head, and down the other side to your chin. Keep it snug."
+        }
+      }
+    },
+    {
+      "key": "image.hand",
+      "kind": "file",
+      "data": {
+        "filename": "fc-measuring-hand.png",
+        "path": "media/hand.png",
+        "alt": "Tape around the widest part of the hand below the knuckles, with the thumb outside the loop."
+      }
+    },
+    {
+      "key": "guide.hand",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.guide"
+      ],
+      "data": {
+        "type": "measurement_guide",
+        "handle": "hand",
+        "fields": {
+          "title": "Hand circumference",
+          "image": {
+            "$ref": "image.hand",
+            "field": "id"
+          },
+          "alt_text": "Tape around the widest part of the hand below the knuckles, with the thumb outside the loop.",
+          "instructions": "Wrap a soft tape around the widest part of your fencing hand, just below the knuckles. Keep your thumb outside the loop and the tape snug."
+        }
+      }
+    },
+    {
+      "key": "image.socks",
+      "kind": "file",
+      "data": {
+        "filename": "fc-measuring-socks.png",
+        "path": "media/socks.png",
+        "alt": "Sock measurements: A marks the sole from heel to toe; B marks the leg from heel upwards."
+      }
+    },
+    {
+      "key": "guide.socks",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.guide"
+      ],
+      "data": {
+        "type": "measurement_guide",
+        "handle": "socks",
+        "fields": {
+          "title": "Sole and leg length",
+          "image": {
+            "$ref": "image.socks",
+            "field": "id"
+          },
+          "alt_text": "Sock measurements: A marks the sole from heel to toe; B marks the leg from heel upwards.",
+          "instructions": "A - Sole length: Measure from your heel to your longest toe.\n\nB - Leg length: Measure from your heel to the height you want above your knee."
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.44",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-44",
+        "fields": {
+          "title": "Mens jackets - 44",
+          "size_label": "44",
+          "chest_cm": "84 - 88",
+          "height_cm": "164 - 170",
+          "chest_in": "33 - 35",
+          "height_ft_in": "5'4\" - 5'7\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.46",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-46",
+        "fields": {
+          "title": "Mens jackets - 46",
+          "size_label": "46",
+          "chest_cm": "88 - 92",
+          "height_cm": "164 - 170",
+          "chest_in": "35 - 36",
+          "height_ft_in": "5'4\" - 5'7\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.48",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-48",
+        "fields": {
+          "title": "Mens jackets - 48",
+          "size_label": "48",
+          "chest_cm": "92 - 96",
+          "height_cm": "170 - 176",
+          "chest_in": "36 - 38",
+          "height_ft_in": "5'7\" - 5'9\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.50",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-50",
+        "fields": {
+          "title": "Mens jackets - 50",
+          "size_label": "50",
+          "chest_cm": "96 - 100",
+          "height_cm": "170 - 176",
+          "chest_in": "38 - 39",
+          "height_ft_in": "5'7\" - 5'9\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.52",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-52",
+        "fields": {
+          "title": "Mens jackets - 52",
+          "size_label": "52",
+          "chest_cm": "100 - 104",
+          "height_cm": "176 - 182",
+          "chest_in": "39 - 41",
+          "height_ft_in": "5'9\" - 6'0\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.54",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-54",
+        "fields": {
+          "title": "Mens jackets - 54",
+          "size_label": "54",
+          "chest_cm": "104 - 108",
+          "height_cm": "176 - 182",
+          "chest_in": "41 - 43",
+          "height_ft_in": "5'9\" - 6'0\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.56",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-56",
+        "fields": {
+          "title": "Mens jackets - 56",
+          "size_label": "56",
+          "chest_cm": "108 - 112",
+          "height_cm": "176 - 182",
+          "chest_in": "43 - 44",
+          "height_ft_in": "5'9\" - 6'0\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.58",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-58",
+        "fields": {
+          "title": "Mens jackets - 58",
+          "size_label": "58",
+          "chest_cm": "112 - 116",
+          "height_cm": "182 - 188",
+          "chest_in": "44 - 46",
+          "height_ft_in": "6'0\" - 6'2\""
+        }
+      }
+    },
+    {
+      "key": "size.mens-jackets.60",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-jackets-60",
+        "fields": {
+          "title": "Mens jackets - 60",
+          "size_label": "60",
+          "chest_cm": "116 - 120",
+          "height_cm": "182 - 188",
+          "chest_in": "46 - 47",
+          "height_ft_in": "6'0\" - 6'2\""
+        }
+      }
+    },
+    {
+      "key": "chart.mens-jackets",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "mens-jackets",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Mens jackets",
+          "category": "Jackets",
+          "navigation_label": "Mens",
+          "measurement_keys": [
+            "chest_cm",
+            "height_cm"
+          ],
+          "measurement_labels": [
+            "Chest (cm)",
+            "Height (cm)"
+          ],
+          "imperial_keys": [
+            "chest_in",
+            "height_ft_in"
+          ],
+          "imperial_labels": [
+            "Chest (in)",
+            "Height (ft/in)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.mens-jackets.44",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.46",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.48",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.50",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.52",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.54",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.56",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.58",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-jackets.60",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.body",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "For a close, athletic fit, choose the size that matches your measurements. Choose one size larger for extra shoulder room or a looser layer underneath.\n\nLamé jackets fit over a fencing jacket of the same size. No extra sizing adjustment is needed.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.36",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-36",
+        "fields": {
+          "title": "Womens jackets - 36",
+          "size_label": "36",
+          "chest_cm": "80 - 84",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.38",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-38",
+        "fields": {
+          "title": "Womens jackets - 38",
+          "size_label": "38",
+          "chest_cm": "84 - 88",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.40",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-40",
+        "fields": {
+          "title": "Womens jackets - 40",
+          "size_label": "40",
+          "chest_cm": "88 - 92",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.42",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-42",
+        "fields": {
+          "title": "Womens jackets - 42",
+          "size_label": "42",
+          "chest_cm": "92 - 96",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.44",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-44",
+        "fields": {
+          "title": "Womens jackets - 44",
+          "size_label": "44",
+          "chest_cm": "96 - 100",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.46",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-46",
+        "fields": {
+          "title": "Womens jackets - 46",
+          "size_label": "46",
+          "chest_cm": "100 - 104",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.48",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-48",
+        "fields": {
+          "title": "Womens jackets - 48",
+          "size_label": "48",
+          "chest_cm": "104 - 108",
+          "height_cm": "170 - 176"
+        }
+      }
+    },
+    {
+      "key": "size.womens-jackets.50",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-jackets-50",
+        "fields": {
+          "title": "Womens jackets - 50",
+          "size_label": "50",
+          "chest_cm": "108 - 112",
+          "height_cm": "170 - 176"
+        }
+      }
+    },
+    {
+      "key": "chart.womens-jackets",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "womens-jackets",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Womens jackets",
+          "category": "Jackets",
+          "navigation_label": "Womens",
+          "measurement_keys": [
+            "chest_cm",
+            "height_cm"
+          ],
+          "measurement_labels": [
+            "Chest (cm)",
+            "Height (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.womens-jackets.36",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.38",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.40",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.42",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.44",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.46",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.48",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-jackets.50",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.body",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "For a close, athletic fit, choose the size that matches your measurements. Choose one size larger for extra shoulder room or a looser layer underneath.\n\nLamé jackets fit over a fencing jacket of the same size. No extra sizing adjustment is needed.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.128",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-128",
+        "fields": {
+          "title": "Kids jackets - 128",
+          "size_label": "128",
+          "age": "7, 8",
+          "chest_cm": "64 - 68",
+          "height_cm": "122 - 128"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.134",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-134",
+        "fields": {
+          "title": "Kids jackets - 134",
+          "size_label": "134",
+          "age": "8, 9",
+          "chest_cm": "67 - 71",
+          "height_cm": "128 - 134"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.140",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-140",
+        "fields": {
+          "title": "Kids jackets - 140",
+          "size_label": "140",
+          "age": "9, 10",
+          "chest_cm": "70 - 74",
+          "height_cm": "134 - 140"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.146",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-146",
+        "fields": {
+          "title": "Kids jackets - 146",
+          "size_label": "146",
+          "age": "10, 11",
+          "chest_cm": "73 - 77",
+          "height_cm": "140 - 146"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.152",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-152",
+        "fields": {
+          "title": "Kids jackets - 152",
+          "size_label": "152",
+          "age": "11, 12",
+          "chest_cm": "76 - 80",
+          "height_cm": "146 - 152"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.158-40",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-158-40",
+        "fields": {
+          "title": "Kids jackets - 158 (40)",
+          "size_label": "158 (40)",
+          "age": "12, 13",
+          "chest_cm": "79 - 83",
+          "height_cm": "152 - 158"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.164-42",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-164-42",
+        "fields": {
+          "title": "Kids jackets - 164 (42)",
+          "size_label": "164 (42)",
+          "age": "13, 14",
+          "chest_cm": "82 - 86",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.kids-jackets.170-44",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-jackets-170-44",
+        "fields": {
+          "title": "Kids jackets - 170 (44)",
+          "size_label": "170 (44)",
+          "age": "15",
+          "chest_cm": "85 - 89",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "chart.kids-jackets",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "kids-jackets",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Kids jackets",
+          "category": "Jackets",
+          "navigation_label": "Kids",
+          "measurement_keys": [
+            "age",
+            "chest_cm",
+            "height_cm"
+          ],
+          "measurement_labels": [
+            "Age",
+            "Chest (cm)",
+            "Height (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.kids-jackets.128",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.134",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.140",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.146",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.152",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.158-40",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.164-42",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-jackets.170-44",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.body",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "For a close, athletic fit, choose the size that matches your measurements. Choose one size larger for extra shoulder room or a looser layer underneath.\n\nLamé jackets fit over a fencing jacket of the same size. No extra sizing adjustment is needed.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.44",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-44",
+        "fields": {
+          "title": "Mens pants - 44",
+          "size_label": "44",
+          "waist_cm": "73 - 77",
+          "hip_cm": "88 - 92",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.46",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-46",
+        "fields": {
+          "title": "Mens pants - 46",
+          "size_label": "46",
+          "waist_cm": "77 - 80",
+          "hip_cm": "92 - 96",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.48",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-48",
+        "fields": {
+          "title": "Mens pants - 48",
+          "size_label": "48",
+          "waist_cm": "80 - 84",
+          "hip_cm": "96 - 100",
+          "height_cm": "170 - 176"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.50",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-50",
+        "fields": {
+          "title": "Mens pants - 50",
+          "size_label": "50",
+          "waist_cm": "84 - 88",
+          "hip_cm": "100 - 104",
+          "height_cm": "170 - 176"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.52",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-52",
+        "fields": {
+          "title": "Mens pants - 52",
+          "size_label": "52",
+          "waist_cm": "88 - 92",
+          "hip_cm": "104 - 108",
+          "height_cm": "176 - 182"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.54",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-54",
+        "fields": {
+          "title": "Mens pants - 54",
+          "size_label": "54",
+          "waist_cm": "92 - 96",
+          "hip_cm": "108 - 112",
+          "height_cm": "176 - 182"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.56",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-56",
+        "fields": {
+          "title": "Mens pants - 56",
+          "size_label": "56",
+          "waist_cm": "96 - 100",
+          "hip_cm": "112 - 116",
+          "height_cm": "176 - 182"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.58",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-58",
+        "fields": {
+          "title": "Mens pants - 58",
+          "size_label": "58",
+          "waist_cm": "100 - 104",
+          "hip_cm": "116 - 120",
+          "height_cm": "182 - 188"
+        }
+      }
+    },
+    {
+      "key": "size.mens-pants.60",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-pants-60",
+        "fields": {
+          "title": "Mens pants - 60",
+          "size_label": "60",
+          "waist_cm": "104 - 108",
+          "hip_cm": "120 - 124",
+          "height_cm": "182 - 188"
+        }
+      }
+    },
+    {
+      "key": "chart.mens-pants",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "mens-pants",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Mens pants",
+          "category": "Pants",
+          "navigation_label": "Mens",
+          "measurement_keys": [
+            "waist_cm",
+            "hip_cm",
+            "height_cm"
+          ],
+          "measurement_labels": [
+            "Waist (cm)",
+            "Hip (cm)",
+            "Height (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.mens-pants.44",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.46",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.48",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.50",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.52",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.54",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.56",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.58",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-pants.60",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.pants",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "If your hips fall in a larger size range, choose that size for room to move. Between sizes, choose larger for more room or smaller for a closer fit.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.36",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-36",
+        "fields": {
+          "title": "Womens pants - 36",
+          "size_label": "36",
+          "waist_cm": "64 - 68",
+          "hip_cm": "87 - 91",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.38",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-38",
+        "fields": {
+          "title": "Womens pants - 38",
+          "size_label": "38",
+          "waist_cm": "68 - 76",
+          "hip_cm": "91 - 95",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.40",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-40",
+        "fields": {
+          "title": "Womens pants - 40",
+          "size_label": "40",
+          "waist_cm": "72 - 76",
+          "hip_cm": "95 - 99",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.42",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-42",
+        "fields": {
+          "title": "Womens pants - 42",
+          "size_label": "42",
+          "waist_cm": "76 - 80",
+          "hip_cm": "99 - 103",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.44",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-44",
+        "fields": {
+          "title": "Womens pants - 44",
+          "size_label": "44",
+          "waist_cm": "80 - 84",
+          "hip_cm": "103 - 107",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.46",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-46",
+        "fields": {
+          "title": "Womens pants - 46",
+          "size_label": "46",
+          "waist_cm": "84 - 88",
+          "hip_cm": "107 - 111",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.48",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-48",
+        "fields": {
+          "title": "Womens pants - 48",
+          "size_label": "48",
+          "waist_cm": "88 - 92",
+          "hip_cm": "111 - 115",
+          "height_cm": "170 - 176"
+        }
+      }
+    },
+    {
+      "key": "size.womens-pants.50",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-pants-50",
+        "fields": {
+          "title": "Womens pants - 50",
+          "size_label": "50",
+          "waist_cm": "92 - 96",
+          "hip_cm": "115 - 119",
+          "height_cm": "170 - 176"
+        }
+      }
+    },
+    {
+      "key": "chart.womens-pants",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "womens-pants",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Womens pants",
+          "category": "Pants",
+          "navigation_label": "Womens",
+          "measurement_keys": [
+            "waist_cm",
+            "hip_cm",
+            "height_cm"
+          ],
+          "measurement_labels": [
+            "Waist (cm)",
+            "Hip (cm)",
+            "Height (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.womens-pants.36",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.38",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.40",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.42",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.44",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.46",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.48",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-pants.50",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.pants",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "If your hips fall in a larger size range, choose that size for room to move. Between sizes, choose larger for more room or smaller for a closer fit.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.128",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-128",
+        "fields": {
+          "title": "Kids pants - 128",
+          "size_label": "128",
+          "age": "7, 8",
+          "waist_cm": "58 - 62",
+          "hip_cm": "70 - 74",
+          "height_cm": "122 - 128"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.134",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-134",
+        "fields": {
+          "title": "Kids pants - 134",
+          "size_label": "134",
+          "age": "8, 9",
+          "waist_cm": "59 - 63",
+          "hip_cm": "72 - 76",
+          "height_cm": "128 - 134"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.140",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-140",
+        "fields": {
+          "title": "Kids pants - 140",
+          "size_label": "140",
+          "age": "9, 10",
+          "waist_cm": "60 - 64",
+          "hip_cm": "74 - 78",
+          "height_cm": "134 - 140"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.146",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-146",
+        "fields": {
+          "title": "Kids pants - 146",
+          "size_label": "146",
+          "age": "10, 11",
+          "waist_cm": "61 - 65",
+          "hip_cm": "76 - 80",
+          "height_cm": "140 - 146"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.152",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-152",
+        "fields": {
+          "title": "Kids pants - 152",
+          "size_label": "152",
+          "age": "11, 12",
+          "waist_cm": "62 - 66",
+          "hip_cm": "78 - 82",
+          "height_cm": "146 - 152"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.158-40",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-158-40",
+        "fields": {
+          "title": "Kids pants - 158 (40)",
+          "size_label": "158 (40)",
+          "age": "12, 13",
+          "waist_cm": "63 - 67",
+          "hip_cm": "81 - 85",
+          "height_cm": "152 - 158"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.164-42",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-164-42",
+        "fields": {
+          "title": "Kids pants - 164 (42)",
+          "size_label": "164 (42)",
+          "age": "13, 14",
+          "waist_cm": "64 - 68",
+          "hip_cm": "84 - 88",
+          "height_cm": "158 - 164"
+        }
+      }
+    },
+    {
+      "key": "size.kids-pants.170-44",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "kids-pants-170-44",
+        "fields": {
+          "title": "Kids pants - 170 (44)",
+          "size_label": "170 (44)",
+          "age": "15",
+          "waist_cm": "68 - 72",
+          "hip_cm": "87 - 91",
+          "height_cm": "164 - 170"
+        }
+      }
+    },
+    {
+      "key": "chart.kids-pants",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "kids-pants",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Kids pants",
+          "category": "Pants",
+          "navigation_label": "Kids",
+          "measurement_keys": [
+            "age",
+            "waist_cm",
+            "hip_cm",
+            "height_cm"
+          ],
+          "measurement_labels": [
+            "Age",
+            "Waist (cm)",
+            "Hip (cm)",
+            "Height (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.kids-pants.128",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.134",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.140",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.146",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.152",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.158-40",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.164-42",
+              "field": "id"
+            },
+            {
+              "$ref": "size.kids-pants.170-44",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.pants",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "If your hips fall in a larger size range, choose that size for room to move. Between sizes, choose larger for more room or smaller for a closer fit.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.2xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-2xs",
+        "fields": {
+          "title": "Underarm protectors - 2XS",
+          "size_label": "2XS",
+          "height_cm": "<158",
+          "chest_cm": "<88"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-xs",
+        "fields": {
+          "title": "Underarm protectors - XS",
+          "size_label": "XS",
+          "height_cm": "158 - 164",
+          "chest_cm": "88 - 92"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.s",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-s",
+        "fields": {
+          "title": "Underarm protectors - S",
+          "size_label": "S",
+          "height_cm": "164 - 170",
+          "chest_cm": "92 - 96"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.m",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-m",
+        "fields": {
+          "title": "Underarm protectors - M",
+          "size_label": "M",
+          "height_cm": "170 - 176",
+          "chest_cm": "96 - 100"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.l",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-l",
+        "fields": {
+          "title": "Underarm protectors - L",
+          "size_label": "L",
+          "height_cm": "176 - 182",
+          "chest_cm": "104 - 108"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-xl",
+        "fields": {
+          "title": "Underarm protectors - XL",
+          "size_label": "XL",
+          "height_cm": "182 - 188",
+          "chest_cm": "108 - 112"
+        }
+      }
+    },
+    {
+      "key": "size.underarm-protectors.2xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "underarm-protectors-2xl",
+        "fields": {
+          "title": "Underarm protectors - 2XL",
+          "size_label": "2XL",
+          "height_cm": ">188",
+          "chest_cm": ">112"
+        }
+      }
+    },
+    {
+      "key": "chart.underarm-protectors",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "underarm-protectors",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Underarm protectors",
+          "category": "Underarm Protectors",
+          "measurement_keys": [
+            "height_cm",
+            "chest_cm"
+          ],
+          "measurement_labels": [
+            "Height (cm)",
+            "Chest (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.underarm-protectors.2xs",
+              "field": "id"
+            },
+            {
+              "$ref": "size.underarm-protectors.xs",
+              "field": "id"
+            },
+            {
+              "$ref": "size.underarm-protectors.s",
+              "field": "id"
+            },
+            {
+              "$ref": "size.underarm-protectors.m",
+              "field": "id"
+            },
+            {
+              "$ref": "size.underarm-protectors.l",
+              "field": "id"
+            },
+            {
+              "$ref": "size.underarm-protectors.xl",
+              "field": "id"
+            },
+            {
+              "$ref": "size.underarm-protectors.2xl",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.body",
+            "field": "id"
+          },
+          "fit_heading": "Start with your height",
+          "fit_advice": "Match your height first. If you're between sizes, use your chest measurement to help choose.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.mens-chest-protectors.xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-chest-protectors-xs",
+        "fields": {
+          "title": "Mens chest protectors - XS",
+          "size_label": "XS",
+          "chest_cm": "64 - 80"
+        }
+      }
+    },
+    {
+      "key": "size.mens-chest-protectors.s",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-chest-protectors-s",
+        "fields": {
+          "title": "Mens chest protectors - S",
+          "size_label": "S",
+          "chest_cm": "84 - 92"
+        }
+      }
+    },
+    {
+      "key": "size.mens-chest-protectors.m",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-chest-protectors-m",
+        "fields": {
+          "title": "Mens chest protectors - M",
+          "size_label": "M",
+          "chest_cm": "92 - 100"
+        }
+      }
+    },
+    {
+      "key": "size.mens-chest-protectors.l",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-chest-protectors-l",
+        "fields": {
+          "title": "Mens chest protectors - L",
+          "size_label": "L",
+          "chest_cm": "100 - 108"
+        }
+      }
+    },
+    {
+      "key": "size.mens-chest-protectors.xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "mens-chest-protectors-xl",
+        "fields": {
+          "title": "Mens chest protectors - XL",
+          "size_label": "XL",
+          "chest_cm": "108 - 120"
+        }
+      }
+    },
+    {
+      "key": "chart.mens-chest-protectors",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "mens-chest-protectors",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Mens chest protectors",
+          "category": "Chest Protectors",
+          "navigation_label": "Mens",
+          "measurement_keys": [
+            "chest_cm"
+          ],
+          "measurement_labels": [
+            "Chest (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.mens-chest-protectors.xs",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-chest-protectors.s",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-chest-protectors.m",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-chest-protectors.l",
+              "field": "id"
+            },
+            {
+              "$ref": "size.mens-chest-protectors.xl",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.body",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "Choose the larger size when your chest measurement falls between two sizes.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.womens-chest-protectors.xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-chest-protectors-xs",
+        "fields": {
+          "title": "Womens chest protectors - XS",
+          "size_label": "XS",
+          "chest_cm": "80 - 83",
+          "cup_size": "A - B"
+        }
+      }
+    },
+    {
+      "key": "size.womens-chest-protectors.s",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-chest-protectors-s",
+        "fields": {
+          "title": "Womens chest protectors - S",
+          "size_label": "S",
+          "chest_cm": "85",
+          "cup_size": "A"
+        }
+      }
+    },
+    {
+      "key": "size.womens-chest-protectors.m",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-chest-protectors-m",
+        "fields": {
+          "title": "Womens chest protectors - M",
+          "size_label": "M",
+          "chest_cm": "85",
+          "cup_size": "B - C"
+        }
+      }
+    },
+    {
+      "key": "size.womens-chest-protectors.l",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-chest-protectors-l",
+        "fields": {
+          "title": "Womens chest protectors - L",
+          "size_label": "L",
+          "chest_cm": "90 - 95",
+          "cup_size": "C"
+        }
+      }
+    },
+    {
+      "key": "size.womens-chest-protectors.xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "womens-chest-protectors-xl",
+        "fields": {
+          "title": "Womens chest protectors - XL",
+          "size_label": "XL",
+          "chest_cm": "90 - 105",
+          "cup_size": "D"
+        }
+      }
+    },
+    {
+      "key": "chart.womens-chest-protectors",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "womens-chest-protectors",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Womens chest protectors",
+          "category": "Chest Protectors",
+          "navigation_label": "Womens",
+          "measurement_keys": [
+            "chest_cm",
+            "cup_size"
+          ],
+          "measurement_labels": [
+            "Chest (cm)",
+            "Cup size"
+          ],
+          "entries": [
+            {
+              "$ref": "size.womens-chest-protectors.xs",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-chest-protectors.s",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-chest-protectors.m",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-chest-protectors.l",
+              "field": "id"
+            },
+            {
+              "$ref": "size.womens-chest-protectors.xl",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.body",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "Choose the larger size when your chest measurement falls between two sizes.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.masks.xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "masks-xs",
+        "fields": {
+          "title": "Masks - XS",
+          "size_label": "XS",
+          "head_cm": "<53"
+        }
+      }
+    },
+    {
+      "key": "size.masks.s",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "masks-s",
+        "fields": {
+          "title": "Masks - S",
+          "size_label": "S",
+          "head_cm": "53 - 59"
+        }
+      }
+    },
+    {
+      "key": "size.masks.m",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "masks-m",
+        "fields": {
+          "title": "Masks - M",
+          "size_label": "M",
+          "head_cm": "61 - 64"
+        }
+      }
+    },
+    {
+      "key": "size.masks.l",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "masks-l",
+        "fields": {
+          "title": "Masks - L",
+          "size_label": "L",
+          "head_cm": "66 - 69"
+        }
+      }
+    },
+    {
+      "key": "size.masks.xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "masks-xl",
+        "fields": {
+          "title": "Masks - XL",
+          "size_label": "XL",
+          "head_cm": "73 - 76"
+        }
+      }
+    },
+    {
+      "key": "chart.masks",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "masks",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Masks",
+          "category": "Masks",
+          "measurement_keys": [
+            "head_cm"
+          ],
+          "measurement_labels": [
+            "Head circumference (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.masks.xs",
+              "field": "id"
+            },
+            {
+              "$ref": "size.masks.s",
+              "field": "id"
+            },
+            {
+              "$ref": "size.masks.m",
+              "field": "id"
+            },
+            {
+              "$ref": "size.masks.l",
+              "field": "id"
+            },
+            {
+              "$ref": "size.masks.xl",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.head",
+            "field": "id"
+          },
+          "fit_heading": "Adjust the fit",
+          "fit_advice": "Between sizes, choose the larger size. If your mask feels loose or tight, ask your coach or an experienced teammate to help adjust it before exchanging sizes.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.6",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-6",
+        "fields": {
+          "title": "Gloves - 6",
+          "size_label": "6",
+          "hand_cm": "<15.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.6-5",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-6-5",
+        "fields": {
+          "title": "Gloves - 6.5",
+          "size_label": "6.5",
+          "hand_cm": "15.5 - 16.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.7",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-7",
+        "fields": {
+          "title": "Gloves - 7",
+          "size_label": "7",
+          "hand_cm": "16.5 - 18"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.7-5",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-7-5",
+        "fields": {
+          "title": "Gloves - 7.5",
+          "size_label": "7.5",
+          "hand_cm": "18 - 19"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.8",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-8",
+        "fields": {
+          "title": "Gloves - 8",
+          "size_label": "8",
+          "hand_cm": "19 - 20.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.8-5",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-8-5",
+        "fields": {
+          "title": "Gloves - 8.5",
+          "size_label": "8.5",
+          "hand_cm": "20.5 - 21.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.9",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-9",
+        "fields": {
+          "title": "Gloves - 9",
+          "size_label": "9",
+          "hand_cm": "21.5 - 23"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.9-5",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-9-5",
+        "fields": {
+          "title": "Gloves - 9.5",
+          "size_label": "9.5",
+          "hand_cm": "23 - 24.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.10",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-10",
+        "fields": {
+          "title": "Gloves - 10",
+          "size_label": "10",
+          "hand_cm": "24.5 - 25.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.10-5",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-10-5",
+        "fields": {
+          "title": "Gloves - 10.5",
+          "size_label": "10.5",
+          "hand_cm": "25.5 - 26.5"
+        }
+      }
+    },
+    {
+      "key": "size.gloves.11",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "gloves-11",
+        "fields": {
+          "title": "Gloves - 11",
+          "size_label": "11",
+          "hand_cm": "26.5 - 28"
+        }
+      }
+    },
+    {
+      "key": "chart.gloves",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "gloves",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Gloves",
+          "category": "Gloves",
+          "measurement_keys": [
+            "hand_cm"
+          ],
+          "measurement_labels": [
+            "Hand circumference (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.gloves.6",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.6-5",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.7",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.7-5",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.8",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.8-5",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.9",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.9-5",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.10",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.10-5",
+              "field": "id"
+            },
+            {
+              "$ref": "size.gloves.11",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.hand",
+            "field": "id"
+          },
+          "fit_heading": "Between sizes?",
+          "fit_advice": "Choose the larger size when your hand measurement falls between two sizes.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.standard-socks.xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "standard-socks-xl",
+        "fields": {
+          "title": "Standard socks - XL",
+          "size_label": "XL",
+          "shoe_us_men": "9.5 - 10.5",
+          "sole_cm": "24",
+          "leg_cm": "47"
+        }
+      }
+    },
+    {
+      "key": "size.standard-socks.l",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "standard-socks-l",
+        "fields": {
+          "title": "Standard socks - L",
+          "size_label": "L",
+          "shoe_us_men": "8.5 - 9",
+          "sole_cm": "22",
+          "leg_cm": "45"
+        }
+      }
+    },
+    {
+      "key": "size.standard-socks.m",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "standard-socks-m",
+        "fields": {
+          "title": "Standard socks - M",
+          "size_label": "M",
+          "shoe_us_men": "7.5 - 8",
+          "sole_cm": "20",
+          "leg_cm": "43"
+        }
+      }
+    },
+    {
+      "key": "size.standard-socks.s",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "standard-socks-s",
+        "fields": {
+          "title": "Standard socks - S",
+          "size_label": "S",
+          "shoe_us_men": "6.5 - 7",
+          "sole_cm": "18",
+          "leg_cm": "41"
+        }
+      }
+    },
+    {
+      "key": "size.standard-socks.xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "standard-socks-xs",
+        "fields": {
+          "title": "Standard socks - XS",
+          "size_label": "XS",
+          "shoe_us_men": "5.5 - 6",
+          "sole_cm": "16",
+          "leg_cm": "39"
+        }
+      }
+    },
+    {
+      "key": "size.standard-socks.2xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "standard-socks-2xs",
+        "fields": {
+          "title": "Standard socks - 2XS",
+          "size_label": "2XS",
+          "shoe_us_men": "4 - 5",
+          "sole_cm": "14",
+          "leg_cm": "35"
+        }
+      }
+    },
+    {
+      "key": "chart.standard-socks",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "standard-socks",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Standard socks",
+          "category": "Footwear",
+          "measurement_keys": [
+            "shoe_us_men",
+            "sole_cm",
+            "leg_cm"
+          ],
+          "measurement_labels": [
+            "US Mens size",
+            "Sole (cm)",
+            "Leg (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.standard-socks.xl",
+              "field": "id"
+            },
+            {
+              "$ref": "size.standard-socks.l",
+              "field": "id"
+            },
+            {
+              "$ref": "size.standard-socks.m",
+              "field": "id"
+            },
+            {
+              "$ref": "size.standard-socks.s",
+              "field": "id"
+            },
+            {
+              "$ref": "size.standard-socks.xs",
+              "field": "id"
+            },
+            {
+              "$ref": "size.standard-socks.2xs",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.socks",
+            "field": "id"
+          },
+          "fit_heading": "Shoe size reference",
+          "fit_advice": "Shoe sizes are US Mens sizes. The length columns give the sock's sole (A) and leg (B) measurements. If you're between sizes, choose the larger size.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "size.elite-socks.xl",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "elite-socks-xl",
+        "fields": {
+          "title": "Elite competition socks - XL",
+          "size_label": "XL",
+          "shoe_us_men": "9.5 - 10.5",
+          "sole_cm": "24",
+          "leg_cm": "47"
+        }
+      }
+    },
+    {
+      "key": "size.elite-socks.l",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "elite-socks-l",
+        "fields": {
+          "title": "Elite competition socks - L",
+          "size_label": "L",
+          "shoe_us_men": "8.5 - 9",
+          "sole_cm": "22",
+          "leg_cm": "46"
+        }
+      }
+    },
+    {
+      "key": "size.elite-socks.m",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "elite-socks-m",
+        "fields": {
+          "title": "Elite competition socks - M",
+          "size_label": "M",
+          "shoe_us_men": "7.5 - 8",
+          "sole_cm": "21",
+          "leg_cm": "43"
+        }
+      }
+    },
+    {
+      "key": "size.elite-socks.s",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "elite-socks-s",
+        "fields": {
+          "title": "Elite competition socks - S",
+          "size_label": "S",
+          "shoe_us_men": "6.5 - 7",
+          "sole_cm": "19",
+          "leg_cm": "39"
+        }
+      }
+    },
+    {
+      "key": "size.elite-socks.xs",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.size"
+      ],
+      "data": {
+        "type": "size_chart_entry",
+        "handle": "elite-socks-xs",
+        "fields": {
+          "title": "Elite competition socks - XS",
+          "size_label": "XS",
+          "shoe_us_men": "5.5 - 6",
+          "sole_cm": "17",
+          "leg_cm": "34"
+        }
+      }
+    },
+    {
+      "key": "chart.elite-socks",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.chart"
+      ],
+      "data": {
+        "type": "size_chart",
+        "handle": "elite-socks",
+        "status": "DRAFT",
+        "fields": {
+          "title": "Elite competition socks",
+          "category": "Footwear",
+          "measurement_keys": [
+            "shoe_us_men",
+            "sole_cm",
+            "leg_cm"
+          ],
+          "measurement_labels": [
+            "US Mens size",
+            "Sole (cm)",
+            "Leg (cm)"
+          ],
+          "entries": [
+            {
+              "$ref": "size.elite-socks.xl",
+              "field": "id"
+            },
+            {
+              "$ref": "size.elite-socks.l",
+              "field": "id"
+            },
+            {
+              "$ref": "size.elite-socks.m",
+              "field": "id"
+            },
+            {
+              "$ref": "size.elite-socks.s",
+              "field": "id"
+            },
+            {
+              "$ref": "size.elite-socks.xs",
+              "field": "id"
+            }
+          ],
+          "guide": {
+            "$ref": "guide.socks",
+            "field": "id"
+          },
+          "fit_heading": "Shoe size reference",
+          "fit_advice": "Shoe sizes are US Mens sizes. The length columns give the sock's sole (A) and leg (B) measurements. If you're between sizes, choose the larger size.",
+          "source_url": "https://fencing.club/pages/size-charts",
+          "source_date": "2026-09-06"
+        }
+      }
+    },
+    {
+      "key": "group.masks",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "masks",
+        "fields": {
+          "title": "Masks",
+          "selection": "category",
+          "category": "Masks"
+        }
+      }
+    },
+    {
+      "key": "group.jackets",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "jackets",
+        "fields": {
+          "title": "Jackets",
+          "selection": "category",
+          "category": "Jackets"
+        }
+      }
+    },
+    {
+      "key": "group.pants",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "pants",
+        "fields": {
+          "title": "Pants",
+          "selection": "category",
+          "category": "Pants"
+        }
+      }
+    },
+    {
+      "key": "group.gloves",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "gloves",
+        "fields": {
+          "title": "Gloves",
+          "selection": "category",
+          "category": "Gloves"
+        }
+      }
+    },
+    {
+      "key": "group.underarm-protectors",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "underarm-protectors",
+        "fields": {
+          "title": "Underarm Protectors",
+          "selection": "category",
+          "category": "Underarm Protectors"
+        }
+      }
+    },
+    {
+      "key": "group.chest-protectors",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "chest-protectors",
+        "fields": {
+          "title": "Chest Protectors",
+          "selection": "category",
+          "category": "Chest Protectors"
+        }
+      }
+    },
+    {
+      "key": "group.footwear",
+      "kind": "metaobject",
+      "dependsOn": [
+        "definition.group"
+      ],
+      "data": {
+        "type": "size_chart_group",
+        "handle": "footwear",
+        "fields": {
+          "title": "Footwear",
+          "selection": "category",
+          "category": "Footwear"
+        }
+      }
+    },
+    {
+      "key": "page.size-charts",
+      "kind": "page",
+      "data": {
+        "handle": "size-charts",
+        "title": "Size charts",
+        "body": "",
+        "templateSuffix": "size-charts",
+        "isPublished": false
+      }
+    },
+    {
+      "key": "menu.size-charts",
+      "kind": "menu",
+      "data": {
+        "handle": "size-charts",
+        "title": "Size charts",
+        "items": [
+          {
+            "title": "Masks",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Masks",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.masks",
+                  "field": "url"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Jackets",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Mens",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.mens-jackets",
+                  "field": "url"
+                }
+              },
+              {
+                "title": "Womens",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.womens-jackets",
+                  "field": "url"
+                }
+              },
+              {
+                "title": "Kids",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.kids-jackets",
+                  "field": "url"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Pants",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Mens",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.mens-pants",
+                  "field": "url"
+                }
+              },
+              {
+                "title": "Womens",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.womens-pants",
+                  "field": "url"
+                }
+              },
+              {
+                "title": "Kids",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.kids-pants",
+                  "field": "url"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Gloves",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Gloves",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.gloves",
+                  "field": "url"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Underarm Protectors",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Underarm protectors",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.underarm-protectors",
+                  "field": "url"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Chest Protectors",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Mens",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.mens-chest-protectors",
+                  "field": "url"
+                }
+              },
+              {
+                "title": "Womens",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.womens-chest-protectors",
+                  "field": "url"
+                }
+              }
+            ]
+          },
+          {
+            "title": "Footwear",
+            "type": "PAGE",
+            "resourceId": {
+              "$ref": "page.size-charts",
+              "field": "id"
+            },
+            "items": [
+              {
+                "title": "Standard socks",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.standard-socks",
+                  "field": "url"
+                }
+              },
+              {
+                "title": "Elite competition socks",
+                "type": "HTTP",
+                "url": {
+                  "$ref": "chart.elite-socks",
+                  "field": "url"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -8,6 +8,16 @@
     "theme_support_url": "https://support.shopify.com/"
   },
   {
+    "name": "Size charts",
+    "settings": [
+      { "type": "metaobject_list", "id": "size_chart_groups", "label": "Groups in display order", "metaobject_type": "size_chart_group", "limit": 50, "info": "Edit headings and chart selection in Content > Metaobjects > Size chart group. Leave empty to group charts by their categories. Shared by the directory and chart navigation." },
+      { "type": "metaobject_list", "id": "size_chart_catalog", "label": "Charts in display order", "metaobject_type": "size_chart", "limit": 50, "info": "Leave empty to show active chart entries. This catalog is shared by the directory and chart navigation." },
+      { "type": "page", "id": "size_chart_index_page", "label": "Size charts directory page", "info": "If unset, the page with handle size-charts is used." },
+      { "type": "select", "id": "size_chart_default_unit", "label": "Default measurement units", "default": "cm", "options": [{ "value": "cm", "label": "Centimeters" }, { "value": "in", "label": "Inches, when published values are available" }] },
+      { "type": "checkbox", "id": "size_chart_hide_downloads", "label": "Hide printable measuring tape links", "default": false }
+    ]
+  },
+  {
     "name": "t:settings_schema.logo.name",
     "settings": [
       {

@@ -1,0 +1,60 @@
+{
+  "handle": "journal",
+  "title": "The Journal",
+  "articles": [
+    {
+      "handle": "how-to-choose-your-first-foil",
+      "title": "How to choose your first foil",
+      "body": "<p>Your first foil sets the tone for everything that follows: how you hold a line, how you feel a parry, how quickly your hand tires in the third bout of the night. Getting it right is less about brand names and more about three fundamentals.</p>\r\n<h2>Blade size</h2>\r\n<p>Most adults start on a size 5 blade. Younger fencers usually begin on a size 2 or 3 and move up as their reach and strength develop. A blade that is too long will feel heavy at the tip and slow your point control.</p>\r\n<h2>Grip</h2>\r\n<p>A French grip teaches distance and finger play, which is why most coaches insist on it for the first season. A pistol grip offers more power and security, but it can hide bad habits before they are corrected. Start French, switch later if your coach agrees.</p>\r\n<h2>Electric or dry</h2>\r\n<p>If you are training only, a dry foil is cheaper and simpler. The moment you enter your first competition you will need an electric foil, a body cord and a lame. Buying electric from the start usually costs less than replacing a dry blade six months in.</p>\r\n<p>Still unsure? Bring your club bag to us and we will match a blade to your hand.</p>\r",
+      "summary": "A practical guide to blade weight, grip and balance for beginners.",
+      "tags": [
+        "Technique"
+      ],
+      "isPublished": true,
+      "publishDate": "2026-06-18T09:00:00Z",
+      "author": {
+        "name": "Fencing Club"
+      },
+      "image": {
+        "url": "https://cdn.shopify.com/s/files/1/0787/6211/5256/articles/generated-1783898171102.jpg?v=1787806954",
+        "altText": "A fencer inspecting a foil blade"
+      }
+    },
+    {
+      "handle": "caring-for-your-fie-mask",
+      "title": "Caring for your FIE mask",
+      "body": "<p>An FIE 1600N mask is the single most important piece of safety equipment you own, and it is also the one most likely to fail a referee's inspection. A ten-minute routine after each session keeps it legal and comfortable.</p>\r\n<h2>After every session</h2>\r\n<p>Wipe the bib and padding with a damp cloth and leave the mask open to dry. Sweat is salt, and salt is what turns mesh into rust. Never store a wet mask sealed in a bag.</p>\r\n<h2>Every month</h2>\r\n<p>Check the mesh for dents by pressing gently with your thumb. Any permanent deformation means the mask is finished. Inspect the bib stitching where it meets the mesh, and confirm the tongue and back strap still hold tension.</p>\r\n<h2>Before a competition</h2>\r\n<p>Test the conductive bib with a body cord tester if you fence foil. Armourers reject more bibs than blades. Bring a spare if you have one.</p>\r\n<p>Treat the mask as a consumable with a long life, not a permanent fixture. Most competitive fencers replace theirs every three to four seasons.</p>\r",
+      "summary": "Keep your 1600N mask competition-ready with a simple routine.",
+      "tags": [
+        "Gear"
+      ],
+      "isPublished": true,
+      "publishDate": "2026-05-14T09:00:00Z",
+      "author": {
+        "name": "Fencing Club"
+      },
+      "image": {
+        "url": "https://cdn.shopify.com/s/files/1/0787/6211/5256/articles/generated-1783898173288.jpg?v=1787806955",
+        "altText": "A fencing mask resting on a bench"
+      }
+    },
+    {
+      "handle": "footwork-drills-for-faster-lunges",
+      "title": "Footwork drills for faster lunges",
+      "body": "<p>A lunge is only as fast as the preparation in front of it. These five drills build the distance control and leg drive that make a lunge land before your opponent reads it.</p>\r\n<h2>1. Mirror advance and retreat</h2>\r\n<p>Face a partner without blades. They lead, you match, holding exactly the same gap for ninety seconds. The goal is never to close or open the distance.</p>\r\n<h2>2. Wall lunge holds</h2>\r\n<p>Lunge, hold the position for five seconds, recover forward. Three sets of eight. This builds the front-leg control that stops you collapsing at full extension.</p>\r\n<h2>3. Ladder change of direction</h2>\r\n<p>Advance twice, retreat once, repeat down the piste. Add a lunge on a coach's call. The point is to lunge from movement, not from a set stance.</p>\r\n<h2>4. Half-lunge to full lunge</h2>\r\n<p>Start the lunge, stop halfway, then commit. Trains the ability to abort and finish, which is what beats a counter-attack.</p>\r\n<h2>5. Explosive starts</h2>\r\n<p>From on guard, drive forward for three metres on a signal. Six reps with full recovery. Speed work is only useful when you are fresh.</p>\r\n<p>Two sessions a week for a month is enough to feel the difference.</p>\r",
+      "summary": "Five drills to sharpen distance, timing and explosive footwork.",
+      "tags": [
+        "Training"
+      ],
+      "isPublished": true,
+      "publishDate": "2026-04-09T09:00:00Z",
+      "author": {
+        "name": "Fencing Club"
+      },
+      "image": {
+        "url": "https://cdn.shopify.com/s/files/1/0787/6211/5256/articles/generated-1783898173058.jpg?v=1787806956",
+        "altText": "Fencers drilling footwork on the piste"
+      }
+    }
+  ]
+}

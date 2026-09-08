@@ -1,0 +1,32 @@
+{% doc %}
+  Renders one non-empty sizing group in the directory or chart sidebar.
+  @param {string} heading - Display heading.
+  @param {metaobject[]} charts - Candidate chart records in display order.
+  @param {string} [category] - Optional exact category filter.
+  @param {metaobject} [current_chart] - Current chart in sidebar context.
+  @param {boolean} [is_navigation] - Use a disclosure instead of a section.
+{% enddoc %}
+{%- assign contains_current = false -%}
+{%- capture group_links -%}
+  {%- for item in charts -%}
+    {%- if category != blank and item.category.value != category -%}{%- continue -%}{%- endif -%}
+    {%- capture validity -%}{%- render 'size-chart-validity', chart: item -%}{%- endcapture -%}
+    {%- assign validity = validity | strip -%}
+    {%- if validity != 'true' -%}{%- continue -%}{%- endif -%}
+    {%- if current_chart.system.handle == item.system.handle -%}{%- assign contains_current = true -%}{%- endif -%}
+    <li><a href="{{ item.system.url }}"{% if current_chart.system.handle == item.system.handle %} aria-current="page"{% endif %}>
+      <span>{{ item.navigation_label.value | default: item.title.value | escape }}</span>{% unless is_navigation %}{% render 'fc-icon', icon: 'arrow-right', size: 16 %}{% endunless %}
+    </a></li>
+  {%- endfor -%}
+{%- endcapture -%}
+{%- assign group_links = group_links | strip -%}
+{%- if heading != blank and group_links != blank -%}
+  {%- if is_navigation -%}
+    <details class="size-chart-directory__group"{% if contains_current %} open{% endif %}>
+      <summary><span>{{ heading | escape }}</span>{% render 'fc-icon', icon: 'chevron-down', size: 16 %}</summary>
+  {%- else -%}
+    <section class="size-chart-directory__group"><h2>{{ heading | escape }}</h2>
+  {%- endif -%}
+    <ul role="list">{{ group_links }}</ul>
+  {%- if is_navigation -%}</details>{%- else -%}</section>{%- endif -%}
+{%- endif -%}

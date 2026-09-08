@@ -1,0 +1,95 @@
+{% doc %}
+  Renders the same chart, instructions, fit advice and downloads on pages and in product flyouts.
+  @param {metaobject} chart - A size_chart entry.
+  @param {string} instance_id - Unique ID for radio and heading associations.
+  @param {boolean} [is_flyout] - Omits the title supplied by the drawer without changing the product URL.
+  @param {string} [full_chart_link_id] - ID of the drawer footer link that receives chart view state.
+{% enddoc %}
+{%- capture validity -%}{%- render 'size-chart-validity', chart: chart -%}{%- endcapture -%}
+{%- assign validity = validity | strip -%}
+{%- if validity == 'true' -%}
+  {%- liquid
+    assign entries = chart.entries.value
+    assign keys = chart.measurement_keys.value
+    assign labels = chart.measurement_labels.value
+    assign imperial_keys = chart.imperial_keys.value
+    assign imperial_labels = chart.imperial_labels.value
+    assign guide = chart.guide.value
+    assign has_imperial = false
+    if imperial_keys != blank
+      assign has_imperial = true
+    endif
+  -%}
+  <size-chart class="size-chart" data-chart-content
+    data-chart-url="{{ chart.system.url | escape }}"
+    data-update-url="{% if is_flyout %}false{% else %}true{% endif %}"
+    data-has-imperial="{{ has_imperial }}"
+    data-default-unit="{{ settings.size_chart_default_unit | default: 'cm' }}"
+    {% if full_chart_link_id != blank %}data-full-chart-link-id="{{ full_chart_link_id | escape }}"{% endif %}
+  >
+    {% if is_flyout == false or is_flyout == blank or has_imperial %}
+    <div class="size-chart__heading"{% if is_flyout %} data-chart-controls hidden{% endif %}>
+      {% unless is_flyout %}<h1 id="ChartTitle-{{ instance_id }}">{{ chart.title.value | escape }}</h1>{% endunless %}
+      {%- if has_imperial -%}
+        <fieldset class="size-chart__units" data-chart-controls hidden>
+          <legend class="visually-hidden">Measurement units</legend>
+          <label><input type="radio" data-chart-unit name="ChartUnit-{{ instance_id }}" value="cm" checked><span>cm</span></label>
+          <label><input type="radio" data-chart-unit name="ChartUnit-{{ instance_id }}" value="in"><span>in</span></label>
+        </fieldset>
+      {%- endif -%}
+    </div>
+    {% endif %}
+    <div class="size-chart__controls" data-chart-controls hidden>
+      <fieldset class="size-chart__sizes">
+        <legend>Sizes to compare</legend>
+        <div class="size-chart__options">
+          {%- for entry in entries -%}
+            <button type="button" data-size-option="{{ entry.system.handle | escape }}" aria-pressed="false">{{ entry.size_label.value | escape }}</button>
+          {%- endfor -%}
+        </div>
+      </fieldset>
+    </div>
+    <div class="size-chart__table-region" data-chart-table-region role="region" aria-labelledby="ChartCaption-{{ instance_id }}" tabindex="0">
+      <table class="size-chart__table">
+        <caption id="ChartCaption-{{ instance_id }}" class="visually-hidden">{{ chart.title.value | escape }}</caption>
+        <thead><tr><th scope="col">Size</th>
+          {%- for entry in entries -%}<th scope="col" data-size-column="{{ entry.system.handle | escape }}">{{ entry.size_label.value | escape }}</th>{%- endfor -%}
+        </tr></thead>
+        <tbody>
+          {%- for key in keys -%}
+            {%- assign row_index = forloop.index0 -%}
+            {%- assign imperial_key = imperial_keys[row_index] -%}
+            <tr>
+              <th scope="row"><span data-value-unit="cm">{{ labels[row_index] | escape }}</span>{% if has_imperial %}<span data-value-unit="in" hidden>{{ imperial_labels[row_index] | escape }}</span>{% endif %}</th>
+              {%- for entry in entries -%}
+                <td data-size-column="{{ entry.system.handle | escape }}"><span data-value-unit="cm">{{ entry[key].value | escape }}</span>{% if has_imperial %}<span data-value-unit="in" hidden>{{ entry[imperial_key].value | escape }}</span>{% endif %}</td>
+              {%- endfor -%}
+            </tr>
+          {%- endfor -%}
+        </tbody>
+      </table>
+    </div>
+    <p class="size-chart__empty" data-chart-empty role="status" hidden>No sizes selected</p>
+    <details class="size-chart__help" data-chart-help open>
+      <summary><h2>How to measure</h2>{% render 'fc-icon', icon: 'chevron-down', size: 18 %}</summary>
+      <div class="size-chart__guide">
+        {%- if guide.image.value != blank -%}
+          {{ guide.image.value | image_url: width: 560 | image_tag: widths: '280, 560', sizes: '280px', alt: guide.alt_text.value, loading: 'lazy', class: 'size-chart__illustration' }}
+        {%- endif -%}
+        <div class="size-chart__instructions">
+          {%- if guide.title.value != blank -%}<h3>{{ guide.title.value | escape }}</h3>{%- endif -%}
+          <p>{{ guide.instructions.value | escape | newline_to_br }}</p>
+        </div>
+      </div>
+      {%- if chart.fit_advice.value != blank -%}
+        <div class="size-chart__fit">
+          {%- if chart.fit_heading.value != blank -%}<h3>{{ chart.fit_heading.value | escape }}</h3>{%- endif -%}
+          <p>{{ chart.fit_advice.value | escape | newline_to_br }}</p>
+        </div>
+      {%- endif -%}
+    </details>
+    {%- unless settings.size_chart_hide_downloads -%}{%- render 'measuring-tape-downloads' -%}{%- endunless -%}
+  </size-chart>
+{%- else -%}
+  <p class="size-chart__unavailable" role="status">This size chart is unavailable.</p>
+{%- endif -%}

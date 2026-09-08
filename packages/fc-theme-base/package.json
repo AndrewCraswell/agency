@@ -9,6 +9,7 @@
     "package": "shopify theme package --path .",
     "pull": "shopify theme pull --path .",
     "push": "shopify theme push --path .",
+    "content:build": "node content/build-manifest.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
@@ -16,6 +17,7 @@
     "@shopify/cli": "^4.6.1",
     "@vitest/coverage-v8": "^4.1.10",
     "happy-dom": "^20.11.1",
+    "liquidjs": "^10.27.2",
     "vitest": "^4.1.10"
   }
 }

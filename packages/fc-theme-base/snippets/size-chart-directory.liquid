@@ -1,0 +1,35 @@
+{% doc %}
+  Renders the theme-wide ordered chart catalog as an index or category navigation.
+  @param {metaobject} [current_chart] - Current chart for sidebar selection.
+  @param {boolean} [is_navigation] - Use expandable category navigation.
+{% enddoc %}
+{%- liquid
+  assign charts = settings.size_chart_catalog
+  if charts == blank
+    assign charts = metaobjects.size_chart.values
+  endif
+-%}
+{%- capture directory_groups -%}
+  {%- if settings.size_chart_groups != blank -%}
+    {%- for group in settings.size_chart_groups -%}
+      {%- if group.selection.value == 'manual' -%}
+        {% render 'size-chart-directory-group', heading: group.title.value, charts: group.charts.value, current_chart: current_chart, is_navigation: is_navigation %}
+      {%- elsif group.selection.value == 'category' and group.category.value != blank -%}
+        {% render 'size-chart-directory-group', heading: group.title.value, charts: charts, category: group.category.value, current_chart: current_chart, is_navigation: is_navigation %}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- else -%}
+    {%- assign categories = charts | map: 'category' | map: 'value' | uniq -%}
+    {%- for category in categories -%}
+      {% render 'size-chart-directory-group', heading: category, charts: charts, category: category, current_chart: current_chart, is_navigation: is_navigation %}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endcapture -%}
+{%- assign directory_groups = directory_groups | strip -%}
+{%- if directory_groups != blank -%}
+  <div class="size-chart-directory{% if is_navigation %} size-chart-directory--navigation{% endif %}">{{ directory_groups }}</div>
+{%- elsif request.design_mode -%}
+  <p>Publish size chart entries or select charts in the theme's Size charts settings.</p>
+{%- else -%}
+  <p>Size charts are not available yet.</p>
+{%- endif -%}

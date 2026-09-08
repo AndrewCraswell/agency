@@ -1,0 +1,33 @@
+{
+  "menus": [
+    {
+      "handle": "main-menu", "title": "Main menu", "items": [
+        { "title": "Weapons", "url": "/collections/weapons", "items": [
+          { "title": "Weapons", "url": "/collections/weapons", "items": [{ "title": "Foil", "url": "/collections/foil-weapons" }, { "title": "Epee", "url": "/collections/epee-weapons" }, { "title": "Saber", "url": "/collections/saber-weapons" }] },
+          { "title": "Blades", "url": "/collections/blades", "items": [{ "title": "Foil Blades", "url": "/collections/foil-blades" }, { "title": "Epee Blades", "url": "/collections/epee-blades" }, { "title": "Saber Blades", "url": "/collections/saber-blades" }] },
+          { "title": "Body Cords", "url": "/collections/body-cords", "items": [{ "title": "Foil Cords", "url": "/collections/foil-body-cords" }, { "title": "Epee Cords", "url": "/collections/epee-body-cords" }, { "title": "Saber Cords", "url": "/collections/saber-body-cords" }] },
+          { "title": "Parts", "url": "/collections/weapon-parts", "items": [{ "title": "Points", "url": "/collections/points" }, { "title": "Grips", "url": "/collections/grips" }, { "title": "Guards", "url": "/collections/guards" }, { "title": "Pads", "url": "/collections/pads" }, { "title": "Pommels", "url": "/collections/pommels-and-nuts" }, { "title": "Sockets", "url": "/collections/sockets" }] }
+        ] },
+        { "title": "Masks", "url": "/collections/masks", "items": [
+          { "title": "Masks", "url": "/collections/masks", "items": [{ "title": "Foil", "url": "/collections/foil-masks" }, { "title": "Epee", "url": "/collections/epee-masks" }, { "title": "Saber", "url": "/collections/saber-masks" }] },
+          { "title": "Mask Cords", "url": "/collections/mask-cords" }, { "title": "Parts", "url": "/collections/mask-parts" }
+        ] },
+        { "title": "Clothing", "url": "/collections/clothing", "items": [
+          { "title": "Uniforms", "url": "/collections/clothing", "items": [{ "title": "Mens", "url": "/collections/mens-clothing" }, { "title": "Womens", "url": "/collections/womens-clothing" }, { "title": "Kids", "url": "/collections/kids" }] },
+          { "title": "Lames", "url": "/collections/lames", "items": [{ "title": "Mens", "url": "/collections/mens-lames" }, { "title": "Womens", "url": "/collections/womens-lames" }, { "title": "Kids", "url": "/collections/kids-lames" }] },
+          { "title": "Gloves", "url": "/collections/gloves", "items": [{ "title": "Foil & Epee Gloves", "url": "/collections/foil-epee-gloves" }, { "title": "Saber Gloves", "url": "/collections/saber-gloves" }] },
+          { "title": "Underarm Protectors", "url": "/collections/fencing-underarm-protectors" },
+          { "title": "Chest Protectors", "url": "/collections/chest-protectors" }
+        ] },
+        { "title": "Footwear", "url": "/collections/footwear", "items": [{ "title": "Shoes", "url": "/collections/shoes" }, { "title": "Socks", "url": "/collections/socks" }] },
+        { "title": "Bags", "url": "/collections/bags", "items": [{ "title": "Wheel Bags", "url": "/collections/wheel-bags" }, { "title": "Carry Bags", "url": "/collections/carry-bags" }] },
+        { "title": "Starter Kits", "url": "/collections/starter-kits", "items": [{ "title": "Foil kits", "url": "/collections/foil-kits" }, { "title": "Epee kits", "url": "/collections/epee-kits" }, { "title": "Saber kits", "url": "/collections/saber-kits" }] },
+        { "title": "Club Gear", "url": "/collections/club-gear", "items": [{ "title": "Kids", "url": "/collections/kids" }, { "title": "Scoring Systems", "url": "/collections/scoring-systems" }, { "title": "Reels and Floor Cables", "url": "/collections/reels-floor-cables" }, { "title": "Repair Tools", "url": "/collections/tools" }] }
+      ]
+    },
+    { "handle": "footer-shop", "title": "Footer shop", "items": [{ "title": "Masks", "url": "/collections/masks" }, { "title": "Jackets", "url": "/collections/jackets" }, { "title": "Weapons", "url": "/collections/weapons" }, { "title": "Blades", "url": "/collections/blades" }, { "title": "Gloves", "url": "/collections/gloves" }, { "title": "Footwear", "url": "/collections/footwear" }] },
+    { "handle": "footer-support", "title": "Footer support", "items": [{ "title": "Contact us", "url": "/pages/contact" }, { "title": "Shipping", "url": "/pages/shipping-policy" }, { "title": "Returns", "url": "/pages/refund-policy" }, { "title": "Size guides", "url": "/pages/size-charts" }, { "title": "Track order", "url": "/account/orders" }] },
+    { "handle": "footer-company", "title": "Footer company", "items": [{ "title": "Our story", "url": "/pages/about-us" }, { "title": "The Journal", "url": "/blogs/journal" }, { "title": "Privacy policy", "url": "/pages/privacy-policy" }, { "title": "Terms of service", "url": "/pages/terms-of-service" }, { "title": "Cookie preferences", "url": "/#cookie-preferences" }] },
+    { "handle": "footer-legal", "title": "Footer legal", "items": [{ "title": "Privacy policy", "url": "/pages/privacy-policy" }, { "title": "Terms of service", "url": "/pages/terms-of-service" }] }
+  ]
+}

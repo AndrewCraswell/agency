@@ -1,0 +1,33 @@
+{% doc %}
+  Displays the product's assigned size chart using the shared content renderer.
+  @param {product} product - Current product.
+  @param {block} block - Theme-editor size_chart block.
+  @param {string} section_id - Section identity for accessible IDs.
+{% enddoc %}
+{%- assign chart = product.metafields.custom.size_chart.value -%}
+{%- capture validity -%}{%- render 'size-chart-validity', chart: chart -%}{%- endcapture -%}
+{%- assign validity = validity | strip -%}
+{%- if validity == 'true' -%}
+  {{ 'size-chart.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'size-chart.js' | asset_url }}" defer="defer"></script>
+  {%- assign instance_id = section_id | append: '-' | append: block.id -%}
+  {%- assign drawer_id = 'SizeChartDrawer-' | append: instance_id -%}
+  {%- assign full_chart_link_id = 'FullChartLink-' | append: instance_id -%}
+  {%- assign drawer_title = 'Size chart: ' | append: chart.title.value -%}
+  {%- capture trigger -%}
+    <a class="size-chart__trigger" href="{{ chart.system.url }}" data-drawer-open aria-haspopup="dialog" aria-expanded="false" aria-controls="{{ drawer_id }}">
+      {{ block.settings.label | default: 'Size chart' | escape }}{% render 'fc-icon', icon: 'arrow-right', size: 16 %}
+    </a>
+  {%- endcapture -%}
+  {%- capture content -%}
+    {% render 'size-chart-content', chart: chart, instance_id: instance_id, is_flyout: true, full_chart_link_id: full_chart_link_id %}
+  {%- endcapture -%}
+  {%- capture footer -%}
+    {% render 'ui-link', id: full_chart_link_id, label: 'View full chart', url: chart.system.url, icon: 'arrow-right', class: 'size-chart__full-link' %}
+  {%- endcapture -%}
+  {% render 'ui-drawer', id: drawer_id, title: drawer_title, close_label: 'Close size chart',
+    trigger: trigger, content: content, footer: footer, size: 'wide', attributes: block.shopify_attributes
+  %}
+{%- elsif request.design_mode -%}
+  <p {{ block.shopify_attributes }}>Assign a published, complete size chart in this product's Size chart metafield.</p>
+{%- endif -%}
