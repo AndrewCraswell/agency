@@ -141,6 +141,7 @@ export class GovInfoCommitteeDirectoryClient {
       return parseGovInfoHistoricalCommitteeText(
         granules.filter((granule) => !granule.title.startsWith("ASSIGNMENTS OF")),
         {
+          packageId: directoryPackage.packageId,
           resolveAbbreviatedMember: createGovInfoAssignmentResolver(
             granules.filter((granule) => granule.title.startsWith("ASSIGNMENTS OF"))
           )

@@ -16,6 +16,7 @@
 - [Embedding rollout and retrieval-quality gate](embedding-rollout-plan.md)
 - [Identity, entity, and representative roadmap](identity-and-representative-roadmap.md)
 - [Committee membership history](committee-membership-history.md)
+- [Historical committee reconciliation policy](committee-reconciliation-policy.md)
 - [GovInfo committee edition inventory](committee-directory-inventory.md)
 - [Change events](change-events.md)
 - [MCP tool contracts](tool-contracts.md)

@@ -7,18 +7,21 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 ## Current acceptance status
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
-As of the verified Trigger release `20260908.1`:
+Production remains on verified Trigger release `20260908.1`; the 2026-09-08 reviewed-reconciliation work below is not yet deployed:
 
 | Congress | Current gate |
 | --- | --- |
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
-| 107, 108, 109, 113 | Parsing supported, but unresolved canonical identities still prevent complete publication |
-| 105 | Awaiting a decision on the uncorroborated `Abercombie` panel spelling; full acceptance remains incomplete |
-| 106 | Awaiting a decision on the full-Congress Davis sabbatical annotation; full acceptance remains incomplete |
+| 107 | Parsed; historical identity corrections and the bracketed, stale Spence entries remain unresolved |
+| 108, 109 | Source-bound identity manifests in implementation; full canonical acceptance remains required |
+| 113 | Read-only canonical audit passes: 210 organizations, 3,530 entries mapped uniquely, zero gaps or duplicate IDs; not yet imported |
+| 105 | Reviewed spelling and assignment punctuation corrections implemented; a touching Water Resources heading still prevents full acceptance |
+| 106 | Leave-note policy resolved; all three editions parse to 199 organizations and 3,331 source memberships; canonical audit still finds unresolved identities |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 
-No pending policy decision is implied by an automated continuation. No incomplete historical roster is published.
+The user's explicit 2026-09-08 request authorized the [reviewed reconciliation strategy](committee-reconciliation-policy.md).
+No incomplete historical roster is published.
 State committee ingestion remains deferred until the approved Open States scrapers are self-hosted.
 
 ## Discovered editions

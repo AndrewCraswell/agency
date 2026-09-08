@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import { normalizeGovInfoCommitteeDirectory } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
+
+// These are synthetic unit rosters for strict normalization, not complete
+// publication snapshots. Reviewed-manifest integration is tested separately.
+vi.mock("./committee-reviewed-identities.js", () => ({ reviewedGovInfoIdentities: () => new Map() }))
 
 const directoryPackage: GovInfoDirectoryPackage = {
   congress: 119,
@@ -13,6 +17,21 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it("preserves an explicit leave note without changing the role or inventing effective dates", () => {
+    const input = [records()[0]!]
+    input[0]!.members[0]!.role = "member"
+    input[0]!.members[0]!.note = "Assigned to Commerce and placed on sabbatical leave for the 106th Congress."
+    const result = normalizeGovInfoCommitteeDirectory(input, directoryPackage, catalog(), new Date())
+    expect(result.snapshot.memberships[0]).toMatchObject({
+      label: input[0]!.members[0]!.note,
+      role: "member",
+      title: "member",
+      isActive: true
+    })
+    expect(result.snapshot.memberships[0]).not.toHaveProperty("effectiveStartDate")
+    expect(result.snapshot.memberships[0]).not.toHaveProperty("effectiveEndDate")
+  })
+
   it.each([
     ["J. GRESHAM BARRETT", "Gresham Barrett"],
     ["K. Michael Conaway", "Michael Conaway"],

@@ -1,10 +1,158 @@
 import { describe, expect, it } from "vitest"
+import { createGovInfoAssignmentResolver } from "./committee-assignment-index.js"
 import { extractGovInfoPreformattedText } from "./committee-granule-text.js"
 import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-parser.js"
 
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("repairs the reviewed Randovich panel row only against unique Radanovich parent evidence", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nResources\n\nGeorge P. Radanovich, of California.\n\nSUBCOMMITTEES\n\nForests and Forest Health\n\nMr. Randovich\n`
+    const parse = (text: string, packageId = "CDIR-1997-06-04") =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text }, { packageId })
+    expect(parse(source)[1]?.members).toEqual([{ chamber: "lower", name: "George P. Radanovich", state: "CA" }])
+    for (const text of [
+      source.replace("California", "Alaska"),
+      source.replace("Forests and Forest Health", "Other Panel"),
+      source.replace("Resources", "Budget"),
+      source.replace("\n\nSUBCOMMITTEES", "\nAlex Radanovich, of California.\n\nSUBCOMMITTEES")
+    ]) {
+      expect(() => parse(text)).toThrow("Ambiguous GovInfo abbreviated member")
+    }
+    expect(() => parse(source, "CDIR-1999-06-15")).toThrow("Ambiguous GovInfo abbreviated member")
+    const literal = source.replace("\n\nSUBCOMMITTEES", "\nAlex Randovich, of Alaska.\n\nSUBCOMMITTEES")
+    expect(() => parse(literal)).toThrow("re-review required")
+  })
+  it("bounds the reviewed Delahunt state repair to corroborated 106th editions", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nInternational Relations\n\nJohn M. McHugh, of New York.    William D. Delahunt, of Massachusette.\n\nSTAFF\n\nJudiciary\n\nWilliam Delahunt, of Massachusetts.\n`
+    const parse = (text: string, packageId = "CDIR-1999-06-15") =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text }, { packageId })
+    for (const id of ["CDIR-1999-06-15", "CDIR-2000-02-01", "CDIR-2000-10-01"]) {
+      expect(parse(source, id)[0]?.members[1]).toEqual({ chamber: "lower", name: "William D. Delahunt", state: "MA" })
+    }
+    for (const changed of [
+      source.replace("William Delahunt, of Massachusetts.", ""),
+      source.replace("William Delahunt, of Massachusetts.", "William Delahunt, of Alaska."),
+      source + "William D. Delahunt, of New York.\n"
+    ]) {
+      expect(() => parse(changed)).toThrow("Unparsed GovInfo historical roster entry")
+    }
+    expect(() => parse(source, "CDIR-1997-06-04")).toThrow("Unparsed GovInfo historical roster entry")
+  })
+  it.each(["National Parks and Public Lands", "Water and Power"])(
+    "uses reviewed Smith elimination and a positive assignment in %s",
+    (panel) => {
+      const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+      const source = `${houseTitle}\n\nResources\n\nLinda Smith, of Washington.\nAdam Smith, of Washington.\nRobert F. Smith, of Oregon.\n\nSUBCOMMITTEES\n\n${panel}\n\nMs. Smith\nMr. R. Smith\n${panel === "Water and Power" ? "Mr. A. Smith\n" : ""}`
+      const assignment =
+        "Smith, L. of Washington (R)    Resources -- National Parks and Public Lands; Water and Power.\nSmith of Oregon (R)    Resources -- National Parks and Public Lands; Water and Power."
+      const parse = (text: string, evidence = assignment, packageId = "CDIR-1997-06-04") =>
+        parseGovInfoHistoricalCommitteeGranule(
+          { chamber: "lower", title: houseTitle, text },
+          {
+            packageId,
+            resolveAbbreviatedMember: createGovInfoAssignmentResolver([
+              { chamber: "lower", title: "ASSIGNMENTS OF REPRESENTATIVES TO COMMITTEES", text: evidence }
+            ])
+          }
+        )
+      expect(parse(source)[1]?.members[0]).toEqual({ chamber: "lower", name: "Linda Smith", state: "WA" })
+      for (const changed of [
+        source.replace("Mr. R. Smith\n", ""),
+        source.replace("Linda Smith, of Washington.", "Linda Smith, of Alaska."),
+        source.replace("\n\nSUBCOMMITTEES", "\nLinda Smith, of Alaska.\n\nSUBCOMMITTEES")
+      ]) {
+        expect(() => parse(changed)).toThrow("Ambiguous GovInfo abbreviated member")
+      }
+      expect(() => parse(source, "")).toThrow("Ambiguous GovInfo abbreviated member")
+      expect(() => parse(source, assignment, "CDIR-1999-06-15")).toThrow("Ambiguous GovInfo abbreviated member")
+    }
+  )
+  it("requires the separate A. Smith row for the reviewed Water and Power elimination", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nResources\n\nLinda Smith, of Washington.\nAdam Smith, of Washington.\nRobert F. Smith, of Oregon.\n\nSUBCOMMITTEES\n\nWater and Power\n\nMs. Smith\nMr. R. Smith\n`
+    const resolveAbbreviatedMember = createGovInfoAssignmentResolver([
+      {
+        chamber: "lower",
+        title: "assignments",
+        text: "Smith, L. of Washington (R)    Resources -- Water and Power.\nSmith of Oregon (R)    Resources -- Water and Power."
+      }
+    ])
+    expect(() =>
+      parseGovInfoHistoricalCommitteeGranule(
+        { chamber: "lower", title: houseTitle, text: source },
+        { packageId: "CDIR-1997-06-04", resolveAbbreviatedMember }
+      )
+    ).toThrow("Ambiguous GovInfo abbreviated member")
+  })
+  it("preserves Davis's exact corroborated leave note without changing his member role", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const note =
+      "In addition, the Republican Conference assigned Representative Thomas M. Davis III, Virginia, to the Committee on Commerce, and placed him on sabbatical leave for the 106th Congress."
+    const source = `${houseTitle}\n\nCommerce\n\nThomas M. Davis III, of Virginia.*\nRobert L. Ehrlich, Jr., of Maryland.\n\n  *${note.replace("on Commerce", "on\nCommerce")}\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule(
+        { chamber: "lower", title: houseTitle, text },
+        { packageId: "CDIR-1999-06-15" }
+      )
+    expect(parse(source)[0]?.members).toEqual([
+      { chamber: "lower", name: "Thomas M. Davis III", state: "VA", note },
+      { chamber: "lower", name: "Robert L. Ehrlich, Jr.", state: "MD" }
+    ])
+    for (const packageId of ["CDIR-2000-02-01", "CDIR-2000-10-01"]) {
+      expect(
+        parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text: source }, { packageId })[0]
+          ?.members[0]?.note
+      ).toBe(note)
+    }
+    for (const options of [{}, { packageId: "CDIR-1997-06-04" }]) {
+      expect(() =>
+        parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text: source }, options)
+      ).toThrow("Unrecognized GovInfo membership role")
+    }
+    for (const text of [
+      source.replace("106th Congress", "105th Congress"),
+      source.replace("Republican Conference assigned", "Republican Conference did not assign"),
+      source.replace("\n\nCommerce\n", "\n\nBudget\n"),
+      source.replace("of Virginia.*", "of Maryland.*"),
+      source.split("\n\n  *")[0] ?? ""
+    ]) {
+      expect(() => parse(text)).toThrow("Unrecognized GovInfo membership role")
+    }
+  })
+  it("repairs the exact Merchant Marine panel typo only against its unique explicit parent member", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nNational Security\n\nNeil Abercrombie, of Hawaii.\nDuncan Hunter, of California.\n\nSUBCOMMITTEES\n\nSpecial Oversight Panel on the Merchant Marine\n\nMr. Hunter    Mr. Abercombie\n`
+    const parse = (text: string) =>
+      parseGovInfoHistoricalCommitteeGranule(
+        { chamber: "lower", title: houseTitle, text },
+        { packageId: "CDIR-1997-06-04" }
+      )
+    expect(parse(source)[1]?.members).toEqual([
+      { chamber: "lower", name: "Duncan Hunter", state: "CA" },
+      { chamber: "lower", name: "Neil Abercrombie", state: "HI" }
+    ])
+    for (const options of [{}, { packageId: "CDIR-1999-06-15" }]) {
+      expect(() =>
+        parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text: source }, options)
+      ).toThrow("Ambiguous GovInfo abbreviated member")
+    }
+    for (const text of [
+      source.replace("of Hawaii", "of Alaska"),
+      source.replace("National Security", "Resources"),
+      source.replace("Panel on the Merchant Marine", "Panel on Other Matters"),
+      source.replace("Duncan Hunter, of California.", "Duncan Hunter, of California.\nAlex Abercrombie, of Hawaii.")
+    ]) {
+      expect(() => parse(text)).toThrow("Ambiguous GovInfo abbreviated member")
+    }
+    const literal = source.replace(
+      "Duncan Hunter, of California.",
+      "Duncan Hunter, of California.\nAlex Abercombie, of Alaska."
+    )
+    expect(() => parse(literal)).toThrow("re-review required")
+  })
   it("repairs the exact National Security McIntrye parent cell only with unique same-granule full-name evidence", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nAgriculture\n\nJo Ann Emerson, of Missouri.    Mike McIntyre, of North Carolina.\n\nSTAFF\n\nNational Security\n\nLindsey Graham, of South Carolina.    Mike McIntrye, of North Carolina.\nSonny Bono, of California.    Ciro D. Rodriguez, of Texas.\n\nSUBCOMMITTEES\n\nMilitary Procurement\n\nMr. Bono    Mr. McIntyre\n`

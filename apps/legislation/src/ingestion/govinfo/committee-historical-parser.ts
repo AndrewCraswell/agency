@@ -23,6 +23,7 @@ const memberWithoutOf = new RegExp(
 )
 const memberWithOf = new RegExp(`^.+?[,\\.]?\\s+of (?:the )?(?:${stateNames})(?=[.,\\s]|$)`, "i")
 export type HistoricalCommitteeParserOptions = {
+  packageId?: string
   resolveAbbreviatedMember?: (context: {
     name: string
     parent: GovInfoCommitteeRecord
@@ -68,6 +69,13 @@ function parseGranule(
       return `${name}, of ${state}`
     }
   )
+  const davisNote =
+    "In addition, the Republican Conference assigned Representative Thomas M. Davis III, Virginia, to the Committee on Commerce, and placed him on sabbatical leave for the 106th Congress."
+  const davisOnLeave =
+    ["CDIR-1999-06-15", "CDIR-2000-02-01", "CDIR-2000-10-01"].includes(options.packageId ?? "") &&
+    granule.chamber === "lower" &&
+    granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+    source.replaceAll(/\s+/g, " ").includes(`*${davisNote}`)
   // This 105th snapshot explicitly records Pallone's election after his prior
   // leave. It does not authorize stripping other markers or active-leave notes.
   const palloneNote = source.match(
@@ -93,6 +101,15 @@ function parseGranule(
   const mcIntyreStates = new Set(
     [...source.matchAll(/(?:^|[ \t]{2,})Mike McIntyre, of ([A-Za-z ]+?)[.,]/gm)].map((match) => match[1]?.toLowerCase())
   )
+  const delahuntStates = new Set(
+    [...source.matchAll(/(?:^| {2,})William(?: D\.)? Delahunt, of ([A-Za-z ]+?)(?=[.,])/gm)].map((match) => match[1])
+  )
+  const delahuntCorroborated =
+    ["CDIR-1999-06-15", "CDIR-2000-02-01", "CDIR-2000-10-01"].includes(options.packageId ?? "") &&
+    granule.chamber === "lower" &&
+    granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+    /(?:^| {2,})William Delahunt, of Massachusetts[.,]/m.test(source) &&
+    [...delahuntStates].every((state) => state === "Massachusetts" || state === "Massachusette")
   const body = rosterSource
     .slice(rosterSource.indexOf(granule.title) + granule.title.length)
     .replaceAll(/\[\[Page[^\]]*\]\]/g, "")
@@ -200,6 +217,106 @@ function parseGranule(
           try {
             const rosterName = heading ?? current?.name ?? ""
             let memberCell = cell
+            let memberNote: string | undefined
+            if (
+              options.packageId === "CDIR-1997-06-04" &&
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              parent?.name === "Resources" &&
+              isSubcommittee &&
+              rosterName === "Forests and Forest Health" &&
+              cell === "Mr. Randovich" &&
+              parent.members.filter(
+                (candidate) => candidate.name === "George P. Radanovich" && candidate.state === "CA"
+              ).length === 1 &&
+              parent.members.filter((candidate) => /(?:^| )Radanovich$/.test(candidate.name)).length === 1 &&
+              !parent.members.some((candidate) => /(?:^| )Randovich$/.test(candidate.name))
+            ) {
+              memberCell = "Mr. Radanovich"
+            }
+            if (delahuntCorroborated && cell === "William D. Delahunt, of Massachusette.") {
+              memberCell = "William D. Delahunt, of Massachusetts."
+            }
+            if (
+              options.packageId === "CDIR-1997-06-04" &&
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              parent?.name === "Resources" &&
+              isSubcommittee &&
+              ["National Parks and Public Lands", "Water and Power"].includes(rosterName) &&
+              cell === "Ms. Smith" &&
+              cells.includes("Mr. R. Smith") &&
+              (rosterName !== "Water and Power" || cells.includes("Mr. A. Smith"))
+            ) {
+              const linda = parent.members.filter(
+                (candidate) => candidate.name === "Linda Smith" && candidate.state === "WA"
+              )
+              if (
+                linda.length === 1 &&
+                parent.members.filter((candidate) => candidate.name === "Linda Smith").length === 1
+              ) {
+                const positiveAssignment = options.resolveAbbreviatedMember?.({
+                  name: "Smith",
+                  parent: { ...parent, members: linda },
+                  subcommitteeName: rosterName,
+                  chamber: granule.chamber
+                })
+                if (positiveAssignment?.name === "Linda Smith" && positiveAssignment.state === "WA") {
+                  memberCell = "Ms. L. Smith"
+                }
+              }
+            }
+            if (
+              options.packageId === "CDIR-1997-06-04" &&
+              granule.chamber === "lower" &&
+              parent?.name === "Resources" &&
+              isSubcommittee &&
+              ["National Parks and Public Lands", "Water and Power"].includes(rosterName) &&
+              memberCell === "Ms. Smith"
+            ) {
+              throw new Error("Ambiguous GovInfo abbreviated member Ms. Smith: reviewed evidence is incomplete")
+            }
+            if (
+              davisOnLeave &&
+              !isSubcommittee &&
+              rosterName === "Commerce" &&
+              cell === "Thomas M. Davis III, of Virginia.*"
+            ) {
+              memberCell = "Thomas M. Davis III, of Virginia."
+              memberNote = davisNote
+            }
+            if (
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              isSubcommittee &&
+              parent?.name === "National Security" &&
+              rosterName === "Special Oversight Panel on the Merchant Marine" &&
+              cell === "Mr. Abercombie" &&
+              options.packageId === "CDIR-1997-06-04" &&
+              parent.members.filter((member) => member.name === "Neil Abercrombie" && member.state === "HI").length ===
+                1 &&
+              parent.members.filter((member) => /(?:^| )Abercrombie$/.test(member.name)).length === 1 &&
+              !parent.members.some((member) => /(?:^| )Abercombie$/.test(member.name))
+            ) {
+              // The panel's own explicit row proves the assignment; only its typo is repaired.
+              memberCell = "Mr. Abercrombie"
+            }
+            if (
+              options.packageId === "CDIR-1997-06-04" &&
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              isSubcommittee &&
+              ((parent?.name === "Resources" &&
+                rosterName === "Forests and Forest Health" &&
+                memberCell === "Mr. Randovich") ||
+                (parent?.name === "National Security" &&
+                  rosterName === "Special Oversight Panel on the Merchant Marine" &&
+                  memberCell === "Mr. Abercombie"))
+            ) {
+              throw new Error(
+                `Ambiguous GovInfo abbreviated member ${cell}: reviewed identity evidence changed; re-review required`
+              )
+            }
             if (
               palloneElected &&
               !isSubcommittee &&
@@ -229,7 +346,11 @@ function parseGranule(
               memberCell = "Mike McIntyre, of North Carolina."
             }
             const member = parseMember(memberCell, granule.chamber, parent, rosterName, options)
-            return isExOfficioBlock ? { ...member, role: "ex-officio" } : member
+            return {
+              ...member,
+              ...(memberNote ? { note: memberNote } : {}),
+              ...(isExOfficioBlock ? { role: "ex-officio" } : {})
+            }
           } catch (error) {
             throw new Error(
               `${error instanceof Error ? error.message : "Invalid member"} in ${heading ?? current?.name}: ${rosterLines.slice(0, 3).join(" | ")}`

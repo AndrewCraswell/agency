@@ -12,6 +12,7 @@ import type {
   GovInfoCommitteeMember,
   GovInfoCommitteeRecord
 } from "./committee-directory-parser.js"
+import { reviewedGovInfoIdentities } from "./committee-reviewed-identities.js"
 
 type PersonRow = Pick<typeof people.$inferSelect, "familyName" | "givenName" | "id" | "name">
 type AliasRow = Pick<typeof personAliases.$inferSelect, "name" | "personId"> & {
@@ -39,6 +40,7 @@ export function normalizeGovInfoCommitteeDirectory(
   retrievedAt: Date
 ): GovInfoCommitteeNormalizationResult {
   const people = buildPersonIndex(catalog, directoryPackage.congress, directoryPackage.issuedAt.getUTCFullYear())
+  const reviewed = reviewedGovInfoIdentities(records, directoryPackage, catalog)
   const organizations = records.map((record) => {
     const sourceId = organizationSourceId(record)
     return {
@@ -74,7 +76,20 @@ export function normalizeGovInfoCommitteeDirectory(
   for (const record of records) {
     const canonicalOrganizationId = organizationId("govinfo", organizationSourceId(record))
     for (const member of record.members) {
-      const match = matchPerson({ ...member, name: crossCheckedPrintedName(member, records, directoryPackage) }, people)
+      const matches = matchingPeople(
+        { ...member, name: crossCheckedPrintedName(member, records, directoryPackage) },
+        people
+      )
+      const reviewedMatch = reviewed.get(member)
+      if (reviewedMatch !== undefined && matches.size === 1 && !matches.has(reviewedMatch)) {
+        throw new Error(`GovInfo strict identity conflicts with reviewed identity for ${member.name}`)
+      }
+      let match: string | undefined
+      if (matches.size === 1) {
+        match = [...matches][0]
+      } else if (matches.size === 0) {
+        match = reviewedMatch
+      }
       if (match === undefined) {
         unmatched.push({ chamber: record.chamber, name: member.name, organization: record.name })
         continue
@@ -85,7 +100,7 @@ export function normalizeGovInfoCommitteeDirectory(
         detectedStartDate: dateOnly(directoryPackage.issuedAt),
         id: organizationMembershipId(canonicalOrganizationId, match, sourceId),
         isActive: true,
-        label: member.role ?? "member",
+        label: member.note ?? member.role ?? "member",
         lastObservedDate: dateOnly(directoryPackage.issuedAt),
         legislativeSessionId: sessionId,
         organizationId: canonicalOrganizationId,
@@ -269,7 +284,7 @@ function buildPersonIndex(catalog: GovInfoPersonCatalog, congress: number, editi
   })
 }
 
-function matchPerson(member: GovInfoCommitteeMember, people: readonly IndexedPerson[]): string | undefined {
+function matchingPeople(member: GovInfoCommitteeMember, people: readonly IndexedPerson[]): Set<string> {
   // Directory district annotations contain typos and Congress.gov omits some at-large
   // districts. Require a unique full-name identity within the Congress and chamber.
   const names = nameVariants(member.name)
@@ -285,14 +300,14 @@ function matchPerson(member: GovInfoCommitteeMember, people: readonly IndexedPer
       .map((person) => person.personId)
   )
   if (scopedMatches.size > 0) {
-    return scopedMatches.size === 1 ? [...scopedMatches][0] : undefined
+    return scopedMatches
   }
   const matches = new Set(
     people
       .filter((person) => person.chamber === member.chamber && names.some((name) => person.names.has(name)))
       .map((person) => person.personId)
   )
-  return matches.size === 1 ? [...matches][0] : undefined
+  return matches
 }
 
 function termAppliesToCongress(term: TermRow, congress: number, editionYear: number): boolean {

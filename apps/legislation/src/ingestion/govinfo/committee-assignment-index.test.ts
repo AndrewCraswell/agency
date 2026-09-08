@@ -21,6 +21,38 @@ Smith of Oregon (R)                        Agriculture.
                                             Power.`
 
 describe("GovInfo same-edition assignment disambiguation", () => {
+  it("accepts a printed comma after the qualified initial without weakening identity evidence", () => {
+    const roster: GovInfoCommitteeRecord = {
+      chamber: "lower",
+      classification: "committee",
+      name: "Transportation and Infrastructure",
+      members: [
+        { chamber: "lower", name: "Eddie Bernice Johnson", state: "TX" },
+        { chamber: "lower", name: "Jay W. Johnson", state: "WI" }
+      ]
+    }
+    const assignment =
+      "Johnson, E., of Texas (D)    Transportation and Infrastructure -- Surface Transportation; Aviation."
+    const resolveText = (text: string) =>
+      createGovInfoAssignmentResolver([{ chamber: "lower", title: "assignments", text }])
+    const context = {
+      name: "Johnson",
+      parent: roster,
+      chamber: "lower",
+      subcommitteeName: "Aviation"
+    } satisfies Parameters<ReturnType<typeof resolveText>>[0]
+    expect(resolveText(assignment)(context)).toEqual(roster.members[0])
+    for (const changed of [
+      assignment.replace("E.,", "J.,"),
+      assignment.replace("Texas", "Wisconsin"),
+      assignment.replace("Aviation", "Other Panel"),
+      assignment.replace("Transportation and Infrastructure", "Other Committee"),
+      assignment.replace("E.,", "E..,")
+    ]) {
+      expect(resolveText(changed)(context)).toBeUndefined()
+    }
+    expect(resolveText(assignment)({ ...context, chamber: "upper" })).toBeUndefined()
+  })
   it("corrects Lofgen only with the exact unique Zoe Lofgren parent identity and positive assignment clause", () => {
     const judiciary: GovInfoCommitteeRecord = {
       chamber: "lower",

@@ -4,6 +4,7 @@ export interface GovInfoCommitteeMember {
   chamber: CongressionalChamber
   district?: string
   name: string
+  note?: string
   role?: string
   state: string
 }
