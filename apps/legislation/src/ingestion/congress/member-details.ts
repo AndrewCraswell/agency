@@ -1,9 +1,4 @@
-import {
-  normalizeCongressMemberDetails,
-  normalizeCongressMembers,
-  type CongressEntityContext,
-  type CongressEntitySnapshot
-} from "./entities.js"
+import { normalizeCongressMemberDetails, type CongressEntityContext, type CongressEntitySnapshot } from "./entities.js"
 
 export interface CongressMemberDetailClient {
   getMember(bioguideId: string): Promise<unknown>
@@ -22,7 +17,6 @@ export async function hydrateCongressMemberSnapshot(
     "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
   >
 > {
-  const listed = normalizeCongressMembers(members, congress, context)
   const membersByBioguideId = new Map<string, unknown>()
   for (const member of members) {
     membersByBioguideId.set(memberBioguideId(member), member)
@@ -36,15 +30,10 @@ export async function hydrateCongressMemberSnapshot(
     }
     details.push({ detail, member })
   }
-  const detailed = normalizeCongressMemberDetails(details, congress, context)
-  return {
-    personDetailPersonIds: detailed.personDetailPersonIds,
-    personDetails: detailed.personDetails,
-    personJurisdictions: detailed.personJurisdictions,
-    people: uniqueById([...listed.people, ...detailed.people]),
-    termPersonIds: detailed.termPersonIds,
-    terms: uniqueById([...listed.terms, ...detailed.terms])
-  }
+  // Career-wide collection terms have different IDs from Congress-specific
+  // detail terms. Unioning them preserves duplicates instead of superseding
+  // the collection facts. The complete detail snapshot is authoritative.
+  return normalizeCongressMemberDetails(details, congress, context)
 }
 
 function memberBioguideId(input: unknown): string {
@@ -56,8 +45,4 @@ function memberBioguideId(input: unknown): string {
     throw new Error("Congress member collection record lacks a bioguideId")
   }
   return bioguideId
-}
-
-function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
-  return [...new Map(values.map((value) => [value.id, value])).values()]
 }
