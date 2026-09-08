@@ -9,6 +9,8 @@ in filenames identify the historical source period. Membership evidence remains 
 - `reviewNotes`: preserved research notes. Detailed evidence links are in the
   [reconciliation record](../../../../docs/committee-reconciliation-policy.md).
 - `historicalAtFirstObservation`: only for explicitly retained historical assignments with unknown boundaries.
+- `annotation`: reviewed source label and role, applied only after the identity and full edition fingerprint pass. A
+  leave-of-absence annotation does not create a departure date or end a tenure.
 
 One dataset shares mappings across explicitly listed editions; no rule applies implicitly to another edition. Add
 reviewed corrections to the applicable dataset, retaining independent person/assignment evidence. A new dataset must be

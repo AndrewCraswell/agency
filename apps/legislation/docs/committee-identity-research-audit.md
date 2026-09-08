@@ -1,5 +1,56 @@
 # Committee identity research audit
 
+## Final 106th and 107th reconciliation, September 8
+
+The remaining 106th cells were checked against the June 1999 biographies for
+[Dixon](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-CA-H-32.htm),
+[Graham](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-SC-H-3.htm),
+[Rothman](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-NJ-H-9.htm),
+[Royce](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-CA-H-39.htm),
+[Lamar Smith](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-TX-H-21.htm),
+[Simpson](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-ID-H-2.htm), and
+[English](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-PA-H-21.htm).
+These establish the identities; the exact committee cells establish the assignments. There are 22 newly resolved
+cells in each of three editions. Royce's erroneous A. is not made a canonical alias. Dixon's printed footnote 1
+reads `Ranking Democratic Member (leave of absence).` His reviewed annotation preserves that label and ranking
+role without inferring departure, return, or effective dates. His Appropriations parent corroborates the identity.
+
+The 107th December and October editions have separate reviewed data because their rosters differ. Reviewed names
+are Bill Frist, Ed Schrock, Marty Meehan, Pat Toomey, Lindsey O. Graham, Charlie Norwood, Charlie W. Norwood Jr.,
+Mary Bono, Darrell E. Issa, Lamar S. Smith, Chris Smith, Mike Bilirakis, Mike Simpson and Philip S. English;
+October additionally has Michael D. Enzi, Hilda A. Solis and Edward A. Royce. Exact existing Bioguide identities
+and Congress/chamber/district terms were checked in the production catalog. No new person or term is manufactured.
+
+Fresh December biographies corroborate [Schrock](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-VA-H-2.htm),
+[Meehan](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-MA-H-5.htm),
+[Norwood](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-GA-H-10.htm),
+[Smith](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-TX-H-21.htm),
+[Christopher Smith](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-NJ-H-4.htm),
+[Bilirakis](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-FL-H-9.htm),
+[Simpson](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-ID-H-2.htm),
+[Frist](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-TN-S-2.htm), and
+[English](https://www.govinfo.gov/content/pkg/CDIR-2001-12-07/html/CDIR-2001-12-07-PA-H-21.htm).
+Norwood's biography explicitly confirms Workforce Protections chair and Health vice-chair; Smith's confirms Crime
+chair; Christopher Smith's confirms Veterans' Affairs chair. Other roles remain the printed roster's evidence.
+
+October biographies corroborate [Toomey and Budget](https://www.govinfo.gov/content/pkg/CDIR-2002-10-01/html/CDIR-2002-10-01-PA-H-15.htm),
+[Graham's House assignments](https://www.govinfo.gov/content/pkg/CDIR-2002-10-01/html/CDIR-2002-10-01-SC-H-3.htm),
+[Enzi and Foreign Relations](https://www.govinfo.gov/content/pkg/CDIR-2002-10-01/html/CDIR-2002-10-01-WY-S-2.htm), and
+[Solis](https://www.govinfo.gov/content/pkg/CDIR-2002-10-01/html/CDIR-2002-10-01-CA-H-31.htm).
+Enzi's D. and Solis's A. are scoped source errors, not accepted canonical initials.
+
+The requested December CA-44/48 HTML biographies return GovInfo's Page Not Found body, even with HTTP 200.
+They were not treated as evidence. [House history](https://history.house.gov/People/Detail/10357) identifies Mary
+Bono and explicitly describes her move to Energy and Commerce in the 107th. The
+[July 2003 GovInfo biography](https://www.govinfo.gov/content/pkg/CDIR-2003-07-11/html/CDIR-2003-07-11-CA-H-49.htm)
+explicitly names Darrell E. Issa and his election to the 107th; that later district is not imported into the 107th.
+The actual 107th committee cells and existing 107th terms remain the assignment and district constraints.
+Nickname mappings are narrow reviewed inferences, not a general nickname engine. All source fingerprints,
+context cardinality, unique parents, and conflicting-identity checks remain mandatory.
+
+The following sections are earlier audit snapshots; current import acceptance is tracked in
+[membership history](committee-membership-history.md).
+
 Research date: 2026-09-08. Scope: the 35 distinct printed names in the reviewed identity manifests,
 plus the parser/biography corrections. This is an identity audit, not proof of exact appointment or departure dates.
 No new ingestion provider or production data change is introduced by this research.

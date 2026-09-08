@@ -49,6 +49,194 @@
   ],
   "identities": [
     {
+      "printedName": "Julian C. Dixon, 1",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:d000373",
+      "canonicalName": "Dixon, Julian C.",
+      "givenName": "JULIAN",
+      "familyName": "DIXON",
+      "district": "32",
+      "contexts": [
+        {
+          "name": "Commerce, Justice, State and Judiciary",
+          "parentName": "Appropriations"
+        }
+      ],
+      "corroboration": {
+        "name": "Julian C. Dixon",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "Appropriations"
+          }
+        ]
+      },
+      "annotation": {
+        "label": "Ranking Democratic Member (leave of absence).",
+        "role": "ranking-member"
+      }
+    },
+    {
+      "printedName": "Lindsey O. Graham",
+      "state": "SC",
+      "chamber": "lower",
+      "personId": "person:congress:g000359",
+      "canonicalName": "Graham, Lindsey",
+      "givenName": "Lindsey",
+      "familyName": "Graham",
+      "district": "3",
+      "contexts": [
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Workforce Protections",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Postsecondary Education, Training and Life-Long Learning",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Early Childhood, Youth and Families",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "Commercial and Administrative Law",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "The Constitution",
+          "parentName": "Judiciary"
+        }
+      ]
+    },
+    {
+      "printedName": "Steve R. Rothman",
+      "state": "NJ",
+      "chamber": "lower",
+      "personId": "person:congress:r000462",
+      "canonicalName": "Rothman, Steven R.",
+      "givenName": "STEVEN",
+      "familyName": "ROTHMAN",
+      "district": "9",
+      "contexts": [
+        {
+          "name": "International Relations"
+        },
+        {
+          "name": "Western Hemisphere",
+          "parentName": "International Relations"
+        },
+        {
+          "name": "International Economic Policy and Trade",
+          "parentName": "International Relations"
+        }
+      ]
+    },
+    {
+      "printedName": "Edward A. Royce",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:r000487",
+      "canonicalName": "Royce, Edward R.",
+      "givenName": "ED",
+      "familyName": "ROYCE",
+      "district": "39",
+      "contexts": [
+        {
+          "name": "Africa",
+          "parentName": "International Relations"
+        },
+        {
+          "name": "Asia and the Pacific",
+          "parentName": "International Relations"
+        }
+      ],
+      "corroboration": {
+        "name": "Edward R. Royce",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "International Relations"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "Lamar S. Smith",
+      "state": "TX",
+      "chamber": "lower",
+      "personId": "person:congress:s000583",
+      "canonicalName": "Smith, Lamar",
+      "givenName": "LAMAR",
+      "familyName": "SMITH",
+      "district": "21",
+      "contexts": [
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "Crime",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Immigration and Claims",
+          "parentName": "Judiciary"
+        }
+      ]
+    },
+    {
+      "printedName": "Mike Simpson",
+      "state": "ID",
+      "chamber": "lower",
+      "personId": "person:congress:s001148",
+      "canonicalName": "Simpson, Michael K.",
+      "givenName": "Michael",
+      "familyName": "Simpson",
+      "district": "2",
+      "contexts": [
+        {
+          "name": "Resources"
+        },
+        {
+          "name": "Fisheries Conservation, Wildlife and Oceans",
+          "parentName": "Resources"
+        },
+        {
+          "name": "Water and Power",
+          "parentName": "Resources"
+        }
+      ]
+    },
+    {
+      "printedName": "Philip S. English",
+      "state": "PA",
+      "chamber": "lower",
+      "personId": "person:congress:e000187",
+      "canonicalName": "English, Phil",
+      "givenName": "PHIL",
+      "familyName": "ENGLISH",
+      "district": "21",
+      "contexts": [
+        {
+          "name": "Ways and Means"
+        },
+        {
+          "name": "Health",
+          "parentName": "Ways and Means"
+        },
+        {
+          "name": "Human Resources",
+          "parentName": "Ways and Means"
+        }
+      ]
+    },
+    {
       "printedName": "Tom A. Coburn",
       "state": "OK",
       "chamber": "lower",

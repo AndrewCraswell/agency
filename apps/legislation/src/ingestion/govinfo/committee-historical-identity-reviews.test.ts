@@ -7,7 +7,7 @@ import { committeeIdentityReviews } from "./committee-review-data.js"
 import { validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
 
 describe("historical reviewed identity manifests", () => {
-  for (const edition of committeeIdentityReviews.filter((review) => [106, 108, 109].includes(review.congress))) {
+  for (const edition of committeeIdentityReviews.filter((review) => [106, 107, 108, 109].includes(review.congress))) {
     it(`requires the complete source fingerprint for ${edition.packageId}`, () => {
       const directory = directoryFor(edition.packageId, edition.congress)
       expect(validateGovInfoIdentityReview(edition, [], directory, { people: [], terms: [], aliases: [] }).size).toBe(0)

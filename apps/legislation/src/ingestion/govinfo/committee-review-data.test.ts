@@ -65,7 +65,7 @@ describe("committee review data loader", () => {
   })
 
   it("loads the bundled identity and historical review datasets", () => {
-    expect(committeeIdentityReviews).toHaveLength(11)
+    expect(committeeIdentityReviews).toHaveLength(13)
     expect(historicalAssignmentReviews).toHaveLength(5)
   })
 })

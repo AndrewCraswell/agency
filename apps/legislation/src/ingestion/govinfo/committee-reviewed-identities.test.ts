@@ -5,8 +5,32 @@ import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import { normalizeGovInfoCommitteeDirectory } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
 import { committeeIdentityReviews } from "./committee-review-data.js"
-import { reviewedGovInfoIdentities, validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
+import {
+  reviewedGovInfoAnnotations,
+  reviewedGovInfoIdentities,
+  validateGovInfoIdentityReview
+} from "./committee-reviewed-identities.js"
 import * as reviewedIdentityModule from "./committee-reviewed-identities.js"
+
+it("preserves reviewed leave and ranking information only for validated edition cells", () => {
+  const directory: GovInfoDirectoryPackage = {
+    packageId: "CDIR-1999-06-15",
+    congress: 106,
+    issuedAt: new Date("1999-06-15"),
+    lastModified: new Date("1999-06-15"),
+    sourceUrl: new URL("https://www.govinfo.gov/"),
+    textUrl: new URL("https://www.govinfo.gov/")
+  }
+  const member = { name: "Julian C. Dixon, 1", state: "CA", chamber: "lower" as const }
+  const validated = new Map([[member, "person:congress:d000373"]])
+  expect(reviewedGovInfoAnnotations(directory, validated).get(member)).toEqual({
+    label: "Ranking Democratic Member (leave of absence).",
+    role: "ranking-member"
+  })
+  expect(reviewedGovInfoAnnotations(directory, new Map()).size).toBe(0)
+  expect(reviewedGovInfoAnnotations({ ...directory, congress: 107 }, validated).size).toBe(0)
+  expect(reviewedGovInfoAnnotations(directory, new Map([[member, "person:congress:wrong"]])).size).toBe(0)
+})
 
 function fixture() {
   const records: GovInfoCommitteeRecord[] = [

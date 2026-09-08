@@ -13,7 +13,7 @@ import type {
   GovInfoCommitteeRecord
 } from "./committee-directory-parser.js"
 import { reviewedHistoricalAssignments } from "./committee-historical-assignments.js"
-import { reviewedGovInfoIdentities } from "./committee-reviewed-identities.js"
+import { reviewedGovInfoAnnotations, reviewedGovInfoIdentities } from "./committee-reviewed-identities.js"
 
 type PersonRow = Pick<typeof people.$inferSelect, "familyName" | "givenName" | "id" | "name">
 type AliasRow = Pick<typeof personAliases.$inferSelect, "name" | "personId"> & {
@@ -51,6 +51,7 @@ export function normalizeGovInfoCommitteeDirectory(
 ): GovInfoCommitteeNormalizationResult {
   const people = buildPersonIndex(catalog, directoryPackage.congress, directoryPackage.issuedAt.getUTCFullYear())
   const reviewed = reviewedGovInfoIdentities(records, directoryPackage, catalog)
+  const annotations = reviewedGovInfoAnnotations(directoryPackage, reviewed)
   const historical = reviewedHistoricalAssignments(records, directoryPackage, catalog)
   const organizations = records.map((record) => {
     const sourceId = organizationSourceId(record)
@@ -132,6 +133,7 @@ export function normalizeGovInfoCommitteeDirectory(
         continue
       }
       const sourceId = `${directoryPackage.congress}:${organizationSourceId(record)}:${match}`
+      const annotation = annotations.get(member)
       memberships.push({
         classification: "member",
         detectedStartDate: historical.has(member) ? null : dateOnly(directoryPackage.issuedAt),
@@ -139,20 +141,20 @@ export function normalizeGovInfoCommitteeDirectory(
         endedReason: historical.has(member) ? "historical_at_first_observation" : null,
         id: organizationMembershipId(canonicalOrganizationId, match, sourceId),
         isActive: !historical.has(member),
-        label: member.note ?? member.role ?? "member",
+        label: annotation?.label ?? member.note ?? member.role ?? "member",
         lastObservedDate: historical.has(member) ? null : dateOnly(directoryPackage.issuedAt),
         legislativeSessionId: sessionId,
         organizationId: canonicalOrganizationId,
         personId: match,
         provenanceComplete: true,
-        role: member.role ?? "member",
+        role: annotation?.role ?? member.role ?? "member",
         sourceId,
         sourceIsOfficial: true,
         sourceProvider: "govinfo",
         sourceRetrievedAt: retrievedAt,
         sourceUpdatedAt: directoryPackage.lastModified,
         sourceUrl: directoryPackage.sourceUrl.href,
-        title: member.role ?? null
+        title: annotation?.role ?? member.role ?? null
       })
     }
   }

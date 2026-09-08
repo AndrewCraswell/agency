@@ -23,6 +23,26 @@ export function reviewedGovInfoIdentities(
   return result
 }
 
+/** Annotations are available only for cells whose edition-bound identity was validated. */
+export function reviewedGovInfoAnnotations(
+  directory: GovInfoDirectoryPackage,
+  validated: ReadonlyMap<GovInfoCommitteeMember, string>
+) {
+  const review = committeeIdentityReviews.find(
+    (entry) => entry.packageId === directory.packageId && entry.congress === directory.congress
+  )
+  const annotations = new Map<GovInfoCommitteeMember, { label: string; role: "member" | "ranking-member" }>()
+  for (const [member, personId] of validated) {
+    const identity = review?.identities.find(
+      (entry) => entry.printedName === member.name && entry.state === member.state && entry.personId === personId
+    )
+    if (identity?.annotation) {
+      annotations.set(member, identity.annotation)
+    }
+  }
+  return annotations
+}
+
 /** Pure validator for repository-reviewed mapping data. Never accepts source-provided review data. */
 export function validateGovInfoIdentityReview(
   review: IdentityReview,

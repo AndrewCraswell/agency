@@ -2,7 +2,9 @@ import { z } from "zod"
 import identities105 from "./review-data/105-identities.json" with { type: "json" }
 import assignments106 from "./review-data/106-historical-assignments.json" with { type: "json" }
 import identities106 from "./review-data/106-identities.json" with { type: "json" }
+import identities107December from "./review-data/107-december-identities.json" with { type: "json" }
 import assignments107 from "./review-data/107-historical-assignments.json" with { type: "json" }
+import identities107October from "./review-data/107-october-identities.json" with { type: "json" }
 import identities108 from "./review-data/108-identities.json" with { type: "json" }
 import identities109 from "./review-data/109-identities.json" with { type: "json" }
 import identities113 from "./review-data/113-identities.json" with { type: "json" }
@@ -22,6 +24,7 @@ const identitySchema = z.strictObject({
   givenName: text,
   familyName: text,
   district: text.nullable(),
+  annotation: z.strictObject({ label: text, role: z.enum(["member", "ranking-member"]) }).optional(),
   contexts: z.array(contextSchema).min(1),
   corroboration: z
     .strictObject({
@@ -97,6 +100,8 @@ export function loadCommitteeReviewData(input: unknown) {
 const loaded = loadCommitteeReviewData([
   identities105,
   identities106,
+  identities107December,
+  identities107October,
   identities108,
   identities109,
   identities113,

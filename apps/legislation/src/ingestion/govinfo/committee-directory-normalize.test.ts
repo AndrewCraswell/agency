@@ -5,7 +5,10 @@ import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
 
 // These are synthetic unit rosters for strict normalization, not complete
 // publication snapshots. Reviewed-manifest integration is tested separately.
-vi.mock("./committee-reviewed-identities.js", () => ({ reviewedGovInfoIdentities: () => new Map() }))
+vi.mock("./committee-reviewed-identities.js", () => ({
+  reviewedGovInfoIdentities: () => new Map(),
+  reviewedGovInfoAnnotations: () => new Map()
+}))
 
 const directoryPackage: GovInfoDirectoryPackage = {
   congress: 119,

@@ -1,0 +1,475 @@
+{
+  "reviewNotes": [
+    "Exact edition-bound identities manually checked against GovInfo member biographies and printed committee rosters. See committee-identity-research-audit.md. Initial errors remain source errors, not canonical aliases."
+  ],
+  "editions": [
+    {
+      "packageId": "CDIR-2002-10-01",
+      "congress": 107,
+      "fingerprint": "770d7924b9154cab7085120edad5008ed9ad1b4f3a08c84a1b513568718aec6b",
+      "organizations": 205,
+      "entries": 3721
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "Bill Frist",
+      "state": "TN",
+      "chamber": "upper",
+      "personId": "person:congress:f000439",
+      "canonicalName": "Frist, William H.",
+      "givenName": "WILLIAM",
+      "familyName": "FRIST",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Budget"
+        },
+        {
+          "name": "Foreign Relations"
+        },
+        {
+          "name": "African Affairs",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "International Operations and Terrorism",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "Near Eastern and South Asian Affairs",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "Health, Education, Labor, and Pensions"
+        },
+        {
+          "name": "Children and Families",
+          "parentName": "Health, Education, Labor, and Pensions"
+        },
+        {
+          "name": "Public Health",
+          "parentName": "Health, Education, Labor, and Pensions"
+        }
+      ]
+    },
+    {
+      "printedName": "Michael D. Enzi",
+      "state": "WY",
+      "chamber": "upper",
+      "personId": "person:congress:e000285",
+      "canonicalName": "Enzi, Michael B.",
+      "givenName": "MICHAEL",
+      "familyName": "ENZI",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Foreign Relations"
+        },
+        {
+          "name": "International Economic Policy, Export and Trade Promotion",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "International Operations and Terrorism",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "Western Hemisphere, Peace Corps, and Narcotics Affairs",
+          "parentName": "Foreign Relations"
+        }
+      ]
+    },
+    {
+      "printedName": "Ed Schrock",
+      "state": "VA",
+      "chamber": "lower",
+      "personId": "person:congress:s001151",
+      "canonicalName": "Schrock, Edward L.",
+      "givenName": "EDWARD",
+      "familyName": "SCHROCK",
+      "district": "2",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Military Installations and Facilities",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Military Personnel",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Military Procurement",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Special Oversight Panel on Morale, Welfare, and Recreation",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "Marty Meehan",
+      "state": "MA",
+      "chamber": "lower",
+      "personId": "person:congress:m000627",
+      "canonicalName": "Meehan, Martin T.",
+      "givenName": "MARTIN",
+      "familyName": "MEEHAN",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Military Research and Development",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Special Oversight Panel on Morale, Welfare, and Recreation",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "Pat Toomey",
+      "state": "PA",
+      "chamber": "lower",
+      "personId": "person:congress:t000461",
+      "canonicalName": "Toomey, Patrick",
+      "givenName": "Patrick",
+      "familyName": "Toomey",
+      "district": "15",
+      "contexts": [
+        {
+          "name": "Budget"
+        }
+      ]
+    },
+    {
+      "printedName": "Lindsey O. Graham",
+      "state": "SC",
+      "chamber": "lower",
+      "personId": "person:congress:g000359",
+      "canonicalName": "Graham, Lindsey",
+      "givenName": "Lindsey",
+      "familyName": "Graham",
+      "district": "3",
+      "contexts": [
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Workforce Protections",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "21st Century Competitiveness",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "The Constitution",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Courts, the Internet, and Intellectual Property",
+          "parentName": "Judiciary"
+        }
+      ]
+    },
+    {
+      "printedName": "Hilda A. Solis",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:s001153",
+      "canonicalName": "Solis, Hilda L.",
+      "givenName": "HILDA",
+      "familyName": "SOLIS",
+      "district": "31",
+      "contexts": [
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Workforce Protections",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Education Reform",
+          "parentName": "Education and the Workforce"
+        }
+      ]
+    },
+    {
+      "printedName": "Charlie Norwood",
+      "state": "GA",
+      "chamber": "lower",
+      "personId": "person:congress:n000159",
+      "canonicalName": "Norwood, Charles W.",
+      "givenName": "CHARLES",
+      "familyName": "NORWOOD",
+      "district": "10",
+      "contexts": [
+        {
+          "name": "Workforce Protections",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Energy and Commerce"
+        },
+        {
+          "name": "Energy and Air Quality",
+          "parentName": "Energy and Commerce"
+        },
+        {
+          "name": "Health",
+          "parentName": "Energy and Commerce"
+        }
+      ],
+      "corroboration": {
+        "name": "Charles W. Norwood, Jr.",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "Education and the Workforce"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "Charlie W. Norwood, Jr.",
+      "state": "GA",
+      "chamber": "lower",
+      "personId": "person:congress:n000159",
+      "canonicalName": "Norwood, Charles W.",
+      "givenName": "CHARLES",
+      "familyName": "NORWOOD",
+      "district": "10",
+      "contexts": [
+        {
+          "name": "Select Education",
+          "parentName": "Education and the Workforce"
+        }
+      ],
+      "corroboration": {
+        "name": "Charles W. Norwood, Jr.",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "Education and the Workforce"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "Mary Bono",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:b001228",
+      "canonicalName": "Bono Mack, Mary",
+      "givenName": "MARY",
+      "familyName": "BONO MACK",
+      "district": "44",
+      "contexts": [
+        {
+          "name": "Energy and Commerce"
+        },
+        {
+          "name": "Commerce, Trade, and Consumer Protection",
+          "parentName": "Energy and Commerce"
+        },
+        {
+          "name": "Energy and Air Quality",
+          "parentName": "Energy and Commerce"
+        },
+        {
+          "name": "Environment and Hazardous Materials",
+          "parentName": "Energy and Commerce"
+        }
+      ]
+    },
+    {
+      "printedName": "Darrell E. Issa",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:i000056",
+      "canonicalName": "Issa, Darrell",
+      "givenName": "Darrell",
+      "familyName": "Issa",
+      "district": "48",
+      "contexts": [
+        {
+          "name": "International Relations"
+        },
+        {
+          "name": "East Asia and the Pacific",
+          "parentName": "International Relations"
+        },
+        {
+          "name": "The Middle East and South Asia",
+          "parentName": "International Relations"
+        },
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "Commercial and Administrative Law",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Immigration and Claims",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Small Business"
+        },
+        {
+          "name": "Tax, Finance, and Exports",
+          "parentName": "Small Business"
+        },
+        {
+          "name": "Workforce, Empowerment, and Government Programs",
+          "parentName": "Small Business"
+        }
+      ]
+    },
+    {
+      "printedName": "Edward A. Royce",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:r000487",
+      "canonicalName": "Royce, Edward R.",
+      "givenName": "ED",
+      "familyName": "ROYCE",
+      "district": "39",
+      "contexts": [
+        {
+          "name": "Africa",
+          "parentName": "International Relations"
+        }
+      ],
+      "corroboration": {
+        "name": "Edward R. Royce",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "International Relations"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "Lamar S. Smith",
+      "state": "TX",
+      "chamber": "lower",
+      "personId": "person:congress:s000583",
+      "canonicalName": "Smith, Lamar",
+      "givenName": "LAMAR",
+      "familyName": "SMITH",
+      "district": "21",
+      "contexts": [
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "The Constitution",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Crime",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Immigration and Claims",
+          "parentName": "Judiciary"
+        }
+      ]
+    },
+    {
+      "printedName": "Chris Smith",
+      "state": "NJ",
+      "chamber": "lower",
+      "personId": "person:congress:s000522",
+      "canonicalName": "Smith, Christopher H.",
+      "givenName": "Christopher",
+      "familyName": "Smith",
+      "district": "4",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        },
+        {
+          "name": "Benefits",
+          "parentName": "Veterans’ Affairs"
+        }
+      ]
+    },
+    {
+      "printedName": "Mike Bilirakis",
+      "state": "FL",
+      "chamber": "lower",
+      "personId": "person:congress:b000463",
+      "canonicalName": "Bilirakis, Michael",
+      "givenName": "MICHAEL",
+      "familyName": "BILIRAKIS",
+      "district": "9",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        },
+        {
+          "name": "Oversight and Investigations",
+          "parentName": "Veterans’ Affairs"
+        }
+      ]
+    },
+    {
+      "printedName": "Mike Simpson",
+      "state": "ID",
+      "chamber": "lower",
+      "personId": "person:congress:s001148",
+      "canonicalName": "Simpson, Michael K.",
+      "givenName": "Michael",
+      "familyName": "Simpson",
+      "district": "2",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        },
+        {
+          "name": "Health",
+          "parentName": "Veterans’ Affairs"
+        }
+      ]
+    },
+    {
+      "printedName": "Philip S. English",
+      "state": "PA",
+      "chamber": "lower",
+      "personId": "person:congress:e000187",
+      "canonicalName": "English, Phil",
+      "givenName": "PHIL",
+      "familyName": "ENGLISH",
+      "district": "21",
+      "contexts": [
+        {
+          "name": "Ways and Means"
+        },
+        {
+          "name": "Health",
+          "parentName": "Ways and Means"
+        },
+        {
+          "name": "Human Resources",
+          "parentName": "Ways and Means"
+        }
+      ]
+    }
+  ]
+}
