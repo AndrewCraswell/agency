@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { ingestionContract } from "../../src/api/ingestion-contract"
 import { jsonResponse, notFoundResponse, requestCorrelationId } from "../health/response"
 import { getReadinessDependencies } from "./dependencies"
 
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     return jsonResponse(correlationId, isServiceReady ? 200 : 503, {
       ...readinessDetails,
+      ingestionContract,
       status: isServiceReady ? "ready" : "unavailable"
     })
   } catch (error) {

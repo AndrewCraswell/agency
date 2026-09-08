@@ -316,6 +316,16 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     expect(otherCongressPersonTerms).toEqual([
       expect.objectContaining({ id: otherCongressTermId, isActive: false, sourceProvider: "congress" })
     ])
+    await replaceEntitySnapshot(database, jurisdictionId, {
+      ...congressTermSnapshot(congressPersonId, currentTermId, "current"),
+      termPersonIds: [congressPersonId],
+      termSourceProvider: "congress"
+    })
+    const replayedTerms = await database
+      .select()
+      .from(schema.legislativeTerms)
+      .where(eq(schema.legislativeTerms.personId, congressPersonId))
+    expect(replayedTerms.map((term) => term.id).sort()).toEqual([currentTermId, nonCongressTermId].sort())
   })
 
   it("keeps an uninterrupted source relationship in its original tenure", async () => {

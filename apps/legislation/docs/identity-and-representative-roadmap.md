@@ -2,10 +2,9 @@
 
 ## Purpose and status
 
-Status: planned after the complete embedding pass. The ingestion, document,
-OCR, supporting-material, and embedding foundations are tracked separately.
-This roadmap begins only after the embedding completion and retrieval-quality
-gates pass.
+Status: identity audit and federal synchronization are in progress. The September 8
+[implementation reconciliation](identity-audit-follow-up.md) supersedes older planning assumptions.
+Office/geography expansion is not implied by completion of the bounded identity repairs.
 
 The outcome is one provenance-preserving civic graph that lets the web
 application answer:
@@ -29,8 +28,8 @@ user's home address.
 | Canonical legislation ingestion | Complete | Bills, actions, sponsors, amendments, votes, people, organizations, terms, memberships, events, documents, and supporting materials are persisted under the `legislation` schema. |
 | Document, OCR, and supporting-material processing | Complete | Ordinary ingestion invokes managed OCR, completion gates include retryable and OCR work, and the one-time polling sweep is removed. |
 | Embedding model selection and retrieval canary | Complete | The accepted mixed-model contract, dedicated vector tables, Trigger tasks, MCP retrieval, selective reranking, and treatment/control evaluations pass. |
-| Complete embedding corpus pass | In progress | Structured amendments are complete. The remaining bill, material-section, and document-section work is moving through PgBouncer to a 128-worker steady state, with temporary 160- and 200-worker throughput canaries and an 80-session PostgreSQL stop threshold. Completion requires every product controller and index-maintenance task to finish with the documented quality and operational gates. |
-| Canonical official identity expansion | Planned | Phase 1. |
+| Complete embedding corpus pass | Corpus complete; release gates separate | EMB-005 records complete generation and valid indexes. EMB-006/007 retain evaluation, spend and incremental acceptance gates; old worker-canary descriptions are not current status. |
+| Canonical official identity expansion | In progress | Phase 1 inventory and federal repairs exist; office and geography expansion remain planned. |
 | District and address resolution | Planned | Phase 3. |
 | Unstructured entity extraction and linking | Planned | Phase 4. |
 | Official activity navigation | Planned | Phase 5. |
@@ -58,7 +57,7 @@ default.
 | Source | Use | Authority and serving rule |
 | --- | --- | --- |
 | [Congress.gov API](https://api.congress.gov/) | Federal members, service context, bills, amendments, and related legislative records. | Authoritative federal acquisition source for these records. It may retain relationship metadata, but does not materialize or update canonical federal committee organizations. Archive responses and serve normalized local records. |
-| [GovInfo](https://www.govinfo.gov/developers) | Federal committees, subcommittees, and memberships. | Sole approved federal committee-data source. Canonical ingestion is pending; do not treat another provider as a fallback. |
+| [GovInfo](https://www.govinfo.gov/developers) | Federal committees, subcommittees, and memberships. | Sole approved federal committee-data source. The importer and historical membership data exist; do not add a fallback provider or infer exact tenure dates from snapshots. |
 | [Open States scrapers](https://github.com/openstates/openstates-scrapers) and [people data](https://github.com/openstates/people) | State officials, roles, memberships, committees, bills, votes, and events. | Sole approved state committee-data source and self-hosted normalized state acquisition. Do not depend on the hosted 250-request quota for routine sync. |
 | [Census Geocoder](https://geocoding.geo.census.gov/geocoder/) | Standardize a submitted address and return coordinates and current geographies. | Request-time web backend dependency with strict privacy, timeout, and no-persistence rules. |
 | [Census TIGER/Line](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html) | Current and historical congressional and state legislative boundary geometry. | Versioned, checksummed PostGIS import used for local and historical point-in-polygon resolution. |
@@ -191,14 +190,14 @@ together only after the contract document is accepted.
 | --- | --- | --- |
 | IDN-101 | In progress | [Identity inventory](identity-link-inventory.md) records repaired 432 vote links, 416 source-backed committee sponsor names, and authoritative term replay for 1,407 people. Importer corrections are deployed as Trigger 20260908.8. Exact-name collision is the distinct Payne father/son pair; broader contextual alias checks remain open. The inventory contains deployed API acceptance and sync-resumption evidence. |
 | IDN-102 | Planned | Write the canonical person, office, district, identifier, alias, term, and provenance contracts, including merge and split rules. |
-| IDN-103 | Planned | Add `external_identifiers` and uniqueness rules for Bioguide, OpenStates, Wikidata, and provider-native IDs. |
-| IDN-104 | Planned | Add `entity_aliases` with normalization, validity dates, language, and provenance. |
+| IDN-103 | Partial | Reuse `person_external_identifiers`, `people.source_id` and `upstream_ids`; do not create a parallel identifier table. The external-identifier table has no production rows. Provider-scoped uniqueness and accepted-source population remain open; this row does not approve a new provider. |
+| IDN-104 | Partial | Reuse `person_aliases` and OpenStates detail normalization. The table has no production rows. Source-backed population, validity dates and language remain open; names alone cannot merge people. |
 | IDN-105 | Planned | Add `offices` and `office_terms`; migrate service facts from `legislative_terms` without losing source identity. |
 | IDN-106 | Planned | Add versioned `districts` and `district_geometries` with PostGIS indexes and non-overlapping effective-date checks. |
 | IDN-107 | Planned | Add `places`, `entity_mentions`, `entity_links`, and `document_citations` with bounded evidence fields and source foreign keys. |
-| IDN-108 | Planned | Add fixtures for same-name officials, party changes, chamber changes, appointments, vacancies, redistricting, and non-consecutive service. |
-| IDN-109 | Planned | Add migration, schema integration tests, query indexes, deletion rules, and validation metrics. |
-| IDN-110 | Planned | Document data ownership and forbid name-only automatic merges. |
+| IDN-108 | Partial | Existing hydration and persistence fixtures cover detail supersession and replay; membership tests cover distinct tenures. Expand appointments, vacancies, redistricting and other untested cases rather than recreating existing suites. |
+| IDN-109 | Partial | Person/profile/alias/identifier/term schemas have foreign keys, provenance checks, indexes and integration tests. Future office/geography models still need their own acceptance. |
+| IDN-110 | Documented; enforcement partial | Rules forbid name-only merges. Incomplete name-only vote stubs are excluded from canonical people results. State acquisition and stable-ID reconciliation remain open. |
 
 Exit gate: the migration passes on a production-shaped copy, every existing
 relationship remains resolvable, and ambiguous identities are reported rather
@@ -211,14 +210,14 @@ parallel after the shared contracts land.
 
 | Task | Status | Deliverable and acceptance gate |
 | --- | --- | --- |
-| OFF-201 | Planned | Implement a Congress.gov member client keyed by Bioguide ID with bounded pagination, source archiving, and retry telemetry. |
-| OFF-202 | Planned | Normalize federal member names, identifiers, offices, service terms, state, district, party, and official links. |
-| OFF-203 | Planned | Reconcile Congress.gov members with existing bill sponsors, amendment sponsors, and House vote positions. |
+| OFF-201 | Partial | CongressClient member collection/detail and bounded Trigger synchronization exist. Audit artifact retention against the proposed archival contract; do not rebuild the client. |
+| OFF-202 | Partial | Detail normalization persists canonical people, profiles, jurisdictions and Congress-specific terms. Separate offices and external-identifier population remain open. |
+| OFF-203 | Partial | Completed the bounded 432-vote-link, 416 committee-sponsor-name and 1,407-person term repairs with API verification. This is not a census of every relationship's historical correctness. |
 | OFF-204 | Planned | Import self-hosted OpenStates people, roles, offices, districts, and memberships without using the hosted API quota. |
 | OFF-205 | Planned | Reconcile state people with existing sponsors, vote positions, committees, and event participants. |
 | OFF-206 | Planned | Model vacancies, special elections, appointments, resignations, party changes, and overlapping source observations. |
 | OFF-207 | Planned | Add current and historical completeness reports by jurisdiction, chamber, district, and date. |
-| OFF-208 | Planned | Add Trigger tasks for federal and state official refreshes with source-specific schedules, durable checkpoints, and non-overlap. |
+| OFF-208 | Partial | Hourly Congress coordinator, durable checkpoints and bounded children are active. The September 8 member refresh completed; the overall resumed wave still needs terminal verification. Self-hosted state ingestion remains gated. |
 | OFF-209 | Planned | Add conflict quarantine so a lower-authority source cannot overwrite an authoritative service interval. |
 | OFF-210 | Planned | Run a federal canary and three-state canary covering one ordinary, one multi-member or unusual, and one redistricted jurisdiction. |
 

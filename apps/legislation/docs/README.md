@@ -15,6 +15,7 @@
 - [OCR canary and historical backfill cost report](ocr-backfill-cost-report.md)
 - [Embedding rollout and retrieval-quality gate](embedding-rollout-plan.md)
 - [Identity, entity, and representative roadmap](identity-and-representative-roadmap.md)
+- [Identity audit follow-up and importer release gate](identity-audit-follow-up.md)
 - [Committee membership history](committee-membership-history.md)
 - [Historical committee reconciliation policy](committee-reconciliation-policy.md)
 - [GovInfo committee edition inventory](committee-directory-inventory.md)

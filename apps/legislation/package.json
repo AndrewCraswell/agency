@@ -105,7 +105,7 @@
     "test:vitest": "vitest run",
     "test:webhook-verification-receiver": "node --test scripts/webhook-verification-receiver/receiver.test.mjs",
     "test:watch": "vitest",
-    "trigger:deploy": "trigger deploy --config trigger.config.ts",
+    "trigger:deploy": "node --env-file-if-exists=.env --import tsx scripts/check-api-ingestion-contract.ts && trigger deploy --config trigger.config.ts",
     "trigger:dev": "trigger dev --config trigger.config.ts",
     "trigger:backfill": "tsx scripts/run-trigger-backfill.ts",
     "trigger:schedules": "tsx scripts/reconcile-trigger-schedules.ts",

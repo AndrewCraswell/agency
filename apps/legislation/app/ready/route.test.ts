@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { ingestionContract } from "../../src/api/ingestion-contract"
 
 const readiness = {
   check: vi.fn<() => Promise<boolean>>(),
@@ -37,6 +38,7 @@ describe("GET /ready", () => {
     expect(response.headers.get("x-correlation-id")).toBe("ready-test")
     await expect(response.json()).resolves.toEqual({
       databasePool: { maximum: 10, total: 2 },
+      ingestionContract,
       status: "ready"
     })
   })
@@ -51,6 +53,7 @@ describe("GET /ready", () => {
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toEqual({
       databasePool: { saturation: 1, waiting: 2 },
+      ingestionContract,
       status: "unavailable"
     })
     expect(warning).toHaveBeenCalledWith("readiness check failed", {

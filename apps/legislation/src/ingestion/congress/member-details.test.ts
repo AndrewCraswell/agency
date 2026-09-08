@@ -38,5 +38,29 @@ describe("Congress member detail hydration", () => {
     expect(snapshot.termPersonIds).toEqual(["person:congress:a000014"])
     expect(snapshot.terms[0]?.startDate).toBeUndefined()
     expect(snapshot.terms[0]?.endDate).toBeUndefined()
+    const replay = await hydrateCongressMemberSnapshot(
+      [member],
+      105,
+      { retrievedAt: new Date("2026-09-09T00:00:00Z") },
+      client
+    )
+    expect(
+      replay.terms.map(({ id, sourceId, officeTitle, startDate, endDate }) => ({
+        id,
+        sourceId,
+        officeTitle,
+        startDate,
+        endDate
+      }))
+    ).toEqual(
+      snapshot.terms.map(({ id, sourceId, officeTitle, startDate, endDate }) => ({
+        id,
+        sourceId,
+        officeTitle,
+        startDate,
+        endDate
+      }))
+    )
+    expect(replay.termPersonIds).toEqual(snapshot.termPersonIds)
   })
 })
