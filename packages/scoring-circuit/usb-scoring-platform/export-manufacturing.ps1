@@ -26,6 +26,9 @@ if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
 Invoke-KiCad @('pcb', 'export', 'gerbers', $board, '--layers', 'F.Cu,In1.Cu,In2.Cu,B.Cu,F.Mask,B.Mask,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,Edge.Cuts', '--check-zones', '--subtract-soldermask', '--output', "$exportDirectory/gerbers/")
 Invoke-KiCad @('pcb', 'export', 'drill', $board, '--format', 'excellon', '--excellon-units', 'mm', '--excellon-separate-th', '--generate-report', '--report-path', "$exportDirectory/drill-report.txt", '--output', "$exportDirectory/gerbers/")
 Compress-Archive -Path "$exportDirectory/gerbers/*" -DestinationPath "$exportDirectory/pcb-fabrication.zip"
+foreach ($handoff in @('README.md', 'design-review.md', 'usb-acquisition-power.md')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $handoff) -Destination (Join-Path $exportDirectory $handoff)
+}
 # U21 must be programmed before the board can qualify either power mode. Build from current source,
 # never copy a possibly stale image from a previous firmware/out directory.
 $controllerDirectory = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../../apps/scoring/firmware/power-control'))
