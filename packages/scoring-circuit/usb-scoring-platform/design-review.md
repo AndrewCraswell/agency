@@ -478,7 +478,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U10       | SN74AXC1T45DCKR       | CORE-to-APP UART level translator.                                               | Retain; dual power-domain isolation behavior, not galvanic isolation. A-to-B DIR correct.                                                                              |
 | U11       | SN74AXC1T45DCKR       | APP-to-CORE UART level translator.                                               | Retain; B-to-A DIR correct; power-off leakage remains budgeted.                                                                                                        |
 | U12       | W5500                 | W5500 Ethernet controller.                                                       | Retain; SCSn/RSTn internal pull-ups rule out missing-pull-up claim. Ensure firmware reset >=500us and startup wait.                                                    |
-| U13       | TSOP38438             | 38kHz TSOP38438 IR demodulator.                                                  | Retain; OUT/GND/VS pin roles checked. Carrier is not encryption; optical range/flood testing remains.                                                                  |
+| U13       | TSOP38438             | Vishay pin order OUT/GND/VS and 2.54mm pitch match native pads.                  | 1.1mm holes exceed the 0.7 by 0.5mm maximum straight lead section. Body/lens seating and optical window still need review; range/flood testing remains.                |
 | U14       | SN74AHCT541PWR        | Eight HUB75 3.3-to-5V AHCT buffer channels.                                      | Retain; OE1 grounded, OE2 under Q1 control.                                                                                                                            |
 | U15       | SN74AHCT541PWR        | Remaining five HUB75 AHCT buffer channels.                                       | Retain; three unused inputs grounded, outputs NC. Second IC is needed for 13 signals.                                                                                  |
 | U16       | 4N32M                 | Favero port 1 optodarlington.                                                    | Retain; base resistor and reverse diode intentional. Cable load, CTR and release time need sample testing.                                                             |
@@ -683,6 +683,11 @@ and nominal model checks above do not establish physical DC-bias, thermal or who
 guide retains the implemented 40us slots / 120us frames and now accounts for 7.8uF nominal raw-VBUS capacitance.
 
 ## Verification limits and next review order
+
+U13's [Vishay drawing, revision 2.1, page 7](https://www.vishay.com/docs/82491/tsop382.pdf) was visually compared with
+native pad positions: 2.54mm pitch, 1=IR_RX, 2=GND, 3=IR_3V3. This closes the lead/pin-map check only, not body/lens
+seating or window orientation. BZ1's TDK drawing remains unavailable from both official download paths in this pass; its
+5mm native lead pitch and 1mm holes are not newly approved from search snippets. No geometry changed.
 
 **J7 footprint correction:** Samtec's TST double-row drawing specifies 1.02mm holes, replacing the previous 1.00mm
 drill. The TST-108 body is `8 × 2.54 + 7.62 = 27.94mm` long, longer than the previous 26mm courtyard in that direction.
