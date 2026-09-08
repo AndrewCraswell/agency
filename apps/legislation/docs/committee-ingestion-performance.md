@@ -25,3 +25,15 @@ The new limits apply only to new executions; they do not change the already-time
 Acceptance: focused tests cover batch statement counts, deterministic events, unchanged batches, duplicate rejection,
 database error propagation, and out-of-order preparation followed by ordered publication. Production acceptance
 still requires database access, a measured import, unchanged rerun, and current-Congress preservation checks.
+
+## Release evidence
+
+Implementation `eb2c281` is committed and pushed to main. Trigger deployment `w5qf9huj`, version `20260908.4`,
+completed successfully. Focused verification passed 36 tests; legislation coverage passed 2,299 tests in 248 files
+and four receiver tests. Sixty database-dependent tests remain skipped. Types and lint pass. Root `pnpm verify`
+passes the check stage but fails unrelated scoring coverage thresholds; the repository-wide gate is not green.
+
+The 108th retry was not dispatched: the database connection timed out, service-side SSH has no configured key,
+and the Railway MCP read was unauthorized. CLI PgBouncer logs show recent successful query traffic, but those
+logs cannot establish the historical checkpoint or absence of an orphan transaction. No restart, cancellation,
+new credentials, or database configuration change was performed to bypass these checks.
