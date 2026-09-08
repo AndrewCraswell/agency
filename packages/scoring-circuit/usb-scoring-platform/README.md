@@ -104,6 +104,9 @@ assembly ordering fields and reference agreement, and exports:
 
 - `pcb-fabrication.zip`: four copper layers, mask/paste/silkscreen, outline and separate plated/unplated drill files.
 - `bom.csv` and `placement.csv`: separate assembly inputs, including through-hole parts but excluding bare J14.
+- `jlcpcb-bom.csv` and `jlcpcb-placement.csv`: upload-column versions of those same rows. Exact MPNs are preserved; no
+  LCSC matches or part-specific rotation corrections are invented. Positions remain native footprint origins in mm, not
+  independently verified component centroids. Supplier placement preview/review remains required.
 - `programming/U21/`: freshly built controller image and programming instructions.
 - `README.md`, `design-review.md` and `usb-acquisition-power.md`: the matching handoff and open findings.
 

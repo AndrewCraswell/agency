@@ -23,6 +23,27 @@ if (@($bom | Where-Object { -not $_.Manufacturer -or -not $_.MPN -or -not $_.Foo
 if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
     @($placement | Group-Object Ref | Where-Object Count -ne 1).Count -ne 0 -or
     @(Compare-Object $bom.Reference $placement.Ref).Count -ne 0) { throw 'BOM and placement references do not match uniquely.' }
+# Supplier upload aliases, generated from this same native export. Do not reuse older catalog matches.
+# Exact MPN is the procurement comment: legacy Value labels can contain a lower nominal voltage rating.
+$bom | ForEach-Object {
+    [pscustomobject][ordered]@{
+        Comment = $_.MPN
+        Designator = $_.Reference
+        Footprint = $_.Footprint
+        Manufacturer = $_.Manufacturer
+        MPN = $_.MPN
+    }
+} | Export-Csv -LiteralPath "$exportDirectory/jlcpcb-bom.csv" -NoTypeInformation -Encoding utf8
+$placement | ForEach-Object {
+    if ($_.Side -notin @('top', 'bottom')) { throw "Unknown placement side for $($_.Ref)." }
+    [pscustomobject][ordered]@{
+        Designator = $_.Ref
+        'Mid X' = $_.PosX
+        'Mid Y' = $_.PosY
+        Layer = if ($_.Side -eq 'top') { 'Top' } else { 'Bottom' }
+        Rotation = $_.Rot
+    }
+} | Export-Csv -LiteralPath "$exportDirectory/jlcpcb-placement.csv" -NoTypeInformation -Encoding utf8
 Invoke-KiCad @('pcb', 'export', 'gerbers', $board, '--layers', 'F.Cu,In1.Cu,In2.Cu,B.Cu,F.Mask,B.Mask,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,Edge.Cuts', '--check-zones', '--subtract-soldermask', '--output', "$exportDirectory/gerbers/")
 Invoke-KiCad @('pcb', 'export', 'drill', $board, '--format', 'excellon', '--excellon-units', 'mm', '--excellon-separate-th', '--generate-report', '--report-path', "$exportDirectory/drill-report.txt", '--output', "$exportDirectory/gerbers/")
 Compress-Archive -Path "$exportDirectory/gerbers/*" -DestinationPath "$exportDirectory/pcb-fabrication.zip"

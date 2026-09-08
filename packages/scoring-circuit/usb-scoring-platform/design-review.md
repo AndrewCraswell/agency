@@ -1,6 +1,6 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/manufacturing-20260908-080109/` assembly
+Started 8 September 2026. Review the current native KiCad board and the `output/manufacturing-20260908-082511/` assembly
 export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
 backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
@@ -16,6 +16,17 @@ Bench tests requiring this prototype do not block ordering it, but do block clai
 confirmed P0 finding has been established in this initial pass; that is not an all-clear.
 
 ## Findings and opportunities
+
+**Current supplier upload files:** the native exporter now generates `jlcpcb-bom.csv` and `jlcpcb-placement.csv`
+alongside the original KiCad exports. All 223 rows were compared field by field: exact MPN/manufacturer/footprint and
+reference agree, and coordinates, rotation and layer are unchanged. J14 and the seven removed regulator-support parts
+are absent. Native ERC, DRC, schematic parity and unconnected counts are zero; the fresh U21 HEX retains SHA256
+`80349F8D523EF5FF46FE6D8545EC02A0561F4723863381F4E8CC91668D38B132`. This resolves local upload formatting only. Native
+footprint origins are not independently approved assembly centroids; supplier matching and placement preview remain
+open. The old supplier draft was not updated or submitted. Repository verification is not clean: the scoring coverage
+gate remains below its configured 100% thresholds; no threshold was reduced.
+[JLCPCB BOM format](https://jlcpcb.com/help/article/bill-of-materials-for-pcb-assembly),
+[placement format](https://jlcpcb.com/help/article/pick-place-file-for-pcb-assembly).
 
 **C56 sourcing correction:** selected TDK `C1608X5R1C475K080AC` (JLCPCB `C2167106`) in place of `C1608X5R1A475K080AC`.
 TDK reports the replacement in production; DigiKey lists both the old part and the previously proposed Murata
@@ -132,6 +143,10 @@ height (10.2 +0.8/-0.2), plus actual seating clearance. No copper, footprint or 
 performance or whole-board isolation acceptance.
 
 ### Current assembly handoff
+
+| Priority | Item                     | Latest state                                                                                                               | Remaining action                                                                                                               |
+| -------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| P2       | JLCPCB upload formatting | Resolved locally: 223 BOM and placement rows match the fresh native export, with zero ERC/DRC/parity/unconnected findings. | Replace stale supplier files and review catalog matches, centroids and orientations before approval; no submission authorized. |
 
 The consolidated README replaces superseded build snapshots and records factory U21 programming, through-hole assembly,
 U18 process handling and external harness responsibilities without claiming supplier acceptance. A fresh export at
