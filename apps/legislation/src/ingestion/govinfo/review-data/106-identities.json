@@ -1,5 +1,6 @@
 {
   "reviewNotes": [
+    "C000560 and CDIR-1999-06-15-OK-H-2 identify Thomas Allen Coburn. CRPT-106hrpt1047 corroborates Commerce and Energy and Power; GAOREPORTS-HEHS-00-54 identifies his Health and Environment vice-chair role. Only the printed Tom A. Coburn cells apply.",
     "F000439 and the same-edition Tennessee biography identify William H.",
     "Frist; contemporary hearings confirm the printed Bill Frist chair roles.",
     "The Directory's Armed Services section prints H.; M000472 and 106th",
@@ -47,6 +48,21 @@
     }
   ],
   "identities": [
+    {
+      "printedName": "Tom A. Coburn",
+      "state": "OK",
+      "chamber": "lower",
+      "personId": "person:congress:c000560",
+      "canonicalName": "Coburn, Tom",
+      "givenName": "TOM",
+      "familyName": "COBURN",
+      "district": "2",
+      "contexts": [
+        { "name": "Commerce" },
+        { "name": "Energy and Power", "parentName": "Commerce" },
+        { "name": "Health and Environment", "parentName": "Commerce" }
+      ]
+    },
     {
       "printedName": "Bill Frist",
       "state": "TN",

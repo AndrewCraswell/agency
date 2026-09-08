@@ -393,3 +393,19 @@ district. The decision is restricted to the three fingerprinted editions and the
 Bill/William alias. Roles and observed-date semantics remain unchanged. The focused suite passed 113 tests.
 Fresh parsing against the production catalog validated all 42 appearances across the three editions.
 Other unresolved identities continue to block publication; no import was launched.
+
+### Reviewed Coburn middle initial, September 8, 2026
+
+Each 106th edition prints Tom A. Coburn of Oklahoma in Commerce, Energy and Power, and Health and Environment.
+The last entry is vice-chair. The [same-edition biography](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-OK-H-2.htm)
+identifies Thomas Allen Coburn; [official biography C000560](https://history.house.gov/People/Detail/11151) confirms
+his 104th–106th House service. The [106th Commerce activity report](https://www.govinfo.gov/content/pkg/CRPT-106hrpt1047/html/CRPT-106hrpt1047.htm)
+corroborates Commerce and Energy and Power membership, and the [March 1, 2000 GAO report](https://www.govinfo.gov/content/pkg/GAOREPORTS-HEHS-00-54/pdf/GAOREPORTS-HEHS-00-54.pdf)
+explicitly addresses him as Health and Environment vice-chair. These are manual validation references, not new
+ingestion providers or membership boundary dates.
+
+The production catalog has `person:congress:c000560`, `Coburn, Tom`, with consistent 106th House terms for district 2.
+The three exact contexts are added to the existing 106th JSON mapping dataset; no matching-engine changes or general
+middle-initial rules are introduced. The original role is preserved. Other unresolved identities still block import.
+Fresh parsing against the production catalog validated all nine appearances; all 240 focused review-data, identity,
+historical-observation, normalization and synchronization tests passed. No import was launched.
