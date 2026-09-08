@@ -123,9 +123,9 @@ assembly ordering fields and reference agreement, and exports:
 - `programming/U21/`: freshly built controller image and programming instructions.
 - `README.md`, `design-review.md` and `usb-acquisition-power.md`: the matching handoff and open findings.
 
-The latest checked board export is `output/mechanical-isolation-review/`: 223 matching assembly references and zero ERC,
-DRC, unconnected or schematic-parity findings. An export is a review package, not authorization to manufacture.
-Re-export after any subsequent design change.
+The latest checked board export is `output/isolator-mask-review/`: 223 matching assembly references and zero ERC, DRC,
+unconnected or schematic-parity findings. An export is a review package, not authorization to manufacture. Re-export
+after any subsequent design change.
 
 ### Supplier draft status
 

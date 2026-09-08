@@ -193,7 +193,7 @@ const previewHtml = `<!doctype html>
     <li><strong>$${estimatedBomTotalUsd.toFixed(2)}</strong> estimated component cost, excluding the bare PCB, assembly, shipping, tax, and off-board equipment</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
   </ul>
-  <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype checklist</a><a href="../docs/clean-sheet-board-architecture.md">Board architecture</a><a href="bom.csv">Prototype BOM</a><a href="placement.csv">Placement file</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
+  <p class="resources"><a href="../usb-scoring-platform/design-review.md">Current hardware review</a><a href="../docs/clean-sheet-board-architecture.md">Board architecture</a><a href="bom.csv">Prototype BOM</a><a href="placement.csv">Placement file</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
   <main>
     <section aria-labelledby="board-preview-heading">
       <figure>

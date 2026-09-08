@@ -9,12 +9,12 @@ are not retained here.
 - [C17 and WebAssembly migration](c17-wasm-simulator-migration.md) owns the single portable scoring core.
 - [Encrypted IR remote-control contract](encrypted-ir-remote-control-contract.md) owns referee-control behavior and
   security requirements.
-- [ESP32 prototype backlog](../../../packages/scoring-circuit/docs/esp32-prototype-backlog.md) owns the clean-sheet PCB
-  critical path.
+- [USB scoring platform](../../../packages/scoring-circuit/usb-scoring-platform/README.md) describes the current native
+  KiCad board. Its [design review](../../../packages/scoring-circuit/usb-scoring-platform/design-review.md) owns hardware
+  findings, remaining verification, and assembly constraints.
 - [Technical debt](technical-debt.md) contains only current, actionable cleanup findings.
 
-There is no separate cross-project delivery backlog. It was removed after the clean-sheet ESP32-S3 prototype, C17
-core migration, and encrypted-IR work each gained a current owner above.
+Use these plans rather than the completed checklist for the earlier ESP32-only carrier.
 
 ## Normative inputs
 
@@ -50,6 +50,7 @@ that the prototype is homologated.
 
 - [Product release manifest](product-release-manifest-contract.md)
 
-The retired dual-processor threat, reset, transport, and recovery documents were removed when the prototype moved to
-one ESP32-S3. Replacement security and recovery contracts must describe that architecture rather than preserving the
-old STM32 boundary.
+The current board has separate acquisition, application, and primary power-control processors. Consult the board's
+[power-mode contract](../../../packages/scoring-circuit/usb-scoring-platform/usb-acquisition-power.md) and
+[power-controller firmware](../firmware/power-control/README.md) for that boundary. Hardware selection does not by
+itself prove the release or recovery firmware is complete.

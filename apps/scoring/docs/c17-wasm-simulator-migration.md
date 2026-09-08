@@ -1,13 +1,16 @@
 # C17 scoring core and WebAssembly simulator migration
 
-**Status:** approved implementation plan
+**Status:** migration incomplete; target reconciled to the current native KiCad board
+
+The ESP32-S3 owns application/display interfaces, not the scoring core; STM32C011 owns primary power control.
+The [native board](../../../packages/scoring-circuit/usb-scoring-platform/README.md) is the hardware baseline.
 
 ## Decision
 
 The product will use one deterministic, heapless C17 scoring core for all
 scoring execution:
 
-- the ESP32-S3 firmware links the core directly;
+- the STM32G474 firmware links the core directly;
 - native host tools compile the same source for conformance, sanitizer, and
   fuzz testing; and
 - the browser simulator loads the same core as WebAssembly.
@@ -28,7 +31,7 @@ shared C17 core cannot satisfy.
 
 The TypeScript scoring engines cannot be deleted today:
 
-- the ESP32-S3 target executable does not yet link the C scoring core;
+- the STM32G474 target integration has not been verified against the current native board;
 - the C input and output model omits fault, uncertainty, grounding, diagnostic,
   reset, and unavailable states implemented by the TypeScript specification;
 - the current 54-vector C corpus is a bounded subset generated from the
@@ -37,7 +40,7 @@ The TypeScript scoring engines cannot be deleted today:
 - the public C structs expose pointers, `bool`, enums, `size_t`, padding, and
   mutable state, so they are not a stable WebAssembly ABI;
 - no pinned C-to-WebAssembly build or browser adapter exists; and
-- ESP32-S3 timing, stack, acquisition, and hardware-output evidence is incomplete.
+- STM32G474 timing, stack, acquisition, and hardware-output evidence is incomplete.
 
 The TypeScript scorer remains the active simulator implementation until
 `CW-16`. From the shadow phase through deletion it is comparison-only, and it
@@ -51,30 +54,30 @@ may be removed only after every deletion gate below passes.
 
 | ID | Status | Latest state | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| `CW-00` | done | Commit `351662e` refreshes the 91-artifact behavior-oracle baseline after root review. The oracle check passes with digest `sha256:8b8866b902dac2928c8859d44b874176d56a8077c0b0a0528b3183c53280b046`; 29 golden scenarios, focused Rules/corpus/decision/display suites, golden vectors, and the product-release host test also pass. This grants no C/WebAssembly parity credit. | Repair the current behavior-oracle baseline. | Current repository state | The existing TypeScript-era manifest is regenerated only after review of every changed input, binds all behavior-affecting simulator sources/tests, names the simulator test command, and passes `--check`; this maintenance grants no C/WebAssembly parity credit. |
-| `CW-01` | done | Commit `2a06a86` updates the root-reviewed ownership decision for the clean-sheet architecture: native host, ESP32-S3 firmware, and WebAssembly all run the same portable C17 authority; peripheral adapters remain non-authoritative and there is no TypeScript scoring fallback. | Freeze this architecture and ownership decision. | Current C17 ADR | One C17 core is named as the only future scoring implementation for native, ESP32-S3, and WebAssembly; peripheral adapters remain non-authoritative. |
-| `CW-02` | ready | `CW-01` is closed. Complete a concise human-reviewed ownership inventory without adding a backlog validator or generated status artifact. | Inventory every scoring-affecting TypeScript branch and consumer. | `CW-01` | The plan names every current scorer, rule/timing source, adapter, simulator consumer, and deletion or migration disposition; root review confirms no production scoring path or fallback is omitted. |
+| `CW-00` | review | Current oracle check fails: existing runtime, simulator, firmware and environment hashes have drifted. Review those artifacts before regenerating; the old passing digest is not current evidence. | Repair the current behavior-oracle baseline. | Current repository state | The existing TypeScript-era manifest is regenerated only after review of every changed input, binds all behavior-affecting simulator sources/tests, names the simulator test command, and passes `--check`; this maintenance grants no C/WebAssembly parity credit. |
+| `CW-01` | review | Target corrected from the superseded ESP32-only plan to STM32G474. Portable C17 ownership is unchanged; prior implementation evidence does not certify the current board integration. | Freeze this architecture and ownership decision. | Current C17 ADR | One C17 core is named as the only future scoring implementation for native, STM32G474, and WebAssembly; peripheral adapters remain non-authoritative. |
+| `CW-02` | blocked | Await the corrected `CW-01` target review. Complete a concise human-reviewed ownership inventory without adding a backlog validator or generated status artifact. | Inventory every scoring-affecting TypeScript branch and consumer. | `CW-01` | The plan names every current scorer, rule/timing source, adapter, simulator consumer, and deletion or migration disposition; root review confirms no production scoring path or fallback is omitted. |
 | `CW-03` | blocked | Root-approved per-weapon logical schema and 11 focused tests are committed; closure waits for dependency `CW-02`. | Freeze language-neutral normalized input, state, result, and error schemas. | `CW-02`, normative rule review | Schemas cover all three weapons, simultaneous events, unavailable and indeterminate inputs, faults, diagnostics, reset, overflow, and exhaustion without JavaScript-shaped semantics. |
 | `CW-04` | backlog | Next after `CW-03`: Freeze portable ABI version 1. | Freeze portable ABI version 1. | `CW-03` | A byte-oriented wrapper uses fixed-width fields, canonical endianness, explicit lengths and capacities, version negotiation, deterministic status codes, opaque state, and no raw C struct layout, pointers, callbacks, heap, or wall clock. |
-| `CW-05` | backlog | Next after `CW-03`: Generate rule and timing profiles from one reviewed artifact. | Generate rule and timing profiles from one reviewed artifact. | `CW-03` | Native, ESP32-S3, and WebAssembly consume identical generated values and expose the same rule/timing digest; copied timing constants are removed from the C core. |
+| `CW-05` | backlog | Next after `CW-03`: Generate rule and timing profiles from one reviewed artifact. | Generate rule and timing profiles from one reviewed artifact. | `CW-03` | Native, STM32G474, and WebAssembly consume identical generated values and expose the same rule/timing digest; copied timing constants are removed from the C core. |
 | `CW-06E` | backlog | Next after `CW-03`, `CW-05`: Complete C épée and resistance behavior. | Complete C épée and resistance behavior. | `CW-03`, `CW-05` | Normal and exceptional resistance, grounded material, uncertainty, unavailable and line-fault states, contact duration, double-hit ordering, and all endpoints match the reviewed corpus. |
 | `CW-06F` | backlog | Next after `CW-03`, `CW-05`: Complete C foil behavior. | Complete C foil behavior. | `CW-03`, `CW-05` | Target classification, guard/piste and weapon faults, grounded, indeterminate and unavailable states, insulation diagnostics, contact duration, and lockout match the reviewed corpus. |
 | `CW-06S` | backlog | Next after `CW-03`, `CW-05`: Complete C sabre behavior. | Complete C sabre behavior. | `CW-03`, `CW-05` | Target and own-equipment behavior, yellow/white diagnostics, abnormal change, control break, whipover, interruption history, external-path containment, and lockout match the reviewed corpus. |
 | `CW-07` | backlog | Next after `CW-06E`, `CW-06F`, `CW-06S`: Complete common record, lifecycle, reset, and failure behavior. | Complete common record, lifecycle, reset, and failure behavior. | `CW-06E`, `CW-06F`, `CW-06S` | Decision records, unavailable results, reset and weapon transitions, bounded state, timestamp overflow, output capacity, and atomic failures are deterministic and field-complete. |
 | `CW-08` | backlog | Next after `CW-03`: Build an independent full conformance corpus. | Build an independent full conformance corpus. | `CW-03` | Reviewed expected artifacts cover every active scenario, truth-table row, boundary plus or minus one microsecond, simultaneous event, long sequence, fault, malformed ABI input, reset, maximum timestamp, and overflow. Expected results are not regenerated from C. |
 | `CW-09` | backlog | Root reran the executable gate after making it build its own required domain artifacts, so it now works from a clean checkout instead of depending on a pre-existing `dist` directory. All 11 first-party C sources are mapped, `stm32_scoring_core.c` has 100% line/function/branch coverage, and every non-core source exceeds 80% in all three metrics (lowest: 80.91% branches in `scoring_esp32_receiver.c`). The policy/parser tests pass 3 of 3. Remaining work follows `CW-04`, `CW-07`, and `CW-08`: add cross-target conformance, GCC/Clang warnings, sanitizers, static analysis, malformed-input fuzz, deterministic replay, property, and full-corpus comparison gates. | Add native C conformance, coverage, sanitizer, property, and fuzz gates. | `CW-04`, `CW-07`, `CW-08` | The LLVM coverage gate passes 100% line/function/branch coverage for the scoring core and at least 80% for every other first-party C/C++ source, with only generated/vendor/test/build-output exclusions. GCC and Clang builds pass warnings-as-errors, AddressSanitizer, UndefinedBehaviorSanitizer, static analysis, malformed-input fuzzing, deterministic replay, and full-corpus byte comparison. |
-| `CW-10` | backlog | Next after `CW-07`, `CW-09`: Link the exact core into the ESP32-S3 target. | Link the exact core into the ESP32-S3 target. | `CW-07`, `CW-09` | Link map and symbol evidence prove the same core source is present; acquisition mapping, startup readiness, watchdog, reset, stack, RAM, worst-case execution time, sample loss, and hardware-output tests pass. |
+| `CW-10` | backlog | Next after `CW-07`, `CW-09`: Link the exact core into the STM32G474 target. | Link the exact core into the STM32G474 target. | `CW-07`, `CW-09` | Link map and symbol evidence prove the same core source is present; acquisition mapping, startup readiness, watchdog, reset, stack, RAM, worst-case execution time, sample loss, and hardware-output tests pass. |
 | `CW-11` | backlog | Next after `CW-04`, `CW-09`: Pin a reproducible C-to-WebAssembly toolchain. | Pin a reproducible C-to-WebAssembly toolchain. | `CW-04`, `CW-09` | Compiler/container versions, checksums, flags, imports, exports, memory limits, artifact digest, license record, and rebuild procedure are fixed and reproducible. |
 | `CW-12` | backlog | Next after `CW-07`, `CW-11`: Build the WebAssembly scoring module. | Build the WebAssembly scoring module. | `CW-07`, `CW-11` | The module exports only the versioned ABI, imports no scoring callback, clock, filesystem, network, or allocator authority, and embeds observable core, rule, and timing digests. |
 | `CW-13` | backlog | Next after `CW-12`: Implement a fail-closed TypeScript WebAssembly adapter. | Implement a fail-closed TypeScript WebAssembly adapter. | `CW-12` | The adapter validates module/version/digests, bounds every copy, handles `i64` without unsafe number conversion, decodes canonical receipts, and returns unavailable on load failure, mismatch, trap, or malformed output. It contains no scoring rule. |
-| `CW-14` | backlog | Next after `CW-09`, `CW-10`, `CW-13`: Run native, WebAssembly, and ESP32-S3 equivalence. | Run native, WebAssembly, and ESP32-S3 equivalence. | `CW-09`, `CW-10`, `CW-13` | All targets produce byte-identical canonical scoring receipts and errors for the complete corpus and seeded adversarial traces under debug and optimized builds; target-specific artifact and build identities are checked separately against their expected manifests; zero unexplained mismatch remains. |
+| `CW-14` | backlog | Next after `CW-09`, `CW-10`, `CW-13`: Run native, WebAssembly, and STM32G474 equivalence. | Run native, WebAssembly, and STM32G474 equivalence. | `CW-09`, `CW-10`, `CW-13` | All targets produce byte-identical canonical scoring receipts and errors for the complete corpus and seeded adversarial traces under debug and optimized builds; target-specific artifact and build identities are checked separately against their expected manifests; zero unexplained mismatch remains. |
 | `CW-15` | backlog | Next after `CW-13`, `CW-14`, current simulator: Add simulator shadow comparison. | Add simulator shadow comparison. | `CW-13`, `CW-14`, current simulator | The simulator executes WebAssembly and the retained TypeScript scorer separately, records both identities, and fails visibly on any difference without treating either mismatch as a pass. |
 | `CW-16` | backlog | Next after `CW-14`, `CW-15`, browser acceptance: Cut simulator scoring over to WebAssembly. | Cut simulator scoring over to WebAssembly. | `CW-14`, `CW-15`, browser acceptance | Every scenario, run-selected action, replay, reset, and unavailable path uses WebAssembly only; desktop, mobile, keyboard, deterministic replay, load failure, trap, and digest mismatch acceptance passes. |
 | `CW-17` | backlog | Next after `CW-16`: Consolidate scenario and report contracts. | Consolidate scenario and report contracts. | `CW-16` | Browser, server, native runner, and fixtures use one generated or shared versioned schema; duplicate loose report definitions and scorer injection are removed. |
-| `CW-18` | backlog | Next after `CW-10`, `CW-17`, `CW-22`: Complete the reviewed observation period. | Complete the reviewed observation period. | `CW-10`, `CW-17`, `CW-22` | Run 14 consecutive days with at least 10,000 complete native corpus replays, 10,000 complete browser WebAssembly corpus replays, 100 complete ESP32-S3 corpus replays on each of three prototype boards, and 24 aggregate hardware-in-loop hours. A signed evidence bundle records the corpus/core/ABI/rule/timing/toolchain digests, shared scenario/report schema digest, simulator/server/native adapter source or artifact digests, board identities, run counts, durations, results, and reviewer. Any change to those inputs or any unresolved mismatch restarts the period from zero. |
+| `CW-18` | backlog | Next after `CW-10`, `CW-17`, `CW-22`: Complete the reviewed observation period. | Complete the reviewed observation period. | `CW-10`, `CW-17`, `CW-22` | Run 14 consecutive days with at least 10,000 complete native corpus replays, 10,000 complete browser WebAssembly corpus replays, 100 complete STM32G474 corpus replays on each of three prototype boards, and 24 aggregate hardware-in-loop hours. A signed evidence bundle records the corpus/core/ABI/rule/timing/toolchain digests, shared scenario/report schema digest, simulator/server/native adapter source or artifact digests, board identities, run counts, durations, results, and reviewer. Any change to those inputs or any unresolved mismatch restarts the period from zero. |
 | `CW-19A` | backlog | Next after `CW-18`: Prepare the final oracle and deletion change. | Prepare the final oracle and deletion change. | `CW-18` | Proposed manifest, scripts, package exports, commands, C/ABI/profile/toolchain inputs, corpus, simulator adapter, target evidence, and deletion list are reviewed together without deleting the TypeScript scorer or breaking verification. |
 | `CW-19B` | backlog | Next after `CW-19A`, independent review: Atomically delete the TypeScript scorer and activate the rebuilt oracle. | Atomically delete the TypeScript scorer and activate the rebuilt oracle. | `CW-19A`, independent review | One reviewed change removes every runtime/test import of the TypeScript épée, resistance, foil, and sabre scorers; removes duplicate rule tests; activates the rebuilt oracle and exports; retains independent fixtures, schemas, UI projection, orchestration, and migration evidence; and passes full repository verification with no fallback scorer or stale intermediate state. |
-| `CW-20` | backlog | Next after `CW-19B`: Package factory-facing evidence. | Package factory-facing evidence. | `CW-19B` | The evidence package records the final oracle identity, C sources, ABI, generated profiles, native/ESP32-S3/WebAssembly toolchains, complete corpus, simulator adapter, build digests, parity commands, and target results without changing the scoring baseline. |
+| `CW-20` | backlog | Next after `CW-19B`: Package factory-facing evidence. | Package factory-facing evidence. | `CW-19B` | The evidence package records the final oracle identity, C sources, ABI, generated profiles, native/STM32G474/WebAssembly toolchains, complete corpus, simulator adapter, build digests, parity commands, and target results without changing the scoring baseline. |
 | `CW-21` | backlog | Next after `CW-17`; `M4-01`, `M4-05`, `M4-08`, `M4-09`, `M5-04`, `M6-05`, `M6-07`, `M6-08`, `M7-03`, `M7-10`, `M8-03`, `BT-09`, and `BT-10` as assigned by the exact row map below: Close the 13 known planned requirement-evidence rows. | Close the 13 known planned requirement-evidence rows. | `CW-17`; `M4-01`, `M4-05`, `M4-08`, `M4-09`, `M5-04`, `M6-05`, `M6-07`, `M6-08`, `M7-03`, `M7-10`, `M8-03`, `BT-09`, and `BT-10` as assigned by the exact row map below | Every ledger row has reviewed normative, executable, target, and physical-output evidence as applicable; its exact active-scenario mapping is unchanged or changed only through separate reviewed manifest work; and promotion from `planned` to `covered` fails closed unless every declared evidence field, digest, owner, and review gate passes. |
 | `CW-22` | backlog | Next after `CW-21`: Perform an independent missing-scenario and coverage-gap analysis. | Perform an independent missing-scenario and coverage-gap analysis. | `CW-21` | An independent reviewer traces normative rules, product behavior, faults, boundaries, lifecycle and reset, malformed and unavailable states, physical outputs, and cross-target behavior to executable scenarios and evidence. Every uncovered or ambiguous item becomes a separately owned task with acceptance evidence; no finding may be silently absorbed into this audit unit. |
 
@@ -109,13 +112,13 @@ scenario exists.
 
 **Inputs:** the reviewed normative rules and traceability matrix; the committed
 golden-scenario manifest and active scenario artifacts; native, WebAssembly,
-ESP32-S3, acquisition, physical-output, audio, timing, and hardware-in-loop
+STM32G474, acquisition, physical-output, audio, timing, and hardware-in-loop
 evidence where applicable; and immutable artifact, rule, timing, schema, board,
 and toolchain identities.
 
 **Dependencies:** `CW-17` must establish the shared versioned scenario and
 report contracts and transitively closes the applicable software, corpus, ABI,
-native, WebAssembly, and ESP32-S3 parity gates. Each row must also satisfy its
+native, WebAssembly, and STM32G474 parity gates. Each row must also satisfy its
 exact additional physical and downstream evidence-task set below. The union is
 `M4-01`, `M4-05`, `M4-08`, `M4-09`, `M5-04`, `M6-05`,
 `M6-07`, `M6-08`, `M7-03`, `M7-10`, `M8-03`, `BT-09`, and `BT-10`. Evidence
@@ -186,7 +189,7 @@ closure.
 
 **Inputs:** the closed `CW-21` ledger; normative rules and approved product
 contracts; the traceability matrix; scenario, vector, property, fuzz, reset,
-and malformed-input corpora; native, WebAssembly, ESP32-S3, acquisition, display,
+and malformed-input corpora; native, WebAssembly, STM32G474, acquisition, display,
 audio, and hardware-in-loop evidence; and all relevant identity manifests.
 
 **Dependency:** all 13 `CW-21` records must be covered. The analyst and final
@@ -206,7 +209,7 @@ reviewer must be independent of the person who promoted those records.
 - lamps, audio, physical outputs, acquisition classifications, and their
   correlation with canonical records; and
 - byte-identical or explicitly target-specific behavior across native,
-  WebAssembly, and ESP32-S3 builds.
+  WebAssembly, and STM32G474 builds.
 
 The matrix must cite the normative or product source, mapped scenario and
 evidence identities, coverage result, reviewer, and any finding. It must also
@@ -233,7 +236,7 @@ reviewed and closed before the analysis can record the finding as resolved.
 ## Final deletion gate
 
 TypeScript scoring may be removed only when the exact C source is linked into
-the ESP32-S3 and WebAssembly artifacts, the full semantic inventory and portable
+the STM32G474 and WebAssembly artifacts, the full semantic inventory and portable
 ABI are closed, all three targets agree on independent expected artifacts,
 the simulator has no fallback or injected scorer, target resource and
 hardware-in-loop evidence passes, build/rule/timing identities are observable,

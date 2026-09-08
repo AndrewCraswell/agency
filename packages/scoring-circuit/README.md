@@ -1,18 +1,18 @@
-# ESP32 scoring prototype board
+# Scoring prototype hardware
 
-This package owns the deliberately simple, hand-assembled PCB used to validate the fencing scoring hardware before
-firmware integration. The board sockets one ESP32-S3 DevKitC and one WIZ850io Ethernet module, exposes the seven fencing
-conductors, and carries only the driver, ADC protection, IR receiver, display, buzzer, and power support needed for the
-prototype.
+The current assembly candidate is the [native KiCad USB scoring platform](usb-scoring-platform/README.md), with STM32
+acquisition, ESP32 application/display interfaces, isolated USB, USB-C PD, Ethernet, IR, HUB75 and Favero outputs. Its
+[design review](usb-scoring-platform/design-review.md) is the authoritative list of remaining findings. It is a
+supplier-review draft, not an approved fabrication release.
 
-The active design documents are:
+## Earlier tscircuit carrier
 
-- [Clean-sheet board architecture](docs/clean-sheet-board-architecture.md)
-- [Prototype delivery checklist](docs/esp32-prototype-backlog.md)
-- [Separate USB/STM32 scoring platform draft](usb-scoring-platform/README.md): native KiCad exploration with the
-  original prototype preserved; not a fabrication-ready replacement.
+The ESP32 DevKitC/WIZ850io carrier is preserved as the explicitly requested comparison design. Its
+[architecture](docs/clean-sheet-board-architecture.md), source and models describe that carrier, not the native board.
+Do not mix its BOM, pinout or generated fabrication files with the USB scoring platform.
 
-Useful commands:
+The following commands operate on that earlier carrier only. For the current board use the native project's
+`export-manufacturing.ps1` and its README instructions.
 
 - `pnpm --filter @repo/scoring-circuit build` generates the circuit JSON, the locally bundled tscircuit RunFrame PCB,
   schematic, and 3D preview, plus the BOM and placement files in `dist/`.

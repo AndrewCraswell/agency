@@ -5,19 +5,19 @@ browser simulator.
 
 ## Current architecture
 
-The product direction is one ESP32-S3 prototype board running one portable C17 scoring core. Native host tests compile
-the same core, and the browser simulator will load it as WebAssembly. TypeScript owns orchestration, validation,
-workflow, replay, and presentation; after the migration it will not contain a fallback scoring engine.
+The current native KiCad board uses STM32G474 for acquisition and USB, ESP32-S3 for application/display interfaces, and
+STM32C011 for input-power control. The scoring target remains one portable C17 core shared by desktop/native tests,
+STM32 firmware, and WebAssembly. TypeScript owns orchestration, validation, workflow, replay, and presentation; after
+the migration it will not contain a fallback scoring engine.
 
 The current transition is tracked in [`docs/c17-wasm-simulator-migration.md`](docs/c17-wasm-simulator-migration.md).
-Until that migration closes, the TypeScript weapon scorers remain the simulator reference and the legacy
-`firmware/stm32` target remains only as migration and comparison evidence. Neither is the prototype hardware
-architecture.
+Until that migration closes, the TypeScript weapon scorers remain the simulator reference. Existing firmware must be
+checked against the actual board pinout and power sequencing; its presence does not establish hardware readiness.
 
-The clean-sheet board backlog is
-[`packages/scoring-circuit/docs/esp32-prototype-backlog.md`](../../packages/scoring-circuit/docs/esp32-prototype-backlog.md).
-Encrypted referee-control behavior is tracked in
-[`docs/encrypted-ir-remote-control-contract.md`](docs/encrypted-ir-remote-control-contract.md).
+The current board and remaining hardware review are documented in
+[`USB scoring platform`](../../packages/scoring-circuit/usb-scoring-platform/README.md) and its
+[design review](../../packages/scoring-circuit/usb-scoring-platform/design-review.md). Encrypted referee-control
+behavior is tracked in [`docs/encrypted-ir-remote-control-contract.md`](docs/encrypted-ir-remote-control-contract.md).
 
 ## Golden scenario runner
 
