@@ -12,9 +12,27 @@ const input = {
 }
 
 describe("OrganizationMembersRepository", () => {
+  it("retains historical coverage warnings on empty pages but not current-only requests", async () => {
+    const warning = "GovInfo roster for session:us:117 is incomplete."
+    let assessed = 0
+    const repository = new OrganizationMembersRepository({
+      organizationExists: async () => true,
+      listOrganizationMemberships: async () => ({ items: [], truncated: false }),
+      coverageWarnings: async () => {
+        assessed += 1
+        return [warning]
+      }
+    })
+    expect(await repository.listOrganizationMembers({ ...input, isCurrent: false })).toMatchObject({
+      warnings: [warning]
+    })
+    expect(await repository.listOrganizationMembers(input)).not.toHaveProperty("warnings")
+    expect(assessed).toBe(1)
+  })
   it("returns not_found for an absent parent before listing memberships", async () => {
     let listed = false
     const repository = new OrganizationMembersRepository({
+      coverageWarnings: async () => [],
       listOrganizationMemberships: async () => {
         listed = true
         return { items: [], truncated: false }
@@ -32,6 +50,7 @@ describe("OrganizationMembersRepository", () => {
     let received: unknown
     const page = { items: [], nextCursor: "member-cursor", truncated: true }
     const repository = new OrganizationMembersRepository({
+      coverageWarnings: async () => [],
       listOrganizationMemberships: async (value) => {
         received = value
         return page

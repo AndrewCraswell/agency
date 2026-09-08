@@ -11,6 +11,16 @@ import {
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "organization-members-read-api-test", write: () => undefined })
 
+it("exposes historical coverage warnings even when the membership page is empty", async () => {
+  const warning = "GovInfo committee roster for session:us:117 is incomplete."
+  const base = await startServer({
+    listOrganizationMembers: async () => ({ items: [], truncated: false, warnings: [warning] })
+  })
+  const response = await fetch(`${base}/api/organizations/organization:govinfo:upper:committee:appropriations/members`)
+  expect(response.status).toBe(200)
+  expect(await response.json()).toMatchObject({ data: [], meta: { warnings: [warning] } })
+})
+
 afterEach(async () => {
   await Promise.all([...servers].map(async (server) => await close(server)))
   servers.clear()

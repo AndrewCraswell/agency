@@ -144,3 +144,9 @@ flag or a second independently committed record. New observations retain a valid
 quarantined-cell details. An observation without an assessment remains unknown, not implicitly complete. Unchanged
 reruns preserve the saved assessment. The API still needs to expose Congress-scoped coverage before the publication
 guard can be removed; checkpoint persistence alone does not make quarantined imports safe to publish.
+
+Organization membership responses now carry affected historical Congress/source-edition coverage warnings in
+`meta.warnings`, including empty pages. Warnings describe source coverage rather than the filtered page. Current-only
+requests do not inherit an old Congress's incomplete status. Other committees/chambers are not marked incomplete,
+and absent checkpoint evidence is not converted into a claim of completeness. Person membership reads and deployment
+verification remain before the quarantined-publication guard can be removed.

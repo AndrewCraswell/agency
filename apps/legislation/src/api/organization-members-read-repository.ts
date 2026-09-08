@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { and, eq, like } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import type { OrganizationMembershipRead } from "../db/queries/civic-scoped-reads.js"
 import {
@@ -6,11 +6,12 @@ import {
   type OrganizationMembershipListInput,
   type OrganizationPage
 } from "../db/queries/organization-relationships.js"
-import { organizations } from "../db/schema/schema.js"
+import { organizations, syncCheckpoints } from "../db/schema/schema.js"
 import { LegislationError } from "../legislation/errors.js"
+import { committeeCoverageWarnings } from "./committee-coverage-warnings.js"
 
 export type OrganizationMembersListInput = OrganizationMembershipListInput
-export type OrganizationMembersPage = OrganizationPage<OrganizationMembershipRead>
+export type OrganizationMembersPage = OrganizationPage<OrganizationMembershipRead> & { warnings?: readonly string[] }
 
 export interface OrganizationMembersReadRepository {
   listOrganizationMembers(input: OrganizationMembersListInput): Promise<OrganizationMembersPage>
@@ -19,6 +20,7 @@ export interface OrganizationMembersReadRepository {
 type OrganizationMembersStore = {
   organizationExists(organizationId: string): Promise<boolean>
   listOrganizationMemberships(input: OrganizationMembersListInput): Promise<OrganizationMembersPage>
+  coverageWarnings(organizationId: string): Promise<string[]>
 }
 
 /**
@@ -38,12 +40,35 @@ export class OrganizationMembersRepository implements OrganizationMembersReadRep
     if (!(await this.#store.organizationExists(input.organizationId))) {
       throw new LegislationError("not_found", `Organization ${input.organizationId} was not found`)
     }
-    return await this.#store.listOrganizationMemberships(input)
+    const page = await this.#store.listOrganizationMemberships(input)
+    if (input.isCurrent === true) {
+      return page
+    }
+    const warnings = await this.#store.coverageWarnings(input.organizationId)
+    return warnings.length === 0 ? page : { ...page, warnings: [...(page.warnings ?? []), ...warnings] }
   }
 }
 
 export function createOrganizationMembersRepository(database: LegislationDatabase): OrganizationMembersReadRepository {
   return new OrganizationMembersRepository({
+    coverageWarnings: async (organizationId) => {
+      const rows = await database
+        .select({ chamber: organizations.chamber, name: organizations.name })
+        .from(organizations)
+        .where(and(eq(organizations.id, organizationId), eq(organizations.sourceProvider, "govinfo")))
+        .limit(1)
+      const organization = rows[0]
+      if (organization === undefined) {
+        return []
+      }
+      const checkpoints = await database
+        .select({ stream: syncCheckpoints.stream, cursor: syncCheckpoints.cursor })
+        .from(syncCheckpoints)
+        .where(
+          and(eq(syncCheckpoints.source, "govinfo"), like(syncCheckpoints.stream, "govinfo:committee-directory:%"))
+        )
+      return committeeCoverageWarnings(checkpoints, organization)
+    },
     listOrganizationMemberships: async (input) => await listOrganizationMemberships(database, input),
     organizationExists: async (organizationId) => {
       const rows = await database
