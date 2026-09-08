@@ -2,6 +2,34 @@ import type { IdentityReview } from "./committee-reviewed-identities.js"
 
 const congress106Identities: IdentityReview["identities"] = [
   {
+    // F000439 and the same-edition Tennessee biography identify William H.
+    // Frist; contemporary hearings confirm the printed Bill Frist chair roles.
+    printedName: "Bill Frist",
+    state: "TN",
+    chamber: "upper",
+    personId: "person:congress:f000439",
+    canonicalName: "Frist, William H.",
+    givenName: "WILLIAM",
+    familyName: "FRIST",
+    district: null,
+    contexts: [
+      { name: "Budget" },
+      { name: "Commerce, Science, and Transportation" },
+      { name: "Aviation", parentName: "Commerce, Science, and Transportation" },
+      { name: "Communications", parentName: "Commerce, Science, and Transportation" },
+      { name: "Manufacturing and Competitiveness", parentName: "Commerce, Science, and Transportation" },
+      { name: "Science, Technology and Space", parentName: "Commerce, Science, and Transportation" },
+      { name: "Surface Transportation and Merchant Marine", parentName: "Commerce, Science, and Transportation" },
+      { name: "Foreign Relations" },
+      { name: "African Affairs", parentName: "Foreign Relations" },
+      { name: "International Economic Policy, Export and Trade Promotion", parentName: "Foreign Relations" },
+      { name: "International Operations", parentName: "Foreign Relations" },
+      { name: "Health, Education, Labor and Pensions" },
+      { name: "Children and Families", parentName: "Health, Education, Labor and Pensions" },
+      { name: "Public Health", parentName: "Health, Education, Labor and Pensions" }
+    ]
+  },
+  {
     // The Directory's Armed Services section prints H.; M000472 and 106th
     // hearing rosters identify John Michael McHugh of New York instead.
     printedName: "John H. McHugh",

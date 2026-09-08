@@ -358,3 +358,25 @@ The fingerprinted manifest resolves only these four cells per edition, preservin
 parent, state, chamber and term checks. Fresh source parsing against the production catalog validated all 12
 appearances. All 112 focused identity, historical-observation, normalization and synchronization tests passed.
 Other unresolved identities still block publication; this correction does not launch an import.
+
+### Reviewed Frist nickname, September 8, 2026
+
+All three 106th editions print Bill Frist of Tennessee in 14 committee/subcommittee cells. The exact contexts are
+Budget; Commerce, Science, and Transportation and its Aviation, Communications, Manufacturing and Competitiveness,
+Science, Technology and Space, and Surface Transportation and Merchant Marine children; Foreign Relations and its
+African Affairs, International Economic Policy, Export and Trade Promotion, and International Operations children;
+Health, Education, Labor and Pensions and its Children and Families and Public Health children.
+
+The [same-edition Tennessee biography](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-TN-S-2.htm)
+identifies William H. Frist and lists the four parent committees. [Bioguide F000439](https://bioguideretro.congress.gov/Home/MemberDetails?memIndex=F000439)
+confirms his Tennessee Senate service. Contemporary [Science, Technology and Space hearing](https://www.govinfo.gov/content/pkg/CHRG-106shrg74817/html/CHRG-106shrg74817.htm),
+[African Affairs hearing](https://www.govinfo.gov/content/pkg/CHRG-106shrg68756/html/CHRG-106shrg68756.htm), and
+[106th HELP activity report, Public Health section](https://www.govinfo.gov/content/pkg/CRPT-107srpt11/pdf/CRPT-107srpt11.pdf)
+independently confirm the three printed chair roles. These are manual evidence, not additional ingestion providers.
+The biography also mentions Small Business, but this review adds no assignment absent from the committee roster.
+
+The canonical catalog has `person:congress:f000439`, `Frist, William H.`, with consistent 106th Senate terms and no
+district. The decision is restricted to the three fingerprinted editions and their exact 14 contexts, not a general
+Bill/William alias. Roles and observed-date semantics remain unchanged. The focused suite passed 113 tests.
+Fresh parsing against the production catalog validated all 42 appearances across the three editions.
+Other unresolved identities continue to block publication; no import was launched.

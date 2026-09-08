@@ -115,7 +115,8 @@ describe("offline-reviewed GovInfo identity validation", () => {
     "Samuel Dale Brownback",
     "Bob Bennett",
     "Tillie K. Fowler",
-    "John H. McHugh"
+    "John H. McHugh",
+    "Bill Frist"
   ])("validates the exact reviewed %s cells", (printedName) => {
     const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
     const identity = manifest.identities.find((candidate) => candidate.printedName === printedName)!
