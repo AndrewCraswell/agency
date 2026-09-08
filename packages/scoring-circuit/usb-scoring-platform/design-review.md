@@ -133,6 +133,15 @@ functions, 95.34% statements, 93.62% branches). The previously timed-out observa
 three-test rerun; no timeout or coverage threshold was relaxed.
 [ADI assembly guide](https://www.analog.com/media/en/technical-documentation/product-information/assembly-considerations-for-module-bga-packages.pdf).
 
+**U18 package and pin comparison:** visually inspected ADI Rev D pages 2 and 22 (05-08-1881 Rev B drawing). Native
+A/B/K/L rows have 11 balls each at 1.27mm pitch, with outer span 12.70mm and A1 at local (-6.35,-6.35)mm. The 15mm
+nominal square body fits the 16mm courtyard; package total height is at most 5.22mm before accounting for the actual
+assembled seating condition. At (82,140)mm, 90 degrees, the courtyard stays inside the board. All 44 nets agree with the
+top-view pin map: primary data/control/power in A, primary ground in B, secondary ground in K, secondary data/power in
+L. VLO2 at L5 is intentionally unused. This closes U18's drawing comparison, not a restored 3D model, measured seating
+or supplier placement approval. No geometry or BOM change was needed.
+[ADI exact package and pin drawing](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf).
+
 ## Review coverage and critic protocol
 
 ### ESP32 memory, boot and antenna check
@@ -726,7 +735,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U15       | SN74AHCT541PWR        | Remaining five HUB75 AHCT buffer channels.                                       | Retain; three unused inputs grounded, outputs NC. Second IC is needed for 13 signals.                                                                                  |
 | U16       | 4N32M                 | Favero port 1 optodarlington.                                                    | Retain; exact DIP pin map, 2.54mm pitch/7.62mm rows and lead/drill fit checked. Actual repeater load and release time need bench tests.                                |
 | U17       | 4N32M                 | Favero port 2 optodarlington.                                                    | Retain; exact DIP pin map, 2.54mm pitch/7.62mm rows and lead/drill fit checked. Actual repeater load and release time need bench tests.                                |
-| U18       | LTM2884IY#PBF         | LTM2884 isolated USB and acquisition power.                                      | Retain; VLO 10mA allowance and 5V-side output budget require whole-system check; assembly profile unresolved.                                                          |
+| U18       | LTM2884IY#PBF         | Isolated USB and acquisition power.                                              | All 44 pin nets and package drawing compared; mask/paste correction exported. Retain. Whole-input power and assembler process acceptance remain open; 3D model absent. |
 | U19       | LTC3130IMSE-1#PBF     | LTC3130 regulated primary 5V from USB VBUS.                                      | Fixed-5V automatic mode implemented; ERC/DRC/parity pass. Whole-input suspend and physical validation remain open.                                                     |
 | U20       | TPS259470LRPWR        | TPS259470 application branch eFuse.                                              | Pin/land check passed; split power-pad paste windows implemented and visually verified. Copper unchanged. Assembler stencil process remains open.                      |
 | U21       | STM32C011F6P6         | STM32C011 primary-side source qualifier and power gate controller.               | Retain; TSSOP20 pitch/numbering/lead fit checked; PA11 default pin16. Programming service and VLO current remain open.                                                 |
