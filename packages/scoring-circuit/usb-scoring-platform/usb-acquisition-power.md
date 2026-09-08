@@ -50,11 +50,11 @@ thermal/tolerance margins or measured hardware behavior; see the
 C39 is TDK C4532X7R1H475K200KB; C43 is
 [TDK C4532X5R1A476M280KA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C4532X5R1A476M280KA),
 the full ordering code for the 47uF/10V/1812 reference family. C41 uses a 16V-rated 4.7uF/0805 part; C42/C66 are
-50V-rated 100nF/0603. L2 is
+50V-rated 22nF/0603 (TDK C1608X7R1H223K080AA). L2 is
 [Coilcraft XAL5050-103MEC](https://www.coilcraft.com/en-us/products/power/high-voltage-inductors/xal/xal50xx/xal5050-103/).
-All 15 replacement-section components have manufacturer/MPN fields. C44 is removed. The schematic and local routing pass
-native ERC/DRC with zero violations and zero unconnected items; all 231 footprints and 879 netlist pins match. This does
-not establish loop stability, transient response, hot-plug behavior or fault-temperature performance.
+The current manufacturing export has 223 fitted components with manufacturer/MPN fields and passes native ERC/DRC,
+connectivity and schematic parity. The earlier regulator's component counts and 100nF bootstrap description are
+superseded. This does not establish physical loop stability, transient response, hot-plug behavior or fault temperature.
 
 Automatic source-current qualification and the application-power policy are implemented. The complete startup/suspend
 budget still requires physical measurements. Keeping the integrated isolator avoids a separate

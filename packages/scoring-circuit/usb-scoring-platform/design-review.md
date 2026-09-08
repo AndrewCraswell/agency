@@ -26,9 +26,9 @@ assembly rows and the unchanged rebuilt U21 image. This is not closure of all fo
 The switch/ESD follow-up `pnpm verify` reached tests: all 46 scoring domain test files passed, but the existing 100%
 coverage gate failed (95.98% lines, 99.79% functions, 95.34% statements, 93.62% branches). No threshold or unrelated
 project file was changed. The native manufacturing package is unchanged by these documentation-only package checks. The
-later regulator-package `pnpm verify` stopped at unrelated `packages/shopify-content` lint errors in
-`catalog-snapshot.ts` and its test. It did not reach tests; the preceding scoring coverage failure is not a fresh result
-from that run. No board geometry changed, and focused document formatting/diff checks passed.
+later regulator-package and inductor-review `pnpm verify` runs stopped at unrelated `packages/shopify-content` lint
+errors in `catalog-snapshot.ts` and its test. Neither reached tests; the preceding scoring coverage failure is not a
+fresh result from those runs. No board geometry changed, and focused document formatting/diff checks passed.
 
 **Current supplier upload files:** the native exporter now generates `jlcpcb-bom.csv` and `jlcpcb-placement.csv`
 alongside the original KiCad exports. All 223 rows were compared field by field: exact MPN/manufacturer/footprint and
@@ -269,6 +269,23 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**L1/L2 fit and current screen:** Coilcraft document 908, revised 26 February 2026, was visually reviewed. Both
+footprints match its 1.18 by 4.70mm lands on 3.31mm centers. The 5.28 +/-0.2 by 5.48 +/-0.2mm bodies fit their 5.98 by
+6.18mm courtyards; maximum heights are 3.1mm for L1 and 5.1mm for L2. L1 is 4.7uH, 40mOhm maximum DCR, 6.7A saturation
+current; L2 is 10uH, 45mOhm maximum DCR, 4.9A saturation current. Those saturation figures describe a typical 30%
+inductance drop at 25 C, not a guaranteed all-temperature threshold. The reference 20 C temperature-rise currents are
+4.3A/3.6A respectively and depend on mounting/cooling. Retain both exact parts.
+[Coilcraft XAL50xx, pages 1 and 4](https://www.coilcraft.com/getmedia/49bc46c8-4b2c-45b9-9b6c-2eaa235ea698/xal50xx.pdf).
+
+L1's 6.7A figure exceeds AP63203's 3.1A maximum high-side peak-limit threshold; L2's 4.9A exceeds LTC3130-1's 1.7A
+maximum peak-limit threshold. This is a useful selection screen, not protection against every transient or a thermal
+test. At 2A RMS L1's cold DC copper loss is 0.16W; using even 1.7A RMS for L2 gives 0.130W, before core loss and DCR
+temperature rise. Confirm peak/RMS current and winding temperature in the assembled regulator load-step tests.
+[AP63203 electrical characteristics](https://www.diodes.com/assets/Datasheets/AP63200-AP63201-AP63203-AP63205.pdf),
+[LTC3130-1 electrical characteristics](https://www.analog.com/media/en/technical-documentation/data-sheets/3130f.pdf).
+The power guide's stale 100nF bootstrap description was corrected to the already-fitted 22nF C42/C66; no circuit
+changed.
+
 **U4/U7 package comparison:** visually checked Diodes' SOT25 and TSOT26 drawings. Both native footprints have 0.95mm
 lead pitch, 2.275mm row-center separation and 1.325 by 0.6mm lands. These are library land patterns, not exact copies of
 the manufacturer's suggested pads: U4 suggests 0.8 by 0.55mm lands on 2.4mm rows; U7 suggests 1.0 by 0.7mm lands on
@@ -397,8 +414,8 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | J10       | 5520250-2             | Favero port 2 modular connector, duplicated inner/outer conductors.              | Retain; inspect this port independently, not just J9.                                                                                                                  |
 | J12       | HTSW-103-07-L-S       | Primary-side STUSB4500 I2C service header.                                       | Retain for prototype; label USB_GND domain, never bridge to board-side ground.                                                                                         |
 | J13       | J1B1211CCD            | Ethernet magjack with integrated LEDs and magnetics.                             | Retain; manufacturer hole-pattern and outward-facing placement check passed. Exact 3D model unavailable; enclosure/cable clearance remains open.                       |
-| L1        | XAL5030-472MEC        | AP63203 4.7uH output inductor.                                                   | Retain; verify peak-current and thermal margin with ESP32/network load steps.                                                                                          |
-| L2        | XAL5050-103MEC        | LTC3130 10uH buck-boost inductor.                                                | Retain current MPN; do not use historical 22uH description. Saturation and loop margin remain required.                                                                |
+| L1        | XAL5030-472MEC        | AP63203 4.7uH output inductor.                                                   | Manufacturer land/body comparison passed; current-limit screen below. Retain; assembled current and temperature remain unmeasured.                                     |
+| L2        | XAL5050-103MEC        | LTC3130 10uH buck-boost inductor.                                                | Manufacturer land/body comparison passed; current-limit screen below. Retain; assembled current and temperature remain unmeasured.                                     |
 | Q1        | DMN2056U-7            | Pulls HUB75 buffer OE low only on display enable.                                | Retain; preserves blanking on reset.                                                                                                                                   |
 | Q2        | DMN2056U-7            | Piezo low-side switch.                                                           | Retain; resistor R87 supplies piezo discharge path.                                                                                                                    |
 | Q3        | DMN2056U-7            | Common low-side drive for both Favero opto LEDs.                                 | Retain; ports intentionally mirror one signal, not independently addressable.                                                                                          |
