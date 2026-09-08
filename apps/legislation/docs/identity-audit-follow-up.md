@@ -74,6 +74,17 @@ Service and web TypeScript checks pass. Production population is not yet verifie
 is still running, so no competing backfill was launched. State identity acquisition remains gated on self-hosted
 OpenStates. The zero-row counts above are the earlier inventory, not a post-deployment population result.
 
+Implementation commit `73fa795` was pushed to `main` and deployed successfully as Trigger `20260908.9`
+(deployment `10103jza`, 26 tasks), after the live API contract gate passed. The isolated legislation coverage
+command passed 2,449 tests, skipped 61, and passed all four webhook receiver tests. Repository verification
+passed checks but failed on unrelated scoring coverage thresholds; a web workflow deletion test also failed.
+The full repository gate remains red.
+
+Docker's backend log identifies its startup failure as an inaccessible runtime socket at
+`C:/Users/andcra/AppData/Local/Docker/run/dockerInference`. A recoverable rename of that exact file failed with
+the same Windows error. No runtime file was removed, and no Docker volume or database was reset. Local
+database replay execution remains blocked on Docker Desktop recovery, not a passing integration result.
+
 Focused contract/readiness/member/amendment checks passed 22 tests. The 18 PostgreSQL entity integration tests,
 including the strengthened persistence replay case, were skipped: the local Docker daemon is unavailable and no
 test database was configured. They were not pointed at production. Service and Next type checks passed.
