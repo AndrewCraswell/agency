@@ -7,7 +7,8 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 ## Current acceptance status
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
-Batching, bounded preparation and reviewed identities are deployed as Trigger `20260908.5` (deployment `mts2zctp`).
+Batching, bounded preparation, reviewed identities and explicit quarantine publication are deployed as Trigger
+`20260908.6` (deployment `6uoxl04m`).
 The 108th recovered from its committed checkpoint after PostgreSQL confirmed no orphan transaction.
 The 105th and 109th subsequently imported successfully; all three passed unchanged reruns.
 Historical import gates remain separate:
@@ -22,10 +23,11 @@ Historical import gates remain separate:
 | 113 | Imported: 3,530 memberships, 210 organizations, 531 people; database dates/current preservation and zero-write rerun verified; fresh authenticated API smoke pending |
 | 105 | Imported June 1997: 196 organizations and 3,155 memberships; unchanged rerun verified |
 | 106 | Imported all three editions: 199 organizations, 3,331 memberships and 535 people; unchanged rerun verified; Brown's four already-historical assignments retain unknown dates |
-| 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
+| 117 | Imported 3,770 memberships across 219 organizations and 533 people; one disputed Udall cell explicitly quarantined, roster marked incomplete; authenticated warning checks and zero-write rerun verified |
 
 The user's explicit 2026-09-08 request authorized the [reviewed reconciliation strategy](committee-reconciliation-policy.md).
-No incomplete historical roster is published.
+All fourteen historical Congresses in this inventory are imported. Thirteen have complete reviewed coverage;
+the approved 117th quarantine is explicitly disclosed as incomplete, never silently treated as complete.
 State committee ingestion remains deferred until the approved Open States scrapers are self-hosted.
 
 ### Earlier remaining-edition audit, 2026-09-08

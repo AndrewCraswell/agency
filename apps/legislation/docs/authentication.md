@@ -31,3 +31,11 @@ intentionally do not distinguish token failures in greater detail.
 
 User and optional organization IDs flow through request context and trace metadata. Tokens, claims other than the two
 stable IDs, queries over 2,000 characters, credentials, and full legislative text are not retained in traces.
+
+## Existing operational smoke credential
+
+The Railway `legislation-web` service already has `WORKOS_SMOKE_CLIENT_ID` and `WORKOS_SMOKE_CLIENT_SECRET`.
+Operators with service-variable access can exchange these existing credentials at the configured WorkOS issuer's
+`/oauth2/token` endpoint using `grant_type=client_credentials`, then pass the short-lived access token in memory to
+API smoke requests. Never print credentials or commit them. This machine-authenticated check is separate from
+the AuthKit browser-session canary; the absence of a local `LEGISLATION_SMOKE_TOKEN` does not block machine API checks.

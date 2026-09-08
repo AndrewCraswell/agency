@@ -435,3 +435,30 @@ Verification: isolated legislation coverage passes 2,436 tests in 253 files, wit
 skipped in four files; all four receiver tests pass. Pre-push types pass. Root `pnpm verify` passes its check
 stage but is not green because of unrelated scoring observatory integration failures. Health/readiness return
 200; authenticated API acceptance is not claimed by these database checks.
+
+### Verified 117th quarantine publication, 2026-09-08
+
+Source `40e5f9b` is committed and pushed to main. Trigger `20260908.6`, deployment `6uoxl04m`, successfully
+deployed all 26 tasks. Import `run_06g84b2scshn3ock3ge5gagl01` and rerun `run_06g84bgpoke8iel6uis1qlue01`
+both reached terminal `COMPLETED` with zero failures. The rerun skipped the edition and wrote zero records.
+
+The 117th now contains 3,770 memberships across 219 organizations and 533 people. All are inactive with
+`congress_ended`, no effective dates and no duplicate source/tenure keys. Tom Udall has zero 117th memberships.
+His exact disputed source claim is retained in the atomic `govinfo:committee-directory:117` checkpoint with
+`coverage.status=incomplete` and reason `source_term_contradiction`, not assigned to a replacement senator.
+The official biography and October 2022 GovInfo roster were reread before publication and still contradict each other.
+
+The existing Railway smoke client obtained a one-hour machine token without changing authentication or creating a
+client. Authenticated production Appropriations-members and Udall-memberships reads returned 200 with explicit
+117th/source-edition quarantine warnings. Both current-only reads returned 200 without historical warnings, and
+Finance membership reads likewise had no unrelated warning. These checks verify machine-authenticated API behavior,
+not the independent browser-session login flow. Tokens and client secrets were never logged or persisted locally.
+
+The full 117th membership-row hash stayed `fafd3775e21e756d1a36251ac7e5ce58` across the rerun. The 119th retained
+3,871 active memberships and hash `f1e55f8a2bd85676714edf02e75d6120`. Preflight found no overlapping imports,
+publication transactions or index builds. All fourteen historical Congresses in the inventory are now imported;
+the 117th remains explicitly incomplete by the approved quarantine policy, not falsely reconciled.
+
+Focused quarantine/synchronization/API tests pass (37), and isolated legislation coverage passes 2,436 tests with
+60 database-dependent skips. Legislation types/lint and pre-push types pass. Root `pnpm verify` remains blocked
+by unrelated Shopify-content lint and scoring electrical-simulation failures; the repository-wide gate is not green.
