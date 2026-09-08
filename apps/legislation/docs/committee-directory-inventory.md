@@ -8,14 +8,16 @@ subsequent validated production imports are recorded in [rollout evidence](commi
 
 The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
 Reviewed reconciliation through `d03e968` is deployed as Trigger `20260908.3` (deployment `sskqndkl`).
-The already-running 108th import remains on `20260908.2`; do not restart it. Historical import gates remain separate:
+The 108th import on `20260908.2` subsequently timed out at one hour. Database/checkpoint inspection is blocked
+by connection timeouts; do not restart it until committed progress and active backends are checked.
+Historical import gates remain separate:
 
 | Congress | Current gate |
 | --- | --- |
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
 | 107 | Parsed; identity corrections and the observation contract for explicitly retained historical Spence entries remain unresolved |
-| 108 | All four editions pass: 206 organizations and 3,856 uniquely mapped memberships each; production import in progress |
+| 108 | All four editions pass source validation; Trigger import timed out; committed progress and recovery pending database access |
 | 109 | Both editions pass: 209 organizations and 3,781 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
 | 113 | Imported: 3,530 memberships, 210 organizations, 531 people; database dates/current preservation and zero-write rerun verified; fresh authenticated API smoke pending |
 | 105 | Complete canonical audit passes: 196 organizations, 3,155 uniquely mapped memberships, zero gaps or duplicates; reviewed hierarchy checks pass; import pending |
