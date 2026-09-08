@@ -32,3 +32,23 @@ This bounded key audit is not a full contextual name-conflict review.
 4. Complete contextual name/term conflict checks and source coverage before marking IDN-101 Done.
 
 No records were changed by this inventory, and no additional providers were introduced.
+
+## Vote-gap diagnosis, September 8
+
+All 432 null links belong to `vote:congress:house-119-2-74`, the February 24, 2026 House vote on H. Res. 1075.
+The [official Clerk roll call](https://clerk.house.gov/Votes/202674) reports 208 ayes, 187 noes and 37 not voting.
+A fresh Congress.gov detail/member bundle normalized to the same 432 source Bioguide IDs and vote options, with
+zero differences from the stored source positions. Every source ID maps exactly to an existing canonical person
+whose `upstream_ids.bioguide` agrees; all 432 now pass `isVotePositionPersonLinkable`.
+
+The importer deliberately saves null canonical links when the referenced person does not yet pass canonical
+completeness checks. Existing source IDs, names and choices are retained. The current evidence identifies a stale
+snapshot which the existing importer can relink; it does not prove exactly which completeness fields were missing
+at the original import. No surname matching, person creation or identity-rule change is justified.
+
+Replay through `normalizeCongressHouseVote` and `upsertCongressHouseVoteSnapshot` is prepared, but its pre-write
+guard stopped on active Congress wave `run_06g84bm7psjkgjpcqijdah0i01` and bills child
+`run_06g84bno61ekhbegv374snak01`. No production changes occurred. Next recheck that the wave is idle, reread the
+official bundle, replay only this vote through the standard importer, then verify all 432 links, unchanged choices,
+and the authenticated vote-detail response. A replay after civic foundations load should reproduce the same links;
+fresh-database loading order remains an operational dependency, not an exception to completeness checks.
