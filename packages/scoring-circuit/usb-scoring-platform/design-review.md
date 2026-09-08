@@ -486,6 +486,12 @@ choice requiring assembler review, not an ADI specification. No schematic/PCB mi
 passed yet; no substitute 3D model is claimed.
 [ADI LTC3130/-1 datasheet, current limits, pin functions and automatic operation](https://www.analog.com/media/en/technical-documentation/data-sheets/3130f.pdf).
 
+**Migration in progress:** the project library now contains `LTC3130IMSE-1`, with all 17 physical pins and the reviewed
+`LTC3130_MSE` footprint binding. Native KiCad exported its symbol SVG; the rendered pin names/numbers were compared with
+ADI's MSE package drawing, including physical VS2=9 and VS1=10 (not the simulation terminal order). The current U19
+remains LTC3115-1 until the schematic, seven removed support parts, changed bypass values and local routing can be
+updated and verified together. Library preparation is not a completed board migration.
+
 Exact-part listing: $12.79 at one and $10.054 each at ten, before assembly, shipping and tax; not a complete board
 quote. [LTC3130IMSE-1#PBF](https://www.digikey.com/en/products/detail/analog-devices-inc/LTC3130IMSE-1-PBF/6174047). The
 current netlist was freshly exported for this check. Active schematic/PCB/BOM remain LTC3115-1. The manufacturer PDF
