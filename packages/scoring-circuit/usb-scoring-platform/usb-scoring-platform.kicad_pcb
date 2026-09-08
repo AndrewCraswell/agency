@@ -26299,8 +26299,8 @@
 		(path "/20cc8167-128c-446a-a106-f942323e143f/8eb01a97-00e8-4fc9-a0dc-2c04f64b61fc/8b232709-d2fd-4689-aaa7-7b3b60b2c067")
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_rect
-			(start -5.4 -13)
-			(end 5.4 13)
+			(start -5.4 -14.47)
+			(end 5.4 14.47)
 			(stroke
 				(width 0.05)
 				(type default)
@@ -26323,7 +26323,7 @@
 		(pad "1" thru_hole rect
 			(at -1.27 -8.89)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_R1")
@@ -26334,7 +26334,7 @@
 		(pad "2" thru_hole rect
 			(at 1.27 -8.89)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_G1")
@@ -26345,7 +26345,7 @@
 		(pad "3" thru_hole rect
 			(at -1.27 -6.35)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_B1")
@@ -26356,7 +26356,7 @@
 		(pad "4" thru_hole rect
 			(at 1.27 -6.35)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -26368,7 +26368,7 @@
 		(pad "5" thru_hole rect
 			(at -1.27 -3.81)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_R2")
@@ -26379,7 +26379,7 @@
 		(pad "6" thru_hole rect
 			(at 1.27 -3.81)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_G2")
@@ -26390,7 +26390,7 @@
 		(pad "7" thru_hole rect
 			(at -1.27 -1.27)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_B2")
@@ -26401,7 +26401,7 @@
 		(pad "8" thru_hole rect
 			(at 1.27 -1.27)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")
@@ -26413,7 +26413,7 @@
 		(pad "9" thru_hole rect
 			(at -1.27 1.27)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_A")
@@ -26424,7 +26424,7 @@
 		(pad "10" thru_hole rect
 			(at 1.27 1.27)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_B")
@@ -26435,7 +26435,7 @@
 		(pad "11" thru_hole rect
 			(at -1.27 3.81)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_C")
@@ -26446,7 +26446,7 @@
 		(pad "12" thru_hole rect
 			(at 1.27 3.81)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_D")
@@ -26457,7 +26457,7 @@
 		(pad "13" thru_hole rect
 			(at -1.27 6.35)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_CLK")
@@ -26468,7 +26468,7 @@
 		(pad "14" thru_hole rect
 			(at 1.27 6.35)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_LAT")
@@ -26479,7 +26479,7 @@
 		(pad "15" thru_hole rect
 			(at -1.27 8.89)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "PANEL_OE")
@@ -26490,7 +26490,7 @@
 		(pad "16" thru_hole rect
 			(at 1.27 8.89)
 			(size 1.8 1.8)
-			(drill 1)
+			(drill 1.02)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net "GND")

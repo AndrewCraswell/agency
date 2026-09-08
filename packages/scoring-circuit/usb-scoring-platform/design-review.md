@@ -1,6 +1,6 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/hub75-power-hole-review/` assembly
+Started 8 September 2026. Review the current native KiCad board and the `output/hub75-signal-fit-review/` assembly
 export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
 backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
@@ -353,7 +353,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | J4        | HTSW-103-07-L-S       | Right fencer A/B/C internal harness header.                                      | Retain; preserve left/right separation and verify harness pin identity.                                                                                                |
 | J5        | HTSW-101-07-L-S       | Metal piste reference internal harness header.                                   | Retain; functional sensing conductor, not protective earth.                                                                                                            |
 | J6        | HTSW-106-07-L-S       | ESP32 3.3V UART/EN/BOOT service header.                                          | Retain; UART service is needed because USB data terminates at STM32.                                                                                                   |
-| J7        | TST-108-02-G-D        | 16-pin HUB75 RGB/address/clock/latch/OE signal header.                           | Retain; confirm keyed cable orientation and exact 64x32 panel scan convention.                                                                                         |
+| J7        | TST-108-02-G-D        | 16-pin HUB75: pitch/pin order checked; holes and courtyard corrected.            | 1.02mm drills and 28.94mm courtyard length; native ERC/DRC/parity/connectivity pass. Keyed cable/panel compatibility remains open.                                     |
 | J8        | 645004114822          | Panel 5V connector: pins 1/2 supply, 3/4 ground. Hole defect corrected.          | 1.8mm drills now match drawing; native ERC/DRC/parity/unconnected checks pass. Cable and wave-solder acceptance remain open.                                           |
 | J9        | 5520250-2             | Favero port 1 modular connector, duplicated inner/outer conductors.              | Retain; actual Favero cable polarity and sample interoperability remain bench checks.                                                                                  |
 | J10       | 5520250-2             | Favero port 2 modular connector, duplicated inner/outer conductors.              | Retain; inspect this port independently, not just J9.                                                                                                                  |
@@ -683,6 +683,19 @@ and nominal model checks above do not establish physical DC-bias, thermal or who
 guide retains the implemented 40us slots / 120us frames and now accounts for 7.8uF nominal raw-VBUS capacitance.
 
 ## Verification limits and next review order
+
+**J7 footprint correction:** Samtec's TST double-row drawing specifies 1.02mm holes, replacing the previous 1.00mm
+drill. The TST-108 body is `8 × 2.54 + 7.62 = 27.94mm` long, longer than the previous 26mm courtyard in that direction.
+Expanded that courtyard to 28.94mm, preserving its conservative 10.8mm width. Pin centers, 1.8mm lands, component
+position and routing are unchanged. The -02 tail is 4.19mm; underside clearance must allow for the protruding tails. The
+current generic IDC model is not an exact Samtec key/body validation. Confirm the keyed mating cable and panel's input
+orientation before powering; do not approve an arbitrary 64x32 scan convention from this footprint check.
+[Samtec series print AQ, sheet 1](https://suddendocs.samtec.com/prints/tst-1xx-xx-x-x-xx-xx-mkt.pdf),
+[recommended double-row footprint](https://suddendocs.samtec.com/prints/tss-tstd.pdf),
+[exact configured part](https://www.samtec.com/products/tst-108-02-g-d). Fresh `output/hub75-signal-fit-review/` has
+zero ERC/DRC/parity/unconnected findings, including the expanded courtyard, and 223 matching BOM/placement references.
+U21 rebuilt unchanged. Earlier fabrication ZIPs are superseded. Repository verification stopped on unrelated legislation
+temporary-file lint errors; focused native checks passed, but no clean repository-wide result is claimed.
 
 **J8 confirmed fit defect:** Würth's exact-part drawing specifies 1.8mm holes for 1.14mm-square contacts (about 1.61mm
 across corners), so the previous 1.4mm holes could not accept the nominal full-width pins. Corrected all four drills in
