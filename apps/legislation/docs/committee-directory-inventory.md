@@ -412,6 +412,19 @@ The July 2003 live canonical re-audit with this leading-initial rule confirms 20
 The single Gresham Barrett entry now resolves; all other gaps remain. November 2003, January 2004 and August 2004
 also confirm these identical counts and unresolved names with the leading-initial rule. All four 108th editions have
 completed this re-audit. No production import was performed.
+Targeted July 2003 identity checks distinguish three remaining gaps rather than treating all as missing aliases:
+
+- `CDIR-2003-07-11-OK-H-4` explicitly links C001053 to `TOM COLE` / `Tom Cole`; its advertised biography does not
+  contain `Thomas`. This does not authorize resolving the three `Thomas Cole` entries by nickname inference.
+- `CDIR-2003-07-11-VA-S-1` explicitly links W000154 to `JOHN W. WARNER` and Virginia. The unresolved Superfund and
+  Waste Management entry instead prints Missouri. The exact alias already exists; bypassing state matching is not a fix.
+  The same-edition assignment table lists parent committees only, not this subcommittee, so it supplies no positive
+  target-assignment corroboration. Nearby source rows also mismatch states (Allard/Virginia, Bond/Colorado, Reid/Montana,
+  Baucus/Nevada); do not treat this as a generic alias-loader defect or silently rewrite source states.
+- `CDIR-2003-07-11-NC-H-5` links B001135 to `Richard Burr` / `Richard Mauze Burr`, but not `Richard M. Burr`.
+  The four unresolved Intelligence entries use `M.`; the existing matcher does not abbreviate spelled-out middle names.
+
+These source checks alone make no identity corrections or changes to import eligibility.
 The July 2005 re-audit confirms 209 organizations, 3,781 entries, 3,739 uniquely mapped memberships, zero duplicate
 identifiers and 42 unresolved entries across 10 names. Three `Michael Conaway` entries now resolve; `Mike Conaway`
 remains unresolved, as intended. September 2006 now confirms the identical organization, entry, mapping and duplicate
