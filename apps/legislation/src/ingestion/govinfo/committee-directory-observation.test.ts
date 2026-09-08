@@ -85,4 +85,21 @@ describe("committee directory observations", () => {
     expect(committeeRosterFingerprint([a, b, a])).toBe(committeeRosterFingerprint([b, a]))
     expect(committeeRosterFingerprint([a])).not.toBe(committeeRosterFingerprint([{ ...a, role: "chair" }]))
   })
+  it("detects historical versus positive assignments without treating local closure as a source change", () => {
+    const member = { organizationId: "committee", personId: "person", role: "member" }
+    const positive = committeeRosterFingerprint([member])
+    const historical = committeeRosterFingerprint([{ ...member, endedReason: "historical_at_first_observation" }])
+    expect(historical).not.toBe(positive)
+    expect(committeeRosterFingerprint([{ ...member, endedReason: "congress_ended" }])).toBe(positive)
+    expect(committeeRosterFingerprint([{ ...member, endedReason: null }])).toBe(positive)
+    expect(
+      directoryDetectionDate({ ...input, previous: { ...previous, fingerprint: historical }, fingerprint: positive })
+    ).toEqual(input.lastModified)
+    expect(
+      directoryDetectionDate({ ...input, previous: { ...previous, fingerprint: positive }, fingerprint: historical })
+    ).toEqual(input.lastModified)
+    expect(
+      directoryDetectionDate({ ...input, previous: { ...previous, fingerprint: historical }, fingerprint: historical })
+    ).toBeUndefined()
+  })
 })

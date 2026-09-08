@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
+import type { OrganizationMembershipEndReason } from "../../legislation/membership.js"
 
 const coverageSchema = z
   .object({
@@ -37,19 +38,29 @@ export function readDirectoryObservation(value: unknown): CommitteeDirectoryObse
   return observationSchema.parse(value)
 }
 
-/** Hash roster identity and role, excluding retrieval times and metadata-only updates. */
+/** Hash source assignment semantics, excluding retrieval metadata and local Congress closure. */
 export function committeeRosterFingerprint(
   memberships: readonly {
     organizationId: string
     personId: string
     role?: string | null
+    endedReason?: OrganizationMembershipEndReason | null
   }[]
 ): string {
   const unique = new Map(
     memberships.map((member) => [JSON.stringify([member.organizationId, member.personId]), member])
   )
   const rows = [...unique.values()]
-    .map((member) => JSON.stringify([member.organizationId, member.personId, member.role ?? "member"]))
+    .map((member) =>
+      JSON.stringify([
+        member.organizationId,
+        member.personId,
+        member.role ?? "member",
+        // An archived mention is not positive evidence of active service. Local
+        // Congress-end reconciliation, however, must not change the source hash.
+        ...(member.endedReason === "historical_at_first_observation" ? [member.endedReason] : [])
+      ])
+    )
     .sort()
   return createHash("sha256").update(JSON.stringify(rows)).digest("hex")
 }

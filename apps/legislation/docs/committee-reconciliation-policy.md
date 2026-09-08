@@ -207,5 +207,7 @@ still require service covering the edition year. Brackets alone never activate t
 The fresh read-only normalization against production canonical people/terms produced four inactive historical
 memberships per edition (20 appearances total), all with null detected start/end/last-observed dates. Focused
 normalization and identity tests passed (89 tests). This does not close the other 106th/107th identities or establish
-production import acceptance. Before importing, include historical/active status in roster-change detection and
-verify the production enum/constraint, then deploy and exercise replay.
+production import acceptance. Roster-change detection includes historical-first-observation status, so a transition
+to or from positive assignment evidence is not mistaken for a metadata-only update. Local Congress-end closure
+does not change the source fingerprint. Before importing, verify the production enum/constraint, then deploy and
+exercise replay.
