@@ -1,6 +1,7 @@
 #ifndef STM32C011_POWER_H
 #define STM32C011_POWER_H
 #include <stdint.h>
+#include <stdbool.h>
 /* Native tests replace only register access, not the transport or control logic. */
 #ifdef POWER_REGISTER_TEST
 uint32_t power_register_read(uintptr_t address);
@@ -10,6 +11,7 @@ static inline uint32_t power_register_read(uintptr_t address) { return *(volatil
 static inline void power_register_write(uintptr_t address, uint32_t value) { *(volatile uint32_t *)address = value; }
 #endif
 void power_target_initialize(void);
-void power_target_poll(void);
+/* True only when a qualified, alert-free controller may sleep until the next 1ms tick. */
+bool power_target_poll(void);
 void power_target_fault(void);
 #endif

@@ -89,19 +89,20 @@ void power_target_initialize(void) {
     wr(IWDG, 0xccccu);wr(IWDG, 0x5555u);wr(IWDG + 4u, 3);wr(IWDG + 8u, 255);
     for (uint32_t n = 0; n < 4000u; ++n) if ((rd(IWDG + 0xcu) & 3u) == 0) break;
     wr(IWDG, 0xaaaau);
-    /* Polling, no interrupts; COUNTFLAG is available for diagnostics, not mode decisions. */
-    wr(SYSTICK + 4u, 5999);wr(SYSTICK + 8u, 0);wr(SYSTICK, 5);
+    /* 1ms shallow-sleep wake-up. The assembly handler leaves COUNTFLAG for this poller. */
+    wr(SYSTICK + 4u, 5999);wr(SYSTICK + 8u, 0);wr(SYSTICK, 7);
     power_control_init(&control, (power_io){NULL, read_pd, write_pd, outputs});
 }
-void power_target_poll(void) {
+bool power_target_poll(void) {
     /* A qualified contract is stable until ALERT_N changes. Avoid continuously sinking the I2C
        pull-ups during USB suspend. Still inspect status every 10ms; no USB-session inference. */
     if ((control.mode == POWER_LAPTOP || control.mode == POWER_DISPLAY) &&
         (rd(GPIOA + 0x10u) & (1u << 6)) != 0) {
         if ((rd(SYSTICK) & (1u << 16)) != 0) ++health_ticks;
-        if (health_ticks < 10u) { wr(IWDG, 0xaaaau); return; }
+        if (health_ticks < 10u) { wr(IWDG, 0xaaaau); return true; }
     }
     health_ticks = 0;
     (void)power_control_poll(&control);
     wr(IWDG, 0xaaaau);
+    return false; /* Re-check after transactions; never sleep on unqualified/error paths. */
 }

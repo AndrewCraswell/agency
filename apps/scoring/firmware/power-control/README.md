@@ -19,8 +19,18 @@ acquisition, PA5 inhibits application power, and PA11 controls suspend shutdown.
 before firmware starts. No heap, RTOS or external firmware library is required.
 
 PA6 is a digital ALERT_N input. Once laptop/display power is qualified, register traffic occurs on an asserted alert or
-a 10ms health check, rather than continuously pulling I2C lines low. The CPU still polls alerts and refreshes the
-watchdog; this is not a low-power sleep implementation or a measured USB suspend result.
+a 10ms health check, rather than continuously pulling I2C lines low. Between these checks the qualified, alert-free
+controller enters shallow Sleep with WFI and wakes on a nominal 1ms SysTick interrupt. The ISR only returns; COUNTFLAG
+remains owned by the poller. Transactions, unknown supplies and error recovery never request sleep. The watchdog is
+refreshed by the main loop, not the ISR, so timer interrupts cannot conceal a stalled main loop.
+
+PA6 is polled, not an interrupt wake source: an alert arriving just after its check can wait up to the next nominal 1ms
+tick plus wake/processing time. A tick handled just before WFI can similarly postpone polling by one period. The
+existing hardware gates and LTM2884 automatic USB-suspend behavior are unchanged. Shallow Sleep keeps SysTick running;
+this is not Stop mode. Confirm wake timing, fault/detach behavior and total input current on the prototype before
+claiming a measured suspend-power margin. The conservative 4mA VLO budget is not reduced by this code change. See
+[STM32C0 RM0490, Sleep mode](https://www.st.com/resource/en/reference_manual/rm0490-stm32c0-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+and [PM0223, WFI wake-up](https://www.st.com/resource/en/programming_manual/dm00104451.pdf).
 
 ## Build and verify
 
