@@ -189,7 +189,7 @@ together only after the contract document is accepted.
 
 | Task | Status | Deliverable and acceptance gate |
 | --- | --- | --- |
-| IDN-101 | Planned | Inventory every current person, term, membership, sponsor, amendment sponsor, and vote-position identity; report null links, duplicate upstream IDs, and conflicting names. |
+| IDN-101 | In progress | [Read-only link inventory](identity-link-inventory.md) records exact null-link counts and stable-ID checks. Next classify 432 vote gaps, 416 unnamed amendment gaps and contextual name/term conflicts; the all-vote row total is an estimate, not a completed census. |
 | IDN-102 | Planned | Write the canonical person, office, district, identifier, alias, term, and provenance contracts, including merge and split rules. |
 | IDN-103 | Planned | Add `external_identifiers` and uniqueness rules for Bioguide, OpenStates, Wikidata, and provider-native IDs. |
 | IDN-104 | Planned | Add `entity_aliases` with normalization, validity dates, language, and provenance. |
