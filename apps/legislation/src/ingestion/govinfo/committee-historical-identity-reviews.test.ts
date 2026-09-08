@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest"
 import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
-import { historicalIdentityReviews } from "./committee-historical-identity-reviews.js"
+import { committeeIdentityReviews } from "./committee-review-data.js"
 import { validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
 
 describe("historical reviewed identity manifests", () => {
-  for (const edition of historicalIdentityReviews) {
+  for (const edition of committeeIdentityReviews.filter((review) => [106, 108, 109].includes(review.congress))) {
     it(`requires the complete source fingerprint for ${edition.packageId}`, () => {
       const directory = directoryFor(edition.packageId, edition.congress)
       expect(validateGovInfoIdentityReview(edition, [], directory, { people: [], terms: [], aliases: [] }).size).toBe(0)

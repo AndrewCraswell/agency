@@ -1,0 +1,59 @@
+{
+  "reviewNotes": [
+    "These Directory compilation notes explicitly retain deceased members' earlier",
+    "assignments. Bioguide B000918 and S000718 independently confirm the identities.",
+    "Neither the package date nor the death date is a detected membership boundary."
+  ],
+  "historicalAtFirstObservation": true,
+  "editions": [
+    {
+      "packageId": "CDIR-1999-06-15",
+      "congress": 106,
+      "fingerprint": "49e580bbb11ac221f8a67d4cc70a884e91c32b174b281887805da5cc8d969212",
+      "organizations": 199,
+      "entries": 3331
+    },
+    {
+      "packageId": "CDIR-2000-02-01",
+      "congress": 106,
+      "fingerprint": "54031e31df3d662243a23c2697ff9e7c3a736bed4d04bbe3a676306ba8fb11ae",
+      "organizations": 199,
+      "entries": 3331
+    },
+    {
+      "packageId": "CDIR-2000-10-01",
+      "congress": 106,
+      "fingerprint": "54031e31df3d662243a23c2697ff9e7c3a736bed4d04bbe3a676306ba8fb11ae",
+      "organizations": 199,
+      "entries": 3331
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "øGeorge E. Brown, Jr.¿",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:b000918",
+      "canonicalName": "Brown, George E., Jr.",
+      "givenName": "GEORGE",
+      "familyName": "BROWN",
+      "district": "42",
+      "contexts": [
+        {
+          "name": "Agriculture"
+        },
+        {
+          "name": "Department Operations, Oversight, Nutrition, and Forestry",
+          "parentName": "Agriculture"
+        },
+        {
+          "name": "Risk Management, Research, and Specialty Crops",
+          "parentName": "Agriculture"
+        },
+        {
+          "name": "Science"
+        }
+      ]
+    }
+  ]
+}

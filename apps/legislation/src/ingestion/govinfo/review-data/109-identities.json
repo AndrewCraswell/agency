@@ -1,0 +1,307 @@
+{
+  "reviewNotes": [
+    "Reviewed identity inference, not an explicit nickname alias: target IA roster prints Steven King; CDIR-2003-07-11-IA-H-5 identifies STEVE KING / K000362. Unique eligible IA House district 5 catalog identity; Peter King of NY is a different candidate.",
+    "Reviewed compound-name identity inference: CDIR-2005-07-11-WA-H-5 prints CATHY McMORRIS but supplies no Bioguide ID. Existing catalog uniquely identifies McMorris Rodgers, Cathy / M001159 in WA House district 5. Missing metadata ID is not presented as explicit Bioguide evidence.",
+    "Reviewed identity inference: target MA roster prints Marty Meehan; CDIR-2002-10-01-MA-H-5 identifies MARTIN T. MEEHAN / M000627. Unique eligible MA House district 5 identity; no runtime nickname rule.",
+    "Reviewed identity inference: target TX Budget roster prints Mike Conaway; CDIR-2005-07-11-TX-H-11 identifies K. MICHAEL CONAWAY / C001062. Unique eligible TX House district 11 identity; no global Mike-to-Michael expansion.",
+    "Reviewed identity inference: target OH roster prints Timothy J. Ryan; CDIR-2003-07-11-OH-H-17 links TIM RYAN and Tim J. Ryan to R000577. Unique eligible OH House district 17 candidate, distinct from Paul Ryan of WI.",
+    "Explicit identity evidence: CDIR-2003-07-11-CA-H-45 links MARY BONO and Mary Bono Mack to B001228. Target edition supplies all assignments; its district 45 term is independently required.",
+    "Reviewed identity inference: target WA roster prints Dave G. Reichert; CDIR-2005-07-11-WA-H-8 identifies DAVID G. REICHERT / R000578. Unique eligible WA House district 8 candidate; no runtime Dave-to-David expansion.",
+    "Reviewed identity inference: target PA roster prints Charlie Dent; CDIR-2005-07-11-PA-H-15 identifies CHARLES W. DENT / D000604. Unique eligible PA House district 15 identity; no runtime nickname rule.",
+    "Reviewed identity inference: target SC roster prints Robert D. Inglis; CDIR-2005-07-11-SC-H-4 identifies BOB INGLIS / I000023. Unique eligible SC House district 4 identity; source extra initials and nickname do not authorize general normalization.",
+    "Reviewed identity inference: target FL roster prints Mike Bilirakis; CDIR-2002-10-01-FL-H-9 identifies MICHAEL BILIRAKIS / B000463. Unique eligible FL House district 9 identity; no global nickname rule."
+  ],
+  "editions": [
+    {
+      "packageId": "CDIR-2005-07-11",
+      "congress": 109,
+      "fingerprint": "ef870ba558c4a90bd6b25e3902dbd13bbac90472400eada7e2c0910e1bbc65b2",
+      "organizations": 209,
+      "entries": 3781
+    },
+    {
+      "packageId": "CDIR-2006-09-01",
+      "congress": 109,
+      "fingerprint": "ef870ba558c4a90bd6b25e3902dbd13bbac90472400eada7e2c0910e1bbc65b2",
+      "organizations": 209,
+      "entries": 3781
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "Steven King",
+      "state": "IA",
+      "chamber": "lower",
+      "personId": "person:congress:k000362",
+      "canonicalName": "King, Steve",
+      "givenName": "Steve",
+      "familyName": "King",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Agriculture"
+        },
+        {
+          "name": "Conservation, Credit, Rural Development, and Research",
+          "parentName": "Agriculture"
+        },
+        {
+          "name": "General Farm Commodities and Risk Management",
+          "parentName": "Agriculture"
+        },
+        {
+          "name": "Livestock and Horticulture",
+          "parentName": "Agriculture"
+        }
+      ]
+    },
+    {
+      "printedName": "Cathy McMorris",
+      "state": "WA",
+      "chamber": "lower",
+      "personId": "person:congress:m001159",
+      "canonicalName": "McMorris Rodgers, Cathy",
+      "givenName": "Cathy",
+      "familyName": "Rodgers",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Readiness",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Strategic Forces",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Select Education",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "21st Century Competitiveness",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "Resources"
+        },
+        {
+          "name": "Forests and Forest Health",
+          "parentName": "Resources"
+        },
+        {
+          "name": "Water and Power",
+          "parentName": "Resources"
+        }
+      ]
+    },
+    {
+      "printedName": "Marty Meehan",
+      "state": "MA",
+      "chamber": "lower",
+      "personId": "person:congress:m000627",
+      "canonicalName": "Meehan, Martin T.",
+      "givenName": "MARTIN",
+      "familyName": "MEEHAN",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Military Personnel",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Terrorism, Unconventional Threats and Capabilities",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "Mike Conaway",
+      "state": "TX",
+      "chamber": "lower",
+      "personId": "person:congress:c001062",
+      "canonicalName": "Conaway, K. Michael",
+      "givenName": "K.",
+      "familyName": "Conaway",
+      "district": "11",
+      "contexts": [
+        {
+          "name": "Budget"
+        }
+      ]
+    },
+    {
+      "printedName": "Timothy J. Ryan",
+      "state": "OH",
+      "chamber": "lower",
+      "personId": "person:congress:r000577",
+      "canonicalName": "Ryan, Tim",
+      "givenName": "TIM",
+      "familyName": "RYAN",
+      "district": "17",
+      "contexts": [
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Select Education",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "21st Century Competitiveness",
+          "parentName": "Education and the Workforce"
+        }
+      ]
+    },
+    {
+      "printedName": "Mary Bono",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:b001228",
+      "canonicalName": "Bono Mack, Mary",
+      "givenName": "MARY",
+      "familyName": "BONO MACK",
+      "district": "45",
+      "contexts": [
+        {
+          "name": "Energy and Commerce"
+        },
+        {
+          "name": "Commerce, Trade, and Consumer Protection",
+          "parentName": "Energy and Commerce"
+        },
+        {
+          "name": "Energy and Air Quality",
+          "parentName": "Energy and Commerce"
+        },
+        {
+          "name": "Environment and Hazardous Materials",
+          "parentName": "Energy and Commerce"
+        },
+        {
+          "name": "Health",
+          "parentName": "Energy and Commerce"
+        }
+      ]
+    },
+    {
+      "printedName": "Dave G. Reichert",
+      "state": "WA",
+      "chamber": "lower",
+      "personId": "person:congress:r000578",
+      "canonicalName": "Reichert, David G.",
+      "givenName": "David",
+      "familyName": "Reichert",
+      "district": "8",
+      "contexts": [
+        {
+          "name": "Homeland Security"
+        },
+        {
+          "name": "Emergency Preparedness, Science, and Technology",
+          "parentName": "Homeland Security"
+        },
+        {
+          "name": "Intelligence, Information Sharing, and Terrorism Risk Assessment",
+          "parentName": "Homeland Security"
+        },
+        {
+          "name": "Management, Integration and Oversight",
+          "parentName": "Homeland Security"
+        },
+        {
+          "name": "Science"
+        },
+        {
+          "name": "Energy",
+          "parentName": "Science"
+        },
+        {
+          "name": "Environment, Technology, and Standards",
+          "parentName": "Science"
+        },
+        {
+          "name": "Research",
+          "parentName": "Science"
+        }
+      ]
+    },
+    {
+      "printedName": "Charlie Dent",
+      "state": "PA",
+      "chamber": "lower",
+      "personId": "person:congress:d000604",
+      "canonicalName": "Dent, Charles W.",
+      "givenName": "Charles",
+      "familyName": "Dent",
+      "district": "15",
+      "contexts": [
+        {
+          "name": "Homeland Security"
+        },
+        {
+          "name": "Emergency Preparedness, Science, and Technology",
+          "parentName": "Homeland Security"
+        },
+        {
+          "name": "Intelligence, Information Sharing, and Terrorism Risk Assessment",
+          "parentName": "Homeland Security"
+        },
+        {
+          "name": "Management, Integration and Oversight",
+          "parentName": "Homeland Security"
+        }
+      ]
+    },
+    {
+      "printedName": "Robert D. Inglis",
+      "state": "SC",
+      "chamber": "lower",
+      "personId": "person:congress:i000023",
+      "canonicalName": "Inglis, Bob",
+      "givenName": "BOB",
+      "familyName": "INGLIS",
+      "district": "4",
+      "contexts": [
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "Courts, the Internet, and Intellectual Property",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Immigration, Border Security, and Claims",
+          "parentName": "Judiciary"
+        }
+      ]
+    },
+    {
+      "printedName": "Mike Bilirakis",
+      "state": "FL",
+      "chamber": "lower",
+      "personId": "person:congress:b000463",
+      "canonicalName": "Bilirakis, Michael",
+      "givenName": "MICHAEL",
+      "familyName": "BILIRAKIS",
+      "district": "9",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        },
+        {
+          "name": "Oversight and Investigations",
+          "parentName": "Veterans’ Affairs"
+        }
+      ]
+    }
+  ]
+}

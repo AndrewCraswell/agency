@@ -22,7 +22,20 @@ review step, not an ingestion dependency and not evidence by itself. Production 
 Reviewed corrections preserve assignment count, organization, chamber, role and tenure semantics. They may not add
 an absent assignment. Exact typo repairs require the expected context and unique corroboration; broader reviewed
 identity resolutions must bind the reviewed source roster and expected canonical candidate. Changed source evidence,
-missing prerequisites or competing candidates fail closed. Decisions remain reviewable in code and this inventory.
+missing prerequisites or competing candidates fail closed. Decisions remain reviewable in mapping data and this inventory.
+
+## Reviewed mapping data
+
+The committed JSON datasets in [review-data](../src/ingestion/govinfo/review-data/README.md) contain reviewed names,
+canonical identities, exact committee contexts, edition fingerprints and research notes. The reviewed-identity matcher
+contains no person-specific mappings. Its shared loader validates the data shape and rejects duplicate editions or
+conflicting source contexts before the existing roster/canonical-person checks run.
+
+The September 8 extraction preserved all mapping values across 11 identity editions and five historical-assignment
+editions, verified by an exact structured-data comparison. Brown/Spence retain their separate historical-observation
+semantics. No database rows, assignments, dates or publication gates change. New database ingestion uses the same
+bundled datasets once canonical people and terms exist. Data changes still require review and deployment; remote
+GovInfo content cannot supply or alter these trusted overrides.
 
 An adjacent GovInfo edition may establish an explicit name-to-Bioguide identity equivalence when the target edition
 lacks an individual biography. This does not transfer any committee assignment across editions: the target roster

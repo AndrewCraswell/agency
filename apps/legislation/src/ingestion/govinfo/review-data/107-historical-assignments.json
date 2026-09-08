@@ -1,0 +1,59 @@
+{
+  "historicalAtFirstObservation": true,
+  "editions": [
+    {
+      "packageId": "CDIR-2001-12-07",
+      "congress": 107,
+      "fingerprint": "b3ff886282c54528f780074b48ada0c485d8c99914142939f27c43104d3baee4",
+      "organizations": 205,
+      "entries": 3732
+    },
+    {
+      "packageId": "CDIR-2002-10-01",
+      "congress": 107,
+      "fingerprint": "770d7924b9154cab7085120edad5008ed9ad1b4f3a08c84a1b513568718aec6b",
+      "organizations": 205,
+      "entries": 3721
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "øFloyd D. Spence¿",
+      "state": "SC",
+      "chamber": "lower",
+      "personId": "person:congress:s000718",
+      "canonicalName": "Spence, Floyd",
+      "givenName": "FLOYD",
+      "familyName": "SPENCE",
+      "district": "2",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Military Procurement",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Special Oversight Panel on Department of Energy Reorganization",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "øFloyd Spence¿",
+      "state": "SC",
+      "chamber": "lower",
+      "personId": "person:congress:s000718",
+      "canonicalName": "Spence, Floyd",
+      "givenName": "FLOYD",
+      "familyName": "SPENCE",
+      "district": "2",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        }
+      ]
+    }
+  ]
+}

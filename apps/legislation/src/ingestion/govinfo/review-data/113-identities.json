@@ -1,0 +1,82 @@
+{
+  "reviewNotes": [
+    "GovInfo STANDING COMMITTEES OF THE HOUSE prints the eight NV cells",
+    "below. Same-edition member metadata identifies H001066 as Steven",
+    "Horsford; the printed extra A. does not establish another identity.",
+    "The same House granule prints Jerry in this Judiciary child, but",
+    "Jerrold in five other NY cells including its parent. Same-edition",
+    "metadata identifies N000002; no external nickname source is used."
+  ],
+  "editions": [
+    {
+      "packageId": "CDIR-2014-02-18",
+      "congress": 113,
+      "fingerprint": "39ae93fceb0701656572030d8d02f279c30b900f6bd6be2568a3de5a24df8d5d",
+      "organizations": 210,
+      "entries": 3530
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "Steven A. Horsford",
+      "state": "NV",
+      "chamber": "lower",
+      "personId": "person:congress:h001066",
+      "canonicalName": "Horsford, Steven",
+      "givenName": "Steven",
+      "familyName": "Horsford",
+      "district": "4",
+      "contexts": [
+        {
+          "name": "Homeland Security"
+        },
+        {
+          "name": "Cybersecurity, Infrastructure Protection, and Security Technologies",
+          "parentName": "Homeland Security"
+        },
+        {
+          "name": "Natural Resources"
+        },
+        {
+          "name": "Energy and Mineral Resources",
+          "parentName": "Natural Resources"
+        },
+        {
+          "name": "Public Lands and Environmental Regulation",
+          "parentName": "Natural Resources"
+        },
+        {
+          "name": "Oversight and Government Reform"
+        },
+        {
+          "name": "Economic Growth, Job Creation and Regulatory Affairs",
+          "parentName": "Oversight and Government Reform"
+        },
+        {
+          "name": "Energy Policy, Health Care and Entitlements",
+          "parentName": "Oversight and Government Reform"
+        }
+      ]
+    },
+    {
+      "printedName": "Jerry Nadler",
+      "state": "NY",
+      "chamber": "lower",
+      "personId": "person:congress:n000002",
+      "canonicalName": "Nadler, Jerrold",
+      "givenName": "Jerrold",
+      "familyName": "Nadler",
+      "district": "10",
+      "contexts": [
+        {
+          "name": "Courts, Intellectual Property, and the Internet",
+          "parentName": "Judiciary"
+        }
+      ],
+      "corroboration": {
+        "name": "Jerrold Nadler",
+        "count": 5
+      }
+    }
+  ]
+}

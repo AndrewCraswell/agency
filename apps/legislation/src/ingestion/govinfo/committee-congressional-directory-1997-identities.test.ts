@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
-import { congress105IdentityReview } from "./committee-congressional-directory-1997-identities.js"
 import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
+import { committeeIdentityReviews } from "./committee-review-data.js"
 import { validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
+
+const congress105IdentityReview = committeeIdentityReviews.find((review) => review.packageId === "CDIR-1997-06-04")!
 
 const directory = {
   packageId: "CDIR-1997-06-04",

@@ -1,0 +1,324 @@
+{
+  "reviewNotes": [
+    "Identity evidence: CDIR-2005-07-11-SC-S-1 explicitly prints LINDSEY O. GRAHAM and G000359. Cross-edition identity only; target edition supplies every assignment and target-Congress term supplies chamber.",
+    "State correction evidence: target Superfund and Waste Management cell prints MO, while its Environment and Public Works parent identifies John W. Warner of VA. CDIR-2003-07-11-VA-S-1 links JOHN W. WARNER to W000154. Requires the separate exact parent-state guard, not a global state override.",
+    "Identity evidence: CDIR-2005-07-11-TN-S-1 explicitly prints WILLIAM H. (BILL) FRIST and F000439. Cross-edition identity only; no committee assignment transferred.",
+    "Reviewed identity inference, not an explicit nickname alias: target IA roster prints Steven King; CDIR-2003-07-11-IA-H-5 identifies STEVE KING / K000362. Unique eligible IA House district 5 catalog identity; Peter King of NY is a different candidate.",
+    "Reviewed identity inference: target VA roster prints Ed Schrock; CDIR-2002-10-01-VA-H-2 identifies EDWARD L. SCHROCK / S001151. Unique eligible VA House district 2 identity; no global Ed-to-Edward expansion.",
+    "Reviewed identity inference: target MA roster prints Marty Meehan; CDIR-2002-10-01-MA-H-5 identifies MARTIN T. MEEHAN / M000627. Unique eligible MA House district 5 identity; no runtime nickname rule.",
+    "Reviewed identity inference: target OK roster prints Thomas Cole; CDIR-2003-07-11-OK-H-4 identifies TOM COLE / C001053. Unique eligible OK House district 4 identity; no runtime Thomas-to-Tom expansion.",
+    "Reviewed identity inference: target OH roster prints Timothy J. Ryan; CDIR-2003-07-11-OH-H-17 links TIM RYAN and Tim J. Ryan to R000577. Unique eligible OH House district 17 candidate, distinct from Paul Ryan of WI.",
+    "Reviewed identity inference: target NJ roster prints Chris Smith; CDIR-2002-10-01-NJ-H-4 identifies CHRISTOPHER H. SMITH / S000522. Unique eligible NJ House district 4 candidate, distinct from the other Smith identities.",
+    "Reviewed identity inference: target FL roster prints Mike Bilirakis; CDIR-2002-10-01-FL-H-9 identifies MICHAEL BILIRAKIS / B000463. Unique eligible FL House district 9 identity; no global nickname rule.",
+    "Reviewed middle-initial evidence: CDIR-2003-07-11-NC-H-5 links Richard Mauze Burr and RICHARD BURR to B001135. Target NC roster prints Richard M. Burr. Target-Congress House district 5 term required, not the later Senate term."
+  ],
+  "editions": [
+    {
+      "packageId": "CDIR-2003-07-11",
+      "congress": 108,
+      "fingerprint": "0b0b5d99cc90453a48ae64a217797c821e7c7a73acaceadebf6c8ea5c9a3b800",
+      "organizations": 206,
+      "entries": 3856
+    },
+    {
+      "packageId": "CDIR-2003-11-01",
+      "congress": 108,
+      "fingerprint": "535fc3cc84856bd3048bfef8ed020be3879f2414e917df6ba6a86c9774aec60e",
+      "organizations": 206,
+      "entries": 3856
+    },
+    {
+      "packageId": "CDIR-2004-01-01",
+      "congress": 108,
+      "fingerprint": "535fc3cc84856bd3048bfef8ed020be3879f2414e917df6ba6a86c9774aec60e",
+      "organizations": 206,
+      "entries": 3856
+    },
+    {
+      "packageId": "CDIR-2004-08-01",
+      "congress": 108,
+      "fingerprint": "535fc3cc84856bd3048bfef8ed020be3879f2414e917df6ba6a86c9774aec60e",
+      "organizations": 206,
+      "entries": 3856
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "Lindsey O. Graham",
+      "state": "SC",
+      "chamber": "upper",
+      "personId": "person:congress:g000359",
+      "canonicalName": "Graham, Lindsey",
+      "givenName": "Lindsey",
+      "familyName": "Graham",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Emerging Threats and Capabilities",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Seapower",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Strategic Forces",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Health, Education, Labor, and Pensions"
+        },
+        {
+          "name": "Children and Families",
+          "parentName": "Health, Education, Labor, and Pensions"
+        },
+        {
+          "name": "Veterans’ Affairs"
+        }
+      ]
+    },
+    {
+      "printedName": "John W. Warner",
+      "state": "MO",
+      "chamber": "upper",
+      "personId": "person:congress:w000154",
+      "canonicalName": "Warner, John",
+      "givenName": "JOHN",
+      "familyName": "WARNER",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Superfund and Waste Management",
+          "parentName": "Environment and Public Works"
+        }
+      ],
+      "canonicalState": "VA",
+      "corroboration": {
+        "name": "John W. Warner",
+        "count": 1,
+        "state": "VA",
+        "contexts": [
+          {
+            "name": "Environment and Public Works"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "Bill Frist",
+      "state": "TN",
+      "chamber": "upper",
+      "personId": "person:congress:f000439",
+      "canonicalName": "Frist, William H.",
+      "givenName": "WILLIAM",
+      "familyName": "FRIST",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Finance"
+        },
+        {
+          "name": "Health Care",
+          "parentName": "Finance"
+        },
+        {
+          "name": "International Trade",
+          "parentName": "Finance"
+        },
+        {
+          "name": "Social Security and Family Policy",
+          "parentName": "Finance"
+        },
+        {
+          "name": "Health, Education, Labor, and Pensions"
+        },
+        {
+          "name": "Rules and Administration"
+        }
+      ]
+    },
+    {
+      "printedName": "Steven King",
+      "state": "IA",
+      "chamber": "lower",
+      "personId": "person:congress:k000362",
+      "canonicalName": "King, Steve",
+      "givenName": "Steve",
+      "familyName": "King",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Agriculture"
+        },
+        {
+          "name": "Conservation, Credit, Rural Development, and Research",
+          "parentName": "Agriculture"
+        },
+        {
+          "name": "Department Operations, Oversight, Nutrition, and Forestry",
+          "parentName": "Agriculture"
+        }
+      ]
+    },
+    {
+      "printedName": "Ed Schrock",
+      "state": "VA",
+      "chamber": "lower",
+      "personId": "person:congress:s001151",
+      "canonicalName": "Schrock, Edward L.",
+      "givenName": "EDWARD",
+      "familyName": "SCHROCK",
+      "district": "2",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Projection Forces",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Tactical Air and Land Forces",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Total Force",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "Marty Meehan",
+      "state": "MA",
+      "chamber": "lower",
+      "personId": "person:congress:m000627",
+      "canonicalName": "Meehan, Martin T.",
+      "givenName": "MARTIN",
+      "familyName": "MEEHAN",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Terrorism, Unconventional Threats and Capabilities",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Total Force",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "Thomas Cole",
+      "state": "OK",
+      "chamber": "lower",
+      "personId": "person:congress:c001053",
+      "canonicalName": "Cole, Tom",
+      "givenName": "Tom",
+      "familyName": "Cole",
+      "district": "4",
+      "contexts": [
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Employer-Employee Relations",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "21st Century Competitiveness",
+          "parentName": "Education and the Workforce"
+        }
+      ]
+    },
+    {
+      "printedName": "Timothy J. Ryan",
+      "state": "OH",
+      "chamber": "lower",
+      "personId": "person:congress:r000577",
+      "canonicalName": "Ryan, Tim",
+      "givenName": "TIM",
+      "familyName": "RYAN",
+      "district": "17",
+      "contexts": [
+        {
+          "name": "Education and the Workforce"
+        },
+        {
+          "name": "Select Education",
+          "parentName": "Education and the Workforce"
+        },
+        {
+          "name": "21st Century Competitiveness",
+          "parentName": "Education and the Workforce"
+        }
+      ]
+    },
+    {
+      "printedName": "Chris Smith",
+      "state": "NJ",
+      "chamber": "lower",
+      "personId": "person:congress:s000522",
+      "canonicalName": "Smith, Christopher H.",
+      "givenName": "Christopher",
+      "familyName": "Smith",
+      "district": "4",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        }
+      ]
+    },
+    {
+      "printedName": "Mike Bilirakis",
+      "state": "FL",
+      "chamber": "lower",
+      "personId": "person:congress:b000463",
+      "canonicalName": "Bilirakis, Michael",
+      "givenName": "MICHAEL",
+      "familyName": "BILIRAKIS",
+      "district": "9",
+      "contexts": [
+        {
+          "name": "Veterans’ Affairs"
+        },
+        {
+          "name": "Oversight and Investigations",
+          "parentName": "Veterans’ Affairs"
+        }
+      ]
+    },
+    {
+      "printedName": "Richard M. Burr",
+      "state": "NC",
+      "chamber": "lower",
+      "personId": "person:congress:b001135",
+      "canonicalName": "Burr, Richard",
+      "givenName": "Richard",
+      "familyName": "Burr",
+      "district": "5",
+      "contexts": [
+        {
+          "name": "Permanent Select Committee on Intelligence"
+        },
+        {
+          "name": "Human Intelligence, Analysis and Counterintelligence",
+          "parentName": "Permanent Select Committee on Intelligence"
+        },
+        {
+          "name": "Intelligence Policy and National Security",
+          "parentName": "Permanent Select Committee on Intelligence"
+        },
+        {
+          "name": "Terrorism and Homeland Security",
+          "parentName": "Permanent Select Committee on Intelligence"
+        }
+      ]
+    }
+  ]
+}

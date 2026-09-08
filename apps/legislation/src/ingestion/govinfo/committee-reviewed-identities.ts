@@ -1,99 +1,8 @@
 import { createHash } from "node:crypto"
-import { congress105IdentityReview } from "./committee-congressional-directory-1997-identities.js"
 import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeMember, GovInfoCommitteeRecord } from "./committee-directory-parser.js"
-import { historicalIdentityReviews } from "./committee-historical-identity-reviews.js"
-
-type ReviewedIdentity = {
-  printedName: string
-  state: string
-  canonicalState?: string
-  chamber: "lower" | "upper"
-  personId: string
-  canonicalName: string
-  givenName: string
-  familyName: string
-  district: string | null
-  contexts: readonly { name: string; parentName?: string }[]
-  corroboration?: {
-    name: string
-    count: number
-    state?: string
-    contexts?: readonly { name: string; parentName?: string }[]
-  }
-}
-
-export type IdentityReview = {
-  historicalAtFirstObservation?: true
-  packageId: string
-  congress: number
-  fingerprint: string
-  organizations: number
-  entries: number
-  identities: readonly ReviewedIdentity[]
-}
-
-// Offline-reviewed identities, not a nickname dictionary. Fingerprint covers
-// JSON.stringify of the complete parsed roster, not raw PDF bytes. Membership
-// evidence remains GovInfo; these IDs already exist in the Congress.gov catalog.
-const reviews: readonly IdentityReview[] = [
-  congress105IdentityReview,
-  ...historicalIdentityReviews,
-  {
-    packageId: "CDIR-2014-02-18",
-    congress: 113,
-    fingerprint: "39ae93fceb0701656572030d8d02f279c30b900f6bd6be2568a3de5a24df8d5d",
-    organizations: 210,
-    entries: 3530,
-    identities: [
-      {
-        // GovInfo STANDING COMMITTEES OF THE HOUSE prints the eight NV cells
-        // below. Same-edition member metadata identifies H001066 as Steven
-        // Horsford; the printed extra A. does not establish another identity.
-        printedName: "Steven A. Horsford",
-        state: "NV",
-        chamber: "lower",
-        personId: "person:congress:h001066",
-        canonicalName: "Horsford, Steven",
-        givenName: "Steven",
-        familyName: "Horsford",
-        district: "4",
-        contexts: [
-          { name: "Homeland Security" },
-          {
-            name: "Cybersecurity, Infrastructure Protection, and Security Technologies",
-            parentName: "Homeland Security"
-          },
-          { name: "Natural Resources" },
-          { name: "Energy and Mineral Resources", parentName: "Natural Resources" },
-          { name: "Public Lands and Environmental Regulation", parentName: "Natural Resources" },
-          { name: "Oversight and Government Reform" },
-          {
-            name: "Economic Growth, Job Creation and Regulatory Affairs",
-            parentName: "Oversight and Government Reform"
-          },
-          { name: "Energy Policy, Health Care and Entitlements", parentName: "Oversight and Government Reform" }
-        ]
-      },
-      {
-        // The same House granule prints Jerry in this Judiciary child, but
-        // Jerrold in five other NY cells including its parent. Same-edition
-        // metadata identifies N000002; no external nickname source is used.
-        printedName: "Jerry Nadler",
-        state: "NY",
-        chamber: "lower",
-        personId: "person:congress:n000002",
-        canonicalName: "Nadler, Jerrold",
-        givenName: "Jerrold",
-        familyName: "Nadler",
-        district: "10",
-        contexts: [{ name: "Courts, Intellectual Property, and the Internet", parentName: "Judiciary" }],
-        corroboration: { name: "Jerrold Nadler", count: 5 }
-      }
-    ]
-  }
-]
+import { committeeIdentityReviews, type IdentityReview } from "./committee-review-data.js"
 
 /** Production callers cannot supply a review; unknown editions get no overrides. */
 export function reviewedGovInfoIdentities(
@@ -101,7 +10,7 @@ export function reviewedGovInfoIdentities(
   directory: GovInfoDirectoryPackage,
   catalog: GovInfoPersonCatalog
 ) {
-  const review = reviews.find(
+  const review = committeeIdentityReviews.find(
     (entry) => entry.packageId === directory.packageId && entry.congress === directory.congress
   )
   if (!review) {
@@ -114,7 +23,7 @@ export function reviewedGovInfoIdentities(
   return result
 }
 
-/** Pure validator for code-reviewed manifests. Never accepts source-provided review data. */
+/** Pure validator for repository-reviewed mapping data. Never accepts source-provided review data. */
 export function validateGovInfoIdentityReview(
   review: IdentityReview,
   records: readonly GovInfoCommitteeRecord[],

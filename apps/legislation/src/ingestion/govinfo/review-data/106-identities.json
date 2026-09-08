@@ -1,0 +1,332 @@
+{
+  "reviewNotes": [
+    "F000439 and the same-edition Tennessee biography identify William H.",
+    "Frist; contemporary hearings confirm the printed Bill Frist chair roles.",
+    "The Directory's Armed Services section prints H.; M000472 and 106th",
+    "hearing rosters identify John Michael McHugh of New York instead.",
+    "F000328 identifies Tillie Kidd Fowler; her biography confirms both",
+    "parent committees and 106th oversight chairmanship. Target cells only.",
+    "The Senate's February 23, 2000 statement identifies Robert F. Bennett",
+    "as this committee's chair. Only the Directory's Bob Bennett cell applies.",
+    "Full printed name is linked to Sam Dale Brownback by B000953/FEC",
+    "S6KS00122; 106th Commerce hearing rosters also print Sam Brownback, KS.",
+    "The source prints Kent Cochran of ND in two children, while its parent",
+    "prints Thad Cochran of MS. The member index and CREC-1999-02-08 D114",
+    "confirm Cochran in both: a scoped name/state correction, not an alias.",
+    "Same-edition Armed Services parent spells McIntyre correctly; 106th",
+    "procurement/readiness hearing rosters independently confirm both seats.",
+    "Bioguide D000492 identifies David Timothy Dreier and his 106th Rules",
+    "chairmanship; the Directory explicitly prints these three CA cells.",
+    "J000032 and contemporary 106th Crime/Immigration hearing rosters",
+    "confirm Sheila Jackson Lee, TX. Only these misspelled source cells apply.",
+    "Offline-reviewed source cells. These are edition-bound decisions, never",
+    "source-provided aliases or a runtime nickname dictionary. Each fingerprint",
+    "covers JSON.stringify of the entire parsed roster in its original order."
+  ],
+  "editions": [
+    {
+      "packageId": "CDIR-1999-06-15",
+      "congress": 106,
+      "fingerprint": "49e580bbb11ac221f8a67d4cc70a884e91c32b174b281887805da5cc8d969212",
+      "organizations": 199,
+      "entries": 3331
+    },
+    {
+      "packageId": "CDIR-2000-02-01",
+      "congress": 106,
+      "fingerprint": "54031e31df3d662243a23c2697ff9e7c3a736bed4d04bbe3a676306ba8fb11ae",
+      "organizations": 199,
+      "entries": 3331
+    },
+    {
+      "packageId": "CDIR-2000-10-01",
+      "congress": 106,
+      "fingerprint": "54031e31df3d662243a23c2697ff9e7c3a736bed4d04bbe3a676306ba8fb11ae",
+      "organizations": 199,
+      "entries": 3331
+    }
+  ],
+  "identities": [
+    {
+      "printedName": "Bill Frist",
+      "state": "TN",
+      "chamber": "upper",
+      "personId": "person:congress:f000439",
+      "canonicalName": "Frist, William H.",
+      "givenName": "WILLIAM",
+      "familyName": "FRIST",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Budget"
+        },
+        {
+          "name": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Aviation",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Communications",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Manufacturing and Competitiveness",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Science, Technology and Space",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Surface Transportation and Merchant Marine",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Foreign Relations"
+        },
+        {
+          "name": "African Affairs",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "International Economic Policy, Export and Trade Promotion",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "International Operations",
+          "parentName": "Foreign Relations"
+        },
+        {
+          "name": "Health, Education, Labor and Pensions"
+        },
+        {
+          "name": "Children and Families",
+          "parentName": "Health, Education, Labor and Pensions"
+        },
+        {
+          "name": "Public Health",
+          "parentName": "Health, Education, Labor and Pensions"
+        }
+      ]
+    },
+    {
+      "printedName": "John H. McHugh",
+      "state": "NY",
+      "chamber": "lower",
+      "personId": "person:congress:m000472",
+      "canonicalName": "McHugh, John M.",
+      "givenName": "JOHN",
+      "familyName": "MCHUGH",
+      "district": "24",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Military Installations and Facilities",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Military Research and Development",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Special Oversight Panel on Morale, Welfare and Recreation",
+          "parentName": "Armed Services"
+        }
+      ]
+    },
+    {
+      "printedName": "Tillie K. Fowler",
+      "state": "FL",
+      "chamber": "lower",
+      "personId": "person:congress:f000328",
+      "canonicalName": "Fowler, Tillie",
+      "givenName": "TILLIE",
+      "familyName": "FOWLER",
+      "district": "4",
+      "contexts": [
+        {
+          "name": "Armed Services"
+        },
+        {
+          "name": "Military Installations and Facilities",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Military Readiness",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Transportation and Infrastructure"
+        },
+        {
+          "name": "Ground Transportation",
+          "parentName": "Transportation and Infrastructure"
+        },
+        {
+          "name": "Oversight, Investigations and Emergency Management",
+          "parentName": "Transportation and Infrastructure"
+        }
+      ]
+    },
+    {
+      "printedName": "Bob Bennett",
+      "state": "UT",
+      "chamber": "upper",
+      "personId": "person:congress:b000382",
+      "canonicalName": "Bennett, Robert F.",
+      "givenName": "ROBERT",
+      "familyName": "BENNETT",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Special Committee on the Year 2000 Technology Problem"
+        }
+      ]
+    },
+    {
+      "printedName": "Samuel Dale Brownback",
+      "state": "KS",
+      "chamber": "upper",
+      "personId": "person:congress:b000953",
+      "canonicalName": "Brownback, Sam",
+      "givenName": "SAM",
+      "familyName": "BROWNBACK",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Aviation",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Communications",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Consumer Affairs, Foreign Commerce and Tourism",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Manufacturing and Competitiveness",
+          "parentName": "Commerce, Science, and Transportation"
+        },
+        {
+          "name": "Surface Transportation and Merchant Marine",
+          "parentName": "Commerce, Science, and Transportation"
+        }
+      ]
+    },
+    {
+      "printedName": "Kent Cochran",
+      "state": "ND",
+      "canonicalState": "MS",
+      "chamber": "upper",
+      "personId": "person:congress:c000567",
+      "canonicalName": "Cochran, Thad",
+      "givenName": "Thad",
+      "familyName": "Cochran",
+      "district": null,
+      "contexts": [
+        {
+          "name": "Marketing Inspection and Product Promotion",
+          "parentName": "Agriculture, Nutrition and Forestry"
+        },
+        {
+          "name": "Production and Price Competitiveness",
+          "parentName": "Agriculture, Nutrition and Forestry"
+        }
+      ],
+      "corroboration": {
+        "name": "Thad Cochran",
+        "state": "MS",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "Agriculture, Nutrition and Forestry"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "Mike McIntrye",
+      "state": "NC",
+      "chamber": "lower",
+      "personId": "person:congress:m000485",
+      "canonicalName": "McIntyre, Mike",
+      "givenName": "MIKE",
+      "familyName": "MCINTYRE",
+      "district": "7",
+      "contexts": [
+        {
+          "name": "Military Procurement",
+          "parentName": "Armed Services"
+        },
+        {
+          "name": "Military Readiness",
+          "parentName": "Armed Services"
+        }
+      ],
+      "corroboration": {
+        "name": "Mike McIntyre",
+        "count": 1,
+        "contexts": [
+          {
+            "name": "Armed Services"
+          }
+        ]
+      }
+    },
+    {
+      "printedName": "David Drier",
+      "state": "CA",
+      "chamber": "lower",
+      "personId": "person:congress:d000492",
+      "canonicalName": "Dreier, David",
+      "givenName": "DAVID",
+      "familyName": "DREIER",
+      "district": "28",
+      "contexts": [
+        {
+          "name": "Rules"
+        },
+        {
+          "name": "Legislative and Budget Process",
+          "parentName": "Rules"
+        },
+        {
+          "name": "Rules and Organization of the House",
+          "parentName": "Rules"
+        }
+      ]
+    },
+    {
+      "printedName": "Shelia Jackson Lee",
+      "state": "TX",
+      "chamber": "lower",
+      "personId": "person:congress:j000032",
+      "canonicalName": "Jackson Lee, Sheila",
+      "givenName": "Sheila",
+      "familyName": "Jackson Lee",
+      "district": "18",
+      "contexts": [
+        {
+          "name": "Judiciary"
+        },
+        {
+          "name": "Crime",
+          "parentName": "Judiciary"
+        },
+        {
+          "name": "Immigration and Claims",
+          "parentName": "Judiciary"
+        }
+      ]
+    }
+  ]
+}

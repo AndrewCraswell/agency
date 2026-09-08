@@ -4,7 +4,7 @@ import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import { normalizeGovInfoCommitteeDirectory } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
-import { historicalIdentityReviews } from "./committee-historical-identity-reviews.js"
+import { committeeIdentityReviews } from "./committee-review-data.js"
 import { reviewedGovInfoIdentities, validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
 import * as reviewedIdentityModule from "./committee-reviewed-identities.js"
 
@@ -118,7 +118,7 @@ describe("offline-reviewed GovInfo identity validation", () => {
     "John H. McHugh",
     "Bill Frist"
   ])("validates the exact reviewed %s cells", (printedName) => {
-    const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
+    const manifest = committeeIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
     const identity = manifest.identities.find((candidate) => candidate.printedName === printedName)!
     const records: GovInfoCommitteeRecord[] = identity.contexts.map((context) => ({
       ...context,
@@ -177,7 +177,7 @@ describe("offline-reviewed GovInfo identity validation", () => {
     ).toBe(0)
   })
   it("accepts only reviewed name-and-state contradictions under the same corroborated parent", () => {
-    const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
+    const manifest = committeeIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
     const identity = manifest.identities.find((candidate) => candidate.printedName === "Kent Cochran")!
     const records: GovInfoCommitteeRecord[] = [
       {
