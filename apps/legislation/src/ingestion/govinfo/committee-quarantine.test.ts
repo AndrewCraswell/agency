@@ -32,7 +32,13 @@ describe("reviewed committee assignment quarantine", () => {
     const { record, directory } = fixture()
     const result = normalize(record, directory)
     expect(result.quarantined).toEqual([
-      { chamber: "upper", name: "Tom Udall", organization: "Appropriations", reason: "source_term_contradiction" }
+      {
+        chamber: "upper",
+        name: "Tom Udall",
+        organization: "Appropriations",
+        reason: "source_term_contradiction",
+        personId: "person:congress:u000039"
+      }
     ])
     expect(result.unmatched).toEqual([])
     expect(result.snapshot.memberships).toEqual([])

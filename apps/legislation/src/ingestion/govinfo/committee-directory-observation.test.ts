@@ -31,7 +31,13 @@ describe("committee directory observations", () => {
     const coverage = {
       status: "incomplete",
       quarantined: [
-        { chamber: "upper", name: "Tom Udall", organization: "Appropriations", reason: "source_term_contradiction" }
+        {
+          chamber: "upper",
+          name: "Tom Udall",
+          organization: "Appropriations",
+          reason: "source_term_contradiction",
+          personId: "person:congress:u000039"
+        }
       ]
     }
     const serialized = JSON.stringify({ ...previous, coverage })

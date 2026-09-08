@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { committeeCoverageWarnings } from "./committee-coverage-warnings.js"
+import { committeeCoverageWarnings, personCommitteeCoverageWarnings } from "./committee-coverage-warnings.js"
 
 const organization = { chamber: "upper", name: "Appropriations" }
 const checkpoint = {
@@ -14,7 +14,13 @@ const checkpoint = {
       coverage: {
         status: "incomplete",
         quarantined: [
-          { chamber: "upper", organization: "Appropriations", name: "Tom Udall", reason: "source_term_contradiction" }
+          {
+            chamber: "upper",
+            organization: "Appropriations",
+            name: "Tom Udall",
+            reason: "source_term_contradiction",
+            personId: "person:congress:u000039"
+          }
         ]
       }
     }
@@ -22,6 +28,15 @@ const checkpoint = {
 }
 
 describe("Congress-scoped committee coverage warnings", () => {
+  it("targets the reviewed person ID, never a namesake or inferred replacement", () => {
+    expect(personCommitteeCoverageWarnings([checkpoint], "person:congress:u000039")).toEqual([
+      "GovInfo membership history for this person in session:us:117 is incomplete: 1 source assignment(s) quarantined in CDIR-2022-10-26."
+    ])
+    expect(personCommitteeCoverageWarnings([checkpoint], "person:congress:u000038")).toEqual([])
+    expect(
+      personCommitteeCoverageWarnings([{ stream: checkpoint.stream, cursor: {} }], "person:congress:u000039")
+    ).toEqual([])
+  })
   it("names the historical Congress and source edition without claiming today's roster is incomplete", () => {
     expect(committeeCoverageWarnings([checkpoint], organization)).toEqual([
       "GovInfo committee roster for session:us:117 is incomplete: 1 source assignment(s) quarantined in CDIR-2022-10-26."

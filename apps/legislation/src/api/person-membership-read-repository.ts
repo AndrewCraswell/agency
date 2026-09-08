@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { and, eq, like } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import type { OrganizationMembershipRead } from "../db/queries/civic-scoped-reads.js"
 import {
@@ -6,11 +6,15 @@ import {
   type PersonMembershipListInput,
   type PersonMembershipPage
 } from "../db/queries/person-membership-reads.js"
-import { people } from "../db/schema/schema.js"
+import { people, syncCheckpoints } from "../db/schema/schema.js"
 import { LegislationError } from "../legislation/errors.js"
+import { personCommitteeCoverageWarnings } from "./committee-coverage-warnings.js"
 
 export type PersonMembershipsListInput = PersonMembershipListInput
-export type PersonMembershipsPage = Omit<PersonMembershipPage, "items"> & { items: OrganizationMembershipRead[] }
+export type PersonMembershipsPage = Omit<PersonMembershipPage, "items"> & {
+  items: OrganizationMembershipRead[]
+  warnings?: readonly string[]
+}
 
 export interface PersonMembershipsReadRepository {
   listPersonMemberships(input: PersonMembershipsListInput): Promise<PersonMembershipsPage>
@@ -19,6 +23,7 @@ export interface PersonMembershipsReadRepository {
 type PersonMembershipsStore = {
   listPersonMemberships(input: PersonMembershipsListInput): Promise<PersonMembershipsPage>
   personExists(personId: string): Promise<boolean>
+  coverageWarnings(personId: string): Promise<string[]>
 }
 
 /**
@@ -37,12 +42,29 @@ export class PersonMembershipsRepository implements PersonMembershipsReadReposit
     if (!(await this.#store.personExists(input.personId))) {
       throw new LegislationError("not_found", `Person ${input.personId} was not found`)
     }
-    return await this.#store.listPersonMemberships(input)
+    const page = await this.#store.listPersonMemberships(input)
+    if (input.isCurrent === true) {
+      return page
+    }
+    const warnings = await this.#store.coverageWarnings(input.personId)
+    return warnings.length === 0 ? page : { ...page, warnings: [...(page.warnings ?? []), ...warnings] }
   }
 }
 
 export function createPersonMembershipsRepository(database: LegislationDatabase): PersonMembershipsReadRepository {
   return new PersonMembershipsRepository({
+    coverageWarnings: async (personId) => {
+      if (!personId.startsWith("person:congress:")) {
+        return []
+      }
+      const checkpoints = await database
+        .select({ stream: syncCheckpoints.stream, cursor: syncCheckpoints.cursor })
+        .from(syncCheckpoints)
+        .where(
+          and(eq(syncCheckpoints.source, "govinfo"), like(syncCheckpoints.stream, "govinfo:committee-directory:%"))
+        )
+      return personCommitteeCoverageWarnings(checkpoints, personId)
+    },
     listPersonMemberships: async (input) => await listPersonMemberships(database, input),
     personExists: async (personId) => {
       const rows = await database.select({ id: people.id }).from(people).where(eq(people.id, personId)).limit(1)

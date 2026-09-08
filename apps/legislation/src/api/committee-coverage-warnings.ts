@@ -1,5 +1,26 @@
 import { readDirectoryObservation } from "../ingestion/govinfo/committee-directory-observation.js"
 
+export function personCommitteeCoverageWarnings(
+  checkpoints: readonly { stream: string; cursor: Record<string, unknown> }[],
+  personId: string
+): string[] {
+  return checkpoints
+    .flatMap((checkpoint) => {
+      const congress = /^govinfo:committee-directory:([1-9]\d*)$/.exec(checkpoint.stream)?.[1]
+      if (congress === undefined) {
+        return []
+      }
+      const observation = readDirectoryObservation(checkpoint.cursor.observation)
+      const disputed = observation?.coverage?.quarantined.filter((entry) => entry.personId === personId) ?? []
+      return disputed.length === 0
+        ? []
+        : [
+            `GovInfo membership history for this person in session:us:${congress} is incomplete: ${disputed.length} source assignment(s) quarantined in ${observation?.packageId}.`
+          ]
+    })
+    .sort()
+}
+
 /** Source coverage describes the Congress roster, not the filtered result page. */
 export function committeeCoverageWarnings(
   checkpoints: readonly { stream: string; cursor: Record<string, unknown> }[],

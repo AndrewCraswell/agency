@@ -36,6 +36,7 @@ export interface GovInfoCommitteeNormalizationResult {
       name: string
       organization: string
       reason: "source_term_contradiction"
+      personId: string
     }>
   >
 }
@@ -105,7 +106,8 @@ export function normalizeGovInfoCommitteeDirectory(
           chamber: member.chamber,
           name: member.name,
           organization: record.name,
-          reason: "source_term_contradiction"
+          reason: "source_term_contradiction",
+          personId: "person:congress:u000039"
         })
         continue
       }

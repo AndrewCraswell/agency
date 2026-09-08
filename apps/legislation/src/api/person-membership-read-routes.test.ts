@@ -8,6 +8,16 @@ import { createPersonMembershipReadApiHandler, type PersonMembershipReadApi } fr
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "person-membership-read-api-test", write: () => undefined })
 
+it("returns saved coverage warnings with an empty historical membership page", async () => {
+  const warning = "Historical roster is incomplete for session:us:117."
+  const base = await startServer({
+    listPersonMemberships: async () => ({ items: [], truncated: false, warnings: [warning] })
+  })
+  const response = await fetch(`${base}/api/people/person:congress:u000039/memberships`)
+  expect(response.status).toBe(200)
+  expect(await response.json()).toMatchObject({ data: [], meta: { warnings: [warning] } })
+})
+
 afterEach(async () => {
   await Promise.all([...servers].map(async (server) => await close(server)))
   servers.clear()

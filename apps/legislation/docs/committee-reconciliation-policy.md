@@ -148,5 +148,8 @@ guard can be removed; checkpoint persistence alone does not make quarantined imp
 Organization membership responses now carry affected historical Congress/source-edition coverage warnings in
 `meta.warnings`, including empty pages. Warnings describe source coverage rather than the filtered page. Current-only
 requests do not inherit an old Congress's incomplete status. Other committees/chambers are not marked incomplete,
-and absent checkpoint evidence is not converted into a claim of completeness. Person membership reads and deployment
-verification remain before the quarantined-publication guard can be removed.
+and absent checkpoint evidence is not converted into a claim of completeness. Person membership reads now expose the
+same historical warning using the reviewed canonical person ID, including when the person's filtered page is empty.
+The disputed cell retains `person:congress:u000039`, independently confirmed as `Udall, Tom` in the production catalog;
+this identifies the quarantined claim, not an accepted 117th membership. Other people and current-only reads do not
+inherit that warning. Deployment verification remains before the quarantined-publication guard can be removed.

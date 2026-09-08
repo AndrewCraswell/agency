@@ -11,9 +11,26 @@ const input = {
 }
 
 describe("PersonMembershipsRepository", () => {
+  it("warns on empty historical pages without contaminating current-only reads", async () => {
+    let assessments = 0
+    const repository = new PersonMembershipsRepository({
+      personExists: async () => true,
+      listPersonMemberships: async () => ({ items: [], truncated: false }),
+      coverageWarnings: async () => {
+        assessments += 1
+        return ["Historical roster is incomplete for session:us:117."]
+      }
+    })
+    expect(await repository.listPersonMemberships({ ...input, isCurrent: false })).toMatchObject({
+      warnings: ["Historical roster is incomplete for session:us:117."]
+    })
+    expect(await repository.listPersonMemberships(input)).not.toHaveProperty("warnings")
+    expect(assessments).toBe(1)
+  })
   it("returns not_found for an absent parent before listing memberships", async () => {
     let listed = false
     const repository = new PersonMembershipsRepository({
+      coverageWarnings: async () => [],
       listPersonMemberships: async () => {
         listed = true
         return { items: [], truncated: false }
@@ -29,6 +46,7 @@ describe("PersonMembershipsRepository", () => {
     let received: unknown
     const page = { items: [], nextCursor: "person-membership-cursor", truncated: true }
     const repository = new PersonMembershipsRepository({
+      coverageWarnings: async () => [],
       listPersonMemberships: async (value) => {
         received = value
         return page

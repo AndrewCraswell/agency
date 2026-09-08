@@ -9,7 +9,8 @@ const coverageSchema = z
         chamber: z.enum(["lower", "upper"]),
         name: z.string().min(1),
         organization: z.string().min(1),
-        reason: z.literal("source_term_contradiction")
+        reason: z.literal("source_term_contradiction"),
+        personId: z.string().regex(/^person:congress:[a-z]\d{6}$/)
       })
     )
   })
