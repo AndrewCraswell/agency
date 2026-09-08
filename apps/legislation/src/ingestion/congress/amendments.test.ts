@@ -2,6 +2,21 @@ import { describe, expect, it } from "vitest"
 import { normalizeCongressAmendmentBundle } from "./amendments.js"
 
 describe("Congress amendment normalization", () => {
+  it("preserves a committee sponsor without inventing a person identity", () => {
+    const snapshot = normalizeCongressAmendmentBundle({
+      amendment: {
+        congress: 113,
+        number: "17",
+        type: "HAMDT",
+        sponsors: [{ name: "Rules Committee", url: "https://api.congress.gov/v3/committee/house/hsru00" }]
+      },
+      sourceUrl: "https://api.congress.gov/v3/amendment/113/hamdt/17"
+    })
+    expect(snapshot.amendment.sponsorName).toBe("Rules Committee")
+    expect(snapshot.amendment.sponsorPersonId).toBeUndefined()
+    expect(snapshot.amendment.sponsorSourceId).toBeUndefined()
+  })
+
   it("normalizes amendment actions, sponsor, related bill, and available text", () => {
     const snapshot = normalizeCongressAmendmentBundle({
       actions: [

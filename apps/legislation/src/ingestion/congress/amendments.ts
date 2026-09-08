@@ -32,7 +32,9 @@ const formatSchema = z.object({ type: z.string().min(1), url: z.string().url() }
 const textVersionSchema = z
   .object({ date: optionalString, formats: z.array(formatSchema).default([]), type: optionalString })
   .passthrough()
-const sponsorSchema = z.object({ bioguideId: optionalString, fullName: optionalString }).passthrough()
+const sponsorSchema = z
+  .object({ bioguideId: optionalString, fullName: optionalString, name: optionalString })
+  .passthrough()
 const amendedBillSchema = z
   .object({ congress: z.number().int().positive(), number: z.string().min(1), type: z.string().min(1) })
   .passthrough()
@@ -146,7 +148,7 @@ export function normalizeCongressAmendmentBundle(input: unknown): CongressAmendm
       sourceId: `${amendment.congress}-${amendment.type.toLowerCase()}-${amendment.number}`,
       sourceUpdatedAt: amendment.updateDate === undefined ? undefined : new Date(amendment.updateDate),
       sourceUrl: source.sourceUrl,
-      sponsorName: sponsor?.fullName,
+      sponsorName: sponsor?.fullName ?? sponsor?.name,
       sponsorPersonId: sponsor?.bioguideId === undefined ? undefined : personId("congress", sponsor.bioguideId),
       sponsorSourceId: sponsor?.bioguideId,
       status: amendmentStatus(amendment.latestAction?.text),
