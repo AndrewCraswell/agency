@@ -85,6 +85,9 @@ after the live API contract check passed. Repository verification passed checks 
 scoring coverage thresholds. The isolated legislation run exposed a replay-test flake comparing HTTP `Date` across
 a second boundary (2,450 tests passed, one failed, 61 skipped). Replay assertions now permit only the generated Date
 header to differ; response status, body and every other header remain compared. No webhook runtime behavior changed.
+After the assertion correction, isolated `pnpm test:coverage` completed successfully: 2,451 Vitest tests passed,
+61 skipped, and all four webhook receiver tests passed. PostgreSQL integration tests remain among the skips;
+this does not establish live continuation or production identity-population acceptance.
 
 ### Federal identity population implementation (2026-09-08)
 
