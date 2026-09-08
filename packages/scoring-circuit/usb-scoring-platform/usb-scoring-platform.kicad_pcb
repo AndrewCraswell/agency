@@ -5086,7 +5086,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608C0G1H180J080AA"
+		(property "MPN" "CC0603JRNPO9BN180"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5098,7 +5098,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -23677,7 +23677,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608C0G1H180J080AA"
+		(property "MPN" "CC0603JRNPO9BN180"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -23689,7 +23689,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
