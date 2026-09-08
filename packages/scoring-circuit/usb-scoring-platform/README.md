@@ -64,7 +64,8 @@ Internal header pitch is 2.54mm; it does not define the external banana spacing.
    finished underside clearance. Confirm the enclosure's optical window before final mounting height is frozen. Form and
    trim BZ1's leads to its 5mm hole pitch; keep the upward sound opening clear and allow its 7mm maximum body height.
 2. Accept U18's **MSL4 handling and 245 C maximum peak-body reflow** requirement, including SAC305 balls. Review U19/U20
-   exposed-pad paste windows and final stencil/process choices.
+   exposed-pad paste windows and final stencil/process choices. U18 uses 0.63mm copper lands, 0.83mm mask openings and
+   0.60mm paste apertures; confirm the manufacturer's recommended 4-5mil stencil process for this BGA.
 3. Program U21 using the included HEX and the linked underside-pogo instructions, verify readback, preserve SWD/option
    bytes, and check U5 defaults. Fixture/service acceptance remains outstanding. The owner must not have to solder a
    programming connector to make the power controller usable.
