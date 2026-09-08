@@ -25,7 +25,10 @@ The refreshed `output/mechanical-isolation-review/` package passes ERC, DRC, par
 assembly rows and the unchanged rebuilt U21 image. This is not closure of all four items or permission to manufacture.
 The switch/ESD follow-up `pnpm verify` reached tests: all 46 scoring domain test files passed, but the existing 100%
 coverage gate failed (95.98% lines, 99.79% functions, 95.34% statements, 93.62% branches). No threshold or unrelated
-project file was changed. The native manufacturing package is unchanged by these documentation-only package checks.
+project file was changed. The native manufacturing package is unchanged by these documentation-only package checks. The
+later regulator-package `pnpm verify` stopped at unrelated `packages/shopify-content` lint errors in
+`catalog-snapshot.ts` and its test. It did not reach tests; the preceding scoring coverage failure is not a fresh result
+from that run. No board geometry changed, and focused document formatting/diff checks passed.
 
 **Current supplier upload files:** the native exporter now generates `jlcpcb-bom.csv` and `jlcpcb-placement.csv`
 alongside the original KiCad exports. All 223 rows were compared field by field: exact MPN/manufacturer/footprint and
@@ -266,6 +269,17 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**U4/U7 package comparison:** visually checked Diodes' SOT25 and TSOT26 drawings. Both native footprints have 0.95mm
+lead pitch, 2.275mm row-center separation and 1.325 by 0.6mm lands. These are library land patterns, not exact copies of
+the manufacturer's suggested pads: U4 suggests 0.8 by 0.55mm lands on 2.4mm rows; U7 suggests 1.0 by 0.7mm lands on
+2.2mm rows. Native lands cover the nominal lead landing regions; U4's maximum 0.50mm and U7's maximum 0.45mm lead widths
+are smaller than the 0.6mm lands. Their maximum body outlines fit the existing courtyards. No demonstrated fit defect or
+reason for a speculative reroute was found; final stencil, placement tolerance and solder-joint acceptance remain
+assembler checks. The U4 pin map is VIN/GND/EN/NC/VOUT, with EN tied to CORE_5V. U7 is FB/EN/VIN/GND/SW/BST, with FB at
+APP_3V3 and EN/VIN at PANEL_5V. No footprint, routing or parts changed.
+[AP2112, pages 1–2 and 14](https://www.diodes.com/assets/Datasheets/AP2112.pdf),
+[AP63203, pages 1–2 and 17](https://www.diodes.com/assets/Datasheets/AP63200-AP63201-AP63203-AP63205.pdf).
+
 **Switch/USB-protection package pass:** SW1/SW2/SW3 each use four 1.7 by 1.0mm lands at local x=+/-3.15, y=+/-1.90mm,
 matching E-Switch P010632 revision J's 8.0/4.6mm outer/inner horizontal and 4.8/2.8mm vertical edges. The duplicated
 KiCad pad numbers group each horizontal pair, consistent with the manufacturer's SPST drawing; pressing connects
@@ -493,10 +507,10 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U1        | STM32G474RET6         | STM32G474 scoring/acquisition; USB isolated side, seven comparator sense inputs. | Retain; supplies, USB, SWD, sense and drive nets inspected. Timing, thresholds and physical current budget remain separate verification.                               |
 | U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; memory-reserved pins, boot/UART wiring and four-layer antenna keepout checked. Substrate/enclosure RF effects require physical testing.                        |
 | U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | DCK0003A land pattern and pin map checked: 1=DP, 2=DM, 3=USB_GND. Retain; physical ESD performance remains untested.                                                   |
-| U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Retain; nominal 75mA at 5V implies about 0.128W before diode-drop adjustment, not a thermal measurement.                                                               |
+| U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
 | U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; matching CC dead-battery pins connected. Verify exact NVM/configuration at first programming.                                                                  |
 | U6        | REC30K-2405SZ         | Isolated application/panel supply.                                               | Pin/land/body drawing check passed; assembler must confirm finished-hole tolerance. Thermal/startup capability remains a bench check. CTRL/TRIM intentionally unused.  |
-| U7        | AP63203WU-7           | AP63203 application 3.3V buck regulator.                                         | Retain; feedback to APP_3V3 and bootstrap topology checked. DC-bias and thermal verification remain.                                                                   |
+| U7        | AP63203WU-7           | AP63203 application 3.3V buck regulator.                                         | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
 | U8        | 74LVC125APW,118       | Three left-channel LVC125 conductor drivers.                                     | Retain; fourth channel input tied low, OE high, output NC intentionally.                                                                                               |
 | U9        | 74LVC125APW,118       | Right A/B/C and piste LVC125 conductor drivers.                                  | Retain; all four channels used. OE pulls prevent reset drive.                                                                                                          |
 | U10       | SN74AXC1T45DCKR       | CORE-to-APP UART level translator.                                               | Retain; dual power-domain isolation behavior, not galvanic isolation. A-to-B DIR correct.                                                                              |
