@@ -4,6 +4,25 @@ Read-only discovery on 2026-09-06 used the CDIR collection endpoint with a modif
 1970-01-01 and a Congress filter. All collection pages were exhausted. Discovery itself wrote no historical memberships;
 subsequent validated production imports are recorded in [rollout evidence](committee-membership-history.md).
 
+## Current acceptance status
+
+The dated investigation notes below preserve earlier failures and fixes; they are not the current import ledger.
+As of the verified Trigger release `20260908.1`:
+
+| Congress | Current gate |
+| --- | --- |
+| 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
+| 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
+| 107, 108, 109, 113 | Parsing supported, but unresolved canonical identities still prevent complete publication |
+| 105 | Awaiting a decision on the uncorroborated `Abercombie` panel spelling; full acceptance remains incomplete |
+| 106 | Awaiting a decision on the full-Congress Davis sabbatical annotation; full acceptance remains incomplete |
+| 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
+
+No pending policy decision is implied by an automated continuation. No incomplete historical roster is published.
+State committee ingestion remains deferred until the approved Open States scrapers are self-hosted.
+
+## Discovered editions
+
 | Congress | Available package issue dates | Whole-package text |
 | --- | --- | --- |
 | 105 | 1997-06-04 | Not advertised |
@@ -390,11 +409,13 @@ check stage but remains blocked by unrelated scoring coverage thresholds (lines 
 statements 95.34%, branches 93.62%, each requiring 100%); it does not establish full legislation-suite completion.
 The July 2003 live canonical re-audit with this leading-initial rule confirms 206 organizations, 3,856 entries,
 3,819 uniquely mapped memberships, zero duplicate identifiers and 37 unresolved entries across 11 names.
-The single Gresham Barrett entry now resolves; all other gaps remain. The other three 108th editions retain their
-previous audit counts until rerun with this rule. No production import was performed.
+The single Gresham Barrett entry now resolves; all other gaps remain. November 2003, January 2004 and August 2004
+also confirm these identical counts and unresolved names with the leading-initial rule. All four 108th editions have
+completed this re-audit. No production import was performed.
 The July 2005 re-audit confirms 209 organizations, 3,781 entries, 3,739 uniquely mapped memberships, zero duplicate
 identifiers and 42 unresolved entries across 10 names. Three `Michael Conaway` entries now resolve; `Mike Conaway`
-remains unresolved, as intended. September 2006 has not yet been rerun with this rule. Neither Congress is cleared
+remains unresolved, as intended. September 2006 now confirms the identical organization, entry, mapping and duplicate
+counts and the same 10 unresolved names. Both 109th editions have completed this re-audit. Neither Congress is cleared
 for publication.
 Louis/Luis Fortuño corrections are limited to the two reviewed 110th editions and require
 same-edition corroboration. They are not generic nickname substitutions.
