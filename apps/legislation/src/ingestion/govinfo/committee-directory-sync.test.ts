@@ -85,9 +85,9 @@ function directory(issued = "2026-02-20", modified = "2026-07-14"): GovInfoDirec
   }
 }
 
-it("does not publish quarantined history before session-scoped completeness can be persisted", async () => {
+it("atomically publishes reviewed quarantine coverage and preserves it on rerun", async () => {
   const reviewedDirectory = { ...directory("2022-10-26", "2022-10-26"), congress: 117 }
-  await expect(
+  const runReviewed = () =>
     executeGovInfoCommitteeSynchronization(
       { config, database, congress: 117, correlationId: "quarantine-test" },
       {
@@ -106,9 +106,31 @@ it("does not publish quarantined history before session-scoped completeness can 
         now: () => now
       }
     )
-  ).rejects.toThrow("session-scoped incomplete-roster publication is not yet enabled")
+  await runReviewed()
+  expect(mocks.replace).toHaveBeenCalledOnce()
+  expect(mocks.replace.mock.calls[0]?.[2].memberships).toEqual([])
+  expect(mocks.replace.mock.calls[0]?.[3]?.preserveExistingOrganizations).toBe(true)
+  expect(cursor).toMatchObject({
+    congress: 117,
+    observation: {
+      coverage: {
+        status: "incomplete",
+        quarantined: [
+          {
+            name: "Tom Udall",
+            personId: "person:congress:u000039",
+            reason: "source_term_contradiction"
+          }
+        ]
+      }
+    }
+  })
+  const first = structuredClone(cursor)
+  expect(mocks.replace.mock.calls[0]?.[3]?.checkpoint?.cursor).toEqual(first)
+  mocks.replace.mockClear()
+  await runReviewed()
   expect(mocks.replace).not.toHaveBeenCalled()
-  expect(cursor).toBeUndefined()
+  expect(cursor).toEqual(first)
 })
 
 function fixture(role = "chairman"): string {

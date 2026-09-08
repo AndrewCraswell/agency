@@ -183,6 +183,17 @@ The import guard remains active, and no 117th roster was published. Next complet
 when the approved credential is available; meanwhile continue the independently actionable 106th/107th historical
 observation and identity work. Trigger was not redeployed by this API-only release.
 
+### Authenticated coverage boundary verified, September 8
+
+The existing Railway `WORKOS_SMOKE_CLIENT_ID` and `WORKOS_SMOKE_CLIENT_SECRET` issue a one-hour machine token.
+No new client or authentication setting was needed. Authenticated Appropriations member, Udall membership and
+current-only member requests returned 200 on the coverage API deployment. This verifies machine authentication,
+not the separate AuthKit browser-session flow; the earlier missing local session token is not a blocker for these reads.
+
+The temporary publication guard is removed. Reviewed quarantine coverage is committed atomically with each roster
+checkpoint and preserved on unchanged reruns; unexpected unmatched assignments still fail closed. Production import
+and post-import warning checks are recorded in the membership-history rollout evidence when verified.
+
 ### Historical first-observation contract
 
 `historical_at_first_observation` is the explicit end-reason value for a source assignment first encountered as already

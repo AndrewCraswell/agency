@@ -39,7 +39,7 @@ export interface GovInfoCommitteeSynchronizationDependencies {
   now?: () => Date
 }
 
-/** Applies complete Congressional Directory editions in issue order, preserving distinct observed tenures. */
+/** Applies reviewed Congressional Directory editions with atomic coverage assessments and distinct observed tenures. */
 export async function executeGovInfoCommitteeSynchronization(
   input: GovInfoCommitteeSynchronizationInput,
   dependencies: GovInfoCommitteeSynchronizationDependencies = {}
@@ -108,13 +108,6 @@ export async function executeGovInfoCommitteeSynchronization(
             .join("; ")
           throw new Error(
             `GovInfo package ${directoryPackage.packageId} has ${normalized.unmatched.length} unmatched committee members: ${examples}`
-          )
-        }
-        // Historical organization rows are shared with the current Congress.
-        // Do not publish partial history until session-scoped completeness is persisted.
-        if (normalized.quarantined.length > 0) {
-          throw new Error(
-            `GovInfo package ${directoryPackage.packageId} has ${normalized.quarantined.length} reviewed quarantined assignments; session-scoped incomplete-roster publication is not yet enabled`
           )
         }
         return { directoryPackage, normalized }
