@@ -1,5 +1,33 @@
 import type { IdentityReview } from "./committee-reviewed-identities.js"
 
+// The 106th Directory prints "Kent Cochran, of North Dakota" in these two
+// children. Its member-by-member index and CREC-1999-02-08, D114, independently
+// identify Cochran in both assignments. The parent prints Thad Cochran of MS.
+// This is a reviewed name AND state contradiction, not a reusable alias.
+const congress106Identities: IdentityReview["identities"] = [
+  {
+    printedName: "Kent Cochran",
+    state: "ND",
+    canonicalState: "MS",
+    chamber: "upper",
+    personId: "person:congress:c000567",
+    canonicalName: "Cochran, Thad",
+    givenName: "Thad",
+    familyName: "Cochran",
+    district: null,
+    contexts: [
+      { name: "Marketing Inspection and Product Promotion", parentName: "Agriculture, Nutrition and Forestry" },
+      { name: "Production and Price Competitiveness", parentName: "Agriculture, Nutrition and Forestry" }
+    ],
+    corroboration: {
+      name: "Thad Cochran",
+      state: "MS",
+      count: 1,
+      contexts: [{ name: "Agriculture, Nutrition and Forestry" }]
+    }
+  }
+]
+
 // Offline-reviewed source cells. These are edition-bound decisions, never
 // source-provided aliases or a runtime nickname dictionary. Each fingerprint
 // covers JSON.stringify of the entire parsed roster in its original order.
@@ -583,6 +611,30 @@ const congress109Identities: IdentityReview["identities"] = [
 ]
 
 export const historicalIdentityReviews: readonly IdentityReview[] = [
+  {
+    packageId: "CDIR-1999-06-15",
+    congress: 106,
+    fingerprint: "49e580bbb11ac221f8a67d4cc70a884e91c32b174b281887805da5cc8d969212",
+    organizations: 199,
+    entries: 3331,
+    identities: congress106Identities
+  },
+  {
+    packageId: "CDIR-2000-02-01",
+    congress: 106,
+    fingerprint: "54031e31df3d662243a23c2697ff9e7c3a736bed4d04bbe3a676306ba8fb11ae",
+    organizations: 199,
+    entries: 3331,
+    identities: congress106Identities
+  },
+  {
+    packageId: "CDIR-2000-10-01",
+    congress: 106,
+    fingerprint: "54031e31df3d662243a23c2697ff9e7c3a736bed4d04bbe3a676306ba8fb11ae",
+    organizations: 199,
+    entries: 3331,
+    identities: congress106Identities
+  },
   {
     packageId: "CDIR-2003-07-11",
     congress: 108,

@@ -4,6 +4,7 @@ import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import { normalizeGovInfoCommitteeDirectory } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
+import { historicalIdentityReviews } from "./committee-historical-identity-reviews.js"
 import { reviewedGovInfoIdentities, validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
 import * as reviewedIdentityModule from "./committee-reviewed-identities.js"
 
@@ -107,6 +108,75 @@ function digest(records: readonly GovInfoCommitteeRecord[]) {
 }
 
 describe("offline-reviewed GovInfo identity validation", () => {
+  it("accepts only reviewed name-and-state contradictions under the same corroborated parent", () => {
+    const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
+    const identity = manifest.identities[0]!
+    const records: GovInfoCommitteeRecord[] = [
+      {
+        name: "Agriculture, Nutrition and Forestry",
+        chamber: "upper",
+        classification: "committee",
+        members: [{ name: "Thad Cochran", state: "MS", chamber: "upper" }]
+      },
+      ...identity.contexts.map((context) => ({
+        ...context,
+        chamber: "upper" as const,
+        classification: "subcommittee" as const,
+        members: [{ name: "Kent Cochran", state: "ND", chamber: "upper" as const }]
+      }))
+    ]
+    const directory = {
+      ...fixture().directory,
+      packageId: manifest.packageId,
+      congress: 106,
+      issuedAt: new Date("1999-06-15")
+    }
+    const catalog: GovInfoPersonCatalog = {
+      aliases: [],
+      people: [
+        {
+          id: identity.personId,
+          name: identity.canonicalName,
+          givenName: identity.givenName,
+          familyName: identity.familyName
+        }
+      ],
+      terms: [
+        {
+          personId: identity.personId,
+          chamber: "upper",
+          district: null,
+          isActive: false,
+          sourceId: "106:upper:1999:2001"
+        }
+      ]
+    }
+    const review = { ...manifest, organizations: 3, entries: 3, fingerprint: digest(records) }
+    const before = JSON.stringify(records)
+    expect([...validateGovInfoIdentityReview(review, records, directory, catalog).values()]).toEqual([
+      identity.personId,
+      identity.personId
+    ])
+    expect(JSON.stringify(records)).toBe(before)
+    for (const contexts of [
+      [],
+      [{ name: identity.contexts[0]!.name }],
+      [identity.contexts[0]!, { name: identity.contexts[1]!.name, parentName: "Other" }]
+    ]) {
+      expect(
+        validateGovInfoIdentityReview(
+          { ...review, identities: [{ ...identity, contexts }] },
+          records,
+          directory,
+          catalog
+        ).size
+      ).toBe(0)
+    }
+    records[0]!.members[0]!.name = "Kent Conrad"
+    expect(
+      validateGovInfoIdentityReview({ ...review, fingerprint: digest(records) }, records, directory, catalog).size
+    ).toBe(0)
+  })
   it("rejects a different unique strict identity and never uses reviews for ambiguous strict matches", () => {
     const f = fixture()
     const spy = vi

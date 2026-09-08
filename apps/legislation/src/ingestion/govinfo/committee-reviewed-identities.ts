@@ -150,10 +150,12 @@ export function validateGovInfoIdentityReview(
     if (
       isStateCorrection &&
       (identity.canonicalState === identity.state ||
-        identity.contexts.length !== 1 ||
-        identity.contexts[0]?.parentName === undefined ||
-        identity.corroboration?.name !== identity.printedName ||
-        identity.corroboration.count !== 1 ||
+        identity.contexts.length === 0 ||
+        identity.contexts.some(
+          (context) =>
+            context.parentName === undefined || context.parentName !== identity.corroboration?.contexts?.[0]?.name
+        ) ||
+        identity.corroboration?.count !== 1 ||
         identity.corroboration.state !== identity.canonicalState ||
         identity.corroboration.contexts?.length !== 1 ||
         identity.corroboration.contexts[0]?.name !== identity.contexts[0].parentName ||

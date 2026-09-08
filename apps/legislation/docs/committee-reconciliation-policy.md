@@ -225,3 +225,25 @@ dates for historical first observations.
 Before and after: 43,948 membership rows, identical full-row ordered checksum `a29a0fc9c33851c8edf4256c3e75af32`
 (`md5(string_agg(md5(row_to_json(m)::text), '' order by id))`). No rows were rewritten, no indexes were rebuilt,
 and no import was launched. The one-use local application script was removed after successful verification.
+
+### Reviewed Cochran name/state contradiction, September 8, 2026
+
+The three 106th editions each print `Kent Cochran, of North Dakota` in Marketing Inspection and Product Promotion
+and Production and Price Competitiveness, both under Agriculture, Nutrition and Forestry. This is present in the
+[original 1999 Directory, printed page 345](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/pdf/CDIR-1999-06-15.pdf),
+not a parser-created name. Kent Conrad is separately listed in Marketing; substituting him based on first name/state
+would therefore be incorrect.
+
+Independent assignment evidence: the [February 8, 1999 Congressional Record, Daily Digest D114](https://www.govinfo.gov/content/pkg/CREC-1999-02-08/pdf/CREC-1999-02-08.pdf)
+reports the January 26 subcommittee assignments, listing Cochran in both children and Conrad separately in Marketing.
+The [October 2000 Directory, printed page 452](https://www.govinfo.gov/content/pkg/CDIR-2000-10-01/pdf/CDIR-2000-10-01.pdf)
+also lists both assignments under COCHRAN. The parent roster identifies Thad Cochran of Mississippi.
+The [official House biography C000567](https://history.house.gov/People/Listing/C/COCHRAN,-William-Thad-(C000567)/)
+confirms William Thad Cochran's Mississippi Senate service during the 106th Congress. Production canonical identity
+is `person:congress:c000567`, `Cochran, Thad`, with two consistent 106th upper-chamber terms and no district.
+
+The edition-fingerprinted manifest resolves exactly these two original cells per edition (six appearances), without
+rewriting source names/states or adding a global alias. Name/state corrections require all reviewed child contexts
+to share the exact single corroborating parent; missing, changed or conflicting evidence fails closed. Fresh parsed
+rosters and the production identity catalog validated all six mappings. Other unresolved identities still block
+publication, and this change launches no import.

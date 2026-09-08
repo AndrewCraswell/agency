@@ -6,6 +6,7 @@ import type { GovInfoCommitteeRecord } from "./committee-directory-parser.js"
 import { historicalAssignmentReviews, reviewedHistoricalAssignments } from "./committee-historical-assignments.js"
 import * as historicalModule from "./committee-historical-assignments.js"
 import { validateGovInfoIdentityReview } from "./committee-reviewed-identities.js"
+import * as identityModule from "./committee-reviewed-identities.js"
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -65,6 +66,7 @@ describe("reviewed historical first observations", () => {
       changed[0]!.members[0]!.role = "chair"
       expect(validateGovInfoIdentityReview(fixtureReview, changed, directory, catalog).size).toBe(0)
       vi.spyOn(historicalModule, "reviewedHistoricalAssignments").mockReturnValue(validated)
+      vi.spyOn(identityModule, "reviewedGovInfoIdentities").mockReturnValue(new Map())
       const normalized = normalizeGovInfoCommitteeDirectory(records, directory, catalog, new Date())
       expect(normalized.unmatched).toEqual([])
       expect(normalized.snapshot.memberships).toHaveLength(4)
