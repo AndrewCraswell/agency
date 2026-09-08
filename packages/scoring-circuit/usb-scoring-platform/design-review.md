@@ -34,9 +34,10 @@ acceptance remains open. Do not purchase components independently without an acc
 **Standalone power-path follow-up:** inspected the saved In2.Cu copper plot and native PANEL_5V polygon. U6 pin 6 and J8
 pins 1/2 use the filled plane, with nominal 6mm main trunks, rather than relying on the narrow surface branches. No
 disconnected panel supply or demonstrated reason to reroute it was found. The power guide now explicitly separates the
-converter's shared 6A rating from the panel allowance. An exact panel maximum-current specification is missing;
-full-white load, startup, shared-load headroom and thermal performance therefore remain unverified. This is a P1
-selection/budget question, not a demonstrated defect or permission to buy a different panel. See
+converter's shared 6A rating from the panel allowance. The user has now selected Waveshare RGB-Matrix-P5-64x32 (SKU
+25848, Amazon B0CLV5MHPX); manufacturer specifications list 5V/4A and <=20W. The selection question is resolved.
+Received revision/pinout, full-white load, startup, shared-load headroom and thermal performance remain unverified. The
+remaining P1 budget question is not a demonstrated defect or purchase authorization. See
 [standalone power boundary](usb-acquisition-power.md#standalone-display-power-boundary).
 
 This follow-up's direct `pnpm --filter @repo/scoring-circuit simulate` passed. `pnpm verify` failed on unrelated
