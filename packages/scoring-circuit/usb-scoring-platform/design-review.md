@@ -295,6 +295,14 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**U5 electrical pin check:** compared all 24 numbered pins and grounded exposed pad against DS12499 Rev 8 table 1.
+CC1DB/CC2DB join their corresponding CC inputs; RESET, address inputs and unused VSYS are grounded. C37/C38 provide the
+specified 1uF bypasses on VREG_1V2/VREG_2V7. Pin 16 VBUS_EN_SNK carries the board's PD_ATTACH_N net; it is not pin 11
+ATTACH, which is intentionally unused. ALERT and POWER_OK2 reach their named nets; VDD is USB_VBUS and pin 18 senses it
+through R88. No pin mismatch found. This does not verify NVM contents, attached-source behavior or package geometry: ST
+and Mouser PDF downloads timed out, so no new visual package pass is recorded.
+[ST pin-function table](https://www.st.com/resource/en/datasheet/stusb4500.pdf).
+
 **D1/D2 and D10/D11 package/polarity check:** visually compared Vishay drawings 88746 (23-Apr-2020) and 88503
 (29-Apr-2020), pages 1/4, with native pads. D1/D2's 2.5 by 1.8mm SMA lands exceed the 1.52 by 1.68mm minima; their 1.5mm
 inner gap is below the 1.88mm maximum. Cathode pad 1 goes to CORE_5V on both, and anodes go to the two isolated
@@ -655,7 +663,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; memory-reserved pins, boot/UART wiring and four-layer antenna keepout checked. Substrate/enclosure RF effects require physical testing.                        |
 | U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | DCK0003A land pattern and pin map checked: 1=DP, 2=DM, 3=USB_GND. Retain; physical ESD performance remains untested.                                                   |
 | U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
-| U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; matching CC dead-battery pins connected. Verify exact NVM/configuration at first programming.                                                                  |
+| U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; all numbered pins/EP and regulator bypasses checked against ST table. Visual package comparison and physical NVM/configuration remain open.                    |
 | U6        | REC30K-2405SZ         | Isolated application/panel supply.                                               | Pin/land/body drawing check passed; assembler must confirm finished-hole tolerance. Thermal/startup capability remains a bench check. CTRL/TRIM intentionally unused.  |
 | U7        | AP63203WU-7           | AP63203 application 3.3V buck regulator.                                         | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
 | U8        | 74LVC125APW,118       | Three left-channel LVC125 conductor drivers.                                     | Retain; fourth channel input tied low, OE high, output NC intentionally.                                                                                               |
