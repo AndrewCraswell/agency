@@ -281,6 +281,16 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 
 ## Every populated reference
 
+**U16/U17 optocoupler package check:** visually reviewed onsemi H11B1M/D Rev 2 (April 2022), ordering table page 8 and
+CASE 646BX drawing page 9. The orderable-system footnote explicitly includes 4N32M: plain DIP-6, not the SMT S suffix or
+0.4-inch T suffix. Both native footprints have 2.54mm pitch, 7.62mm rows, 0.9mm holes and 1.8mm lands. The maximum 0.51
+by 0.30mm pin section has a 0.592mm diagonal, smaller than the nominal drill; finished-hole tolerance remains an
+assembler check. The supplied leads are splayed and require normal DIP insertion forming, not a wider PCB row spacing.
+Native pin 1/2 LED, 3 NC, 4 emitter, 5 collector and 6 base agree for both 90-degree placements. No footprint change is
+warranted. Actual Favero receiver load, saturation and release time remain bench tests, not established by this package
+check. The plain M ordering code must not inherit the optional V-code insulation certification claim.
+[onsemi exact family and package drawing](https://www.onsemi.com/download/data-sheet/pdf/h11b1m-d.pdf).
+
 **U12 W5500 package/pin review:** visually checked manufacturer datasheet 1.1.0 pages 7/64/65 and compared all 48 native
 pad nets, including the footprint's 90-degree rotation. Its 0.5mm pitch, 1.475 by 0.3mm lands and 8.325mm opposing-row
 spacing cover the nominal lead regions; drawing lead width is at most 0.27mm. The body envelope fits the saved
@@ -295,10 +305,22 @@ unconnected. This closes the pin/package comparison, not physical Ethernet signa
 Scoped formatting/diff checks passed. The follow-up `pnpm verify` stopped at unrelated Shopify-content lint; no
 full-suite pass is claimed. Native geometry and the current manufacturing package are unchanged.
 
-U1/U21 native pitch and pad dimensions were extracted, but visual comparison of their ST package drawings is not
-complete: direct ST downloads timed out, and the web screenshot returned no usable image. Text-only source access is not
-recorded as a visual pass. Use a manufacturer-datasheet mirror or retained copy for the next attempt, not repeated
-unchanged download calls. No processor footprint was modified.
+**U1/U21 package comparison:** visually inspected ST-authored mirrored DS12288 Rev 4 pages 212/213 and DS13866 Rev 3
+pages 86/87. Compared the dimensions and drawing identifiers against current official DS12288 Rev 6 pages 210/211 and
+DS13866 Rev 5 pages 87/88; the reviewed package dimensions agree. The mirror is not represented as the latest revision.
+U1 has 64 lands on 0.5mm pitch, 1.55 by 0.3mm lands and 11.35mm opposing-row centers. U21 has 20 lands on 0.65mm pitch,
+1.475 by 0.4mm lands and 5.725mm row centers. Pin-number progression agrees after rotating the drawing to the native
+footprint orientation (U1 placement 0 degrees, U21 90 degrees). Neither pattern is mirrored.
+
+The land widths exceed the respective 0.27/0.30mm maximum lead widths and cover the nominal lead landing regions. They
+are library patterns, not exact copies of ST's 1.2 by 0.3mm and 1.35 by 0.4mm example lands. No lead/pad mismatch
+requiring a processor footprint change was found. This is package geometry review, not new functional pin validation,
+solder-process approval or measured MCU operation. U21's body courtyard has little allowance beyond the maximum
+molding-flash envelope; assembler placement clearance remains part of the final assembly review.
+[Current G474 drawing](https://www.st.com/resource/en/datasheet/stm32g474re.pdf),
+[G474 visual mirror](https://www.32mcu.com/pdf/PDF_4/STM32G474RE.pdf),
+[current C011 drawing](https://www.st.com/resource/en/datasheet/stm32c011f6.pdf),
+[C011 visual mirror](https://www.32mcu.com/pdf/PDF_4/STM32C011F6.pdf).
 
 **U10/U11 translator follow-up:** native VCCA/GND/A/B/DIR/VCCB pin order matches TI SCES882E. U10 DIR selects STM_TX to
 ESP_RX; U11 selects ESP_TX to STM_RX. Their 0.65mm-pitch lands cover nominal leads, but the original body courtyard had
@@ -604,7 +626,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | SW1       | TL3342F160QG          | STM32 reset to ground.                                                           | Exact E-Switch drawing J land pattern and normally-open contact grouping checked. Retain; physical actuation/recovery still untested.                                  |
 | SW2       | TL3342F160QG          | ESP32 EN reset to ground.                                                        | Exact E-Switch drawing J land pattern and normally-open contact grouping checked. Retain; physical actuation/recovery still untested.                                  |
 | SW3       | TL3342F160QG          | ESP32 BOOT to ground.                                                            | Exact E-Switch drawing J land pattern and normally-open contact grouping checked. Retain; physical actuation/recovery still untested.                                  |
-| U1        | STM32G474RET6         | STM32G474 scoring/acquisition; USB isolated side, seven comparator sense inputs. | Retain; supplies, USB, SWD, sense and drive nets inspected. Timing, thresholds and physical current budget remain separate verification.                               |
+| U1        | STM32G474RET6         | STM32G474 scoring/acquisition; USB isolated side, seven comparator sense inputs. | Retain; exact LQFP64 pitch, numbering and nominal lead fit checked. Timing, thresholds and physical power remain bench work.                                           |
 | U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; memory-reserved pins, boot/UART wiring and four-layer antenna keepout checked. Substrate/enclosure RF effects require physical testing.                        |
 | U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | DCK0003A land pattern and pin map checked: 1=DP, 2=DM, 3=USB_GND. Retain; physical ESD performance remains untested.                                                   |
 | U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Pin/body/land comparison below found no fit defect. Retain; assembly tolerance, startup and thermal measurements remain open.                                          |
@@ -619,12 +641,12 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | U13       | TSOP38438             | Pin/lead check passed; reversed body courtyard corrected, model/pads unchanged.  | Native ERC/DRC/parity/connectivity pass. Assembly height, lead trim and enclosure window remain open.                                                                  |
 | U14       | SN74AHCT541PWR        | Eight HUB75 3.3-to-5V AHCT buffer channels.                                      | Retain; OE1 grounded, OE2 under Q1 control.                                                                                                                            |
 | U15       | SN74AHCT541PWR        | Remaining five HUB75 AHCT buffer channels.                                       | Retain; three unused inputs grounded, outputs NC. Second IC is needed for 13 signals.                                                                                  |
-| U16       | 4N32M                 | Favero port 1 optodarlington.                                                    | Retain; base resistor and reverse diode intentional. Cable load, CTR and release time need sample testing.                                                             |
-| U17       | 4N32M                 | Favero port 2 optodarlington.                                                    | Retain; separate isolated output shares transmit command but not output ground.                                                                                        |
+| U16       | 4N32M                 | Favero port 1 optodarlington.                                                    | Retain; exact DIP pin map, 2.54mm pitch/7.62mm rows and lead/drill fit checked. Actual repeater load and release time need bench tests.                                |
+| U17       | 4N32M                 | Favero port 2 optodarlington.                                                    | Retain; exact DIP pin map, 2.54mm pitch/7.62mm rows and lead/drill fit checked. Actual repeater load and release time need bench tests.                                |
 | U18       | LTM2884IY#PBF         | LTM2884 isolated USB and acquisition power.                                      | Retain; VLO 10mA allowance and 5V-side output budget require whole-system check; assembly profile unresolved.                                                          |
 | U19       | LTC3130IMSE-1#PBF     | LTC3130 regulated primary 5V from USB VBUS.                                      | Fixed-5V automatic mode implemented; ERC/DRC/parity pass. Whole-input suspend and physical validation remain open.                                                     |
 | U20       | TPS259470LRPWR        | TPS259470 application branch eFuse.                                              | Pin/land check passed; split power-pad paste windows implemented and visually verified. Copper unchanged. Assembler stencil process remains open.                      |
-| U21       | STM32C011F6P6         | STM32C011 primary-side source qualifier and power gate controller.               | Retain; PA11 is default pin16 mapping; no remap bug established. First programming and VLO current budget open.                                                        |
+| U21       | STM32C011F6P6         | STM32C011 primary-side source qualifier and power gate controller.               | Retain; TSSOP20 pitch/numbering/lead fit checked; PA11 default pin16. Programming service and VLO current remain open.                                                 |
 | Y1        | ABM3B-8.000MHZ-B2-T   | STM32 8MHz HSE crystal.                                                          | Retain; 27pF pair gives 13.5pF series load before strays. Verify startup/frequency.                                                                                    |
 | Y2        | ABM8-25.000MHZ-B2-T   | Ethernet 25MHz CL18pF crystal.                                                   | Retain provisionally; 18pF pair gives 9pF before strays. Reference circuit alone does not establish actual crystal load.                                               |
 
