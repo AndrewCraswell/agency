@@ -31,7 +31,6 @@ that the prototype is homologated.
 - [Foil state machine](foil-state-machine-contract.md)
 - [Sabre state machine](sabre-state-machine-contract.md)
 - [Golden scenarios](golden-scenario-contract.md)
-- [Behavior oracle](behavior-oracle-contract.md)
 - [Scenario runner](scenario-runner-contract.md)
 - [Seeded protocol fuzz evidence](seeded-protocol-fuzz-evidence.md)
 

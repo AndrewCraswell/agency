@@ -46,6 +46,5 @@ Stable reason codes are returned for structural rejection, signature rejection, 
 length/digest mismatch, security-floor violation, and downgrade. They are software decisions only; update selection,
 activation, flash integrity, network transport, key management, and recovery remain separate work.
 
-Repository-wide verification and behavior-oracle wiring are intentionally deferred for root integration after this
-isolated contract is approved. The bounded subtree provides standalone Debug, Release, and optional sanitizer CMake
-host checks without changing shared scripts.
+The bounded subtree provides standalone Debug, Release, and optional sanitizer CMake host checks. Repository
+verification invokes its host tests; source fingerprints are not a substitute for those executable checks.
