@@ -59,6 +59,23 @@ const congress106Identities: IdentityReview["identities"] = [
       { name: "Legislative and Budget Process", parentName: "Rules" },
       { name: "Rules and Organization of the House", parentName: "Rules" }
     ]
+  },
+  {
+    // J000032 and contemporary 106th Crime/Immigration hearing rosters
+    // confirm Sheila Jackson Lee, TX. Only these misspelled source cells apply.
+    printedName: "Shelia Jackson Lee",
+    state: "TX",
+    chamber: "lower",
+    personId: "person:congress:j000032",
+    canonicalName: "Jackson Lee, Sheila",
+    givenName: "Sheila",
+    familyName: "Jackson Lee",
+    district: "18",
+    contexts: [
+      { name: "Judiciary" },
+      { name: "Crime", parentName: "Judiciary" },
+      { name: "Immigration and Claims", parentName: "Judiciary" }
+    ]
   }
 ]
 

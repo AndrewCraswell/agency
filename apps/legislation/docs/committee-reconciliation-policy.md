@@ -266,3 +266,20 @@ Production canonical people and 106th terms match `person:congress:m000485` (NC 
 15 appearances total, and retain exact parent checks. Fresh read-only validation passed all three editions, including
 the prior Cochran decisions. The 107 focused normalization, identity and synchronization tests passed. Other unresolved
 names still prevent publication; no data import was launched.
+
+### Reviewed Jackson Lee spelling, September 8, 2026
+
+All three 106th editions print `Shelia Jackson Lee`, Texas, in Judiciary, Crime, and Immigration and Claims.
+The [original House committee granule](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-HOUSECOMMITTEES.htm)
+contains the same typo. [Official biography J000032](https://history.house.gov/People/Listing/J/JACKSON-LEE,-Sheila-(J000032)/)
+identifies Sheila Jackson Lee and confirms Judiciary service during the 106th Congress. Independent contemporary
+rosters and attendance identify her in both children: [Immigration and Claims, June 10, 1999](https://commdocs.house.gov/committees/judiciary/hju62494.000/hju62494_0.HTM),
+and [Crime, July 13, 2000](https://commdocs.house.gov/committees/judiciary/hju66179.000/hju66179_0.HTM).
+These are manual validation references, not additional ingestion providers.
+
+Production identity `person:congress:j000032`, `Jackson Lee, Sheila`, has consistent 106th lower-chamber terms for
+Texas district 18. The edition-fingerprinted decision covers exactly three cells per edition, nine appearances;
+it neither rewrites source spelling nor creates a general typo alias. All existing fingerprint, parent, state,
+identity and term guards remain in force. Other unresolved names still block publication; no import was launched.
+Fresh source parsing against the production catalog validated all nine mappings; the focused identity,
+historical-observation, normalization and synchronization suite passed 108 tests.
