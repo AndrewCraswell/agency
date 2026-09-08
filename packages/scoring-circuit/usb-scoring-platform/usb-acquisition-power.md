@@ -36,16 +36,15 @@ The current LTM2884 reference listing was $56.82 at one piece / $44.2720 at the 
 assembly quote. Reprice the complete board after the remaining power-control implementation, without applying the $36
 credit.
 
-U19 is **LTC3115IDHD-1#PBF**, replacing LMR36510ADDAR. It can regulate through the low-input region where the old buck
-could only drop voltage. The native circuit follows the
-[ADI Rev E 5V reference](https://www.analog.com/media/en/technical-documentation/data-sheets/ltc3115-1.pdf): 10uH L2,
-47uF output, 4.7uF input and VCC bypass, 100nF bootstrap capacitors, 47.5k RT (750kHz), 1M/249k feedback, 60.4k/3.3nF
-compensation and 15k/33pF feed-forward. PWM/SYNC is low for Burst mode; RUN is connected to VBUS. The reference
-specifies 5V/1A for input above 3.6V. That is component-level capability, not a guaranteed board input budget.
+U19 is **LTC3130IMSE-1#PBF**, configured for fixed 5V with automatic Burst/PWM operation. The native circuit follows the
+[ADI LTC3130-1 reference](https://www.analog.com/media/en/technical-documentation/data-sheets/3130f.pdf): 10uH L2, 47uF
+output, 4.7uF PVIN and VCC bypass, separate 1uF VIN bypass and two 22nF bootstrap capacitors. MODE and VS1 are grounded;
+VS2 and MPPC connect to VCC; EXTVCC uses the 5V output and RUN connects to VBUS. Internal compensation and fixed output
+remove R90/R91/R108/R109/R110/C67/C68. U18 isolation and U21 power control remain unchanged.
 
-**Open before release:** U19 pad 16 is permanently grounded, selecting Burst mode. The 1A headline rating does not
-validate the 0.3005A allocation below in this mode. Resolve active/suspend mode selection against ADI's mode-specific
-load limits and recheck input power; see the
+The schematic and local PCB routing pass native ERC/DRC and parity checks. Both 4.1V and 20V manufacturer-model
+load-step cases passed the nominal 5V +/-5% screen. These do not establish whole-input suspend consumption, guaranteed
+thermal/tolerance margins or measured hardware behavior; see the
 [design review](design-review.md#requirements-and-power-budget-follow-up-8-september).
 
 C39 is TDK C4532X7R1H475K200KB; C43 is
@@ -116,7 +115,7 @@ larger converter. Laptop-only units ship **without a HUB75 panel connected**. Th
 scoring display. ESP32, Ethernet and IR remain on the separate application supply; sound and Favero transmission are
 disabled in this acquisition-only budget, even though their circuits are populated.
 
-The native schematic and placement now use **one J1 USB-C receptacle**. STUSB4500 negotiates power, LTC3115-1 supplies
+The native schematic and placement now use **one J1 USB-C receptacle**. STUSB4500 negotiates power, LTC3130-1 supplies
 the LTM2884 primary, and the separately enabled TPS25947/REC30K branch supplies isolated application power. **The local
 circuits, J1 feeds, CC lines, primary distribution and regulated isolator feeder are routed. They have not been powered
 or characterized; do not power this draft.** The left-edge primary return remains separate from board ground. An absent
@@ -200,7 +199,7 @@ Use an assembled board, current measurement at J1 **and** U18 output, and a pass
 hardware measurements have been performed.
 
 1. Cold plug, delayed/denied configuration, reset and deconfiguration: <=100mA host and <=20mA isolated steady load;
-   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40/C50 sums to **6.9uF nominal**. U19's 47uF output
+   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40/C50 sums to **7.8uF nominal**. U19's 47uF output
    capacitor, U18's input bypass and secondary charging are behind the regulator but still contribute startup current.
    Tolerance, effective capacitance, PD transitions and hot-plug overshoot require measurement; the nominal sum is not
    proof of USB input-capacitance compliance.

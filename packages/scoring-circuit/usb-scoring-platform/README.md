@@ -88,11 +88,10 @@ The owner removed the $36 savings target on 2026-09-06: finish the reliable one-
 meet that estimate. **Keep LTM2884 USB isolation and REC30K application power.** The cheaper discrete USB-isolator
 proposal is not selected. The direct W5500 Ethernet change is retained.
 
-U19 is now **LTC3115IDHD-1#PBF**, a 5V buck-boost regulator replacing the buck-only LMR36510. The schematic, support
-parts and local PCB routing are implemented. Its 10uH/750kHz reference network follows the
-[ADI datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ltc3115-1.pdf), not an improvised
-dropout workaround. C44 is removed; C66-C68 and R108-R110 complete the replacement network. Exact ordering fields are
-included for all 15 parts in this section. Low-input regulation still requires measurement on the assembled prototype.
+U19 is **LTC3130IMSE-1#PBF**, providing fixed 5V with automatic Burst/PWM operation. Its schematic and local PCB routing
+pass native ERC/DRC/parity checks. Internal compensation removes seven support parts; C40 is 1uF and C42/C66 are 22nF.
+The [power guide](usb-acquisition-power.md) records the circuit and remaining suspend, thermal and physical startup
+checks. Nominal manufacturer-model results are not hardware approval.
 
 The power-control hardware is routed: U21 **STM32C011F6P6**, Q6 application inhibit, six bias resistors, three
 bypass/reset capacitors and J14 underside programming pads. U21 is powered from LTM2884's primary-side VLO and controls
@@ -487,8 +486,8 @@ support effort.
   [TE 5520250 D3 component-side drawing](https://www.te.com/commerce/DocumentDelivery/DDEController?Action=srchrtrv&DocFormat=pdf&DocLang=English&DocNm=5520250&DocType=Customer+Drawing&PartCntxt=5520250-2).
   Keep the drawing's contact numbering; rotating a model alone must never be used to conceal a hole-pattern mismatch.
 - **J1 is the only USB-C receptacle**, for laptop power/data or standalone PD power. U5 **STUSB4500QTR** replaces the
-  Adafruit connector module. U19 **LTC3115IDHD-1#PBF** and L2 **XAL5050-103MEC** provide a nominal 5.016V primary supply
-  for **LTM2884IY#PBF**; raw negotiated VBUS must never reach that isolator. U6 **REC30K-2405SZ**, behind U20
+  Adafruit connector module. U19 **LTC3130IMSE-1#PBF** and L2 **XAL5050-103MEC** provide a fixed 5V primary supply for
+  **LTM2884IY#PBF**; raw negotiated VBUS must never reach that isolator. U6 **REC30K-2405SZ**, behind U20
   **TPS259470LRPWR**, replaces the nonisolated Pololu converter with isolated display/application power. D1/D2 retain
   the isolated-source OR into CORE_5V and AP2112K supplies CORE_3V3. USB_GND remains separate from board GND. **The
   shared USB power circuits, connector feeds, CC lines and U19-to-U18 supply feeder are routed. Regulation, negotiation,
