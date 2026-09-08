@@ -110,6 +110,13 @@ export async function executeGovInfoCommitteeSynchronization(
             `GovInfo package ${directoryPackage.packageId} has ${normalized.unmatched.length} unmatched committee members: ${examples}`
           )
         }
+        // Historical organization rows are shared with the current Congress.
+        // Do not publish partial history until session-scoped completeness is persisted.
+        if (normalized.quarantined.length > 0) {
+          throw new Error(
+            `GovInfo package ${directoryPackage.packageId} has ${normalized.quarantined.length} reviewed quarantined assignments; session-scoped incomplete-roster publication is not yet enabled`
+          )
+        }
         return { directoryPackage, normalized }
       })
       // Reject source/identity failures in later editions before publishing any roster.

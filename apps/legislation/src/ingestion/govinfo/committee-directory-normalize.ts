@@ -30,6 +30,14 @@ export interface GovInfoPersonCatalog {
 export interface GovInfoCommitteeNormalizationResult {
   snapshot: EntitySnapshot
   unmatched: ReadonlyArray<Readonly<{ chamber: CongressionalChamber; name: string; organization: string }>>
+  quarantined: ReadonlyArray<
+    Readonly<{
+      chamber: CongressionalChamber
+      name: string
+      organization: string
+      reason: "source_term_contradiction"
+    }>
+  >
 }
 
 /** Maps a complete Directory edition onto existing Congress.gov person identities. */
@@ -73,9 +81,34 @@ export function normalizeGovInfoCommitteeDirectory(
   const memberships: EntitySnapshot["memberships"] = []
   const sessionId = legislativeSessionId("us", String(directoryPackage.congress))
   const unmatched: GovInfoCommitteeNormalizationResult["unmatched"][number][] = []
+  const quarantined: GovInfoCommitteeNormalizationResult["quarantined"][number][] = []
   for (const record of records) {
     const canonicalOrganizationId = organizationId("govinfo", organizationSourceId(record))
     for (const member of record.members) {
+      // Reviewed against the printed 117th roster and Bioguide U000039:
+      // Udall's Senate service ended January 3, 2021. Never infer a replacement.
+      if (
+        directoryPackage.packageId === "CDIR-2022-10-26" &&
+        directoryPackage.congress === 117 &&
+        record.chamber === "upper" &&
+        record.classification === "committee" &&
+        record.name === "Appropriations" &&
+        record.parentName === undefined &&
+        member.chamber === "upper" &&
+        member.name === "Tom Udall" &&
+        member.state === "NM" &&
+        member.district === undefined &&
+        member.note === undefined &&
+        (member.role === undefined || member.role === "member")
+      ) {
+        quarantined.push({
+          chamber: member.chamber,
+          name: member.name,
+          organization: record.name,
+          reason: "source_term_contradiction"
+        })
+        continue
+      }
       const matches = matchingPeople(
         { ...member, name: crossCheckedPrintedName(member, records, directoryPackage) },
         people
@@ -117,6 +150,16 @@ export function normalizeGovInfoCommitteeDirectory(
       })
     }
   }
+  if (quarantined.length > 1) {
+    throw new Error("GovInfo reviewed Udall quarantine changed cardinality; source review is required")
+  }
+  for (const organization of organizations) {
+    if (
+      quarantined.some((entry) => entry.chamber === organization.chamber && entry.organization === organization.name)
+    ) {
+      organization.membershipRelationsComplete = false
+    }
+  }
   return {
     snapshot: {
       memberships,
@@ -126,7 +169,8 @@ export function normalizeGovInfoCommitteeDirectory(
       people: [],
       terms: []
     },
-    unmatched
+    unmatched,
+    quarantined
   }
 }
 

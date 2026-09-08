@@ -62,7 +62,8 @@ transaction deadlines and safe timeout recovery.
 7. Verify database counts, Congress-end closure, detected dates, current-Congress fingerprints and unchanged reruns.
    Authenticated API verification is a separate gate and must not be claimed without working credentials.
 
-The 15-minute Codex follow-up remains stopped. This plan does not restart it.
+The user reactivated the 15-minute Codex follow-up on September 8. It checks for active work before continuing
+this backlog, does not overlap imports, and stays quiet when there is no meaningful change.
 
 ## Tradeoffs retained deliberately
 
@@ -116,7 +117,24 @@ Remaining work is separated into two decisions:
 2. Already-historical assignments need an explicit representation with unknown dates allowed. Proposed behavior:
    retain the source assignment, mark it historical at first observation, do not invent a detected start or a
    Congress-end departure, and distinguish an explicit roster-as-of date from the package issue date. This is not
-   implemented or approved by this audit. The 117th contradiction separately requires either source-backed correction
-   or an explicitly approved incomplete-roster policy; do not silently omit Udall.
+   implemented by this audit. The user subsequently approved this representation and explicit quarantine of the
+   disputed 117th assignment, with the roster marked incomplete; do not silently omit Udall.
 
 Until those contracts are settled and all identities reconcile, the 106th, 107th and 117th remain unpublished.
+
+### Approved quarantine implementation, September 8
+
+The normalizer now separates the exact October 2022 Senate Appropriations Tom Udall/NM cell into a reviewed
+`source_term_contradiction` quarantine. It neither creates an identity nor substitutes another senator. Changed
+edition, Congress, context, state, role, notes or duplicate cells do not inherit this exception. Unexpected unmatched
+cells still fail validation. The affected normalized organization is explicitly incomplete.
+
+Manual reality check: the [official House biography for U000039](https://history.house.gov/People/Detail/20879?ret=True)
+states Udall's Senate service ended January 3, 2021, whereas the October 2022 GovInfo roster above prints him in
+Appropriations. This corroborates quarantine, not a replacement assignment.
+
+Publication remains deliberately gated: historical imports preserve organization rows shared with the current
+Congress, so an organization-only incomplete flag cannot describe historical completeness safely. Next implement
+session-scoped completeness and quarantined-cell persistence, expose it in the API, and test transactional checkpoint
+and rerun behavior before deploying/importing 117. Brown/Spence historical-observation handling and the remaining
+106/107 identity reviews follow; their approval no longer needs to be requested.

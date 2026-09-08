@@ -85,6 +85,32 @@ function directory(issued = "2026-02-20", modified = "2026-07-14"): GovInfoDirec
   }
 }
 
+it("does not publish quarantined history before session-scoped completeness can be persisted", async () => {
+  const reviewedDirectory = { ...directory("2022-10-26", "2022-10-26"), congress: 117 }
+  await expect(
+    executeGovInfoCommitteeSynchronization(
+      { config, database, congress: 117, correlationId: "quarantine-test" },
+      {
+        client: {
+          discover: async () => [reviewedDirectory],
+          getRecords: async () => [
+            {
+              chamber: "upper",
+              classification: "committee",
+              name: "Appropriations",
+              members: [{ chamber: "upper", name: "Tom Udall", state: "NM" }]
+            }
+          ]
+        },
+        loadCatalog: async () => ({ people: [], terms: [], aliases: [] }),
+        now: () => now
+      }
+    )
+  ).rejects.toThrow("session-scoped incomplete-roster publication is not yet enabled")
+  expect(mocks.replace).not.toHaveBeenCalled()
+  expect(cursor).toBeUndefined()
+})
+
 function fixture(role = "chairman"): string {
   const senate = Array.from({ length: 10 }, (_, i) => `Senate Committee ${i + 1}\n\nJane Senator (wa) ${role}`).join(
     "\n\n"
