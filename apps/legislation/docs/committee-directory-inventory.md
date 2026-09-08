@@ -368,6 +368,10 @@ The post-fix July 2003 canonical audit confirms 206 organizations, 3,856 source 
 memberships and 38 unresolved entries across 12 names, with no duplicates. The Eni entry now resolves; all other
 unmatched entries remain unchanged. The other three editions have source corroboration but have not yet had a
 post-fix full canonical rerun. No edition was imported.
+The November 2003 and August 2004 post-fix canonical audits also confirm 206 organizations, 3,856 source entries,
+3,818 uniquely mapped memberships and 38 unresolved entries across the same 12 names, with no duplicates.
+January 2004 now confirms those identical counts as well. All four post-fix canonical audits are complete; all four
+editions still require the remaining 38 identities to be resolved before publication. No partial data was imported.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation

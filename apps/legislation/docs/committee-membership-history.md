@@ -60,10 +60,10 @@ edition availability must be inventoried before promising transitions: live disc
 package each for Congresses 105 and 118. A single retained edition supports a roster snapshot, not a complete sequence
 of historical joins and departures. Earlier directories likewise require format validation.
 
-The [live edition inventory](committee-directory-inventory.md) identifies 23 historical editions. The 118th has passed
-production import and API verification, as has the 116th. The 117th
-and 105th–115th remain gated on the documented source/layout discrepancies. Historical writes preserve current
-organization metadata. Do not run a destructive restart across unvalidated editions.
+The [live edition inventory](committee-directory-inventory.md) identifies 23 historical editions. Congresses 110,
+111, 112, 114, 115, 116 and 118 have passed production import, API verification and unchanged-rerun checks, as recorded
+below. Congresses 105–109, 113 and 117 remain gated on source identity, layout or policy decisions. Historical writes
+preserve current organization metadata. Do not run a destructive restart across unvalidated editions.
 
 The historical reconstruction command (not yet validated for production) is:
 
