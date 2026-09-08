@@ -121,11 +121,11 @@ function crossCheckedPrintedName(
   records: readonly GovInfoCommitteeRecord[],
   directory: GovInfoDirectoryPackage
 ): string {
-  if (
-    ["CDIR-2005-07-11", "CDIR-2006-09-01"].includes(directory.packageId) &&
-    directory.congress === 109 &&
-    member.chamber === "lower"
-  ) {
+  const reviewed108 =
+    directory.congress === 108 &&
+    ["CDIR-2003-07-11", "CDIR-2003-11-01", "CDIR-2004-01-01", "CDIR-2004-08-01"].includes(directory.packageId)
+  const reviewed109 = directory.congress === 109 && ["CDIR-2005-07-11", "CDIR-2006-09-01"].includes(directory.packageId)
+  if ((reviewed109 || (reviewed108 && member.name === "Eni Faleomaveaga")) && member.chamber === "lower") {
     const correction = new Map([
       ["Eni Faleomaveaga", { name: "Eni F.H. Faleomavaega", state: "AS" }],
       ["Willliam Jefferson", { name: "William J. Jefferson", state: "LA" }]

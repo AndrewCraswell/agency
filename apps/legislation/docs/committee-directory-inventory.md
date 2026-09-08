@@ -357,6 +357,17 @@ Both post-correction canonical audits complete with 209 organizations, 3,781 sou
 memberships, 45 unresolved entries and no duplicates. The intended three Faleomavaega entries and one Jefferson entry
 now resolve in each edition (49 to 45 unresolved). The remaining 11 names and their counts are unchanged. Neither
 edition has been imported; the unrelated scoring coverage thresholds still block repository-wide verification.
+The subsequent 108th source review checks all four packages (July/November 2003 and January/August 2004): each has
+one `Eni Faleomaveaga` entry in Small Business and six exact `Eni F.H. Faleomavaega` entries, all House/AS. Two are
+full parent-roster entries (International Relations and Resources), with four inherited subcommittee entries.
+Each edition still has 206 organizations and 3,856 source entries. No other Faleomavaega spellings or scopes were found.
+The exact Eni correction is now enabled for those four Congress-108 packages, retaining non-conflicting full-name,
+state and chamber corroboration. The Jefferson correction remains Congress-109-only. All 68 focused alias/normalization
+tests, legislation lint and types pass; a post-fix canonical check follows without importing partial data.
+The post-fix July 2003 canonical audit confirms 206 organizations, 3,856 source entries, 3,818 uniquely mapped
+memberships and 38 unresolved entries across 12 names, with no duplicates. The Eni entry now resolves; all other
+unmatched entries remain unchanged. The other three editions have source corroboration but have not yet had a
+post-fix full canonical rerun. No edition was imported.
 
 The next reviewed batch restores 108/112 OGM/FFM headings and removes 112/113 footnote/vacancy annotations.
 All affected per-roster membership hashes and counts remain identical. Independent source-entry reconciliation

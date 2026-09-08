@@ -13,6 +13,57 @@ const directoryPackage: GovInfoDirectoryPackage = {
 }
 
 describe("normalizeGovInfoCommitteeDirectory", () => {
+  it.each(["CDIR-2003-07-11", "CDIR-2003-11-01", "CDIR-2004-01-01", "CDIR-2004-08-01"])(
+    "limits the 108th Eni correction to reviewed and nonconflicting evidence: %s",
+    (packageId) => {
+      const source = catalog()
+      source.people[0]!.name = "Eni F.H. Faleomavaega"
+      source.terms[0]!.chamber = "lower"
+      source.terms[0]!.sourceId = "108:lower:2003:2005"
+      const input = [records()[0]!]
+      input[0]!.chamber = "lower"
+      input[0]!.members = [
+        { name: "Eni Faleomaveaga", state: "AS", chamber: "lower", role: "chair" },
+        { name: "Eni F.H. Faleomavaega", state: "AS", chamber: "lower" }
+      ]
+      const edition = { ...directoryPackage, congress: 108, packageId, issuedAt: new Date("2003-07-11T00:00:00Z") }
+      const result = normalizeGovInfoCommitteeDirectory(input, edition, source, new Date())
+      expect(result.unmatched).toEqual([])
+      expect(result.snapshot.memberships).toHaveLength(2)
+      expect(result.snapshot.memberships[0]?.role).toBe("chair")
+      expect(
+        normalizeGovInfoCommitteeDirectory(input, { ...edition, congress: 109 }, source, new Date()).unmatched
+      ).toHaveLength(2)
+      expect(
+        normalizeGovInfoCommitteeDirectory(input, { ...edition, packageId: "CDIR-2004-08-02" }, source, new Date())
+          .unmatched
+      ).toHaveLength(1)
+      input[0]!.members.push({ name: "Eni F.H. Faleomavaega", state: "CA", chamber: "lower" })
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members.pop()
+      input[0]!.members.push({ name: "Eni F.H. Faleomavaega", state: "AS", chamber: "upper" })
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(2)
+      input[0]!.members.pop()
+      input[0]!.members[0]!.state = "CA"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[0]!.state = "AS"
+      input[0]!.members[0]!.chamber = "upper"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[0]!.chamber = "lower"
+      input[0]!.members[0]!.name = "Eni Faleomaveaga Extra"
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      input[0]!.members[0]!.name = "Eni Faleomaveaga"
+      input[0]!.members.pop()
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+      source.people[0]!.name = "William J. Jefferson"
+      input[0]!.members = [
+        { name: "Willliam Jefferson", state: "LA", chamber: "lower" },
+        { name: "William J. Jefferson", state: "LA", chamber: "lower" }
+      ]
+      expect(normalizeGovInfoCommitteeDirectory(input, edition, source, new Date()).unmatched).toHaveLength(1)
+    }
+  )
+
   it.each([
     ["Eni Faleomaveaga", "Eni F.H. Faleomavaega", "AS"],
     ["Willliam Jefferson", "William J. Jefferson", "LA"]
