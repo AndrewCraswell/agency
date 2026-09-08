@@ -43,6 +43,11 @@ could only drop voltage. The native circuit follows the
 compensation and 15k/33pF feed-forward. PWM/SYNC is low for Burst mode; RUN is connected to VBUS. The reference
 specifies 5V/1A for input above 3.6V. That is component-level capability, not a guaranteed board input budget.
 
+**Open before release:** U19 pad 16 is permanently grounded, selecting Burst mode. The 1A headline rating does not
+validate the 0.3005A allocation below in this mode. Resolve active/suspend mode selection against ADI's mode-specific
+load limits and recheck input power; see the
+[design review](design-review.md#requirements-and-power-budget-follow-up-8-september).
+
 C39 is TDK C4532X7R1H475K200KB; C43 is
 [TDK C4532X5R1A476M280KA](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C4532X5R1A476M280KA),
 the full ordering code for the 47uF/10V/1812 reference family. C41 uses a 16V-rated 4.7uF/0805 part; C42/C66 are
@@ -179,8 +184,9 @@ capturing; do not claim margin just because the MCU has not reset.
   excitation OE_N high, and hold SOUNDER_PWM/FAVERO_TX low. No startup chirp, comparator scan, radio or network startup.
 - Only after a nonzero configuration is accepted may firmware enter the 75mA allocation. Source one conductor high at a
   time, with break-before-make; low discharge phases may enable several outputs. The existing scan model follows this
-  topology, but its 525us characterization sweep is **not** an approved scoring schedule. Budget a faster real schedule
-  and verify contact timing separately. Desktop acquisition must explicitly start a new capture session.
+  topology. The current STM32 acquisition driver and decoder use **40us slots / 120us three-slot frames**; the former
+  525us characterization sweep is not the firmware schedule. Host tests check frame timing, but physical settling and
+  contact timing still require bench verification. Desktop acquisition must explicitly start a new capture session.
 - USB reset, deconfiguration or loss of USB_PRESENT returns to the startup allocation and invalidates capture. Bus
   silence is not evidence of a charger. With SPNDPWR high, suspend removes acquisition power on USB alone; retain the
   accepted reconnect-after-wake behavior and test that boot/USB attach completes without repeated power cycling.
@@ -194,7 +200,7 @@ Use an assembled board, current measurement at J1 **and** U18 output, and a pass
 hardware measurements have been performed.
 
 1. Cold plug, delayed/denied configuration, reset and deconfiguration: <=100mA host and <=20mA isolated steady load;
-   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40 sums to **6.8uF nominal**. U19's 47uF output
+   capture inrush separately. Direct raw-VBUS bypass C1/C36/C39/C40/C50 sums to **6.9uF nominal**. U19's 47uF output
    capacitor, U18's input bypass and secondary charging are behind the regulator but still contribute startup current.
    Tolerance, effective capacitance, PD transitions and hot-plug overshoot require measurement; the nominal sum is not
    proof of USB input-capacitance compliance.
