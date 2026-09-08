@@ -66,7 +66,9 @@ Both runtime corrections deployed successfully to Trigger production **20260908.
 [`og3wxg18`](https://cloud.trigger.dev/projects/v3/proj_bsjukvltatwjsyczuatb/deployments/og3wxg18), with 26 tasks.
 The earlier 20260908.7 attempt failed on a Depot network timeout and is not accepted as a successful release.
 The 16 focused normalization/hydration tests and repository pre-push types passed. Full repository verification
-has unrelated scoring failures; it is not a green acceptance gate.
+is not a green acceptance gate: an earlier pass failed in scoring, and a later pass was invalidated by overlapping
+coverage runs sharing an output directory. An isolated smoke-foundation rerun passed all 51 tests. The final
+legislation coverage rerun uses a separate report directory and two workers to avoid that collision.
 
 Production replay and authenticated response verification remain open: the pre-write guard again observed the
 active Congress wave and prevented overlapping writes. Do not mark the inventory or data repair complete solely
@@ -74,6 +76,12 @@ because the importer fixes are deployed. Replay the one vote, affected amendment
 and affected people through their standard importers after the wave is idle; verify canonical IDs, unchanged vote
 choices, preserved amendment content, and removal of superseded terms. Broader fuzzy/contextual alias checks
 remain outside the exact-name census above.
+
+The first Congress child `run_06g84bno61ekhbegv374snak01` completed; the same coordinator subsequently started
+`run_06g84ktqa0kpamd6v3stdf2901`, which was still executing at the final replay check. Therefore completion of
+the first child alone is not clearance to replay. A fresh Congress.gov member detail read for A000014 returned
+the 105th-Congress House term with startYear 1997 and endYear 1999, confirming the regression fixture against
+the live primary source.
 
 ## Vote-gap diagnosis, September 8
 
