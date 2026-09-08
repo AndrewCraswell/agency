@@ -1,8 +1,8 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/assembly-review-current/` assembly
-export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
-backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
+Started 8 September 2026. Review the current native KiCad board and the `output/catalog-corrected/` assembly export, not
+the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation backlog.
+Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
 ## Priority and evidence
 
@@ -21,15 +21,25 @@ confirmed P0 finding has been established in this initial pass; that is not an a
 
 Refreshed draft `0f5a45675ffe4595850ae7ab1a859877` parsed all 223 references from the matching native export. Configured
 ERC, DRC, connectivity and schematic parity returned zero findings; U21 HEX rebuilt successfully. No supplier placement
-approval, payment or submission was made. The initial automatic matching reports 144 confirmed, 77 shortage references
-and two unmatched references, J8 (645004114822) and U6 (REC30K-2405SZ).
+approval, payment or submission was made. After the corrected BOM upload, the supplier reports 144 confirmed, 48
+shortage references and 31 unselected references. J1 had been unchecked at quantity zero; it is now checked, visually
+verified at quantity two and $2.1312 component total. That is not an all-in assembly quote.
 
-**P1, open: reject incorrect automatic capacitor matches before progressing.** Forty references requesting TDK
-C1608X7R1H105K080AB, C1608X7R1H104K080AA, C1608X7R1H682K080AA or C1608X5R1A105K080AC were offered 0603N800J500CT /
-C3868041 (80pF C0G). C63 requests C2012X5R1A106K125AC (10uF), but was offered 0805ZD125KAT2A / C2171149 (1.2uF). These
-are not electrically equivalent substitutions. The uploaded BOM retains the correct requested MPNs; correct the supplier
-matches, not the circuit to fit these errors. Shortage counts include incorrect matches and therefore are not a reliable
-count of genuinely unavailable selected parts.
+**P1, partially corrected: reject incorrect automatic capacitor matches before progressing.** The exporter now includes
+TDK catalog codes C45537494 for C1608X7R1H105K080AB (eight references) and C72453 for C1608X7R1H104K080AA (29
+references). Both exact identities were found in JLCPCB's public search with zero stock. Reupload removed the wrong
+assignments for these 37 references: the eight 1uF parts now match exactly but show shortages, while the 29 100nF parts
+remain unselected. This resolves incorrect identity assignment only, not sourcing. C52/C53 (C1608X7R1H682K080AA, 6.8nF)
+and C70 (C1608X5R1A105K080AC, 1uF) still show 0603N800J500CT / C3868041 (80pF C0G). C63 requests C2012X5R1A106K125AC
+(10uF), but was offered 0805ZD125KAT2A / C2171149 (1.2uF). These are not electrically equivalent substitutions. The
+uploaded BOM retains the correct requested MPNs; correct the supplier matches, not the circuit to fit these errors.
+Shortage counts include incorrect matches and therefore are not a reliable count of genuinely unavailable selected
+parts.
+
+Exact public-inventory searches returned no result for J8 (645004114822), U6 (REC30K-2405SZ), C52/C53, C63 or C70. The
+shorter C52/C53 search returned C1608X7R1H682KT000N / C2802699 with zero stock; it is not an approved ordering-code
+alias. Do not select it without manufacturer confirmation. The remaining work is exact-part sourcing or reviewed
+substitution, followed by placement review. The paid assisted-matching request remains paused with the order.
 
 The supplier accepted C64/C65's exact CC0603JRNPO9BN180 identity as catalog C107040, and C56's exact C1608X5R1C475K080AC
 identity as C2167106 (with a reported purchase-quantity shortage). Those live identities supersede earlier tentative

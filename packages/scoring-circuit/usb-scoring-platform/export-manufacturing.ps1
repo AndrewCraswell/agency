@@ -25,6 +25,12 @@ if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
     @(Compare-Object $bom.Reference $placement.Ref).Count -ne 0) { throw 'BOM and placement references do not match uniquely.' }
 # Supplier upload aliases, generated from this same native export. Do not reuse older catalog matches.
 # Exact MPN is the procurement comment: legacy Value labels can contain a lower nominal voltage rating.
+# Exact TDK catalog identities checked in JLCPCB's public inventory. Stock is not guaranteed.
+# Without explicit codes the matcher incorrectly combined these two MPNs as an 80pF capacitor.
+$catalogCodes = @{
+    'C1608X7R1H105K080AB' = 'C45537494'
+    'C1608X7R1H104K080AA' = 'C72453'
+}
 $bom | ForEach-Object {
     [pscustomobject][ordered]@{
         Comment = $_.MPN
@@ -32,6 +38,7 @@ $bom | ForEach-Object {
         Footprint = $_.Footprint
         Manufacturer = $_.Manufacturer
         MPN = $_.MPN
+        'LCSC Part #' = if ($_.Manufacturer -eq 'TDK') { $catalogCodes[$_.MPN] } else { $null }
     }
 } | Export-Csv -LiteralPath "$exportDirectory/jlcpcb-bom.csv" -NoTypeInformation -Encoding utf8
 $placement | ForEach-Object {
