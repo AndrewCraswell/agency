@@ -1,6 +1,6 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/mechanical-isolation-review/` assembly
+Started 8 September 2026. Review the current native KiCad board and the `output/translator-clearance-review/` assembly
 export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
 backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
@@ -33,7 +33,7 @@ changed.
 remaining exact-package overlays and installed cable fit are still open. Power sizing and nominal simulations are
 recorded, but attached-PD suspend consumption cannot be closed from the available guaranteed data. All-layer isolation
 geometry is checked and the prototype operating constraints are explicit; system insulation approval is not established.
-The refreshed `output/mechanical-isolation-review/` package passes ERC, DRC, parity and connectivity with 223 matching
+The refreshed `output/translator-clearance-review/` package passes ERC, DRC, parity and connectivity with 223 matching
 assembly rows and the unchanged rebuilt U21 image. This is not closure of all four items or permission to manufacture.
 The switch/ESD follow-up `pnpm verify` reached tests: all 46 scoring domain test files passed, but the existing 100%
 coverage gate failed (95.98% lines, 99.79% functions, 95.34% statements, 93.62% branches). No threshold or unrelated
@@ -94,7 +94,7 @@ unchanged. Fresh U21 HEX SHA256 is `80349F8D523EF5FF46FE6D8545EC02A0561F47238633
 | P2       | Stocked same-footprint headers and capacitor alternatives — proposal                   | C64/C65 changed to reviewed Yageo CC0603JRNPO9BN180; ERC/DRC/parity/unconnected all zero; fresh 230-part export matches. C56 now selects production TDK C1608X5R1C475K080AC; native ERC/DRC/parity/unconnected checks pass. J2/J6 remain open. JLCPCB draft is unchanged.   | May reduce minimum-order waste and delay without adding components. Savings unpriced until equivalent parts and assembly quantities are verified. | Reconcile C107040 in the supplier draft before ordering. Confirm C56 supplier quantity; continue J2/J6 reviews.                                                                                                 |
 | P2       | U21 idle CPU power — shallow sleep implemented                                         | Qualified, alert-free target now sleeps until nominal 1ms SysTick. Unknown supplies, transactions and error paths remain awake. Native policy/transport tests pass; ARM vector and WFI instructions inspected. The P1 total suspend budget remains open.                    | No BOM increase; reduces idle CPU activity without new USB-state detection. No measured current saving claimed.                                   | Measure tick/wake and PA6 alert response, watchdog recovery and whole-input current. Preserve the conservative 4mA allowance until measured.                                                                    |
 | P3       | Broader power-module consolidation — unassessed opportunity                            | Current decision intentionally retains LTM2884 and REC30K to avoid a discrete isolation redesign. No equivalent simpler replacement has been established.                                                                                                                   | Potential BOM savings versus isolation, layout, sourcing and revalidation cost; estimate pending evidence.                                        | Critic may propose exact alternatives with a complete replacement BOM and preserved functionality. Do not reopen the settled topology solely because individual module prices look high.                        |
-| P1       | Physical footprints and assembly orientation — corrected connector/body defects        | J7/J8 and U13/BZ1 fixes pass native DRC. Q1-Q6, D3-D9 and U8/U9/U14/U15 package/pin checks found no nominal fit defect. Remaining overlays and installed cable envelopes are not all complete.                                                                              | Removes identified fit/clearance defects without changing circuit functions.                                                                      | Finish remaining package overlays and assembler placement/cable acceptance; do not treat missing CAD as a missing BOM part.                                                                                     |
+| P1       | Physical footprints and assembly orientation — corrected connector/body defects        | J7/J8, U13/BZ1 and U10/U11 clearance fixes pass native DRC. Completed package/pin checks are below; remaining overlays and installed cable envelopes are still open.                                                                                                        | Removes identified fit/clearance defects without changing circuit functions.                                                                      | Finish remaining package overlays and assembler placement/cable acceptance; do not treat missing CAD as a missing BOM part.                                                                                     |
 | P1       | U19 primary regulator — migration implemented, margins still open                      | LTC3130-1 fixed 5V automatic Burst/PWM replaces the Burst-only circuit. Seven support parts removed. Native ERC/DRC/parity pass; both nominal manufacturer-model load steps pass.                                                                                           | Removes the operating-mode mismatch and external compensation; no complete price saving claimed.                                                  | Finish whole-input suspend and physical startup/thermal verification; reconcile assembly quote for the exact new parts.                                                                                         |
 | P1       | J3/J4/J5 external harness assembly — handoff gap                                       | These are internal Samtec headers, not the fencer banana sockets or piste socket.                                                                                                                                                                                           | A soldered PCB alone is not a finished cable-ready scoring box. Harness/socket quote is separate and unknown.                                     | Include mating sockets, harness pinout and assembly responsibility in the order if the delivered unit must need no soldering. Existing owner-validated weapon cable is not being reopened.                      |
 | P2       | USB_GND copper island — resolved in saved native board                                 | Refilled and saved the canonical PCB. Reloaded board preserves all 231 footprint placements/pad nets and 3823 track/via identities and endpoints. Saved-board DRC without automatic refill now reports zero violations, unconnected items and parity errors; ERC also zero. | Stale floating copper corrected; no component or routing change and zero BOM cost.                                                                | Re-export manufacturing files after remaining circuit fixes; older ZIPs are not updated by this saved-board correction.                                                                                         |
@@ -280,6 +280,24 @@ this review. Keep confirmed defects, improvements and post-assembly measurements
 - **Unused U8/U15 channels:** their inputs and enables have defined states; unused outputs are intentionally NC.
 
 ## Every populated reference
+
+**U10/U11 translator follow-up:** native VCCA/GND/A/B/DIR/VCCB pin order matches TI SCES882E. U10 DIR selects STM_TX to
+ESP_RX; U11 selects ESP_TX to STM_RX. Their 0.65mm-pitch lands cover nominal leads, but the original body courtyard had
+minimal margin. A local SN74AXC1T45DCKR footprint now has a 3.2 by 3.0mm courtyard covering the 2.15 by 1.4mm maximum
+body, the drawing's protrusion allowance and additional clearance. Both schematic assignments use that local footprint.
+Pads, models, positions and routes are unchanged; the larger outline is an assembly-clearance correction, not a
+demonstrated short circuit.
+
+TI specifies high-impedance outputs below 100mV on either supply; partial-power-down leakage is at most 5uA per data
+port through 85 C, 7.5uA through 125 C under the stated test conditions. Do not assume zero leakage or apply that limit
+to intermediate ramp voltages. Retain both devices for switched-domain UART protection, not galvanic isolation. Verify
+residual APP_3V3 voltage and startup UART behavior on hardware.
+[TI pin, leakage and DCK0006A drawings, pages 3/6 and PDF pages 30/31](https://www.ti.com/lit/ds/symlink/sn74axc1t45.pdf).
+
+Fresh `output/translator-clearance-review/` export passes ERC/DRC/parity/connectivity and has 223 matching assembly
+rows. U21's rebuilt image hash is unchanged. This closes the clearance correction, not factory or bench acceptance.
+Scoped formatting/diff checks passed; full `pnpm verify` still fails unrelated Shopify-content lint. No checks were
+relaxed.
 
 **U8/U9 and U14/U15 buffer package/pin review:** all four native TSSOP footprints have 0.65mm pitch, 5.725mm row spacing
 and 1.475 by 0.4mm lands. Visually checked Nexperia 74LVC125A revision 12 (2 May 2025), pages 3/10, and TI SN74AHCT541
