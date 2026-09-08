@@ -126,8 +126,21 @@ describe("Congress entity range backfill", () => {
             sourceRetrievedAt: expect.any(Date)
           })
         ]),
-        personAliasPersonIds: [],
-        personAliases: [],
+        personAliasPersonIds: ["person:congress:m000001"],
+        personAliasSourceProvider: "congress",
+        personAliases: [
+          expect.objectContaining({
+            personId: "person:congress:m000001",
+            sourceProvider: "congress",
+            name: "Member 118"
+          }),
+          expect.objectContaining({
+            personId: "person:congress:m000001",
+            sourceProvider: "congress",
+            name: "Member 119"
+          })
+        ],
+        personExternalIdentifiers: [expect.objectContaining({ scheme: "bioguide", value: "M000001" })],
         personDetailSourceProvider: "congress",
         personDetails: expect.arrayContaining([
           expect.objectContaining({ personId: "person:congress:m000001", sourceProvider: "congress" })

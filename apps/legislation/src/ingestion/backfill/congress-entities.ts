@@ -82,8 +82,16 @@ export async function executeCongressEntityRangeBackfill(
         {
           memberships: [],
           organizations: [],
-          personAliasPersonIds: [],
-          personAliases: [],
+          personAliasPersonIds: unique(memberSnapshots.flatMap((snapshot) => snapshot.personAliasPersonIds)),
+          personAliasSourceProvider: "congress",
+          personAliases: uniqueById(
+            memberSnapshots.flatMap((snapshot) => snapshot.personAliases),
+            (alias) => `${alias.personId}:${alias.sourceIdentity}`
+          ),
+          personExternalIdentifiers: uniqueById(
+            memberSnapshots.flatMap((snapshot) => snapshot.personExternalIdentifiers ?? []),
+            (identifier) => `${identifier.personId}:${identifier.sourceIdentity}`
+          ),
           personDetailPersonIds: memberDetailsByPersonId(memberSnapshots).map((detail) => detail.personId),
           personDetailSourceProvider: "congress",
           personDetails: memberDetailsByPersonId(memberSnapshots),

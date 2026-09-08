@@ -268,6 +268,59 @@ describe("Congress entity normalization", () => {
     ])
   })
 
+  it("retains only explicit source names and the exact Bioguide identity on replay", () => {
+    const input = [
+      {
+        detail: {
+          bioguideId: "S001208",
+          currentMember: true,
+          directOrderName: "Elissa Slotkin",
+          invertedOrderName: "Slotkin, Elissa",
+          firstName: "Elissa",
+          lastName: "Slotkin"
+        },
+        member: { bioguideId: "S001208", name: "Slotkin, Elissa", url: "https://api.congress.gov/v3/member/S001208" }
+      }
+    ]
+    const result = normalizeCongressMemberDetails(input, 119, organizationContext)
+    expect(result.personAliases.map((alias) => alias.name)).toEqual(["Slotkin, Elissa", "Elissa Slotkin"])
+    expect(result.personAliasPersonIds).toEqual(["person:congress:s001208"])
+    expect(result.personExternalIdentifiers).toEqual([
+      expect.objectContaining({
+        personId: "person:congress:s001208",
+        scheme: "bioguide",
+        value: "S001208",
+        provenanceComplete: true
+      })
+    ])
+    expect(normalizeCongressMemberDetails(input, 119, organizationContext)).toEqual(result)
+  })
+
+  it("does not synthesize aliases from name components or accept untrusted alias evidence", () => {
+    const detail = {
+      bioguideId: "S001208",
+      currentMember: true,
+      firstName: "Elissa",
+      lastName: "Slotkin",
+      directOrderName: null,
+      invertedOrderName: " "
+    }
+    const member = { bioguideId: "S001208", name: "Slotkin, Elissa", url: "https://api.congress.gov/v3/member/S001208" }
+    expect(
+      normalizeCongressMemberDetails([{ detail, member }], 119, organizationContext).personAliases.map(
+        (alias) => alias.name
+      )
+    ).toEqual([member.name])
+    const untrusted = normalizeCongressMemberDetails(
+      [{ detail, member: { ...member, url: "https://example.test/member" } }],
+      119,
+      organizationContext
+    )
+    expect(untrusted.personAliases).toEqual([])
+    expect(untrusted.personAliasPersonIds).toEqual([])
+    expect(untrusted.personExternalIdentifiers).toEqual([])
+  })
+
   it("rejects the obsolete member detail terms object wrapper", () => {
     expect(() =>
       normalizeCongressMemberDetails(

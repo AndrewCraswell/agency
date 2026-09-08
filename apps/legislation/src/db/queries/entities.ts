@@ -168,6 +168,7 @@ export async function replaceEntitySnapshot(
   }
   const personAliasPersonIds = [...new Set(snapshot.personAliasPersonIds)]
   const personAliasValues = snapshot.personAliases
+  const personAliasSourceProvider = snapshot.personAliasSourceProvider ?? "openstates"
   const personDetailPersonIds = [...new Set(snapshot.personDetailPersonIds ?? [])]
   const personDetailSourceProvider = snapshot.personDetailSourceProvider
   const personDetailValues = snapshot.personDetails ?? []
@@ -248,7 +249,10 @@ export async function replaceEntitySnapshot(
       await transaction
         .delete(personAliases)
         .where(
-          and(inArray(personAliases.personId, personAliasPersonIds), eq(personAliases.sourceProvider, "openstates"))
+          and(
+            inArray(personAliases.personId, personAliasPersonIds),
+            eq(personAliases.sourceProvider, personAliasSourceProvider)
+          )
         )
     }
     if (personAliasValues.length > 0) {

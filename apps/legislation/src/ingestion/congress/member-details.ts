@@ -11,12 +11,7 @@ export async function hydrateCongressMemberSnapshot(
   context: CongressEntityContext,
   client: CongressMemberDetailClient,
   detailCache = new Map<string, unknown>()
-): Promise<
-  Pick<
-    CongressEntitySnapshot,
-    "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
-  >
-> {
+): Promise<CongressEntitySnapshot> {
   const membersByBioguideId = new Map<string, unknown>()
   for (const member of members) {
     membersByBioguideId.set(memberBioguideId(member), member)

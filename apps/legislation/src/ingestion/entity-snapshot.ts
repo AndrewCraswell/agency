@@ -23,6 +23,7 @@ export interface EntitySnapshot {
   memberships: MembershipInsert[]
   organizations: OrganizationInsert[]
   personAliasPersonIds: string[]
+  personAliasSourceProvider?: string
   personAliases: PersonAliasInsert[]
   personDetailPersonIds?: string[]
   personDetailSourceProvider?: string

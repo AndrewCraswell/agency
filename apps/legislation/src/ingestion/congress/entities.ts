@@ -49,6 +49,8 @@ const memberDetailSchema = z
       z.object({ imageUrl: optionalHttpsUrl }).optional()
     ),
     firstName: optionalString,
+    directOrderName: optionalString,
+    invertedOrderName: optionalString,
     lastName: optionalString,
     officialUrl: optionalHttpsUrl,
     terms: z.array(memberDetailTermSchema).default([]),
@@ -63,7 +65,15 @@ type TermInsert = typeof legislativeTerms.$inferInsert
 
 export type CongressEntitySnapshot = Pick<
   EntitySnapshot,
-  "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
+  | "personAliasPersonIds"
+  | "personAliases"
+  | "personExternalIdentifiers"
+  | "personDetailPersonIds"
+  | "personDetails"
+  | "personJurisdictions"
+  | "people"
+  | "termPersonIds"
+  | "terms"
 >
 
 export interface CongressEntityContext {
@@ -175,16 +185,15 @@ export function normalizeCongressMemberDetails(
   inputs: readonly CongressMemberDetailInput[],
   congress: number,
   context: CongressEntityContext
-): Pick<
-  CongressEntitySnapshot,
-  "personDetailPersonIds" | "personDetails" | "personJurisdictions" | "people" | "termPersonIds" | "terms"
-> {
+): CongressEntitySnapshot {
   const federalJurisdictionId = jurisdictionId("us")
   const normalized = inputs.map(({ detail, member }) => ({
     detail: memberDetailSchema.parse(detail),
     member: memberSchema.parse(member)
   }))
   const people: PersonInsert[] = []
+  const personAliases: EntitySnapshot["personAliases"] = []
+  const personExternalIdentifiers: NonNullable<EntitySnapshot["personExternalIdentifiers"]> = []
   const personDetails: PersonDetailInsert[] = []
   const personJurisdictions: PersonJurisdictionInsert[] = []
   const terms: TermInsert[] = []
@@ -196,6 +205,29 @@ export function normalizeCongressMemberDetails(
     const canonicalPersonId = personId("congress", detail.bioguideId)
     const provenance = congressProvenance(member.url, context.retrievedAt)
     const sourceUpdatedAt = detail.updateDate === undefined ? undefined : new Date(detail.updateDate)
+    if (provenance.provenanceComplete) {
+      personExternalIdentifiers.push({
+        personId: canonicalPersonId,
+        scheme: "bioguide",
+        value: detail.bioguideId,
+        sourceIdentity: `congress:${detail.bioguideId}:bioguide`,
+        sourceUpdatedAt,
+        ...provenance
+      })
+      // Keep only explicitly published name forms, never inferred nicknames or
+      // synthesized first/last-name combinations. Identical forms collapse.
+      for (const name of new Set([member.name, detail.directOrderName, detail.invertedOrderName])) {
+        if (name !== undefined) {
+          personAliases.push({
+            name,
+            personId: canonicalPersonId,
+            sourceIdentity: `congress:${detail.bioguideId}:name:${name}`,
+            sourceUpdatedAt,
+            ...provenance
+          })
+        }
+      }
+    }
     people.push({
       familyName: detail.lastName,
       givenName: detail.firstName,
@@ -247,6 +279,9 @@ export function normalizeCongressMemberDetails(
     }
   }
   return {
+    personAliasPersonIds: people.filter((person) => person.provenanceComplete).map((person) => person.id),
+    personAliases,
+    personExternalIdentifiers,
     personDetailPersonIds: people.map((person) => person.id),
     personDetails,
     personJurisdictions,

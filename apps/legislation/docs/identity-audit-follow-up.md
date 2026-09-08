@@ -59,6 +59,21 @@ source-backed alias/identifier population. These are explicit gaps, not reasons 
 
 ## Verification
 
+### Federal identity population implementation (2026-09-08)
+
+Congress member detail hydration now emits the published Bioguide identifier and distinct collection,
+direct-order and inverted-order names into the existing identifier and alias tables. No name is inferred from
+first/last-name components and no name-only identity merge is performed. Untrusted source URLs do not authorize
+alias replacement or emit identifiers. CLI and Trigger range ingestion both deduplicate these records across
+Congress snapshots. Alias replacement is provider-scoped, preserving OpenStates rows during Congress refreshes.
+
+Focused normalizer, hydration and range tests pass 18 tests. A new PostgreSQL case checks repeated identity
+replacement, stale Congress alias removal and preservation of another provider's aliases/identifiers; all 19
+database integration tests remain skipped because Docker Desktop cannot start/report a working engine.
+Service and web TypeScript checks pass. Production population is not yet verified: the existing Congress wave
+is still running, so no competing backfill was launched. State identity acquisition remains gated on self-hosted
+OpenStates. The zero-row counts above are the earlier inventory, not a post-deployment population result.
+
 Focused contract/readiness/member/amendment checks passed 22 tests. The 18 PostgreSQL entity integration tests,
 including the strengthened persistence replay case, were skipped: the local Docker daemon is unavailable and no
 test database was configured. They were not pointed at production. Service and Next type checks passed.

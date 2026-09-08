@@ -216,6 +216,49 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     })
   })
 
+  it("replays Congress identities without duplicating rows or deleting other providers", async () => {
+    const id = "person:congress:identity-refresh"
+    const base = congressDetailSnapshot(id, "person.jpg")
+    await replaceEntitySnapshot(database, jurisdictionId, base)
+    await database.insert(schema.personAliases).values([
+      { personId: id, sourceIdentity: "openstates:alias", name: "State source name", sourceProvider: "openstates" },
+      { personId: id, sourceIdentity: "congress:stale", name: "Stale source name", sourceProvider: "congress" }
+    ])
+    await database.insert(schema.personExternalIdentifiers).values({
+      personId: id,
+      sourceIdentity: "openstates:id",
+      scheme: "openstates",
+      value: "state-id",
+      sourceProvider: "openstates"
+    })
+    const input = {
+      ...base,
+      personAliasPersonIds: [id],
+      personAliasSourceProvider: "congress",
+      personAliases: [
+        { personId: id, sourceIdentity: "congress:alias", name: "Published name", sourceProvider: "congress" }
+      ],
+      personExternalIdentifiers: [
+        {
+          personId: id,
+          sourceIdentity: "congress:id",
+          scheme: "bioguide",
+          value: "S001208",
+          sourceProvider: "congress"
+        }
+      ]
+    }
+    await replaceEntitySnapshot(database, jurisdictionId, input)
+    await replaceEntitySnapshot(database, jurisdictionId, input)
+    const aliases = await database.select().from(schema.personAliases).where(eq(schema.personAliases.personId, id))
+    const identifiers = await database
+      .select()
+      .from(schema.personExternalIdentifiers)
+      .where(eq(schema.personExternalIdentifiers.personId, id))
+    expect(aliases.map((alias) => alias.sourceIdentity).sort()).toEqual(["congress:alias", "openstates:alias"])
+    expect(identifiers.map((identifier) => identifier.sourceIdentity).sort()).toEqual(["congress:id", "openstates:id"])
+  })
+
   it("keeps organizations active for a people-only Congress snapshot", async () => {
     const organizationId = "organization:congress:people-only-refresh"
     const congressPersonId = "person:congress:people-only-refresh"

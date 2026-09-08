@@ -1163,8 +1163,22 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
           {
             memberships: [],
             organizations: [],
-            personAliasPersonIds: [],
-            personAliases: [],
+            personAliasPersonIds: [...new Set(memberSnapshots.flatMap((snapshot) => snapshot.personAliasPersonIds))],
+            personAliasSourceProvider: "congress",
+            personAliases: [
+              ...new Map(
+                memberSnapshots
+                  .flatMap((snapshot) => snapshot.personAliases)
+                  .map((alias) => [`${alias.personId}:${alias.sourceIdentity}`, alias])
+              ).values()
+            ],
+            personExternalIdentifiers: [
+              ...new Map(
+                memberSnapshots
+                  .flatMap((snapshot) => snapshot.personExternalIdentifiers ?? [])
+                  .map((identifier) => [`${identifier.personId}:${identifier.sourceIdentity}`, identifier])
+              ).values()
+            ],
             personDetailPersonIds: [...personDetailsByPersonId.keys()],
             personDetailSourceProvider: "congress",
             personDetails: [...personDetailsByPersonId.values()],
