@@ -1,6 +1,6 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/manufacturing-20260908-082511/` assembly
+Started 8 September 2026. Review the current native KiCad board and the `output/hub75-power-hole-review/` assembly
 export, not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation
 backlog. Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
 
@@ -354,7 +354,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | J5        | HTSW-101-07-L-S       | Metal piste reference internal harness header.                                   | Retain; functional sensing conductor, not protective earth.                                                                                                            |
 | J6        | HTSW-106-07-L-S       | ESP32 3.3V UART/EN/BOOT service header.                                          | Retain; UART service is needed because USB data terminates at STM32.                                                                                                   |
 | J7        | TST-108-02-G-D        | 16-pin HUB75 RGB/address/clock/latch/OE signal header.                           | Retain; confirm keyed cable orientation and exact 64x32 panel scan convention.                                                                                         |
-| J8        | 645004114822          | Panel 5V connector, two supply and two ground contacts.                          | Retain; verify mating cable/current rating; no panel in laptop SKU.                                                                                                    |
+| J8        | 645004114822          | Panel 5V connector: pins 1/2 supply, 3/4 ground. Hole defect corrected.          | 1.8mm drills now match drawing; native ERC/DRC/parity/unconnected checks pass. Cable and wave-solder acceptance remain open.                                           |
 | J9        | 5520250-2             | Favero port 1 modular connector, duplicated inner/outer conductors.              | Retain; actual Favero cable polarity and sample interoperability remain bench checks.                                                                                  |
 | J10       | 5520250-2             | Favero port 2 modular connector, duplicated inner/outer conductors.              | Retain; inspect this port independently, not just J9.                                                                                                                  |
 | J12       | HTSW-103-07-L-S       | Primary-side STUSB4500 I2C service header.                                       | Retain for prototype; label USB_GND domain, never bridge to board-side ground.                                                                                         |
@@ -683,6 +683,18 @@ and nominal model checks above do not establish physical DC-bias, thermal or who
 guide retains the implemented 40us slots / 120us frames and now accounts for 7.8uF nominal raw-VBUS capacitance.
 
 ## Verification limits and next review order
+
+**J8 confirmed fit defect:** Würth's exact-part drawing specifies 1.8mm holes for 1.14mm-square contacts (about 1.61mm
+across corners), so the previous 1.4mm holes could not accept the nominal full-width pins. Corrected all four drills in
+both the saved PCB and project footprint; positions, nets, 2.8mm lands and 3.96mm pitch are unchanged. Nominal annular
+width is now 0.5mm. The manufacturer specifies wave soldering for the nylon-66 header; do not assume suitability for the
+SMT reflow oven. Its 7A rating is not permission to exceed the panel rail budget or a substitute for mating-contact/wire
+derating and assembled temperature checks.
+[Würth 645004114822 drawing, revision L, sheet 1](https://www.we-online.com/components/products/datasheet/645004114822.pdf).
+Fresh `output/hub75-power-hole-review/` has zero ERC/DRC/parity/unconnected findings, 223 matching assembly rows, and a
+rebuilt U21 image. Only these four hole diameters changed in the PCB and source footprint; no routing moved. Older
+fabrication ZIPs are superseded. `pnpm verify` stopped on unrelated `apps/legislation/tmp/committee-coburn-audit.ts`
+console lint errors; no clean repository-wide pass is claimed and that file was not changed.
 
 J1 mechanical source: [GCT USB4105 drawing B4, sheet 1](https://gct.co/files/drawings/usb4105.pdf), visually reviewed
 against saved native pad coordinates. Locators are 0.65mm holes spaced 5.78mm; shell slots have 8.64mm horizontal
