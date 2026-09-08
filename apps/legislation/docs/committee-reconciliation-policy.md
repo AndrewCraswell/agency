@@ -247,3 +247,22 @@ rewriting source names/states or adding a global alias. Name/state corrections r
 to share the exact single corroborating parent; missing, changed or conflicting evidence fails closed. Fresh parsed
 rosters and the production identity catalog validated all six mappings. Other unresolved identities still block
 publication, and this change launches no import.
+
+### Reviewed McIntyre/Dreier spellings, September 8, 2026
+
+All three 106th editions print `Mike McIntrye` in Military Procurement and Military Readiness, while their Armed
+Services parent correctly prints `Mike McIntyre`, North Carolina. The [Directory's House committee granule](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/html/CDIR-1999-06-15-HOUSECOMMITTEES.htm)
+also prints `David Drier`, California, as Rules chair and as a member of Legislative and Budget Process and Rules
+and Organization of the House. The correction preserves those roles; it does not promote him to subcommittee chair.
+
+Independent checks: [McIntyre's official biography, M000485](https://history.house.gov/People/Detail/17932),
+the contemporary [Military Readiness hearing](https://commdocs.house.gov/committees/security/has081030.000/has081030_0.HTM),
+and [Military Procurement hearing, HASC 106-50](https://commdocs.house.gov/committees/security/has076200.000/has076200_0.HTM)
+identify Mike McIntyre of North Carolina. [Dreier's official biography, D000492](https://history.house.gov/People/Listing/D/DREIER,-David-Timothy-(D000492)/)
+confirms his 106th Rules chairmanship. These are manual validation references, not new ingestion providers.
+
+Production canonical people and 106th terms match `person:congress:m000485` (NC district 7) and
+`person:congress:d000492` (CA district 28). The fingerprinted manifests add exactly five reviewed cells per edition,
+15 appearances total, and retain exact parent checks. Fresh read-only validation passed all three editions, including
+the prior Cochran decisions. The 107 focused normalization, identity and synchronization tests passed. Other unresolved
+names still prevent publication; no data import was launched.

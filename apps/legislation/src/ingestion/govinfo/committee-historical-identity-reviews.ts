@@ -25,6 +25,40 @@ const congress106Identities: IdentityReview["identities"] = [
       count: 1,
       contexts: [{ name: "Agriculture, Nutrition and Forestry" }]
     }
+  },
+  {
+    // Same-edition Armed Services parent spells McIntyre correctly; 106th
+    // procurement/readiness hearing rosters independently confirm both seats.
+    printedName: "Mike McIntrye",
+    state: "NC",
+    chamber: "lower",
+    personId: "person:congress:m000485",
+    canonicalName: "McIntyre, Mike",
+    givenName: "MIKE",
+    familyName: "MCINTYRE",
+    district: "7",
+    contexts: [
+      { name: "Military Procurement", parentName: "Armed Services" },
+      { name: "Military Readiness", parentName: "Armed Services" }
+    ],
+    corroboration: { name: "Mike McIntyre", count: 1, contexts: [{ name: "Armed Services" }] }
+  },
+  {
+    // Bioguide D000492 identifies David Timothy Dreier and his 106th Rules
+    // chairmanship; the Directory explicitly prints these three CA cells.
+    printedName: "David Drier",
+    state: "CA",
+    chamber: "lower",
+    personId: "person:congress:d000492",
+    canonicalName: "Dreier, David",
+    givenName: "DAVID",
+    familyName: "DREIER",
+    district: "28",
+    contexts: [
+      { name: "Rules" },
+      { name: "Legislative and Budget Process", parentName: "Rules" },
+      { name: "Rules and Organization of the House", parentName: "Rules" }
+    ]
   }
 ]
 
