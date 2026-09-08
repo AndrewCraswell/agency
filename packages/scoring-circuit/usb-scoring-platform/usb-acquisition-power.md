@@ -88,6 +88,31 @@ Before approving maximum-brightness operation, close
 U7, not its 3.3V output current. Panel selection is resolved; shared-load, startup and thermal qualification remain
 open. This does not affect the panel-disconnected laptop mode.
 
+### Selected-panel wiring and load check
+
+The saved native PCB J7 pad nets are, in pin order 1-16:
+`R1, G1, B1, GND, R2, G2, B2, GND, A, B, C, D, CLK, LAT, OE, GND`. These are PANEL-prefixed signals driven by the
+existing 5V AHCT buffers. J8 pins 1/2 are PANEL_5V and pins 3/4 are GND. Connect J7 to the panel's **INPUT**, not its
+cascade output; use a separate power harness from J8. Do not assume matching connector pitch proves either harness's
+polarity or pin-one orientation.
+
+The manufacturer's
+[ESP32 wiring diagram](https://docs.waveshare.com/assets/images/HUB75-GPIO-define-4fcc7f8b11b60a490cceddd451d7ec8f.webp)
+shows the same physical signal-pair sequence, but labels the B2 partner **E**, whereas our J7 pin 8 is grounded. It also
+numbers the illustrated cable from 16 at R1 down to 1 at GND, opposite our footprint pin numbers. This generic diagram
+is not exact-P5 revision proof. For the selected 1/16-scan panel, confirm that the position opposite B2 is GND or an
+unused E input allowed low. Do not reverse the PCB pins or add an E GPIO from this diagram alone. Before powering a
+sample, compare its connector labels and continuity with the sequence above. The panel remains selected, but
+plug-and-play compatibility is not yet established.
+
+A practical provisional load envelope is 4A panel + 1A at APP_3V3 + the existing 75mA acquisition target + 100mA
+reserved for other direct 5V loads. At an assumed 80% U7 efficiency, this is
+`4 + (3.3 * 1 / (5 * 0.8)) + 0.075 + 0.100 = 5.000A`, or 25W at U6's output. This leaves 1A against its nominal 6A
+rating. The 1A application and 100mA other-load figures are design allocations, not measured consumption or guaranteed
+component maxima; 80% is an analysis assumption, not a guaranteed efficiency. Accept that envelope only after confirming
+the component load sum and U6 temperature derating, then measuring startup and maximum-load behavior. No converter
+replacement or brightness reduction is justified by this calculation alone.
+
 ## Primary-side control hardware
 
 U21 is [STM32C011F6P6](https://www.st.com/resource/en/datasheet/stm32c011f6.pdf), TSSOP-20, powered by U18 VLO

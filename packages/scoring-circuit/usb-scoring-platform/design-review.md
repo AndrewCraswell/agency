@@ -40,6 +40,14 @@ Received revision/pinout, full-white load, startup, shared-load headroom and the
 remaining P1 budget question is not a demonstrated defect or purchase authorization. See
 [standalone power boundary](usb-acquisition-power.md#standalone-display-power-boundary).
 
+**Selected-panel follow-up:** J7/J8 native pad-net assignments were inspected. The generic Waveshare diagram uses
+reverse cable numbering and labels the B2 partner E rather than our grounded pin 8; no speculative PCB change was made.
+Exact received-P5 labels/continuity and cable polarity need checking before power-up. A provisional 25W shared load
+envelope leaves 5W nominal U6 headroom, but depends on explicit application-load and efficiency assumptions. See
+[wiring and load check](usb-acquisition-power.md#selected-panel-wiring-and-load-check). No purchase, fabrication
+approval or physical qualification is implied. The preceding repository verification finished unsuccessfully in scoring
+coverage; it also reported a web workflow test failure. Electrical simulation passed all eight models.
+
 This follow-up's direct `pnpm --filter @repo/scoring-circuit simulate` passed. `pnpm verify` failed on unrelated
 Shopify-content lint and cancelled concurrent checks; it is not a full pass. No schematic, footprint, route or BOM
 changed.
