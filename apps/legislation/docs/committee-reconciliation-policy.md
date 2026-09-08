@@ -180,9 +180,9 @@ previously observed active tenure cannot be relabeled as historical at first obs
 
 The application schema, original migration baseline, API projection and reconciliation now support this contract.
 Exact-source Brown/Spence normalization is implemented and read-only validated against all five reviewed editions.
-Production schema application and the remaining identity reconciliation are still pending; no historical import is
-enabled by this change. An already-applied baseline is not rerun automatically: verify the deployed enum
-and constraint before enabling ingestion, preserving valid indexes and unrelated data.
+Production schema application is complete; the remaining identity reconciliation and deployment are still pending.
+No historical import is enabled by this change. An already-applied baseline is not rerun automatically: the narrow
+production DDL below was applied separately, preserving valid indexes and unrelated data.
 
 ### Brown/Spence source-cell validation, September 8, 2026
 
@@ -209,5 +209,19 @@ memberships per edition (20 appearances total), all with null detected start/end
 normalization and identity tests passed (89 tests). This does not close the other 106th/107th identities or establish
 production import acceptance. Roster-change detection includes historical-first-observation status, so a transition
 to or from positive assignment evidence is not mistaken for a metadata-only update. Local Congress-end closure
-does not change the source fingerprint. Before importing, verify the production enum/constraint, then deploy and
-exercise replay.
+does not change the source fingerprint. Before importing, finish identity validation, then deploy and exercise replay.
+
+### Production historical-membership schema, September 8, 2026
+
+Read-only preflight found no active PostgreSQL queries or index builds; the latest four committee backfill runs were
+completed. Production had only the two earlier end-reason values and no historical-observation constraint.
+
+Applied the missing `historical_at_first_observation` enum value, added the baseline
+`organization_memberships_historical_observation_check` as `NOT VALID`, then explicitly validated it. Each operation
+used its own transaction with a two-second lock timeout and twenty-second statement timeout. PostgreSQL now reports
+`convalidated=true`; the expression requires a session, inactive status, and null detected start/end/last-observed
+dates for historical first observations.
+
+Before and after: 43,948 membership rows, identical full-row ordered checksum `a29a0fc9c33851c8edf4256c3e75af32`
+(`md5(string_agg(md5(row_to_json(m)::text), '' order by id))`). No rows were rewritten, no indexes were rebuilt,
+and no import was launched. The one-use local application script was removed after successful verification.
