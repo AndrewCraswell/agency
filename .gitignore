@@ -23,6 +23,7 @@ apps/legislation/.container/
 .trigger/
 .data/
 /tmp/
+/apps/legislation/tmp/
 /apps/legislation/infra/bicep/main.json
 
 # Next
