@@ -40,6 +40,57 @@ function harness(
 }
 
 describe("same-directory committee member aliases", () => {
+  it.each([undefined, { state: "AS" }, { chamber: "S" }, { congress: "104" }, { bioGuideId: "invalid" }])(
+    "validates the observed Virgin Islands delegate identity with %j",
+    async (mismatch) => {
+      const directory = "CDIR-1997-06-04"
+      const id = `${directory}-VI-H`
+      const url = `https://api.govinfo.gov/packages/${directory}/granules/${id}/summary`
+      const request = vi.fn<typeof fetch>()
+      request.mockResolvedValueOnce(
+        new Response(JSON.stringify({ nextPage: null, granules: [{ granuleId: id, granuleLink: url }] }))
+      )
+      request.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            packageId: directory,
+            granuleId: id,
+            members: [
+              {
+                congress: "105",
+                chamber: "H",
+                state: "VI",
+                bioGuideId: "C000380",
+                name: [{ parsed: "DONNA CHRISTIAN-GREEN", "authority-fnf": "Donna M. Christensen" }],
+                ...mismatch
+              }
+            ]
+          })
+        )
+      )
+      const result = getGovInfoCommitteeMemberAliases({
+        apiKey: "test-key",
+        congress: 105,
+        packageId: directory,
+        candidates: [{ state: "VI", chamber: "lower" }],
+        http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+      })
+      const outcome = await result.then(
+        (aliases) => ({ aliases }),
+        () => ({ rejected: true })
+      )
+      expect(outcome).toEqual(
+        mismatch
+          ? { rejected: true }
+          : {
+              aliases: [
+                { name: "DONNA CHRISTIAN-GREEN", personId: "person:congress:c000380", state: "VI", chamber: "lower" },
+                { name: "Donna M. Christensen", personId: "person:congress:c000380", state: "VI", chamber: "lower" }
+              ]
+            }
+      )
+    }
+  )
   const territorialId = `${packageId}-AS-H`
   const territorialGranule = { granuleId: territorialId, granuleLink: `${base}/${territorialId}/summary` }
   const territorialMember = {
@@ -62,12 +113,18 @@ describe("same-directory committee member aliases", () => {
     ])
   })
 
-  it.each(["AS", "AS-S", "AS-H-", "AS-H-extra", "FL-H"])(
+  it.each(["AS", "AS-S", "AS-H-", "AS-H-extra", "VI", "VI-S", "VI-H-", "VI-H-extra", "FL-H"])(
     "does not expand the observed territorial format to %s",
     async (suffix) => {
       const { run, request } = harness(
         [{ nextPage: null, granules: [{ granuleId: `${packageId}-${suffix}`, granuleLink: "https://unused.test" }] }],
-        [...territorialCandidates, { state: "AS", chamber: "upper" }, { state: "FL", chamber: "lower" }]
+        [
+          ...territorialCandidates,
+          { state: "AS", chamber: "upper" },
+          { state: "VI", chamber: "lower" },
+          { state: "VI", chamber: "upper" },
+          { state: "FL", chamber: "lower" }
+        ]
       )
       expect(await run()).toEqual([])
       expect(request).toHaveBeenCalledOnce()

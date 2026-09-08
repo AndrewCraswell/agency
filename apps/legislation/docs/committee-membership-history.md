@@ -337,3 +337,24 @@ After the recurring import wave finished, fresh preflight found no active/pendin
 113th import `run_06g7vrtpndh02qnmuvrrta9q01` was dispatched once with idempotency key
 `committee-history-113-509d46d-20260908`, executing on `20260908.2`. Its terminal result and database/no-op checks
 remain pending. The pre-import 119th membership fingerprint still matched the baseline above.
+
+The 113th import completed successfully on `20260908.2`. Database verification confirms 3,530 memberships across
+210 organizations and 531 people, all inactive with `congress_ended`, detected start `2014-02-18`, null detected
+ends and null effective dates. The 119th membership and active-organization fingerprints remain exactly unchanged.
+The historical full-row fingerprint is `7b96216eec60a77df634d5a50b85083b`. Unchanged rerun
+`run_06g800eqoh3or28cj0lfjgut01` was dispatched once with key `committee-history-113-noop-509d46d-20260908`;
+its terminal result remains pending. Fresh API health/readiness returned 200 and anonymous protected people returned
+401; these do not replace authenticated membership acceptance.
+
+The 113th unchanged rerun completed on `20260908.2`, skipped its one edition and wrote zero rows. Historical and
+119th full-row fingerprints remained unchanged. Fresh preflight found no index build or active/pending Trigger runs,
+then dispatched 108th import `run_06g800qt643gmml55un90hi301` with key `committee-history-108-509d46d-20260908`.
+The 108th terminal/database/no-op checks remain pending; the 109th has not been dispatched.
+
+The 105th follow-up now fully reconciles 196 organizations and 3,155 unique memberships with zero gaps or duplicates.
+Its exact reviewed manifest resolves 66 cells; the narrow districtless `VI-H` biography loader resolves Donna
+Christian-Green's three cells through explicit same-edition C000380 metadata. An independent reviewer examined all
+hierarchy labels and visually confirmed the unusual two-member Standards roster with twelve printed vacancies;
+this was not an all-row visual census. The combined GovInfo suite passes 341 tests. The latest root verification
+passes its check stage, then fails the unrelated scoring coverage thresholds. The earlier locked-file issue did not
+recur in that run. Historical 105th import is not yet dispatched.

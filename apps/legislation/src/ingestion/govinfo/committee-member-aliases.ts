@@ -91,8 +91,8 @@ export async function getGovInfoCommitteeMemberAliases(options: {
       // advertised URL and returned package ID, not the date prefix, bind scope.
       const match =
         /^CDIR-\d{4}-\d{2}-\d{2}-([A-Z]{2})-(S|H)-\d+$/.exec(granule.granuleId) ??
-        // Older directories advertise the American Samoa delegate without a district.
-        /^CDIR-\d{4}-\d{2}-\d{2}-(AS)-(H)$/.exec(granule.granuleId)
+        // Observed American Samoa and Virgin Islands delegate IDs omit the district.
+        /^CDIR-\d{4}-\d{2}-\d{2}-(AS|VI)-(H)$/.exec(granule.granuleId)
       if (match === null) {
         continue
       }

@@ -14,10 +14,10 @@ Reviewed reconciliation code `509d46d` is deployed as Trigger `20260908.2`. Hist
 | 110, 111, 112, 114, 115, 116, 118 | Imported and verified, including unchanged reruns; see rollout evidence |
 | 119 | Current sync verified on the deployed release, with 3,871 active memberships and zero writes on its unchanged rerun |
 | 107 | Parsed; historical identity corrections and the bracketed, stale Spence entries remain unresolved |
-| 108 | All four editions pass: 206 organizations and 3,856 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
+| 108 | All four editions pass: 206 organizations and 3,856 uniquely mapped memberships each; production import in progress |
 | 109 | Both editions pass: 209 organizations and 3,781 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
-| 113 | Read-only canonical audit passes: 210 organizations, 3,530 entries mapped uniquely, zero gaps or duplicate IDs; not yet imported |
-| 105 | Complete parse passes: 196 organizations and 3,155 source memberships; canonical identity and complete structural acceptance remain required |
+| 113 | Imported: 3,530 memberships, 210 organizations, 531 people; database dates/current preservation and zero-write rerun verified; fresh authenticated API smoke pending |
+| 105 | Complete canonical audit passes: 196 organizations, 3,155 uniquely mapped memberships, zero gaps or duplicates; reviewed hierarchy checks pass; import pending |
 | 106 | Leave-note policy resolved; all three editions parse to 199 organizations and 3,331 source memberships; canonical audit still finds unresolved identities |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 

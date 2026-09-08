@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { congress105IdentityReview } from "./committee-congressional-directory-1997-identities.js"
 import type { GovInfoDirectoryPackage } from "./committee-directory-client.js"
 import type { GovInfoPersonCatalog } from "./committee-directory-normalize.js"
 import type { GovInfoCommitteeMember, GovInfoCommitteeRecord } from "./committee-directory-parser.js"
@@ -36,6 +37,7 @@ export type IdentityReview = {
 // JSON.stringify of the complete parsed roster, not raw PDF bytes. Membership
 // evidence remains GovInfo; these IDs already exist in the Congress.gov catalog.
 const reviews: readonly IdentityReview[] = [
+  congress105IdentityReview,
   ...historicalIdentityReviews,
   {
     packageId: "CDIR-2014-02-18",
