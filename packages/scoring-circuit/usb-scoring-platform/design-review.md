@@ -386,10 +386,10 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 
 ## Geometry validation, 8 September
 
-Native `pcbnew` shapes were inspected without saving the board. Zone fill was regenerated in memory. The primary net set
-came from the USB-side ICs/connectors, U18 A/B pads and U6 input pins, extended through their resistor/inductor
-networks. Secondary `GND` was checked not to be in that set. Copper comparisons include pad, track/via and filled-zone
-geometry; intentionally unconnected pins are not treated as meaningful domain nets.
+The initial native `pcbnew` inspection regenerated zone fill in memory without saving. The primary net set came from the
+USB-side ICs/connectors, U18 A/B pads and U6 input pins, extended through their resistor/inductor networks. Secondary
+`GND` was checked not to be in that set. Copper comparisons include pad, track/via and filled-zone geometry;
+intentionally unconnected pins are not treated as meaningful domain nets.
 
 | Check                  | Result                                                                                          | Meaning / limitation                                                                                                |
 | ---------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -406,13 +406,27 @@ calculation independently gives 2.65mm. This is **not** a measured creepage path
 The exhaustive other-layer pair search was stopped for runtime; only the local U18 checks above are reported for those
 layers. Do not present an unfinished search as a full-board result.
 
+**Local pour correction implemented:** widened the existing four-layer U18 keepout from x77.30–86.70mm to
+x77.235–86.765mm, matching the inner land edges, while preserving its y130–150mm extent. Refilled and saved the native
+board. Polygon intersections against the interior rectangle x77.236–86.764mm, y133.336–146.664mm now report **zero
+filled-copper area on F.Cu, In1.Cu, In2.Cu and B.Cu**. The 1um inset avoids boundary-rounding ambiguity. The table above
+records the earlier finding, not the corrected fill. All 231 footprints and 3,823 track/via items retained identity,
+position and connections. KiCad DRC without a temporary refill reports zero violations, unconnected items and schematic
+parity issues. The exported [bottom copper plot](output/isolation-gap-bottom.pdf) was visually inspected.
+
 ADI instructs leaving copper out of the area between inner pad columns on top and bottom. Its module creepage figure is
-not a blanket PCB requirement. The small nominal edge intrusion warrants drawing/keepout reconciliation, while the
-2.65mm gap elsewhere needs an explicit system requirement before acceptance or rerouting.
+not a blanket PCB requirement. This fixes the local pour intrusion; the 2.65mm gap elsewhere still needs an explicit
+system requirement before acceptance or rerouting. No component, circuit topology or isolation-rating claim changed.
 [LTM2884 datasheet, PCB layout and isolation characteristics](https://www.analog.com/media/en/technical-documentation/data-sheets/ltm2884.pdf).
 
-No route or component has been changed. These results narrow the previous broad geometry questions; they do not close
-whole-board electrical safety, package-fit or assembler review.
+No route or component has been changed. Only the existing keepout and resulting copper fill were corrected. These
+results do not close whole-board electrical safety, package-fit or assembler review. The refreshed
+`output/isolation-keepout-review/` contains Gerbers, drills, 230 matching BOM/placement references and a fresh U21 build
+(2476 text bytes, 60 BSS; HEX SHA256 `80349F8D523EF5FF46FE6D8545EC02A0561F4723863381F4E8CC91668D38B132`). Exported
+ERC/DRC/parity/unconnected counts are zero. Earlier archives and the JLCPCB draft predate this correction; nothing was
+uploaded or approved. This slice's `pnpm verify` passed its check stages and all seven electrical models, then failed
+the existing scoring TypeScript 100% coverage thresholds (95.98% lines, 99.79% functions, 95.34% statements, 93.62%
+branches). No thresholds were changed; repository-wide verification is not clean.
 
 ## Requirements and power-budget follow-up, 8 September
 
