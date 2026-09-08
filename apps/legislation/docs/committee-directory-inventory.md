@@ -388,6 +388,14 @@ full canonical reconciliation; this matching change alone does not close either 
 All 79 focused alias/normalization tests and legislation lint/types pass. Repository `pnpm verify` passes its
 check stage but remains blocked by unrelated scoring coverage thresholds (lines 95.98%, functions 99.79%,
 statements 95.34%, branches 93.62%, each requiring 100%); it does not establish full legislation-suite completion.
+The July 2003 live canonical re-audit with this leading-initial rule confirms 206 organizations, 3,856 entries,
+3,819 uniquely mapped memberships, zero duplicate identifiers and 37 unresolved entries across 11 names.
+The single Gresham Barrett entry now resolves; all other gaps remain. The other three 108th editions retain their
+previous audit counts until rerun with this rule. No production import was performed.
+The July 2005 re-audit confirms 209 organizations, 3,781 entries, 3,739 uniquely mapped memberships, zero duplicate
+identifiers and 42 unresolved entries across 10 names. Three `Michael Conaway` entries now resolve; `Mike Conaway`
+remains unresolved, as intended. September 2006 has not yet been rerun with this rule. Neither Congress is cleared
+for publication.
 Louis/Luis Fortuño corrections are limited to the two reviewed 110th editions and require
 same-edition corroboration. They are not generic nickname substitutions.
 
