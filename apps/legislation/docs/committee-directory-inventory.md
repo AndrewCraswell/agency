@@ -17,7 +17,7 @@ Reviewed reconciliation code `509d46d` is deployed as Trigger `20260908.2`. Hist
 | 108 | All four editions pass: 206 organizations and 3,856 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
 | 109 | Both editions pass: 209 organizations and 3,781 uniquely mapped memberships each, zero gaps or duplicate IDs; import pending |
 | 113 | Read-only canonical audit passes: 210 organizations, 3,530 entries mapped uniquely, zero gaps or duplicate IDs; not yet imported |
-| 105 | Reviewed spelling, assignment punctuation and Water Resources heading corrections implemented; Ways and Means / Health Johnson ambiguity remains |
+| 105 | Complete parse passes: 196 organizations and 3,155 source memberships; canonical identity and complete structural acceptance remain required |
 | 106 | Leave-note policy resolved; all three editions parse to 199 organizations and 3,331 source memberships; canonical audit still finds unresolved identities |
 | 117 | Source contradiction involving Tom Udall remains unresolved; no incomplete-roster policy approved |
 

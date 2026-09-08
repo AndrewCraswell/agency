@@ -328,3 +328,12 @@ No PostgreSQL index build was present. The pre-import baseline uses `md5(string_
 119th GovInfo memberships: 3,871 total/active, `942a816915e3734aaa4b0f8cdaeaa6ca`; active federal GovInfo organizations:
 221, `e6816e2fd02d046f435f01fdd235638a`. Compare using this same expression after a historical import.
 The stopped Codex schedule remains stopped. Authenticated API acceptance still requires a working smoke token.
+
+The subsequent isolated coverage run passed 2,262 tests in 246 files plus all four receiver tests; the same 60
+database-dependent tests remain skipped. The follow-up Water Resources heading fix is committed and pushed as
+`a68f8db`; it is not included in Trigger `20260908.2` and does not affect the validated 108th/109th/113th rosters.
+
+After the recurring import wave finished, fresh preflight found no active/pending Trigger runs and no index builds.
+113th import `run_06g7vrtpndh02qnmuvrrta9q01` was dispatched once with idempotency key
+`committee-history-113-509d46d-20260908`, executing on `20260908.2`. Its terminal result and database/no-op checks
+remain pending. The pre-import 119th membership fingerprint still matched the baseline above.

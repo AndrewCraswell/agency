@@ -6,6 +6,59 @@ import { parseGovInfoHistoricalCommitteeGranule } from "./committee-historical-p
 const title = "STANDING COMMITTEES OF THE SENATE"
 const fixture = `${title}\n\n                   Agriculture\n\n              328A Office Building, phone 224-2035\n\n                 Richard G. Lugar, of Indiana, Chairman\n\nRick Santorum, of Pennsylvania.      Tom Harkin, of Iowa.\nMary L. Landrieu, of Louisiana.      Patrick J. Leahy, of Vermont.\n\n                              SUBCOMMITTEES\n\n                     Forestry and Conservation\n\n                         Mr. Santorum, Chairman\n\nMs. Landrieu                           Mr. Leahy\n\n                                  STAFF\n\n        Director.--Somebody Else.\n`
 describe("historical GovInfo printed rosters", () => {
+  it("repairs the reviewed Social Security Becerna row only against unique Becerra evidence", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nWays and Means\n\nXavier Becerra, of California.\n\nSUBCOMMITTEES\n\nSocial Security\n\nMr. Becerna\n`
+    const parse = (text = source, packageId = "CDIR-1997-06-04") =>
+      parseGovInfoHistoricalCommitteeGranule({ chamber: "lower", title: houseTitle, text }, { packageId })
+    expect(parse()[1]?.members).toEqual([{ name: "Xavier Becerra", state: "CA", chamber: "lower" }])
+    for (const changed of [
+      source.replace("Xavier Becerra, of California.", "Alex Becerna, of Alaska."),
+      source.replace("California", "Alaska"),
+      source.replace("\n\nSUBCOMMITTEES", "\nAlex Becerra, of Alaska.\n\nSUBCOMMITTEES"),
+      source.replace("\n\nSUBCOMMITTEES", "\nAlex Becerna, of Alaska.\n\nSUBCOMMITTEES")
+    ]) {
+      expect(() => parse(changed)).toThrow("re-review required")
+    }
+    expect(() => parse(source.replace("Social Security", "Health"))).toThrow("Ambiguous")
+    expect(() => parse(source.replace("Ways and Means", "Budget"))).toThrow("Ambiguous")
+    expect(() => parse(source, "CDIR-1999-06-15")).toThrow("Ambiguous")
+  })
+  it("resolves the two Health Johnson cells only through reviewed same-token cross-panel assignments", () => {
+    const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
+    const source = `${houseTitle}\n\nWays and Means\n\nNancy L. Johnson, of Connecticut.\nSam Johnson, of Texas.\nJim Bunning, of Kentucky.\n\nSUBCOMMITTEES\n\nHealth\n\nMs. Johnson    Mr. Johnson\n\nOversight\nMs. Johnson, Chairwoman\n\nSocial Security\nMr. Bunning, Chairman\n\nMr. Johnson    1 vacancy\n\nSTAFF\n`
+    const assignments = {
+      chamber: "lower" as const,
+      title: "ASSIGNMENTS OF REPRESENTATIVES TO COMMITTEES",
+      text: "Johnson, N. of Connecticut (R)    Ways and Means -- Oversight; Health.\nJohnson, S., of Texas (R)    Ways and Means -- Health; Social Security."
+    }
+    const parse = (text = source, assignmentText = assignments.text, packageId = "CDIR-1997-06-04") =>
+      parseGovInfoHistoricalCommitteeGranule(
+        { chamber: "lower", title: houseTitle, text },
+        {
+          packageId,
+          resolveAbbreviatedMember: createGovInfoAssignmentResolver([{ ...assignments, text: assignmentText }])
+        }
+      )
+    const records = parse()
+    expect(records[1]?.members.map((member) => member.name)).toEqual(["Nancy L. Johnson", "Sam Johnson"])
+    expect(records[2]?.members[0]).toMatchObject({ name: "Nancy L. Johnson", role: "chair" })
+    expect(records[3]?.members.map((member) => member.name)).toEqual(["Jim Bunning", "Sam Johnson"])
+    for (const changed of [
+      source.replace("Ms. Johnson    Mr. Johnson", "Ms. Johnson"),
+      source.replace("Ms. Johnson, Chairwoman", "Mr. Johnson, Chairman"),
+      source.replace("Mr. Johnson    1 vacancy", "Ms. Johnson    1 vacancy"),
+      source.replace("Sam Johnson, of Texas.", "Sam Johnson, of Ohio."),
+      source.replace("\n\nSUBCOMMITTEES", "\nAlex Johnson, of Texas.\n\nSUBCOMMITTEES")
+    ]) {
+      expect(() => parse(changed)).toThrow("re-review required")
+    }
+    expect(() => parse(source, assignments.text.replace("Oversight; Health", "Health"))).toThrow("re-review required")
+    expect(() =>
+      parse(source, assignments.text.replace("Health; Social Security", "Health; Oversight; Social Security"))
+    ).toThrow("re-review required")
+    expect(() => parse(source, assignments.text, "CDIR-1999-06-15")).toThrow("Ambiguous")
+  })
   it("separates the 105th Water Resources heading without attaching it to McGovern", () => {
     const houseTitle = "STANDING COMMITTEES OF THE HOUSE"
     const source = `${houseTitle}\n\nTransportation and Infrastructure\n\nThomas E. Petri, of Wisconsin.\nSherwood L. Boehlert, of New York.\nJames P. McGovern, of Massachusetts.\nJ. C. Watts, Jr., of Oklahoma.\n\nSUBCOMMITTEES\n\nSurface Transportation\nMr. Petri, Chairman\n\n         Mr. Watts    Mr. McGovern\n                  Water Resources and Environment\n                      Mr. Boehlert, Chairman\n\n         Mr. Petri    Mr. McGovern\n\nSTAFF\n\nDirector.--Somebody Else.\n`

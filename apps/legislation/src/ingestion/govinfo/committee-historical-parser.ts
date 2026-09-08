@@ -222,6 +222,70 @@ function parseGranule(
               options.packageId === "CDIR-1997-06-04" &&
               granule.chamber === "lower" &&
               granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              parent?.name === "Ways and Means" &&
+              isSubcommittee &&
+              rosterName === "Social Security" &&
+              cell === "Mr. Becerna"
+            ) {
+              if (
+                parent.members.filter((member) => member.name === "Xavier Becerra" && member.state === "CA").length !==
+                  1 ||
+                parent.members.filter((member) => /(?:^| )Becerra$/.test(member.name)).length !== 1 ||
+                parent.members.some((member) => /(?:^| )Becerna$/.test(member.name))
+              ) {
+                throw new Error("Ambiguous GovInfo Becerna: reviewed identity evidence changed; re-review required")
+              }
+              memberCell = "Mr. Becerra"
+            }
+            if (
+              options.packageId === "CDIR-1997-06-04" &&
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
+              parent?.name === "Ways and Means" &&
+              isSubcommittee &&
+              rosterName === "Health" &&
+              (cell === "Ms. Johnson" || cell === "Mr. Johnson")
+            ) {
+              // These exact tokens are independently identified in two other printed
+              // panels by state/initial-qualified assignments, not by gender inference.
+              const committeeText = source.match(/^\s*Ways and Means\s*$([\s\S]*?)^\s*STAFF\s*$/m)?.[1] ?? ""
+              const oversightToken = /^\s*Oversight\s*\n\s*Ms\. Johnson, Chairwoman\s*$/m.test(committeeText)
+              const socialToken =
+                /^\s*Social Security\s*\n\s*Mr\. Bunning, Chairman\s*\n\s*Mr\. Johnson[ \t]{2,}/m.test(committeeText)
+              const reviewedParent = parent
+              const resolve = (subcommitteeName: string) =>
+                options.resolveAbbreviatedMember?.({
+                  name: "Johnson",
+                  parent: reviewedParent,
+                  subcommitteeName,
+                  chamber: granule.chamber
+                })
+              const nancy = resolve("Oversight")
+              const sam = resolve("Social Security")
+              if (
+                !cells.includes("Ms. Johnson") ||
+                !cells.includes("Mr. Johnson") ||
+                !oversightToken ||
+                !socialToken ||
+                nancy?.name !== "Nancy L. Johnson" ||
+                nancy.state !== "CT" ||
+                sam?.name !== "Sam Johnson" ||
+                sam.state !== "TX" ||
+                parent.members.filter((member) => /(?:^| )Johnson$/.test(member.name)).length !== 2 ||
+                parent.members.filter((member) => member.name === "Nancy L. Johnson" && member.state === "CT")
+                  .length !== 1 ||
+                parent.members.filter((member) => member.name === "Sam Johnson" && member.state === "TX").length !== 1
+              ) {
+                throw new Error(
+                  "Ambiguous GovInfo Health Johnson: reviewed cross-panel evidence changed; re-review required"
+                )
+              }
+              memberCell = cell === "Ms. Johnson" ? "Ms. N. Johnson" : "Mr. S. Johnson"
+            }
+            if (
+              options.packageId === "CDIR-1997-06-04" &&
+              granule.chamber === "lower" &&
+              granule.title === "STANDING COMMITTEES OF THE HOUSE" &&
               parent?.name === "Resources" &&
               isSubcommittee &&
               rosterName === "Forests and Forest Health" &&
