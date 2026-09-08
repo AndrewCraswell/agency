@@ -1,0 +1,28 @@
+LTC3130-1 candidate startup and load step, nominal manufacturer model
+* Model order comes from ADI LTC3130-1.asy, NOT package pin order:
+* model terminals 9/10 are VS1/VS2; MSOP physical pins 9/10 are VS2/VS1.
+.lib LTC3130-1.sub
+.param supply=4.1
+.step param supply list 4.1 20
+VS raw 0 PWL(0 0 1m {supply})
+RCABLE raw input 0.1
+LCABLE input pvin 1u
+CPVIN pvin 0 2.6u Rser=0.01
+RVINKELVIN pvin vin 0.01
+CVIN vin 0 0.6u Rser=0.01
+CVCC vcc 0 4.1u Rser=0.01
+CBST1 bst1 sw1 22n
+CBST2 bst2 sw2 22n
+LPOWER sw1 sw2 10u Rser=0.1
+COUT out 0 24u Rser=0.01
+XREG 0 bst1 sw1 pvin vin vin vcc vcc 0 vcc 0 out pgood out bst2 sw2 LTC3130-1
+* Resistive-equivalent step: 10mA to 300.5mA at 5V, not the LTM2884 startup model.
+BLOAD out 0 I=max(V(out),0)/5*if(time<20m,0.01,if(time<40m,0.3005,0.01))
+.tran 0 50m 0 500n
+.options plotwinsize=0
+.save V(out) V(pvin) I(VS)
+.meas tran startup_voltage FIND V(out) AT=19m
+.meas tran loaded_min MIN V(out) FROM=20m TO=39m
+.meas tran loaded_settled FIND V(out) AT=39m
+.meas tran release_max MAX V(out) FROM=40m TO=49m
+.end

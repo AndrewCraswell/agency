@@ -14,6 +14,11 @@ The repository `pnpm verify` command runs the suite, and CI installs ngspice bef
 
 ## Models and limits
 
+- `primary-regulator-startup.cir` is a separate **LTspice-only candidate experiment**, not one of the ngspice acceptance
+  models. It uses ADI's proprietary `LTC3130-1.sub`; that model is not redistributed here. Copy the deck to an output
+  directory and run `LTspice.exe -b <deck-path> -I<model-directory>` (no space after `-I`). It compares 4.1V and 20V
+  sources with a resistive-equivalent 10mA/300.5mA load step and reduced capacitor values. Model terminals 9/10
+  are VS1/VS2, unlike the physical MSOP pin order. This is not an LTM2884 startup-load model or suspend approval.
 - The LTC3130 candidate input-network model checks three explicitly assumed scenarios: a 4.75V source with
   0.5-ohm/2uH leads and a 10mA-to-524mA load step; a fast 5V attachment with 0.05-ohm/2uH leads; and a 5V-to-20V
   transition over 500us. Effective input capacitance is 6uF, 8.58uF and 4uF respectively. Limits preserve the 4.1V
