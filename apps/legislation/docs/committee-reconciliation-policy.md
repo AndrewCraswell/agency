@@ -283,3 +283,24 @@ it neither rewrites source spelling nor creates a general typo alias. All existi
 identity and term guards remain in force. Other unresolved names still block publication; no import was launched.
 Fresh source parsing against the production catalog validated all nine mappings; the focused identity,
 historical-observation, normalization and synchronization suite passed 108 tests.
+
+### Reviewed Brownback full name, September 8, 2026
+
+Each of the three 106th editions prints `Samuel Dale Brownback`, Kansas, in Commerce, Science, and Transportation
+and five children: Aviation; Communications; Consumer Affairs, Foreign Commerce and Tourism; Manufacturing and
+Competitiveness; Surface Transportation and Merchant Marine. Other sections print `Sam Brownback`. This is a
+full-name variation, not evidence of a different person or an incorrect assignment.
+
+[Bioguide B000953](https://bioguideretro.congress.gov/Home/MemberDetails?memIndex=B000953) identifies Sam Dale
+Brownback's Kansas Senate service, 1996–2011; the [FEC candidate record](https://www.fec.gov/data/candidate/S6KS00122/)
+uses Samuel Dale Brownback. Contemporary [Manufacturing hearing rosters](https://www.govinfo.gov/content/pkg/CHRG-106shrg74874/html/CHRG-106shrg74874.htm)
+and [Aviation hearing rosters](https://www.govinfo.gov/content/pkg/CHRG-106shrg86337/html/CHRG-106shrg86337.htm)
+independently print Sam Brownback of Kansas in Commerce and those children. The target Directory itself supplies all
+six reviewed assignments; no assignment is imported from another Congress. These references are manual evidence only.
+
+The canonical catalog has `person:congress:b000953`, `Brownback, Sam`, with consistent 106th Senate terms and no
+district. The full-roster-fingerprinted manifest covers exactly six cells per edition, 18 appearances, retaining
+state, chamber, parent and canonical-term guards. No general Sam/Samuel expansion is introduced. Other unresolved
+identities still prevent publication; no import is launched by this correction.
+Fresh source parsing against the production catalog validated all 18 appearances. The focused identity,
+historical-observation, normalization and synchronization suite passed 109 tests.

@@ -108,16 +108,16 @@ function digest(records: readonly GovInfoCommitteeRecord[]) {
 }
 
 describe("offline-reviewed GovInfo identity validation", () => {
-  it.each(["Mike McIntrye", "David Drier", "Shelia Jackson Lee"])(
+  it.each(["Mike McIntrye", "David Drier", "Shelia Jackson Lee", "Samuel Dale Brownback"])(
     "validates the exact reviewed %s cells",
     (printedName) => {
       const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
       const identity = manifest.identities.find((candidate) => candidate.printedName === printedName)!
       const records: GovInfoCommitteeRecord[] = identity.contexts.map((context) => ({
         ...context,
-        chamber: "lower",
+        chamber: identity.chamber,
         classification: context.parentName === undefined ? "committee" : "subcommittee",
-        members: [{ name: printedName, state: identity.state, chamber: "lower" }]
+        members: [{ name: printedName, state: identity.state, chamber: identity.chamber }]
       }))
       if (identity.corroboration) {
         records.push({
@@ -146,10 +146,10 @@ describe("offline-reviewed GovInfo identity validation", () => {
         terms: [
           {
             personId: identity.personId,
-            chamber: "lower",
+            chamber: identity.chamber,
             district: identity.district,
             isActive: false,
-            sourceId: "106:lower:1999:2001"
+            sourceId: `106:${identity.chamber}:1999:2001`
           }
         ]
       }
@@ -172,7 +172,7 @@ describe("offline-reviewed GovInfo identity validation", () => {
   )
   it("accepts only reviewed name-and-state contradictions under the same corroborated parent", () => {
     const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!
-    const identity = manifest.identities[0]!
+    const identity = manifest.identities.find((candidate) => candidate.printedName === "Kent Cochran")!
     const records: GovInfoCommitteeRecord[] = [
       {
         name: "Agriculture, Nutrition and Forestry",

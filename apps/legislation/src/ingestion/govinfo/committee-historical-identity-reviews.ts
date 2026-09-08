@@ -1,11 +1,30 @@
 import type { IdentityReview } from "./committee-reviewed-identities.js"
 
-// The 106th Directory prints "Kent Cochran, of North Dakota" in these two
-// children. Its member-by-member index and CREC-1999-02-08, D114, independently
-// identify Cochran in both assignments. The parent prints Thad Cochran of MS.
-// This is a reviewed name AND state contradiction, not a reusable alias.
 const congress106Identities: IdentityReview["identities"] = [
   {
+    // Full printed name is linked to Sam Dale Brownback by B000953/FEC
+    // S6KS00122; 106th Commerce hearing rosters also print Sam Brownback, KS.
+    printedName: "Samuel Dale Brownback",
+    state: "KS",
+    chamber: "upper",
+    personId: "person:congress:b000953",
+    canonicalName: "Brownback, Sam",
+    givenName: "SAM",
+    familyName: "BROWNBACK",
+    district: null,
+    contexts: [
+      { name: "Commerce, Science, and Transportation" },
+      { name: "Aviation", parentName: "Commerce, Science, and Transportation" },
+      { name: "Communications", parentName: "Commerce, Science, and Transportation" },
+      { name: "Consumer Affairs, Foreign Commerce and Tourism", parentName: "Commerce, Science, and Transportation" },
+      { name: "Manufacturing and Competitiveness", parentName: "Commerce, Science, and Transportation" },
+      { name: "Surface Transportation and Merchant Marine", parentName: "Commerce, Science, and Transportation" }
+    ]
+  },
+  {
+    // The source prints Kent Cochran of ND in two children, while its parent
+    // prints Thad Cochran of MS. The member index and CREC-1999-02-08 D114
+    // confirm Cochran in both: a scoped name/state correction, not an alias.
     printedName: "Kent Cochran",
     state: "ND",
     canonicalState: "MS",
