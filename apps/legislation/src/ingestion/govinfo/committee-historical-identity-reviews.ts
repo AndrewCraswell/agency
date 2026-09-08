@@ -2,6 +2,19 @@ import type { IdentityReview } from "./committee-reviewed-identities.js"
 
 const congress106Identities: IdentityReview["identities"] = [
   {
+    // The Senate's February 23, 2000 statement identifies Robert F. Bennett
+    // as this committee's chair. Only the Directory's Bob Bennett cell applies.
+    printedName: "Bob Bennett",
+    state: "UT",
+    chamber: "upper",
+    personId: "person:congress:b000382",
+    canonicalName: "Bennett, Robert F.",
+    givenName: "ROBERT",
+    familyName: "BENNETT",
+    district: null,
+    contexts: [{ name: "Special Committee on the Year 2000 Technology Problem" }]
+  },
+  {
     // Full printed name is linked to Sam Dale Brownback by B000953/FEC
     // S6KS00122; 106th Commerce hearing rosters also print Sam Brownback, KS.
     printedName: "Samuel Dale Brownback",

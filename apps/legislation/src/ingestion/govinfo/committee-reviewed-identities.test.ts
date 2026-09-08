@@ -108,7 +108,7 @@ function digest(records: readonly GovInfoCommitteeRecord[]) {
 }
 
 describe("offline-reviewed GovInfo identity validation", () => {
-  it.each(["Mike McIntrye", "David Drier", "Shelia Jackson Lee", "Samuel Dale Brownback"])(
+  it.each(["Mike McIntrye", "David Drier", "Shelia Jackson Lee", "Samuel Dale Brownback", "Bob Bennett"])(
     "validates the exact reviewed %s cells",
     (printedName) => {
       const manifest = historicalIdentityReviews.find((review) => review.packageId === "CDIR-1999-06-15")!

@@ -304,3 +304,19 @@ state, chamber, parent and canonical-term guards. No general Sam/Samuel expansio
 identities still prevent publication; no import is launched by this correction.
 Fresh source parsing against the production catalog validated all 18 appearances. The focused identity,
 historical-observation, normalization and synchronization suite passed 109 tests.
+
+### Reviewed Bennett chair identity, September 8, 2026
+
+All three 106th Directory editions print `Bob Bennett`, Utah, as chair of the Special Committee on the Year 2000
+Technology Problem. Other Senate committee cells print `Robert F. Bennett`. The Senate's contemporary
+[February 23, 2000 opening statement](https://www.jec.senate.gov/archive/Documents/Hearings/bennet22300.htm)
+explicitly identifies Senator Robert F. Bennett as chair of this exact committee. This verifies both the actual
+person and assignment, rather than assuming a general Bob/Robert nickname rule.
+
+Production identity `person:congress:b000382`, `Bennett, Robert F.`, has consistent 106th Senate terms and no district.
+The fingerprinted decision resolves only the single printed cell per edition (three appearances), preserving its
+chair role. It does not infer service dates from the hearing date or establish continuous service between editions.
+The Directory remains the ingestion source; the Senate statement is manual validation evidence. Other unresolved
+identities still block publication, and no import was launched.
+Fresh parsing against the production catalog validated all three appearances; the focused identity,
+historical-observation, normalization and synchronization suite passed 110 tests.
