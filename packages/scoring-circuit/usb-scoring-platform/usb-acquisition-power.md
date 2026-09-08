@@ -60,6 +60,28 @@ Automatic source-current qualification and the application-power policy are impl
 budget still requires physical measurements. Keeping the integrated isolator avoids a separate
 transformer/rectifier/data-isolator redesign; it does not eliminate those system-level responsibilities.
 
+## Standalone display power boundary
+
+U6 REC30K-2405SZ is rated 5V/6A, shared by the panel, application regulator, buffer circuits and the D2 acquisition
+feed. It is not a 6A allocation exclusively for J8. The current specification names a 64x32 HUB75 interface but no exact
+panel with a guaranteed maximum input current. Do not approve an arbitrary panel or claim full-white operation from
+resolution alone. Use its rated load, including startup, plus the other loads against the converter's derated output at
+the intended enclosure temperature. The manufacturer's 87% efficiency is typical at nominal input and full load; it is
+not a guaranteed efficiency at our 20V input.
+[RECOM selection guide and derating](https://recom-power.com/pdf/Econoline/REC30K%28-Z%29.pdf).
+
+The saved PCB's PANEL_5V fill on In2.Cu is one connected polygon. U6 pin 6 and J8 pins 1/2 connect through their plated
+holes to this plane; the small surface branches are not the entire panel-current path. The main horizontal and vertical
+trunks are nominally 6mm wide before local clearances. The specified inner copper is 0.0152mm, not outer-layer 1oz. This
+confirms connectivity, not allowable current or temperature rise: local holes, thermal connections, the ground return,
+cable and contacts still contribute resistance. Neither clean DRC nor the 7A connector contact rating establishes a 6A
+board-path rating. Measure voltage at J8 and at the panel, plus converter/connector temperature, during the assembled
+maximum-load and startup tests. No speculative trace change was made from the overview alone.
+
+Before choosing the panel, close `I_panel + I_application_input + I_acquisition_feed + I_other_5V <= I_U6_derated`.
+Application input means the 5V input to U7, not its 3.3V output current. Until an exact panel is specified, the
+standalone maximum-brightness power budget remains unclosed. This does not affect the panel-disconnected laptop mode.
+
 ## Primary-side control hardware
 
 U21 is [STM32C011F6P6](https://www.st.com/resource/en/datasheet/stm32c011f6.pdf), TSSOP-20, powered by U18 VLO

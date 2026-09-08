@@ -17,6 +17,18 @@ confirmed P0 finding has been established in this initial pass; that is not an a
 
 ## Findings and opportunities
 
+**Standalone power-path follow-up:** inspected the saved In2.Cu copper plot and native PANEL_5V polygon. U6 pin 6 and J8
+pins 1/2 use the filled plane, with nominal 6mm main trunks, rather than relying on the narrow surface branches. No
+disconnected panel supply or demonstrated reason to reroute it was found. The power guide now explicitly separates the
+converter's shared 6A rating from the panel allowance. An exact panel maximum-current specification is missing;
+full-white load, startup, shared-load headroom and thermal performance therefore remain unverified. This is a P1
+selection/budget question, not a demonstrated defect or permission to buy a different panel. See
+[standalone power boundary](usb-acquisition-power.md#standalone-display-power-boundary).
+
+This follow-up's direct `pnpm --filter @repo/scoring-circuit simulate` passed. `pnpm verify` failed on unrelated
+Shopify-content lint and cancelled concurrent checks; it is not a full pass. No schematic, footprint, route or BOM
+changed.
+
 **Current four-item disposition:** mechanical review has corrected J7/J8 hole sizing and U13/BZ1 body clearances;
 remaining exact-package overlays and installed cable fit are still open. Power sizing and nominal simulations are
 recorded, but attached-PD suspend consumption cannot be closed from the available guaranteed data. All-layer isolation
@@ -854,9 +866,9 @@ including weak seven-short sensing at 0.6715V against 0.6510V. Those models do n
 hardware. Targeted document formatting and `git diff --check` passed.
 
 The project sets generic 0.2mm net-class clearance and enables creepage errors, but has no project `.kicad_dru` encoding
-an isolation-barrier requirement. A clean DRC therefore does not prove the required primary-to-secondary separation. The
-next physical review must trace both sides of U18/U6, all copper layers, mounting hardware and service/debugger
-connections against an explicit design requirement, not silently equate 0.2mm fabrication clearance with safety.
+an isolation-barrier requirement. Clean DRC alone does not prove isolation. The completed all-layer geometric comparison
+above separately establishes the approximately 2.50mm projected gap and no domain overlap. External grounding, assembled
+insulation and enclosure acceptance remain separate; the fabrication clearance is not a safety rating.
 
 Remaining desk-review order: (1) exact footprint/mechanical and isolation geometry; (2) power/capacitance/compensation
 budgets; (3) supplier alternates and no-soldering assembly handoff. After assembly: controlled power-up, reset/suspend,
