@@ -25,6 +25,7 @@ type ReviewedIdentity = {
 }
 
 export type IdentityReview = {
+  historicalAtFirstObservation?: true
   packageId: string
   congress: number
   fingerprint: string
@@ -140,7 +141,7 @@ export function validateGovInfoIdentityReview(
       Number(period[1]) === review.congress &&
       period[2] === term.chamber &&
       Number(period[3]) <= year &&
-      (period[4] === "current" || Number(period[4]) >= year)
+      (review.historicalAtFirstObservation === true || period[4] === "current" || Number(period[4]) >= year)
     )
   })
   const allCells = records.flatMap((record) => record.members.map((member) => ({ record, member })))

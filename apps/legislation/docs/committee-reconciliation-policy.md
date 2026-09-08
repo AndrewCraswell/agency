@@ -179,6 +179,33 @@ reuse the historical tenure; a later positive active assignment creates a new te
 previously observed active tenure cannot be relabeled as historical at first observation.
 
 The application schema, original migration baseline, API projection and reconciliation now support this contract.
-Production schema application and exact-source Brown/Spence normalization are still pending; no historical import is
-enabled by this schema-only change. An already-applied baseline is not rerun automatically: verify the deployed enum
+Exact-source Brown/Spence normalization is implemented and read-only validated against all five reviewed editions.
+Production schema application and the remaining identity reconciliation are still pending; no historical import is
+enabled by this change. An already-applied baseline is not rerun automatically: verify the deployed enum
 and constraint before enabling ingestion, preserving valid indexes and unrelated data.
+
+### Brown/Spence source-cell validation, September 8, 2026
+
+The three 106th editions (June 15, 1999; February 1 and October 1, 2000) each retain four Brown cells: Agriculture,
+its Department Operations and Risk Management subcommittees, and Science. The two 107th editions (December 7, 2001
+and October 1, 2002) each retain four Spence cells: Armed Services, Military Procurement, the Department of Energy
+Reorganization panel, and Veterans’ Affairs. The last already matched by name and therefore would have been missed
+by reviewing only unmatched identities. No other parsed Spence assignment occurs in either 107th edition.
+
+The [October 2000 compilation notes](https://www.govinfo.gov/content/pkg/CDIR-2000-10-01/pdf/CDIR-2000-10-01.pdf)
+also record Brown's death on July 15, 1999. Together with the previously reviewed compilation notes and bracketed
+committee cells, this supports historical retention, not active membership at publication. The independently reviewed
+House biographies identify [Brown, B000918](https://history.house.gov/People/Listing/B/BROWN%2C-George-Edward%2C-Jr--%28B000918%29/)
+and [Spence, S000718](https://history.house.gov/People/Listing/S/SPENCE%2C-Floyd-Davidson-%28S000718%29/).
+Their death dates are corroboration, not inferred committee start/end dates.
+
+`committee-historical-assignments.ts` freezes each full parsed roster fingerprint and exact canonical identity,
+Congress/chamber/district and committee contexts. A changed fingerprint or missing/conflicting identity fails closed.
+Only these reviewed manifests permit canonical service ending before the edition year; ordinary identity reviews
+still require service covering the edition year. Brackets alone never activate this policy.
+
+The fresh read-only normalization against production canonical people/terms produced four inactive historical
+memberships per edition (20 appearances total), all with null detected start/end/last-observed dates. Focused
+normalization and identity tests passed (89 tests). This does not close the other 106th/107th identities or establish
+production import acceptance. Before importing, include historical/active status in roster-change detection and
+verify the production enum/constraint, then deploy and exercise replay.

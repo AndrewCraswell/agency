@@ -12,6 +12,7 @@ import type {
   GovInfoCommitteeMember,
   GovInfoCommitteeRecord
 } from "./committee-directory-parser.js"
+import { reviewedHistoricalAssignments } from "./committee-historical-assignments.js"
 import { reviewedGovInfoIdentities } from "./committee-reviewed-identities.js"
 
 type PersonRow = Pick<typeof people.$inferSelect, "familyName" | "givenName" | "id" | "name">
@@ -50,6 +51,7 @@ export function normalizeGovInfoCommitteeDirectory(
 ): GovInfoCommitteeNormalizationResult {
   const people = buildPersonIndex(catalog, directoryPackage.congress, directoryPackage.issuedAt.getUTCFullYear())
   const reviewed = reviewedGovInfoIdentities(records, directoryPackage, catalog)
+  const historical = reviewedHistoricalAssignments(records, directoryPackage, catalog)
   const organizations = records.map((record) => {
     const sourceId = organizationSourceId(record)
     return {
@@ -115,7 +117,7 @@ export function normalizeGovInfoCommitteeDirectory(
         { ...member, name: crossCheckedPrintedName(member, records, directoryPackage) },
         people
       )
-      const reviewedMatch = reviewed.get(member)
+      const reviewedMatch = historical.get(member) ?? reviewed.get(member)
       if (reviewedMatch !== undefined && matches.size === 1 && !matches.has(reviewedMatch)) {
         throw new Error(`GovInfo strict identity conflicts with reviewed identity for ${member.name}`)
       }
@@ -132,11 +134,13 @@ export function normalizeGovInfoCommitteeDirectory(
       const sourceId = `${directoryPackage.congress}:${organizationSourceId(record)}:${match}`
       memberships.push({
         classification: "member",
-        detectedStartDate: dateOnly(directoryPackage.issuedAt),
+        detectedStartDate: historical.has(member) ? null : dateOnly(directoryPackage.issuedAt),
+        detectedEndDate: null,
+        endedReason: historical.has(member) ? "historical_at_first_observation" : null,
         id: organizationMembershipId(canonicalOrganizationId, match, sourceId),
-        isActive: true,
+        isActive: !historical.has(member),
         label: member.note ?? member.role ?? "member",
-        lastObservedDate: dateOnly(directoryPackage.issuedAt),
+        lastObservedDate: historical.has(member) ? null : dateOnly(directoryPackage.issuedAt),
         legislativeSessionId: sessionId,
         organizationId: canonicalOrganizationId,
         personId: match,
