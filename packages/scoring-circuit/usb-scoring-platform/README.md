@@ -73,6 +73,11 @@ Internal header pitch is 2.54mm; it does not define the external banana spacing.
 U21's programming file is implemented; the complete scoring/application firmware is not. "Ready to start programming"
 must not be represented as a fully functioning or qualified scoring machine.
 
+For ESP32 recovery, J6 pin 3 is the board's TX (connect to programmer RX), pin 4 is board RX (programmer TX), pin 2 is
+scoring-side GND, pin 5 EN and pin 6 BOOT. Use 3.3V logic; pin 1 is APP_3V3, not permission to back-power the board.
+Power the application branch normally, hold BOOT low while releasing reset, then release BOOT after boot strapping. Keep
+this programmer ground separate from primary-side J12/J14 USB_GND. Physical recovery is not yet tested.
+
 ## Fabrication and export
 
 For the prototype order choose **standard green solder mask and white silkscreen**. The saved black KiCad rendering does

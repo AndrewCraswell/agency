@@ -71,6 +71,29 @@ unchanged. Fresh U21 HEX SHA256 is `80349F8D523EF5FF46FE6D8545EC02A0561F47238633
 
 ## Review coverage and critic protocol
 
+### ESP32 memory, boot and antenna check
+
+U2's exact N8R8 module retains GPIO35/36/37 (pads 28–30) unused, as required for its octal PSRAM. GPIO47/48 carry the
+processor UART; the 1.8V restriction for the R16V variant is not a reason to reject the selected R8 module. GPIO45/46
+remain unconnected to external loads; GPIO0 has R29's 10k pull-up and SW3 grounding it for download. R28/C21 provide EN
+pull-up/delay and SW2 resets it. UART0 RX/TX reach J6 pins 4/3; J6 also exposes EN/BOOT. This is pin/strap wiring
+review, not demonstrated flashing or application firmware operation.
+[Espressif module datasheet v1.8, pin and boot tables](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf).
+
+Native U2 antenna area is x137–155, y55.25–61.25mm. The existing keepout spans x122–170, y40.25–61.25mm, with pads,
+tracks, vias, fills and footprints prohibited on all four copper layers. Intersecting actual pad/track/via polygons and
+saved filled zones with its 1um-inset interior found no copper on any layer. This checks the saved region, not RF
+performance. The antenna remains over substrate, 5.25mm inside the top board edge; Espressif prefers an antenna
+overhanging the base board, otherwise a cutout, and clearance in the enclosure. Retain this prototype placement pending
+RF range/throughput testing; do not describe the copper-free region as equivalent to a substrate cutout or
+certification.
+[Espressif module-placement guidance](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32s3/pcb-layout-design.html#general-principles-of-pcb-layout-for-modules-positioning-a-module-on-a-base-board).
+No pin, route, part or board outline changed.
+
+Focused native pin/net and copper-intersection checks passed. The full `pnpm verify` rerun passed checks and eight
+electrical models, then stopped at the existing scoring-domain 100% coverage thresholds. Formatting and scoped diff
+checks passed; no threshold or unrelated source was changed.
+
 ### Core regulator capacitor review
 
 U4's saved pads match the AP2112 SOT25 pin table: 1 VIN and 3 EN on CORE_5V, 2 GND, 4 unused, 5 CORE_3V3. C2 and C3
@@ -429,7 +452,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | SW2       | TL3342F160QG          | ESP32 EN reset to ground.                                                        | Retain; recovery aid.                                                                                                                                                  |
 | SW3       | TL3342F160QG          | ESP32 BOOT to ground.                                                            | Retain; manual programming recovery.                                                                                                                                   |
 | U1        | STM32G474RET6         | STM32G474 scoring/acquisition; USB isolated side, seven comparator sense inputs. | Retain; supplies, USB, SWD, sense and drive nets inspected. Timing, thresholds and physical current budget remain separate verification.                               |
-| U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; PSRAM-reserved GPIO35/36/37 and other unused pads intentionally NC. Antenna clearance requires geometric review.                                               |
+| U2        | ESP32-S3-WROOM-1-N8R8 | ESP32-S3-N8R8 display/Ethernet/IR processor on switched APP_3V3.                 | Retain; memory-reserved pins, boot/UART wiring and four-layer antenna keepout checked. Substrate/enclosure RF effects require physical testing.                        |
 | U3        | TPD2E2U06DCKR         | USB D+/D- ESD device referenced to USB_GND.                                      | Retain; not a VBUS/CC surge protector or isolation component.                                                                                                          |
 | U4        | AP2112K-3.3TRG1       | AP2112 3.3V acquisition LDO, EN tied to CORE_5V.                                 | Retain; nominal 75mA at 5V implies about 0.128W before diode-drop adjustment, not a thermal measurement.                                                               |
 | U5        | STUSB4500QTR          | STUSB4500 autonomous PD sink with U21 qualification.                             | Retain; matching CC dead-battery pins connected. Verify exact NVM/configuration at first programming.                                                                  |
