@@ -102,6 +102,13 @@ respecting the previous job's lease. The new member refresh is executing; amendm
 committee reports completed. Resumable scan initialization and population verification remain pending; do not
 bypass the lease or launch another coordinator to accelerate the handoff.
 
+On September 9, the corrected bills scan had persisted 16,200 successful reference receipts across multiple
+budget handoffs, with the fixed cutoff still `2026-09-08T21:22:07Z`. Completion remains pending. The identity tables
+were still empty: investigation found the recurring entity synchronization adapter still discarded aliases and
+identifiers, although CLI and historical range composition were wired. That adapter now passes through the hydrated
+records and Congress alias-provider scope; its existing daily-route test asserts both alias forms and Bioguide ID.
+This correction requires a new-version member refresh before production population can be accepted.
+
 ### Federal identity population implementation (2026-09-08)
 
 Congress member detail hydration now emits the published Bioguide identifier and distinct collection,

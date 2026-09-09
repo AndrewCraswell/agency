@@ -316,8 +316,10 @@ async function synchronizeCongressEntitiesForScope(
     {
       memberships: [],
       organizations: [],
-      personAliasPersonIds: [],
-      personAliases: [],
+      personAliasPersonIds: memberSnapshot.personAliasPersonIds,
+      personAliasSourceProvider: "congress",
+      personAliases: memberSnapshot.personAliases,
+      personExternalIdentifiers: memberSnapshot.personExternalIdentifiers,
       personDetailPersonIds: memberSnapshot.personDetailPersonIds,
       personDetailSourceProvider: "congress",
       personDetails: memberSnapshot.personDetails,

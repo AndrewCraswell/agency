@@ -167,6 +167,8 @@ describe("executeSynchronization", () => {
     const getMember = vi.fn<(bioguideId: string) => Promise<unknown>>(async (bioguideId) => ({
       bioguideId,
       currentMember: true,
+      directOrderName: "Daily Example",
+      invertedOrderName: "Example, Daily",
       officialUrl: "https://example.house.gov/",
       terms: [
         {
@@ -207,6 +209,28 @@ describe("executeSynchronization", () => {
       "jurisdiction:us",
       expect.objectContaining({
         organizations: [],
+        personAliasPersonIds: ["person:congress:d000001"],
+        personAliasSourceProvider: "congress",
+        personAliases: [
+          expect.objectContaining({
+            personId: "person:congress:d000001",
+            name: "Daily Example",
+            sourceProvider: "congress"
+          }),
+          expect.objectContaining({
+            personId: "person:congress:d000001",
+            name: "Example, Daily",
+            sourceProvider: "congress"
+          })
+        ],
+        personExternalIdentifiers: [
+          expect.objectContaining({
+            personId: "person:congress:d000001",
+            scheme: "bioguide",
+            value: "D000001",
+            sourceProvider: "congress"
+          })
+        ],
         personDetailSourceProvider: "congress",
         personDetails: [expect.objectContaining({ personId: "person:congress:d000001" })],
         personJurisdictions: [expect.objectContaining({ personId: "person:congress:d000001" })],
