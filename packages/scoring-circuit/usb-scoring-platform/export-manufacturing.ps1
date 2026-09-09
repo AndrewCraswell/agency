@@ -29,7 +29,8 @@ if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
 # Without explicit codes the matcher incorrectly combined these two MPNs as an 80pF capacitor.
 $catalogCodes = @{
     'C1608X7R1H105K080AB' = 'C45537494'
-    'C1608X7R1H104K080AA' = 'C72453'
+    'CC0603KRX7R9BB104' = 'C14663'
+    'GRM21BR61A106KE19L' = 'C77073'
     'GRM188R61A105KA61D' = 'C86012'
     'CC0603KRX7R9BB682' = 'C107097'
 }

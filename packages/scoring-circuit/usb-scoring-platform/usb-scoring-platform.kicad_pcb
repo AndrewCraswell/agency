@@ -2579,7 +2579,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -2591,7 +2591,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4184,7 +4184,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -4218,7 +4218,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4230,7 +4230,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4532,7 +4532,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -4566,7 +4566,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4578,7 +4578,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5762,7 +5762,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5774,7 +5774,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -7242,7 +7242,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7276,7 +7276,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -7288,7 +7288,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8912,7 +8912,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8946,7 +8946,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8958,7 +8958,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -9610,7 +9610,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -9644,7 +9644,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -9656,7 +9656,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -10274,7 +10274,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10308,7 +10308,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -10320,7 +10320,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12356,7 +12356,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -12390,7 +12390,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12402,7 +12402,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -15548,7 +15548,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -15582,7 +15582,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -15594,7 +15594,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -16469,7 +16469,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -16481,7 +16481,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -16841,7 +16841,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -16853,7 +16853,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -17483,7 +17483,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -17495,7 +17495,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -18616,7 +18616,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -18628,7 +18628,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -19942,7 +19942,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -19976,7 +19976,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -19988,7 +19988,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -21566,7 +21566,7 @@
 				)
 			)
 		)
-		(property "MPN" "C2012X5R1A106K125AC"
+		(property "MPN" "GRM21BR61A106KE19L"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -21578,7 +21578,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Murata"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -22840,7 +22840,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -22874,7 +22874,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -22886,7 +22886,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -23939,7 +23939,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -23973,7 +23973,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -23985,7 +23985,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -24113,7 +24113,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24147,7 +24147,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -24159,7 +24159,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -24831,7 +24831,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -24865,7 +24865,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -24877,7 +24877,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -25203,7 +25203,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -25237,7 +25237,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -25249,7 +25249,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -32726,7 +32726,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -32760,7 +32760,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -32772,7 +32772,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -34701,7 +34701,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -34735,7 +34735,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -34747,7 +34747,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -36855,7 +36855,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -36889,7 +36889,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -36901,7 +36901,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -37401,7 +37401,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -37435,7 +37435,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -37447,7 +37447,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -40374,7 +40374,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -40408,7 +40408,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -40420,7 +40420,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -46278,7 +46278,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -46290,7 +46290,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -46416,7 +46416,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -46450,7 +46450,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -46462,7 +46462,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -47285,7 +47285,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H104K080AA"
+		(property "Datasheet" "https://www.yageogroup.com/download/specsheet/CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -47319,7 +47319,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -47331,7 +47331,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -48140,7 +48140,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H104K080AA"
+		(property "MPN" "CC0603KRX7R9BB104"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -48152,7 +48152,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
