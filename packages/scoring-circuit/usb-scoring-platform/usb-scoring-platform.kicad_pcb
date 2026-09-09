@@ -8748,7 +8748,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H682K080AA"
+		(property "MPN" "CC0603KRX7R9BB682"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8760,7 +8760,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -24693,7 +24693,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Murata"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -24705,7 +24705,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X5R1A105K080AC"
+		(property "MPN" "GRM188R61A105KA61D"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -42018,7 +42018,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H682K080AA"
+		(property "MPN" "CC0603KRX7R9BB682"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -42030,7 +42030,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "Yageo"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)

@@ -1,8 +1,11 @@
 # Prototype design review
 
-Started 8 September 2026. Review the current native KiCad board and the `output/catalog-corrected/` assembly export, not
-the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation backlog.
+Started 8 September 2026. Review the current native KiCad board and the `output/assembly-capacitors/` assembly export,
+not the earlier ESP32 prototype. This is a findings table, not a fabrication approval or a new implementation backlog.
 Submission and payment remain paused. No circuit changes are authorized merely by a suggestion appearing here.
+
+The 223-part capacitor-substitution export passed configured ERC/DRC, connectivity and schematic-parity checks. U21
+rebuilt with the unchanged HEX hash. These substitutions change only manufacturer/MPN metadata, not geometry or routing.
 
 ## Priority and evidence
 
@@ -29,17 +32,28 @@ verified at quantity two and $2.1312 component total. That is not an all-in asse
 TDK catalog codes C45537494 for C1608X7R1H105K080AB (eight references) and C72453 for C1608X7R1H104K080AA (29
 references). Both exact identities were found in JLCPCB's public search with zero stock. Reupload removed the wrong
 assignments for these 37 references: the eight 1uF parts now match exactly but show shortages, while the 29 100nF parts
-remain unselected. This resolves incorrect identity assignment only, not sourcing. C52/C53 (C1608X7R1H682K080AA, 6.8nF)
-and C70 (C1608X5R1A105K080AC, 1uF) still show 0603N800J500CT / C3868041 (80pF C0G). C63 requests C2012X5R1A106K125AC
-(10uF), but was offered 0805ZD125KAT2A / C2171149 (1.2uF). These are not electrically equivalent substitutions. The
-uploaded BOM retains the correct requested MPNs; correct the supplier matches, not the circuit to fit these errors.
-Shortage counts include incorrect matches and therefore are not a reliable count of genuinely unavailable selected
-parts.
+remain unselected. This resolves incorrect identity assignment only, not sourcing. C53 still shows 0603N800J500CT /
+C3868041 (80pF C0G), pending upload of the reviewed replacement below. C63 requests C2012X5R1A106K125AC (10uF), but was
+offered 0805ZD125KAT2A / C2171149 (1.2uF). These are not electrically equivalent substitutions. The uploaded BOM retains
+the correct requested MPNs; correct the supplier matches, not the circuit to fit these errors. Shortage counts include
+incorrect matches and therefore are not a reliable count of genuinely unavailable selected parts.
 
 Exact public-inventory searches returned no result for J8 (645004114822), U6 (REC30K-2405SZ), C52/C53, C63 or C70. The
 shorter C52/C53 search returned C1608X7R1H682KT000N / C2802699 with zero stock; it is not an approved ordering-code
 alias. Do not select it without manufacturer confirmation. The remaining work is exact-part sourcing or reviewed
 substitution, followed by placement review. The paid assisted-matching request remains paused with the order.
+
+**Reviewed capacitor replacements, 9 September:** C52/C53 now specify Yageo CC0603KRX7R9BB682 / C107097 in the native
+schematic and PCB: 6.8nF, 50V, X7R, 10%, 0603, 1.6 x 0.8 x 0.8mm. C70 now specifies Murata GRM188R61A105KA61D / C86012:
+1uF, 10V, X5R, 10%, the same 0603 dimensions. The nominal electrical requirements, footprint and routing are unchanged.
+Manufacturer dimension/rating sheets were visually checked using rendered PDFs. These are prototype substitutions, not a
+claim of identical DC-bias curves or measured Ethernet/VLO performance; existing bench checks remain. Live JLCPCB search
+showed 447,850 Yageo parts and 39,591 Murata parts, not reserved stock. The supplier draft saved C52 and C70, but C53
+returned a network error and the session then redirected to sign-in. Reupload the next generated BOM after login; do not
+assume the supplier draft matches the updated native BOM yet. C63 is unchanged pending sourcing.
+
+Sources: [Yageo specification](https://yageogroup.com/component-documentation/download/specsheet/CC0603KRX7R9BB682),
+[Murata reference sheet, page 2](https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM188R61A105KA61-01A.pdf).
 
 The supplier accepted C64/C65's exact CC0603JRNPO9BN180 identity as catalog C107040, and C56's exact C1608X5R1C475K080AC
 identity as C2167106 (with a reported purchase-quantity shortage). Those live identities supersede earlier tentative
@@ -608,8 +622,8 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | C49       | C3216X7R1C106K160AC   | REC30K PANEL_5V reservoir                                                        | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C50       | C2012X7R2A104K125AA   | Additional raw VBUS bypass; omitted from guide's capacitance sum                 | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C51       | C1608X7R1H223K080AA   | Ethernet TX center-tap filter                                                    | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
-| C52       | C1608X7R1H682K080AA   | Ethernet RX+ series coupling                                                     | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
-| C53       | C1608X7R1H682K080AA   | Ethernet RX- series coupling                                                     | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
+| C52       | CC0603KRX7R9BB682     | Ethernet RX+ series coupling                                                     | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
+| C53       | CC0603KRX7R9BB682     | Ethernet RX- series coupling                                                     | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C54       | C1608X7R1H103K080AA   | Ethernet RX termination midpoint bypass                                          | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C55       | C1608X7R1H103K080AA   | W5500 1V2O bypass                                                                | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C56       | C1608X5R1C475K080AC   | W5500 TOCAP reservoir                                                            | Selected in-production 16V TDK replacement; dimensions and bias curves compared. Supplier quantity and bench behavior remain open.                                     |
@@ -624,7 +638,7 @@ SWCLK, NRST). Retain probe access; it must not be mistaken for another domain's 
 | C65       | CC0603JRNPO9BN180     | 25MHz Ethernet crystal output load                                               | Retain C0G; oscillator load/stray-capacitance budget and startup measurement remain open.                                                                              |
 | C66       | C1608X7R1H223K080AA   | LTC3130 22nF BST2-to-SW2 bootstrap                                               | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C69       | C1608X7R1H104K080AA   | Power-controller VLO bypass                                                      | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
-| C70       | C1608X5R1A105K080AC   | Power-controller VLO reservoir                                                   | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
+| C70       | GRM188R61A105KA61D    | Power-controller VLO reservoir                                                   | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | C71       | C1608X7R1H104K080AA   | Power-controller NRST filter                                                     | Retain; correct supply/signal role. Check effective capacitance and exact supplier substitution, not nominal value alone.                                              |
 | D1        | SS14-E3/61T           | Isolated USB 5V anode to CORE_5V cathode.                                        | Retain; SMA land dimensions and cathode-to-CORE_5V polarity checked. Forward drop and unpowered-domain leakage remain power/bench checks.                              |
 | D2        | SS14-E3/61T           | PANEL_5V anode to CORE_5V cathode.                                               | Retain; SMA land dimensions and cathode-to-CORE_5V polarity checked. Forward drop and unpowered-domain leakage remain power/bench checks.                              |

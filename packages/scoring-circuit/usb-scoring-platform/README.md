@@ -123,7 +123,7 @@ assembly ordering fields and reference agreement, and exports:
 - `programming/U21/`: freshly built controller image and programming instructions.
 - `README.md`, `design-review.md` and `usb-acquisition-power.md`: the matching handoff and open findings.
 
-The latest checked board export is `output/catalog-corrected/`: 223 matching assembly references and zero configured
+The latest checked board export is `output/assembly-capacitors/`: 223 matching assembly references and zero configured
 ERC, DRC, unconnected or schematic-parity findings. An export is a review package, not authorization to manufacture.
 Re-export after any subsequent design change.
 
@@ -133,11 +133,13 @@ The refreshed JLCPCB draft `0f5a45675ffe4595850ae7ab1a859877` accepted the curre
 detected all **223 parts**, with two top-side Standard assemblies requested. The corrected BOM supplies exact catalog
 codes for 37 capacitor references previously assigned the wrong part. Eight now match their exact MPN with shortages; 29
 remain unselected rather than incorrectly matched. The supplier reports 144 confirmed, 48 shortage references and 31
-unselected; these are supplier UI labels, not engineering approvals. Four incorrect capacitor matches remain
-(C52/C53/C70 and C63). J1 was separately selected for assembly and visually verified at quantity two. J8 and U6 have no
-exact public-inventory search result. Do not proceed with these unresolved matches or assume shortages are procured. See
-the design review for details. Earlier 230-part drafts are stale. No order, payment or paid matching request was
-submitted; no complete assembly price or procurement readiness is established.
+unselected before the latest manual replacements; these are supplier UI labels, not engineering approvals. C52/C53 and
+C70 now have reviewed, same-rating/package replacements in the native BOM. C52 and C70 were saved in the supplier draft;
+C53 remains incorrectly matched after a network error, and C63 is unresolved. The supplier session expired before the
+updated BOM could be uploaded. J1 was separately selected for assembly and visually verified at quantity two. J8 and U6
+have no exact public-inventory search result. Do not proceed with these unresolved matches or assume shortages are
+procured. See the design review for details. Earlier 230-part drafts are stale. No order, payment or paid matching
+request was submitted; no complete assembly price or procurement readiness is established.
 
 The owner authorized the $10 assisted part-selection service but subsequently paused submission. Do not submit or pay
 without renewed direction. Supplier support described a route for through-hole assembly and LTM2884 process review; that
