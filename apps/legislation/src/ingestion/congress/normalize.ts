@@ -114,6 +114,22 @@ export function normalizeCongressBillBundle(
   const sessionId = legislativeSessionId("us", String(source.bill.congress))
   const members = [...source.bill.sponsors, ...source.cosponsors]
   const uniqueMembers = new Map(members.map((member) => [member.bioguideId, member]))
+  const sponsors = new Map<string, NonNullable<CanonicalBillAggregate["sponsors"]>[number]>()
+  for (const [index, member] of members.entries()) {
+    const sponsor = {
+      billId: canonicalBillId,
+      classification: index < source.bill.sponsors.length ? "primary" : "cosponsor",
+      id: childId("sponsor", canonicalBillId, member.bioguideId),
+      isPrimary: index < source.bill.sponsors.length,
+      name: member.fullName,
+      personId: personId("congress", member.bioguideId)
+    }
+    const existing = sponsors.get(sponsor.id)
+    if (existing !== undefined && JSON.stringify(existing) !== JSON.stringify(sponsor)) {
+      throw new Error(`Conflicting Congress sponsor observations for ${sponsor.id}`)
+    }
+    sponsors.set(sponsor.id, sponsor)
+  }
 
   return {
     actions: source.actions.flatMap((action, index) =>
@@ -213,13 +229,6 @@ export function normalizeCongressBillBundle(
       jurisdictionId: federalJurisdictionId,
       name: `${source.bill.congress}th Congress`
     },
-    sponsors: members.map((member, index) => ({
-      billId: canonicalBillId,
-      classification: index < source.bill.sponsors.length ? "primary" : "cosponsor",
-      id: childId("sponsor", canonicalBillId, member.bioguideId),
-      isPrimary: index < source.bill.sponsors.length,
-      name: member.fullName,
-      personId: personId("congress", member.bioguideId)
-    }))
+    sponsors: [...sponsors.values()]
   }
 }

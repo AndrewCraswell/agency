@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { beforeAll, describe, expect, it } from "vitest"
-import { normalizeCongressBillBundle } from "./normalize.js"
+import { congressBillBundleSchema, normalizeCongressBillBundle } from "./normalize.js"
 
 let fixture: unknown
 
@@ -11,6 +11,25 @@ beforeAll(async () => {
 })
 
 describe("Congress.gov normalization", () => {
+  it("collapses repeated source sponsor observations without changing their canonical identity", () => {
+    const source = congressBillBundleSchema.parse(fixture)
+    const expected = normalizeCongressBillBundle(source)
+    source.bill.sponsors = [...source.bill.sponsors, ...source.bill.sponsors]
+    source.cosponsors = [...source.cosponsors, ...source.cosponsors]
+    expect(normalizeCongressBillBundle(source).sponsors).toEqual(expected.sponsors)
+    expect(normalizeCongressBillBundle(source).people).toEqual(expected.people)
+  })
+
+  it("rejects conflicting sponsor observations rather than picking an arbitrary name or role", () => {
+    const source = congressBillBundleSchema.parse(fixture)
+    const member = source.bill.sponsors[0]!
+    source.bill.sponsors.push({ ...member, fullName: "Conflicting name" })
+    expect(() => normalizeCongressBillBundle(source)).toThrow("Conflicting Congress sponsor observations")
+    source.bill.sponsors.pop()
+    source.cosponsors.push(member)
+    expect(() => normalizeCongressBillBundle(source)).toThrow("Conflicting Congress sponsor observations")
+  })
+
   it("updates the same canonical federal bill as GovInfo while preserving omitted documents", () => {
     const aggregate = normalizeCongressBillBundle(fixture)
     expect(aggregate.bill).toMatchObject({

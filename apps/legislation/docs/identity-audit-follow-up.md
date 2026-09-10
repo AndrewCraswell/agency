@@ -4,6 +4,18 @@ September 8, 2026. This classifies stored identity evidence; it does not authori
 
 ## Post-refresh verification
 
+September 10 follow-up: the recurring member refresh populated 1,110 Congress aliases and 555 Bioguide
+identifiers across 555 people. Large change-log fields now use explicit content digests; deployment
+`20260910.1` recovered 44 previously rejected bills, leaving seven record failures.
+
+Direct Congress.gov bill-detail checks confirmed duplicated primary sponsor observations on 118th Congress
+S.38 (D000622, Tammy Duckworth), S.873 (M001183, Joe Manchin), S.1469 (E000295, Joni Ernst),
+S.2185 (C000141, Benjamin Cardin), and S.2611 (S001181, Jeanne Shaheen). Each pair had the same
+Bioguide ID and printed name. Normalization now collapses identical canonical sponsor observations by ID;
+conflicting names or roles remain explicit failures rather than last-write-wins corrections.
+The two remaining provider failures, 111-S-3605 and 113-S-1997, are Congress.gov HTTP 500 responses.
+Full-wave acceptance remains pending.
+
 Coordinator `run_06g853d10it3r9rilcrepa7h01` uses Trigger `20260908.8`. Member child
 `run_06g853f3rh563c7j6lfi3ra601` completed with 558 attempts. After that refresh, production retained 10,755
 terms, zero untitled terms, zero duplicate Congress person/Congress/chamber groups, zero person/term jurisdiction
