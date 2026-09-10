@@ -205,3 +205,7 @@ type CancellationReceipt = { id: string; cancelledAt: string; finalRevision: str
 ```
 
 `before` and `after` are capped at 64 KiB and never contain full document text or provider payloads.
+Fields whose canonical JSON exceeds 8 KiB are represented as
+`{ representation: "sha256", byteLength: number, digest: string }`, where the digest and byte count cover
+the complete canonical JSON value in UTF-8. This is an explicit content reference, not truncated text.
+Full values remain on their canonical records; unchanged large values do not emit repeat changes.

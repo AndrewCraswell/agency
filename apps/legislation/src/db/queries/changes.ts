@@ -39,6 +39,7 @@ interface PlannedCanonicalChange {
 }
 
 const MAX_CANONICAL_SNAPSHOT_BYTES = 64 * 1024
+const MAX_CANONICAL_FIELD_BYTES = 8 * 1024
 
 interface SourceRecord {
   sourceIsOfficial?: boolean | null
@@ -72,7 +73,22 @@ function canonicalValue(value: unknown): unknown {
 }
 
 function canonicalFields(fields: Readonly<Record<string, unknown>>): Record<string, unknown> {
-  const canonical = canonicalValue(fields) as Record<string, unknown>
+  const canonical = Object.fromEntries(
+    Object.entries(fields)
+      .filter(([, value]) => value !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => {
+        const normalized = canonicalValue(value)
+        const encoded = JSON.stringify(normalized)
+        const byteLength = Buffer.byteLength(encoded, "utf8")
+        return [
+          key,
+          byteLength > MAX_CANONICAL_FIELD_BYTES
+            ? { representation: "sha256", byteLength, digest: hash(normalized) }
+            : normalized
+        ]
+      })
+  )
   const encoded = JSON.stringify(canonical)
   if (encoded === undefined || Buffer.byteLength(encoded, "utf8") > MAX_CANONICAL_SNAPSHOT_BYTES) {
     throw new Error(`Canonical change snapshot exceeds the ${MAX_CANONICAL_SNAPSHOT_BYTES} byte limit`)

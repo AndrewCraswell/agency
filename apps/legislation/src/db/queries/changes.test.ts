@@ -88,11 +88,48 @@ describe("canonical change planning", () => {
   it("bounds persisted canonical snapshots", () => {
     expect(() =>
       planCanonicalChange({
-        fields: { description: "x".repeat(64 * 1024) },
+        fields: Object.fromEntries(Array.from({ length: 1000 }, (_, index) => [`field${index}`, "x".repeat(100)])),
         recordId: "bill:1",
         recordType: "bill"
       })
     ).toThrow("Canonical change snapshot exceeds")
+  })
+
+  it("tracks oversized summaries without persisting or truncating their content", () => {
+    const summary = "é".repeat(64 * 1024)
+    const input = { fields: { summary, status: "introduced" }, recordId: "bill:1", recordType: "bill" }
+    const created = planCanonicalChange(input)!
+    expect(created.after.summary).toEqual({
+      representation: "sha256",
+      byteLength: Buffer.byteLength(JSON.stringify(summary), "utf8"),
+      digest: expect.stringMatching(/^[a-f0-9]{64}$/)
+    })
+    expect(Buffer.byteLength(JSON.stringify(created.after))).toBeLessThan(64 * 1024)
+    expect(input.fields.summary).toBe(summary)
+    const previous = { fields: created.after, fingerprint: created.fingerprint }
+    expect(planCanonicalChange(input, previous)).toBeUndefined()
+    const changed = planCanonicalChange({ ...input, fields: { ...input.fields, summary: `${summary}!` } }, previous)!
+    expect(changed.changedFields).toEqual(["summary"])
+    expect(changed.after.summary).not.toEqual(created.after.summary)
+    expect(
+      planCanonicalChange({ ...input, fields: { ...input.fields, summary: "short" } }, previous)?.after.summary
+    ).toBe("short")
+  })
+
+  it("canonicalizes oversized nested fields before hashing and preserves small fields", () => {
+    const text = "x".repeat(9000)
+    const input = { recordId: "bill:1", recordType: "bill", fields: { nested: { a: text, b: 1 }, title: "Small" } }
+    const created = planCanonicalChange(input)!
+    expect(created.after.title).toBe("Small")
+    expect(
+      planCanonicalChange(
+        { ...input, fields: { title: "Small", nested: { b: 1, a: text } } },
+        {
+          fields: created.after,
+          fingerprint: created.fingerprint
+        }
+      )
+    ).toBeUndefined()
   })
 
   it("persists the source reference captured before a later source update", async () => {
