@@ -52,7 +52,7 @@ const memberDetailSchema = z
     directOrderName: optionalString,
     invertedOrderName: optionalString,
     lastName: optionalString,
-    officialUrl: optionalHttpsUrl,
+    officialWebsiteUrl: optionalHttpsUrl,
     terms: z.array(memberDetailTermSchema).default([]),
     updateDate: optionalIsoDateTime
   })
@@ -243,7 +243,7 @@ export function normalizeCongressMemberDetails(
     })
     personDetails.push({
       imageUrl: detail.depiction?.imageUrl ?? null,
-      officialUrl: detail.officialUrl ?? null,
+      officialUrl: detail.officialWebsiteUrl ?? null,
       personId: canonicalPersonId,
       publicEmail: null,
       sourceUpdatedAt,

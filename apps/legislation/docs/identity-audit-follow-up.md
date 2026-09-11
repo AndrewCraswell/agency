@@ -182,4 +182,17 @@ The singleton Congress wave coordinator accepts `kind: "entities"` with an inclu
 range. It uses the same global allocation and child lease machinery as other Congress work, but launches only the
 existing hydrated entity-range importer. It does not fan out unrelated historical bills, events, or votes. This enables
 historical alias/Bioguide population without competing independent API-budget allocators. Deployment and production
-acceptance for these changes remain pending.
+acceptance for these changes is tracked below.
+
+Commit `6201055` was pushed and deployed as Trigger `20260911.1` (`6ejl9t6f`, 26 tasks). Production canary
+`run_06g91rprq88c48dvn7c1d8eb01` released the old fixed cutoff and advanced the watermark from September 4 to
+September 8. Both upstream failures (111/S/3605 and 113/S/1997) remain explicit retry entries; no source records were
+fabricated. The next scan began at September 8 20:22 UTC through September 11 14:47 UTC. Terminal fresh-scan
+completion remains pending, but the failed-record isolation and forward scan handoff are verified in production.
+
+The identity audit also verified Congress.gov's live `officialWebsiteUrl` field using member `L000491`. The importer
+previously read `officialUrl`, silently losing the published website. The source parser and regression input now use
+the actual field; the canonical API output remains `officialUrl`. Historical refresh must use this corrected version.
+
+The 19 focused retry/coordinator tests passed. Repository verification passed its check stage, then failed in unrelated
+scoring `observatory-integration.test.ts` on a five-second timeout; it is not a green full-repository result.

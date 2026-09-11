@@ -29,16 +29,16 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `819a0fc` (final bill, amendment, and supporting-material query remediation) |
-| Deployment | `9824b674-c55e-4933-8cec-a68475746f5f` |
+| Source snapshot commit | `5548045` (API ingestion-contract readiness gate) |
+| Deployment | `57197853-4d0e-4072-8e9f-d27ca154adeb` |
 | Deployment status | `SUCCESS` |
-| Image | Not recorded in the final acceptance evidence |
+| Image | `sha256:114e972282d229b563a6eaa7a3c68ec9b59f9a0c473b11679755182f4e08fe7e` |
 | Previous rollback artifact | Reverify the immediately preceding immutable Railway artifact before any rollback |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
-| Current verification | Commits `1fa13a0`, `36e7060`, `e72b5c4`, and `819a0fc` contain the classification-backfill safety fix and final query work; their focused and legislation verification gates passed before release. |
+| Current verification | September 11: health/readiness and auth rejection pass; 11 civic operations pass with nonempty canonical fixtures and conditional 304. Broad lexical amendment and passage search return 503; amendment logs confirm statement timeout. See the reconciled API backlog. Remaining rows retain historical release evidence unless explicitly dated September 11. |
 | Foundation smoke | Health and readiness returned `200`; unknown routes and unsupported methods returned `404`. |
 | Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
 | Current deployment handler coverage | 88 of 88 explicit Next.js handlers |
@@ -201,35 +201,24 @@ detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, pos
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API sets PostgreSQL
 `statement_timeout` to `15s`. These probes promote the six webhook operations covered by the lifecycle smoke plus the verified
 challenge operation. The final cumulative smoke promotes all seven search, document-difference, and research operations;
-the endpoint ledger is now 68 Done and 20 Blocked. The browse
+the endpoint ledger at that release was 68 Done and 20 Blocked. September 11 reconciliation supersedes those counts
+with 77 Done and 11 Blocked. The browse
 index release additionally returned authenticated canonical one-item pages for bills in 609/158/77 ms and amendments in
 345/108/88 ms, with correlation-ID echo on all six requests.
 
 ## Next safe actions
 
-1. Begin MCP migration only when directed. Cut over through the authenticated HTTP API tool by tool, prove canonical
-   lexical, semantic, and hybrid parity, and retain a rollback boundary. This release intentionally stopped before MCP
-   implementation or smoke.
-2. Run
-   `congress:entities --start-congress 119 --end-congress 119`, verify the canonical person/profile/jurisdiction/term
-   predicates, and smoke person detail and person-term detail. Federal organization and membership detail remain blocked
-   pending a complete current GovInfo committee-data ingestion and fresh smoke. No roster command exists. If a canonical
-   operator is later required, name it `govinfo:committees`; do not use historical `congress:entities` ranges or the
-   historical backfill to imply a federal committee refresh. Then run
-   `congress:events --domain meetings --start-congress <start> --end-congress <end> --rematerialize`. Verify canonical
-   provenance/relationship predicates before using the resulting meeting as smoke evidence; do not infer completion from
-   an ingestion success count.
-3. For one official native-text document, run
-   `documents:process --document-id <document-id> --force` and then
-   `embeddings:document-sections --document-id <document-id> --limit 64`. Verify replacement sections, dedicated vectors,
-   and the two affected document routes before promotion.
-4. Resolve the remaining canonical civic-fixture blockers one bounded source-backed cohort at a time, then repeat the
-   exact affected production smoke profile before promoting an operation.
-5. Keep every named fixture and configuration blocker explicit until it passes fresh deployed smoke.
+1. Diagnose the reproduced amendment and passage lexical-search timeouts and repeat the exact deployed requests.
+2. Finish historical alias/identifier population through the budget-controlled identity-only Congress coordinator;
+   retain separate API acceptance and population evidence. Current and historical GovInfo committee ingestion already
+   has acceptance evidence, including the disclosed 117th-Congress quarantine.
+3. Resolve the nine remaining civic data gates listed in the HTTP API backlog. Empty successful Pages do not establish
+   nonempty relationship or detail acceptance. No new ingestion source is authorized.
+4. Begin MCP migration only when directed. It remains outside the current work scope.
 
 ## Rollback
 
-The current deployment is `9824b674-c55e-4933-8cec-a68475746f5f`. Reverify the immediately preceding immutable Railway
+The current deployment is `57197853-4d0e-4072-8e9f-d27ca154adeb`. Reverify the immediately preceding immutable Railway
 source or image before using it as a rollback artifact; the final acceptance evidence did not record that artifact's ID.
 After each subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains
 available for redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be

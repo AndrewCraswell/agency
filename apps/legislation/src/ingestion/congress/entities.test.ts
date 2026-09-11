@@ -153,7 +153,7 @@ describe("Congress entity normalization", () => {
             depiction: { imageUrl: "https://api.congress.gov/image/G000607.jpg" },
             firstName: "James",
             lastName: "Gallagher",
-            officialUrl: "https://gallagher.house.gov/",
+            officialWebsiteUrl: "https://gallagher.house.gov/",
             terms: [
               {
                 chamber: "House of Representatives",
