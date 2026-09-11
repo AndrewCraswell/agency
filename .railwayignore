@@ -15,3 +15,20 @@
 !/packages/oxlint-config/**
 !/packages/typescript-config/
 !/packages/typescript-config/**
+
+# Custom Railway allowlists can take precedence over Git ignores. Never upload
+# local credentials, build output, caches, or backfill evidence with source.
+**/.env
+**/.env.*
+**/node_modules/
+**/.next/
+**/.trigger/
+**/.turbo/
+**/.cache/
+**/dist/
+/apps/legislation/coverage/
+**/tmp/
+**/artifacts/
+**/output/
+**/*.tsbuildinfo
+/apps/legislation/evals/
