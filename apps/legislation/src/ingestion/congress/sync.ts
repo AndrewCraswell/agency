@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm"
+import { z } from "zod"
 import type { LegislationDatabase } from "../../db/database.js"
 import { getBillById, upsertBillAggregate } from "../../db/queries/bill-aggregates.js"
 import { syncCheckpoints } from "../../db/schema/schema.js"
@@ -25,9 +26,24 @@ type CongressSyncCursor = Readonly<{
   canonicalId: string
   gaps?: readonly CongressSyncGap[]
   pendingScan?: CongressPendingScan
+  recordRetries?: readonly CongressRecordRetry[]
   scannedThrough?: string
   updateDate: string
 }>
+
+const recordRetrySchema = z.object({
+  reference: z.object({
+    congress: z.number().int().positive(),
+    number: z.string(),
+    type: z.string(),
+    url: z.string(),
+    updateDate: z.string().optional()
+  }),
+  attempts: z.number().int().positive(),
+  nextAttemptAt: z.iso.datetime(),
+  message: z.string()
+})
+type CongressRecordRetry = z.infer<typeof recordRetrySchema>
 
 type CongressPendingScan = Readonly<{
   from: string
@@ -68,13 +84,19 @@ export async function synchronizeCongress(
   const from = options.from ?? (pendingScan === undefined ? checkpointFrom : new Date(pendingScan.from)) ?? new Date(0)
   const to = options.to ?? (pendingScan === undefined ? new Date() : new Date(pendingScan.to))
   const completedReferences = new Set(pendingScan?.completedReferences ?? [])
+  const retries = new Map(
+    z
+      .array(recordRetrySchema)
+      .parse(checkpoint?.cursor?.recordRetries ?? [])
+      .map((item) => [federalBillId(item.reference.congress, item.reference.type, item.reference.number), item])
+  )
+  const attempted = new Set<string>()
   const counts = createJobCounts()
   const failures: CongressSyncResult["failures"] = []
   const gaps = new Map(parseCongressSyncGaps(checkpoint?.cursor).map((gap) => [congressSyncGapKey(gap), gap]))
   let committedCursor = parseCongressSyncCursor(checkpoint?.cursor, checkpoint?.watermark ?? from)
   let persistedCheckpoint: CongressSyncCursor | undefined
   let proposed: { canonicalId: string; updateDate: string } | undefined
-  let canAdvanceCheckpoint = true
   options.onProgress?.({
     committedCheckpoint: checkpoint?.cursor,
     event: "checkpoint_start",
@@ -99,9 +121,10 @@ export async function synchronizeCongress(
           },
       gaps.values()
     )
-    await saveCongressCheckpoint(database, stream, cursor)
-    persistedCheckpoint = cursor
-    return cursor
+    const savedCursor = { ...cursor, recordRetries: [...retries.values()] }
+    await saveCongressCheckpoint(database, stream, savedCursor)
+    persistedCheckpoint = savedCursor
+    return savedCursor
   }
 
   // Keep the scan cutoff fixed across budget handoffs. A high-water date alone
@@ -115,15 +138,25 @@ export async function synchronizeCongress(
 
   const processReference = async (reference: CongressBillReference, isCurrentRange: boolean) => {
     counts.discovered += 1
-    const referenceKey = JSON.stringify([
-      federalBillId(reference.congress, reference.type, reference.number),
-      reference.updateDate ?? null
-    ])
+    const id = federalBillId(reference.congress, reference.type, reference.number)
+    const referenceKey = JSON.stringify([id, reference.updateDate ?? null])
+    const retry = retries.get(id)
+    if (
+      attempted.has(referenceKey) ||
+      (retry !== undefined &&
+        retry.reference.updateDate === reference.updateDate &&
+        new Date(retry.nextAttemptAt) > new Date() &&
+        options.from === undefined)
+    ) {
+      counts.skipped += 1
+      return
+    }
     if (isCurrentRange && completedReferences.has(referenceKey)) {
       counts.skipped += 1
       return
     }
     try {
+      attempted.add(referenceKey)
       const bundle = await client.getBillBundle(reference)
       await options.sourceStore?.put("congress", stream, new TextEncoder().encode(JSON.stringify(bundle)), {
         sourceUrl: reference.url
@@ -162,12 +195,13 @@ export async function synchronizeCongress(
         proposed = { canonicalId, updateDate }
       }
       if (options.dryRun !== true) {
+        retries.delete(id)
         if (isCurrentRange) {
           completedReferences.add(referenceKey)
         }
         committedCursor = {
           ...committedCursor,
-          ...(canAdvanceCheckpoint ? proposed : undefined)
+          ...proposed
         }
         if (!isCurrentRange || completedReferences.size % CONGRESS_RECEIPT_CHECKPOINT_BATCH_SIZE === 0) {
           await persistCheckpoint()
@@ -179,9 +213,16 @@ export async function synchronizeCongress(
         await persistCheckpoint()
         throw error
       }
-      canAdvanceCheckpoint = false
       counts.failed += 1
       const message = error instanceof Error ? error.message : "Unknown Congress.gov record failure"
+      const attempts = (retry?.attempts ?? 0) + 1
+      retries.set(id, {
+        reference,
+        attempts,
+        message: message.slice(0, 1000),
+        nextAttemptAt: new Date(Date.now() + Math.min(24, 2 ** Math.min(attempts - 1, 5)) * 3_600_000).toISOString()
+      })
+      await persistCheckpoint()
       failures.push({
         identifier: `${reference.congress}-${reference.type}-${reference.number}`,
         message,
@@ -223,11 +264,9 @@ export async function synchronizeCongress(
         to: capturedGap.gap.to
       })
     }
-    if (canAdvanceCheckpoint) {
-      committedCursor = {
-        ...committedCursor,
-        scannedThrough: laterCongressSyncTime(committedCursor.scannedThrough, range.to)
-      }
+    committedCursor = {
+      ...committedCursor,
+      scannedThrough: laterCongressSyncTime(committedCursor.scannedThrough, range.to)
     }
     await persistCheckpoint()
   }
@@ -240,14 +279,26 @@ export async function synchronizeCongress(
   }
   await processRange(currentRange, true)
 
-  // Deferred listing gaps have their own durable ranges. Failed records keep
-  // this scan open; successful records remain skippable on its next attempt.
-  if (failures.length === 0) {
+  // Listing completed. Unavailable records are durably owned by recordRetries,
+  // not by this scan cutoff, so they cannot hold newer source changes back.
+  {
     const finishedCursor = { ...committedCursor }
     delete finishedCursor.pendingScan
     committedCursor = finishedCursor
     await persistCheckpoint()
   }
+
+  // Fresh data gets the request budget first. Retry even records no longer in
+  // the source listing, with a bounded batch and durable exponential backoff.
+  for (const item of [...retries.values()].filter((item) => new Date(item.nextAttemptAt) <= new Date()).slice(0, 25)) {
+    await processReference(item.reference, false)
+  }
+
+  options.onProgress?.({
+    event: "record_retry_backlog",
+    outstandingRecords: retries.size,
+    earliestRetryAt: [...retries.values()].map((item) => item.nextAttemptAt).toSorted()[0]
+  })
 
   if (failures.length === 0 && gaps.size === 0 && options.dryRun !== true) {
     const watermark = proposed === undefined ? to : new Date(proposed.updateDate)
@@ -257,7 +308,7 @@ export async function synchronizeCongress(
     options.onProgress?.({ committedCheckpoint: finalCursor, event: "checkpoint_committed" })
     return { checkpoint: finalCursor, counts, failures }
   }
-  return { checkpoint: failures.length === 0 || gaps.size > 0 ? persistedCheckpoint : undefined, counts, failures }
+  return { checkpoint: persistedCheckpoint, counts, failures }
 }
 
 async function saveCongressCheckpoint(database: LegislationDatabase, stream: string, cursor: CongressSyncCursor) {

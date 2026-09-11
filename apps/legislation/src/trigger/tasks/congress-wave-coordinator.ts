@@ -51,6 +51,11 @@ const childPayloadSchema = z
 const wavePayloadSchema = z.discriminatedUnion("kind", [
   z.object({
     endCongress: z.number().int().positive(),
+    kind: z.literal("entities"),
+    startCongress: z.number().int().positive()
+  }),
+  z.object({
+    endCongress: z.number().int().positive(),
     kind: z.literal("history"),
     startCongress: z.number().int().positive()
   }),
@@ -85,10 +90,7 @@ export const congressWaveCoordinator = task({
         skipped: "active-wave" as const
       }
     }
-    const scopes =
-      input.kind === "history"
-        ? congressHistoryWaveScopes(input.startCongress, input.endCongress)
-        : congressRecurringWaveScopes(input.currentCongress)
+    const scopes = congressWavePayloadScopes(input)
     const result = await runCongressWave(scopes, {
       executeChild: createBatchChildExecutor(ctx.run.id),
       waitUntil: async (date) => await wait.until({ date })
@@ -98,6 +100,15 @@ export const congressWaveCoordinator = task({
     return { ...result, derivedDispatch, kind: input.kind }
   }
 })
+
+export function congressWavePayloadScopes(payload: unknown): string[] {
+  const input = wavePayloadSchema.parse(payload)
+  if (input.kind === "recurring") {
+    return congressRecurringWaveScopes(input.currentCongress)
+  }
+  const history = congressHistoryWaveScopes(input.startCongress, input.endCongress)
+  return input.kind === "entities" ? history.filter((scope) => scope.startsWith("congress:entities-range:")) : history
+}
 
 export function congressRecurringDerivedPayloads(waveRunId: string, includeMaterials: boolean) {
   const rebuildId = `recurring-congress:${waveRunId}`

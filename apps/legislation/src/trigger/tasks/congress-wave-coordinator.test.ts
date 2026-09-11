@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  congressWavePayloadScopes,
   congressRecurringDerivedPayloads,
   assertCongressWaveBatchCardinality,
   congressWaveChildIdempotencyKey,
@@ -10,6 +11,14 @@ import {
 } from "./congress-wave-coordinator.js"
 
 describe("Congress wave child deferred results", () => {
+  it("refreshes historical identities through the singleton allocator without launching other domains", () => {
+    expect(congressWavePayloadScopes({ kind: "entities", startCongress: 105, endCongress: 119 })).toEqual([
+      "congress:entities-range:105-119"
+    ])
+    expect(() => congressWavePayloadScopes({ kind: "entities", startCongress: 119, endCongress: 105 })).toThrow(
+      "valid inclusive Congress range"
+    )
+  })
   it("returns an overlapping scope to the coordinator after the active lease expires", () => {
     const retryAt = new Date("2026-08-19T08:27:45.000Z")
     expect(congressWaveLeaseHandoffResult("congress:events:119", 0, retryAt)).toEqual({

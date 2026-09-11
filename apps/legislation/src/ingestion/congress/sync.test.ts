@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { LegislationDatabase } from "../../db/database.js"
 import { ProviderHttpError } from "../http-client.js"
 import type { CongressBillReference } from "./client.js"
@@ -24,6 +24,7 @@ const NULL_DATE_ERROR = new ProviderHttpError(
 )
 
 beforeEach(() => vi.clearAllMocks())
+afterEach(() => vi.useRealTimers())
 
 describe("Congress bill scan continuation", () => {
   const from = new Date("2026-09-01T00:00:00.000Z")
@@ -79,6 +80,8 @@ describe("Congress bill scan continuation", () => {
   })
 
   it("retries failed records and refetches a changed reference instead of trusting an old receipt", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(to)
     const harness = createDatabaseHarness()
     let isResumed = false
     const getBillBundle = vi.fn<(record: CongressBillReference) => Promise<unknown>>(async (record) => {
@@ -96,17 +99,101 @@ describe("Congress bill scan continuation", () => {
     }
     const failed = await synchronizeCongress(harness.database, client, { from, to })
     expect(failed.counts.failed).toBe(1)
-    expect(harness.cursors.at(-1)).toHaveProperty("pendingScan")
+    expect(failed.checkpoint).not.toHaveProperty("pendingScan")
+    expect(failed.checkpoint).toMatchObject({
+      scannedThrough: to.toISOString(),
+      recordRetries: [expect.objectContaining({ attempts: 1 })]
+    })
     isResumed = true
+    vi.setSystemTime(new Date(to.getTime() + 3_600_001))
     getBillBundle.mockClear()
     const recovered = await synchronizeCongress(harness.database, client)
     expect(getBillBundle).toHaveBeenCalledTimes(2)
     expect(recovered.counts.failed).toBe(0)
+    expect(recovered.checkpoint).toHaveProperty("recordRetries", [])
     expect(recovered.checkpoint).not.toHaveProperty("pendingScan")
     // A later explicit replay never inherits the previous scan's receipts.
     getBillBundle.mockClear()
     await synchronizeCongress(harness.database, client, { from, to })
     expect(getBillBundle).toHaveBeenCalledTimes(2)
+  })
+
+  it("advances fresh scans during backoff and retries missing references after their deadline", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(to)
+    const harness = createDatabaseHarness()
+    const failedReference = reference("2")
+    let records = [failedReference]
+    const getBillBundle = vi.fn<(record: CongressBillReference) => Promise<unknown>>(async (record) => bundle(record))
+    getBillBundle.mockRejectedValueOnce(new Error("Source unavailable"))
+    const client = {
+      getBillBundle,
+      async *listUpdated() {
+        yield* records
+      }
+    }
+    await synchronizeCongress(harness.database, client, { from, to })
+    records = [failedReference, reference("3")]
+    getBillBundle.mockClear()
+    vi.setSystemTime(new Date(to.getTime() + 1_000))
+    const fresh = await synchronizeCongress(harness.database, client)
+    expect(getBillBundle).toHaveBeenCalledExactlyOnceWith(reference("3"))
+    expect(fresh.checkpoint).toMatchObject({
+      scannedThrough: new Date().toISOString(),
+      recordRetries: [expect.objectContaining({ attempts: 1 })]
+    })
+    records = []
+    vi.setSystemTime(new Date(to.getTime() + 3_600_001))
+    getBillBundle.mockClear()
+    const recovered = await synchronizeCongress(harness.database, client)
+    expect(getBillBundle).toHaveBeenCalledExactlyOnceWith(failedReference)
+    expect(recovered.checkpoint).toHaveProperty("recordRetries", [])
+  })
+
+  it("retains retry ownership across request-budget exhaustion and dry runs", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(to)
+    const harness = createDatabaseHarness()
+    let records = [reference("2")]
+    const getBillBundle = vi.fn<(record: CongressBillReference) => Promise<unknown>>(async (record) => bundle(record))
+    getBillBundle.mockRejectedValueOnce(new Error("Source unavailable"))
+    const client = {
+      getBillBundle,
+      async *listUpdated() {
+        yield* records
+      }
+    }
+    await synchronizeCongress(harness.database, client, { from, to })
+    const saved = harness.cursors.at(-1)
+    await synchronizeCongress(harness.database, client, { from, to, dryRun: true })
+    expect(harness.cursors.at(-1)).toBe(saved)
+    records = []
+    vi.setSystemTime(new Date(to.getTime() + 3_600_001))
+    const exhausted = new CongressRequestBudgetExhaustedError(new Date(), "allocation_exhausted")
+    getBillBundle.mockRejectedValueOnce(exhausted)
+    await expect(synchronizeCongress(harness.database, client)).rejects.toBe(exhausted)
+    expect(harness.cursors.at(-1)).toMatchObject({ recordRetries: [expect.objectContaining({ attempts: 1 })] })
+    expect(harness.cursors.at(-1)).not.toHaveProperty("pendingScan")
+    const recovered = await synchronizeCongress(harness.database, client)
+    expect(recovered.checkpoint).toHaveProperty("recordRetries", [])
+  })
+
+  it("attempts a changed source revision immediately without retrying duplicate references", async () => {
+    const harness = createDatabaseHarness()
+    const old = reference("2")
+    const changed = reference("2", "2026-09-01T12:00:00Z")
+    const getBillBundle = vi.fn<(record: CongressBillReference) => Promise<unknown>>(async (record) => bundle(record))
+    getBillBundle.mockRejectedValueOnce(new Error("Source unavailable"))
+    const client = {
+      getBillBundle,
+      async *listUpdated() {
+        yield* [old, old, changed]
+      }
+    }
+    const result = await synchronizeCongress(harness.database, client, { from, to })
+    expect(getBillBundle.mock.calls).toEqual([[old], [changed]])
+    expect(result.checkpoint).toHaveProperty("recordRetries", [])
+    expect(result.counts).toMatchObject({ failed: 1, inserted: 1, skipped: 1 })
   })
 })
 

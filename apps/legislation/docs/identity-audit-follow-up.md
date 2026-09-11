@@ -166,3 +166,20 @@ No Trigger redeploy or interruption of the running sync was necessary.
 The local Docker startup attempt did not expose a working engine within the bounded check. Persistence regression
 execution therefore remains unverified. The resumed full wave also remains pending; do not treat these release and
 member-refresh checks as a terminal result for bills, amendments or the entire recurring coordinator.
+
+### Failed-record isolation and historical identity refresh (2026-09-11)
+
+Congress bill synchronization now persists failed bundle references in `recordRetries` on the existing stream
+checkpoint. A completed listing advances `scannedThrough` and releases its fixed scan cutoff even when individual
+records fail. Failures remain failures in that attempt's counts and report; no synthetic bill or success receipt is
+created. Subsequent scans prioritize fresh changes, then retry at most 25 due records, including records no longer
+returned by the listing. Unchanged failed revisions back off from one hour to a maximum of 24 hours; changed revisions
+and explicit replay may retry immediately. Request-budget handoffs retain the durable retry entries. The
+`record_retry_backlog` event and checkpoint entries disclose unresolved records even when a later scan succeeds.
+Successful scans must not be described as complete historical coverage while that ledger or listing gaps remain.
+
+The singleton Congress wave coordinator accepts `kind: "entities"` with an inclusive `startCongress`/`endCongress`
+range. It uses the same global allocation and child lease machinery as other Congress work, but launches only the
+existing hydrated entity-range importer. It does not fan out unrelated historical bills, events, or votes. This enables
+historical alias/Bioguide population without competing independent API-budget allocators. Deployment and production
+acceptance for these changes remain pending.
