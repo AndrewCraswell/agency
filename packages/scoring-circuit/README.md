@@ -1,5 +1,10 @@
 # Scoring prototype hardware
 
+Active new development is the [virtual scoring box](virtual-scoring-box/README.md): STM32 scoring, ESP32 wireless/IR,
+and laptop or wall-powered USB-C. Its initial schematic is incomplete; it has no fabrication package yet. The combined
+board below is frozen as the separately preserved computer/standalone reference. A dedicated standalone board comes
+later.
+
 The current assembly candidate is the [native KiCad USB scoring platform](usb-scoring-platform/README.md), with STM32
 acquisition, ESP32 application/display interfaces, isolated USB, USB-C PD, Ethernet, IR, HUB75 and Favero outputs. Its
 [design review](usb-scoring-platform/design-review.md) is the authoritative list of remaining findings. It is a
