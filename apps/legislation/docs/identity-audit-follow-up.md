@@ -196,3 +196,17 @@ the actual field; the canonical API output remains `officialUrl`. Historical ref
 
 The 19 focused retry/coordinator tests passed. Repository verification passed its check stage, then failed in unrelated
 scoring `observatory-integration.test.ts` on a five-second timeout; it is not a green full-repository result.
+
+Website mapping and acceptance reconciliation commit `2230505` is pushed to `main` and deployed as Trigger
+`20260911.2` (`zo107nt5`, 26 tasks). The identity normalization/hydration/range suite passed 18 tests. The isolated
+legislation suite passed 2,459 tests with 61 skips, plus all four receiver tests; the latest repository verification
+again failed on the unrelated scoring observatory timeout.
+
+As of the September 11 follow-up, item 1's isolation and forward handoff are accepted and item 4's API-ledger
+reconciliation is complete (77 accepted, nine data gates, two search timeouts). Item 3's historical population is
+**not complete**: production still has Congress aliases/identifiers for 555 of 1,623 Congress-backed people. The active
+recurring coordinator above owns the shared request budget; do not launch an overlapping identity wave. Once it is
+terminal and no other Congress wave is active, run the deployed coordinator with `kind: "entities"`,
+`startCongress: 105`, `endCongress: 119`, and a new idempotency key. Verify the resulting people coverage, inspect any
+remaining missing identities, and smoke historical alias/identifier/website projection before closing item 3.
+The stopped Codex follow-up remains paused. No new source, MCP cutover, or rate limiter was introduced.
