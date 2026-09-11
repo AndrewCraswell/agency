@@ -1,7 +1,7 @@
 # Virtual scoring box
 
-Open `virtual-scoring-box.kicad_pro` in KiCad 10. This is a separate, incomplete schematic and PCB project, not an
-orderable board. The combined `../usb-scoring-platform/` design is frozen for this product split at repository commit
+Open `virtual-scoring-box.kicad_pro` in KiCad 10. This separate development PCB is routed and has an assembly-review
+export; it has not been released to a manufacturer. The combined `../usb-scoring-platform/` design is frozen at commit
 `ea7c3af023e6ad69eb4b2c7591a94a8ba3619fca`; do not change it while developing this board. Its supplier draft remains
 paused.
 
@@ -27,10 +27,11 @@ no-connects. J3/J4/J5 are bare PCB wire-solder terminations, excluded from the p
 1.2mm drills and wire strain relief still need assembly review. Unused copied custom symbols and header footprints have
 been removed.
 
-The native PCB has **154 footprints** on a provisional **120 x 85mm, four-layer, 1.6mm** board. The USB interface uses
-GCT USB4105-GF-A, TPD2E2U06DCKR protection, a **CP2102N-A02-GQFN20R USB-to-UART bridge**, and an **ISO7021DR serial
-isolator**. **TPS70933DBVR** supplies the laptop-side 3.3V rail and tolerates raw VBUS up to 30V. Its EN pin is
-intentionally open using the internal pull-up, never connected directly to high-voltage VBUS. C40 is 4.7uF.
+The native PCB has **146 footprints**, including **142 purchased components**, on a **120 x 85mm, four-layer, 1.6mm**
+board. The USB interface uses GCT USB4105-GF-A, TPD2E2U06DCKR protection, a **CP2102N-A02-GQFN20R USB-to-UART bridge**,
+and an **ISO7021DR serial isolator**. **TPS70933DBVR** supplies the laptop-side 3.3V rail and tolerates raw VBUS up to
+30V. Its EN pin is intentionally open using the internal pull-up, never connected directly to high-voltage VBUS. C40 is
+4.7uF.
 
 `usb-power-control.kicad_sch` adds **STUSB4500QTR**, **STM32C011F6P6** and **TPS259470ARPWR**. Program and read back a
 single **5V / 1.5A sink PDO** before shipment. The eFuse provides automatic-retry current limiting, reverse-current
@@ -73,6 +74,10 @@ ESP32 service header. Shared-source application updates need the board-specific 
 sequence-numbered messages with bounded queues and flow control in the protocol; hardware RTS/CTS and USB remote wake
 are not connected. The hardware bridge supports up to 3 Mbaud, but firmware throughput has not been validated.
 
+STM32 USART1 connects directly to ESP32 on the shared 3.3V rail: `STM_TX` to ESP RX and `STM_RX` to ESP TX. Same-rail
+translators U10/U11 and their redundant C23-C26/R30/R31 support were removed. R72/R73 retain idle-high reset defaults;
+C22/C27 remain at the ESP32 supply. The removed parts' copper, custom symbol and footprint were also removed.
+
 All schematic connections are now routed. In1.Cu provides separate scoring and USB-side ground regions; In2.Cu carries
 the corresponding 3.3V pours and selected signal routes. Two low-current source-controller supply joins use In1.Cu in
 the control area, outside the USB data corridor. Raw VBUS and protected 5V use separate back-layer pours, with explicit
@@ -86,9 +91,10 @@ board-update checkpoint.
 1. Finish the primary-side sleep-current and voltage/current tolerance review, then verify antenna clearance and
    connector access. The virtual-board source-control configuration is implemented and host-tested; its physical power
    behavior is not measured. Board size is not frozen; the old 165 x 100mm layout is not this product.
-2. Review whether the same-rail UART translators can be removed without changing reset behavior, and review every
-   footprint/model and the assembly BOM/placement before producing a supplier package. R69, R74 and R77 were moved to
-   clear their ground/USB routing; component identities and pin nets are unchanged. Rerun native checks after changes.
+2. Complete supplier matching, placement orientation and assembly/programming acceptance using this board's export, not
+   the combined board's paused order. All 142 purchased parts have manufacturer/MPN/footprint fields and matching
+   placement rows. All purchased components have resolvable package models. The bare solder/pogo targets have no model
+   and are excluded from both BOM and placement. R69/R74/R77 routing-clearance moves remain unchanged.
 3. Implement the board-specific STM32 serial adapter/shared application firmware, then validate real power, input
    thresholds, USB and wireless behavior on assembled hardware before use with fencers. Application development does not
    require the physical PCB, but successful host tests alone cannot qualify an assembled scoring machine.
@@ -113,17 +119,24 @@ virtual image, not the combined image, and configure/read back U23's single 5V/1
 
 ## Current checkpoint checks
 
-KiCad netlist export contains **154 components**, including bare wire/service pads. ERC reports **zero findings**.
-Native DRC reports **zero violations**, **zero schematic/PCB parity issues**, and **zero unconnected items**. Unused
-routing tails were removed. The rule floor is **0.15mm track / 0.15mm clearance**, with wider ordinary routes and power
-copper. This is above [JLCPCB's published multilayer 1oz trace/space minimum](https://jlcpcb.com/capabilities/Capab); it
-does not waive isolation, current-carrying capacity or assembly review. Local 0.5mm vias use 0.25mm drills. An
-edge-specific ESP32 footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are
-unchanged. The 0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing
-fabrication constraint; it is not a waiver of assembly review.
+KiCad contains **146 components**, including four bare wire/service targets. ERC reports **zero findings**. Native DRC
+reports **zero violations**, **zero schematic/PCB parity issues**, and **zero unconnected items**. Unused routing tails
+were removed. The rule floor is **0.15mm track / 0.15mm clearance**, with wider ordinary routes and power copper. This
+is above [JLCPCB's published multilayer 1oz trace/space minimum](https://jlcpcb.com/capabilities/Capab); it does not
+waive isolation, current-carrying capacity or assembly review. Local 0.5mm vias use 0.25mm drills. An edge-specific
+ESP32 footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are unchanged. The
+0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication
+constraint; it is not a waiver of assembly review.
 
-The latest native render is `output/routed-board-3d.png`; generated reports and images are local, ignored outputs. This
-is a clean native routing checkpoint, not a firmware release, bench result, final BOM or permission to order.
+The native custom rule also passes a **2mm minimum copper-clearance screen** between primary USB/power/control nets and
+scoring-side nets, including intentionally unconnected primary package pads. This is an engineering layout floor, not a
+FIE requirement, dielectric test, interlayer insulation rating or measured surface-creepage result. Physical insulation
+qualification remains separate from ordinary PCB DRC.
+
+The manufacturing exporter includes fresh `board-top-3d.png` and `board-bottom-3d.png` renders in its output directory.
+Generated reports and images are local, ignored outputs. This is a clean native CAD/assembly-export checkpoint, not a
+firmware release, bench result or permission to order. U22 uses the installed KiCad WSON-8 2x2mm, 0.5mm-pitch package
+model; its obsolete `Texas_DSG0008A_` model filename was corrected without changing its footprint or placement.
 
 The CP2102N footprint uses KiCad's Silicon Labs QFN20 land pattern and a retained, unmodified
 [KiCad StepUp package model](https://gitlab.com/kicad/libraries/kicad-packages3D/-/blob/6.0.11/Package_DFN_QFN.3dshapes/SiliconLabs_QFN-20-1EP_3x3mm_P0.5mm.step).
@@ -159,3 +172,39 @@ Power policy / target adapter have 100% line/function coverage and 95.05% / 95.7
 metrics remain 100%. Both MCU images cross-build (3096 bytes code, 72 bytes static RAM). Full repository verification
 still fails the same scoring TypeScript coverage gate, not a C test failure. The virtual image is not yet flashed or
 electrically qualified.
+
+## Assembly handoff
+
+Run `./export-manufacturing.ps1` with KiCad 10 and LLVM/Clang available. It creates a new output directory, runs native
+ERC/DRC/parity checks, exports the exact BOM and matching placements, Gerbers, plated/non-plated drills and an assembly
+PDF, and builds the **virtual** U24 image from current source. Gerbers, drills and placements share the lower-left
+auxiliary origin (board coordinates 50,135mm); exported component positions use positive X/Y millimetres. The four
+copper layers are F.Cu, In1.Cu, In2.Cu, B.Cu. Minimum drill is 0.2mm; the USB shell uses plated slots. Request standard
+green solder mask and white silkscreen for this prototype. A 3D colour is not a manufacturing order option.
+
+- Fit all 142 BOM parts, including through-hole J2/J6 and U13. Do not substitute parts or rotate them from generic
+  catalog previews without checking pin 1 against the native pad map. The Gerber ZIP is bare-board data, not assembly
+  instructions; send BOM, placement and programming requirements separately when an order is authorized.
+- J3/J4/J5 are seven bare 1.2mm plated wire holes. J7 is five bare primary-domain SWD pads. Do not buy or fit connectors
+  at these references. Enclosure-mounted ABC/piste sockets, wire gauge, harness length and strain relief are not defined
+  by the PCB BOM. Keep left/right wiring distinct. Leave clearance around the USB cable, IR window and ESP32 antenna.
+- Program/read back **U24 STM32C011** through J7 with the included `programming/U24/power-control.hex`. Use USB_GND for
+  this primary-side probe and do not inject voltage through its reference pin. Configure/read back **U23 STUSB4500** NVM
+  for one 5V/1.5A sink PDO using ST's programming procedure. Volatile runtime configuration is not a factory NVM image.
+  The assembler must confirm the fixture/programming service; it is not implied by an SMT assembly quote.
+- J2 is the isolated STM32 scoring MCU's SWD; J6 is ESP32 3.3V UART recovery. Do not bridge their scoring GND to USB_GND
+  with non-isolated programming equipment during isolation tests. No complete virtual-box scoring/application image is
+  included yet; the combined STM32 image's PA2 output configuration is not the virtual USART2 adapter.
+- After assembly, test cold-start, source changes, USB suspend/resume, rejected low-power sources, fault shutdown, radio
+  load steps, temperatures, acquisition thresholds and insulation before connecting fencers. Factory electrical
+  continuity and host software tests do not replace these measurements.
+
+The primary-side suspend review is not a worst-case compliance proof. TPS25947 specifies 610uA maximum on-state
+quiescent current; CP2102N gives 195uA **typical**, excluding USB pull-up current; STUSB4500's 210uA maximum is for
+**unattached/no communication**, not an active PD session. STM32C011 Stop current, LSI/RTC/watchdog overhead, wake duty,
+resistor dividers and bus pull-ups must also be included. In particular, a stuck-low PD alert can prevent Stop. Measure
+the complete input current under the source's actual suspend policy; do not add typical values and label the sum a
+guaranteed limit. References: [CP2102N](https://www.silabs.com/documents/public/data-sheets/cp2102n-datasheet.pdf),
+[STUSB4500 table 22](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
+[STM32C011 table 31](https://www.st.com/resource/en/datasheet/stm32c011f4.pdf),
+[TPS25947](https://www.ti.com/lit/ds/symlink/tps25947.pdf).

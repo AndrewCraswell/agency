@@ -1,0 +1,8 @@
+(version 1)
+
+# Engineering layout floor, not a mains safety or FIE creepage certification.
+# Primary includes raw USB/PD, its control circuit, transformer primary and NC pads.
+# LAPTOP_UART_* and transformer secondary remain on the scoring side.
+(rule "USB primary to scoring copper"
+    (condition "(A.NetName == 'USB_*' || A.NetName == 'PD_*' || A.NetName == 'PRIMARY_*' || A.NetName == 'INPUT_*' || A.NetName == 'HOST_*' || A.NetName == 'XFMR_PRI_*' || A.NetName == 'SCORING_*' || A.NetName == 'SOURCE_ALLOWED' || A.NetName == 'FUSE_FAULT_N' || A.NetName == 'unconnected-(J1-*' || A.NetName == 'unconnected-(U18-*' || A.NetName == 'unconnected-(U20-*' || A.NetName == 'unconnected-(U23-*' || A.NetName == 'unconnected-(U24-*' || A.NetName == 'unconnected-(U25-*') && B.NetName != '' && !(B.NetName == 'USB_*' || B.NetName == 'PD_*' || B.NetName == 'PRIMARY_*' || B.NetName == 'INPUT_*' || B.NetName == 'HOST_*' || B.NetName == 'XFMR_PRI_*' || B.NetName == 'SCORING_*' || B.NetName == 'SOURCE_ALLOWED' || B.NetName == 'FUSE_FAULT_N' || B.NetName == 'unconnected-(J1-*' || B.NetName == 'unconnected-(U18-*' || B.NetName == 'unconnected-(U20-*' || B.NetName == 'unconnected-(U23-*' || B.NetName == 'unconnected-(U24-*' || B.NetName == 'unconnected-(U25-*')")
+    (constraint clearance (min 2mm)))
