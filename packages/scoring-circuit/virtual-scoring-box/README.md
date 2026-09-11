@@ -1,7 +1,7 @@
 # Virtual scoring box
 
-Open `virtual-scoring-box.kicad_pro` in KiCad 10. This is a separate, incomplete schematic project, not an orderable
-board. The combined `../usb-scoring-platform/` design is frozen for this product split at repository commit
+Open `virtual-scoring-box.kicad_pro` in KiCad 10. This is a separate, incomplete schematic and PCB project, not an
+orderable board. The combined `../usb-scoring-platform/` design is frozen for this product split at repository commit
 `ea7c3af023e6ad69eb4b2c7591a94a8ba3619fca`; do not change it while developing this board. Its supplier draft remains
 paused.
 
@@ -21,27 +21,40 @@ paused.
 
 ## Current state and next work
 
-The initial project contains the combined design's two acquisition sheets, STM32 sheet and ESP32 sheet, with local
-symbol and footprint dependencies. This preserves the known input topology while the reduced product is integrated. It
-does not inherit the combined board's verification approval, PCB layout, power firmware, or fabrication package.
+The schematic contains the two acquisition circuits, STM32, ESP32, input reset-default resistors and TSOP38438 IR
+receiver. Twenty-two standalone-only processor connections have been replaced with explicit no-connects. J3/J4/J5 are
+bare PCB wire-solder terminations, excluded from the purchased-parts BOM; their provisional 1.2mm drills and wire strain
+relief still need assembly review. Unused copied custom symbols and header footprints have been removed.
+
+The native PCB has an initial placement of 90 footprints on a provisional **120 x 85mm, four-layer, 1.6mm** board. It
+has no tracks or planes, and the power/USB circuit is not yet included. The ESP32 antenna extends beyond the top edge;
+antenna/enclosure clearance still needs review. This project does not inherit the combined board's verification
+approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each board-update
+checkpoint.
 
 1. Integrate USB-C power/data and an appropriately sized isolated supply for **both** processors. The combined board's
    laptop-mode application-power inhibition cannot be reused unchanged. Review source qualification, radio peak current,
    suspend/recovery and wall-charger operation before choosing the supply. Do not automatically retain its 30W
    converter.
-2. Extract the existing IR receiver circuit without Ethernet. Remove standalone-only ESP32 signals/reset support;
-   replace the inherited fencer/piste header footprints with direct wire solder points. Preserve processor programming
-   access.
-3. Complete ERC/net review, then place and route a compact PCB. Verify antenna clearance, connector access and every
-   footprint/model. Board size is not frozen. No PCB file exists yet; the old 165 x 100mm layout is not this product.
-4. Run native checks and review the assembly BOM/placement before producing a supplier package. Validate real power,
+2. Finish schematic/net review, power-section placement and routing. Verify antenna clearance, connector access and
+   every footprint/model. Board size is not frozen; the old 165 x 100mm layout is not this product.
+3. Run native checks and review the assembly BOM/placement before producing a supplier package. Validate real power,
    input thresholds, USB and wireless behavior on assembled hardware before use with fencers.
 
-Power/USB/IR sheets are not yet connected. Inherited global labels and power inputs can therefore produce ERC findings;
-do not suppress them to present this draft as complete. No new document/evidence validators or firmware forks are
-needed.
+Power and USB are not yet integrated. Do not suppress the resulting ERC findings to present this draft as complete. No
+new document/evidence validators or firmware forks are needed.
 
-Initial KiCad CLI netlist export succeeded with 73 components. ERC reports 26 isolated pin labels and three undriven
-power inputs in this partial hierarchy; integration and removal of unused signals remain required. This is not a clean
-ERC result or a 73-part final BOM. Repository-wide verification was attempted and failed in the coverage run; it is not
-evidence of complete validation for this project.
+## Placement checkpoint checks
+
+KiCad netlist export contains 90 components. ERC has seven outstanding findings: USB_DM, USB_DP and USB_PRESENT are
+unconnected to the pending USB section, and four power inputs are undriven. The placement check has no schematic/PCB
+parity errors or component overlaps. It still reports 229 unrouted connections and two ESP32 silkscreen/edge warnings.
+The 0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication
+constraint; it is not a waiver of assembly review.
+
+The latest native render is `output/placement-3d.png`; generated reports and images are local, ignored outputs. This is
+an integration checkpoint, not a clean electrical/routing result or a final BOM.
+
+Repository verification reached coverage but did not pass: the existing scoring simulator rebuild integration test
+(`apps/scoring/src/observatory-integration.test.ts:126`) exceeded its 5000ms timeout. The scoring run reported 968 tests
+passed and one failed; no simulator files were changed for this board checkpoint.
