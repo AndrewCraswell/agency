@@ -16,8 +16,16 @@ static bool write_bytes(power_control *c, uint8_t reg, const uint8_t *p, size_t 
 }
 static void output(power_control *c, power_mode mode) {
     c->mode = mode;
+    /* Type-C 1.5A/3A permits advertised current during USB suspend. Under PD,
+       fresh source PDO1 identifies a non-USB charger or the host's suspend rule.
+       Bit28 is undefined if USB Communications Capable (bit26) is clear.
+       The sink's No USB Suspend request is never treated as a grant. */
+    const bool virtual_exempt = c->board == POWER_BOARD_VIRTUAL &&
+        (mode == POWER_TYPE_C || (mode == POWER_LAPTOP && c->source_count != 0 &&
+                                 ((c->source[0] & (UINT32_C(1) << 26)) == 0 ||
+                                  (c->source[0] & (UINT32_C(1) << 28)) == 0)));
     c->io.outputs(c->io.context, mode == POWER_TYPE_C || mode == POWER_LAPTOP || mode == POWER_DISPLAY,
-                  mode == POWER_DISPLAY, mode != POWER_DISPLAY);
+                  mode == POWER_DISPLAY, mode != POWER_DISPLAY && !virtual_exempt);
 }
 static void invalidate(power_control *c) {
     c->source_count = 0;
@@ -40,14 +48,15 @@ static bool profile(power_control *c, bool display) {
        PDO2 drives the board's POWER_OK2 hardware gate (POWER_OK_CFG=10b). */
     const uint32_t pdo[2] = { (UINT32_C(1) << 26) | (100u << 10) | 150u, (400u << 10) | 300u };
     uint8_t bytes[8], count = display ? 2u : 1u;
+    const size_t size = c->board == POWER_BOARD_VIRTUAL ? 4u : sizeof bytes;
     for (size_t i = 0; i < 2; ++i)
         for (size_t j = 0; j < 4; ++j) bytes[i * 4 + j] = (uint8_t)(pdo[i] >> (8u * j));
     output(c, POWER_OFF);
-    if (!write_bytes(c, SINK_PDO, bytes, sizeof bytes) || !write_bytes(c, PDO_COUNT, &count, 1)) return false;
+    if (!write_bytes(c, SINK_PDO, bytes, size) || !write_bytes(c, PDO_COUNT, &count, 1)) return false;
     /* Read-back catches reset/NVM reload or a silently rejected write. */
     uint8_t verify[8], actual;
-    if (!read_bytes(c, SINK_PDO, verify, sizeof verify) || !read_bytes(c, PDO_COUNT, &actual, 1)) return false;
-    for (size_t i = 0; i < sizeof bytes; ++i) if (verify[i] != bytes[i]) return false;
+    if (!read_bytes(c, SINK_PDO, verify, size) || !read_bytes(c, PDO_COUNT, &actual, 1)) return false;
+    for (size_t i = 0; i < size; ++i) if (verify[i] != bytes[i]) return false;
     if ((actual & 3u) != count) return false;
     c->display_profile = display;
     c->source_count = 0;
@@ -55,8 +64,9 @@ static bool profile(power_control *c, bool display) {
     c->requested_caps = false;
     return send_control(c, 0x0d);
 }
-void power_control_init(power_control *c, power_io io) {
+void power_control_init(power_control *c, power_io io, power_board board) {
     c->io = io;
+    c->board = board;
     c->source_count = 0;
     c->initialized = false;
     c->attached = false;
@@ -97,6 +107,7 @@ static bool source_message(power_control *c) {
     return true;
 }
 static bool display_available(const power_control *c) {
+    if (c->board == POWER_BOARD_VIRTUAL) return false;
     if (c->source_count == 0 || (c->source[0] & (UINT32_C(1) << 26)) != 0) return false;
     for (size_t i = 0; i < c->source_count; ++i) {
         uint32_t p = c->source[i];

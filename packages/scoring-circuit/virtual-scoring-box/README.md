@@ -83,31 +83,33 @@ beyond the top edge; antenna/enclosure clearance still needs review. This projec
 verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each
 board-update checkpoint.
 
-1. Implement and test the virtual-board source-control configuration and serial adapter. Preserve 5V PD and advertised
-   Type-C current compatibility, independent bridge enumeration and wireless wall-charger operation. Finish the
-   primary-side sleep-current and voltage/current tolerance review. Verify antenna clearance, connector access and every
-   footprint/model. Board size is not frozen; the old 165 x 100mm layout is not this product.
+1. Finish the primary-side sleep-current and voltage/current tolerance review, then verify antenna clearance and
+   connector access. The virtual-board source-control configuration is implemented and host-tested; its physical power
+   behavior is not measured. Board size is not frozen; the old 165 x 100mm layout is not this product.
 2. Review whether the same-rail UART translators can be removed without changing reset behavior, and review every
    footprint/model and the assembly BOM/placement before producing a supplier package. R69, R74 and R77 were moved to
    clear their ground/USB routing; component identities and pin nets are unchanged. Rerun native checks after changes.
-3. Validate real power, input thresholds, USB and wireless behavior on assembled hardware before use with fencers.
+3. Implement the board-specific STM32 serial adapter/shared application firmware, then validate real power, input
+   thresholds, USB and wireless behavior on assembled hardware before use with fencers. Application development does not
+   require the physical PCB, but successful host tests alone cannot qualify an assembled scoring machine.
 
-USB data-interface placement, the isolated power stage, source-control hardware and PCB routing are implemented;
-source-control firmware and assembly release are not complete. Preserve the existing compatibility promise of advertised
-Type-C current at least 1.5A **or** a qualified 5V/1.5A PD contract unless the user approves narrowing it. A
-direct-current-advertisement-only design could omit PD negotiation and the separate power-control processor, but that is
-an unapproved compatibility change, not the current specification. The smaller supply must power both STM32 and ESP32;
-the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings. No new
-document/evidence validators or firmware forks are needed.
+USB data-interface placement, the isolated power stage, source-control hardware/firmware and PCB routing are
+implemented; assembly release and physical qualification are not complete. Preserve the existing compatibility promise
+of advertised Type-C current at least 1.5A **or** a qualified 5V/1.5A PD contract unless the user approves narrowing it.
+A direct-current-advertisement-only design could omit PD negotiation and the separate power-control processor, but that
+is an unapproved compatibility change, not the current specification. The smaller supply must power both STM32 and
+ESP32; the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings.
+No new document/evidence validators or firmware forks are needed.
 
 The power firmware must combine source qualification with the bridge's sleep signal: no qualified source means the
 scoring supply stays off; a source requiring USB suspend allows it only while USB is awake. Qualified sources exempt
 from USB suspend, including an appropriate wall charger, must support wireless operation without USB enumeration.
-Preserve the existing 5V PD compatibility; do not substitute a direct-Type-C-only policy. The hardware gate is now in
-the schematic and routed; its primary-side low-power firmware budget remains unfinished. PA4 outputs SOURCE_ALLOWED, PA5
-outputs USB_SUSPEND_EXEMPT. PD alert, USB_AWAKE and RTC alarms support STOP-mode wakeup. A requested RDO exemption alone
-is not permission. The combined board's 20V/display policy and shallow-sleep adapter are not the finished firmware for
-this board.
+Preserve the existing 5V PD compatibility; do not substitute a direct-Type-C-only policy. The hardware gate is routed
+and the shared [power-controller source](../../../apps/scoring/firmware/power-control/README.md) now builds a
+virtual-board image. PA4 outputs SOURCE_ALLOWED, PA5 outputs USB_SUSPEND_EXEMPT. PD alert, eFuse fault, USB_AWAKE and a
+nominal 32ms RTC alarm wake Stop0. A requested RDO exemption alone is not permission; the firmware checks the fresh
+source flags. The virtual image never enables the combined board's 20V/display profile. Factory-program U24 using the
+virtual image, not the combined image, and configure/read back U23's single 5V/1.5A NVM PDO separately.
 
 ## Current checkpoint checks
 
@@ -151,3 +153,9 @@ All 47 scoring test files / 969 tests passed, but scoring coverage failed its gl
 95.44%, branches 93.78%, functions 99.79%. This is not a clean repository verification result. No scoring firmware or
 simulator files were changed for this routing checkpoint; the coverage shortfall remains separate from the clean native
 PCB checks.
+
+The subsequent power-firmware checkpoint passes all three native power suites and the complete C/C++ coverage gate.
+Power policy / target adapter have 100% line/function coverage and 95.05% / 95.74% branch coverage; all scoring-core
+metrics remain 100%. Both MCU images cross-build (3096 bytes code, 72 bytes static RAM). Full repository verification
+still fails the same scoring TypeScript coverage gate, not a C test failure. The virtual image is not yet flashed or
+electrically qualified.

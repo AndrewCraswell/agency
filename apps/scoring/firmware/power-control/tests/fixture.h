@@ -42,10 +42,10 @@ static inline void contract(fixture *f,unsigned index,unsigned current) {
     f->reg[0x29]=0x18;put32(f->reg+0x91,(index<<28)|(current<<10)|current|(1u<<25));
 }
 static inline void laptop(power_control *c,fixture *f) {
-    setup(f);power_control_init(c,io(f));assert(power_control_poll(c));source(f,true,2);contract(f,1,150);assert(power_control_poll(c));assert(c->mode==POWER_LAPTOP);
+    setup(f);power_control_init(c,io(f),POWER_BOARD_COMBINED);assert(power_control_poll(c));source(f,true,2);contract(f,1,150);assert(power_control_poll(c));assert(c->mode==POWER_LAPTOP);
 }
 static inline void display(power_control *c,fixture *f) {
-    setup(f);power_control_init(c,io(f));assert(power_control_poll(c));source(f,false,2);contract(f,1,150);assert(power_control_poll(c));assert(f->reg[0x70]==2 && c->mode==POWER_OFF);
+    setup(f);power_control_init(c,io(f),POWER_BOARD_COMBINED);assert(power_control_poll(c));source(f,false,2);contract(f,1,150);assert(power_control_poll(c));assert(f->reg[0x70]==2 && c->mode==POWER_OFF);
     source(f,false,2);contract(f,2,300);assert(power_control_poll(c));assert(c->mode==POWER_DISPLAY);
 }
 #endif

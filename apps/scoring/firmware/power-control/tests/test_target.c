@@ -7,13 +7,17 @@ static uint32_t gpio, i2c_status, remaining;
 static uint8_t pointer;
 static bool first_byte, auto_stop, reading, force_busy, force_timeout, nack_triggered;
 static unsigned status_reads, nack_at, watchdog_updates;
+static unsigned sleeps, rtc_failure, watchdog_refreshes;
+static bool locked, expected_deep, inject_wake;
 typedef struct { uintptr_t address;uint32_t value; } slot;
-static slot registers[40];static size_t register_count;
+static slot registers[80];static size_t register_count;
 static void remember(uintptr_t a,uint32_t v) {
     for(size_t i=0;i<register_count;++i)if(registers[i].address==a){registers[i].value=v;return;}
-    assert(register_count<40);registers[register_count++]=(slot){a,v};
+    assert(register_count<80);registers[register_count++]=(slot){a,v};
 }
 uint32_t power_register_read(uintptr_t a) {
+    if(a==0x40021060u)return rtc_failure==1 ? 1u : 3u;
+    if(a==0x4000280cu)return rtc_failure==2 ? 0x80u : 0xc1u;
     if(a==0xe000e010u) {
         for(size_t i=0;i<register_count;++i)if(registers[i].address==a) {
             uint32_t value=registers[i].value;registers[i].value&=~(1u<<16);return value;
@@ -37,6 +41,7 @@ uint32_t power_register_read(uintptr_t a) {
     return 0;
 }
 void power_register_write(uintptr_t a,uint32_t v) {
+    if(a==0x40003000u && v==0xaaaau)++watchdog_refreshes;
     if(a==0x50000018u){gpio|=v&0xffffu;gpio&=~(v>>16);return;}
     if(a==0x40005400u && v==0)i2c_status=0;
     if(a==0x4000541cu && (v&0x20u)!=0)i2c_status&=~0x20u;
@@ -55,10 +60,21 @@ void power_register_write(uintptr_t a,uint32_t v) {
     }
     remember(a,v);
 }
-static void reset(void) {
+void power_interrupt_lock(void) { assert(!locked);locked=true; }
+void power_interrupt_unlock(void) { assert(locked);locked=false; }
+void power_wait_for_interrupt(void) {
+    assert(locked);++sleeps;
+    assert(((power_register_read(0xe000ed10u)&4u)!=0)==expected_deep);
+    if(expected_deep)remember(0x40021000u,2u<<11); /* Verify 6MHz is restored even if divider differs. */
+    if(inject_wake)power_target_irq(); /* Simulate pending IRQ during WFI. */
+}
+static void clear(void) {
     setup(&pd);gpio=0;i2c_status=0;remaining=0;register_count=0;status_reads=0;nack_at=0;nack_triggered=false;
     force_busy=false;force_timeout=false;watchdog_updates=1;
-    power_target_initialize();
+    sleeps=0;rtc_failure=0;watchdog_refreshes=0;locked=false;expected_deep=false;inject_wake=false;
+}
+static void reset(void) {
+    clear();power_target_initialize(POWER_BOARD_COMBINED);
     assert((gpio&0x830u)==0x820u);
     assert(power_register_read(0x50000420u)==0x66000000u);
     assert(power_register_read(0x40005410u)==0x00100206u);
@@ -71,6 +87,7 @@ int main(void) {
     remember(0x50000010u,1u<<6);
     unsigned before=status_reads;
     assert(power_target_poll());assert(status_reads==before);
+    power_target_sleep();assert(sleeps==1 && !locked);
     for(unsigned tick=0;tick<9;++tick){remember(0xe000e010u,7u|(1u<<16));assert(power_target_poll());assert(status_reads==before);}
     remember(0xe000e010u,7u|(1u<<16));assert(!power_target_poll());assert(status_reads>before);
     remember(0x50000010u,0); /* Alerts always bypass the periodic check. */
@@ -87,6 +104,43 @@ int main(void) {
     reset();force_timeout=true;assert(!power_target_poll());assert((gpio&0x830u)==0x820u);
     force_timeout=false;power_target_poll();assert((gpio&0x830u)==0x830u);
     reset();pd.reg[0x2f]=0;power_target_poll();assert((gpio&0x830u)==0x820u);
-    watchdog_updates=5000;power_target_initialize();assert((gpio&0x830u)==0x820u);
+    watchdog_updates=5000;power_target_initialize(POWER_BOARD_COMBINED);assert((gpio&0x830u)==0x820u);
+    before=watchdog_refreshes;assert(!power_target_poll());assert(watchdog_refreshes==before);
+    /* Actual virtual register map: two push-pull grants, no application output or
+       1ms SysTick. RTC and all fault/alert/USB wake inputs remain enabled in Stop. */
+    clear();remember(0x50000010u,0xc2u);expected_deep=true;
+    power_target_initialize(POWER_BOARD_VIRTUAL);assert((gpio&0x31u)==0);
+    assert((power_register_read(0x50000004u)&0x31u)==0);
+    assert((power_register_read(0x50000000u)&0xffffu)==0x05f1u);
+    assert(power_register_read(0xe000e010u)==0);
+    assert(power_register_read(0x40002810u)==((31u<<16)|1023u));
+    assert(power_register_read(0x40002840u)==0x80808080u);
+    assert(power_register_read(0x40002844u)==5u<<24);
+    assert(power_register_read(0xe000e100u)==0xa4u);
+    assert(power_register_read(0x40021880u)==0x800c2u);
+    assert(power_target_poll());assert((gpio&0x30u)==0x30u);
+    power_target_sleep();assert(sleeps==1 && (power_register_read(0xe000ed10u)&4u)==0);
+    assert((power_register_read(0x40021000u)&0x3800u)==3u<<11);
+    power_target_irq();power_target_sleep();assert(sleeps==1); /* Pending work cannot sleep. */
+    assert(power_target_poll());inject_wake=true;power_target_sleep();assert(sleeps==2);
+    power_target_sleep();assert(sleeps==2);inject_wake=false;
+    remember(0x50000010u,0x82u);assert(power_target_poll());power_target_sleep();assert(sleeps==2); /* Alert low. */
+    remember(0x50000010u,0x42u); /* No enumeration, valid non-PD charger. */
+    assert(power_target_poll());assert((gpio&0x30u)==0x30u);
+    source(&pd,true,2);pd.reg[0x36]|=0x10u;contract(&pd,1,150);
+    assert(power_target_poll());assert((gpio&0x30u)==0x10u); /* Suspend required: grant only, gate obeys CP2102N. */
+    remember(0x50000010u,0xc2u);assert(power_target_poll());assert((gpio&0x30u)==0x10u);
+    remember(0x50000010u,0xc0u);power_target_irq();assert(power_target_poll());assert((gpio&0x30u)==0); /* eFuse fault. */
+    remember(0x50000010u,0xc2u);power_target_irq();assert(power_target_poll());assert((gpio&0x30u)==0x10u);
+    source(&pd,false,2);contract(&pd,1,150);assert(power_target_poll());assert((gpio&0x30u)==0x30u);
+    contract(&pd,2,300);assert(power_target_poll());assert((gpio&0x30u)==0 && pd.reg[0x70]==1);
+    force_busy=true;assert(power_target_poll());assert((gpio&0x30u)==0);
+    power_target_fault();assert((gpio&0x30u)==0);
+    for(unsigned broken=1;broken<=2;++broken) {
+        clear();rtc_failure=broken;remember(0x50000010u,0xc2u);
+        power_target_initialize(POWER_BOARD_VIRTUAL);before=watchdog_refreshes;
+        assert(!power_target_poll());power_target_sleep();assert(sleeps==0 && (gpio&0x30u)==0);
+        assert(watchdog_refreshes==before); /* Failed wake clock resets via watchdog, never grants. */
+    }
     puts("STM32C011 register/transport scenarios passed");return 0;
 }

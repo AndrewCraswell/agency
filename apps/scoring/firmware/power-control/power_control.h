@@ -13,8 +13,10 @@ typedef struct {
 } power_io;
 
 typedef enum { POWER_OFF, POWER_TYPE_C, POWER_LAPTOP, POWER_DISPLAY, POWER_FAULT } power_mode;
+typedef enum { POWER_BOARD_COMBINED, POWER_BOARD_VIRTUAL } power_board;
 typedef struct {
     power_io io;
+    power_board board;
     uint32_t source[7];
     uint8_t source_count;
     bool initialized;
@@ -25,7 +27,7 @@ typedef struct {
     power_mode mode;
 } power_control;
 
-void power_control_init(power_control *control, power_io io);
+void power_control_init(power_control *control, power_io io, power_board board);
 /* Call continuously; process alerts within 1ms to capture STUSB4500's transient RX buffer. */
 bool power_control_poll(power_control *control);
 #endif

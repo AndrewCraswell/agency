@@ -1,9 +1,15 @@
-param([string]$OutputDirectory = "$PSScriptRoot/../out/power-control-target")
+param(
+    [ValidateSet('combined', 'virtual')][string]$Board = 'combined',
+    [string]$OutputDirectory = ''
+)
 $ErrorActionPreference = 'Stop'
+if (-not $OutputDirectory) { $OutputDirectory = "$PSScriptRoot/../out/power-control-$Board-target" }
+$boardFlags = @()
+if ($Board -eq 'virtual') { $boardFlags = @('-DPOWER_VIRTUAL_BOARD=1') }
 $targetDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
 $elf = Join-Path $targetDirectory 'power-control.elf'
-& clang --target=arm-none-eabi -mcpu=cortex-m0plus -mthumb -std=c17 -Oz -g -ffreestanding -fno-builtin -ffunction-sections -fdata-sections -Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wpedantic -nostdlib -fuse-ld=lld "-Wl,-T,$PSScriptRoot/stm32c011.ld" '-Wl,--gc-sections' "-Wl,-Map,$targetDirectory/power-control.map" "$PSScriptRoot/startup.S" "$PSScriptRoot/power_control.c" "$PSScriptRoot/stm32c011_power.c" -o $elf
+& clang @boardFlags --target=arm-none-eabi -mcpu=cortex-m0plus -mthumb -std=c17 -Oz -g -ffreestanding -fno-builtin -ffunction-sections -fdata-sections -Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wpedantic -nostdlib -fuse-ld=lld "-Wl,-T,$PSScriptRoot/stm32c011.ld" '-Wl,--gc-sections' "-Wl,-Map,$targetDirectory/power-control.map" "$PSScriptRoot/startup.S" "$PSScriptRoot/power_control.c" "$PSScriptRoot/stm32c011_power.c" -o $elf
 if ($LASTEXITCODE -ne 0) { throw 'STM32C011 cross-build failed' }
 & llvm-objcopy -O ihex $elf (Join-Path $targetDirectory 'power-control.hex')
 if ($LASTEXITCODE -ne 0) { throw 'HEX export failed' }

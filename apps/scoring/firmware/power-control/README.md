@@ -1,7 +1,53 @@
 # USB power controller
 
-U21 (STM32C011F6P6) supervises STUSB4500 and the isolated power enables. This is separate from the STM32G474 scoring
-firmware. One board and one USB-C receptacle serve both modes; there is no physical mode switch.
+STM32C011F6P6 supervises STUSB4500 and the isolated power enables. This is separate from STM32G474 scoring firmware. The
+same source builds a **combined-board U21** image or **virtual-box U24** image; select the board when building, not with
+a physical switch. Do not flash one board's image onto the other.
+
+## Virtual scoring box
+
+Use `build-target.ps1 -Board virtual`. The virtual configuration only writes and reads back one 5V/1.5A sink PDO; it
+never enables the 20V display profile. Both processors share the isolated supply.
+
+- Non-PD Type-C requires one valid CC orientation advertising at least 1.5A. That advertised current is available during
+  USB suspend, including wall-charger operation without enumeration.
+- PD requires fresh source capabilities and a matching fixed 5V contract of at least 1.5A. A source explicitly declaring
+  no USB communication capability is treated as a charger. For a USB-capable source, its first PDO's **USB Suspend
+  Supported** flag determines whether the CP2102N sleep signal must disable scoring power. That flag is undefined on a
+  non-USB source; a sink's **No USB Suspend** request alone never grants an exemption.
+- PA4=`SOURCE_ALLOWED`, PA5=`USB_SUSPEND_EXEMPT`, both push-pull and default low. One atomic GPIO write updates the
+  pair. PA1 reads the eFuse's active-low fault; a fault suppresses both grants. The hardware gate implements
+  `(USB_AWAKE OR USB_SUSPEND_EXEMPT) AND SOURCE_ALLOWED`, so USB-sleep shutoff does not wait for the firmware poll.
+- PA0 holds PD RESET low; PA6 receives ALERT_N, PA7 receives USB_AWAKE. PB6/PB7 remain I2C, PA13/PA14 remain SWD.
+- The MCU uses **Stop0**, with SysTick disabled, GPIO-edge wake for fault/PD alert/USB state and an internal-LSI RTC
+  alarm nominally every **32ms**. This is a power-health timer, never scoring time. Pending events are rechecked with
+  interrupts masked before WFI; wake restores the 6MHz divider before interrupts resume. The main loop alone feeds the
+  watchdog. Failure to initialize the RTC or watchdog leaves grants off and allows the watchdog to reset the MCU.
+
+The CP2102N can enumerate while the scoring supply is off. It uses the CP210x VCP driver; this power firmware is not the
+STM32G474 serial transport or desktop application. Factory programming must configure/read back **U23 STUSB4500's single
+5V/1.5A NVM PDO** separately. The runtime only changes volatile registers and cannot make an unsafe NVM image safe
+before its first negotiation.
+
+Program **U24 only** through J7: 1=USB_HOST_3V3 reference, 2=USB_GND, 3=SWDIO, 4=SWCLK, 5=NRST. Confirm the native pad
+numbering and use an isolated probe without injecting power or bridging USB_GND to scoring GND. Initial STM32G474 and
+ESP32 recovery remains through their separate service headers. No application firmware or bench qualification is implied
+by a successfully built power-controller image.
+
+The policy and register-adapter tests cover USB-capable and non-USB sources, both suspend flags, Type-C orientations and
+current thresholds, rejected 20V contracts, faults/detach/reset, I2C failures, failed wake clocks and sleep-entry races.
+These are host tests, not measurements. Measure startup, shutdown, radio load steps, every qualified-source transition,
+USB suspend/resume current, alert latency, eFuse timing and I2C edges on the assembled board. A stuck-low PD alert can
+prevent Stop entry during a communication fault; this recovery case also belongs in the input-current bench test.
+
+References:
+[USB-IF Type-C functional tests, suspend test 4.10.3](https://www.usb.org/sites/default/files/USB%20Type%20C%20Functional%20Test%20Specification%202024%2003%2003.pdf),
+[USB-IF PD specification bundle, companion PD2.0 v1.3 section 6.4.1.2.3.2](https://www.usb.org/sites/default/files/USB_PD_R3.2_V1.2_2.zip),
+[STM32C0 RM0490](https://www.st.com/resource/en/reference_manual/rm0490-stm32c0-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+and
+[ST's STM32C011 register definitions](https://github.com/STMicroelectronics/cmsis-device-c0/blob/master/Include/stm32c011xx.h).
+
+## Combined board
 
 - Reset, disconnect, invalid supply and communication faults disable acquisition and inhibit application power.
 - Non-PD Type-C requires at least 1.5A advertised current. PD laptop mode requires a validated 5V contract of at least
@@ -40,15 +86,16 @@ Run from the repository root with Clang, LLD, LLVM tools, CMake and Ninja on PAT
 cmake -G Ninja -S apps/scoring/firmware/power-control -B apps/scoring/firmware/out/power-control -DCMAKE_C_COMPILER=clang -DSCORING_ENABLE_LLVM_COVERAGE=ON
 cmake --build apps/scoring/firmware/out/power-control
 ctest --test-dir apps/scoring/firmware/out/power-control --output-on-failure
-& apps/scoring/firmware/power-control/build-target.ps1
+& apps/scoring/firmware/power-control/build-target.ps1 -Board combined
+& apps/scoring/firmware/power-control/build-target.ps1 -Board virtual
 pnpm --filter scoring test:c-coverage
 ```
 
-ELF, HEX and BIN output goes into ignored `firmware/out/power-control-target`. The native tests exercise policy and the
-actual register-level driver using fake MMIO. Existing coverage checks include both C files at the non-core 80% minimum;
-scoring-core requirements remain 100%.
+ELF, HEX and BIN output goes into ignored `firmware/out/power-control-<board>-target`. The native tests exercise policy
+and the actual register-level driver using fake MMIO. Existing coverage checks include both C files at the non-core 80%
+minimum; scoring-core requirements remain 100%.
 
-## Programming and physical checks
+## Combined-board programming and physical checks
 
 J14 underside pads: 1=VLO reference, 2=USB_GND, 3=SWDIO, 4=SWCLK, 5=NRST. Do not inject debugger power into VLO or
 bridge the isolation barrier with grounded equipment. Flash the HEX using an appropriately isolated SWD setup.

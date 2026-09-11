@@ -2,7 +2,7 @@
 #include <stdio.h>
 int main(void) {
     fixture f;power_control c;
-    setup(&f);power_control_init(&c,io(&f));assert(!f.acquisition && !f.application && f.suspend);
+    setup(&f);power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(!f.acquisition && !f.application && f.suspend);
     assert(power_control_poll(&c));assert(c.mode==POWER_TYPE_C && f.reg[0x70]==1);
     for(unsigned orientation=0;orientation<2;++orientation)for(unsigned cc=0;cc<4;++cc) {
         f.reg[0x11]=(uint8_t)(cc<<(orientation*2));assert(power_control_poll(&c));assert(f.acquisition==(cc>=2));assert(!f.application);
@@ -11,7 +11,7 @@ int main(void) {
     f.reg[0x11]=0x22;assert(power_control_poll(&c));assert(!f.acquisition);
     f.reg[0x11]=2;f.reg[0x0e]=9;assert(power_control_poll(&c));assert(!f.acquisition);
     for(unsigned engine=0;engine<256;++engine) {
-        setup(&f);power_control_init(&c,io(&f));assert(power_control_poll(&c));f.reg[0x29]=(uint8_t)engine;
+        setup(&f);power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(power_control_poll(&c));f.reg[0x29]=(uint8_t)engine;
         assert(power_control_poll(&c));assert(f.acquisition==(engine==0x13 || engine==0x14));
     }
     laptop(&c,&f);assert(f.acquisition && !f.application && f.suspend);
@@ -51,12 +51,12 @@ int main(void) {
     laptop(&c,&f);source(&f,true,1);f.reg[0x32]|=0x80;assert(power_control_poll(&c));assert(f.acquisition);
     laptop(&c,&f);f.reg[0x0b]=2;f.reg[0x16]=0;assert(power_control_poll(&c));assert(f.acquisition);
     f.reg[0x0b]=2;f.reg[0x16]=1;assert(power_control_poll(&c));assert(!f.acquisition);
-    setup(&f);f.bad_profile=true;power_control_init(&c,io(&f));assert(!power_control_poll(&c));
-    setup(&f);f.reg[0x2f]=0;power_control_init(&c,io(&f));assert(!power_control_poll(&c));
-    setup(&f);f.reg[0x2f]=0x21;power_control_init(&c,io(&f));assert(power_control_poll(&c));
+    setup(&f);f.bad_profile=true;power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(!power_control_poll(&c));
+    setup(&f);f.reg[0x2f]=0;power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(!power_control_poll(&c));
+    setup(&f);f.reg[0x2f]=0x21;power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(power_control_poll(&c));
     /* Every transaction position in boot, receive, display negotiation and detach fails closed. */
     for(unsigned flow=0;flow<4;++flow)for(unsigned failure=1;failure<=20;++failure) {
-        if(flow==0){setup(&f);power_control_init(&c,io(&f));}
+        if(flow==0){setup(&f);power_control_init(&c,io(&f),POWER_BOARD_COMBINED);}
         else if(flow==1){laptop(&c,&f);source(&f,true,2);}
         else if(flow==2){laptop(&c,&f);source(&f,false,2);}
         else{display(&c,&f);f.reg[0x0e]=0;}
@@ -66,17 +66,17 @@ int main(void) {
         f.fail_at=0;f.torn_header=false;assert(power_control_poll(&c));
     }
     /* Non-fixed optional PDOs, inadequate chargers, smaller contracts and stale buffers stay off. */
-    setup(&f);power_control_init(&c,io(&f));assert(power_control_poll(&c));source(&f,false,7);
+    setup(&f);power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(power_control_poll(&c));source(&f,false,7);
     for(unsigned i=1;i<7;++i)put32(f.reg+0x33+i*4,0xc0000000u);
     contract(&f,7,150);assert(power_control_poll(&c));assert(!f.application && !f.acquisition);
     laptop(&c,&f);contract(&f,1,149);assert(power_control_poll(&c));assert(!f.acquisition);
     display(&c,&f);contract(&f,2,299);assert(power_control_poll(&c));assert(!f.application);
-    setup(&f);power_control_init(&c,io(&f));assert(power_control_poll(&c));contract(&f,1,150);
+    setup(&f);power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(power_control_poll(&c));contract(&f,1,150);
     assert(power_control_poll(&c));assert(c.requested_caps && f.reg[0x51]==7 && !f.acquisition);
     assert(power_control_poll(&c));assert(!f.acquisition);
     source(&f,true,2);assert(power_control_poll(&c));assert(f.acquisition && !c.requested_caps);
     for(unsigned fail_byte=1;fail_byte<=2;++fail_byte) {
-        setup(&f);power_control_init(&c,io(&f));assert(power_control_poll(&c));contract(&f,1,150);
+        setup(&f);power_control_init(&c,io(&f),POWER_BOARD_COMBINED);assert(power_control_poll(&c));contract(&f,1,150);
         f.fail_at=f.calls+3+fail_byte;assert(!power_control_poll(&c));assert(!f.acquisition);
     }
     laptop(&c,&f);f.reg[0x94]&=(uint8_t)~2u;assert(power_control_poll(&c));assert(!f.acquisition);
