@@ -181,6 +181,10 @@ describe("amendment lexical search query", () => {
     expect(query.sql).toContain('"row_number" = $')
     expect(query.sql.match(/ts_headline/g)).toHaveLength(1)
     expect(query.sql.indexOf("ts_headline")).toBeGreaterThan(query.sql.indexOf("amendment_document_lexical_ranked"))
+    expect(query.sql.indexOf("limit")).toBeLessThan(query.sql.indexOf("ts_headline"))
+    expect(query.sql).toContain('"amendment_document_lexical_page" as')
+    // Use an unambiguous alias: document_sections also exposes document_id.
+    expect(query.sql).toContain('"page_document_id"')
   })
 
   it("applies document filters and hybrid candidate IDs to both disjoint match branches", () => {
@@ -257,6 +261,28 @@ describe("amendment lexical search query", () => {
 })
 
 describe("hybrid passage lexical scoring", () => {
+  it("filters and ranks a narrow page before loading text, metadata and latest actions", () => {
+    const query = buildLexicalPassageSearchQuery(database, {
+      limit: 7,
+      query: "housing",
+      documentIds: ["document:one"],
+      sessionIds: ["session:119"],
+      pageFrom: 2
+    }).toSQL()
+    const pageEnd = query.sql.indexOf("limit")
+    const ranking = query.sql.slice(0, pageEnd)
+    expect(ranking).toContain('"lexical_passage_page" as')
+    expect(ranking).toContain('"session_id"')
+    expect(ranking).toContain('"page_end"')
+    expect(ranking).toContain("ts_rank_cd")
+    expect(ranking).not.toContain("ts_headline")
+    expect(ranking).not.toContain('"bill_actions"')
+    expect(ranking).not.toContain('"document_sections"."text"')
+    expect(query.sql.indexOf("ts_headline")).toBeGreaterThan(pageEnd)
+    expect(query.sql.match(/limit/g)).toHaveLength(1)
+    expect(query.params).toEqual(expect.arrayContaining(["document:one", "session:119", 2, 8]))
+  })
+
   it("restricts lexical ranking to the semantic HNSW candidate IDs", () => {
     const query = buildLexicalPassageSearchQuery(database, { limit: 20, mode: "hybrid", query: "housing" }, [
       "section:first",

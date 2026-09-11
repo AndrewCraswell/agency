@@ -891,22 +891,34 @@ export function buildLexicalPassageSearchQuery(
   const snippet = sql<
     string | null
   >`ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=3, MaxWords=45, MinWords=12')`
+  // Rank only identifiers and scores. Carrying section text and document metadata
+  // through the corpus-wide sort spills wide rows before LIMIT can help.
+  const page = database.$with("lexical_passage_page").as(
+    database
+      .select({ sectionId: documentSections.id, rank: rank.as("rank") })
+      .from(documentSections)
+      .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+      .innerJoin(bills, eq(billDocuments.billId, bills.id))
+      .where(
+        and(
+          sql`${documentSections.searchVector} @@ ${searchQuery}`,
+          candidateSectionIds === undefined ? undefined : inArray(documentSections.id, candidateSectionIds),
+          eq(billDocuments.processingStatus, "processed"),
+          ...passageFilters(input)
+        )
+      )
+      .orderBy(desc(rank), asc(documentSections.id))
+      .limit(limit + 1)
+      .offset(offset)
+  )
   return database
-    .select({ ...passageSelection(rank, snippet), headingMatched })
-    .from(documentSections)
+    .with(page)
+    .select({ ...passageSelection(sql<number>`${page.rank}`, snippet), headingMatched })
+    .from(page)
+    .innerJoin(documentSections, eq(documentSections.id, page.sectionId))
     .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
     .innerJoin(bills, eq(billDocuments.billId, bills.id))
-    .where(
-      and(
-        sql`${documentSections.searchVector} @@ ${searchQuery}`,
-        candidateSectionIds === undefined ? undefined : inArray(documentSections.id, candidateSectionIds),
-        eq(billDocuments.processingStatus, "processed"),
-        ...passageFilters(input)
-      )
-    )
-    .orderBy(desc(rank), asc(documentSections.id))
-    .limit(limit + 1)
-    .offset(offset)
+    .orderBy(desc(page.rank), asc(page.sectionId))
 }
 
 export function embeddingLiteral(embedding: number[], dimensions: number): SQL {

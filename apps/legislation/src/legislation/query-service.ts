@@ -214,24 +214,36 @@ export function buildDocumentAmendmentLexicalQuery(
   const rankedRowNumber = sql<number>`"amendment_document_lexical_ranked"."row_number"`
   const rankedSectionId = sql<string>`"amendment_document_lexical_ranked"."section_id"`
   const rankedTextMatches = sql<boolean>`"amendment_document_lexical_ranked"."text_matches"`
+  const page = database.$with("amendment_document_lexical_page").as(
+    database
+      .select({
+        documentId: rankedDocumentId.as("page_document_id"),
+        identifierMatches: rankedIdentifierMatches.as("identifier_matches"),
+        rank: rankedRank.as("rank"),
+        sectionId: rankedSectionId.as("section_id"),
+        textMatches: rankedTextMatches.as("text_matches")
+      })
+      .from(rankedCandidates)
+      .where(eq(rankedRowNumber, 1))
+      .orderBy(desc(rankedRank), asc(rankedDocumentId))
+      .limit(limit)
+  )
   const snippet = sql<string>`left(ts_headline('english', ${documentSections.text}, ${query}, 'MaxWords=35, MinWords=10, MaxFragments=1'), 1000)`
   return database
-    .with(documentCandidates, rankedCandidates)
+    .with(documentCandidates, rankedCandidates, page)
     .select({
       bill: bills,
       document: billDocuments,
-      identifierMatches: rankedIdentifierMatches,
-      rank: rankedRank,
+      identifierMatches: page.identifierMatches,
+      rank: page.rank,
       snippet,
-      textMatches: rankedTextMatches
+      textMatches: page.textMatches
     })
-    .from(rankedCandidates)
-    .innerJoin(billDocuments, eq(billDocuments.id, rankedDocumentId))
+    .from(page)
+    .innerJoin(billDocuments, eq(billDocuments.id, page.documentId))
     .innerJoin(bills, eq(bills.id, billDocuments.billId))
-    .innerJoin(documentSections, eq(documentSections.id, rankedSectionId))
-    .where(eq(rankedRowNumber, 1))
-    .orderBy(desc(rankedRank), asc(rankedDocumentId))
-    .limit(limit)
+    .innerJoin(documentSections, eq(documentSections.id, page.sectionId))
+    .orderBy(desc(page.rank), asc(page.documentId))
 }
 
 export function buildStructuredAmendmentLexicalQuery(

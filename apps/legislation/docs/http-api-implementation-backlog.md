@@ -104,6 +104,18 @@ agenda-item detail, outcome detail, calendar detail, and calendar meetings still
 lookup still requires its configured geography/provider gate. Global meetings and calendars also returned empty Pages.
 No new source or representative provider was enabled.
 
+September 11 search diagnosis: production plans selected sequential scans of `document_sections` for the broad
+lexical query `legislation`, despite a valid/ready 7,087 MB full-text GIN index. The planner estimated about 2.4 million
+matching sections before statistics refresh. Passage search carried rows approximately 1,140 bytes wide through its
+initial sort. Section search/document statistics were refreshed successfully (41 seconds); this alone did not close
+the timeout gates. Both query builders now select a narrow, exactly ranked page before loading full result metadata
+and snippets. No candidate sampling or response-contract change was introduced. Focused tests and live filtered
+old/new query parity passed; broad queries still exceeded the unchanged 15-second deadline in diagnostic execution.
+Transaction-local experiments with index scans and planner/memory settings did not establish a safe fix. One 64 MB
+work-memory experiment exhausted parallel shared memory and was rolled back; no global settings were changed.
+These two gates remain open. Rank-aware indexing or an explicitly approximate candidate contract requires a separate
+engineering decision; do not silently truncate candidates or claim that vector-index completion fixes lexical ranking.
+
 Fresh unfiltered lexical searches for `legislation` returned `503` for `/api/search/amendments` and
 `/api/search/passages`. Railway logs confirm PostgreSQL statement timeout for amendment search, not missing
 embeddings or a failed authentication challenge. Both operations are reopened as Blocked pending query diagnosis and
