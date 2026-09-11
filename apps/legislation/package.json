@@ -81,6 +81,7 @@
     "dev:service": "tsx watch src/cli/main.ts serve",
     "eval:embeddings": "tsx scripts/evaluate-embedding-canary.ts",
     "eval:text-index": "node --env-file=.env scripts/benchmark-text-index.mjs",
+    "eval:ranked-search": "node --env-file=.env --import tsx scripts/verify-ranked-section-search.ts",
     "eval:embeddings:bakeoff": "tsx scripts/run-embedding-bakeoff.ts",
     "eval:embeddings:build-bakeoff": "tsx scripts/build-embedding-bakeoff.ts",
     "eval:embeddings:build-judgments": "tsx scripts/build-embedding-judgment-pool.ts",

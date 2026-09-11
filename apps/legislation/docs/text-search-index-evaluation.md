@@ -1,7 +1,110 @@
 # Isolated ranked text-index evaluation
 
-September 11, 2026. Status: benchmark completed, production adoption **not approved or implemented**.
+September 11, 2026. Status: ranked-query implementation and isolated correctness canary completed;
+production schema, ingestion integration, API cutover and extension rollout **not implemented**.
 The two broad lexical timeout gates remain open. This does not change API acceptance counts.
+
+## Selected direction and current implementation
+
+Prefer an in-place ParadeDB index on `document_sections`, not a separate search service or a duplicate
+full-text projection. Native PostgreSQL still has to score/sort broad match sets: the additional exact
+per-document lateral amendment query hit PostgreSQL's existing 15-second deadline on September 11.
+An amendment-only GIN index would not solve global passage ranking. A separate engine introduces
+another corpus, synchronization, deletion handling and operational ownership.
+
+The implementation in `src/search/ranked-section-search.ts` is deliberately **not connected to the API**:
+
+- Index the existing heading/text expression; retain canonical section/document IDs.
+- Add derived document title and filter metadata to the same section row at rollout. These columns
+  currently exist only in the disposable canary, not the canonical or production schema.
+- Compile default AND, quoted phrases, OR and minus exclusions through `ranked-text-query.ts`.
+  Caller text cannot inject Tantivy operators, field selectors or SQL. Invalid grammar fails closed.
+- Use literal, case-sensitive indexed metadata and epoch-millisecond date ranges. All filter
+  predicates use `pdb.const(0)` so adding a filter cannot change a surviving result's relevance score.
+- Order by score descending and bytewise canonical IDs. For amendments, document ID precedes section
+  ID. Scan additional ranked batches until enough distinct documents are found; never truncate at an
+  arbitrary candidate limit. The first section for a document is its highest-scoring section.
+- Callers must hold a repeatable-read snapshot across batches and enforce a cumulative deadline.
+  The canary does both. The collector propagates errors instead of returning a falsely complete prefix.
+
+This is BM25 relevance, not numerical `ts_rank_cd` parity. Stemming/tokenization, stopword behavior,
+the explicit grammar and changed tie ordering require relevance acceptance before API cutover.
+Conjunction/phrase matching remains within one section or the title, never across unrelated sections.
+
+## Full-query correctness canary
+
+`pnpm eval:ranked-search` runs against a fresh, explicitly named `legislation_search_benchmark` database
+on a different host/port from `DATABASE_URL`. No extension is installed by the script. It creates its
+own temporary `legislation` schema and refuses to reuse an existing one. Fixtures roll back on exit.
+`--sample` additionally copies at most 10,000 public sections in read-only, 500-row source batches,
+adds nine synthetic copies with distinct canonical keys, commits the sample, measures in a fresh
+read-only repeatable-read transaction, and removes its own schema in cleanup.
+
+The second disposable Railway service was `legislation-search-canary`
+(`fc96e46e-7c9a-41cc-850f-3e418e3525be`), with successful deployment
+`0294b48e-4884-4c9e-8b6b-856daaaf4142`, image `paradedb/paradedb:0.25.9`.
+No production database writes, extension changes, restart or API deployment occurred.
+The canary service and its ephemeral data were deleted after verification; the local Railway link
+was restored to `legislation-web`. The sample is reproducible, but the deleted service is not recoverable.
+
+Live fixtures pass five grammar cases, thirteen filter cases, database-paged exact amendment grouping,
+and section text update, deletion, processing-status update and rollback checks. All seven positive
+filter combinations produce `TopKScanExecState` without `heap_filter`; surviving scores are unchanged.
+The checks caught and corrected three problems that a SQL-string-only test would miss:
+
+1. `AND NOT field:term` did not implement exclusions correctly; `AND -field:term` does.
+2. Ordinary JSON containment and numeric extraction filters used heap filtering, not index filtering.
+3. Direct SQL text equality filters contributed to BM25 scores; constant-zero indexed filters do not.
+
+Corrected, committed 100,000-row sample measurements (one observation, not latency percentiles):
+
+| Query | Passage server ms | Amendment section-page server ms | Exact 21-document collection incl. network ms | Batches |
+| --- | ---: | ---: | ---: | ---: |
+| legislation | 121.427 | 125.569 | 590.826 | 1 |
+| tax | 131.373 | 130.139 | 1613.970 | 2 |
+| education | 123.354 | 123.138 | 457.522 | 1 |
+| health | 122.744 | 133.980 | 448.574 | 1 |
+
+These are the fuller query shape, not the simplified benchmark below. They are **not evidence that
+15-million-section production queries meet the deadline**, nor a direct speedup comparison against
+the earlier simplified GIN test. The sample is canonical-ID ordered and synthetically repeated, not
+representative. Representative filters, cold/warm repetitions, concurrency, judged relevance and
+full-corpus cost/storage remain rollout gates.
+
+## Production rollout gates
+
+Read-only inspection confirms production PostgreSQL **18.6**, Debian 12 x86-64, pgvector **0.8.6**,
+empty `shared_preload_libraries`, and no available `pg_search` extension. Do not replace it blindly
+with the canary image or downgrade pgvector. A compatible production image and controlled restart
+are required; the temporary-service approval alone did not authorize that infrastructure cutover.
+
+- [x] Implement and test safe query compilation, indexed filters and exact grouping.
+- [x] Prove fixture correctness, score-neutral filters, index-plan shape and bounded sample execution.
+- [ ] Prepare a pinned PostgreSQL 18 / pgvector 0.8.6 image with matching pg_search binaries; verify
+      startup and existing extension compatibility in isolation. The official release supplies a
+      [Debian 12 PostgreSQL 18 package](https://github.com/paradedb/paradedb/releases/tag/v0.25.9),
+      `postgresql-18-pg-search_0.25.9-1PARADEDB-bookworm_amd64.deb`, published SHA-256
+      `8f70e992f03493dafe9f93d84781779625a23450c5eb85b6791501032d190bcb`. It has not been installed.
+- [ ] Agree on the production restart window and verify backup/restore. Extension activation is a
+      user-run step under the Railway operating policy, not an automated `CREATE EXTENSION`.
+      Only after the compatible image is available, preserve any existing preload entries, set
+      `shared_preload_libraries` to include `pg_search`, restart, then run `CREATE EXTENSION pg_search;`.
+      Do not run that command against the current image: the extension is unavailable.
+- [ ] Add canonical derived title/metadata columns and transactionally maintained section, document,
+      bill and sponsor update paths. Test concurrent parent/section changes; do not introduce an
+      eventually consistent outbox merely for same-database metadata.
+- [ ] Backfill in resumable bounded batches, check metadata integrity, then build the index with
+      adequate storage and no overlapping maintenance. Measure actual index footprint and write cost.
+- [ ] Integrate passage/amendment API candidate retrieval, hydration, match/snippet metadata, cursor
+      binding and the cumulative request deadline. Judge relevance against real queries.
+- [ ] Deploy and run authenticated full-corpus broad/scoped lexical and regression smoke tests.
+      Keep the previous application/native query deployment available for rollback. After creating
+      extension-backed indexes, an application rollback is not permission to remove their binaries.
+
+The implementation's 82 focused tests, service type-check, standalone canary type-check and scoped
+lint/format pass. `pnpm verify` passed its check stage but failed in the unrelated scoring scenario
+`rejects invalid foil classification provenance, ranges, bounds, and state pairings` (5-second test
+timeout). Repository verification is not green; neither production timeout gate is closed.
 
 ## Scope and reproducibility
 
