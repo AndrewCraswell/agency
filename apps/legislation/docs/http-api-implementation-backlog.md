@@ -25,8 +25,8 @@ handlers, and the current production deployment contains 88/88. Across all 88 op
 **Done** and 11 **Blocked**: nine production-data gates and two reproduced search timeouts. The shared Next.js API boundary verifies WorkOS bearer tokens and
 installs the derived request identity in reviewed local source. The deployed release records separate WorkOS authorities for
 M2M API tokens and AuthKit user-session tokens, plus both required encryption secrets. The 14 subscription/webhook
-operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Current source `5548045` is deployed as
-`57197853-4d0e-4072-8e9f-d27ca154adeb` with terminal `SUCCESS`. The following subscription and OCR evidence is historical acceptance, not a fresh rerun. The subscription
+operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Current source `ca1a976` plus upload exclusions `03d9dc9` is deployed as
+`6bfe6fc2-9045-4d90-b09d-f689fb80846a` with terminal `SUCCESS`. The following subscription and OCR evidence is historical acceptance, not a fresh rerun. The subscription
 smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch
 `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API database session
@@ -115,6 +115,22 @@ Transaction-local experiments with index scans and planner/memory settings did n
 work-memory experiment exhausted parallel shared memory and was rolled back; no global settings were changed.
 These two gates remain open. Rank-aware indexing or an explicitly approximate candidate contract requires a separate
 engineering decision; do not silently truncate candidates or claim that vector-index completion fixes lexical ranking.
+
+September 11 follow-up: the narrow-page release is now deployed successfully. Authenticated broad amendment and
+passage searches still return `503` in 15,818 ms and 15,242 ms respectively; a document-filtered passage query returns
+`200` with a nonempty result in 274 ms. Health, readiness, and the canonical lowercase `person:congress:m001245` lookup
+return `200`. A diagnostic uppercase identifier returned `404`, then the canonical identifier was verified.
+Even a match count without joins or ranking exceeded the deadline (one client read timeout, followed by a forced-index
+count cancelled by PostgreSQL after 15,211 ms). A serial, forced-index passage query with session-local 128 MB work
+memory and JIT disabled still timed out in 15,173 ms. All diagnostic settings were rolled back; no active diagnostic
+query remained. These results isolate expensive broad-match retrieval as well as ranking, rather than headline work
+alone. No sampling, ranking-contract change, extension installation, or global database tuning was applied.
+
+Deployment upload remediation: explicit `.railwayignore` exclusions reduced the compressed archive from 129,512,462
+to 1,886,250 bytes; the smaller upload succeeded. Generated output, local environment files, and evaluation artifacts
+are excluded, while the application source directory `src/coverage` remains included. Search-focused checks passed
+56 tests. `pnpm verify` passed its check stage but failed the unrelated scoring application's 100% coverage thresholds
+(lines 96.09%, functions 99.79%, statements 95.44%, branches 93.78%); repository verification is not green.
 
 Fresh unfiltered lexical searches for `legislation` returned `503` for `/api/search/amendments` and
 `/api/search/passages`. Railway logs confirm PostgreSQL statement timeout for amendment search, not missing

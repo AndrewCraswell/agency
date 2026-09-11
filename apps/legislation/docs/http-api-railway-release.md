@@ -29,11 +29,11 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `5548045` (API ingestion-contract readiness gate) |
-| Deployment | `57197853-4d0e-4072-8e9f-d27ca154adeb` |
+| Source snapshot commit | `ca1a976` plus the source-upload exclusions committed as `03d9dc9`; includes exact ranked pagination `600f348` |
+| Deployment | `6bfe6fc2-9045-4d90-b09d-f689fb80846a` |
 | Deployment status | `SUCCESS` |
-| Image | `sha256:114e972282d229b563a6eaa7a3c68ec9b59f9a0c473b11679755182f4e08fe7e` |
-| Previous rollback artifact | Reverify the immediately preceding immutable Railway artifact before any rollback |
+| Image | Retrieve the immutable image digest from this deployment before an image-based rollback; not recorded in this check |
+| Previous rollback artifact | `57197853-4d0e-4072-8e9f-d27ca154adeb`, previously verified `SUCCESS` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
