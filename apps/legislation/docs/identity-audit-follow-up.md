@@ -217,3 +217,26 @@ lock timeout and no row rewrite. Parsing errors now identify the Bioguide member
 Do not launch an overlapping identity wave. Verify the resulting people coverage, inspect any
 remaining missing identities, and smoke historical alias/identifier/website projection before closing item 3.
 The stopped Codex follow-up remains paused. No new source, MCP cutover, or rate limiter was introduced.
+
+The corrected importer shipped as Trigger `20260911.3` (`k3ajaw8t`) from pushed commits `13f6aa6` and `600f348`.
+Coordinator `run_06g92mg3gt79lp6ths8481q901` and child `run_06g92mh3pqqkreemn4hr18e901` both completed successfully:
+1,668 source requests, 12,378 people/term records processed, zero failures, Congresses 105–119 complete. Production
+now has 1,623 complete Congress profiles, aliases, and identifiers, with 544 published websites. The sole HTTP website
+is Christian D. Menefee (`M001245`), verified directly against Congress.gov as `http://menefee.house.gov/` and returned
+unchanged by the authenticated person-detail API. Brown and Abercrombie historical detail requests also returned
+source-backed records successfully. The earlier import failure was not limited to an old member's website.
+
+Do not confuse range completion with every stored person being hydrated: the database contains 2,135 Congress-prefixed
+identities, of which 512 still lack complete aliases/identifiers. Sample residuals include Abdnor, Abourezk, Adams,
+Addabbo, and Aiken, with null source-provider attribution. Their complete coverage has not been audited; no records were
+deleted or merged to hide the gap. The approved 105–119 population run is complete, while this residual is a separate
+remaining coverage question.
+
+Verification: 79 focused tests and service/web types passed; isolated legislation coverage passed 2,465 tests with
+61 skips, plus all four receiver tests. Full `pnpm verify` remains red in the unrelated scoring suite (including
+worker-termination/time-limit failures); it is not a green repository-wide result.
+
+API deployment attempts `a2a11fd4-23d6-4cb7-8730-1a95a106acbb` and `b7c1fe2c-b525-402d-98d4-a551bcb554f2`
+timed out during upload and remained `INITIALIZING`, without a build for the first attempt. The active successful API
+release remains `57197853-4d0e-4072-8e9f-d27ca154adeb`; the new search pagination code is committed/pushed but its API
+deployment is not verified. Do not label either search timeout gate closed.
