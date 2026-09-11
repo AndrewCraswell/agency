@@ -80,6 +80,7 @@
     "dev": "node scripts/next.mjs dev --webpack",
     "dev:service": "tsx watch src/cli/main.ts serve",
     "eval:embeddings": "tsx scripts/evaluate-embedding-canary.ts",
+    "eval:text-index": "node --env-file=.env scripts/benchmark-text-index.mjs",
     "eval:embeddings:bakeoff": "tsx scripts/run-embedding-bakeoff.ts",
     "eval:embeddings:build-bakeoff": "tsx scripts/build-embedding-bakeoff.ts",
     "eval:embeddings:build-judgments": "tsx scripts/build-embedding-judgment-pool.ts",
