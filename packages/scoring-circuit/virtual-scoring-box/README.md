@@ -53,11 +53,10 @@ circuits share `CORE_3V3`; the IR receiver retains its existing resistor/capacit
 low until the output is valid. A 10k output resistor provides a discharge path.
 
 The transformer enable has a default-off pull-down. Its protected 5V input and qualified-source/suspend enable are
-connected in the schematic to the USB-C power-control section; PCB routing is pending. Neither is tied directly to raw
-USB VBUS. USB_GND and scoring GND remain separate, including their copper pours. Only the affected piste trace segment
-was moved to the back layer to clear the new supply. Low-input-voltage operation, radio load steps, temperature,
-power-down time and system insulation still need bench verification. Component insulation ratings alone do not establish
-FIE compliance.
+connected through PCB copper to the USB-C power-control section. Neither is tied directly to raw USB VBUS. USB_GND and
+scoring GND remain separate, including their copper pours. Only the affected piste trace segment was moved to the back
+layer to clear the new supply. Low-input-voltage operation, radio load steps, temperature, power-down time and system
+insulation still need bench verification. Component insulation ratings alone do not establish FIE compliance.
 
 The bridge replaces the ISOUSB111. It can enumerate independently of the scoring processors and exposes `USB_AWAKE` from
 its active-low suspend output. A 10k pull-down keeps this signal low while reset leaves it floating. This gives the
@@ -74,25 +73,28 @@ ESP32 service header. Shared-source application updates need the board-specific 
 sequence-numbered messages with bounded queues and flow control in the protocol; hardware RTS/CTS and USB remote wake
 are not connected. The hardware bridge supports up to 3 Mbaud, but firmware throughput has not been validated.
 
-A first signal-routing pass, a scoring-side In1.Cu ground pour and a separate primary-side In2.Cu ground pour are
-present. The lower-left area contains the USB interface and isolated power stage. The 50 selected non-power/non-USB
-signal nets are only partially routed; ground-pad connections, USB pairs and power distribution remain unfinished. The
-ESP32 antenna extends beyond the top edge; antenna/enclosure clearance still needs review. This project does not inherit
-the combined board's verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D
-screenshot with each board-update checkpoint.
+All schematic connections are now routed. In1.Cu provides separate scoring and USB-side ground regions; In2.Cu carries
+the corresponding 3.3V pours and selected signal routes. Two low-current source-controller supply joins use In1.Cu in
+the control area, outside the USB data corridor. Raw VBUS and protected 5V use separate back-layer pours, with explicit
+eFuse input/output necks and bridges between separated copper regions. USB D+ stays on the front layer; D- has a short
+back-layer crossing with nearby ground stitching at both transitions. This is full-speed USB routing, not a measured USB
+compliance result. The lower-left area contains the USB interface and isolated power stage. The ESP32 antenna extends
+beyond the top edge; antenna/enclosure clearance still needs review. This project does not inherit the combined board's
+verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each
+board-update checkpoint.
 
-1. Complete power/USB routing and remaining processor/input connections. Check whether the same-rail UART translators
-   can be removed without changing reset behavior.
-2. Implement and test the virtual-board source-control configuration and serial adapter. Preserve 5V PD and advertised
+1. Implement and test the virtual-board source-control configuration and serial adapter. Preserve 5V PD and advertised
    Type-C current compatibility, independent bridge enumeration and wireless wall-charger operation. Finish the
    primary-side sleep-current and voltage/current tolerance review. Verify antenna clearance, connector access and every
    footprint/model. Board size is not frozen; the old 165 x 100mm layout is not this product.
-3. Run native checks and review the assembly BOM/placement before producing a supplier package. Validate real power,
-   input thresholds, USB and wireless behavior on assembled hardware before use with fencers.
+2. Review whether the same-rail UART translators can be removed without changing reset behavior, and review every
+   footprint/model and the assembly BOM/placement before producing a supplier package. R69, R74 and R77 were moved to
+   clear their ground/USB routing; component identities and pin nets are unchanged. Rerun native checks after changes.
+3. Validate real power, input thresholds, USB and wireless behavior on assembled hardware before use with fencers.
 
-USB data-interface placement, the isolated power stage and source-control hardware are implemented; primary routing and
-source-control firmware are not complete. Preserve the existing compatibility promise of advertised Type-C current at
-least 1.5A **or** a qualified 5V/1.5A PD contract unless the user approves narrowing it. A
+USB data-interface placement, the isolated power stage, source-control hardware and PCB routing are implemented;
+source-control firmware and assembly release are not complete. Preserve the existing compatibility promise of advertised
+Type-C current at least 1.5A **or** a qualified 5V/1.5A PD contract unless the user approves narrowing it. A
 direct-current-advertisement-only design could omit PD negotiation and the separate power-control processor, but that is
 an unapproved compatibility change, not the current specification. The smaller supply must power both STM32 and ESP32;
 the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings. No new
@@ -102,7 +104,7 @@ The power firmware must combine source qualification with the bridge's sleep sig
 scoring supply stays off; a source requiring USB suspend allows it only while USB is awake. Qualified sources exempt
 from USB suspend, including an appropriate wall charger, must support wireless operation without USB enumeration.
 Preserve the existing 5V PD compatibility; do not substitute a direct-Type-C-only policy. The hardware gate is now in
-the schematic; its routing and primary-side low-power firmware budget remain unfinished. PA4 outputs SOURCE_ALLOWED, PA5
+the schematic and routed; its primary-side low-power firmware budget remains unfinished. PA4 outputs SOURCE_ALLOWED, PA5
 outputs USB_SUSPEND_EXEMPT. PD alert, USB_AWAKE and RTC alarms support STOP-mode wakeup. A requested RDO exemption alone
 is not permission. The combined board's 20V/display policy and shallow-sleep adapter are not the finished firmware for
 this board.
@@ -110,15 +112,16 @@ this board.
 ## Current checkpoint checks
 
 KiCad netlist export contains **154 components**, including bare wire/service pads. ERC reports **zero findings**.
-Native DRC reports **zero copper/placement violations**, **zero schematic/PCB parity issues**, and **221 unconnected
-items**. The increase includes the new source-control section, which is placed but unrouted; no completed routing is
-claimed. Four obsolete ground taps and their unused vias were removed with the old USB isolator. An edge-specific ESP32
-footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are unchanged. The 0.2mm
-minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication constraint;
-it is not a waiver of assembly review.
+Native DRC reports **zero violations**, **zero schematic/PCB parity issues**, and **zero unconnected items**. Unused
+routing tails were removed. The rule floor is **0.15mm track / 0.15mm clearance**, with wider ordinary routes and power
+copper. This is above [JLCPCB's published multilayer 1oz trace/space minimum](https://jlcpcb.com/capabilities/Capab); it
+does not waive isolation, current-carrying capacity or assembly review. Local 0.5mm vias use 0.25mm drills. An
+edge-specific ESP32 footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are
+unchanged. The 0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing
+fabrication constraint; it is not a waiver of assembly review.
 
-The latest native render is `output/usb-power-control-3d.png`; generated reports and images are local, ignored outputs.
-This is an integration checkpoint, not a clean electrical/routing result or a final BOM.
+The latest native render is `output/routed-board-3d.png`; generated reports and images are local, ignored outputs. This
+is a clean native routing checkpoint, not a firmware release, bench result, final BOM or permission to order.
 
 The CP2102N footprint uses KiCad's Silicon Labs QFN20 land pattern and a retained, unmodified
 [KiCad StepUp package model](https://gitlab.com/kicad/libraries/kicad-packages3D/-/blob/6.0.11/Package_DFN_QFN.3dshapes/SiliconLabs_QFN-20-1EP_3x3mm_P0.5mm.step).
@@ -131,8 +134,8 @@ library/model paths changed. Its six-pad land pattern and pin ordering were chec
 [750315371 drawing](https://www.we-online.com/components/products/datasheet/750315371.pdf). The converter was checked
 against [SN6505B](https://www.ti.com/lit/ds/symlink/sn6505b.pdf),
 [TPS62162](https://www.ti.com/lit/ds/symlink/tps62162.pdf) and [SS14](https://www.vishay.com/docs/88746/ss12.pdf)
-manufacturer documentation. Local supply routing has no open internal transformer/rectifier/switching-node connections;
-whole-board power distribution and the reset/enable links remain open.
+manufacturer documentation. Supply, distribution and reset/enable connections have no remaining native connectivity
+findings. Physical startup, fault, suspend, load-step and temperature tests remain necessary.
 
 Source-control pin/function review uses [STUSB4500](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
 [STM32C011](https://www.st.com/resource/en/datasheet/stm32c011f4.pdf),
@@ -143,8 +146,8 @@ Source-control pin/function review uses [STUSB4500](https://www.st.com/resource/
 not the unrelated twenty-pin download reported in that thread. Its STEP assembly already supplies the seating transform;
 no extra rotation or height offset is applied.
 
-At the preceding routing checkpoint, repository verification used formatting in read-only `--check` mode to preserve
-other projects' active edits. Format, lint, types, unused-code and change checks passed. Coverage did not pass: the
-existing `apps/scoring/src/epee-state-machine-audit.test.ts` committed-source audit exceeded its 5000ms timeout. The
-scoring run reported 968 tests passed and one failed. Rerunning that audit alone passed all four tests; the whole
-coverage run is not claimed clean. No scoring firmware or simulator files were changed for this checkpoint.
+The routing checkpoint ran `pnpm verify`: format, lint, types, unused-code, change and circuit-simulation checks passed.
+All 47 scoring test files / 969 tests passed, but scoring coverage failed its global 100% gate: lines 96.09%, statements
+95.44%, branches 93.78%, functions 99.79%. This is not a clean repository verification result. No scoring firmware or
+simulator files were changed for this routing checkpoint; the coverage shortfall remains separate from the clean native
+PCB checks.
