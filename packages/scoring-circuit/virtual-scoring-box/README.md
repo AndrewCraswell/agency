@@ -27,9 +27,23 @@ no-connects. J3/J4/J5 are bare PCB wire-solder terminations, excluded from the p
 1.2mm drills and wire strain relief still need assembly review. Unused copied custom symbols and header footprints have
 been removed.
 
-The native PCB has **107 footprints** on a provisional **120 x 85mm, four-layer, 1.6mm** board. The USB interface uses
+The native PCB has **122 footprints** on a provisional **120 x 85mm, four-layer, 1.6mm** board. The USB interface uses
 GCT USB4105-GF-A, TPD2E2U06DCKR protection, a **CP2102N-A02-GQFN20R USB-to-UART bridge**, and an **ISO7021DR serial
-isolator**. TLV75533PDBVR supplies the laptop-side 3.3V rail. The scoring-side supply is not integrated yet.
+isolator**. TLV75533PDBVR currently supplies the laptop-side 3.3V rail; input protection must be completed before this
+5.5V-rated regulator can be exposed to a PD source.
+
+The isolated processor supply is implemented and locally routed: **SN6505BDBVR**, **Wurth 750315371** 1:1.1 transformer,
+two **SS14-E3/61T** rectifiers and **TPS62162DSGR** fixed-3.3V buck regulator. Both processors and the acquisition
+circuits share `CORE_3V3`; the IR receiver retains its existing resistor/capacitor supply filter. The design target is
+0.8A combined load, below the buck's 1A rating, not a measured whole-supply rating. The 2.2uH XAL5030-222MEC and two
+10uF output capacitors follow the regulator's recommended LC range. The regulator's power-good output holds STM32 reset
+low until the output is valid. A 10k output resistor provides a discharge path.
+
+The transformer enable has a default-off pull-down. Its protected 5V input and qualified-source/suspend enable still
+await the USB-C power-control section. Neither is tied directly to raw USB VBUS. USB_GND and scoring GND remain
+separate, including their copper pours. Only the affected piste trace segment was moved to the back layer to clear the
+new supply. Low-input-voltage operation, radio load steps, temperature, power-down time and system insulation still need
+bench verification. Component insulation ratings alone do not establish FIE compliance.
 
 The bridge replaces the ISOUSB111. It can enumerate independently of the scoring processors and exposes `USB_AWAKE` from
 its active-low suspend output. A 10k pull-down keeps this signal low while reset leaves it floating. This gives the
@@ -46,28 +60,27 @@ ESP32 service header. Shared-source application updates need the board-specific 
 sequence-numbered messages with bounded queues and flow control in the protocol; hardware RTS/CTS and USB remote wake
 are not connected. The hardware bridge supports up to 3 Mbaud, but firmware throughput has not been validated.
 
-A first signal-routing pass, a scoring-side In1.Cu ground pour and 59 short ground-pad taps are present. The pour and
-signal routing leave the lower-left primary-side power area clear. The 50 selected non-power/non-USB signal nets are
-only partially routed; ground-pad connections, USB pairs and power distribution remain unfinished. The ESP32 antenna
-extends beyond the top edge; antenna/enclosure clearance still needs review. This project does not inherit the combined
-board's verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each
-board-update checkpoint.
+A first signal-routing pass, a scoring-side In1.Cu ground pour and a separate primary-side In2.Cu ground pour are
+present. The lower-left area contains the USB interface and isolated power stage. The 50 selected non-power/non-USB
+signal nets are only partially routed; ground-pad connections, USB pairs and power distribution remain unfinished. The
+ESP32 antenna extends beyond the top edge; antenna/enclosure clearance still needs review. This project does not inherit
+the combined board's verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D
+screenshot with each board-update checkpoint.
 
-1. Integrate USB-C power/data and an appropriately sized isolated supply for **both** processors. The combined board's
-   laptop-mode application-power inhibition cannot be reused unchanged. Review source qualification, radio peak current,
-   suspend/recovery and wall-charger operation before choosing the supply. Do not automatically retain its 30W
-   converter.
+1. Complete USB-C source qualification, input protection and hardware suspend gating. Preserve 5V PD and advertised
+   Type-C current compatibility, independent bridge enumeration and wireless wall-charger operation. Check primary-side
+   sleep current and protect the bridge/regulator against incorrect or factory-default higher-voltage PD negotiation.
 2. Finish schematic/net review, power-section placement and routing. Verify antenna clearance, connector access and
    every footprint/model. Board size is not frozen; the old 165 x 100mm layout is not this product.
 3. Run native checks and review the assembly BOM/placement before producing a supplier package. Validate real power,
    input thresholds, USB and wireless behavior on assembled hardware before use with fencers.
 
-USB data-interface placement is implemented, but power is not integrated. Preserve the existing compatibility promise of
-advertised Type-C current at least 1.5A **or** a qualified 5V/1.5A PD contract unless the user approves narrowing it. A
-direct-current-advertisement-only design could omit PD negotiation and the separate power-control processor, but that is
-an unapproved compatibility change, not the current specification. The smaller supply must power both STM32 and ESP32;
-the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings. No new
-document/evidence validators or firmware forks are needed.
+USB data-interface placement and the isolated power stage are implemented, but power qualification is not. Preserve the
+existing compatibility promise of advertised Type-C current at least 1.5A **or** a qualified 5V/1.5A PD contract unless
+the user approves narrowing it. A direct-current-advertisement-only design could omit PD negotiation and the separate
+power-control processor, but that is an unapproved compatibility change, not the current specification. The smaller
+supply must power both STM32 and ESP32; the combined board's STM32-only laptop budget is insufficient. Do not suppress
+pending power/connection findings. No new document/evidence validators or firmware forks are needed.
 
 The next power implementation must combine source qualification with the bridge's sleep signal: no qualified source
 means the scoring supply stays off; a source requiring USB suspend allows it only while USB is awake. Qualified sources
@@ -77,21 +90,32 @@ primary-side low-power firmware budget remain unfinished.
 
 ## Current checkpoint checks
 
-KiCad netlist export contains 107 components. ERC has eight outstanding findings: USB_CC1 and USB_CC2 await the power
-section, and six power inputs are undriven. Native DRC reports **zero copper/placement violations**, **zero
-schematic/PCB parity issues**, and **133 unconnected items**. The increase includes new USB support connections; no
-completed routing is claimed. Four obsolete ground taps and their unused vias were removed with the old USB isolator. An
-edge-specific ESP32 footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are
-unchanged. The 0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing
-fabrication constraint; it is not a waiver of assembly review.
+KiCad netlist export contains 122 purchased/placed components plus power flags. ERC has three outstanding findings:
+USB_CC1 and USB_CC2 await the power-control section, and the protected 5V input is undriven. Flags identify actual
+passive power-entry, transformer/rectifier and filtered-rail sources; the unfinished protected input is not waived.
+Native DRC reports **zero copper/placement violations**, **zero schematic/PCB parity issues**, and **133 unconnected
+items**. The increase includes new USB support connections; no completed routing is claimed. Four obsolete ground taps
+and their unused vias were removed with the old USB isolator. An edge-specific ESP32 footprint clips only off-board
+silkscreen; its pads, manufacturer model and antenna keepout are unchanged. The 0.2mm minimum drill matches the retained
+ESP32 thermal-via footprint and the combined board's existing fabrication constraint; it is not a waiver of assembly
+review.
 
-The latest native render is `output/usb-bridge-3d.png`; generated reports and images are local, ignored outputs. This is
-an integration checkpoint, not a clean electrical/routing result or a final BOM.
+The latest native render is `output/isolated-supply-3d.png`; generated reports and images are local, ignored outputs.
+This is an integration checkpoint, not a clean electrical/routing result or a final BOM.
 
 The CP2102N footprint uses KiCad's Silicon Labs QFN20 land pattern and a retained, unmodified
 [KiCad StepUp package model](https://gitlab.com/kicad/libraries/kicad-packages3D/-/blob/6.0.11/Package_DFN_QFN.3dshapes/SiliconLabs_QFN-20-1EP_3x3mm_P0.5mm.step).
 The model retains its copyright and CC BY-SA 4.0 notice with the KiCad electronic-design exception. It is a package
 model, not a manufacturer assembly approval.
+
+T1 uses Wurth's exact manufacturer symbol, footprint and STEP model from the
+[WE-PPTI product library](https://www.we-online.com/en/components/products/WE-PPTI?sq=750315371), with only local
+library/model paths changed. Its six-pad land pattern and pin ordering were checked against the rendered
+[750315371 drawing](https://www.we-online.com/components/products/datasheet/750315371.pdf). The converter was checked
+against [SN6505B](https://www.ti.com/lit/ds/symlink/sn6505b.pdf),
+[TPS62162](https://www.ti.com/lit/ds/symlink/tps62162.pdf) and [SS14](https://www.vishay.com/docs/88746/ss12.pdf)
+manufacturer documentation. Local supply routing has no open internal transformer/rectifier/switching-node connections;
+whole-board power distribution and the reset/enable links remain open.
 
 At the preceding routing checkpoint, repository verification used formatting in read-only `--check` mode to preserve
 other projects' active edits. Format, lint, types, unused-code and change checks passed. Coverage did not pass: the

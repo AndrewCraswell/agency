@@ -1,11 +1,12 @@
-(kicad_sch (version 20250114)
+(kicad_sch
+(version 20250114)
 (generator "eeschema")
 (uuid 20cc8167-128c-446a-a106-f942323e143f)
 (paper "A3")
 (title_block (title "Virtual scoring box") (rev "Engineering draft") (comment 1 "Separate design - original prototype preserved"))
 (lib_symbols)
 (text "VIRTUAL SCORING BOX - ACQUISITION DRAFT" (at 30 20 0) (effects (font (size 3 3)) (justify left)) (uuid a137666f-e562-4a28-a43b-250287625019))
-(text "STM32 scoring + ESP32 wireless. Power and isolated USB integration pending.\nUnrouted placement study only: NOT FOR FABRICATION." (at 30 30 0) (effects (font (size 1.4 1.4)) (justify left)) (uuid 147e441a-8bb4-4de0-adb7-467be410c45d))
+(text "STM32 scoring + ESP32 wireless. USB bridge and isolated processor supply integrated.\nInput power qualification/protection and routing remain unfinished: NOT FOR FABRICATION." (at 30 30 0) (effects (font (size 1.4 1.4)) (justify left)) (uuid 147e441a-8bb4-4de0-adb7-467be410c45d))
 (sheet (at 155 55) (size 100 30) (stroke (width 0.2) (type default)) (fill (color 0 0 0 0)) (uuid edc47c5d-79f6-4e87-a428-cb43ded9ee70) (property "Sheetname" "STM32 acquisition, USB and standalone scoring" (at 155 53 0) (effects (font (size 1.2 1.2)) (justify left))) (property "Sheetfile" "acquisition-controller.kicad_sch" (at 155 87 0) (effects (font (size 1 1)) (justify left))) (instances (project "virtual-scoring-box" (path "/20cc8167-128c-446a-a106-f942323e143f" (page "3")))))
 (sheet (at 280 55) (size 100 30) (stroke (width 0.2) (type default)) (fill (color 0 0 0 0)) (uuid 418358c6-76d1-499d-a7fe-54e99505ae62) (property "Sheetname" "Left weapon acquisition" (at 280 53 0) (effects (font (size 1.2 1.2)) (justify left))) (property "Sheetfile" "left-weapon-inputs.kicad_sch" (at 280 87 0) (effects (font (size 1 1)) (justify left))) (instances (project "virtual-scoring-box" (path "/20cc8167-128c-446a-a106-f942323e143f" (page "4")))))
 (sheet (at 30 110) (size 100 30) (stroke (width 0.2) (type default)) (fill (color 0 0 0 0)) (uuid 3792934b-4036-4ce5-af62-f4d0f9047a22) (property "Sheetname" "Right weapon and piste acquisition" (at 30 108 0) (effects (font (size 1.2 1.2)) (justify left))) (property "Sheetfile" "right-and-piste-inputs.kicad_sch" (at 30 142 0) (effects (font (size 1 1)) (justify left))) (instances (project "virtual-scoring-box" (path "/20cc8167-128c-446a-a106-f942323e143f" (page "5")))))
@@ -14,6 +15,6 @@
 (sheet_instances (path "/" (page "1")))
 (embedded_fonts no)
 (sheet (at 30 165) (size 100 30) (stroke (width 0.2) (type default)) (fill (color 0 0 0 0)) (uuid f603805f-642d-41f5-af93-02e8d3a920f8) (property "Sheetname" "Acquisition reset defaults" (at 30 163 0) (effects (font (size 1.2 1.2)) (justify left))) (property "Sheetfile" "reset-defaults.kicad_sch" (at 30 197 0) (effects (font (size 1 1)) (justify left))) (instances (project "virtual-scoring-box" (path "/20cc8167-128c-446a-a106-f942323e143f" (page "8")))))
-
 (sheet (at 280 110) (size 100 30) (stroke (width 0.2) (type default)) (fill (color 0 0 0 0)) (uuid bd387e31-6da9-4a92-aed7-12491d1f9509) (property "Sheetname" "IR remote receiver" (at 280 108 0) (effects (font (size 1.2 1.2)) (justify left))) (property "Sheetfile" "ir-receiver.kicad_sch" (at 280 142 0) (effects (font (size 1 1)) (justify left))) (instances (project "virtual-scoring-box" (path "/20cc8167-128c-446a-a106-f942323e143f" (page "7")))))
+(sheet (at 280 165) (size 100 30) (stroke (width .2) (type default)) (fill (color 0 0 0 0)) (uuid daaa2508-48ed-4c8d-85a0-a75084637864) (property "Sheetname" "Isolated processor supply" (at 280 163 0) (effects (font (size 1.2 1.2)) (justify left))) (property "Sheetfile" "isolated-power.kicad_sch" (at 280 197 0) (effects (font (size 1 1)) (justify left))) (instances (project "virtual-scoring-box" (path "/20cc8167-128c-446a-a106-f942323e143f" (page "10")))))
 )
