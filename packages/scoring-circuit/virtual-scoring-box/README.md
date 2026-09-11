@@ -34,12 +34,12 @@ downstream pull-up-enable input and is tied to CORE_3V3, not treated as a suspen
 connections were reviewed against [TI's ISOUSB111 datasheet](https://www.ti.com/lit/ds/symlink/isousb111.pdf), including
 the rendered pin table.
 
-A first signal-routing pass and a scoring-side In1.Cu ground pour are present. The pour and signal routing leave the
-lower-left primary-side power area clear. The 50 selected non-power/non-USB signal nets are only partially routed;
-ground-pad connections, USB pairs and power distribution remain unfinished. The ESP32 antenna extends beyond the top
-edge; antenna/enclosure clearance still needs review. This project does not inherit the combined board's verification
-approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each board-update
-checkpoint.
+A first signal-routing pass, a scoring-side In1.Cu ground pour and 59 short ground-pad taps are present. The pour and
+signal routing leave the lower-left primary-side power area clear. The 50 selected non-power/non-USB signal nets are
+only partially routed; ground-pad connections, USB pairs and power distribution remain unfinished. The ESP32 antenna
+extends beyond the top edge; antenna/enclosure clearance still needs review. This project does not inherit the combined
+board's verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each
+board-update checkpoint.
 
 1. Integrate USB-C power/data and an appropriately sized isolated supply for **both** processors. The combined board's
    laptop-mode application-power inhibition cannot be reused unchanged. Review source qualification, radio peak current,
@@ -57,11 +57,16 @@ an unapproved compatibility change, not the current specification. The smaller s
 the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings. No new
 document/evidence validators or firmware forks are needed.
 
+The ISOUSB111 does not inherit the combined board's LTM2884 automatic isolated-power shutdown. Its whole-board
+PD-suspend power budget, including ESP32 and the isolated converter, remains unresolved. Do not finalize the power
+section or call the USB interface qualified until this is addressed. The direct Type-C current-advertisement-only
+alternative is awaiting a user decision; it has not been adopted.
+
 ## Current checkpoint checks
 
 KiCad netlist export contains 98 components. ERC has nine outstanding findings: USB_PRESENT, USB_CC1 and USB_CC2 await
 the power section, and six power inputs are undriven. Native DRC reports **zero copper/placement violations**, **zero
-schematic/PCB parity issues**, and **165 unconnected items**. This is not a clean routing result. An edge-specific ESP32
+schematic/PCB parity issues**, and **107 unconnected items**. This is not a clean routing result. An edge-specific ESP32
 footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are unchanged. The 0.2mm
 minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication constraint;
 it is not a waiver of assembly review.
@@ -72,4 +77,5 @@ This is an integration checkpoint, not a clean electrical/routing result or a fi
 Repository verification used the same checks with formatting in read-only `--check` mode to preserve other projects'
 active edits. Format, lint, types, unused-code and change checks passed. Coverage did not pass: the existing
 `apps/scoring/src/epee-state-machine-audit.test.ts` committed-source audit exceeded its 5000ms timeout. The scoring run
-reported 968 tests passed and one failed. No scoring firmware or simulator files were changed for this checkpoint.
+reported 968 tests passed and one failed. Rerunning that audit alone passed all four tests; the whole coverage run is
+not claimed clean. No scoring firmware or simulator files were changed for this checkpoint.
