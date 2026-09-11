@@ -27,12 +27,24 @@ no-connects. J3/J4/J5 are bare PCB wire-solder terminations, excluded from the p
 1.2mm drills and wire strain relief still need assembly review. Unused copied custom symbols and header footprints have
 been removed.
 
-The native PCB has **98 footprints** on a provisional **120 x 85mm, four-layer, 1.6mm** board. The USB interface uses
-GCT USB4105-GF-A, TPD2E2U06DCKR data-line protection, and an ISOUSB111DWR full-speed data isolator with local bypass
-capacitors. Both isolator sides use externally regulated 3.3V; their supplies are still pending. Pin 12 is the
-downstream pull-up-enable input and is tied to CORE_3V3, not treated as a suspend-status output. Pin mapping and supply
-connections were reviewed against [TI's ISOUSB111 datasheet](https://www.ti.com/lit/ds/symlink/isousb111.pdf), including
-the rendered pin table.
+The native PCB has **107 footprints** on a provisional **120 x 85mm, four-layer, 1.6mm** board. The USB interface uses
+GCT USB4105-GF-A, TPD2E2U06DCKR protection, a **CP2102N-A02-GQFN20R USB-to-UART bridge**, and an **ISO7021DR serial
+isolator**. TLV75533PDBVR supplies the laptop-side 3.3V rail. The scoring-side supply is not integrated yet.
+
+The bridge replaces the ISOUSB111. It can enumerate independently of the scoring processors and exposes `USB_AWAKE` from
+its active-low suspend output. A 10k pull-down keeps this signal low while reset leaves it floating. This gives the
+pending power circuit a hardware USB-sleep signal; it does **not** by itself qualify the source or complete the
+whole-board suspend budget. The isolator defaults to UART idle-high. Pinouts, supply arrangements and the QFN land
+pattern were reviewed against the rendered manufacturer drawings:
+[Silicon Labs CP2102N](https://www.silabs.com/documents/public/data-sheets/cp2102n-datasheet.pdf) and
+[TI ISO7021](https://www.ti.com/lit/ds/symlink/iso7021.pdf).
+
+The laptop link is STM32 **USART2, PA2 TX / PA15 RX, AF7**, separate from USART1 to ESP32 and SWD. PA11/PA12 native USB
+and the obsolete USB_PRESENT input are now explicitly unused. Desktop software needs the CP210x VCP driver and a serial
+transport adapter; native STM32 USB DFU is **not connected**. Initial programming/recovery remains through SWD and the
+ESP32 service header. Shared-source application updates need the board-specific serial adapter. Use framed,
+sequence-numbered messages with bounded queues and flow control in the protocol; hardware RTS/CTS and USB remote wake
+are not connected. The hardware bridge supports up to 3 Mbaud, but firmware throughput has not been validated.
 
 A first signal-routing pass, a scoring-side In1.Cu ground pour and 59 short ground-pad taps are present. The pour and
 signal routing leave the lower-left primary-side power area clear. The 50 selected non-power/non-USB signal nets are
@@ -57,25 +69,32 @@ an unapproved compatibility change, not the current specification. The smaller s
 the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings. No new
 document/evidence validators or firmware forks are needed.
 
-The ISOUSB111 does not inherit the combined board's LTM2884 automatic isolated-power shutdown. Its whole-board
-PD-suspend power budget, including ESP32 and the isolated converter, remains unresolved. Do not finalize the power
-section or call the USB interface qualified until this is addressed. The direct Type-C current-advertisement-only
-alternative is awaiting a user decision; it has not been adopted.
+The next power implementation must combine source qualification with the bridge's sleep signal: no qualified source
+means the scoring supply stays off; a source requiring USB suspend allows it only while USB is awake. Qualified sources
+exempt from USB suspend, including an appropriate wall charger, must support wireless operation without USB enumeration.
+Preserve the existing 5V PD compatibility; do not substitute a direct-Type-C-only policy. This hardware gate and the
+primary-side low-power firmware budget remain unfinished.
 
 ## Current checkpoint checks
 
-KiCad netlist export contains 98 components. ERC has nine outstanding findings: USB_PRESENT, USB_CC1 and USB_CC2 await
-the power section, and six power inputs are undriven. Native DRC reports **zero copper/placement violations**, **zero
-schematic/PCB parity issues**, and **107 unconnected items**. This is not a clean routing result. An edge-specific ESP32
-footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are unchanged. The 0.2mm
-minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication constraint;
-it is not a waiver of assembly review.
+KiCad netlist export contains 107 components. ERC has eight outstanding findings: USB_CC1 and USB_CC2 await the power
+section, and six power inputs are undriven. Native DRC reports **zero copper/placement violations**, **zero
+schematic/PCB parity issues**, and **133 unconnected items**. The increase includes new USB support connections; no
+completed routing is claimed. Four obsolete ground taps and their unused vias were removed with the old USB isolator. An
+edge-specific ESP32 footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are
+unchanged. The 0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing
+fabrication constraint; it is not a waiver of assembly review.
 
-The latest native render is `output/signal-routing-3d.png`; generated reports and images are local, ignored outputs.
-This is an integration checkpoint, not a clean electrical/routing result or a final BOM.
+The latest native render is `output/usb-bridge-3d.png`; generated reports and images are local, ignored outputs. This is
+an integration checkpoint, not a clean electrical/routing result or a final BOM.
 
-Repository verification used the same checks with formatting in read-only `--check` mode to preserve other projects'
-active edits. Format, lint, types, unused-code and change checks passed. Coverage did not pass: the existing
-`apps/scoring/src/epee-state-machine-audit.test.ts` committed-source audit exceeded its 5000ms timeout. The scoring run
-reported 968 tests passed and one failed. Rerunning that audit alone passed all four tests; the whole coverage run is
-not claimed clean. No scoring firmware or simulator files were changed for this checkpoint.
+The CP2102N footprint uses KiCad's Silicon Labs QFN20 land pattern and a retained, unmodified
+[KiCad StepUp package model](https://gitlab.com/kicad/libraries/kicad-packages3D/-/blob/6.0.11/Package_DFN_QFN.3dshapes/SiliconLabs_QFN-20-1EP_3x3mm_P0.5mm.step).
+The model retains its copyright and CC BY-SA 4.0 notice with the KiCad electronic-design exception. It is a package
+model, not a manufacturer assembly approval.
+
+At the preceding routing checkpoint, repository verification used formatting in read-only `--check` mode to preserve
+other projects' active edits. Format, lint, types, unused-code and change checks passed. Coverage did not pass: the
+existing `apps/scoring/src/epee-state-machine-audit.test.ts` committed-source audit exceeded its 5000ms timeout. The
+scoring run reported 968 tests passed and one failed. Rerunning that audit alone passed all four tests; the whole
+coverage run is not claimed clean. No scoring firmware or simulator files were changed for this checkpoint.
