@@ -21,14 +21,23 @@ paused.
 
 ## Current state and next work
 
-The schematic contains the two acquisition circuits, STM32, ESP32, input reset-default resistors and TSOP38438 IR
-receiver. Twenty-two standalone-only processor connections have been replaced with explicit no-connects. J3/J4/J5 are
-bare PCB wire-solder terminations, excluded from the purchased-parts BOM; their provisional 1.2mm drills and wire strain
-relief still need assembly review. Unused copied custom symbols and header footprints have been removed.
+The schematic contains the two acquisition circuits, STM32, ESP32, input reset-default resistors, TSOP38438 IR receiver,
+and a USB-C data interface. Twenty-two standalone-only processor connections have been replaced with explicit
+no-connects. J3/J4/J5 are bare PCB wire-solder terminations, excluded from the purchased-parts BOM; their provisional
+1.2mm drills and wire strain relief still need assembly review. Unused copied custom symbols and header footprints have
+been removed.
 
-The native PCB has an initial placement of 90 footprints on a provisional **120 x 85mm, four-layer, 1.6mm** board. It
-has no tracks or planes, and the power/USB circuit is not yet included. The ESP32 antenna extends beyond the top edge;
-antenna/enclosure clearance still needs review. This project does not inherit the combined board's verification
+The native PCB has **98 footprints** on a provisional **120 x 85mm, four-layer, 1.6mm** board. The USB interface uses
+GCT USB4105-GF-A, TPD2E2U06DCKR data-line protection, and an ISOUSB111DWR full-speed data isolator with local bypass
+capacitors. Both isolator sides use externally regulated 3.3V; their supplies are still pending. Pin 12 is the
+downstream pull-up-enable input and is tied to CORE_3V3, not treated as a suspend-status output. Pin mapping and supply
+connections were reviewed against [TI's ISOUSB111 datasheet](https://www.ti.com/lit/ds/symlink/isousb111.pdf), including
+the rendered pin table.
+
+A first signal-routing pass and a scoring-side In1.Cu ground pour are present. The pour and signal routing leave the
+lower-left primary-side power area clear. The 50 selected non-power/non-USB signal nets are only partially routed;
+ground-pad connections, USB pairs and power distribution remain unfinished. The ESP32 antenna extends beyond the top
+edge; antenna/enclosure clearance still needs review. This project does not inherit the combined board's verification
 approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each board-update
 checkpoint.
 
@@ -41,20 +50,26 @@ checkpoint.
 3. Run native checks and review the assembly BOM/placement before producing a supplier package. Validate real power,
    input thresholds, USB and wireless behavior on assembled hardware before use with fencers.
 
-Power and USB are not yet integrated. Do not suppress the resulting ERC findings to present this draft as complete. No
-new document/evidence validators or firmware forks are needed.
+USB data-interface placement is implemented, but power is not integrated. Preserve the existing compatibility promise of
+advertised Type-C current at least 1.5A **or** a qualified 5V/1.5A PD contract unless the user approves narrowing it. A
+direct-current-advertisement-only design could omit PD negotiation and the separate power-control processor, but that is
+an unapproved compatibility change, not the current specification. The smaller supply must power both STM32 and ESP32;
+the combined board's STM32-only laptop budget is insufficient. Do not suppress pending power/connection findings. No new
+document/evidence validators or firmware forks are needed.
 
-## Placement checkpoint checks
+## Current checkpoint checks
 
-KiCad netlist export contains 90 components. ERC has seven outstanding findings: USB_DM, USB_DP and USB_PRESENT are
-unconnected to the pending USB section, and four power inputs are undriven. The placement check has no schematic/PCB
-parity errors or component overlaps. It still reports 229 unrouted connections and two ESP32 silkscreen/edge warnings.
-The 0.2mm minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication
-constraint; it is not a waiver of assembly review.
+KiCad netlist export contains 98 components. ERC has nine outstanding findings: USB_PRESENT, USB_CC1 and USB_CC2 await
+the power section, and six power inputs are undriven. Native DRC reports **zero copper/placement violations**, **zero
+schematic/PCB parity issues**, and **165 unconnected items**. This is not a clean routing result. An edge-specific ESP32
+footprint clips only off-board silkscreen; its pads, manufacturer model and antenna keepout are unchanged. The 0.2mm
+minimum drill matches the retained ESP32 thermal-via footprint and the combined board's existing fabrication constraint;
+it is not a waiver of assembly review.
 
-The latest native render is `output/placement-3d.png`; generated reports and images are local, ignored outputs. This is
-an integration checkpoint, not a clean electrical/routing result or a final BOM.
+The latest native render is `output/signal-routing-3d.png`; generated reports and images are local, ignored outputs.
+This is an integration checkpoint, not a clean electrical/routing result or a final BOM.
 
-Repository verification reached coverage but did not pass: the existing scoring simulator rebuild integration test
-(`apps/scoring/src/observatory-integration.test.ts:126`) exceeded its 5000ms timeout. The scoring run reported 968 tests
-passed and one failed; no simulator files were changed for this board checkpoint.
+Repository verification used the same checks with formatting in read-only `--check` mode to preserve other projects'
+active edits. Format, lint, types, unused-code and change checks passed. Coverage did not pass: the existing
+`apps/scoring/src/epee-state-machine-audit.test.ts` committed-source audit exceeded its 5000ms timeout. The scoring run
+reported 968 tests passed and one failed. No scoring firmware or simulator files were changed for this checkpoint.
