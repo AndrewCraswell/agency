@@ -187,8 +187,9 @@ acceptance for these changes is tracked below.
 Commit `6201055` was pushed and deployed as Trigger `20260911.1` (`6ejl9t6f`, 26 tasks). Production canary
 `run_06g91rprq88c48dvn7c1d8eb01` released the old fixed cutoff and advanced the watermark from September 4 to
 September 8. Both upstream failures (111/S/3605 and 113/S/1997) remain explicit retry entries; no source records were
-fabricated. The next scan began at September 8 20:22 UTC through September 11 14:47 UTC. Terminal fresh-scan
-completion remains pending, but the failed-record isolation and forward scan handoff are verified in production.
+fabricated. The next scan began at September 8 20:22 UTC through September 11 14:47 UTC. The coordinator subsequently
+completed all six recurring scopes; the checkpoint advanced through September 11 15:28 UTC with no pending scan.
+By 16:10 UTC, 119/HR/1004 had recovered, leaving only the two upstream MemberTerm errors in the retry ledger.
 
 The identity audit also verified Congress.gov's live `officialWebsiteUrl` field using member `L000491`. The importer
 previously read `officialUrl`, silently losing the published website. The source parser and regression input now use
@@ -204,9 +205,15 @@ again failed on the unrelated scoring observatory timeout.
 
 As of the September 11 follow-up, item 1's isolation and forward handoff are accepted and item 4's API-ledger
 reconciliation is complete (77 accepted, nine data gates, two search timeouts). Item 3's historical population is
-**not complete**: production still has Congress aliases/identifiers for 555 of 1,623 Congress-backed people. The active
-recurring coordinator above owns the shared request budget; do not launch an overlapping identity wave. Once it is
-terminal and no other Congress wave is active, run the deployed coordinator with `kind: "entities"`,
-`startCongress: 105`, `endCongress: 119`, and a new idempotency key. Verify the resulting people coverage, inspect any
+**not complete**: the last completed population audit had Congress aliases/identifiers for 555 of 1,623 Congress-backed
+people. After confirming no active Congress wave, the identity-only coordinator was launched as
+`run_06g92gni459kkd7i3g6vnhqk01` with `kind: "entities"`, `startCongress: 105`, `endCongress: 119`, and idempotency key
+`historical-identity-population-105-119-20260911`. Its child is `run_06g92gnpa4ehabsdr958llei01`.
+That attempt failed closed on the HTTPS-only `officialWebsiteUrl` parser before replacing the snapshot. The parser
+and person-details constraint now accept HTTP/HTTPS official-site metadata without rewriting the source URL;
+unsafe schemes remain rejected, and Congress API provenance/fetch rules remain HTTPS-only. The baseline migration
+and schema snapshot match the corrected constraint, which was applied and validated in production with a two-second
+lock timeout and no row rewrite. Parsing errors now identify the Bioguide member to make future source defects actionable.
+Do not launch an overlapping identity wave. Verify the resulting people coverage, inspect any
 remaining missing identities, and smoke historical alias/identifier/website projection before closing item 3.
 The stopped Codex follow-up remains paused. No new source, MCP cutover, or rate limiter was introduced.

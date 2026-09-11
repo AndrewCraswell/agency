@@ -143,6 +143,38 @@ describe("Congress entity normalization", () => {
     expect(result.terms[0]).toMatchObject({ provenanceComplete: false, sourceIsOfficial: false })
   })
 
+  it.each(["http://example.house.gov/", "https://example.house.gov/"])("preserves published website %s", (website) => {
+    const result = normalizeCongressMemberDetails(
+      [
+        {
+          member: { bioguideId: "G000607", name: "Gallagher, Mike" },
+          detail: { bioguideId: "G000607", currentMember: false, officialWebsiteUrl: website }
+        }
+      ],
+      118,
+      organizationContext
+    )
+    expect(result.personDetails?.[0]?.officialUrl).toBe(website)
+  })
+
+  it.each(["javascript:alert(1)", "file:///etc/passwd", "ftp://example.test/file"])(
+    "rejects unsafe website %s with member identity",
+    (website) => {
+      expect(() =>
+        normalizeCongressMemberDetails(
+          [
+            {
+              member: { bioguideId: "G000607", name: "Gallagher, Mike" },
+              detail: { bioguideId: "G000607", currentMember: false, officialWebsiteUrl: website }
+            }
+          ],
+          118,
+          organizationContext
+        )
+      ).toThrow("Invalid Congress member detail for G000607")
+    }
+  )
+
   it("hydrates member profile and titled terms from the official detail record", () => {
     const result = normalizeCongressMemberDetails(
       [

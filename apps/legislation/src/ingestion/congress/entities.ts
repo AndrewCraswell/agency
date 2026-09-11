@@ -15,6 +15,12 @@ const optionalHttpsUrl = z.preprocess(
   (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
   z.url({ protocol: /^https$/ }).optional()
 )
+// Historical official-site metadata can legitimately predate HTTPS. This is
+// displayed source metadata, not the URL used to fetch the Congress API.
+const optionalWebsiteUrl = z.preprocess(
+  (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
+  z.url({ protocol: /^https?$/ }).optional()
+)
 const optionalInteger = z.preprocess((value) => (value === null ? undefined : value), z.number().int().optional())
 const optionalDistrict = z.preprocess(
   (value) => (value === null ? undefined : value),
@@ -52,7 +58,7 @@ const memberDetailSchema = z
     directOrderName: optionalString,
     invertedOrderName: optionalString,
     lastName: optionalString,
-    officialWebsiteUrl: optionalHttpsUrl,
+    officialWebsiteUrl: optionalWebsiteUrl,
     terms: z.array(memberDetailTermSchema).default([]),
     updateDate: optionalIsoDateTime
   })
@@ -187,10 +193,16 @@ export function normalizeCongressMemberDetails(
   context: CongressEntityContext
 ): CongressEntitySnapshot {
   const federalJurisdictionId = jurisdictionId("us")
-  const normalized = inputs.map(({ detail, member }) => ({
-    detail: memberDetailSchema.parse(detail),
-    member: memberSchema.parse(member)
-  }))
+  const normalized = inputs.map(({ detail, member }) => {
+    const parsedMember = memberSchema.parse(member)
+    const parsedDetail = memberDetailSchema.safeParse(detail)
+    if (!parsedDetail.success) {
+      throw new Error(`Invalid Congress member detail for ${parsedMember.bioguideId}: ${parsedDetail.error.message}`, {
+        cause: parsedDetail.error
+      })
+    }
+    return { detail: parsedDetail.data, member: parsedMember }
+  })
   const people: PersonInsert[] = []
   const personAliases: EntitySnapshot["personAliases"] = []
   const personExternalIdentifiers: NonNullable<EntitySnapshot["personExternalIdentifiers"]> = []

@@ -7331,7 +7331,7 @@
         },
         "person_details_official_url_check": {
           "name": "person_details_official_url_check",
-          "value": "\"legislation\".\"person_details\".\"official_url\" is null or \"legislation\".\"person_details\".\"official_url\" ~ '^https://'"
+          "value": "\"legislation\".\"person_details\".\"official_url\" is null or \"legislation\".\"person_details\".\"official_url\" ~ '^https?://'"
         },
         "person_details_public_email_check": {
           "name": "person_details_public_email_check",

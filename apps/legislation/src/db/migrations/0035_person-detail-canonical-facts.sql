@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS "legislation"."person_details" (
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "person_details_provenance_complete_check" CHECK (not "provenance_complete" or ("source_url" is not null and "source_url" ~ '^https://' and "source_provider" is not null and length(btrim("source_provider")) > 0 and "source_retrieved_at" is not null and "source_is_official" is not null)),
   CONSTRAINT "person_details_image_url_check" CHECK ("image_url" is null or "image_url" ~ '^https://'),
-  CONSTRAINT "person_details_official_url_check" CHECK ("official_url" is null or "official_url" ~ '^https://'),
+  CONSTRAINT "person_details_official_url_check" CHECK ("official_url" is null or "official_url" ~ '^https?://'),
   CONSTRAINT "person_details_public_email_check" CHECK ("public_email" is null or length(btrim("public_email")) > 0)
 );
 

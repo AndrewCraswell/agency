@@ -319,7 +319,10 @@ export const personDetails = legislationSchema.table(
       sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
     check("person_details_image_url_check", sql`${table.imageUrl} is null or ${table.imageUrl} ~ '^https://'`),
-    check("person_details_official_url_check", sql`${table.officialUrl} is null or ${table.officialUrl} ~ '^https://'`),
+    check(
+      "person_details_official_url_check",
+      sql`${table.officialUrl} is null or ${table.officialUrl} ~ '^https?://'`
+    ),
     check(
       "person_details_public_email_check",
       sql`${table.publicEmail} is null or length(btrim(${table.publicEmail})) > 0`
