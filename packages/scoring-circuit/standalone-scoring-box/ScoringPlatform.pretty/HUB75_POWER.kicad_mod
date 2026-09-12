@@ -7,7 +7,7 @@
 		(at 0 -3 270)
 		(layer "F.SilkS")
 		(hide yes)
-		(uuid "02f75969-e1f9-4bc2-a969-35af66b6eb1a")
+		(uuid "95362ad4-35e5-480c-b8fc-510ea377490f")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -19,7 +19,7 @@
 		(at 0 3 270)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "417ccfd7-3664-4b62-871b-d123f33ac3c0")
+		(uuid "45cd2fc9-3d91-4bc8-9575-2e9ecaa6d32e")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -31,7 +31,7 @@
 		(at 0 0 270)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "7fb20450-b82f-4e4c-88e2-8e590c729902")
+		(uuid "d2c9f820-4b6a-4cad-b84d-30b7d2662913")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -43,7 +43,7 @@
 		(at 0 0 270)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "068fd7a4-645e-4e5f-a49c-993507d09173")
+		(uuid "c5ca5cf0-8684-4638-be2c-5c7359cb5cef")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -55,7 +55,7 @@
 		(at 0 0 270)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "2f154e20-7ab1-247f-2477-971e31c1f643")
+		(uuid "c1027a11-1bf2-40b1-8bb2-6b3c5eb74a73")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -73,16 +73,27 @@
 		)
 		(fill no)
 		(layer "F.CrtYd")
-		(uuid "ef3e0dca-582c-4174-a307-7dae50c42a9e")
+		(uuid "ba852fef-a87c-4bb8-9faa-384465bf9d5e")
 	)
 	(fp_text user "HUB75 5V"
 		(at 0 -4.6 0)
 		(layer "F.SilkS")
-		(uuid "a2b2e61a-da17-44e9-bf5c-3f0e4c7ea8c8")
+		(uuid "42538426-8d2e-4f98-ac54-01579195104f")
 		(effects
 			(font
 				(size 0.8 0.8)
 				(thickness 0.15)
+			)
+		)
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 -3 0)
+		(layer "F.Fab")
+		(uuid "05f78478-30c5-4d9a-9823-580f4d8bac27")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.12)
 			)
 		)
 	)
@@ -92,7 +103,7 @@
 		(drill 1.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "454bc940-4cbb-4a61-213d-a1fe70c971a3")
+		(uuid "ab4e687d-7686-4bcc-8e4e-9f02c494487e")
 	)
 	(pad "2" thru_hole rect
 		(at -1.98 0)
@@ -100,7 +111,7 @@
 		(drill 1.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "44d41ecc-0c50-80d4-5d75-207451663fec")
+		(uuid "9fe6cbf4-f791-4a78-a237-c721e4c6739c")
 	)
 	(pad "3" thru_hole rect
 		(at 1.98 0)
@@ -108,7 +119,7 @@
 		(drill 1.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "2eca04ee-7fee-a48e-2eec-bbd22237e3ce")
+		(uuid "dfd0a6cd-01c3-4216-b12c-6c60092faa81")
 	)
 	(pad "4" thru_hole rect
 		(at 5.94 0)
@@ -116,7 +127,7 @@
 		(drill 1.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "4611a9a0-27e7-42bf-6a1f-d0e203d91b7d")
+		(uuid "3f083548-1e35-461c-abdc-48ec281dfedc")
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/../assets/cad/wurth-645004114822.step"

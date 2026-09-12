@@ -7,7 +7,7 @@
 		(at 0 -3 180)
 		(layer "F.SilkS")
 		(hide yes)
-		(uuid "a4a9e4b3-6ffa-4165-b41a-550aaa4c2b3e")
+		(uuid "bca1fe77-b2b9-4625-83f3-d2c4b1b6c1cc")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -19,7 +19,7 @@
 		(at 0 3 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "67609ca3-d7d8-436a-aa24-73a568732b6d")
+		(uuid "075474c2-00c5-4e53-bbb8-ce90148fcf5b")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -31,7 +31,7 @@
 		(at 0 0 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "015f6f67-3365-46ad-96f5-63c7d3da9185")
+		(uuid "68ce827c-7c91-4c85-8b89-4ddd0a9fc68e")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -43,7 +43,7 @@
 		(at 0 0 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "111c5191-840f-4182-b53f-caae2bc2b9b2")
+		(uuid "ebfd60e3-3b63-47d5-a2fa-b8c3da6e70e5")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -55,7 +55,7 @@
 		(at 0 0 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "12ba0440-68f3-91a1-40d2-e0fe1566ac63")
+		(uuid "9610b49f-311f-4e31-94a3-08c49df06154")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -73,7 +73,18 @@
 		)
 		(fill no)
 		(layer "F.CrtYd")
-		(uuid "56c926fe-eaf0-415b-afa1-95a8ca575425")
+		(uuid "72789da4-8a61-4763-a997-f466991193f7")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 -3 0)
+		(layer "F.Fab")
+		(uuid "c6857a71-2ce2-4c51-ab5e-3241f5af39e1")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.12)
+			)
+		)
 	)
 	(pad "1" thru_hole rect
 		(at -2.54 0)
@@ -81,7 +92,7 @@
 		(drill 1.1)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "4c770d20-2181-df3f-7085-3462028c4803")
+		(uuid "709eea47-5ccc-4ad2-bec5-0f75b46112fa")
 	)
 	(pad "2" thru_hole rect
 		(at 0 0)
@@ -89,7 +100,7 @@
 		(drill 1.1)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "1e65da80-08fe-1c7f-0c69-a18221d15f83")
+		(uuid "c3053c44-2b38-445a-981c-3bd1b6b041d3")
 	)
 	(pad "3" thru_hole rect
 		(at 2.54 0)
@@ -97,7 +108,7 @@
 		(drill 1.1)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "69844720-0474-a53f-726d-919e1f998203")
+		(uuid "5e0348af-9f1f-4fe3-bb60-c34d92d1d835")
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/../assets/cad/tsop384xx.step"

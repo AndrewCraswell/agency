@@ -3,7 +3,7 @@
 (generator "eeschema")
 (uuid 95251ad8-e338-4d8f-a50b-ff3c23d840b3)
 (paper "A3")
-(title_block (title "Standalone scoring box") (rev "Placement draft"))
+(title_block (title "Standalone scoring box") (rev "Routed review"))
 (lib_symbols)
 (text "FENCING CLUB - STANDALONE SCORING BOX\nSTM32 scoring / ESP32 application / HUB75 / Ethernet / IR / FA-05 / audio\nUSB-C is POWER ONLY. Initial placement: copper routing and power verification pending." (at 25 18 0) (effects (font (size 1.5 1.5)) (justify left)) (uuid 2fc5a65a-a6a5-4090-aba3-76401af004be))
 (sheet (at 25 55) (size 110 30) (stroke (width 0.2) (type default)) (fill (color 0 0 0 0)) (uuid 418358c6-76d1-499d-a7fe-54e99505ae62) (property "Sheetname" "Left fencer acquisition" (at 25 53 0) (effects (font (size 1.1 1.1)) (justify left))) (property "Sheetfile" "left-weapon-inputs.kicad_sch" (at 25 87 0) (effects (font (size 1 1)) (justify left))) (instances (project "standalone-scoring-box" (path "/95251ad8-e338-4d8f-a50b-ff3c23d840b3" (page "2")))))

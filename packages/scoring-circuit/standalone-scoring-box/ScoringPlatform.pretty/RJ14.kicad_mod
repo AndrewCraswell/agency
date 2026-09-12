@@ -7,7 +7,7 @@
 		(at 0 -3 180)
 		(layer "F.SilkS")
 		(hide yes)
-		(uuid "e03e807a-8fbb-49ee-9f00-3622696eb108")
+		(uuid "73c88d83-21d1-455d-aeb9-c7df3590d5ef")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -19,7 +19,7 @@
 		(at 0 3 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "a0662458-a658-4fe4-bd4e-3bb7eca01a8a")
+		(uuid "90aca5a6-1336-4484-add6-1035eb452b80")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -31,7 +31,7 @@
 		(at 0 0 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "4f3a1b01-c35e-45ea-a47c-5086e62a9fe8")
+		(uuid "cd85a2bf-eb3d-4d19-913e-142157c3b21c")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -43,7 +43,7 @@
 		(at 0 0 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "5936c100-cafb-46f1-b611-afb40df8ea7f")
+		(uuid "a6fffed0-4871-4c9e-af2e-f5fbcc41229a")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -55,7 +55,7 @@
 		(at 0 0 180)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "5b91b0c0-527a-0481-0085-b9c2516e90fd")
+		(uuid "dea6af5f-4df2-40a5-9007-f1381c2ac4b5")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -73,15 +73,26 @@
 		)
 		(fill no)
 		(layer "F.CrtYd")
-		(uuid "62a44792-01ff-4b8f-9c04-ee03ff15be28")
+		(uuid "6344b5bf-260e-4abe-aa69-d0f7e08d78cf")
 	)
 	(fp_text user "FA-05 DATA"
 		(at 0 9.5 0)
 		(layer "F.SilkS")
-		(uuid "5961ae60-bd48-43ae-b05e-197f25e0bab6")
+		(uuid "2f0328f4-779d-45e1-b33e-8ad15c7c32cf")
 		(effects
 			(font
 				(size 0.9 0.9)
+				(thickness 0.15)
+			)
+		)
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 5 0)
+		(layer "F.Fab")
+		(uuid "ec4113f2-62ad-44cd-8e6b-496d48e4352e")
+		(effects
+			(font
+				(size 1 1)
 				(thickness 0.15)
 			)
 		)
@@ -91,14 +102,14 @@
 		(size 3.25 3.25)
 		(drill 3.25)
 		(layers "*.Cu" "*.Mask")
-		(uuid "acbb5790-be8a-4aa6-82c9-2ee62ffb97ae")
+		(uuid "da3abc2e-e88a-45d8-b30f-08781b5f5545")
 	)
 	(pad "" np_thru_hole circle
 		(at 5.08 3.9825 180)
 		(size 3.25 3.25)
 		(drill 3.25)
 		(layers "*.Cu" "*.Mask")
-		(uuid "a374fd24-e5fa-4619-b71a-49aaeac70368")
+		(uuid "a3f47692-5f4e-4e40-be7f-06f73d32eef3")
 	)
 	(pad "2" thru_hole circle
 		(at -1.905 -2.3675 180)
@@ -106,7 +117,7 @@
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "0ebb6380-6df9-eedf-32c7-85c22c77059d")
+		(uuid "0853adc9-e91b-4eee-8de3-5c3b5bfba641")
 	)
 	(pad "3" thru_hole circle
 		(at -0.635 -4.9075 180)
@@ -114,7 +125,7 @@
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "0cd2a7a0-413b-2381-75a3-9f6255f3e4bd")
+		(uuid "9b3e8a91-7cfb-40f2-9ad7-87ba29efb30a")
 	)
 	(pad "4" thru_hole circle
 		(at 0.635 -2.3675 180)
@@ -122,7 +133,7 @@
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "5d8f90a0-2927-14bf-0b41-67223fa9e303")
+		(uuid "f9b34283-2e44-4904-814e-10a6f0a1dc08")
 	)
 	(pad "5" thru_hole circle
 		(at 1.905 -4.9075 180)
@@ -130,7 +141,7 @@
 		(drill 0.9)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "76c26f0c-155a-730c-4c0d-88f4528a7b0c")
+		(uuid "ba70d813-5ca0-4f71-b515-8569e39e885a")
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/../assets/cad/te-5520250-2-rj14.step"

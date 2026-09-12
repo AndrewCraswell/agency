@@ -12,13 +12,14 @@ terminations**. The combined design had 223 purchased parts; the reduction is 24
 
 **This is a routed engineering checkpoint, not an order-ready board.** Changed circuits have new routing; unchanged
 local circuits were reused only with matching pad positions and net assignments. Insulation and antenna keepouts remain.
-Power qualification, the factory programming handoff and manufacturing review below are still required. CAD checks do
-not establish electrical performance or FIE approval.
+The power desk review and factory programming procedure are supplied in [power-handoff.md](power-handoff.md). Physical
+power qualification and manufacturing review below are still required. CAD checks do not establish electrical
+performance or FIE approval.
 
 KiCad 10.0.6 verification on **2026-09-12**: **0 ERC violations, 0 DRC violations, 0 unconnected items and 0
-schematic/PCB mismatches**. Both checks were run with failure-on-violation enabled. The initial placement had 499
-unconnected items. Final routing cleanup simplified 36 signal runs from 148 segments to 72, in addition to removing
-obsolete copper ends; no component or required signal was removed.
+schematic/PCB mismatches** under the project's enabled rules. Both checks were run with failure-on-violation enabled.
+The initial placement had 499 unconnected items. Final routing cleanup simplified 36 signal runs from 148 segments to
+72, in addition to removing obsolete copper ends; no component or required signal was removed.
 
 The native 3D preview is generated in `output/board-top-3d.png`; copper-layer views are in `output/layers/`. J13's exact
 Ethernet model reference remains unavailable in the installed library. Its footprint and reserved connector area are
@@ -84,9 +85,15 @@ The standalone board removes LTM2884 isolated laptop USB, LTC3130 laptop supply,
 diodes, and the STM32C011 source-mode controller. U22 **TPS70933DBVR** and two capacitors provide the small primary-side
 3.3V supply for status and I2C pull-ups. EN is intentionally open using its internal pull-up, not tied to raw VBUS.
 
-**Factory configuration is still required.** Before the assembly can work as specified, program and read back U5 NVM
-through primary-domain J12 with exactly two sink PDOs: default 5V, then fixed 20V/3A. Configure `POWER_OK_CFG=10b`,
-`REQ_SRC_CURRENT=0` and `POWER_ONLY_ABOVE_5V=1`. The programming image and procedure are not implemented yet.
+The desk-reviewed load allocation is **26.4W**, with a 45C commissioning target and 50C full-load local-ambient ceiling
+around U6. C45 is now 1nF C0G: the nominal eFuse output ramp is about 10ms rather than 100ms. This same-footprint change
+reduces startup overlap without adding components. The [power handoff](power-handoff.md) records assumptions, tolerance
+calculations, limits and measurements still needed.
+
+**Factory configuration is still required.** Program and read back U5 through primary-domain J12 with exactly two sink
+PDOs: 5V/0.5A, then fixed 20V/3A, and the listed status settings. `prepare-power-profile.py` prepares those settings
+from an actual 40-byte NVM readback while preserving unrelated bits. The procedure and offline byte tests are supplied;
+no real device readback, factory-qualified image or hardware programming result is available yet.
 
 Q4/Q5 retain both active-low `POWER_OK2` and `VBUS_EN_SNK` qualification. Together they inhibit U20 until the requested
 PDO2 contract is accepted and remove its enable on detach. This uses the controller's documented standalone behavior,
@@ -97,17 +104,35 @@ Source references: [STUSB4500 status and NVM behavior](https://www.st.com/resour
 [TPS709 input and EN limits](https://www.ti.com/lit/ds/symlink/tps709.pdf), and
 [TPS25947 protection behavior](https://www.ti.com/lit/ds/symlink/tps25947.pdf).
 
+## Manufacturing review files
+
+Run `./export-manufacturing.ps1` from this directory. It checks ERC, DRC, connectivity and schematic parity, then
+creates this design's BOM, matching SMT/THT placements, Gerbers/drills, assembly drawing and native 3D preview in a new
+`output/manufacturing-*` directory. J3/J4/J5 are bare solder pads and are excluded from purchased-part lists. The
+package includes the U5 programming procedure and offline profile helper, not a guessed NVM binary or the removed
+source-mode MCU firmware. Supplier catalog matches must be checked afresh. Nothing is uploaded automatically.
+
+The reviewed export contains 199 BOM rows, 199 matching placements and 13 Gerber/drill files. Their common origin is the
+board's lower-left corner. The assembly drawing includes the custom connector and power-part references; these added
+fabrication-layer labels do not change the visible silkscreen, component positions or copper.
+
+The four offline power-profile tests pass (`python -B test_power_profile.py`). The repository-wide `pnpm verify` check
+still fails at the existing scoring application's 100% coverage gate: 969 tests pass, with statements 95.44%, branches
+93.78%, functions 99.79% and lines 96.09%. No thresholds were lowered; this is separate from the native board/export
+checks.
+
+Use **default green solder mask** for the prototype order as requested. Both the CAD stackup and order handoff use
+green; Gerbers describe mask openings, not pigment. Confirm the actual supplier option before ordering.
+
 ## Remaining work, in order
 
-1. Finish the new whole-board power budget and tolerance/thermal/startup review, including default-off behavior and the
-   U5 programming/readback handoff. The combined board's supply calculations are inputs, not approval of this circuit.
-   Do not assume the isolated converter's 30W nameplate is an available continuous panel allocation.
-2. Confirm enclosure access, mounting, connector bodies and the ESP32 antenna clearance. Resolve J13's missing authentic
-   CAD model. Retain the routed isolation boundary and recheck any mechanical placement changes in KiCad.
-3. Generate this board's own BOM, placements, Gerbers and supplier draft after the power and mechanical review. Run
-   fabrication/assembly checks, confirm the stackup and recheck part availability and assembly responsibilities; no
-   combined or virtual fabrication ZIP applies to this design.
-4. On assembled hardware, verify power, insulation, startup/faults, acquisition timing, display, Ethernet, repeaters, IR
+1. Confirm enclosure access, mounting, connector bodies and the ESP32 antenna clearance. There are no mounting holes
+   yet; agree retention before release. Resolve J13's missing authentic CAD model. Retain the routed isolation boundary
+   and recheck any mechanical placement changes in KiCad.
+2. Review the generated manufacturing draft, confirm stackup/impedance, part availability, SMT/THT assembly and
+   enclosure-wire responsibilities. Confirm the factory can program/read back U5 with the supplied procedure. No
+   combined or virtual fabrication ZIP applies, and the current JLCPCB virtual-board draft remains untouched.
+3. On assembled hardware, verify power, insulation, startup/faults, acquisition timing, display, Ethernet, repeaters, IR
    and audio before connecting fencing equipment. CAD checks cannot substitute for those measurements.
 
 Maintain this README and native KiCad source directly. No new backlog validator, generator framework, historical
