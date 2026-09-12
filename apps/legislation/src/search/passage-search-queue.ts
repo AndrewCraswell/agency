@@ -39,7 +39,7 @@ async function queueQuery(source: ReplicationConnection, text: string, values?: 
 export async function drainPassageChanges(
   source: ReplicationConnection,
   target: ReplicationConnection,
-  options: { budgetMs?: number; now?: () => number } = {}
+  options: { budgetMs?: number; now?: () => number; readers?: readonly ReplicationConnection[] } = {}
 ) {
   const budgetMs = options.budgetMs ?? 240_000
   if (!Number.isSafeInteger(budgetMs) || budgetMs < 1000 || budgetMs > 300_000) {
@@ -114,7 +114,8 @@ export async function drainPassageChanges(
         entries.map(([id]) => id),
         {
           budgetMs: Math.min(60_000, Math.floor(deadline - now())),
-          now
+          now,
+          readers: options.readers
         }
       )
     } catch {

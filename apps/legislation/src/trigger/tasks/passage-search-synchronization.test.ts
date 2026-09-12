@@ -33,11 +33,26 @@ describe("passage synchronization cycle", () => {
     vi.resetAllMocks()
     vi.stubEnv("DATABASE_URL", "postgresql://source/canonical")
     vi.stubEnv("PASSAGE_SEARCH_DATABASE_URL", "postgresql://target/legislation_passage_search")
+    vi.stubEnv("PASSAGE_SEARCH_READ_CONCURRENCY", "1")
     mocks.ready.mockResolvedValue(0)
     mocks.enqueue.mockResolvedValue(0)
     mocks.drain.mockResolvedValue({ events: 1, documents: 1, sections: 2, deferred: 0 })
   })
   afterEach(() => vi.unstubAllEnvs())
+  it("allocates and closes the configured parallel readers without adding publishers", async () => {
+    vi.stubEnv("PASSAGE_SEARCH_READ_CONCURRENCY", "2")
+    mocks.ready.mockResolvedValueOnce(1)
+    await runSynchronizationCycle(false)
+    expect(mocks.connect).toHaveBeenCalledTimes(3)
+    expect(mocks.end).toHaveBeenCalledTimes(3)
+    expect(mocks.drain).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        readers: [expect.anything()]
+      })
+    )
+  })
   it("does not enqueue a backfill when it was not requested", async () => {
     await expect(runSynchronizationCycle(false)).resolves.toEqual({
       enqueued: 0,

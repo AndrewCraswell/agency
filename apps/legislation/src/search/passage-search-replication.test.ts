@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
-import { replicatePassageDocument, type ReplicationConnection } from "./passage-search-replication.js"
+import {
+  replicatePassageDocument,
+  replicatePassageDocuments,
+  type ReplicationConnection
+} from "./passage-search-replication.js"
 
 const section = (id: string) => ({
   id,
@@ -31,6 +35,76 @@ function fixture(pages: unknown[][]) {
 }
 
 describe("passage document replication", () => {
+  it("imports one locked snapshot, partitions documents and publishes once", async () => {
+    const { source, target, calls } = fixture([])
+    const original = source.query
+    source.query = async (text, values) =>
+      text.includes("pg_export_snapshot") ? { rows: [{ snapshot: "00000003-0000001A-1" }] } : original(text, values)
+    const reader: ReplicationConnection = {
+      query: async (text, values) => {
+        calls.push({ side: "reader", text, values })
+        return { rows: text.startsWith("select s.id") ? [{ ...section("b"), document_id: "other" }] : [] }
+      }
+    }
+    await expect(
+      replicatePassageDocuments(source, target, ["document", "other"], { readers: [reader] })
+    ).resolves.toEqual({ sections: 1 })
+    expect(calls.filter((call) => call.text.startsWith("select s.id")).map((call) => call.values?.[0])).toEqual([
+      ["document"],
+      ["other"]
+    ])
+    expect(
+      calls
+        .filter((call) => call.side === "reader")
+        .slice(0, 2)
+        .map((call) => call.text)
+    ).toEqual(["begin isolation level repeatable read read only", "set transaction snapshot '00000003-0000001A-1'"])
+    expect(calls.filter((call) => call.side === "target" && call.text === "commit")).toHaveLength(1)
+    expect(calls.findIndex((call) => call.side === "reader" && call.text === "rollback")).toBeLessThan(
+      calls.findIndex((call) => call.side === "target" && call.text === "commit")
+    )
+  })
+
+  it("waits for all readers before rolling back a failed wave", async () => {
+    const { source, target, calls } = fixture([])
+    let hasPrematureRollback = false
+    const original = source.query
+    source.query = async (text, values) => {
+      if (text.includes("pg_export_snapshot")) {
+        return { rows: [{ snapshot: "00000003-0000001A-1" }] }
+      }
+      if (text.startsWith("select s.id")) {
+        throw new Error("source failed")
+      }
+      return original(text, values)
+    }
+    const reader: ReplicationConnection = {
+      query: async (text, values) => {
+        calls.push({ side: "reader", text, values })
+        if (text.startsWith("select s.id")) {
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          hasPrematureRollback = calls.some((call) => call.side === "target" && call.text === "rollback")
+          return { rows: [{ ...section("b"), document_id: "other" }] }
+        }
+        return { rows: [] }
+      }
+    }
+    await expect(
+      replicatePassageDocuments(source, target, ["document", "other"], { readers: [reader] })
+    ).rejects.toThrow("source failed")
+    expect(hasPrematureRollback).toBe(false)
+    expect(calls.some((call) => call.text === "commit")).toBe(false)
+    expect(calls.at(-1)).toMatchObject({ side: "target", text: "rollback" })
+  })
+
+  it("rejects reused connections and duplicate document ownership before starting", async () => {
+    const { source, target, calls } = fixture([])
+    await expect(replicatePassageDocuments(source, target, ["a", "b"], { readers: [source] })).rejects.toThrow(
+      "Invalid"
+    )
+    await expect(replicatePassageDocuments(source, target, ["a", "a"])).rejects.toThrow("Invalid")
+    expect(calls).toHaveLength(0)
+  })
   it("uses bounded 1000-section transfer pages by default", async () => {
     const firstPage = Array.from({ length: 1000 }, (_, index) => section(String(index).padStart(4, "0")))
     const { source, target, calls } = fixture([firstPage, [section("1000")]])

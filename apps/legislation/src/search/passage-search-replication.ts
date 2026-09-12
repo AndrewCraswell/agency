@@ -5,6 +5,14 @@ export type ReplicationConnection = {
   query: (text: string, values?: unknown[]) => Promise<{ rows: unknown[] }>
 }
 
+type ReplicationOptions = {
+  batchSize?: number
+  budgetMs?: number
+  now?: () => number
+  /** Additional checked-out source connections; all import one locked snapshot. */
+  readers?: readonly ReplicationConnection[]
+}
+
 const sectionSchema = z.object({
   id: z.string().min(1),
   document_id: z.string().min(1),
@@ -54,7 +62,7 @@ export async function replicatePassageDocument(
   source: ReplicationConnection,
   target: ReplicationConnection,
   documentId: string,
-  options: { batchSize?: number; budgetMs?: number; now?: () => number } = {}
+  options: ReplicationOptions = {}
 ) {
   const result = await replicatePassageDocuments(source, target, [documentId], options)
   return { documentId, sections: result.sections }
@@ -65,17 +73,21 @@ export async function replicatePassageDocuments(
   source: ReplicationConnection,
   target: ReplicationConnection,
   documentIds: readonly string[],
-  options: { batchSize?: number; budgetMs?: number; now?: () => number } = {}
+  options: ReplicationOptions = {}
 ) {
   // Amortize source/target round trips without changing the atomic document
   // boundary, single-publisher lock or statement/aggregate deadlines.
   const batchSize = options.batchSize ?? 1000
   const budgetMs = options.budgetMs ?? 60_000
   const now = options.now ?? Date.now
+  const readers = options.readers ?? []
   if (
     documentIds.length === 0 ||
     documentIds.length > 100 ||
     documentIds.some((id) => id.length === 0) ||
+    new Set(documentIds).size !== documentIds.length ||
+    readers.length > 3 ||
+    new Set([source, target, ...readers]).size !== readers.length + 2 ||
     !Number.isSafeInteger(batchSize) ||
     batchSize < 1 ||
     batchSize > 1000 ||
@@ -88,8 +100,6 @@ export async function replicatePassageDocuments(
   const deadline = now() + budgetMs
   let hasSourceTransaction = false
   let hasTargetTransaction = false
-  let copied = 0
-  let after: string | null = null
   const remaining = () => {
     const milliseconds = Math.floor(deadline - now())
     if (milliseconds < 1) {
@@ -113,26 +123,70 @@ export async function replicatePassageDocuments(
     await source.query("set local lock_timeout='1s'")
     await setDeadline(target)
     await target.query("delete from legislation.document_sections where document_id=any($1::text[])", [documentIds])
-    for (;;) {
-      await setDeadline(source)
-      const response = await source.query(sectionPageSql, [documentIds, after, batchSize])
-      const rows = z.array(sectionSchema).max(batchSize).parse(response.rows)
-      if (rows.some((row) => !documentIds.includes(row.document_id))) {
-        throw new Error("Passage replication returned another document")
-      }
-      if (rows.length > 0) {
-        const lastId = rows.at(-1)?.id
-        if (lastId === undefined || lastId === after) {
-          throw new Error("Passage replication cursor did not advance")
+    const activeReaders = readers.slice(0, documentIds.length - 1)
+    const snapshot =
+      activeReaders.length > 0
+        ? z
+            .object({ snapshot: z.string().regex(/^[0-9A-Fa-f]+-[0-9A-Fa-f]+-[0-9]+$/) })
+            .parse((await source.query("select pg_export_snapshot() snapshot")).rows[0]).snapshot
+        : null
+    let publication = Promise.resolve()
+    const read = async (connection: ReplicationConnection, ids: readonly string[]) => {
+      let copied = 0
+      let after: string | null = null
+      for (;;) {
+        await setDeadline(connection)
+        const response = await connection.query(sectionPageSql, [ids, after, batchSize])
+        const rows = z.array(sectionSchema).max(batchSize).parse(response.rows)
+        if (rows.some((row) => !ids.includes(row.document_id))) {
+          throw new Error("Passage replication returned another document")
         }
-        await setDeadline(target)
-        await target.query(insertSectionPageSql, [JSON.stringify(rows)])
-        copied += rows.length
-        after = lastId
+        if (rows.length > 0) {
+          const lastId = rows.at(-1)?.id
+          if (lastId === undefined || lastId === after) {
+            throw new Error("Passage replication cursor did not advance")
+          }
+          publication = publication.then(async () => {
+            await setDeadline(target)
+            await target.query(insertSectionPageSql, [JSON.stringify(rows)])
+          })
+          await publication
+          copied += rows.length
+          after = lastId
+        }
+        if (rows.length < batchSize) {
+          break
+        }
       }
-      if (rows.length < batchSize) {
-        break
+      return copied
+    }
+    // Only reads fan out. A single target connection/transaction owns the lock,
+    // deletes and publication, including on coordinator failure. Never commit
+    // or roll back while another reader can still enqueue a target write.
+    const connections = [source, ...activeReaders]
+    const results = await Promise.allSettled(
+      connections.map(async (connection, index) => {
+        const ids = documentIds.filter((_, documentIndex) => documentIndex % connections.length === index)
+        if (connection === source) {
+          return read(connection, ids)
+        }
+        await connection.query("begin isolation level repeatable read read only")
+        try {
+          // PostgreSQL does not parameterize SET TRANSACTION SNAPSHOT. The token
+          // above is strictly validated before interpolation; no query precedes it.
+          await connection.query(`set transaction snapshot '${snapshot}'`)
+          return await read(connection, ids)
+        } finally {
+          await connection.query("rollback")
+        }
+      })
+    )
+    let copied = 0
+    for (const result of results) {
+      if (result.status === "rejected") {
+        throw result.reason
       }
+      copied += result.value
     }
     await setDeadline(source)
     await source.query("commit")

@@ -12,6 +12,7 @@ const hasDatabase = sourceUrl !== undefined && targetUrl !== undefined
 describe.skipIf(!hasDatabase)("passage search database synchronization", () => {
   const source = new pg.Client({ connectionString: sourceUrl, connectionTimeoutMillis: 10_000 })
   const target = new pg.Client({ connectionString: targetUrl, connectionTimeoutMillis: 10_000 })
+  const reader = new pg.Client({ connectionString: sourceUrl, connectionTimeoutMillis: 10_000 })
   const prefix = `passage-test:${randomUUID()}`
   const billId = `${prefix}:bill`
   const documentId = `${prefix}:document`
@@ -27,6 +28,7 @@ describe.skipIf(!hasDatabase)("passage search database synchronization", () => {
       throw new Error("Only isolated passage test databases are allowed")
     }
     await source.connect()
+    await reader.connect()
     await target.connect()
     const identity = await source.query("select current_database() name")
     if (identity.rows[0]?.name !== "legislation_passage_source_test") {
@@ -74,7 +76,7 @@ describe.skipIf(!hasDatabase)("passage search database synchronization", () => {
         ])
       }
     } finally {
-      await Promise.allSettled([source.end(), target.end()])
+      await Promise.allSettled([source.end(), target.end(), reader.end()])
     }
   }, 30_000)
 
@@ -135,7 +137,7 @@ describe.skipIf(!hasDatabase)("passage search database synchronization", () => {
       [destination, documentId]
     )
     await source.query("update legislation.document_sections set document_id=$1 where id=$2", [destination, sectionId])
-    await replicatePassageDocuments(source, target, [destination])
+    await replicatePassageDocuments(source, target, [destination, documentId], { readers: [reader] })
     expect(
       (await target.query("select document_id from legislation.document_sections where id=$1", [sectionId])).rows[0]
         ?.document_id
@@ -145,6 +147,36 @@ describe.skipIf(!hasDatabase)("passage search database synchronization", () => {
     await drainPassageChanges(source, target)
     await source.query("delete from legislation.bill_documents where id=$1", [destination])
     await drainPassageChanges(source, target)
+  }, 60_000)
+
+  it("keeps concurrent edits out of every reader until the next atomic publication", async () => {
+    const editor = new pg.Client({ connectionString: sourceUrl, connectionTimeoutMillis: 10_000 })
+    await editor.connect()
+    try {
+      const original = (await editor.query("select text from legislation.document_sections where id=$1", [sectionId]))
+        .rows[0]?.text
+      const delayedReader = {
+        query: async (text: string, values?: unknown[]) => {
+          const result = await reader.query(text, values)
+          if (text.startsWith("set transaction snapshot")) {
+            await editor.query("update legislation.document_sections set text='concurrent revision' where id=$1", [
+              sectionId
+            ])
+          }
+          return result
+        }
+      }
+      await replicatePassageDocuments(source, target, [`${prefix}:missing`, documentId], { readers: [delayedReader] })
+      expect(
+        (await target.query("select text from legislation.document_sections where id=$1", [sectionId])).rows[0]?.text
+      ).toBe(original)
+      await replicatePassageDocuments(source, target, [`${prefix}:missing`, documentId], { readers: [reader] })
+      expect(
+        (await target.query("select text from legislation.document_sections where id=$1", [sectionId])).rows[0]?.text
+      ).toBe("concurrent revision")
+    } finally {
+      await editor.end()
+    }
   }, 60_000)
 
   it("retains late-committing low sequence events instead of skipping them", async () => {

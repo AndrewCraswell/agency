@@ -30,7 +30,13 @@ export const passageSearchSynchronizationSchedule = schedules.task({
 })
 
 export async function runSynchronizationCycle(enqueueBackfill: boolean) {
-  const env = z.object({ DATABASE_URL: z.url(), PASSAGE_SEARCH_DATABASE_URL: z.url() }).parse(process.env)
+  const env = z
+    .object({
+      DATABASE_URL: z.url(),
+      PASSAGE_SEARCH_DATABASE_URL: z.url(),
+      PASSAGE_SEARCH_READ_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(2)
+    })
+    .parse(process.env)
   const sourceUrl = new URL(env.DATABASE_URL)
   const targetUrl = new URL(env.PASSAGE_SEARCH_DATABASE_URL)
   if (targetUrl.pathname !== "/legislation_passage_search" || targetUrl.host === sourceUrl.host) {
@@ -38,9 +44,16 @@ export async function runSynchronizationCycle(enqueueBackfill: boolean) {
   }
   const source = new pg.Client({ connectionString: sourceUrl.href, connectionTimeoutMillis: 10_000 })
   const target = new pg.Client({ connectionString: targetUrl.href, connectionTimeoutMillis: 10_000 })
+  const readers = Array.from(
+    { length: env.PASSAGE_SEARCH_READ_CONCURRENCY - 1 },
+    () => new pg.Client({ connectionString: sourceUrl.href, connectionTimeoutMillis: 10_000 })
+  )
   try {
     await source.connect()
     await target.connect()
+    for (const reader of readers) {
+      await reader.connect()
+    }
     const deadline = Date.now() + 240_000
     const totals = { enqueued: 0, events: 0, documents: 0, sections: 0, deferred: 0 }
     while (deadline - Date.now() >= 30_000) {
@@ -51,7 +64,8 @@ export async function runSynchronizationCycle(enqueueBackfill: boolean) {
         break
       }
       const result = await drainPassageChanges(source, target, {
-        budgetMs: Math.max(1000, Math.floor(deadline - Date.now()))
+        budgetMs: Math.max(1000, Math.floor(deadline - Date.now())),
+        readers
       })
       totals.events += result.events
       totals.documents += result.documents
@@ -64,6 +78,6 @@ export async function runSynchronizationCycle(enqueueBackfill: boolean) {
     }
     return totals
   } finally {
-    await Promise.allSettled([source.end(), target.end()])
+    await Promise.allSettled([source.end(), target.end(), ...readers.map((reader) => reader.end())])
   }
 }
