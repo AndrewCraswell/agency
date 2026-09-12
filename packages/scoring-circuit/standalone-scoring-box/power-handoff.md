@@ -121,9 +121,17 @@ Ethernet, Favero and HUB75 connectors. J3/J4/J5 are bare solder terminations, no
 installs the enclosure-mounted banana sockets and their soldered/strain-relieved wires, plus the separate panel and
 harnesses. A PCB-assembly quote alone does not include that enclosure wiring or the display.
 
-Before ordering: confirm enclosure retention (there are currently no board mounting holes), authentic J13 body/CAD
-clearance, connector access, final stackup/impedance, parts availability and factory programming capability. The
-exporter creates a **review draft**, not manufacturing approval; use default green mask for the prototype order.
+The four 3.2mm mounting holes require insulating M3 hardware with heads/washers no larger than 6mm; their coordinates
+are in the project README. The jack footprint/body envelope was checked against its manufacturer drawing, but the exact
+jack model is not displayed in the 3D preview. Before ordering: confirm enclosure retention and cable access, final
+stackup/impedance, parts availability and factory programming capability. The exporter creates a **review draft**, not
+manufacturing approval; use default green mask for the prototype order.
+
+[JLCPCB's programming service](https://jlcpcb.com/help/article/pcba-programming-service) is offered for Standard PCBA
+after assembly and requires programming files and interface instructions. This does not establish that their fixture
+supports STUSB4500's five-sector NVM protocol. Select programming/functional-test review in the draft if available, but
+do not release production without that capability and first-article readback being agreed. No supplier contact or
+programming-service approval is implied by this handoff.
 
 On the first article, measure cold/loaded startup, 5V-only rejection, detach, short-circuit/latch recovery, whole-board
 current, 5V at the panel, both 3.3V rails and temperature at full display/radio/network load. Test insulation and the

@@ -12,8 +12,10 @@
 - **Active: [standalone HUB75 scoring box](standalone-scoring-box/README.md).** Separate native schematic and routed 165
   x 100mm board with 199 purchased parts. Retains STM32, ESP32, IR, fencer/piste connections, HUB75, Ethernet, Favero
   outputs, audio and power-only USB-C PD; removes the laptop interface and source-mode MCU. The power desk review, U5
-  programming procedure and manufacturing exporter are supplied. Mechanical/supplier review and physical tests remain;
-  it is not order-ready. Firmware logic stays shared, with board-specific hardware adapters.
+  programming procedure and manufacturing exporter are supplied. Four mounting holes and the Ethernet footprint have
+  been reviewed; a separate JLCPCB draft is saved. Its README records 34 unresolved sourcing/catalog references, plus
+  impedance/programming and physical-test work. It is not order-ready. Firmware logic stays shared, with board-specific
+  hardware adapters.
 
 For each native design, use its own README and manufacturing exporter. Keep the latest supplier-upload package and
 required programming handoff; older output checkpoints, build caches and scratch routing scripts are disposable. Keep

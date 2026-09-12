@@ -7,8 +7,9 @@ Open `standalone-scoring-box.kicad_pro` in KiCad 10. This is the separate **HUB7
 ## Current checkpoint
 
 The native schematic, placement and PCB routing are implemented. The four-layer, 1.6mm board provisionally retains the
-combined board's **165 x 100mm** outline. There are **202 footprints: 199 purchased parts and three bare wire
-terminations**. The combined design had 223 purchased parts; the reduction is 24 parts, not a priced cost saving.
+combined board's **165 x 100mm** outline. There are **206 footprints: 199 purchased parts, three bare wire terminations
+and four unplated mounting holes**. The combined design had 223 purchased parts; the reduction is 24 parts, not a priced
+cost saving.
 
 **This is a routed engineering checkpoint, not an order-ready board.** Changed circuits have new routing; unchanged
 local circuits were reused only with matching pad positions and net assignments. Insulation and antenna keepouts remain.
@@ -46,7 +47,31 @@ component models are referenced without duplicate copies.
 
 USB-C is on the left edge beside its controller. Ethernet remains on the bottom edge and the two Favero ports on the top
 edge, retaining the combined board's connector geometry. The ESP32 antenna projects beyond the top edge. Final enclosure
-clearance, mounting holes and mechanical access with actual cables still need confirmation.
+clearance and mechanical access with actual cables still need confirmation.
+
+### Mounting and Ethernet fit
+
+H1-H4 are 3.2mm unplated mounting holes, with a 6.5mm-diameter copper-free area on all four layers. Use **M3 nylon
+screws and insulating standoffs, with heads/washers no larger than 6mm**. The offset fourth mounting point avoids the
+radio antenna and connector circuitry. No existing signal track or component was moved. These holes are not purchased
+assembly parts, and do not imply an enclosure or hardware kit is included.
+
+Mounting centers measured from the board's lower-left corner, looking down from the component side:
+
+| Hole | X (mm, right) | Y (mm, up) |
+| ---- | ------------- | ---------- |
+| H1   | 4             | 96         |
+| H2   | 4             | 4          |
+| H3   | 160           | 3.5        |
+| H4   | 137           | 55         |
+
+J13 was compared visually and numerically with pages 2-3 of the
+[Cetus J1B1211CCD drawing retained by WIZnet](https://www.wiznet.hk/en/index.php?controller=attachment&id_attachment=2).
+Its eight 0.9mm signal holes, four 1.02mm LED holes, two 1.6mm shield holes and two 3.25mm locating holes match the
+drawing. The nominal body is 16 x 21.3 x 13.35mm; its front extends 1.1mm beyond the bottom board edge, with the
+locating feet still on the board. The adjacent R105 lies outside the body. This is a footprint/body-envelope check, not
+a physical mating test. No authentic STEP model was available from the checked library/provider; do not substitute a
+different jack merely to fill the preview. Its missing model alone does not prevent assembling the specified part.
 
 ## Routing organization
 
@@ -74,6 +99,11 @@ and panel startup load still belong to the power/manufacturing review.
 Ethernet transmit copper measures 30.2676mm per leg. Receive copper, including both sides of the series resistors,
 measures 31.7467mm and 31.5467mm, a 0.20mm difference. These paths exceed WIZnet's preferred 25mm length but remain
 below its 75mm limit; they are not a claim of an optimal layout or verified 100-ohm impedance.
+
+The saved dielectric/copper stack matches the published [JLC04161H-7628 stackup](https://jlcpcb.com/impedance): 0.2104mm
+outer prepreg, 1.065mm core, 0.035mm outer copper and 0.0152mm inner copper. Select that construction in the quote. The
+online impedance calculator did not return a width during this review (its page reported a calculation/rendering error);
+the 100-ohm target remains unqualified and must not be represented as a passed impedance test.
 
 ## Simpler standalone power
 
@@ -124,14 +154,70 @@ checks.
 Use **default green solder mask** for the prototype order as requested. Both the CAD stackup and order handoff use
 green; Gerbers describe mask openings, not pigment. Confirm the actual supplier option before ordering.
 
+### Current JLCPCB draft
+
+The separate [standalone assembly draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=35c0fdd6e3324e1b85591293ca0d5e9c)
+was configured and saved on **2026-09-12**. The existing virtual-board draft remains untouched. Nothing was submitted,
+paid for or sent to support.
+
+- Four layers, 165 x 100mm, 1.6mm, TG155, green mask, white silk, ENIG, 1oz outer/0.5oz inner copper and
+  **JLC04161H-7628** construction. The 0.2mm-via option adds four-wire testing. Impedance control is selected at +/-10%,
+  but this does not qualify the existing Ethernet geometry or supply its missing 100-ohm calculation.
+- **Five fabricated PCBs and two top-side Standard assemblies**, the site's minimum assembly quantity. Temporary 5mm
+  rails make the quoted panel 165 x 110mm; factory rail removal is selected. The finished PCB outline is unchanged.
+- Production-file and component-placement confirmation are enabled, with **automatic confirmation disabled**. Customer
+  parts selection is retained. Functional-test review includes the U5 procedure/helper; this is not confirmation that
+  JLCPCB can perform the required NVM programming. The assembly drawing and no-omissions instructions are attached.
+- Uploaded bundle: `output/manufacturing-20260912-154354/pcb-fabrication.zip`, SHA256
+  `7387D2A76A82E2785578438EF19FFCEA299DF2A01581D353D708A00965DFA252`. BOM and placement files both contain 199
+  references.
+- The preliminary **$128.67** is fabrication/options for five PCBs with rails, **not** assembled-board cost. Components,
+  assembly, programming, shipping and tax are not a finished quote.
+
+All 199 uploaded references were inspected for exact part-number matching. The site initially substituted **80pF Walsin
+0603N800J500CT / C3868041** for eight **1uF TDK C1608X7R1H105K080AB** capacitors. Those eight supplier references were
+corrected to **C45537494** and verified after reloading the saved draft. That catalog entry has zero stock and
+incomplete package metadata (`HWDG`); it is **not assembly-approved**. Do not reuse the incorrect automatic match on a
+fresh upload. J1's exact USB4105-GF-A / C3020560 was separately selected and has stock.
+
+The final saved state is **165 selected references, 24 shortage references, eight unresolved capacitor selections and
+two unmatched references**. JLCPCB's “173 Parts confirmed” includes the eight unchecked capacitors; it must not be
+reported as 173 populated parts. All 199 are required. Placement review could not be entered from this incomplete BOM;
+no omissions or placement approval were accepted.
+
+| References                          | Specified part / catalog record     | Current sourcing issue                                           |
+| ----------------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
+| C1, C2, C3, C15, C21, C33, C37, C38 | TDK C1608X7R1H105K080AB / C45537494 | No stock; package metadata needs correction; all eight unchecked |
+| C5, C22, C28                        | C1608X5R1C106M080AB / C2167896      | Short 3 pieces                                                   |
+| C12, C54, C55                       | C1608X7R1H103K080AA / C2180830      | Short 19 pieces                                                  |
+| C14                                 | C1608X7S1A475K080AC / C5331011      | Short 5 pieces                                                   |
+| C17, C18                            | CGA3E2C0G1H270J080AA / C193086      | Short 8 pieces                                                   |
+| C36, C73                            | C2012X7R1H105K125AB / C3867006      | Short 5 pieces                                                   |
+| C45                                 | C1608C0G1H102J080AA / C2167700      | Short 20 pieces                                                  |
+| C46                                 | C2012X7R2A104K125AA / C2167715      | Short 5 pieces                                                   |
+| C47                                 | C3225X7R1H106K250AC / C2181731      | Short 2 pieces                                                   |
+| C49                                 | C3216X7R1C106K160AC / C2167646      | Short 6 pieces                                                   |
+| C51                                 | C1608X7R1H223K080AA / C2182735      | Short 6 pieces                                                   |
+| C56                                 | C1608X5R1C475K080AC / C2167106      | Short 2 pieces                                                   |
+| J2                                  | HTSW-105-07-L-S / C6571098          | Short 2 pieces                                                   |
+| J6                                  | HTSW-106-07-L-S / C3324216          | Short 2 pieces                                                   |
+| J9, J10                             | 5520250-2 / C3179927                | Short 4 pieces                                                   |
+| R30, R31                            | RC0603FR-0747KL / C105579           | Short 20 pieces                                                  |
+| R98                                 | RC0603FR-071K37L / C137777          | Short 1 piece                                                    |
+| J8                                  | Wurth 645004114822                  | No result in exact-MPN assembly search                           |
+| U6                                  | RECOM REC30K-2405SZ                 | No result in exact-MPN assembly search                           |
+
+Shortfall quantities are the site's total per part group for two assemblies, including its purchasing/attrition rules;
+do not multiply them by the number of listed references. Stock is a dated snapshot. Resolve through exact-part sourcing
+or separately reviewed substitutes, never by approving a partly populated board. No part pre-order was purchased.
+
 ## Remaining work, in order
 
-1. Confirm enclosure access, mounting, connector bodies and the ESP32 antenna clearance. There are no mounting holes
-   yet; agree retention before release. Resolve J13's missing authentic CAD model. Retain the routed isolation boundary
-   and recheck any mechanical placement changes in KiCad.
-2. Review the generated manufacturing draft, confirm stackup/impedance, part availability, SMT/THT assembly and
-   enclosure-wire responsibilities. Confirm the factory can program/read back U5 with the supplied procedure. No
-   combined or virtual fabrication ZIP applies, and the current JLCPCB virtual-board draft remains untouched.
+1. Resolve the 34 sourcing/catalog references above, then inspect every supplier placement and obtain the complete
+   SMT/THT assembly quote. Do not submit an order or contact support without the owner's permission.
+2. Qualify Ethernet impedance against the selected construction and agree the factory's U5 programming/readback method.
+   Confirm enclosure/cable access and external wiring responsibilities. These items prevent manufacturing release; the
+   saved draft and clean CAD checks do not waive them.
 3. On assembled hardware, verify power, insulation, startup/faults, acquisition timing, display, Ethernet, repeaters, IR
    and audio before connecting fencing equipment. CAD checks cannot substitute for those measurements.
 
