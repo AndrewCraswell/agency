@@ -31,6 +31,19 @@ function fixture(pages: unknown[][]) {
 }
 
 describe("passage document replication", () => {
+  it("uses bounded 1000-section transfer pages by default", async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => section(String(index).padStart(4, "0")))
+    const { source, target, calls } = fixture([firstPage, [section("1000")]])
+    await expect(replicatePassageDocument(source, target, "document")).resolves.toEqual({
+      documentId: "document",
+      sections: 1001
+    })
+    expect(calls.filter((call) => call.text.startsWith("select s.id")).map((call) => call.values)).toEqual([
+      [["document"], null, 1000],
+      [["document"], "0999", 1000]
+    ])
+    expect(calls.filter((call) => call.text === "commit").map((call) => call.side)).toEqual(["source", "target"])
+  })
   it("serializes before taking the source snapshot and commits a complete keyset copy", async () => {
     const { source, target, calls } = fixture([[section("a"), section("b")], [section("c")]])
     await expect(replicatePassageDocument(source, target, "document", { batchSize: 2 })).resolves.toEqual({

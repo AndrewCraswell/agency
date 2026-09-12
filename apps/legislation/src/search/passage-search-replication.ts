@@ -67,7 +67,9 @@ export async function replicatePassageDocuments(
   documentIds: readonly string[],
   options: { batchSize?: number; budgetMs?: number; now?: () => number } = {}
 ) {
-  const batchSize = options.batchSize ?? 250
+  // Amortize source/target round trips without changing the atomic document
+  // boundary, single-publisher lock or statement/aggregate deadlines.
+  const batchSize = options.batchSize ?? 1000
   const budgetMs = options.budgetMs ?? 60_000
   const now = options.now ?? Date.now
   if (

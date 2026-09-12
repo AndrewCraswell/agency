@@ -11,7 +11,6 @@ Source: September 12, 2026 authenticated production smoke, all 26 advertised too
 | Related bills reject incomplete relationship provenance | Fixed for smoke fixture, source replay passed | Refreshed outgoing and incoming relationships from all four source bills; replay 508 ms |
 | Bill votes reject incomplete canonical facts | Fixed, deployed replay passed | Shared projection, bounded position pagination; collection 311 ms |
 | Supporting-material hearing link resolves to not found | Fixed, deployed replay passed | Source-backed hearing resolves in 220 ms |
-| Event and calendar discovery return empty | Partial: events pass; calendar ingestion missing | Hearing discovery is nonempty; durable publisher-calendar source remains to be selected and ingested |
 
 Do not fabricate dates, sources, active status or relationships to bypass validation. Fix ingestion for future records as well as the affected stored records. Preserve the completed vector indexes and the isolated passage-search rollout gate.
 
@@ -23,7 +22,7 @@ Fresh Congress.gov source replay restored the affected bill's action and relatio
 
 Verification: 2,678 legislation tests passed, 73 skipped, plus four webhook receiver tests. The Next production build passed. Root `pnpm verify` is not green because of unrelated scoring-package coverage failure; legislation coverage passed independently.
 
-Passage search remains gated on complete search-copy validation. Calendar discovery has no source calendar importer yet; empty discovery is not evidence of a broken request, but the data-coverage gap remains open.
+Passage search remains gated on complete search-copy validation. Calendar discovery is excluded from this bug list: its valid empty response reflects an unimplemented importer, not a runtime defect. The calendar endpoint is unchanged.
 
 ## Deployed acceptance
 
@@ -31,6 +30,14 @@ Commit `eeeaf13` is pushed to main. Railway deployment `0e6c5217-b1d1-4354-9798-
 
 The repeated smoke exercised all 26 tools in 43 requests. It initially found two errors: lexical passage timeout and incomplete incoming related-bill provenance. Refreshing the three incoming source bills resolved the latter, confirmed by an additional authenticated request. There is now one failing exercised tool mode, plus calendar discovery returning a valid empty page. Semantic and hybrid passage searches passed, as did all other exercised search modes and six continuation-page requests.
 
-Remaining closure: complete and validate the passage copy before cutover; select and ingest a real publisher-owned calendar. The copy checkpoint is still unfinished (Arizona document IDs as of September 12, 17:37 UTC). Do not report all defects closed or all source records repaired: these results validate the smoke fixtures and corrected future ingestion, not a corpus-wide replay.
+Remaining bug closure: complete and validate the passage copy before cutover. The copy checkpoint is still unfinished (Arizona document IDs as of September 12, 17:37 UTC). Do not report all defects closed or all source records repaired: these results validate the smoke fixtures and corrected future ingestion, not a corpus-wide replay.
 
-GovInfo's [Congressional Calendars](https://www.govinfo.gov/help/ccal) are legislative business calendars, not interchangeable with dated committee meeting schedules. Choosing between these is a product/data-source decision, not permission to manufacture calendar rows from the restored hearing.
+Calendar ingestion remains outside this bug-fix scope, per the user's September 12 clarification.
+
+## Passage copy follow-up
+
+September 12, 18:07 UTC: target contains 647,844 sections; source statistics estimate 16,560,791 sections. Backfill remains incomplete, with 334 queued events including 53 deferred retries. The live replay benchmark overlapped the scheduled publisher and may have caused lock-contention retries; these must clear before acceptance.
+
+On the same 100 existing documents / 4,400 sections, transfer pages of 250 took 54.771 and 52.243 seconds; pages of 1,000 took 34.399 and 35.241 seconds. The default transfer page is now 1,000 (the existing maximum), preserving the 100-document atomic transaction, single-publisher lock and deadlines. This is a replay benchmark, not a measured full-backfill speedup. Twenty-five focused worker/queue/replication tests passed. Root verification still fails unrelated scoring coverage.
+
+At the observed pre-tuning throughput, roughly 45–55 hours remain for copying, excluding integrity, relevance/performance acceptance and cutover. This is provisional: source counts are estimates, later documents vary in size, and failed/deferred work must be reconciled. The lexical API timeout remains open until deployed full-corpus acceptance passes.
