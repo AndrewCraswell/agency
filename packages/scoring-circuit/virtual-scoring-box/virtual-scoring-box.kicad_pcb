@@ -1618,7 +1618,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/content/datasheet/asset/file/pyu-af_51_rohs_l"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1652,7 +1652,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-0747KL"
+		(property "MPN" "AF0603FR-0747KL"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -1676,6 +1676,7 @@
 				)
 			)
 		)
+		(property "JLCPCB" "C144107" (at 0 0 0) (layer "F.Fab") (hide yes) (effects (font (size 1 1))))
 		(path "/60912ca6-e883-4081-9dc0-30579f3da31f/5f76d6b6-3d91-4e0f-8bfb-9c1c37fd0ca8")
 		(sheetname "USB-C input and source control")
 		(sheetfile "usb-power-control.kicad_sch")
@@ -7166,7 +7167,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/content/datasheet/asset/file/pyu-af_51_rohs_l"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7200,7 +7201,7 @@
 				)
 			)
 		)
-		(property "MPN" "RC0603FR-0747KL"
+		(property "MPN" "AF0603FR-0747KL"
 			(at 0 0 270)
 			(layer "F.SilkS")
 			(hide yes)
@@ -7224,6 +7225,7 @@
 				)
 			)
 		)
+		(property "JLCPCB" "C144107" (at 0 0 0) (layer "F.Fab") (hide yes) (effects (font (size 1 1))))
 		(path "/60912ca6-e883-4081-9dc0-30579f3da31f/fec20356-85f4-4801-a4e6-0d96304a3472")
 		(sheetname "USB-C input and source control")
 		(sheetfile "usb-power-control.kicad_sch")
