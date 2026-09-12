@@ -87,11 +87,25 @@ Local via antipads remain; this is not a measured USB-compliance result.
 
 The regulator, inductor and output capacitors form a compact group with a direct top-layer ground return. Output sensing
 is separated from the switching node. Y1 and its load capacitors sit beside the STM32 oscillator pins: both crystal nets
-now stay on the front, with no vias. Total drawn HSE_IN/HSE_OUT copper decreased from 9.24/12.78mm to 6.90/9.48mm,
-including capacitor branches. Obsolete tails were removed; total via count decreased from 434 to 430. These are layout
-measurements, not oscillator or supply test results. The acquisition groups, external connectors, board outline and
-ESP32 antenna position are unchanged. The antenna extends beyond the top edge; the final enclosure must leave it clear.
-Provide an actual KiCad 3D render with each board-update checkpoint.
+stay on the front, with no vias and 6.90/9.48mm total drawn HSE_IN/HSE_OUT copper, including capacitor branches.
+
+The placement refinement puts J2 beside STM32 and J6 beside ESP32, with the ESP reset/boot buttons grouped beside J6.
+The seven input-load resistors sit beside their STM32 pins; repeated driver/default resistors form orderly local rows.
+Twenty-five components moved relative to `f9809c1`; all 146 footprint identities, values and pad/net assignments are
+unchanged. External connectors, board outline, ESP32 antenna position, USB data, crystal and switching-loop geometry
+remain unchanged. In1.Cu still has no signal or power tracks. The antenna extends beyond the top edge; the final
+enclosure must leave it clear.
+
+Total drawn track length decreased from **3691.893mm to 3198.362mm**, segment count from **2030 to 1629**, and via count
+from **430 to 377**. These are whole-board layout measurements, not propagation delays, measured electrical performance,
+or proof of a globally optimal layout. Shorter aggregate routing does not mean every individual net is shorter. Native
+layer views and top/bottom 3D views must be inspected with the final exports.
+
+White silkscreen identifies STM32, ESP32, the IR receiver, left/right inputs, USB-C, piste, A/B/C wire pads, service
+headers and reset/boot controls. J2/J6 have individual pin labels. A compact power/interface legend pairs functions with
+the key component references; U25's physical identifier is on the back because its front-side area is dense. Full
+component references remain on the fabrication drawing. Text meets the enabled 0.8mm minimum and clears solder pads and
+board edges. Provide an actual KiCad 3D render with each board-update checkpoint.
 
 The native stackup now specifies [JLC04161H-3313](https://jlcpcb.com/impedance): nominal 1.6mm four-layer construction,
 35um outer / 15.2um inner copper, 0.0994mm outer prepregs (Dk 4.1), and a 1.265mm core (Dk 4.6). Select this exact
@@ -105,7 +119,7 @@ result. Electrical USB verification remains a bench requirement.
 2. Complete supplier matching, placement orientation and assembly/programming acceptance using this board's export, not
    the combined board's paused order. All 142 purchased parts have manufacturer/MPN/footprint fields and matching
    placement rows. All purchased components have resolvable package models. The bare solder/pogo targets have no model
-   and are excluded from both BOM and placement. R69/R74/R77 routing-clearance moves remain unchanged.
+   and are excluded from both BOM and placement. Use the revised J2/J6 locations when reviewing programming fixtures.
 3. Implement the board-specific STM32 serial adapter/shared application firmware, then validate real power, input
    thresholds, USB and wireless behavior on assembled hardware before use with fencers. Application development does not
    require the physical PCB, but successful host tests alone cannot qualify an assembled scoring machine.
@@ -220,11 +234,12 @@ guaranteed limit. References: [CP2102N](https://www.silabs.com/documents/public/
 
 ### JLCPCB validation draft
 
-The [current virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=9436ff25140d450e99236c3e2d137dd3) is
-**unsubmitted and unpaid, not order-ready**. The 2026-09-12 layout review uploaded the revised Gerbers, 142-reference
-BOM and matching placements from `output/assembly-layout-review/`. This replaces the earlier `c45d113d...` virtual-box
-draft for PCB validation; its fabrication files are obsolete. Keep the frozen combined-board draft separate. The
-programming feasibility package remains associated with the earlier review, not newly approved in this draft.
+The [retained virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=9436ff25140d450e99236c3e2d137dd3) is
+**unsubmitted, unpaid and stale for the current layout, not order-ready**. It contains the preceding Gerbers and
+placements from `output/assembly-layout-review/`. The refined board must be uploaded with its matching new placement
+file before supplier review; do not order from that draft or the older `c45d113d...` draft. Keep the frozen
+combined-board draft separate. The programming feasibility package remains associated with the earlier review, not newly
+approved.
 
 Do not contact JLCPCB support, send follow-up messages, or request additional sourcing/programming quotations without
 the user's explicit permission. Continue local validation and self-service draft checks only. Do not submit or pay.
@@ -253,24 +268,25 @@ the user's explicit permission. Continue local validation and self-service draft
   `JLCPCB Part #`. This prevents the known automatic mis-match on re-upload; it does not approve a substitution or
   establish available inventory. Review every supplier line again after any BOM upload.
 
-The new draft contains 142 BOM references / 48 MPNs and 142 matching placements. All 142 requested identities match
+The retained draft contains 142 BOM references / 48 MPNs and 142 matching placements. All 142 requested identities match
 their supplier identities after normalizing punctuation; this is an identity screen, not datasheet or placement
 approval. JLCPCB confirms 117 references and flags **25 references with inventory shortages**. Advancing to placement
 review offers to leave unavailable parts unpopulated. That option was rejected: no required component has been waived.
 Supplier placement approval, assembly/programming acceptance and the complete price remain open. No order, payment, new
 sourcing request or support message was sent during this layout review.
 
-The BOM is unchanged from the stock review, SHA-256 `D3AD05D6F85417485E3D4224F42FDC00C65BA3DC7EBAF2E13502C32A5B3591D0`.
-Thirteen components were repositioned; all 146 footprint identities, values and pad/net assignments remain unchanged.
-The new placement SHA-256 is `2EE28FAFDDB4A68AD5ACAA9D2ED6C2A4BD49D5A74B4539783CCEF577B9923022`. The fabrication ZIP
-contains thirteen Gerber/drill files, SHA-256 `19C7D07030136A6B3D4023C694466C93A726CB8B81A124EA8BCB01DD7A7C2114`.
+The current local review export is `output/assembly-layout-polish/`, generated together with `export-manufacturing.ps1`:
+thirteen Gerber/drill files, 142 BOM rows, matching placements and top/bottom 3D renders. BOM identities are unchanged
+from the stock review; prior placement/fabrication hashes are obsolete. Generated exports remain local and ignored, not
+a release authorization. This export has not been uploaded to JLCPCB.
 
 Fresh KiCad ERC, DRC, unconnected and parity counts are all zero under the enabled rules; top/bottom 3D renders and
 local copper views were inspected. The virtual U24 image cross-builds unchanged at 3096 bytes code / 72 bytes RAM.
 Scoring-circuit types and tests passed (2 files / 13 tests); lint and all eight existing ngspice models also passed.
-These models do not simulate the revised PCB parasitics. Repository `pnpm verify` stopped on an unrelated type error in
-`apps/legislation/src/search/amendment-search.test.ts:75` (`blobPath` is absent from `DocumentAmendmentSummaryRow`),
-before its coverage stage. That file was left untouched; no full-repository pass is claimed.
+These models do not simulate the revised PCB parasitics. Repository `pnpm verify` passed its check stage, then stopped
+at the existing scoring application's 100% coverage gate: 969 tests passed, with 96.09% lines, 99.79% functions, 95.44%
+statements and 93.78% branches. No application source or thresholds changed in this PCB-only refinement; no
+full-repository pass is claimed.
 
 The unresolved procurement list below is **25 board references / 12 part types**, not 25 extra pieces. JLCPCB purchase
 quantities also include assembly attrition and minimum-order quantities. The reference list was rechecked in the new
