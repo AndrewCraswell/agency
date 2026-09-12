@@ -25,8 +25,8 @@ handlers, and the current production deployment contains 88/88. Across all 88 op
 **Done** and 10 **Blocked**: nine production-data gates and broad passage search. The shared Next.js API boundary verifies WorkOS bearer tokens and
 installs the derived request identity in reviewed local source. The deployed release records separate WorkOS authorities for
 M2M API tokens and AuthKit user-session tokens, plus both required encryption secrets. The 14 subscription/webhook
-operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Current source `b1fef71`, including projection foundation `2a91fba`, is deployed as
-`ddc68697-d50f-42f2-b760-b2ded5832c64` with terminal `SUCCESS`. The following subscription and OCR evidence is historical acceptance, not a fresh rerun. The subscription
+operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Current source `54852f9` is deployed as
+`60895192-ae34-42ab-9b96-2142750aa73c` with terminal `SUCCESS`. The API-backed MCP route is published, but positive resource-token acceptance remains pending. Ranked passage traffic is disabled during backfill. The following subscription and OCR evidence is historical acceptance, not a fresh rerun. The subscription
 smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch
 `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API database session
@@ -39,7 +39,7 @@ are valid. The approved 319-document OCR cohort now has valid page metadata on a
 production document-section retrieval projected the repaired range successfully.
 The old Railway `legislation-api` service is deleted and is not a rollback target. Authentication enforcement is live;
 the remaining route blockers include named production-data gates and the search failures below. MCP cutover and smoke remain deferred, and work
-stopped before that step as requested.
+has now resumed under the four-item closeout request. See [passage search and API closeout](passage-search-delivery.md) for current acceptance and unresolved source-data evidence.
 
 ## Delivery traceability
 
@@ -52,7 +52,7 @@ stopped before that step as requested.
 | Search, document-difference, and research routes | One operation reopened | September 12 amendment remediation passed all 14 deployed smoke checks, including broad lexical searches in 495–1,785 ms, pagination, filters and semantic/hybrid modes. Passage search remains Blocked after September 11 broad-query 503s. The other five retain historical release evidence. |
 | Subscription and webhook routes | Done | All 14 explicit routes, domain compositions, and focused local tests are deployed. The seven subscription and all seven webhook operations are Done after authenticated lifecycle smoke in deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a` from source `c3c5f43`; all 14 webhook-lifecycle checks passed, including signed verification against a throwaway Railway receiver. |
 | WorkOS authentication | Done for released surface | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Authenticated lifecycle and cumulative search/diff/research smoke passed; remaining skips are named missing-fixture gates. |
-| MCP HTTP migration | Deferred | This is the next step. Cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence; work stopped before implementation or smoke as requested. |
+| MCP HTTP migration | In progress | All 22 query operations are API-backed in deployed snapshot `54852f9`; discovery and rejection boundaries passed. Positive MCP-resource consent, complete real-data tool acceptance and soak remain open. |
 | Final runtime cleanup | Blocked | Remove duplicate standalone production serving code, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
 
 ## Review and commit protocol

@@ -11,14 +11,17 @@ The user completes consent in their own browser. The operator retains only sanit
 
 ## Current status
 
-The canary is deliberately blocked. The current Railway `legislation-web` deployment is
-`35cfc3bb-ea63-477c-b467-6bf84a4200c5` from commit `0a2748b`; its health and readiness checks returned `200`, but it
-does not yet expose a live Next.js MCP route. `apps/legislation` is the canonical application home. Do not configure or
+The positive consent canary remains pending. Railway `legislation-web` deployment
+`60895192-ae34-42ab-9b96-2142750aa73c` from commit `54852f9` reached `SUCCESS` and exposes
+`https://legislation-web-production-b024.up.railway.app/mcp` through Next.js. Health, readiness and protected-resource
+metadata returned `200`; anonymous and API-audience-token MCP requests returned `401`. These rejection checks do not
+prove the browser-consent flow. `apps/legislation` is the canonical application home. Do not configure or
 test a Resource Indicator against the deleted `legislation-api` service. That service is historical evidence only and is
 neither current nor a rollback target.
 
-Resume this procedure only after the Next.js MCP route is deployed and its exact public `/mcp` URL is known. MCP remains
-last in the HTTP migration sequence, after API route migration and WorkOS authentication.
+The browser-consent procedure can now use the exact endpoint above. Outbound MCP-to-API access uses its own dedicated
+machine credential; it must never substitute for the incoming MCP-resource token. Final runtime cleanup remains gated
+on positive deployed MCP acceptance.
 
 ## Prerequisites
 

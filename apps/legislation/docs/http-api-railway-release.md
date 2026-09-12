@@ -29,14 +29,14 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `b1fef71`, including native amendment projection `2a91fba`; source-only committed archive |
-| Deployment | `ddc68697-d50f-42f2-b760-b2ded5832c64` |
+| Source snapshot commit | `54852f9`; source-only committed archive, API-backed MCP and organization relationships; ranked passage traffic disabled |
+| Deployment | `60895192-ae34-42ab-9b96-2142750aa73c` |
 | Deployment status | `SUCCESS` |
-| Image | Build export digest `sha256:664bca774dd40e2a9f5eed534fb334344f63db11d5097a556d908629beb2bbaf` |
-| Previous rollback artifact | `6bfe6fc2-9045-4d90-b09d-f689fb80846a`, verified `SUCCESS` before replacement; immutable image `sha256:e4183e1a1e9f7059b3197bf1ba3f88ad4dca518cdd112a40aa52b3d74072d7fa`. Now `REMOVED` after replacement, not a running fallback. |
+| Image | `sha256:ddf521127732c093d8bc21157ddc084f16307f915b551d21b8afd42d101229df` |
+| Previous rollback artifact | `ddc68697-d50f-42f2-b760-b2ded5832c64`, verified `SUCCESS` before replacement; immutable image `sha256:f3bf4ecb87f74a71d5954c87bec623b2207912ba739b08032cd8cf51d02acbd7`. Now `REMOVED`, not a running fallback. |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
-| Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
+| Railway service list after original teardown | `legislation-web`, `pgbouncer`, `pgvector`; the approved isolated `legislation-passage-search` service was added September 12 |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
 | Current verification | September 12: all 14 amendment-release smoke checks pass, including health/readiness, anonymous 401, broad lexical requests, pagination, Oregon filtering, semantic/hybrid and canonical detail. Lexical requests took 495–1,785 ms. Amendment timeout gate closed; passage timeout remains open. Other rows retain historical acceptance, including September 11 civic verification. See the reconciled API backlog and amendment search evidence. |
 | Foundation smoke | Health and readiness returned `200`; unknown routes and unsupported methods returned `404`. |

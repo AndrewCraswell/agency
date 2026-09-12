@@ -25,7 +25,12 @@ No gate is closed by local tests alone. Record commit, deployment, nonempty acce
 
 ## Current evidence
 
-The last verified application release remains `ddc68697-d50f-42f2-b760-b2ded5832c64`, with native amendment search accepted. The separate passage service is not yet serving API traffic. No full-corpus passage ETA is claimed until actual load throughput and index build time are measured.
+The current application release is `60895192-ae34-42ab-9b96-2142750aa73c`, from committed snapshot `54852f9`, with terminal `SUCCESS`. The separate passage service is not yet serving API traffic. No full-corpus passage ETA is claimed until actual load throughput and index build time are measured.
+
+- Final legislation verification passed 2,675 tests plus four receiver tests, formatting, lint, types and unused-dependency checks. The separate production build passed. Root `pnpm verify` still fails in the unrelated scoring coverage task.
+- Trigger version `20260912.2` deployed successfully from the same committed snapshot with 28 tasks, including the organization ingestion correction. Scheduled copy run `run_06g9crv77rsb81u4n7nhua9q01` completed with 5,975 document refreshes, 33,714 section writes and zero deferred failures; the next cycle was executing when checked.
+- Deployed health/readiness and protected-resource metadata returned 200. Authenticated jurisdiction collection returned one canonical row. Anonymous MCP and API-audience-token MCP requests both returned 401. This verifies rejection boundaries, not a successful MCP-resource consent flow.
+- API-backed `getBill` for the Washington canary returned 422, `organization isActive must be boolean`, correlation `3ef3792b-9b88-4c03-ace5-997eb2609993`. Embedded organization observations do not prove active status. The organization relationship acceptance does not close full bill-detail/profile completeness or justify inventing a boolean. Resolve this through authoritative organization data or an explicit unknown-state contract before promoting the data gate.
 
 - Search service `000bdbad-62cd-43ef-9890-825675dc15cb`, volume `bf04d46e-4ed6-41af-8b78-9bf949464a5c`, initial deployment `3bf7c2ca-5716-4a69-9e1d-48fd6999f0ad` reached `SUCCESS`. Read-only inspection confirmed PostgreSQL 18.6 and preinstalled `pg_search` 0.25.9. No extension was installed into the canonical database.
 - Real-data copy canary: 8 documents, 13 sections, idempotent replay passed; ranked query returned 13 hits in 167 ms. This tiny sample does not establish full-corpus latency.
