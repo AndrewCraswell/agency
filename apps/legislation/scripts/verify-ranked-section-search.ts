@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { mkdir, writeFile } from "node:fs/promises"
 import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { z } from "zod"
@@ -8,8 +9,12 @@ import {
   rankedSectionPageQuery,
   type RankedSectionFilters
 } from "../src/search/ranked-section-search.js"
+import { runPairedTextIndexBenchmark } from "./paired-text-index-benchmark.js"
+import { textIndexSampleRanges, validateSampleStratum } from "./text-index-sample-ranges.js"
 
+const reportLines: string[] = []
 function report(line: string) {
+  reportLines.push(line)
   process.stdout.write(`${line}\n`)
 }
 
@@ -44,17 +49,20 @@ async function measureSample() {
   // A bounded public sample, not a representative production latency estimate.
   const source = new pg.Client({ connectionString: sourceUrl.href, connectionTimeoutMillis: 10000 })
   await source.connect()
-  let after = ""
   let copied = 0
   try {
     await source.query("begin isolation level repeatable read read only")
     await source.query("set local statement_timeout=15000")
     await client.query("delete from legislation.document_sections")
-    while (copied < 10000) {
-      const result = await source.query(
-        `with sample as materialized (
+    await client.query("drop index legislation.document_sections_ranked_text_idx")
+    for (const { jurisdiction, prefix, upperBound, target } of textIndexSampleRanges) {
+      let after: string = prefix
+      let stratumCopied = 0
+      while (stratumCopied < target) {
+        const result = await source.query(
+          `with sample as materialized (
         select id,document_id,heading,text,page_start,page_end from legislation.document_sections
-        where id > $1 order by id limit 500
+        where id > $1 and id < $2 order by id limit 500
       ) select s.*,coalesce(d.title,'') search_document_title,
         jsonb_build_object('processingStatus',d.processing_status,
           'billIds',jsonb_build_array(b.id),'jurisdictionIds',jsonb_build_array(b.jurisdiction_id),
@@ -68,22 +76,37 @@ async function measureSample() {
           'documentUpdatedAt',extract(epoch from d.updated_at)*1000) search_metadata
         from sample s join legislation.bill_documents d on d.id=s.document_id
         join legislation.bills b on b.id=d.bill_id order by s.id`,
-        [after]
-      )
-      const rows = z.array(z.object({ id: z.string() }).passthrough()).parse(result.rows)
-      if (rows.length === 0) {
-        break
-      }
-      await client.query(
-        `insert into legislation.document_sections
+          [after, upperBound]
+        )
+        const rows = z.array(z.object({ id: z.string() }).passthrough()).parse(result.rows)
+        if (rows.length === 0) {
+          break
+        }
+        assert.ok(
+          rows.every((row) => row.id.startsWith(prefix)),
+          "Source range returned an unexpected jurisdiction prefix"
+        )
+        await client.query(
+          `insert into legislation.document_sections
         select id,document_id,heading,text,page_start,page_end,search_document_title,search_metadata
         from jsonb_to_recordset($1::jsonb) as r(id text,document_id text,heading text,text text,
           page_start integer,page_end integer,search_document_title text,search_metadata jsonb)`,
-        [JSON.stringify(rows)]
+          [JSON.stringify(rows)]
+        )
+        copied += rows.length
+        stratumCopied += rows.length
+        after = z.string().parse(rows.at(-1)?.id)
+        report(JSON.stringify({ copiedPublicSections: copied, stratum: jurisdiction, stratumCopied }))
+      }
+      report(
+        JSON.stringify({
+          samplingStratum: jurisdiction,
+          requestedRows: target,
+          copiedRows: stratumCopied,
+          method: "first canonical IDs inside indexed prefix range; not random or representative"
+        })
       )
-      copied += rows.length
-      after = z.string().parse(rows.at(-1)?.id)
-      report(JSON.stringify({ copiedPublicSections: copied }))
+      validateSampleStratum(jurisdiction, stratumCopied, target)
     }
   } finally {
     await source.query("rollback").catch(() => undefined)
@@ -98,48 +121,88 @@ async function measureSample() {
       [copy]
     )
   }
+  const vectorStarted = performance.now()
+  const beforeVectors = await client.query("select pg_table_size('legislation.document_sections')::float8 table_bytes")
+  await client.query(`alter table legislation.document_sections
+    add column benchmark_body_vector tsvector generated always as (to_tsvector('english',coalesce(heading,'') || ' ' || text)) stored,
+    add column benchmark_title_vector tsvector generated always as (to_tsvector('english',search_document_title)) stored`)
+  const nativeVectorPreparationMs = performance.now() - vectorStarted
+  const nativeStarted = performance.now()
+  await client.query(
+    "create index benchmark_body_gin on legislation.document_sections using gin(benchmark_body_vector)"
+  )
+  await client.query(
+    "create index benchmark_title_gin on legislation.document_sections using gin(benchmark_title_vector)"
+  )
+  const nativeIndexBuildMs = performance.now() - nativeStarted
+  const rankedStarted = performance.now()
+  await client.query(rankedSectionIndexSql)
+  const rankedIndexBuildMs = performance.now() - rankedStarted
   await client.query("analyze legislation.document_sections")
   // Measure committed index segments, not the cost of searching our own pending writes.
   await client.query("commit")
   hasCommittedSample = true
   await client.query("begin isolation level repeatable read read only")
   await client.query("set local statement_timeout=60000")
-  for (const query of ["legislation", "tax", "education", "health"]) {
-    for (const amendmentsOnly of [false, true]) {
-      const statement = dialect.sqlToQuery(rankedSectionPageQuery({ query, amendmentsOnly, limit: 21 }))
-      const plan = await client.query(`explain (analyze,format json) ${statement.sql}`, statement.params)
-      const serialized = JSON.stringify(plan.rows)
-      assert.ok(serialized.includes("TopKScanExecState"))
-      assert.ok(!serialized.includes("heap_filter"))
-      const result = z
-        .array(z.object({ "QUERY PLAN": z.array(z.object({ "Execution Time": z.number() })) }))
-        .parse(plan.rows)
-      report(
-        JSON.stringify({
-          sampleRows: copied * 10,
-          query,
-          amendmentsOnly,
-          serverMs: result[0]?.["QUERY PLAN"][0]?.["Execution Time"]
-        })
-      )
-      if (amendmentsOnly) {
-        const started = performance.now()
-        let batches = 0
-        const grouped = await collectRankedAmendments(async (offset, limit) => {
-          const remaining = Math.floor(15000 - (performance.now() - started))
-          assert.ok(remaining > 0, "Amendment query exceeded its total 15-second budget")
-          await client.query("select set_config('statement_timeout',$1,true)", [`${remaining}ms`])
-          const page = dialect.sqlToQuery(rankedSectionPageQuery({ query, amendmentsOnly: true, limit, offset }))
-          batches += 1
-          return hitSchema.parse((await client.query(page.sql, page.params)).rows)
-        }, 21)
-        const elapsedMs = performance.now() - started
-        assert.ok(elapsedMs < 15000)
-        report(JSON.stringify({ query, groupedDocuments: grouped.length, batches, elapsedMs }))
-        await client.query("set local statement_timeout=60000")
-      }
-    }
+  await client.query("set local work_mem='4MB'")
+  await client.query("set local max_parallel_workers_per_gather=2")
+  const settings = await client.query(`select name,setting,unit from pg_settings where name in
+    ('shared_buffers','work_mem','maintenance_work_mem','max_parallel_workers_per_gather','max_parallel_workers','jit','random_page_cost','effective_cache_size') order by name`)
+  report(
+    JSON.stringify({
+      measurementSettings: settings.rows,
+      caveat: "Session work_mem and parallel gather match production; shared buffers and host remain benchmark-specific"
+    })
+  )
+  const storage = await client.query(`select
+    pg_relation_size('legislation.document_sections')::float8 heap_bytes,
+    pg_table_size('legislation.document_sections')::float8 table_including_toast_bytes,
+    (pg_relation_size('legislation.benchmark_body_gin') + pg_relation_size('legislation.benchmark_title_gin'))::float8 native_index_bytes,
+    pg_relation_size('legislation.document_sections_ranked_text_idx')::float8 ranked_index_bytes,
+    (select sum(octet_length(text))::float8 from legislation.document_sections) source_text_bytes`)
+  report(
+    JSON.stringify({
+      sampleRows: copied * 10,
+      originalCopiedRows: copied,
+      syntheticCopies: 9,
+      nativeVectorPreparationMs,
+      nativeIndexBuildMs,
+      rankedIndexBuildMs,
+      tableBeforeNativeVectors: beforeVectors.rows[0],
+      storage: storage.rows[0],
+      buildTiming: "single build wall observations; native GIN built before ranked; not migration estimate"
+    })
+  )
+  report(JSON.stringify({ measurementPhase: "fresh-bulk-index" }))
+  await runPairedTextIndexBenchmark(client, copied * 10, report)
+  await client.query("commit")
+  // Exercise committed parent-metadata changes on the disposable sample only.
+  await client.query("set statement_timeout=60000")
+  const updateStarted = performance.now()
+  let updatedRows = 0
+  for (let batch = 0; batch < 10; batch++) {
+    const updated = await client.query(
+      `with selected as (select id from legislation.document_sections order by id limit 500 offset $1)
+       update legislation.document_sections s
+       set search_metadata=jsonb_set(s.search_metadata,'{updatedAt}',to_jsonb(1789171200000::bigint))
+       from selected where s.id=selected.id`,
+      [batch * 500]
+    )
+    updatedRows += updated.rowCount ?? 0
   }
+  report(
+    JSON.stringify({
+      measurementPhase: "after-committed-metadata-updates",
+      updatedRows,
+      committedBatches: 10,
+      updateWallMs: performance.now() - updateStarted,
+      caveat: "Both index types coexist; this is combined update cost, not isolated engine overhead"
+    })
+  )
+  await client.query("begin isolation level repeatable read read only")
+  await client.query("set local work_mem='4MB'")
+  await client.query("set local max_parallel_workers_per_gather=2")
+  await runPairedTextIndexBenchmark(client, copied * 10, report)
 }
 
 await client.connect()
@@ -268,10 +331,24 @@ try {
     })
   )
 } finally {
-  await client.query("rollback").catch(() => undefined)
-  if (hasCommittedSample) {
-    // This schema was created above in the verified disposable database only.
-    await client.query("drop schema legislation cascade")
+  try {
+    if (args[0] === "--sample") {
+      await mkdir(new URL("../tmp/", import.meta.url), { recursive: true })
+      const artifactName = `ranked-search-comparison-${new Date().toISOString().replaceAll(":", "-")}.json`
+      report(JSON.stringify({ artifactName }))
+      await writeFile(new URL(`../tmp/${artifactName}`, import.meta.url), `[\n${reportLines.join(",\n")}\n]\n`, {
+        flag: "wx"
+      })
+    }
+  } finally {
+    try {
+      await client.query("rollback").catch(() => undefined)
+      if (hasCommittedSample) {
+        // This schema was created above in the verified disposable database only.
+        await client.query("drop schema legislation cascade")
+      }
+    } finally {
+      await client.end()
+    }
   }
-  await client.end()
 }

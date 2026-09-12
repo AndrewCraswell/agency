@@ -1,5 +1,8 @@
 # Isolated ranked text-index evaluation
 
+September 12 update: [paired performance comparison and migration decision](ranked-search-performance-decision.md).
+Production adoption is on hold; the implementation below remains an isolated candidate, not a deployed solution.
+
 September 11, 2026. Status: ranked-query implementation and isolated correctness canary completed;
 production schema, ingestion integration, API cutover and extension rollout **not implemented**.
 The two broad lexical timeout gates remain open. This does not change API acceptance counts.
