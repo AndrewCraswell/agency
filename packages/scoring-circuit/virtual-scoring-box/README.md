@@ -102,10 +102,11 @@ or proof of a globally optimal layout. Shorter aggregate routing does not mean e
 layer views and top/bottom 3D views must be inspected with the final exports.
 
 White silkscreen identifies STM32, ESP32, the IR receiver, left/right inputs, USB-C, piste, A/B/C wire pads, service
-headers and reset/boot controls. J2/J6 have individual pin labels. A compact power/interface legend pairs functions with
-the key component references; U25's physical identifier is on the back because its front-side area is dense. Full
-component references remain on the fabrication drawing. Text meets the enabled 0.8mm minimum and clears solder pads and
-board edges. Provide an actual KiCad 3D render with each board-update checkpoint.
+headers and reset/boot controls. J2/J6 have individual pin labels. The product marking is **FENCING CLUB**, **VIRTUAL
+SCORING BOX**, and **USB + WIRELESS**. The piste termination says only **PISTE**; the electrical safety distinction
+remains in this documentation. Omit code-only component labels and lookup legends from the silkscreen; full component
+references remain on the fabrication drawing. Text meets the enabled 0.8mm minimum and clears solder pads and board
+edges. Provide an actual KiCad 3D render with each board-update checkpoint.
 
 The native stackup now specifies [JLC04161H-3313](https://jlcpcb.com/impedance): nominal 1.6mm four-layer construction,
 35um outer / 15.2um inner copper, 0.0994mm outer prepregs (Dk 4.1), and a 1.265mm core (Dk 4.6). Select this exact
@@ -275,7 +276,7 @@ review offers to leave unavailable parts unpopulated. That option was rejected: 
 Supplier placement approval, assembly/programming acceptance and the complete price remain open. No order, payment, new
 sourcing request or support message was sent during this layout review.
 
-The current local review export is `output/assembly-layout-polish/`, generated together with `export-manufacturing.ps1`:
+The current local review export is `output/assembly-branding/`, generated together with `export-manufacturing.ps1`:
 thirteen Gerber/drill files, 142 BOM rows, matching placements and top/bottom 3D renders. BOM identities are unchanged
 from the stock review; prior placement/fabrication hashes are obsolete. Generated exports remain local and ignored, not
 a release authorization. This export has not been uploaded to JLCPCB.
@@ -283,10 +284,12 @@ a release authorization. This export has not been uploaded to JLCPCB.
 Fresh KiCad ERC, DRC, unconnected and parity counts are all zero under the enabled rules; top/bottom 3D renders and
 local copper views were inspected. The virtual U24 image cross-builds unchanged at 3096 bytes code / 72 bytes RAM.
 Scoring-circuit types and tests passed (2 files / 13 tests); lint and all eight existing ngspice models also passed.
-These models do not simulate the revised PCB parasitics. Repository `pnpm verify` passed its check stage, then stopped
-at the existing scoring application's 100% coverage gate: 969 tests passed, with 96.09% lines, 99.79% functions, 95.44%
-statements and 93.78% branches. No application source or thresholds changed in this PCB-only refinement; no
-full-repository pass is claimed.
+These models do not simulate the revised PCB parasitics. The branding-only update preserves all components and copper;
+fresh native ERC, DRC and schematic parity checks still report zero findings. Its `pnpm verify` run stopped at three
+lint errors in unrelated active legislation work (`config.ts`, `ranked-passage-search.test.ts`, and
+`query-service.test.ts`). The preceding layout run also exposed the scoring application's existing 100% coverage gate:
+969 tests passed, with 96.09% lines, 99.79% functions, 95.44% statements and 93.78% branches. No application source or
+thresholds changed in these PCB-only updates; no full-repository pass is claimed.
 
 The unresolved procurement list below is **25 board references / 12 part types**, not 25 extra pieces. JLCPCB purchase
 quantities also include assembly attrition and minimum-order quantities. The reference list was rechecked in the new

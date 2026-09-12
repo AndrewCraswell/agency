@@ -34309,28 +34309,6 @@
 		(layer "User.2")
 		(uuid "d1dc2a22-c9e9-4ae0-9d24-d3d34ffea046")
 	)
-	(gr_text "U23"
-		(at 57.675 104 0)
-		(layer "F.SilkS")
-		(uuid "e2c83c8c-2728-4219-bceb-6a7bf02172ca")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U18"
-		(at 59.5 112.255 0)
-		(layer "F.SilkS")
-		(uuid "7fcefcac-4504-45b2-ad42-5ae2ab16e1e9")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
 	(gr_text "USB CTRL SWD"
 		(at 66 95.4 0)
 		(layer "F.SilkS")
@@ -34342,43 +34320,10 @@
 			)
 		)
 	)
-	(gr_text "U24"
-		(at 75 98.505 0)
-		(layer "F.SilkS")
-		(uuid "542907f5-94d7-47d9-a5ad-9d482c3f20fa")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "T1"
-		(at 75.02 127 0)
-		(layer "F.SilkS")
-		(uuid "93d8a447-33cd-4ff7-a8a7-f1c18c5275b9")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
 	(gr_text "PISTE"
 		(at 93.5 126.5 0)
 		(layer "F.SilkS")
 		(uuid "0d80f1c2-d558-4dba-9d4e-a58e4c0aadbe")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U22"
-		(at 102 124.255 0)
-		(layer "F.SilkS")
-		(uuid "41d983a3-89b9-4118-b235-0bf629c121a0")
 		(effects
 			(font
 				(size 0.8 0.8)
@@ -34452,14 +34397,14 @@
 			)
 		)
 	)
-	(gr_text "PISTE IS NOT PROTECTIVE EARTH"
-		(at 125 132 0)
+	(gr_text "FENCING CLUB"
+		(at 143 118 0)
 		(layer "F.SilkS")
 		(uuid "55922633-22a9-4686-b8bc-5a69fc3cb84a")
 		(effects
 			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
+				(size 1.8 1.8)
+				(thickness 0.25)
 			)
 		)
 	)
@@ -34522,83 +34467,6 @@
 		(at 136.9 73.2 0)
 		(layer "F.SilkS")
 		(uuid "b6f9ed70-0dcf-4451-b263-a5932ffba410")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "USB-C: POWER + DATA"
-		(at 143 107.8 0)
-		(layer "F.SilkS")
-		(uuid "d6ad7dc7-0d33-4c0e-87d7-c8334549ee3d")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U18  USB-UART"
-		(at 143 110 0)
-		(layer "F.SilkS")
-		(uuid "df0dfc52-627f-414b-820c-d513aaf5f979")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U23  USB-C PD"
-		(at 143 112.2 0)
-		(layer "F.SilkS")
-		(uuid "9bc28bb2-434b-45b1-9c4b-3ffb2a486ee2")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U24  POWER CONTROL"
-		(at 143 114.4 0)
-		(layer "F.SilkS")
-		(uuid "7e32078d-0a99-42eb-ae99-5638e18e5bfb")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U25  INPUT PROTECTION"
-		(at 143 116.6 0)
-		(layer "F.SilkS")
-		(uuid "4afcfc4a-3e9b-4be2-a826-497a2bae68b5")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "T1  POWER ISOLATION"
-		(at 143 118.8 0)
-		(layer "F.SilkS")
-		(uuid "544f45d2-9800-4097-a74d-92761c7e3372")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-		)
-	)
-	(gr_text "U22  3.3V SUPPLY"
-		(at 143 121 0)
-		(layer "F.SilkS")
-		(uuid "4582c843-987a-4204-8b7d-7733c5fcef6b")
 		(effects
 			(font
 				(size 0.8 0.8)
@@ -34683,7 +34551,7 @@
 			)
 		)
 	)
-	(gr_text "U8 LEFT INPUT"
+	(gr_text "LEFT INPUT"
 		(at 69 93 0)
 		(layer "F.SilkS")
 		(uuid "89e4ea72-46ed-4965-899e-d5d94a127762")
@@ -34694,7 +34562,7 @@
 			)
 		)
 	)
-	(gr_text "U1 STM32"
+	(gr_text "STM32"
 		(at 109.5 90.6 0)
 		(layer "F.SilkS")
 		(uuid "182a9b0b-fe43-4da1-a018-fb9e9865efce")
@@ -34727,7 +34595,7 @@
 			)
 		)
 	)
-	(gr_text "U9 RIGHT INPUT"
+	(gr_text "RIGHT INPUT"
 		(at 152 102.3 0)
 		(layer "F.SilkS")
 		(uuid "27d59337-a22c-47df-9ed2-0edeb3b79e40")
@@ -34782,7 +34650,7 @@
 			)
 		)
 	)
-	(gr_text "U2 ESP32-S3"
+	(gr_text "ESP32-S3"
 		(at 114.5 76.2 0)
 		(layer "F.SilkS")
 		(uuid "d5935c79-a96e-40f2-b25f-c97c394fa454")
@@ -34793,7 +34661,7 @@
 			)
 		)
 	)
-	(gr_text "U13 IR RECEIVER"
+	(gr_text "IR RECEIVER"
 		(at 158 55 0)
 		(layer "F.SilkS")
 		(uuid "3250957d-7319-421c-a9ef-b8bdc906367d")
@@ -34824,18 +34692,6 @@
 				(size 1.25 1.25)
 				(thickness 0.16)
 			)
-		)
-	)
-	(gr_text "U25"
-		(at 74 117 0)
-		(layer "B.SilkS")
-		(uuid "e9c58cf3-e4de-4f1d-8a3c-bb1eb11d04e2")
-		(effects
-			(font
-				(size 0.8 0.8)
-				(thickness 0.14)
-			)
-			(justify mirror)
 		)
 	)
 	(segment
