@@ -78,15 +78,26 @@ STM32 USART1 connects directly to ESP32 on the shared 3.3V rail: `STM_TX` to ESP
 translators U10/U11 and their redundant C23-C26/R30/R31 support were removed. R72/R73 retain idle-high reset defaults;
 C22/C27 remain at the ESP32 supply. The removed parts' copper, custom symbol and footprint were also removed.
 
-All schematic connections are now routed. In1.Cu provides separate scoring and USB-side ground regions; In2.Cu carries
-the corresponding 3.3V pours and selected signal routes. Two low-current source-controller supply joins use In1.Cu in
-the control area, outside the USB data corridor. Raw VBUS and protected 5V use separate back-layer pours, with explicit
-eFuse input/output necks and bridges between separated copper regions. USB D+ stays on the front layer; D- has a short
-back-layer crossing with nearby ground stitching at both transitions. This is full-speed USB routing, not a measured USB
-compliance result. The lower-left area contains the USB interface and isolated power stage. The ESP32 antenna extends
-beyond the top edge; antenna/enclosure clearance still needs review. This project does not inherit the combined board's
-verification approval, power firmware, or fabrication package. Provide an actual KiCad 3D screenshot with each
-board-update checkpoint.
+All schematic connections are routed. In1.Cu contains only the separate scoring and USB ground planes: all 33 former
+power-track segments on that layer were removed. In2.Cu carries the corresponding 3.3V regions and ordinary signal
+routes. Raw VBUS and protected 5V retain separate back-layer pours and explicit eFuse input/output joins. The USB bridge
+and protection device face the connector directly. Both data nets have two vias for the short USB-C duplicated-contact
+joins; the main data routes remain on the front. The back joins have a local, stitched USB-ground reference on In2.Cu.
+Local via antipads remain; this is not a measured USB-compliance result.
+
+The regulator, inductor and output capacitors form a compact group with a direct top-layer ground return. Output sensing
+is separated from the switching node. Y1 and its load capacitors sit beside the STM32 oscillator pins: both crystal nets
+now stay on the front, with no vias. Total drawn HSE_IN/HSE_OUT copper decreased from 9.24/12.78mm to 6.90/9.48mm,
+including capacitor branches. Obsolete tails were removed; total via count decreased from 434 to 430. These are layout
+measurements, not oscillator or supply test results. The acquisition groups, external connectors, board outline and
+ESP32 antenna position are unchanged. The antenna extends beyond the top edge; the final enclosure must leave it clear.
+Provide an actual KiCad 3D render with each board-update checkpoint.
+
+The native stackup now specifies [JLC04161H-3313](https://jlcpcb.com/impedance): nominal 1.6mm four-layer construction,
+35um outer / 15.2um inner copper, 0.0994mm outer prepregs (Dk 4.1), and a 1.265mm core (Dk 4.6). Select this exact
+stackup in the fabrication draft. Do not substitute the default 7628 stackup silently. The 0.20mm USB trace geometry is
+a design target, not a fabricator-confirmed 90-ohm result; JLCPCB's online calculation currently returns no width
+result. Electrical USB verification remains a bench requirement.
 
 1. Finish the primary-side sleep-current and voltage/current tolerance review, then verify antenna clearance and
    connector access. The virtual-board source-control configuration is implemented and host-tested; its physical power
@@ -161,17 +172,15 @@ Source-control pin/function review uses [STUSB4500](https://www.st.com/resource/
 not the unrelated twenty-pin download reported in that thread. Its STEP assembly already supplies the seating transform;
 no extra rotation or height offset is applied.
 
-The routing checkpoint ran `pnpm verify`: format, lint, types, unused-code, change and circuit-simulation checks passed.
-All 47 scoring test files / 969 tests passed, but scoring coverage failed its global 100% gate: lines 96.09%, statements
-95.44%, branches 93.78%, functions 99.79%. This is not a clean repository verification result. No scoring firmware or
-simulator files were changed for this routing checkpoint; the coverage shortfall remains separate from the clean native
-PCB checks.
+The 2026-09-12 layout review passes native ERC, DRC, schematic parity and connectivity with zero findings. Part values,
+footprint identities and pad/net maps are unchanged. Scoring-circuit type-check and its 13 tests pass; all eight
+existing electrical simulation models pass their stated limits. These simulations do not model PCB parasitics or qualify
+this layout. The virtual U24 image cross-builds (3096 bytes code, 72 bytes static RAM); it is not flashed or
+electrically qualified. Fresh fabrication, assembly and 3D files are in `output/assembly-layout-review/`.
 
-The subsequent power-firmware checkpoint passes all three native power suites and the complete C/C++ coverage gate.
-Power policy / target adapter have 100% line/function coverage and 95.05% / 95.74% branch coverage; all scoring-core
-metrics remain 100%. Both MCU images cross-build (3096 bytes code, 72 bytes static RAM). Full repository verification
-still fails the same scoring TypeScript coverage gate, not a C test failure. The virtual image is not yet flashed or
-electrically qualified.
+`pnpm verify` is not clean: it stops at the unrelated legislation type error in `src/search/amendment-search.test.ts:75`
+(`blobPath` is not a `DocumentAmendmentSummaryRow` property). Coverage is not reached in that run. The previously
+reported scoring TypeScript coverage shortfall has not been reassessed by this layout-only change.
 
 ## Assembly handoff
 
@@ -211,15 +220,18 @@ guaranteed limit. References: [CP2102N](https://www.silabs.com/documents/public/
 
 ### JLCPCB validation draft
 
-The [saved virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=c45d113d10e04783b58e13074aaa71db) is
-**unsubmitted and unpaid, not order-ready**. The 2026-09-12 review uploaded the Gerbers, 142-reference BOM, matching
-placements and `programming-review.zip`. Keep the frozen combined-board draft separate.
+The [current virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=9436ff25140d450e99236c3e2d137dd3) is
+**unsubmitted and unpaid, not order-ready**. The 2026-09-12 layout review uploaded the revised Gerbers, 142-reference
+BOM and matching placements from `output/assembly-layout-review/`. This replaces the earlier `c45d113d...` virtual-box
+draft for PCB validation; its fabrication files are obsolete. Keep the frozen combined-board draft separate. The
+programming feasibility package remains associated with the earlier review, not newly approved in this draft.
 
 Do not contact JLCPCB support, send follow-up messages, or request additional sourcing/programming quotations without
 the user's explicit permission. Continue local validation and self-service draft checks only. Do not submit or pay.
 
 - Five bare boards, two assembled; Standard PCBA, all components on top; 120 x 85mm finished, 1.6mm FR-4, green mask,
-  white legend, ENIG, 1oz outer / 0.5oz inner copper. JLCPCB adds two 5mm rails; depaneling is selected.
+  white legend, ENIG, 1oz outer / 0.5oz inner copper. **JLC04161H-3313** is selected, with F.Cu / In1.Cu / In2.Cu / B.Cu
+  in that order. JLCPCB adds two 5mm rails; depaneling is selected.
 - Epoxy-filled/capped vias are requested. U2 has twelve 0.2mm thermal holes and U22 has two. Fill/cap only the
   0.2/0.25/0.3mm via groups, not USB slots, connector, wire or locating holes. Confirm this in the production files.
 - Production-file and placement confirmation are required, with automatic confirmation disabled.
@@ -241,21 +253,29 @@ the user's explicit permission. Continue local validation and self-service draft
   `JLCPCB Part #`. This prevents the known automatic mis-match on re-upload; it does not approve a substitution or
   establish available inventory. Review every supplier line again after any BOM upload.
 
-The refreshed `output/assembly-stock-review/` BOM and placement file were uploaded to the same draft after the R88/R92
-substitution. There are 142 BOM references / 48 MPNs and 142 matching placements. All 142 requested identities match
+The new draft contains 142 BOM references / 48 MPNs and 142 matching placements. All 142 requested identities match
 their supplier identities after normalizing punctuation; this is an identity screen, not datasheet or placement
-approval. The BOM SHA-256 is `D3AD05D6F85417485E3D4224F42FDC00C65BA3DC7EBAF2E13502C32A5B3591D0`. Positions, pads and
-routing did not change; placement SHA-256 remains `389FF191E600E2708319AEC03B73A158270CB6539B29ECF73960BE6BE392F4CD`.
-All thirteen Gerber/drill files match the preceding package apart from generation timestamps.
+approval. JLCPCB confirms 117 references and flags **25 references with inventory shortages**. Advancing to placement
+review offers to leave unavailable parts unpopulated. That option was rejected: no required component has been waived.
+Supplier placement approval, assembly/programming acceptance and the complete price remain open. No order, payment, new
+sourcing request or support message was sent during this layout review.
 
-Fresh KiCad ERC, DRC, unconnected and parity counts are all zero; top/bottom 3D renders were inspected. The virtual U24
-image cross-builds unchanged at 3096 bytes code / 72 bytes RAM. Focused scoring-circuit lint, types and unused-code
-checks passed. This checkpoint's `pnpm verify` stopped before tests on an unrelated nested-ternary lint error in
-`apps/legislation/scripts/verify-ranked-section-search.ts:75`; that file was left untouched. The earlier scoring
-coverage failure remains unresolved and no fresh full-suite success is claimed.
+The BOM is unchanged from the stock review, SHA-256 `D3AD05D6F85417485E3D4224F42FDC00C65BA3DC7EBAF2E13502C32A5B3591D0`.
+Thirteen components were repositioned; all 146 footprint identities, values and pad/net assignments remain unchanged.
+The new placement SHA-256 is `2EE28FAFDDB4A68AD5ACAA9D2ED6C2A4BD49D5A74B4539783CCEF577B9923022`. The fabrication ZIP
+contains thirteen Gerber/drill files, SHA-256 `19C7D07030136A6B3D4023C694466C93A726CB8B81A124EA8BCB01DD7A7C2114`.
+
+Fresh KiCad ERC, DRC, unconnected and parity counts are all zero under the enabled rules; top/bottom 3D renders and
+local copper views were inspected. The virtual U24 image cross-builds unchanged at 3096 bytes code / 72 bytes RAM.
+Scoring-circuit types and tests passed (2 files / 13 tests); lint and all eight existing ngspice models also passed.
+These models do not simulate the revised PCB parasitics. Repository `pnpm verify` stopped on an unrelated type error in
+`apps/legislation/src/search/amendment-search.test.ts:75` (`blobPath` is absent from `DocumentAmendmentSummaryRow`),
+before its coverage stage. That file was left untouched; no full-repository pass is claimed.
 
 The unresolved procurement list below is **25 board references / 12 part types**, not 25 extra pieces. JLCPCB purchase
-quantities also include assembly attrition and minimum-order quantities; recheck stock and price before release.
+quantities also include assembly attrition and minimum-order quantities. The reference list was rechecked in the new
+draft; numeric shortfalls below are from the preceding procurement review. Recheck quantities, stock and price before
+release.
 
 | References                            | Required MPN         | JLCPCB identity | Remaining sourcing issue                                                                          |
 | ------------------------------------- | -------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
@@ -287,18 +307,19 @@ one-piece minimum. These listings suggest procurement can retain the design, but
 landed quotes. No items were added to the existing sourcing cart. Purchased sourcing parts must reach JLCPCB's warehouse
 before assembly selection; obtain corrected quantity/lead-time/fee confirmation before buying.
 
-The attached programming package is for **supplier feasibility review**, not programming acceptance. It includes the
-virtual U24 HEX and assembly/probe guidance. U23 still needs a reviewed single-5V/1.5A NVM configuration and an agreed
-programming/readback method. ST's reference NVM example is not this board's configuration; do not copy it unmodified. ST
-provides an [offline configuration GUI and factory I2C programming procedure](https://github.com/usb-c/STUSB4500). The
-target is one enabled fixed PDO, 5V/1.5A, USB communication capable, not externally powered, and `REQ_SRC_CURRENT=0`;
-disable the higher-voltage PDOs. Preserve unrelated NVM settings using the ST tool rather than writing guessed reserved
-bytes. U24's SWD connection cannot directly write U23's NVM: the factory needs an agreed I2C probe or temporary
-programmer image, followed by full 40-byte readback, cold-reset PDO verification, and the final U24 runtime image. Use a
-fixed 5V source during initial programming, not a higher-voltage-capable PD source. JLCPCB support (Leo, 2026-09-12)
-confirmed that its functional-test service can review programming and that through-hole assembly of J2/J6/U13 is
-supported. This is not engineering acceptance of the specific fixture or U23 NVM operation. The supplied U24 HEX cannot
-substitute for U23's separate 40-byte NVM configuration; a specific clarification was sent.
+The previously supplied programming package is for **supplier feasibility review**, not programming acceptance. It
+includes the virtual U24 HEX and assembly/probe guidance. U23 still needs a reviewed single-5V/1.5A NVM configuration
+and an agreed programming/readback method. ST's reference NVM example is not this board's configuration; do not copy it
+unmodified. ST provides an
+[offline configuration GUI and factory I2C programming procedure](https://github.com/usb-c/STUSB4500). The target is one
+enabled fixed PDO, 5V/1.5A, USB communication capable, not externally powered, and `REQ_SRC_CURRENT=0`; disable the
+higher-voltage PDOs. Preserve unrelated NVM settings using the ST tool rather than writing guessed reserved bytes. U24's
+SWD connection cannot directly write U23's NVM: the factory needs an agreed I2C probe or temporary programmer image,
+followed by full 40-byte readback, cold-reset PDO verification, and the final U24 runtime image. Use a fixed 5V source
+during initial programming, not a higher-voltage-capable PD source. JLCPCB support (Leo, 2026-09-12) confirmed that its
+functional-test service can review programming and that through-hole assembly of J2/J6/U13 is supported. This is not
+engineering acceptance of the specific fixture or U23 NVM operation. The supplied U24 HEX cannot substitute for U23's
+separate 40-byte NVM configuration; a specific clarification was sent.
 [Programming is a separately reviewed Standard PCBA service](https://jlcpcb.com/help/article/pcba-programming-service).
 Do not release a board with blank source-control firmware as ready to program the scoring application.
 
