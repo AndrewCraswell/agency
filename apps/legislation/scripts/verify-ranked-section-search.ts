@@ -10,12 +10,16 @@ import {
   type RankedSectionFilters
 } from "../src/search/ranked-section-search.js"
 import { runPairedTextIndexBenchmark } from "./paired-text-index-benchmark.js"
+import { diagnoseRankedUpdates } from "./ranked-update-diagnostic.js"
 import { textIndexSampleRanges, validateSampleStratum } from "./text-index-sample-ranges.js"
 
 const reportLines: string[] = []
 function report(line: string) {
   reportLines.push(line)
-  process.stdout.write(`${line}\n`)
+  const summary = z.record(z.string(), z.unknown()).parse(JSON.parse(line))
+  delete summary.observations
+  delete summary.measurements
+  process.stdout.write(`${JSON.stringify(summary)}\n`)
 }
 
 // Deliberately restricted to a disposable database. Never provisions extensions.
@@ -42,7 +46,13 @@ const client = new pg.Client({ connectionString: targetUrl.href, connectionTimeo
 const dialect = new PgDialect()
 const hitSchema = z.array(z.object({ id: z.string(), document_id: z.string(), score: z.number() }))
 const args = process.argv.slice(2)
-assert.ok(args.length === 0 || (args.length === 1 && args[0] === "--sample"), "Only --sample is supported")
+assert.ok(
+  args.length === 0 ||
+    (args.length === 1 && ["--sample", "--diagnose-updates", "--diagnose-amendments"].includes(args[0] ?? "")),
+  "Unsupported benchmark argument"
+)
+const hasSample = args.length === 1
+const hasAmendmentSample = args[0] === "--diagnose-amendments"
 let hasCommittedSample = false
 
 async function measureSample() {
@@ -55,15 +65,32 @@ async function measureSample() {
     await source.query("set local statement_timeout=15000")
     await client.query("delete from legislation.document_sections")
     await client.query("drop index legislation.document_sections_ranked_text_idx")
-    for (const { jurisdiction, prefix, upperBound, target } of textIndexSampleRanges) {
+    const ranges = hasAmendmentSample
+      ? [{ jurisdiction: "amendments", prefix: "", upperBound: "", target: 10000 }]
+      : textIndexSampleRanges
+    for (const { jurisdiction, prefix, upperBound, target } of ranges) {
       let after: string = prefix
       let stratumCopied = 0
       while (stratumCopied < target) {
         const result = await source.query(
-          `with sample as materialized (
+          `${
+            hasAmendmentSample
+              ? `with documents as materialized (
+            select id from legislation.bill_documents where classification='amendment'
+            order by (document_date is null),document_date desc nulls first,id limit 1000
+          ), sample as materialized (
+            select s.id,s.document_id,s.heading,s.text,s.page_start,s.page_end
+            from documents d cross join lateral (
+              select id,document_id,heading,text,page_start,page_end
+              from legislation.document_sections where document_id=d.id and id > $1
+              order by id limit 100
+            ) s order by s.id limit 500
+          )`
+              : `with sample as materialized (
         select id,document_id,heading,text,page_start,page_end from legislation.document_sections
         where id > $1 and id < $2 order by id limit 500
-      ) select s.*,coalesce(d.title,'') search_document_title,
+      )`
+          } select s.*,coalesce(d.title,'') search_document_title,
         jsonb_build_object('processingStatus',d.processing_status,
           'billIds',jsonb_build_array(b.id),'jurisdictionIds',jsonb_build_array(b.jurisdiction_id),
           'sessionIds',jsonb_build_array(b.session_id),'classifications',b.classification,
@@ -76,7 +103,7 @@ async function measureSample() {
           'documentUpdatedAt',extract(epoch from d.updated_at)*1000) search_metadata
         from sample s join legislation.bill_documents d on d.id=s.document_id
         join legislation.bills b on b.id=d.bill_id order by s.id`,
-          [after, upperBound]
+          hasAmendmentSample ? [after] : [after, upperBound]
         )
         const rows = z.array(z.object({ id: z.string() }).passthrough()).parse(result.rows)
         if (rows.length === 0) {
@@ -103,16 +130,35 @@ async function measureSample() {
           samplingStratum: jurisdiction,
           requestedRows: target,
           copiedRows: stratumCopied,
-          method: "first canonical IDs inside indexed prefix range; not random or representative"
+          method: hasAmendmentSample
+            ? "Up to 10000 sections from latest 1000 amendment documents by indexed date; at most 100 sections per document per page; not random; may truncate documents"
+            : "first canonical IDs inside indexed prefix range; not random or representative"
         })
       )
-      validateSampleStratum(jurisdiction, stratumCopied, target)
+      if (hasAmendmentSample) {
+        assert.ok(stratumCopied >= 1000, "At least 1000 actual amendment sections required")
+      } else {
+        validateSampleStratum(jurisdiction, stratumCopied, target)
+      }
     }
   } finally {
     await source.query("rollback").catch(() => undefined)
     await source.end()
   }
   // Duplicate only this copied sample with distinct keys. Never read another 90k source rows.
+  const composition = z.object({ sections: z.number(), documents: z.number(), amendment_sections: z.number() }).parse(
+    (
+      await client.query(`select count(*)::int sections,
+    count(distinct document_id)::int documents,
+    count(*) filter(where search_metadata @> '{"documentClassifications":["amendment"]}')::int amendment_sections
+    from legislation.document_sections`)
+    ).rows[0]
+  )
+  report(JSON.stringify({ sourceSampleComposition: composition }))
+  if (hasAmendmentSample) {
+    assert.ok(composition.documents >= 100, "At least 100 actual amendment documents required")
+    assert.equal(composition.amendment_sections, composition.sections)
+  }
   for (let copy = 1; copy <= 9; copy++) {
     await client.query(
       `insert into legislation.document_sections
@@ -203,6 +249,10 @@ async function measureSample() {
   await client.query("set local work_mem='4MB'")
   await client.query("set local max_parallel_workers_per_gather=2")
   await runPairedTextIndexBenchmark(client, copied * 10, report)
+  if (args[0] === "--diagnose-updates" || hasAmendmentSample) {
+    await client.query("commit")
+    await diagnoseRankedUpdates(client, targetUrl.href, report)
+  }
 }
 
 await client.connect()
@@ -316,7 +366,7 @@ try {
   assert.deepEqual(await search("taxation"), [])
   await client.query("rollback to savepoint mutation_checks")
   assert.deepEqual(ids(await search('"health insurance"')), ["a-1"])
-  if (args[0] === "--sample") {
+  if (hasSample) {
     await measureSample()
   }
   // Fixtures roll back; a committed sample is removed in finally.
@@ -332,7 +382,7 @@ try {
   )
 } finally {
   try {
-    if (args[0] === "--sample") {
+    if (hasSample) {
       await mkdir(new URL("../tmp/", import.meta.url), { recursive: true })
       const artifactName = `ranked-search-comparison-${new Date().toISOString().replaceAll(":", "-")}.json`
       report(JSON.stringify({ artifactName }))

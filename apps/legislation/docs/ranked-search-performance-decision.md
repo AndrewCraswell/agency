@@ -1,9 +1,81 @@
 # Ranked search performance decision
 
-September 12, 2026. Decision: **do not migrate with the current design**. Fresh-index passage ranking
-improves, but the benefit reverses after a small committed metadata-update workload. The benchmark
-does not establish an overall API improvement or resolution of the broad amendment timeout.
+September 12, 2026. Decision: **hold production migration**.
+The original default configuration regresses after metadata updates. The follow-up below establishes
+that ordinary vacuum repairs the slowdown and disabling mutable buffers preserves most broad-query
+benefits across repeated writes. However, the amendment-heavy follow-up is slower than native search,
+including with buffering disabled. This is not an overall API improvement or resolution of the broad amendment timeout.
 Existing vector indexes, embeddings and OCR remain untouched.
+
+## Update-regression diagnostic
+
+The isolated `legislation-search-update-diagnostic` service (`57616f58-ef58-463d-a375-e8137f34e7dc`)
+ran ParadeDB 0.25.9, deployment `f43305cb-e71e-4ab8-b944-ebe9a9d15de5` (SUCCESS).
+The first run repeated the 100,000-row mixed workload using a fresh read-only source sample.
+Evidence: `tmp/ranked-search-comparison-2026-09-12T12-57-51.119Z.json`.
+
+Median database execution milliseconds, three observations per cell:
+
+| Query | Fresh snapshots after updates | After 120 seconds idle | After ordinary vacuum | Buffers disabled, after two 5,000-row update cycles | Native at that last stage |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| legislation | 175.334 | 175.253 | 10.744 | 35.297 | 78.434 |
+| health | 154.729 | 153.694 | 10.849 | 12.092 | 83.753 |
+| tax | 155.228 | 155.729 | 9.767 | 13.239 | 46.765 |
+| "health insurance" | 155.967 | 155.268 | 11.147 | 12.576 | 12.972 |
+
+Background merging was enabled. Releasing the long repeatable-read snapshot and waiting did not
+repair the regression in this observation window. Ordinary `VACUUM (ANALYZE)` did, without rebuilding.
+The alternative experiment set the supported index option `mutable_segment_rows=0`, reset the test
+index once to establish a clean configuration control, and then performed two 5,000-row update cycles
+and ten separately committed one-row updates **without intervening vacuum or rebuild**. Four concurrent
+readers subsequently retained approximately 12 ms health/tax execution and 36 ms legislation execution.
+This first concurrency test had no simultaneous writer; the amendment follow-up adds that case.
+
+The mechanism is consistent with [ParadeDB's documented mutable-buffer design](https://www.paradedb.com/blog/increased-write-performance):
+recent buffered records are materialized into a searchable in-memory index during queries.
+The [0.25.9 index-option implementation](https://github.com/paradedb/paradedb/blob/v0.25.9/pg_search/src/postgres/options.rs)
+accepts zero to disable mutable segments. This remains a causal inference from the controlled comparison,
+not CPU profiling inside the extension.
+
+Tradeoff: on this run, ten 500-row update commits took 2.474 seconds with default buffering versus
+3.022 and 3.055 seconds with buffering disabled (approximately 22–24% more wall time). Both native and
+ranked indexes coexist, network time is included, and these are single observations, not an isolated
+write-throughput estimate. The phrase query has essentially no benefit; not every search becomes faster.
+
+Reproduce with `pnpm eval:ranked-search --diagnose-updates`; use `--diagnose-amendments` for the bounded
+latest-amendment sample, exact metadata eligibility and committed insert/delete checks, four readers
+with a simultaneous bounded writer, and final exact amendment grouping. Full plans are retained in
+timestamped ignored JSON artifacts; terminal output contains summaries. Both modes refuse the source
+host and any target database other than `legislation_search_benchmark`, use read-only source
+transactions, and clean up their own disposable schema. No production configuration is changed.
+
+### Amendment-heavy follow-up
+
+The second run copied 1,294 actual sections from 1,000 recent amendment documents, then created nine
+synthetic copies: 12,940 sections. All sample sections belong to amendments; 94.3% are Colorado.
+This is substantially more actual amendment coverage than the original 13 sections, but remains a
+small, jurisdiction-skewed sample, not a production-scale benchmark. The source query uses the
+amendment-date index and bounded per-document section lookups; source reads have 15-second timeouts.
+Evidence: `tmp/ranked-search-comparison-2026-09-12T13-07-43.691Z.json`. All 300 paired measurements
+completed without errors, every amendment measurement returned 21 distinct documents, and all 17
+exact metadata eligibility checks passed. These are not empty-result performance claims.
+
+The exact metadata ID-set checks passed after every update cycle, including removal of superseded
+timestamps and committed insert/delete visibility. A further 5,000-row writer overlapped all ten
+committed batches with four reader workloads and completed in 2.684 seconds. The final exact
+amendment grouping comparison still favored native search: health 11.367 ms versus ranked 43.774 ms;
+tax 4.867 ms versus ranked 21.154 ms; legislation 7.680 ms versus ranked 46.304 ms (five-run medians).
+Do not confuse these with deployed API latency or identical relevance scores.
+
+Automatic vacuum was observed on this smaller table: at 13:02:05 UTC its catalog reported two
+autovacuums, zero dead rows, and last autovacuum at 13:01:14 UTC. Default-buffer performance therefore
+recovered during the post-update suite. Even with buffering disabled, timings varied after subsequent
+writes. This reinforces that a short clean-index result is not a steady-state guarantee.
+
+Recommendation: retain the current production engine and preserve all vector indexes. The buffer
+regression has a supported mitigation; **the overall migration business case has not passed**.
+If further evaluation is pursued, require larger, jurisdiction-balanced amendment workloads and an
+integrated API comparison before investing the estimated 30–55 engineering hours in migration.
 
 ## What was measured
 
@@ -84,8 +156,8 @@ Backfill/index wall time and restart downtime remain unmeasured. A defensible to
 requires a production-like storage/build rehearsal and measured bounded metadata backfill throughput.
 No new embedding generation or HNSW rebuild belongs in that plan.
 
-Before adopting: use a substantial real amendment sample, exercise duplicate-heavy/deep pages and
-concurrent ingestion, judge relevance, then measure the integrated API. Do not close either production
+Before adopting: use a larger jurisdiction-balanced amendment sample, exercise duplicate-heavy/deep pages and
+long-running concurrent ingestion, judge relevance, then measure the integrated API. Do not close either production
 timeout gate based on this candidate-stage benchmark.
 
 ## Reproduction and verification
@@ -96,11 +168,11 @@ refuses unsafe source/target identities and incomplete sample strata. Timestampe
 and execution plans are written under ignored `tmp/ranked-search-comparison-*.json`; schema cleanup
 runs even if report writing fails.
 
-The 101 focused tests and standalone harness type-check pass. Repository `pnpm verify` passed its
-check stage but failed unrelated scoring coverage thresholds (lines 96.09%, functions 99.79%,
-statements 95.44%, branches 93.78%, against 100%). Repository-wide verification is not green.
+The follow-up's 107 focused tests and standalone harness type-check pass. Repository `pnpm verify`
+passed its check stage but failed two unrelated `fc-theme-base` component-library tests at their
+five-second timeouts. Repository-wide verification is not green.
 
-Full final observations: `tmp/ranked-search-comparison-2026-09-12T09-51-58.684Z.json`.
+Original comparison observations: `tmp/ranked-search-comparison-2026-09-12T09-51-58.684Z.json`.
 The disposable schema was removed by the harness. The temporary Railway service and ephemeral data
 were deleted; a fresh listing confirms only the original application, pooler and database remain.
 The deleted sample is reproducible from the harness, not recoverable from that service. No production
