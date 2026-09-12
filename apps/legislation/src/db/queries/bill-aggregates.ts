@@ -1,4 +1,5 @@
 import { and, eq, inArray, notInArray, or, sql } from "drizzle-orm"
+import { LegislationError } from "../../legislation/errors.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -17,6 +18,23 @@ import {
   votes
 } from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
+
+/** Missing OpenStates entities must be imported before their bill observations can commit. */
+export function assertOpenStatesOrganizationDependencies(
+  candidateIds: readonly string[],
+  existingIds: ReadonlySet<string>
+): void {
+  const missingIds = [...new Set(candidateIds)].filter(
+    (id) => id.startsWith("organization:openstates:") && !existingIds.has(id)
+  )
+  if (missingIds.length > 0) {
+    throw new LegislationError(
+      "dependency_unavailable",
+      "Import the referenced OpenStates organizations before retrying these bill records",
+      { details: { missingOrganizationIds: missingIds } }
+    )
+  }
+}
 
 function jurisdictionChanged() {
   return sql`row(
@@ -81,6 +99,12 @@ function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
   for (const vote of aggregate.votes ?? []) {
     if (vote.vote.billId !== billId || vote.positions?.some((position) => position.voteId !== vote.vote.id) === true) {
       throw new Error("vote data does not belong to the aggregate bill")
+    }
+  }
+
+  for (const organization of aggregate.organizationObservations ?? []) {
+    if (organization.jurisdictionId !== aggregate.jurisdiction.id) {
+      throw new Error("organization observation does not belong to the aggregate jurisdiction")
     }
   }
 
@@ -235,6 +259,10 @@ export async function upsertBillAggregate(
     })
     await transaction.insert(bills).values(bill).onConflictDoUpdate({ set: bill, target: bills.id })
 
+    if (aggregate.organizationObservations !== undefined && aggregate.organizationObservations.length > 0) {
+      await insertMissingOrganizationObservations(transaction, aggregate.organizationObservations)
+    }
+
     const candidateOrganizationIds = [
       ...(aggregate.actions ?? []).flatMap((action) =>
         action.organizationId === undefined || action.organizationId === null ? [] : [action.organizationId]
@@ -252,6 +280,7 @@ export async function upsertBillAggregate(
             .from(organizations)
             .where(inArray(organizations.id, candidateOrganizationIds))
     const validOrganizationIds = new Set(existingOrganizations.map((organization) => organization.id))
+    assertOpenStatesOrganizationDependencies(candidateOrganizationIds, validOrganizationIds)
 
     if (aggregate.people !== undefined && aggregate.people.length > 0) {
       for (const person of aggregate.people) {
@@ -419,6 +448,14 @@ function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()]
 }
 
+/** Bill-embedded facts never overwrite directory profiles or reconcile memberships. */
+export function insertMissingOrganizationObservations(
+  database: Pick<LegislationDatabase, "insert">,
+  observations: readonly (typeof organizations.$inferInsert)[]
+) {
+  return database.insert(organizations).values(uniqueById(observations)).onConflictDoNothing()
+}
+
 const votePositionInsertBatchSize = 100
 
 export async function upsertBillAggregates(
@@ -527,6 +564,10 @@ export async function upsertBillAggregates(
         target: bills.id
       })
 
+    const organizationObservations = aggregates.flatMap((aggregate) => aggregate.organizationObservations ?? [])
+    if (organizationObservations.length > 0) {
+      await insertMissingOrganizationObservations(transaction, organizationObservations)
+    }
     const candidateOrganizationIds = aggregates.flatMap((aggregate) => [
       ...(aggregate.actions ?? []).flatMap((action) =>
         action.organizationId === undefined || action.organizationId === null ? [] : [action.organizationId]
@@ -544,6 +585,7 @@ export async function upsertBillAggregates(
             .from(organizations)
             .where(inArray(organizations.id, candidateOrganizationIds))
     const validOrganizationIds = new Set(existingOrganizations.map((organization) => organization.id))
+    assertOpenStatesOrganizationDependencies(candidateOrganizationIds, validOrganizationIds)
 
     await transaction.delete(billActions).where(inArray(billActions.billId, billIds))
     await transaction.delete(billOrganizations).where(inArray(billOrganizations.billId, billIds))

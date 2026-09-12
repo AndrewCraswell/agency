@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { upsertBillAggregates } from "../../db/queries/bill-aggregates.js"
 import { syncCheckpoints } from "../../db/schema/schema.js"
+import { LegislationError } from "../../legislation/errors.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
 import { createJobCounts, type JobCounts } from "../job.js"
 import { normalizeOpenStatesBill, type NormalizationDiagnostic, type OpenStatesContext } from "./normalize.js"
@@ -141,7 +142,7 @@ async function persistPrepared(
         failure: {
           identifier: item.identifier,
           message: error instanceof Error ? error.message : "Unknown Open States persistence failure",
-          retryable: false
+          retryable: error instanceof LegislationError && error.category === "dependency_unavailable"
         },
         status: "failed"
       }

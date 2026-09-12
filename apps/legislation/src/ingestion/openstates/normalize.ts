@@ -9,6 +9,7 @@ import {
   personId
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
+import { canonicalChamberSchema, canonicalOrganizationClassificationSchema } from "../civic-foundation.js"
 import { outgoingRelationProvenance } from "../relation-provenance.js"
 
 const safeArray = <T extends z.ZodType>(item: T) =>
@@ -520,6 +521,46 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     }
   }
 
+  const organizationObservations = uniqueBy(
+    [
+      source.from_organization,
+      ...source.actions.map((action) => action.organization ?? action.organization_id),
+      ...source.votes.map((vote) => vote.organization ?? vote.organization_id)
+    ].flatMap((reference) => {
+      // A bare identifier is a dependency, not enough evidence to create an organization.
+      if (reference === undefined || typeof reference === "string") {
+        return []
+      }
+      const chamber = canonicalChamberSchema.safeParse(reference.classification)
+      const classification = canonicalOrganizationClassificationSchema.safeParse(reference.classification)
+      let canonicalClassification = classification.success ? classification.data : null
+      if (chamber.success && chamber.data !== "legislature") {
+        canonicalClassification = "chamber"
+      }
+      return [
+        {
+          id: organizationId("openstates", reference.id),
+          jurisdictionId: jurisdiction,
+          sourceId: reference.id,
+          name: reference.name,
+          classification: canonicalClassification,
+          chamber: chamber.success ? chamber.data : null,
+          sourceUrl: billSourceUrl,
+          sourceProvider: "openstates",
+          sourceIsOfficial: false,
+          sourceRetrievedAt: context.retrievedAt,
+          provenanceComplete:
+            context.retrievedAt !== undefined && z.url({ protocol: /^https$/ }).safeParse(billSourceUrl).success,
+          detailFactsComplete: false,
+          childRelationsComplete: false,
+          membershipRelationsComplete: false,
+          upstreamIds: { openstates: reference.id }
+        }
+      ]
+    }),
+    (organization) => organization.id
+  )
+
   return {
     aggregate: {
       actions,
@@ -554,6 +595,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         })),
         (organization) => organization.organizationId
       ),
+      organizationObservations,
       relations,
       session: {
         id: session,

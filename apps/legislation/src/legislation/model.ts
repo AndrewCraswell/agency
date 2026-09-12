@@ -8,6 +8,7 @@ import type {
   documentSections,
   jurisdictions,
   legislativeSessions,
+  organizations,
   people,
   votePositions,
   votes
@@ -30,6 +31,8 @@ export interface CanonicalBillAggregate {
   jurisdiction: typeof jurisdictions.$inferInsert
   people?: Array<typeof people.$inferInsert>
   organizations?: Array<typeof billOrganizations.$inferInsert>
+  /** Source-resolved organization facts, inserted only when their entity does not exist. */
+  organizationObservations?: Array<typeof organizations.$inferInsert>
   relations?: Array<typeof billRelations.$inferInsert>
   session: typeof legislativeSessions.$inferInsert
   sponsors?: Array<typeof billSponsors.$inferInsert>
