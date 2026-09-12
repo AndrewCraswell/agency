@@ -9,15 +9,15 @@
   includes isolated USB, USB-C PD, Ethernet, IR, HUB75, audio and Favero outputs. Preserve it as a separate reference;
   do not overwrite it with either dedicated product. Its [design review](usb-scoring-platform/design-review.md) retains
   unresolved findings and component checks, not fabrication approval.
-- **Active: [standalone HUB75 scoring box](standalone-scoring-box/README.md).** Separate native schematic and initial
-  165 x 100mm placement with 199 purchased parts. Retains STM32, ESP32, IR, fencer/piste connections, HUB75, Ethernet,
-  Favero outputs, audio and power-only USB-C PD; removes the laptop interface and source-mode MCU. Power review and
-  routing are still pending. Firmware logic stays shared, with board-specific hardware adapters.
+- **Active: [standalone HUB75 scoring box](standalone-scoring-box/README.md).** Separate native schematic and routed 165
+  x 100mm board with 199 purchased parts. Retains STM32, ESP32, IR, fencer/piste connections, HUB75, Ethernet, Favero
+  outputs, audio and power-only USB-C PD; removes the laptop interface and source-mode MCU. Power review and
+  manufacturing preparation are still pending. Firmware logic stays shared, with board-specific hardware adapters.
 
-For each native design, use its README and its manufacturing exporter when available; the unrouted standalone project
-does not yet have one. Keep the latest supplier-upload package and required programming handoff; older output
-checkpoints, build caches and scratch routing scripts are disposable. Keep source, required component models and
-manufacturer references. Generated output is not a second source of truth.
+For each native design, use its README and its manufacturing exporter when available; the standalone project does not
+yet have one. Keep the latest supplier-upload package and required programming handoff; older output checkpoints, build
+caches and scratch routing scripts are disposable. Keep source, required component models and manufacturer references.
+Generated output is not a second source of truth.
 
 ## Earlier tscircuit carrier
 
