@@ -1,0 +1,128 @@
+(footprint "PS1240P02BT"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -3 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "457189d0-e656-4777-8d3d-9fb824a6b6c4")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "PS1240P02BT"
+		(at 0 3 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b18fc513-667d-4ef0-9951-d5505d63ad92")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "d5b7d9fe-2074-4bd5-b78e-89dae0d00197")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "a3edd67c-3ac3-4c93-a4a7-05d6a67f9ad5")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Supplier Part Number" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "02bf0cf6-3e9d-d16a-7ffa-afca3ea871d6")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_circle
+		(center -2.5 -2.5)
+		(end -2.1 -2.5)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "6cda6110-0abe-443c-91a5-e33da95a449d")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 6.1 0)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "266499aa-191e-4fbf-958b-575fa7778c6c")
+	)
+	(fp_rect
+		(start -6.85 -6.85)
+		(end 6.85 6.85)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "655d77ac-b5f7-4c05-8767-6c9f1eb1e3e3")
+	)
+	(pad "1" thru_hole rect
+		(at -2.5 0)
+		(size 2 2)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "409382c2-342b-00e2-27c2-7f021b59fd22")
+	)
+	(pad "2" thru_hole rect
+		(at 2.5 0)
+		(size 2 2)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3d5e05e0-1d12-3801-7782-75e22e0d4c3d")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/../assets/cad/tdk-ps1240p02bt.step"
+		(offset
+			(xyz -2.5 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

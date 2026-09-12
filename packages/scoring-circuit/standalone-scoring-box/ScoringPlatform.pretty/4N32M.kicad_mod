@@ -1,0 +1,149 @@
+(footprint "4N32M"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -3 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "44cc5d22-5d51-4210-b5c9-9e3351ab39b7")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "4N32M"
+		(at 0 3 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6640c072-af2d-44fe-b28c-1c77b31bf73c")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "42a807b7-c921-43fc-a3b1-65fc7c442347")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "a9b29330-6c6c-41bf-8424-41e63271d9f0")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Supplier Part Number" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "334f4fe0-7abc-6561-28c8-1aa2292c301d")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_circle
+		(center -3.2 -4.7)
+		(end -2.8 -4.7)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "a9f4ff49-4c5b-4e10-8006-ea67a76ba29a")
+	)
+	(fp_rect
+		(start -5.35 -3.95)
+		(end 5.35 3.95)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "7488b6ff-f843-4a51-a745-79ea146fc34c")
+	)
+	(pad "1" thru_hole rect
+		(at -3.81 -2.54)
+		(size 1.8 1.8)
+		(drill 0.9)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "63a6b748-0aff-b728-4da7-48f859b1b6e8")
+	)
+	(pad "2" thru_hole rect
+		(at -3.81 0)
+		(size 1.8 1.8)
+		(drill 0.9)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1034da20-364f-c8ff-7cd4-6c1e3ca6f0c3")
+	)
+	(pad "3" thru_hole rect
+		(at -3.81 2.54)
+		(size 1.8 1.8)
+		(drill 0.9)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "2dce1e20-6236-9a01-6960-ea1e34f86e3d")
+	)
+	(pad "4" thru_hole rect
+		(at 3.81 2.54)
+		(size 1.8 1.8)
+		(drill 0.9)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1726ce9a-788e-ca9a-2609-39663b5ec29a")
+	)
+	(pad "5" thru_hole rect
+		(at 3.81 0)
+		(size 1.8 1.8)
+		(drill 0.9)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "75fc827a-3528-8086-1fb2-7c7a748d797a")
+	)
+	(pad "6" thru_hole rect
+		(at 3.81 -2.54)
+		(size 1.8 1.8)
+		(drill 0.9)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "5980b4c0-2518-38df-0f50-430243b8bee3")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/../assets/cad/dip-6-w7.62mm.step"
+		(offset
+			(xyz -3.81 2.54 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
