@@ -41,3 +41,20 @@ September 12, 18:07 UTC: target contains 647,844 sections; source statistics est
 On the same 100 existing documents / 4,400 sections, transfer pages of 250 took 54.771 and 52.243 seconds; pages of 1,000 took 34.399 and 35.241 seconds. The default transfer page is now 1,000 (the existing maximum), preserving the 100-document atomic transaction, single-publisher lock and deadlines. This is a replay benchmark, not a measured full-backfill speedup. Twenty-five focused worker/queue/replication tests passed. Root verification still fails unrelated scoring coverage.
 
 At the observed pre-tuning throughput, roughly 45–55 hours remain for copying, excluding integrity, relevance/performance acceptance and cutover. This is provisional: source counts are estimates, later documents vary in size, and failed/deferred work must be reconciled. The lexical API timeout remains open until deployed full-corpus acceptance passes.
+
+## Copy concurrency experiment
+
+September 12: a disposable table in the isolated passage database was populated from the same 160 processed documents / 5,143 sections, split into eight disjoint 20-document batches. The table copied the live table's indexes. Each transaction used the existing replication implementation, 1,000-row transfer pages and unchanged deadlines. Only the scratch-table adapter omitted the production publisher lock. Source access was read-only; production queue ownership, checkpoints and publisher concurrency were unchanged.
+
+| Concurrent writers | First run | Reverse-order repeat | Acceptance |
+| --- | --- | --- | --- |
+| 1 | 55.638 seconds | 52.925 seconds | Both runs passed row and fingerprint checks |
+| 2 | 30.991 seconds | 35.116 seconds | Both runs passed row and fingerprint checks |
+| 4 | 29.805 seconds | 27.137 seconds | Both runs passed row and fingerprint checks |
+| 8 | 27.992 seconds, incomplete | Not repeated | Two statement cancellations (`57014`); only 3,972 rows committed; rejected |
+
+The first attempt had a benchmark-only asynchronous counter race; that result was discarded and the counter corrected before the measurements above. The eight-writer failure stopped the concurrency ladder rather than increasing deadlines or accepting missing batches. Disposable schemas are removed after each ladder. No live rows were deleted or replaced by this experiment.
+
+Interpretation: gains diminish beyond two writers; four remains a candidate, while eight is not acceptable with the current deadlines. This small, locally driven public-network experiment is not a sustained Trigger throughput or full-corpus ETA measurement. Sampled search-service CPU stayed below 0.1 vCPU and memory below 3.5 GB; these coarse samples do not isolate the bottleneck or exclude source/network contention.
+
+Before production fanout: implement exclusive work ownership and move-safe publication ordering, exercise retries and concurrent source edits/moves, then repeat a bounded two/four-worker comparison from the deployed execution environment. Merely increasing Trigger queue concurrency would duplicate unclaimed work and contend on the global publication lock. Keep that lock and the single production publisher until its correctness contract has a tested replacement. Latest production check during the experiment: 805,072 target sections, 246 queued events, zero deferred retries; enumeration remains incomplete.
