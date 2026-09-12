@@ -28,6 +28,7 @@
 - [HTTP API local smoke checklist](http-api-local-smoke.md)
 - [HTTP API Railway release record](http-api-railway-release.md)
 - [API performance remediation](api-performance-remediation.md)
+- [Native amendment search projection and rollout](amendment-search-projection.md)
 - [Isolated ranked text-index evaluation](text-search-index-evaluation.md)
 - [Ranked search performance, update-regression diagnosis and migration effort](ranked-search-performance-decision.md)
 - [WorkOS MCP-resource OAuth canary](workos-mcp-resource-oauth-canary.md)

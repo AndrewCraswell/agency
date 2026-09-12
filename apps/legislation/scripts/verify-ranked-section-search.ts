@@ -9,6 +9,7 @@ import {
   rankedSectionPageQuery,
   type RankedSectionFilters
 } from "../src/search/ranked-section-search.js"
+import { copyBalancedAmendments } from "./amendment-benchmark-sample.js"
 import { runPairedTextIndexBenchmark } from "./paired-text-index-benchmark.js"
 import { diagnoseRankedUpdates } from "./ranked-update-diagnostic.js"
 import { textIndexSampleRanges, validateSampleStratum } from "./text-index-sample-ranges.js"
@@ -48,11 +49,14 @@ const hitSchema = z.array(z.object({ id: z.string(), document_id: z.string(), sc
 const args = process.argv.slice(2)
 assert.ok(
   args.length === 0 ||
-    (args.length === 1 && ["--sample", "--diagnose-updates", "--diagnose-amendments"].includes(args[0] ?? "")),
+    (args.length === 1 &&
+      ["--sample", "--diagnose-updates", "--diagnose-amendments", "--balanced-amendments"].includes(args[0] ?? "")),
   "Unsupported benchmark argument"
 )
 const hasSample = args.length === 1
-const hasAmendmentSample = args[0] === "--diagnose-amendments"
+const hasBalancedSample = args[0] === "--balanced-amendments"
+const hasAmendmentSample = args[0] === "--diagnose-amendments" || hasBalancedSample
+const sampleCopies = hasBalancedSample ? 1 : 10
 let hasCommittedSample = false
 
 async function measureSample() {
@@ -65,10 +69,13 @@ async function measureSample() {
     await source.query("set local statement_timeout=15000")
     await client.query("delete from legislation.document_sections")
     await client.query("drop index legislation.document_sections_ranked_text_idx")
+    if (hasBalancedSample) {
+      copied = await copyBalancedAmendments(source, client, report)
+    }
     const ranges = hasAmendmentSample
       ? [{ jurisdiction: "amendments", prefix: "", upperBound: "", target: 10000 }]
       : textIndexSampleRanges
-    for (const { jurisdiction, prefix, upperBound, target } of ranges) {
+    for (const { jurisdiction, prefix, upperBound, target } of hasBalancedSample ? [] : ranges) {
       let after: string = prefix
       let stratumCopied = 0
       while (stratumCopied < target) {
@@ -155,11 +162,22 @@ async function measureSample() {
     ).rows[0]
   )
   report(JSON.stringify({ sourceSampleComposition: composition }))
+  report(
+    JSON.stringify({
+      eligibleSourceComposition: (
+        await client.query(`select
+    count(*)::int sections,count(distinct document_id)::int documents,
+    max(octet_length(text))::int longest_section_bytes,
+    percentile_cont(0.95) within group (order by octet_length(text)) section_bytes_p95
+    from legislation.document_sections where search_metadata->>'processingStatus'='processed'`)
+      ).rows[0]
+    })
+  )
   if (hasAmendmentSample) {
     assert.ok(composition.documents >= 100, "At least 100 actual amendment documents required")
     assert.equal(composition.amendment_sections, composition.sections)
   }
-  for (let copy = 1; copy <= 9; copy++) {
+  for (let copy = 1; copy < sampleCopies; copy++) {
     await client.query(
       `insert into legislation.document_sections
       select id || ':sample:' || $1,document_id || ':sample:' || $1,heading,text,page_start,page_end,search_document_title,search_metadata
@@ -170,7 +188,7 @@ async function measureSample() {
   const vectorStarted = performance.now()
   const beforeVectors = await client.query("select pg_table_size('legislation.document_sections')::float8 table_bytes")
   await client.query(`alter table legislation.document_sections
-    add column benchmark_body_vector tsvector generated always as (to_tsvector('english',coalesce(heading,'') || ' ' || text)) stored,
+    add column benchmark_body_vector tsvector generated always as (setweight(to_tsvector('english',coalesce(heading,'')),'A') || setweight(to_tsvector('english',text),'B')) stored,
     add column benchmark_title_vector tsvector generated always as (to_tsvector('english',search_document_title)) stored`)
   const nativeVectorPreparationMs = performance.now() - vectorStarted
   const nativeStarted = performance.now()
@@ -208,9 +226,9 @@ async function measureSample() {
     (select sum(octet_length(text))::float8 from legislation.document_sections) source_text_bytes`)
   report(
     JSON.stringify({
-      sampleRows: copied * 10,
+      sampleRows: copied * sampleCopies,
       originalCopiedRows: copied,
-      syntheticCopies: 9,
+      syntheticCopies: sampleCopies - 1,
       nativeVectorPreparationMs,
       nativeIndexBuildMs,
       rankedIndexBuildMs,
@@ -220,7 +238,7 @@ async function measureSample() {
     })
   )
   report(JSON.stringify({ measurementPhase: "fresh-bulk-index" }))
-  await runPairedTextIndexBenchmark(client, copied * 10, report)
+  await runPairedTextIndexBenchmark(client, copied * sampleCopies, report)
   await client.query("commit")
   // Exercise committed parent-metadata changes on the disposable sample only.
   await client.query("set statement_timeout=60000")
@@ -248,7 +266,7 @@ async function measureSample() {
   await client.query("begin isolation level repeatable read read only")
   await client.query("set local work_mem='4MB'")
   await client.query("set local max_parallel_workers_per_gather=2")
-  await runPairedTextIndexBenchmark(client, copied * 10, report)
+  await runPairedTextIndexBenchmark(client, copied * sampleCopies, report)
   if (args[0] === "--diagnose-updates" || hasAmendmentSample) {
     await client.query("commit")
     await diagnoseRankedUpdates(client, targetUrl.href, report)

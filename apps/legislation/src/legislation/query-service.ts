@@ -22,6 +22,7 @@ import { findChangeEvents, type CanonicalChangeType } from "../db/queries/change
 import {
   amendmentActions,
   amendmentEmbeddings,
+  amendmentSectionSearch,
   amendments,
   billActions,
   billDocuments,
@@ -143,24 +144,22 @@ async function lexicalAmendmentCandidates(
 }
 
 /**
- * Keep the indexed section match separate from the computed title match. An OR
- * between them makes PostgreSQL scan every document section before it can rank
- * any candidate. The disjoint branches below produce the same candidate set:
- * matching sections come from the GIN-backed branch, while title-only sections
- * cover the remaining sections of title-matched documents. Expensive headline
- * generation happens only after the best section per document is selected.
+ * Rank the narrow, synchronously maintained amendment projection, not the full
+ * section corpus. Canonical parent filters still apply before choosing winners.
+ * Disjoint branches preserve NULL-vector eligibility and exact section scores;
+ * full document hydration and headlines happen only after the final page.
  */
 export function buildDocumentAmendmentLexicalQuery(
-  database: LegislationDatabase,
+  database: Omit<LegislationDatabase, "$client">,
   input: ApiAmendmentSearchInput,
   limit: number,
   candidateDocumentIds?: readonly string[]
 ) {
   const query = sql`websearch_to_tsquery('english', ${input.query})`
-  const documentTitleVector = sql`to_tsvector('english', coalesce(${billDocuments.title}, ''))`
+  const documentTitleVector = sql`${amendmentSectionSearch.titleVector}`
   const titleMatches = sql<boolean>`${documentTitleVector} @@ ${query}`
-  const sectionMatches = sql<boolean>`${documentSections.searchVector} @@ ${query}`
-  const sectionRank = sql<number>`ts_rank_cd(${documentSections.searchVector}, ${query})`
+  const sectionMatches = sql<boolean>`${amendmentSectionSearch.sectionVector} @@ ${query}`
+  const sectionRank = sql<number>`ts_rank_cd(${amendmentSectionSearch.sectionVector}, ${query})`
   const titleRank = sql<number>`ts_rank_cd(${documentTitleVector}, ${query})`
   const filters = and(
     documentSearchFilters(input),
@@ -171,11 +170,11 @@ export function buildDocumentAmendmentLexicalQuery(
       documentId: sql<string>`${billDocuments.id}`.as("document_id"),
       identifierMatches: titleMatches.as("identifier_matches"),
       rank: sql<number>`${sectionRank} + ${titleRank}`.as("rank"),
-      sectionId: sql<string>`${documentSections.id}`.as("section_id"),
+      sectionId: sql<string>`${amendmentSectionSearch.sectionId}`.as("section_id"),
       textMatches: sql<boolean>`true`.as("text_matches")
     })
-    .from(documentSections)
-    .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+    .from(amendmentSectionSearch)
+    .innerJoin(billDocuments, eq(billDocuments.id, amendmentSectionSearch.documentId))
     .innerJoin(bills, eq(bills.id, billDocuments.billId))
     .where(and(filters, sectionMatches))
   const titleOnlySections = database
@@ -183,12 +182,12 @@ export function buildDocumentAmendmentLexicalQuery(
       documentId: sql<string>`${billDocuments.id}`.as("document_id"),
       identifierMatches: sql<boolean>`true`.as("identifier_matches"),
       rank: titleRank.as("rank"),
-      sectionId: sql<string>`${documentSections.id}`.as("section_id"),
+      sectionId: sql<string>`${amendmentSectionSearch.sectionId}`.as("section_id"),
       textMatches: sql<boolean>`false`.as("text_matches")
     })
     .from(billDocuments)
     .innerJoin(bills, eq(bills.id, billDocuments.billId))
-    .innerJoin(documentSections, eq(documentSections.documentId, billDocuments.id))
+    .innerJoin(amendmentSectionSearch, eq(amendmentSectionSearch.documentId, billDocuments.id))
     .where(and(filters, titleMatches, sql`not (${sectionMatches})`))
   const documentCandidates = database
     .$with("amendment_document_lexical_candidates")

@@ -1644,6 +1644,25 @@ export const documentSections = legislationSchema.table(
   ]
 )
 
+export const amendmentSectionSearch = legislationSchema.table(
+  "amendment_section_search",
+  {
+    sectionId: text("section_id")
+      .primaryKey()
+      .references(() => documentSections.id, { onDelete: "cascade" }),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => billDocuments.id, { onDelete: "cascade" }),
+    sectionVector: tsvector("section_vector"),
+    titleVector: tsvector("title_vector").notNull()
+  },
+  (table) => [
+    index("amendment_section_search_document_idx").on(table.documentId),
+    index("amendment_section_search_section_gin_idx").using("gin", table.sectionVector),
+    index("amendment_section_search_title_gin_idx").using("gin", table.titleVector)
+  ]
+)
+
 export const billEmbeddings = legislationSchema.table(
   "bill_embeddings",
   {

@@ -51,10 +51,10 @@ Production scale at diagnosis:
 
 ### Passage and amendment lexical search
 
-September 11: the [ranked search canary](text-search-index-evaluation.md) now verifies safe grammar,
-score-neutral indexed filters and exact amendment grouping. The preferred direction is an in-place
-ParadeDB index; production needs a compatible database image/extension rollout, derived metadata
-maintenance/backfill and API integration. **Neither broad lexical timeout gate is closed.**
+September 12: the [ranked search comparison](ranked-search-performance-decision.md) does not justify a production
+ParadeDB migration. The current implementation work uses a [native amendment search projection](amendment-search-projection.md)
+to isolate amendment text without changing the database engine or rebuilding HNSW indexes. Its backfill, result parity,
+production timing and deployed smoke gates must pass before cutover. **Neither broad lexical timeout gate is closed.**
 
 - [ ] Detect lexical queries whose estimated match set is too broad to rank safely within the API budget.
 - [ ] Return a documented `query_too_broad` error for unscoped pathological lexical searches rather than a database

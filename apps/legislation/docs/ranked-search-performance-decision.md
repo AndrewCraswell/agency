@@ -7,6 +7,38 @@ benefits across repeated writes. However, the amendment-heavy follow-up is slowe
 including with buffering disabled. This is not an overall API improvement or resolution of the broad amendment timeout.
 Existing vector indexes, embeddings and OCR remain untouched.
 
+## Balanced amendment follow-up
+
+The September 12 follow-up sampled complete available sections from up to 1,000 SHA-256-selected amendment
+documents per jurisdiction: **45,246 real sections, 18,104 documents, no synthetic copies**. Every copied section's
+stored vector matched the production A-heading/B-body weighting. This supersedes the Colorado-heavy sample for
+the amendment comparison, but is still a warm candidate-stage test, not production API performance.
+
+After repeated updates and four concurrent readers with a simultaneous writer, the tuned ranked index produced
+these final median database execution times (five alternating observations per engine):
+
+| Amendment query | Native ms | Tuned ranked ms |
+| --- | ---: | ---: |
+| legislation | 38.358 | 43.500 |
+| health | 48.075 | 44.418 |
+| tax | 29.369 | 44.915 |
+| "health insurance" | 12.226 | 17.818 |
+| health, Oregon | 16.117 | 18.563 |
+
+All 300 paired measurements completed without errors; 17 exact update-eligibility checks passed. Ranked scoring
+is BM25, not native score/result identity. The final amendment results do not justify migrating the production
+database engine. Broad passage top-K remains promising but is a separate, unclosed API/relevance decision.
+
+Evidence: `tmp/ranked-search-comparison-2026-09-12T14-17-32.741Z.json`. Native GIN indexes occupied 30,679,040 bytes,
+ranked 63,766,528 bytes. Single builds took 1.272 and 0.791 seconds respectively on this isolated host; these
+are not full-corpus migration estimates. Benchmark shared buffers differ from production.
+
+Production read-only probes of the existing full-section query and an amendment-first alternative both exceeded
+15 seconds for broad terms. One original phrase probe also hit a PostgreSQL shared-memory allocation error;
+that is not evidence of a full persistent volume. Evidence: `tmp/amendment-query-diagnostic-2026-09-12T13-46-53.607Z.json`.
+The next implementation uses a [narrow native amendment projection](amendment-search-projection.md), retaining
+exact existing ranking and canonical filters without rewriting the whole section table or any HNSW index.
+
 ## Update-regression diagnostic
 
 The isolated `legislation-search-update-diagnostic` service (`57616f58-ef58-463d-a375-e8137f34e7dc`)

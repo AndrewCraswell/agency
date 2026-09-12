@@ -176,6 +176,8 @@ describe("amendment lexical search query", () => {
 
     expect(query.sql).toContain('"amendment_document_lexical_candidates" as')
     expect(query.sql).toContain(" union all ")
+    expect(query.sql).toContain('"legislation"."amendment_section_search"')
+    expect(query.sql).not.toContain("to_tsvector")
     expect(query.sql).not.toMatch(/search_vector[^)]*@@[^)]* or to_tsvector/)
     expect(query.sql).toContain("row_number() over (partition by")
     expect(query.sql).toContain('"row_number" = $')
