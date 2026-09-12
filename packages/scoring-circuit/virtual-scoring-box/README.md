@@ -55,9 +55,9 @@ low until the output is valid. A 10k output resistor provides a discharge path.
 
 The transformer enable has a default-off pull-down. Its protected 5V input and qualified-source/suspend enable are
 connected through PCB copper to the USB-C power-control section. Neither is tied directly to raw USB VBUS. USB_GND and
-scoring GND remain separate, including their copper pours. Only the affected piste trace segment was moved to the back
-layer to clear the new supply. Low-input-voltage operation, radio load steps, temperature, power-down time and system
-insulation still need bench verification. Component insulation ratings alone do not establish FIE compliance.
+scoring GND remain separate, including their copper pours. The piste connection clears the supply on the front layer.
+Low-input-voltage operation, radio load steps, temperature, power-down time and system insulation still need bench
+verification. Component insulation ratings alone do not establish FIE compliance.
 
 The bridge replaces the ISOUSB111. It can enumerate independently of the scoring processors and exposes `USB_AWAKE` from
 its active-low suspend output. A 10k pull-down keeps this signal low while reset leaves it floating. This gives the
@@ -96,10 +96,17 @@ unchanged. External connectors, board outline, ESP32 antenna position, USB data,
 remain unchanged. In1.Cu still has no signal or power tracks. The antenna extends beyond the top edge; the final
 enclosure must leave it clear.
 
-Total drawn track length decreased from **3691.893mm to 3198.362mm**, segment count from **2030 to 1629**, and via count
-from **430 to 377**. These are whole-board layout measurements, not propagation delays, measured electrical performance,
-or proof of a globally optimal layout. Shorter aggregate routing does not mean every individual net is shorter. Native
-layer views and top/bottom 3D views must be inspected with the final exports.
+The surface-routing pass preserves every component position and pad/net assignment. **LEFT_A, LEFT_C, RIGHT_A, RIGHT_B,
+RIGHT_C and PISTE** now run entirely on F.Cu. LEFT_B retains its shorter front/back path; forcing it onto the front
+produced an excessive detour. Four control networks no longer use In2.Cu: LEFT_C_DRIVE, RIGHT_C_DRIVE, PISTE_OE_N and
+SWDIO. Tight processor escapes remain internal where a front-only path would be obstructed or longer. The reset button
+has a short, dedicated connection to the scoring ground plane. Redundant signal vias were removed.
+
+Relative to the preceding branding checkpoint, In2.Cu track length falls from **772.930mm to 681.571mm** (11.8%); its
+share of total track length falls from **24.2% to 21.4%**. F.Cu carries 1472.575mm and B.Cu 1029.816mm. Total drawn
+track length is **3183.962mm**, down from 3198.362mm; there are **1618 segments and 366 vias**, down from 1629 and 377.
+In1.Cu remains ground-plane-only. These are CAD measurements, not propagation delays, measured electrical performance,
+or proof of a globally optimal layout. Shorter aggregate routing does not mean every individual net is shorter.
 
 White silkscreen identifies STM32, ESP32, the IR receiver, left/right inputs, USB-C, piste, A/B/C wire pads, service
 headers and reset/boot controls. J2/J6 have individual pin labels. The product marking is **FENCING CLUB**, **VIRTUAL
@@ -187,16 +194,6 @@ Source-control pin/function review uses [STUSB4500](https://www.st.com/resource/
 not the unrelated twenty-pin download reported in that thread. Its STEP assembly already supplies the seating transform;
 no extra rotation or height offset is applied.
 
-The 2026-09-12 layout review passes native ERC, DRC, schematic parity and connectivity with zero findings. Part values,
-footprint identities and pad/net maps are unchanged. Scoring-circuit type-check and its 13 tests pass; all eight
-existing electrical simulation models pass their stated limits. These simulations do not model PCB parasitics or qualify
-this layout. The virtual U24 image cross-builds (3096 bytes code, 72 bytes static RAM); it is not flashed or
-electrically qualified. Fresh fabrication, assembly and 3D files are in `output/assembly-layout-review/`.
-
-`pnpm verify` is not clean: it stops at the unrelated legislation type error in `src/search/amendment-search.test.ts:75`
-(`blobPath` is not a `DocumentAmendmentSummaryRow` property). Coverage is not reached in that run. The previously
-reported scoring TypeScript coverage shortfall has not been reassessed by this layout-only change.
-
 ## Assembly handoff
 
 Run `./export-manufacturing.ps1` with KiCad 10 and LLVM/Clang available. It creates a new output directory, runs native
@@ -276,20 +273,19 @@ review offers to leave unavailable parts unpopulated. That option was rejected: 
 Supplier placement approval, assembly/programming acceptance and the complete price remain open. No order, payment, new
 sourcing request or support message was sent during this layout review.
 
-The current local review export is `output/assembly-branding/`, generated together with `export-manufacturing.ps1`:
-thirteen Gerber/drill files, 142 BOM rows, matching placements and top/bottom 3D renders. BOM identities are unchanged
-from the stock review; prior placement/fabrication hashes are obsolete. Generated exports remain local and ignored, not
-a release authorization. This export has not been uploaded to JLCPCB.
+The current local review export is `output/assembly-surface-routing/`, generated together with
+`export-manufacturing.ps1`: thirteen Gerber/drill files, 142 BOM rows, matching placements and top/bottom 3D renders.
+BOM identities are unchanged from the stock review; prior placement/fabrication hashes are obsolete. Generated exports
+remain local and ignored, not a release authorization. This export has not been uploaded to JLCPCB.
 
 Fresh KiCad ERC, DRC, unconnected and parity counts are all zero under the enabled rules; top/bottom 3D renders and
 local copper views were inspected. The virtual U24 image cross-builds unchanged at 3096 bytes code / 72 bytes RAM.
 Scoring-circuit types and tests passed (2 files / 13 tests); lint and all eight existing ngspice models also passed.
-These models do not simulate the revised PCB parasitics. The branding-only update preserves all components and copper;
-fresh native ERC, DRC and schematic parity checks still report zero findings. Its `pnpm verify` run stopped at three
-lint errors in unrelated active legislation work (`config.ts`, `ranked-passage-search.test.ts`, and
-`query-service.test.ts`). The preceding layout run also exposed the scoring application's existing 100% coverage gate:
-969 tests passed, with 96.09% lines, 99.79% functions, 95.44% statements and 93.78% branches. No application source or
-thresholds changed in these PCB-only updates; no full-repository pass is claimed.
+These models do not simulate the revised PCB parasitics. The surface-routing update preserves component placement, pad
+geometry, USB data, crystal and power-switching copper. The refreshed `pnpm verify` passes its check stage, then fails
+the scoring application's existing 100% coverage gate: 96.09% lines, 99.79% functions, 95.44% statements and 93.78%
+branches. No application source or coverage thresholds changed in this PCB-only update; no full-repository pass is
+claimed.
 
 The unresolved procurement list below is **25 board references / 12 part types**, not 25 extra pieces. JLCPCB purchase
 quantities also include assembly attrition and minimum-order quantities. The reference list was rechecked in the new
