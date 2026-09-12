@@ -14,7 +14,7 @@ function Invoke-KiCad([string[]]$Arguments) {
 }
 Invoke-KiCad @('sch', 'erc', $schematic, '--format', 'json', '--exit-code-violations', '--output', "$exportDirectory/erc.json")
 Invoke-KiCad @('pcb', 'drc', $board, '--format', 'json', '--schematic-parity', '--refill-zones', '--exit-code-violations', '--output', "$exportDirectory/drc.json")
-Invoke-KiCad @('sch', 'export', 'bom', $schematic, '--exclude-dnp', '--fields', 'Reference,Value,Footprint,Manufacturer,MPN', '--labels', 'Reference,Value,Footprint,Manufacturer,MPN', '--output', "$exportDirectory/bom.csv")
+Invoke-KiCad @('sch', 'export', 'bom', $schematic, '--exclude-dnp', '--fields', 'Reference,Value,Footprint,Manufacturer,MPN,JLCPCB', '--labels', 'Reference,Value,Footprint,Manufacturer,MPN,JLCPCB', '--output', "$exportDirectory/bom.csv")
 Invoke-KiCad @('pcb', 'export', 'pos', $board, '--format', 'csv', '--units', 'mm', '--exclude-dnp', '--use-drill-file-origin', '--output', "$exportDirectory/placement.csv")
 $bom = @(Import-Csv -LiteralPath "$exportDirectory/bom.csv")
 $placement = @(Import-Csv -LiteralPath "$exportDirectory/placement.csv")
@@ -31,6 +31,7 @@ $bom | ForEach-Object {
         Footprint = $_.Footprint
         Manufacturer = $_.Manufacturer
         MPN = $_.MPN
+        'JLCPCB Part #' = $_.JLCPCB
     }
 } | Export-Csv -LiteralPath "$exportDirectory/jlcpcb-bom.csv" -NoTypeInformation -Encoding utf8
 $placement | ForEach-Object {

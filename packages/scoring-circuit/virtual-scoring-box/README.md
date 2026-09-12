@@ -208,3 +208,82 @@ guaranteed limit. References: [CP2102N](https://www.silabs.com/documents/public/
 [STUSB4500 table 22](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
 [STM32C011 table 31](https://www.st.com/resource/en/datasheet/stm32c011f4.pdf),
 [TPS25947](https://www.ti.com/lit/ds/symlink/tps25947.pdf).
+
+### JLCPCB validation draft
+
+The [saved virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=c45d113d10e04783b58e13074aaa71db) is
+**unsubmitted and unpaid, not order-ready**. The 2026-09-12 review uploaded the Gerbers, 142-reference BOM, matching
+placements and `programming-review.zip`. Keep the frozen combined-board draft separate.
+
+- Five bare boards, two assembled; Standard PCBA, all components on top; 120 x 85mm finished, 1.6mm FR-4, green mask,
+  white legend, ENIG, 1oz outer / 0.5oz inner copper. JLCPCB adds two 5mm rails; depaneling is selected.
+- Epoxy-filled/capped vias are requested. U2 has twelve 0.2mm thermal holes and U22 has two. Fill/cap only the
+  0.2/0.25/0.3mm via groups, not USB slots, connector, wire or locating holes. Confirm this in the production files.
+- Production-file and placement confirmation are required, with automatic confirmation disabled.
+- The original automatic match incorrectly assigned eight 1uF capacitors to Walsin **80pF** parts C3868041. All eight
+  matches were corrected to the intended TDK identity. C45537494 is the exact-name catalog entry but has incomplete
+  package/category data and zero stock; its appearance in a matched/selected row is **not sourcing approval**.
+  [TDK specifies 1uF, 50V, X7R, 10%, 0603](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB).
+- R82/R84's invalid ordering identity was corrected in the schematic, PCB and supplier draft to
+  [Panasonic ERA3AEB103V](https://industrial.panasonic.com/ww/products/pt/high-precision-chip-resistors/models/ERA3AEB103V):
+  10kOhm, 0.1%, 25ppm/K, 0.1W, 0603. Their values, pads and routing did not change. C190610 was in stock and both
+  references were selected. J1 USB4105-GF-A/C3020560 was also in stock and selected at quantity two.
+- The schematic and PCB record explicit JLCPCB identities for the ten corrected references, and the exporter carries
+  them in `JLCPCB Part #`. This prevents the known automatic mis-match on re-upload; it does not approve a substitution
+  or establish available inventory. Review every supplier line again after any BOM upload.
+
+The corrected BOM and matching placement file were re-uploaded to this same draft. The fresh local package is
+`output/assembly-quote/`: 142 BOM references / 48 MPNs, with 142 matching placement rows. Native ERC, DRC, schematic
+parity and unconnected counts are all zero. The BOM SHA-256 is
+`A7E7A3132E070661A07102542B0E7C885ED700281467DE5CEEA6F78F14496076`; the placement SHA-256 is
+`389FF191E600E2708319AEC03B73A158270CB6539B29ECF73960BE6BE392F4CD`, unchanged from the original draft upload. All
+corrections are purchasing metadata; component positions, pads and routing did not change. The repeat `pnpm verify` run
+still passes 969 scoring tests but fails the same TypeScript coverage thresholds recorded above. The regenerated
+Gerber/drill content also matches the uploaded fabrication package except for generation dates.
+
+The unresolved procurement list below is **27 board references / 13 part types**, not 27 extra pieces. JLCPCB purchase
+quantities also include assembly attrition and minimum-order quantities; recheck stock and price before release.
+
+| References                            | Required MPN         | JLCPCB identity | Remaining sourcing issue                                                                          |
+| ------------------------------------- | -------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| C1, C15, C21, C33, C39, C49, C50, C52 | C1608X7R1H105K080AB  | C45537494       | 20-piece shortfall; incomplete catalog package/rating data requires manual sourcing confirmation. |
+| C12                                   | C1608X7R1H103K080AA  | C2180830        | 18-piece quoted shortfall.                                                                        |
+| C14                                   | C1608X7S1A475K080AC  | C5331011        | 5-piece quoted shortfall.                                                                         |
+| C17, C18                              | CGA3E2C0G1H270J080AA | C193086         | 8-piece quoted shortfall.                                                                         |
+| C22                                   | C1608X5R1C106M080AB  | C2167896        | 1-piece quoted shortfall.                                                                         |
+| C41-C46                               | C3216X7R1C106K160AC  | C2167646        | 16-piece quoted shortfall.                                                                        |
+| J2                                    | HTSW-105-07-L-S      | C6571098        | 2-piece quoted shortfall; through-hole assembly required.                                         |
+| J6                                    | HTSW-106-07-L-S      | C3324216        | 2-piece quoted shortfall; through-hole assembly required.                                         |
+| R81                                   | ERA3AEB2372V         | C2074741        | 6-piece quoted shortfall.                                                                         |
+| R83                                   | ERA3AEB3482V         | C2074547        | 20-piece quoted shortfall.                                                                        |
+| R88, R92                              | RC0603FR-0747KL      | C105579         | 19-piece quoted shortfall.                                                                        |
+| T1                                    | 750315371            | C5184247        | 5-piece quoted shortfall; do not substitute an arbitrary transformer.                             |
+| U26                                   | SN74LVC1G3208DBVR    | C2682152        | 2-piece quoted shortfall.                                                                         |
+
+Non-purchasing parts quotation **XOB2026091200835** was submitted on 2026-09-12 for these 13 identities. The site's
+quantity-entry handler failed (`this.minNumber is not a function`): entered quantities appeared in the form but the
+saved request retained one per line. The quote is therefore **not a usable build quotation**. Support was sent the
+correction list: C45537494=20, C2180830=20, C5331011=5, C193086=8, C2167896=5, C2167646=16, C6571098=2, C3324216=2,
+C2074741=6, C2074547=20, C105579=20, C5184247=5, C2682152=5. These are total required procurement quantities including
+the draft's attrition, not just the shortfalls above. No checkout, payment or component substitution was authorized.
+
+Read-only Global Sourcing checks found exact 750315371 transformers at about $3.63 each (Element14_UK, minimum five),
+the exact 1uF TDK capacitor at about $0.183 each (Element, minimum ten), and J2's exact Samtec header via DigiKey with a
+one-piece minimum. These listings suggest procurement can retain the design, but are not stocked-assembly commitments or
+landed quotes. No items were added to the existing sourcing cart. Purchased sourcing parts must reach JLCPCB's warehouse
+before assembly selection; obtain corrected quantity/lead-time/fee confirmation before buying.
+
+The attached programming package is for **supplier feasibility review**, not programming acceptance. It includes the
+virtual U24 HEX and assembly/probe guidance. U23 still needs a reviewed single-5V/1.5A NVM configuration and an agreed
+programming/readback method. ST's reference NVM example is not this board's configuration; do not copy it unmodified.
+JLCPCB support (Leo, 2026-09-12) confirmed that its functional-test service can review programming and that through-hole
+assembly of J2/J6/U13 is supported. This is not engineering acceptance of the specific fixture or U23 NVM operation. The
+supplied U24 HEX cannot substitute for U23's separate 40-byte NVM configuration; a specific clarification was sent.
+[Programming is a separately reviewed Standard PCBA service](https://jlcpcb.com/help/article/pcba-programming-service).
+Do not release a board with blank source-control firmware as ready to program the scoring application.
+
+The native ERC/DRC/parity/connectivity checks report zero findings under enabled rules. This does not finish the
+datasheet/rating review of every MPN, all 142 supplier placements, or physical qualification. CP2102N, ISO7021, TPS25947
+and the transformer pin/net maps were individually rechecked against manufacturer drawings. Final supplier placement
+review, complete assembly price and programming-service acceptance remain open; no shortage has been waived by omitting
+parts. The earlier $110.63 figure was the **bare-PCB quote only**, not the assembled total.

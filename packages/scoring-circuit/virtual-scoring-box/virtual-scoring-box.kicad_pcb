@@ -3078,6 +3078,18 @@
 				)
 			)
 		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0000")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/129828c4-577a-4845-a07c-0bccf2c55b9c")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -5584,6 +5596,18 @@
 				)
 			)
 		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0001")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property "Manufacturer" "TDK"
 			(at 0 0 0)
 			(layer "F.SilkS")
@@ -7543,6 +7567,18 @@
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "30eee4d1-e26b-4d2a-ab05-028c40fc56a7")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0002")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11139,6 +11175,18 @@
 				)
 			)
 		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0003")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/f4ac2758-1493-4ccf-86e5-e6c8e8ce0d8d")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -12171,6 +12219,18 @@
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "c3deb65c-3a47-4785-9335-c960928e45e4")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0004")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -17443,6 +17503,18 @@
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "9abbb7fb-09a2-40d2-8afb-e074a01082b6")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0005")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26853,6 +26925,18 @@
 				)
 			)
 		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0006")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property "Manufacturer" "TDK"
 			(at 0 0 0)
 			(layer "F.SilkS")
@@ -28558,11 +28642,23 @@
 				)
 			)
 		)
-		(property "MPN" "ERA3AEB1002V"
+		(property "MPN" "ERA3AEB103V"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "72623583-2632-4ec3-ae3c-aa30138c75bf")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "JLCPCB" "C190610"
+			(at 0 0 90)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0007")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -29256,11 +29352,23 @@
 				)
 			)
 		)
-		(property "MPN" "ERA3AEB1002V"
+		(property "MPN" "ERA3AEB103V"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "71c9426c-928d-4858-8ca0-6fd234c7dc40")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "JLCPCB" "C190610"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0008")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -30652,6 +30760,18 @@
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "a32c1812-c046-428d-9dd1-0ae950ca47f1")
+			(effects
+				(font
+					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "JLCPCB" "C45537494"
+			(at 0 0 0)
+			(layer "F.SilkS")
+			(hide yes)
+			(uuid "eff41871-15ee-40da-83b6-54b34b9e0009")
 			(effects
 				(font
 					(size 1.27 1.27)
