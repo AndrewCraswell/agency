@@ -67,5 +67,5 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 --> statement-breakpoint
 DO $$ BEGIN
-	ALTER TABLE "legislation"."legislative_events" ADD CONSTRAINT "legislative_events_canonical_facts_complete_check" CHECK (NOT "canonical_facts_complete" OR ("publisher_local_date" IS NOT NULL AND "classification" IS NOT NULL AND "is_remote" IS NOT NULL AND "provenance_complete")) NOT VALID;
+	ALTER TABLE "legislation"."legislative_events" ADD CONSTRAINT "legislative_events_canonical_facts_complete_check" CHECK (NOT "canonical_facts_complete" OR ("publisher_local_date" IS NOT NULL AND "classification" IS NOT NULL AND "provenance_complete")) NOT VALID;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

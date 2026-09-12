@@ -221,7 +221,7 @@ export interface MeetingSummary extends CanonicalFields {
   endsAt: string | null
   date: string
   location: EventLocation | null
-  isRemote: boolean
+  isRemote: boolean | null
 }
 
 export interface MeetingDetail extends MeetingSummary {
@@ -545,7 +545,7 @@ export type MeetingSummaryProjectionInput = SourceRecord & {
   endsAt: DateValue | null
   date: DateValue
   location: EventLocation | null
-  isRemote: boolean
+  isRemote: boolean | null
 }
 
 export type CalendarSummaryProjectionInput = SourceRecord & {

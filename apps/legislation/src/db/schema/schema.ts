@@ -689,7 +689,7 @@ export const legislativeEvents = legislationSchema.table(
     ),
     check(
       "legislative_events_canonical_facts_complete_check",
-      sql`not ${table.canonicalFactsComplete} or (${table.publisherLocalDate} is not null and ${table.classification} is not null and ${table.isRemote} is not null and ${table.provenanceComplete})`
+      sql`not ${table.canonicalFactsComplete} or (${table.publisherLocalDate} is not null and ${table.classification} is not null and ${table.provenanceComplete})`
     ),
     uniqueIndex("legislative_events_jurisdiction_source_uidx").on(table.jurisdictionId, table.sourceId),
     index("legislative_events_schedule_idx").on(table.jurisdictionId, table.startAt, table.status),

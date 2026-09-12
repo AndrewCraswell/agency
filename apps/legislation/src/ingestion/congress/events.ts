@@ -102,11 +102,11 @@ function uniqueCommittees(values: z.infer<typeof committeeSchema>[]): z.infer<ty
   return [...unique.values()]
 }
 
-function hasExplicitCommitteeList(input: unknown): boolean {
+function hasExplicitCommitteeList(input: unknown, field = "meeting"): boolean {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return false
   }
-  const event = Reflect.get(input, "meeting")
+  const event = Reflect.get(input, field)
   return typeof event === "object" && event !== null && !Array.isArray(event) && Array.isArray(event.committees)
 }
 
@@ -323,7 +323,6 @@ export function normalizeCongressCommitteeMeeting(
       allDay: false,
       canonicalFactsComplete:
         date !== undefined &&
-        isRemote !== undefined &&
         classification !== undefined &&
         provenance.provenanceComplete &&
         organizationRelationsComplete &&
@@ -369,7 +368,10 @@ export function normalizeCongressCommitteeMeeting(
   }
 }
 
-export function normalizeCongressHearing(input: unknown): CongressEventSnapshot | undefined {
+export function normalizeCongressHearing(
+  input: unknown,
+  context: CongressEventNormalizationContext = {}
+): CongressEventSnapshot | undefined {
   const source = hearingBundleSchema.parse(input)
   const hearing = source.hearing
   const hearingDate = hearing.dates[0]?.date
@@ -379,6 +381,8 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
   }
   const eventId = legislativeEventId("congress", `published-hearing-${hearing.jacketNumber}`)
   const date = hearingDate.slice(0, 10)
+  const provenance = eventProvenance(source.sourceUrl, context)
+  const organizationRelationsComplete = hasExplicitCommitteeList(input, "hearing")
   const committees = uniqueCommittees(hearing.committees)
   const formats = uniqueDocuments(
     hearing.formats.map((format) => ({
@@ -402,23 +406,27 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
     })),
     event: {
       allDay: true,
-      canonicalFactsComplete: false,
+      canonicalFactsComplete:
+        publisherLocalDate(date) !== undefined && provenance.provenanceComplete && organizationRelationsComplete,
       classification: "hearing",
       id: eventId,
       isDeleted: false,
-      organizationRelationsComplete: false,
+      organizationRelationsComplete,
+      ...provenance,
+      publisherLocalDate: date,
+      isRemote: null,
       jurisdictionId: jurisdictionId("us"),
       name: title,
       sourceId: hearing.jacketNumber,
       sourceUpdatedAt: hearing.updateDate === undefined ? undefined : new Date(hearing.updateDate),
       sourceUrl: source.sourceUrl,
       startAt: new Date(`${date}T00:00:00Z`),
-      sessionRelationsComplete: false,
+      sessionRelationsComplete: true,
       status: "other",
       upstreamIds: { congress: hearing.jacketNumber }
     },
     materials: materials(eventId, formats, date),
-    organizationIds: [],
+    organizationIds: committees.map((committee) => organizationId("congress", committee.systemCode)),
     participants: committees.map((committee) => ({
       eventId,
       id: eventChildId("participant", eventId, `committee:${committee.systemCode}`),
@@ -426,6 +434,6 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
       organizationId: organizationId("congress", committee.systemCode),
       role: "committee"
     })),
-    sessionIds: []
+    sessionIds: [legislativeSessionId("us", String(hearing.congress))]
   }
 }

@@ -45,6 +45,7 @@ export interface MeetingListInput {
 
 export type MeetingPersistenceRead = Pick<
   typeof legislativeEvents.$inferSelect,
+  | "allDay"
   | "classification"
   | "description"
   | "endAt"
@@ -114,6 +115,7 @@ export function buildMeetingListQuery(database: LegislationDatabase, input: Meet
   const sourceSequence = sourceSequenceSort()
   return database
     .select({
+      allDay: legislativeEvents.allDay,
       classification: legislativeEvents.classification,
       description: legislativeEvents.description,
       endAt: legislativeEvents.endAt,

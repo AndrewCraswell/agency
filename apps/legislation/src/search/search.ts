@@ -334,6 +334,7 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
       select id
       from primary_sources
       group by id
+      order by id asc
       limit ${candidateLimit}
     ),
     primary_count as (
@@ -356,21 +357,24 @@ export function buildLexicalBillSearchQuery(input: SearchInput, query: string, l
       ) sponsor_fallback
     ),
     version_section_lookahead as materialized (
-      select
-        ${documentSections.id} as section_id,
-        ${billDocuments.billId} as bill_id
+      select version_fallback.*
       from primary_count
-      cross join ${documentSections}
-      inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
-      inner join ${bills} on ${bills.id} = ${billDocuments.billId}
-      where
-        primary_count.count < ${candidateLimit}
-        and ${billDocuments.classification} = 'version'
-        and ${billDocuments.processingStatus} = 'processed'
-        and ${documentSections.searchVector} @@ ${searchQuery}
-        and ${and(...billFilters(input)) ?? sql`true`}
-      order by ${documentSections.id} asc
-      limit ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT + 1}
+      cross join lateral (
+        select
+          ${documentSections.id} as section_id,
+          ${billDocuments.billId} as bill_id
+        from ${documentSections}
+        inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
+        inner join ${bills} on ${bills.id} = ${billDocuments.billId}
+        where
+          ${billDocuments.classification} = 'version'
+          and ${billDocuments.processingStatus} = 'processed'
+          and ${documentSections.searchVector} @@ ${searchQuery}
+          and ${and(...billFilters(input)) ?? sql`true`}
+        order by ${documentSections.id} asc
+        limit case when primary_count.count < ${candidateLimit}
+          then ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT + 1} else 0 end
+      ) version_fallback
     ),
     version_section_coverage as (
       select count(*) > ${LEXICAL_BILL_VERSION_CANDIDATE_LIMIT} as capped

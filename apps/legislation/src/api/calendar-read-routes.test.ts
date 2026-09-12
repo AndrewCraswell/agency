@@ -62,6 +62,7 @@ function meeting(): MeetingRead {
     description: null,
     endAt: null,
     id: "event:wa:rules-1",
+    allDay: false,
     isRemote: false,
     jurisdictionId: "jurisdiction:wa",
     location: null,

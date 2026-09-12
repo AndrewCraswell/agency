@@ -341,6 +341,7 @@ function meeting(): MeetingRead {
     description: "Fixture meeting",
     endAt: null,
     id: MEETING_ID,
+    allDay: false,
     isRemote: false,
     jurisdictionId: JURISDICTION_ID,
     location: { name: "Capitol" },

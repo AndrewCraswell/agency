@@ -5,23 +5,18 @@ import {
   projectBillDetail,
   projectBillSummary,
   projectPersonSummary,
-  projectVoteDetail,
-  projectVoteSummary,
   type AmendmentSummary,
   type BillAction,
   type BillDetail,
   type BillRelation,
   type PersonSummary,
   type Sponsor,
-  type VoteCounts,
-  type VoteDetail,
-  type VotePosition,
-  type VoteSummaryProjectionInput,
-  type VoteSummary
+  type VoteDetail
 } from "../../api/canonical-projection.js"
 import { sourceProjectionContext } from "../../api/canonical-read.js"
 import { projectDocumentSummaryRead } from "../../api/document-read-routes.js"
 import { projectOrganizationRow } from "../../api/organization-summary-read-projection.js"
+import { projectVote, projectVoteDetailRead } from "../../api/vote-read-routes.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -42,7 +37,7 @@ import {
   compareAmendmentReadOrder
 } from "./amendment-reads.js"
 import { listBillDocuments } from "./document-reads.js"
-import { assertCanonicalVotePersistence, assertVotePositionSequence } from "./vote-reads.js"
+import { assertCanonicalVotePersistence, assertVotePositionSequence, listVotePositionReads } from "./vote-reads.js"
 
 const MAX_CHILD_LIMIT = 25
 /** Vote details embed positions, so this relationship keeps the 25-item cap. */
@@ -222,7 +217,7 @@ export async function getBillDetailRead(
   const detailVoteRows = voteRows.slice(0, childLimit)
   assertCanonicalBillVotes(detailVoteRows, votePositionRows)
   const votePageInfo = billDetailVotePageInfo(voteRows.length, detailVoteRows.at(-1), childLimit, { billId: id })
-  const voteSummaries = projectVotes(detailVoteRows, votePositionRows, apiBaseUrl)
+  const voteSummaries = detailVoteRows.map((vote) => projectVote(vote, apiBaseUrl))
 
   return projectBillDetail(
     {
@@ -295,21 +290,12 @@ export async function listBillVoteReads(
     )
     .orderBy(asc(votes.heldAt), asc(votes.id))
     .limit(limit + 1)
-  const voteIds = voteRows.map((vote) => vote.id)
-  const positions =
-    voteIds.length === 0
-      ? []
-      : await database
-          .select({ person: people, position: votePositions })
-          .from(votePositions)
-          .leftJoin(people, eq(votePositions.personId, people.id))
-          .where(inArray(votePositions.voteId, voteIds))
-          .orderBy(asc(votePositions.voteId), asc(votePositions.sourceIdentity))
-  assertCanonicalBillVotes(
-    voteRows.slice(0, limit),
-    positions.map((row) => row.position)
-  )
-  const items = voteRows.slice(0, limit).map((vote) => projectVoteDetailRead(vote, positions, apiBaseUrl))
+  const items: VoteDetail[] = []
+  for (const vote of voteRows.slice(0, limit)) {
+    assertCanonicalVotePersistence(vote)
+    const positions = await listVotePositionReads(database, { voteId: vote.id, limit: 25 })
+    items.push(projectVoteDetailRead(vote, positions, apiBaseUrl))
+  }
   const truncated = voteRows.length > limit
   const lastVote = voteRows[limit - 1]
   return {
@@ -525,133 +511,6 @@ function projectRelation(
   }
 }
 
-function projectVotes(
-  votesForBill: readonly (typeof votes.$inferSelect)[],
-  positionRows: readonly (typeof votePositions.$inferSelect)[],
-  apiBaseUrl: string
-): VoteSummary[] {
-  const positionsByVote = new Map<string, (typeof votePositions.$inferSelect)[]>()
-  for (const position of positionRows) {
-    const positions = positionsByVote.get(position.voteId)
-    if (positions === undefined) {
-      positionsByVote.set(position.voteId, [position])
-    } else {
-      positions.push(position)
-    }
-  }
-  return votesForBill.map((vote) => {
-    const sourceUrl = requiredVoteSourceUrl(vote.sourceUrl)
-    return projectVoteSummary(
-      voteSummaryProjectionInput(vote, positionsByVote.get(vote.id) ?? []),
-      sourceProjectionContext(
-        {
-          createdAt: vote.createdAt,
-          id: vote.id,
-          sourceUrl,
-          updatedAt: vote.createdAt
-        },
-        apiBaseUrl
-      )
-    )
-  })
-}
-
-function voteSummaryProjectionInput(
-  vote: typeof votes.$inferSelect,
-  positions: readonly (typeof votePositions.$inferSelect)[]
-): VoteSummaryProjectionInput {
-  const date = vote.heldAt?.toISOString().slice(0, 10)
-  if (date === undefined) {
-    throw incomplete("Vote date is not persisted")
-  }
-  return {
-    billId: vote.billId,
-    classification: vote.classification,
-    counts: voteCounts(vote, positions),
-    date,
-    heldAt: vote.heldAt,
-    id: vote.id,
-    motion: vote.motion,
-    organizationId: vote.organizationId,
-    question: vote.question,
-    result: voteResult(vote.result),
-    sourceUrl: requiredVoteSourceUrl(vote.sourceUrl)
-  }
-}
-
-function projectVoteDetailRead(
-  vote: typeof votes.$inferSelect,
-  rows: readonly { person: typeof people.$inferSelect | null; position: typeof votePositions.$inferSelect }[],
-  apiBaseUrl: string
-): VoteDetail {
-  const positionRows = rows.filter((row) => row.position.voteId === vote.id)
-  const input = voteSummaryProjectionInput(
-    vote,
-    positionRows.map((row) => row.position)
-  )
-  const sourceUrl = requiredVoteSourceUrl(vote.sourceUrl)
-  const context = sourceProjectionContext(
-    { createdAt: vote.createdAt, id: vote.id, sourceUrl, updatedAt: vote.createdAt },
-    apiBaseUrl
-  )
-  const summary = projectVoteSummary(input, context)
-  const positions = positionRows.map((row) =>
-    projectVotePosition(row.position, row.person, vote, summary.sources, apiBaseUrl)
-  )
-  return projectVoteDetail(
-    {
-      positions,
-      positionsPageInfo: { limit: Math.max(positions.length, 1), nextCursor: null, truncated: false },
-      vote: input
-    },
-    context
-  )
-}
-
-function projectVotePosition(
-  position: typeof votePositions.$inferSelect,
-  person: typeof people.$inferSelect | null,
-  vote: typeof votes.$inferSelect,
-  sources: VotePosition["sources"],
-  apiBaseUrl: string
-): VotePosition {
-  if (position.sourceName === null) {
-    throw incomplete("Vote position source name is not persisted")
-  }
-  return {
-    canonicalUrl: new URL(
-      `/api/votes/${encodeURIComponent(vote.id)}#${encodeURIComponent(position.sourceIdentity)}`,
-      apiBaseUrl
-    ).toString(),
-    id: position.sourceIdentity,
-    option: votePositionOption(position.option),
-    person: person === null ? null : projectSponsorPerson(person, apiBaseUrl),
-    sourceName: position.sourceName,
-    sourcePersonId: position.sourcePersonId,
-    sources,
-    type: "vote-position",
-    updatedAt: position.createdAt.toISOString(),
-    voteId: vote.id
-  }
-}
-
-function votePositionOption(value: string): VotePosition["option"] {
-  switch (value) {
-    case "yes":
-    case "no":
-    case "absent":
-    case "abstain":
-    case "not-voting":
-    case "present":
-    case "proxy":
-    case "paired":
-    case "other":
-      return value
-    default:
-      throw incomplete("Vote position option is not canonical")
-  }
-}
-
 export function requiredVoteSourceUrl(sourceUrl: string | null): string {
   if (sourceUrl === null) {
     throw incomplete("Vote canonical provenance is not persisted")
@@ -669,65 +528,6 @@ export function billDetailVotePageInfo(
   return {
     nextCursor: truncated && lastVote !== undefined ? encodeBillVoteCursor(voteKey(lastVote), scope) : null,
     truncated
-  }
-}
-
-function voteCounts(
-  vote: typeof votes.$inferSelect,
-  positions: readonly (typeof votePositions.$inferSelect)[]
-): VoteCounts {
-  if (vote.yesCount === null || vote.noCount === null || vote.otherCount === null) {
-    throw incomplete("Vote counts are incomplete")
-  }
-  const expected = vote.yesCount + vote.noCount + vote.otherCount
-  if (vote.otherCount === 0) {
-    return {
-      absent: 0,
-      abstain: 0,
-      no: vote.noCount,
-      notVoting: 0,
-      other: 0,
-      paired: 0,
-      present: 0,
-      proxy: 0,
-      yes: vote.yesCount
-    }
-  }
-  if (positions.length !== expected) {
-    throw incomplete("Vote option counts cannot be derived from incomplete positions")
-  }
-  const count = (option: (typeof votePositions.$inferSelect)["option"]) =>
-    positions.filter((position) => position.option === option).length
-  if (count("yes") !== vote.yesCount || count("no") !== vote.noCount) {
-    throw incomplete("Vote positions do not match persisted counts")
-  }
-  return {
-    absent: count("absent"),
-    abstain: count("abstain"),
-    no: count("no"),
-    notVoting: count("not-voting"),
-    other: count("other"),
-    paired: count("paired"),
-    present: count("present"),
-    proxy: count("proxy"),
-    yes: count("yes")
-  }
-}
-
-function voteResult(value: string | null): VoteSummary["result"] {
-  switch (value?.toLowerCase()) {
-    case "pass":
-    case "passed":
-      return "passed"
-    case "fail":
-    case "failed":
-      return "failed"
-    case "other":
-      return "other"
-    case null:
-      throw incomplete("Vote result is not persisted")
-    default:
-      throw incomplete("Vote result is not canonical")
   }
 }
 

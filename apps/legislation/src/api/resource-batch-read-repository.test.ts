@@ -280,6 +280,7 @@ const meetingRead: MeetingRead = {
   description: "Fixture meeting",
   endAt: null,
   id: resourceIds.meeting,
+  allDay: false,
   isRemote: false,
   jurisdictionId: resourceIds.jurisdiction,
   location: null,

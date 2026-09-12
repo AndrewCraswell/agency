@@ -4,6 +4,7 @@ import { projectMeetingRead } from "./meeting-read-projection.js"
 
 function meeting(calendarId: string | null): MeetingRead {
   return {
+    allDay: false,
     calendarId,
     classification: "meeting",
     description: null,
@@ -30,6 +31,15 @@ function meeting(calendarId: string | null): MeetingRead {
 }
 
 describe("meeting read projection", () => {
+  it("does not invent a clock time or remote status for a date-only hearing", () => {
+    expect(
+      projectMeetingRead({ ...meeting(null), allDay: true, isRemote: null }, "https://api.example.test")
+    ).toMatchObject({
+      startsAt: null,
+      isRemote: null,
+      date: "2026-08-17"
+    })
+  })
   it("projects the persisted singular calendar relation, including no calendar", () => {
     const baseUrl = "https://api.example.test"
     expect(projectMeetingRead(meeting(null), baseUrl)).toMatchObject({ calendarId: null, type: "meeting" })

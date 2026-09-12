@@ -21,6 +21,7 @@
 - [GovInfo committee edition inventory](committee-directory-inventory.md)
 - [Change events](change-events.md)
 - [MCP tool contracts](tool-contracts.md)
+- [Authenticated MCP smoke defects](mcp-smoke-bugs.md)
 - [HTTP API contract](http-api-contract/README.md)
 - [Next.js API migration and staged Railway release plan](nextjs-api-migration-plan.md)
 - [Next.js runtime and smoke boundary](nextjs-runtime.md)

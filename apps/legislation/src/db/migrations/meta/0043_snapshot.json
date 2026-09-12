@@ -5843,7 +5843,7 @@
         },
         "legislative_events_canonical_facts_complete_check": {
           "name": "legislative_events_canonical_facts_complete_check",
-          "value": "not \"legislation\".\"legislative_events\".\"canonical_facts_complete\" or (\"legislation\".\"legislative_events\".\"publisher_local_date\" is not null and \"legislation\".\"legislative_events\".\"classification\" is not null and \"legislation\".\"legislative_events\".\"is_remote\" is not null and \"legislation\".\"legislative_events\".\"provenance_complete\")"
+          "value": "not \"legislation\".\"legislative_events\".\"canonical_facts_complete\" or (\"legislation\".\"legislative_events\".\"publisher_local_date\" is not null and \"legislation\".\"legislative_events\".\"classification\" is not null and \"legislation\".\"legislative_events\".\"provenance_complete\")"
         }
       },
       "isRLSEnabled": false

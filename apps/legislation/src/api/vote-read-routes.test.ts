@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import type { VoteRead } from "../db/queries/vote-reads.js"
 import { close, createLegislationServer } from "../mcp/server.js"
 import { createLogger } from "../observability/logger.js"
-import { createVoteReadApiHandler, type VoteReadApi } from "./vote-read-routes.js"
+import { createVoteReadApiHandler, projectVote, projectVoteDetailRead, type VoteReadApi } from "./vote-read-routes.js"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "vote-read-routes-test", write: () => undefined })
@@ -76,6 +76,19 @@ function service(overrides: Partial<VoteReadApi> = {}): VoteReadApi {
 }
 
 describe("vote read API handler", () => {
+  it("preserves persisted nonbinary counts and a bounded position continuation for bill consumers", () => {
+    const row = vote({ notVotingCount: 12, presentCount: 1, otherCount: 0, sourceUpdatedAt: null })
+    const summary = projectVote(row, "https://api.example.test")
+    expect(summary.counts).toMatchObject({ notVoting: 12, present: 1, other: 0 })
+    const detail = projectVoteDetailRead(
+      row,
+      { items: [], nextCursor: "positions-page-2", truncated: true },
+      "https://api.example.test"
+    )
+    expect(detail.counts).toEqual(summary.counts)
+    expect(detail.positionsPageInfo).toEqual({ limit: 25, nextCursor: "positions-page-2", truncated: true })
+    expect(detail.sources[0]?.sourceUpdatedAt).toBeNull()
+  })
   it("uses the shared pagination default for person vote activity", async () => {
     let received: unknown
     const baseUrl = await start(

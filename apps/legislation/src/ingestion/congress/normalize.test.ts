@@ -38,6 +38,7 @@ describe("Congress.gov normalization", () => {
       upstreamIds: { congress: "119-hr-1234" }
     })
     expect(aggregate.actions).toHaveLength(3)
+    expect(aggregate.actions?.every((action) => action.sourceUrl === aggregate.bill.sourceUrl)).toBe(true)
     expect(aggregate.people).toHaveLength(2)
     expect(aggregate.sponsors).toHaveLength(2)
     expect(aggregate.documents).toBeUndefined()

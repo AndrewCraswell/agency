@@ -34,6 +34,7 @@ function meeting(): MeetingRead {
     description: "A source-declared meeting",
     endAt: null,
     id: "event:openstates:rules-1",
+    allDay: false,
     isRemote: false,
     jurisdictionId: "jurisdiction:wa",
     location: { name: "Capitol" },

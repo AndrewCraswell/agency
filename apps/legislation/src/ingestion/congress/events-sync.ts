@@ -48,7 +48,7 @@ export async function synchronizeCongressEvents(
       const snapshot =
         domain === "meetings"
           ? normalizeCongressCommitteeMeeting(source, normalizationContext)
-          : normalizeCongressHearing(source)
+          : normalizeCongressHearing(source, normalizationContext)
       if (snapshot === undefined) {
         counts.skipped += 1
         nextOffset = item.offset + 1

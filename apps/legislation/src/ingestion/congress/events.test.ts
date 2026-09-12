@@ -67,19 +67,22 @@ describe("Congress event normalization", () => {
   })
 
   it("normalizes a published hearing as an all-day event without inventing a meeting time", () => {
-    const snapshot = normalizeCongressHearing({
-      hearing: {
-        chamber: "House",
-        committees: [{ name: "Science Committee", systemCode: "hssy00" }],
-        congress: 119,
-        dates: [{ date: "2025-03-05" }],
-        formats: [{ type: "PDF", url: "https://congress.gov/hearing.pdf" }],
-        jacketNumber: 58978,
-        title: "Assessing the Threat",
-        updateDate: "2026-08-17T01:21:42Z"
+    const snapshot = normalizeCongressHearing(
+      {
+        hearing: {
+          chamber: "House",
+          committees: [{ name: "Science Committee", systemCode: "hssy00" }],
+          congress: 119,
+          dates: [{ date: "2025-03-05" }],
+          formats: [{ type: "PDF", url: "https://congress.gov/hearing.pdf" }],
+          jacketNumber: 58978,
+          title: "Assessing the Threat",
+          updateDate: "2026-08-17T01:21:42Z"
+        },
+        sourceUrl: "https://api.congress.gov/v3/hearing/119/house/58978"
       },
-      sourceUrl: "https://api.congress.gov/v3/hearing/119/house/58978"
-    })
+      context
+    )
     if (snapshot === undefined) {
       throw new Error("Expected a dated hearing snapshot")
     }
@@ -88,9 +91,17 @@ describe("Congress event normalization", () => {
       allDay: true,
       classification: "hearing",
       id: "event:congress:published-hearing-58978",
+      canonicalFactsComplete: true,
+      provenanceComplete: true,
+      publisherLocalDate: "2025-03-05",
+      isRemote: null,
+      sessionRelationsComplete: true,
+      organizationRelationsComplete: true,
       status: "other"
     })
     expect(snapshot.materials[0]?.material.classification).toBe("hearing-transcript")
+    expect(snapshot.sessionIds).toEqual(["session:us:119"])
+    expect(snapshot.organizationIds).toEqual(["organization:congress:hssy00"])
   })
 
   it("derives remote status only from an unambiguous source-declared location", () => {
@@ -166,7 +177,7 @@ describe("Congress event normalization", () => {
     )
 
     expect(ambiguousLocation.event).toMatchObject({
-      canonicalFactsComplete: false,
+      canonicalFactsComplete: true,
       isRemote: undefined,
       organizationRelationsComplete: true,
       provenanceComplete: true,

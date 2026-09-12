@@ -145,7 +145,8 @@ export function normalizeCongressBillBundle(
                 canonicalBillId,
                 `${index}:${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
               ),
-              ordinal: index
+              ordinal: index,
+              sourceUrl: source.bill.url
             }
           ]
     ),

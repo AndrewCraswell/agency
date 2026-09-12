@@ -80,6 +80,7 @@ function meeting(): MeetingRead {
     description: "Rules Committee hearing",
     endAt: new Date("2026-08-17T19:00:00.000Z"),
     id: "event:wa:rules-1",
+    allDay: false,
     isRemote: false,
     jurisdictionId: "jurisdiction:wa",
     location: null,

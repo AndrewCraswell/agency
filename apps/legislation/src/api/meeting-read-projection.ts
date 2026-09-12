@@ -13,13 +13,13 @@ export function projectMeetingRead(read: MeetingRead, apiBaseUrl: string) {
       description: nullableText(read.description, "meeting description"),
       endsAt: read.endAt,
       id: requiredText(read.id, "meeting ID"),
-      isRemote: requiredBoolean(read.isRemote, "meeting isRemote"),
+      isRemote: read.isRemote,
       jurisdictionId: requiredText(read.jurisdictionId, "meeting jurisdictionId"),
       location: location(read.location, read.virtualAccess),
       organizationIds: read.organizationIds,
       sessionIds: read.sessionIds,
       sourceUrl: source.sourceUrl,
-      startsAt: read.startAt,
+      startsAt: read.allDay ? null : read.startAt,
       status: status(read.status),
       title: requiredText(read.name, "meeting title")
     },
@@ -89,13 +89,6 @@ function nullableText(value: string | null, name: string): string | null {
 
 function optionalText(value: unknown): string | null {
   return isText(value) ? value : null
-}
-
-function requiredBoolean(value: boolean | null, name: string): boolean {
-  if (typeof value !== "boolean") {
-    throw new LegislationError("unprocessable", `${name} must be boolean`)
-  }
-  return value
 }
 
 function isText(value: unknown): value is string {

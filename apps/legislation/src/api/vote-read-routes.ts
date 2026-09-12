@@ -259,7 +259,7 @@ function projectPersonVoteActivity(value: PersonVotePositionRead, apiBaseUrl: st
     vote: projectVote(value.vote, apiBaseUrl)
   }
 }
-function projectVote(vote: VoteRead, apiBaseUrl: string): VoteSummary {
+export function projectVote(vote: VoteRead, apiBaseUrl: string): VoteSummary {
   return projectVoteSummary(voteInput(vote), context(vote, apiBaseUrl))
 }
 function voteInput(vote: VoteRead) {
