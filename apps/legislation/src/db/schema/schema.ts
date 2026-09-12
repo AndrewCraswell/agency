@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm"
 import {
   bigserial,
+  bigint,
   boolean,
   type AnyPgColumn,
   char,
@@ -16,6 +17,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  unique,
   uuid,
   vector
 } from "drizzle-orm/pg-core"
@@ -24,6 +26,7 @@ import { organizationMembershipEndReasons, type OrganizationMembershipEndReason 
 const tsvector = customType<{ data: string }>({
   dataType: () => "tsvector"
 })
+const xid8 = customType<{ data: string }>({ dataType: () => "xid8" })
 
 /** Source-declared only; missing keys remain unknown rather than copied from a participant or venue label. */
 export interface EventLocationPayload {
@@ -1662,6 +1665,38 @@ export const amendmentSectionSearch = legislationSchema.table(
     index("amendment_section_search_title_gin_idx").using("gin", table.titleVector)
   ]
 )
+
+export const passageSearchChanges = legislationSchema.table(
+  "passage_search_changes",
+  {
+    id: bigint("id", { mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
+    entityKind: text("entity_kind").notNull(),
+    entityId: text("entity_id").notNull(),
+    afterDocumentId: text("after_document_id"),
+    enqueuedAt: timestamp("enqueued_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    transactionId: xid8("transaction_id")
+      .notNull()
+      .default(sql`pg_current_xact_id()`),
+    retryAt: timestamp("retry_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    attempts: integer("attempts").notNull().default(0),
+    errorCategory: text("error_category")
+  },
+  (table) => [
+    check("passage_search_changes_entity_kind_check", sql`${table.entityKind} in ('document','bill')`),
+    unique("passage_search_changes_transaction_key").on(table.entityKind, table.entityId, table.transactionId),
+    index("passage_search_changes_retry_idx").on(table.retryAt, table.id)
+  ]
+)
+
+export const passageSearchBackfill = legislationSchema.table("passage_search_backfill", {
+  name: text("name").primaryKey(),
+  afterDocumentId: text("after_document_id"),
+  completedAt: timestamp("completed_at", { withTimezone: true })
+})
 
 export const billEmbeddings = legislationSchema.table(
   "bill_embeddings",

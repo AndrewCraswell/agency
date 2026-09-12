@@ -73,10 +73,10 @@ Evidence: `tmp/passage-diagnostic-1789225942923.json` and `tmp/passage-index-pro
 [PostgreSQL's GIN documentation](https://www.postgresql.org/docs/18/textsearch-indexes.html) explains that the index
 stores lexemes rather than weight labels; finding matches is not equivalent to returning an exactly ranked page.
 The existing [ranked-index experiment](ranked-search-performance-decision.md) is a candidate-stage benchmark only,
-not full-corpus acceptance. The next decision is whether to evaluate a passage-only ranked lexical index with changed
-relevance ordering (BM25), retaining canonical IDs, exact filters and deterministic pagination. Production integration
-requires explicit ranking/infrastructure approval and a compatible deployment/rollback plan. The alternative is an
-explicit scope-required or asynchronous-search contract, also a product decision. Do not silently sample candidates,
+not full-corpus acceptance. On September 12 the user approved a separate passage-only ParadeDB service and BM25
+ordering, retaining canonical IDs, exact filters and deterministic pagination. Implementation and release gates are
+tracked in [the passage-search delivery plan](passage-search-delivery.md). Full-corpus acceptance and a compatible
+deployment/rollback plan still precede API cutover. Do not silently sample candidates,
 switch lexical requests to semantic mode, raise the API deadline, or close this gate with a different error response.
 
 - [ ] Detect lexical queries whose estimated match set is too broad to rank safely within the API budget.

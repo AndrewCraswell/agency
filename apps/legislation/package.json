@@ -85,6 +85,8 @@
     "eval:amendment-query": "node --env-file=.env --import tsx scripts/diagnose-amendment-query.ts",
     "eval:amendment-projection": "node --env-file=.env --import tsx scripts/verify-amendment-search-projection.ts",
     "backfill:amendment-search": "node --env-file=.env --import tsx scripts/backfill-amendment-search.ts",
+    "sync:passage-search": "node --env-file=.env --import tsx scripts/synchronize-passage-search.ts",
+    "eval:passage-copy": "node --env-file=.env --import tsx scripts/verify-passage-search-copy.ts",
     "eval:embeddings:bakeoff": "tsx scripts/run-embedding-bakeoff.ts",
     "eval:embeddings:build-bakeoff": "tsx scripts/build-embedding-bakeoff.ts",
     "eval:embeddings:build-judgments": "tsx scripts/build-embedding-judgment-pool.ts",

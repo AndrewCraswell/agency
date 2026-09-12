@@ -330,6 +330,13 @@
       "when": 1789214400000,
       "tag": "0046_amendment_section_search",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789236000000,
+      "tag": "0047_passage_search_changes",
+      "breakpoints": true
     }
   ]
 }
