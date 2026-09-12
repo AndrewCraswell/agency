@@ -5,19 +5,21 @@ browser simulator.
 
 ## Current architecture
 
-The current native KiCad board uses STM32G474 for acquisition and USB, ESP32-S3 for application/display interfaces, and
-STM32C011 for input-power control. The scoring target remains one portable C17 core shared by desktop/native tests,
-STM32 firmware, and WebAssembly. TypeScript owns orchestration, validation, workflow, replay, and presentation; after
-the migration it will not contain a fallback scoring engine.
+The native KiCad designs use STM32G474 for acquisition/scoring, ESP32-S3 for application interfaces and wireless/IR, and
+STM32C011 for input-power control. USB transport is board-specific: the virtual box uses a USB-to-UART bridge; the
+frozen combined board has a different USB interface. The scoring target remains one portable C17 core shared by
+desktop/native tests, STM32 firmware, and WebAssembly. TypeScript owns orchestration, validation, workflow, replay, and
+presentation; after the migration it will not contain a fallback scoring engine.
 
 The current transition is tracked in [`docs/c17-wasm-simulator-migration.md`](docs/c17-wasm-simulator-migration.md).
 Until that migration closes, the TypeScript weapon scorers remain the simulator reference. Existing firmware must be
 checked against the actual board pinout and power sequencing; its presence does not establish hardware readiness.
 
-The current board and remaining hardware review are documented in
-[`USB scoring platform`](../../packages/scoring-circuit/usb-scoring-platform/README.md) and its
-[design review](../../packages/scoring-circuit/usb-scoring-platform/design-review.md). Encrypted referee-control
-behavior is tracked in [`docs/encrypted-ir-remote-control-contract.md`](docs/encrypted-ir-remote-control-contract.md).
+The [hardware index](../../packages/scoring-circuit/README.md) distinguishes the active
+[virtual scoring box](../../packages/scoring-circuit/virtual-scoring-box/README.md), the frozen combined board and the
+planned standalone HUB75 board. Consult each board's own handoff rather than transferring its pinout or power budget to
+another variant. Encrypted referee-control behavior is tracked in
+[`docs/encrypted-ir-remote-control-contract.md`](docs/encrypted-ir-remote-control-contract.md).
 
 ## Golden scenario runner
 

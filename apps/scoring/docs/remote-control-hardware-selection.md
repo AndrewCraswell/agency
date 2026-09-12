@@ -1,4 +1,4 @@
-# RC-04 handheld hardware selection
+# Handheld remote hardware selection
 
 **State:** schematic-input contract only. It does not authorize procurement,
 fabrication, firmware, pairing, or industrial design.
@@ -18,9 +18,10 @@ fabrication, firmware, pairing, or industrial design.
 | 3.3 V rail | Texas Instruments TPS62743YFPR | 300 mA buck with Murata LQH2MCN2R2M52L 2.2 uH inductor and GRM188R61A106KE69D 10 uF input and output capacitors. |
 | Debug cable | Tag-Connect TC2050-IDC-NL-050-ALL | No header is populated. The board imports manufacturer footprint TC2050-IDC-NL-FP revision A: ten 0.787 mm plus or minus 0.076 mm paste-free contact pads, three 0.991 mm plus or minus 0.076 mm non-plated alignment holes, 0.508 mm minimum signal clearance, and the published keepout. TC2050-CLIP-3PACK attaches from the PCB underside for temporary retention. |
 
-The apparatus stays independent: BP-126 and BP-146 route the TSOP38438
-receiver through ESP32-S3 GPIO35 and RMT RX. USB-C PD remains the normal
-apparatus power input. The handheld USB-C connector is a separate 5 V charging
+The apparatus stays independent: its TSOP38438 receiver uses the ESP32-S3's
+pulse-capture interface. The exact GPIO and supply are owned by each
+[native board schematic](../../../packages/scoring-circuit/README.md), not the obsolete carrier allocation.
+The handheld USB-C connector is a separate 5 V charging
 sink and does not negotiate USB PD. Optical hardware never authenticates or
 authorizes a scoring command.
 

@@ -1,14 +1,21 @@
 # Scoring prototype hardware
 
-Active new development is the [virtual scoring box](virtual-scoring-box/README.md): STM32 scoring, ESP32 wireless/IR,
-and laptop or wall-powered USB-C. Its schematic and PCB placement are incomplete; it has no fabrication package yet. The
-combined board below is frozen as the separately preserved computer/standalone reference. A dedicated standalone board
-comes later.
+## Native KiCad designs
 
-The current assembly candidate is the [native KiCad USB scoring platform](usb-scoring-platform/README.md), with STM32
-acquisition, ESP32 application/display interfaces, isolated USB, USB-C PD, Ethernet, IR, HUB75 and Favero outputs. Its
-[design review](usb-scoring-platform/design-review.md) is the authoritative list of remaining findings. It is a
-supplier-review draft, not an approved fabrication release.
+- **Active: [virtual scoring box](virtual-scoring-box/README.md).** STM32 scoring, ESP32 wireless/IR, and laptop or
+  wall-powered USB-C. The 120 x 85mm board is routed and has a 142-part assembly export. Its README records the current
+  JLCPCB draft, component shortages and programming handoff; it is not yet order-ready.
+- **Frozen: [combined computer/standalone board](usb-scoring-platform/README.md).** The 165 x 100mm, 223-part design
+  includes isolated USB, USB-C PD, Ethernet, IR, HUB75, audio and Favero outputs. Preserve it as a separate reference;
+  do not overwrite it with either dedicated product. Its [design review](usb-scoring-platform/design-review.md) retains
+  unresolved findings and component checks, not fabrication approval.
+- **Next: dedicated standalone HUB75 board.** Not implemented yet. Reuse the reviewed sensing and processor design,
+  keeping STM32, ESP32, IR, fencer/piste connections, HUB75, Ethernet, Favero outputs, audio and USB-C PD power. Omit
+  the laptop data interface. Keep firmware logic shared, with board-specific hardware adapters.
+
+For each native design, use its README and `export-manufacturing.ps1`. Keep its latest supplier-upload package and
+required programming handoff; older output checkpoints, build caches and scratch routing scripts are disposable. Keep
+source, required component models and manufacturer references. Generated output is not a second source of truth.
 
 ## Earlier tscircuit carrier
 
@@ -16,8 +23,7 @@ The ESP32 DevKitC/WIZ850io carrier is preserved as the explicitly requested comp
 [architecture](docs/clean-sheet-board-architecture.md), source and models describe that carrier, not the native board.
 Do not mix its BOM, pinout or generated fabrication files with the USB scoring platform.
 
-The following commands operate on that earlier carrier only. For the current board use the native project's
-`export-manufacturing.ps1` and its README instructions.
+The following commands operate on that earlier carrier only, not either native KiCad design.
 
 - `pnpm --filter @repo/scoring-circuit build` generates the circuit JSON, the locally bundled tscircuit RunFrame PCB,
   schematic, and 3D preview, plus the BOM and placement files in `dist/`.

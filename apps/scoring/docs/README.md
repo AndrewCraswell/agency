@@ -9,9 +9,9 @@ are not retained here.
 - [C17 and WebAssembly migration](c17-wasm-simulator-migration.md) owns the single portable scoring core.
 - [Encrypted IR remote-control contract](encrypted-ir-remote-control-contract.md) owns referee-control behavior and
   security requirements.
-- [USB scoring platform](../../../packages/scoring-circuit/usb-scoring-platform/README.md) describes the current native
-  KiCad board. Its [design review](../../../packages/scoring-circuit/usb-scoring-platform/design-review.md) owns hardware
-  findings, remaining verification, and assembly constraints.
+- [Hardware index](../../../packages/scoring-circuit/README.md) separates the active virtual scoring box, frozen
+  combined computer/standalone board, and planned standalone HUB75 board. Each implemented board's README owns its
+  assembly handoff; the combined board's review must not be mistaken for the virtual box's current status.
 - [Technical debt](technical-debt.md) contains only current, actionable cleanup findings.
 
 Use these plans rather than the completed checklist for the earlier ESP32-only carrier.
@@ -32,7 +32,8 @@ that the prototype is homologated.
 - [Sabre state machine](sabre-state-machine-contract.md)
 - [Golden scenarios](golden-scenario-contract.md)
 - [Scenario runner](scenario-runner-contract.md)
-- [Seeded protocol fuzz evidence](seeded-protocol-fuzz-evidence.md)
+- [Property-test contract](scoring-property-test-contract.md); the [seeded protocol fuzz test](../src/m2-13-seeded-fuzz.test.ts)
+  owns the executable vectors and expected results.
 
 ## Replay, workflow, and remote control
 
@@ -49,7 +50,8 @@ that the prototype is homologated.
 
 - [Product release manifest](product-release-manifest-contract.md)
 
-The current board has separate acquisition, application, and primary power-control processors. Consult the board's
-[power-mode contract](../../../packages/scoring-circuit/usb-scoring-platform/usb-acquisition-power.md) and
+The native designs have separate acquisition, application, and primary power-control processors. Consult the
+[virtual box handoff](../../../packages/scoring-circuit/virtual-scoring-box/README.md), or the frozen combined board's
+[power-mode contract](../../../packages/scoring-circuit/usb-scoring-platform/usb-acquisition-power.md), and the shared
 [power-controller firmware](../firmware/power-control/README.md) for that boundary. Hardware selection does not by
 itself prove the release or recovery firmware is complete.

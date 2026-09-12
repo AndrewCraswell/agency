@@ -1,11 +1,13 @@
-# USB scoring platform
+# Combined computer/standalone scoring board
 
 Native KiCad engineering prototype, separate from the earlier ESP32/tscircuit board. Open
 `usb-scoring-platform.kicad_pro` in KiCad 10; schematic and PCB are the editable source, with no generator required.
 
-**Supplier-review draft, not released for fabrication, sale or connection to fencers.** The
-[prioritized design review](design-review.md) is the single record of findings and closure evidence. Do not interpret a
-clean ERC/DRC result as electrical safety, firmware readiness or supplier acceptance.
+**Frozen reference: do not overwrite when developing the dedicated virtual or standalone boards.** See the
+[hardware index](../README.md) for their status. This remains a supplier-review draft, not released for fabrication,
+sale or connection to fencers. The [prioritized design review](design-review.md) is the single record of findings and
+closure evidence. Do not interpret a clean ERC/DRC result as electrical safety, firmware readiness or supplier
+acceptance.
 
 ## Current board and power modes
 

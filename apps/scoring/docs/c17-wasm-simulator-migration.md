@@ -1,9 +1,11 @@
 # C17 scoring core and WebAssembly simulator migration
 
-**Status:** migration incomplete; target reconciled to the current native KiCad board
+**Status:** migration incomplete; shared scoring core with board-specific hardware adapters
 
 The ESP32-S3 owns application/display interfaces, not the scoring core; STM32C011 owns primary power control.
-The [native board](../../../packages/scoring-circuit/usb-scoring-platform/README.md) is the hardware baseline.
+The [hardware index](../../../packages/scoring-circuit/README.md) distinguishes the active virtual box, frozen combined
+board and planned standalone HUB75 board. Their different transport and power interfaces belong in adapters, not
+separate scoring engines.
 
 ## Decision
 
