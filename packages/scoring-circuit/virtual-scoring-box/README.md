@@ -232,12 +232,12 @@ guaranteed limit. References: [CP2102N](https://www.silabs.com/documents/public/
 
 ### JLCPCB validation draft
 
-The [retained virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=9436ff25140d450e99236c3e2d137dd3) is
-**unsubmitted, unpaid and stale for the current layout, not order-ready**. It contains the preceding Gerbers and
-placements from `output/assembly-layout-review/`. The refined board must be uploaded with its matching new placement
-file before supplier review; do not order from that draft or the older `c45d113d...` draft. Keep the frozen
-combined-board draft separate. The programming feasibility package remains associated with the earlier review, not newly
-approved.
+The [current virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=0d7e87fc3bcf4669aeb7055e406425c1) is
+**unsubmitted, unpaid and not order-ready**. On 2026-09-12, JLCPCB accepted the revised Gerbers, BOM and placement file
+from `output/assembly-surface-routing/`. The ZIP SHA-256 is
+`5745D27C666B6909F49E156D7E74235956336AD4D5BFBD7E9C590D7966547863`. The older `9436ff25...` and `c45d113d...` drafts are
+obsolete for this layout; keep the frozen combined-board draft separate. The programming feasibility package remains
+associated with the earlier review, not newly approved.
 
 Do not contact JLCPCB support, send follow-up messages, or request additional sourcing/programming quotations without
 the user's explicit permission. Continue local validation and self-service draft checks only. Do not submit or pay.
@@ -248,6 +248,9 @@ the user's explicit permission. Continue local validation and self-service draft
 - Epoxy-filled/capped vias are requested. U2 has twelve 0.2mm thermal holes and U22 has two. Fill/cap only the
   0.2/0.25/0.3mm via groups, not USB slots, connector, wire or locating holes. Confirm this in the production files.
 - Production-file and placement confirmation are required, with automatic confirmation disabled.
+- JLCPCB parsed the revised board as four layers, 120 x 85mm. Its explicit copper order is F.Cu / In1.Cu / In2.Cu /
+  B.Cu. The 0.2mm drill setting also selects four-wire Kelvin testing and TG155. The displayed $110.63 is still the
+  bare-PCB quote, not a complete assembled-board price.
 - The original automatic match incorrectly assigned eight 1uF capacitors to Walsin **80pF** parts C3868041. All eight
   matches were corrected to the intended TDK identity. C45537494 is the exact-name catalog entry but has incomplete
   package/category data and zero stock; its appearance in a matched/selected row is **not sourcing approval**.
@@ -255,7 +258,9 @@ the user's explicit permission. Continue local validation and self-service draft
 - R82/R84's invalid ordering identity was corrected in the schematic, PCB and supplier draft to
   [Panasonic ERA3AEB103V](https://industrial.panasonic.com/ww/products/pt/high-precision-chip-resistors/models/ERA3AEB103V):
   10kOhm, 0.1%, 25ppm/K, 0.1W, 0603. Their values, pads and routing did not change. C190610 was in stock and both
-  references were selected. J1 USB4105-GF-A/C3020560 was also in stock and selected at quantity two.
+  references were selected. The new upload initially left J1 USB4105-GF-A/C3020560 at quantity zero. Reselecting the
+  exact GCT part corrected this to quantity two; JLCPCB showed 1,571 in stock. Its $0.03-per-piece special-assembly
+  notice is a disclosed handling fee, not permission to omit the connector.
 - R88 (`PD_ALERT_N`) and R92 (`FUSE_FAULT_N`) now use stocked **Yageo AF0603FR-0747KL / C144107** in place of the
   unavailable RC0603FR-0747KL. Both are 3.3V pull-ups, not voltage-setting dividers. Resistance remains 47kOhm, 1%,
   100ppm/K, 0.1W, 75V, 0603; pads and routing are unchanged. Nominal asserted-low dissipation is only 0.232mW.
@@ -270,13 +275,14 @@ The retained draft contains 142 BOM references / 48 MPNs and 142 matching placem
 their supplier identities after normalizing punctuation; this is an identity screen, not datasheet or placement
 approval. JLCPCB confirms 117 references and flags **25 references with inventory shortages**. Advancing to placement
 review offers to leave unavailable parts unpopulated. That option was rejected: no required component has been waived.
-Supplier placement approval, assembly/programming acceptance and the complete price remain open. No order, payment, new
-sourcing request or support message was sent during this layout review.
+Supplier placement approval, assembly/programming acceptance and the complete price remain open. This was rechecked on
+the new draft: the next step offers **Do not place**, which would omit required parts. That option was not accepted. No
+order, payment, new sourcing request or support message was sent during this draft refresh.
 
 The current local review export is `output/assembly-surface-routing/`, generated together with
 `export-manufacturing.ps1`: thirteen Gerber/drill files, 142 BOM rows, matching placements and top/bottom 3D renders.
 BOM identities are unchanged from the stock review; prior placement/fabrication hashes are obsolete. Generated exports
-remain local and ignored, not a release authorization. This export has not been uploaded to JLCPCB.
+remain local and ignored, not a release authorization. This exact export is now uploaded to the current draft above.
 
 Fresh KiCad ERC, DRC, unconnected and parity counts are all zero under the enabled rules; top/bottom 3D renders and
 local copper views were inspected. The virtual U24 image cross-builds unchanged at 3096 bytes code / 72 bytes RAM.
@@ -288,9 +294,8 @@ branches. No application source or coverage thresholds changed in this PCB-only 
 claimed.
 
 The unresolved procurement list below is **25 board references / 12 part types**, not 25 extra pieces. JLCPCB purchase
-quantities also include assembly attrition and minimum-order quantities. The reference list was rechecked in the new
-draft; numeric shortfalls below are from the preceding procurement review. Recheck quantities, stock and price before
-release.
+quantities also include assembly attrition and minimum-order quantities. Both the reference list and numeric shortfalls
+below were rechecked in the refreshed draft on 2026-09-12. Recheck stock and price before release.
 
 | References                            | Required MPN         | JLCPCB identity | Remaining sourcing issue                                                                          |
 | ------------------------------------- | -------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
@@ -306,6 +311,11 @@ release.
 | R83                                   | ERA3AEB3482V         | C2074547        | 20-piece quoted shortfall.                                                                        |
 | T1                                    | 750315371            | C5184247        | 5-piece quoted shortfall; do not substitute an arbitrary transformer.                             |
 | U26                                   | SN74LVC1G3208DBVR    | C2682152        | 3-piece current shortfall.                                                                        |
+
+An exact-family stock search for U26 found only two TI DBVR pieces, no idle/private stock, and no TI DBVT stock
+(`C2862830`). The stocked `SN74LVC1G3208DBVR-TP / C51939611` is a **TECHPUBLIC** part, not an alternate reel of the
+specified TI device; it was not selected. Procurement of exact parts or a separately verified substitution is still
+needed. Do not reduce attrition quantities or clear these warnings by leaving required positions empty.
 
 Non-purchasing parts quotation **XOB2026091200835** was submitted on 2026-09-12 for these 13 identities. The site's
 quantity-entry handler failed (`this.minNumber is not a function`): entered quantities appeared in the form but the
