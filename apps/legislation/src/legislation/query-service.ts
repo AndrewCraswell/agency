@@ -94,6 +94,15 @@ const DETAIL_RESPONSE_TARGET_BYTES = 750_000
 const DOCUMENT_AMENDMENT_ID_PREFIX = "amendment:document:"
 const LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT = 250
 const LEXICAL_SUPPORTING_MATERIAL_SEARCH_TIMEOUT_MS = 5_000
+const amendmentSearchDocumentColumns = {
+  id: billDocuments.id,
+  billId: billDocuments.billId,
+  title: billDocuments.title,
+  documentDate: billDocuments.documentDate,
+  sourceUrl: billDocuments.sourceUrl,
+  createdAt: billDocuments.createdAt,
+  updatedAt: billDocuments.updatedAt
+}
 
 function coverageWarnings(itemCount: number, domain: string): string[] {
   return itemCount === 0
@@ -161,8 +170,17 @@ export function buildDocumentAmendmentLexicalQuery(
   const sectionMatches = sql<boolean>`${amendmentSectionSearch.sectionVector} @@ ${query}`
   const sectionRank = sql<number>`ts_rank_cd(${amendmentSectionSearch.sectionVector}, ${query})`
   const titleRank = sql<number>`ts_rank_cd(${documentTitleVector}, ${query})`
+  const billFilters = and(
+    input.jurisdictionIds === undefined ? undefined : inArray(bills.jurisdictionId, input.jurisdictionIds),
+    input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds)
+  )
   const filters = and(
-    documentSearchFilters(input),
+    documentSearchFilters({ ...input, jurisdictionIds: undefined, sessionIds: undefined }),
+    // The validated non-null bill FK guarantees existence. Only scoped searches
+    // need a bill lookup before ranking; unscoped searches hydrate bills once per page.
+    billFilters === undefined
+      ? undefined
+      : sql`exists (select 1 from ${bills} where ${bills.id} = ${billDocuments.billId} and ${billFilters})`,
     candidateDocumentIds === undefined ? undefined : inArray(billDocuments.id, candidateDocumentIds)
   )
   const matchingSections = database
@@ -175,7 +193,6 @@ export function buildDocumentAmendmentLexicalQuery(
     })
     .from(amendmentSectionSearch)
     .innerJoin(billDocuments, eq(billDocuments.id, amendmentSectionSearch.documentId))
-    .innerJoin(bills, eq(bills.id, billDocuments.billId))
     .where(and(filters, sectionMatches))
   const titleOnlySections = database
     .select({
@@ -186,7 +203,6 @@ export function buildDocumentAmendmentLexicalQuery(
       textMatches: sql<boolean>`false`.as("text_matches")
     })
     .from(billDocuments)
-    .innerJoin(bills, eq(bills.id, billDocuments.billId))
     .innerJoin(amendmentSectionSearch, eq(amendmentSectionSearch.documentId, billDocuments.id))
     .where(and(filters, titleMatches, sql`not (${sectionMatches})`))
   const documentCandidates = database
@@ -231,8 +247,8 @@ export function buildDocumentAmendmentLexicalQuery(
   return database
     .with(documentCandidates, rankedCandidates, page)
     .select({
-      bill: bills,
-      document: billDocuments,
+      bill: { jurisdictionId: bills.jurisdictionId },
+      document: amendmentSearchDocumentColumns,
       identifierMatches: page.identifierMatches,
       rank: page.rank,
       snippet,
@@ -341,9 +357,9 @@ export function buildSemanticAmendmentCandidateQueries(
   const documentQuery = database
     .with(sectionCandidates, documentCandidates)
     .select({
-      bill: bills,
+      bill: { jurisdictionId: bills.jurisdictionId },
       distance: documentCandidates.distance,
-      document: billDocuments,
+      document: amendmentSearchDocumentColumns,
       snippet: documentCandidates.snippet
     })
     .from(documentCandidates)

@@ -12,7 +12,11 @@ This avoids rewriting every section when unrelated parent metadata changes.
 
 Matching sections and title-only sections remain disjoint. NULL section vectors retain their existing SQL eligibility.
 All parent filters run before exact best-section selection and document ranking. There is no arbitrary candidate cap.
-Only the final page is hydrated and given snippets. Scores, section/document tie order, API shape and pagination remain unchanged.
+Only the final page is hydrated and given snippets. Search hydration selects seven document-summary fields and the bill's
+jurisdiction, never whole document text or bill embeddings. The same narrow summary selection serves semantic/hybrid
+amendment candidates. Unscoped lexical searches rely on the validated non-null bill foreign key for existence and avoid
+per-section bill joins; jurisdiction/session filters use a canonical bill EXISTS predicate before ranking.
+Scores, section/document tie order, API shape and pagination remain unchanged.
 
 Synchronous database triggers copy the actual stored section vector after the existing heading/text vector trigger.
 Section insertion, replacement, moves, title changes, classification changes and cascading deletion update the projection
@@ -55,5 +59,24 @@ All 2,583 legislation coverage tests and four webhook receiver tests passed; Nex
 Repository `pnpm verify` passed its checks but remains blocked by unrelated scoring coverage thresholds.
 
 Production migration 0046 applied successfully in 2.70 seconds after confirming it was the sole pending migration.
-The backfill inventoried 113,937 amendment documents and is in progress. Deployment remains gated on complete
-population, integrity/ANALYZE evidence, and production query measurements; this is not a completed API cutover.
+The backfill completed in 1,109.49 seconds (18.49 minutes), visiting all 113,937 amendment documents in 456 batches,
+each with zero mismatches and no retries. The projection contains 340,696 sections from 108,481 documents, no null
+vectors, and occupies 1,175 MB including indexes. All four indexes are valid/ready; ANALYZE completed at
+`2026-09-12T14:38:47.699Z`. Evidence: `tmp/amendment-search-backfill-2026-09-12T14-38-49.193Z.json`.
+
+Seven production read-only comparisons proved exact canonical-record, score, match-flag, snippet, and ordering parity
+between the first projection query and its optimized hydration/filtering form, including 20/100-result requests and
+jurisdiction, bill and session filters. Ordered diagnostic observations (not randomized benchmarks):
+
+| Query | Full-record projection query ms | Narrow-summary query ms | Internal JSON before / after bytes |
+| --- | ---: | ---: | ---: |
+| health, 20 | 4,342 | 1,030 | 6,734,947 / 14,871 |
+| tax, 20 | 6,305 | 1,061 | 12,084,740 / 14,663 |
+| health insurance phrase, 20 | 2,499 | 396 | 4,924,397 / 14,763 |
+| health, Oregon, 20 | 1,390 | 1,779 | 923,715 / 13,878 |
+| health, 100 | 18,957 | 1,529 | 41,821,892 / 75,201 |
+
+These byte counts describe serialized internal database results, not the public API response. The original full-section
+query timed out before this migration; production plan evidence for the first projection is
+`tmp/amendment-query-diagnostic-2026-09-12T14-40-09.024Z.json`.
+The optimized application is awaiting deployed smoke; this is not yet a completed API cutover.

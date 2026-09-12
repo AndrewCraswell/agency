@@ -515,8 +515,13 @@ export function isStructuredAmendmentComplete(
   return value.billId !== null
 }
 
+export type DocumentAmendmentSummaryRow = Pick<
+  typeof billDocuments.$inferSelect,
+  "id" | "billId" | "title" | "documentDate" | "sourceUrl" | "createdAt" | "updatedAt"
+>
+
 export function projectDocumentAmendment(
-  document: typeof billDocuments.$inferSelect,
+  document: DocumentAmendmentSummaryRow,
   jurisdictionId: string,
   apiBaseUrl: string
 ): AmendmentSummary {
@@ -527,7 +532,7 @@ export function projectDocumentAmendment(
 }
 
 function documentAmendmentInput(
-  document: typeof billDocuments.$inferSelect,
+  document: DocumentAmendmentSummaryRow,
   jurisdictionId: string
 ): AmendmentSummaryProjectionInput {
   return {

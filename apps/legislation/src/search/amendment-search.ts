@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
-import type { amendments, billDocuments } from "../db/schema/schema.js"
+import type { DocumentAmendmentSummaryRow } from "../db/queries/amendment-reads.js"
+import type { amendments } from "../db/schema/schema.js"
 
 export type AmendmentSearchMode = "hybrid" | "lexical" | "semantic"
 export type AmendmentSearchRecordType = "document" | "structured"
@@ -53,7 +54,7 @@ export type StructuredAmendmentSearchCandidate = Readonly<{
 }>
 
 export type DocumentAmendmentSearchCandidate = Readonly<{
-  document: typeof billDocuments.$inferSelect
+  document: DocumentAmendmentSummaryRow
   jurisdictionId: string
   lexicalScore: number | null
   matchedFields: readonly AmendmentSearchMatchedField[]
