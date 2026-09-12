@@ -87,6 +87,7 @@
     "backfill:amendment-search": "node --env-file=.env --import tsx scripts/backfill-amendment-search.ts",
     "sync:passage-search": "node --env-file=.env --import tsx scripts/synchronize-passage-search.ts",
     "eval:passage-copy": "node --env-file=.env --import tsx scripts/verify-passage-search-copy.ts",
+    "eval:passage-readiness": "node --env-file=.env --import tsx scripts/inspect-passage-search-readiness.ts",
     "eval:embeddings:bakeoff": "tsx scripts/run-embedding-bakeoff.ts",
     "eval:embeddings:build-bakeoff": "tsx scripts/build-embedding-bakeoff.ts",
     "eval:embeddings:build-judgments": "tsx scripts/build-embedding-judgment-pool.ts",

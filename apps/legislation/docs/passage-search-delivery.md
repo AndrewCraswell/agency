@@ -26,6 +26,10 @@ No gate is closed by local tests alone. Record commit, deployment, nonempty acce
 
 ## Current evidence
 
+Use `pnpm --filter legislation eval:passage-readiness` with the isolated `PASSAGE_SEARCH_DATABASE_URL` to inspect synchronization prerequisites without modifying either database. It reports backfill completion, all pending changes (including delayed retries), oldest pending timestamp and ranked-index validity/readiness. Exit 2 means prerequisites are not met; query failures also fail rather than reporting success. The observations are separate snapshots, not a cross-database consistency guarantee. Even a caught-up report never approves cutover: corpus parity, full-corpus searches, authenticated API/MCP and ingestion-overlap acceptance remain required. This intentionally avoids repeatedly counting the entire section corpus during copying. `eval:passage-copy` remains a small mutating replay canary, not a readiness audit.
+
+September 12, 19:42 UTC: the read-only readiness check correctly blocked cutover. Backfill was still enumerating California 2001–2002 documents; 61 changes were pending, zero had failed attempts, and the oldest pending change was approximately six seconds old. The target ranked index was valid and ready. Eight focused readiness tests passed, including empty-queue/incomplete-backfill, delayed retries, wrong database, invalid index and query-failure cases. This is synchronization evidence, not full-corpus acceptance.
+
 The current application release is `60895192-ae34-42ab-9b96-2142750aa73c`, from committed snapshot `54852f9`, with terminal `SUCCESS`. The separate passage service is not yet serving API traffic. No full-corpus passage ETA is claimed until actual load throughput and index build time are measured.
 
 - Final legislation verification passed 2,675 tests plus four receiver tests, formatting, lint, types and unused-dependency checks. The separate production build passed. Root `pnpm verify` still fails in the unrelated scoring coverage task.
