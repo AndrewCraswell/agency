@@ -1,8 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
-import { afterAll, describe, expect, it } from "vitest"
+import { afterAll, describe, expect, it, vi } from "vitest"
 import * as schema from "../db/schema/schema.js"
+import type { RankedPassageSearch } from "../search/ranked-passage-search.js"
 import { buildLexicalPassageSearchQuery } from "../search/search.js"
 import { LegislationError } from "./errors.js"
 import {
@@ -34,6 +35,27 @@ const database = drizzle(pool, { schema })
 
 afterAll(async () => {
   await pool.end()
+})
+
+describe("ranked passage search routing", () => {
+  it("uses the feature-gated ranked search only for lexical mode", async () => {
+    const search = vi.fn<RankedPassageSearch["search"]>(async () => ({
+      items: [],
+      search: { isReranked: false, models: [] },
+      truncated: false
+    }))
+    const service = new LegislationQueryService(database, undefined, { generation: "generation-a", search })
+
+    await expect(service.searchBillText({ mode: "lexical", query: "health" })).resolves.toMatchObject({ items: [] })
+    expect(search).toHaveBeenCalledWith({
+      mode: "lexical",
+      query: "health",
+      rankingGeneration: "generation-a"
+    })
+    await expect(service.searchBillText({ mode: "semantic", query: "health" })).rejects.toThrow(LegislationError)
+    await expect(service.searchBillText({ mode: "hybrid", query: "health" })).rejects.toThrow(LegislationError)
+    expect(search).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe("bill browse query", () => {

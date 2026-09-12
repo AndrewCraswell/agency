@@ -15,7 +15,7 @@ function tokenResponse(accessToken = "token-1", expiresIn = 120): Response {
 describe("API access token provider", () => {
   it("exchanges only configured client credentials, caches the token, and refreshes early", async () => {
     let currentTime = 0
-    const calls: Array<Readonly<{ input: RequestInfo | URL; init?: RequestInit }>> = []
+    const calls: Array<Readonly<{ input: Parameters<typeof fetch>[0]; init?: RequestInit }>> = []
     const provider = createApiAccessTokenProvider(
       { clientId, clientSecret, issuer },
       {

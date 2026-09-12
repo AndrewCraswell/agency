@@ -2,6 +2,7 @@ import { loadConfig, type LegislationConfig } from "../../config/config.js"
 import { createDatabase, type LegislationDatabase } from "../../db/database.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
 import { OpenRouterRetrievalClient } from "../../models/openrouter-retrieval.js"
+import { createRankedPassageSearch } from "../../search/ranked-passage-search.js"
 import { createNextDatabaseReadiness, type NextDatabaseReadiness } from "./readiness.js"
 
 export interface NextLegislationApplication {
@@ -25,14 +26,30 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     statementTimeoutMs: config.database.apiStatementTimeoutMs
   })
   const retrievalClient = createRetrievalClient(config)
+  const passageSearchDatabase =
+    config.passageSearch.enabled === true
+      ? createDatabase(config.passageSearch.database, {
+          statementTimeoutMs: config.passageSearch.database.apiStatementTimeoutMs
+        })
+      : undefined
+  const rankedPassageSearch =
+    passageSearchDatabase === undefined || config.passageSearch.enabled === false
+      ? undefined
+      : createRankedPassageSearch({
+          canonicalDatabase: database,
+          generation: config.passageSearch.rankingGeneration,
+          searchDatabase: passageSearchDatabase.database
+        })
 
   return {
-    close: async () => await pool.end(),
+    close: async () => {
+      await Promise.all([pool.end(), passageSearchDatabase?.pool.end()])
+    },
     config,
     database,
-    queryService: new LegislationQueryService(database, retrievalClient),
+    queryService: new LegislationQueryService(database, retrievalClient, rankedPassageSearch),
     retrievalClient,
-    readiness: createNextDatabaseReadiness(pool)
+    readiness: createNextDatabaseReadiness(pool, passageSearchDatabase?.pool)
   }
 }
 

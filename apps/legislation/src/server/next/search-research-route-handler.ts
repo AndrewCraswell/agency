@@ -22,7 +22,7 @@ import { getNextLegislationApplication } from "./runtime.js"
 type SearchResearchQueryService = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
 
 type SearchResearchApplication = Readonly<{
-  config: Pick<LegislationConfig, "model" | "server">
+  config: Pick<LegislationConfig, "model" | "passageSearch" | "server">
   database: LegislationDatabase
   queryService: SearchResearchQueryService
   retrievalClient: OpenRouterRetrievalClient | undefined
@@ -55,7 +55,10 @@ export function createSearchResearchRequestHandler(
 
 export function createSearchResearchHttpApiHandler(application: SearchResearchApplication): HttpApiHandler {
   const apiBaseUrl = requiredPublicApiBaseUrl(application)
-  const options = { apiBaseUrl }
+  const options =
+    application.config.passageSearch.enabled === true
+      ? { apiBaseUrl, rankedPassageGeneration: application.config.passageSearch.rankingGeneration }
+      : { apiBaseUrl }
 
   return rejectTrailingSlashApiPaths(
     createCompositeHttpApiHandler([

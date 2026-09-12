@@ -629,6 +629,8 @@ export interface PassageSearchInput extends SearchInput {
   mode?: "hybrid" | "lexical" | "semantic"
   pageFrom?: number
   pageTo?: number
+  /** Internal generation token for the feature-gated ranked lexical index. */
+  rankingGeneration?: string
   versionCodes?: string[]
 }
 
@@ -761,15 +763,22 @@ function passageSearchCursorBinding(input: PassageSearchInput): string {
     .update(
       JSON.stringify({
         billIds: sortedValues(input.billIds),
+        classifications: sortedValues(input.classifications),
         documentClassifications: sortedValues(input.documentClassifications),
         documentIds: sortedValues(input.documentIds),
         headings: sortedValues(input.headings),
         jurisdictionIds: sortedValues(input.jurisdictionIds),
+        introducedFrom: input.introducedFrom,
+        introducedTo: input.introducedTo,
         mode: input.mode ?? "lexical",
         pageFrom: input.pageFrom,
         pageTo: input.pageTo,
         query: input.query.trim(),
+        rankingGeneration: input.rankingGeneration,
         sessionIds: sortedValues(input.sessionIds),
+        sponsorIds: sortedValues(input.sponsorIds),
+        statuses: sortedValues(input.statuses),
+        subjects: sortedValues(input.subjects),
         updatedFrom: input.updatedFrom?.toISOString(),
         updatedTo: input.updatedTo?.toISOString(),
         updatedToExclusive: input.updatedToExclusive?.toISOString(),
@@ -777,6 +786,131 @@ function passageSearchCursorBinding(input: PassageSearchInput): string {
       })
     )
     .digest("base64url")
+}
+
+export type RankedPassageHydrationHit = Readonly<{
+  contentHash: string
+  documentId: string
+  documentTitle: string
+  heading: string | null
+  pageEnd: number | null
+  pageStart: number | null
+  score: number
+  sectionId: string
+}>
+
+export class RankedPassageHydrationError extends Error {
+  readonly reason:
+    | "canonical_filter_mismatch"
+    | "content_mismatch"
+    | "duplicate_section"
+    | "indexed_projection_mismatch"
+
+  constructor(
+    reason: "canonical_filter_mismatch" | "content_mismatch" | "duplicate_section" | "indexed_projection_mismatch"
+  ) {
+    super(`Ranked passage search hydration failed: ${reason}`)
+    this.name = "RankedPassageHydrationError"
+    this.reason = reason
+  }
+}
+
+/**
+ * Hydrates ranked identifiers from the authoritative canonical database.
+ * A stale search-copy hit fails the page so callers can retry after synchronization;
+ * it is never silently dropped or represented with copied metadata.
+ */
+export async function hydrateRankedPassageSearch(
+  database: LegislationDatabase,
+  input: PassageSearchInput,
+  hits: readonly RankedPassageHydrationHit[]
+): Promise<SearchPage<PassageSearchCandidate>> {
+  const { limit, offset, query } = validatePassageSearchInput(input)
+  if (hits.length === 0) {
+    return { items: [], nextCursor: undefined, truncated: false }
+  }
+  const sectionIds = hits.map((hit) => hit.sectionId)
+  if (new Set(sectionIds).size !== sectionIds.length) {
+    throw new RankedPassageHydrationError("duplicate_section")
+  }
+  const rows = await buildRankedPassageHydrationQuery(database, input, sectionIds, query)
+  const rowsById = new Map(rows.map((row) => [row.section.id, row]))
+  const items = hits.slice(0, limit).map((hit) => {
+    const row = rowsById.get(hit.sectionId)
+    if (row === undefined || row.document.id !== hit.documentId) {
+      throw new RankedPassageHydrationError("canonical_filter_mismatch")
+    }
+    assertRankedPassageHydrationFreshness(row, hit)
+    const { headingMatched: matchedHeading, ...candidate } = row
+    const matchedFields: PassageSearchCandidate["matchedFields"] = matchedHeading ? ["heading", "text"] : ["text"]
+    return {
+      ...candidate,
+      lexicalScore: hit.score,
+      matchedFields,
+      rank: hit.score,
+      rerankScore: null,
+      score: hit.score,
+      semanticScore: null
+    }
+  })
+  if (rows.length !== hits.length) {
+    throw new RankedPassageHydrationError("canonical_filter_mismatch")
+  }
+  return {
+    items,
+    nextCursor: hits.length > limit ? encodePassageSearchCursor(offset + limit, input) : undefined,
+    truncated: hits.length > limit
+  }
+}
+
+export function assertRankedPassageHydrationFreshness(
+  canonical: Readonly<{
+    document: Readonly<{ title: string }>
+    section: Readonly<{
+      contentHash: string
+      heading: string | null
+      pageEnd: number | null
+      pageStart: number | null
+    }>
+  }>,
+  hit: RankedPassageHydrationHit
+): void {
+  if (canonical.section.contentHash !== hit.contentHash) {
+    throw new RankedPassageHydrationError("content_mismatch")
+  }
+  if (
+    canonical.section.heading !== hit.heading ||
+    canonical.section.pageStart !== hit.pageStart ||
+    canonical.section.pageEnd !== hit.pageEnd ||
+    canonical.document.title !== hit.documentTitle
+  ) {
+    throw new RankedPassageHydrationError("indexed_projection_mismatch")
+  }
+}
+
+export function buildRankedPassageHydrationQuery(
+  database: LegislationDatabase,
+  input: PassageSearchInput,
+  sectionIds: readonly string[],
+  normalizedQuery = input.query.trim()
+) {
+  const searchQuery = sql`websearch_to_tsquery('english', ${normalizedQuery})`
+  const headingMatched = sql<boolean>`coalesce(to_tsvector('english', coalesce(${documentSections.heading}, '')) @@ ${searchQuery}, false)`
+  const snippet = sql<
+    string | null
+  >`ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=3, MaxWords=45, MinWords=12')`
+  return database
+    .select({ ...passageSelection(sql<number>`0`, snippet), headingMatched })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+    .innerJoin(bills, eq(billDocuments.billId, bills.id))
+    .where(
+      and(
+        inArray(documentSections.id, sectionIds),
+        eq(billDocuments.processingStatus, "processed"),
+        ...passageFilters(input)
+      )
+    )
 }
 
 function passageFilters(input: Omit<PassageSearchInput, "query">): SQL[] {

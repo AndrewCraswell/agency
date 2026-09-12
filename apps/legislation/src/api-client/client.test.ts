@@ -69,6 +69,7 @@ describe("LegislationApiClient", () => {
     expect(String(url)).toBe("https://legislation.example.test/api/bills?jurisdictionId=jurisdiction%3Aca&limit=20")
     expect(new Headers(init?.headers).get("authorization")).toBe("Bearer top-secret")
     expect(new Headers(init?.headers).get("x-correlation-id")).toBe(correlationId)
+    expect(init?.redirect).toBe("error")
   })
 
   it("maps documented ErrorResponse values", async () => {

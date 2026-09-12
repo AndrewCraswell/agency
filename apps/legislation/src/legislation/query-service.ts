@@ -62,6 +62,7 @@ import {
   type AmendmentSearchInput as ApiAmendmentSearchInput,
   type AmendmentSearchPage
 } from "../search/amendment-search.js"
+import type { RankedPassageSearch } from "../search/ranked-passage-search.js"
 import type {
   BillSearchCandidate,
   BillSearchResultPage,
@@ -1635,10 +1636,16 @@ function decodeChangeCursor(cursor: string | undefined): { id?: string; observed
 
 export class LegislationQueryService {
   readonly #database: LegislationDatabase
+  readonly #rankedPassageSearch?: RankedPassageSearch
   readonly #retrievalClient?: RetrievalModelClient
 
-  constructor(database: LegislationDatabase, retrievalClient?: RetrievalModelClient) {
+  constructor(
+    database: LegislationDatabase,
+    retrievalClient?: RetrievalModelClient,
+    rankedPassageSearch?: RankedPassageSearch
+  ) {
     this.#database = database
+    this.#rankedPassageSearch = rankedPassageSearch
     this.#retrievalClient = retrievalClient
   }
 
@@ -3036,6 +3043,12 @@ export class LegislationQueryService {
   ): Promise<PassageSearchResultPage> {
     const mode = input.mode ?? "lexical"
     if (mode === "lexical") {
+      if (this.#rankedPassageSearch !== undefined) {
+        return await this.#rankedPassageSearch.search({
+          ...input,
+          rankingGeneration: this.#rankedPassageSearch.generation
+        })
+      }
       return { ...(await lexicalPassageSearch(this.#database, input)), search: { isReranked: false, models: [] } }
     }
     const queryEmbedding = await this.#embedQueryWithModel("search_bill_text", input.query)

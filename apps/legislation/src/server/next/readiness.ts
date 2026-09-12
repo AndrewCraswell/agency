@@ -4,12 +4,21 @@ import { isDatabaseReady } from "../../db/readiness.js"
 
 export interface NextDatabaseReadiness {
   check(): Promise<boolean>
-  details(): Readonly<{ databasePool: ReturnType<typeof databasePoolSnapshot> }>
+  details(): Readonly<{
+    databasePool: ReturnType<typeof databasePoolSnapshot>
+    passageSearchPool?: ReturnType<typeof databasePoolSnapshot>
+  }>
 }
 
-export function createNextDatabaseReadiness(pool: pg.Pool): NextDatabaseReadiness {
+export function createNextDatabaseReadiness(pool: pg.Pool, passageSearchPool?: pg.Pool): NextDatabaseReadiness {
   return {
-    check: async () => await isDatabaseReady(pool),
-    details: () => ({ databasePool: databasePoolSnapshot(pool) })
+    check: async () =>
+      passageSearchPool === undefined
+        ? await isDatabaseReady(pool)
+        : (await Promise.all([isDatabaseReady(pool), isDatabaseReady(passageSearchPool)])).every(Boolean),
+    details: () => ({
+      databasePool: databasePoolSnapshot(pool),
+      ...(passageSearchPool === undefined ? {} : { passageSearchPool: databasePoolSnapshot(passageSearchPool) })
+    })
   }
 }

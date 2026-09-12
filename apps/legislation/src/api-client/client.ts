@@ -693,6 +693,7 @@ export class LegislationApiClient {
         body: request.body === undefined ? undefined : JSON.stringify(request.body),
         headers,
         method: request.method,
+        redirect: "error",
         signal
       })
       const payload = await readJson(response)

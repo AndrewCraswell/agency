@@ -3,18 +3,12 @@ import { createMcpHandler, McpServer, type JSONValue } from "@modelcontextprotoc
 import { z } from "zod"
 import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
-import type { LegislationQueryService } from "../legislation/query-service.js"
 import { errorContext, type Logger } from "../observability/logger.js"
 import type { Telemetry } from "../observability/telemetry.js"
 
 const canonicalBillId = z.string().regex(/^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$/)
 const canonicalId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}:[a-z0-9-]+(?::[^:]+)*$`))
-const entityLookupSchema = (prefix: string) =>
-  z.object({
-    cursor: z.string().optional(),
-    id: canonicalId(prefix),
-    limit: z.number().int().min(1).max(100).optional()
-  })
+const entityLookupSchema = (prefix: string) => z.object({ id: canonicalId(prefix) })
 const pageSchema = {
   cursor: z.string().optional(),
   limit: z.number().int().min(1).max(100).optional()
@@ -41,31 +35,109 @@ const MAXIMUM_RESPONSE_BYTES = 900_000
 const TOOL_TIMEOUT_MILLISECONDS = 30_000
 const MAXIMUM_BATCH_LOOKUPS = 25
 
+type PageInput = Readonly<{ cursor?: string; limit?: number }>
+type EntityInput = Readonly<{ id: string }>
+type BillInput = Readonly<{ childLimit?: number; id: string }>
+type BillTextInput = Readonly<{ cursor?: string; documentId?: string; id: string; versionCode?: string }>
+type BillSearchInput = Readonly<{
+  classifications?: string[]
+  cursor?: string
+  introducedFrom?: string
+  introducedTo?: string
+  jurisdictionIds?: string[]
+  limit?: number
+  mode?: "hybrid" | "lexical" | "semantic"
+  query: string
+  sessionIds?: string[]
+  sponsorIds?: string[]
+  statuses?: string[]
+  subjects?: string[]
+}>
+type BillTextSearchInput = Readonly<{
+  billId?: string
+  classifications?: string[]
+  cursor?: string
+  documentIds?: string[]
+  jurisdictionIds?: string[]
+  limit?: number
+  mode?: "hybrid" | "lexical" | "semantic"
+  query: string
+  sessionIds?: string[]
+}>
+
 export type LegislationQueryApi = Readonly<{
-  compareBillVersions: (input: Parameters<LegislationQueryService["compareBillVersions"]>[0]) => Promise<unknown>
-  findRelatedBills: (input: Parameters<LegislationQueryService["findRelatedBills"]>[0]) => Promise<unknown>
-  getAmendment: (input: Parameters<LegislationQueryService["getAmendment"]>[0]) => Promise<unknown>
-  getBill: (input: Parameters<LegislationQueryService["getBill"]>[0]) => Promise<unknown>
-  getBillVotes: (input: Parameters<LegislationQueryService["getBillVotes"]>[0]) => Promise<unknown>
-  getBillText: (input: Parameters<LegislationQueryService["getBillText"]>[0]) => Promise<unknown>
-  getBillTimeline: (input: Parameters<LegislationQueryService["getBillTimeline"]>[0]) => Promise<unknown>
-  getCalendar: (input: Parameters<LegislationQueryService["getCalendar"]>[0]) => Promise<unknown>
-  getEvent: (input: Parameters<LegislationQueryService["getEvent"]>[0]) => Promise<unknown>
-  getOrganization: (input: Parameters<LegislationQueryService["getOrganization"]>[0]) => Promise<unknown>
-  getPerson: (input: Parameters<LegislationQueryService["getPerson"]>[0]) => Promise<unknown>
-  getSupportingMaterial: (input: Parameters<LegislationQueryService["getSupportingMaterial"]>[0]) => Promise<unknown>
-  getVote: (input: Parameters<LegislationQueryService["getVote"]>[0]) => Promise<unknown>
-  searchAmendments: (input: Parameters<LegislationQueryService["searchAmendments"]>[0]) => Promise<unknown>
-  searchBills: (input: Parameters<LegislationQueryService["searchBills"]>[0]) => Promise<unknown>
-  searchBillText: (input: Parameters<LegislationQueryService["searchBillText"]>[0]) => Promise<unknown>
-  searchChanges: (input: Parameters<LegislationQueryService["searchChanges"]>[0]) => Promise<unknown>
-  searchEvents: (input: Parameters<LegislationQueryService["searchEvents"]>[0]) => Promise<unknown>
-  searchOrganizations: (input: Parameters<LegislationQueryService["searchOrganizations"]>[0]) => Promise<unknown>
-  searchPeople: (input: Parameters<LegislationQueryService["searchPeople"]>[0]) => Promise<unknown>
-  searchSupportingMaterials: (
-    input: Parameters<LegislationQueryService["searchSupportingMaterials"]>[0]
+  compareBillVersions: (input: Readonly<{ billId: string; documentIds: [string, string] }>) => Promise<unknown>
+  findRelatedBills: (
+    input: PageInput & Readonly<{ classification?: string; id: string; mode?: "lexical" | "semantic" }>
   ) => Promise<unknown>
-  searchVotes: (input: Parameters<LegislationQueryService["searchVotes"]>[0]) => Promise<unknown>
+  getAmendment: (input: EntityInput) => Promise<unknown>
+  getBill: (input: BillInput) => Promise<unknown>
+  getBillVotes: (input: PageInput & Readonly<{ billId: string }>) => Promise<unknown>
+  getBillText: (input: BillTextInput) => Promise<unknown>
+  getBillTimeline: (input: PageInput & EntityInput) => Promise<unknown>
+  getCalendar: (input: PageInput & Readonly<{ jurisdictionId?: string; organizationId?: string }>) => Promise<unknown>
+  getEvent: (input: EntityInput) => Promise<unknown>
+  getOrganization: (input: EntityInput) => Promise<unknown>
+  getPerson: (input: EntityInput) => Promise<unknown>
+  getSupportingMaterial: (input: EntityInput) => Promise<unknown>
+  getVote: (input: EntityInput) => Promise<unknown>
+  searchAmendments: (
+    input: PageInput &
+      Readonly<{
+        billId?: string
+        jurisdictionId?: string
+        mode?: "hybrid" | "lexical" | "semantic"
+        query?: string
+        sponsorPersonId?: string
+      }>
+  ) => Promise<unknown>
+  searchBills: (input: BillSearchInput) => Promise<unknown>
+  searchBillText: (input: BillTextSearchInput) => Promise<unknown>
+  searchChanges: (
+    input: PageInput &
+      Readonly<{
+        classification?: "cancel" | "create" | "delete" | "relationship-change" | "reschedule" | "update"
+        jurisdictionId?: string
+        observedFrom?: Date
+        observedTo?: Date
+        organizationId?: string
+        personId?: string
+        recordId?: string
+        recordType?: string
+      }>
+  ) => Promise<unknown>
+  searchEvents: (
+    input: PageInput & Readonly<{ from?: Date; jurisdictionId?: string; organizationId?: string; to?: Date }>
+  ) => Promise<unknown>
+  searchOrganizations: (
+    input: PageInput &
+      Readonly<{
+        classification?: "chamber" | "committee" | "legislature" | "subcommittee"
+        isActive?: boolean
+        jurisdictionId?: string
+        parentOrganizationId?: string
+        query?: string
+      }>
+  ) => Promise<unknown>
+  searchPeople: (
+    input: PageInput &
+      Readonly<{ isActive?: boolean; jurisdictionId?: string; organizationId?: string; query?: string }>
+  ) => Promise<unknown>
+  searchSupportingMaterials: (
+    input: PageInput &
+      Readonly<{
+        amendmentId?: string
+        billId?: string
+        classification?: string
+        eventId?: string
+        jurisdictionId?: string
+        mode?: "hybrid" | "lexical" | "semantic"
+        query?: string
+      }>
+  ) => Promise<unknown>
+  searchVotes: (
+    input: PageInput & Readonly<{ billId?: string; from?: Date; organizationId?: string; personId?: string }>
+  ) => Promise<unknown>
 }>
 
 function success(value: unknown) {
@@ -109,8 +181,18 @@ function toJsonValue(value: unknown): JSONValue {
 
 function failure(error: unknown, logger: Logger) {
   if (error instanceof LegislationError) {
+    const retryable = error.details?.retryable
     return {
-      content: [{ text: JSON.stringify({ error: error.category, message: error.message }), type: "text" as const }],
+      content: [
+        {
+          text: JSON.stringify({
+            error: error.category,
+            message: error.message,
+            ...(typeof retryable === "boolean" ? { retryable } : {})
+          }),
+          type: "text" as const
+        }
+      ],
       isError: true
     }
   }
@@ -201,7 +283,6 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           description:
             "Get bounded canonical bill details with sponsors, actions, votes, documents, relations, and structured or document-backed amendments.",
           inputSchema: z.object({
-            childCursor: z.string().optional(),
             childLimit: z.number().int().min(1).max(100).optional(),
             id: canonicalBillId
           }),
@@ -234,8 +315,8 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
         {
           description: "Get a deterministically ordered bill action and vote timeline.",
           inputSchema: z.object({
-            childCursor: z.string().optional(),
-            childLimit: z.number().int().min(1).max(100).optional(),
+            cursor: z.string().optional(),
+            limit: z.number().int().min(1).max(100).optional(),
             id: canonicalBillId
           }),
           outputSchema
@@ -301,9 +382,11 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
         {
           description: "Find explicitly related canonical bills without duplicates.",
           inputSchema: z.object({
+            classification: z.string().trim().min(1).max(32).optional(),
+            cursor: z.string().optional(),
             id: canonicalBillId,
-            includeSemantic: z.boolean().optional(),
-            limit: z.number().int().min(1).max(100).optional()
+            limit: z.number().int().min(1).max(100).optional(),
+            mode: z.enum(["lexical", "semantic"]).optional()
           }),
           outputSchema
         },
@@ -386,13 +469,11 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
       server.registerTool(
         "get_calendar",
         {
-          description: "Get available chamber calendar entries for a jurisdiction and date range.",
+          description: "Discover available chamber calendars by jurisdiction or organization.",
           inputSchema: z.object({
             ...pageSchema,
-            from: optionalDateTime,
             jurisdictionId: canonicalId("jurisdiction").optional(),
-            organizationId: canonicalId("organization").optional(),
-            to: optionalDateTime
+            organizationId: canonicalId("organization").optional()
           }),
           outputSchema
         },
@@ -556,7 +637,12 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           description: "Search observed canonical record changes by record, jurisdiction, committee, or person.",
           inputSchema: z.object({
             ...pageSchema,
+            classification: z
+              .enum(["cancel", "create", "delete", "relationship-change", "reschedule", "update"])
+              .optional(),
             jurisdictionId: canonicalId("jurisdiction").optional(),
+            observedFrom: optionalDateTime,
+            observedTo: optionalDateTime,
             organizationId: canonicalId("organization").optional(),
             personId: canonicalId("person").optional(),
             recordId: z.string().trim().min(1).optional(),

@@ -18,6 +18,17 @@ describe("ranked section query", () => {
     expect(query.sql).toContain("pdb.parse($2, lenient => false, conjunction_mode => true)::pdb.const(0)")
     expect(query.sql).toContain('order by pdb.score(id) desc,  id collate "C" asc')
     expect(query.sql).toContain("limit $3 offset $4")
+    expect(query.sql).not.toContain("content_hash")
+  })
+
+  it("selects private freshness fields only for canonical passage hydration", () => {
+    const query = dialect.sqlToQuery(
+      rankedSectionPageQuery({ includeHydrationFields: true, limit: 2, query: "health" })
+    )
+
+    expect(query.sql).toContain(
+      "document_id, content_hash, heading, page_start, page_end, search_document_title, pdb.score(id)"
+    )
   })
 
   it("matches complete expressions within either amendment body or title", () => {

@@ -77,6 +77,20 @@ const configSchema = z
         return Number.isFinite(parsed) ? Math.min(parsed, 5) : value
       }, z.number().int().min(1).max(5))
     }),
+    passageSearch: z.discriminatedUnion("enabled", [
+      z.object({ enabled: z.literal(false) }),
+      z.object({
+        database: z.object({
+          apiStatementTimeoutMs: z.coerce.number().int().min(1_000).max(15_000),
+          connectionTimeoutMs: z.coerce.number().int().positive(),
+          idleTimeoutMs: z.coerce.number().int().positive(),
+          maxConnections: z.coerce.number().int().min(1).max(10),
+          url: z.url({ protocol: /^postgres(?:ql)?$/ })
+        }),
+        enabled: z.literal(true),
+        rankingGeneration: z.string().trim().min(1).max(128)
+      })
+    ]),
     security: z.object({
       idempotencyEncryptionKey: optionalSecret,
       webhookSecretEncryptionKey: optionalSecret
@@ -95,6 +109,16 @@ const configSchema = z
         code: "custom",
         message: "FEDERAL_START_CONGRESS must not exceed FEDERAL_END_CONGRESS",
         path: ["ingestion", "federalStartCongress"]
+      })
+    }
+    if (
+      config.passageSearch.enabled &&
+      postgresDatabaseIdentity(config.passageSearch.database.url) === postgresDatabaseIdentity(config.database.url)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "PASSAGE_SEARCH_DATABASE_URL must identify a separate database",
+        path: ["passageSearch", "database", "url"]
       })
     }
     const hasLangfusePublicKey = config.observability.langfusePublicKey !== undefined
@@ -142,6 +166,11 @@ const configSchema = z
     }
   })
 
+function postgresDatabaseIdentity(value: string): string {
+  const url = new URL(value)
+  return `${url.hostname.toLowerCase()}:${url.port || "5432"}${url.pathname}`
+}
+
 export type LegislationConfig = z.infer<typeof configSchema>
 
 export class ConfigurationError extends Error {
@@ -172,6 +201,25 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
           }
         }
       : { mode: environment.AUTH_MODE ?? "disabled" }
+  const passageSearchEnabled = environment.PASSAGE_SEARCH_API_ENABLED ?? "false"
+  let passageSearch: unknown
+  if (passageSearchEnabled === "true") {
+    passageSearch = {
+      database: {
+        apiStatementTimeoutMs: environment.PASSAGE_SEARCH_API_STATEMENT_TIMEOUT_MS ?? "10000",
+        connectionTimeoutMs: environment.PASSAGE_SEARCH_CONNECTION_TIMEOUT_MS ?? "5000",
+        idleTimeoutMs: environment.PASSAGE_SEARCH_IDLE_TIMEOUT_MS ?? "30000",
+        maxConnections: environment.PASSAGE_SEARCH_MAX_CONNECTIONS ?? "5",
+        url: environment.PASSAGE_SEARCH_DATABASE_URL
+      },
+      enabled: true,
+      rankingGeneration: environment.PASSAGE_SEARCH_RANKING_GENERATION
+    }
+  } else if (passageSearchEnabled === "false") {
+    passageSearch = { enabled: false }
+  } else {
+    passageSearch = { enabled: passageSearchEnabled }
+  }
   const result = configSchema.safeParse({
     auth,
     backfill: {
@@ -224,6 +272,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       endpoint: environment.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT,
       maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
+    passageSearch,
     security: {
       idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET,
       webhookSecretEncryptionKey: environment.LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY

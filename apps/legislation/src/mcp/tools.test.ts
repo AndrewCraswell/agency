@@ -108,20 +108,69 @@ describe("legislation MCP tools", () => {
     await transport.close()
   })
 
+  it("does not advertise inputs removed by the public HTTP contract", async () => {
+    const { client, transport } = await createClient()
+    const result = await client.listTools()
+    const tools = new Map(result.tools.map((tool) => [tool.name, inputPropertyNames(tool.inputSchema)]))
+
+    expect(tools.get("get_bill")).not.toContain("childCursor")
+    expect(tools.get("get_bill_timeline")).toEqual(expect.arrayContaining(["cursor", "limit"]))
+    expect(tools.get("get_bill_timeline")).not.toEqual(expect.arrayContaining(["childCursor", "childLimit"]))
+    expect(tools.get("find_related_bills")).not.toContain("includeSemantic")
+    expect(tools.get("get_calendar")).not.toEqual(expect.arrayContaining(["from", "to"]))
+    for (const name of [
+      "get_amendment",
+      "get_event",
+      "get_organization",
+      "get_person",
+      "get_supporting_material",
+      "get_vote"
+    ]) {
+      expect(tools.get(name)).not.toEqual(expect.arrayContaining(["cursor", "limit"]))
+    }
+    await transport.close()
+  })
+
   it("returns structured canonical bill data", async () => {
     const { client, service, transport } = await createClient()
 
     const result = await client.callTool({
-      arguments: { childCursor: "eyJvZmZzZXQiOjEwfQ", childLimit: 10, id: "bill:us:119:hr:1234" },
+      arguments: { childLimit: 10, id: "bill:us:119:hr:1234" },
       name: "get_bill"
     })
 
     expect(result.isError).not.toBe(true)
     expect(result.structuredContent).toEqual({ data: { id: "bill:us:119:hr:1234", title: "A test bill" } })
     expect(service.getBill).toHaveBeenCalledWith({
-      childCursor: "eyJvZmZzZXQiOjEwfQ",
       childLimit: 10,
       id: "bill:us:119:hr:1234"
+    })
+    await transport.close()
+  })
+
+  it("preserves a mapped API error category and retryability", async () => {
+    const service: LegislationQueryApi = {
+      ...createService(),
+      getBill: async () => {
+        throw new LegislationError("dependency_unavailable", "The API is temporarily unavailable", {
+          details: { retryable: true }
+        })
+      }
+    }
+    const { client, transport } = await createClient(service)
+
+    const result = await client.callTool({ arguments: { id: "bill:us:119:hr:1234" }, name: "get_bill" })
+
+    expect(result.isError).toBe(true)
+    const firstContent = result.content[0]
+    expect(firstContent?.type).toBe("text")
+    if (firstContent?.type !== "text") {
+      throw new Error("Expected an MCP text error response")
+    }
+    expect(JSON.parse(firstContent.text)).toEqual({
+      error: "dependency_unavailable",
+      message: "The API is temporarily unavailable",
+      retryable: true
     })
     await transport.close()
   })
@@ -316,4 +365,12 @@ function arraySchemasMissingItems(value: unknown, path = "$"): string[] {
     ...missing,
     ...Object.entries(schema).flatMap(([key, item]) => arraySchemasMissingItems(item, `${path}.${key}`))
   ]
+}
+
+function inputPropertyNames(schema: unknown): string[] {
+  if (typeof schema !== "object" || schema === null) {
+    return []
+  }
+  const properties = Reflect.get(schema, "properties")
+  return typeof properties === "object" && properties !== null ? Object.keys(properties) : []
 }

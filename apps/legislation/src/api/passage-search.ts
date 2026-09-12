@@ -218,7 +218,7 @@ function scoreText(value: number | null): string {
 
 export function createPassageSearchApiHandler(
   service: PassageSearchApi,
-  options: Readonly<{ apiBaseUrl: string }>
+  options: Readonly<{ apiBaseUrl: string; rankedPassageGeneration?: string }>
 ): HttpApiHandler {
   return async (request, response) => {
     const url = requestUrl(request)
@@ -246,6 +246,7 @@ export function createPassageSearchApiHandler(
         pageFrom: body.pageFrom,
         pageTo: body.pageTo,
         query: body.query,
+        rankingGeneration: mode === "lexical" ? options.rankedPassageGeneration : undefined,
         sessionIds: body.sessionIds,
         versionCodes: body.versionCodes,
         ...updatedRange(body.from ?? undefined, body.to ?? undefined)

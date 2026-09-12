@@ -36,6 +36,7 @@ export function rankedSectionPageQuery(input: {
   query: string
   amendmentsOnly?: boolean
   filters?: RankedSectionFilters
+  includeHydrationFields?: boolean
   limit: number
   offset?: number
 }) {
@@ -144,13 +145,25 @@ export function rankedSectionPageQuery(input: {
     predicates.push(indexedFilter(`page_start:<=${input.filters.pageTo}`))
   }
   const documentOrder = input.amendmentsOnly ? sql`document_id collate "C" asc,` : sql``
-  return sql`select id, document_id, pdb.score(id) as score
+  const hydrationFields = input.includeHydrationFields
+    ? sql`, content_hash, heading, page_start, page_end, search_document_title`
+    : sql``
+  return sql`select id, document_id${hydrationFields}, pdb.score(id) as score
     from legislation.document_sections where ${sql.join(predicates, sql` and `)}
     order by pdb.score(id) desc, ${documentOrder} id collate "C" asc
     limit ${input.limit} offset ${offset}`
 }
 
-export type RankedSectionHit = { id: string; document_id: string; score: number }
+export type RankedSectionHit = {
+  content_hash?: string
+  document_id: string
+  heading?: string | null
+  id: string
+  page_end?: number | null
+  page_start?: number | null
+  score: number
+  search_document_title?: string
+}
 
 /**
  * Exact best-section grouping. The caller must hold a repeatable-read snapshot

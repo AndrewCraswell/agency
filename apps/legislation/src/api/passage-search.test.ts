@@ -89,8 +89,11 @@ function service(overrides: Partial<PassageSearchApi> = {}): PassageSearchApi {
   }
 }
 
-async function start(api: PassageSearchApi): Promise<string> {
-  const handler = createPassageSearchApiHandler(api, { apiBaseUrl: "https://api.example.test" })
+async function start(api: PassageSearchApi, rankedPassageGeneration?: string): Promise<string> {
+  const handler = createPassageSearchApiHandler(api, {
+    apiBaseUrl: "https://api.example.test",
+    rankedPassageGeneration
+  })
   const server = createServer(async (request, response) => {
     if (!(await handler(request, response))) {
       response.writeHead(404)
@@ -159,6 +162,35 @@ describe("passage search HTTP API", () => {
     await expect(accepted.json()).resolves.toMatchObject({ data: [{ rank: 2 }] })
     expect(rejected.status).toBe(400)
     expect(observed).toHaveLength(1)
+  })
+
+  it("binds ranked lexical cursors to the configured full-corpus generation", async () => {
+    const observed: PassageSearchInput[] = []
+    const generation = "full-corpus-2026-09-12"
+    const input = { limit: 1, mode: "lexical" as const, query: "housing", rankingGeneration: generation }
+    const cursor = encodePassageSearchCursor(1, input)
+    const baseUrl = await start(
+      service({
+        searchBillText: async (value) => {
+          observed.push(value)
+          return { items: [], search: { isReranked: false, models: [] }, truncated: false }
+        }
+      }),
+      generation
+    )
+
+    expect((await post(baseUrl, { cursor, limit: 1, mode: "lexical", query: "housing" })).status).toBe(200)
+    expect(observed).toEqual([expect.objectContaining(input)])
+    expect(
+      (
+        await post(baseUrl, {
+          cursor: encodePassageSearchCursor(1, { ...input, rankingGeneration: "old-generation" }),
+          limit: 1,
+          mode: "lexical",
+          query: "housing"
+        })
+      ).status
+    ).toBe(400)
   })
 
   it("rejects unsupported fields, invalid page ranges, and an oversized semantic request before invoking search", async () => {

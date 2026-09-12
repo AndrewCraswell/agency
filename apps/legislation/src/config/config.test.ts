@@ -42,6 +42,7 @@ describe("loadConfig", () => {
       logging: { level: "info" },
       model: { baseUrl: "https://openrouter.ai/api/v1" },
       ocr: { maximumAttempts: 5 },
+      passageSearch: { enabled: false },
       server: {
         host: "127.0.0.1",
         port: 3100,
@@ -56,6 +57,61 @@ describe("loadConfig", () => {
     expect(loadConfig({ RESEARCH_ANSWER_MODEL: "openai/gpt-5-mini" }).model.researchAnswerModel).toBe(
       "openai/gpt-5-mini"
     )
+  })
+
+  it("keeps ranked passage search off unless its separate database and generation are explicit", () => {
+    expect(loadConfig({ PASSAGE_SEARCH_DATABASE_URL: "postgresql://search.example/passages" }).passageSearch).toEqual({
+      enabled: false
+    })
+    expect(() => loadConfig({ PASSAGE_SEARCH_API_ENABLED: "yes" })).toThrow(ConfigurationError)
+    expect(() => loadConfig({ PASSAGE_SEARCH_API_ENABLED: "true" })).toThrow(ConfigurationError)
+    expect(() =>
+      loadConfig({
+        PASSAGE_SEARCH_API_ENABLED: "true",
+        PASSAGE_SEARCH_DATABASE_URL: "postgresql://search.example/passages"
+      })
+    ).toThrow(ConfigurationError)
+
+    expect(
+      loadConfig({
+        PASSAGE_SEARCH_API_ENABLED: "true",
+        PASSAGE_SEARCH_API_STATEMENT_TIMEOUT_MS: "7000",
+        PASSAGE_SEARCH_DATABASE_URL: "postgresql://search.example/passages",
+        PASSAGE_SEARCH_RANKING_GENERATION: "full-corpus-2026-09-12"
+      }).passageSearch
+    ).toEqual({
+      database: {
+        apiStatementTimeoutMs: 7000,
+        connectionTimeoutMs: 5000,
+        idleTimeoutMs: 30000,
+        maxConnections: 5,
+        url: "postgresql://search.example/passages"
+      },
+      enabled: true,
+      rankingGeneration: "full-corpus-2026-09-12"
+    })
+  })
+
+  it("bounds the ranked passage query deadline without changing the canonical API deadline", () => {
+    expect(() =>
+      loadConfig({
+        PASSAGE_SEARCH_API_ENABLED: "true",
+        PASSAGE_SEARCH_API_STATEMENT_TIMEOUT_MS: "15001",
+        PASSAGE_SEARCH_DATABASE_URL: "postgresql://search.example/passages",
+        PASSAGE_SEARCH_RANKING_GENERATION: "generation"
+      })
+    ).toThrow(ConfigurationError)
+  })
+
+  it("rejects the canonical database as the ranked passage target", () => {
+    expect(() =>
+      loadConfig({
+        DATABASE_URL: "postgresql://database.example/canonical",
+        PASSAGE_SEARCH_API_ENABLED: "true",
+        PASSAGE_SEARCH_DATABASE_URL: "postgresql://database.example/canonical",
+        PASSAGE_SEARCH_RANKING_GENERATION: "generation"
+      })
+    ).toThrow("PASSAGE_SEARCH_DATABASE_URL must identify a separate database")
   })
 
   it("parses configured values", () => {

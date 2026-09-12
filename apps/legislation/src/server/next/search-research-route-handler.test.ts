@@ -50,7 +50,12 @@ vi.mock("../../api/universal-search-adapter.js", () => ({ createProductionUniver
 vi.mock("../../api/universal-search.js", () => ({ createUniversalSearchApiHandler: mocks.universalHandler }))
 vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
-    config: { auth: { mode: "disabled" }, model: {}, server: { publicApiBaseUrl: "https://api.example.test" } },
+    config: {
+      auth: { mode: "disabled" },
+      model: {},
+      passageSearch: { enabled: false },
+      server: { publicApiBaseUrl: "https://api.example.test" }
+    },
     database: {},
     queryService: {},
     retrievalClient: undefined
