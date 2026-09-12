@@ -34,7 +34,8 @@ Concurrent deadlocks abort and require normal transaction retry; no maintenance 
 3. Verify every batch has zero vector/title/membership mismatches, all projection indexes are valid, and ANALYZE finishes.
 4. Measure the production query before deploying the application. Require nonempty broad, phrase, filtered and
    paginated results within the API deadline; verify exact output parity on the isolated fixture suite.
-5. Deploy the application only after population/verification, then smoke authenticated API and MCP retrieval.
+5. Deploy the application only after population/verification, then smoke authenticated amendment API retrieval.
+   MCP cutover remains separately deferred; `/mcp` is not deployed on this Next.js service.
    The previous application deployment remains the rollback; keeping an unused projection is safe.
 
 ## Reproducible checks
@@ -79,4 +80,29 @@ jurisdiction, bill and session filters. Ordered diagnostic observations (not ran
 These byte counts describe serialized internal database results, not the public API response. The original full-section
 query timed out before this migration; production plan evidence for the first projection is
 `tmp/amendment-query-diagnostic-2026-09-12T14-40-09.024Z.json`.
-The optimized application is awaiting deployed smoke; this is not yet a completed API cutover.
+The optimized application is deployed from `b1fef71` (projection foundation `2a91fba`) as Railway deployment
+`ddc68697-d50f-42f2-b760-b2ded5832c64`, observed terminal `SUCCESS` on September 12. All 14 authenticated-release
+smoke checks passed (public health/readiness and anonymous rejection included). End-to-end observations:
+
+| API query | HTTP | Results | ms |
+| --- | ---: | ---: | ---: |
+| health document amendments | 200 | 20 | 1,683 |
+| health second page | 200 | 20 | 1,338 |
+| tax | 200 | 20 | 1,004 |
+| health insurance phrase | 200 | 20 | 495 |
+| legislation document amendments | 200 | 20 | 1,239 |
+| health, maximum page | 200 | 100 | 1,785 |
+| health, Oregon | 200 | 20 | 942 |
+| legislation, default mixed records | 200 | 20 | 978 |
+| health semantic | 200 | 8 | 961 |
+| health hybrid | 200 | 8 | 533 |
+
+Every search verified nonempty canonical IDs/URLs, source references, scores, mode, correlation and no-store caching.
+The second page had no overlap and began at rank 21. Following the first result's canonical amendment URL returned
+the same ID with HTTP 200 in 188 ms. Anonymous search returned 401; health/readiness returned 200. These are bounded
+smoke observations, not a load-test percentile or a guarantee for every query. The broad amendment release gate is
+closed; broad passage search and the separately deferred MCP cutover are not.
+Local redacted receipt: `tmp/amendment-api-smoke-2026-09-12T15-00-28.570Z.json`.
+
+The disposable Railway benchmark service was deleted after preserving benchmark evidence; production retains only
+`legislation-web`, `pgbouncer`, and `pgvector`. Its public-text sample can be recreated with the committed benchmark tool.

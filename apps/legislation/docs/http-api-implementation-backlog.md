@@ -18,15 +18,15 @@ An endpoint is not Next-route **Done** merely because the standalone Node handle
 the source of truth for request and response bodies. The existing local smoke checklist is reusable test input, but the
 release gate also requires block-by-block deployed Railway smoke.
 
-This ledger was reconciled on 2026-09-11 against deployed civic reads and fresh search smoke. `apps/legislation` is the canonical
+This ledger was reconciled on 2026-09-12 after amendment search remediation and deployed smoke. `apps/legislation` is the canonical
 application and documentation home; Railway retains the `legislation-web` service name. All 88 rows have reviewed
 domain/query/projection evidence, so the **Domain state** is 88 **Done**. Reviewed source now has 88/88 explicit Next.js
-handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 77
-**Done** and 11 **Blocked**: nine production-data gates and two reproduced search timeouts. The shared Next.js API boundary verifies WorkOS bearer tokens and
+handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 78
+**Done** and 10 **Blocked**: nine production-data gates and broad passage search. The shared Next.js API boundary verifies WorkOS bearer tokens and
 installs the derived request identity in reviewed local source. The deployed release records separate WorkOS authorities for
 M2M API tokens and AuthKit user-session tokens, plus both required encryption secrets. The 14 subscription/webhook
-operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Current source `ca1a976` plus upload exclusions `03d9dc9` is deployed as
-`6bfe6fc2-9045-4d90-b09d-f689fb80846a` with terminal `SUCCESS`. The following subscription and OCR evidence is historical acceptance, not a fresh rerun. The subscription
+operations are deployed; the seven subscription and all seven webhook operations passed authenticated lifecycle smoke. Current source `b1fef71`, including projection foundation `2a91fba`, is deployed as
+`ddc68697-d50f-42f2-b760-b2ded5832c64` with terminal `SUCCESS`. The following subscription and OCR evidence is historical acceptance, not a fresh rerun. The subscription
 smoke passed all 12 checks: list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch
 `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`,
 and cancelled visibility `200`; the cancellation fixture remains cancelled by design. The Next API database session
@@ -49,7 +49,7 @@ stopped before that step as requested.
 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS`; this remains historical foundation evidence, while the current unified deployment is recorded above. |
 | Legislative routes | Complete | All 39 routes are Done: 11 jurisdiction/session routes, 18 bills, amendments, and vote routes, eight document/resource routes, and two global change routes. The three vote operations and both provenance-complete global change operations passed the authenticated `vote-change` production smoke against deployment `e419978a-d839-41c5-897b-d9d536a60dc3`. On 2026-09-02, authenticated production verification against deployment `9824b674-c55e-4933-8cec-a68475746f5f` proved document detail and section-list retrieval with a real section-bearing processed document. A persisted null OCR value correctly projected as `not-required`; detail returned in 157 ms and sections in 46 ms, with correlation IDs, private/no-store caching, ETags, and conditional requests verified. |
 | Civic routes | Partial acceptance | Eleven people/organization operations passed fresh authenticated nonempty fixture, canonical-source, correlation, cache, and conditional-request checks on September 11. Organization bills, meetings, and calendars retain missing-data gates. Eight meeting/calendar operations retain prior acceptance; five detail/relation operations and representative lookup remain Blocked. See the current release ledger below. |
-| Search, document-difference, and research routes | Two operations reopened | Seven operations passed the earlier release gate. September 11 broad lexical amendment and passage searches returned 503; these two operations are Blocked pending query remediation and fresh smoke. The other five retain their historical release evidence. |
+| Search, document-difference, and research routes | One operation reopened | September 12 amendment remediation passed all 14 deployed smoke checks, including broad lexical searches in 495–1,785 ms, pagination, filters and semantic/hybrid modes. Passage search remains Blocked after September 11 broad-query 503s. The other five retain historical release evidence. |
 | Subscription and webhook routes | Done | All 14 explicit routes, domain compositions, and focused local tests are deployed. The seven subscription and all seven webhook operations are Done after authenticated lifecycle smoke in deployment `e1781bbc-6526-4f87-8eb8-df39142bf11a` from source `c3c5f43`; all 14 webhook-lifecycle checks passed, including signed verification against a throwaway Railway receiver. |
 | WorkOS authentication | Done for released surface | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Authenticated lifecycle and cumulative search/diff/research smoke passed; remaining skips are named missing-fixture gates. |
 | MCP HTTP migration | Deferred | This is the next step. Cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence; work stopped before implementation or smoke as requested. |
@@ -79,17 +79,23 @@ For each deliverable:
 
 The endpoint rows below record reusable domain implementation only. The current Next.js route release state is tracked
 separately until each explicit handler passes deployment smoke. All 88 explicit handlers are deployed; the release ledger
-is 77 Done and 11 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
+is 78 Done and 10 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
 the 88 public API endpoint count.
 
 ### Current Next.js route release state
 
 | State | Count | Scope |
 | --- | ---: | --- |
-| Done | 77 | Eleven jurisdiction/session routes, 18 bills/amendment/vote routes, eight document/resource routes, two global change routes, 11 people/organization routes, eight meeting/calendar operations, five search/diff/research operations, seven subscription operations, and seven webhook operations. Earlier release evidence is retained except where fresh smoke disproves it. |
+| Done | 78 | Eleven jurisdiction/session routes, 18 bills/amendment/vote routes, eight document/resource routes, two global change routes, 11 people/organization routes, eight meeting/calendar operations, six search/diff/research operations, seven subscription operations, and seven webhook operations. Earlier release evidence is retained except where fresh smoke disproves it. |
 | In progress | 0 | No route is awaiting an active implementation, deployment, or smoke gate. |
 | Ready | 0 | Every non-blocked route has completed remote smoke. |
-| Blocked | 11 | Nine missing-data acceptance gates and two search query timeouts, listed below. |
+| Blocked | 10 | Nine missing-data acceptance gates and broad passage search, listed below. |
+
+September 12 amendment acceptance supersedes the amendment failure in the historical September 11 diagnosis below.
+The native projection backfill verified all 113,937 amendment documents, with zero batch mismatches. Release
+`ddc68697-d50f-42f2-b760-b2ded5832c64` passed 14 smoke checks, including broad `legislation` with default mixed records
+in 978 ms. Exact pagination, filters, canonical mapping, semantic/hybrid modes and auth were verified. No embeddings
+or HNSW indexes were rebuilt. See [amendment search evidence](amendment-search-projection.md).
 
 Fresh September 11 acceptance passed all seven people operations and organization collection, detail, members, and
 membership detail: 11 previously blocked operations. The fixture is `person:congress:l000491` (Frank Lucas) and
@@ -274,8 +280,8 @@ tool is committed in `553578e`.
 The current release evidence is recorded in the [Railway API release record](http-api-railway-release.md). Progress
 reports must state all three totals: reusable domain implementation is 88/88 **Done**; explicit Next.js handler coverage
 is 88/88 in reviewed source and the current production deployment; and Next.js Route Handler release state is
-77/88 **Done**, 0 **In progress**, 0 **Ready**, and 11
-**Blocked**. The states sum to 88. The 11 Blocked routes have named production-data, canonical-fixture, or
-dependency-configuration deficiencies. All 14 subscription and webhook operations, three vote operations, and two global
-change operations and all seven search/diff/research operations are Done after authenticated smoke. The root operational `/health` and
+78/88 **Done**, 0 **In progress**, 0 **Ready**, and 10
+**Blocked**. The states sum to 88. The 10 Blocked routes have named production-data, canonical-fixture,
+dependency-configuration or broad passage-search deficiencies. All 14 subscription and webhook operations, three vote operations, and two global
+change operations and six search/diff/research operations are Done after authenticated smoke. The root operational `/health` and
 `/ready` handlers and the API catch-all are outside the 88-route count.

@@ -29,16 +29,16 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `ca1a976` plus the source-upload exclusions committed as `03d9dc9`; includes exact ranked pagination `600f348` |
-| Deployment | `6bfe6fc2-9045-4d90-b09d-f689fb80846a` |
+| Source snapshot commit | `b1fef71`, including native amendment projection `2a91fba`; source-only committed archive |
+| Deployment | `ddc68697-d50f-42f2-b760-b2ded5832c64` |
 | Deployment status | `SUCCESS` |
-| Image | Retrieve the immutable image digest from this deployment before an image-based rollback; not recorded in this check |
-| Previous rollback artifact | `57197853-4d0e-4072-8e9f-d27ca154adeb`, previously verified `SUCCESS` |
+| Image | Build export digest `sha256:664bca774dd40e2a9f5eed534fb334344f63db11d5097a556d908629beb2bbaf` |
+| Previous rollback artifact | `6bfe6fc2-9045-4d90-b09d-f689fb80846a`, verified `SUCCESS` before replacement; immutable image `sha256:e4183e1a1e9f7059b3197bf1ba3f88ad4dca518cdd112a40aa52b3d74072d7fa`. Now `REMOVED` after replacement, not a running fallback. |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
-| Current verification | September 11: health/readiness and auth rejection pass; 11 civic operations pass with nonempty canonical fixtures and conditional 304. Broad lexical amendment and passage search return 503; amendment logs confirm statement timeout. See the reconciled API backlog. Remaining rows retain historical release evidence unless explicitly dated September 11. |
+| Current verification | September 12: all 14 amendment-release smoke checks pass, including health/readiness, anonymous 401, broad lexical requests, pagination, Oregon filtering, semantic/hybrid and canonical detail. Lexical requests took 495–1,785 ms. Amendment timeout gate closed; passage timeout remains open. Other rows retain historical acceptance, including September 11 civic verification. See the reconciled API backlog and amendment search evidence. |
 | Foundation smoke | Health and readiness returned `200`; unknown routes and unsupported methods returned `404`. |
 | Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
 | Current deployment handler coverage | 88 of 88 explicit Next.js handlers |

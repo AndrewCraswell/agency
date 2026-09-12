@@ -53,8 +53,10 @@ Production scale at diagnosis:
 
 September 12: the [ranked search comparison](ranked-search-performance-decision.md) does not justify a production
 ParadeDB migration. The current implementation work uses a [native amendment search projection](amendment-search-projection.md)
-to isolate amendment text without changing the database engine or rebuilding HNSW indexes. Its backfill, result parity,
-production timing and deployed smoke gates must pass before cutover. **Neither broad lexical timeout gate is closed.**
+to isolate amendment text without changing the database engine or rebuilding HNSW indexes. Backfill, exact result parity,
+production timing and all 14 deployed smoke checks passed in release `ddc68697-d50f-42f2-b760-b2ded5832c64` from
+`b1fef71`. **The broad amendment timeout gate is closed; broad passage search remains open.** Amendment lexical smoke
+returned in 495–1,785 ms, including 100 results. This is smoke evidence, not a corpus-wide latency guarantee.
 
 - [ ] Detect lexical queries whose estimated match set is too broad to rank safely within the API budget.
 - [ ] Return a documented `query_too_broad` error for unscoped pathological lexical searches rather than a database
