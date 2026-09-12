@@ -58,6 +58,27 @@ production timing and all 14 deployed smoke checks passed in release `ddc68697-d
 `b1fef71`. **The broad amendment timeout gate is closed; broad passage search remains open.** Amendment lexical smoke
 returned in 495–1,785 ms, including 100 results. This is smoke evidence, not a corpus-wide latency guarantee.
 
+September 12 passage follow-up: **not completed; no application or production configuration change deployed**.
+Fresh read-only diagnostics removed parent joins, snippets, and hydration entirely. Rank-only `legislation` and
+match-count-only `legislation` both exceeded the database-enforced 15-second deadline. Separate transaction-local
+probes disabled sequential scans, parallel workers and JIT, and used 128 MB work memory; match-count `legislation`,
+rank-only `health`, and rank-only `"health insurance"` still timed out. Every transaction was rolled back.
+The session snapshot had one active session (the diagnostic itself) and zero blocked sessions. Section statistics
+estimated 16,272,711 live rows and 1,055 dead rows, with last automatic analyze at `2026-09-12T00:10:15.554Z`.
+The section relation occupies 17,863,311,360 heap bytes and 96,453,959,680 total bytes including indexes/TOAST;
+its native full-text GIN index occupies 7,664,771,072 bytes. These observations do not prove every native redesign
+would fail, but do not justify shipping another unverified query rewrite or a full-corpus projection backfill.
+
+Evidence: `tmp/passage-diagnostic-1789225942923.json` and `tmp/passage-index-probe-1789226060517.json`.
+[PostgreSQL's GIN documentation](https://www.postgresql.org/docs/18/textsearch-indexes.html) explains that the index
+stores lexemes rather than weight labels; finding matches is not equivalent to returning an exactly ranked page.
+The existing [ranked-index experiment](ranked-search-performance-decision.md) is a candidate-stage benchmark only,
+not full-corpus acceptance. The next decision is whether to evaluate a passage-only ranked lexical index with changed
+relevance ordering (BM25), retaining canonical IDs, exact filters and deterministic pagination. Production integration
+requires explicit ranking/infrastructure approval and a compatible deployment/rollback plan. The alternative is an
+explicit scope-required or asynchronous-search contract, also a product decision. Do not silently sample candidates,
+switch lexical requests to semantic mode, raise the API deadline, or close this gate with a different error response.
+
 - [ ] Detect lexical queries whose estimated match set is too broad to rank safely within the API budget.
 - [ ] Return a documented `query_too_broad` error for unscoped pathological lexical searches rather than a database
       availability error.
