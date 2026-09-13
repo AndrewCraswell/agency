@@ -16,13 +16,16 @@ The required order is:
 3. Complete deployed smoke for every route block.
 4. Add WorkOS request identity and the required subscription/webhook secrets, then deploy and functionally smoke the
    subscription and webhook routes. All 14 subscription and webhook operations now have closure evidence.
-5. Begin MCP migration only after the authenticated HTTP API release. The API gate is now complete for routes with
-   available canonical production data, and work stopped before MCP implementation or smoke as requested.
+5. Begin MCP migration after the authenticated HTTP API release. Authenticated MCP testing has since exercised all 26
+   advertised tools; [MCP smoke defects](mcp-smoke-bugs.md) records the results and remaining lexical passage failure.
 
 No product UX is in this plan. Until a design is approved, the Next.js page surface is only the smallest non-product
 placeholder needed to prove the application runtime.
 
-## Current truth
+## September 11 migration checkpoint
+
+This table is retained as migration evidence, not current deployment status. For subsequent deployed fixes and remaining
+acceptance gates, use [MCP smoke defects](mcp-smoke-bugs.md) and [passage search delivery](passage-search-delivery.md).
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |

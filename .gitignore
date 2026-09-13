@@ -23,6 +23,10 @@ apps/legislation/.container/
 .trigger/
 .data/
 /tmp/
+# Local browser diagnostics and disposable deployment staging, never source.
+/.playwright-cli/
+/.codex-deploy/
+/menus.json
 /apps/legislation/tmp/
 /apps/legislation/infra/bicep/main.json
 

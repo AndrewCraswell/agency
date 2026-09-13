@@ -47,8 +47,10 @@ Search, document-difference, and research production smoke is complete. All five
 ready, all four embedding tables have current statistics, both page-range constraints are valid, and no PostgreSQL index
 build remains active.
 
-The authenticated API performance release is complete for every route that has its required production data. MCP
-migration and MCP smoke are the next deferred step; work stopped before that step as requested.
+The measurements above describe the September 2 release, not current full-corpus acceptance. Authenticated MCP smoke
+has since exercised all 26 advertised tools. See [MCP smoke defects](mcp-smoke-bugs.md) for deployed results and the
+remaining lexical passage failure, and [passage search delivery](passage-search-delivery.md) for the gated search-copy
+rollout. Do not interpret the earlier targeted search passes as closure of the later broad-query failures.
 
 ## Smoke procedure
 
