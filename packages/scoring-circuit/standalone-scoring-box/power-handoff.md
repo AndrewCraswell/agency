@@ -58,10 +58,10 @@ Sources: [Waveshare panel](https://docs.waveshare.com/RGB-Matrix-Px-64x32),
 - R98 remains 1.37k: nominal current limit **2.434A**. A deliberately broad +/-15% screen plus 1% resistor tolerance
   gives **2.048-2.827A**. This is not an exact guaranteed threshold at this resistor value. It leaves modest margin
   above the 1.913A input allocation, below the 3A contract; transient overshoot is not covered by that steady figure.
-- **C45 changed from 10nF X7R to 1nF, 50V, C0G, 5%, TDK C1608C0G1H102J080AA**, without moving pads or copper. TI's
-  nominal `slew rate = 2000 / C[pF]` gives 2V/ms and about 10ms to 20V, instead of 100ms. This reduces time spent
-  feeding a starting converter through a partially-on eFuse. U6 starts around 8-9V and has 20ms typical/50ms maximum
-  startup under its stated test conditions; those figures are not a guaranteed delay under our input ramp.
+- **C45 is 1nF, 50V, C0G, 5%, YAGEO CC0603JRNPO9BN102**, without moving pads or copper. TI's nominal
+  `slew rate = 2000 / C[pF]` gives 2V/ms and about 10ms to 20V, instead of 100ms. This reduces time spent feeding a
+  starting converter through a partially-on eFuse. U6 starts around 8-9V and has 20ms typical/50ms maximum startup under
+  its stated test conditions; those figures are not a guaranteed delay under our input ramp.
 - C46/C47 contribute 10.1uF nominal behind U20: about 20.2mA capacitive inrush at the new nominal slew. U6's internal
   input capacitance is unspecified. For scale, 100uF **total** would draw 0.2A and 220uF 0.44A, before converter load.
   Do not pass startup using only the visible 10.1uF. Capture actual input current and U20 output; check for current
@@ -77,7 +77,7 @@ Sources: [Waveshare panel](https://docs.waveshare.com/RGB-Matrix-Px-64x32),
 
 Sources: [TI TPS25947 Rev C, sections 6.5 and 7.3.5](https://www.ti.com/lit/ds/symlink/tps25947.pdf),
 [DMN2056U](https://www.diodes.com/datasheet/download/DMN2056U.pdf),
-[TDK C45](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608C0G1H102J080AA),
+[YAGEO C45](https://yageogroup.com/download/specsheet/CC0603JRNPO9BN102),
 [STUSB4500 sections 2.2.8-2.2.10](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
 [TPS709](https://www.ti.com/lit/ds/symlink/tps709.pdf).
 

@@ -14,7 +14,7 @@ function Invoke-KiCad([string[]]$Arguments) {
 }
 Invoke-KiCad @('sch', 'erc', $schematic, '--format', 'json', '--exit-code-violations', '--output', "$exportDirectory/erc.json")
 Invoke-KiCad @('pcb', 'drc', $board, '--format', 'json', '--schematic-parity', '--refill-zones', '--exit-code-violations', '--output', "$exportDirectory/drc.json")
-Invoke-KiCad @('sch', 'export', 'bom', $schematic, '--exclude-dnp', '--fields', 'Reference,Value,Footprint,Manufacturer,MPN', '--labels', 'Reference,Value,Footprint,Manufacturer,MPN', '--output', "$exportDirectory/bom.csv")
+Invoke-KiCad @('sch', 'export', 'bom', $schematic, '--exclude-dnp', '--fields', 'Reference,Value,Footprint,Manufacturer,MPN,LCSC', '--labels', 'Reference,Value,Footprint,Manufacturer,MPN,LCSC', '--output', "$exportDirectory/bom.csv")
 Invoke-KiCad @('pcb', 'export', 'pos', $board, '--format', 'csv', '--units', 'mm', '--exclude-dnp', '--use-drill-file-origin', '--output', "$exportDirectory/placement.csv")
 $bom = @(Import-Csv -LiteralPath "$exportDirectory/bom.csv")
 $placement = @(Import-Csv -LiteralPath "$exportDirectory/placement.csv")
@@ -23,7 +23,7 @@ if (@($bom | Where-Object { -not $_.Manufacturer -or -not $_.MPN -or -not $_.Foo
 if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
     @($placement | Group-Object Ref | Where-Object Count -ne 1).Count -ne 0 -or
     @(Compare-Object $bom.Reference $placement.Ref).Count -ne 0) { throw 'BOM and placement references do not match uniquely.' }
-# Exact MPNs, never the combined/virtual board's previous catalog matches or substitution choices.
+# Exact MPNs and reviewed catalog IDs from this board, not auto-matched substitutions.
 $bom | ForEach-Object {
     [pscustomobject][ordered]@{
         Comment = $_.MPN
@@ -31,6 +31,7 @@ $bom | ForEach-Object {
         Footprint = $_.Footprint
         Manufacturer = $_.Manufacturer
         MPN = $_.MPN
+        'LCSC Part #' = $_.LCSC
     }
 } | Export-Csv -LiteralPath "$exportDirectory/jlcpcb-bom.csv" -NoTypeInformation -Encoding utf8
 $placement | ForEach-Object {

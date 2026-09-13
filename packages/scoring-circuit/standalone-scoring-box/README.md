@@ -17,7 +17,7 @@ The power desk review and factory programming procedure are supplied in [power-h
 power qualification and manufacturing review below are still required. CAD checks do not establish electrical
 performance or FIE approval.
 
-KiCad 10.0.6 verification on **2026-09-12**: **0 ERC violations, 0 DRC violations, 0 unconnected items and 0
+KiCad 10.0.6 verification on **2026-09-13**: **0 ERC violations, 0 DRC violations, 0 unconnected items and 0
 schematic/PCB mismatches** under the project's enabled rules. Both checks were run with failure-on-violation enabled.
 The initial placement had 499 unconnected items. Final routing cleanup simplified 36 signal runs from 148 segments to
 72, in addition to removing obsolete copper ends; no component or required signal was removed.
@@ -102,8 +102,14 @@ below its 75mm limit; they are not a claim of an optimal layout or verified 100-
 
 The saved dielectric/copper stack matches the published [JLC04161H-7628 stackup](https://jlcpcb.com/impedance): 0.2104mm
 outer prepreg, 1.065mm core, 0.035mm outer copper and 0.0152mm inner copper. Select that construction in the quote. The
-online impedance calculator did not return a width during this review (its page reported a calculation/rendering error);
-the 100-ohm target remains unqualified and must not be represented as a passed impedance test.
+online impedance calculator did not return a width. An independent first-order screen on 2026-09-13 uses the
+[TI edge-coupled microstrip equations, Figure 9-4](https://www.ti.com/lit/ds/symlink/sn65mlvd203b.pdf):
+`Z0 = 87/sqrt(Er+1.41) * ln(5.98*H/(0.8*W+T))` and `Zdiff = 2*Z0*(1-0.48*exp(-0.96*S/H))`. With H=0.2104mm, W=0.25mm,
+T=0.035mm, edge gap S=0.25mm and Er=4.4, the result is **60.56 ohms single-ended / 102.54 ohms differential**. Keep the
+existing pair geometry; it is within the nominal 90-110 ohm target window. This is an analytical screen, not a
+field-solver or manufacturing qualification: solder mask, copper etch/plating, dielectric tolerance, pad escapes and
+connector transitions are not included. Request the fabricator's finished-stackup calculation and impedance coupon
+before manufacturing approval.
 
 ## Simpler standalone power
 
@@ -146,10 +152,11 @@ The reviewed export contains 199 BOM rows, 199 matching placements and 13 Gerber
 board's lower-left corner. The assembly drawing includes the custom connector and power-part references; these added
 fabrication-layer labels do not change the visible silkscreen, component positions or copper.
 
-The four offline power-profile tests pass (`python -B test_power_profile.py`). The repository-wide `pnpm verify` check
-still fails at the existing scoring application's 100% coverage gate: 969 tests pass, with statements 95.44%, branches
-93.78%, functions 99.79% and lines 96.09%. No thresholds were lowered; this is separate from the native board/export
-checks.
+The four offline power-profile tests pass (`python -B test_power_profile.py`). On 2026-09-13, repository-wide
+`pnpm verify` passed its format/lint/types/knip phase but stopped in scoring tests on a 5-second observatory integration
+timeout. A separate `pnpm --filter scoring test:coverage:domain` rerun passed all 969 tests; its existing 100% coverage
+gate still fails with statements 95.44%, branches 93.78%, functions 99.79% and lines 96.09%. No thresholds were lowered;
+this is separate from the native board/export checks, and repository-wide verification is not clean.
 
 Use **default green solder mask** for the prototype order as requested. Both the CAD stackup and order handoff use
 green; Gerbers describe mask openings, not pigment. Confirm the actual supplier option before ordering.
@@ -157,67 +164,89 @@ green; Gerbers describe mask openings, not pigment. Confirm the actual supplier 
 ### Current JLCPCB draft
 
 The separate [standalone assembly draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=35c0fdd6e3324e1b85591293ca0d5e9c)
-was configured and saved on **2026-09-12**. The existing virtual-board draft remains untouched. Nothing was submitted,
-paid for or sent to support.
+was configured on 2026-09-12 and its revised BOM/placements verified on **2026-09-13**. The existing virtual-board draft
+remains untouched. Nothing was submitted, paid for or sent to support.
 
 - Four layers, 165 x 100mm, 1.6mm, TG155, green mask, white silk, ENIG, 1oz outer/0.5oz inner copper and
   **JLC04161H-7628** construction. The 0.2mm-via option adds four-wire testing. Impedance control is selected at +/-10%,
-  but this does not qualify the existing Ethernet geometry or supply its missing 100-ohm calculation.
+  but this does not qualify the finished board's impedance; the nominal analytical screen is recorded above.
 - **Five fabricated PCBs and two top-side Standard assemblies**, the site's minimum assembly quantity. Temporary 5mm
   rails make the quoted panel 165 x 110mm; factory rail removal is selected. The finished PCB outline is unchanged.
 - Production-file and component-placement confirmation are enabled, with **automatic confirmation disabled**. Customer
   parts selection is retained. Functional-test review includes the U5 procedure/helper; this is not confirmation that
   JLCPCB can perform the required NVM programming. The assembly drawing and no-omissions instructions are attached.
 - Uploaded bundle: `output/manufacturing-20260912-154354/pcb-fabrication.zip`, SHA256
-  `7387D2A76A82E2785578438EF19FFCEA299DF2A01581D353D708A00965DFA252`. BOM and placement files both contain 199
-  references.
+  `7387D2A76A82E2785578438EF19FFCEA299DF2A01581D353D708A00965DFA252`. Updated BOM and placement files from
+  `output/manufacturing-20260913-011725/` were subsequently uploaded; both contain 199 references. Sourcing changes did
+  not move components, change pads/drills/nets, or alter routed copper.
+- The live draft has **195 selected references with exact requested MPNs**, two shortage references (J9/J10, four TE
+  connectors required across the two assemblies), and two unmatched references (J8/U6). J1 was explicitly reselected
+  after upload left its quantity at zero; it now has quantity two and is selected. No private inventory is available.
 - The preliminary **$128.67** is fabrication/options for five PCBs with rails, **not** assembled-board cost. Components,
   assembly, programming, shipping and tax are not a finished quote.
 
-All 199 uploaded references were inspected for exact part-number matching. The site initially substituted **80pF Walsin
-0603N800J500CT / C3868041** for eight **1uF TDK C1608X7R1H105K080AB** capacitors. Those eight supplier references were
-corrected to **C45537494** and verified after reloading the saved draft. That catalog entry has zero stock and
-incomplete package metadata (`HWDG`); it is **not assembly-approved**. Do not reuse the incorrect automatic match on a
-fresh upload. J1's exact USB4105-GF-A / C3020560 was separately selected and has stock.
+### Reviewed sourcing changes
 
-The final saved state is **165 selected references, 24 shortage references, eight unresolved capacitor selections and
-two unmatched references**. JLCPCB's “173 Parts confirmed” includes the eight unchecked capacitors; it must not be
-reported as 173 populated parts. All 199 are required. Placement review could not be entered from this incomplete BOM;
-no omissions or placement approval were accepted.
+The native schematic/PCB now specify stocked ordering numbers for **30 previously unresolved references**, plus J1's
+exact USB connector match. Ratings, capacitance/resistance values, pinouts, footprints and copper are unchanged. The
+exporter includes the native `LCSC` field as `LCSC Part #`; an empty field means no reviewed catalog ID, not an
+instruction to omit the part. Always check the resulting supplier match, especially on a fresh upload.
 
-| References                          | Specified part / catalog record     | Current sourcing issue                                           |
-| ----------------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
-| C1, C2, C3, C15, C21, C33, C37, C38 | TDK C1608X7R1H105K080AB / C45537494 | No stock; package metadata needs correction; all eight unchecked |
-| C5, C22, C28                        | C1608X5R1C106M080AB / C2167896      | Short 3 pieces                                                   |
-| C12, C54, C55                       | C1608X7R1H103K080AA / C2180830      | Short 19 pieces                                                  |
-| C14                                 | C1608X7S1A475K080AC / C5331011      | Short 5 pieces                                                   |
-| C17, C18                            | CGA3E2C0G1H270J080AA / C193086      | Short 8 pieces                                                   |
-| C36, C73                            | C2012X7R1H105K125AB / C3867006      | Short 5 pieces                                                   |
-| C45                                 | C1608C0G1H102J080AA / C2167700      | Short 20 pieces                                                  |
-| C46                                 | C2012X7R2A104K125AA / C2167715      | Short 5 pieces                                                   |
-| C47                                 | C3225X7R1H106K250AC / C2181731      | Short 2 pieces                                                   |
-| C49                                 | C3216X7R1C106K160AC / C2167646      | Short 6 pieces                                                   |
-| C51                                 | C1608X7R1H223K080AA / C2182735      | Short 6 pieces                                                   |
-| C56                                 | C1608X5R1C475K080AC / C2167106      | Short 2 pieces                                                   |
-| J2                                  | HTSW-105-07-L-S / C6571098          | Short 2 pieces                                                   |
-| J6                                  | HTSW-106-07-L-S / C3324216          | Short 2 pieces                                                   |
-| J9, J10                             | 5520250-2 / C3179927                | Short 4 pieces                                                   |
-| R30, R31                            | RC0603FR-0747KL / C105579           | Short 20 pieces                                                  |
-| R98                                 | RC0603FR-071K37L / C137777          | Short 1 piece                                                    |
-| J8                                  | Wurth 645004114822                  | No result in exact-MPN assembly search                           |
-| U6                                  | RECOM REC30K-2405SZ                 | No result in exact-MPN assembly search                           |
+| References                          | Selected MPN            | JLCPCB ID |
+| ----------------------------------- | ----------------------- | --------- |
+| C1, C2, C3, C15, C21, C33, C37, C38 | YAGEO CC0603KRX7R9BB105 | C559769   |
+| C5, C22, C28                        | TDK C1608X5R1C106MT000N | C342854   |
+| C12, C54, C55                       | YAGEO CC0603KRX7R9BB103 | C100042   |
+| C14                                 | TDK C1608X7S1A475KT000E | C342959   |
+| C17, C18                            | YAGEO CC0603JRNPO9BN270 | C107045   |
+| C36, C73                            | YAGEO CC0805KKX7R9BB105 | C91185    |
+| C45                                 | YAGEO CC0603JRNPO9BN102 | C106246   |
+| C46                                 | YAGEO CC0805KKX7R0BB104 | C106243   |
+| C47                                 | TDK C3225X7R1H106KT000E | C432929   |
+| C49                                 | TDK C3216X7R1C106KT000N | C342827   |
+| C51                                 | YAGEO CC0603KRX7R9BB223 | C106222   |
+| C56                                 | YAGEO CC0603KRX5R7BB475 | C277476   |
+| R30, R31                            | Vishay CRCW060347K0FKEA | C844929   |
+| R98                                 | Vishay CRCW06031K37FKEA | C4209564  |
+| J2                                  | Samtec HTSW-105-07-G-S  | C3337223  |
+| J6                                  | Samtec HTSW-106-07-G-S  | C3334125  |
+| J1                                  | GCT USB4105-GF-A        | C3020560  |
 
-Shortfall quantities are the site's total per part group for two assemblies, including its purchasing/attrition rules;
-do not multiply them by the number of listed references. Stock is a dated snapshot. Resolve through exact-part sourcing
-or separately reviewed substitutes, never by approving a partly populated board. No part pre-order was purchased.
+Each selected ID showed sufficient assembly-search inventory for the two-board prototype on 2026-09-13. This does not
+reserve stock or establish availability for 30 boards. C47/C49 retain their original TDK parts under the delivery
+numbers explicitly paired in [TDK's change notice, page 13](https://media.futureelectronics.com/PCN/95306_SPCN.PDF).
+C5/C22/C28 and C14 likewise use ordering numbers for the existing TDK catalog parts; their native Datasheet fields
+retain the corresponding TDK catalog pages. All substitute datasheet links are in the native component fields.
+
+YAGEO capacitor review includes dimensions, voltage, dielectric, tolerance and typical DC-bias graphs, not just the
+printed capacitance. The 0603 1uF part loses substantial capacitance at 20V; C1 is not counted as 1uF effective there.
+C36/C73 remain separate 0805 raw-input bypass capacitors. C37/C38 operate at U5's 1.2V/2.7V regulator outputs: the
+typical bias curve, 10% tolerance and X7R temperature screen give about 0.67uF at 2.7V, above ST's 0.5uF minimum. These
+typical-curve screens are not guaranteed all-corner or aged capacitance measurements. C47/C49 retain the previous bulk
+parts to avoid an unreviewed change to converter behavior. C56 remains 4.7uF on W5500's 1.2V TOCAP. The crystal
+capacitors remain 27pF C0G; R98 remains 1.37k, 1%, 100ppm/K, so neither oscillator loading nor nominal eFuse current
+setting changes.
+
+J2/J6 retain Samtec's high-temperature HTSW body, 2.54mm pitch, 5.84mm mating post, 2.54mm tail and existing 1.02mm PCB
+drills. Only plating changes: `-G` retains 10 microinch gold on the mating post and uses flash gold on the tail instead
+of `-L` matte tin. Do not substitute standard TSW:
+[Samtec's catalog](https://suddendocs.samtec.com/catalog_english/tsw_th.pdf) does not rate that PBT version for
+lead-free soldering. [J2](https://www.samtec.com/products/htsw-105-07-g-s) and
+[J6](https://www.samtec.com/products/htsw-106-07-g-s) are manufacturer-listed high-temperature parts.
+
+The remaining exact-part sourcing gaps are **J8 (Wurth 645004114822), J9/J10 (TE 5520250-2), and U6 (RECOM
+REC30K-2405SZ)**. Keep these parts populated; do not approve omissions or a substitute without reviewing the connector
+geometry or power/isolation requirements. The updated BOM is applied and the 195 selected references match the native
+MPNs. Supplier placement review and a complete assembly quote remain unavailable until the four unresolved references
+are sourced. No parts purchase or supplier inquiry has been authorized in this change.
 
 ## Remaining work, in order
 
-1. Resolve the 34 sourcing/catalog references above, then inspect every supplier placement and obtain the complete
-   SMT/THT assembly quote. Do not submit an order or contact support without the owner's permission.
-2. Qualify Ethernet impedance against the selected construction and agree the factory's U5 programming/readback method.
-   Confirm enclosure/cable access and external wiring responsibilities. These items prevent manufacturing release; the
-   saved draft and clean CAD checks do not waive them.
+1. Resolve the four remaining sourcing references, then inspect every supplier placement and obtain the complete SMT/THT
+   assembly quote. Do not submit an order or contact support without the owner's permission.
+2. Obtain the fabricator's finished-stackup impedance confirmation and agree its U5 programming/readback method. Confirm
+   enclosure/cable access and external wiring responsibilities. These items prevent manufacturing release; the saved
+   draft and clean CAD checks do not waive them.
 3. On assembled hardware, verify power, insulation, startup/faults, acquisition timing, display, Ethernet, repeaters, IR
    and audio before connecting fencing equipment. CAD checks cannot substitute for those measurements.
 
