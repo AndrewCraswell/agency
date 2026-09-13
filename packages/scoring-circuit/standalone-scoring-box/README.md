@@ -152,9 +152,8 @@ The reviewed export contains 199 BOM rows, 199 matching placements and 13 Gerber
 board's lower-left corner. The assembly drawing includes the custom connector and power-part references; these added
 fabrication-layer labels do not change the visible silkscreen, component positions or copper.
 
-The four offline power-profile tests pass (`python -B test_power_profile.py`). On 2026-09-13, repository-wide
-`pnpm verify` passed its format/lint/types/knip phase but stopped in scoring tests on a 5-second observatory integration
-timeout. A separate `pnpm --filter scoring test:coverage:domain` rerun passed all 969 tests; its existing 100% coverage
+The four offline power-profile tests pass (`python -B test_power_profile.py`). The latest 2026-09-13 repository-wide
+`pnpm verify` run passed its format/lint/types/knip phase and all 969 scoring tests. Its existing 100% scoring coverage
 gate still fails with statements 95.44%, branches 93.78%, functions 99.79% and lines 96.09%. No thresholds were lowered;
 this is separate from the native board/export checks, and repository-wide verification is not clean.
 
@@ -179,9 +178,10 @@ remains untouched. Nothing was submitted, paid for or sent to support.
   `7387D2A76A82E2785578438EF19FFCEA299DF2A01581D353D708A00965DFA252`. Updated BOM and placement files from
   `output/manufacturing-20260913-011725/` were subsequently uploaded; both contain 199 references. Sourcing changes did
   not move components, change pads/drills/nets, or alter routed copper.
-- The live draft has **195 selected references with exact requested MPNs**, two shortage references (J9/J10, four TE
-  connectors required across the two assemblies), and two unmatched references (J8/U6). J1 was explicitly reselected
-  after upload left its quantity at zero; it now has quantity two and is selected. No private inventory is available.
+- The assembly draft has **195 selected references with exact requested MPNs**, two shortage references (J9/J10, four TE
+  connectors required across the two assemblies), and two unmatched references (J8/U6). Exact Global Sourcing offers for
+  all four references are now identified below; they are not yet purchased or available in private inventory. J1 was
+  explicitly reselected after upload left its quantity at zero; it now has quantity two and is selected.
 - The preliminary **$128.67** is fabrication/options for five PCBs with rails, **not** assembled-board cost. Components,
   assembly, programming, shipping and tax are not a finished quote.
 
@@ -234,16 +234,45 @@ of `-L` matte tin. Do not substitute standard TSW:
 lead-free soldering. [J2](https://www.samtec.com/products/htsw-105-07-g-s) and
 [J6](https://www.samtec.com/products/htsw-106-07-g-s) are manufacturer-listed high-temperature parts.
 
-The remaining exact-part sourcing gaps are **J8 (Wurth 645004114822), J9/J10 (TE 5520250-2), and U6 (RECOM
-REC30K-2405SZ)**. Keep these parts populated; do not approve omissions or a substitute without reviewing the connector
-geometry or power/isolation requirements. The updated BOM is applied and the 195 selected references match the native
-MPNs. Supplier placement review and a complete assembly quote remain unavailable until the four unresolved references
-are sourced. No parts purchase or supplier inquiry has been authorized in this change.
+### Remaining parts: exact sources found
+
+All three remaining part types are available through **JLCPCB Global Sourcing**, with no substitute or PCB change. On
+2026-09-13 the account already contained these three unpurchased cart lines. Only these lines were selected for the
+standalone two-assembly checkout; the other 21 sourcing-cart lines were left unchanged and unselected.
+
+| Board references | Exact part          | JLCPCB sourcing distributor / SKU | Distributor stock shown | Purchase quantity | Line price (USD) |
+| ---------------- | ------------------- | --------------------------------- | ----------------------: | ----------------: | ---------------: |
+| U6               | RECOM REC30K-2405SZ | DigiKey / 945-REC30K-2405SZ-ND    |                     252 |                 2 |           $71.75 |
+| J9, J10          | TE 5520250-2        | DigiKey / A31405-ND               |                   2,019 |                 4 |           $11.31 |
+| J8               | Wurth 645004114822  | RS Components / 645004114822      |                     179 |                10 |            $6.14 |
+
+The quantities cover two assembled boards; J8 has a ten-piece minimum, leaving eight spare headers. No additional
+attrition quantity was shown for these offers; any assembly-review supplement still needs agreement. The selected-parts
+subtotal is **$89.20**. Checkout adds **$3.00 handling**, displaying **$92.20 total** before billing information has
+been completed. This is only the three sourcing lines, not PCB fabrication or assembly, and it is not a paid or reserved
+price. The DigiKey power-module offer shows 8-14 business days; that is not a promised complete-board delivery date.
+
+The exact manufacturer/distributor identities are also corroborated by the
+[RECOM listing](https://www.digikey.com/en/products/detail/recom-power/REC30K-2405SZ/24366463),
+[TE listing](https://www.digikey.com/en/products/detail/te-connectivity-amp-connectors/5520250-2/769549), and
+[Wurth listing](https://uk.rs-online.com/web/p/pcb-headers/2138652). Direct distributor prices differ from JLCPCB's
+sourcing quote; use the checkout amount above for this route. The existing native MPNs, footprints and models remain.
+
+[JLCPCB's Global Sourcing procedure](https://jlcpcb.com/help/article/how-to-use-jlcpcb-global-sourcing-parts-service)
+requires purchase, assembly eligibility review and warehouse receipt before these parts can be assigned from private
+inventory. Paid sourcing orders are normally non-cancellable; review can reject unsupported parts or request
+supplements. Do not mark the four references as stocked or the board as order-ready simply because offers exist.
+
+The [sourcing cart](https://jlcpcb.com/user-center/smtPrivateLibrary/partsCart/?global=1) and checkout are prepared, but
+**no order was submitted, no payment or new terms were accepted, and no supplier message was sent**. Billing information
+and owner purchase approval are the next actions. After receipt, assign the exact private parts to J8/J9/J10/U6 and
+review all 199 placements; do not omit any of them to advance the assembly draft.
 
 ## Remaining work, in order
 
-1. Resolve the four remaining sourcing references, then inspect every supplier placement and obtain the complete SMT/THT
-   assembly quote. Do not submit an order or contact support without the owner's permission.
+1. Obtain owner approval for the prepared exact-part purchase, complete sourcing and warehouse receipt, then assign the
+   four private-inventory references, inspect every supplier placement and obtain the complete SMT/THT assembly quote.
+   Do not submit an order or contact support without the owner's permission.
 2. Obtain the fabricator's finished-stackup impedance confirmation and agree its U5 programming/readback method. Confirm
    enclosure/cable access and external wiring responsibilities. These items prevent manufacturing release; the saved
    draft and clean CAD checks do not waive them.
