@@ -1,5 +1,24 @@
 # Passage search and API closeout
 
+## September 14 scope and acceptance
+
+The public surface now contains 81 operations. Calendar, meeting-outcome and representative-lookup endpoints were removed, including calendar MCP discovery and client methods. This supersedes the older nine-data-gate list below.
+
+Commit `07d7f94` is pushed and deployed as Railway `7eaa1e92-7947-4c2f-bb75-5f345b48e7e9` (`SUCCESS`). Ingestion version `20260914.1` is deployed with the Open States source-include fix. Authenticated production checks passed:
+
+| Operation | Real fixture | Result |
+| --- | --- | --- |
+| Organization bills | `organization:congress:hsvr00` | 200, nonempty, 284 ms |
+| Organization meetings | `organization:congress:hsif03` | 200, nonempty, 153 ms |
+| Meeting detail | `event:congress:committee-meeting-119189` | 200, 119 ms |
+| Agenda-item detail | California Rules event `ocd-event/6694d8b5-f5f4-41a0-ab81-d5f63ec9ec33` | 200, 65 ms, Assembly source link |
+
+All seven removed operations returned 404. The agenda contract uses the source description as a display title when necessary, and null relationship arrays mean unknown, not confirmed absent. Source replay used the ordinary normalizers and persistence paths; no invented links or fabricated source records were added. These checks establish endpoint acceptance, not exhaustive historical coverage, state scraper deployment, or merged cross-provider organization identities.
+
+Verification: 2,392 legislation tests passed, and the isolated built-router rerun passed all 240 checks after a concurrent-build collision. The final focused source/agenda suite passed 28 tests. Normal commit and push hooks passed. Root `pnpm verify` passed format/lint/types/unused checks but failed in unrelated scoring tests (three failures in two files); it is not a clean repository-wide pass.
+
+At 13:18 UTC, passage readiness still reported `backfill_incomplete` and `pending_changes` (120 queued, zero failed attempts). The target index was valid and ready. Passage cutover remains disabled until the existing copy and final acceptance complete; no vector indexes were rebuilt.
+
 The user approved a separate ParadeDB passage-search service and BM25 ordering on September 12, 2026. This does not approve replacing the canonical PostgreSQL image or rebuilding vector indexes. The earlier whole-database migration hold still applies.
 
 ## Delivery gates

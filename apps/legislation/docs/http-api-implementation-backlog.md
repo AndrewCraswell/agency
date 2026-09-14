@@ -1,5 +1,7 @@
 # Current scope update — September 14, 2026
 
+Deployment acceptance is now recorded in [passage search and API closeout](passage-search-delivery.md#september-14-scope-and-acceptance): all four retained civic gates passed authenticated real-data smoke, and all seven removed operations returned 404 on `7eaa1e92-7947-4c2f-bb75-5f345b48e7e9`. Passage search alone remains open in this five-item closeout. The paragraphs and historical ledgers below retain their original chronology.
+
 Fresh authenticated production checks passed for organization bills (`organization:congress:hsvr00`, nonempty), organization meetings (`organization:congress:hsif03`, nonempty), and meeting detail (`event:congress:committee-meeting-119189`) after a source replay. These checks do not establish exhaustive historical coverage or merge GovInfo and Congress organization identities.
 
 Agenda source fix: Open States event ingestion now requests `sources`. Agenda display titles use the source description when there is no separate title; unknown relationship arrays are `null`, not fabricated empty arrays. A fresh California Rules agenda was replayed from Open States and passed the canonical reader. Deployment smoke remains pending. Broad passage search still requires completed copy and readiness acceptance.
