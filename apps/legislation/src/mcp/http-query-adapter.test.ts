@@ -241,16 +241,6 @@ describe("createMcpHttpQueryAdapter", () => {
       undefined
     ],
     [
-      "get_calendar",
-      pageResponse(),
-      (adapter: ReturnType<typeof createMcpHttpQueryAdapter>) =>
-        adapter.getCalendar({ jurisdictionId: "jurisdiction:ca" }),
-      "/api/calendars",
-      "GET",
-      { jurisdictionId: "jurisdiction:ca" },
-      undefined
-    ],
-    [
       "get_event",
       resourceResponse({}),
       (adapter: ReturnType<typeof createMcpHttpQueryAdapter>) => adapter.getEvent({ id: "event:1" }),

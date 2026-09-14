@@ -109,8 +109,7 @@ const civicEntityRoutes: readonly CivicEntityRoute[] = [
     probe: "?unexpected=1"
   },
   { name: "organization meetings", pathname: `/api/organizations/${organizationId}/meetings`, probe: "?limit=0" },
-  { name: "organization bills", pathname: `/api/organizations/${organizationId}/bills`, probe: "?limit=0" },
-  { name: "organization calendars", pathname: `/api/organizations/${organizationId}/calendars`, probe: "?limit=0" }
+  { name: "organization bills", pathname: `/api/organizations/${organizationId}/bills`, probe: "?limit=0" }
 ]
 
 type MeetingCalendarRoute = Readonly<{
@@ -139,13 +138,6 @@ const meetingCalendarRoutes: readonly MeetingCalendarRoute[] = [
     pathname: `/api/meetings/${meetingId}/documents/document%3Arouter`,
     probe: "?unexpected=1"
   },
-  { method: "GET", name: "meeting outcomes", pathname: `/api/meetings/${meetingId}/outcomes`, probe: "?limit=0" },
-  {
-    method: "GET",
-    name: "meeting outcome",
-    pathname: `/api/meetings/${meetingId}/outcomes/outcome%3Arouter`,
-    probe: "?unexpected=1"
-  },
   {
     method: "GET",
     name: "meeting participants",
@@ -157,20 +149,6 @@ const meetingCalendarRoutes: readonly MeetingCalendarRoute[] = [
     name: "meeting participant",
     pathname: `/api/meetings/${meetingId}/participants/person%3Arouter`,
     probe: "?unexpected=1"
-  },
-  { method: "GET", name: "calendar collection", pathname: "/api/calendars", probe: "?limit=0" },
-  { method: "GET", name: "calendar detail", pathname: "/api/calendars/calendar%3Arouter", probe: "?unexpected=1" },
-  {
-    method: "GET",
-    name: "calendar meetings",
-    pathname: "/api/calendars/calendar%3Arouter/meetings",
-    probe: "?limit=0"
-  },
-  {
-    body: JSON.stringify({}),
-    method: "POST",
-    name: "representative lookup",
-    pathname: "/api/representative-lookups"
   }
 ]
 
@@ -665,6 +643,23 @@ describe.sequential("built Next.js API Route Handler acceptance", () => {
     await expectInvalidRequest(followUp, "router-civic-entity-malformed-follow-up")
   })
 
+  it.each([
+    "/api/calendars",
+    "/api/calendars/calendar%3Arouter",
+    "/api/calendars/calendar%3Arouter/meetings",
+    `/api/organizations/${organizationId}/calendars`,
+    `/api/meetings/${meetingId}/outcomes`,
+    `/api/meetings/${meetingId}/outcomes/outcome%3Arouter`,
+    "/api/representative-lookups"
+  ])("does not expose deferred endpoint %s", async (pathname) => {
+    expect.hasAssertions()
+    for (const method of ["GET", "POST"]) {
+      const correlationId = "removed-endpoint"
+      const response = await request(pathname, { method, headers: { "x-correlation-id": correlationId } })
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  })
+
   it.each(meetingCalendarRoutes)(
     "routes the encoded meeting and calendar %s path through its built handler",
     async (route) => {
@@ -758,9 +753,7 @@ describe.sequential("built Next.js API Route Handler acceptance", () => {
   it.each([
     `/api/meetings/${meetingId}/agenda?limit=0`,
     `/api/meetings/${meetingId}/documents?limit=0`,
-    `/api/meetings/${meetingId}/outcomes?limit=0`,
-    `/api/meetings/${meetingId}/participants?limit=0`,
-    "/api/calendars/calendar%3Arouter/meetings?limit=0"
+    `/api/meetings/${meetingId}/participants?limit=0`
   ])("routes meeting and calendar nested static paths before the dynamic parent for %s", async (pathname) => {
     expect.hasAssertions()
     const correlationId = "router-meeting-calendar-nested-static"

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { HttpApiHandler } from "../../api/http.js"
-import type { AddressToDistrictProvider, RepresentativeLookupApi } from "../../api/representative-lookup.js"
 
 type HandlerFactory = (...arguments_: readonly unknown[]) => HttpApiHandler
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
@@ -10,7 +9,6 @@ const mocks = vi.hoisted(() => {
 
   return {
     agendaHandler: vi.fn<HandlerFactory>(handler),
-    calendarHandler: vi.fn<HandlerFactory>(handler),
     createComposite: vi.fn<(handlers: readonly HttpApiHandler[]) => HttpApiHandler>((handlers) =>
       Object.assign(
         vi.fn<HttpApiHandler>(async (request, response) => {
@@ -28,26 +26,13 @@ const mocks = vi.hoisted(() => {
     eventDocumentHandler: vi.fn<HandlerFactory>(handler),
     execute: vi.fn<NextHttpApiExecutor>(),
     meetingHandler: vi.fn<HandlerFactory>(handler),
-    outcomeHandler: vi.fn<HandlerFactory>(handler),
     participantListHandler: vi.fn<HandlerFactory>(handler),
-    participantReadHandler: vi.fn<HandlerFactory>(handler),
-    representativeApi: vi.fn<() => RepresentativeLookupApi>(() => ({
-      lookup: async () => {
-        throw new Error("Representative lookup is not exercised by this composition test")
-      }
-    })),
-    representativeHandler: vi.fn<HandlerFactory>(handler),
-    representativeProvider: vi.fn<() => AddressToDistrictProvider>(() => ({
-      resolve: async () => {
-        throw new Error("Representative lookup is not exercised by this composition test")
-      }
-    }))
+    participantReadHandler: vi.fn<HandlerFactory>(handler)
   }
 })
 
 vi.mock("../../api/http.js", () => ({ createCompositeHttpApiHandler: mocks.createComposite }))
 vi.mock("../../api/next/node-handler.js", () => ({ executeNextHttpApiHandler: mocks.execute }))
-vi.mock("../../api/calendar-read-routes.js", () => ({ createCalendarReadApiHandler: mocks.calendarHandler }))
 vi.mock("../../api/event-document-read-routes.js", () => ({
   createEventDocumentReadApiHandler: mocks.eventDocumentHandler
 }))
@@ -55,9 +40,7 @@ vi.mock("../../api/meeting-agenda-read-routes.js", () => ({ createMeetingAgendaR
 vi.mock("../../api/meeting-document-read-routes.js", () => ({
   createMeetingDocumentReadApiHandler: mocks.documentHandler
 }))
-vi.mock("../../api/meeting-outcome-read-routes.js", () => ({
-  createMeetingOutcomeReadApiHandler: mocks.outcomeHandler
-}))
+
 vi.mock("../../api/meeting-participant-list-routes.js", () => ({
   createMeetingParticipantListApiHandler: mocks.participantListHandler
 }))
@@ -65,17 +48,6 @@ vi.mock("../../api/meeting-participant-read-routes.js", () => ({
   createMeetingParticipantReadApiHandler: mocks.participantReadHandler
 }))
 vi.mock("../../api/meeting-read-routes.js", () => ({ createMeetingReadApiHandler: mocks.meetingHandler }))
-vi.mock("../../api/representative-lookup.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../api/representative-lookup.js")>()
-  return {
-    ...actual,
-    createRepresentativeLookupApi: mocks.representativeApi,
-    createRepresentativeLookupApiHandler: mocks.representativeHandler
-  }
-})
-vi.mock("./representative-lookup-provider.js", () => ({
-  createNextRepresentativeLookupProvider: mocks.representativeProvider
-}))
 vi.mock("./runtime.js", () => ({
   getNextLegislationApplication: vi.fn<() => unknown>(() => ({
     config: { auth: { mode: "disabled" }, ingestion: {}, server: { publicApiBaseUrl: "https://api.example.test" } },
@@ -90,7 +62,7 @@ afterEach(() => {
 })
 
 describe("meeting calendar Next composition", () => {
-  it("composes exactly the fourteen meeting calendar operations with one handler owner each", async () => {
+  it("composes exactly the eight meeting operations with one handler owner each", async () => {
     mocks.execute.mockImplementation(async (request, handler) => {
       const url = new URL(request.url)
       const handled = await Reflect.apply(handler, undefined, [
@@ -105,19 +77,14 @@ describe("meeting calendar Next composition", () => {
     const options = { apiBaseUrl: "https://api.example.test" }
     for (const handler of [
       mocks.agendaHandler,
-      mocks.calendarHandler,
       mocks.documentHandler,
       mocks.eventDocumentHandler,
       mocks.meetingHandler,
-      mocks.outcomeHandler,
       mocks.participantListHandler,
       mocks.participantReadHandler
     ]) {
       expect(handler).toHaveBeenCalledWith(expect.any(Object), options)
     }
-    expect(mocks.representativeProvider).toHaveBeenCalledWith(expect.any(Object))
-    expect(mocks.representativeApi).toHaveBeenCalledTimes(1)
-    expect(mocks.representativeHandler).toHaveBeenCalledWith(expect.any(Object))
 
     const composition = mocks.createComposite.mock.results[0]?.value
     if (typeof composition !== "function") {
@@ -127,7 +94,7 @@ describe("meeting calendar Next composition", () => {
     if (!Array.isArray(handlers)) {
       throw new Error("Expected the composite handler to receive route handlers")
     }
-    expect(handlers).toHaveLength(9)
+    expect(handlers).toHaveLength(6)
 
     const routes = [
       ["GET", "/api/meetings"],
@@ -136,20 +103,20 @@ describe("meeting calendar Next composition", () => {
       ["GET", "/api/meetings/meeting-1/agenda/agenda-item-1"],
       ["GET", "/api/meetings/meeting-1/documents"],
       ["GET", "/api/meetings/meeting-1/documents/event-document-1"],
-      ["GET", "/api/meetings/meeting-1/outcomes"],
-      ["GET", "/api/meetings/meeting-1/outcomes/outcome-1"],
       ["GET", "/api/meetings/meeting-1/participants"],
-      ["GET", "/api/meetings/meeting-1/participants/participant-1"],
-      ["GET", "/api/calendars"],
-      ["GET", "/api/calendars/calendar-1"],
-      ["GET", "/api/calendars/calendar-1/meetings"],
-      ["POST", "/api/representative-lookups"]
+      ["GET", "/api/meetings/meeting-1/participants/participant-1"]
     ] as const
     for (const [method, url] of routes) {
       expect(await matchedHandlerCount(handlers, method, url)).toBe(1)
     }
 
     const excludedRoutes = [
+      ["GET", "/api/calendars"],
+      ["GET", "/api/calendars/calendar-1"],
+      ["GET", "/api/calendars/calendar-1/meetings"],
+      ["GET", "/api/meetings/meeting-1/outcomes"],
+      ["GET", "/api/meetings/meeting-1/outcomes/outcome-1"],
+      ["POST", "/api/representative-lookups"],
       ["GET", "/api/meetings/meeting-1/documents/event-document-1/extra"],
       ["POST", "/api/meetings"],
       ["GET", "/api/meetings/meeting-1/"],

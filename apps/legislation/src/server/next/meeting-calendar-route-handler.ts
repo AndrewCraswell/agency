@@ -1,15 +1,11 @@
-import { createCalendarReadRepository } from "../../api/calendar-read-repository.js"
-import { createCalendarReadApiHandler } from "../../api/calendar-read-routes.js"
 import { createEventDocumentReadApiHandler } from "../../api/event-document-read-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
 import { createMeetingAgendaReadApiHandler } from "../../api/meeting-agenda-read-routes.js"
 import { createMeetingDocumentReadApiHandler } from "../../api/meeting-document-read-routes.js"
-import { createMeetingOutcomeReadApiHandler } from "../../api/meeting-outcome-read-routes.js"
 import { createMeetingParticipantListApiHandler } from "../../api/meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "../../api/meeting-participant-read-routes.js"
 import { createMeetingReadRepository } from "../../api/meeting-read-repository.js"
 import { createMeetingReadApiHandler, type MeetingReadApi } from "../../api/meeting-read-routes.js"
-import { createRepresentativeLookupApi, createRepresentativeLookupApiHandler } from "../../api/representative-lookup.js"
 import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { getEventDocumentRead } from "../../db/queries/event-document-read.js"
@@ -22,18 +18,12 @@ import {
   assertMeetingExists as assertMeetingDocumentParentExists,
   listMeetingDocuments
 } from "../../db/queries/meeting-document-read.js"
-import {
-  assertMeetingOutcomeParentExists,
-  getMeetingOutcomeRead,
-  listMeetingOutcomes
-} from "../../db/queries/meeting-outcome-read.js"
 import { getMeetingParticipantRead } from "../../db/queries/meeting-participant-read.js"
 import {
   assertMeetingExists as assertMeetingParticipantParentExists,
   listMeetingParticipants
 } from "../../db/queries/meeting-participant-reads.js"
 import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
-import { createNextRepresentativeLookupProvider } from "./representative-lookup-provider.js"
 import { getNextLegislationApplication } from "./runtime.js"
 
 type MeetingCalendarApplication = Readonly<{
@@ -50,7 +40,7 @@ export type MeetingCalendarRequestHandlerDependencies = Readonly<{
 
 let meetingCalendarHandler: HttpApiHandler | undefined
 
-/** Handles meeting, calendar, and representative lookup routes. */
+/** Handles supported meeting routes. */
 export async function handleMeetingCalendarRequest(request: Request): Promise<Response> {
   meetingCalendarHandler ??= createMeetingCalendarHttpApiHandler(getNextLegislationApplication())
   return await executeAuthenticatedApiRequest(request, meetingCalendarHandler)
@@ -102,18 +92,6 @@ export function createMeetingCalendarHttpApiHandler(application: MeetingCalendar
         isMeetingDocumentItemRoute
       ),
       restrictToRoutes(
-        createMeetingOutcomeReadApiHandler(
-          {
-            assertMeetingOutcomeParentExists: async (meetingId) =>
-              await assertMeetingOutcomeParentExists(database, meetingId),
-            getMeetingOutcomeRead: async (input) => await getMeetingOutcomeRead(database, input),
-            listMeetingOutcomes: async (input) => await listMeetingOutcomes(database, input)
-          },
-          options
-        ),
-        isMeetingOutcomeRoute
-      ),
-      restrictToRoutes(
         createMeetingParticipantListApiHandler(
           {
             assertMeetingExists: async (meetingId) => await assertMeetingParticipantParentExists(database, meetingId),
@@ -129,13 +107,6 @@ export function createMeetingCalendarHttpApiHandler(application: MeetingCalendar
           options
         ),
         isMeetingParticipantItemRoute
-      ),
-      restrictToRoutes(createCalendarReadApiHandler(createCalendarReadRepository(database), options), isCalendarRoute),
-      restrictToRoutes(
-        createRepresentativeLookupApiHandler(
-          createRepresentativeLookupApi(createNextRepresentativeLookupProvider(application.config))
-        ),
-        isRepresentativeLookupRoute
       )
     ])
   )
@@ -147,7 +118,6 @@ function createMeetingDetailReadApi(database: LegislationDatabase): MeetingReadA
     ...meetingRepository,
     listMeetingAgenda: async (input) => await listMeetingAgenda(database, input),
     listMeetingDocuments: async (input) => await listMeetingDocuments(database, input),
-    listMeetingOutcomes: async (input) => await listMeetingOutcomes(database, input),
     listMeetingParticipants: async (input) => await listMeetingParticipants(database, input)
   }
 }
@@ -193,10 +163,6 @@ function isMeetingDocumentItemRoute(request: Readonly<{ method?: string; url?: s
   return isNamedMeetingChildRoute(request, "documents", true) && requestPathSegments(request).length === 6
 }
 
-function isMeetingOutcomeRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
-  return isNamedMeetingChildRoute(request, "outcomes", true)
-}
-
 function isMeetingParticipantCollectionRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
   return isNamedMeetingChildRoute(request, "participants", false)
 }
@@ -219,22 +185,6 @@ function isNamedMeetingChildRoute(
     segments[4] === child &&
     (segments.length === 5 || (includeItem && segments.length === 6 && hasDynamicRouteId(segments[5])))
   )
-}
-
-function isCalendarRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
-  const segments = requestPathSegments(request)
-  return (
-    request.method === "GET" &&
-    segments[1] === "api" &&
-    segments[2] === "calendars" &&
-    (segments.length === 3 ||
-      (segments.length === 4 && hasDynamicRouteId(segments[3])) ||
-      (segments.length === 5 && hasDynamicRouteId(segments[3]) && segments[4] === "meetings"))
-  )
-}
-
-function isRepresentativeLookupRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
-  return request.method === "POST" && requestPathname(request) === "/api/representative-lookups"
 }
 
 function hasDynamicRouteId(value: string | undefined): value is string {

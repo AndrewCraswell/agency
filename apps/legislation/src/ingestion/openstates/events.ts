@@ -184,7 +184,7 @@ export function normalizeOpenStatesEvent(
         agendaItem: {
           amendmentRelationsComplete: false,
           billRelationsComplete: false,
-          canonicalFactsComplete: item.title !== undefined,
+          canonicalFactsComplete: item.title !== undefined || item.description !== undefined,
           classification: item.classification[0],
           description: item.description,
           eventId: canonicalEventId,
@@ -192,7 +192,7 @@ export function normalizeOpenStatesEvent(
           materialRelationsComplete: false,
           ordinal: item.order,
           status: item.status,
-          title: item.title
+          title: item.title ?? item.description
         },
         amendmentIds: [],
         billIds: [],

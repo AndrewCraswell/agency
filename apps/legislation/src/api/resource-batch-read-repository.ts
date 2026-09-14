@@ -1,11 +1,9 @@
 import { LegislationError } from "../legislation/errors.js"
 import type { AmendmentReadRepository } from "./amendment-read-repository.js"
 import type { BillDetailReadRepository } from "./bill-detail-read-repository.js"
-import { projectCalendarDetailRead, type CalendarReadApi } from "./calendar-read-routes.js"
 import type {
   AmendmentDetail,
   BillDetail,
-  CalendarDetail,
   DocumentDetail,
   Jurisdiction,
   MeetingDetail,
@@ -37,8 +35,7 @@ export const RESOURCE_TYPES = [
   "supporting-material",
   "person",
   "organization",
-  "meeting",
-  "calendar"
+  "meeting"
 ] as const
 
 export type ResourceType = (typeof RESOURCE_TYPES)[number]
@@ -58,7 +55,6 @@ export type CanonicalResource =
   | PersonDetail
   | OrganizationDetail
   | MeetingDetail
-  | CalendarDetail
 
 export type ResourceBatchRequestItem = Readonly<{
   type: ResourceType
@@ -73,7 +69,6 @@ export type CanonicalResourceBatchReadDependencies = Readonly<{
   apiBaseUrl: string
   amendmentReadRepository?: Pick<AmendmentReadRepository, "getAmendment">
   billDetailReadRepository?: Pick<BillDetailReadRepository, "getBillDetail">
-  calendarReadApi?: Pick<CalendarReadApi, "getCalendarRead">
   coreReadApi?: Pick<CoreReadQueryApi, "getSupportingMaterial">
   documentReadApi?: Pick<DocumentReadApi, "getDocumentDetail">
   jurisdictionReadRepository?: Pick<JurisdictionReadRepository, "getJurisdiction">
@@ -83,7 +78,6 @@ export type CanonicalResourceBatchReadDependencies = Readonly<{
     | "listMeetingAgenda"
     | "listMeetingDocuments"
     | "listMeetingOrganizations"
-    | "listMeetingOutcomes"
     | "listMeetingParticipants"
   >
   organizationDetailReadRepository?: Pick<OrganizationDetailReadRepository, "getOrganizationDetail">
@@ -132,7 +126,6 @@ export function createCanonicalResourceBatchResolvers(
     amendmentReadRepository,
     apiBaseUrl,
     billDetailReadRepository,
-    calendarReadApi,
     coreReadApi,
     documentReadApi,
     jurisdictionReadRepository,
@@ -186,19 +179,15 @@ export function createCanonicalResourceBatchResolvers(
   }
   if (meetingReadApi !== undefined) {
     resolvers.meeting = async (id) => {
-      const [meeting, organizations, agenda, documents, outcomes, participants] = await Promise.all([
+      const [meeting, organizations, agenda, documents, participants] = await Promise.all([
         meetingReadApi.getMeetingRead(id),
         meetingReadApi.listMeetingOrganizations(id),
         meetingReadApi.listMeetingAgenda({ limit: 25, meetingId: id }),
         meetingReadApi.listMeetingDocuments({ limit: 25, meetingId: id }),
-        meetingReadApi.listMeetingOutcomes({ limit: 25, meetingId: id }),
         meetingReadApi.listMeetingParticipants({ limit: 25, meetingId: id })
       ])
-      return projectMeetingDetailRead(meeting, organizations, agenda, documents, outcomes, participants, apiBaseUrl, 25)
+      return projectMeetingDetailRead(meeting, organizations, agenda, documents, participants, apiBaseUrl, 25)
     }
-  }
-  if (calendarReadApi !== undefined) {
-    resolvers.calendar = async (id) => projectCalendarDetailRead(await calendarReadApi.getCalendarRead(id), apiBaseUrl)
   }
   return resolvers
 }

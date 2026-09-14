@@ -406,7 +406,6 @@ describe("createLegislationServer", () => {
       getBillVotes: async () => ({ billId, items: [] }),
       getBillText: async () => ({ sections: [] }),
       getBillTimeline: async () => ({ events: [] }),
-      getCalendar: async () => ({ items: [] }),
       getEvent: async () => ({ event: {} }),
       getOrganization: async () => ({ organization: {} }),
       getPerson: async () => ({ person: {} }),
@@ -438,7 +437,7 @@ describe("createLegislationServer", () => {
     try {
       await client.connect(transport)
       const tools = await client.listTools()
-      expect(tools.tools).toHaveLength(26)
+      expect(tools.tools).toHaveLength(25)
       for (const call of [
         { arguments: { mode: "lexical", query: "data" }, name: "search_bills" },
         { arguments: { id: billId }, name: "get_bill" },
@@ -454,7 +453,6 @@ describe("createLegislationServer", () => {
         { arguments: { classification: "committee", jurisdictionId: "jurisdiction:us" }, name: "search_organizations" },
         { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_events" },
         { arguments: { id: "event:congress:meeting-1" }, name: "get_event" },
-        { arguments: { jurisdictionId: "jurisdiction:us" }, name: "get_calendar" },
         { arguments: { billId }, name: "search_votes" },
         { arguments: { billId }, name: "get_bill_votes" },
         { arguments: { id: "vote:congress:house-1" }, name: "get_vote" },

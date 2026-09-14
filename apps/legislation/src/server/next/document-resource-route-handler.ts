@@ -1,6 +1,5 @@
 import { createAmendmentReadRepository } from "../../api/amendment-read-repository.js"
 import { createBillDetailReadRepository } from "../../api/bill-detail-read-repository.js"
-import { createCalendarReadRepository } from "../../api/calendar-read-repository.js"
 import { createChangeFeedApiHandler } from "../../api/change-feed-routes.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "../../api/core-read.js"
 import { createDocumentReadApiHandler, type DocumentReadApi } from "../../api/document-read-routes.js"
@@ -26,7 +25,6 @@ import {
 } from "../../db/queries/document-reads.js"
 import { listMeetingAgenda } from "../../db/queries/meeting-agenda-read.js"
 import { listMeetingDocuments } from "../../db/queries/meeting-document-read.js"
-import { listMeetingOutcomes } from "../../db/queries/meeting-outcome-read.js"
 import { listMeetingParticipants } from "../../db/queries/meeting-participant-reads.js"
 import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
 import { getNextLegislationApplication } from "./runtime.js"
@@ -107,7 +105,6 @@ export function createDocumentResourceHttpApiHandler(application: DocumentResour
             amendmentReadRepository: createAmendmentReadRepository(database, options.apiBaseUrl),
             apiBaseUrl: options.apiBaseUrl,
             billDetailReadRepository: createBillDetailReadRepository(database, options.apiBaseUrl),
-            calendarReadApi: createCalendarReadRepository(database),
             coreReadApi: application.queryService,
             documentReadApi,
             jurisdictionReadRepository: createJurisdictionReadRepository(database),
@@ -142,7 +139,6 @@ function createMeetingDetailReadApi(
   | "listMeetingAgenda"
   | "listMeetingDocuments"
   | "listMeetingOrganizations"
-  | "listMeetingOutcomes"
   | "listMeetingParticipants"
 > {
   const meetingRepository = createMeetingReadRepository(database)
@@ -151,7 +147,6 @@ function createMeetingDetailReadApi(
     listMeetingAgenda: async (input) => await listMeetingAgenda(database, input),
     listMeetingDocuments: async (input) => await listMeetingDocuments(database, input),
     listMeetingOrganizations: meetingRepository.listMeetingOrganizations,
-    listMeetingOutcomes: async (input) => await listMeetingOutcomes(database, input),
     listMeetingParticipants: async (input) => await listMeetingParticipants(database, input)
   }
 }

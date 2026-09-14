@@ -65,7 +65,6 @@ function service(): MeetingReadApi {
     listMeetingDocuments: async () => ({ items: [], truncated: false }),
     listMeetings: async () => ({ items: [meeting()], truncated: false }),
     listMeetingOrganizations: async () => [],
-    listMeetingOutcomes: async () => ({ items: [], truncated: false }),
     listMeetingParticipants: async () => ({ items: [], truncated: false })
   }
 }
@@ -201,7 +200,7 @@ describe("meeting read API handler", () => {
       error: { category: "not_found", correlationId: "missing-parent" }
     })
     const global = await fetch(
-      `${baseUrl}/api/meetings?billId=bill%3A1&calendarId=calendar%3A1&isRemote=false&jurisdictionId=jurisdiction%3Awa`
+      `${baseUrl}/api/meetings?billId=bill%3A1&isRemote=false&jurisdictionId=jurisdiction%3Awa`
     )
     expect(global.status).toBe(200)
     await expect(global.json()).resolves.toMatchObject({
@@ -209,7 +208,6 @@ describe("meeting read API handler", () => {
     })
     expect(received).toMatchObject({
       billId: "bill:1",
-      calendarId: "calendar:1",
       isRemote: false,
       jurisdictionId: "jurisdiction:wa",
       limit: 20

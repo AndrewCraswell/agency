@@ -66,7 +66,6 @@ export function createJurisdictionHttpApiHandler(application: JurisdictionRouteA
             ...meetingRepository,
             listMeetingAgenda: unavailableMeetingChild,
             listMeetingDocuments: unavailableMeetingChild,
-            listMeetingOutcomes: unavailableMeetingChild,
             listMeetingParticipants: unavailableMeetingChild
           },
           options

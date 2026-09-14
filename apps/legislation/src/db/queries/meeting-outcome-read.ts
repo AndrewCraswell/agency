@@ -93,15 +93,6 @@ export function buildMeetingOutcomeExistenceQuery(database: LegislationDatabase,
     .limit(1)
 }
 
-export async function assertMeetingOutcomeParentExists(
-  database: LegislationDatabase,
-  meetingId: string
-): Promise<void> {
-  if ((await buildMeetingOutcomeExistenceQuery(database, meetingId))[0] === undefined) {
-    throw new LegislationError("not_found", `Meeting ${meetingId} was not found`)
-  }
-}
-
 /**
  * `billId` intentionally resolves only through a persisted action or vote
  * target. Agenda links, event links, descriptions, and temporal proximity are
@@ -136,33 +127,6 @@ export function buildMeetingOutcomeReadQuery(database: LegislationDatabase, inpu
       )
     )
     .limit(1)
-}
-
-export async function listMeetingOutcomes(
-  database: LegislationDatabase,
-  input: MeetingOutcomeListInput
-): Promise<MeetingOutcomePage> {
-  const limit = parseLimit(input.limit)
-  const rows = await buildMeetingOutcomeListQuery(database, input)
-  const truncated = rows.length > limit
-  const items = rows.slice(0, limit)
-  const last = items.at(-1)
-  return {
-    items: items.map(meetingOutcomeReadFromPersistence),
-    nextCursor: truncated && last !== undefined ? encodeCursor(last, cursorScope(input)) : undefined,
-    truncated
-  }
-}
-
-export async function getMeetingOutcomeRead(
-  database: LegislationDatabase,
-  input: MeetingOutcomeLookup
-): Promise<MeetingOutcomeRead> {
-  const row = (await buildMeetingOutcomeReadQuery(database, input))[0]
-  if (row === undefined) {
-    throw new LegislationError("not_found", `Outcome ${input.outcomeId} was not found for meeting ${input.meetingId}`)
-  }
-  return meetingOutcomeReadFromPersistence(row)
 }
 
 /** Validates persisted canonical facts instead of filling missing fields from related records. */
@@ -244,17 +208,6 @@ function cursorPredicate(cursor: MeetingOutcomeCursor | undefined): SQL | undefi
         gt(eventOutcomes.sourceSequence, cursor.sourceSequence),
         and(eq(eventOutcomes.sourceSequence, cursor.sourceSequence), gt(eventOutcomes.id, cursor.id))
       )
-}
-
-function encodeCursor(row: MeetingOutcomePersistenceRead, scope: MeetingOutcomeCursorScope): string {
-  return Buffer.from(
-    JSON.stringify({
-      id: requiredText(row.id, "outcome ID"),
-      scope,
-      sourceSequence: nonnegativeInteger(row.sourceSequence, "outcome sourceSequence"),
-      version: 1
-    } satisfies MeetingOutcomeCursor)
-  ).toString("base64url")
 }
 
 function decodeCursor(value: string | undefined, scope: MeetingOutcomeCursorScope): MeetingOutcomeCursor | undefined {
@@ -411,13 +364,6 @@ function requiredDate(value: Date, name: string): Date {
 
 function nullableDate(value: Date | null, name: string): Date | null {
   return value === null ? null : requiredDate(value, name)
-}
-
-function nonnegativeInteger(value: number, name: string): number {
-  if (!isNonnegativeInteger(value)) {
-    throw new LegislationError("unprocessable", `${name} must be a nonnegative integer`)
-  }
-  return value
 }
 
 function isClassification(value: unknown): value is MeetingOutcomeClassification {

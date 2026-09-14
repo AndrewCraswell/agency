@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, or, type SQL } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -30,11 +30,11 @@ export interface MeetingAgendaPage {
 }
 
 export interface MeetingAgendaItemRead {
-  amendmentIds: string[]
-  billIds: string[]
+  amendmentIds: string[] | null
+  billIds: string[] | null
   description: string | null
   id: string
-  materialIds: string[]
+  materialIds: string[] | null
   meetingId: string
   ordinal: number
   source: {
@@ -82,7 +82,7 @@ type AgendaRelationIds = {
   materialIds: string[]
 }
 
-/** A deleted meeting and an incomplete agenda item are not public resources. */
+/** Publish source-described agenda items, preserving unknown relationships as null. */
 export function buildMeetingAgendaListQuery(database: LegislationDatabase, input: MeetingAgendaListInput) {
   const limit = parseLimit(input.limit)
   const scope = cursorScope(input)
@@ -157,21 +157,15 @@ export function meetingAgendaReadFromPersistence(
   value: MeetingAgendaPersistenceRead,
   relations: AgendaRelationIds | undefined
 ): MeetingAgendaItemRead {
-  if (
-    !value.agendaItem.canonicalFactsComplete ||
-    !value.agendaItem.billRelationsComplete ||
-    !value.agendaItem.amendmentRelationsComplete ||
-    !value.agendaItem.materialRelationsComplete ||
-    relations === undefined
-  ) {
+  if (relations === undefined) {
     throw new LegislationError("not_found", `Agenda item ${value.agendaItem.id} was not found`)
   }
   return {
-    amendmentIds: relations.amendmentIds,
-    billIds: relations.billIds,
+    amendmentIds: value.agendaItem.amendmentRelationsComplete ? relations.amendmentIds : null,
+    billIds: value.agendaItem.billRelationsComplete ? relations.billIds : null,
     description: nullableText(value.agendaItem.description, "agenda item description"),
     id: requiredText(value.agendaItem.id, "agenda item ID"),
-    materialIds: relations.materialIds,
+    materialIds: value.agendaItem.materialRelationsComplete ? relations.materialIds : null,
     meetingId: requiredText(value.agendaItem.eventId, "agenda item meetingId"),
     ordinal: nonnegativeInteger(value.agendaItem.ordinal, "agenda item ordinal"),
     source: {
@@ -183,7 +177,7 @@ export function meetingAgendaReadFromPersistence(
       upstreamIds: value.source.upstreamIds
     },
     status: nullableText(value.agendaItem.status, "agenda item status"),
-    title: requiredText(value.agendaItem.title, "agenda item title")
+    title: requiredText(value.agendaItem.title?.trim() || value.agendaItem.description, "agenda item title")
   }
 }
 
@@ -219,10 +213,8 @@ function agendaVisibility(meetingId: string): [SQL, ...SQL[]] {
   return [
     eq(eventAgendaItems.eventId, meetingId),
     eq(legislativeEvents.isDeleted, false),
-    eq(eventAgendaItems.canonicalFactsComplete, true),
-    eq(eventAgendaItems.billRelationsComplete, true),
-    eq(eventAgendaItems.amendmentRelationsComplete, true),
-    eq(eventAgendaItems.materialRelationsComplete, true)
+    sql`${legislativeEvents.sourceUrl} ~ '^https?://'`,
+    sql`length(trim(coalesce(nullif(${eventAgendaItems.title}, ''), ${eventAgendaItems.description}, ''))) > 0`
   ]
 }
 

@@ -4,7 +4,6 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { Command } from "commander"
 import { createLegislationApiHandler } from "../api/handlers.js"
-import { createRepresentativeLookupApi } from "../api/representative-lookup.js"
 import {
   createCanonicalResearchEvidenceRetriever,
   createOpenRouterResearchAnswerGenerator,
@@ -16,7 +15,6 @@ import {
   SubscriptionIdempotencyTransaction
 } from "../api/subscription-repository.js"
 import { createAes256GcmWebhookSecretProtector } from "../api/subscriptions.js"
-import { CensusAddressGeocoder, UsRepresentativeLookupProvider } from "../api/us-representative-lookup-provider.js"
 import { PostgresWebhookReadRepository } from "../api/webhook-read-repository.js"
 import { createWorkosAuthenticator } from "../auth/workos.js"
 import { decodeIdempotencyEncryptionKey, loadConfig, type LegislationConfig } from "../config/config.js"
@@ -371,20 +369,6 @@ async function serve() {
       ? undefined
       : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
   const queryService = new LegislationQueryService(database, retrievalClient)
-  const representativeLookupApi =
-    config.ingestion.openStatesApiKey === undefined
-      ? undefined
-      : createRepresentativeLookupApi(
-          new UsRepresentativeLookupProvider({
-            apiBaseUrl: config.server.publicApiBaseUrl,
-            geocoder: new CensusAddressGeocoder({ timeoutMs: config.ingestion.requestTimeoutMs }),
-            openStates: new OpenStatesClient({
-              apiKey: config.ingestion.openStatesApiKey,
-              baseUrl: new URL(config.ingestion.openStatesApiUrl),
-              http: openStatesHttpClient(config)
-            })
-          })
-        )
   const researchAnswerApi =
     retrievalClient === undefined
       ? undefined
@@ -418,7 +402,6 @@ async function serve() {
     apiHandler: createLegislationApiHandler(queryService, {
       apiBaseUrl: config.server.publicApiBaseUrl,
       documentDatabase: database,
-      ...(representativeLookupApi === undefined ? {} : { representativeLookupApi }),
       researchAnswerApi,
       ...(config.security.idempotencyEncryptionKey === undefined
         ? {}

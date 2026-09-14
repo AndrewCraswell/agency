@@ -992,7 +992,6 @@ async function startComposedServer(): Promise<string> {
     listMeetingAgenda: async () => ({ items: [], truncated: false }),
     listMeetingDocuments: async () => ({ items: [], truncated: false }),
     listMeetingOrganizations: async () => [],
-    listMeetingOutcomes: async () => ({ items: [], truncated: false }),
     listMeetingParticipants: async () => ({ items: [], truncated: false }),
     listMeetings: async () => ({ items: [meeting()], truncated: false })
   }

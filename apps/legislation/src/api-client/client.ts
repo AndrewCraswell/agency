@@ -326,10 +326,6 @@ export class LegislationApiClient {
     return this.#page({ method: "GET", path: `/api/organizations/${segment(id)}/bills`, query }, options)
   }
 
-  listOrganizationCalendars(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
-    return this.#page({ method: "GET", path: `/api/organizations/${segment(id)}/calendars`, query }, options)
-  }
-
   listMeetings(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: "/api/meetings", query }, options)
   }
@@ -356,17 +352,6 @@ export class LegislationApiClient {
   getMeetingDocument(meetingId: string, documentId: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
     return this.#resource(
       { method: "GET", path: `/api/meetings/${segment(meetingId)}/documents/${segment(documentId)}` },
-      options
-    )
-  }
-
-  listMeetingOutcomes(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
-    return this.#page({ method: "GET", path: `/api/meetings/${segment(id)}/outcomes`, query }, options)
-  }
-
-  getMeetingOutcome(meetingId: string, outcomeId: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
-    return this.#resource(
-      { method: "GET", path: `/api/meetings/${segment(meetingId)}/outcomes/${segment(outcomeId)}` },
       options
     )
   }
@@ -474,22 +459,6 @@ export class LegislationApiClient {
 
   listSessionMeetings(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: `/api/sessions/${segment(id)}/meetings`, query }, options)
-  }
-
-  listCalendars(query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
-    return this.#page({ method: "GET", path: "/api/calendars", query }, options)
-  }
-
-  getCalendar(id: string, options?: ApiRequestOptions): Promise<ResourceResponse> {
-    return this.#resource({ method: "GET", path: `/api/calendars/${segment(id)}` }, options)
-  }
-
-  listCalendarMeetings(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
-    return this.#page({ method: "GET", path: `/api/calendars/${segment(id)}/meetings`, query }, options)
-  }
-
-  lookupRepresentatives(body: ApiRequestBody, options?: ApiRequestOptions): Promise<ResourceResponse> {
-    return this.#resource({ body, method: "POST", path: "/api/representative-lookups" }, options)
   }
 
   getResources(body: ApiRequestBody, options?: ApiRequestOptions): Promise<BatchResponse> {

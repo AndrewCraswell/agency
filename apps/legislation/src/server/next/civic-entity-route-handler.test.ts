@@ -40,7 +40,6 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("../../api/http.js", () => ({ createCompositeHttpApiHandler: mocks.createComposite }))
 vi.mock("../../api/next/node-handler.js", () => ({ executeNextHttpApiHandler: mocks.execute }))
-vi.mock("../../api/calendar-read-routes.js", () => ({ createCalendarReadApiHandler: mocks.calendarHandler }))
 vi.mock("../../api/civic-scoped-read-routes.js", () => ({ createCivicScopedReadApiHandler: mocks.civicScopedHandler }))
 vi.mock("../../api/meeting-read-routes.js", () => ({ createMeetingReadApiHandler: mocks.meetingHandler }))
 vi.mock("../../api/organization-bill-read-routes.js", () => ({
@@ -97,7 +96,6 @@ describe("civic entity Next composition", () => {
 
     const options = { apiBaseUrl: "https://api.example.test" }
     for (const handler of [
-      mocks.calendarHandler,
       mocks.civicScopedHandler,
       mocks.meetingHandler,
       mocks.organizationBillHandler,
@@ -122,7 +120,7 @@ describe("civic entity Next composition", () => {
     if (!Array.isArray(handlers)) {
       throw new Error("Expected the composite handler to receive route handlers")
     }
-    expect(handlers).toHaveLength(13)
+    expect(handlers).toHaveLength(12)
 
     const routes = [
       ["GET", "/api/people"],
@@ -137,14 +135,14 @@ describe("civic entity Next composition", () => {
       ["GET", "/api/organizations/organization-1/members"],
       ["GET", "/api/organizations/organization-1/memberships/membership-1"],
       ["GET", "/api/organizations/organization-1/meetings"],
-      ["GET", "/api/organizations/organization-1/bills"],
-      ["GET", "/api/organizations/organization-1/calendars"]
+      ["GET", "/api/organizations/organization-1/bills"]
     ] as const
     for (const [method, url] of routes) {
       expect(await matchedHandlerCount(handlers, method, url)).toBe(1)
     }
 
     const excludedRoutes = [
+      ["GET", "/api/organizations/organization-1/calendars"],
       ["GET", "/api/people/person-1/terms"],
       ["GET", "/api/people/person-1/meetings"],
       ["GET", "/api/organizations/organization-1/memberships"],

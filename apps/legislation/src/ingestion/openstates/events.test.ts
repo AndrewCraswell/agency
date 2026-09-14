@@ -91,6 +91,7 @@ describe("Open States event normalization", () => {
     expect(cancelled.event.status).toBe("cancelled")
     expect(cancelled.agendaItems).toHaveLength(1)
     expect(cancelled.agendaItems[0]?.agendaItem.description).toBe("Corrected description")
+    expect(cancelled.agendaItems[0]?.agendaItem.title).toBe("Corrected description")
     expect(cancelled.documents).toHaveLength(1)
     expect(cancelled.participants).toHaveLength(1)
 

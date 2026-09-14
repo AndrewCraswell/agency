@@ -10,8 +10,6 @@ import * as agendaItem from "./[meetingId]/agenda/[agendaItemId]/route"
 import * as agenda from "./[meetingId]/agenda/route"
 import * as documentDetail from "./[meetingId]/documents/[eventDocumentId]/route"
 import * as documentList from "./[meetingId]/documents/route"
-import * as outcomeDetail from "./[meetingId]/outcomes/[outcomeId]/route"
-import * as outcomeList from "./[meetingId]/outcomes/route"
 import * as participantDetail from "./[meetingId]/participants/[participantId]/route"
 import * as participantList from "./[meetingId]/participants/route"
 import * as detail from "./[meetingId]/route"
@@ -43,8 +41,6 @@ const routes: readonly [string, RouteModule, string][] = [
     documentDetail,
     `https://legislation.test/api/meetings/${meetingId}/documents/document%3Afixture`
   ],
-  ["outcomes", outcomeList, `https://legislation.test/api/meetings/${meetingId}/outcomes?limit=1`],
-  ["outcome detail", outcomeDetail, `https://legislation.test/api/meetings/${meetingId}/outcomes/outcome%3Afixture`],
   ["participants", participantList, `https://legislation.test/api/meetings/${meetingId}/participants?limit=1`],
   [
     "participant detail",

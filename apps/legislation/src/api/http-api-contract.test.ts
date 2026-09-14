@@ -59,16 +59,16 @@ function operationId(operation: Pick<InventoryOperation, "method" | "path">): st
 }
 
 describe("HTTP API documentation contract", () => {
-  it("keeps all 88 inventory operations represented exactly once in their detailed contract pages", () => {
+  it("keeps all 81 inventory operations represented exactly once in their detailed contract pages", () => {
     const operations = inventory()
     const inventoryKeys = operations.map(({ method, path }) => `${method} ${path}`)
     const detailedKeys = contractPages.flatMap((page) =>
       [...document(page).matchAll(declaredOperation)].map((match) => match[1])
     )
 
-    expect(operations).toHaveLength(88)
-    expect(new Set(inventoryKeys)).toHaveProperty("size", 88)
-    expect(new Set(detailedKeys)).toHaveProperty("size", 88)
+    expect(operations).toHaveLength(81)
+    expect(new Set(inventoryKeys)).toHaveProperty("size", 81)
+    expect(new Set(detailedKeys)).toHaveProperty("size", 81)
     expect(new Set(detailedKeys)).toEqual(new Set(inventoryKeys))
   })
 
@@ -78,7 +78,7 @@ describe("HTTP API documentation contract", () => {
     const schemas = document("schemas.md")
 
     expect(operations.every(({ access }) => access === "Authenticated" || access === "First-party")).toBe(true)
-    expect(operations.filter(({ response }) => response.startsWith("Page<"))).toHaveLength(45)
+    expect(operations.filter(({ response }) => response.startsWith("Page<"))).toHaveLength(41)
     expect(operations.filter(({ response }) => response.startsWith("SearchPage<"))).toHaveLength(4)
     expect(operations.filter(({ response }) => response.startsWith("BatchResponse<"))).toHaveLength(4)
     expect(readme).toContain("The HTTP API accepts configured WorkOS M2M bearer tokens")
@@ -103,7 +103,7 @@ describe("HTTP API documentation contract", () => {
   it("derives a unique stable OpenAPI operation ID for every documented operation", () => {
     const ids = inventory().map(operationId)
 
-    expect(new Set(ids)).toHaveProperty("size", 88)
+    expect(new Set(ids)).toHaveProperty("size", 81)
     expect(ids).toContain("get__api__changes__by_changeId")
     expect(ids).toContain("get__api__bills__by_billId__votes")
     expect(ids).toContain("post__api__webhooks__by_webhookId__rotate_secret")

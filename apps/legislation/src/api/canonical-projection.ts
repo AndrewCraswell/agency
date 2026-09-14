@@ -180,9 +180,9 @@ export interface AgendaItem extends CanonicalFields {
   ordinal: number
   title: string
   description: string | null
-  billIds: string[]
-  amendmentIds: string[]
-  materialIds: string[]
+  billIds: string[] | null
+  amendmentIds: string[] | null
+  materialIds: string[] | null
   status: string | null
 }
 
@@ -229,8 +229,7 @@ export interface MeetingDetail extends MeetingSummary {
   participants: MeetingParticipant[]
   agenda: AgendaItem[]
   documents: EventDocument[]
-  outcomes: MeetingOutcome[]
-  childPageInfo: Record<"participants" | "agenda" | "documents" | "outcomes", ChildCollectionPageInfo>
+  childPageInfo: Record<"participants" | "agenda" | "documents", ChildCollectionPageInfo>
 }
 
 export interface CalendarSummary extends CanonicalFields {
@@ -571,7 +570,6 @@ export interface MeetingDetailProjectionInput {
   participants: readonly MeetingParticipant[]
   agenda: readonly AgendaItem[]
   documents: readonly EventDocument[]
-  outcomes: readonly MeetingOutcome[]
   childPageInfo: MeetingDetail["childPageInfo"]
 }
 
@@ -588,9 +586,9 @@ export type AgendaItemProjectionInput = SourceRecord & {
   ordinal: number
   title: string
   description: string | null
-  billIds: readonly string[]
-  amendmentIds: readonly string[]
-  materialIds: readonly string[]
+  billIds: readonly string[] | null
+  amendmentIds: readonly string[] | null
+  materialIds: readonly string[] | null
   status: string | null
 }
 
@@ -976,19 +974,16 @@ export function projectMeetingDetail(input: MeetingDetailProjectionInput, contex
   input.participants.forEach((participant) => validateMeetingParticipant(participant))
   input.agenda.forEach((item) => validateAgendaItem(item))
   input.documents.forEach((document) => validateEventDocument(document))
-  input.outcomes.forEach((outcome) => validateMeetingOutcome(outcome))
   return {
     ...projectMeetingSummary(input.meeting, context),
     organizations: input.organizations.map((organization) => structuredClone(organization)),
     participants: input.participants.map((participant) => structuredClone(participant)),
     agenda: input.agenda.map((item) => structuredClone(item)),
     documents: input.documents.map((document) => structuredClone(document)),
-    outcomes: input.outcomes.map((outcome) => structuredClone(outcome)),
     childPageInfo: {
       participants: pageInfo(input.childPageInfo.participants, "meeting participants"),
       agenda: pageInfo(input.childPageInfo.agenda, "meeting agenda"),
-      documents: pageInfo(input.childPageInfo.documents, "meeting documents"),
-      outcomes: pageInfo(input.childPageInfo.outcomes, "meeting outcomes")
+      documents: pageInfo(input.childPageInfo.documents, "meeting documents")
     }
   }
 }
@@ -1056,9 +1051,9 @@ export function projectAgendaItem(input: AgendaItemProjectionInput, context: Pro
     ordinal: nonnegativeInteger(input.ordinal, "agenda item ordinal"),
     title: required(input.title, "agenda item title"),
     description: input.description,
-    billIds: [...input.billIds],
-    amendmentIds: [...input.amendmentIds],
-    materialIds: [...input.materialIds],
+    billIds: input.billIds === null ? null : [...input.billIds],
+    amendmentIds: input.amendmentIds === null ? null : [...input.amendmentIds],
+    materialIds: input.materialIds === null ? null : [...input.materialIds],
     status: input.status
   }
 }
@@ -1572,12 +1567,6 @@ function validateEventDocument(input: EventDocument): void {
   required(input.title, "event document title")
   required(input.classification, "event document classification")
   absoluteUrl(input.sourceUrl, "event document sourceUrl")
-}
-
-function validateMeetingOutcome(input: MeetingOutcome): void {
-  validateCanonicalRecord(input, "meeting outcome")
-  required(input.meetingId, "meeting outcome meetingId")
-  required(input.description, "meeting outcome description")
 }
 
 function pageInfo(input: ChildCollectionPageInfo, label: string): ChildCollectionPageInfo {

@@ -8,7 +8,7 @@ application in `apps/legislation`, with one explicit `route.ts` for every docume
 [Next.js API migration plan](../nextjs-api-migration-plan.md) and the
 [HTTP API implementation backlog](../http-api-implementation-backlog.md).
 
-The 88 existing domain handlers are reusable implementation, not completed Next.js routes. The standalone server path
+The 81 existing domain handlers are reusable implementation, not completed Next.js routes. The standalone server path
 in `apps/legislation` is transitional source, not a live rollback service: the old Railway `legislation-api` service is
 deleted. The current unified `legislation-web` deployment is `f6a0534f-c56e-479f-b201-a086cd0f678a` from source
 snapshot `7bb8a68` at `https://legislation-web-production-b024.up.railway.app`; its successful verification, build, and
@@ -21,15 +21,15 @@ diverge.
 
 ## Migration state ledger
 
-The domain state is 88/88 **Done**. Explicit Next.js handler coverage is 88/88 in reviewed source and the current
+The domain state is 81/81 **Done**. Explicit Next.js handler coverage is 81/81 in reviewed source and the current
 production deployment. Subscription and webhook route and composition code plus focused local tests are deployed;
 Railway has the public WorkOS verifier configuration and both application encryption secrets. The Next.js Route Handler
-release state is 40/88 **Done**, 23
-**In progress**, 0 **Ready**, and 25 **Blocked**; these states sum to 88. Every Blocked route has a named production-data,
+release state is 40/81 **Done**, 23
+**In progress**, 0 **Ready**, and 25 **Blocked**; these states sum to 81. Every Blocked route has a named production-data,
 canonical-fixture, or dependency prerequisite. The 11 committed and deployed jurisdiction/session handlers passed all
 deployed operation and rejection checks. The corrected Alaska snapshot uses
 publisher classification
-`legislature`; production import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6,
+`legislature`; production import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e81fce5f0b7df44aadd357c` processed 6/6,
 and its idempotent rerun skipped 6. Production schema migrations through the current ledger are applied. The nationwide
 audit remains incomplete for 52 jurisdictions and 648 sessions.
 
@@ -151,21 +151,14 @@ ordering rule, and exception.
 | GET    | `/api/organizations/{organizationId}/memberships/{membershipId}` | Authenticated | `Membership` |
 | GET    | `/api/organizations/{organizationId}/meetings`    | Authenticated | `Page<MeetingSummary>`      |
 | GET    | `/api/organizations/{organizationId}/bills`       | Authenticated | `Page<BillSummary>`         |
-| GET    | `/api/organizations/{organizationId}/calendars`   | Authenticated | `Page<CalendarSummary>`     |
 | GET    | `/api/meetings`                                   | Authenticated | `Page<MeetingSummary>`      |
 | GET    | `/api/meetings/{meetingId}`                       | Authenticated | `MeetingDetail`             |
 | GET    | `/api/meetings/{meetingId}/agenda`                | Authenticated | `Page<AgendaItem>`          |
 | GET    | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | Authenticated | `AgendaItem`                |
 | GET    | `/api/meetings/{meetingId}/documents`             | Authenticated | `Page<EventDocument>`       |
 | GET    | `/api/meetings/{meetingId}/documents/{eventDocumentId}` | Authenticated | `EventDocument`       |
-| GET    | `/api/meetings/{meetingId}/outcomes`              | Authenticated | `Page<MeetingOutcome>`      |
-| GET    | `/api/meetings/{meetingId}/outcomes/{outcomeId}`  | Authenticated | `MeetingOutcome`            |
 | GET    | `/api/meetings/{meetingId}/participants`          | Authenticated | `Page<MeetingParticipant>`  |
 | GET    | `/api/meetings/{meetingId}/participants/{participantId}` | Authenticated | `MeetingParticipant` |
-| GET    | `/api/calendars`                                  | Authenticated | `Page<CalendarSummary>`     |
-| GET    | `/api/calendars/{calendarId}`                     | Authenticated | `CalendarDetail`            |
-| GET    | `/api/calendars/{calendarId}/meetings`            | Authenticated | `Page<MeetingSummary>`      |
-| POST   | `/api/representative-lookups`                     | First-party   | `RepresentativeLookupResult` |
 
 ### Search, diffs, subscriptions, and delivery
 

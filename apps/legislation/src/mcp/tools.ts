@@ -75,7 +75,6 @@ export type LegislationQueryApi = Readonly<{
   getBillVotes: (input: PageInput & Readonly<{ billId: string }>) => Promise<unknown>
   getBillText: (input: BillTextInput) => Promise<unknown>
   getBillTimeline: (input: PageInput & EntityInput) => Promise<unknown>
-  getCalendar: (input: PageInput & Readonly<{ jurisdictionId?: string; organizationId?: string }>) => Promise<unknown>
   getEvent: (input: EntityInput) => Promise<unknown>
   getOrganization: (input: EntityInput) => Promise<unknown>
   getPerson: (input: EntityInput) => Promise<unknown>
@@ -465,19 +464,6 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           outputSchema
         },
         (input) => tool("get_event", input, () => service.getEvent(input), logger, telemetry)
-      )
-      server.registerTool(
-        "get_calendar",
-        {
-          description: "Discover available chamber calendars by jurisdiction or organization.",
-          inputSchema: z.object({
-            ...pageSchema,
-            jurisdictionId: canonicalId("jurisdiction").optional(),
-            organizationId: canonicalId("organization").optional()
-          }),
-          outputSchema
-        },
-        (input) => tool("get_calendar", input, () => service.getCalendar(input), logger, telemetry)
       )
       server.registerTool(
         "search_votes",

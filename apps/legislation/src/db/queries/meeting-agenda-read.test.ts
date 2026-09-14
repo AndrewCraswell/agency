@@ -48,7 +48,7 @@ describe("meeting agenda repository", () => {
     expect(generated).toContain('"legislative_events"."is_deleted" =')
   })
 
-  it("binds agenda rows to a visible meeting and only selects complete canonical facts", () => {
+  it("binds agenda rows to a visible meeting and requires source-described content", () => {
     const cursor = Buffer.from(
       JSON.stringify({ id: agendaItemId, ordinal: 0, scope: { meetingId }, version: 1 })
     ).toString("base64url")
@@ -58,14 +58,11 @@ describe("meeting agenda repository", () => {
     expect(generated).toContain('inner join "legislation"."legislative_events"')
     expect(generated).toContain('"event_agenda_items"."event_id" =')
     expect(generated).toContain('"legislative_events"."is_deleted" =')
-    expect(generated).toContain('"event_agenda_items"."canonical_facts_complete" =')
-    expect(generated).toContain('"event_agenda_items"."bill_relations_complete" =')
-    expect(generated).toContain('"event_agenda_items"."amendment_relations_complete" =')
-    expect(generated).toContain('"event_agenda_items"."material_relations_complete" =')
+    expect(generated).toContain("length(trim(coalesce(")
+    expect(generated).not.toContain('"bill_relations_complete" =')
     expect(generated).toContain(
       'order by "legislation"."event_agenda_items"."ordinal" asc, "legislation"."event_agenda_items"."id" asc'
     )
-    expect(generated).not.toContain("coalesce")
   })
 
   it("binds a singular agenda item to both its meeting parent and item ID", () => {
@@ -93,18 +90,22 @@ describe("meeting agenda repository", () => {
 
     const incomplete = persistence()
     incomplete.agendaItem.materialRelationsComplete = false
-    expect(() =>
+    expect(
       meetingAgendaReadFromPersistence(incomplete, {
         amendmentIds: [],
         billIds: [],
         materialIds: []
       })
-    ).toThrow("was not found")
+    ).toMatchObject({ amendmentIds: [], billIds: [], materialIds: null })
   })
 
-  it("never substitutes a description for a missing canonical title", () => {
+  it("uses the source description as its display title, never inventing text", () => {
     const incomplete = persistence()
     incomplete.agendaItem.title = null
+    expect(
+      meetingAgendaReadFromPersistence(incomplete, { amendmentIds: [], billIds: [], materialIds: [] })
+    ).toMatchObject({ title: "Consider the budget proposal" })
+    incomplete.agendaItem.description = null
     expect(() =>
       meetingAgendaReadFromPersistence(incomplete, { amendmentIds: [], billIds: [], materialIds: [] })
     ).toThrow("agenda item title must not be empty")

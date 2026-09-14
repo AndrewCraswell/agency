@@ -99,7 +99,7 @@ export class OpenStatesClient {
       url.searchParams.set("end_date", openStatesDateTime(options.to))
       url.searchParams.set("page", String(page))
       url.searchParams.set("per_page", "20")
-      for (const include of ["agenda", "documents", "participants"]) {
+      for (const include of ["sources", "agenda", "documents", "participants"]) {
         url.searchParams.append("include", include)
       }
       const response = await this.#http.get(url, { headers: { "x-api-key": this.#apiKey } })

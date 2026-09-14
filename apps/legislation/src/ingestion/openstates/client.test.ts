@@ -33,6 +33,7 @@ describe("Open States entity client", () => {
     expect(requestUrls[1]?.searchParams.get("start_date")).toBe("2026-08-17T10:11:12")
     expect(requestUrls[1]?.searchParams.get("end_date")).toBe("2026-08-18T13:14:15")
     expect(requestUrls[1]?.searchParams.get("per_page")).toBe("20")
+    expect(requestUrls[1]?.searchParams.getAll("include")).toContain("sources")
   })
 
   it("paginates jurisdiction-scoped people and committee snapshots", async () => {

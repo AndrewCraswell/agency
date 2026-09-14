@@ -84,7 +84,6 @@ describe("document resource route handler", () => {
       amendmentReadRepository: expect.any(Object),
       apiBaseUrl: options.apiBaseUrl,
       billDetailReadRepository: expect.any(Object),
-      calendarReadApi: expect.any(Object),
       coreReadApi: {},
       documentReadApi: expect.any(Object),
       jurisdictionReadRepository: expect.any(Object),

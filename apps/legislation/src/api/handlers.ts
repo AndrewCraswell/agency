@@ -22,11 +22,6 @@ import {
   listMeetingAgenda
 } from "../db/queries/meeting-agenda-read.js"
 import { assertMeetingExists, listMeetingDocuments } from "../db/queries/meeting-document-read.js"
-import {
-  assertMeetingOutcomeParentExists,
-  getMeetingOutcomeRead,
-  listMeetingOutcomes
-} from "../db/queries/meeting-outcome-read.js"
 import { getMeetingParticipantRead } from "../db/queries/meeting-participant-read.js"
 import {
   assertMeetingExists as assertMeetingParticipantParentExists,
@@ -45,8 +40,6 @@ import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
 import { createBillRelatedReadApiHandler } from "./bill-related-read-routes.js"
 import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
 import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
-import { createCalendarReadRepository } from "./calendar-read-repository.js"
-import { createCalendarReadApiHandler } from "./calendar-read-routes.js"
 import { createChangeFeedApiHandler } from "./change-feed-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
@@ -63,7 +56,6 @@ import { createJurisdictionReadRepository } from "./jurisdiction-read-repository
 import { createJurisdictionReadApiHandler } from "./jurisdiction-read-routes.js"
 import { createMeetingAgendaReadApiHandler } from "./meeting-agenda-read-routes.js"
 import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-routes.js"
-import { createMeetingOutcomeReadApiHandler } from "./meeting-outcome-read-routes.js"
 import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
 import { createMeetingReadRepository } from "./meeting-read-repository.js"
@@ -83,12 +75,6 @@ import { createPersonDetailReadRepository } from "./person-detail-read-repositor
 import { createPersonDetailReadApiHandler } from "./person-detail-read-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
-import {
-  createRepresentativeLookupApi,
-  createRepresentativeLookupApiHandler,
-  UnavailableAddressToDistrictProvider,
-  type RepresentativeLookupApi
-} from "./representative-lookup.js"
 import {
   createResearchAnswerApiHandler,
   createUnavailableResearchAnswerApi,
@@ -132,7 +118,6 @@ export function createLegislationApiHandler(
     webhookMutationExecutor?: SubscriptionMutationExecutor
     webhookSecretProtector?: WebhookSecretProtector
     webhookReadRepository?: WebhookReadRepository
-    representativeLookupApi?: RepresentativeLookupApi
   }>
 ): HttpApiHandler {
   const documentDatabase = options.documentDatabase
@@ -156,9 +141,6 @@ export function createLegislationApiHandler(
     ...(documentReadApi === undefined ? {} : { documentReadApi })
   })
   return createCompositeHttpApiHandler([
-    createRepresentativeLookupApiHandler(
-      options.representativeLookupApi ?? createRepresentativeLookupApi(new UnavailableAddressToDistrictProvider())
-    ),
     createResourceBatchReadApiHandler(resourceBatchReadRepository),
     ...(documentReadApi === undefined ? [] : [createDocumentReadApiHandler(documentReadApi, options)]),
     ...(documentDatabase === undefined
@@ -227,12 +209,10 @@ export function createLegislationApiHandler(
               ...createMeetingReadRepository(documentDatabase),
               listMeetingAgenda: async (input) => await listMeetingAgenda(documentDatabase, input),
               listMeetingDocuments: async (input) => await listMeetingDocuments(documentDatabase, input),
-              listMeetingOutcomes: async (input) => await listMeetingOutcomes(documentDatabase, input),
               listMeetingParticipants: async (input) => await listMeetingParticipants(documentDatabase, input)
             },
             options
           ),
-          createCalendarReadApiHandler(createCalendarReadRepository(documentDatabase), options),
           createMeetingAgendaReadApiHandler(
             {
               assertMeetingExists: async (meetingId) =>
@@ -253,15 +233,6 @@ export function createLegislationApiHandler(
               assertMeetingExists: async (meetingId) =>
                 await assertMeetingParticipantParentExists(documentDatabase, meetingId),
               listMeetingParticipants: async (input) => await listMeetingParticipants(documentDatabase, input)
-            },
-            options
-          ),
-          createMeetingOutcomeReadApiHandler(
-            {
-              assertMeetingOutcomeParentExists: async (meetingId) =>
-                await assertMeetingOutcomeParentExists(documentDatabase, meetingId),
-              getMeetingOutcomeRead: async (input) => await getMeetingOutcomeRead(documentDatabase, input),
-              listMeetingOutcomes: async (input) => await listMeetingOutcomes(documentDatabase, input)
             },
             options
           ),

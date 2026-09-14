@@ -27,7 +27,6 @@ function createService(): LegislationQueryApi {
     getBillVotes: vi.fn<LegislationQueryApi["getBillVotes"]>(async ({ billId }) => ({ billId, items: [] })),
     getBillText: vi.fn<LegislationQueryApi["getBillText"]>(async ({ id }) => ({ id, sections: [] })),
     getBillTimeline: vi.fn<LegislationQueryApi["getBillTimeline"]>(async ({ id }) => ({ events: [], id })),
-    getCalendar: vi.fn<LegislationQueryApi["getCalendar"]>(async () => ({ items: [] })),
     getEvent: vi.fn<LegislationQueryApi["getEvent"]>(async ({ id }) => ({ event: { id } })),
     getOrganization: vi.fn<LegislationQueryApi["getOrganization"]>(async ({ id }) => ({ organization: { id } })),
     getPerson: vi.fn<LegislationQueryApi["getPerson"]>(async ({ id }) => ({ person: { id } })),
@@ -77,7 +76,6 @@ describe("legislation MCP tools", () => {
       "get_bill_timeline",
       "get_bill_votes",
       "get_bills",
-      "get_calendar",
       "get_event",
       "get_organization",
       "get_person",
@@ -117,7 +115,6 @@ describe("legislation MCP tools", () => {
     expect(tools.get("get_bill_timeline")).toEqual(expect.arrayContaining(["cursor", "limit"]))
     expect(tools.get("get_bill_timeline")).not.toEqual(expect.arrayContaining(["childCursor", "childLimit"]))
     expect(tools.get("find_related_bills")).not.toContain("includeSemantic")
-    expect(tools.get("get_calendar")).not.toEqual(expect.arrayContaining(["from", "to"]))
     for (const name of [
       "get_amendment",
       "get_event",
@@ -317,7 +314,6 @@ describe("legislation MCP tools", () => {
       { arguments: { id: "organization:congress:house" }, name: "get_organization" },
       { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_events" },
       { arguments: { id: "event:congress:meeting-1" }, name: "get_event" },
-      { arguments: { jurisdictionId: "jurisdiction:us" }, name: "get_calendar" },
       { arguments: { billId: "bill:us:119:hr:1234" }, name: "search_votes" },
       { arguments: { billId: "bill:us:119:hr:1234" }, name: "get_bill_votes" },
       { arguments: { id: "vote:congress:house-1" }, name: "get_vote" },

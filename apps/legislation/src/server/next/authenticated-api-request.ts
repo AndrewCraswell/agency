@@ -42,11 +42,6 @@ export async function executeAuthenticatedApiRequest(
       application.config.auth,
       dependencies.createAuthenticator
     )(request.headers.get("authorization") ?? undefined)
-    if (requiresFirstPartySession(request) && identity.credentialType !== "user-session") {
-      return apiErrorResponse(request, new LegislationError("forbidden", "A first-party user session is required"), {
-        headers: { "cache-control": "private, no-store" }
-      })
-    }
     const requestIdentity = { organizationId: identity.organizationId, userId: identity.userId }
     return await execute(request, handler, { requestContext: { identity: requestIdentity } })
   } catch (error) {
@@ -55,10 +50,6 @@ export async function executeAuthenticatedApiRequest(
     }
     return authenticationFailure(request)
   }
-}
-
-function requiresFirstPartySession(request: Request): boolean {
-  return request.method === "POST" && /^\/api\/representative-lookups\/?$/u.test(new URL(request.url).pathname)
 }
 
 function authenticatorFor(

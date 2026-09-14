@@ -1,5 +1,3 @@
-import { createCalendarReadRepository } from "../../api/calendar-read-repository.js"
-import { createCalendarReadApiHandler } from "../../api/calendar-read-routes.js"
 import { createCivicScopedReadApiHandler } from "../../api/civic-scoped-read-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "../../api/http.js"
 import { createMeetingReadRepository } from "../../api/meeting-read-repository.js"
@@ -127,7 +125,6 @@ export function createCivicEntityHttpApiHandler(application: CivicEntityApplicat
             ...meetingRepository,
             listMeetingAgenda: unavailableMeetingChild,
             listMeetingDocuments: unavailableMeetingChild,
-            listMeetingOutcomes: unavailableMeetingChild,
             listMeetingParticipants: unavailableMeetingChild
           },
           options
@@ -144,10 +141,6 @@ export function createCivicEntityHttpApiHandler(application: CivicEntityApplicat
           options
         ),
         isOrganizationBillsRoute
-      ),
-      restrictToRoutes(
-        createCalendarReadApiHandler(createCalendarReadRepository(database), options),
-        isOrganizationCalendarsRoute
       )
     ])
   )
@@ -237,10 +230,6 @@ function isOrganizationMeetingsRoute(request: Readonly<{ method?: string; url?: 
 
 function isOrganizationBillsRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
   return matchesSegments(request, ["api", "organizations", "id", "bills"])
-}
-
-function isOrganizationCalendarsRoute(request: Readonly<{ method?: string; url?: string }>): boolean {
-  return matchesSegments(request, ["api", "organizations", "id", "calendars"])
 }
 
 function matchesSegments(

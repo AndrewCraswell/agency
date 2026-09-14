@@ -187,13 +187,10 @@ describe("LegislationApiClient", () => {
     await api.listPersonAmendments("person:1", undefined, { correlationId })
     await api.listPersonVotes("person:1", undefined, { correlationId })
     await api.listOrganizationMeetings("organization:1", undefined, { correlationId })
-    await api.listOrganizationCalendars("organization:1", undefined, { correlationId })
     await api.listJurisdictionMeetings("jurisdiction:1", undefined, { correlationId })
     await api.listSessionMeetings("session:1", undefined, { correlationId })
-    await api.listCalendarMeetings("calendar:1", undefined, { correlationId })
     await api.listMeetingAgenda("meeting:1", undefined, { correlationId })
     await api.listMeetingDocuments("meeting:1", undefined, { correlationId })
-    await api.listMeetingOutcomes("meeting:1", undefined, { correlationId })
     await api.listMeetingParticipants("meeting:1", undefined, { correlationId })
 
     expect(fetch.mock.calls.map(([url, init]) => [new URL(String(url)).pathname, init?.method])).toEqual([
@@ -202,13 +199,10 @@ describe("LegislationApiClient", () => {
       ["/api/people/person%3A1/amendments", "GET"],
       ["/api/people/person%3A1/votes", "GET"],
       ["/api/organizations/organization%3A1/meetings", "GET"],
-      ["/api/organizations/organization%3A1/calendars", "GET"],
       ["/api/jurisdictions/jurisdiction%3A1/meetings", "GET"],
       ["/api/sessions/session%3A1/meetings", "GET"],
-      ["/api/calendars/calendar%3A1/meetings", "GET"],
       ["/api/meetings/meeting%3A1/agenda", "GET"],
       ["/api/meetings/meeting%3A1/documents", "GET"],
-      ["/api/meetings/meeting%3A1/outcomes", "GET"],
       ["/api/meetings/meeting%3A1/participants", "GET"]
     ])
   })
@@ -224,7 +218,7 @@ describe("LegislationApiClient", () => {
     expect(fetch.mock.calls[0]?.[1]?.method).toBe("GET")
   })
 
-  it("maps composed search, batch, representative, and research requests", async () => {
+  it("maps composed search, batch and research requests", async () => {
     const fetch = vi
       .fn<FetchLike>()
       .mockResolvedValueOnce(searchResponse([{ nextCursor: null, recordType: "bill", returned: 0 }]))
@@ -235,7 +229,6 @@ describe("LegislationApiClient", () => {
 
     await api.searchAll({ query: "housing" }, { correlationId })
     await api.getResources({ items: [{ id: "bill:1", type: "bill" }] }, { correlationId })
-    await api.lookupRepresentatives({ address: { country: "US", postalCode: "94103" } }, { correlationId })
     await api.answerLegislativeResearchQuestion(
       { question: "What changed?", scope: { billIds: ["bill:1"] } },
       { correlationId }
@@ -244,7 +237,6 @@ describe("LegislationApiClient", () => {
     expect(fetch.mock.calls.map(([url, init]) => [new URL(String(url)).pathname, init?.method, init?.body])).toEqual([
       ["/api/search/all", "POST", JSON.stringify({ query: "housing" })],
       ["/api/resources/batch", "POST", JSON.stringify({ items: [{ id: "bill:1", type: "bill" }] })],
-      ["/api/representative-lookups", "POST", JSON.stringify({ address: { country: "US", postalCode: "94103" } })],
       ["/api/research/answers", "POST", JSON.stringify({ question: "What changed?", scope: { billIds: ["bill:1"] } })]
     ])
   })

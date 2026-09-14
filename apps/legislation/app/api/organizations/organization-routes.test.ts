@@ -7,7 +7,6 @@ const { handleCivicEntityRequest } = vi.hoisted(() => ({
 vi.mock("../../../src/server/next/civic-entity-route-handler", () => ({ handleCivicEntityRequest }))
 
 import * as bills from "./[organizationId]/bills/route"
-import * as calendars from "./[organizationId]/calendars/route"
 import * as meetings from "./[organizationId]/meetings/route"
 import * as members from "./[organizationId]/members/route"
 import * as membership from "./[organizationId]/memberships/[membershipId]/route"
@@ -39,8 +38,7 @@ const routes: readonly [string, RouteModule, string][] = [
     `https://legislation.test/api/organizations/${organizationId}/memberships/membership%3Afixture`
   ],
   ["meetings", meetings, `https://legislation.test/api/organizations/${organizationId}/meetings?limit=1`],
-  ["bills", bills, `https://legislation.test/api/organizations/${organizationId}/bills?limit=1`],
-  ["calendars", calendars, `https://legislation.test/api/organizations/${organizationId}/calendars?limit=1`]
+  ["bills", bills, `https://legislation.test/api/organizations/${organizationId}/bills?limit=1`]
 ]
 
 beforeEach(() => {

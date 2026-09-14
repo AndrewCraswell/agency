@@ -1,3 +1,7 @@
+# Current scope update — September 14, 2026
+
+Calendar discovery was removed from the advertised MCP tools along with the deferred calendar HTTP endpoints. There are now 25 advertised tools. Historical smoke counts below describe the earlier 26-tool release. Passage search remains gated on complete copy validation.
+
 # Authenticated MCP smoke defects
 
 Source: September 12, 2026 authenticated production smoke, all 26 advertised tools, 42 evaluated requests. Sixteen tools passed exercised cases; eight had failures; two discovery tools returned empty lists. HTTP 200 with a tool or batch-item error is a failure.

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { LegislationError } from "../legislation/errors.js"
 import { close, createLegislationServer } from "../mcp/server.js"
 import { createLogger } from "../observability/logger.js"
-import { projectCalendarDetail, projectJurisdiction } from "./canonical-projection.js"
+import { projectJurisdiction } from "./canonical-projection.js"
 import type { ResourceBatchReadRepository, ResourceBatchRequestItem } from "./resource-batch-read-repository.js"
 import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
 
@@ -34,25 +34,6 @@ const jurisdiction = projectJurisdiction(
     name: "United States",
     sourceUrl: source.sourceUrl,
     timezone: "UTC"
-  },
-  { apiBaseUrl: "https://api.example.test", sources: [source], updatedAt: "2026-08-24T12:00:00.000Z" }
-)
-
-const calendar = projectCalendarDetail(
-  {
-    calendar: {
-      classification: "legislative",
-      id: "calendar:us",
-      isActive: true,
-      jurisdictionId: "jurisdiction:us",
-      name: "United States legislative calendar",
-      organizationId: null,
-      sourceUrl: source.sourceUrl,
-      timezone: "UTC"
-    },
-    coverageFrom: null,
-    coverageTo: null,
-    description: null
   },
   { apiBaseUrl: "https://api.example.test", sources: [source], updatedAt: "2026-08-24T12:00:00.000Z" }
 )
@@ -164,29 +145,11 @@ describe("resource batch read API handler", () => {
     })
   })
 
-  it("accepts calendar resources and rejects invalid outer requests", async () => {
-    const baseUrl = await start(
-      repository({ getResource: async (input) => (input.type === "calendar" ? calendar : jurisdiction) })
-    )
-    const calendarResponse = await fetch(`${baseUrl}/api/resources/batch`, {
-      body: JSON.stringify({ items: [{ id: "calendar:us", type: "calendar" }] }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-    expect(calendarResponse.status).toBe(200)
-    await expect(calendarResponse.json()).resolves.toEqual({
-      data: [
-        {
-          data: calendar,
-          id: "calendar:us",
-          status: "ok"
-        }
-      ],
-      links: { self: "/api/resources/batch" },
-      meta: { correlationId: expect.any(String), requested: 1, returned: 1, warnings: [] }
-    })
+  it("rejects removed calendar resources and invalid outer requests", async () => {
+    const baseUrl = await start(repository())
 
     for (const body of [
+      { items: [{ id: "calendar:us", type: "calendar" }] },
       {},
       { extra: true, items: [{ id: "jurisdiction:us", type: "jurisdiction" }] },
       { items: [] },

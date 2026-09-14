@@ -14,7 +14,6 @@ import {
   projectJurisdiction,
   projectLegislativeTerm,
   projectMeetingDetail,
-  projectMeetingOutcome,
   projectMeetingParticipant,
   projectMeetingSummary,
   projectMembership,
@@ -499,20 +498,6 @@ describe("canonical legislative projections", () => {
       },
       context
     )
-    const outcome = projectMeetingOutcome(
-      {
-        id: "outcome:1",
-        sourceUrl: meetingInput.sourceUrl,
-        meetingId: meetingInput.id,
-        agendaItemId: agenda.id,
-        classification: "note",
-        description: "No action taken",
-        billActionId: null,
-        voteId: null,
-        linkMethod: "explicit"
-      },
-      context
-    )
 
     expect(projectMeetingSummary(meetingInput, context)).toMatchObject({
       startsAt: "2026-03-01T18:00:00.000Z",
@@ -527,12 +512,10 @@ describe("canonical legislative projections", () => {
           participants: [participant],
           agenda: [agenda],
           documents: [document],
-          outcomes: [outcome],
           childPageInfo: {
             participants: { limit: 25, nextCursor: null, truncated: false },
             agenda: { limit: 25, nextCursor: null, truncated: false },
-            documents: { limit: 25, nextCursor: null, truncated: false },
-            outcomes: { limit: 25, nextCursor: null, truncated: false }
+            documents: { limit: 25, nextCursor: null, truncated: false }
           }
         },
         context

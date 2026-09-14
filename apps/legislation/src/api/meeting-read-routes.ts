@@ -1,7 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import type { MeetingAgendaPage } from "../db/queries/meeting-agenda-read.js"
 import type { MeetingDocumentPage, MeetingDocumentRead } from "../db/queries/meeting-document-read.js"
-import type { MeetingOutcomePage } from "../db/queries/meeting-outcome-read.js"
 import type { MeetingParticipantPage } from "../db/queries/meeting-participant-reads.js"
 import type { MeetingOrganizationRead, MeetingRead } from "../db/queries/meeting-read.js"
 import { LegislationError } from "../legislation/errors.js"
@@ -20,7 +19,6 @@ import {
 } from "./http.js"
 import { projectMeetingAgendaItemRead } from "./meeting-agenda-read-routes.js"
 import { projectMeetingDocumentRead } from "./meeting-document-read-routes.js"
-import { projectMeetingOutcomeRead } from "./meeting-outcome-read-routes.js"
 import { projectMeetingParticipantRead } from "./meeting-participant-projection.js"
 import { projectMeetingRead } from "./meeting-read-projection.js"
 import type { MeetingCollectionInput, MeetingReadRepository } from "./meeting-read-repository.js"
@@ -32,7 +30,6 @@ const MAX_CHILD_LIMIT = 25
 
 const GLOBAL_PARAMETERS = [
   "billId",
-  "calendarId",
   "classification",
   "cursor",
   "from",
@@ -58,7 +55,6 @@ const ORGANIZATION_PARAMETERS = ["classification", "cursor", "from", "limit", "s
 export interface MeetingReadApi extends MeetingReadRepository {
   listMeetingAgenda(input: { limit: number; meetingId: string }): Promise<MeetingAgendaPage>
   listMeetingDocuments(input: { limit: number; meetingId: string }): Promise<MeetingDocumentPage<MeetingDocumentRead>>
-  listMeetingOutcomes(input: { limit: number; meetingId: string }): Promise<MeetingOutcomePage>
   listMeetingParticipants(input: { limit: number; meetingId: string }): Promise<MeetingParticipantPage>
 }
 
@@ -129,12 +125,11 @@ async function handleDetail(
 ): Promise<void> {
   assertAllowedQueryParameters(url, ["childLimit"])
   const childLimit = queryInteger(url, "childLimit", DEFAULT_CHILD_LIMIT, MAX_CHILD_LIMIT)
-  const [meeting, organizations, agenda, documents, outcomes, participants] = await Promise.all([
+  const [meeting, organizations, agenda, documents, participants] = await Promise.all([
     service.getMeetingRead(meetingId),
     service.listMeetingOrganizations(meetingId),
     service.listMeetingAgenda({ limit: childLimit, meetingId }),
     service.listMeetingDocuments({ limit: childLimit, meetingId }),
-    service.listMeetingOutcomes({ limit: childLimit, meetingId }),
     service.listMeetingParticipants({ limit: childLimit, meetingId })
   ])
   sendApiJson(
@@ -142,16 +137,7 @@ async function handleDetail(
     200,
     apiResource(
       request,
-      projectMeetingDetailRead(
-        meeting,
-        organizations,
-        agenda,
-        documents,
-        outcomes,
-        participants,
-        apiBaseUrl,
-        childLimit
-      )
+      projectMeetingDetailRead(meeting, organizations, agenda, documents, participants, apiBaseUrl, childLimit)
     )
   )
 }
@@ -161,7 +147,6 @@ export function projectMeetingDetailRead(
   organizations: readonly MeetingOrganizationRead[],
   agenda: MeetingAgendaPage,
   documents: MeetingDocumentPage<MeetingDocumentRead>,
-  outcomes: MeetingOutcomePage,
   participants: MeetingParticipantPage,
   apiBaseUrl: string,
   childLimit: number
@@ -173,12 +158,10 @@ export function projectMeetingDetailRead(
     childPageInfo: {
       agenda: pageInfo(agenda, childLimit),
       documents: pageInfo(documents, childLimit),
-      outcomes: pageInfo(outcomes, childLimit),
       participants: pageInfo(participants, childLimit)
     },
     documents: documents.items.map((item) => projectMeetingDocumentRead(item, apiBaseUrl)),
     organizations: organizations.map((item) => projectOrganizationRow(item, apiBaseUrl)),
-    outcomes: outcomes.items.map((item) => projectMeetingOutcomeRead(item, apiBaseUrl)),
     participants: participants.items.map((item) => projectMeetingParticipantRead(item, apiBaseUrl))
   }
 }
@@ -200,7 +183,6 @@ function inputFromQuery(url: URL, route: MeetingCollectionRoute): MeetingCollect
   const statuses = route.name === "global" ? enumQueryValues(url, "status", MEETING_STATUSES) : undefined
   return {
     billId: route.name === "global" ? boundedQuery(url, "billId", 256) : undefined,
-    calendarId: route.name === "global" ? boundedQuery(url, "calendarId", 256) : undefined,
     cursor: boundedQuery(url, "cursor", 4096),
     from,
     isRemote: route.name === "global" ? booleanQuery(url, "isRemote") : undefined,

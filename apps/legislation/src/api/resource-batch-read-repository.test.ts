@@ -4,7 +4,6 @@ import type { PersonDetailRead } from "../db/queries/person-detail-read.js"
 import type { SessionRead } from "../db/queries/session-read.js"
 import type { VotePositionRead, VoteRead } from "../db/queries/vote-reads.js"
 import { LegislationError } from "../legislation/errors.js"
-import type { CalendarRead } from "./calendar-read-repository.js"
 import { projectAmendmentDetail, projectOrganizationDetail, type ProjectionContext } from "./canonical-projection.js"
 import { projectBillDetailRead } from "./canonical-read.js"
 import type { JurisdictionRead } from "./jurisdiction-read-repository.js"
@@ -99,7 +98,6 @@ const fixtureContext: ProjectionContext = {
 const resourceIds = {
   amendment: "amendment:us:119:1",
   bill: "bill:us:119:hr:1",
-  calendar: "calendar:us:119",
   document: documentRead.id,
   jurisdiction: jurisdiction.id,
   meeting: "meeting:us:119:1",
@@ -222,22 +220,6 @@ const sessionRead = {
   updatedAt: new Date("2026-08-24T12:00:00.000Z")
 } as SessionRead
 
-const calendarRead: CalendarRead = {
-  classification: "legislative-schedule",
-  coverageFrom: "2026-01-01",
-  coverageTo: "2026-12-31",
-  description: "Fixture calendar",
-  id: resourceIds.calendar,
-  isActive: true,
-  jurisdictionId: resourceIds.jurisdiction,
-  name: "Fixture calendar",
-  organizationId: resourceIds.organization,
-  sourceUrl: "https://source.example.test/calendar",
-  sources: fixtureContext.sources,
-  timezone: "UTC",
-  updatedAt: fixtureContext.updatedAt
-}
-
 const voteRead: VoteRead = {
   absentCount: 0,
   abstainCount: 0,
@@ -275,7 +257,7 @@ const voteRead: VoteRead = {
 }
 
 const meetingRead: MeetingRead = {
-  calendarId: resourceIds.calendar,
+  calendarId: "calendar:us:119",
   classification: "meeting",
   description: "Fixture meeting",
   endAt: null,
@@ -373,7 +355,7 @@ describe("CanonicalResourceBatchRepository", () => {
   it("fails closed when a canonical resolver is not available", async () => {
     const repository = createResourceBatchReadRepository({})
 
-    await expect(repository.getResource({ id: "calendar:us", type: "calendar" })).rejects.toMatchObject({
+    await expect(repository.getResource({ id: "jurisdiction:us", type: "jurisdiction" })).rejects.toMatchObject({
       category: "dependency_unavailable"
     })
   })
@@ -432,7 +414,6 @@ describe("CanonicalResourceBatchRepository", () => {
     const calls = {
       amendment: [] as string[],
       bill: [] as unknown[],
-      calendar: [] as string[],
       document: [] as string[],
       jurisdiction: [] as string[],
       meeting: [] as Array<readonly [string, unknown]>,
@@ -454,12 +435,6 @@ describe("CanonicalResourceBatchRepository", () => {
         getBillDetail: async (input) => {
           calls.bill.push(input)
           return billDetail
-        }
-      },
-      calendarReadApi: {
-        getCalendarRead: async (id) => {
-          calls.calendar.push(id)
-          return calendarRead
         }
       },
       coreReadApi: {
@@ -496,10 +471,6 @@ describe("CanonicalResourceBatchRepository", () => {
         listMeetingOrganizations: async (id) => {
           calls.meeting.push(["listMeetingOrganizations", id])
           return []
-        },
-        listMeetingOutcomes: async (input) => {
-          calls.meeting.push(["listMeetingOutcomes", input])
-          return { items: [], truncated: false }
         },
         listMeetingParticipants: async (input) => {
           calls.meeting.push(["listMeetingParticipants", input])
@@ -546,7 +517,6 @@ describe("CanonicalResourceBatchRepository", () => {
     expect(calls).toEqual({
       amendment: [resourceIds.amendment],
       bill: [{ childLimit: 25, id: resourceIds.bill }],
-      calendar: [resourceIds.calendar],
       document: [resourceIds.document],
       jurisdiction: [resourceIds.jurisdiction],
       meeting: [
@@ -554,7 +524,6 @@ describe("CanonicalResourceBatchRepository", () => {
         ["listMeetingOrganizations", resourceIds.meeting],
         ["listMeetingAgenda", { limit: 25, meetingId: resourceIds.meeting }],
         ["listMeetingDocuments", { limit: 25, meetingId: resourceIds.meeting }],
-        ["listMeetingOutcomes", { limit: 25, meetingId: resourceIds.meeting }],
         ["listMeetingParticipants", { limit: 25, meetingId: resourceIds.meeting }]
       ],
       organization: [{ childLimit: 25, organizationId: resourceIds.organization }],

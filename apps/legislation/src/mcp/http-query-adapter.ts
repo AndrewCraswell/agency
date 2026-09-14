@@ -67,7 +67,6 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
         warnings: page.meta.warnings
       }
     },
-    getCalendar: async (input) => pageData(await api.listCalendars(query(input), requestOptions())),
     getEvent: async ({ id }) => resourceData(await api.getMeeting(id, requestOptions())),
     getOrganization: async ({ id }) => resourceData(await api.getOrganization(id, undefined, requestOptions())),
     getPerson: async ({ id }) => resourceData(await api.getPerson(id, undefined, requestOptions())),
@@ -118,7 +117,6 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
     getBillVotes: async (input) => await apiCall(() => adapter.getBillVotes(input)),
     getBillText: async (input) => await apiCall(() => adapter.getBillText(input)),
     getBillTimeline: async (input) => await apiCall(() => adapter.getBillTimeline(input)),
-    getCalendar: async (input) => await apiCall(() => adapter.getCalendar(input)),
     getEvent: async (input) => await apiCall(() => adapter.getEvent(input)),
     getOrganization: async (input) => await apiCall(() => adapter.getOrganization(input)),
     getPerson: async (input) => await apiCall(() => adapter.getPerson(input)),
