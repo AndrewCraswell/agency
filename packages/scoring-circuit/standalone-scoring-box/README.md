@@ -33,8 +33,8 @@ component models are referenced without duplicate copies.
   and IR application. Share the C17 scoring core and application source with the virtual box; use board-specific
   pin/power/transport configuration, not necessarily identical firmware binaries.
 - **J3/J4:** left/right ABC solder-wire pads on opposite edges. **J5:** bottom-edge piste solder-wire pad. All connect
-  to enclosure-mounted banana sockets with strain relief; these PCB pads are not the external sockets. The owner's Ok
-  Fencing cable compatibility remains accepted. Piste is a scoring reference, not protective earth.
+  to external banana sockets through soldered wires; these PCB pads are not the external sockets. The owner's Ok Fencing
+  cable compatibility remains accepted. Piste is a scoring reference, not protective earth.
 - **J7/J8:** HUB75 signal and separate 5V power for one Waveshare RGB-Matrix-P5-64x32, SKU 25848, 1/16-scan display. The
   panel and harnesses are external to this PCB assembly. Keep the inherited FM6127 initialization and unused E-line
   handling in the display adapter.
@@ -46,8 +46,9 @@ component models are referenced without duplicate copies.
   pins and the old STM32 USB/presence pins are explicitly unconnected. There is no laptop USB data mode.
 
 USB-C is on the left edge beside its controller. Ethernet remains on the bottom edge and the two Favero ports on the top
-edge, retaining the combined board's connector geometry. The ESP32 antenna projects beyond the top edge. Final enclosure
-clearance and mechanical access with actual cables still need confirmation.
+edge, retaining the combined board's connector geometry. The ESP32 antenna projects beyond the top edge. This prototype
+is a bare-board build with no enclosure; enclosure design or fit approval is not an ordering prerequisite. Secure and
+insulate external wiring for bench use.
 
 ### Mounting and Ethernet fit
 
@@ -96,20 +97,35 @@ and [WIZnet Ethernet guidance](https://docs.wiznet.io/Design-Guide/hardware_desi
 measured current rating or impedance certification: the fabricator's actual stackup, temperature rise, connector losses
 and panel startup load still belong to the power/manufacturing review.
 
-Ethernet transmit copper measures 30.2676mm per leg. Receive copper, including both sides of the series resistors,
-measures 31.7467mm and 31.5467mm, a 0.20mm difference. These paths exceed WIZnet's preferred 25mm length but remain
-below its 75mm limit; they are not a claim of an optimal layout or verified 100-ohm impedance.
+Ethernet transmit copper measures 30.2676mm per leg. Receive copper, including both sides of coupling capacitors
+C52/C53, measures 31.7467mm and 31.5467mm, a 0.20mm difference. These paths exceed WIZnet's preferred 25mm length but
+remain below its 75mm limit; they are not a claim of an optimal layout or verified 100-ohm impedance.
 
 The saved dielectric/copper stack matches the published [JLC04161H-7628 stackup](https://jlcpcb.com/impedance): 0.2104mm
-outer prepreg, 1.065mm core, 0.035mm outer copper and 0.0152mm inner copper. Select that construction in the quote. The
-online impedance calculator did not return a width. An independent first-order screen on 2026-09-13 uses the
+outer prepreg, 1.065mm core, 0.035mm outer copper and 0.0152mm inner copper. Select that construction in the quote. An
+independent first-order screen on 2026-09-13 uses the
 [TI edge-coupled microstrip equations, Figure 9-4](https://www.ti.com/lit/ds/symlink/sn65mlvd203b.pdf):
 `Z0 = 87/sqrt(Er+1.41) * ln(5.98*H/(0.8*W+T))` and `Zdiff = 2*Z0*(1-0.48*exp(-0.96*S/H))`. With H=0.2104mm, W=0.25mm,
 T=0.035mm, edge gap S=0.25mm and Er=4.4, the result is **60.56 ohms single-ended / 102.54 ohms differential**. Keep the
 existing pair geometry; it is within the nominal 90-110 ohm target window. This is an analytical screen, not a
 field-solver or manufacturing qualification: solder mask, copper etch/plating, dielectric tolerance, pad escapes and
-connector transitions are not included. Request the fabricator's finished-stackup calculation and impedance coupon
-before manufacturing approval.
+connector transitions are not included.
+
+On 2026-09-13 the [JLCPCB calculator](https://jlcpcb.com/pcb-impedance-calculator) successfully returned widths for the
+same four-layer, 1.6mm, 1oz outer/0.5oz inner construction, L1 signals referenced to L2, and a 100-ohm target:
+
+| Calculator model, with solder mask | Pair edge spacing | Adjacent ground clearance | Calculated width |
+| ---------------------------------- | ----------------: | ------------------------: | ---------------: |
+| Non-coplanar differential pair     |          0.2499mm |                      none |         0.2545mm |
+| Coplanar differential pair         |          0.2499mm |                  0.2499mm |         0.2418mm |
+
+Spacing/clearance inputs were 0.25mm; the table records the calculator's displayed rounded values. The board's main
+traces are 0.25mm wide and its ground zones use 0.25mm clearance. This is a nominal design cross-check, not an impedance
+measurement: local 0.20mm neck-downs, changing coupling and pad/connector transitions still need the production review.
+No copper was changed to chase the calculator's last decimal. Obtain the fabricator's approval of the actual routing
+against **100 ohms differential, +/-10%**, and its coupon/test result before manufacturing acceptance. The calculator
+result does not count as that factory response. The precise request is in
+[power-handoff.md](power-handoff.md#factory-confirmation-request).
 
 ## Simpler standalone power
 
@@ -152,10 +168,12 @@ The reviewed export contains 199 BOM rows, 199 matching placements and 13 Gerber
 board's lower-left corner. The assembly drawing includes the custom connector and power-part references; these added
 fabrication-layer labels do not change the visible silkscreen, component positions or copper.
 
-The four offline power-profile tests pass (`python -B test_power_profile.py`). The latest 2026-09-13 repository-wide
-`pnpm verify` run passed its format/lint/types/knip phase and all 969 scoring tests. Its existing 100% scoring coverage
-gate still fails with statements 95.44%, branches 93.78%, functions 99.79% and lines 96.09%. No thresholds were lowered;
-this is separate from the native board/export checks, and repository-wide verification is not clean.
+The four offline power-profile tests pass (`python -B test_power_profile.py`). The manufacturing-handoff `pnpm verify`
+run passed format/lint/types/knip, then reported 968 scoring tests passed and one 5-second timeout in
+`observatory-integration.test.ts`. That file passed all three tests on a focused rerun without changing its timeout or
+source. The preceding coverage run was also below the existing 100% gate: statements 95.44%, branches 93.78%, functions
+99.79% and lines 96.09%. No thresholds were lowered. These are separate from the native board/export checks;
+repository-wide verification is not clean.
 
 Use **default green solder mask** for the prototype order as requested. Both the CAD stackup and order handoff use
 green; Gerbers describe mask openings, not pigment. Confirm the actual supplier option before ordering.
@@ -273,9 +291,10 @@ review all 199 placements; do not omit any of them to advance the assembly draft
 1. Obtain owner approval for the prepared exact-part purchase, complete sourcing and warehouse receipt, then assign the
    four private-inventory references, inspect every supplier placement and obtain the complete SMT/THT assembly quote.
    Do not submit an order or contact support without the owner's permission.
-2. Obtain the fabricator's finished-stackup impedance confirmation and agree its U5 programming/readback method. Confirm
-   enclosure/cable access and external wiring responsibilities. These items prevent manufacturing release; the saved
-   draft and clean CAD checks do not waive them.
+2. Obtain the fabricator's finished-stackup impedance confirmation and agreement to U5's five-sector I2C programming,
+   readback and cold-start checks. The calculator cross-check and programming handoff are prepared, but no factory
+   acceptance or actual U5 readback is available. Contact requires the owner's permission. No enclosure review is
+   required for this bare-board prototype.
 3. On assembled hardware, verify power, insulation, startup/faults, acquisition timing, display, Ethernet, repeaters, IR
    and audio before connecting fencing equipment. CAD checks cannot substitute for those measurements.
 

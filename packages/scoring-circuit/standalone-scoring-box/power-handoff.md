@@ -1,6 +1,7 @@
 # Standalone power and assembly handoff
 
-Engineering review: 2026-09-12. Applies only to this standalone board. No assembled board has been tested.
+Engineering review: 2026-09-12; manufacturing handoff updated 2026-09-13. Applies only to this standalone board. No
+assembled board has been tested. This prototype has no enclosure.
 
 ## Supply decision
 
@@ -30,8 +31,8 @@ not manufacturer guarantees.
 
 The exact RECOM 9-24V derating curve reaches full load through approximately **50C local ambient**, then decreases. At
 60C it permits approximately 24.55W, insufficient for this budget. Use a **45C commissioning target and 50C full-load
-local-ambient ceiling** until measurements establish the enclosure's behavior. Its reference test PCB differs from ours.
-Do not infer an enclosure rating from the curve.
+local-ambient ceiling** until measurements establish the open-board thermal behavior. Its reference test PCB differs
+from ours. Do not infer a future enclosure rating from the curve.
 
 U4 dissipates approximately 0.34W at 200mA and nominal rails. Its published SOT25 thermal resistance gives about 63C
 rise, before board-specific cooling effects. Measure U4 as well as U6; its 600mA rating is not a usable board current
@@ -117,21 +118,45 @@ The mapping was checked against the library implementation; no ST GUI export or 
 ## Assembly and first-article acceptance
 
 Request SMT **and through-hole** assembly. Fit every purchased BOM item, including U6, programming headers, IR, sounder,
-Ethernet, Favero and HUB75 connectors. J3/J4/J5 are bare solder terminations, not missing purchased parts. Agree who
-installs the enclosure-mounted banana sockets and their soldered/strain-relieved wires, plus the separate panel and
-harnesses. A PCB-assembly quote alone does not include that enclosure wiring or the display.
+Ethernet, Favero and HUB75 connectors. J3/J4/J5 are bare solder terminations, not missing purchased parts. The prototype
+has no enclosure. External banana sockets, soldered/secured/insulated wires, the separate panel and harnesses are not
+included in the PCB assembly; there is no enclosure-fit approval step.
 
 The four 3.2mm mounting holes require insulating M3 hardware with heads/washers no larger than 6mm; their coordinates
 are in the project README. The jack footprint/body envelope was checked against its manufacturer drawing, but the exact
-jack model is not displayed in the 3D preview. Before ordering: confirm enclosure retention and cable access, final
-stackup/impedance, parts availability and factory programming capability. The exporter creates a **review draft**, not
-manufacturing approval; use default green mask for the prototype order.
+jack model is not displayed in the 3D preview. Before ordering: confirm final stackup/impedance, parts availability and
+factory programming capability. The exporter creates a **review draft**, not manufacturing approval; use default green
+mask for the prototype order.
 
 [JLCPCB's programming service](https://jlcpcb.com/help/article/pcba-programming-service) is offered for Standard PCBA
 after assembly and requires programming files and interface instructions. This does not establish that their fixture
 supports STUSB4500's five-sector NVM protocol. Select programming/functional-test review in the draft if available, but
 do not release production without that capability and first-article readback being agreed. No supplier contact or
 programming-service approval is implied by this handoff.
+
+### Factory confirmation request
+
+Prepared for the standalone draft `35c0fdd6e3324e1b85591293ca0d5e9c`; **not sent**. A factory response is needed to
+close these two points. Do not substitute the virtual-board draft or infer acceptance from the selected order options.
+
+1. **Ethernet:** confirm 100-ohm differential impedance, +/-10%, on the actual submitted L1 routing referenced to L2
+   using JLC04161H-7628, 1oz outer/0.5oz inner copper. Review `ETH_TX_P/N` and the receive path `ETH_RX_P/N` through to
+   `ETH_RX_JACK_P/N`, including pad transitions and 0.20mm local neck-downs. The main traces/edge gap are 0.25/0.25mm;
+   nearby GND fill has 0.25mm clearance. JLCPCB's calculator returns 0.2545mm width without coplanar ground and 0.2418mm
+   with 0.25mm coplanar clearance for the 100-ohm target. Confirm the production geometry and provide an impedance
+   coupon/test report. Return proposed copper or stackup changes for approval before applying them.
+2. **U5 STUSB4500QTR:** confirm that the post-assembly station supports ST's five-sector I2C NVM sequence, not generic
+   EEPROM writes. J12 is pin 1 USB_GND, pin 2 SDA, pin 3 SCL; 7-bit address 0x28, 3.3V open-drain signalling, and
+   onboard 4.7k pull-ups. Use the procedure above to read 40 bytes, prepare/inspect the product settings, write, compare
+   all 40 bytes and cold-cycle J1. Confirm who prepares the lot image from the actual initial readback, which programmer
+   and ST utility/library are used, and that first-article readback and power checks will be returned before the rest of
+   the lot proceeds. A 5V-only source must leave PANEL_5V off; an accepted 20V/3A contract must enable the supply.
+
+ST explicitly documents both an offline GUI configuration/export route and an I2C NVM-library route. Our existing helper
+uses actual device readback to preserve unrelated settings. A synthetic fixture is not a deliverable programming image.
+JLCPCB's published service requires a HEX/BIN file and review of the programming method; the attached helper and
+instructions alone do not establish their acceptance of the read/prepare/write route. Resolve that with their engineers
+before calling factory configuration complete. This does not require a new PCB controller or architectural redesign.
 
 On the first article, measure cold/loaded startup, 5V-only rejection, detach, short-circuit/latch recovery, whole-board
 current, 5V at the panel, both 3.3V rails and temperature at full display/radio/network load. Test insulation and the
