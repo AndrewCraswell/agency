@@ -13,8 +13,8 @@ cost saving.
 
 **This is a routed engineering checkpoint, not an order-ready board.** Changed circuits have new routing; unchanged
 local circuits were reused only with matching pad positions and net assignments. Insulation and antenna keepouts remain.
-The power desk review and factory programming procedure are supplied in [power-handoff.md](power-handoff.md). Physical
-power qualification and manufacturing review below are still required. CAD checks do not establish electrical
+The power desk review and post-delivery programming procedure are supplied in [power-handoff.md](power-handoff.md).
+Physical power qualification and manufacturing review below are still required. CAD checks do not establish electrical
 performance or FIE approval.
 
 KiCad 10.0.6 verification on **2026-09-13**: **0 ERC violations, 0 DRC violations, 0 unconnected items and 0
@@ -122,10 +122,9 @@ same four-layer, 1.6mm, 1oz outer/0.5oz inner construction, L1 signals reference
 Spacing/clearance inputs were 0.25mm; the table records the calculator's displayed rounded values. The board's main
 traces are 0.25mm wide and its ground zones use 0.25mm clearance. This is a nominal design cross-check, not an impedance
 measurement: local 0.20mm neck-downs, changing coupling and pad/connector transitions still need the production review.
-No copper was changed to chase the calculator's last decimal. Obtain the fabricator's approval of the actual routing
-against **100 ohms differential, +/-10%**, and its coupon/test result before manufacturing acceptance. The calculator
-result does not count as that factory response. The precise request is in
-[power-handoff.md](power-handoff.md#factory-confirmation-request).
+No copper was changed to chase the calculator's last decimal. Retain **100 ohms differential, +/-10%** in the order's
+impedance requirements and review the returned production files and coupon/test result. This is the ordinary fabrication
+check, not a requirement to contact support before preparing the prototype order.
 
 ## Simpler standalone power
 
@@ -142,10 +141,11 @@ around U6. C45 is now 1nF C0G: the nominal eFuse output ramp is about 10ms rathe
 reduces startup overlap without adding components. The [power handoff](power-handoff.md) records assumptions, tolerance
 calculations, limits and measurements still needed.
 
-**Factory configuration is still required.** Program and read back U5 through primary-domain J12 with exactly two sink
-PDOs: 5V/0.5A, then fixed 20V/3A, and the listed status settings. `prepare-power-profile.py` prepares those settings
-from an actual 40-byte NVM readback while preserving unrelated bits. The procedure and offline byte tests are supplied;
-no real device readback, factory-qualified image or hardware programming result is available yet.
+**Configuration is required before first use and will be done after delivery.** Program and read back U5 through
+primary-domain J12 with exactly two sink PDOs: 5V/0.5A, then fixed 20V/3A, and the listed status settings.
+`prepare-power-profile.py` prepares those settings from an actual 40-byte NVM readback while preserving unrelated bits.
+The procedure and offline byte tests are supplied; no real device readback, factory-qualified image or hardware
+programming result is available yet.
 
 Q4/Q5 retain both active-low `POWER_OK2` and `VBUS_EN_SNK` qualification. Together they inhibit U20 until the requested
 PDO2 contract is accepted and remove its enable on detach. This uses the controller's documented standalone behavior,
@@ -181,8 +181,8 @@ green; Gerbers describe mask openings, not pigment. Confirm the actual supplier 
 ### Current JLCPCB draft
 
 The separate [standalone assembly draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=35c0fdd6e3324e1b85591293ca0d5e9c)
-was configured on 2026-09-12 and its revised BOM/placements verified on **2026-09-13**. The existing virtual-board draft
-remains untouched. Nothing was submitted, paid for or sent to support.
+was configured on 2026-09-12; its revised BOM/placements were checked on 2026-09-13 and live inventory refreshed on
+**2026-09-14**. It is separate from the virtual-board draft. Nothing was submitted, paid for or sent to support.
 
 - Four layers, 165 x 100mm, 1.6mm, TG155, green mask, white silk, ENIG, 1oz outer/0.5oz inner copper and
   **JLC04161H-7628** construction. The 0.2mm-via option adds four-wire testing. Impedance control is selected at +/-10%,
@@ -196,10 +196,10 @@ remains untouched. Nothing was submitted, paid for or sent to support.
   `7387D2A76A82E2785578438EF19FFCEA299DF2A01581D353D708A00965DFA252`. Updated BOM and placement files from
   `output/manufacturing-20260913-011725/` were subsequently uploaded; both contain 199 references. Sourcing changes did
   not move components, change pads/drills/nets, or alter routed copper.
-- The assembly draft has **195 selected references with exact requested MPNs**, two shortage references (J9/J10, four TE
-  connectors required across the two assemblies), and two unmatched references (J8/U6). Exact Global Sourcing offers for
-  all four references are now identified below; they are not yet purchased or available in private inventory. J1 was
-  explicitly reselected after upload left its quantity at zero; it now has quantity two and is selected.
+- The assembly draft has **194 confirmed references**, three shortage references (J9/J10/U20) and two unmatched
+  references (J8/U6). U20's previously available public stock has been depleted. Exact Global Sourcing offers for all
+  five references are identified below; they are not yet purchased or available in private inventory. J1 was explicitly
+  reselected after upload left its quantity at zero; it now has quantity two and is selected.
 - The preliminary **$128.67** is fabrication/options for five PCBs with rails, **not** assembled-board cost. Components,
   assembly, programming, shipping and tax are not a finished quote.
 
@@ -254,47 +254,57 @@ lead-free soldering. [J2](https://www.samtec.com/products/htsw-105-07-g-s) and
 
 ### Remaining parts: exact sources found
 
-All three remaining part types are available through **JLCPCB Global Sourcing**, with no substitute or PCB change. On
-2026-09-13 the account already contained these three unpurchased cart lines. Only these lines were selected for the
-standalone two-assembly checkout; the other 21 sourcing-cart lines were left unchanged and unselected.
+All four remaining part types have exact offers through **JLCPCB Global Sourcing**, with no substitute or PCB change.
+The 2026-09-14 refresh added U20 to the three existing unpurchased lines. The shared sourcing cart also now contains the
+virtual board's exact transformer and logic gate; the other 21 earlier cart lines remain unchanged and unselected.
 
-| Board references | Exact part          | JLCPCB sourcing distributor / SKU | Distributor stock shown | Purchase quantity | Line price (USD) |
-| ---------------- | ------------------- | --------------------------------- | ----------------------: | ----------------: | ---------------: |
-| U6               | RECOM REC30K-2405SZ | DigiKey / 945-REC30K-2405SZ-ND    |                     252 |                 2 |           $71.75 |
-| J9, J10          | TE 5520250-2        | DigiKey / A31405-ND               |                   2,019 |                 4 |           $11.31 |
-| J8               | Wurth 645004114822  | RS Components / 645004114822      |                     179 |                10 |            $6.14 |
+| Board references | Exact part          | JLCPCB sourcing distributor / SKU  | Distributor stock shown | Purchase quantity | Line price (USD) |
+| ---------------- | ------------------- | ---------------------------------- | ----------------------: | ----------------: | ---------------: |
+| U6               | RECOM REC30K-2405SZ | DigiKey / 945-REC30K-2405SZ-ND     |                     252 |                 2 |           $71.75 |
+| J9, J10          | TE 5520250-2        | DigiKey / A31405-ND                |                   2,019 |                 4 |           $11.31 |
+| J8               | Wurth 645004114822  | RS Components / 645004114822       |                     179 |                10 |            $6.14 |
+| U20              | TI TPS259470LRPWR   | Texas Instruments / TPS259470LRPWR |                   3,000 |                 2 |            $4.16 |
 
 The quantities cover two assembled boards; J8 has a ten-piece minimum, leaving eight spare headers. No additional
-attrition quantity was shown for these offers; any assembly-review supplement still needs agreement. The selected-parts
-subtotal is **$89.20**. Checkout adds **$3.00 handling**, displaying **$92.20 total** before billing information has
-been completed. This is only the three sourcing lines, not PCB fabrication or assembly, and it is not a paid or reserved
-price. The DigiKey power-module offer shows 8-14 business days; that is not a promised complete-board delivery date.
+attrition quantity was shown for these offers; any assembly-review supplement still needs agreement. The standalone
+parts subtotal is **$93.36**, excluding checkout handling/tax. The earlier $92.20 checkout did not include U20 and is
+obsolete. The DigiKey power-module offer shows 8-14 business days and the TI U20 offer shows 10-14 business days;
+neither is a promised complete-board delivery date. Retain the exact latching U20 variant, not the virtual board's
+auto-retry TPS259470ARPWR.
 
 The exact manufacturer/distributor identities are also corroborated by the
 [RECOM listing](https://www.digikey.com/en/products/detail/recom-power/REC30K-2405SZ/24366463),
 [TE listing](https://www.digikey.com/en/products/detail/te-connectivity-amp-connectors/5520250-2/769549), and
 [Wurth listing](https://uk.rs-online.com/web/p/pcb-headers/2138652). Direct distributor prices differ from JLCPCB's
-sourcing quote; use the checkout amount above for this route. The existing native MPNs, footprints and models remain.
+sourcing quote; refresh the selected-cart checkout before purchase. The existing native MPNs, footprints and models
+remain.
 
 [JLCPCB's Global Sourcing procedure](https://jlcpcb.com/help/article/how-to-use-jlcpcb-global-sourcing-parts-service)
 requires purchase, assembly eligibility review and warehouse receipt before these parts can be assigned from private
 inventory. Paid sourcing orders are normally non-cancellable; review can reject unsupported parts or request
-supplements. Do not mark the four references as stocked or the board as order-ready simply because offers exist.
+supplements. Do not mark the five references as stocked or the board as order-ready simply because offers exist.
 
 The [sourcing cart](https://jlcpcb.com/user-center/smtPrivateLibrary/partsCart/?global=1) and checkout are prepared, but
 **no order was submitted, no payment or new terms were accepted, and no supplier message was sent**. Billing information
-and owner purchase approval are the next actions. After receipt, assign the exact private parts to J8/J9/J10/U6 and
+and owner purchase approval are the next actions. After receipt, assign the exact private parts to J8/J9/J10/U6/U20 and
 review all 199 placements; do not omit any of them to advance the assembly draft.
+
+The combined six-line checkout for both prototype designs was refreshed on 2026-09-14: \*\*$113.18 parts + $6.00
+handling
+
+- $0.91 duty/tax = $120.09 displayed total\*\*, before completing billing information. It includes these four standalone
+  part types plus the virtual board's transformer and TI logic gate. This is the remaining sourcing purchase for two
+  assemblies of each board, not their complete BOM, fabrication or assembly price. None of the other 21 cart lines is
+  selected. The displayed total is not a payment approval or inventory reservation.
 
 ## Remaining work, in order
 
 1. Obtain owner approval for the prepared exact-part purchase, complete sourcing and warehouse receipt, then assign the
-   four private-inventory references, inspect every supplier placement and obtain the complete SMT/THT assembly quote.
+   five private-inventory references, inspect every supplier placement and obtain the complete SMT/THT assembly quote.
    Do not submit an order or contact support without the owner's permission.
-2. Obtain the fabricator's finished-stackup impedance confirmation and agreement to U5's five-sector I2C programming,
-   readback and cold-start checks. The calculator cross-check and programming handoff are prepared, but no factory
-   acceptance or actual U5 readback is available. Contact requires the owner's permission. No enclosure review is
-   required for this bare-board prototype.
+2. Retain the reviewed stackup and 100-ohm differential impedance requirement in the order and inspect the production
+   files. U5 programming/readback and cold-start checks will be performed after delivery through fitted J12; factory
+   programming-service approval is not a prototype-order gate. No enclosure review is required.
 3. On assembled hardware, verify power, insulation, startup/faults, acquisition timing, display, Ethernet, repeaters, IR
    and audio before connecting fencing equipment. CAD checks cannot substitute for those measurements.
 

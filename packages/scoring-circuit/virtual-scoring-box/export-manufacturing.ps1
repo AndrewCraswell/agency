@@ -23,7 +23,7 @@ if (@($bom | Where-Object { -not $_.Manufacturer -or -not $_.MPN -or -not $_.Foo
 if (@($bom | Group-Object Reference | Where-Object Count -ne 1).Count -ne 0 -or
     @($placement | Group-Object Ref | Where-Object Count -ne 1).Count -ne 0 -or
     @(Compare-Object $bom.Reference $placement.Ref).Count -ne 0) { throw 'BOM and placement references do not match uniquely.' }
-# Exact MPNs are procurement identities. Do not carry over combined-board substitutions or stock claims.
+# Exact MPNs and reviewed catalog IDs come from this board's native component fields.
 $bom | ForEach-Object {
     [pscustomobject][ordered]@{
         Comment = $_.MPN
@@ -31,7 +31,7 @@ $bom | ForEach-Object {
         Footprint = $_.Footprint
         Manufacturer = $_.Manufacturer
         MPN = $_.MPN
-        'JLCPCB Part #' = $_.JLCPCB
+        'LCSC Part #' = $_.JLCPCB
     }
 } | Export-Csv -LiteralPath "$exportDirectory/jlcpcb-bom.csv" -NoTypeInformation -Encoding utf8
 $placement | ForEach-Object {

@@ -1,6 +1,6 @@
 # Standalone power and assembly handoff
 
-Engineering review: 2026-09-12; manufacturing handoff updated 2026-09-13. Applies only to this standalone board. No
+Engineering review: 2026-09-12; manufacturing handoff updated 2026-09-14. Applies only to this standalone board. No
 assembled board has been tested. This prototype has no enclosure.
 
 ## Supply decision
@@ -82,7 +82,12 @@ Sources: [TI TPS25947 Rev C, sections 6.5 and 7.3.5](https://www.ti.com/lit/ds/s
 [STUSB4500 sections 2.2.8-2.2.10](https://www.st.com/resource/en/datasheet/stusb4500.pdf),
 [TPS709](https://www.ti.com/lit/ds/symlink/tps709.pdf).
 
-## U5 factory programming
+## U5 programming after delivery
+
+The owner selected post-delivery programming for these prototypes. Order a fully populated board; do not wait for a
+factory programming-service agreement. Use the fitted J12 header with a no-solder cable to a 3.3V open-drain I2C
+programmer implementing ST's NVM sequence. A generic USB-to-UART cable is not an I2C programmer. The procedure below
+still must pass before normal use; assembly completion alone does not make an unconfigured board operational.
 
 J12 is **primary-domain service only**: pin 1 USB_GND, pin 2 SDA, pin 3 SCL. Both address pins are grounded: STUSB4500
 uses **7-bit I2C address 0x28** (0x50/0x51 address bytes). Use open-drain 3.3V I2C; the board supplies its 4.7k
@@ -124,39 +129,21 @@ included in the PCB assembly; there is no enclosure-fit approval step.
 
 The four 3.2mm mounting holes require insulating M3 hardware with heads/washers no larger than 6mm; their coordinates
 are in the project README. The jack footprint/body envelope was checked against its manufacturer drawing, but the exact
-jack model is not displayed in the 3D preview. Before ordering: confirm final stackup/impedance, parts availability and
-factory programming capability. The exporter creates a **review draft**, not manufacturing approval; use default green
-mask for the prototype order.
+jack model is not displayed in the 3D preview. Before ordering: check final stackup/impedance, parts availability and
+all fitted-part placements. The exporter creates a **review draft**, not manufacturing approval; use default green mask
+for the prototype order.
 
-[JLCPCB's programming service](https://jlcpcb.com/help/article/pcba-programming-service) is offered for Standard PCBA
-after assembly and requires programming files and interface instructions. This does not establish that their fixture
-supports STUSB4500's five-sector NVM protocol. Select programming/functional-test review in the draft if available, but
-do not release production without that capability and first-article readback being agreed. No supplier contact or
-programming-service approval is implied by this handoff.
+### Order requirements versus bring-up
 
-### Factory confirmation request
+Keep 100-ohm differential impedance, +/-10%, for the front-layer Ethernet pairs on JLC04161H-7628 with 1oz outer / 0.5oz
+inner copper. The main width/gap is 0.25/0.25mm and adjacent ground clearance is 0.25mm; local neck-downs are 0.20mm.
+The calculator gives 0.2545mm non-coplanar or 0.2418mm coplanar width at that target. Review returned production files
+and the impedance coupon/test report; do not silently accept a different stackup or changed copper.
 
-Prepared for the standalone draft `35c0fdd6e3324e1b85591293ca0d5e9c`; **not sent**. A factory response is needed to
-close these two points. Do not substitute the virtual-board draft or infer acceptance from the selected order options.
-
-1. **Ethernet:** confirm 100-ohm differential impedance, +/-10%, on the actual submitted L1 routing referenced to L2
-   using JLC04161H-7628, 1oz outer/0.5oz inner copper. Review `ETH_TX_P/N` and the receive path `ETH_RX_P/N` through to
-   `ETH_RX_JACK_P/N`, including pad transitions and 0.20mm local neck-downs. The main traces/edge gap are 0.25/0.25mm;
-   nearby GND fill has 0.25mm clearance. JLCPCB's calculator returns 0.2545mm width without coplanar ground and 0.2418mm
-   with 0.25mm coplanar clearance for the 100-ohm target. Confirm the production geometry and provide an impedance
-   coupon/test report. Return proposed copper or stackup changes for approval before applying them.
-2. **U5 STUSB4500QTR:** confirm that the post-assembly station supports ST's five-sector I2C NVM sequence, not generic
-   EEPROM writes. J12 is pin 1 USB_GND, pin 2 SDA, pin 3 SCL; 7-bit address 0x28, 3.3V open-drain signalling, and
-   onboard 4.7k pull-ups. Use the procedure above to read 40 bytes, prepare/inspect the product settings, write, compare
-   all 40 bytes and cold-cycle J1. Confirm who prepares the lot image from the actual initial readback, which programmer
-   and ST utility/library are used, and that first-article readback and power checks will be returned before the rest of
-   the lot proceeds. A 5V-only source must leave PANEL_5V off; an accepted 20V/3A contract must enable the supply.
-
-ST explicitly documents both an offline GUI configuration/export route and an I2C NVM-library route. Our existing helper
-uses actual device readback to preserve unrelated settings. A synthetic fixture is not a deliverable programming image.
-JLCPCB's published service requires a HEX/BIN file and review of the programming method; the attached helper and
-instructions alone do not establish their acceptance of the read/prepare/write route. Resolve that with their engineers
-before calling factory configuration complete. This does not require a new PCB controller or architectural redesign.
+U5 read/prepare/write/readback and cold-power-cycle checks belong to post-delivery bring-up, not a pre-order support
+request. The existing helper preserves unrelated bits from a real device readback; its synthetic tests are not a
+programming image. A factory service remains optional only if separately authorized. No new supplier contact or
+programming-service acceptance is implied here.
 
 On the first article, measure cold/loaded startup, 5V-only rejection, detach, short-circuit/latch recovery, whole-board
 current, 5V at the panel, both 3.3V rails and temperature at full display/radio/network load. Test insulation and the

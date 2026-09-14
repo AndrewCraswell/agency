@@ -1863,7 +1863,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/content/datasheet/asset/file/pyu-rt_1-to-0-01_rohs_l"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1897,7 +1897,7 @@
 				)
 			)
 		)
-		(property "MPN" "ERA3AEB2372V"
+		(property "MPN" "RT0603BRD0723K7L"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -1908,8 +1908,8 @@
 					(thickness 0.15)
 				)
 			)
-		)
-		(property "Manufacturer" "Panasonic"
+		) (property "JLCPCB" "C861245" (at 0 0 90) (layer "F.SilkS") (hide yes) (uuid "c482b835-f4c2-4ac5-8783-4f8bc22636c4") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
+		(property "Manufacturer" "Yageo"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -3091,7 +3091,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -3125,7 +3125,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -3137,7 +3137,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -3149,7 +3149,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4606,7 +4606,7 @@
 				)
 			)
 		)
-		(property "MPN" "C3216X7R1C106K160AC"
+		(property "MPN" "C3216X7R1C106KT000N"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -4617,7 +4617,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342827" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "e62cee6a-e7fd-4407-9a35-f3f84fa4a09e") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(property "Manufacturer" "TDK"
 			(at 0 0 0)
 			(layer "F.SilkS")
@@ -5621,7 +5621,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5655,7 +5655,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5667,7 +5667,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5679,7 +5679,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5810,7 +5810,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E2C0G1H270J080AA"
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603JRNPO9BN270"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -5844,7 +5844,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5856,7 +5856,7 @@
 				)
 			)
 		)
-		(property "MPN" "CGA3E2C0G1H270J080AA"
+		(property "MPN" "CC0603JRNPO9BN270"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -5867,7 +5867,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C107045" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "b6d47dce-8d31-42db-a26b-ce68c2d3e666") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/33f71683-8d22-4daa-a89d-bb8be5baad8b")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -7599,7 +7599,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7633,7 +7633,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -7645,7 +7645,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -7657,7 +7657,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8456,7 +8456,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H103K080AA"
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB103"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -8490,7 +8490,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8502,7 +8502,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H103K080AA"
+		(property "MPN" "CC0603KRX7R9BB103"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8513,7 +8513,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C100042" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "44329e31-460f-4b9c-813f-d6711ddc38ad") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/488f402b-bb5d-45b8-ab01-bc08fa06c84c")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -8805,7 +8805,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
+		(property "Datasheet" "https://www.samtec.com/products/htsw-105-07-g-s"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8851,7 +8851,7 @@
 				)
 			)
 		)
-		(property "MPN" "HTSW-105-07-L-S"
+		(property "MPN" "HTSW-105-07-G-S"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -8862,7 +8862,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C3337223" (at 0 0 90) (layer "F.SilkS") (hide yes) (uuid "a90355da-9b04-4afc-9969-86f27fd94721") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/4abf2f42-4c39-4748-af2b-50d9e9cc1ea1")
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -10383,7 +10383,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X5R1C106M080AB"
+		(property "MPN" "C1608X5R1C106MT000N"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -10394,7 +10394,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342854" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "a36fd460-bba3-4635-aa44-ee9cf014cbba") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/97185045-65e6-4b5b-a06d-6bdd67041229/513bca46-9e7a-4a76-ac77-7d36f063a02a")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -11198,7 +11198,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB"
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -11232,7 +11232,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -11244,7 +11244,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -11256,7 +11256,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12261,7 +12261,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12295,7 +12295,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12307,7 +12307,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -12319,7 +12319,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -13513,7 +13513,7 @@
 				)
 			)
 		)
-		(property "MPN" "C3216X7R1C106K160AC"
+		(property "MPN" "C3216X7R1C106KT000N"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -13524,7 +13524,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342827" (at 0 0 90) (layer "F.SilkS") (hide yes) (uuid "3e2bcf3e-9f78-4bd0-8331-40812691cacd") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(property "Manufacturer" "TDK"
 			(at 0 0 90)
 			(layer "F.SilkS")
@@ -17416,7 +17416,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7S1A475K080AC"
+		(property "MPN" "C1608X7S1A475KT000E"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -17427,7 +17427,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342959" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "80215620-cc99-4ea3-9318-0efe82e70af1") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/9bfcab3b-69a8-4e95-ac78-056ca7db2d13")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -17545,7 +17545,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -17579,7 +17579,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -17591,7 +17591,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -17603,7 +17603,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -18243,7 +18243,7 @@
 				)
 			)
 		)
-		(property "MPN" "C3216X7R1C106K160AC"
+		(property "MPN" "C3216X7R1C106KT000N"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -18254,7 +18254,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342827" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "4cf7c832-d7e9-4914-9b69-dea3c0933459") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(property "Manufacturer" "TDK"
 			(at 0 0 0)
 			(layer "F.SilkS")
@@ -18417,7 +18417,7 @@
 				)
 			)
 		)
-		(property "MPN" "C3216X7R1C106K160AC"
+		(property "MPN" "C3216X7R1C106KT000N"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -18428,7 +18428,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342827" (at 0 0 90) (layer "F.SilkS") (hide yes) (uuid "8001de37-38b5-4914-b9b3-0eec0bcc6893") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(property "Manufacturer" "TDK"
 			(at 0 0 90)
 			(layer "F.SilkS")
@@ -21069,7 +21069,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/content/datasheet/asset/file/pyu-rt_1-to-0-01_rohs_l"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -21103,7 +21103,7 @@
 				)
 			)
 		)
-		(property "MPN" "ERA3AEB3482V"
+		(property "MPN" "RT0603BRD0734K8L"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -21114,8 +21114,8 @@
 					(thickness 0.15)
 				)
 			)
-		)
-		(property "Manufacturer" "Panasonic"
+		) (property "JLCPCB" "C861338" (at 0 0 90) (layer "F.SilkS") (hide yes) (uuid "08377e33-1605-43e9-90cd-5b6e7f3deb0a") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
+		(property "Manufacturer" "Yageo"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(hide yes)
@@ -21452,7 +21452,7 @@
 				)
 			)
 		)
-		(property "MPN" "C3216X7R1C106K160AC"
+		(property "MPN" "C3216X7R1C106KT000N"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -21463,7 +21463,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342827" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "ad8a3f56-87db-4140-b788-4385621e20da") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(property "Manufacturer" "TDK"
 			(at 0 0 0)
 			(layer "F.SilkS")
@@ -26959,7 +26959,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -26993,7 +26993,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -27005,7 +27005,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -27017,7 +27017,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -27719,7 +27719,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E2C0G1H270J080AA"
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603JRNPO9BN270"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -27753,7 +27753,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 180)
 			(layer "F.SilkS")
 			(hide yes)
@@ -27765,7 +27765,7 @@
 				)
 			)
 		)
-		(property "MPN" "CGA3E2C0G1H270J080AA"
+		(property "MPN" "CC0603JRNPO9BN270"
 			(at 0 0 180)
 			(layer "F.SilkS")
 			(hide yes)
@@ -27776,7 +27776,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C107045" (at 0 0 180) (layer "F.SilkS") (hide yes) (uuid "ec1f9753-e9c8-4fac-8b8a-81375e933c53") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/edc47c5d-79f6-4e87-a428-cb43ded9ee70/ddef5556-9766-4b1e-af73-1e9098ebaa0c")
 		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
@@ -29258,7 +29258,7 @@
 				)
 			)
 		)
-		(property "MPN" "C3216X7R1C106K160AC"
+		(property "MPN" "C3216X7R1C106KT000N"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -29269,7 +29269,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C342827" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "e2ad509d-082a-4114-85a4-a8ea1faa826e") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(property "Manufacturer" "TDK"
 			(at 0 0 0)
 			(layer "F.SilkS")
@@ -30801,7 +30801,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -30835,7 +30835,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1608X7R1H105K080AB"
+		(property "MPN" "CC0603KRX7R9BB105"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -30847,7 +30847,7 @@
 				)
 			)
 		)
-		(property "JLCPCB" "C45537494"
+		(property "JLCPCB" "C559769"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -30859,7 +30859,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "TDK"
+		(property "Manufacturer" "YAGEO"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -31513,7 +31513,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://suddendocs.samtec.com/prints/htsw-xxx-xx-xxx-x-xx-xx-xx-mkt.pdf"
+		(property "Datasheet" "https://www.samtec.com/products/htsw-106-07-g-s"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -31559,7 +31559,7 @@
 				)
 			)
 		)
-		(property "MPN" "HTSW-106-07-L-S"
+		(property "MPN" "HTSW-106-07-G-S"
 			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -31570,7 +31570,7 @@
 					(thickness 0.15)
 				)
 			)
-		)
+		) (property "JLCPCB" "C3334125" (at 0 0 0) (layer "F.SilkS") (hide yes) (uuid "939c05a0-4225-43d0-8055-ef715cc6c9e4") (effects (font (size 1.27 1.27) (thickness 0.15) ) ) )
 		(path "/20cc8167-128c-446a-a106-f942323e143f/97185045-65e6-4b5b-a06d-6bdd67041229/f2819ce1-5f5f-4017-aaf3-dd9412861bdd")
 		(attr through_hole)
 		(duplicate_pad_numbers_are_jumpers no)

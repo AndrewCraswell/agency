@@ -34,12 +34,13 @@ and an **ISO7021DR serial isolator**. **TPS70933DBVR** supplies the laptop-side 
 4.7uF.
 
 `usb-power-control.kicad_sch` adds **STUSB4500QTR**, **STM32C011F6P6** and **TPS259470ARPWR**. Program and read back a
-single **5V / 1.5A sink PDO** before shipment. The eFuse provides automatic-retry current limiting, reverse-current
-blocking and adjustable voltage protection. R85 sets approximately 1.21A; C54 gives approximately 25ms for the 5V ramp.
-ITIMER is intentionally open for the fastest overcurrent response. Nominal UVLO is 4.04V rising / 3.69V falling; nominal
-OVLO is 5.38V rising / 4.91V falling. Divider resistors are 0.1%; temperature, comparator tolerance and fault overshoot
-still require review and measurement against the protected parts' limits. Raw-input capacitors are 50V-rated. R76 now
-senses only `USB_5V_PROTECTED`, so overvoltage removes the bridge's VBUS indication while its controller stays powered.
+single **5V / 1.5A sink PDO** after delivery, before normal use. The eFuse provides automatic-retry current limiting,
+reverse-current blocking and adjustable voltage protection. R85 sets approximately 1.21A; C54 gives approximately 25ms
+for the 5V ramp. ITIMER is intentionally open for the fastest overcurrent response. Nominal UVLO is 4.04V rising / 3.69V
+falling; nominal OVLO is 5.38V rising / 4.91V falling. Divider resistors are 0.1%; temperature, comparator tolerance and
+fault overshoot still require review and measurement against the protected parts' limits. Raw-input capacitors are
+50V-rated. R76 now senses only `USB_5V_PROTECTED`, so overvoltage removes the bridge's VBUS indication while its
+controller stays powered.
 
 **SN74LVC1G3208DBVR** implements `(USB_AWAKE OR USB_SUSPEND_EXEMPT) AND SOURCE_ALLOWED`. **SN74LVC1T45DBVR** translates
 the result to protected 5V because SN6505 EN requires 0.7 times VCC. Both qualification outputs have pull-downs; R79
@@ -117,9 +118,13 @@ edges. Provide an actual KiCad 3D render with each board-update checkpoint.
 
 The native stackup now specifies [JLC04161H-3313](https://jlcpcb.com/impedance): nominal 1.6mm four-layer construction,
 35um outer / 15.2um inner copper, 0.0994mm outer prepregs (Dk 4.1), and a 1.265mm core (Dk 4.6). Select this exact
-stackup in the fabrication draft. Do not substitute the default 7628 stackup silently. The 0.20mm USB trace geometry is
-a design target, not a fabricator-confirmed 90-ohm result; JLCPCB's online calculation currently returns no width
-result. Electrical USB verification remains a bench requirement.
+stackup in the fabrication draft. Do not substitute the default 7628 stackup silently. On 2026-09-14,
+[JLCPCB's calculator](https://jlcpcb.com/pcb-impedance-calculator) returned 0.1862mm width for 90 ohms and 0.2007mm for
+86 ohms at the main run's 1.10mm edge spacing, L1 over L2, non-coplanar, with solder mask. The actual 0.20mm traces are
+therefore approximately 86 ohms nominal. At the short 0.30mm-gap approach, the calculator returned 0.1969mm for 83 ohms.
+Retain the existing geometry; these uniform-cross-section estimates do not model pads, vias, connector stubs or
+manufacturing tolerance. They are not a measured USB-compliance result. Review the selected stackup in the production
+files and test the assembled full-speed USB link during bring-up.
 
 1. Finish the primary-side sleep-current and voltage/current tolerance review, then verify antenna clearance and
    connector access. The virtual-board source-control configuration is implemented and host-tested; its physical power
@@ -147,8 +152,8 @@ Preserve the existing 5V PD compatibility; do not substitute a direct-Type-C-onl
 and the shared [power-controller source](../../../apps/scoring/firmware/power-control/README.md) now builds a
 virtual-board image. PA4 outputs SOURCE_ALLOWED, PA5 outputs USB_SUSPEND_EXEMPT. PD alert, eFuse fault, USB_AWAKE and a
 nominal 32ms RTC alarm wake Stop0. A requested RDO exemption alone is not permission; the firmware checks the fresh
-source flags. The virtual image never enables the combined board's 20V/display profile. Factory-program U24 using the
-virtual image, not the combined image, and configure/read back U23's single 5V/1.5A NVM PDO separately.
+source flags. The virtual image never enables the combined board's 20V/display profile. After delivery, program U24
+using the virtual image, not the combined image, and configure/read back U23's single 5V/1.5A NVM PDO separately.
 
 ## Current checkpoint checks
 
@@ -212,7 +217,8 @@ green solder mask and white silkscreen for this prototype. A 3D colour is not a 
 - Program/read back **U24 STM32C011** through J7 with the included `programming/U24/power-control.hex`. Use USB_GND for
   this primary-side probe and do not inject voltage through its reference pin. Configure/read back **U23 STUSB4500** NVM
   for one 5V/1.5A sink PDO using ST's programming procedure. Volatile runtime configuration is not a factory NVM image.
-  The assembler must confirm the fixture/programming service; it is not implied by an SMT assembly quote.
+  This is post-delivery bring-up work, not a prerequisite for the prototype assembly order. See the procedure below; do
+  not describe an unprogrammed board as ready to run the scoring application.
 - J2 is the isolated STM32 scoring MCU's SWD; J6 is ESP32 3.3V UART recovery. Do not bridge their scoring GND to USB_GND
   with non-isolated programming equipment during isolation tests. No complete virtual-box scoring/application image is
   included yet; the combined STM32 image's PA2 output configuration is not the virtual USART2 adapter.
@@ -233,123 +239,92 @@ guaranteed limit. References: [CP2102N](https://www.silabs.com/documents/public/
 ### JLCPCB validation draft
 
 The [current virtual-box draft](https://cart.jlcpcb.com/smt-order/?pcbFileNo=0d7e87fc3bcf4669aeb7055e406425c1) is
-**unsubmitted, unpaid and not order-ready**. On 2026-09-12, JLCPCB accepted the revised Gerbers, BOM and placement file
-from `output/assembly-surface-routing/`. The ZIP SHA-256 is
-`5745D27C666B6909F49E156D7E74235956336AD4D5BFBD7E9C590D7966547863`. The older `9436ff25...` and `c45d113d...` drafts are
-obsolete for this layout; keep the frozen combined-board draft separate. The programming feasibility package remains
-associated with the earlier review, not newly approved.
+**unsubmitted and unpaid**. On 2026-09-14 it accepted the revised BOM and matching placement file from
+`output/manufacturing-20260914-051026/`: **142 purchased references, 140 confirmed, two inventory shortages**. No
+required component was omitted. J1 USB4105-GF-A/C3020560 was explicitly reselected after the upload left its quantity at
+zero; the corrected draft has two fitted USB connectors, one per assembled board.
 
-Do not contact JLCPCB support, send follow-up messages, or request additional sourcing/programming quotations without
-the user's explicit permission. Continue local validation and self-service draft checks only. Do not submit or pay.
+The procurement-only update changes 23 component identities, with no change to values, nets, footprints, component
+positions or copper. The Gerbers already loaded from `output/assembly-surface-routing/` remain geometrically valid. The
+latest export also contains matching Gerbers, 142 BOM/placement rows, an assembly PDF and native top/bottom 3D renders.
+ERC, DRC, unconnected and schematic/PCB parity findings are all zero under the enabled rules. The virtual U24 image
+cross-builds to 3096 bytes code / 72 bytes RAM. These are CAD/software checks, not physical qualification.
 
-- Five bare boards, two assembled; Standard PCBA, all components on top; 120 x 85mm finished, 1.6mm FR-4, green mask,
-  white legend, ENIG, 1oz outer / 0.5oz inner copper. **JLC04161H-3313** is selected, with F.Cu / In1.Cu / In2.Cu / B.Cu
-  in that order. JLCPCB adds two 5mm rails; depaneling is selected.
-- Epoxy-filled/capped vias are requested. U2 has twelve 0.2mm thermal holes and U22 has two. Fill/cap only the
-  0.2/0.25/0.3mm via groups, not USB slots, connector, wire or locating holes. Confirm this in the production files.
-- Production-file and placement confirmation are required, with automatic confirmation disabled.
-- JLCPCB parsed the revised board as four layers, 120 x 85mm. Its explicit copper order is F.Cu / In1.Cu / In2.Cu /
-  B.Cu. The 0.2mm drill setting also selects four-wire Kelvin testing and TG155. The displayed $110.63 is still the
-  bare-PCB quote, not a complete assembled-board price.
-- The original automatic match incorrectly assigned eight 1uF capacitors to Walsin **80pF** parts C3868041. All eight
-  matches were corrected to the intended TDK identity. C45537494 is the exact-name catalog entry but has incomplete
-  package/category data and zero stock; its appearance in a matched/selected row is **not sourcing approval**.
-  [TDK specifies 1uF, 50V, X7R, 10%, 0603](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1H105K080AB).
-- R82/R84's invalid ordering identity was corrected in the schematic, PCB and supplier draft to
-  [Panasonic ERA3AEB103V](https://industrial.panasonic.com/ww/products/pt/high-precision-chip-resistors/models/ERA3AEB103V):
-  10kOhm, 0.1%, 25ppm/K, 0.1W, 0603. Their values, pads and routing did not change. C190610 was in stock and both
-  references were selected. The new upload initially left J1 USB4105-GF-A/C3020560 at quantity zero. Reselecting the
-  exact GCT part corrected this to quantity two; JLCPCB showed 1,571 in stock. Its $0.03-per-piece special-assembly
-  notice is a disclosed handling fee, not permission to omit the connector.
-- R88 (`PD_ALERT_N`) and R92 (`FUSE_FAULT_N`) now use stocked **Yageo AF0603FR-0747KL / C144107** in place of the
-  unavailable RC0603FR-0747KL. Both are 3.3V pull-ups, not voltage-setting dividers. Resistance remains 47kOhm, 1%,
-  100ppm/K, 0.1W, 75V, 0603; pads and routing are unchanged. Nominal asserted-low dissipation is only 0.232mW.
-  [Yageo's AF specification, pages 2, 4 and 5](https://yageogroup.com/content/datasheet/asset/file/pyu-af_51_rohs_l)
-  confirms ordering, dimensions and ratings. JLCPCB showed 6,246 in stock and selected both references at a combined
-  procurement quantity of 20 for $0.2240. This clears two reference shortages without changing circuit behavior.
-- The schematic and PCB record explicit JLCPCB identities for twelve references, and the exporter carries them in
-  `JLCPCB Part #`. This prevents the known automatic mis-match on re-upload; it does not approve a substitution or
-  establish available inventory. Review every supplier line again after any BOM upload.
+Order configuration remains five bare boards and two fully assembled boards: Standard PCBA, all components on top, 120 x
+85mm, 1.6mm four-layer FR-4, green mask, white legend, ENIG, 1oz outer / 0.5oz inner copper and **JLC04161H-3313**.
+Copper order is F.Cu / In1.Cu / In2.Cu / B.Cu. Two 5mm rails and depaneling are selected. Fill/cap only the
+0.2/0.25/0.3mm via groups, not connector, wire or locating holes. Keep production-file and placement confirmation
+required, with automatic confirmation disabled. Final supplier placement inspection is still pending.
 
-The retained draft contains 142 BOM references / 48 MPNs and 142 matching placements. All 142 requested identities match
-their supplier identities after normalizing punctuation; this is an identity screen, not datasheet or placement
-approval. JLCPCB confirms 117 references and flags **25 references with inventory shortages**. Advancing to placement
-review offers to leave unavailable parts unpopulated. That option was rejected: no required component has been waived.
-Supplier placement approval, assembly/programming acceptance and the complete price remain open. This was rechecked on
-the new draft: the next step offers **Do not place**, which would omit required parts. That option was not accepted. No
-order, payment, new sourcing request or support message was sent during this draft refresh.
+#### Stocked replacements
 
-The current local review export is `output/assembly-surface-routing/`, generated together with
-`export-manufacturing.ps1`: thirteen Gerber/drill files, 142 BOM rows, matching placements and top/bottom 3D renders.
-BOM identities are unchanged from the stock review; prior placement/fabrication hashes are obsolete. Generated exports
-remain local and ignored, not a release authorization. This exact export is now uploaded to the current draft above.
+| References                            | Current MPN         | JLCPCB part |
+| ------------------------------------- | ------------------- | ----------- |
+| C1, C15, C21, C33, C39, C49, C50, C52 | CC0603KRX7R9BB105   | C559769     |
+| C12                                   | CC0603KRX7R9BB103   | C100042     |
+| C14                                   | C1608X7S1A475KT000E | C342959     |
+| C17, C18                              | CC0603JRNPO9BN270   | C107045     |
+| C22                                   | C1608X5R1C106MT000N | C342854     |
+| C41-C46                               | C3216X7R1C106KT000N | C342827     |
+| J2                                    | HTSW-105-07-G-S     | C3337223    |
+| J6                                    | HTSW-106-07-G-S     | C3334125    |
+| R81                                   | RT0603BRD0723K7L    | C861245     |
+| R83                                   | RT0603BRD0734K8L    | C861338     |
 
-Fresh KiCad ERC, DRC, unconnected and parity counts are all zero under the enabled rules; top/bottom 3D renders and
-local copper views were inspected. The virtual U24 image cross-builds unchanged at 3096 bytes code / 72 bytes RAM.
-Scoring-circuit types and tests passed (2 files / 13 tests); lint and all eight existing ngspice models also passed.
-These models do not simulate the revised PCB parasitics. The surface-routing update preserves component placement, pad
-geometry, USB data, crystal and power-switching copper. The refreshed `pnpm verify` passes its check stage, then fails
-the scoring application's existing 100% coverage gate: 96.09% lines, 99.79% functions, 95.44% statements and 93.78%
-branches. No application source or coverage thresholds changed in this PCB-only update; no full-repository pass is
-claimed.
+The capacitors and headers reuse the standalone board's reviewed selections. Yageo replacements retain the required
+capacitance, dielectric, tolerance and package; the TDK parts use the current ordering identities. J2/J6 retain their
+pitch, pin length, footprint and pinout; `-G` changes the contact/tail plating, not connector geometry. Both still
+require through-hole assembly.
 
-The unresolved procurement list below is **25 board references / 12 part types**, not 25 extra pieces. JLCPCB purchase
-quantities also include assembly attrition and minimum-order quantities. Both the reference list and numeric shortfalls
-below were rechecked in the refreshed draft on 2026-09-12. Recheck stock and price before release.
+The [1uF/50V Yageo specification](https://yageogroup.com/download/specsheet/CC0603KRX7R9BB105) was also checked against
+the laptop-specific rails: C49 at 1.2V, C50 at 2.7V, and the 3.3V nodes. The typical DC-bias plot loses about 10% at
+2.7V; combining that estimate with initial tolerance and X7R temperature variation leaves approximately 0.67uF against
+STUSB4500's 0.5uF minimum on VREG_2V7. This is a design estimate, not an aged worst-case guarantee. At high raw VBUS, do
+not assume the full marked 1uF remains effective.
 
-| References                            | Required MPN         | JLCPCB identity | Remaining sourcing issue                                                                          |
-| ------------------------------------- | -------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
-| C1, C15, C21, C33, C39, C49, C50, C52 | C1608X7R1H105K080AB  | C45537494       | 20-piece shortfall; incomplete catalog package/rating data requires manual sourcing confirmation. |
-| C12                                   | C1608X7R1H103K080AA  | C2180830        | 19-piece current shortfall.                                                                       |
-| C14                                   | C1608X7S1A475K080AC  | C5331011        | 5-piece quoted shortfall.                                                                         |
-| C17, C18                              | CGA3E2C0G1H270J080AA | C193086         | 8-piece quoted shortfall.                                                                         |
-| C22                                   | C1608X5R1C106M080AB  | C2167896        | 2-piece current shortfall.                                                                        |
-| C41-C46                               | C3216X7R1C106K160AC  | C2167646        | 16-piece quoted shortfall.                                                                        |
-| J2                                    | HTSW-105-07-L-S      | C6571098        | 2-piece quoted shortfall; through-hole assembly required.                                         |
-| J6                                    | HTSW-106-07-L-S      | C3324216        | 2-piece quoted shortfall; through-hole assembly required.                                         |
-| R81                                   | ERA3AEB2372V         | C2074741        | 6-piece quoted shortfall.                                                                         |
-| R83                                   | ERA3AEB3482V         | C2074547        | 20-piece quoted shortfall.                                                                        |
-| T1                                    | 750315371            | C5184247        | 5-piece quoted shortfall; do not substitute an arbitrary transformer.                             |
-| U26                                   | SN74LVC1G3208DBVR    | C2682152        | 3-piece current shortfall.                                                                        |
+R81/R83 retain 23.7k/34.8k, 0.1%, 25ppm/C, 100mW, 75V and 0603. The
+[Yageo RT datasheet](https://yageogroup.com/content/datasheet/asset/file/pyu-rt_1-to-0-01_rohs_l), ordering table and
+RT0603 rating table support these exact configurations. The eFuse's nominal voltage thresholds are unchanged. Native
+MPN/catalog fields are the source of the BOM's `LCSC Part #` column; inspect every match after an upload.
 
-An exact-family stock search for U26 found only two TI DBVR pieces, no idle/private stock, and no TI DBVT stock
-(`C2862830`). The stocked `SN74LVC1G3208DBVR-TP / C51939611` is a **TECHPUBLIC** part, not an alternate reel of the
-specified TI device; it was not selected. Procurement of exact parts or a separately verified substitution is still
-needed. Do not reduce attrition quantities or clear these warnings by leaving required positions empty.
+#### Remaining sourcing and order steps
 
-Non-purchasing parts quotation **XOB2026091200835** was submitted on 2026-09-12 for these 13 identities. The site's
-quantity-entry handler failed (`this.minNumber is not a function`): entered quantities appeared in the form but the
-saved request retained one per line. The quote is therefore **not a usable build quotation**. Support was sent the
-correction list: C45537494=20, C2180830=20, C5331011=5, C193086=8, C2167896=5, C2167646=16, C6571098=2, C3324216=2,
-C2074741=6, C2074547=20, C105579=20, C5184247=5, C2682152=5. These are total required procurement quantities including
-the draft's attrition, not just the shortfalls above. The C105579 request is now obsolete because R88/R92 were replaced
-with stocked C144107. Do not buy that old line. No checkout or payment was authorized. No new support contact was made
-during the stock substitution review.
+| Reference | Exact part                      | Current gap                                              | Prepared procurement                                                                                                 |
+| --------- | ------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| T1        | Wurth 750315371 / C5184247      | Five-piece total requirement, five short                 | Five from Element14_UK at $3.6257 each; $18.13 plus $0.91 displayed duty; 2,819 listed in stock, 10-15 business days |
+| U26       | TI SN74LVC1G3208DBVR / C2682152 | Five-piece total requirement, two at JLCPCB, three short | Five exact TI parts at $0.338 each, $1.69 total; 6,000 listed in stock, 10-14 business days                          |
 
-Read-only Global Sourcing checks found exact 750315371 transformers at about $3.63 each (Element14_UK, minimum five),
-the exact 1uF TDK capacitor at about $0.183 each (Element, minimum ten), and J2's exact Samtec header via DigiKey with a
-one-piece minimum. These listings suggest procurement can retain the design, but are not stocked-assembly commitments or
-landed quotes. No items were added to the existing sourcing cart. Purchased sourcing parts must reach JLCPCB's warehouse
-before assembly selection; obtain corrected quantity/lead-time/fee confirmation before buying.
+These two exact-part lines are saved in the
+[Global Sourcing cart](https://jlcpcb.com/user-center/smtPrivateLibrary/partsCart/?global=1), not purchased or received.
+Together with the standalone board's four remaining part types, the selected six-line checkout displays **$120.09**:
+$113.18 parts, $6.00 handling and $0.91 duty/tax, before completing billing information. This is not the full BOM or
+assembled-board price. No payment or order submission has been made. Buying the full five U26 pieces avoids depending on
+the two unreserved public-stock pieces. Prices and stock were observed on 2026-09-14 and must be refreshed before
+purchase. Procurement quantities include assembly minimums/attrition, not just fitted quantities. The cart also contains
+other projects' earlier lines: select only the intended board parts.
 
-The previously supplied programming package is for **supplier feasibility review**, not programming acceptance. It
-includes the virtual U24 HEX and assembly/probe guidance. U23 still needs a reviewed single-5V/1.5A NVM configuration
-and an agreed programming/readback method. ST's reference NVM example is not this board's configuration; do not copy it
-unmodified. ST provides an
-[offline configuration GUI and factory I2C programming procedure](https://github.com/usb-c/STUSB4500). The target is one
-enabled fixed PDO, 5V/1.5A, USB communication capable, not externally powered, and `REQ_SRC_CURRENT=0`; disable the
-higher-voltage PDOs. Preserve unrelated NVM settings using the ST tool rather than writing guessed reserved bytes. U24's
-SWD connection cannot directly write U23's NVM: the factory needs an agreed I2C probe or temporary programmer image,
-followed by full 40-byte readback, cold-reset PDO verification, and the final U24 runtime image. Use a fixed 5V source
-during initial programming, not a higher-voltage-capable PD source. JLCPCB support (Leo, 2026-09-12) confirmed that its
-functional-test service can review programming and that through-hole assembly of J2/J6/U13 is supported. This is not
-engineering acceptance of the specific fixture or U23 NVM operation. The supplied U24 HEX cannot substitute for U23's
-separate 40-byte NVM configuration; a specific clarification was sent.
-[Programming is a separately reviewed Standard PCBA service](https://jlcpcb.com/help/article/pcba-programming-service).
-Do not release a board with blank source-control firmware as ready to program the scoring application.
+The remaining order sequence is approval of the exact-part purchase, warehouse receipt/private-inventory assignment,
+then all-part placement inspection and the complete SMT/THT quote. Do not choose “Do not place,” reduce attrition to
+hide a shortage, or substitute TECHPUBLIC's similarly named gate for the TI device. No support contact, order submission
+or payment is authorized by this handoff. Assembly pricing is separate from parts pricing.
 
-The native ERC/DRC/parity/connectivity checks report zero findings under enabled rules. This does not finish the
-datasheet/rating review of every MPN, all 142 supplier placements, or physical qualification. CP2102N, ISO7021, TPS25947
-and the transformer pin/net maps were individually rechecked against manufacturer drawings. Final supplier placement
-review, complete assembly price and programming-service acceptance remain open; no shortage has been waived by omitting
-parts. The earlier $110.63 figure was the **bare-PCB quote only**, not the assembled total.
+#### Programming after delivery
+
+The owner selected post-delivery power-controller programming; factory programming-service approval is not a
+prototype-order prerequisite. Order all components fitted, including J2/J6/U13. Before normal use:
+
+1. Use a fixed 5V source for initial programming, not a higher-voltage-capable PD source. Blank U24 leaves the scoring
+   supply disabled.
+2. Program U24 through J7's primary-domain SWD pogo pads with the exported virtual image. Use USB_GND, never the
+   isolated scoring ground; the probe reference pin must not inject power.
+3. Read U23's actual 40-byte NVM using [ST's I2C NVM sequence](https://github.com/usb-c/STUSB4500). Prepare exactly one
+   fixed 5V/1.5A sink PDO, USB communication capable, not externally powered, `REQ_SRC_CURRENT=0`, and disable
+   higher-voltage PDOs. Preserve unrelated settings with ST's configuration tool rather than guessing reserved bytes.
+4. Write using ST's five-sector procedure, compare all 40 bytes, cold-cycle and verify the advertised sink PDO. U24 SWD
+   cannot directly write U23: use an I2C probe or a temporary U24 programmer image, then restore the final U24 image.
+   The actual probe/temporary-programmer workflow has not yet been exercised on hardware.
+5. Verify source qualification, suspend/resume, fault shutdown, radio load steps and both processor rails before
+   starting scoring-board bring-up. An assembled but unprogrammed board is not operational.
+
+Physical insulation, input thresholds, timing, USB and wireless qualification still require an assembled first article.
+No host test or nominal impedance calculation replaces those measurements.
