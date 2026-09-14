@@ -360,3 +360,90 @@ describe("RC-03 encrypted IR security contract", () => {
     expect(() => decrypt(vector.aad, `${vector.tag.slice(0, -2)}00`)).toThrow()
   })
 })
+
+describe("IR wire and ingress boundary failures", () => {
+  it("round-trips every press code and rejects malformed wire buffers", () => {
+    for (const pressKind of ["direct", "modified", "held", "double"]) {
+      expect(parseIrSecureFrame(serializeIrSecureFrame(frame({ pressKind })))).toEqual(frame({ pressKind }))
+    }
+    for (const value of [null, [], new Uint8Array(0), new Uint8Array(151)])
+      expect(() => parseIrSecureFrame(value)).toThrow(TypeError)
+    for (const offset of [2, 6, 7]) {
+      const wire = serializeIrSecureFrame(frame())
+      wire[offset] = 255
+      expect(() => parseIrSecureFrame(wire)).toThrow(TypeError)
+    }
+    expect(() => createIrReplayState({})).toThrow(TypeError)
+    expect(calculateIrReplayTransition({}, createIrReplayState(pairing), candidate())).toMatchObject({
+      reason: "malformed-frame"
+    })
+  })
+
+  it("rejects invalid and contradictory throttle states", () => {
+    expect(() => createIrIngressThrottleState(-1)).toThrow(TypeError)
+    const initial = createIrIngressThrottleState(10)
+    for (const state of [
+      null,
+      {},
+      { ...initial, globalWindowCount: 65 },
+      { ...initial, queuedFrameCount: 5 },
+      { ...initial, remoteWindowCounts: [{ count: 0, remoteIdentity: pairing.remoteIdentity }] },
+      { ...initial, remoteWindowCounts: [{ count: 1, remoteIdentity: "invalid" }] }
+    ]) {
+      expect(admitIrIngress(state, pairing.remoteIdentity, 10)).toMatchObject({
+        reason: "invalid-ingress",
+        state: null
+      })
+      expect(releaseIrIngressSlot(state)).toMatchObject({ reason: "invalid-ingress", state: null })
+    }
+    expect(releaseIrIngressSlot(initial)).toMatchObject({ reason: "invalid-ingress" })
+    expect(admitIrIngress(initial, "invalid", 10)).toMatchObject({ reason: "invalid-ingress" })
+    expect(admitIrIngress(initial, pairing.remoteIdentity, -1)).toMatchObject({ reason: "invalid-ingress" })
+    expect(admitIrIngress(initial, pairing.remoteIdentity, 9)).toMatchObject({ reason: "clock-regression" })
+    const restarted = admitIrIngress(initial, pairing.remoteIdentity, 1_000_010)
+    expect(restarted).toMatchObject({
+      disposition: "admitted",
+      state: { windowStartedAtUs: 1_000_010, globalWindowCount: 1 }
+    })
+    const multi = {
+      ...initial,
+      globalWindowCount: 2,
+      remoteWindowCounts: [
+        { count: 1, remoteIdentity: pairing.remoteIdentity },
+        { count: 1, remoteIdentity: pairing.apparatusIdentity }
+      ]
+    }
+    expect(admitIrIngress(multi, pairing.remoteIdentity, 10)).toMatchObject({
+      disposition: "admitted",
+      state: {
+        remoteWindowCounts: [
+          { count: 2, remoteIdentity: pairing.remoteIdentity },
+          { count: 1, remoteIdentity: pairing.apparatusIdentity }
+        ]
+      }
+    })
+  })
+})
+
+it("rejects sparse replay arrays and non-enumerable replay entries", () => {
+  const empty = createIrReplayState(pairing)
+  for (const remembered of [
+    Array(1),
+    Object.defineProperty([{ commandId: frame().commandId, counter: frame().counter }], "0", { enumerable: false })
+  ]) {
+    expect(calculateIrReplayTransition(pairing, { ...empty, remembered }, candidate())).toMatchObject({
+      reason: "state-unavailable"
+    })
+  }
+})
+
+it("rejects descriptor-free replay state arrays", () => {
+  const remembered = new Proxy([], {
+    getPrototypeOf() {
+      return null
+    }
+  })
+  expect(
+    calculateIrReplayTransition(pairing, { ...createIrReplayState(pairing), remembered }, candidate())
+  ).toMatchObject({ reason: "state-unavailable" })
+})

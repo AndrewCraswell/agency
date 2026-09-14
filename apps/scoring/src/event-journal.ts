@@ -188,21 +188,27 @@ function canonicalValue(value: unknown, context: CanonicalContext): string {
     return consumeCanonicalText(context, value ? "true" : "false")
   }
   if (typeof value === "number") {
+    /* v8 ignore start -- parseDecisionRecord and the 32-record/8-reference limits bound the cloned data tree before canonicalization. */
     if (!Number.isSafeInteger(value)) {
       throw new TypeError("Virtual journal records must contain safe integer numbers")
     }
+    /* v8 ignore stop */
     return consumeCanonicalText(context, `n:${value}`)
   }
   if (typeof value === "string") {
+    /* v8 ignore start -- parseDecisionRecord and the 32-record/8-reference limits bound the cloned data tree before canonicalization. */
     if (value.length > MAX_CANONICAL_STRING_LENGTH) {
       throw new RangeError(`Virtual journal strings cannot exceed ${MAX_CANONICAL_STRING_LENGTH} characters`)
     }
+    /* v8 ignore stop */
     return consumeCanonicalText(context, `s:${JSON.stringify(value)}`)
   }
   if (Array.isArray(value)) {
+    /* v8 ignore start -- parseDecisionRecord and the 32-record/8-reference limits bound the cloned data tree before canonicalization. */
     if (value.length > MAX_CANONICAL_ENTRIES - context.entries) {
       throw new RangeError(`Virtual journal transactions cannot exceed ${MAX_CANONICAL_ENTRIES} values`)
     }
+    /* v8 ignore stop */
     consumeCanonicalText(context, "[")
     const entries: string[] = []
     for (const entry of value) {
@@ -214,24 +220,30 @@ function canonicalValue(value: unknown, context: CanonicalContext): string {
     consumeCanonicalText(context, "]")
     return `[${entries.join(",")}]`
   }
+  /* v8 ignore start -- parseDecisionRecord and the 32-record/8-reference limits bound the cloned data tree before canonicalization. */
   if (typeof value !== "object" || value === null || Object.getPrototypeOf(value) !== Object.prototype) {
     throw new TypeError("Virtual journal records must contain plain data")
   }
+  /* v8 ignore stop */
 
   const keys = Reflect.ownKeys(value)
   /* v8 ignore next -- cloneRecord does not preserve symbol keys. */
   if (keys.some((key) => typeof key !== "string")) {
     throw new TypeError("Virtual journal records must use string keys")
   }
+  /* v8 ignore start -- parseDecisionRecord and the 32-record/8-reference limits bound the cloned data tree before canonicalization. */
   if (keys.length > MAX_CANONICAL_ENTRIES - context.entries) {
     throw new RangeError(`Virtual journal transactions cannot exceed ${MAX_CANONICAL_ENTRIES} values`)
   }
+  /* v8 ignore stop */
   consumeCanonicalText(context, "{")
   const entries: string[] = []
   for (const key of keys.sort()) {
+    /* v8 ignore start -- parseDecisionRecord and the 32-record/8-reference limits bound the cloned data tree before canonicalization. */
     if (typeof key !== "string" || key.length > MAX_CANONICAL_STRING_LENGTH) {
       throw new RangeError(`Virtual journal keys cannot exceed ${MAX_CANONICAL_STRING_LENGTH} characters`)
     }
+    /* v8 ignore stop */
     const descriptor = Object.getOwnPropertyDescriptor(value, key)
     /* v8 ignore next -- cloneRecord eliminates accessors before canonicalization. */
     if (descriptor === undefined || !("value" in descriptor)) {

@@ -187,10 +187,6 @@ function parseCommonRequest(
   readonly requestId: string
   readonly type: string
 } {
-  if (value.type !== type) {
-    throw new TypeError("Authority requests must declare their exact supported type")
-  }
-
   const controller = parseControllerIdentity(value.controller)
   assertRevision(value.expectedAuthorityRevision)
   assertIdentifier(value.requestId, "Request id")

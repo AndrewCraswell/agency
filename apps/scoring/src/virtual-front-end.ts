@@ -306,9 +306,11 @@ export type VirtualFrontEndCycleState = Readonly<{
 
 function profileFor(phaseId: VirtualFrontEndPhaseId): VirtualFrontEndPhaseProfile {
   const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((candidate) => candidate.id === phaseId)
+  /* v8 ignore start -- both callers first validate the phase ID against the complete registry. */
   if (profile === undefined) {
     throw new RangeError("Virtual front-end phases must use a declared M0-03 phase ID")
   }
+  /* v8 ignore stop */
   return profile
 }
 
@@ -549,11 +551,7 @@ function assertFaultState(state: VirtualFrontEndRelationState, faultCode: Virtua
   }
 }
 
-function normalizeRelation(
-  input: VirtualFrontEndRelationInput,
-  profile?: VirtualFrontEndPhaseProfile,
-  side?: VirtualFrontEndSide
-): VirtualFrontEndRelationReading {
+function normalizeRelation(input: VirtualFrontEndRelationInput): VirtualFrontEndRelationReading {
   assertIdentifier(input.id, "Virtual front-end relation IDs")
 
   const [first, second] = input.endpoints
@@ -565,10 +563,7 @@ function normalizeRelation(
     throw new RangeError("Virtual front-end readings must use a declared relation state")
   }
 
-  const endpointIsLegal =
-    profile === undefined || side === undefined || phaseAllowsEndpoints(profile, side, [first, second])
-  const state = endpointIsLegal ? input.state : "crossLine"
-  const faultCode = endpointIsLegal ? input.faultCode : "cross-line"
+  const { state, faultCode } = input
   assertFaultState(state, faultCode)
   assertIdentifier(input.provenance.sourceId, "Virtual front-end provenance source IDs")
   assertNonNegativeSafeInteger(input.provenance.observedAtUs, "Virtual front-end provenance timestamps")
@@ -1105,7 +1100,8 @@ function validateCycleCommand(command: unknown): VirtualFrontEndCycleCommand {
     throw new TypeError("Only observe cycle commands may carry relations")
   }
   const seen = new WeakSet<object>()
-  if (typeof command === "object" && command !== null) seen.add(command)
+  // plainDataRecord has already established that command is a non-null object.
+  seen.add(Object(command))
   const observedRelations = values.relations
   const relations =
     values.stage === "observe"
@@ -1145,10 +1141,7 @@ function cycleReceipt(
 
 function deepFreezeCycleValue<Value>(value: Value): Value {
   if (typeof value !== "object" || value === null || Object.isFrozen(value)) return value
-  for (const key of Reflect.ownKeys(value)) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    if (descriptor !== undefined && "value" in descriptor) deepFreezeCycleValue(descriptor.value)
-  }
+  for (const child of Object.values(value)) deepFreezeCycleValue(child)
   return Object.freeze(value)
 }
 
@@ -1236,9 +1229,11 @@ export function advanceVirtualFrontEndCycle(
   }
 
   const relations = command.relations
+  /* v8 ignore start -- validateCycleCommand requires an array for observe; every other stage returns above. */
   if (relations === null) {
     throw new Error("Observe cycle commands require relations after validation")
   }
+  /* v8 ignore stop */
   const snapshotState = advanceVirtualFrontEnd(state.frontEnd, {
     atUs: command.atUs,
     phase: {

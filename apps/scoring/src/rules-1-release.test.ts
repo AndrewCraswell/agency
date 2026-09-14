@@ -107,3 +107,25 @@ describe("rules-1 release record", () => {
     expect(JSON.stringify(RULES_ONE_RELEASE)).not.toContain("boundaryUs")
   })
 })
+
+it("rejects malformed release arrays and unavailable source readers", () => {
+  expect(() => validateRulesOneRelease({ ...RULES_ONE_RELEASE, verification: null })).toThrow()
+  expect(() => validateRulesOneRelease({ ...RULES_ONE_RELEASE, verification: [] })).toThrow()
+  expect(() => Reflect.apply(verifyRulesOneReleaseSourceSnapshot, undefined, [RULES_ONE_RELEASE, null])).toThrow()
+})
+
+it("requires every milestone and consistent review status", () => {
+  expect(() =>
+    validateRulesOneRelease({
+      ...RULES_ONE_RELEASE,
+      artifacts: RULES_ONE_RELEASE.artifacts.filter((entry) => entry.milestone !== "M1-01")
+    })
+  ).toThrow(/milestone/)
+  expect(() =>
+    validateRulesOneRelease({
+      ...RULES_ONE_RELEASE,
+      review: { ...RULES_ONE_RELEASE.review, approvalStatus: "pending-root-final-review" }
+    })
+  ).toThrow(/review handoff/)
+  expect(() => validateRulesOneRelease({ ...RULES_ONE_RELEASE, review: null })).toThrow(TypeError)
+})

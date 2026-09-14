@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createApplicationTimeMetadata, type ApplicationTimelineEntry } from "./application-time-metadata.js"
-import { DECISION_RECORD_SCHEMA_VERSION, type DecisionRecord } from "./decision-record.js"
+import { DECISION_RECORD_SCHEMA_VERSION, parseDecisionRecord, type DecisionRecord } from "./decision-record.js"
 import {
   MAX_REPLAY_RENDER_RECORD_BYTES,
   MAX_REPLAY_RENDER_STRING_LENGTH,
@@ -542,4 +542,26 @@ describe("stored-record replay renderer", () => {
     expect(() => renderReplayRecord({ record: oversized })).toThrow("bounded identifier")
     expect(MAX_REPLAY_RENDER_RECORD_BYTES).toBe(65_536)
   })
+})
+
+it("renders resistance, clock, timing and other numeric uncertainty records losslessly", () => {
+  for (const subject of ["resistance", "clock", "timing", "line-state"] as const) {
+    const outcome = {
+      disposition: "uncertainty" as const,
+      effect: "not-qualified" as const,
+      observedAtUs: 10_500,
+      lowerBound: 1,
+      upperBound: 2,
+      signal: { audible: "none" as const, latched: false, visual: "diagnostic" as const },
+      subject,
+      unit:
+        subject === "resistance"
+          ? ("milliOhm" as const)
+          : subject === "clock" || subject === "timing"
+            ? ("us" as const)
+            : null
+    }
+    const model = renderReplayRecord({ record: parseDecisionRecord({ ...record, outcome }) })
+    expect(model.record.outcome).toEqual(outcome)
+  }
 })

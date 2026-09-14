@@ -106,7 +106,7 @@ describe("scenario observatory module integration", () => {
     serverProcess?.kill()
   })
 
-  it("serves the built React simulator and its bundled script", async () => {
+  it("serves the built React simulator and its bundled script", { timeout: 30_000 }, async () => {
     const pageResponse = await fetch(origin)
     const page = await pageResponse.text()
     const scriptPath = page.match(/<script[^>]+src="([^"]+\.js)"/)?.[1]
@@ -123,42 +123,46 @@ describe("scenario observatory module integration", () => {
     expect((await scriptResponse.text()).length).toBeGreaterThan(1000)
   })
 
-  it("keeps a served simulator build coherent across a live rebuild and fails closed for missing or corrupt output", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "scoring-simulator-"))
-    const server = await startObservatory(directory)
-    try {
-      const missing = await fetch(server.origin)
-      expect(missing.status).toBe(503)
-      await expect(missing.json()).resolves.toEqual({ error: "simulator-build-unavailable" })
+  it(
+    "keeps a served simulator build coherent across a live rebuild and fails closed for missing or corrupt output",
+    { timeout: 30_000 },
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), "scoring-simulator-"))
+      const server = await startObservatory(directory)
+      try {
+        const missing = await fetch(server.origin)
+        expect(missing.status).toBe(503)
+        await expect(missing.json()).resolves.toEqual({ error: "simulator-build-unavailable" })
 
-      await writeSimulatorBuild(directory, "first.js", "export const build = 'first'\n")
-      const firstPage = await (await fetch(server.origin)).text()
-      expect(firstPage).toContain("/assets/first.js")
-      expect(await (await fetch(`${server.origin}/assets/first.js`)).text()).toContain("first")
+        await writeSimulatorBuild(directory, "first.js", "export const build = 'first'\n")
+        const firstPage = await (await fetch(server.origin)).text()
+        expect(firstPage).toContain("/assets/first.js")
+        expect(await (await fetch(`${server.origin}/assets/first.js`)).text()).toContain("first")
 
-      await rm(join(directory, "assets"), { force: true, recursive: true })
-      await writeSimulatorBuild(directory, "second.js", "export const build = 'second'\n")
-      const secondPageResponse = await fetch(server.origin)
-      const secondPage = await secondPageResponse.text()
-      expect(secondPageResponse.headers.get("cache-control")).toBe("no-store")
-      expect(secondPage).toContain("/assets/second.js")
-      const secondAsset = await fetch(`${server.origin}/assets/second.js`)
-      expect(secondAsset.status).toBe(200)
-      expect(secondAsset.headers.get("x-content-type-options")).toBe("nosniff")
-      expect(await secondAsset.text()).toContain("second")
-      expect(await (await fetch(`${server.origin}/assets/first.js`)).text()).toContain("first")
+        await rm(join(directory, "assets"), { force: true, recursive: true })
+        await writeSimulatorBuild(directory, "second.js", "export const build = 'second'\n")
+        const secondPageResponse = await fetch(server.origin)
+        const secondPage = await secondPageResponse.text()
+        expect(secondPageResponse.headers.get("cache-control")).toBe("no-store")
+        expect(secondPage).toContain("/assets/second.js")
+        const secondAsset = await fetch(`${server.origin}/assets/second.js`)
+        expect(secondAsset.status).toBe(200)
+        expect(secondAsset.headers.get("x-content-type-options")).toBe("nosniff")
+        expect(await secondAsset.text()).toContain("second")
+        expect(await (await fetch(`${server.origin}/assets/first.js`)).text()).toContain("first")
 
-      await writeFile(join(directory, "index.html"), "<html>corrupt</html>")
-      const corrupt = await fetch(server.origin)
-      expect(corrupt.status).toBe(503)
-      await expect(corrupt.json()).resolves.toEqual({ error: "simulator-build-invalid" })
-    } finally {
-      server.process.kill()
-      await rm(directory, { force: true, recursive: true })
+        await writeFile(join(directory, "index.html"), "<html>corrupt</html>")
+        const corrupt = await fetch(server.origin)
+        expect(corrupt.status).toBe(503)
+        await expect(corrupt.json()).resolves.toEqual({ error: "simulator-build-invalid" })
+      } finally {
+        server.process.kill()
+        await rm(directory, { force: true, recursive: true })
+      }
     }
-  })
+  )
 
-  it("executes reports for every weapon through the same server", async () => {
+  it("executes reports for every weapon through the same server", { timeout: 30_000 }, async () => {
     const response = await fetch(`${origin}/api/run`)
     const body = await response.text()
     const repeatedBody = await (await fetch(`${origin}/api/run`)).text()

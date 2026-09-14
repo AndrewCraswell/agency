@@ -6,6 +6,7 @@ import {
   assertIntegerMicroseconds,
   isIntegerMicroseconds,
   resolveScoringGlossaryTerm,
+  resolveScoringGlossaryUnit,
   validateGlossaryMeasurement,
   validateScoringGlossary,
   validateScoringQuantity
@@ -168,5 +169,88 @@ describe("M0-02 scoring glossary and units", () => {
       candidate.terms[0].canonical = "changed"
     }).not.toThrow()
     expect(validated.terms[0].canonical).not.toBe("changed")
+  })
+})
+
+describe("glossary input boundaries", () => {
+  it("rejects malformed containers and property descriptors without invoking accessors", () => {
+    for (const value of [
+      null,
+      [],
+      new Date(),
+      {},
+      { ...mutableGlossary(), extra: true },
+      { ...mutableGlossary(), revision: "unknown" },
+      { ...mutableGlossary(), terms: [] },
+      { ...mutableGlossary(), units: [] }
+    ]) {
+      expect(() => validateScoringGlossary(value)).toThrow()
+    }
+    const accessor = mutableGlossary()
+    Object.defineProperty(accessor, "revision", {
+      enumerable: true,
+      get() {
+        throw new Error("accessor executed")
+      }
+    })
+    expect(() => validateScoringGlossary(accessor)).toThrow(/enumerable data/)
+    const hidden = mutableGlossary()
+    Object.defineProperty(hidden, "revision", { enumerable: false })
+    expect(() => validateScoringGlossary(hidden)).toThrow(/enumerable data/)
+  })
+
+  it("rejects malformed unit and term fields", () => {
+    for (const [field, value] of Object.entries({
+      dimension: "unknown",
+      fieldSuffix: "",
+      integerOnly: 1,
+      nonNegative: 1,
+      symbol: "",
+      toSiFactor: 0
+    })) {
+      const candidate = mutableGlossary()
+      candidate.units[0]![field] = value
+      expect(() => validateScoringGlossary(candidate), field).toThrow()
+    }
+    for (const [field, value] of Object.entries({
+      canonical: " ",
+      definition: "",
+      kind: "unknown",
+      aliases: null,
+      unit: "us"
+    })) {
+      const candidate = mutableGlossary()
+      candidate.terms[0]![field] = value
+      expect(() => validateScoringGlossary(candidate), field).toThrow()
+    }
+    const missingUnit = mutableGlossary()
+    missingUnit.terms = [
+      { aliases: [], canonical: "duration", definition: "Elapsed time", kind: "quantity", unit: null }
+    ]
+    expect(() => validateScoringGlossary(missingUnit)).toThrow(/must declare a unit/)
+    const alias = mutableGlossary()
+    alias.terms[0]!.aliases = ["A"]
+    expect(() => validateScoringGlossary(alias)).toThrow(/Overloaded glossary alias/)
+    const unknownReference = mutableGlossary()
+    unknownReference.units = unknownReference.units.filter((unit) => unit.code !== "us")
+    expect(() => validateScoringGlossary(unknownReference)).toThrow(/Unknown glossary unit reference/)
+  })
+
+  it("resolves aliases and enforces measurement domains", () => {
+    for (const label of [null, "", 1]) expect(() => resolveScoringGlossaryTerm(label)).toThrow()
+    const custom = validateScoringGlossary({
+      ...mutableGlossary(),
+      terms: [{ aliases: ["other-name"], canonical: "custom", definition: "Custom term", kind: "line", unit: null }]
+    })
+    expect(resolveScoringGlossaryTerm("other-name", custom).canonical).toBe("custom")
+    const reduced = validateScoringGlossary({
+      ...custom,
+      units: [SCORING_GLOSSARY_UNITS.find((unit) => unit.code !== "us")]
+    })
+    expect(() => resolveScoringGlossaryUnit("us", reduced)).toThrow(/Unknown scoring glossary unit/)
+    expect(() => validateGlossaryMeasurement({ unit: "us", value: -1 })).toThrow(/non-negative/)
+    for (const term of SCORING_GLOSSARY_TERMS.filter((term) => term.kind === "quantity" && term.unit !== "us")) {
+      expect(validateScoringQuantity(term.canonical, 1)).toBe(1)
+    }
   })
 })

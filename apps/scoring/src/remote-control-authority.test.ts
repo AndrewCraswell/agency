@@ -357,3 +357,101 @@ describe("RC-01 remote-control authority contract", () => {
     ).toThrow(TypeError)
   })
 })
+
+describe("authority validation boundaries", () => {
+  it("rejects malformed requests, controllers and revisions", () => {
+    const request = workflowRequest("request")
+    for (const bad of [
+      null,
+      { ...request, type: 1 },
+      { ...request, expectedAuthorityRevision: -1 },
+      { ...request, controller: {} },
+      { ...request, controller: { ...handheldReferee, kind: "unknown" } },
+      { ...request, controller: { ...handheldReferee, permission: "unknown" } },
+      { ...request, [Symbol("extra")]: true }
+    ]) {
+      expect(() => parseAuthorityRequest(bad)).toThrow(TypeError)
+    }
+    for (const type of [
+      "bout-workflow-command",
+      "snapshot-load-request",
+      "scoring-rearm-request",
+      "scoring-reset-request",
+      "authority-transfer-request"
+    ]) {
+      expect(() => parseAuthorityRequest({ ...request, type, extra: true })).toThrow(TypeError)
+    }
+    expect(() =>
+      createRemoteControlAuthority({ activeController: null, authorityRevision: 0, maxRememberedRequestIds: 0 })
+    ).toThrow()
+    expect(() =>
+      createRemoteControlAuthority({ activeController: null, authorityRevision: 0, maxPendingScoringCoreRequests: 0 })
+    ).toThrow()
+    expect(
+      createRemoteControlAuthority({ activeController: null, authorityRevision: 0 }).receive(request)
+    ).toMatchObject({ reason: "no-active-controller" })
+    const bounded = createRemoteControlAuthority({
+      activeController: handheldReferee,
+      authorityRevision: 7,
+      maxRememberedRequestIds: 1
+    })
+    expect(bounded.receive(request).disposition).toBe("application-applied")
+    expect(bounded.receive(workflowRequest("second"))).toMatchObject({ reason: "request-history-full" })
+    expect(gate(applicationSupervisor).receiveScoringCoreResponse({})).toMatchObject({ reason: "malformed" })
+    expect(
+      gate().receiveScoringCoreResponse({ authority: "stm32-scoring", requestId: "unknown", result: "accepted" })
+    ).toMatchObject({ reason: "unknown-scoring-core-request" })
+  })
+
+  it("checks snapshot permissions and transfer revision exhaustion", () => {
+    expect(
+      gate(applicationReferee).receive({
+        ...workflowRequest("snapshot", applicationReferee),
+        type: "snapshot-load-request"
+      })
+    ).toMatchObject({ reason: "controller-permission-not-permitted" })
+    const exhausted = createRemoteControlAuthority({
+      activeController: applicationSupervisor,
+      authorityRevision: Number.MAX_SAFE_INTEGER
+    })
+    expect(
+      exhausted.receive({
+        ...workflowRequest("transfer", applicationSupervisor, Number.MAX_SAFE_INTEGER),
+        type: "authority-transfer-request",
+        targetController: tournamentSupervisor
+      })
+    ).toMatchObject({ reason: "authority-revision-mismatch" })
+    expect(
+      mapApprovedWeaponCommand(
+        parseRemoteCommand({
+          apparatusId: "apparatus",
+          authority: { ...applicationSupervisor, authorityRevision: 7 },
+          command: "clock.toggle",
+          commandId: "clock",
+          counter: 1,
+          payload: {},
+          pressKind: "direct",
+          remoteId: null,
+          schemaVersion: 1
+        })
+      )
+    ).toBeNull()
+  })
+})
+
+it("rejects malformed authority options and unrecognized core responses", () => {
+  expect(() => Reflect.apply(createRemoteControlAuthority, undefined, [{}])).toThrow(TypeError)
+  expect(
+    gate().receiveScoringCoreResponse({ authority: "stm32-scoring", requestId: "unknown", result: "accepted" })
+  ).toMatchObject({ reason: "unknown-scoring-core-request" })
+})
+
+it("rejects transferring authority to the current controller", () => {
+  expect(
+    gate(applicationSupervisor).receive({
+      ...workflowRequest("same", applicationSupervisor),
+      type: "authority-transfer-request",
+      targetController: applicationSupervisor
+    })
+  ).toMatchObject({ reason: "controller-kind-not-permitted" })
+})

@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto"
+import * as fs from "node:fs"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   SCENARIO_RUN_CLI_REPORT_FORMAT,
   SCENARIO_RUN_CLI_REPORT_VERSION,
@@ -130,3 +131,20 @@ describe("scenario runner CLI", () => {
     })
   })
 })
+
+it("reports the working directory and tolerates unavailable evidence digests", () => {
+  expect(runScenarioCli([process.cwd()]).exitCode).toBe(2)
+  const spy = vi.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
+    throw new Error("read unavailable")
+  })
+  try {
+    expect(runScenarioCli([fixturePath("epee-contact-boundaries.json")])).toMatchObject({
+      exitCode: 0,
+      report: { input: { contentDigest: null } }
+    })
+  } finally {
+    spy.mockRestore()
+  }
+})
+
+vi.mock("node:fs", { spy: true })

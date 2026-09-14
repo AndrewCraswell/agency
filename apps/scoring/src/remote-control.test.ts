@@ -481,3 +481,17 @@ describe("RC-02 complete clock snapshot schema", () => {
     ).toThrow(TypeError)
   })
 })
+
+it("rejects non-record payloads, unknown press kinds and running passivity in incompatible modes", () => {
+  expect(() => parseRemoteCommand({ ...score, payload: null })).toThrow(TypeError)
+  expect(() => parseRemoteCommand({ ...score, pressKind: "unknown" })).toThrow(TypeError)
+  for (const clock of [{ ...snapshot.clock, mode: "break" }, snapshot.clock]) {
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...snapshot,
+        clock,
+        passivity: { configuredDurationCentiseconds: 6000, remainingDurationCentiseconds: 1000, status: "running" }
+      })
+    ).toThrow(TypeError)
+  }
+})

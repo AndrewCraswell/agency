@@ -1001,9 +1001,7 @@ function parseComparison(
 
 function deepFreeze<T>(value: T): T {
   if (typeof value !== "object" || value === null || Object.isFrozen(value)) return value
-  for (const descriptor of Object.values(Object.getOwnPropertyDescriptors(value))) {
-    if ("value" in descriptor) deepFreeze(descriptor.value)
-  }
+  for (const child of Object.values(value)) deepFreeze(child)
   return Object.freeze(value)
 }
 

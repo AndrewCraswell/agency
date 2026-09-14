@@ -373,7 +373,7 @@ export function parseIrSecureFrame(value: unknown): IrSecureEnvelope {
     commandId: bytesToHex(value.subarray(52, 68)),
     counter: view.getBigUint64(44, false).toString(16).padStart(16, "0"),
     keyEpoch: view.getUint32(40, false),
-    pressKind: pressKindFromCode(value[68] ?? 0),
+    pressKind: pressKindFromCode(value[68]),
     protocolId: IR_PROTOCOL_ID,
     protocolVersion: IR_PROTOCOL_VERSION,
     remoteIdentity: bytesToHex(value.subarray(24, 40)),

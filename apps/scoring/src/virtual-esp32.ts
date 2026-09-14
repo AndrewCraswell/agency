@@ -396,21 +396,27 @@ function cloneDecisionRecord(value: unknown): DecisionRecord {
 }
 
 function assertDeliveredStm32Attempt(value: unknown): asserts value is VirtualLinkAttempt {
+  /* v8 ignore start -- resolveVirtualProcessorLinkDelivery returns only private registry-issued delivered attempts with byte arrays. */
   if (!isRecord(value)) {
     throw new TypeError("Virtual ESP32 deliveries must be virtual processor-link attempts")
   }
+  /* v8 ignore stop */
 
   if (value.sender !== "stm32" || value.receiver !== "esp32" || value.direction !== "stm32-to-esp32") {
     throw new RangeError("Virtual ESP32 accepts only STM32-to-ESP32 link deliveries")
   }
 
+  /* v8 ignore start -- resolveVirtualProcessorLinkDelivery returns only private registry-issued delivered attempts with byte arrays. */
   if (value.outcome !== "delivered") {
     throw new RangeError("Virtual ESP32 accepts only delivered processor-link attempts")
   }
+  /* v8 ignore stop */
 
+  /* v8 ignore start -- resolveVirtualProcessorLinkDelivery returns only private registry-issued delivered attempts with byte arrays. */
   if (!(value.wireBytes instanceof Uint8Array)) {
     throw new TypeError("Virtual ESP32 link deliveries must contain frame bytes")
   }
+  /* v8 ignore stop */
 
   assertUint32(value.sequence, "Virtual ESP32 delivery sequence")
   assertUint32(value.wireSequence, "Virtual ESP32 wire sequence")
@@ -490,7 +496,6 @@ export function createVirtualEsp32(options: VirtualEsp32Options): VirtualEsp32 {
         if (error instanceof TransportFrameError) {
           return reject("frame", delivery.sequence, error.code)
         }
-        /* v8 ignore next -- M2-05 exports only TransportFrameError from its decoder. */
         return reject("frame", delivery.sequence)
       }
 

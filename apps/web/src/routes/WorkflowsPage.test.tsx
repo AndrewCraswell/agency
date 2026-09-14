@@ -233,7 +233,7 @@ describe("WorkflowsPage", () => {
     render(<WorkflowsPage />)
 
     await userEvent.click(await screen.findByRole("button", { name: "Create workflow" }))
-    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Temporary name")
+    await userEvent.type(await screen.findByRole("textbox", { name: "Name" }), "Temporary name")
     await userEvent.click(screen.getByRole("combobox", { name: "Repository" }))
     expect(screen.getByRole("option", { name: "octo/agency" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "octo/platform" })).toBeInTheDocument()
@@ -242,7 +242,7 @@ describe("WorkflowsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
 
     await userEvent.click(await screen.findByRole("button", { name: "Create workflow" }))
-    expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("")
+    expect(await screen.findByRole("textbox", { name: "Name" })).toHaveValue("")
     expect(screen.getByRole("combobox", { name: "Repository" })).toHaveTextContent("Select a repository")
   })
 
@@ -252,7 +252,7 @@ describe("WorkflowsPage", () => {
     render(<WorkflowsPage />)
 
     await userEvent.click(await screen.findByRole("button", { name: "Create workflow" }))
-    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Release workflow")
+    await userEvent.type(await screen.findByRole("textbox", { name: "Name" }), "Release workflow")
 
     expect(await screen.findByText(/Connect GitHub and grant access/u)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Go to Integrations" })).toHaveAttribute(

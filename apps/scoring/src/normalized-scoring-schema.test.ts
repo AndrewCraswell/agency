@@ -406,3 +406,115 @@ describe("CW-03 normalized scoring schema", () => {
     expect(NormalizedScoringSchemaError).toBeTypeOf("function")
   })
 })
+
+describe("normalized data boundary failures", () => {
+  it("rejects cycles, shared objects, exotic prototypes and non-data properties", () => {
+    const cycle = sample("epee")
+    Object.assign(cycle, { left: cycle })
+    const shared = sample("epee")
+    shared.right = shared.left
+    const hidden = sample("epee")
+    Object.defineProperty(hidden, "kind", { enumerable: false })
+    const symbol = sample("epee")
+    Object.defineProperty(symbol, Symbol("extra"), { value: 1 })
+    for (const value of [cycle, shared, hidden, symbol, null, { ...sample("epee"), left: new Date() }]) {
+      expect(() => parseNormalizedScoringInput(value)).toThrow(NormalizedScoringSchemaError)
+    }
+  })
+
+  it("rejects unsupported schema, kinds, widths, lists and weapon identifiers", () => {
+    for (const override of [
+      { schemaVersion: 2 },
+      { kind: "other" },
+      { atUs: "18446744073709551616" },
+      { diagnostics: Array.from({ length: 9 }, () => ({ code: "white", side: "left" })) },
+      { weapon: "other" }
+    ]) {
+      expect(() => parseNormalizedScoringInput({ ...sample("epee"), ...override })).toThrow(
+        NormalizedScoringSchemaError
+      )
+    }
+    expect(() => parseNormalizedScoringState({ ...state("epee"), weapon: "other" })).toThrow(
+      NormalizedScoringSchemaError
+    )
+  })
+
+  it("enforces decision side, signals, timestamps and result consistency", () => {
+    for (const override of [
+      { side: "right" },
+      { audible: "no" },
+      { latched: "no" },
+      { visual: "none" },
+      { atUs: "1", startedAtUs: "20" },
+      { atUs: "1", startedAtUs: "2" },
+      { ...emptyDecision("left"), atUs: "1" },
+      { disposition: "off-target", visual: "off-target", audible: "yes" },
+      { disposition: "off-target", visual: "none", audible: "no" },
+      { disposition: "off-target", visual: "off-target", audible: "no", latched: "no" },
+      { disposition: "indeterminate" }
+    ]) {
+      expect(() =>
+        parseNormalizedScoringResult({ ...result(), left: { ...hitDecision("left"), ...override } })
+      ).toThrow(NormalizedScoringSchemaError)
+    }
+    expect(
+      parseNormalizedScoringResult({
+        ...result(),
+        left: { ...hitDecision("left"), disposition: "off-target", visual: "off-target", audible: "no" }
+      }).left.disposition
+    ).toBe("off-target")
+    expect(() => parseNormalizedScoringResult({ ...result(), errorCode: "fault" })).toThrow(
+      NormalizedScoringSchemaError
+    )
+  })
+
+  it("rejects inconsistent candidate, first-hit and last-input state", () => {
+    for (const override of [
+      { hasLastInput: "no" },
+      { hasFirstHit: "no" },
+      { left: { ...sideState(), registered: "yes" } },
+      { left: { ...sideState(), candidateSinceUs: "99" } },
+      { left: { ...sideState(), candidate: "none", candidateSinceUs: "1" } }
+    ]) {
+      expect(() => parseNormalizedScoringState({ ...state("epee"), ...override })).toThrow(NormalizedScoringSchemaError)
+    }
+    const foil = state("foil")
+    expect(() =>
+      parseNormalizedScoringState({ ...foil, left: { ...foil.left, candidateClassification: "none" } })
+    ).toThrow(NormalizedScoringSchemaError)
+    expect(() =>
+      parseNormalizedScoringState({ ...state("epee"), hasLastInput: "no", lastInputAtUs: "0", lastInputId: 0 })
+    ).toThrow(NormalizedScoringSchemaError)
+  })
+})
+
+it("rejects malformed array descriptors and inconsistent empty scoring history", () => {
+  const sparse = sample("epee")
+  delete sparse.diagnostics[0]
+  const hidden = sample("epee")
+  Object.defineProperty(hidden.diagnostics, "0", { enumerable: false })
+  const wrongLength = sample("epee")
+  wrongLength.diagnostics = new Proxy(wrongLength.diagnostics, {
+    getOwnPropertyDescriptor(target, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key)
+      return key === "length" ? { ...descriptor, value: 99 } : descriptor
+    }
+  })
+  for (const value of [sparse, hidden, wrongLength])
+    expect(() => parseNormalizedScoringInput(value)).toThrow(NormalizedScoringSchemaError)
+  const empty = {
+    ...state("epee"),
+    hasFirstHit: "no",
+    firstHitAtUs: "0",
+    lockoutActive: "no",
+    lockoutEndsAtUs: "0",
+    locked: "no"
+  }
+  expect(() => parseNormalizedScoringState(empty)).not.toThrow()
+  for (const changes of [{ lockoutEndsAtUs: "1" }, { locked: "yes" }, { lockoutActive: "yes" }]) {
+    expect(() => parseNormalizedScoringState({ ...empty, ...changes })).toThrow(NormalizedScoringSchemaError)
+  }
+  expect(() => parseNormalizedScoringState({ ...state("epee"), firstHitAtUs: "2", lockoutEndsAtUs: "1" })).toThrow(
+    NormalizedScoringSchemaError
+  )
+})

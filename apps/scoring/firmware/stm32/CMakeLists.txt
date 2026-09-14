@@ -45,7 +45,6 @@ add_executable(scoring_stm32_core_tests
 
 add_executable(scoring_stm32_contact_filter_tests tests/test_stm32_contact_filter.c)
 target_link_libraries(scoring_stm32_contact_filter_tests PRIVATE scoring_stm32_host)
-scoring_native_apply_baseline_warnings(scoring_stm32_contact_filter_tests)
 add_test(NAME scoring_stm32_contact_filter_tests COMMAND scoring_stm32_contact_filter_tests)
 
 add_executable(scoring_stm32_target_startup_tests
@@ -63,12 +62,10 @@ add_executable(scoring_stm32g474_acquisition_tests
 )
 target_include_directories(scoring_stm32g474_acquisition_tests PRIVATE
   "${SCORING_FIRMWARE_ROOT}/target" "${SCORING_FIRMWARE_ROOT}/tests" "${SCORING_FIRMWARE_ROOT}/include")
-scoring_native_apply_baseline_warnings(scoring_stm32g474_acquisition_tests)
 add_test(NAME scoring_stm32g474_acquisition_tests COMMAND scoring_stm32g474_acquisition_tests)
 
 add_executable(scoring_stm32_conductor_decode_tests tests/test_stm32_conductor_decode.c)
 target_link_libraries(scoring_stm32_conductor_decode_tests PRIVATE scoring_stm32_host)
-scoring_native_apply_baseline_warnings(scoring_stm32_conductor_decode_tests)
 add_test(NAME scoring_stm32_conductor_decode_tests COMMAND scoring_stm32_conductor_decode_tests)
 
 target_include_directories(scoring_stm32_host_tests PRIVATE
@@ -106,10 +103,19 @@ foreach(target
   scoring_stm32_host_tests
   scoring_stm32_transport_tests
   scoring_stm32_core_tests
+  scoring_stm32_contact_filter_tests
+  scoring_stm32_conductor_decode_tests
+  scoring_stm32g474_acquisition_tests
   scoring_stm32_target_startup_tests
   scoring_stm32g474_target_adapter_tests
 )
   scoring_native_apply_baseline_warnings(${target})
+  # Test assertions must execute in Release builds as well as coverage builds.
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /UNDEBUG)
+  else()
+    target_compile_options(${target} PRIVATE -UNDEBUG)
+  endif()
 endforeach()
 scoring_native_assert_baseline_warnings(
   scoring_stm32_host

@@ -793,3 +793,189 @@ describe("virtual front-end", () => {
     expect(Object.isFrozen(state.frontEnd.current?.relations[0]?.provenance)).toBe(true)
   })
 })
+
+it("rejects malformed cycle stages, sources and relation graphs", () => {
+  const command = {
+    atUs: 10,
+    cycleId: "cycle",
+    phaseId: "epee-tip-loop",
+    relations: null,
+    side: "left",
+    source: null,
+    stage: "safe-inactive"
+  }
+  for (const change of [
+    { cycleId: 1 },
+    { side: "none" },
+    { stage: "unknown" },
+    { source: "left.A" },
+    { relations: [] }
+  ]) {
+    expect(() => advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), { ...command, ...change })).toThrow()
+  }
+  const observation = { ...command, stage: "observe", source: "left.A", relations: [relation({ id: "relation" })] }
+  for (const relations of [
+    null,
+    [null],
+    [{ ...relation({ id: "relation" }), endpoints: [] }],
+    [{ ...relation({ id: "relation" }), provenance: null }]
+  ]) {
+    expect(() =>
+      advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), { ...observation, relations })
+    ).toThrow()
+  }
+  for (const key of ["relations", "endpoints"] as const) {
+    const relations = [relation({ id: "relation" })]
+    const values = key === "relations" ? relations : relations[0]!.endpoints
+    Object.defineProperty(values, "0", { enumerable: false })
+    expect(() =>
+      advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), { ...observation, relations })
+    ).toThrow()
+  }
+  const shared = relation({ id: "shared" })
+  expect(() =>
+    advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), { ...observation, relations: [shared, shared] })
+  ).toThrow(/alias/)
+  expect(() =>
+    advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), {
+      ...observation,
+      relations: [shared, { ...shared, endpoints: [...shared.endpoints] }]
+    })
+  ).toThrow(/provenance/)
+  expect(
+    advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), { ...command, stage: "fault" }).receipt.diagnostic
+  ).toBe("safe-state")
+  const selected = advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), command).state
+  expect(
+    advanceVirtualFrontEndCycle(selected, { ...command, atUs: 11, stage: "select-source", source: "right.A" }).receipt
+      .diagnostic
+  ).toBe("unauthorized-excitation")
+  expect(
+    advanceVirtualFrontEndCycle(selected, {
+      ...command,
+      cycleId: "different",
+      atUs: 11,
+      stage: "select-source",
+      source: "left.A"
+    }).receipt.diagnostic
+  ).toBe("cycle-incomplete")
+})
+
+it("resolves opposing conductors and piste paths from the right-hand perspective", () => {
+  const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((value) => value.id === "foil-target-context")!
+  let current = createVirtualFrontEndCycleState()
+  for (const [index, stage] of ["safe-inactive", "select-source", "settle", "observe"].entries()) {
+    const atUs = index + 1
+    const result = advanceVirtualFrontEndCycle(current, {
+      atUs,
+      cycleId: "right-cycle",
+      phaseId: profile.id,
+      side: "right",
+      stage,
+      source: stage === "safe-inactive" ? null : "right.A",
+      relations:
+        stage === "observe"
+          ? [
+              relation({
+                id: "target",
+                endpoints: ["left.C", "right.A"],
+                provenance: { sourceId: "fixture", observedAtUs: atUs }
+              }),
+              relation({
+                id: "piste",
+                endpoints: ["piste", "right.A"],
+                provenance: { sourceId: "fixture", observedAtUs: atUs }
+              })
+            ]
+          : null
+    })
+    current = result.state
+    if (stage === "observe") expect(result.receipt.status).toBe("observed")
+  }
+})
+it("resolves opposing conductors and piste paths from the left-hand perspective", () => {
+  const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((value) => value.id === "foil-target-context")!
+  let current = createVirtualFrontEndCycleState()
+  for (const [index, stage] of ["safe-inactive", "select-source", "settle", "observe"].entries()) {
+    const atUs = index + 1
+    const result = advanceVirtualFrontEndCycle(current, {
+      atUs,
+      cycleId: "left-cycle",
+      phaseId: profile.id,
+      side: "left",
+      stage,
+      source: stage === "safe-inactive" ? null : "left.A",
+      relations:
+        stage === "observe"
+          ? [
+              relation({
+                id: "target",
+                endpoints: ["left.A", "right.C"],
+                provenance: { sourceId: "fixture", observedAtUs: atUs }
+              }),
+              relation({
+                id: "piste",
+                endpoints: ["left.A", "piste"],
+                provenance: { sourceId: "fixture", observedAtUs: atUs }
+              })
+            ]
+          : null
+    })
+    current = result.state
+    if (stage === "observe") expect(result.receipt.status).toBe("observed")
+  }
+})
+
+it("validates excitation owners and preserves inactive phases", () => {
+  const invalid = { ...frame(), phase: { ...activeEpeePhase, excitation: { state: "active", owner: "unknown" } } }
+  expect(() => Reflect.apply(advanceVirtualFrontEnd, undefined, [createVirtualFrontEndState(), invalid])).toThrow(
+    /declared conductor/
+  )
+  const inactive = { ...activeEpeePhase, excitation: { state: "inactive" as const, owner: null }, safeInactive: true }
+  expect(
+    advanceVirtualFrontEnd(createVirtualFrontEndState(), frame({ phase: inactive })).current?.phase.excitation
+  ).toEqual({ state: "inactive", owner: null })
+})
+
+it("rejects exotic relation lengths and incomplete observed phase relations", () => {
+  const relations = new Proxy([], {
+    getOwnPropertyDescriptor(target, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key)
+      return key === "length" ? { ...descriptor, value: "invalid" } : descriptor
+    }
+  })
+  const base = { cycleId: "incomplete", phaseId: "epee-tip-loop", side: "left" }
+  expect(() =>
+    advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), {
+      ...base,
+      atUs: 4,
+      stage: "observe",
+      source: "left.A",
+      relations
+    })
+  ).toThrow()
+  let state = createVirtualFrontEndCycleState()
+  for (const [index, stage] of ["safe-inactive", "select-source", "settle"].entries()) {
+    state = advanceVirtualFrontEndCycle(state, {
+      ...base,
+      atUs: index + 1,
+      stage,
+      source: index === 0 ? null : "left.A",
+      relations: null
+    }).state
+  }
+  expect(
+    advanceVirtualFrontEndCycle(state, { ...base, atUs: 4, stage: "observe", source: "left.A", relations: [] }).receipt
+  ).toMatchObject({ diagnostic: "cycle-incomplete" })
+})
+
+it("rejects a canonical conductor owned by the wrong acquisition phase", () => {
+  expect(() =>
+    advanceVirtualFrontEnd(
+      createVirtualFrontEndState(),
+      frame({
+        phase: { ...activeEpeePhase, excitation: { state: "active", owner: "right.A" } }
+      })
+    )
+  ).toThrow(/not authorized/)
+})

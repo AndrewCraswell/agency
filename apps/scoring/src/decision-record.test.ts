@@ -285,3 +285,40 @@ describe("decision record schema", () => {
     expect(() => parseDecisionRecord(new Map())).toThrow(new TypeError("Unsupported or invalid decision record"))
   })
 })
+
+it("rejects malformed uncertainty records and exotic capture arrays", () => {
+  expect(() => parseDecisionRecord(record({ ...uncertaintyOutcome, observedAtUs: -1 }))).toThrow()
+  expect(() =>
+    parseDecisionRecord({ ...record(uncertaintyOutcome), outcome: { ...uncertaintyOutcome, effect: "other" } })
+  ).toThrow()
+  for (const change of [
+    (items: readonly unknown[]) => {
+      Object.setPrototypeOf(items, {})
+    },
+    (items: readonly unknown[]) => {
+      Object.defineProperty(items, "0", { enumerable: false })
+    }
+  ]) {
+    const value = structuredClone(record(uncertaintyOutcome))
+    change(value.rawCaptureRefs)
+    expect(() => parseDecisionRecord(value)).toThrow()
+  }
+  for (const field of ["observed", "status"]) {
+    const value = structuredClone(record(identityUncertaintyOutcome))
+    if (value.outcome.disposition !== "uncertainty" || value.outcome.subject !== "identity")
+      throw new Error("Missing identity outcome")
+    Reflect.deleteProperty(value.outcome.identity, field)
+    expect(() => parseDecisionRecord(value)).toThrow()
+  }
+})
+
+it("rejects unknown identity fields and malformed observed identities", () => {
+  for (const change of [{ field: "unknown" }, { observed: "" }]) {
+    expect(() =>
+      parseDecisionRecord({
+        ...record(identityUncertaintyOutcome),
+        outcome: { ...identityUncertaintyOutcome, identity: { ...identityUncertaintyOutcome.identity, ...change } }
+      })
+    ).toThrow()
+  }
+})

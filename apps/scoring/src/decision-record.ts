@@ -499,7 +499,6 @@ function isStrictPlainData(value: unknown, seen = new WeakSet<object>()): boolea
     return false
   }
   return keys.every((key) => {
-    if (typeof key !== "string") return false
     const descriptor = Object.getOwnPropertyDescriptor(value, key)
     return (
       descriptor !== undefined &&

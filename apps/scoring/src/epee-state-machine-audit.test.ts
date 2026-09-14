@@ -108,3 +108,19 @@ describe("M1-01 epee state-machine audit", () => {
     expect(Object.isFrozen(audit.sourceContracts)).toBe(true)
   })
 })
+
+it("rejects malformed audit containers and unversioned evidence", () => {
+  expect(() => validateM101EpeeStateMachineAudit(null)).toThrow(TypeError)
+  expect(() => validateM101EpeeStateMachineAudit({ ...M101_EPEE_STATE_MACHINE_AUDIT, branches: [null] })).toThrow(
+    RangeError
+  )
+  expect(() => validateM101EpeeStateMachineAudit({ ...M101_EPEE_STATE_MACHINE_AUDIT, sourceContracts: [] })).toThrow(
+    RangeError
+  )
+})
+
+it("validates missing audit versions and milestone evidence", () => {
+  expect(() => validateM101EpeeStateMachineAudit({ ...M101_EPEE_STATE_MACHINE_AUDIT, version: "unknown" })).toThrow(
+    RangeError
+  )
+})

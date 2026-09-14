@@ -175,3 +175,29 @@ describe("RC-04 handheld hardware selection", () => {
     }
   })
 })
+
+it("rejects noncanonical hardware-selection graphs", () => {
+  for (const mutate of [
+    (value: object) => {
+      Object.setPrototypeOf(value, null)
+    },
+    (value: object) => {
+      Reflect.deleteProperty(value, "architecture")
+      Reflect.set(value, "replacement", {})
+    },
+    (value: object) => {
+      Reflect.set(value, "architecture", value)
+    },
+    (value: object) => {
+      Reflect.set(value, "requiredEvidenceBeforeRelease", {})
+    },
+    (value: object) => {
+      const array = Reflect.get(value, "requiredEvidenceBeforeRelease")
+      Object.setPrototypeOf(array, {})
+    }
+  ]) {
+    const candidate: object = structuredClone(remoteControlHardwareSelection)
+    mutate(candidate)
+    expect(() => validateRemoteControlHardwareSelection(candidate)).toThrow(RangeError)
+  }
+})

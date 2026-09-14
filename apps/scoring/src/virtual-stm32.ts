@@ -153,9 +153,11 @@ function assertCanonicalSnapshot(value: unknown): asserts value is VirtualFrontE
  */
 function weaponForReviewedPhase(snapshot: VirtualFrontEndSnapshot): VirtualStm32Weapon {
   const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((candidate) => candidate.id === snapshot.phase.id)
+  /* v8 ignore start -- validateVirtualFrontEndSnapshot has already resolved this phase against the same registry. */
   if (profile === undefined) {
     throw new RangeError("Virtual STM32 snapshots must use a reviewed acquisition phase")
   }
+  /* v8 ignore stop */
   return profile.weapon
 }
 

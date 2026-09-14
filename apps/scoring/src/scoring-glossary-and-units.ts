@@ -375,9 +375,6 @@ function requireExactKeys(value: Record<string, unknown>, keys: readonly string[
     throw new TypeError(`${path} has an unknown or missing property`)
   }
   for (const key of actualKeys) {
-    if (typeof key !== "string") {
-      throw new TypeError(`${path} properties must have string keys`)
-    }
     const descriptor = Object.getOwnPropertyDescriptor(value, key)
     if (descriptor === undefined || !descriptor.enumerable || !("value" in descriptor)) {
       throw new TypeError(`${path} properties must be enumerable data values`)

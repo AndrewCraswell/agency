@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest"
+import * as crypto from "node:crypto"
+import { describe, expect, it, vi } from "vitest"
 import { DECISION_RECORD_SCHEMA_VERSION, type DecisionRecord } from "./decision-record.js"
 import {
   EVENT_JOURNAL_WRITE_BOUNDARIES,
@@ -232,3 +233,49 @@ describe("event journal", () => {
     expect(createEventJournal({ storage }).records.map((entry) => entry.recordId)).toEqual(["record-1"])
   })
 })
+
+it("applies byte-budget backpressure before record capacity without committing partial data", () => {
+  const storage = createVirtualEventJournalStorage()
+  const journal = createEventJournal({ storage })
+  let accepted = 0
+  let refused = false
+  for (let index = 0; index < 32; index += 1) {
+    const value = record(`record-${index}`, 100)
+    const large = {
+      ...value,
+      rawCaptureRefs: Array.from({ length: 8 }, (_, reference) => ({
+        ...value.rawCaptureRefs[0]!,
+        captureId: `${reference}-${"x".repeat(120)}`,
+        contentFormatRevision: "x".repeat(128)
+      }))
+    }
+    const receipt = journal.append(large)
+    if (receipt.outcome === "backpressure") {
+      refused = true
+      expect(journal.records).toHaveLength(accepted)
+      expect(createEventJournal({ storage }).records).toHaveLength(accepted)
+      break
+    }
+    expect(receipt.outcome).toBe("accepted")
+    accepted += 1
+  }
+  expect(refused).toBe(true)
+  expect(accepted).toBeGreaterThan(0)
+})
+
+it("propagates unexpected integrity failures without committing", () => {
+  const storage = createVirtualEventJournalStorage()
+  const journal = createEventJournal({ storage })
+  const spy = vi.spyOn(crypto, "createHash").mockImplementationOnce(() => {
+    throw new Error("hash unavailable")
+  })
+  try {
+    expect(() => journal.append(record("failed", 10))).toThrow("hash unavailable")
+    expect(journal.records).toEqual([])
+    expect(createEventJournal({ storage }).records).toEqual([])
+  } finally {
+    spy.mockRestore()
+  }
+})
+
+vi.mock("node:crypto", { spy: true })

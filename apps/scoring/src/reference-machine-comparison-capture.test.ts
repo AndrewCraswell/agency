@@ -146,3 +146,216 @@ describe("reference-machine comparison capture", () => {
     expect(isReferenceMachineComparisonCapture(null)).toBe(false)
   })
 })
+
+function capturePaths(value: unknown, path: string[] = []): string[][] {
+  if (typeof value !== "object" || value === null) return [path]
+  return [path, ...Object.entries(value).flatMap(([key, child]) => capturePaths(child, [...path, key]))]
+}
+
+function changeCapture(path: readonly string[], value: unknown): Record<string, unknown> {
+  const capture = example()
+  let parent: object = capture
+  for (const key of path.slice(0, -1)) {
+    const next: unknown = Reflect.get(parent, key)
+    if (typeof next !== "object" || next === null) throw new Error(`Invalid fixture path ${path.join(".")}`)
+    parent = next
+  }
+  Reflect.set(parent, path.at(-1)!, value)
+  return capture
+}
+
+describe("comparison capture input boundaries", () => {
+  it.each(
+    capturePaths(example())
+      .filter((path) => path.length > 0)
+      .map((path) => ({ path, label: path.join(".") }))
+  )("rejects invalid data at $label", ({ path }) => {
+    expect(() => parseReferenceMachineComparisonCapture(changeCapture(path, {}))).toThrow(
+      ReferenceMachineComparisonCaptureError
+    )
+  })
+
+  it("rejects broken evidence identities, ranges and references", () => {
+    for (const [path, value] of [
+      ["captureId", "UPPER CASE"],
+      ["session.startedAt", "invalid"],
+      ["session.endedAt", "2000-01-01T00:00:00Z"],
+      ["scenarioRef.path", "elsewhere.json"],
+      ["scenarioRef.schemaVersion", "unknown"],
+      ["scenarioRef.contentDigest", "not-a-digest"],
+      ["sources.0.page", 0],
+      ["sources.3.page", null],
+      ["machines.1.firmware.identity", null],
+      ["machines.1.firmware.identityStatus", "unknown"],
+      ["machines.1.firmware.identityStatus", "not-applicable"],
+      ["instruments.0.calibration.status", "current"],
+      ["instruments.0.calibration.calibratedAt", "2026-01-01T00:00:00Z"],
+      ["instruments.0.calibration.validThrough", "2000-01-01T00:00:00Z"],
+      ["inputs.0.sourceInputIds.0", "missing-input"],
+      ["inputs.0.artifactIds.0", "missing-artifact"],
+      ["inputs.0.sourceId", "missing-machine"],
+      ["outputs.0.machineId", "missing-machine"],
+      ["outputs.1.decisionRecordRef.schemaVersion", 2],
+      ["artifacts.0.throughUs", -1],
+      ["artifacts.0.capturedAt", "2000-01-01T00:00:00Z"],
+      ["artifacts.0.contentFormat", "NOT A FORMAT"],
+      ["comparisons.0.evidenceArtifactIds.0", "missing-artifact"]
+    ] satisfies Array<[string, unknown]>) {
+      expect(() => parseReferenceMachineComparisonCapture(changeCapture(path.split("."), value)), path).toThrow(
+        ReferenceMachineComparisonCaptureError
+      )
+    }
+  })
+
+  it("rejects sparse and accessor-backed evidence arrays", () => {
+    for (const mutate of [
+      (items: unknown[]) => {
+        delete items[0]
+      },
+      (items: unknown[]) => {
+        Object.defineProperty(items, "0", { enumerable: false })
+      },
+      (items: unknown[]) => {
+        Object.defineProperty(items, "0", {
+          enumerable: true,
+          get() {
+            throw new Error("must not execute")
+          }
+        })
+      }
+    ]) {
+      const value = example()
+      if (!Array.isArray(value.sources)) throw new Error("Missing sources")
+      mutate(value.sources)
+      expect(() => parseReferenceMachineComparisonCapture(value)).toThrow(ReferenceMachineComparisonCaptureError)
+    }
+    expect(isReferenceMachineComparisonCapture({})).toBe(false)
+  })
+})
+
+it("rejects contradictory comparison and calibration evidence", () => {
+  const known = parseReferenceMachineComparisonCapture(example())
+  const calibration = {
+    status: "current",
+    calibratedAt: "2026-01-01T00:00:00Z",
+    validThrough: "2027-01-01T00:00:00Z",
+    certificateDigest: `sha256:${"a".repeat(64)}`
+  }
+  for (const [path, value] of [
+    ["sources", []],
+    ["scenarioRef.inputIds", ["same", "same"]],
+    [
+      "machines.1.firmware",
+      {
+        ...known.machines[1]!.firmware,
+        identityStatus: "unknown",
+        identity: null,
+        version: null,
+        buildDigest: `sha256:${"a".repeat(64)}`
+      }
+    ],
+    ["instruments.0.calibration", { ...calibration, calibratedAt: null }],
+    ["instruments.0.calibration", { ...calibration, validThrough: null }],
+    ["instruments.0.calibration", { ...calibration, status: "expired", validThrough: "2000-01-01T00:00:00Z" }],
+    ["inputs.0.measurement.uncertainty", { kind: "absolute", value: null }],
+    ["inputs.0.measurement.instrumentId", "unknown"],
+    ["outputs.0.artifactIds", ["unknown"]],
+    ["artifacts.0.fromUs", 60_000_000],
+    ["machines.1.sourceIds", ["unknown"]],
+    ["setup.fixtureId", "unknown"],
+    ["outputs.0.id", known.inputs[0]!.id],
+    ["comparisons.0.left.observationId", "unknown"],
+    ["comparisons.0.right.observationId", "unknown"],
+    ["comparisons.0.left.machineId", "unknown"],
+    ["comparisons.0.dimension", "input-state"],
+    ["comparisons.0.left", { machineId: "fixture", observationId: known.inputs[0]!.id }],
+    ["comparisons.0.right", { machineId: "fixture", observationId: known.inputs[0]!.id }]
+  ] satisfies Array<[string, unknown]>) {
+    expect(() => parseReferenceMachineComparisonCapture(changeCapture(path.split("."), value)), path).toThrow(
+      ReferenceMachineComparisonCaptureError
+    )
+  }
+})
+
+it("accepts optional observations and saturates session duration safely", () => {
+  const source = parseReferenceMachineComparisonCapture(example())
+  const measurement = source.inputs[0]!.measurement
+  const optional = {
+    ...source,
+    notes: undefined,
+    inputs: source.inputs.map(({ measurement: _measurement, ...input }) => input),
+    outputs: source.outputs.map(({ notes: _notes, decisionRecordRef: _record, ...output }) => ({
+      ...output,
+      indication: { ...output.indication, latched: null },
+      measurement,
+      reportedDisposition: null
+    }))
+  }
+  Reflect.deleteProperty(optional, "notes")
+  expect(isReferenceMachineComparisonCapture(optional)).toBe(true)
+  for (const session of [
+    { ...source.session, startedAt: "0001-01-01T00:00:00Z", endedAt: "9999-01-01T00:00:00Z" },
+    { ...source.session, wallClockUncertaintyUs: Number.MAX_SAFE_INTEGER }
+  ])
+    expect(parseReferenceMachineComparisonCapture({ ...source, session }).session).toEqual(session)
+  expect(() =>
+    parseReferenceMachineComparisonCapture({
+      ...source,
+      session: { ...source.session, wallClockUncertaintyUs: Number.MAX_SAFE_INTEGER },
+      inputs: [{ ...source.inputs[0], atUs: Number.MAX_SAFE_INTEGER, atUncertaintyUs: 1 }]
+    })
+  ).toThrow(/safe integer/)
+  const inputs = [
+    { ...source.inputs[0]!, sourceId: "fixture" },
+    { ...source.inputs[1]!, sourceId: "scoring-prototype" }
+  ]
+  const comparison = {
+    ...source.comparisons[0]!,
+    dimension: "input-state",
+    left: { machineId: "fixture", observationId: inputs[0]!.id },
+    right: { machineId: "scoring-prototype", observationId: inputs[1]!.id }
+  }
+  expect(
+    parseReferenceMachineComparisonCapture({ ...source, inputs, comparisons: [comparison] }).comparisons[0]!.dimension
+  ).toBe("input-state")
+})
+
+it("handles non-Error property traps and rejects false array lengths", () => {
+  const trap = new Proxy(
+    {},
+    {
+      ownKeys() {
+        throw "hostile property trap"
+      }
+    }
+  )
+  expect(() => parseReferenceMachineComparisonCapture(trap)).toThrow(ReferenceMachineComparisonCaptureError)
+  expect(() => parseReferenceMachineComparisonCapture({ ...example(), session: trap })).toThrow(
+    ReferenceMachineComparisonCaptureError
+  )
+  const source = parseReferenceMachineComparisonCapture(example())
+  const mutable = [...source.sources]
+  const lengths = new Proxy(mutable, {
+    getOwnPropertyDescriptor(target, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key)
+      return key === "length" ? { ...descriptor, value: 99 } : descriptor
+    }
+  })
+  expect(() => parseReferenceMachineComparisonCapture({ ...source, sources: lengths })).toThrow(/data length/)
+  const failure = new Error("array inspection failed")
+  const broken = new Proxy([], {
+    getPrototypeOf() {
+      throw failure
+    }
+  })
+  expect(() => isReferenceMachineComparisonCapture({ ...source, sources: broken })).toThrow(failure)
+  expect(
+    parseReferenceMachineComparisonCapture({ ...source, setup: { ...source.setup, fixtureId: null } }).setup.fixtureId
+  ).toBeNull()
+  expect(
+    parseReferenceMachineComparisonCapture({
+      ...source,
+      inputs: source.inputs.map((input) => ({ ...input, notes: "Observed" }))
+    }).inputs[0]!.notes
+  ).toBe("Observed")
+})

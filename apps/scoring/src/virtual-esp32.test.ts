@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { DECISION_RECORD_SCHEMA_VERSION, type DecisionRecord, type DecisionRecordOutcome } from "./decision-record.js"
+import * as transport from "./transport-frame.js"
 import { encodeTransportFrame } from "./transport-frame.js"
 import { createVirtualEsp32, type AuthoritativeDecisionPayloadDecoder } from "./virtual-esp32.js"
 import { createVirtualProcessorLink, type VirtualLinkAttempt } from "./virtual-processor-link.js"
@@ -514,4 +515,22 @@ describe("virtual ESP32 authority guard", () => {
     expect(receiver.receive(frame)).toMatchObject({ outcome: "rejected", reason: "payload", sequence: 0 })
     expect(receiver.records).toEqual([])
   })
+})
+
+it("rejects unexpected decoder failures and mismatched decoder metadata", () => {
+  const frame = decisionFrame(0, 1)
+  const delivery = delivered(frame)
+  const decoded = transport.decodeTransportFrame("esp32", frame)
+  const receiver = createVirtualEsp32({ decodeDecisionRecordPayload: decoder(new Map()) })
+  const spy = vi.spyOn(transport, "decodeTransportFrame").mockImplementationOnce(() => {
+    throw new Error("decoder unavailable")
+  })
+  try {
+    expect(receiver.receive(delivery)).toMatchObject({ outcome: "rejected", reason: "frame" })
+    spy.mockReturnValueOnce({ ...decoded, sequence: 1 })
+    expect(receiver.receive(delivery)).toMatchObject({ outcome: "rejected", reason: "frame-metadata" })
+    expect(receiver.records).toEqual([])
+  } finally {
+    spy.mockRestore()
+  }
 })

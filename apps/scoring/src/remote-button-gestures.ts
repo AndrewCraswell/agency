@@ -112,7 +112,7 @@ function isRemoteButton(value: string): value is RemoteButton {
   return (REMOTE_BUTTONS as readonly string[]).includes(value)
 }
 
-function isDigit(button: RemoteButton): boolean {
+function isDigit(button: RemoteButton): button is Extract<RemoteButton, `digit${number}`> {
   return DIGIT_PATTERN.test(button)
 }
 
@@ -124,8 +124,8 @@ function command(command: RemoteCommandKey, pressKind: RemotePressKind): RemoteC
   return { command, kind: "command", payload: EMPTY_PAYLOAD, pressKind }
 }
 
-function direct(button: RemoteButton): RemoteCommandIntent | null {
-  const commands: Partial<Record<RemoteButton, RemoteCommandKey>> = {
+function direct(button: Exclude<RemoteButton, "opt" | `digit${number}`>): RemoteCommandIntent {
+  const commands: Record<Exclude<RemoteButton, "opt" | `digit${number}`>, RemoteCommandKey> = {
     back: "workflow.undo",
     leftCard: "penalty.award.left",
     loadTime: "clock.loadConfigured",
@@ -142,7 +142,7 @@ function direct(button: RemoteButton): RemoteCommandIntent | null {
     startStop: "clock.toggle"
   }
   const key = commands[button]
-  return key === undefined ? null : command(key, "direct")
+  return command(key, "direct")
 }
 
 function modified(button: RemoteButton): RemoteCommandIntent | ClockEntryIntent | null {
@@ -289,10 +289,6 @@ export function reduceRemoteButtonSignal(
     const pendingRelease = state.pendingLoadTimeReleaseAtMs
     const pendingDouble = button === "loadTime" && pendingRelease !== null
     const withinDoubleWindow = pendingDouble && signal.atMs <= pendingRelease + inputTimings.doubleWindowMs
-    if (pendingDouble && !withinDoubleWindow) {
-      intents.push(command("clock.loadConfigured", "direct"))
-      state = { ...state, pendingLoadTimeReleaseAtMs: null }
-    }
     const optIndex = state.pressed.findIndex((press) => press.button === "opt")
     const optPress = optIndex === -1 ? undefined : state.pressed[optIndex]
     const blockedByOptHold = button !== "opt" && optPress?.holdEmitted === true
@@ -301,7 +297,7 @@ export function reduceRemoteButtonSignal(
       ...state.pressed,
       {
         atMs: signal.atMs,
-        blockedByOptHold: blockedByOptHold ?? false,
+        blockedByOptHold,
         button,
         chorded,
         doubleCandidate: withinDoubleWindow,
@@ -361,10 +357,7 @@ export function reduceRemoteButtonSignal(
     if (press.doubleCandidate) return { intents: [...intents, command("clock.loadOneMinute", "double")], state }
     return { intents, state: { ...state, pendingLoadTimeReleaseAtMs: signal.atMs } }
   }
-  const result = direct(button)
-  return result === null
-    ? { intents: [...intents, rejection("reserved-button")], state }
-    : { intents: [...intents, result], state }
+  return { intents: [...intents, direct(button)], state }
 }
 
 export function reduceRemoteButtonSignals(

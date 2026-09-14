@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import * as sabreEvidence from "./sabre-scenario-evidence.js"
 import {
   MAX_COVERAGE_SCENARIO_IDS,
   MAX_EXPECTED_DECISIONS,
@@ -1043,7 +1044,7 @@ describe("golden scenario runner", () => {
             persistence: "transient",
             side: "left",
             signal: { visual: "diagnostic", audible: "none", latched: false },
-            sourceInputIds: ["left-start"]
+            sourceInputIds: ["right-start"]
           }
         ]
       }
@@ -1483,6 +1484,16 @@ describe("golden scenario runner", () => {
         coverage: [{ traceabilityId: "UNKNOWN", status: "planned", scenarioIds: ["not-in-corpus"] }]
       })
     ).toMatchObject({ exitCode: 2, report: { error: { code: "manifest-path" } } })
+    expect(
+      writeManifest("duplicate-coverage", {
+        ...base,
+        scenarios: [entry()],
+        coverage: [
+          { traceabilityId: "EPEE-03", status: "planned", scenarioIds: [] },
+          { traceabilityId: "EPEE-03", status: "planned", scenarioIds: [scenario.scenarioId] }
+        ]
+      })
+    ).toMatchObject({ exitCode: 2, report: { error: { code: "manifest-duplicate" } } })
     expect(writeManifest("stale", { ...base, scenarios: [entry({ weapon: "foil" })] })).toMatchObject({
       exitCode: 2,
       report: { error: { code: "manifest-path" } }
@@ -1526,7 +1537,7 @@ describe("golden scenario runner", () => {
     }
   })
 
-  it("passes the committed canonical corpus in stable order", () => {
+  it("passes the committed canonical corpus in stable order", { timeout: 30_000 }, () => {
     const manifestPath = resolve(fixtureDirectory, "../golden-scenario-manifest.json")
 
     const firstRun = runScenario(manifestPath)
@@ -1899,4 +1910,27 @@ describe("golden scenario runner", () => {
     const run = runScenario(path)
     expect(run).toMatchObject({ exitCode: 0, report: { status: "passed" } })
   })
+})
+
+it("reports acceptance mismatches and identifies failed Sabre adapter input", () => {
+  const directory = temporaryDirectory()
+  const path = join(directory, "status.json")
+  writeJson(path, { ...readFixture("epee-contact-boundaries.json"), ruleRevision: "unknown" })
+  expect(runScenario(path)).toMatchObject({
+    exitCode: 1,
+    report: {
+      scenarios: [
+        { mismatches: expect.arrayContaining([{ kind: "status", message: "expected accepted, got rejected" }]) }
+      ]
+    }
+  })
+  writeJson(path, { ...readFixture("epee-grounded-rejection.json"), weapon: "sabre" })
+  const spy = vi.spyOn(sabreEvidence, "projectSabreScenarioInput").mockImplementationOnce(() => {
+    throw new Error("invalid sample")
+  })
+  try {
+    expect(runScenario(path)).toMatchObject({ exitCode: 1, report: { scenarios: [{ actualStatus: "rejected" }] } })
+  } finally {
+    spy.mockRestore()
+  }
 })

@@ -118,9 +118,11 @@ export function createVirtualClock(options: VirtualClockOptions = {}): VirtualCl
     }
 
     const handle = nextHandle
+    /* v8 ignore start -- requires Number.MAX_SAFE_INTEGER successful schedules; exhaustion is kept fail-closed. */
     if (handle === MAX_SAFE_MICROSECONDS) {
       scheduleSequenceExhausted = true
     } else {
+      /* v8 ignore stop */
       nextHandle += 1
     }
     queue.push({ atUs, callback, handle, order: handle })

@@ -295,3 +295,37 @@ describe("remote button gesture interpreter", () => {
     }
   })
 })
+
+describe("gesture boundary rejection", () => {
+  it("rejects invalid times and reserved chords", () => {
+    expect(reduceRemoteButtonSignal(INITIAL_REMOTE_GESTURE_STATE, { kind: "advance-time", atMs: -1 }).intents).toEqual([
+      { kind: "ignored", reason: "invalid-time" }
+    ])
+    expect(
+      reduceRemoteButtonSignal(
+        INITIAL_REMOTE_GESTURE_STATE,
+        { kind: "advance-time", atMs: 0 },
+        { ...DEFAULT_REMOTE_GESTURE_TIMINGS, holdMs: 0 }
+      ).intents
+    ).toEqual([{ kind: "ignored", reason: "invalid-time" }])
+    expect(
+      reduceRemoteButtonSignals([
+        signal("down", "opt", 1),
+        signal("down", "startStop", 2),
+        { kind: "advance-time", atMs: 10_000 },
+        signal("up", "startStop", 10_001)
+      ]).intents
+    ).toEqual([{ kind: "ignored", reason: "reserved-button" }])
+  })
+
+  it("rejects digits beyond a complete four-digit time", () => {
+    const state: RemoteGestureState = {
+      ...INITIAL_REMOTE_GESTURE_STATE,
+      clockEntry: { digits: "1234", expiresAtMs: 1000 }
+    }
+    const down = reduceRemoteButtonSignal(state, signal("down", "digit1", 1))
+    expect(reduceRemoteButtonSignal(down.state, signal("up", "digit1", 2)).intents).toEqual([
+      { kind: "ignored", reason: "reserved-button" }
+    ])
+  })
+})

@@ -1103,32 +1103,30 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     if (state.snapshot.clock.mode === "break") return reject(state, command, "invalid-mode")
 
     const awardedState = state.snapshot.sides[awarded]
-    if (command.command.startsWith("penalty.award.")) {
-      if (!awardedState.yellowCard) {
-        return apply(state, command, "penalty.award", {
-          ...copySnapshot(state.snapshot),
-          sides: {
-            ...structuredClone(state.snapshot.sides),
-            [awarded]: { ...structuredClone(awardedState), yellowCard: true }
-          }
-        })
-      }
-
-      const opponent = opposingSide(awarded)
-      const opponentState = state.snapshot.sides[opponent]
-      if (awardedState.redCardCount === Number.MAX_SAFE_INTEGER || opponentState.score === Number.MAX_SAFE_INTEGER) {
-        return reject(state, command, "out-of-bounds")
-      }
+    if (!awardedState.yellowCard) {
       return apply(state, command, "penalty.award", {
         ...copySnapshot(state.snapshot),
-        lastScoredSide: opponent,
         sides: {
           ...structuredClone(state.snapshot.sides),
-          [awarded]: { ...structuredClone(awardedState), redCardCount: awardedState.redCardCount + 1 },
-          [opponent]: { ...structuredClone(opponentState), score: opponentState.score + 1 }
+          [awarded]: { ...structuredClone(awardedState), yellowCard: true }
         }
       })
     }
+
+    const opponent = opposingSide(awarded)
+    const opponentState = state.snapshot.sides[opponent]
+    if (awardedState.redCardCount === Number.MAX_SAFE_INTEGER || opponentState.score === Number.MAX_SAFE_INTEGER) {
+      return reject(state, command, "out-of-bounds")
+    }
+    return apply(state, command, "penalty.award", {
+      ...copySnapshot(state.snapshot),
+      lastScoredSide: opponent,
+      sides: {
+        ...structuredClone(state.snapshot.sides),
+        [awarded]: { ...structuredClone(awardedState), redCardCount: awardedState.redCardCount + 1 },
+        [opponent]: { ...structuredClone(opponentState), score: opponentState.score + 1 }
+      }
+    })
   }
 
   if (command.command === "cards.reset") {

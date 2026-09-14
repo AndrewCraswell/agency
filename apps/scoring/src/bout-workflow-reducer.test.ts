@@ -1455,3 +1455,321 @@ describe("RC-05 bout workflow reducer", () => {
     expect(stale).toMatchObject({ event: { rejectionReason: "incompatible-snapshot-revision" } })
   })
 })
+
+describe("bout workflow boundary guards", () => {
+  function withSnapshot(changes: object) {
+    return createBoutWorkflowReducerState({ ...state().snapshot, ...changes })
+  }
+  function dispatch(
+    current: BoutWorkflowReducerState,
+    key: RemoteCommand["command"],
+    id: string = key,
+    payload: object = {}
+  ) {
+    return reduceBoutWorkflow(current, { type: "command", command: command(key, id, payload), nextBout: null })
+  }
+
+  it("rejects exhausted revisions and zero or overflowing scores and clocks", () => {
+    const exhausted = withSnapshot({ eventRevision: Number.MAX_SAFE_INTEGER })
+    expect(dispatch(exhausted, "score.increment.left").reason).toBe("out-of-bounds")
+    const scored = dispatch(state(), "score.increment.right").state
+    expect(dispatch(scored, "score.decrement.right").state.snapshot.sides.right.score).toBe(0)
+    expect(
+      dispatch(withSnapshot({ ...scored.snapshot, eventRevision: Number.MAX_SAFE_INTEGER }), "workflow.undo").reason
+    ).toBe("invalid-mode")
+    expect(
+      dispatch({ ...scored, snapshot: { ...scored.snapshot, eventRevision: Number.MAX_SAFE_INTEGER } }, "workflow.undo")
+        .reason
+    ).toBe("out-of-bounds")
+    const emptyClock = withSnapshot({ clock: { ...state().snapshot.clock, remainingDurationCentiseconds: 0 } })
+    expect(dispatch(emptyClock, "clock.toggle").reason).toBe("out-of-bounds")
+    expect(dispatch(emptyClock, "clock.adjust.negative").reason).toBe("out-of-bounds")
+    const maxScore = withSnapshot({
+      sides: { ...state().snapshot.sides, left: { ...state().snapshot.sides.left, score: Number.MAX_SAFE_INTEGER } }
+    })
+    expect(dispatch(maxScore, "score.increment.left").reason).toBe("out-of-bounds")
+  })
+
+  it("blocks control changes while the bout clock is running", () => {
+    const running = dispatch(state(), "clock.toggle").state
+    for (const key of [
+      "bout.new",
+      "scoring.rearm",
+      "weapon.showOrAdvance",
+      "device.sleep.request",
+      "sides.swap",
+      "clock.loadConfigured",
+      "clock.loadOneMinute",
+      "medical.start",
+      "format.advance",
+      "break.start.oneMinute",
+      "overtime.toggle"
+    ] as const) {
+      expect(dispatch(running, key).outcome, key).toBe("rejected")
+    }
+    expect(dispatch(running, "clock.configure", "configure", { minutes: 1, seconds: 0 }).reason).toBe("clock-running")
+    expect(dispatch(running, "bout.snapshot.load", "load", { snapshot: state().snapshot }).reason).toBe("clock-running")
+  })
+
+  it("enforces break and medical modes and toggles a medical timeout", () => {
+    const breakRunning = dispatch(state(), "break.start.oneMinute").state
+    const breakStopped = dispatch(breakRunning, "clock.toggle").state
+    for (const key of [
+      "medical.start",
+      "format.advance",
+      "break.start.oneMinute",
+      "score.increment.left",
+      "penalty.award.left"
+    ] as const) {
+      expect(dispatch(breakStopped, key, `again-${key}`).reason, key).toBe("invalid-mode")
+    }
+    let medical = dispatch(state(), "medical.start").state
+    expect(dispatch(medical, "clock.toggle").reason).toBe("invalid-mode")
+    medical = dispatch(medical, "medical.start", "stop-medical").state
+    expect(medical.snapshot.medical?.status).toBe("stopped")
+    medical = dispatch(medical, "medical.start", "resume-medical").state
+    expect(medical.snapshot.medical?.status).toBe("running")
+  })
+
+  it("cycles all rearm delays and weapons only after correlated acceptance", () => {
+    let current = state()
+    for (const [index, expected] of ["one-second", "three-seconds", "five-seconds", "manual"].entries()) {
+      const id = `rearm-${index}`
+      current = dispatch(current, "scoring.autoRearm.advance", id).state
+      const applied = callReduce(current, {
+        authority: "stm32-scoring",
+        operation: "scoring-rearm",
+        requestId: id,
+        result: "accepted",
+        stm32RecordId: `record-${index}`,
+        type: "stm32-workflow-result"
+      })
+      expect(applied.state.snapshot.autoRearm).toBe(expected)
+      current = applied.state
+    }
+    for (const [index, expected] of ["sabre", "epee", "foil"].entries()) {
+      const id = `weapon-${index}`
+      current = dispatch(current, "weapon.showOrAdvance", id).state
+      current = callReduce(current, {
+        authority: "stm32-scoring",
+        operation: "weapon-request",
+        requestId: id,
+        result: "accepted",
+        stm32RecordId: `weapon-record-${index}`,
+        type: "stm32-workflow-result"
+      }).state
+      expect(current.snapshot.weapon).toBe(expected)
+    }
+  })
+
+  it("does not apply pending results after the event revision is exhausted", () => {
+    const pending = dispatch(state(), "scoring.rearm").state
+    const exhausted = { ...pending, snapshot: { ...pending.snapshot, eventRevision: Number.MAX_SAFE_INTEGER } }
+    expect(
+      callReduce(exhausted, {
+        authority: "stm32-scoring",
+        operation: "scoring-rearm",
+        requestId: "scoring.rearm",
+        result: "accepted",
+        stm32RecordId: "record",
+        type: "stm32-workflow-result"
+      }).reason
+    ).toBe("stm32-rejection")
+    expect(() =>
+      parseScoringCoreWorkflowResult({
+        authority: "stm32-scoring",
+        operation: "scoring-rearm",
+        requestId: "request",
+        result: "rejected",
+        stm32RecordId: "not-null",
+        type: "stm32-workflow-result"
+      })
+    ).toThrow()
+  })
+})
+
+it("bounds competition progression and rejects stale registry state", () => {
+  function send(current: BoutWorkflowReducerState, key: RemoteCommand["command"], id: string, payload: object = {}) {
+    return reduceBoutWorkflow(current, { type: "command", nextBout: null, command: command(key, id, payload) })
+  }
+  const initial = state()
+  expect(send(initial, "format.retreat", "minimum").reason).toBe("out-of-bounds")
+  const advanced = send(initial, "format.advance", "advance")
+  expect(advanced.state.snapshot.competition.value).toBe(2)
+  expect(send(advanced.state, "format.retreat", "retreat").state.snapshot.competition.value).toBe(1)
+  const maximum = {
+    ...initial,
+    snapshot: {
+      ...initial.snapshot,
+      competition: { kind: "match" as const, value: COMPETITION_FORMAT_REGISTRY.bounds.match.maximum }
+    }
+  }
+  expect(send(maximum, "format.advance", "maximum").reason).toBe("out-of-bounds")
+  const invalid = { ...initial, snapshot: { ...initial.snapshot, competition: { kind: "match" as const, value: 0 } } }
+  expect(send(invalid, "format.advance", "invalid").reason).toBe("out-of-bounds")
+  const registry = {
+    ...initial,
+    snapshot: {
+      ...initial.snapshot,
+      competitionFormatAuthority: { ...initial.snapshot.competitionFormatAuthority, ownerId: "unknown" }
+    }
+  }
+  expect(send(registry, "format.advance", "registry").reason).toBe("owner-unavailable")
+  expect(() => createBoutWorkflowReducerState(registry.snapshot)).toThrow(/registry/)
+  expect(() => createBoutWorkflowReducerState(maximum.snapshot)).not.toThrow()
+  expect(() =>
+    createBoutWorkflowReducerState({
+      ...maximum.snapshot,
+      competition: { kind: "match", value: COMPETITION_FORMAT_REGISTRY.bounds.match.maximum + 1 }
+    })
+  ).toThrow(/registry/)
+  expect(send(initial, "priority.assign.supervisor", "priority", { side: "left" }).reason).toBe("owner-unavailable")
+  expect(send(initial, "bout.new", "missing-config").reason).toBe("invalid-mode")
+  const zeroConfigured = {
+    ...initial,
+    snapshot: { ...initial.snapshot, clock: { ...initial.snapshot.clock, configuredDurationCentiseconds: 0 } }
+  }
+  expect(send(zeroConfigured, "clock.loadConfigured", "load").reason).toBe("invalid-mode")
+  const exhaustedAuthority = {
+    ...initial,
+    snapshot: { ...initial.snapshot, authority: { ...authority, authorityRevision: Number.MAX_SAFE_INTEGER } }
+  }
+  const transfer = commandFrom("controller.authority.transfer", "transfer", exhaustedAuthority.snapshot.authority, {
+    nextAuthority: { ...authority, controllerId: "different" }
+  })
+  expect(reduceBoutWorkflow(exhaustedAuthority, { command: transfer, nextBout: null, type: "command" }).reason).toBe(
+    "out-of-bounds"
+  )
+})
+
+it("rejects malformed fresh-bout and new-bout identities", () => {
+  const snapshot = state().snapshot
+  const fresh = {
+    apparatusId: snapshot.apparatusId,
+    boutId: snapshot.boutId,
+    authority,
+    clockDurationCentiseconds: 100,
+    initialCompetition: snapshot.competition,
+    sourceCommandIdentity: snapshot.sourceCommandIdentity,
+    timingConfigurationRevision: "timing",
+    weapon: "foil"
+  }
+  for (const change of [
+    { clockDurationCentiseconds: 0 },
+    { initialCompetition: null },
+    { sourceCommandIdentity: { ...snapshot.sourceCommandIdentity, remoteId: "" } }
+  ]) {
+    expect(() => Reflect.apply(createFreshBoutWorkflowSnapshot, undefined, [{ ...fresh, ...change }])).toThrow()
+  }
+  const next = {
+    boutId: "bout-new",
+    clockDurationCentiseconds: 100,
+    initialCompetition: snapshot.competition,
+    timingConfigurationRevision: "timing",
+    weapon: "foil"
+  }
+  for (const change of [{ weapon: "bad" }, { initialCompetition: null }]) {
+    expect(
+      callReduce(state(), { type: "command", command: command("bout.new", "new"), nextBout: { ...next, ...change } })
+        .reason
+    ).toBe("malformed-action")
+  }
+  const pending = callReduce(state(), { type: "command", command: command("bout.new", "new"), nextBout: next }).state
+  expect(
+    callReduce(
+      { ...pending, snapshot: { ...pending.snapshot, boutRevision: Number.MAX_SAFE_INTEGER } },
+      {
+        authority: "stm32-scoring",
+        requestId: "new",
+        result: "accepted",
+        stm32RecordId: "record",
+        type: "stm32-bout-reset-result"
+      }
+    ).reason
+  ).toBe("stm32-rejection")
+})
+
+it("rejects invalid pending requests and distinguishes snapshot and mode guards", () => {
+  const initial = state()
+  expect(
+    callReduce(initial, { type: "command", command: command("clock.toggle", "extra"), nextBout: null, extra: true })
+      .reason
+  ).toBe("malformed-action")
+  const loaded = { ...initial.snapshot, eventRevision: 1, sourceCommandDisposition: "rejected" }
+  expect(
+    callReduce(initial, {
+      type: "command",
+      command: command("bout.snapshot.load", "load", { snapshot: loaded }),
+      nextBout: null
+    }).reason
+  ).toBe("incomplete-snapshot")
+  const breakState = {
+    ...initial,
+    snapshot: { ...initial.snapshot, clock: { ...initial.snapshot.clock, mode: "break" as const } }
+  }
+  for (const key of ["clock.adjust.positive", "overtime.toggle"] as const)
+    expect(reduceBoutWorkflow(breakState, { type: "command", command: command(key, key), nextBout: null }).reason).toBe(
+      "invalid-mode"
+    )
+  const overtime = {
+    ...initial,
+    snapshot: { ...initial.snapshot, clock: { ...initial.snapshot.clock, mode: "overtime" as const } }
+  }
+  expect(
+    reduceBoutWorkflow(overtime, { type: "command", command: command("clock.toggle", "overtime"), nextBout: null })
+      .reason
+  ).toBe("invalid-mode")
+})
+
+it("requires a record identity for accepted scoring-core workflow results", () => {
+  expect(() =>
+    parseScoringCoreWorkflowResult({
+      authority: "stm32-scoring",
+      operation: "scoring-rearm",
+      requestId: "rearm",
+      result: "accepted",
+      stm32RecordId: "",
+      type: "stm32-workflow-result"
+    })
+  ).toThrow(TypeError)
+})
+
+it("checks stopped medical and passivity timers before requesting safe idle", () => {
+  for (const field of ["medical", "passivity"] as const) {
+    for (const status of ["running", "stopped"] as const) {
+      const initial = state()
+      const current = {
+        ...initial,
+        snapshot: {
+          ...initial.snapshot,
+          [field]: {
+            configuredDurationCentiseconds: 100,
+            remainingDurationCentiseconds: 100,
+            status
+          }
+        }
+      }
+      const result = reduceBoutWorkflow(current, {
+        type: "command",
+        command: command("device.sleep.request", "sleep"),
+        nextBout: null
+      })
+      expect(result.state.pendingScoringCoreWorkflowAction !== null).toBe(status === "stopped")
+    }
+  }
+})
+
+it("rejects clock adjustments while the bout clock is running", () => {
+  const initial = state()
+  const running = {
+    ...initial,
+    snapshot: { ...initial.snapshot, clock: { ...initial.snapshot.clock, status: "running" as const } }
+  }
+  expect(
+    reduceBoutWorkflow(running, {
+      type: "command",
+      command: command("clock.adjust.positive", "adjust"),
+      nextBout: null
+    }).reason
+  ).toBe("clock-running")
+})

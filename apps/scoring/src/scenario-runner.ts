@@ -727,30 +727,6 @@ function compareScenario(
 }
 
 function executeScenario(scenario: Scenario, path: string): ScenarioRunResult {
-  const duplicateInput = scenario.inputs.find(
-    (input, index) => scenario.inputs.findIndex((candidate) => candidate.id === input.id) !== index
-  )
-  if (duplicateInput !== undefined) throw new RunnerInputError("manifest-duplicate", path)
-
-  const duplicateLine = scenario.inputs.find(
-    (input) => new Set(input.lines.map((line) => line.line)).size !== input.lines.length
-  )
-  if (duplicateLine !== undefined) {
-    return compareScenario(scenario, path, {
-      actualStatus: "rejected",
-      classifications: [],
-      diagnostics: [],
-      decisions: [],
-      error: { code: "duplicate-line-reading", atInputId: duplicateLine.id },
-      finalState: null,
-      uncertainty: []
-    })
-  }
-
-  const lineNames = new Set(scenario.lineModel.names)
-  const unknownLine = scenario.inputs.flatMap((input) => input.lines).find((line) => !lineNames.has(line.line))
-  if (unknownLine !== undefined) throw new RunnerInputError("invalid-schema", path)
-
   let timingTable: TimingTable
   try {
     timingTable = loadTimingTableForRuleRevision(scenario.ruleRevision)

@@ -17,7 +17,8 @@ const ownedTargetSources = [
 ].join("\n")
 const staticRequirements = [
   "SCORING_STM32_OUTPUT_STATE_SAFE_INACTIVE == 0",
-  "group->port->BSRR = (uint32_t)group->pins << 16U;",
+  "uint32_t levels = group->high_pins | ((uint32_t)(group->pins & ~group->high_pins) << 16U);",
+  "group->port->BSRR = levels;",
   "group->port->MODER |= output_mode;",
   "return SCORING_STATUS_UNAVAILABLE;"
 ]
@@ -28,7 +29,7 @@ for (const requirement of staticRequirements) {
   }
 }
 
-const latchBeforeMode = source.indexOf("group->port->BSRR = (uint32_t)group->pins << 16U;")
+const latchBeforeMode = source.indexOf("group->port->BSRR = levels;")
 const firstOutputMode = source.indexOf("group->port->MODER |= output_mode;")
 
 if (latchBeforeMode === -1 || firstOutputMode === -1 || latchBeforeMode > firstOutputMode) {
