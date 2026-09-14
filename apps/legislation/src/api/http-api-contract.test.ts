@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
-const contractDirectory = new URL("../../docs/http-api-contract/", import.meta.url)
+const contractDirectory = new URL("../../docs/engineering/api/", import.meta.url)
 const contractPages = [
   "legislative-records.md",
   "civic-graph-and-events.md",

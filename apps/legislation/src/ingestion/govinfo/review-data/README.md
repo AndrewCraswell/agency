@@ -6,8 +6,7 @@ in filenames identify the historical source period. Membership evidence remains 
 - `editions`: exact reviewed package IDs, Congress, complete parsed-roster SHA-256 fingerprints and expected counts.
 - `identities`: printed name/state/chamber, expected canonical identity and district, exact committee contexts and
   optional corroborating source cells.
-- `reviewNotes`: preserved research notes. Detailed evidence links are in the
-  [reconciliation record](../../../../docs/committee-reconciliation-policy.md).
+- `reviewNotes`: preserved research notes. Detailed evidence links are in the [source decisions](source-decisions.md).
 - `historicalAtFirstObservation`: only for explicitly retained historical assignments with unknown boundaries.
 - `annotation`: reviewed source label and role, applied only after the identity and full edition fingerprint pass. A
   leave-of-absence annotation does not create a departure date or end a tenure.

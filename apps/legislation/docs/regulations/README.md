@@ -1,0 +1,116 @@
+# Regulatory data ingestion proposal
+
+Recorded September 14, 2026. Status: future capability proposal, not implemented or supported coverage.
+
+## Purpose and decision
+
+Update September 14, 2026: evaluate **Vaquill for state statutory and administrative codes, with direct federal
+acquisition**, as the leading scoped option. Compare it with a broader license and OpenLaws before selecting a contract.
+State-only availability, savings, coverage and rights remain unverified. Keep current legislative providers.
+See [sourcing options and tradeoffs](sourcing-options.md) and [supplier shortlist](supplier-shortlist.md).
+
+The [federal collector baseline](federal-collector-baseline.md) combines our original plan with the inspected Vaquill
+code: reuse its collection patterns, with Tabra update and completeness controls. Paid state coverage plus direct
+federal ingestion is the agreed direction, subject to provider validation and terms. Do not build
+duplicate collectors for content a validated licensed feed supplies. [Sourcing options](sourcing-options.md) records current ingestion overlap and broader licensing opportunities.
+
+Build a dependable, locally stored regulatory corpus before adding regulatory analysis to Tabra. The first objective
+is complete source acquisition, preserved text and versions, and measurable freshness. Bill correlation and AI impact
+analysis depend on that foundation and are not prerequisites for importing the data.
+
+This proposal records the product discussion and public source documentation reviewed on the date above. It does not
+claim authenticated API access, successful downloads, performance measurements, a completed nationwide source audit,
+vendor licensing rights, or production ingestion. Recheck service contracts when implementation begins.
+
+- [Shared federal collector baseline and reuse decision](federal-collector-baseline.md)
+- [Source catalog, overlap, bulk access and rate limits](sources.md)
+- [Acquisition, storage, synchronization and release plan](implementation.md)
+- [Granular implementation phases and validation gates](implementation-backlog.md)
+- [Canonical data, versions and rights](data-contract.md)
+- [Backfills, collectors and Trigger.dev workflows](acquisition-workflows.md)
+- [Search indexing and embeddings](search-indexing.md)
+- [Regulatory API endpoints and MCP tools](api-mcp-contract.md)
+- [Future Vaquill state onboarding](state-onboarding.md)
+- [Competitor source disclosures and their limits](competitor-sources.md)
+- [Sourcing options and tradeoffs](sourcing-options.md)
+- [Legal data supplier shortlist](supplier-shortlist.md)
+
+## Core clarification: content type versus time
+
+GovInfo is not only a historical archive. It also publishes new and corrected material and supports discovery by
+modification time. Regulations.gov and RegInfo are not required simply to keep published federal rules current.
+
+| Need | Initial acquisition decision | Additional source when useful |
+| --- | --- | --- |
+| Published proposed rules, final rules and notices | GovInfo text + FederalRegister.gov metadata joined by document number | Extend reused RULE/PRORULE collector for scoped notices |
+| Consolidated federal regulatory code | eCFR title inventory and dated full-title XML | GovInfo bulk alternative; annual CFR for historical editions |
+| Rulemaking supporting materials and public comments | Outside the initial minimum corpus | Regulations.gov, with agency-document acquisition prioritized over all comments |
+| Planned rules and review information | Outside the initial minimum corpus | RegInfo Unified Agenda XML; review-status collection is a separate feasibility task |
+
+The initial design uses three pipelines: U.S. Code, eCFR and Federal Register. FederalRegister.gov supplies structured
+metadata while GovInfo supplies bulk publication text; eCFR supplies versioned full-title acquisition. Docket research
+and regulatory planning remain later additions.
+The existence of overlapping content does not mean all endpoints have identical metadata, historical depth, publication
+timing, legal status or identifiers.
+
+## Ingest once, serve from Tabra
+
+APIs and bulk downloads are collection methods. Both populate Tabra's own storage. A normal customer query searches
+the stored and indexed corpus rather than calling government APIs for every result or answer.
+
+```text
+Government inventories, bulk files and APIs
+    -> durable original artifacts and acquisition manifest
+    -> normalized documents, provisions, versions and events
+    -> local search and cited analysis
+    -> monitoring, reviewed briefs and exports
+```
+
+Separate the initial import from recurring updates. Preserve source versions so an answer can point to the exact text
+used even after the government source changes. Customer query volume should not multiply government API traffic.
+
+## What competitive coverage means
+
+Two collections are essential:
+
+1. Existing regulations: consolidated administrative code, hierarchy, authority citations, source currency and available
+   historical editions or versions.
+2. Regulatory developments: proposed, revised, adopted, emergency, withdrawn and corrected materials, relevant source
+   dates, and the actual text needed to understand the change.
+
+A list of notices without their proposed or adopted text is partial coverage. A current-code snapshot without
+rulemaking updates is also partial coverage. A final rule may provide amendment instructions rather than a complete
+replacement chapter; retain that document alongside the consolidated code rather than pretending the two are copies.
+
+Do not market the initial scope as all federal regulatory information. Dockets, comments, agency guidance, enforcement
+actions, court decisions, incorporated external standards and regulatory planning are distinct content classes. Annual
+code editions are not a complete daily history. A published effective date is not a guarantee that a rule remains legally
+operative after subsequent events outside our coverage.
+
+## Federal and state delivery boundaries
+
+Start by validating licensed state delivery against the source and completeness requirements, alongside the direct
+federal design. Compare broader licensed delivery if its incremental cost is worthwhile. Inventory uncovered official
+sources for targeted supplementation; provider coverage and Tabra's storage/redistribution rights remain unverified.
+
+The nationwide state target should explicitly account for all 50 states and DC. Record Puerto Rico and other territories
+as separately evaluated scope; existing legislative support does not automatically establish regulatory support.
+Each jurisdiction needs both its code and its rulemaking publications assessed. Do not count a state as complete because
+one searchable code website was imported.
+
+## Relationship to existing Tabra plans
+
+- [Organization features](../product/organization-features.md) describes shared research, review, reports and delivery. Those
+  surfaces can later consume regulatory content; their delivery does not establish regulatory coverage.
+- [Product backlog](../product/backlog.md) keeps regulations deferred. This proposal does not add regulations to the
+  current personal-experience completion gate.
+- [Legislative synchronization catalog](../engineering/data-sync-catalog.md) and [coverage policy](../engineering/coverage-policy.md) remain the
+  current legislative contracts. Extend those contracts when implementation starts; do not silently reclassify a source
+  as ingested based on this proposal.
+- [Canonical data model](../engineering/data-model.md), [document processing](../engineering/supporting-material-processing.md),
+  [OCR operations](../operations/document-ocr.md), [change events](../engineering/data-model.md#change-events), and
+  [Trigger.dev orchestration](../engineering/trigger-orchestration-design.md) are integration points to inspect before coding.
+
+Regulatory acquisition is independent of customer pricing. Preserve the agreed flat, feature-based pricing approach;
+measure collection, processing, storage and customer-serving costs internally. No usage quotas, vendor purchase,
+production schedules or release commitments are authorized by this document.

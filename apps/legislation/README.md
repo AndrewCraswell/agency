@@ -1,7 +1,7 @@
 # Legislation
 
 Legislative intelligence application containing synchronization, canonical data, document processing, search, the
-Next.js public API boundary, the remote MCP server, authentication, observability, and Azure MCP infrastructure. This is
+Next.js public API boundary, the remote MCP server, authentication, observability, and infrastructure templates. This is
 the canonical application and documentation home. Railway retains the service name `legislation-web`; that service name
 does not create a separate canonical product application.
 
@@ -32,19 +32,17 @@ docker build -f apps/legislation/Dockerfile -t legislation:local .
 
 From `apps/legislation`, `pnpm docker:build` runs the same root-context build for local service work. Production is the
 Railway service named `legislation-web`; its current Next.js deployment configuration and release evidence are recorded
-in [the Railway API release record](docs/http-api-railway-release.md). The former standalone `legislation-api` service
-was deleted and must not be recreated as a rollback target. Database migrations remain an explicit release operation
-through `pnpm --filter legislation db:migrate`; container startup never applies them.
+in [the runtime guide](docs/operations/development.md) and [API acceptance](docs/operations/passage-search-delivery.md).
+The former standalone `legislation-api` service was deleted and must not be recreated as a rollback target. Database
+migrations remain an explicit release operation through `pnpm --filter legislation db:migrate`; container startup never
+applies them.
 
-## Representative lookups
+## Deferred capabilities
 
-`POST /api/representative-lookups` is registered in every API deployment. When `OPENSTATES_API_KEY` is configured, the
-CLI composes the public US Census geocoder and OpenStates adapter; otherwise the route returns
-`503 dependency_unavailable`. The provider receives one normalized address or coordinate request in memory and must not
-persist or log it.
+Standalone calendar, meeting-outcome and representative-lookup API operations were removed from the public contract.
+Address-lookup mockups do not imply an available API or activated provider. See the
+[product backlog](docs/product/backlog.md) and [current API acceptance](docs/operations/passage-search-delivery.md).
 
-The existing OpenStates integration defines the applicable civic-data credential: provision an activated OpenStates API
-key as `OPENSTATES_API_KEY`, retain `OPENSTATES_API_URL=https://v3.openstates.org`, and use it through the documented
-`/people.geo` endpoint for coordinate-to-legislator results. US address requests use the public Census
-structured-address geocoder and then call OpenStates; that geocoder has no API-key configuration. Both integrations run
-with the existing bounded request timeout, and address data is neither logged nor persisted.
+The Bicep MCP template is retained as an infrastructure reference; the current application/API-backed MCP runtime is
+Next.js on Railway. See [runtime ownership](docs/operations/development.md#nextjs-runtime) before changing deployment
+configuration.
