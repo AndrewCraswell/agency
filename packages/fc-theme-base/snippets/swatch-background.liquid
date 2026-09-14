@@ -1,0 +1,21 @@
+{%- liquid
+  if swatch.image
+    assign image_url = swatch.image | image_url: width: 50
+    echo 'url(' | append: image_url | append: ')'
+  elsif swatch.color
+    echo 'rgb(' | append: swatch.color.rgb | append: ')'
+  elsif color_name != blank
+    assign named_colors = 'black,white,red,blue,green,yellow,orange,purple,pink,brown,gray,grey,silver,gold,navy,teal,coral,beige,ivory,maroon,olive,lime,aqua,fuchsia' | split: ','
+    assign normalized_name = color_name | downcase | strip
+    assign colors = normalized_name | split: '/'
+    assign first_color = colors.first | strip
+    assign second_color = colors.last | strip
+    if normalized_name == 'clear'
+      echo 'repeating-conic-gradient(#ffffff 0% 25%, #dedede 0% 50%) 0 / 8px 8px'
+    elsif colors.size == 1 and named_colors contains first_color
+      echo first_color
+    elsif colors.size == 2 and named_colors contains first_color and named_colors contains second_color
+      echo 'linear-gradient(135deg, ' | append: first_color | append: ' 50%, ' | append: second_color | append: ' 50%)'
+    endif
+  endif
+-%}

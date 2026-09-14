@@ -47,8 +47,8 @@ if (!customElements.get('localization-form')) {
           this.elements.search.setAttribute('aria-activedescendant', '');
         }
         document.body.classList.remove('overflow-hidden-mobile');
-        document.querySelector('.menu-drawer').classList.remove('country-selector-open');
-        this.header.preventHide = false;
+        document.querySelector('.menu-drawer')?.classList.remove('country-selector-open');
+        if (this.header) this.header.preventHide = false;
       }
 
       onContainerKeyDown(event) {
@@ -131,10 +131,10 @@ if (!customElements.get('localization-form')) {
         if (this.elements.search && this.mql.matches) {
           this.elements.search.focus();
         }
-        if (this.hasAttribute('data-prevent-hide')) {
+        if (this.hasAttribute('data-prevent-hide') && this.header) {
           this.header.preventHide = true;
         }
-        document.querySelector('.menu-drawer').classList.add('country-selector-open');
+        document.querySelector('.menu-drawer')?.classList.add('country-selector-open');
       }
 
       closeSelector(event) {

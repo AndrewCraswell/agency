@@ -1,0 +1,5 @@
+{%- assign heading_tag = heading_tag | default: 'h2' -%}
+<div class="collection-filter-panel__header">
+  <{{ heading_tag }} id="{{ heading_id | escape }}">{{ heading | escape }}</{{ heading_tag }}>
+  <a href="{{ clear_url | escape }}" data-clear-collection-filters>{{ clear_label | escape }}</a>
+</div>

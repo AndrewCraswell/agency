@@ -1,5 +1,5 @@
 {% comment %}
-  Renders a checkbox with a label, optional badge, and optional description.
+  Renders a native checkbox or radio with a whole-row label and shared interaction states.
 
   Accepts:
   - id: {String} Input id, used to associate the label. Required.
@@ -10,19 +10,32 @@
   - disabled: {Boolean} Render as a locked, non-interactive option.
   - action: {String} Optional token rendered as data-action for scripts to bind to.
   - value: {String} Optional token rendered as data-value for scripts to read.
+  - type: {String} checkbox (default) or radio.
+  - variant: {String} filter enables highlighted option rows; ordinary fields remain unfilled.
+  - name: {String} Native form field name; required to group radios.
+  - count: {Number} Optional filter result count.
+  - required: {Boolean} Native required validation.
+  - described_by: {String} Optional external hint or error id.
+  - additional_props: {String} Trusted template-owned input attributes.
 {% endcomment %}
 
-<div class="ui-checkbox-field">
+<div class="ui-checkbox-field{% if type == 'radio' %} ui-checkbox-field--radio{% endif %}{% if variant == 'filter' %} ui-checkbox-field--filter{% endif %}">
   <input
-    type="checkbox"
-    class="ui-checkbox"
-    id="{{ id }}"
+    type="{{ type | default: 'checkbox' }}"
+    class="{% if type == 'radio' %}ui-radio{% else %}ui-checkbox{% endif %}"
+    id="{{ id | escape }}"
+    {% if name != blank %}name="{{ name | escape }}"{% endif %}
+    {% if value != nil %}value="{{ value | escape }}"{% endif %}
+    {% if required %}required{% endif %}
+    {% if described_by != blank %}aria-describedby="{{ described_by | escape }}"{% endif %}
+    {% if invalid %}aria-invalid="true"{% endif %}
     {% if checked %}checked{% endif %}
     {% if disabled %}disabled{% endif %}
     {% if action %}data-action="{{ action | escape }}"{% endif %}
     {% if value %}data-value="{{ value | escape }}"{% endif %}
+    {{ additional_props }}
   >
-  <label class="ui-checkbox-field__copy" for="{{ id }}">
+  <label class="ui-checkbox-field__copy" for="{{ id | escape }}">
     <span class="ui-checkbox-field__label">
       {{- label | escape -}}
       {%- if badge %}{% render 'ui-badge', label: badge %}{% endif -%}
@@ -31,4 +44,5 @@
       <span class="ui-checkbox-field__description">{{ description | escape }}</span>
     {%- endif -%}
   </label>
+  {% if count != nil %}<span class="ui-checkbox-field__count" aria-hidden="true">({{ count }})</span>{% endif %}
 </div>

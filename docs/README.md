@@ -16,6 +16,9 @@ as the change they describe.
 | [shopify-policy-pages.md](shopify-policy-pages.md) | Policy page templates, store-managed content, responsive reading, and footer menu wiring. |
 | [shopify-content-installation.md](shopify-content-installation.md) | Fencing Club migration content, portable manifests, menu wiring, and safe reruns. |
 | [shopify-catalog-rehearsal.md](shopify-catalog-rehearsal.md) | Read-only source snapshots, Contoso imports, native bundles, chart assignments, and controlled stock. |
+| [shopify-collection-filters.md](shopify-collection-filters.md) | Shopify filter sources, curated classifications, protection attributes, and migration boundaries. |
 | [shopify-size-charts.md](shopify-size-charts.md) | Shared chart pages and drawers, editable category headings/order, dynamic membership, and sizing verification. |
 | [shopify-drawers.md](shopify-drawers.md) | Reusable drawer shell, motion, focus and scroll lifecycle, and consumer integration. |
+| [shopify-cart.md](shopify-cart.md) | Cart panel/page layout, native bundles, notes, discounts, request coordination, and acceptance. |
+| [shopify-interaction-states.md](shopify-interaction-states.md) | Interactive component inventory, state/motion contract, and local component lab. |
 | [Printable measuring tape](../packages/fc-theme-base/printables/README.md) | Branded A4 and Letter PDFs, print calibration, font assets, and regeneration checks. |

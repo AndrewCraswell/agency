@@ -1,0 +1,44 @@
+<div class="ui-text-field ui-field{% if disabled %} ui-field--disabled{% endif %}">
+  <label class="ui-field__label{% if hide_label %} visually-hidden{% endif %}" for="{{ id | escape }}">{{ label | escape }}{% if prefix != blank %}<span class="visually-hidden"> ({{ prefix | escape }})</span>{% endif %}</label>
+  <div class="ui-text-field__control{% if multiline %} ui-text-field__control--multiline{% endif %}">
+    {% if prefix != blank %}<span class="ui-text-field__prefix" aria-hidden="true">{{ prefix | escape }}</span>{% endif %}
+    {% if multiline %}
+    <textarea
+      class="ui-text-field__input"
+      id="{{ id | escape }}"
+      name="{{ name | escape }}"
+      rows="{{ rows | default: 3 }}"
+      {% if form_id != blank %}form="{{ form_id | escape }}"{% endif %}
+      {% if maxlength != nil %}maxlength="{{ maxlength }}"{% endif %}
+      {% if placeholder != blank %}placeholder="{{ placeholder | escape }}"{% endif %}
+      {% if described_by != blank %}aria-describedby="{{ described_by | escape }}"{% endif %}
+      {% if invalid %}aria-invalid="true"{% endif %}
+      {% if disabled %}disabled{% endif %}
+      {% if readonly %}readonly{% endif %}
+      {% if required %}required{% endif %}
+    >{{ value | escape }}</textarea>
+    {% else %}
+    <input
+      class="ui-text-field__input"
+      id="{{ id | escape }}"
+      name="{{ name | escape }}"
+      type="{{ type | default: 'text' | escape }}"
+      value="{{ value | escape }}"
+      {% if form_id != blank %}form="{{ form_id | escape }}"{% endif %}
+      {% if autocapitalize != blank %}autocapitalize="{{ autocapitalize | escape }}"{% endif %}
+      {% if type == 'email' %}spellcheck="false"{% endif %}
+      {% if placeholder != blank %}placeholder="{{ placeholder | escape }}"{% endif %}
+      {% if inputmode != blank %}inputmode="{{ inputmode | escape }}"{% endif %}
+      {% if autocomplete != blank %}autocomplete="{{ autocomplete | escape }}"{% endif %}
+      {% if described_by != blank %}aria-describedby="{{ described_by | escape }}"{% endif %}
+      {% if invalid %}aria-invalid="true"{% endif %}
+      {% if disabled %}disabled{% endif %}
+      {% if readonly %}readonly{% endif %}
+      {% if required %}required{% endif %}
+      {% if range_min != nil %}data-min="{{ range_min | escape }}"{% endif %}
+      {% if range_max != nil %}data-max="{{ range_max | escape }}"{% endif %}
+      {% if inputmode == 'decimal' %}data-pattern="\d| |,|\."{% endif %}
+    >
+    {% endif %}
+  </div>
+</div>

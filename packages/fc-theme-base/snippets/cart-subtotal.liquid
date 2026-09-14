@@ -1,0 +1,7 @@
+{% doc %}
+  Merchandise subtotal before cart-level discounts, with checkout shipping wording.
+{% enddoc %}
+<div class="fc-cart-breakdown">
+  <div><span>{{ 'sections.cart.items_subtotal' | t }}</span><span>{{ cart.items_subtotal_price | money }}</span></div>
+  <div><span>{{ 'sections.cart.shipping' | t }}</span><span>{{ 'sections.cart.calculated_at_checkout' | t }}</span></div>
+</div>

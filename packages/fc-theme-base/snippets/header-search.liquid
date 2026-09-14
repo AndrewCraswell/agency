@@ -54,12 +54,7 @@
               value="{{ search.terms | escape }}"
               placeholder="{{ 'general.search.placeholder' | t }}"
               {%- if settings.predictive_search_enabled -%}
-                role="combobox"
-                aria-expanded="false"
-                aria-owns="predictive-search-results"
-                aria-controls="predictive-search-results"
-                aria-haspopup="listbox"
-                aria-autocomplete="list"
+                aria-controls="{{ input_id }}-results"
                 autocorrect="off"
                 autocomplete="off"
                 autocapitalize="off"
@@ -80,10 +75,10 @@
           </div>
 
           {%- if settings.predictive_search_enabled -%}
-            <div class="predictive-search predictive-search--header" tabindex="-1" data-predictive-search>
+            <div id="{{ input_id }}-results" class="predictive-search predictive-search--header" tabindex="-1" data-predictive-search role="region" aria-label="{{ 'general.search.search' | t | escape }}">
               {%- render 'predictive-search-skeleton' -%}
             </div>
-            {%- render 'predictive-search-idle', id_prefix: input_id -%}
+            {%- render 'predictive-search-idle', id_prefix: input_id, within_modal: true -%}
 
             <span class="predictive-search-status visually-hidden" role="status" aria-hidden="true"></span>
           {%- endif -%}

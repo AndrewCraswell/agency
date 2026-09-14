@@ -26,7 +26,10 @@ class DetailsModal extends HTMLElement {
 
   open(event) {
     this.onBodyClickEvent = this.onBodyClickEvent || this.onBodyClick.bind(this);
+    this.querySelector('.search-panel')?.removeAttribute('data-closing-content');
     event.target.closest('details').setAttribute('open', true);
+    this.querySelector('.search-modal')?.removeAttribute('inert');
+    this.summaryToggle.setAttribute('aria-expanded', 'true');
     document.body.addEventListener('click', this.onBodyClickEvent);
     document.body.classList.add('overflow-hidden');
 
@@ -37,8 +40,16 @@ class DetailsModal extends HTMLElement {
   }
 
   close(focusToggle = true) {
+    const search = this.querySelector('.search-panel');
+    if (search && this.isOpen()) {
+      if (search.hasAttribute('idle')) search.dataset.closingContent = 'idle';
+      else if (search.hasAttribute('open') || search.hasAttribute('loading')) search.dataset.closingContent = 'results';
+    }
     removeTrapFocus(focusToggle ? this.summaryToggle : null);
+    this.querySelector('.search-modal')?.setAttribute('inert', '');
+    this.summaryToggle.setAttribute('aria-expanded', 'false');
     this.detailsContainer.removeAttribute('open');
+    this.querySelector('predictive-search')?.close();
     document.body.removeEventListener('click', this.onBodyClickEvent);
     document.body.classList.remove('overflow-hidden');
   }

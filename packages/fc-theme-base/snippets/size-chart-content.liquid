@@ -33,8 +33,9 @@
       {%- if has_imperial -%}
         <fieldset class="size-chart__units" data-chart-controls hidden>
           <legend class="visually-hidden">Measurement units</legend>
-          <label><input type="radio" data-chart-unit name="ChartUnit-{{ instance_id }}" value="cm" checked><span>cm</span></label>
-          <label><input type="radio" data-chart-unit name="ChartUnit-{{ instance_id }}" value="in"><span>in</span></label>
+          {% assign unit_options = 'cm,in' | split: ',' %}
+          {% assign unit_name = 'ChartUnit-' | append: instance_id %}
+          {% render 'ui-segmented-control', name: unit_name, options: unit_options, selected: 'cm', input_attributes: 'data-chart-unit' %}
         </fieldset>
       {%- endif -%}
     </div>
@@ -44,7 +45,8 @@
         <legend>Sizes to compare</legend>
         <div class="size-chart__options">
           {%- for entry in entries -%}
-            <button type="button" data-size-option="{{ entry.system.handle | escape }}" aria-pressed="false">{{ entry.size_label.value | escape }}</button>
+            {% capture choice_attributes %}data-size-option="{{ entry.system.handle | escape }}"{% endcapture %}
+            {% render 'ui-choice', type: 'button', label: entry.size_label.value, additional_props: choice_attributes %}
           {%- endfor -%}
         </div>
       </fieldset>

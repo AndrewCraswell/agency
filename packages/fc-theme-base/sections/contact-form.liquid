@@ -47,53 +47,14 @@
             </div>
           {%- endif -%}
 
-          <div class="contact-page__field">
-            <label for="ContactForm-name">Name</label>
-            <input
-              id="ContactForm-name"
-              type="text"
-              name="contact[name]"
-              autocomplete="name"
-              value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}"
-              placeholder="{{ section.settings.name_placeholder | escape }}"
-            >
-          </div>
-          <div class="contact-page__field">
-            <label for="ContactForm-email">Email</label>
-            <input
-              id="ContactForm-email"
-              type="email"
-              name="contact[email]"
-              autocomplete="email"
-              spellcheck="false"
-              autocapitalize="off"
-              value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}"
-              placeholder="{{ section.settings.email_placeholder | escape }}"
-              aria-required="true"
-              required
-            >
-          </div>
-          <div class="contact-page__field">
-            <label for="ContactForm-phone">Phone</label>
-            <input
-              id="ContactForm-phone"
-              type="tel"
-              name="contact[phone]"
-              autocomplete="tel"
-              value="{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}"
-              placeholder="{{ section.settings.phone_placeholder | escape }}"
-            >
-          </div>
-          <div class="contact-page__field">
-            <label for="ContactForm-body">Anything we should know?</label>
-            <textarea
-              id="ContactForm-body"
-              name="contact[body]"
-              rows="4"
-              placeholder="{{ section.settings.message_placeholder | escape }}"
-            >{{- form.body -}}</textarea>
-          </div>
-          <button type="submit" class="contact-page__submit">{{ section.settings.submit_label | escape }}</button>
+          {% capture contact_name %}{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}{% endcapture %}
+          {% capture contact_email %}{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}{% endcapture %}
+          {% capture contact_phone %}{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}{% endcapture %}
+          {% render 'ui-text-field', id: 'ContactForm-name', name: 'contact[name]', label: 'Name', autocomplete: 'name', value: contact_name, placeholder: section.settings.name_placeholder %}
+          {% render 'ui-text-field', id: 'ContactForm-email', name: 'contact[email]', label: 'Email', type: 'email', autocomplete: 'email', autocapitalize: 'off', required: true, value: contact_email, placeholder: section.settings.email_placeholder %}
+          {% render 'ui-text-field', id: 'ContactForm-phone', name: 'contact[phone]', label: 'Phone', type: 'tel', autocomplete: 'tel', value: contact_phone, placeholder: section.settings.phone_placeholder %}
+          {% render 'ui-text-field', id: 'ContactForm-body', name: 'contact[body]', label: 'Anything we should know?', multiline: true, rows: 4, value: form.body, placeholder: section.settings.message_placeholder %}
+          {% render 'ui-button', type: 'submit', variant: 'primary', label: section.settings.submit_label %}
         {%- endform -%}
       </div>
 

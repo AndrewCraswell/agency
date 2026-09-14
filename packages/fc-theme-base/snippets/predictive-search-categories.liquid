@@ -9,7 +9,6 @@
   - heading: {String} group heading (required)
   - hide_heading: {Boolean} keep the heading for assistive tech only (default false)
   - id_prefix: {String} unique prefix for the heading and option ids (required)
-  - as_options: {Boolean} mark each entry as a listbox option (default false)
   - limit: {Number} maximum entries to show (default 5)
 
   Usage:
@@ -27,25 +26,18 @@
       <li
         id="{{ id_prefix }}-{{ forloop.index }}"
         class="predictive-search__list-item"
-        {% if as_options %}
-          role="option"
-          aria-selected="false"
-        {% endif %}
+        data-search-result
       >
         {%- if variant == 'chips' -%}
           {%- render 'ui-pill',
             label: link.title,
             url: link.url,
-            icon: 'arrow-up-right',
-            option: as_options
+            icon: 'arrow-up-right'
           -%}
         {%- else -%}
           <a
             href="{{ link.url }}"
             class="predictive-search__item"
-            {% if as_options %}
-              tabindex="-1"
-            {% endif %}
           >
             <span class="predictive-search__item-icon">
               {%- render 'fc-icon', icon: 'layout-grid', size: 15 -%}

@@ -10,6 +10,7 @@
     "pull": "shopify theme pull --path .",
     "push": "shopify theme push --path .",
     "content:build": "node content/build-manifest.mjs",
+    "lab": "node tests/component-library.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

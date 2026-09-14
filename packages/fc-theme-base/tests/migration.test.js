@@ -10,6 +10,13 @@ describe('Fencing Club migration package', () => {
     const manifest = buildMigrationManifest(await read('sizing-source.json'), await read('navigation-source.json'), await read('chart-assignments.json'), []);
     expect(manifest.resources.filter((resource) => resource.kind === 'menu')).toHaveLength(6);
     expect(manifest.resources.filter((resource) => resource.kind === 'product-chart-assignment')).toHaveLength(26);
+    expect(manifest.resources.filter((resource) => ['definition.weapon', 'definition.gender', 'definition.skill_level', 'definition.protection_rating', 'definition.fie_status'].includes(resource.key)).map(resource => resource.data)).toEqual([
+      { namespace: 'custom', key: 'weapon', name: 'Weapon', type: 'list.single_line_text_field', ownerType: 'PRODUCT', access: { storefront: 'PUBLIC_READ' } },
+      { namespace: 'custom', key: 'gender', name: 'Gender', type: 'single_line_text_field', ownerType: 'PRODUCT', access: { storefront: 'PUBLIC_READ' } },
+      { namespace: 'custom', key: 'skill_level', name: 'Skill Level', type: 'single_line_text_field', ownerType: 'PRODUCT', access: { storefront: 'PUBLIC_READ' } },
+      { namespace: 'custom', key: 'protection_rating', name: 'Safety Level', type: 'single_line_text_field', ownerType: 'PRODUCT', access: { storefront: 'PUBLIC_READ' } },
+      { namespace: 'custom', key: 'fie_status', name: 'FIE Rating', type: 'single_line_text_field', ownerType: 'PRODUCT', access: { storefront: 'PUBLIC_READ' } },
+    ]);
     expect(JSON.stringify(manifest)).not.toContain('gid://shopify/');
     expect(JSON.stringify(manifest)).not.toContain('/collections/sabre');
     expect(JSON.stringify(manifest)).not.toContain('/apps/track');

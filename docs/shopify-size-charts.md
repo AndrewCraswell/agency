@@ -69,6 +69,9 @@ with no valid groups shows the empty state instead of an empty container.
 
 ## Behavior
 
+- Size choices render the shared `ui-choice` pill also used for product options, retaining multi-select comparison.
+  The cm/in control uses `ui-segmented-control`: two native radios with a sliding selected segment, arrow-key support,
+  a visible keyboard focus ring and immediate state updates under reduced motion.
 - Comparison starts with the first two sizes. Buttons toggle table columns using `aria-pressed`, wrapping only when
   the available width requires it. Size columns use their intrinsic content width; they do not divide or fill the
   available page width. Values remain on one line on screen. The table scrolls horizontally with sticky measurement

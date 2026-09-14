@@ -30,19 +30,12 @@ class SearchForm extends HTMLElement {
     this.toggleResetButton();
   }
 
-  shouldResetForm() {
-    return !document.querySelector('[aria-selected="true"] a');
-  }
-
   onFormReset(event) {
     // Prevent default so the form reset doesn't set the value gotten from the url on page load
     event.preventDefault();
-    // Don't reset if the user has selected an element on the predictive search dropdown
-    if (this.shouldResetForm()) {
-      this.input.value = '';
-      this.input.focus();
-      this.toggleResetButton();
-    }
+    this.input.value = '';
+    this.input.focus();
+    this.toggleResetButton();
   }
 }
 

@@ -7,7 +7,10 @@ from theme migration: the live shop already owns its catalog and must not import
 
 - Confirmed source: `8f3f5f-3.myshopify.com`, primary domain `fencing.club`. Source access is read-only.
 - Write destination: `contosocamp.myshopify.com` only. Both import and finalization refuse any other destination.
-- The captured source has 204 products and 606 images. Existing 29 Contoso products have distinct handles and are kept.
+- The captured source has 204 products and 606 images. The importer preserves existing destination products.
+- After explicit approval, the 29 original Contoso demo products were deleted on September 11, 2026, using their
+  captured IDs and verified handles. All 204 imported products remain. The home page now selects imported products
+  and links to their real collections. This cleanup is separate from the importer's create-only contract.
 - No customers, orders, credentials, fulfillment configuration, or source stock quantities are copied.
 - Titles, descriptions, SEO, and option copy use Mens, Womens, Kids without apostrophes. Handles and SKUs stay literal.
 - Products start as drafts with tracked zero stock and the current product template. Gift cards and subscription-only

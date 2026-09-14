@@ -84,7 +84,7 @@
   display: grid;
   grid-template-columns: 2.6rem minmax(0, 1fr) 1.8rem;
   gap: 1.4rem;
-  align-items: start;
+  align-items: center;
   padding: 1.8rem 0;
   list-style: none;
   cursor: pointer;
@@ -95,7 +95,7 @@
 }
 
 .ui-faq-item__question-text {
-  padding-top: 0.3rem;
+  padding-top: 0;
   font-size: 1.6rem;
   font-weight: 600;
   line-height: 1.25;
@@ -126,13 +126,22 @@
 
 .ui-faq-item__chevron {
   display: inline-flex;
-  margin-top: 0.4rem;
+  margin-top: 0;
   color: #5a5a60;
   transition: transform 150ms ease;
 }
 
 .ui-faq-item[open] .ui-faq-item__chevron {
   transform: rotate(180deg);
+}
+
+.ui-faq-item[open] .ui-faq-item__answer {
+  animation: faq-answer-enter var(--ui-motion-enter) var(--ui-motion-ease);
+}
+
+@keyframes faq-answer-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .ui-faq-item__answer {
@@ -163,8 +172,9 @@
 }
 
 .ui-faq-item__question:focus-visible {
-  outline: 0.2rem solid #101012;
-  outline-offset: 0.4rem;
+  outline: 0.2rem solid var(--ui-focus-outer, #101012);
+  outline-offset: 0.3rem;
+  box-shadow: 0 0 0 0.3rem var(--ui-focus-inner, #ffffff);
 }
 
 .faq-page__contact {
@@ -173,6 +183,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ui-faq-item[open] .ui-faq-item__answer { animation: none; }
   .ui-faq-item__chevron {
     transition-duration: 1ms;
   }

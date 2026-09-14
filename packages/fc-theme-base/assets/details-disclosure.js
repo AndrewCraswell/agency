@@ -35,7 +35,7 @@ customElements.define('details-disclosure', DetailsDisclosure);
 class HeaderMenu extends DetailsDisclosure {
   constructor() {
     super();
-    this.header = document.querySelector('.header-wrapper');
+    this.header = this.closest('.header-wrapper');
 
     // Pointer users expect the panel on hover; click and keyboard still drive the
     // same <details>, and coarse pointers keep tap-to-open.
@@ -43,6 +43,16 @@ class HeaderMenu extends DetailsDisclosure {
     this.addEventListener('pointerenter', this.onPointerEnter);
     this.addEventListener('pointerleave', this.onPointerLeave);
     this.querySelector('summary').addEventListener('click', this.onSummaryClick);
+    this.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.close();
+      this.querySelector('summary').focus();
+    });
+    this.addEventListener('keyup', event => {
+      if (event.key === 'Escape') event.stopPropagation();
+    }, true);
 
     if (!HeaderMenu.tracking) {
       HeaderMenu.tracking = true;
@@ -101,22 +111,65 @@ class HeaderMenu extends DetailsDisclosure {
 
   // Hover already opened it, so the click that follows would immediately close it.
   onSummaryClick = (event) => {
-    if (!this.hoverQuery.matches || !this.mainDetailsToggle.open) return;
     event.preventDefault();
+    if (this.mainDetailsToggle.open && !this.closingAnimation) {
+      if (this.hoverQuery.matches && event.detail > 0) return;
+      this.close();
+    } else this.open();
   };
 
   open() {
+    clearTimeout(this.closeTimer);
+    if (this.closingAnimation) {
+      this.closingAnimation.cancel();
+      this.closingAnimation = null;
+    }
+    this.content.inert = false;
+    this.content.removeAttribute('aria-hidden');
+    this.mainDetailsToggle.removeAttribute('data-menu-exiting');
+    this.querySelector('summary').setAttribute('aria-expanded', true);
     if (this.mainDetailsToggle.open) return;
-    document.querySelectorAll('header-menu details[open]').forEach((details) => {
-      if (details !== this.mainDetailsToggle) details.removeAttribute('open');
+    const siblings = [...document.querySelectorAll('header-menu details[open]')].filter(details => details !== this.mainDetailsToggle);
+    this.mainDetailsToggle.toggleAttribute('data-menu-switch', siblings.length > 0);
+    siblings.forEach((details) => {
+      details.closest('header-menu').close(false, true);
     });
     this.mainDetailsToggle.setAttribute('open', '');
     this.querySelector('summary').setAttribute('aria-expanded', true);
   }
 
+  close(immediate = false, switching = false) {
+    clearTimeout(this.closeTimer);
+    if (!this.mainDetailsToggle.open) return;
+    this.mainDetailsToggle.setAttribute('data-menu-exiting', '');
+    this.querySelector('summary').setAttribute('aria-expanded', false);
+    this.content.inert = true;
+    this.content.setAttribute('aria-hidden', 'true');
+    const duration = getComputedStyle(this.content).getPropertyValue('--menu-exit-duration').trim();
+    if (immediate || duration === '0ms' || matchMedia('(prefers-reduced-motion: reduce)').matches || typeof this.content.animate !== 'function') {
+      this.closingAnimation?.cancel();
+      this.closingAnimation = null;
+      super.close();
+      return;
+    }
+    if (this.closingAnimation) return;
+    const animation = this.content.animate([
+      { opacity: getComputedStyle(this.content).opacity, transform: getComputedStyle(this.content).transform },
+      { opacity: 0, transform: switching ? 'translateY(0)' : 'translateY(-8px)' },
+    ], { duration: switching ? 140 : 160, easing: 'cubic-bezier(0.2, 0, 0, 1)', fill: 'both' });
+    this.closingAnimation = animation;
+    animation.finished.then(() => {
+      if (this.closingAnimation !== animation) return;
+      super.close();
+      animation.cancel();
+      this.closingAnimation = null;
+    }, () => {});
+  }
+
   onToggle() {
+    this.querySelector('summary').setAttribute('aria-expanded', String(this.mainDetailsToggle.open && !this.mainDetailsToggle.hasAttribute('data-menu-exiting')));
     if (!this.header) return;
-    this.header.preventHide = this.mainDetailsToggle.open;
+    this.header.preventHide = !!this.header.querySelector('header-menu details[open]:not([data-menu-exiting])');
 
     if (document.documentElement.style.getPropertyValue('--header-bottom-position-desktop') !== '') return;
     document.documentElement.style.setProperty(

@@ -58,6 +58,32 @@ if (desktopForm !== null) addBreadcrumbInputs(desktopForm);
 const mobileForm = document.querySelector('#FacetFiltersFormMobile');
 if (mobileForm !== null) addBreadcrumbInputs(mobileForm);
 
-for (const link of document.querySelectorAll('.collection-filter-option a, .ui-pagination a')) {
+for (const link of document.querySelectorAll('.collection-filter-option a[href], .ui-pagination a[href]')) {
   copyBreadcrumbContext(link);
 }
+
+for (const link of document.querySelectorAll('[data-clear-collection-filters]')) {
+  copyBreadcrumbContext(link);
+  const destination = new URL(link.href, window.location.origin);
+  const sort = new URLSearchParams(window.location.search).get('sort_by');
+  if (sort) destination.searchParams.set('sort_by', sort);
+  link.href = `${destination.pathname}${destination.search}`;
+}
+
+document.addEventListener('change', event => {
+  const input = event.target;
+  if (input.matches('.collection-curated-filters price-range input')) {
+    const destination = new URL(window.location.href);
+    for (const field of input.closest('price-range').querySelectorAll('input')) {
+      destination.searchParams.delete(field.name);
+      if (field.value.trim()) destination.searchParams.set(field.name, field.value);
+    }
+    destination.searchParams.delete('page');
+    window.location.assign(`${destination.pathname}${destination.search}`);
+    return;
+  }
+  if (!input.matches('.collection-curated-filters input[data-filter-url]') || input.disabled) return;
+  const destination = { href: input.dataset.filterUrl };
+  copyBreadcrumbContext(destination);
+  window.location.assign(destination.href);
+});

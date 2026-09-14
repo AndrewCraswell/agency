@@ -13,7 +13,10 @@ class CartDrawer extends HTMLElement {
 
     cartLink.setAttribute('role', 'button');
     cartLink.setAttribute('aria-haspopup', 'dialog');
+    cartLink.setAttribute('aria-controls', 'CartDrawer');
+    cartLink.setAttribute('aria-expanded', 'false');
     cartLink.addEventListener('click', (event) => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       this.open(cartLink);
     });
@@ -28,24 +31,16 @@ class CartDrawer extends HTMLElement {
   open(triggeredBy) {
     if (this.classList.contains('active')) return;
     if (triggeredBy) this.setActiveElement(triggeredBy);
+    document.querySelector('#cart-icon-bubble')?.setAttribute('aria-expanded', 'true');
     const cartDrawerNote = this.querySelector('[id^="Details-"] summary');
     if (cartDrawerNote && !cartDrawerNote.hasAttribute('role')) this.setSummaryAccessibility(cartDrawerNote);
-    // here the animation doesn't seem to always get triggered. A timeout seem to help
-    setTimeout(() => {
-      this.classList.add('animate', 'active');
+    this.classList.add('animate', 'active');
+    this.focusFrame = requestAnimationFrame(() => {
+      if (!this.classList.contains('active')) return;
+      const containerToTrapFocusOn = this.querySelector('.drawer__inner');
+      const focusElement = containerToTrapFocusOn.querySelector('.drawer__close') || this.querySelector('.drawer__close');
+      trapFocus(containerToTrapFocusOn, focusElement);
     });
-
-    this.addEventListener(
-      'transitionend',
-      () => {
-        const containerToTrapFocusOn = this.classList.contains('is-empty')
-          ? this.querySelector('.drawer__inner-empty')
-          : document.getElementById('CartDrawer');
-        const focusElement = this.querySelector('.drawer__inner') || this.querySelector('.drawer__close');
-        trapFocus(containerToTrapFocusOn, focusElement);
-      },
-      { once: true },
-    );
 
     document.body.classList.add('overflow-hidden');
 
@@ -56,7 +51,9 @@ class CartDrawer extends HTMLElement {
   }
 
   close() {
+    cancelAnimationFrame(this.focusFrame);
     this.classList.remove('active');
+    document.querySelector('#cart-icon-bubble')?.setAttribute('aria-expanded', 'false');
     removeTrapFocus(this.activeElement);
     document.body.classList.remove('overflow-hidden');
   }
@@ -77,6 +74,8 @@ class CartDrawer extends HTMLElement {
   }
 
   renderContents(parsedState) {
+    const renderedDrawer = new DOMParser().parseFromString(parsedState.sections['cart-drawer'], 'text/html').querySelector('cart-drawer');
+    this.classList.toggle('is-empty', renderedDrawer.classList.contains('is-empty'));
     this.querySelector('.drawer__inner').classList.contains('is-empty') &&
       this.querySelector('.drawer__inner').classList.remove('is-empty');
     this.productId = parsedState.id;
@@ -86,13 +85,14 @@ class CartDrawer extends HTMLElement {
         : document.getElementById(section.id);
 
       if (!sectionElement) return;
-      sectionElement.innerHTML = this.getSectionInnerHTML(parsedState.sections[section.id], section.selector);
+      const source = this.getSectionDOM(parsedState.sections[section.id], section.selector);
+      CartItems.preserveControls(sectionElement, source);
+      sectionElement.innerHTML = source.innerHTML;
     });
 
-    setTimeout(() => {
-      this.querySelector('#CartDrawer-Overlay').addEventListener('click', this.close.bind(this));
-      this.open();
-    });
+    this.querySelector('#CartDrawer-Overlay').addEventListener('click', this.close.bind(this));
+    this.open();
+    CartItems.updateCheckoutState();
   }
 
   getSectionInnerHTML(html, selector = '.shopify-section') {

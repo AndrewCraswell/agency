@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" class="js">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Fencing Club component lab</title>
+  <script>(()=>{const value=new URLSearchParams(location.search).get('scoutTheme');document.documentElement.dataset.theme=value||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');})();</script>
+  <style>{% render 'theme-tokens' %}</style>
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/component-ui.css">
+  <link rel="stylesheet" href="/assets/component-product-variant-picker.css">
+  <link rel="stylesheet" href="/assets/component-list-menu.css">
+  <link rel="stylesheet" href="/assets/component-mega-menu.css">
+  <link rel="stylesheet" href="/assets/section-faq.css">
+  <link rel="stylesheet" href="/assets/section-contact-form.css">
+  <link rel="stylesheet" href="/assets/section-main-search.css">
+  <link rel="stylesheet" href="/assets/section-home.css">
+  <link rel="stylesheet" href="/assets/component-support-band.css">
+  <link rel="stylesheet" href="/assets/component-cookie-consent.css">
+  <link rel="stylesheet" href="/assets/component-facets.css">
+  <link rel="stylesheet" href="/assets/section-main-collection.css">
+  <link rel="stylesheet" href="/assets/component-localization-form.css">
+  <link rel="stylesheet" href="/lab/country-flags.css">
+  <link rel="stylesheet" href="/assets/component-search.css">
+  <link rel="stylesheet" href="/assets/component-predictive-search.css">
+  <link rel="stylesheet" href="/assets/component-price.css">
+  <link rel="stylesheet" href="/assets/component-swatch.css">
+  <link rel="stylesheet" href="/assets/component-swatch-input.css">
+  <link rel="stylesheet" href="/assets/cart-experience.css">
+  <link rel="stylesheet" href="/assets/component-menu-drawer.css">
+  <link rel="stylesheet" href="/assets/section-main-product.css">
+  <link rel="stylesheet" href="/assets/component-list-social.css">
+  <link rel="stylesheet" href="/assets/size-chart.css">
+  <link rel="stylesheet" href="/lab/library.css">
+  <script src="/lab/privacy-fixture.js" defer></script>
+  <script src="/assets/constants.js" defer></script><script src="/assets/pubsub.js" defer></script>
+  <script src="/assets/global.js" defer></script><script src="/assets/details-disclosure.js" defer></script>
+  <script src="/assets/cookie-consent.js" defer></script>
+  <script src="/assets/ui-select.js" defer></script>
+  <script src="/assets/localization-form.js" defer></script>
+  <script src="/assets/search-form.js" defer></script>
+  <script src="/assets/predictive-search.js" defer></script>
+  <script src="/assets/media-gallery.js" defer></script>
+  <script src="/assets/product-modal.js" defer></script>
+  <script src="/assets/size-chart.js" defer></script>
+  <script src="/lab/workflows.js" defer></script>
+  <script src="/lab/library.js" defer></script>
+</head>
+<body>
+  <a class="lab-skip" href="#lab-main">Skip to components</a>
+  <header class="lab-header">
+    <img src="/assets/fencing-club-logo.png" alt="Fencing Club" width="40" height="48">
+    <div><h1>Component lab</h1><span>Local fixtures</span></div>
+    <label class="lab-motion"><input type="checkbox" id="reduce-motion"> Reduce motion</label>
+    <button type="button" id="reset-lab" title="Reset examples" aria-label="Reset examples">{% render 'fc-icon', icon: 'rotate-ccw', size: 20 %}</button>
+  </header>
+  <nav class="lab-nav" aria-label="Component sections"><a href="#commands">Commands</a><a href="#selection">Selection</a><a href="#navigation">Navigation</a><a href="#browsing">Filters and sorting</a><a href="#search-components">Search</a><a href="#announcements">Announcements</a><a href="#localization">Language and currency</a><a href="#forms">Forms</a><a href="#product-details">Product details</a><a href="#cart-components">Cart details</a><a href="#disclosures">Disclosures</a><a href="#menu">Mega menu</a><a href="#cards">Cards</a><a href="#sections">Sections</a><a href="#privacy">Privacy</a><a href="#coverage">Coverage</a></nav>
+  <main id="lab-main" tabindex="-1">
+    <section id="commands" class="lab-section"><h2>Commands <code>ui-button / ui-link</code></h2>
+      <div class="specimen lab-row">
+        {% render 'ui-button', label: 'Add to cart', variant: 'primary', action: 'simulate-save', icon: 'arrow-right' %}
+        {% render 'ui-button', label: 'Continue shopping', variant: 'secondary', action: 'select-example' %}
+        {% render 'ui-button', label: 'Cancel', variant: 'ghost', action: 'select-example' %}
+        {% render 'ui-button', aria_label: 'Close example', variant: 'icon', icon: 'close', action: 'select-example' %}
+        {% render 'ui-link', label: 'View all products', url: '#selection', icon: 'arrow-right' %}
+      </div>
+      <div class="specimen lab-row">
+        {% render 'ui-button', label: 'Unavailable', variant: 'primary', disabled: true %}
+        {% render 'ui-button', label: 'Unavailable link', url: '#cards', variant: 'secondary', disabled: true %}
+        {% render 'ui-button', label: 'Saving', variant: 'secondary', busy: true %}
+      </div>
+      <div class="lab-state-row"><label><input type="checkbox" id="disable-command"> Disable primary action</label><label><input type="checkbox" id="fail-command"> Simulate failure</label><output id="command-status" role="status">Ready</output></div>
+    </section>
+    <section id="selection" class="lab-section"><h2>Selection <code>product-variant-options / ui-pill / quantity-input</code></h2>
+      <div class="specimen lab-selection">
+        <form id="product-form-component-lab"><fieldset class="product-form__input product-form__input--pill"><legend>Size</legend>{% render 'product-variant-options', option: option, picker_type: 'button' %}</fieldset></form>
+        <div><h3>Quantity</h3>{% render 'quantity-input', variant: variant, variant_id: variant.id, min: 1 %}</div>
+        <div class="lab-row">{% render 'ui-pill', label: 'All gear', url: '#selection', active: true %}{% render 'ui-pill', label: 'Clothing', url: '#selection' %}{% render 'ui-pill', label: 'Accessories', url: '#selection' %}</div>
+        <div class="lab-row">{% render 'ui-checkbox-field', id: 'lab-stock', label: 'In stock', checked: true %}{% render 'ui-checkbox-field', id: 'lab-sale', label: 'On sale' %}{% render 'ui-checkbox-field', id: 'lab-locked', label: 'Unavailable filter', disabled: true %}</div>
+      </div>
+      <output id="selection-status" role="status">Size M selected</output>
+    </section>
+    <section id="disclosures" class="lab-section"><h2>Disclosures <code>ui-faq-item / ui-drawer</code></h2>
+      <div class="specimen">
+        {% render 'ui-faq-item', question: 'Which size should I choose?', answer: '<p>Use your measurements to compare the size chart for your product.</p>', link_label: 'View size chart', link_url: '#selection' %}
+        {%- capture drawer_trigger -%}<button type="button" class="ui-button ui-button--secondary" data-drawer-open aria-haspopup="dialog" aria-expanded="false" aria-controls="LabDrawer">Open drawer</button>{%- endcapture -%}
+        {%- capture drawer_options -%}<option>Small</option><option>Medium</option><option>Large</option>{%- endcapture -%}
+        {%- capture drawer_content -%}<img class="lab-drawer-image" src="/assets/mega-sizing-guide.jpg" alt="Fencing clothing"><p>Size chart</p>{% render 'ui-select', id: 'lab-drawer-size', name: 'size', label: 'Size', options: drawer_options %}{%- endcapture -%}
+        {% render 'ui-drawer', id: 'LabDrawer', title: 'Size chart', close_label: 'Close size chart', trigger: drawer_trigger, content: drawer_content %}
+      </div>
+    </section>
+    <section id="menu" class="lab-section lab-menu-section"><h2>Mega menu <code>header-mega-menu / details-disclosure.js</code></h2>
+      <h3>Default</h3>
+      <div class="specimen header-wrapper lab-menu" data-header-example="default">{% render 'header-mega-menu' %}</div>
+      <h3>Inverted</h3>
+      <div class="specimen header-wrapper header-wrapper--inverted lab-menu" data-header-example="inverted">{% render 'header-mega-menu', id_prefix: 'inverted-' %}</div>
+      <h3>Transparent</h3>
+      <div class="specimen header-wrapper header-wrapper--translucent lab-menu" data-header-example="transparent">{% render 'header-mega-menu', id_prefix: 'transparent-' %}</div>
+      <output id="menu-status" role="status">No destination selected</output>
+    </section>
+    {% render 'workflows', catalog: catalog, commerce: commerce, option: option, dropdown_section: dropdown_section, localization: localization, announcements: announcements %}
+    {% render 'page-controls', gallery: gallery, policy: policy, chart: chart, share_block: share_block %}
+    {% render 'specimens', products: products, articles: articles, examples: examples, search_page: search_page %}
+    <section id="coverage" class="lab-section"><h2>State coverage</h2>
+      <div class="lab-table-wrap" role="region" aria-label="Component coverage" tabindex="0"><table><caption>Component coverage and workflow boundaries</caption><thead><tr><th>Family</th><th>Review states</th><th>Coverage</th></tr></thead><tbody>
+        <tr><td>Commands and links</td><td>Hover, focus, pressed, disabled, busy, success, error</td><td>Live specimens; async responses simulated</td></tr>
+        <tr><td>Variants, pills, quantity, checkboxes</td><td>Selected, unavailable, hover, pressed, focus, min/max</td><td>Production snippets; fixture values</td></tr>
+        <tr><td>FAQ and drawer</td><td>Open/closed, Escape, focus return, reduced motion</td><td>Production snippets and drawer controller</td></tr>
+        <tr><td>Mega menu</td><td>Pointer travel, sibling switching, click, keyboard, touch</td><td>Production menu tree renderer and controller</td></tr>
+        <tr><td>Cards and home sections</td><td>Product, article, category, contact, page, skeleton, editorial, testimonials</td><td>Production renderers; noncommercial fixture content</td></tr>
+        <tr><td>Privacy banner and preferences</td><td>Required, optional, accepted, declined, saving, failed, reopening</td><td>Production controller; in-memory API only</td></tr>
+        <tr><td>Filters, price range, sorting, pagination</td><td>Selected, unavailable, clear, loading, failed/retry, empty, keyboard</td><td>Production Liquid; local catalog response adapter</td></tr>
+        <tr><td>Search</td><td>Idle, recent, grouped results, skeleton, empty, failed/retry, clear, keyboard</td><td>Production controller; local request and recent-history adapters</td></tr>
+        <tr><td>Announcements, language, country/currency</td><td>Single, carousel, tone variants, open, selected, Escape</td><td>Production renderers/controllers; localization submissions stay local</td></tr>
+        <tr><td>Forms and cart details</td><td>Required, invalid, readonly, disabled, busy, success, error, bundle disclosure</td><td>Production field styles and cart snippets; no messages or discounts submitted</td></tr>
+        <tr><td>Mobile navigation, gallery, sizing, reading</td><td>Nested/back, thumbnail, zoom, units, compare sizes, downloads, contents/table</td><td>Production snippets/controllers with fixture context</td></tr>
+        <tr><td>Platform-dependent commerce</td><td>Orders, checkout/payment, live inventory/discounts, pickup, gift-card recipients</td><td>Requires separate store acceptance; no live actions here</td></tr>
+        <tr><td>Optional base-theme integrations</td><td>Bulk quick order, accelerated checkout, video/3D, app blocks</td><td>Audited; not simulated as working integrations</td></tr>
+      </tbody></table></div>
+    </section>
+  </main>
+</body></html>

@@ -1,0 +1,23 @@
+{% doc %}
+  Shows the components of a native bundle without independent purchase controls.
+  @param {line_item} item - Cart line item.
+  @param {string} context - Unique cart view name.
+{% enddoc %}
+{%- if item.item_components.size > 0 -%}
+  <details class="fc-cart-contents" id="CartContents-{{ context }}-{{ item.key | replace: ':', '-' }}">
+    <summary>{{ 'sections.cart.included_items' | t }} {% render 'fc-icon', icon: 'chevron-down', size: 16 %}</summary>
+    <ul role="list">
+      {%- for component in item.item_components -%}
+        <li>
+          {%- if component.image -%}
+            {{ component.image | image_url: width: 120 | image_tag: loading: 'lazy', widths: '60, 120', sizes: '48px', class: 'fc-cart-contents__image' }}
+          {%- endif -%}
+          <div>
+            <span>{{ component.quantity }} &times; {{ component.product.title | escape }}</span>
+            {%- unless component.product.has_only_default_variant -%}<small>{{ component.variant.title | escape }}</small>{%- endunless -%}
+          </div>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </details>
+{%- endif -%}

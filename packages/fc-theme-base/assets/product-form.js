@@ -46,9 +46,9 @@ if (!customElements.get('product-form')) {
         const quantity = parseInt(formData.get('quantity')) || 1;
         const linesUpdateDeferred = this.createCartLinesUpdateEvent(variantId, quantity);
 
-        fetch(`${routes.cart_add_url}`, config)
+        const operation = () => fetch(`${routes.cart_add_url}`, config)
           .then((response) => response.json())
-          .then((response) => {
+          .then(async (response) => {
             if (response.status) {
               publish(PUB_SUB_EVENTS.cartError, {
                 source: 'product-form',
@@ -77,7 +77,7 @@ if (!customElements.get('product-form')) {
 
             const startMarker = CartPerformance.createStartingMarker('add:wait-for-subscribers');
             if (!this.error)
-              publish(PUB_SUB_EVENTS.cartUpdate, {
+              await publish(PUB_SUB_EVENTS.cartUpdate, {
                 source: 'product-form',
                 productVariantId: variantId,
                 cartData: response,
@@ -107,17 +107,20 @@ if (!customElements.get('product-form')) {
           })
           .catch((e) => {
             console.error(e);
+            this.handleErrorMessage(window.cartStrings.error);
             this.dispatchCartErrorEvent(e.message || 'Network error', 'SERVICE_UNAVAILABLE');
             linesUpdateDeferred?.reject(e);
           })
           .finally(() => {
             this.submitButton.classList.remove('loading');
-            if (this.cart && this.cart.classList.contains('is-empty')) this.cart.classList.remove('is-empty');
             if (!this.error) this.submitButton.removeAttribute('aria-disabled');
             this.querySelector('.loading__spinner').classList.add('hidden');
 
             CartPerformance.measureFromEvent("add:user-action", evt);
           });
+        const cartController = customElements.get('cart-items');
+        if (cartController) return cartController.mutate(operation);
+        return operation();
       }
 
       handleErrorMessage(errorMessage = false) {

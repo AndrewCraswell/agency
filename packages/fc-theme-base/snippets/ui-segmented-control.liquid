@@ -1,0 +1,8 @@
+<div class="ui-segmented-control">
+  {% for option in options %}
+    <label>
+      <input type="radio" name="{{ name | escape }}" value="{{ option | escape }}" {% if option == selected %}checked{% endif %} {{ input_attributes }}>
+      <span>{{ option | escape }}</span>
+    </label>
+  {% endfor %}
+</div>

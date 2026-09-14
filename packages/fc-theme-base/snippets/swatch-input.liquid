@@ -25,12 +25,17 @@
     %}
 {% endcomment %}
 
+{%- capture swatch_background -%}{%- render 'swatch-background', swatch: swatch, color_name: color_name -%}{%- endcapture -%}
+{%- if color_name != blank and swatch_background == blank -%}
+  {%- assign choice_label = label | default: value -%}
+  {% render 'ui-choice', type: type, id: id, name: name, value: value, label: choice_label, form_id: product_form_id, checked: checked, disabled: disabled, additional_props: additional_props %}
+{%- else -%}
 <input
   type="{{ type | default: 'radio' }}"
-  id="{{ id }}"
-  name="{{ name }}"
-  value="{{ value }}"
-  form="{{ product_form_id }}"
+  id="{{ id | escape }}"
+  name="{{ name | escape }}"
+  value="{{ value | escape }}"
+  {% if product_form_id != blank %}form="{{ product_form_id | escape }}"{% endif %}
   class="swatch-input__input{% if visually_disabled %} visually-disabled{% endif %}"
   {% if checked %}
     checked
@@ -43,10 +48,11 @@
   {% endif %}
 >
 <label
-  for="{{ id }}"
-  title="{{ value }}"
+  for="{{ id | escape }}"
+  title="{{ label | default: value | escape }}"
   class="swatch-input__label{% if shape == 'square' %} swatch-input__label--square{% endif %}"
 >
-  {% render 'swatch', swatch: swatch, shape: shape %}
+  {% render 'swatch', swatch: swatch, shape: shape, color_name: color_name %}
   {{ help_text }}
 </label>
+{%- endif -%}

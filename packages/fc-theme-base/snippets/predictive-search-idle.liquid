@@ -7,11 +7,12 @@
   Accepts:
   - id_prefix: {String} unique prefix for the ids in this instance (required)
   - modifier: {String} extra class matching the results panel's positioning variant
+  - within_modal: {Boolean} use a region inside an existing search dialog
 
   Usage:
   {% render 'predictive-search-idle', id_prefix: 'header-search' %}
 {%- endcomment -%}
-<div class="predictive-search predictive-search--idle {{ modifier }}" data-predictive-search-idle tabindex="-1">
+<div id="{{ id_prefix }}-suggestions" class="predictive-search predictive-search--idle {{ modifier }}" data-predictive-search-idle tabindex="-1" role="{% if within_modal %}region{% else %}dialog{% endif %}" aria-label="{{ 'templates.search.popular_categories' | t | escape }}">
   <div class="predictive-search__results-groups-wrapper">
     <div class="predictive-search__rail" data-recent-searches hidden>
       {%- assign recent_heading = 'templates.search.recent_searches' | t -%}

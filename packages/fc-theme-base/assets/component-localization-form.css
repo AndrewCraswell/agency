@@ -67,7 +67,7 @@
   margin-bottom: 1.5rem;
   padding-left: 1rem;
   text-align: left;
-  min-height: calc(4rem + var(--inputs-border-width) * 2);
+  min-height: 4.4rem;
   min-width: calc(7rem + var(--inputs-border-width) * 2);
 }
 
@@ -308,6 +308,7 @@
 
 .disclosure__link {
   display: grid;
+  min-height: 4.4rem;
   grid-template-columns: auto 1fr auto;
   gap: 0.5rem;
   padding: 0.9rem 1.5rem;
@@ -344,10 +345,10 @@
 }
 
 .header-localization .disclosure .localization-form__select {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   letter-spacing: 0.06rem;
   height: auto;
-  min-height: initial;
+  min-height: 4.4rem;
   background: transparent;
 }
 
@@ -448,4 +449,15 @@
 
 .language-selector .disclosure__list {
   min-width: 200px;
+}
+
+.localization-form__select { font-size: 1.5rem; }
+.localization-form__select:focus-visible, .disclosure__link:focus-visible {
+  outline: 2px solid var(--ui-focus-outer);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--ui-focus-inner);
+}
+.localization-form__select:not(:disabled):active, .disclosure__link:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  .localization-form__select:not(:disabled):active, .disclosure__link:active { transform: none; }
 }

@@ -2,6 +2,43 @@
   position: static;
 }
 
+.header__inline-menu .header__menu-item,
+.header__inline-menu .header__menu-item:hover,
+.header__inline-menu details[open] > .header__menu-item {
+  color: var(--header-menu-ink, rgb(var(--color-foreground)));
+  background: none;
+  text-decoration: none;
+}
+.header__inline-menu .header__menu-item > span,
+.header__inline-menu .header__menu-item:hover > span,
+.header__inline-menu details[open] > .header__menu-item > span {
+  text-decoration: none;
+  transition: opacity 160ms ease;
+}
+@media (hover: hover) {
+  .header__inline-menu .header__menu-item:hover > span { opacity: 0.75; }
+}
+.header__inline-menu .header__menu-item:active > span { opacity: 0.65; }
+.header__inline-menu .header__menu-item:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; box-shadow: none; }
+:is(.header-wrapper--inverted, .header-wrapper--translucent) { --header-menu-ink: #f7f7f5; }
+:is(.header-wrapper--inverted, .header-wrapper--translucent) .header__inline-menu .header__menu-item { color: var(--header-menu-ink); }
+@media (prefers-reduced-motion: reduce) { .header__inline-menu .header__menu-item > span { transition: none; } }
+
+.header__inline-menu header-menu > details > summary.header__menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.header__inline-menu header-menu > details > summary.header__menu-item > .icon-caret {
+  position: static;
+  flex: 0 0 1.2rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  transition: transform 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 /* The panel spans the header wrapper rather than 100vw: 100vw includes the scrollbar,
    and centring on the nav drifts the panel off the page as the nav shifts. The logo is
    pushed behind so the open panel is not painted over. */
@@ -11,7 +48,9 @@
 }
 
 .mega-menu__content {
+  --menu-exit-duration: 160ms;
   background-color: rgb(var(--color-background));
+  border: 1px solid rgba(var(--color-foreground), 0.12);
   border-left: 0;
   border-radius: 0;
   border-right: 0;
@@ -48,6 +87,26 @@
   visibility: visible;
   pointer-events: auto;
   transform: translateY(0);
+  animation: mega-menu-enter 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes mega-menu-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mega-menu[open][data-menu-switch] .mega-menu__content {
+  animation: mega-menu-switch 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+.mega-menu[data-menu-exiting] .mega-menu__content { pointer-events: none; }
+@keyframes mega-menu-switch {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mega-menu[open] .mega-menu__content, .mega-menu[open][data-menu-switch] .mega-menu__content { animation: none; }
+  .header__inline-menu header-menu > details > summary.header__menu-item > .icon-caret { transition: none; }
 }
 
 .mega-menu__list {
@@ -538,6 +597,18 @@
 .fc-mega-panel__option:hover {
   text-decoration: underline;
   text-underline-offset: 0.3rem;
+}
+
+:is(.fc-mega-tool__button, .fc-mega-card, .fc-mega-panel__option) {
+  transition: background-color var(--ui-motion-fast) var(--ui-motion-ease), color var(--ui-motion-fast) var(--ui-motion-ease), border-color var(--ui-motion-fast) var(--ui-motion-ease), transform var(--ui-motion-fast) var(--ui-motion-ease);
+}
+@media (hover: hover) {
+  .fc-mega-panel__option:hover { background: rgba(var(--color-foreground), 0.07); }
+}
+.fc-mega a:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  :is(.fc-mega-tool__button, .fc-mega-card, .fc-mega-panel__option) { transition: none; }
+  .fc-mega a:active { transform: none; }
 }
 
 .fc-mega-panel__option .icon {

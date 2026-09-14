@@ -71,6 +71,13 @@
   transition: transform var(--duration-short) ease;
 }
 
+.announcement-bar .slider-button--prev,
+.announcement-bar .slider-button--next {
+  margin-inline: 0;
+  flex: 0 0 44px;
+  min-width: 44px;
+}
+
 .announcement-bar-slider .slider-button svg,
 .announcement-bar-slider .slider-button path {
   color: #ffffff;
@@ -108,18 +115,15 @@
 }
 
 @media screen and (min-width: 990px) {
-  /* base.css gives .utility-bar__grid.page-width 3.2rem gutters; the design runs full width. */
   .utility-bar > .utility-bar__grid.page-width {
     max-width: none;
-    padding-inline: 0;
+    padding-inline: 1.6rem;
   }
 }
 
-/* The design's 28px gutters plus Dawn's 44px chevrons left the message barely a third of a phone
-   screen, so it wrapped to three lines. Narrower here; the targets stay 36x44. */
 @media screen and (max-width: 749px) {
   .utility-bar {
-    padding-inline: 0.8rem;
+    padding-inline: 0;
   }
 
   .utility-bar > .utility-bar__grid.page-width {
@@ -128,8 +132,39 @@
 
   .announcement-bar .slider-button--prev,
   .announcement-bar .slider-button--next {
-    min-width: 3.6rem;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    min-width: 44px;
     margin: 0;
     padding: 0;
   }
+  .announcement-bar-slider { position: relative; }
+  .announcement-bar .slider-button--prev { left: 0; }
+  .announcement-bar .slider-button--next { right: 0; }
+  .announcement-bar-slider .slider { flex: 1 1 100%; }
+  .announcement-bar__message {
+    display: block;
+    padding: 11px 44px;
+    min-height: 55px;
+    text-align: center;
+    line-height: 15px;
+  }
+  .announcement-bar__title { margin-inline-end: 8px; }
+  .announcement-bar__cta {
+    display: flex;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    margin: 3px auto 0;
+    font-size: 12.5px;
+    line-height: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-bar-slider .slider-button .svg-wrapper { transition: none; }
+  .announcement-bar-slider .slider-button:hover .svg-wrapper,
+  .announcement-bar-slider .slider-button:focus-visible .svg-wrapper { transform: none; }
 }

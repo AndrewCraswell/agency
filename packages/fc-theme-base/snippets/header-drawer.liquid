@@ -31,10 +31,7 @@
                         id="HeaderDrawer-{{ link.handle }}"
                         class="menu-drawer__menu-item list-menu__item link link--text focus-inset{% if link.child_active %} menu-drawer__menu-item--active{% endif %}"
                       >
-                        {{ link.title | escape }}
-                        <span class="svg-wrapper">
-                          {{- 'icon-arrow.svg' | inline_asset_content -}}
-                        </span>
+                        <span>{{ link.title | escape }}</span>
                         <span class="svg-wrapper">
                           {{- 'icon-caret.svg' | inline_asset_content -}}
                         </span>
@@ -45,23 +42,19 @@
                         tabindex="-1"
                       >
                         <div class="menu-drawer__inner-submenu">
-                          <button class="menu-drawer__close-button link link--text focus-inset" aria-expanded="true">
-                            <span class="svg-wrapper">
-                              {{- 'icon-arrow.svg' | inline_asset_content -}}
-                            </span>
-                            {{ link.title | escape }}
-                          </button>
                           <ul class="menu-drawer__menu list-menu" role="list" tabindex="-1">
-                            <li>
-                              <a
-                                id="HeaderDrawer-{{ link.handle }}-collection"
-                                href="{{ link.url }}"
-                                class="menu-drawer__menu-item link link--text list-menu__item focus-inset"
-                              >
-                                {{ link.title | escape }}
-                              </a>
-                            </li>
-                            {%- for childlink in link.links -%}
+                            {%- liquid
+                              assign child_links = '' | split: ','
+                              for childlink in link.links
+                                if childlink.title == link.title and childlink.url == link.url and childlink.links != blank
+                                  assign child_links = child_links | concat: childlink.links
+                                else
+                                  assign child_entry = link.links | slice: forloop.index0, 1
+                                  assign child_links = child_links | concat: child_entry
+                                endif
+                              endfor
+                            -%}
+                            {%- for childlink in child_links -%}
                               {%- capture child_context_url -%}
                                 {%- render 'collection-context-url', url: childlink.url, current_label: childlink.title -%}
                               {%- endcapture -%}
@@ -83,10 +76,7 @@
                                       id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}"
                                       class="menu-drawer__menu-item link link--text list-menu__item focus-inset"
                                     >
-                                      {{ childlink.title | escape }}
-                                      <span class="svg-wrapper">
-                                        {{- 'icon-arrow.svg' | inline_asset_content -}}
-                                      </span>
+                                      <span>{{ childlink.title | escape }}</span>
                                       <span class="svg-wrapper">
                                         {{- 'icon-caret.svg' | inline_asset_content -}}
                                       </span>
@@ -95,37 +85,14 @@
                                       id="childlink-{{ childlink.handle | escape }}"
                                       class="menu-drawer__submenu has-submenu gradient motion-reduce"
                                     >
-                                      <button
-                                        class="menu-drawer__close-button link link--text focus-inset"
-                                        aria-expanded="true"
-                                      >
-                                        <span class="svg-wrapper">
-                                          {{- 'icon-arrow.svg' | inline_asset_content -}}
-                                        </span>
-                                        {{ childlink.title | escape }}
-                                      </button>
                                       <ul
                                         class="menu-drawer__menu list-menu"
                                         role="list"
                                         tabindex="-1"
                                       >
-                                        <li>
-                                          <a
-                                            id="HeaderDrawer-{{ link.handle }}-{{ childlink.handle }}-collection"
-                                            href="{{ child_context_url }}"
-                                            class="menu-drawer__menu-item link link--text list-menu__item focus-inset"
-                                          >
-                                            {{ childlink.title | escape }}
-                                          </a>
-                                        </li>
                                         {%- for grandchildlink in childlink.links -%}
                                           {%- liquid
                                             assign grandchild_label = grandchildlink.title
-                                            if grandchild_label == 'Mens'
-                                              assign grandchild_label = 'Men'
-                                            elsif grandchild_label == 'Womens'
-                                              assign grandchild_label = 'Women'
-                                            endif
                                           -%}
                                           {%- capture grandchild_context_url -%}
                                             {%- render 'collection-context-url',

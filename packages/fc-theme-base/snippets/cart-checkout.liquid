@@ -1,0 +1,15 @@
+{% doc %}
+  Compact checkout action shared by both cart views.
+  @param {string} form_id - Cart form to submit.
+  @param {string} context - page or drawer.
+{% enddoc %}
+<div class="fc-cart-checkout" data-cart-checkout>
+  <div class="totals"><h2 class="totals__total">{{ 'sections.cart.estimated_total' | t }}</h2><p class="totals__total-value">{{ cart.total_price | money_with_currency }}</p></div>
+  <button type="submit" class="cart__checkout-button button" name="checkout" form="{{ form_id }}" id="CartCheckout-{{ context }}" {% if cart == empty %}disabled{% endif %}>{{ 'sections.cart.checkout' | t }} {% render 'fc-icon', icon: 'arrow-right', size: 18 %}</button>
+  <p class="fc-cart-checkout__note">
+    {%- if cart.duties_included and cart.taxes_included -%}{{ 'sections.cart.duties_and_taxes_included_shipping_at_checkout_without_policy' | t }}
+    {%- elsif cart.taxes_included -%}{{ 'sections.cart.taxes_included_shipping_at_checkout_without_policy' | t }}
+    {%- elsif cart.duties_included -%}{{ 'sections.cart.duties_included_taxes_at_checkout_shipping_at_checkout_without_policy' | t }}
+    {%- else -%}{{ 'sections.cart.taxes_at_checkout_shipping_at_checkout_without_policy' | t }}{%- endif -%}
+  </p>
+</div>

@@ -256,15 +256,14 @@ class QuantityInput extends HTMLElement {
 
   validateQtyRules() {
     const value = parseInt(this.input.value);
-    if (this.input.min) {
-      const buttonMinus = this.querySelector(".quantity__button[name='minus']");
-      buttonMinus.classList.toggle('disabled', parseInt(value) <= parseInt(this.input.min));
-    }
-    if (this.input.max) {
-      const max = parseInt(this.input.max);
-      const buttonPlus = this.querySelector(".quantity__button[name='plus']");
-      buttonPlus.classList.toggle('disabled', value >= max);
-    }
+    const buttonMinus = this.querySelector(".quantity__button[name='minus']");
+    const buttonPlus = this.querySelector(".quantity__button[name='plus']");
+    const atMinimum = this.input.min !== '' && value <= parseInt(this.input.min);
+    const atMaximum = this.input.max !== '' && value >= parseInt(this.input.max);
+    buttonMinus.disabled = this.input.disabled || atMinimum;
+    buttonPlus.disabled = this.input.disabled || atMaximum;
+    buttonMinus.classList.toggle('disabled', buttonMinus.disabled);
+    buttonPlus.classList.toggle('disabled', buttonPlus.disabled);
   }
 }
 
@@ -479,6 +478,7 @@ class MenuDrawer extends HTMLElement {
     this.mainDetailsToggle.querySelectorAll('details').forEach((details) => {
       details.removeAttribute('open');
       details.classList.remove('menu-opening');
+      details.querySelector('summary')?.setAttribute('aria-expanded', 'false');
     });
     this.mainDetailsToggle.querySelectorAll('.submenu-open').forEach((submenu) => {
       submenu.classList.remove('submenu-open');
@@ -487,7 +487,7 @@ class MenuDrawer extends HTMLElement {
     removeTrapFocus(elementToFocus);
     this.closeAnimation(this.mainDetailsToggle);
 
-    if (event instanceof KeyboardEvent) elementToFocus?.setAttribute('aria-expanded', false);
+    this.mainDetailsToggle.querySelector('summary')?.setAttribute('aria-expanded', 'false');
   }
 
   onFocusOut() {

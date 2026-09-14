@@ -1,3 +1,5 @@
+{{ 'component-swatch.css' | asset_url | stylesheet_tag }}
+{{ 'component-swatch-input.css' | asset_url | stylesheet_tag }}
 {%- comment -%}
   Renders the collection's real Shopify filters in the curated filter styling.
 
@@ -5,30 +7,60 @@
   - results: {Collection} Collection whose filters are rendered (required)
   - section_id: {String} Owning section id, for unique ids (required)
 
-  Filter values carry their own add/remove URLs, so the markup stays a plain
-  link list and facets.js intercepts it.
+  Native inputs carry Shopify add/remove URLs; collection-breadcrumbs.js navigates
+  those URLs with the current breadcrumb context. Links remain available without JavaScript.
 {%- endcomment -%}
 <nav class="collection-curated-filters" aria-label="{{ 'products.facets.filter_by_label' | t }}">
   {%- for filter in results.filters -%}
     {%- liquid
       assign group_key = filter.label | handle
       assign presentation = 'checkbox'
+      assign parameter_name = filter.param_name | default: filter.values.first.param_name
+      if parameter_name == 'filter.v.option.size'
+        assign presentation = 'choice'
+      endif
+      if parameter_name == 'filter.v.option.color' or parameter_name == 'filter.v.option.colour'
+        assign presentation = 'swatch'
+      endif
       if filter.presentation == 'swatch'
         assign presentation = 'swatch'
       endif
       if filter.type == 'price_range'
         assign presentation = 'price'
+      else
+        assign visible_values = 0
+        for value in filter.values
+          if value.count > 0 or value.active
+            if presentation == 'swatch' and value.active == false
+              capture swatch_background
+                render 'swatch-background', swatch: value.swatch, color_name: value.label
+              endcapture
+              if swatch_background == blank
+                continue
+              endif
+            endif
+            assign visible_values = visible_values | plus: 1
+          endif
+        endfor
+        if visible_values == 0
+          continue
+        endif
       endif
     -%}
     <section
       class="collection-filter-group collection-filter-group--{{ presentation }}"
       aria-labelledby="CollectionFilter-{{ section_id }}-{{ group_key }}"
     >
-      <h3 id="CollectionFilter-{{ section_id }}-{{ group_key }}">{{ filter.label | escape | upcase }}</h3>
+      <details class="collection-filter-group__disclosure" open>
+        <summary>
+          <h3 id="CollectionFilter-{{ section_id }}-{{ group_key }}">{{ filter.label | escape | upcase }}</h3>
+          {% render 'fc-icon', icon: 'chevron-down', size: 16 %}
+        </summary>
 
       {%- if filter.type == 'price_range' -%}
         <price-range class="collection-filter-group__price">
-          {%- render 'price-facet', filter: filter, id_prefix: 'CollectionFilter-', filter_type: 'vertical' -%}
+          {%- assign price_prefix = 'CollectionFilter-' | append: section_id | append: '-' -%}
+          {%- render 'price-facet', filter: filter, id_prefix: price_prefix, filter_type: 'vertical' -%}
         </price-range>
       {%- else -%}
         <ul class="collection-filter-group__options list-unstyled">
@@ -36,7 +68,15 @@
             {%- liquid
               assign is_disabled = false
               if value.count == 0 and value.active == false
-                assign is_disabled = true
+                continue
+              endif
+              if presentation == 'swatch' and value.active == false
+                capture swatch_background
+                  render 'swatch-background', swatch: value.swatch, color_name: value.label
+                endcapture
+                if swatch_background == blank
+                  continue
+                endif
               endif
               assign option_url = value.url_to_add
               if value.active
@@ -48,30 +88,28 @@
                 {%- if value.active %} collection-filter-option--active{% endif %}
                 {%- if is_disabled %} collection-filter-option--disabled{% endif %}"
             >
-              {%- if presentation == 'swatch' -%}
-                <span
-                  class="collection-filter-option__swatch"
-                  style="--filter-swatch: {{ value.swatch.color | default: '#ffffff' }}"
-                  aria-hidden="true"
-                ></span>
-                <span class="collection-filter-option__swatch-link">
-                  <a href="{{ option_url }}" aria-pressed="{{ value.active }}">{{ value.label | escape }}</a>
-                </span>
+              {%- if presentation == 'choice' -%}
+                {%- assign choice_id = 'CollectionChoice-' | append: section_id | append: '-' | append: group_key | append: '-' | append: forloop.index -%}
+                {%- capture choice_attributes -%}data-filter-url="{{ option_url | escape }}"{%- endcapture -%}
+                {% render 'ui-choice', type: 'checkbox', id: choice_id, name: value.param_name, value: value.value, label: value.label, checked: value.active, disabled: is_disabled, additional_props: choice_attributes %}
+                {% unless is_disabled %}<noscript><a href="{{ option_url | escape }}">{{ value.label | escape }}</a></noscript>{% endunless %}
+              {%- elsif presentation == 'swatch' -%}
+                {%- assign swatch_id = 'CollectionSwatch-' | append: section_id | append: '-' | append: group_key | append: '-' | append: forloop.index -%}
+                {%- capture swatch_attributes -%}data-filter-url="{{ option_url | escape }}"{%- endcapture -%}
+                {%- capture swatch_label -%}<span class="visually-hidden">{{ value.label | escape }}</span>{%- endcapture -%}
+                {% render 'swatch-input', type: 'checkbox', id: swatch_id, name: value.param_name, value: value.value, label: value.label, color_name: value.label, swatch: value.swatch, checked: value.active, disabled: is_disabled, help_text: swatch_label, additional_props: swatch_attributes %}
+                {% unless is_disabled %}<noscript><a href="{{ option_url | escape }}">{{ value.label | escape }}</a></noscript>{% endunless %}
               {%- else -%}
-                <span class="collection-filter-option__check" aria-hidden="true">
-                  {%- if value.active -%}
-                    <span class="svg-wrapper">{%- render 'fc-icon', icon: 'check', size: 12 -%}</span>
-                  {%- endif -%}
-                </span>
-                <span class="collection-filter-option__label">
-                  <a href="{{ option_url }}" aria-pressed="{{ value.active }}">{{ value.label | escape }}</a>
-                </span>
-                <span class="collection-filter-option__count" aria-hidden="true">{{ value.count }}</span>
+                {%- assign checkbox_id = 'CollectionCheckbox-' | append: section_id | append: '-' | append: group_key | append: '-' | append: forloop.index -%}
+                {%- capture checkbox_attributes -%}data-filter-url="{{ option_url | escape }}"{%- endcapture -%}
+                {% render 'ui-checkbox-field', variant: 'filter', id: checkbox_id, name: value.param_name, value: value.value, label: value.label, checked: value.active, disabled: is_disabled, count: value.count, additional_props: checkbox_attributes %}
+                {% unless is_disabled %}<noscript><a href="{{ option_url | escape }}">{{ value.label | escape }}</a></noscript>{% endunless %}
               {%- endif -%}
             </li>
           {%- endfor -%}
         </ul>
       {%- endif -%}
+      </details>
     </section>
   {%- endfor -%}
 </nav>

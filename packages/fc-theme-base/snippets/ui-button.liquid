@@ -10,22 +10,34 @@
   - icon: {String} Optional icon name passed to ui-icon.
   - action: {String} Optional token rendered as data-action for scripts to bind to.
   - full_width: {Boolean} Stretch to fill the container.
+  - disabled: {Boolean} Prevent activation and show the disabled state.
+  - busy: {Boolean} Prevent activation and announce a pending action.
   - class: {String} Optional extra classes.
 {% endcomment %}
 
+{%- liquid
+  assign inactive = false
+  if disabled or busy
+    assign inactive = true
+  endif
+-%}
 {%- if url != blank -%}
   <a
-    href="{{ url }}"
+    {% if inactive %}role="link" aria-disabled="true" tabindex="-1"{% else %}href="{{ url }}"{% endif %}
     class="ui-button ui-button--{{ variant | default: 'secondary' }}{% if full_width %} ui-button--full-width{% endif %}{% if class %} {{ class }}{% endif %}"
     {% if aria_label %}aria-label="{{ aria_label | escape }}"{% endif %}
-    {% if action %}data-action="{{ action | escape }}"{% endif %}
+    {% if busy %}aria-busy="true"{% endif %}
+    {% if action and inactive == false %}data-action="{{ action | escape }}"{% endif %}
   >
 {%- else -%}
   <button
     type="{{ type | default: 'button' }}"
     class="ui-button ui-button--{{ variant | default: 'secondary' }}{% if full_width %} ui-button--full-width{% endif %}{% if class %} {{ class }}{% endif %}"
     {% if aria_label %}aria-label="{{ aria_label | escape }}"{% endif %}
-    {% if action %}data-action="{{ action | escape }}"{% endif %}
+    {% if inactive %}disabled{% endif %}
+    {% if busy %}aria-busy="true"{% endif %}
+    {% if action and inactive == false %}data-action="{{ action | escape }}"{% endif %}
+    {{ additional_props }}
   >
 {%- endif -%}
   {%- if icon -%}

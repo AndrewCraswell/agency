@@ -45,11 +45,12 @@
   assign main_count = product_count | plus: guide_count
   assign total_results = rail_count | plus: main_count
 -%}
-<div id="predictive-search-results" role="listbox">
+<div id="predictive-search-results">
   {%- if predictive_search.performed -%}
     {%- if total_results > 0 -%}
       <div
         id="predictive-search-results-groups-wrapper"
+        data-search-results-groups
         class="predictive-search__results-groups-wrapper{% if rail_count == 0 %} predictive-search__results-groups-wrapper--no-rail{% endif %}{% if main_count == 0 %} predictive-search__results-groups-wrapper--no-main{% endif %}"
       >
     {%- endif -%}
@@ -62,10 +63,9 @@
             <li
               id="predictive-search-option-query-{{ forloop.index }}"
               class="predictive-search__list-item"
-              role="option"
-              aria-selected="false"
+              data-search-result
             >
-              <a href="{{ query.url }}" class="predictive-search__item" tabindex="-1">
+              <a href="{{ query.url }}" class="predictive-search__item">
                 <span class="predictive-search__item-icon">
                   {%- render 'fc-icon', icon: 'search', size: 15 -%}
                 </span>
@@ -91,10 +91,9 @@
             <li
               id="predictive-search-option-collection-{{ forloop.index }}"
               class="predictive-search__list-item"
-              role="option"
-              aria-selected="false"
+              data-search-result
             >
-              <a href="{{ collection.url }}" class="predictive-search__item" tabindex="-1">
+              <a href="{{ collection.url }}" class="predictive-search__item">
                 <span class="predictive-search__item-icon">
                   {%- render 'fc-icon', icon: 'layout-grid', size: 15 -%}
                 </span>
@@ -130,15 +129,14 @@
             <ul
               id="predictive-search-results-products-list"
               class="predictive-search__results-list predictive-search__products-grid list-unstyled"
-              role="group"
+              role="list"
               aria-labelledby="predictive-search-products"
             >
               {%- for product in found_products limit: product_count -%}
                 <li
                   id="predictive-search-option-product-{{ forloop.index }}"
                   class="predictive-search__list-item predictive-search__list-item--product"
-                  role="option"
-                  aria-selected="false"
+                  data-search-result
                 >
                   <product-component view-event-payload="{{ product | standard_event_data: 'view', context: 'search' | escape }}">
                     {%- assign card_id = 'PredictiveSearchTitle-' | append: forloop.index -%}
@@ -147,7 +145,6 @@
                       variant: 'search',
                       card_id: card_id,
                       show_price: settings.predictive_search_show_price,
-                      tabindex: '-1',
                       image_width: 426,
                       image_widths: '168, 209, 336, 418',
                       image_sizes: '(min-width: 1100px) 209px, 50vw',
@@ -165,10 +162,9 @@
                 <li
                   id="predictive-search-option-article-{{ forloop.index }}"
                   class="predictive-search__list-item"
-                  role="option"
-                  aria-selected="false"
+                  data-search-result
                 >
-                  <a href="{{ article.url }}" class="predictive-search__item" tabindex="-1">
+                  <a href="{{ article.url }}" class="predictive-search__item">
                     <span class="predictive-search__item-icon">
                       {%- render 'fc-icon', icon: 'book-open', size: 15 -%}
                     </span>
@@ -183,10 +179,9 @@
                 <li
                   id="predictive-search-option-page-{{ forloop.index }}"
                   class="predictive-search__list-item"
-                  role="option"
-                  aria-selected="false"
+                  data-search-result
                 >
-                  <a href="{{ page.url }}" class="predictive-search__item" tabindex="-1">
+                  <a href="{{ page.url }}" class="predictive-search__item">
                     <span class="predictive-search__item-icon">
                       {%- render 'fc-icon', icon: 'life-buoy', size: 15 -%}
                     </span>
@@ -212,7 +207,7 @@
     {%- if total_results > 0 -%}
       </div>
     {%- else -%}
-      <div id="predictive-search-results-groups-wrapper" class="predictive-search__empty">
+      <div id="predictive-search-results-groups-wrapper" class="predictive-search__empty" data-search-results-groups>
         <span class="predictive-search__empty-icon">
           {%- render 'fc-icon', icon: 'search-x', size: 26 -%}
         </span>
@@ -225,8 +220,7 @@
           variant: 'chips',
           heading: browse_heading,
           hide_heading: true,
-          id_prefix: 'predictive-search-option-empty-category',
-          as_options: true
+          id_prefix: 'predictive-search-option-empty-category'
         -%}
       </div>
     {%- endif -%}
@@ -260,16 +254,14 @@
         <div
           id="predictive-search-option-search-keywords"
           class="predictive-search__search-for-button predictive-search__list-item"
-            role="option"
-            aria-selected="false"
+          data-search-result
         >
           {%- render 'ui-link',
             label: view_all_label,
             url: view_all_url,
             icon: 'arrow-right',
             class: 'predictive-search__item--term',
-            label_class: 'predictive-search__view-all-label',
-            tabindex: '-1'
+            label_class: 'predictive-search__view-all-label'
           -%}
         </div>
       </div>

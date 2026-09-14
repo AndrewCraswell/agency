@@ -1,0 +1,19 @@
+<div class="lab-catalog-layout">
+  <aside aria-labelledby="LabFilterHeading">
+    {% render 'collection-filter-header', heading_id: 'LabFilterHeading', heading_tag: 'h3', heading: 'Filters', clear_label: 'Clear all', clear_url: '/lab/catalog' %}
+    <details class="lab-filter-disclosure" open>
+      <summary>Filters {% render 'fc-icon', icon: 'chevron-down', size: 16 %}</summary>
+      <div class="collection-filter-panel">
+      <div class="lab-filter-actions"><a class="ui-link" href="/lab/catalog">Clear all</a></div>
+      {% render 'collection-facet-filters', results: catalog, section_id: 'lab-catalog' %}
+      </div>
+    </details>
+  </aside>
+  <div class="lab-catalog-main">
+    {% render 'collection-toolbar', results: catalog, enable_sorting: true, sort_label: 'Sort by' %}
+    <div class="lab-card-grid" data-catalog-products>
+      {% for product in catalog.products %}{% assign card_id = 'lab-catalog-card-' | append: product.id %}{% render 'ui-product-card', product: product, card_id: card_id, show_type: true, show_price: true, section_id: 'lab-catalog' %}{% else %}<div class="lab-empty"><h3>No products found</h3><p>Try different filters.</p><a href="/lab/catalog" class="ui-link">Clear all</a></div>{% endfor %}
+    </div>
+    {% render 'ui-pagination', paginate: catalog.paginate %}
+  </div>
+</div>

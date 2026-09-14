@@ -3288,6 +3288,76 @@
       }
     },
     {
+      "key": "definition.weapon",
+      "kind": "product-metafield-definition",
+      "data": {
+        "namespace": "custom",
+        "key": "weapon",
+        "name": "Weapon",
+        "type": "list.single_line_text_field",
+        "ownerType": "PRODUCT",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        }
+      }
+    },
+    {
+      "key": "definition.gender",
+      "kind": "product-metafield-definition",
+      "data": {
+        "namespace": "custom",
+        "key": "gender",
+        "name": "Gender",
+        "type": "single_line_text_field",
+        "ownerType": "PRODUCT",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        }
+      }
+    },
+    {
+      "key": "definition.skill_level",
+      "kind": "product-metafield-definition",
+      "data": {
+        "namespace": "custom",
+        "key": "skill_level",
+        "name": "Skill Level",
+        "type": "single_line_text_field",
+        "ownerType": "PRODUCT",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        }
+      }
+    },
+    {
+      "key": "definition.protection_rating",
+      "kind": "product-metafield-definition",
+      "data": {
+        "namespace": "custom",
+        "key": "protection_rating",
+        "name": "Safety Level",
+        "type": "single_line_text_field",
+        "ownerType": "PRODUCT",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        }
+      }
+    },
+    {
+      "key": "definition.fie_status",
+      "kind": "product-metafield-definition",
+      "data": {
+        "namespace": "custom",
+        "key": "fie_status",
+        "name": "FIE Rating",
+        "type": "single_line_text_field",
+        "ownerType": "PRODUCT",
+        "access": {
+          "storefront": "PUBLIC_READ"
+        }
+      }
+    },
+    {
       "key": "collection.featured-products",
       "kind": "collection",
       "data": {

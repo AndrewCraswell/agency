@@ -88,6 +88,8 @@ details[open].menu-opening > .menu-drawer__submenu {
   padding: 3rem 0;
 }
 
+.menu-drawer__menu { list-style: none; padding: 0; margin: 0; }
+
 .menu-drawer__inner-submenu {
   height: 100%;
   overflow-x: hidden;
@@ -262,6 +264,8 @@ details[open].menu-opening > .menu-drawer__submenu {
   font-size: 1.5rem;
   font-weight: 400;
   color: #101012;
+  line-height: normal;
+  letter-spacing: 0;
 }
 
 .menu-drawer summary.menu-drawer__menu-item {
@@ -312,6 +316,9 @@ details[open].menu-opening > .menu-drawer__submenu {
   margin: 1rem 3.2rem;
   background: #e3e3e0;
 }
+
+.menu-drawer__menu > li { position: relative; display: flow-root; }
+.menu-drawer__menu-item > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 
 .menu-drawer__utility-links {
   border-top: 0.1rem solid #e3e3e0;

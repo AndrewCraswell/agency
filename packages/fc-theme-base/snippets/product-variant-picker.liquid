@@ -61,10 +61,7 @@
         </fieldset>
       {%- else -%}
         <div class="product-form__input product-form__input--dropdown">
-          <label class="form__label" for="Option-{{ section.id }}-{{ forloop.index0 }}">
-            {{ option.name }}
-          </label>
-          <div class="select">
+          {%- capture select_leading -%}
             {%- if picker_type == 'swatch_dropdown' -%}
               <span
                 data-selected-value
@@ -73,23 +70,18 @@
                 {% render 'swatch', swatch: option.selected_value.swatch, shape: block.settings.swatch_shape %}
               </span>
             {%- endif -%}
-            <select
-              id="Option-{{ section.id }}-{{ forloop.index0 }}"
-              class="select__select"
-              name="options[{{ option.name | escape }}]"
-              form="{{ product_form_id }}"
-            >
+          {%- endcapture -%}
+          {%- capture select_options -%}
               {% render 'product-variant-options',
                 product: product,
                 option: option,
                 block: block,
                 picker_type: picker_type
               %}
-            </select>
-            <span class="svg-wrapper">
-              {{- 'icon-caret.svg' | inline_asset_content -}}
-            </span>
-          </div>
+          {%- endcapture -%}
+          {%- assign select_id = 'Option-' | append: section.id | append: '-' | append: forloop.index0 -%}
+          {%- assign select_name = 'options[' | append: option.name | append: ']' -%}
+          {% render 'ui-select', id: select_id, name: select_name, label: option.name, form_id: product_form_id, options: select_options, leading: select_leading %}
         </div>
       {%- endif -%}
     {%- endfor -%}

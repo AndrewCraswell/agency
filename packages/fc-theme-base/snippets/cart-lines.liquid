@@ -1,0 +1,78 @@
+{% doc %}
+  Shared product rows for the cart page and panel.
+  @param {string} context - page or drawer.
+{% enddoc %}
+{%- liquid
+  assign row_prefix = 'CartItem-'
+  assign quantity_prefix = 'Quantity-'
+  assign error_prefix = 'Line-item-error-'
+  if context == 'drawer'
+    assign row_prefix = 'CartDrawer-Item-'
+    assign quantity_prefix = 'Drawer-quantity-'
+    assign error_prefix = 'CartDrawer-LineItemError-'
+  endif
+-%}
+<ul class="fc-cart-lines" role="list">
+  {%- for item in cart.items -%}
+    {%- liquid
+      assign line = item.index | plus: 1
+      assign can_update = item.instructions.can_update_quantity | default: true, allow_false: true
+      assign can_remove = item.instructions.can_remove | default: true, allow_false: true
+      assign disclosure_id = 'CartDisclosure-' | append: context | append: '-' | append: line
+    -%}
+    <li class="cart-item fc-cart-line" id="{{ row_prefix }}{{ line }}">
+      <div class="fc-cart-line__product">
+        <a class="fc-cart-line__image" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+          {%- if item.image -%}{{ item.image | image_url: width: 200 | image_tag: loading: 'lazy', widths: '80, 160, 200', sizes: '80px' }}{%- endif -%}
+        </a>
+        <div class="fc-cart-line__information">
+          <div class="cart-item__title">
+            <a class="cart-item__name" href="{{ item.url }}">{{ item.product.title | escape }}</a>
+            {% render 'cart-disclosure-indicator', product: item.product, modal_id: disclosure_id %}
+          </div>
+          {%- unless item.product.has_only_default_variant -%}
+            <dl class="fc-cart-line__options">
+              {%- for option in item.options_with_values -%}<div><dt>{{ option.name | escape }}:</dt><dd>{{ option.value | escape }}</dd></div>{%- endfor -%}
+            </dl>
+          {%- endunless -%}
+          {%- if item.parent_relationship.parent != null -%}<p class="fc-cart-line__detail">{{ 'products.product.nested_label' | t: title: item.product.title, parent_title: item.parent_relationship.parent.title | escape }}</p>{%- endif -%}
+          {%- for property in item.properties -%}
+            {%- assign initial = property.first | slice: 0 -%}
+            {%- if property.last != blank and initial != '_' -%}
+              <p class="fc-cart-line__detail">{{ property.first | escape }}:
+                {%- if property.last contains '/uploads/' -%}<a href="{{ property.last | escape }}" target="_blank" rel="noopener">{{ property.last | split: '/' | last | escape }}</a>{%- else -%} {{ property.last | escape }}{%- endif -%}
+              </p>
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if item.selling_plan_allocation -%}<p class="fc-cart-line__detail">{{ item.selling_plan_allocation.selling_plan.name | escape }}</p>{%- endif -%}
+          <div class="fc-cart-line__price">
+            <span><span class="visually-hidden">{{ 'sections.cart.headings.total' | t }}</span>{{ item.final_line_price | money }}</span>
+            {%- if item.original_line_price > item.final_line_price -%}<s>{{ item.original_line_price | money }}</s>{%- endif -%}
+            {%- for discount in item.line_level_discount_allocations -%}<span class="fc-cart-line__saving">{{ discount.discount_application.title | escape }}</span>{%- endfor -%}
+          </div>
+          {%- if item.unit_price_measurement -%}{% render 'unit-price', price: item.unit_price, measurement: item.unit_price_measurement %}{%- endif -%}
+        </div>
+      </div>
+      <div class="cart-item__quantity-wrapper fc-cart-line__commands">
+        <quantity-input class="quantity cart-quantity">
+          <button class="quantity__button" type="button" name="minus" aria-label="{{ 'products.product.quantity.decrease' | t: product: item.product.title | escape }}" {% unless can_update %}disabled{% endunless %}><span class="svg-wrapper">{{ 'icon-minus.svg' | inline_asset_content }}</span></button>
+          <input class="quantity__input" type="number" name="updates[]" id="{{ quantity_prefix }}{{ line }}" value="{{ item.quantity }}" min="0" data-min="{{ item.variant.quantity_rule.min }}" step="{{ item.variant.quantity_rule.increment }}" {% if item.variant.quantity_rule.max != null %}max="{{ item.variant.quantity_rule.max }}"{% endif %} data-index="{{ line }}" data-quantity-variant-id="{{ item.variant.id }}" data-quantity-line-key="{{ item.key | escape }}" aria-label="{{ 'products.product.quantity.input_label' | t: product: item.product.title | escape }}" {% unless can_update %}disabled{% endunless %}>
+          <button class="quantity__button" type="button" name="plus" aria-label="{{ 'products.product.quantity.increase' | t: product: item.product.title | escape }}" {% unless can_update %}disabled{% endunless %}><span class="svg-wrapper">{{ 'icon-plus.svg' | inline_asset_content }}</span></button>
+        </quantity-input>
+        {%- if can_remove -%}
+          <cart-remove-button data-index="{{ line }}"><a href="{{ item.url_to_remove }}" class="fc-cart-icon-button" aria-label="{{ 'sections.cart.remove_title' | t: title: item.title | escape }}" title="{{ 'sections.cart.remove_title' | t: title: item.title | escape }}"><span class="svg-wrapper">{{ 'icon-remove.svg' | inline_asset_content }}</span></a></cart-remove-button>
+        {%- endif -%}
+      </div>
+      {%- if item.variant.quantity_rule.min > 1 or item.variant.quantity_rule.increment > 1 or item.variant.quantity_rule.max != null or item.variant.quantity_price_breaks.size > 0 -%}
+        <details class="fc-cart-quantity-rules"><summary>{{ 'products.product.quantity.note' | t }}</summary>
+          {%- if item.variant.quantity_rule.min > 1 -%}<p>{{ 'products.product.quantity.min_of' | t: quantity: item.variant.quantity_rule.min }}</p>{%- endif -%}
+          {%- if item.variant.quantity_rule.increment > 1 -%}<p>{{ 'products.product.quantity.multiples_of' | t: quantity: item.variant.quantity_rule.increment }}</p>{%- endif -%}
+          {%- if item.variant.quantity_rule.max != null -%}<p>{{ 'products.product.quantity.max_of' | t: quantity: item.variant.quantity_rule.max }}</p>{%- endif -%}
+          {%- for price_break in item.variant.quantity_price_breaks -%}<p>{{ price_break.minimum_quantity }}+ {{ price_break.price | money_with_currency }}</p>{%- endfor -%}
+        </details>
+      {%- endif -%}
+      <div class="cart-item__error" id="{{ error_prefix }}{{ line }}" role="alert"><small class="cart-item__error-text">{{ item.error_message | escape }}</small></div>
+      {% render 'cart-item-contents', item: item, context: context %}
+    </li>
+  {%- endfor -%}
+</ul>

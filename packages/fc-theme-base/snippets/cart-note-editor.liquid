@@ -1,0 +1,19 @@
+{% doc %}
+  Shared order note editor with explicit save feedback.
+  @param {string} context - Unique cart view name.
+  @param {string} form_id - Owning checkout form.
+{% enddoc %}
+<details class="fc-cart-disclosure" id="CartNoteDetails-{{ context }}">
+  <summary><span class="svg-wrapper">{{ 'icon-chat-bubble.svg' | inline_asset_content }}</span>{{ 'sections.cart.order_note' | t }} {% render 'fc-icon', icon: 'chevron-down', size: 16 %}</summary>
+  <cart-note data-saved="{{ 'sections.cart.note_saved' | t | escape }}" data-error="{{ 'sections.cart.note_error' | t | escape }}" data-dirty="{{ 'sections.cart.note_unsaved' | t | escape }}">
+    {%- assign note_id = 'CartNote-' | append: context -%}
+    {%- assign note_status = 'CartNoteStatus-' | append: context -%}
+    {%- assign note_label = 'sections.cart.order_note' | t -%}
+    {% render 'ui-text-field', id: note_id, name: 'note', label: note_label, hide_label: true, multiline: true, form_id: form_id, rows: 3, maxlength: 5000, described_by: note_status, value: cart.note %}
+    <div class="fc-cart-note-actions">
+      {%- assign save_label = 'sections.cart.save_note' | t -%}
+      {% render 'ui-button', label: save_label, icon: 'check', variant: 'secondary', additional_props: 'data-save-note' %}
+      <p id="CartNoteStatus-{{ context }}" role="status" data-note-status></p>
+    </div>
+  </cart-note>
+</details>

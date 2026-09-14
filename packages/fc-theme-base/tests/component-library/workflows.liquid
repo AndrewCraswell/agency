@@ -1,0 +1,78 @@
+<section id="navigation" class="lab-section"><h2>Navigation <code>ui-breadcrumbs / ui-pagination / journal-tag-filter</code></h2>
+  <div class="specimen lab-stack">
+    {% render 'ui-breadcrumbs', root_label: 'Home', root_url: '#navigation', current_label: 'Contact' %}
+    {% render 'ui-breadcrumbs', root_label: 'Home', root_url: '#navigation', parent_label: 'Clothing', parent_url: '#browsing', current_label: 'Mens competition fencing jackets' %}
+    <div class="lab-row" data-local-links><span>Journal</span>{% render 'journal-tag-filter', blog: blogs['lab-journal'], tag: 'Training' %}{% render 'journal-tag-filter', blog: blogs['lab-journal'], tag: 'Equipment' %}</div>
+    {% render 'ui-pagination', paginate: catalog.paginate %}
+    {% render 'ui-pagination', paginate: catalog.paginate, mode: 'next', next_label: 'More articles' %}
+  </div>
+  <output id="navigation-status" role="status">Page 1</output>
+</section>
+<section id="browsing" class="lab-section"><h2>Filters and sorting <code>collection-facet-filters / price-facet / collection-toolbar</code></h2>
+  <div class="lab-state-row"><label><input id="catalog-slow" type="checkbox"> Slow response</label><label><input id="catalog-fail" type="checkbox"> Simulate load failure</label><output id="catalog-status" role="status">6 products</output></div>
+  <div class="specimen" id="catalog-region">{% render 'catalog', catalog: catalog %}</div>
+  <div class="lab-state-row" id="catalog-error" hidden><p role="alert">Unable to load products. Try again.</p><button class="lab-command" type="button" id="catalog-retry">Retry</button></div>
+</section>
+<section id="search-components" class="lab-section"><h2>Search <code>ui-search-form / predictive-search</code></h2>
+  <div class="lab-state-row"><label for="search-response">Response</label><select id="search-response"><option value="results">Matching results</option><option value="empty">No results</option><option value="slow">Slow response</option><option value="error">Failed request</option></select><output id="search-fixture-status" role="status">Local search</output></div>
+  <div class="specimen lab-search-surface">{% render 'ui-search-form', input_id: 'LabSearch', label: 'Search products', button_label: 'Search' %}
+    <div id="search-error" hidden><p role="alert">Unable to load search results. Try again.</p><button type="button" class="ui-button ui-button--secondary" id="search-retry">Retry</button></div>
+  </div>
+  <div class="specimen lab-search-loading" role="group" aria-label="Search loading example">{% render 'predictive-search-skeleton' %}</div>
+</section>
+<section id="announcements" class="lab-section"><h2>Announcement banners <code>announcement-bar / slideshow-component</code></h2>
+  {% for announcement in announcements %}<div class="specimen lab-section-specimen lab-announcement">{% render 'announcement-bar', section: announcement %}</div>{% endfor %}
+</section>
+<section id="localization" class="lab-section"><h2>Language and currency <code>language-localization / country-localization</code></h2>
+  <div class="specimen lab-row lab-localization">
+    <localization-form><form class="localization-form" data-localization-form><div><h3 id="LabCountryLabel">Country or region</h3>{% render 'country-localization', localPosition: 'LabCountry' %}</div></form></localization-form>
+    <localization-form><form class="localization-form" data-localization-form><div><h3 id="LabLanguageLabel">Language</h3>{% render 'language-localization', localPosition: 'LabLanguage' %}</div></form></localization-form>
+  </div>
+  <output id="localization-status" role="status">United States (USD $), English</output>
+</section>
+<section id="forms" class="lab-section"><h2>Fields and validation <code>ui-text-field / ui-select</code></h2>
+  <div class="lab-state-row"><label><input id="form-fail" type="checkbox"> Simulate send failure</label></div>
+  <div class="specimen lab-checkable-examples">
+    <fieldset><legend>Checkboxes</legend>
+      {% render 'ui-checkbox-field', id: 'lab-check-available', name: 'lab-filter', value: 'stock', label: 'In stock', count: 12, checked: true %}
+      {% render 'ui-checkbox-field', id: 'lab-check-sale', name: 'lab-filter', value: 'sale', label: 'On sale', count: 3 %}
+      {% render 'ui-checkbox-field', id: 'lab-check-disabled', label: 'Unavailable option', disabled: true %}
+      {% render 'ui-checkbox-field', id: 'lab-check-locked', label: 'Required option', checked: true, disabled: true %}
+    </fieldset>
+    <fieldset><legend>Radio buttons</legend>
+      {% render 'ui-checkbox-field', type: 'radio', id: 'lab-radio-foil', name: 'lab-weapon', value: 'foil', label: 'Foil', checked: true %}
+      {% render 'ui-checkbox-field', type: 'radio', id: 'lab-radio-epee', name: 'lab-weapon', value: 'epee', label: 'Epee' %}
+      {% render 'ui-checkbox-field', type: 'radio', id: 'lab-radio-saber', name: 'lab-weapon', value: 'saber', label: 'Saber' %}
+      {% render 'ui-checkbox-field', type: 'radio', id: 'lab-radio-disabled', name: 'lab-weapon', value: 'unavailable', label: 'Unavailable option', disabled: true %}
+    </fieldset>
+  </div>
+  <div class="specimen"><form id="lab-contact-form" class="lab-form" novalidate>
+    {% render 'ui-text-field', id: 'lab-name', name: 'name', label: 'Name', autocomplete: 'off', value: 'Alex Example' %}
+    <div>{% render 'ui-text-field', id: 'lab-email', name: 'email', label: 'Email (required)', type: 'email', autocomplete: 'off', required: true, described_by: 'lab-email-error' %}<p id="lab-email-error" class="lab-field-error" hidden>Enter a valid email address.</p></div>
+    {% capture topic_options %}<option>Product advice</option><option>Size and fit</option><option>Order support</option><option>Returns</option><option disabled>Unavailable topic</option>{% endcapture %}
+    {% render 'ui-select', id: 'lab-topic', name: 'topic', label: 'Topic', options: topic_options %}
+    {% render 'ui-text-field', id: 'lab-message', name: 'message', label: 'Message', multiline: true, rows: 3, maxlength: 500 %}
+    {% render 'ui-text-field', id: 'lab-disabled-field', name: 'unavailable', label: 'Unavailable field', value: 'Unavailable', disabled: true %}
+    {% render 'ui-text-field', id: 'lab-readonly-field', name: 'reference', label: 'Reference', value: 'LOCAL-EXAMPLE', readonly: true %}
+    {% render 'ui-checkbox-field', id: 'lab-form-checkbox', label: 'Email me a copy', checked: false %}
+    {% render 'ui-button', label: 'Send message', type: 'submit', variant: 'primary' %}
+    <output id="lab-form-status" role="status"></output>
+  </form></div>
+</section>
+<section id="product-details" class="lab-section"><h2>Product details <code>price / swatch-input / product-variant-options</code></h2>
+  <div class="specimen lab-stack">
+    <div class="lab-row"><div><h3>Regular price</h3>{% render 'price', product: commerce.regular, show_badges: true %}</div><div><h3>Sale price</h3>{% render 'price', product: commerce.sale, show_badges: true %}</div><div><h3>Sold out</h3>{% render 'price', product: commerce.soldOut, show_badges: true %}</div></div>
+    <form id="lab-swatch-form"><fieldset class="product-form__input product-form__input--swatch"><legend>Color</legend>{% for swatch in commerce.swatches %}{% assign swatch_id = 'lab-swatch-' | append: forloop.index %}{% assign unavailable = false %}{% if forloop.last %}{% assign unavailable = true %}{% endif %}{% capture help %}<span class="visually-hidden">{{ swatch.label }}</span>{% endcapture %}{% render 'swatch-input', id: swatch_id, name: 'lab-color', value: swatch.label, swatch: swatch, checked: forloop.first, disabled: unavailable, help_text: help, product_form_id: 'lab-swatch-form' %}{% endfor %}</fieldset></form>
+    {% capture size_options %}{% render 'product-variant-options', option: option, picker_type: 'dropdown', section: dropdown_section %}{% endcapture %}
+    {% render 'ui-select', id: 'LabVariantDropdown', name: 'size', label: 'Size', options: size_options %}
+    <output id="product-details-status" role="status">White, size M</output>
+  </div>
+</section>
+<section id="cart-components" class="lab-section"><h2>Cart details <code>cart-item-contents / cart-note-editor / cart-discount</code></h2>
+  <div class="lab-state-row"><label><input id="cart-detail-fail" type="checkbox"> Simulate save failure</label></div>
+  <div class="specimen lab-cart-details">
+    {% render 'cart-item-contents', item: commerce.bundle, context: 'lab' %}
+    {% render 'cart-note-editor', context: 'lab', form_id: 'lab-cart-form' %}
+    {% render 'cart-discount', context: 'lab' %}
+  </div>
+</section>

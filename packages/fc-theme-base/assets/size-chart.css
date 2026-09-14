@@ -52,17 +52,7 @@
 .size-chart__sizes { flex: 1 1 20rem; }
 .size-chart__sizes legend { font-size: 1.3rem; font-weight: 600; margin-block-end: .8rem; }
 .size-chart__options { display: flex; flex-wrap: wrap; gap: .8rem; }
-.size-chart__options button { min-width: 4.8rem; min-height: 4.4rem; padding: .6rem 1rem; color: var(--chart-ink); background: white; border: 1px solid #c9c9c4; border-radius: 4px; font: inherit; cursor: pointer; }
-.size-chart__options button[aria-pressed="true"] { background: var(--chart-ink); color: white; border-color: var(--chart-ink); }
-.size-chart__options button:hover { border-color: var(--chart-ink); }
 .size-chart__units { display: flex; flex-shrink: 0; align-self: flex-start; }
-.size-chart__units label { position: relative; display: block; cursor: pointer; }
-.size-chart__units input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.size-chart__units span { display: grid; place-items: center; width: 5.2rem; min-height: 4.4rem; border: 1px solid #c9c9c4; }
-.size-chart__units label:first-of-type span { border-radius: 4px 0 0 4px; }
-.size-chart__units label:last-of-type span { border-radius: 0 4px 4px 0; }
-.size-chart__units input:checked + span { background: var(--chart-ink); color: white; border-color: var(--chart-ink); }
-.size-chart__units input:focus-visible + span { outline: 2px solid var(--chart-ink); outline-offset: 3px; }
 .size-chart__table-region { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-color: #a0a0a6 var(--chart-surface); }
 .size-chart__table { width: max-content; table-layout: auto; border-collapse: separate; border-spacing: 0; box-shadow: none; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
 .size-chart__table th,

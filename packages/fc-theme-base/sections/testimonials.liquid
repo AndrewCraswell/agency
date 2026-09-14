@@ -33,7 +33,7 @@
             {%- for block in section.blocks -%}
               <figure class="fc-home__quote" data-carousel-slide {{ block.shopify_attributes }}>
                 {%- if block.settings.rating > 0 -%}
-                  <span class="fc-home__stars" aria-label="{{ block.settings.rating }} out of 5 stars">
+                  <span class="fc-home__stars" role="img" aria-label="{{ block.settings.rating }} out of 5 stars">
                     {%- for i in (1..block.settings.rating) -%}
                       {%- render 'fc-icon', icon: 'star', size: 16 -%}
                     {%- endfor -%}

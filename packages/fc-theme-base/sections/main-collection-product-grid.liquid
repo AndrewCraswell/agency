@@ -1,7 +1,6 @@
 {{ 'component-facets.css' | asset_url | stylesheet_tag }}
 {{ 'section-main-collection.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'facets.js' | asset_url }}" defer="defer"></script>
-<script src="{{ 'collection-sort.js' | asset_url }}" defer="defer"></script>
 {%- unless section.settings.quick_add == 'none' -%}
   <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
 {%- endunless -%}
@@ -41,12 +40,8 @@
             id="main-collection-filters"
             data-id="{{ section.id }}"
           >
-            <div class="collection-filter-panel__header">
-              <h2 id="CollectionFilters-{{ section.id }}">{{ section.settings.filter_heading | escape }}</h2>
-              <facet-remove>
-                <a href="{{ collection.url }}">{{ section.settings.clear_all_label | escape }}</a>
-              </facet-remove>
-            </div>
+            {%- assign filter_heading_id = 'CollectionFilters-' | append: section.id -%}
+            {% render 'collection-filter-header', heading_id: filter_heading_id, heading: section.settings.filter_heading, clear_label: section.settings.clear_all_label, clear_url: collection.url %}
             {%- liquid
               assign desktop_filter_id = section.id | append: '-desktop'
               assign mobile_filter_id = section.id | append: '-mobile'
@@ -63,7 +58,7 @@
                 <div class="collection-curated-filters-mobile__header">
                   <strong>{{ section.settings.filter_heading | escape }}</strong>
                   <div class="collection-curated-filters-mobile__actions">
-                    <a href="{{ collection.url }}">{{ section.settings.clear_all_label | escape }}</a>
+                    <a href="{{ collection.url }}" data-clear-collection-filters>{{ section.settings.clear_all_label | escape }}</a>
                     <button
                       type="button"
                       aria-label="{{ 'accessibility.close' | t }}"
@@ -129,6 +124,7 @@
                     {%- render 'ui-button',
                       label: section.settings.clear_all_label,
                       url: collection.url,
+                      additional_props: 'data-clear-collection-filters',
                       variant: 'primary'
                     -%}
                   {%- endif -%}

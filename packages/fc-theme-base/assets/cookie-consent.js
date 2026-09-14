@@ -92,7 +92,7 @@ class CookieConsent extends HTMLElement {
   }
 
   applySelection() {
-    if (!this.api) return;
+    if (!this.api || this.saving) return;
 
     const consent = {};
     this.inputs.forEach((input) => {
@@ -102,11 +102,20 @@ class CookieConsent extends HTMLElement {
     // sale_of_data is deliberately not set here: Shopify enforces it independently of
     // consent and requires a customer-initiated opt-out flow, not a banner on page load.
     this.setError(false);
+    this.setBusy(true);
     this.api.setTrackingConsent(consent, (response) => {
+      this.setBusy(false);
       // A failed write must not dismiss the banner, or the choice is silently lost.
       if (response?.error) this.setError(true);
       else this.dismiss();
     });
+  }
+
+  setBusy(busy) {
+    this.saving = busy;
+    this.setAttribute('aria-busy', String(busy));
+    this.querySelectorAll('[data-action="consent-accept"], [data-action="consent-decline"], [data-action="consent-save"], [data-action="consent-manage"]').forEach(button => { button.disabled = busy; });
+    this.inputs.forEach(input => { input.disabled = busy; });
   }
 
   setError(visible) {

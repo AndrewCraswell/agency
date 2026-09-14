@@ -1,0 +1,20 @@
+{% doc %}
+  Shared cart discount code entry. Eligibility is confirmed by Shopify.
+  @param {string} context - Unique cart view name.
+{% enddoc %}
+<cart-discount class="fc-cart-disclosure" data-error="{{ 'sections.cart.discount_error' | t | escape }}" data-invalid="{{ 'sections.cart.discount_invalid' | t | escape }}" data-applied="{{ 'sections.cart.discount_applied' | t | escape }}" data-removed="{{ 'sections.cart.discount_removed' | t | escape }}" data-remove-label="{{ 'sections.cart.remove_discount' | t | escape }}">
+  <details id="CartDiscountDetails-{{ context }}">
+    <summary><span class="svg-wrapper">{{ 'icon-discount.svg' | inline_asset_content }}</span>{{ 'sections.cart.discount_code' | t }} {% render 'fc-icon', icon: 'chevron-down', size: 16 %}</summary>
+    <div class="fc-cart-discount-entry">
+      {%- assign discount_id = 'CartDiscount-' | append: context -%}
+      {%- assign discount_status = 'CartDiscountStatus-' | append: context -%}
+      {%- assign discount_label = 'sections.cart.discount_code' | t -%}
+      {%- assign apply_label = 'sections.cart.apply' | t -%}
+      {% render 'ui-text-field', id: discount_id, name: 'discount', label: discount_label, hide_label: true, autocomplete: 'off', autocapitalize: 'characters', described_by: discount_status %}
+      {% render 'ui-button', label: apply_label, variant: 'secondary', additional_props: 'data-apply-discount' %}
+    </div>
+    <p id="CartDiscountStatus-{{ context }}" role="status" data-discount-status></p>
+    <ul class="fc-cart-discount-codes" data-discount-codes role="list"></ul>
+    <template data-remove-icon>{% render 'fc-icon', icon: 'x', size: 16 %}</template>
+  </details>
+</cart-discount>

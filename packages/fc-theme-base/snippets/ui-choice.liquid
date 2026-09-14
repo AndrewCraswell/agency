@@ -1,0 +1,6 @@
+{% if type == 'button' %}
+  <button type="button" class="ui-choice" aria-pressed="{% if checked %}true{% else %}false{% endif %}" {% if disabled %}disabled{% endif %} {{ additional_props }}><span class="ui-choice__text">{{ label | escape }}</span></button>
+{% else %}
+  <input type="{{ type | default: 'radio' }}" class="ui-choice__input{% if disabled %} disabled{% endif %}" id="{{ id | escape }}" name="{{ name | escape }}" value="{{ value | escape }}" {% if form_id != blank %}form="{{ form_id | escape }}"{% endif %} {% if checked %}checked{% endif %} {% if disabled %}disabled{% endif %} {{ additional_props }}>
+  <label class="ui-choice" for="{{ id | escape }}"><span class="ui-choice__text">{{ label | escape }}</span>{{ help_text }}</label>
+{% endif %}

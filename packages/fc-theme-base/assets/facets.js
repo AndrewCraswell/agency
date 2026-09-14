@@ -15,6 +15,7 @@ class FacetFiltersForm extends HTMLElement {
   }
 
   static setListeners() {
+    if (document.querySelector('.collection-curated-filters')) return;
     const onHistoryChange = (event) => {
       const searchParams = event.state ? event.state.searchParams : FacetFiltersForm.searchParamsInitial;
       if (searchParams === FacetFiltersForm.searchParamsPrev) return;
@@ -338,6 +339,14 @@ class FacetFiltersForm extends HTMLElement {
 
   onSubmitHandler(event) {
     event.preventDefault();
+    if (document.querySelector('.collection-curated-filters')) {
+      const destination = new URL(window.location.href);
+      const sort = event.target.closest('form').querySelector('[name="sort_by"]');
+      destination.searchParams.set('sort_by', sort.value);
+      destination.searchParams.delete('page');
+      window.location.assign(`${destination.pathname}${destination.search}`);
+      return;
+    }
     const sortFilterForms = document.querySelectorAll('facet-filters-form form');
     if (event.srcElement.className == 'mobile-facets__checkbox') {
       const searchParams = this.createSearchParams(event.target.closest('form'));

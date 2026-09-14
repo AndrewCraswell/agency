@@ -56,11 +56,11 @@
             "title": "Build Your Own Kit",
             "description": "Everything to get on the strip: uniform, blade, and mask bundled together.",
             "link_1_label": "Foil Kits",
-            "link_1_url": "shopify://collections/weapons",
+            "link_1_url": "shopify://collections/foil-kits",
             "link_2_label": "Épée Kits",
-            "link_2_url": "shopify://collections/weapons",
+            "link_2_url": "shopify://collections/epee-kits",
             "link_3_label": "Sabre Kits",
-            "link_3_url": "shopify://collections/weapons"
+            "link_3_url": "shopify://collections/saber-kits"
           }
         },
         "card-2": {
@@ -70,11 +70,11 @@
             "title": "Weapon Builder",
             "description": "Assemble a competition-ready blade part by part, tuned exactly how you like it.",
             "link_1_label": "Foil Weapon",
-            "link_1_url": "shopify://collections/weapons",
+            "link_1_url": "shopify://collections/foil-weapons",
             "link_2_label": "Épée Weapon",
-            "link_2_url": "shopify://collections/weapons",
+            "link_2_url": "shopify://collections/epee-weapons",
             "link_3_label": "Sabre Weapon",
-            "link_3_url": "shopify://collections/weapons"
+            "link_3_url": "shopify://collections/saber-weapons"
           }
         },
         "card-3": {
@@ -84,7 +84,9 @@
             "title": "Team Fencing Bag",
             "description": "Roomy, durable bags to haul your whole setup, from the club to the competition.",
             "link_1_label": "Wheel Bags",
-            "link_2_label": "Carry Bags"
+            "link_1_url": "shopify://collections/wheel-bags",
+            "link_2_label": "Carry Bags",
+            "link_2_url": "shopify://collections/carry-bags"
           }
         }
       },
@@ -102,7 +104,7 @@
         "cat-3": { "type": "category", "settings": { "collection": "weapons" } },
         "cat-4": { "type": "category", "settings": { "collection": "blades" } },
         "cat-5": { "type": "category", "settings": { "collection": "gloves" } },
-        "cat-6": { "type": "category", "settings": { "collection": "shoes-socks" } }
+        "cat-6": { "type": "category", "settings": { "collection": "footwear" } }
       },
       "block_order": ["cat-1", "cat-2", "cat-3", "cat-4", "cat-5", "cat-6"],
       "settings": {
@@ -115,10 +117,10 @@
     "best_sellers": {
       "type": "best-sellers",
       "blocks": {
-        "product-1": { "type": "product", "settings": { "product": "signature-fie-foil" } },
-        "product-2": { "type": "product", "settings": { "product": "aero-fencing-mask-1600n" } },
-        "product-3": { "type": "product", "settings": { "product": "competition-jacket" } },
-        "product-4": { "type": "product", "settings": { "product": "carbon-body-cord" } }
+        "product-1": { "type": "product", "settings": { "product": "standard-electric-foil-french" } },
+        "product-2": { "type": "product", "settings": { "product": "novus-epee-fencing-mask-350n" } },
+        "product-3": { "type": "product", "settings": { "product": "novus-mens-fencing-jacket-350n" } },
+        "product-4": { "type": "product", "settings": { "product": "standard-foil-saber-body-cord" } }
       },
       "block_order": ["product-1", "product-2", "product-3", "product-4"],
       "settings": {

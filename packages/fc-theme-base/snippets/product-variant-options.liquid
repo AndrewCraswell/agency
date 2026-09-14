@@ -71,38 +71,23 @@
       render 'swatch-input',
       id: input_id,
       name: input_name,
-      value: escaped_value,
+      value: value,
       swatch: value.swatch,
       product_form_id: product_form_id,
       checked: value.selected,
+      disabled: option_disabled,
       visually_disabled: option_disabled,
       shape: block.settings.swatch_shape,
       help_text: help_text,
       additional_props: input_dataset
     %}
   {%- elsif picker_type == 'button' -%}
-    <input
-      type="radio"
-      id="{{ input_id }}"
-      name="{{ input_name | escape }}"
-      value="{{ escaped_value }}"
-      form="{{ product_form_id }}"
-      {% if value.selected %}
-        checked
-      {% endif %}
-      {% if option_disabled %}
-        class="disabled"
-      {% endif %}
-      {{ input_dataset }}
-    >
-    <label for="{{ input_id }}">
-      {{ value -}}
-      {{ label_unavailable }}
-    </label>
+    {% render 'ui-choice', id: input_id, name: input_name, value: value, label: value, form_id: product_form_id, checked: value.selected, disabled: option_disabled, additional_props: input_dataset, help_text: label_unavailable %}
   {%- elsif picker_type == 'dropdown' or picker_type == 'swatch_dropdown' -%}
     <option
       id="{{ input_id }}"
       value="{{ escaped_value }}"
+      {% if option_disabled %}disabled{% endif %}
       {% if value.selected %}
         selected="selected"
       {% endif %}

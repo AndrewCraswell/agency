@@ -6,7 +6,6 @@
   - url: {String} Optional link target
   - active: {Boolean} Applies the selected appearance and page state
   - icon: {String} Optional trailing icon name
-  - option: {Boolean} Removes a listbox option link from the tab order
   - class: {String} Optional extra classes
   - block_attributes: {String} Optional Shopify block attributes
 
@@ -19,9 +18,6 @@
     href="{{ url }}"
     {% if active %}
       aria-current="page"
-    {% endif %}
-    {% if option %}
-      tabindex="-1"
     {% endif %}
     {{ block_attributes }}
   >

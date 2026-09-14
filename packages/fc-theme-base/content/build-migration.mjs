@@ -4,6 +4,17 @@ import { buildSizingManifest } from './build-manifest.mjs';
 
 export function buildMigrationManifest(sizing, navigation, assignments, pages, collections = [], journal) {
   const { resources } = buildSizingManifest(sizing);
+  for (const [key, name, type] of [
+    ['weapon', 'Weapon', 'list.single_line_text_field'],
+    ['gender', 'Gender', 'single_line_text_field'],
+    ['skill_level', 'Skill Level', 'single_line_text_field'],
+    ['protection_rating', 'Safety Level', 'single_line_text_field'],
+    ['fie_status', 'FIE Rating', 'single_line_text_field'],
+  ]) {
+    resources.push({ key: `definition.${key}`, kind: 'product-metafield-definition', data: {
+      namespace: 'custom', key, name, type, ownerType: 'PRODUCT', access: { storefront: 'PUBLIC_READ' },
+    } });
+  }
   for (const collection of collections) resources.push({ key: `collection.${collection.handle}`, kind: 'collection', data: collection });
   if (journal) resources.push({ key: `blog.${journal.handle}`, kind: 'blog', data: journal });
   const addLinks = (items) => items.map((item) => {

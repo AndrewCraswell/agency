@@ -1,0 +1,40 @@
+<section id="cards" class="lab-section"><h2>Cards <code>Production snippets / fixture content</code></h2>
+  <div class="lab-card-group specimen">
+    <h3>Product cards</h3><div class="lab-card-grid">{% for product in products %}{% render 'ui-product-card', product: product, card_id: product.id, show_type: true, show_price: true, show_add: true, add_label: 'Choose options', section_id: 'lab-cards' %}{% endfor %}</div>
+    <h3>Search product and loading placeholder</h3><div class="lab-card-grid">{% render 'ui-product-card', product: products[0], variant: 'search', card_id: 'lab-search-product', show_type: true, show_price: true %}{% render 'ui-product-card-skeleton' %}</div>
+    <h3>Article cards</h3><div class="lab-card-grid">{% for article in articles %}{% render 'ui-article-card', article: article, heading_level: 4, read_label: 'Read more' %}{% endfor %}</div>
+    <h3>Category links</h3><div class="lab-card-grid">
+      {% render 'ui-category-link-card', label: 'Weapons', url: '#cards' %}
+      {% render 'ui-category-link-card', label: 'Masks', url: '#cards' %}
+      {% render 'ui-category-link-card', label: 'Clothing', url: '#cards' %}
+    </div>
+    <h3>Page links</h3><div class="lab-card-grid">
+      {% render 'ui-page-link-card', title: 'Size guides', description: 'Compare your measurements with the product size chart.', url: '#cards' %}
+      {% render 'ui-page-link-card', title: 'Delivery', description: 'Review delivery information for your destination.', url: '#cards' %}
+    </div>
+    <h3>Contact cards</h3><div class="lab-card-grid lab-contact-grid">
+      {% render 'ui-contact-intent-card', title: 'Product advice', description: 'Choose equipment for your next session.', icon: 'life-buoy', topic: 'Product advice' %}
+      {% render 'ui-contact-intent-card', title: 'Order support', description: 'Ask about delivery or an existing order.', icon: 'truck', topic: 'Order support' %}
+    </div>
+    <h3>Quick answers</h3><div class="lab-card-grid">
+      {% render 'ui-contact-quick-answer', question: 'Which size should I choose?', answer: 'Use the size guide for the product you are considering.' %}
+    </div>
+    <h3>Page search result</h3><ul class="lab-result-list">{% render 'ui-page-result-row', page: search_page, heading_level: 4 %}</ul>
+    <h3>Badges</h3><div class="lab-row">{% render 'ui-badge', label: 'New' %}{% render 'ui-badge', label: 'Always on' %}</div>
+  </div>
+  <output id="card-status" role="status">No card selected</output>
+</section>
+<section id="sections" class="lab-section"><h2>Sections <code>Production sections / fixture content</code></h2>
+  <div class="specimen lab-section-specimen" data-section-example="featured-products">{% render 'best-sellers', section: examples.products %}</div>
+  <div class="specimen lab-section-specimen" data-section-example="categories">{% render 'category-grid', section: examples.categories %}</div>
+  <div class="specimen lab-section-specimen" data-section-example="featured-picks">{% render 'featured-picks', section: examples.picks %}</div>
+  <div class="specimen lab-section-specimen" data-section-example="story">{% render 'why-us', section: examples.story %}</div>
+  <div class="specimen lab-section-specimen" data-section-example="testimonials">{% render 'testimonials', section: examples.testimonials %}</div>
+  <div class="specimen lab-section-specimen" data-section-example="journal">{% render 'journal-highlights', section: examples.journal %}</div>
+  <div class="specimen lab-section-specimen" data-section-example="support">{% render 'ui-support-band', heading: 'Need help choosing?', text: 'Compare equipment and sizes before ordering.', primary_label: 'Contact us', primary_url: '#cards', secondary_label: 'Size guides', secondary_url: '#selection' %}</div>
+</section>
+<section id="privacy" class="lab-section"><h2>Privacy <code>cookie-consent / in-memory API</code></h2>
+  <div class="lab-row lab-state-row"><button class="lab-command" type="button" id="show-consent-banner">Show cookie banner</button><button class="lab-command" type="button" data-cookie-preferences>Manage preferences</button><label><input type="checkbox" id="fail-consent"> Simulate consent save failure</label></div>
+  <output id="privacy-status" role="status">No consent written to Shopify</output>
+  <div class="specimen lab-privacy">{% render 'cookie-consent' %}</div>
+</section>

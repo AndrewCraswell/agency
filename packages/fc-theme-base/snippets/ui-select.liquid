@@ -1,0 +1,25 @@
+<ui-select class="ui-select ui-field{% if disabled %} ui-field--disabled{% endif %}" data-label="{{ label | escape }}">
+  <label id="{{ id | escape }}-label" class="ui-field__label{% if hide_label %} visually-hidden{% endif %}" for="{{ id | escape }}">{{ label | escape }}</label>
+  <div class="ui-select__control">
+    {{ leading }}
+    <select
+      class="ui-select__input"
+      id="{{ id | escape }}"
+      name="{{ name | escape }}"
+      {% if form_id != blank %}form="{{ form_id | escape }}"{% endif %}
+      {% if described_by != blank %}aria-describedby="{{ described_by | escape }}"{% endif %}
+      {% if invalid %}aria-invalid="true"{% endif %}
+      {% if disabled %}disabled{% endif %}
+      {% if required %}required{% endif %}
+    >{{ options }}</select>
+    {% render 'fc-icon', icon: 'chevron-down', size: 16 %}
+    <button id="{{ id | escape }}-trigger" class="ui-select__trigger" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="{{ id | escape }}-listbox" aria-labelledby="{{ id | escape }}-label {{ id | escape }}-value" data-select-trigger hidden>
+      {% if prefix != blank %}<span class="ui-select__prefix" aria-hidden="true">{{ prefix | escape }}</span>{% endif %}
+      <span id="{{ id | escape }}-value" class="ui-select__current" data-select-current></span>
+      {% render 'fc-icon', icon: 'chevron-down', size: 16 %}
+    </button>
+    <div id="{{ id | escape }}-listbox" class="ui-select__menu" role="listbox" aria-labelledby="{{ id | escape }}-label" data-select-menu hidden></div>
+    <template data-select-check>{% render 'fc-icon', icon: 'check', size: 15 %}</template>
+  </div>
+  <p id="{{ id | escape }}-validation" class="ui-select__validation" data-select-validation hidden></p>
+</ui-select>
