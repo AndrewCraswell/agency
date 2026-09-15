@@ -4,6 +4,7 @@ import type { LegislationDatabase } from "../../db/database.js"
 import { getBillById, upsertBillAggregate } from "../../db/queries/bill-aggregates.js"
 import { syncCheckpoints } from "../../db/schema/schema.js"
 import { federalBillId } from "../../legislation/identifiers.js"
+import { ingestionErrorSummary } from "../errors.js"
 import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
@@ -214,7 +215,7 @@ export async function synchronizeCongress(
         throw error
       }
       counts.failed += 1
-      const message = error instanceof Error ? error.message : "Unknown Congress.gov record failure"
+      const message = ingestionErrorSummary(error)
       const attempts = (retry?.attempts ?? 0) + 1
       retries.set(id, {
         reference,

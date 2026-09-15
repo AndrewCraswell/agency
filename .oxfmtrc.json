@@ -21,6 +21,7 @@
     "**/next-env.d.ts",
     "**/*.shopify*.html",
     "**/fixtures/golden-vector-export.json",
+    "**/fixtures/fr-2024-01-02-metadata.json",
     "pnpm-lock.yaml",
     "packages/scoring-circuit/pcb/**",
     "packages/fc-theme/**",

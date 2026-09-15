@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { embeddingRouteFor } from "../../models/embedding-routing.js"
+import { OpenRouterEmbeddingClient } from "../../models/openrouter-embeddings.js"
 import {
   billEmbeddingInputHash,
   embedSelected,
@@ -10,6 +11,28 @@ import {
 } from "./jobs.js"
 
 describe("embedding freshness", () => {
+  it("does not persist the original hash when the provider rejects an oversized input", async () => {
+    const route = embeddingRouteFor("document-section")
+    const persist = vi.fn<(records: unknown[]) => Promise<void>>()
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValue(new Response("Invalid 'input[0]': maximum input length is 8192 tokens.", { status: 400 }))
+    const client = new OpenRouterEmbeddingClient({ apiKey: "fixture", route, fetch })
+    const candidate = {
+      id: "section:test",
+      embedding: null,
+      embeddingInputHash: null,
+      embeddingInputContract: null,
+      embeddingModel: null,
+      input: "x".repeat(16000),
+      inputHash: "a".repeat(64)
+    }
+    await expect(
+      embedSelected(client, route, { candidates: [candidate], complete: true, cursor: "", scanned: 1 }, persist)
+    ).rejects.toThrow("HTTP 400")
+    expect(persist).not.toHaveBeenCalled()
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
   it("chunks bulk candidates for the provider and groups persistence writes", async () => {
     const route = embeddingRouteFor("bill")
     const candidates = Array.from({ length: 5 }, (_, index) => ({

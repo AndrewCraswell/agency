@@ -5,7 +5,11 @@ service. PgBouncer absorbs short-lived worker connections and multiplexes their 
 PostgreSQL backends. The direct PostgreSQL URL remains the migration, administration, and rollback path; application
 workers use the pooled URL after their deployment has passed the compatibility canary.
 
-## Live Railway contract
+## Recorded Railway configuration
+
+This is deployment/canary evidence, not a fresh live inspection. Verify `SHOW CONFIG` and current direct-worker load
+before changing limits. The [embedding rebuild hold](../engineering/embedding-rollout-plan.md) still applies; capacity
+instructions do not authorize a new paid pass.
 
 | Setting | Value |
 | --- | --- |
@@ -16,7 +20,7 @@ workers use the pooled URL after their deployment has passed the compatibility c
 | Image | `edoburu/pgbouncer:v1.25.2-p0` |
 | Pool mode | `transaction` |
 | Client ceiling | 500 |
-| PostgreSQL backend ceiling | 20 |
+| PostgreSQL backend ceiling | 20 for initial/direct-worker coexistence; later accepted pooled stage 60 |
 | Minimum warm backends | 0 |
 | Idle backend release | 30 seconds |
 | Prepared-statement cache | 100 statements |
@@ -91,5 +95,6 @@ Do not run a second unpooled high-concurrency campaign during the canary. During
 
 Use Railway deployment status and bounded logs to verify the pooler. Connect to the `pgbouncer` administrative database
 with the PostgreSQL user to inspect `SHOW POOLS`, `SHOW STATS`, and `SHOW CONFIG`. The direct database URL is reserved
-for migrations and emergency rollback. A rollback changes the Trigger.dev `DATABASE_URL` back to the direct URL and
-does not require changing or deleting either Railway service.
+for migrations and emergency rollback. Before returning workers to the direct URL, stop admission, settle existing work
+and reduce worker/pool fan-out to the measured direct-database allowance. The pooled 128-worker ceiling is not safe merely
+because the connection URL changed. Rollback does not require deleting either Railway service.

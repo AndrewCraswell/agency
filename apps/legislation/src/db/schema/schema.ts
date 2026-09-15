@@ -2141,3 +2141,558 @@ export const apiIdempotencyRecords = legislationSchema.table(
     index("api_idempotency_records_expiry_idx").on(table.expiresAt)
   ]
 )
+
+// Regulatory storage has no bill/session ownership. Publication is edition-scoped.
+export const legalRightsProfiles = legislationSchema.table(
+  "legal_rights_profiles",
+  {
+    id: text("id").primaryKey(),
+    policyHash: text("policy_hash").notNull(),
+    policy: jsonb("policy").notNull(),
+    isActive: boolean("is_active").notNull().default(true)
+  },
+  (t) => [
+    check("legal_rights_profiles_policy_hash_check", sql`${t.policyHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_rights_profiles_policy_check", sql`jsonb_typeof(${t.policy}) = 'object'`)
+  ]
+)
+
+export const legalSources = legislationSchema.table(
+  "legal_sources",
+  {
+    id: text("id").primaryKey(),
+    publisher: text("publisher").notNull(),
+    authority: text("authority").notNull()
+  },
+  (t) => [check("legal_sources_authority_check", sql`${t.authority} in ('official','licensed')`)]
+)
+
+export const legalImportManifests = legislationSchema.table(
+  "legal_import_manifests",
+  {
+    id: text("id").primaryKey(),
+    body: jsonb("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [check("legal_import_manifests_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`)]
+)
+
+export const legalArtifacts = legislationSchema.table(
+  "legal_artifacts",
+  {
+    hash: text("hash").primaryKey(),
+    bytes: bigint("bytes", { mode: "number" }).notNull(),
+    storageLocator: text("storage_locator").notNull(),
+    acquiredAt: timestamp("acquired_at", { withTimezone: true }).notNull()
+  },
+  (t) => [
+    check("legal_artifacts_hash_check", sql`${t.hash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_artifacts_bytes_check", sql`${t.bytes} > 0`)
+  ]
+)
+
+export const legalImportGenerations = legislationSchema.table(
+  "legal_import_generations",
+  {
+    id: text("id").primaryKey(),
+    manifestId: text("manifest_id")
+      .notNull()
+      .references(() => legalImportManifests.id),
+    unitKey: text("unit_key").notNull(),
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => legalSources.id),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id),
+    rightsProfileId: text("rights_profile_id")
+      .notNull()
+      .references(() => legalRightsProfiles.id),
+    artifactHash: text("artifact_hash")
+      .notNull()
+      .references(() => legalArtifacts.hash),
+    parserHash: text("parser_hash").notNull(),
+    contract: text("contract").notNull(),
+    unit: jsonb("unit").notNull(),
+    summary: jsonb("summary").notNull(),
+    expectedRecords: integer("expected_records").notNull(),
+    state: text("state").notNull().default("staging"),
+    blockedReason: text("blocked_reason"),
+    fence: integer("fence").notNull().default(0),
+    leaseToken: uuid("lease_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    unique().on(t.id, t.sourceId, t.jurisdictionId, t.rightsProfileId),
+    check("legal_import_generations_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+    check(
+      "legal_import_generations_expected_records_check",
+      sql`${t.expectedRecords} > 0 OR (${t.expectedRecords} = 0 AND ${t.contract} = 'fr-html-import-2026-09-14')`
+    ),
+    check(
+      "legal_import_generations_state_check",
+      sql`${t.state} in ('staging','validated','materialized','published','blocked')`
+    ),
+    check("legal_import_generations_fence_check", sql`${t.fence} >= 0`),
+    check("legal_import_generations_check", sql`(${t.leaseToken} is null) = (${t.leaseExpiresAt} is null)`),
+    index("legal_import_generations_work_idx").on(t.state, t.leaseExpiresAt, t.id)
+  ]
+)
+
+export const legalImportRecords = legislationSchema.table(
+  "legal_import_records",
+  {
+    generationId: text("generation_id")
+      .notNull()
+      .references(() => legalImportGenerations.id),
+    recordKey: text("record_key").notNull(),
+    nativeId: text("native_id").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    parentKey: text("parent_key"),
+    nodeKind: text("node_kind").notNull(),
+    sourceLocator: text("source_locator").notNull(),
+    identityKey: text("identity_key").notNull(),
+    payloadBytes: integer("payload_bytes").notNull(),
+    recordHash: text("record_hash").notNull(),
+    payload: jsonb("payload").notNull()
+  },
+  (t) => [
+    primaryKey({ columns: [t.generationId, t.recordKey] }),
+    unique().on(t.generationId, t.nativeId),
+    unique().on(t.generationId, t.ordinal),
+    check("legal_import_records_ordinal_check", sql`${t.ordinal} >= 0`),
+    check("legal_import_records_payload_bytes_check", sql`${t.payloadBytes} > 0 and ${t.payloadBytes} <= 67108864`),
+    check("legal_import_records_record_hash_check", sql`${t.recordHash} ~ '^[a-f0-9]{64}$'`)
+  ]
+)
+
+export const legalCodes = legislationSchema.table(
+  "legal_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id),
+    codeKey: text("code_key").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull()
+  },
+  (t) => [
+    unique().on(t.jurisdictionId, t.codeKey),
+    unique().on(t.id, t.jurisdictionId),
+    check("legal_codes_kind_check", sql`${t.kind} in ('regulation','statute')`)
+  ]
+)
+
+export const legalEditions = legislationSchema.table(
+  "legal_editions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    codeId: uuid("code_id").notNull(),
+    jurisdictionId: text("jurisdiction_id").notNull(),
+    sourceId: text("source_id").notNull(),
+    generationId: text("generation_id").notNull().unique(),
+    rightsProfileId: text("rights_profile_id").notNull(),
+    nativeKey: text("native_key").notNull(),
+    sourceRevision: text("source_revision").notNull(),
+    issueDate: date("issue_date"),
+    currencyDate: date("currency_date"),
+    publishedAt: timestamp("published_at", { withTimezone: true })
+  },
+  (t) => [
+    foreignKey({ columns: [t.codeId, t.jurisdictionId], foreignColumns: [legalCodes.id, legalCodes.jurisdictionId] }),
+    foreignKey({
+      columns: [t.generationId, t.sourceId, t.jurisdictionId, t.rightsProfileId],
+      foreignColumns: [
+        legalImportGenerations.id,
+        legalImportGenerations.sourceId,
+        legalImportGenerations.jurisdictionId,
+        legalImportGenerations.rightsProfileId
+      ]
+    }),
+    unique().on(t.id, t.codeId),
+    unique().on(t.id, t.codeId, t.sourceId),
+    index("legal_editions_source_idx").on(t.codeId, t.sourceId, t.issueDate, t.id)
+  ]
+)
+
+export const legalAnnualEditions = legislationSchema.table(
+  "legal_annual_editions",
+  {
+    id: text("id").primaryKey(),
+    manifestId: text("manifest_id")
+      .notNull()
+      .references(() => legalImportManifests.id),
+    codeId: uuid("code_id")
+      .notNull()
+      .references(() => legalCodes.id),
+    packageYear: integer("package_year").notNull(),
+    revisionDate: date("revision_date").notNull(),
+    expectedVolumes: integer("expected_volumes").notNull(),
+    coverage: jsonb("coverage").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (t) => [
+    unique().on(t.id, t.codeId),
+    unique().on(t.manifestId, t.codeId, t.packageYear),
+    check("legal_annual_editions_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+    check("legal_annual_editions_package_year_check", sql`${t.packageYear} BETWEEN 1996 AND 9999`),
+    check("legal_annual_editions_expected_volumes_check", sql`${t.expectedVolumes} BETWEEN 1 AND 200`)
+  ]
+)
+
+export const legalAnnualEditionVolumes = legislationSchema.table(
+  "legal_annual_edition_volumes",
+  {
+    annualEditionId: text("annual_edition_id").notNull(),
+    codeId: uuid("code_id").notNull(),
+    volume: integer("volume").notNull(),
+    editionId: uuid("edition_id").notNull()
+  },
+  (t) => [
+    primaryKey({ columns: [t.annualEditionId, t.volume] }),
+    unique().on(t.annualEditionId, t.editionId),
+    foreignKey({
+      columns: [t.annualEditionId, t.codeId],
+      foreignColumns: [legalAnnualEditions.id, legalAnnualEditions.codeId]
+    }),
+    foreignKey({ columns: [t.editionId, t.codeId], foreignColumns: [legalEditions.id, legalEditions.codeId] }),
+    check("legal_annual_edition_volumes_volume_check", sql`${t.volume} > 0`)
+  ]
+)
+
+export const legalProvisions = legislationSchema.table(
+  "legal_provisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    codeId: uuid("code_id")
+      .notNull()
+      .references(() => legalCodes.id),
+    identityKey: text("identity_key").notNull(),
+    identityBasis: text("identity_basis").notNull()
+  },
+  (t) => [unique().on(t.codeId, t.identityKey), unique().on(t.id, t.codeId)]
+)
+
+export const legalProvisionVersions = legislationSchema.table(
+  "legal_provision_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provisionId: uuid("provision_id").notNull(),
+    codeId: uuid("code_id").notNull(),
+    contentHash: text("content_hash").notNull(),
+    inputContract: text("input_contract").notNull(),
+    heading: text("heading").notNull(),
+    body: text("body").notNull(),
+    nodeKind: text("node_kind").notNull(),
+    blocks: jsonb("blocks").notNull(),
+    language: text("language").notNull()
+  },
+  (t) => [
+    foreignKey({ columns: [t.provisionId, t.codeId], foreignColumns: [legalProvisions.id, legalProvisions.codeId] }),
+    unique().on(t.provisionId, t.contentHash, t.inputContract),
+    unique().on(t.id, t.provisionId, t.codeId),
+    check("legal_provision_versions_content_hash_check", sql`${t.contentHash} ~ '^[a-f0-9]{64}$'`)
+  ]
+)
+
+export const legalEditionProvisions = legislationSchema.table(
+  "legal_edition_provisions",
+  {
+    editionId: uuid("edition_id").notNull(),
+    codeId: uuid("code_id").notNull(),
+    provisionId: uuid("provision_id").notNull(),
+    versionId: uuid("version_id").notNull(),
+    parentId: uuid("parent_id"),
+    ordinal: integer("ordinal").notNull(),
+    sourceLocator: text("source_locator").notNull(),
+    sourceAttributes: jsonb("source_attributes").notNull(),
+    nativeId: text("native_id").notNull()
+  },
+  (t) => [
+    primaryKey({ columns: [t.editionId, t.provisionId] }),
+    unique().on(t.editionId, t.ordinal),
+    foreignKey({ columns: [t.editionId, t.codeId], foreignColumns: [legalEditions.id, legalEditions.codeId] }),
+    foreignKey({
+      columns: [t.versionId, t.provisionId, t.codeId],
+      foreignColumns: [legalProvisionVersions.id, legalProvisionVersions.provisionId, legalProvisionVersions.codeId]
+    }),
+    foreignKey({ columns: [t.editionId, t.parentId], foreignColumns: [t.editionId, t.provisionId] }),
+    check("legal_edition_provisions_ordinal_check", sql`${t.ordinal} >= 0`),
+    check("legal_edition_provisions_check", sql`${t.parentId} is distinct from ${t.provisionId}`),
+    index("legal_edition_provisions_version_idx").on(t.versionId),
+    index("legal_edition_provisions_parent_idx").on(t.editionId, t.parentId, t.ordinal)
+  ]
+)
+
+export const legalCodeHeads = legislationSchema.table(
+  "legal_code_heads",
+  {
+    codeId: uuid("code_id").notNull(),
+    sourceId: text("source_id").notNull(),
+    editionId: uuid("edition_id").notNull()
+  },
+  (t) => [
+    primaryKey({ columns: [t.codeId, t.sourceId] }),
+    foreignKey({
+      columns: [t.editionId, t.codeId, t.sourceId],
+      foreignColumns: [legalEditions.id, legalEditions.codeId, legalEditions.sourceId]
+    })
+  ]
+)
+
+export const legalDerivedOutbox = legislationSchema.table(
+  "legal_derived_outbox",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    editionId: uuid("edition_id")
+      .notNull()
+      .references(() => legalEditions.id),
+    operation: text("operation").notNull(),
+    state: text("state").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    retryAt: timestamp("retry_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    unique().on(t.editionId, t.operation),
+    check("legal_derived_outbox_operation_check", sql`${t.operation} in ('lexical','embedding','event')`),
+    check("legal_derived_outbox_state_check", sql`${t.state} in ('pending','acknowledged')`),
+    check("legal_derived_outbox_attempts_check", sql`${t.attempts} >= 0`),
+    index("legal_derived_outbox_retry_idx").on(t.state, t.retryAt, t.id)
+  ]
+)
+
+export const regulatoryDocuments = legislationSchema.table(
+  "regulatory_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id),
+    identityNamespace: text("identity_namespace").notNull(),
+    nativeNumber: text("native_number").notNull()
+  },
+  (t) => [unique().on(t.jurisdictionId, t.identityNamespace, t.nativeNumber)]
+)
+
+export const regulatoryDocumentVersions = legislationSchema.table(
+  "regulatory_document_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => regulatoryDocuments.id),
+    contentHash: text("content_hash").notNull(),
+    inputContract: text("input_contract").notNull(),
+    pdfHash: text("pdf_hash")
+      .notNull()
+      .references(() => legalArtifacts.hash),
+    heading: text("heading").notNull(),
+    body: text("body").notNull(),
+    blocks: jsonb("blocks").notNull(),
+    publicationKind: text("publication_kind").notNull()
+  },
+  (t) => [
+    unique().on(t.documentId, t.contentHash, t.inputContract, t.pdfHash),
+    unique().on(t.id, t.documentId),
+    check("regulatory_document_versions_content_hash_check", sql`${t.contentHash} ~ '^[a-f0-9]{64}$'`),
+    check("regulatory_document_versions_blocks_check", sql`jsonb_typeof(${t.blocks})='array'`),
+    check(
+      "regulatory_document_versions_publication_kind_check",
+      sql`${t.publicationKind} in ('final_rule','proposed_rule','notice','other')`
+    )
+  ]
+)
+
+export const regulatoryPublicationBatches = legislationSchema.table(
+  "regulatory_publication_batches",
+  {
+    generationId: text("generation_id")
+      .primaryKey()
+      .references(() => legalImportGenerations.id),
+    metadataManifestId: text("metadata_manifest_id").notNull(),
+    metadataManifest: jsonb("metadata_manifest").notNull(),
+    snapshotHash: text("snapshot_hash").notNull(),
+    reconciliation: jsonb("reconciliation").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    check("regulatory_publication_batches_metadata_manifest_id_check", sql`${t.metadataManifestId} ~ '^[a-f0-9]{64}$'`),
+    check("regulatory_publication_batches_snapshot_hash_check", sql`${t.snapshotHash} ~ '^[a-f0-9]{64}$'`)
+  ]
+)
+
+export const regulatoryDocumentObservations = legislationSchema.table(
+  "regulatory_document_observations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    generationId: text("generation_id")
+      .notNull()
+      .references(() => regulatoryPublicationBatches.generationId),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => regulatoryDocuments.id),
+    versionId: uuid("version_id").notNull(),
+    sourceId: text("source_id").notNull(),
+    jurisdictionId: text("jurisdiction_id").notNull(),
+    rightsProfileId: text("rights_profile_id").notNull(),
+    publicationDate: date("publication_date").notNull(),
+    metadata: jsonb("metadata").notNull(),
+    sourceLocator: text("source_locator").notNull(),
+    pdfReceipt: jsonb("pdf_receipt").notNull(),
+    pdfInspection: jsonb("pdf_inspection").notNull()
+  },
+  (t) => [
+    unique().on(t.generationId, t.documentId),
+    foreignKey({
+      columns: [t.versionId, t.documentId],
+      foreignColumns: [regulatoryDocumentVersions.id, regulatoryDocumentVersions.documentId]
+    }),
+    foreignKey({
+      columns: [t.generationId, t.sourceId, t.jurisdictionId, t.rightsProfileId],
+      foreignColumns: [
+        legalImportGenerations.id,
+        legalImportGenerations.sourceId,
+        legalImportGenerations.jurisdictionId,
+        legalImportGenerations.rightsProfileId
+      ]
+    }),
+    index("regulatory_document_observations_browse_idx").on(t.publicationDate, t.id),
+    index("regulatory_document_observations_version_idx").on(t.versionId)
+  ]
+)
+
+export const regulatoryPublicationOutbox = legislationSchema.table(
+  "regulatory_publication_outbox",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    observationId: uuid("observation_id")
+      .notNull()
+      .unique()
+      .references(() => regulatoryDocumentObservations.id),
+    operation: text("operation").notNull(),
+    state: text("state").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    retryAt: timestamp("retry_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    check("regulatory_publication_outbox_operation_check", sql`${t.operation}='lexical'`),
+    check("regulatory_publication_outbox_state_check", sql`${t.state} in ('pending','acknowledged')`),
+    check("regulatory_publication_outbox_attempts_check", sql`${t.attempts} >= 0`),
+    index("regulatory_publication_outbox_retry_idx").on(t.state, t.retryAt, t.id)
+  ]
+)
+
+export const legalPassageGenerations = legislationSchema.table(
+  "legal_passage_generations",
+  {
+    id: text("id").primaryKey(),
+    provisionVersionId: uuid("provision_version_id").references(() => legalProvisionVersions.id),
+    documentVersionId: uuid("document_version_id").references(() => regulatoryDocumentVersions.id),
+    contract: text("contract").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    tokenizerId: text("tokenizer_id").notNull(),
+    context: text("context").notNull(),
+    manifestHash: text("manifest_hash").notNull(),
+    passageCount: integer("passage_count").notNull(),
+    eligibility: text("eligibility").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    check("legal_passage_generations_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+    check("legal_passage_generations_body_hash_check", sql`${t.bodyHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_passage_generations_manifest_hash_check", sql`${t.manifestHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_passage_generations_owner_check", sql`num_nonnulls(${t.provisionVersionId},${t.documentVersionId})=1`),
+    check("legal_passage_generations_count_check", sql`${t.passageCount} >= 0`),
+    check("legal_passage_generations_eligibility_check", sql`${t.eligibility} in ('eligible','empty_text')`),
+    check("legal_passage_generations_empty_check", sql`(${t.passageCount}=0)=(${t.eligibility}='empty_text')`),
+    index("legal_passage_generations_provision_idx").on(t.provisionVersionId, t.id),
+    index("legal_passage_generations_document_idx").on(t.documentVersionId, t.id)
+  ]
+)
+
+export const legalPassages = legislationSchema.table(
+  "legal_passages",
+  {
+    id: text("id").primaryKey(),
+    generationId: text("generation_id")
+      .notNull()
+      .references(() => legalPassageGenerations.id),
+    ordinal: integer("ordinal").notNull(),
+    body: text("body").notNull(),
+    inputText: text("input_text").notNull(),
+    data: jsonb("data").notNull(),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(sql`to_tsvector('english'::regconfig,input_text)`)
+  },
+  (t) => [
+    unique().on(t.generationId, t.ordinal),
+    check("legal_passages_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+    check("legal_passages_ordinal_check", sql`${t.ordinal} >= 0`),
+    check(
+      "legal_passages_data_check",
+      sql`${t.body}=${t.data}->>'text' and ${t.inputText}=${t.data}->>'inputText' and ${t.ordinal}=(${t.data}->>'ordinal')::integer`
+    ),
+    index("legal_passages_search_idx").using("gin", t.searchVector)
+  ]
+)
+
+export const legalPassagePreparations = legislationSchema.table(
+  "legal_passage_preparations",
+  {
+    id: text("id").primaryKey(),
+    editionId: uuid("edition_id").references(() => legalEditions.id),
+    observationId: uuid("observation_id").references(() => regulatoryDocumentObservations.id),
+    tokenizerId: text("tokenizer_id").notNull(),
+    inventoryHash: text("inventory_hash").notNull(),
+    expectedCount: integer("expected_count").notNull(),
+    state: text("state").notNull().default("pending"),
+    fence: integer("fence").notNull().default(0),
+    leaseToken: uuid("lease_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    retryAt: timestamp("retry_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    lastError: text("last_error")
+  },
+  (t) => [
+    check("legal_passage_preparations_scope_check", sql`num_nonnulls(${t.editionId},${t.observationId})=1`),
+    check("legal_passage_preparations_count_check", sql`${t.expectedCount}>0`),
+    check("legal_passage_preparations_state_check", sql`${t.state} in ('pending','prepared')`),
+    check("legal_passage_preparations_lease_check", sql`(${t.leaseToken} is null)=(${t.leaseExpiresAt} is null)`)
+  ]
+)
+export const legalPassagePreparationItems = legislationSchema.table(
+  "legal_passage_preparation_items",
+  {
+    preparationId: text("preparation_id")
+      .notNull()
+      .references(() => legalPassagePreparations.id),
+    ordinal: integer("ordinal").notNull(),
+    versionId: uuid("version_id").notNull(),
+    context: text("context").notNull(),
+    generationId: text("generation_id").references(() => legalPassageGenerations.id)
+  },
+  (t) => [
+    primaryKey({ columns: [t.preparationId, t.ordinal] }),
+    unique().on(t.preparationId, t.versionId),
+    index("legal_passage_preparation_pending_idx")
+      .on(t.preparationId, t.ordinal)
+      .where(sql`${t.generationId} is null`)
+  ]
+)

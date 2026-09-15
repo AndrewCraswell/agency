@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import * as cheerio from "cheerio"
-import { XMLParser } from "fast-xml-parser"
+import { XMLValidator } from "fast-xml-parser"
 import { unzipSync } from "fflate"
 import iconv from "iconv-lite"
 import { documentSectionId } from "../../legislation/identifiers.js"
+import { runPdfTask } from "./pdf-task.js"
 
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 export const MAX_PDF_TEXT_EXTRACTION_PAGES = 750
@@ -87,9 +88,22 @@ function assertUsefulDocumentText(text: string): void {
 }
 
 function extractXmlText(bytes: Uint8Array): string {
-  const xml = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
-  const parser = new XMLParser({ preserveOrder: true, processEntities: false, trimValues: false })
-  parser.parse(xml)
+  let xml: string
+  try {
+    xml = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+    // Processing-instruction data is not an attribute list. In particular,
+    // Congress xm-replace_text instructions can contain an unmatched quote.
+    // Validate the XML directly; Cheerio below performs the text extraction.
+    const validation = XMLValidator.validate(xml)
+    if (validation !== true) {
+      throw new Error(validation.err.msg)
+    }
+  } catch (error) {
+    throw new DocumentExtractionError(
+      "malformed-document",
+      `XML document could not be parsed: ${error instanceof Error ? error.message : "invalid XML"}`
+    )
+  }
   const $ = cheerio.load(xml, { xml: true })
   $("script,style").remove()
   $("section,level,subsection,p,heading,header").each((_index, element) => {
@@ -181,6 +195,7 @@ function officeXmlText(bytes: Uint8Array, mediaType: string): string {
 
 export interface PdfPageExtractionEvidence {
   hasRasterImage: boolean
+  hasVectorGraphics?: boolean
   text: string
 }
 
@@ -191,11 +206,11 @@ export interface PdfOcrAssessment {
 
 export function assessPdfOcrEligibility(pages: readonly PdfPageExtractionEvidence[]): PdfOcrAssessment {
   const pageEvidence = pages.map((page) => ({
-    hasRasterImage: page.hasRasterImage,
+    hasVisualContent: page.hasRasterImage || page.hasVectorGraphics === true,
     textLength: normalizeLegalText(page.text).length
   }))
   const scannedPageCount = pageEvidence.filter(
-    (page) => page.hasRasterImage && page.textLength < MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS
+    (page) => page.hasVisualContent && page.textLength < MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS
   ).length
   const totalTextLength = pageEvidence.reduce((total, page) => total + page.textLength, 0)
 
@@ -225,8 +240,10 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
   const standardFontDataUrl = fileURLToPath(
     new URL("standard_fonts/", import.meta.resolve("pdfjs-dist/package.json"))
   ).replaceAll("\\", "/")
-  const loadingTask = getDocument({ data: Uint8Array.from(bytes), standardFontDataUrl })
-  const document = await loadingTask.promise
+  // Image decoding is also required for OCR eligibility: an omitted JBIG2
+  // decoder can make a scanned page appear to contain no raster operators.
+  const wasmUrl = fileURLToPath(new URL("wasm/", import.meta.resolve("pdfjs-dist/package.json"))).replaceAll("\\", "/")
+  const loadingTask = getDocument({ data: Uint8Array.from(bytes), standardFontDataUrl, wasmUrl })
   const rasterImageOperators = new Set([
     OPS.paintImageMaskXObject,
     OPS.paintImageMaskXObjectGroup,
@@ -237,22 +254,39 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
     OPS.paintSolidColorImageMask
   ])
   const pages: PdfPageExtractionEvidence[] = []
-  try {
-    assertPdfTextExtractionPageCount(document.numPages)
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber)
-      const content = await page.getTextContent()
-      const text = content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" ")
-      if (normalizeLegalText(text).length >= MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS) {
-        pages.push({ hasRasterImage: false, text })
-        continue
+  await runPdfTask(
+    async (signal) => {
+      const document = await loadingTask.promise
+      signal.throwIfAborted()
+      assertPdfTextExtractionPageCount(document.numPages)
+      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+        signal.throwIfAborted()
+        const page = await document.getPage(pageNumber)
+        signal.throwIfAborted()
+        const content = await page.getTextContent()
+        signal.throwIfAborted()
+        const text = content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" ")
+        if (normalizeLegalText(text).length >= MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS) {
+          pages.push({ hasRasterImage: false, text })
+          continue
+        }
+        const operators = await page.getOperatorList()
+        signal.throwIfAborted()
+        pages.push({
+          hasRasterImage: operators.fnArray.some((operator) => rasterImageOperators.has(operator)),
+          // Printed PDFs can outline every glyph instead of exposing text or images.
+          // Sparse pages with drawing paths need OCR too; an empty OCR result remains a failure.
+          hasVectorGraphics: operators.fnArray.includes(OPS.constructPath),
+          text
+        })
       }
-      const operators = await page.getOperatorList()
-      pages.push({ hasRasterImage: operators.fnArray.some((operator) => rasterImageOperators.has(operator)), text })
-    }
-  } finally {
-    await loadingTask.destroy()
-  }
+    },
+    () => loadingTask.destroy(),
+    new DocumentExtractionError(
+      "ocr-required",
+      "PDF exceeded the 120-second local extraction budget and requires provider extraction"
+    )
+  )
   const assessment = assessPdfOcrEligibility(pages)
   if (assessment.kind === "image-only") {
     throw new DocumentExtractionError(
@@ -269,7 +303,7 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
   if (assessment.kind === "unusable") {
     throw new DocumentExtractionError(
       "malformed-document",
-      "PDF produced too little usable text and contains no raster pages"
+      "PDF produced too little usable text and contains no raster or vector content"
     )
   }
   return pages.map((page) => page.text).join("\n\n")

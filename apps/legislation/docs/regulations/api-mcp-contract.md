@@ -4,7 +4,19 @@ Proposed additions, September 14, 2026. These routes/tools are not implemented o
 count by this document. Parent: [implementation](implementation.md). Reuse the normative
 [shared HTTP schemas](../engineering/api/schemas.md), WorkOS access rules and API-backed MCP architecture.
 
+Naming decision, September 14, 2026: use `/api/legal/` with simple resource names and `/api/search/legal` for ranked
+retrieval. This namespace covers regulations and statutes, including future state coverage. Published rules, proposals
+and notices use `publications`; consolidated code sections use `provisions`. The namespace is not a resource parent.
+
 ## Runtime and access
+
+The application-layer canary service (`src/api/legal-search-canary.ts`) now requires identity from the verified request
+context and an explicitly configured organization allowlist. It requires a selected acknowledged preparation and checks
+API/MCP permission before accessing search text. It currently accepts only official federal sources with worldwide
+rights; territory-limited policies fail closed until trusted territory attributes are available. Caller-supplied identity
+or location fields cannot authorize access. These are application-service gates, not a registered route/tool or a billing
+plan implementation. The strict public search DTO, typed client, explicit Next route, MCP tool and token-audience canary
+remain implementation gates below.
 
 Each operation gets an explicit Next.js `app/api/.../route.ts`, a strict Zod request schema, reusable application query
 service, typed API-client method and HTTP/MCP parity tests. No catch-all regulatory router and no direct provider/model
@@ -12,8 +24,10 @@ ingestion inside request handlers. Public read operations below are authenticate
 exposed in public MCP. Existing WorkOS API/MCP audiences remain distinct and token forwarding/exchange follows the
 existing adapter contract. Do not accept an MCP audience token directly as an API credential.
 
-All successful bodies use the existing `ResourceResponse<T>`, `Page<T>` or `SearchPage<T>` envelope; errors preserve
-correlation IDs and existing status/categories. All records include `id`, `canonicalUrl`, `sources`, `updatedAt`.
+All successful bodies use the existing `ResourceResponse<T>`, `Page<T>` or explicitly extended `SearchPage<T>` envelope;
+errors preserve correlation IDs and existing status/categories. Canonical entities include `id`, `canonicalUrl`,
+`sources`, `updatedAt`. Memberships, relationship edges, capability rows, source-agency references, reader blocks and
+diff hunks are contextual values; they do not acquire artificial canonical detail routes.
 Sources identify publisher and supplier separately, source URL/rendition, retrievedAt, sourceModifiedAt, source currency,
 rights/attribution and version hash. Missing dates/text/status are `null`/explicit availability, not fabricated defaults.
 
@@ -25,52 +39,60 @@ account entitlements are distinct: unsupported data is not described as a custom
 ## Shared request rules
 
 IDs are opaque single encoded path segments. Reject unknown fields, invalid dates, reversed ranges and unsupported
-filters with `400 invalid_request`. Lists use cursor + limit default 20/max 100; ID/enum filter arrays max 25 unique
-items. Collection cursors bind caller, normalized filters, sort, page size and selected generation. POST searches are
+filters with `400 invalid_request`. Lists use cursor + limit default 20/max 100; ordinary ID/enum filter arrays max 25 unique
+items. Legal search is an explicit exception: its implemented schema permits 100 unique IDs, as specified below.
+Collection cursors bind caller, normalized filters, sort, page size and selected generation. POST searches are
 read-only and use no mutation idempotency key. Query text is trimmed 1–500 characters.
 
-`selection` is one of `{ editionId }`, `{ asOf: YYYY-MM-DD }`, or omitted/latest. `asOf` applies to code versions only,
-never to publication date implicitly. Search can use `editionIds` instead of selection for explicit comparison scope;
+Selection permits `editionId`, `versionId`, or both: together they validate that the requested version belongs to the
+requested edition and provision. `asOf: YYYY-MM-DD` is exclusive with both and applies only to supported publisher
+history, never implicitly to publication dates. Omission on a provision selects its latest validated edition; a direct
+version lookup with no edition remains context-neutral. Search can use `editionIds` instead of selection for explicit comparison scope;
 mixing `editionIds` and `asOf` is rejected. Filter date names specify their meaning, e.g. `publishedFrom` versus
 `observedFrom`; do not reuse ambiguous `from` for different clocks. All ranges are inclusive.
 
-Version metadata includes `basis`, `selectedDate`, `sourceCurrencyDate`, `observedAt`, `contentHash`,
-`legalStatus`, `availability` and `isLatestValidated`. See [data contract](data-contract.md) for historical semantics.
+Immutable version metadata includes owner identity, `contentHash`, input contract and language. Edition-specific `basis`,
+`selectedDate`, `sourceCurrencyDate`, `observedAt`, hierarchy, locators, rights and `isLatestValidated` belong in a
+separate selected context. A context-neutral version returns no invented edition dates or hierarchy. See
+[data contract](data-contract.md) for historical semantics.
 Unsupported asOf returns `409 conflict`/`historical_coverage_unavailable`, not silently selected nearby text. Unknown
 canonical IDs return 404. A scope with no ingested coverage returns coverage warnings and no claim of known absence.
 
 ## Endpoint inventory
 
 Lists specify default sort below with final ID tiebreakers. GET detail responses contain bounded metadata, not unbounded
-entire title text or child collections. Text is traversed through passages and artifact retrieval.
+entire title text or child collections. Readable text uses ordered source blocks; passages are retrieval excerpts.
 
 | Operation | Input in addition to ID/cursor/limit | Response and ordering |
 | --- | --- | --- |
-| GET `/api/legal-codes` | jurisdictionId, kind (`statute`/`regulation`) | `Page<LegalCode>`; jurisdiction/name/id |
-| GET `/api/legal-codes/{codeId}` | none | `LegalCodeDetail`; latest edition, coverage and available capabilities |
-| GET `/api/legal-codes/{codeId}/editions` | sourceId, issuedFrom, issuedTo | `Page<LegalEdition>`; issue date descending/id |
-| GET `/api/legal-codes/{codeId}/provisions` | editionId OR asOf; parentId; nodeKind | `Page<ProvisionSummary>`; edition structural order/id |
-| GET `/api/legal-editions/{editionId}` | none | `LegalEditionDetail`; manifest coverage, dates, revision and status |
-| GET `/api/legal-provisions/{provisionId}` | editionId OR asOf OR versionId | `ProvisionDetail`; selected exact version metadata, hierarchy, bounded passage preview |
-| GET `/api/legal-provisions/{provisionId}/versions` | sourceId | `Page<ProvisionVersionSummary>`; first observed date descending/id; edition memberships paged through edition traversal |
-| GET `/api/legal-versions/{versionId}` | none | `LegalVersionDetail`; exact immutable text identity and passage count |
-| GET `/api/legal-versions/{versionId}/passages` | none | `Page<LegalPassage>`; ordinal/id; provision or publication version |
-| GET `/api/legal-passages/{passageId}` | none | `LegalPassage`; exact source/version/locator and bounded text |
-| POST `/api/legal-provisions/resolve` | citation, jurisdictionId, codeId?, editionId? OR asOf? | `CitationResolution`; resolved, ambiguous or not_found result |
-| GET `/api/regulatory-documents` | jurisdictionId, agencyId, kind, publishedFrom, publishedTo, updatedSince | `Page<RegulatoryDocumentSummary>`; publication date descending/id |
-| GET `/api/regulatory-documents/{documentId}` | versionId? | `RegulatoryDocumentDetail`; latest validated default; dates, kind, agencies, current text version ID |
-| GET `/api/regulatory-documents/{documentId}/versions` | none | `Page<DocumentVersionSummary>`; source revision/observation descending/id |
-| GET `/api/regulatory-actions/{actionId}` | none | `RegulatoryActionDetail`; grouping evidence and bounded aliases |
-| GET `/api/regulatory-actions/{actionId}/documents` | kind | `Page<RegulatoryDocumentSummary>`; publication date ascending/id |
-| POST `/api/search/regulations` | request defined below | `SearchPage<RegulatorySearchHit>`; frozen ranking |
-| POST `/api/legal-versions/compare` | leftVersionId, rightVersionId, cursor?, limit? | `Page<LegalDiffHunk>`; source structural order |
-| GET `/api/legal-relationships` | exactly one of provisionId/documentId/actionId; type; direction | `Page<LegalRelationship>`; type/target/id |
-| GET `/api/legal-events` | jurisdictionId, codeId, documentId, kind, observedFrom, observedTo, cursor | `Page<LegalEvent>`; observedAt ascending/id |
-| GET `/api/regulatory-coverage` | jurisdictionId, codeId, corpus, sourceId | `Page<RegulatoryCoverage>`; jurisdiction/corpus/source/id |
-| GET `/api/legal-artifacts/{artifactId}` | none | `LegalArtifactAccess`; metadata plus short-lived authorized download URL where permitted |
+| GET `/api/legal/codes` | jurisdictionId, kind (`statute`/`regulation`) | `Page<LegalCode>`; jurisdiction/name/id |
+| GET `/api/legal/codes/{codeId}` | none | `LegalCodeDetail`; latest edition, coverage and available capabilities |
+| GET `/api/legal/codes/{codeId}/editions` | sourceId, issuedFrom, issuedTo | `Page<LegalEdition>`; issue date descending/id |
+| GET `/api/legal/codes/{codeId}/provisions` | editionId OR asOf; traversal (`children`/`all`); parentId; nodeKind | `Page<ProvisionSummary>`; edition structural order/id |
+| GET `/api/legal/editions/{editionId}` | none | `LegalEditionDetail`; manifest coverage, dates, revision and status |
+| GET `/api/legal/provisions/{provisionId}` | editionId and/or versionId OR exclusive asOf | `ProvisionDetail`; selected version and separate context, bounded text preview |
+| GET `/api/legal/provisions/{provisionId}/versions` | sourceId | `Page<ProvisionVersionSummary>`; first observed date descending/id; edition memberships paged through edition traversal |
+| GET `/api/legal/provisions/{provisionId}/editions` | versionId?; sourceId? | `Page<LegalEditionMembership>`; edition ID ascending; rights-filtered membership discovery |
+| GET `/api/legal/versions/{versionId}` | editionId? for a provision version | `LegalVersionDetail`; immutable identity and optional validated context |
+| GET `/api/legal/versions/{versionId}/text` | editionId required for provision text; anchor OR cursor; limit | `ResourceResponse<LegalTextWindow>`; lossless ordered source blocks |
+| GET `/api/legal/versions/{versionId}/passages` | none | `Page<LegalPassage>`; ordinal/id; provision or publication version |
+| GET `/api/legal/passages/{passageId}` | none | `LegalPassage`; exact source/version/locator and bounded text |
+| POST `/api/legal/provisions/resolve` | citation, jurisdictionId, codeId?, editionId? OR asOf? | `CitationResolution`; resolved, ambiguous or not_found result |
+| GET `/api/legal/publications` | jurisdictionId, agencyId OR sourceId + sourceAgencyId, kind, publishedFrom, publishedTo, updatedSince | `Page<RegulatoryDocumentSummary>`; publication date descending/id |
+| GET `/api/legal/agencies` | jurisdictionId; sourceId?; q? | `Page<LegalAgencyReference>`; name/source/alias; publisher-reference directory, not new organization identities |
+| GET `/api/legal/publications/{documentId}` | versionId? | `RegulatoryDocumentDetail`; latest validated default; dates, kind, agencies, current text version ID |
+| GET `/api/legal/publications/{documentId}/versions` | none | `Page<DocumentVersionSummary>`; source revision/observation descending/id |
+| GET `/api/legal/actions/{actionId}` | none | `RegulatoryActionDetail`; grouping evidence and bounded aliases |
+| GET `/api/legal/actions/{actionId}/publications` | kind | `Page<RegulatoryDocumentSummary>`; publication date ascending/id |
+| POST `/api/search/legal` | request defined below | `SearchPage<RegulatorySearchHit>`; frozen ranking |
+| POST `/api/legal/versions/compare` | leftVersionId, rightVersionId, cursor?, limit? | `Page<LegalDiffHunk>`; source structural order |
+| GET `/api/legal/relationships` | exactly one owner; type; direction; scope (`selected`/`all`); editionId/versionId for selected evidence | `Page<LegalRelationship>`; type/target/id; typed bounded target summaries |
+| GET `/api/legal/events` | jurisdictionId, codeId, documentId, kind, observedFrom, observedTo, cursor | `Page<LegalEvent>`; observedAt ascending/id |
+| GET `/api/legal/coverage` | jurisdictionId, codeId, corpus, sourceId | `Page<RegulatoryCoverage>`; jurisdiction/corpus/source/id |
+| GET `/api/legal/artifacts/{artifactId}` | none | `LegalArtifactAccess`; metadata plus short-lived authorized download URL where permitted |
 
-`legal-versions` resolves the discriminated provision/publication version identity, so publication text uses the same
-bounded passage API. The ID namespace prevents cross-table collisions. No route nests more than one parent. An action
+`/api/legal/versions` resolves the discriminated provision/publication version identity, so publication text uses the same
+bounded reader API. The ID namespace prevents cross-table collisions. No route nests more than one parent. An action
 is discoverable through document/relationship/search results; a broad action-search product is deferred.
 
 `CitationResolution` includes normalized input, status, exact provision/version when resolved, or at most 25 candidates
@@ -83,7 +105,75 @@ locators and exact version IDs. Results are generation-bound and bounded by both
 No LLM is needed to compute a literal text diff. Large documents use a persisted comparison result with stable paging,
 not an unbounded synchronous recomputation on every page.
 
+## Reader, traversal and source context
+
+The executable foundation is `src/ingestion/regulations/reader-contract.ts` and `reader-text.ts`. Local source projection
+is implemented; database-backed reads, HTTP routes and MCP registration still require their phase gates.
+
+The text operation returns the normal resource envelope with selection and continuation inside `data`, preserving
+the existing strict envelope metadata. `LegalTextWindow` includes `versionId`, `readerContract`, `bodyHash`,
+`blockGeneration`, `format`, `blocks`, `totalBlocks`, `startBlock`, `nextCursor`, `isStart`, `isEnd`, `availability`
+and `textTruncated`. The read service adds the authorized `selectedContext` before delivery. Its provision context is
+the strict `legalEditionContextSchema`; publication context identifies the publication version/source observation and
+has no code edition. The local projection intentionally does not grant authorization or manufacture canonical IDs.
+
+Blocks have stable IDs, UTF-16 `start`/`end` offsets into the exact canonical body, source ordinal, kind, tag and text.
+The initial representation is plain text: table tabs/newlines and footnote text are preserved; source XML is not returned
+or interpreted as HTML. Rich table-cell rendering is a later representation gate. A block is at most 16,384 characters;
+a window is at most 100,000 characters and 100 blocks, default 20. Oversized blocks split losslessly without breaking
+surrogate pairs or repeating context. Any source/block mismatch fails validation. Empty structural nodes are explicit.
+
+Use `anchor` only for the first window, then `cursor`. Search hits carry an exact authorized text URL and matching block
+anchor; clients do not need a preliminary version request. Continue until `nextCursor` is null. Pagination is distinct
+from source incompleteness. Continuations bind caller, version, reader generation, edition, observation, rights policy
+and limit. Recheck current authorization/rights on every page; a token is never an access grant. No pagination scheme
+substitutes another edition after a correction or restriction.
+
+Provision traversal defaults to direct `children`: omitted `parentId` returns roots; a parent returns only its immediate
+children in that edition. `traversal=all` enumerates every node and rejects `parentId`. Validate parent membership.
+Return selected edition/version, bounded ancestor references, `hasChildren`, heading/citation and node kind in summaries;
+pin that edition in subsequent child links and cursors. Resolve latest once, not separately on each expansion.
+
+`agencyId` means an existing canonical organization ID, discoverable through `/api/organizations?classification=agency`.
+The legal agency directory exposes namespaced publisher aliases with resolved/unresolved status and nullable organization
+ID. `sourceAgencyId` is the stable source-alias key, not a fabricated publisher or organization ID; require its `sourceId`.
+Raw publisher IDs/names remain separately retained. Apply the same source-visibility policy to the directory and results.
+
+Relationship values include source owner/version/context, relation type, evidence basis/locator, and a bounded typed
+target summary. Unresolved targets carry literal citation text and nullable target ID/URL. Default `scope=all` explicitly
+means aggregate history. A reader requests `scope=selected` with its context; fail if that evidence selection is unsupported.
+Never silently show current links as evidence for a selected historical version.
+
+## Strict wire-schema integration
+
+Reuse the existing envelope metadata exactly for ordinary resources and pages. Capabilities use `legalCapabilitySchema`:
+`available`, `not_ingested`, `incomplete`, `unsupported`, or `restricted`, with independent `isStale` and safe reason.
+Only retained available/incomplete data can be stale. Absence of a state publication feed is `unsupported`, not an empty
+complete publication corpus. Canonical publication, code and relationship DTOs must reference these strict types rather
+than inventing parallel status vocabularies.
+
+Regulatory search deliberately extends `SearchPage.meta` with `legal: { lexicalGeneration, embeddingGeneration,
+effectiveMode, degraded, candidateSetTruncated }`; nullable embedding generation means no vector generation was used.
+Update the shared normative schema, endpoint serializer and typed client parser together before registering this route.
+Do not add arbitrary metadata to the current strict client or put machine-readable state into warning strings.
+Historical selection errors use allowlisted structured details containing reason and available edition/date bounds;
+the HTTP serializer and client error parser must preserve them together. Internal SQL, rights-policy bodies and source
+credentials never appear in these errors. Complete DTO examples and strict parser parity remain API-01/API-08 gates.
+
 ## Search request and result
+
+`src/api-client/legal-search-contract.ts` now defines strict request and response schemas. They are not yet
+wired to a registered route, client method or MCP tool. Request queries trim whitespace and accept 1–500 characters;
+ID lists contain 1–100 unique IDs of at most 256 characters. Empty lists, duplicate selectors, unknown fields,
+reversed date ranges and incompatible corpus filters fail validation. Cursors are opaque strings capped at 8,192 characters.
+
+Response hits share canonical fields, exact version/passage IDs, citation, jurisdiction, agency references, snippet,
+match mode, source locator, version hash and coverage warnings. Provision hits add code and validated edition context;
+publication hits add publication kind, publication date, nullable effective date and observation ID. Legal sources
+extend SourceReference with publisher, supplier and nullable attribution. Metadata distinguishes requested `mode`
+from `legal.effectiveMode`; the only fallback is an explicit change from semantic/hybrid to lexical. Embedding generation
+and model reporting must agree with effective mode. Duplicate passage IDs and mismatched selected versions are rejected.
+Authorization, supported coverage, cursor binding and permission to degrade still belong to the service boundary.
 
 Strict request fields:
 
@@ -146,20 +236,20 @@ instructions; tool descriptions prohibit treating a proposed rule as current con
 
 | MCP tool | API operation(s) | Purpose |
 | --- | --- | --- |
-| `search_regulations` | POST search/regulations | Bounded, filtered cited retrieval |
-| `list_legal_codes` | GET legal-codes | Discover actual jurisdiction/code coverage |
-| `list_legal_editions` | GET code editions | Select supported historical editions |
-| `list_legal_provisions` | GET code provisions | Traverse hierarchy in a selected edition |
-| `resolve_legal_citation` | POST provisions/resolve | Exact citation or explicit ambiguity |
-| `get_legal_provision` | GET provision | Metadata and selected version |
-| `get_legal_text` | GET version + version passages | Bounded exact-version text with continuation |
-| `get_regulatory_document` | GET regulatory document | Published proposal/final/notice metadata |
-| `list_regulatory_documents` | GET regulatory-documents | Publication history by kind/date/agency |
-| `get_regulatory_action` | GET action + action documents | Bounded evidence-backed grouping |
-| `compare_legal_versions` | POST versions/compare | Literal source-text differences |
-| `get_legal_relationships` | GET legal-relationships | Authority/citation/amendment links |
-| `get_legal_changes` | GET legal-events | Observed changes with historical flags |
-| `get_regulatory_coverage` | GET regulatory-coverage | Scope and freshness before relying on absence |
+| `search_regulations` | POST `/api/search/legal` | Bounded, filtered cited retrieval |
+| `list_legal_codes` | GET `/api/legal/codes` | Discover actual jurisdiction/code coverage |
+| `list_legal_editions` | GET `/api/legal/codes/{codeId}/editions` | Select supported historical editions |
+| `list_legal_provisions` | GET `/api/legal/codes/{codeId}/provisions` | Traverse hierarchy in a selected edition |
+| `resolve_legal_citation` | POST `/api/legal/provisions/resolve` | Exact citation or explicit ambiguity |
+| `get_legal_provision` | GET `/api/legal/provisions/{provisionId}` | Metadata and selected version |
+| `get_legal_text` | GET `/api/legal/versions/{versionId}/text` | Bounded source text with exact selected context and continuation |
+| `get_regulatory_document` | GET `/api/legal/publications/{documentId}` | Published proposal/final/notice metadata |
+| `list_regulatory_documents` | GET `/api/legal/publications` | Publication history by kind/date/agency |
+| `get_regulatory_action` | GET `/api/legal/actions/{actionId}` + `/api/legal/actions/{actionId}/publications` | Bounded evidence-backed grouping |
+| `compare_legal_versions` | POST `/api/legal/versions/compare` | Literal source-text differences |
+| `get_legal_relationships` | GET `/api/legal/relationships` | Authority/citation/amendment links |
+| `get_legal_changes` | GET `/api/legal/events` | Observed changes with historical flags |
+| `get_regulatory_coverage` | GET `/api/legal/coverage` | Scope and freshness before relying on absence |
 
 Inputs match API schemas; use API-client methods and safe error mapping. Wrapping multiple API calls must share a
 bounded result budget and propagate exact version selections. No parallel tool-only search algorithm, provider key,
@@ -188,3 +278,60 @@ bounded large text, stale coverage, unavailable semantic dependency, and prohibi
 fixtures through the deployed API-backed MCP client. Compare IDs, text hashes, dates, rights and pagination exactly.
 Any regulatory UI added for these surfaces also needs integrated-browser desktop/mobile/keyboard acceptance; server
 tests alone do not establish the user experience.
+
+## LLM design review: September 14, 2026
+
+Three isolated judges reviewed the proposed endpoints as a backend architect, frontend consumer and third-party
+integrator. All found the resource decomposition coherent; all rejected freezing this draft unchanged. A second round
+challenged targeted fixes, followed by a fairness comparison against the same resource model under `/api/legal/`.
+Both naming layouts were considered valid; preference for the existing layout was weak and based on consistency.
+The subsequent product decision selects `/api/legal/` and `/api/search/legal`; the inventory and mappings above use
+that approved naming. The retained judge report describes the earlier evaluated draft, not an alternative active contract.
+These are model judgments, not runtime or real-user acceptance. The review protocol, score summaries, evidence references
+and scenario dispositions are retained in [the review report](../../artifacts/regulatory-api-review/review-2026-09-14.md).
+
+The adopted contract preserves the original resource identities and now contains 25 planned operations: the original
+22 plus bounded source text, reverse edition-membership discovery and a publisher-agency reference directory.
+The latter exposes source aliases and creates no competing canonical agency identity. Implementation status remains
+separate from these design decisions:
+
+| Area | Required clarification or recommended change |
+| --- | --- |
+| Readable text | Source projection and window schemas implemented locally; database, HTTP and MCP delivery pending. |
+| Exact selection | Combined membership selector/context validation implemented; publisher-date lookup and read-service authorization pending. |
+| Browse | Root/direct-child/all-node request validation implemented; database traversal pending. |
+| Discovery | Canonical/unresolved source-reference schema implemented; directory and source-alias filtering pending. |
+| Wire schemas | Reader/capability/context schemas implemented; broader DTOs and shared strict-client integration remain API-01/API-08. |
+| Enterprise sync | Required protocol and failure cases specified below; durable feed implementation remains a separate enterprise gate. |
+
+The reader contract above fixes selector, anchor and source-block semantics. Public serialization must attach validated
+canonical context and authorization; local source-record preview IDs are never exposed as canonical version IDs.
+
+The existing WorkOS boundary, API-backed MCP, source rights, literal diffs, explicit historical-coverage rejection and
+federal/state capability separation were judged strengths. Dedicated broad action search, a new agency identity system,
+extra batch routes and wholesale path renaming were not justified by the reviewed scenarios. Durable third-party sync
+may be deferred for a reader-only release, but remains a required gate before promising an enterprise replica connector.
+
+## Enterprise synchronization gate
+
+`GET /api/legal/events` serves activity history, not a guaranteed replica feed. `updatedSince` is a browse filter,
+not an acknowledgement or checkpoint. Neither source observation timestamps nor a raw bigserial allocation establish
+commit order: an earlier allocated event may commit after a later one. Notifications suppress some backfill/parser
+events and cannot replace synchronization. The enterprise feed must independently implement:
+
+1. A frozen, authorized subset baseline linked atomically to a durable committed-change checkpoint. Specify supported
+   code/publication scope and the exact retained revisions; do not promise whole licensed-corpus export.
+2. A committed-order log or equivalent contiguous acknowledgement protocol which cannot skip a later commit with an
+   earlier observation/allocated ID. Stable event IDs, revision precedence and at-least-once deduplication are mandatory.
+3. Separate next-page and terminal next-poll tokens, bound to caller, scope and schema. An empty page does not discard
+   the last durable checkpoint. Old tokens replay within declared retention; expiration returns safe resnapshot guidance.
+4. Upsert, metadata/relationship change, membership removal and rights-withdrawal dispositions. A purge notice for
+   previously delivered content includes only a permitted safe identifier/instruction, never newly restricted text.
+   Rights changes trigger reconciliation even if the underlying body hash is unchanged.
+5. Exact revision hydration while it is permitted and retained. If the referenced revision is no longer deliverable,
+   return a classified restriction/expiry outcome and resync instructions; do not substitute the newest text silently.
+6. Tests for baseline races, delayed commit, duplicate replay, empty polls, partial page failure, scope/rights changes,
+   token expiration and revision unavailability. Snapshot/delta continuity must be demonstrated with real committed data.
+
+The endpoint and retention SLA for this additional capability are not advertised until its durable store and scoped
+delivery contract pass API-14. This gate does not block frozen regulatory ingestion or the authenticated reader canary.

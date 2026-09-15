@@ -1,0 +1,10 @@
+# Local acceptance refresh from an explicitly pinned, previously verified dependency image.
+# No dependency installation or network downloads. Production builds use the full Dockerfile.
+ARG VERIFIED_DEPENDENCY_IMAGE
+FROM ${VERIFIED_DEPENDENCY_IMAGE}
+ARG SOURCE_INPUTS=artifacts/openstates-runtime/state-batch-build-inputs
+COPY python/*.py /opt/openstates/adapter/
+COPY ${SOURCE_INPUTS}/ /opt/openstates/inputs/
+RUN python /opt/openstates/adapter/smoke_openstates_runtime.py /opt/openstates/inputs
+WORKDIR /tmp
+CMD ["python", "/opt/openstates/adapter/smoke_openstates_runtime.py", "/opt/openstates/inputs"]

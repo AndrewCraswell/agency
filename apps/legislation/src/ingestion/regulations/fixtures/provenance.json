@@ -1,0 +1,77 @@
+[
+  {
+    "fixture": "ecfr-title-1-excerpt.xml",
+    "fixtureHash": "1c2ae5dea5f036043f64529973b22497eaa259c9365c7be6ffa2ab66769653af",
+    "sourceUrl": "https://www.ecfr.gov/api/versioner/v1/full/2026-08-10/title-1.xml",
+    "artifactHash": "fe18aad18e3b6e8fde18478d1f64d946bb9963bb74f1c164183627663c695c72",
+    "sourceUnit": {
+      "key": "916f283e3d31e9861ac6a7f8abfaf633d79f02d53a0eb157b212ef1447079d3c",
+      "sourceId": "ecfr",
+      "nativeId": "title-1",
+      "edition": "2026-08-10",
+      "sourceUrl": "https://www.ecfr.gov/api/versioner/v1/full/2026-08-10/title-1.xml",
+      "inventoryHash": "1cc7e4770ed60a2e944272dbe5d823b04a60d38f6dcefafde02fd1ee873275ea",
+      "inventoryRevision": "062c4266d6b1e4a84f1d176d4de95b7594b8b4dcda63515269f31b3664069e38",
+      "issueDate": "2026-08-10",
+      "currencyDate": "2026-09-11",
+      "sourceModifiedText": null,
+      "expectedBytes": null,
+      "format": "xml",
+      "historical": true,
+      "rightsProfileId": "official-federal-text",
+      "externalStandardsIncluded": false
+    },
+    "locators": ["/ECFR/DIV1//DIV5[@N='1']", "/ECFR/DIV1//DIV5[@N='17']"],
+    "transformation": "Source element excerpts reserialized as UTF-8; minimal ancestor containers generated. Not a complete title or issue."
+  },
+  {
+    "fixture": "cfr-2024-title1-excerpt.xml",
+    "fixtureHash": "0945b24375045c5ee0cd5adec7eb550a259662f0b209354cb8ffca3151dd9841",
+    "sourceUrl": "https://www.govinfo.gov/bulkdata/CFR/2024/title-1/CFR-2024-title1-vol1.xml",
+    "artifactHash": "443032797d95acd1d1f338e5f6252544b97ec35bd12e6fc0979d3773f9913595",
+    "sourceUnit": {
+      "key": "f88ef90ef16cbcf0e6bb0ebc0c951f8ae4cdadf78ebc3d897c34275cd72f054d",
+      "sourceId": "govinfo-cfr",
+      "nativeId": "CFR-2024-title1-vol1",
+      "edition": "2024",
+      "sourceUrl": "https://www.govinfo.gov/bulkdata/CFR/2024/title-1/CFR-2024-title1-vol1.xml",
+      "inventoryHash": "cb4d772fdd26255898605b7963834ecea83af4b342cbe3d387a3ff1f17931da9",
+      "inventoryRevision": "eafd61c49910212f585c64dbf42edc5c36dccb5d6cc61627de30600b94865312",
+      "issueDate": null,
+      "currencyDate": null,
+      "sourceModifiedText": "19-Nov-2025 13:26",
+      "expectedBytes": 814725,
+      "format": "xml",
+      "historical": true,
+      "rightsProfileId": "official-federal-text",
+      "externalStandardsIncluded": false
+    },
+    "locators": ["/CFRDOC/FMTR/TITLEPG", "/CFRDOC/TITLE/CFRTITLE", "/CFRDOC/TITLE//PART[1]"],
+    "transformation": "Source element excerpts reserialized as UTF-8; minimal ancestor containers generated. Not a complete title or issue."
+  },
+  {
+    "fixture": "fr-2024-01-02-excerpt.xml",
+    "fixtureHash": "f2553fca85f61aa90b0d6429ffb3b25113fa51d0024a72dc0f86dd3d63ed4550",
+    "sourceUrl": "https://www.govinfo.gov/bulkdata/FR/2024/01/FR-2024-01-02.xml",
+    "artifactHash": "57abe43a1988ac14194809a43425e692991568a3ad081bdd37bb450404d9f7f0",
+    "sourceUnit": {
+      "key": "e9e7f7975c4672c8b7ec7c637cfccaf0c1c9a589b282aed3220a917d8ce421b6",
+      "sourceId": "govinfo-fr",
+      "nativeId": "FR-2024-01-02",
+      "edition": "2024-01-02",
+      "sourceUrl": "https://www.govinfo.gov/bulkdata/FR/2024/01/FR-2024-01-02.xml",
+      "inventoryHash": "4b718c96ae7ddf312b6293fc928de3b7bc091570a0106f3a3234248980ca446d",
+      "inventoryRevision": "0b08109bf2b48fb3e243ce68882c500e1e9a207b66b1ca847bb43e98644fe59d",
+      "issueDate": "2024-01-02",
+      "currencyDate": null,
+      "sourceModifiedText": "22-Sep-2025 23:37",
+      "expectedBytes": 1897193,
+      "format": "xml",
+      "historical": true,
+      "rightsProfileId": "official-federal-text",
+      "externalStandardsIncluded": false
+    },
+    "locators": ["/FEDREG/DATE", "/FEDREG//RULE[1]", "/FEDREG//PRORULE[1]", "/FEDREG//NOTICE[1]"],
+    "transformation": "Source element excerpts reserialized as UTF-8; minimal ancestor containers generated. Not a complete title or issue."
+  }
+]

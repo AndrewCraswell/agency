@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { resolve } from "node:path"
 import { and, eq } from "drizzle-orm"
 import type { LegislationConfig } from "../../config/config.js"
@@ -425,7 +426,35 @@ export async function drainEmbeddings(
   const persistenceBatchSize =
     options.persistenceBatchSize ?? (bulkMode ? Math.min(selectionBatchSize, 128) : batchSize)
   const shard = normalizeShard(options)
-  const products = [...new Set(options.products ?? EMBEDDING_JOB_KINDS)].sort()
+  const targets = {
+    amendmentId: options.amendmentId,
+    billId: options.billId,
+    documentId: options.documentId,
+    materialId: options.materialId
+  }
+  const hasTarget = Object.values(targets).some((value) => value !== undefined)
+  if (Object.values(targets).some((value) => value !== undefined && value.trim().length === 0)) {
+    throw new Error("Embedding target IDs must not be empty")
+  }
+  const scopedProducts = EMBEDDING_JOB_KINDS.filter((product) => {
+    if (!hasTarget) {
+      return true
+    }
+    if (product === "amendments") {
+      return options.amendmentId !== undefined
+    }
+    if (product === "bills") {
+      return options.billId !== undefined
+    }
+    if (product === "materials") {
+      return options.materialId !== undefined
+    }
+    return options.billId !== undefined || options.documentId !== undefined
+  })
+  const products = [...new Set(options.products ?? scopedProducts)].sort()
+  if (products.some((product) => !scopedProducts.includes(product))) {
+    throw new Error("Targeted embedding products require a matching target ID")
+  }
   if (products.length === 0) {
     throw new Error("Embedding backfill requires at least one product")
   }
@@ -447,7 +476,10 @@ export async function drainEmbeddings(
   const productScope = products.join("+")
   const operation =
     shard.count === 1 ? `refresh-embeddings-${productScope}` : `refresh-embeddings-${productScope}-shard-${shard.index}`
-  const scopeKey = shard.count === 1 ? productScope : `${productScope}:shard:${shard.index}-of-${shard.count}`
+  let scopeKey = shard.count === 1 ? productScope : `${productScope}:shard:${shard.index}-of-${shard.count}`
+  if (hasTarget) {
+    scopeKey = `${productScope}:target:${createHash("sha256").update(JSON.stringify(targets)).digest("hex")}`
+  }
   const checkpointStream = `embeddings:${scopeKey}`
 
   return runBackfillJob(
@@ -471,10 +503,16 @@ export async function drainEmbeddings(
     },
     dependencies.runIngestionJob,
     async () => {
-      const loadedCheckpoint = await (dependencies.loadEmbeddingCheckpoint ?? loadEmbeddingCheckpoint)(
+      const persistedCheckpoint = await (dependencies.loadEmbeddingCheckpoint ?? loadEmbeddingCheckpoint)(
         input.database,
         checkpointStream
       )
+      // A completed targeted pass must inspect freshness again after later source/OCR updates.
+      // Incomplete passes retain their cursor so bounded continuations still make progress.
+      const loadedCheckpoint =
+        hasTarget && products.every((product) => persistedCheckpoint[product].complete)
+          ? initialEmbeddingCheckpoint
+          : persistedCheckpoint
       const enabled = new Set<EmbeddingJobKind>(products)
       const checkpoint: EmbeddingDrainCheckpoint = {
         amendments: enabled.has("amendments") ? loadedCheckpoint.amendments : { complete: true, cursor: "" },
@@ -851,10 +889,14 @@ function normalizeDocumentPartition(
 }
 
 function documentJobIdentity(
-  options: Pick<BillDocumentDrainOptions, "jurisdictionId">,
+  options: Pick<BillDocumentDrainOptions, "jurisdictionId" | "billId" | "documentId">,
   shard: Readonly<{ count: number; index: number }>,
   documentPartition: Readonly<{ count: number; index: number }> | undefined
 ): Readonly<{ operation: string; scopeKey: string }> {
+  if (options.billId !== undefined || options.documentId !== undefined) {
+    const target = options.billId !== undefined ? `bill:${options.billId}` : `document:${options.documentId}`
+    return { operation: "process-documents", scopeKey: `target:${createHash("sha256").update(target).digest("hex")}` }
+  }
   if (documentPartition !== undefined) {
     return {
       operation: `process-documents-jurisdiction-${options.jurisdictionId}-partition-${documentPartition.index}-of-${documentPartition.count}`,
@@ -862,7 +904,10 @@ function documentJobIdentity(
     }
   }
   if (shard.count === 1) {
-    return { operation: "process-documents", scopeKey: "all" }
+    return {
+      operation: "process-documents",
+      scopeKey: options.jurisdictionId === undefined ? "all" : `jurisdiction:${options.jurisdictionId}`
+    }
   }
   return { operation: `process-documents-shard-${shard.index}`, scopeKey: `shard:${shard.index}-of-${shard.count}` }
 }

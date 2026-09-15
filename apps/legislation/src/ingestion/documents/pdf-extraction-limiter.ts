@@ -20,12 +20,16 @@ export function createPdfExtractionLimiter(maximumConcurrency = 1): {
       return
     }
     await new Promise<void>((resolve) => waiters.push(resolve))
-    active += 1
   }
 
   function release(): void {
-    active -= 1
-    waiters.shift()?.()
+    const next = waiters.shift()
+    if (next === undefined) {
+      active -= 1
+    } else {
+      // Transfer the reserved slot without briefly making it available to a new arrival.
+      next()
+    }
   }
 
   return {

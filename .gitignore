@@ -33,3 +33,6 @@ apps/legislation/.container/
 # Next
 .next
 *.tsbuildinfo
+
+# Local Python scraper adapter bytecode.
+/apps/legislation/python/__pycache__/

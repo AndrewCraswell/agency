@@ -4,6 +4,9 @@ September 14, 2026. This preserves the initial market evidence from the product 
 The [pricing and offerings](../product/pricing.md) page owns the revised proposal. Response/query/issue quotas, top-ups,
 included seat counts and a fixed enterprise floor from the initial report are superseded or undecided; they are not retained as current offerings.
 
+Use [Competitors by ICP](../product/competitors.md) for the later segment-specific analysis and refresh status. This page
+retains dated price/source evidence, not a second positioning or product-priority document.
+
 ## Scope and evidence
 
 The market review covers 14 directly relevant legislative tracking or broader policy intelligence products, three adjacent legal research/AI platforms, and the Plural Open free-data alternative. This is a broad U.S.-focused competitive set, not an exhaustive inventory of every regional service, legal application, or emerging startup. International, advocacy-only, practice-management, and contract-only products are outside the primary comparison.
@@ -18,7 +21,7 @@ Plural pricing and Quorum quote-based packaging were rechecked during consolidat
 
 ## Published-price competitors
 
-| Product | Plans and current published pricing | Main features and overlap | Implication for Tabra |
+| Product | Published pricing at review | Main features and overlap | Implication for Tabra |
 | --- | --- | --- | --- |
 | LegiScan | OneVote free; OneVote+ $25/year for one state or Congress, up to $1,000/year nationally; GAITS Pro $100/year for one jurisdiction, up to $3,000/year nationally. Pro includes one seat; extra seats normally $100/year, with volume discounts. | Bill search, tracking, alerts, notes, client/issue classification, and reports. OneVote monitors 50 bills in a home state plus Congress; paid plans expand monitoring and reporting. | A low-cost baseline for professional tracking. Five national Pro seats are $3,400/year before discounts. Tabra must demonstrate research value beyond alerts. [1][2] |
 | BillTrack50 | Citizen free. Legislative tracking $1,000/year per state or Congress, or $5,000/year nationwide. Monthly installments are $84 or $420 respectively, on a full-year subscription. Regulation tracking is separately listed at the same current prices. | Paid subscriptions include unlimited users and tracking, AI tools, reports, collaboration, widgets, permissions, and API use. Citizen includes current-session search and AI research tools. | Broad collaboration is available near $417/month annual equivalent; do not assume each reviewer creates a large marginal license value. [3] |
@@ -28,7 +31,7 @@ Plural pricing and Quorum quote-based packaging were rechecked during consolidat
 
 Sources: [1](https://legiscan.com/misc/LegiScan_Price_List.pdf), [2](https://legiscan.com/features), [3](https://www.billtrack50.com/info/pricing), [4](https://pluralpolicy.com/pricing), [5](https://lawsignals.com/pricing), [6](https://self-service.stateaffairs.com/).
 
-For an illustrative five-person national team (Tabra's included seats remain undecided), At the proposed $2,990/year, Tabra would sit below LegiScan's $3,400 five-seat national package and the $5,000 headline team offerings, but that comparison does not establish equivalent functionality. LawSignals Practice Group is $4,788/year at its published annual rate. The discount is only defensible if Tabra delivers the core client research workflow; a cheaper unfinished product is not an equivalent offer.
+For an illustrative five-person national team, the proposed $2,990/year is below the cited $3,400 LegiScan and $5,000 team offers. Tabra's included seats remain undecided; these amounts do not establish equivalent functionality. LawSignals Practice Group is $4,788/year at its recorded annual rate. A cheaper unfinished product is not an equivalent offer.
 
 ## Free and quote-based competitors
 

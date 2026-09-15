@@ -1,6 +1,7 @@
 # Regulatory sourcing options and tradeoffs
 
-Recorded September 14, 2026. Future design; no provider selected by contract or ingestion implemented.
+Recorded September 14, 2026. Sourcing/rights evaluation, not a signed vendor decision. Direct federal local acquisition,
+storage and search foundations now exist; [implementation progress](implementation-progress.md) records their limits.
 
 ## Recommended evaluation direction
 
@@ -19,7 +20,7 @@ votes, sponsors or actions. Current status below comes from the workspace assess
 | Federal legislative activity | Existing implementation | Congress.gov + GovInfo | Not established |
 | State legislative activity | Existing work / rollout | Open States | Not established |
 | U.S. Code and historical enacted law | Future | GovInfo; validate collection editions | Advertised |
-| Federal published rules and regulatory code | Future | GovInfo + FederalRegister.gov; eCFR | Advertised; scope differs |
+| Federal published rules and regulatory code | Local implementation/pilots; production gates open | GovInfo + FederalRegister.gov; eCFR | Advertised; scope differs |
 | Federal dockets/comments and rule planning | Optional future | Regulations.gov; RegInfo | Not established |
 | State statutory codes | Future | Vaquill licensed feed | Advertised |
 | State administrative codes | Future | Vaquill licensed feed | Advertised; gaps need validation |

@@ -1,0 +1,9 @@
+**
+!python/
+!python/*.py
+!artifacts/
+!artifacts/openstates-runtime/
+!artifacts/openstates-runtime/clock-corrected-build-inputs/
+!artifacts/openstates-runtime/clock-corrected-build-inputs/**
+!artifacts/openstates-runtime/clock-corrected-dependency-inputs/
+!artifacts/openstates-runtime/clock-corrected-dependency-inputs/**

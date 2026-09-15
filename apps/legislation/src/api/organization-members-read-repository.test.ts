@@ -18,16 +18,25 @@ describe("OrganizationMembersRepository", () => {
     const repository = new OrganizationMembersRepository({
       organizationExists: async () => true,
       listOrganizationMemberships: async () => ({ items: [], truncated: false }),
-      coverageWarnings: async () => {
+      coverageWarnings: async (_organizationId, isCurrent) => {
         assessed += 1
-        return [warning]
+        return isCurrent ? [] : [warning]
       }
     })
     expect(await repository.listOrganizationMembers({ ...input, isCurrent: false })).toMatchObject({
       warnings: [warning]
     })
     expect(await repository.listOrganizationMembers(input)).not.toHaveProperty("warnings")
-    expect(assessed).toBe(1)
+    expect(assessed).toBe(2)
+  })
+  it("does not hide incomplete roster warnings on current-only pages", async () => {
+    const warning = "Committee membership coverage is incomplete."
+    const repository = new OrganizationMembersRepository({
+      organizationExists: async () => true,
+      listOrganizationMemberships: async () => ({ items: [], truncated: false }),
+      coverageWarnings: async () => [warning]
+    })
+    expect(await repository.listOrganizationMembers(input)).toMatchObject({ warnings: [warning] })
   })
   it("returns not_found for an absent parent before listing memberships", async () => {
     let listed = false

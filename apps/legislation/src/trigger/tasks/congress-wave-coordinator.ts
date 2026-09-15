@@ -23,6 +23,7 @@ import { RetryingHttpClient } from "../../ingestion/http-client.js"
 import { ingestionJobHandoffRetryAt, JobAlreadyRunningError } from "../../ingestion/job.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
 import { parseSynchronizationIdentity } from "../identities.js"
+import { requireSuccessfulSynchronizationResult } from "./synchronization-executor.js"
 
 const congressWaveCoordinatorQueue = queue({ concurrencyLimit: 1, name: "congress-wave-coordinator" })
 const congressWaveChildQueue = queue({
@@ -310,7 +311,7 @@ async function executeCongressWaveChild(
       return deferredCongressWaveChildResult(scope, budget.attempts, result)
     }
     if (result.status !== "succeeded") {
-      throw new Error(`Congress wave child ${scope} completed with ${result.status}`)
+      requireSuccessfulSynchronizationResult(result)
     }
     return { attempts: budget.attempts, scope, status: "complete" }
   } catch (error) {

@@ -41,7 +41,7 @@ applies them.
 
 Standalone calendar, meeting-outcome and representative-lookup API operations were removed from the public contract.
 Address-lookup mockups do not imply an available API or activated provider. See the
-[product backlog](docs/product/backlog.md) and [current API acceptance](docs/operations/passage-search-delivery.md).
+[product backlog](docs/backlog/backlog.md) and [current API acceptance](docs/operations/passage-search-delivery.md).
 
 The Bicep MCP template is retained as an infrastructure reference; the current application/API-backed MCP runtime is
 Next.js on Railway. See [runtime ownership](docs/operations/development.md#nextjs-runtime) before changing deployment

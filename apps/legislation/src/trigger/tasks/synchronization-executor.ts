@@ -4,7 +4,7 @@ import { createDatabase } from "../../db/database.js"
 import { DERIVED_DOCUMENT_BATCH_SIZE } from "../../ingestion/backfill/derived.js"
 import { DOCUMENT_BACKFILL_SHARD_COUNT, documentBackfillJurisdictionLane } from "../../ingestion/documents/jobs.js"
 import { executeGovInfoCurrentSynchronization } from "../../ingestion/govinfo/sync.js"
-import { JobAlreadyRunningError, type JobResult } from "../../ingestion/job.js"
+import { ingestionFailureSummary, JobAlreadyRunningError, type JobResult } from "../../ingestion/job.js"
 import { executeSynchronization } from "../../ingestion/synchronization/synchronize.js"
 import { jurisdictionId as canonicalJurisdictionId } from "../../legislation/identifiers.js"
 import type { derivedShardBackfillController } from "./backfill-tasks.js"
@@ -181,12 +181,9 @@ export function requireSuccessfulSynchronizationResult(result: SynchronizationTa
   if (result.status === "succeeded" || result.status === "overlap_skipped") {
     return result
   }
-  const detail = result.failures
-    .slice(0, 3)
-    .map((failure) => failure.message)
-    .join("; ")
+  const detail = ingestionFailureSummary(result.failures.slice(0, 3)) ?? ""
   throw new Error(
-    `Synchronization ${result.source} ${result.operation} completed with status ${result.status}${
+    `Synchronization ${result.source} ${result.operation} completed with status ${result.status} (ingestion ${result.runId}, workflow ${result.workflowExecutionId ?? "unknown"})${
       detail === "" ? "" : `: ${detail}`
     }`
   )

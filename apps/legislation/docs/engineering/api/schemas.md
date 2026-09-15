@@ -67,9 +67,14 @@ type ModelUsage = {
 }
 ```
 
+The proposed legal search extension is defined by `src/api-client/legal-search-contract.ts` and the
+[regulatory API contract](../../regulations/api-mcp-contract.md#search-request-and-result). It reuses the search
+envelope and adds strict legal hits and `meta.legal` generation, effective-mode, degradation and candidate truncation
+fields. `meta.mode` records the requested mode. These schemas are implemented; route/client/MCP registration remains gated.
+
 Lists return `200 Page<T>`; reads return `200 ResourceResponse<T>`; creates return `201 ResourceResponse<T>` plus
 `Location`; updates return `200`; deletes return `200 ResourceResponse<CancellationReceipt>`. Calculations
-(representative lookup, diff, research answer) return `200`. `304` has no body.
+(diff and research answer) return `200`. `304` has no body. Representative lookup is not a current public operation.
 
 ## Batch body and response
 
@@ -95,6 +100,11 @@ The heterogeneous `/api/resources/batch` body is `{ "items": ResourceBatchReques
 is `{type, id}`; `type` is `jurisdiction`, `session`, `bill`, `amendment`, `vote`, `document`, `supporting-material`,
 `person`, `organization`, `meeting`, or `calendar`. The response is `BatchResponse<CanonicalResource>` and each success
 retains its discriminating `type`. A valid outer batch returns HTTP `200` even when individual items fail.
+
+The internal batch/projection and subscription schemas still declare `calendar`, and meeting summaries retain a nullable
+`calendarId`. These retained values do not restore removed calendar endpoints or guarantee a usable calendar target.
+Their public batch/target behavior must be reconciled with the reduced route inventory before broader exposure; do not
+advertise calendar discovery from enum presence. This documentation cleanup changes no runtime schema.
 
 ## Error contract
 

@@ -12,6 +12,10 @@ Novu supports channel workflows and an embedded inbox. We use those capabilities
 experience; the user does not need a Novu account or see its operational dashboard.
 [Novu workflow and inbox concepts](https://docs.novu.co/platform/how-novu-works).
 
+The [IA](information-architecture.md#primary-work) defines monitoring surfaces, and
+[conversation integration](../design/conversations.md#9-writing-back-to-the-product) defines chat confirmation/receipts.
+This document owns delivery semantics; neither design silently extends API enums or approves new channels.
+
 ## Ownership and event flow
 
 ```text
@@ -49,7 +53,7 @@ research history and canonical event retention. Secrets and signing remain serve
 | --- | --- |
 | Persistent bell | Unread count, recent notifications, open Updates; no competing badge state |
 | Updates | Novu-backed personal inbox with read/unread and archive actions; open canonical evidence and matching reasons |
-| Following detail | Target/query, selected events, channel choices, frequency/timezone, effective delivery state and history |
+| Following detail | Compact configuration, Matched events by default, secondary Delivery history and selected delivery with collapsed attempts |
 | Settings, Notifications | Global channel permissions, workflow-category preferences, verified email destination, timezone |
 | Chat follow preview | Target and event scope plus effective channels; blocked email visibly explained before confirmation |
 | Issue tracker | Durable matched changes independent of email opt-out; links to responsible follows and inbox items |

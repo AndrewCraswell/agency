@@ -26,6 +26,7 @@
       "outputs": ["coverage/**"]
     },
     "test:coverage": {
+      "passThroughEnv": ["LEGISLATION_COVERAGE_DIRECTORY"],
       "outputs": ["coverage/**"]
     },
     "dev": {

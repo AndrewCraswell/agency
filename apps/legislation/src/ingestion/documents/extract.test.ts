@@ -21,6 +21,45 @@ const textPdf = Buffer.from(
 )
 
 describe("legislative document extraction", () => {
+  it("routes outlined vector text to OCR without treating empty pages as scans", () => {
+    const outlined = { hasRasterImage: false, hasVectorGraphics: true, text: "" }
+    expect(assessPdfOcrEligibility([outlined])).toEqual({ kind: "image-only", scannedPageCount: 1 })
+    expect(
+      assessPdfOcrEligibility([
+        outlined,
+        { hasRasterImage: false, text: "A complete page of digitally encoded legislative text." }
+      ])
+    ).toEqual({ kind: "mixed-scan", scannedPageCount: 1 })
+    expect(assessPdfOcrEligibility([{ hasRasterImage: false, hasVectorGraphics: false, text: "" }])).toEqual({
+      kind: "unusable",
+      scannedPageCount: 0
+    })
+  })
+
+  it.each([encoder.encode("<bill><section><?xm-replace_text unclosed"), new Uint8Array([0xff, 0xfe, 0xfd])])(
+    "classifies deterministic XML decoding/parser errors as terminal",
+    async (bytes) => {
+      let failure: unknown
+      try {
+        await extractDocument("document:invalid-xml", bytes, "application/xml")
+      } catch (error) {
+        failure = error
+      }
+      expect(failure).toBeInstanceOf(DocumentExtractionError)
+      expect(classifyDocumentFailure(failure)).toMatchObject({ category: "malformed-document", retryable: false })
+    }
+  )
+  it("accepts quoted processing-instruction data from historical Congress XML", async () => {
+    // Reduced from the instructions in 109th H.R. 5681 and 111th H.R. 3200.
+    const result = await extractDocument(
+      "document:congress-pi",
+      encoder.encode(
+        '<bill><section><?xm-replace_text "?><p>Legislative text must remain intact.</p></section></bill>'
+      ),
+      "application/xml"
+    )
+    expect(result.text).toBe("Legislative text must remain intact.")
+  })
   it("extracts structured XML and preserves legal section boundaries", async () => {
     const result = await extractDocument(
       "document:xml",

@@ -18,6 +18,12 @@ Provider contracts were checked on 2026-08-18 against the official
 [GovInfo API documentation](https://github.com/usgpo/api), and
 [BILLSTATUS XML user guide](https://github.com/usgpo/bill-status/blob/main/BILLSTATUS-XML_User_User-Guide.md).
 The source contracts describe availability; the checked-in importers and database schema determine the ingestion status.
+Field rows below retain that provider/adapter inventory, not a fresh September production census. Open States API
+cadences are inactive transitional definitions, not the approved freshness path. Current self-hosted state work and
+acceptance live in the [runtime build](../operations/openstates-runtime-build.md) and
+[rollout checklist](../operations/openstates-rollout-checklist.md); regulatory acquisition has its own
+[implementation and production gates](../regulations/production-backlog.md). Do not infer absence of newer normalized
+fields or nationwide availability from an older catalog row.
 Federal committee, subcommittee, and membership materialization is implemented from GovInfo Congressional Directory
 text renditions only. State committee, subcommittee, and membership materialization may use OpenStates only. No other
 provider is a committee-data fallback.
@@ -65,7 +71,7 @@ schedule; the live Trigger.dev project is the source of truth for a schedule's a
 | Congress.gov | Committee reports and text formats, not committee organization or membership data | `congress-wave-child` | Configured current Congress | Hourly wave | Offset checkpoint per Congress |
 | Congress.gov | Members and terms | `congress-wave-child` | Configured current Congress | Hourly wave | Complete current snapshot |
 | GovInfo | Current-Congress BILLSTATUS XML | `govinfo-bill-status-sync` | Configured Congress and bill-type policy | Daily at 11:45 UTC | Collections API `lastModified` window with 24-hour replay; XML payload from bulk repository |
-| GovInfo | Federal committees, subcommittees, memberships | Trigger `govinfo-committee-directory-sync`; CLI `govinfo:committees` | Current Congress automatically; explicit historical ranges require validation | Daily 09:30 UTC in production | Current-Congress canary and unchanged rerun passed on 2026-09-06. Discover newly dated CDIR editions through JSON and parse bounded plain text with roster-count reconciliation. Same-edition corrections and historical reconstruction remain follow-up work. No XML committee input. See [membership history](committee-membership-history.md). |
+| GovInfo | Federal committees, subcommittees, memberships | Trigger `govinfo-committee-directory-sync`; CLI `govinfo:committees` | Current Congress automatically; explicit historical ranges require validation | Recorded daily 09:30 UTC schedule; recheck activation | Parse bounded CDIR text with roster reconciliation; historical 105-118 acceptance and quarantine limits are owned by [membership history](committee-membership-history.md). Same-edition correction handling and a fresh complete transition history remain separate gates. No XML committee input. |
 | Open States, GovInfo, and Congress.gov non-committee domains | Historical rebuild | `legislation-backfill` | Explicit rebuild ID and bounded historical ranges | Manual only | Existing archive, package, and domain checkpoints; deterministic child idempotency keys |
 
 The manifest creates 163 desired recurring schedules: 156 Open States jurisdiction schedules, six Congress.gov
@@ -501,9 +507,9 @@ list packages by `lastModified` or `dateIssued`, follow related-content links, r
 enumerate granules, and retrieve granule summaries/content. Collection-specific MODS and package metadata can add fields
 beyond the common contract.
 
-The current product ingests only BILLSTATUS as a first-class GovInfo feed. Official bill-version URLs carried by
-BILLSTATUS are passed to the downstream document processor; this is not equivalent to independently traversing the
-GovInfo BILLS collection.
+GovInfo legislative ingestion includes BILLSTATUS and the separate CDIR committee importer. Official bill-version URLs
+carried by BILLSTATUS feed document processing; this is not standalone traversal of BILLS. Regulatory FR/CFR acquisition
+and local publication have separate [evidence](../regulations/implementation-progress.md) and production gates.
 
 ### GovInfo legislative collection coverage
 
@@ -542,7 +548,7 @@ checkpoint, tests, and Trigger task exist.
 
 | Interface and source field | Source type | Ingestion | Canonical destination or disposition | Trigger.dev task and cadence |
 | --- | --- | --- | --- | --- |
-| Collections directory `collectionCode` | string | Discovery only | Identifies available collection. BILLSTATUS is the only enabled code. | `govinfo-bill-status-sync`, daily. |
+| Collections directory `collectionCode` | string | Discovery only | Identifies the selected collection; BILLSTATUS, CDIR and regulatory collection paths have separate ownership. | Per-collection contract; no general collection crawler. |
 | Collections directory `collectionName` | string | Not ingested | Documentation/discovery metadata. | None. |
 | Collections directory `packageCount` | integer | Not ingested | Dynamic provider metric, not a completeness claim. | None. |
 | Collections directory `granuleCount` | integer or null | Not ingested | Dynamic provider metric. | None. |
@@ -614,7 +620,7 @@ the legislative content field families and explicitly distinguish what the curre
 | `cosponsors.item[].bioguideId` | string | Ingested | Canonical cosponsor person link. | `govinfo-bill-status-sync`, daily. |
 | Cosponsor `isOriginalCosponsor`, sponsorship/withdrawal dates, party/state/district, GPO/LIS IDs | scalar fields | Artifact only | Sponsor relationship dates/details are not modeled. | `govinfo-bill-status-sync`, daily. |
 | `committees.item[].name` | string | Partial | Flattened into `bills.committees`. | `govinfo-bill-status-sync`, daily. |
-| Committee chamber/systemCode/type, activities, subcommittees and report citations | nested objects/arrays | Artifact only | GovInfo is the sole approved federal committee-data source, but standalone committee materialization is pending. | `govinfo-bill-status-sync`, daily. |
+| Committee chamber/systemCode/type, activities, subcommittees and report citations | nested objects/arrays | Artifact only in BILLSTATUS | Standalone committee materialization uses the separate GovInfo CDIR importer, not these bill children. | `govinfo-bill-status-sync`, daily. |
 | `committeeReports.committeeReport[].citation` | string | Artifact only | Report job through Congress.gov is authoritative. | `govinfo-bill-status-sync`, daily. |
 | `relatedBills.item[].congress` | integer-like string | Ingested | Related canonical bill ID. | `govinfo-bill-status-sync`, daily. |
 | `relatedBills.item[].type` | string | Ingested | Related canonical bill ID. | `govinfo-bill-status-sync`, daily. |
@@ -649,8 +655,8 @@ The catalog exposes several high-value gaps that should remain visible in future
   treaties that the product does not ingest.
 - Congress.gov member leadership and party history, committee history/activity, House vote notes, amendment cosponsors,
   and amendment-to-amendment links are available but not modeled.
-- GovInfo contains official publications that enrich structured Congress.gov data, but only BILLSTATUS currently has a
-  recurring importer. CRPT, CHRG, CPRT, CREC, CCAL, PLAW, CMR, SERIALSET, STATUTE, and USCODE remain unimplemented.
+- GovInfo has BILLSTATUS and CDIR legislative importers plus separately gated regulatory work. CRPT, CHRG, CPRT, CREC,
+  CCAL, PLAW, CMR, SERIALSET, STATUTE and USCODE remain distinct acquisitions, not implied by those importers.
 - No approved source currently provides dependable structured Senate member roll-call positions through the implemented
   API contracts. This must remain an explicit limitation rather than an inferred capability.
 - “Artifact only” is not equivalent to searchable or queryable. A field becomes a product capability only after a

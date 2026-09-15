@@ -32,7 +32,7 @@ publisher fixes live in the
 | Bill documents | 64 deterministic jurisdiction lanes; a large jurisdiction may replace its lane with 2-8 ID partitions | 100 rows | 1 | 64 |
 | Supporting materials | 24 deterministic material-ID shards | 25 rows | 2 | 64 |
 | OCR | Explicit IDs handed off by document or material workers | 100 IDs | 1 | 12 |
-| Embeddings | Current pass is moving to pooled concurrency; future full recreations run one product at a time with 128 shards through `embedding-full-sync`, with 160 and 200 reserved for temporary canaries | 64 rows per provider request | 1 | 128 steady-state shared embedding queue |
+| Embeddings | Future approved recreations use sequential 128-shard products through `embedding-full-sync`; exact-input rebuild is deferred | Up to 64 inputs within actual token/transport limits | Per worker policy; historical workers reserve a heartbeat connection | 128 ceiling only under accepted pooled capacity |
 
 A document partition is not a publisher allowance. Every partition and every
 Trigger deployment shares the durable host slots in PostgreSQL. Adding workers
@@ -109,10 +109,9 @@ or deferred retryable failures, interrupted claims, and eligible material OCR
 rows. The material controller waits for OCR children before declaring its shard
 complete.
 
-Those gates passed and the cost-controlled embedding rollout was explicitly
-approved on 2026-08-22. Embedding completion is now tracked independently for
-bills, document sections, amendments, and supporting-material sections; it
-does not reopen a completed document or material gate.
+Those gates passed for the August 22 cohort, not every later source record. Re-evaluate each new cohort independently.
+Current embedding integrity, incremental refresh and the deferred full rebuild are owned by the
+[embedding guide](../engineering/embedding-rollout-plan.md); never infer readiness solely from vector existence.
 
 ## Observing progress
 

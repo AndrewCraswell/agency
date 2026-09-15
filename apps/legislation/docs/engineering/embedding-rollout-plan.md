@@ -1,17 +1,49 @@
 # Embedding rollout and retrieval-quality gate
 
-Embeddings are an optional retrieval enhancement, not an ingestion-completion
-requirement. The historical corpus remains available through structured and
-PostgreSQL lexical search while the complete corpus pass is running.
+## Input integrity repair and deferred rebuild (September 15, 2026)
 
-The corpus, storage, cost, model, and MCP treatment/control gates below passed,
-and the complete embedding phase was approved on 2026-08-22. The pass began
-with four concurrent product waves at 16 deterministic shards per product,
-then used 32 document-section, 20 material-section, and 16 bill shards after
-structured amendments completed. The remaining pass now uses PgBouncer and a
-128-worker steady-state ceiling, with 160 and 200 reserved for temporary
-throughput canaries. This page remains the source of truth for the accepted
-routing, quality gates, incremental ownership, and completion audit.
+The shared OpenRouter embedding client previously capped inputs at 16,000 characters and, after a recognized provider
+token-limit error, halved the rejected input and retried. The retry could return a vector for shorter text while the
+calling job persisted the original input hash. Existing embedding rows do not record the actual submitted text length,
+token-limit retry reason or shortened-input hash, so a matching stored input hash does not prove integrity for this path.
+There is no evidence that every existing vector was affected. A bounded read-only inspection confirmed the four remote
+embedding tables have no field identifying these retries; affected counts remain unknown.
+
+The client now rejects over-limit inputs before HTTP, submits the exact accepted input, freezes request bodies across
+transient retries, and propagates provider size errors without shortening. Shared token checks use pinned
+`tiktoken@1.0.22` WebAssembly for OpenAI Small and `@huggingface/tokenizers@0.2.0` with pinned/checksummed Voyage 4
+vocabulary files. They load locally once per process. Operational token ceilings are 8,000/290,000 for OpenAI and
+31,000/310,000 for Voyage (per input/per batch), with the existing 16,000-character and 64-input transport guards.
+`embedding-preparation.ts` emits contiguous, lossless source spans with complete prefixed-input hashes and token
+counts. Regulatory prose consumes this splitter; atomic table handling remains with the regulatory passage builder.
+Regression tests cover local and provider limits, unchanged retry payloads, caller-array mutation, invalid Unicode,
+combined batch limits, reference tokenizer parity, and no vector/hash persistence after rejection. Existing jobs'
+explicit character cap occurs before hashing and remains a separate excerpt-coverage limitation to replace before rebuilding.
+
+Live synthetic smoke: OpenAI local/provider counts both total 678; Voyage reference/local counts total 683 while
+OpenRouter reports 680. Individual Voyage requests confirmed exactly one fewer reported token per input; the local
+counter matches the pinned Rust reference (`tokenizers==0.22.2`) on 21 cases. Do not subtract tokens to match billing.
+The strict provider-usage equality smoke reports this discrepancy rather than claiming equality. No existing vectors
+were replaced. The initial pure-JavaScript OpenAI implementation was removed after repetitive inputs took about
+30 seconds; the WebAssembly implementation passes the focused suite in seconds.
+
+User direction: regenerate **all embeddings later**, not during this repair. Do not delete existing vectors, change
+freshness contracts to trigger automatic regeneration, or dispatch a rebuild now. Before that rebuild, share model-aware
+token counting and lossless passage preparation across ingestion products, preserve table/section context, and verify
+exact-input hashes and retrieval canaries. The transport client must reject inputs it cannot submit intact; a tokenizer
+does not justify truncating them. The user approved shared tokenizer preparation; continue using OpenRouter for inference.
+Rebuild execution and cutover require their own recorded deployment, scope, coverage,
+cost and search validation. Old hashes cannot safely be used to skip the eventual full rebuild.
+
+Source-record promotion and end-to-end ingestion readiness are separate milestones.
+For North Carolina and Alaska onboarding, embeddings and verified lexical/semantic
+retrieval are required before ingestion is called complete or another state is
+onboarded (user decision, 2026-09-15). Structured reads may be available earlier,
+but that partial availability does not satisfy the onboarding gate.
+
+Historical routing/corpus gates passed in August, but they do not close the September exact-input integrity issue or
+authorize another paid pass. The rebuild hold above takes precedence over the retained rollout procedure. Accepted
+future full-pass topology is the sequential 128-shard coordinator; earlier mixed shard counts are not operating instructions.
 
 Future full recreations use the sequential 128-shard coordinator documented below. PgBouncer is now available for a
 separate pooled-concurrency canary at 128, 160, and finally 200 workers. Do not raise the task ceiling merely
@@ -27,57 +59,16 @@ if the higher stages continue to scale efficiently.
 
 ## Canary status
 
-The bounded canary program began on 2026-08-22. Its first treatment created or reused vectors for
-four treatment bills and ten treatment document sections, while the two clean
-control bills remained unembedded and supporting-material sections were
-excluded. The later [routed canary report](../../evals/embedding-canary.md) records
-the accepted multi-product contract and machine-readable result files.
+Keep the evaluation manifests/results with their owning reports rather than copying each experimental iteration here:
 
-With canonical jurisdiction and session filters, the treatment cohort reached
-100 percent recall at 10 for both known-item bill discovery and judged document
-passages. All four treatment bills ranked first; the three treatment passages
-ranked second, first, and first. This passes the small known-item check, but it
-does not establish broad topical-search quality. The original broad queries
-returned relevant but unlabeled bills, so their earlier 57 percent score was a
-single-target evaluation artifact rather than a valid topical-relevance score.
+| Evidence | What it establishes |
+| --- | --- |
+| [Routed MCP canary](../../evals/embedding-canary.md) | Frozen multi-product treatment/control retrieval, canonical projection, amendment fusion and selective reranking |
+| [Broad-topic canary](../../evals/embedding-topic-canary.md) | Bounded taxonomy-based topic evaluation; not whole-corpus relevance or current production latency |
+| [Model/input bakeoff](../../evals/embedding-model-bakeoff.md) | Per-product model choices, rejected leading-text bill fallback and graded comparisons |
 
-Richer bill vectors and passage-to-bill candidate projection were tested and
-removed because they did not improve this cohort. The expanded bakeoff showed
-material reranking gains for bill and document ranking while it hurt
-amendments and Voyage-current supporting materials. Selective reranking is
-active only for bill and document-section retrieval; migration `0022` and the
-deployed treatment/control canary verified that boundary.
-
-A second canary then tested ten broad topics using 148 exhaustive source-
-taxonomy judgments in fixed jurisdiction and session scopes. Pure semantic
-retrieval filled every available top-10 position with a judged relevant bill,
-reached 100 percent treatment Recall@25, and averaged 347 ms warm latency.
-Hybrid retrieval was slightly worse and slower. See the
-[broad-topic canary report](../../evals/embedding-topic-canary.md). This clears the
-bounded retrieval-quality gate for pure semantic search. Dedicated storage and
-strict reconciliation are now implemented; the 429,261 historical inline bill
-vectors cannot be reused for the selected Voyage bill route and remain
-non-authoritative.
-
-The expanded isolated bakeoff then evaluated 3,989 records and 40 queries
-across bills, document passages, amendments, and supporting materials. It
-selected a mixed per-product arrangement rather than one global model: Voyage
-4 for bills and supporting materials, and OpenAI Small for document sections
-and structured amendments. The experiment also rejected raw leading document
-excerpts as a sparse-bill fallback and showed that each product needs its own
-input contract. See the
-[model and input bakeoff](../../evals/embedding-model-bakeoff.md). Full rollout
-was held until the broader human-graded and deployed MCP gates passed.
-
-The routed production canary then stored 2,560 rows through Trigger.dev and
-replayed the frozen MCP treatment/control manifest. The embedded treatment
-reached 100 percent Recall@10 and 0.929 nDCG@10 with no tool error; intentionally
-unembedded controls remained absent from pure semantic search. It also verified
-amendment rank fusion, supporting-material retrieval, canonical identity
-projection, and query-time selective reranking. See the
-[routed MCP canary report](../../evals/embedding-canary.md). That result authorized
-the current complete pass while retaining lexical and hybrid fallbacks until
-all four products finish.
+These are dated evidence, not fresh acceptance after input, model, serving or source changes. An earlier single-target
+broad-query score was not a valid topical evaluation. Unverified inline vectors remain non-authoritative.
 
 ## Retrieval products and embedding inputs
 
@@ -90,15 +81,13 @@ joins. They are not a substitute for searchable prose.
 | Search product | Embedding input | Result returned to the caller |
 | --- | --- | --- |
 | Bill discovery | Bill title, summary, and subjects. Do not append a raw document excerpt or embed a bare identifier as if it described the policy. | Canonical bill with jurisdiction, session, sponsors, committees, actions, source links, and coverage metadata. |
-| Bill-document passage search | Bill title and identifier, document title, version/classification, section heading, and section text. OCR text uses the same contract as native text while retaining OCR provenance. | Canonical document section plus its document and bill, agency URL, and stored-object reference. |
-| Structured amendment search | Bill context, printed amendment identifier and type, purpose, and description. If the structured row contains only an identifier, associate proven amendment document text instead of inventing a synopsis. | Canonical amendment, sponsor and dates, related bill, and any supporting document passages. |
-| Document-backed amendment search | Bill context, amendment document title/classification, section heading, and section text. | Canonical `amendment:document:` result projected back to its bill and source document. |
-| Supporting-material search | Bill context, material title/classification, section heading, and section text. | Canonical supporting material and section, related bill, agency URL, and stored-object reference. |
+| Bill-document passage search | Section heading and text under the accepted route; OCR retains provenance. | Canonical document section plus its document and bill, source URL and stored-object reference. |
+| Structured amendment search | Purpose and description, with the accepted printed-identifier fallback. Sparse input is a quality limitation, not permission to invent a synopsis. | Canonical amendment, sponsor and dates, related bill and available passages. |
+| Document-backed amendment search | Section heading and text under the document-section route. | Canonical `amendment:document:` result projected to its bill and document. |
+| Supporting-material search | Section heading and text under the material route. | Canonical material/section, related bill and source/storage references. |
 
-This requires semantic and hybrid modes for `search_amendments` and
-`search_supporting_materials` before their vectors are promoted. Bills and
-bill-document passages already have semantic consumers, but their input
-contracts must be upgraded before the broad rollout.
+All four product tools now declare lexical/semantic/hybrid modes. Contextual headers and lossless chunks are future
+input-contract changes requiring their own evaluation and rebuild; do not describe them as the current route input.
 
 ## Canonical canary routing contract
 
@@ -290,22 +279,11 @@ materials have a longer tail. The bakeoff therefore compares the current input
 against the contextual, token-aware input instead of assuming that a model
 change alone explains quality.
 
-## Current scope
+## Corpus sizing
 
-Production PostgreSQL statistics observed on 2026-08-21 estimated approximately
-21 million possible embedding rows:
-
-| Record kind | Estimated rows | Current MCP semantic consumer |
-| --- | ---: | --- |
-| Bills | 1.51 million | `search_bills` semantic and hybrid modes; semantic bill-relation expansion. |
-| Bill-document sections | 15.25 million | `search_bill_text` semantic and hybrid modes. |
-| Structured amendments | 38,822 | None. `search_amendments` is lexical-only. |
-| Supporting-material sections | 4.26 million | None. `search_supporting_materials` is lexical-only. |
-
-At 1,536 float dimensions, 21 million vectors contain roughly 120 GiB of raw
-vector values before PostgreSQL row overhead, HNSW indexes, WAL, backups, or
-replicas. Supporting-material sections therefore remain outside the paid
-rollout until their MCP semantic retrieval path and evaluation set exist.
+The August 21 estimate of roughly 21 million potential rows predates later ingestion and mixed-model completion.
+Reinventory rows, actual input lengths, selected dimensions, indexes/WAL/storage and provider prices before a paid pass.
+Amendment/material semantic consumers now exist; the original lexical-only rollout exclusion is obsolete.
 
 ## Preconditions
 
@@ -513,14 +491,12 @@ Do not expand the rollout to compensate for an inconclusive evaluation.
    amendment, and supporting-material configurations.
 4. Review per-product quality, sparse-stratum quality, cost, storage, and
    latency evidence.
-5. Inventory the 429,261 historical inline bill vectors and leave them
-   non-authoritative because their OpenAI model does not match the selected
-   Voyage bill route. Reuse only document-section vectors whose exact model,
-   dimensions, canonical input, and legacy hash satisfy the selected contract.
+5. Keep inline and potentially shortened-input vectors non-authoritative for the rebuild. The September integrity
+   finding means an old matching hash alone cannot authorize reuse or skipping the approved full regeneration.
 6. If approved, expand in bounded, checkpointed waves while retaining a
    nonembedded holdout long enough to detect regressions.
-7. Roll out bills and bill-document passages first, then amendments, then
-   supporting materials. Each product has an independent stop/go decision.
+7. Use the approved sequential full-pass coordinator after each product's quality gate; do not change shard partitions
+   or launch competing product waves during a run.
 8. Run final embedding-integrity validation and deployed MCP smoke tests.
 9. Enable recurring embedding refresh only after the historical rollout is
    complete and its daily cost is measured.
@@ -535,8 +511,8 @@ single cheaper model for every product: the measured supporting-material gain
 from Voyage is large, while OpenAI Small is the cost-effective winner for
 document passages and structured amendments.
 
-Begin the historical pass with all approved products sharing 200 deterministic
-shards and a 128-worker Trigger queue. A historical worker selects up to 640
+For a separately approved recreation, use 128 deterministic shards per sequential product and a 128-worker ceiling.
+The prior 200-shard mixed pass is not the current coordinator contract. A historical worker selects up to 640
 candidates per product in one query, sends provider requests in batches of 64,
 and persists generated vectors in batches of 128. Incremental and daily syncs
 keep their normal 64-record selection and persistence path, so the bulk tuning
@@ -555,7 +531,7 @@ PgBouncer wait time remains acceptable. The model contract remains:
 Evaluate after the first 100,000 generated or reconciled rows and reduce the
 fan-out if provider throttling, retries, or database pressure appear. Compare
 observed spend, p95 task duration, database connections, index growth, retry
-rate, and deployed MCP quality against the projection. The current corpus estimate is
+rate, and deployed MCP quality against the projection. The historical August estimate was
 approximately $444 for the mixed generation pass, compared with approximately
 $292 for all OpenAI Small and approximately $943 for all Voyage 4. Cohere
 Rerank 3.5 is query-time spend, approximately $0.001 per reranked request, and

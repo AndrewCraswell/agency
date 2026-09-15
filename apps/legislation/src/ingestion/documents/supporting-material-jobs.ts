@@ -4,7 +4,7 @@ import type { LegislationDatabase } from "../../db/database.js"
 import { supportingMaterials } from "../../db/schema/schema.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
-import { downloadDocument } from "./download.js"
+import { detectDocumentContentType, downloadDocument } from "./download.js"
 import type { DocumentHostLimiter } from "./host-limiter.js"
 import { documentRetryAt, documentStatusForFailure } from "./jobs.js"
 import { createPdfExtractionLimiter } from "./pdf-extraction-limiter.js"
@@ -224,7 +224,11 @@ export async function processPendingSupportingMaterials(
             sourceUrl: record.sourceUrl
           }
         : await downloadWithHostLease(options.hostLimiter, record.sourceUrl, () =>
-            downloadDocument(record.sourceUrl, { fetch: options.fetch, timeoutMs: options.timeoutMs })
+            downloadDocument(record.sourceUrl, {
+              detectContentType: false,
+              fetch: options.fetch,
+              timeoutMs: options.timeoutMs
+            })
           )
       const contentHash = createHash("sha256").update(downloaded.bytes).digest("hex")
       const path = artifactPath("supporting-materials", record.id, contentHash, downloaded.sourceUrl)
@@ -235,6 +239,7 @@ export async function processPendingSupportingMaterials(
         .update(supportingMaterials)
         .set({ blobPath: path, contentType: downloaded.contentType })
         .where(eq(supportingMaterials.id, record.id))
+      downloaded.contentType = detectDocumentContentType(downloaded.bytes, downloaded.contentType)
       const outcome = await pdfExtractionLimiter.run(
         downloaded.contentType,
         async () =>

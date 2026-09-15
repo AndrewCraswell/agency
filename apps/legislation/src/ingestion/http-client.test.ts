@@ -2,6 +2,75 @@ import { describe, expect, it, vi } from "vitest"
 import { ProviderHttpError, readBounded, RetryingHttpClient } from "./http-client.js"
 
 describe("RetryingHttpClient", () => {
+  it.each([new TypeError("terminated"), new DOMException("body timed out", "TimeoutError")])(
+    "retries a failed body and accounts for both provider attempts: %s",
+    async (failure) => {
+      const request = vi
+        .fn<typeof fetch>()
+        .mockImplementationOnce(
+          async () =>
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  controller.error(failure)
+                }
+              }),
+              {
+                headers: { "x-ratelimit-remaining": "99" }
+              }
+            )
+        )
+        .mockResolvedValueOnce(Response.json({ complete: true }))
+      const afterAttemptComplete = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+      const client = new RetryingHttpClient({
+        fetch: request,
+        maxAttempts: 2,
+        requestTimeoutMs: 1000,
+        afterAttemptComplete
+      })
+      const response = await client.get(new URL("https://provider.example/data?api_key=secret"))
+      expect(await response.json()).toEqual({ complete: true })
+      expect(afterAttemptComplete).toHaveBeenCalledTimes(2)
+      expect(afterAttemptComplete).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ errorName: failure.name, status: 200, rateLimitRemaining: 99 })
+      )
+      expect(client.metrics).toEqual({
+        attempts: 2,
+        retries: 1,
+        successfulRequests: 1,
+        failedRequests: 0,
+        rateLimited: 0
+      })
+    }
+  )
+  it("preserves the body failure cause after exhausting retries", async () => {
+    const failure = new TypeError("terminated")
+    const request = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(failure)
+            }
+          })
+        )
+    )
+    const client = new RetryingHttpClient({ fetch: request, maxAttempts: 2, requestTimeoutMs: 1000 })
+    await expect(client.get(new URL("https://provider.example/data"))).rejects.toMatchObject({
+      cause: failure,
+      retryable: true
+    })
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(client.metrics).toMatchObject({ retries: 1, failedRequests: 1, successfulRequests: 0 })
+  })
+  it("does not turn syntactically invalid JSON into a transport retry", async () => {
+    const request = vi.fn<typeof fetch>(async () => new Response("{invalid}"))
+    const client = new RetryingHttpClient({ fetch: request, maxAttempts: 3, requestTimeoutMs: 1000 })
+    const response = await client.get(new URL("https://provider.example/data"))
+    await expect(response.json()).rejects.toBeInstanceOf(SyntaxError)
+    expect(request).toHaveBeenCalledOnce()
+  })
   it("preserves an explicit redirect policy for credentialed requests", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response("ok"))
     const client = new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })

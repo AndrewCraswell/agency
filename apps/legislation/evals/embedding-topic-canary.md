@@ -52,10 +52,7 @@ bills, then rechecked after seeding to prove 122 embedded treatments and 26 unem
 
 ## Next gate
 
-1. Create dedicated, foreign-keyed embedding tables under the `legislation` schema.
-2. Inventory and migrate or deliberately discard the 429,261 inline historical vectors without issuing new provider
-   requests.
-3. Run a larger human-judged pool that grades related results not covered by exact source subjects.
-4. Repeat the semantic and lexical measurements through the MCP boundary after the storage migration.
-5. Approve a bounded historical rollout only if recall, latency, storage growth, and cost remain within the recorded
-   limits.
+The subsequent dedicated-storage and routed MCP work is recorded in [the routed canary](embedding-canary.md). Current
+input integrity, frozen-evaluation requirements and rebuild authorization belong to the
+[embedding guide](../docs/engineering/embedding-rollout-plan.md). Do not treat this early experiment as an active
+migration queue or permission to discard/reuse old vectors.

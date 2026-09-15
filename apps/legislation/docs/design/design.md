@@ -1,6 +1,6 @@
 # Legislative research app design specification
 
-September 14, 2026
+Maintained design handoff; product priorities and navigation follow the current product specification and IA.
 
 ## 1 Purpose and design assignment
 
@@ -12,8 +12,28 @@ Produce an information architecture, annotated screen designs, reusable componen
 prototypes. This brief contains the requirements needed for preliminary design. It describes intended behavior rather
 than claiming that every supporting API, dataset, or notification integration is ready.
 
-The primary experience is **ask a question, inspect the evidence, and decide what to follow**. Users can also browse
-records and manage their work directly. Opening evidence must preserve the conversation and its research context.
+The primary experience is **ask, inspect evidence, maintain an issue, and prepare a reviewed update** for association
+and boutique policy researchers. Users can also browse and manage work directly; evidence inspection preserves context.
+
+Use the [IA collection requirements](../product/information-architecture.md#supporting-discovery) for high-volume surfaces:
+period scope, grouping, filters, ordering, bounded rendering and selection. Show those behaviors in connected
+desktop/mobile designs, not only short sample lists.
+
+### Workflow handoffs
+
+The [product specification](../product/product-spec.md) owns ICP priorities and scope; the IA owns navigation.
+The focused contracts below own their respective behavior. This brief retains shared visual requirements and examples,
+not a competing conversation contract or proof of implemented capabilities.
+
+| Deliverable | Owning design specification |
+| --- | --- |
+| Open chat anywhere, manage turns/references, render answers, inspect citations and write selected work back | [Conversations and product integration](conversations.md) |
+| Maintain issues, prepare/review briefs and navigate exact evidence | [IA objects, surfaces and connected flows](../product/information-architecture.md) |
+| Configure monitoring and in-app/email delivery | [Notification experience](../product/notification-experience.md) |
+| Govern account/integrations and conditional shared work | [Product boundaries](../product/product-spec.md), [organization behavior](../product/organization-features.md) |
+
+Use one coherent source fixture set across the connected journeys. Reuse shared collection, evidence and craft components;
+do not implement separate chat and direct-control versions of the same feature.
 
 ### Fixed product decisions
 
@@ -41,13 +61,15 @@ Do not introduce additional product capabilities through visual mockups without 
 
 | Perspective | Typical task | What the design must help them understand |
 | --- | --- | --- |
+| Association policy researcher | Prepare a recurring member/board update | Relevant developments, exact amended text, selected findings and reviewable citations |
 | Lobbyist | Track an issue across states, notice a hearing change, review amended text | What changed, the next published event, supporting evidence, and notification timing |
 | Person following representatives | Identify an officeholder and understand their work | Correct identity and service period, sponsorship versus bill outcomes, and the question behind a vote |
 | Lawyer | Follow proposed legal changes and compare provisions | Exact versions and passages, as-of dates, effective-date conditions, and limits of corpus coverage |
 | Non-profit researcher | Follow an issue across jurisdictions and prepare an update | Why records match, gaps in coverage, manageable alerts, and reusable cited findings |
 | Company researcher | Monitor proposed changes relevant to an industry | Differences across jurisdictions and the evidence behind a relevance assessment |
 
-These perspectives inform one shared interface. Do not require users to choose a persona or build five separate modes.
+The [ICP strategy](../product/icp.md) prioritizes association teams and solo/boutique researchers. Other perspectives
+test evidence comprehension, not separate product modes or equal go-to-market priority.
 Industry relevance and political or legal interpretations must never be presented as established facts without evidence.
 
 ## 3 Information architecture
@@ -63,8 +85,11 @@ Explore
   Bills
   Representatives
   Committees
+  Meetings
 Settings
   Account
+  Address
+  Data and privacy
   Notifications
   Integrations
     MCP connection
@@ -122,52 +147,22 @@ versions when switching views. The on-screen keyboard must not conceal the compo
 
 ## 5 Conversation screens
 
-### Home and first use
+The [conversation integration specification](conversations.md) is the canonical handoff for these screens and supersedes
+earlier conversation/context/citation/action examples wherever they disagree. It defines global and contextual entry,
+linear turns, the composer, supported content blocks, reference tagging, evidence citations, truthful activity and explicit
+write-back. Its canvas alignment section distinguishes reusable components from unsupported visible controls.
 
-**Purpose:** make it immediately clear that users can ask questions and take product actions.
+| Surface | Design emphasis |
+| --- | --- |
+| Home/new draft | Composer and explicit scope; no mandatory setup or issue; references alone do not submit |
+| Active conversation | One readable transcript/composer, selected references and optional shared evidence view |
+| Contextual entry | Reuse the same conversation and destination picker; Ask/Add to context stage input without sending |
+| History | Authorized conversations with title, recent activity, rename and consequential deletion; no public sharing |
+| Progress and recovery | Truthful executed work, incomplete output and original-operation recovery, not private chain-of-thought |
+| Write-back | Exact proposed destination and confirmed receipt; Issues/Brief/Following own the saved result |
 
-Content order: main composer, editable scope controls, a small set of concrete starting prompts, then recent work when
-available. Show New conversation and navigation without a mandatory onboarding questionnaire.
-
-Suggested prompt types: find bills on an issue, review a representative's votes, inspect committee activity, and follow
-a bill. Draft example: “Find housing bills in the states I select.” Avoid claiming complete nationwide coverage.
-
-The composer supports multiline input, an explicit send button, and visible submission state. Any keyboard shortcut
-must be discoverable. Do not show attachment, voice, web-browsing, or external-source controls unless separately approved.
-
-**Design variants:** first visit, returning user, selected jurisdiction/session, and ambiguous record selection.
-
-### Active conversation
-
-**Purpose:** turn questions into verifiable research and interactive product actions.
-
-Content order: conversation title and context, user question, response with citations and structured results, follow-up
-composer. Context shows selected jurisdictions, sessions/date ranges, issue, and records. Resolve relative dates to a
-visible interval and timezone. Scope edits affect subsequent requests; earlier answers retain their original scope.
-
-Support these response forms using consistent components:
-
-| Response | Required content | Available actions |
-| --- | --- | --- |
-| Cited explanation | Short answer, supporting citations, relevant limitations | Open evidence; ask follow-up; copy |
-| Record results | Identity, jurisdiction/session, status or role, matching excerpt | Filter; open; add to issue; follow |
-| Activity results | Actor where known, action, date, related record, source | Inspect action; open related record |
-| Bill progress | Established stages and current recorded state | Inspect supporting actions; open bill |
-| Comparison | Named inputs, differences, supporting passages | Open full comparison; inspect text |
-| Follow preview | Target, events, effective channels, frequency/timezone | Adjust; confirm; cancel |
-
-Show meaningful states: waiting, searching, generating, complete, stopped, failed. Do not simulate progress percentages
-or display hidden reasoning. Stopping preserves partial output marked incomplete. A retry retains the user's question.
-An action proposal, an action being saved, and a successfully saved subscription have different visual states.
-
-If the outcome of a save is unknown, show that uncertainty and a check-status recovery action. Do not offer a blind
-retry that might create duplicate subscriptions. Signing in again must not automatically replay a pending action.
-
-### Conversation history
-
-Provide recent activity, recognizable titles, open, rename, and delete. Show personal ownership. Deletion explains that
-it removes the conversation without silently removing separately saved issues or follows. Confirm destructive deletion
-and preserve history if deletion fails. Public sharing and team access are outside initial scope.
+Deleting a conversation does not delete independently saved issues, findings or follows. Shared history requires the
+organization ownership and authorization contracts; it is not enabled merely by a workspace selector or this handoff.
 
 ## 6 Discovery and evidence screens
 
@@ -218,8 +213,9 @@ and incomplete history. Label any fictional example clearly as illustrative.
 
 ### Representative detail
 
-Content order: identity and jurisdiction, current/historical offices and service dates, follow control, activity,
-sponsored/cosponsored bills, amendments, recorded votes, and memberships.
+Overview is profile-only: identity, current/historical service, office and supported staff information. Keep activity,
+bills, amendments, votes and Current/Past memberships in their own sections. Header actions are Follow and Ask, not export
+or duplicated metrics. See the [IA evidence hierarchy](../product/information-architecture.md#linked-evidence).
 
 Separate actions by the person from later updates to bills they sponsor. Show office or membership applicable when an
 action occurred. A vote includes its motion/question and procedural context; do not equate a procedural vote with a
@@ -228,8 +224,8 @@ Avoid activity-based effectiveness, ideology, or agreement scores.
 
 ### Committee detail
 
-Content order: identity, jurisdiction/chamber and purpose, follow control, next published meeting, recent actions,
-membership/leadership, referred bills, meetings/agendas, and available materials.
+Overview is profile-only: identity, purpose and office. Members, activity, bills, meetings and materials have their own
+sections; do not repeat them as overview counters or related-record rails. Follow and Ask remain the header actions.
 
 Separate formal committee actions, meeting/publication updates, and changes elsewhere to referred bills. Users can open
 members, bills, meetings, documents, and official evidence. Include current/historical membership and unknown dates.
@@ -281,9 +277,8 @@ information will be saved. Following is an explicit additional decision.
 
 ### Issue detail
 
-Content order: name and personal ownership, editable scope, recent matched changes, included records, query matches,
-exclusions, evidence comparison, and linked subscriptions. Provide resume research, edit scope, include/exclude record,
-configure follows, and preview brief.
+Use the bounded overview with direct Records, Findings, Compare and Brief subviews. Keep name/ownership and saved scope
+visible; provide Resume research, scope/inclusion controls and explicit following. Do not duplicate an entire issue in chat.
 
 Show why records matched and distinguish user inclusion from automated query matches. Excluding a record must explain
 its effect on this issue and affected notifications. Query changes have an effective time and preview whether existing
@@ -298,9 +293,10 @@ Compare records across jurisdictions using bill identity, version/status date, r
 change, known effective-date information, and coverage gaps. Separate factual text from an assessment of relevance to
 the user. Do not assert company-specific compliance obligations from an industry label alone.
 
-A brief preview contains issue scope, as-of time, selected findings, citations, user annotations, and limitations. Users
-inspect sources, edit the selection, and copy reviewed text. Preview is not publication. No send-to-colleagues button,
-public conversation sharing, or implied persistent report archive is required. File export formats remain open.
+A brief moves through preparation, draft, evidence review and reviewed copy. Persist selection, reporting interval,
+text, annotations, citations and review state together. Changed inputs/content require review again. Preserve real
+source/version dates, not a routine As-of badge. Personal review is not publication, independent approval or an archive;
+organization exports/sharing remain a separately gated extension.
 
 ## 9 Following and Novu notifications
 
@@ -320,10 +316,9 @@ choices. Advanced detail may be expandable; the saved configuration must be unam
 Some categories require additional backend work. Annotate their dependency in the design handoff; do not replace a
 specific event with an unexplained generic update. Users can inspect, edit, pause, resume, and cancel existing follows.
 
-In-app and email are the ordinary channels. Webhooks are an advanced integration. Frequencies are immediate, hourly,
-and daily. Daily delivery is at 08:00 in the selected timezone; hourly closes on the hour. Immediate follows use a short
-coalescing window after detection. Delivery cadence is not a guarantee about when the source publishes or is collected.
-Weekly schedules, quiet hours, SMS, push, and chat delivery are outside the initial contract.
+The [notification contract](../product/notification-experience.md#preferences-and-timing) owns channel, cadence, batching,
+preference and dispatch semantics. In-app/email are ordinary channels; webhooks stay secondary. Do not invent additional
+schedules/channels or translate configured cadence into guaranteed source detection or receipt.
 
 ### Bell and Updates
 
@@ -348,23 +343,25 @@ Settings, Notifications exposes global channel permissions, supported category p
 and timezone. A follow requesting email cannot override global email opt-out. Show the effective state in the follow
 preview with a route to change preferences. Legislative urgency never makes alerts impossible to disable.
 
-Following detail includes delivery history and distinct queued, confirmed, suppressed, failed, and unknown states.
-Provider acceptance is not proof of receipt. Pause/cancellation affects future dispatch; messages already sent may
-still arrive. Design one correction notification, a rescheduled meeting, a failed delivery, and an unavailable inbox.
+Following detail defaults to full-width Matched events, with Delivery history secondary and attempts collapsed in selected
+detail. Preserve per-channel queued, accepted, delivered-where-evidenced, suppressed, failed and unknown outcomes.
+Design correction/reschedule and failed/unknown delivery alongside unavailable inbox; never equate acceptance with receipt.
 
 ## 10 Account and integration screens
 
 Account shows identity, applicable account context, and sign-out. Do not introduce team roles or invitations into the
-initial personal experience. Recovery from an expired session restores the intended destination and draft research.
+initial personal experience. Existing authentication flows handle expiry and safe return without dedicated lifecycle screens.
 
 Integrations has MCP and advanced webhook entries. MCP setup shows the product server URL with copy action, supported
-external-client authentication instructions, capabilities, and help. Distinguish instructions provided from a connection
-actually verified. Authorization listing/revocation is shown only where supported. Never expose server credentials or
+external-client authentication instructions and help, with no in-app connection-status or verification UI. Users check
+access in their own client. Authorization listing/revocation requires provider support. Never expose server credentials or
 ask users to copy browser-session tokens. Connecting this app to arbitrary external MCP sources is outside scope.
 
 Webhook management accounts for destination creation, verification, editing, secret rotation, removal, and failure
 feedback. Secret handling is an advanced flow; include one-time display and clear recovery states without exposing
 secrets in screenshots or shared prototype examples. Novu's operational dashboard is not an end-user page.
+
+The [account/integrations plan](../product/account-integrations-action-plan.md) owns current privacy, provider and billing gates.
 
 ## 11 Components and required state coverage
 
@@ -382,6 +379,36 @@ Create reusable variants rather than one-off mockups for every result or message
 | Issue controls | Scope revision, included/excluded record, relevance reason, follow preview |
 | Notifications | Read/unread/archived, multiple matching reasons, paused, suppressed, failed, unavailable |
 | Forms | Default/focus/disabled/invalid/saving/success, destructive confirmation, unknown save result |
+| Collection parts | Toolbar, applied scope, group heading, pagination, selection, retrieval limit, preview footer, period picker, date control |
+
+### Shared collection parts
+
+Every collection described in the [IA](../product/information-architecture.md#supporting-discovery) is assembled from one set of
+canvas components rather than a toolbar redrawn per screen. They exist on the `Collections — Shared parts` board and
+must be instanced, not copied by hand, so a change to paging or scope language reaches every surface at once.
+
+| Part | Canvas id | Contract it carries |
+| --- | --- | --- |
+| Collection — Toolbar | `yBfzT` | Collection search, principal scope picker, Filters with an applied count, Sort |
+| Collection — Applied scope | `ky1Gk` | The scope in force stays readable, with Reset to the collection's stated defaults |
+| Collection — Group heading | `pLJPC` | One grouping level, never an accordion; repeats marked continued when a group spans pages |
+| Collection — Pagination | `pyj8X` | Twenty a page, Previous and Next, exact totals only when returned for the whole filtered set |
+| Collection — Selection bar | `nhoEp` | Selection by record across pages, page-scoped header checkbox, count and Clear |
+| Collection — Retrieval limit | `eSkBu` | A ranked-search window stated as a window, with a route to refine |
+| Collection — Preview footer | `QGPwm` | At most five records and a View all that carries the same scope through |
+| Collection — Period picker | `u6hXE` | Sessions grouped by jurisdiction with published dates and classification |
+| Collection — Date control | `We77V` | The filtered field is named, and undated records are listed rather than counted as matches |
+
+Scope, sort, grouping and paging stay four separate ideas. Scope decides which records qualify, sort orders the whole
+matching set, grouping only adds headings to that order, and paging bounds what is drawn. A heading is never allowed to
+imply that a page holds a complete month or session, and a preview limit is never presented as a total.
+
+Do not narrate these rules on screen. A note explaining that search covers the whole collection rather than the current
+page, that a repeated heading means the month continues, that a cancelled meeting stays on the list, or that closing a
+drawer discards edits is design rationale, not product copy. The control, the marker and the row already carry it. Write
+a line only when it tells the user something the interface cannot show: that a date was never published, that an unknown
+position is not a No, that a message was accepted rather than received, or what a scope change will do before they
+confirm it. Keep needed qualifiers and consequences concise; do not impose a sentence quota on correctness.
 
 Every major surface needs populated, loading, empty, partial-data, and recoverable-error designs. Include examples with
 long titles, dense histories, many versions, missing vote positions, no known next event, and failed document extraction.
@@ -401,9 +428,9 @@ Use plain, neutral language. Preserve official terminology where necessary and e
 coverage qualifications next to the affected claim. Avoid unsupported promises such as real-time nationwide coverage,
 exhaustive legal research, or guaranteed delivery. Do not use dot glyphs as visual separators.
 
-Navigation and example copy are draft wording. Fluent Agent MCP review is required when available before implementation
-acceptance; it was unavailable during preparation of this brief. The designer should annotate copy questions separately
-from interaction questions.
+Review new/changed customer-facing copy with Fluent Agent MCP when available and record the guidance applied. Historical
+unavailability is not a current tool status; the conversation handoff records its own review. Annotate copy questions
+separately from interaction questions.
 
 ## 13 Prototype scenarios and representative content
 
@@ -421,7 +448,7 @@ Label fictional records as illustrative; do not invent official source links or 
 | Open an older cited version, see newer-text notice, compare versions | Original citation stays fixed; user chooses the new version deliberately |
 | Open bell, read update, inspect evidence, pause follow, check settings | Inbox state stays consistent; archiving and pausing are distinct; email opt-out is respected |
 | Open external record link with expired session, sign in, continue | Destination returns; pending mutations are not replayed |
-| Open MCP setup | User can distinguish setup instructions, authentication, and verified connectivity |
+| Open MCP setup | Correct address and authentication instructions; verification occurs in the external client, without an in-app status claim |
 
 Run the primary research flow and notification management on both desktop and mobile. Prototype at least one missing-data
 and one failed-action recovery path rather than only successful responses.
@@ -454,10 +481,11 @@ keyboard/focus behavior, and any data dependency. Do not mark an unimplemented i
 - Subscription previews show effective delivery settings and support direct management.
 - Bell, Updates, email, and follow history form a coherent notification experience.
 - Desktop, mobile, keyboard, enlarged-text, and required recovery states are accounted for.
-- Each of the five audience scenarios has a connected prototype path.
+- Primary ICP reporting/question journeys and supporting evidence scenarios have connected prototype paths.
 
-The persona critique was simulated, not a user study. Validate prototypes with at least one participant from each
-perspective before design acceptance. Observe whether they identify scope, interpret evidence, configure intended
+The persona critique was simulated, not a user study. Recruit qualified target researchers under the
+[ICP validation plan](../product/icp.md#7-validation-and-decision-rules), adding specialist perspectives where they expose
+distinct interpretation risks. Observe whether they identify scope, interpret evidence, configure intended
 notifications, and recover from missing data without coaching. Resolve critical misunderstandings and repeat affected
 flows. Engineering browser acceptance follows implementation and is separate from design review.
 
@@ -473,7 +501,7 @@ Keep team/client workspaces, organization-wide distribution, campaign/contact to
 arbitrary external MCP sources, general web research, court/regulatory feeds, deadline calculations, and
 company-specific compliance determinations outside the initial personal design. Billing and address lookup may be
 explored in mockups under the [design handoff](#design-handoff); their implementation and provider activation remain
-separately gated. Organization extensions are specified in [organization features](organization-features.md).
+separately gated. Organization extensions are specified in [organization features](../product/organization-features.md).
 Public conversation sharing, file export formats, weekly digests, quiet hours, and additional channels require decisions.
 
 The designer should bring back proposals for visual direction, responsive panel behavior, dense comparison layouts,
@@ -482,14 +510,14 @@ be called out explicitly for product review.
 
 ## 16 Supporting specifications
 
-The [product implementation backlog](backlog.md) maps this brief to features, pages, integrations, dependencies,
+The [product implementation backlog](../backlog/backlog.md) maps this brief to features, pages, integrations, dependencies,
 and completion evidence.
 
 This is the canonical design brief; it supersedes the preliminary experience requirements and simulated persona critique. Use the following focused contracts for additional detail:
 
-- [Product specification](product-spec.md)
-- [Information architecture](information-architecture.md)
-- [Notification experience and Novu integration](notification-experience.md)
+- [Product specification](../product/product-spec.md)
+- [Information architecture](../product/information-architecture.md)
+- [Notification experience and Novu integration](../product/notification-experience.md)
 
 Maintain this brief when approved product decisions change. The supporting specifications retain the detailed API,
 data, and notification contracts; resolve contradictions before implementation rather than designing around assumptions.
@@ -501,7 +529,7 @@ data, and notification contracts; resolve contradictions before implementation r
 ## Design handoff and remaining review work
 
 Consolidated September 14, 2026 from the completed overhaul and two superseded design reviews. The current design
-artifact is [legislationpen.pen](../../legislationpen.pen); the screen requirements above define the intended
+artifact is [legislation.pen](../../legislation.pen); the screen requirements above define the intended
 experience. This section preserves useful constraints and unresolved review work without repeating old frame counts,
 completed work orders or superseded token replacements. It does not certify the current design or shipped UI.
 
@@ -509,13 +537,13 @@ completed work orders or superseded token replacements. It does not certify the 
 
 ### Design authority and scope
 
-- Use the [product specification](product-spec.md), [information architecture](information-architecture.md), and
-  the screen requirements above for product behavior. Use the [product backlog](backlog.md)
+- Use the [product specification](../product/product-spec.md), [information architecture](../product/information-architecture.md), and
+  the screen requirements above for product behavior. Use the [product backlog](../backlog/backlog.md)
   for implementation acceptance; completing mockups does not mark a product task Done.
 - Billing and address lookup are allowed in design exploration. Their payment, entitlement, geography/provider and
   release requirements remain deferred. The removed representative-lookup API is not an available implementation.
 - Mobile push has no approved delivery contract. Current personal notification scope is in-app/email; organization
-  digests, Slack and Teams belong to the separate [organization proposal](organization-features.md).
+  digests, Slack and Teams belong to the separate [organization proposal](../product/organization-features.md).
 - The source file still imports the shadcn library. Preserve that import and the deliberate Tabra/shadcn mapping.
   The original review's recommendation to remove it is superseded.
 
@@ -532,14 +560,14 @@ completed work orders or superseded token replacements. It does not certify the 
 - Use tokenized color, typography and spacing. The five 118px search-label alignment offsets are now the named
   `label-column` token at the same value; they remain an alignment constant, not a spacing step, and not a general
   license to hardcode layout values.
-- Auditing that a value *references* a token is not sufficient. Renaming `accent` to its shadcn meaning left 214
-  foregrounds across roughly forty screens pointing at it, resolving to `#E7EAE8` at 1.00:1 against their own
-  background: correctly tokenized and completely invisible. After any token rename, resolve foreground and background
-  token *values* and check contrast, not just that a token is in use.
+- After token changes, resolve foreground/background values and check contrast; a valid token reference can still
+  produce invisible text. Historical counts from a token-renaming incident are not a current audit.
 - Legislative progress is a sequence of recorded states, not a completion percentage. Unknown, missing and unavailable
   evidence must remain distinguishable from zero or confirmed absence. Never rely on color alone for status.
 - Panel and standalone-page presentations share the same evidence hierarchy. Preserve exact citations/versions,
-  readable long-form text, and a visible path from inline coverage notes to Coverage and sources.
+  readable long-form text, direct official source links and record-specific limitations. The removed Coverage and sources
+  destination must not be recreated. Vote and meeting direct links use their shared drawer/sheet content under the
+  [IA return contract](../product/information-architecture.md#evidence-entry-and-return), not duplicate page templates.
 - The later review deliberately retained `Shell — App Sidebar` and `Shell — Nav Item, Active Count`. Zero instances
   alone are not deletion authority; the earlier instruction to delete the sidebar is superseded.
 - Disabled optional slots and intentional absolute overlays need visual review before treating them as clipping defects.
@@ -560,9 +588,9 @@ automatic Done states are inferred from the historical reports.
 | State completeness | Amendment, meeting, vote, supporting material, coverage, search, conversations, billing and address mockups | Foundation and design; legislative pages |
 | Responsive behavior | Narrow layouts for evidence/search/coverage and exploratory billing/address screens; 320px reflow and enlarged text | Foundation and design; release acceptance |
 | Keyboard/focus behavior | Real screen focus states, modal focus return, keyboard navigation; more than a showcase example | Foundation and design; release acceptance |
-| Navigation reconciliation | Reachable search, meetings and coverage destinations. Inline coverage notes now carry a visible link to Coverage and sources on all 27 instances | Foundation and design; legislative pages |
+| Navigation reconciliation | Reachable search, meetings, settings and direct evidence links; shared drawer/page return behavior and direct source access per the evidence-navigation handoff | Foundation and design; legislative pages |
 | Research components | Consistent answer block, evidence container, reader and comparison typography | Conversation and research; legislative pages |
-| Copy and usability | Fluent review when available, five-persona prototype evaluation and resolution of critical misunderstandings | Integrations and release |
+| Copy and usability | Fluent guidance, target-ICP prototype evaluation and resolution of critical misunderstandings | Integrations and release |
 
 The previous design reviews were scenario and artifact audits, not evidence of interviews or production usability.
 Use the acceptance flows in the designer brief and verify implemented UX in the integrated browser before release.
@@ -571,13 +599,7 @@ Use the acceptance flows in the designer brief and verify implemented UX in the 
 
 ### Canvas tooling notes
 
-These cost several wasted rebuild cycles and are worth knowing before editing the artifact.
-
-- A screenshot of a frame created in the same or an adjacent call often returns blank. That is refresh lag, not broken
-  layout. Do not delete and rebuild a frame because its screenshot looked empty.
-- Screenshotting a `fill_container` or `layoutPosition: absolute` node returns blank by design. Screenshot its parent.
-- Reported `y` bounds carry a constant +50px offset, so children can appear to overflow a parent that they actually
-  fit. Subtract it before concluding there is a clipping defect.
-- `Get` with a visitor silently fails to traverse some subtrees. A `try/catch` around it will report zero findings
-  rather than an error. Cross-check any zero result with a second method before trusting it.
-- Clip reports on disabled optional slots and on descendants of absolute overlays are expected noise, not defects.
+Access the encrypted design only through Pencil tools and read their current schema/reference. Inspect the meaningful
+parent and rendered output before diagnosing a blank screenshot or bounds issue; historical refresh/+50px artifacts
+are not universal geometry rules. Some subtrees have resisted broad traversal, so zero matches do not prove zero usage.
+Exclude disabled ancestors from visible-clipping conclusions and never rebuild/delete solely from one tool result.

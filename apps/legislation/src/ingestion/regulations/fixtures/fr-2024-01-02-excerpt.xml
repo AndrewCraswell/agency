@@ -1,0 +1,233 @@
+<?xml version='1.0' encoding='utf-8'?>
+<FEDREG><DATE>Tuesday, January 2, 2024</DATE>
+    <RULE>
+            <PREAMB>
+                <PRTPAGE P="5" />
+                <AGENCY TYPE="F">NUCLEAR REGULATORY COMMISSION</AGENCY>
+                <CFR>10 CFR Part 20</CFR>
+                <DEPDOC>[NRC-2023-0218]</DEPDOC>
+                <SUBJECT>Regulatory Guide: Health Physics Surveys for Byproduct Material at NRC-Licensed Processing and Manufacturing Plants</SUBJECT>
+                <AGY>
+                    <HD SOURCE="HED">AGENCY:</HD>
+                    <P>Nuclear Regulatory Commission.</P>
+                </AGY>
+                <ACT>
+                    <HD SOURCE="HED">ACTION:</HD>
+                    <P>Regulatory guide: withdrawal.</P>
+                </ACT>
+                <SUM>
+                    <HD SOURCE="HED">SUMMARY:</HD>
+                    <P>The U.S. Nuclear Regulatory Commission (NRC) is withdrawing Regulatory Guide (RG) 8.21, “Health Physics Surveys for Byproduct Material at NRC-Licensed Processing and Manufacturing Plants.” This RG is being withdrawn because there is more up-to-date guidance in NUREG-1556, “Consolidated Guidance About Materials Licenses,” making RG 8.21 obsolete.</P>
+                </SUM>
+                <EFFDATE>
+                    <HD SOURCE="HED">DATES:</HD>
+                    <P>The effective date of the withdrawal of RG 8.21 is January 2, 2024.</P>
+                </EFFDATE>
+                <ADD>
+                    <HD SOURCE="HED">ADDRESSES:</HD>
+                    <P>Please refer to Docket ID NRC-2023-0218 when contacting the NRC about the availability of information regarding this document. You may obtain publicly available information related to this document using any of the following methods:</P>
+                    <P>
+                        • 
+                        <E T="03">Federal Rulemaking Website:</E>
+                         Go to 
+                        <E T="03">https://www.regulations.gov</E>
+                         and search for Docket ID NRC-2023-0218. Address questions about Docket IDs in 
+                        <E T="03">Regulations.gov</E>
+                         to Stacy Schumann; telephone: 301-415-0624; email: 
+                        <E T="03">Stacy.Schumann@nrc.gov.</E>
+                         For technical questions, contact the individuals listed in the 
+                        <E T="02">FOR FURTHER INFORMATION CONTACT</E>
+                         section of this document.
+                    </P>
+                    <P>
+                        • 
+                        <E T="03">NRC's Agencywide Documents Access and Management System (ADAMS):</E>
+                         You may obtain publicly available documents online in the ADAMS Public Documents collection at 
+                        <E T="03">https://www.nrc.gov/reading-rm/adams.html.</E>
+                         To begin the search, select “Begin Web-based ADAMS Search.” For problems with ADAMS, please contact the NRC's Public Document Room (PDR) reference staff at 1-800-397-4209, at 301-415-4737, or by email to 
+                        <E T="03">PDR.Resource@nrc.gov.</E>
+                    </P>
+                    <P>
+                        • 
+                        <E T="03">NRC's PDR:</E>
+                         The PDR, where you may examine and order copies of publicly available documents, is open by appointment. To make an appointment to visit the PDR, please send an email to 
+                        <E T="03">PDR.Resource@nrc.gov</E>
+                         or call 1-800-397-4209 or 301-415-4737, between 8 a.m. and 4 p.m. eastern time (ET), Monday through Friday, except Federal holidays.
+                    </P>
+                </ADD>
+                <FURINF>
+                    <HD SOURCE="HED">FOR FURTHER INFORMATION CONTACT:</HD>
+                    <P>
+                        Don Lowman, telephone: (301) 415-5452; email: 
+                        <E T="03">Don.Lowman@nrc.gov,</E>
+                         or Harriet Karagiannis, Office of Nuclear Regulatory Research, telephone: 301-415-2493; email: 
+                        <E T="03">Harriet.Karagiannis@nrc.gov.</E>
+                         Both are staff of the Office of Nuclear Regulatory Research at the U.S. Nuclear Regulatory Commission, Washington, DC 20555-0001.
+                    </P>
+                </FURINF>
+            </PREAMB>
+            <SUPLINF>
+                <HD SOURCE="HED">SUPPLEMENTARY INFORMATION:</HD>
+                <P>
+                    The NRC is withdrawing RG 8.21, “Health Physics Surveys for Byproduct Material at NRC-Licensed Processing and Manufacturing Plants.” The NRC staff issued RG 8.21 in 1979 to describe the methods and procedures considered acceptable by the NRC staff to comply with the survey requirements found in part 20 of title 10 of the 
+                    <E T="03">Code of Federal Regulations</E>
+                     (10 CFR), “Standards for Protection Against Radiation.” Although 10 CFR part 20 was revised in 1991 (May 21, 1991; 56 FR 23390), RG 8.21 was not updated.
+                </P>
+                <P>
+                    Since the staff had consolidated and followed the latest guidance pertinent to materials licensees found in NUREG-1556, “Consolidated Guidance About Materials Licenses,” RG 8.21 became outdated. Specifically, guidance for the advanced survey/measurement techniques and other more recent survey procedures are currently included in NUREG-1556, Volume 12, Revision 1 (ADAMS Accession No. ML18136A704). Issues identified during the periodic reviews of RG 8.21 in 2012 and 2023 include: 1) the citations to the regulations described in RG 8.21 were not consistent with those listed in the 1991 revision of 10 CFR 20, 2) several of the references were outdated (
+                    <E T="03">e.g.,</E>
+                     some references were dated from the 1950's and no longer available to the public), and 3) the latest advances since 1979 in survey/measurement techniques and equipment that have been effective were not included in RG 8.21. For these reasons and because NUREG-1556 provides current health physics survey guidance to NRC byproduct material licensees, the NRC determined that RG 8.21 is no longer needed and is being withdrawn.
+                </P>
+                <P>Withdrawal of an RG means that the guide no longer provides useful information or has been superseded by other guidance, technological innovations, congressional actions, or other events. The withdrawal of RG 8.21 does not alter any prior or existing NRC licensing approval or the acceptability of licensee commitments to RG 8.21. Although RG 8.21 is withdrawn, current licensees may continue to use it, and withdrawal does not affect any existing licenses or agreements. However, RG 8.21 should not be used in future requests or applications for NRC licensing actions.</P>
+                <SIG>
+                    <DATED>Dated: December 26, 2023.</DATED>
+                    <P>For the Nuclear Regulatory Commission.</P>
+                    <NAME>Stephen M. Wyman,</NAME>
+                    <TITLE>Acting Chief, Regulatory Guide and Programs Management Branch, Division of Engineering, Office of Nuclear Regulatory Research.</TITLE>
+                </SIG>
+            </SUPLINF>
+            <FRDOC>[FR Doc. 2023-28797 Filed 12-29-23; 8:45 am]</FRDOC>
+            <BILCOD>BILLING CODE 7590-01-P</BILCOD>
+        </RULE>
+        <PRORULE>
+            <PREAMB>
+                <PRTPAGE P="37" />
+                <AGENCY TYPE="F">DEPARTMENT OF TRANSPORTATION</AGENCY>
+                <SUBAGY>Federal Aviation Administration</SUBAGY>
+                <CFR>14 CFR Part 21</CFR>
+                <DEPDOC>[Docket No. FAA-2022-1135]</DEPDOC>
+                <SUBJECT>Airworthiness Criteria: Special Class Airworthiness Criteria for the Blackshape S.p.A., Model BK160-200 Very Light Airplane</SUBJECT>
+                <AGY>
+                    <HD SOURCE="HED">AGENCY:</HD>
+                    <P>Federal Aviation Administration (FAA), Department of Transportation (DOT).</P>
+                </AGY>
+                <ACT>
+                    <HD SOURCE="HED">ACTION:</HD>
+                    <P>Notice of proposed airworthiness criteria.</P>
+                </ACT>
+                <SUM>
+                    <HD SOURCE="HED">SUMMARY:</HD>
+                    <P>The FAA announces the availability of, and requests comments on, the proposed airworthiness criteria for the Blackshape S.p.A., Model BK160-200 Very Light Airplane (VLA). This document proposes the airworthiness criteria that the FAA finds to be appropriate and applicable for the VLA design.</P>
+                </SUM>
+                <EFFDATE>
+                    <HD SOURCE="HED">DATES:</HD>
+                    <P>Send comments on or before February 1, 2024.</P>
+                </EFFDATE>
+                <ADD>
+                    <HD SOURCE="HED">ADDRESSES:</HD>
+                    <P>Send comments identified by Docket No. FAA-2022-1135 using any of the following methods:</P>
+                    <P>
+                        • 
+                        <E T="03">Federal eRegulations Portal:</E>
+                         Go to 
+                        <E T="03">https://www.regulations.gov/</E>
+                         and follow the online instructions for sending your comments electronically.
+                    </P>
+                    <P>
+                        • 
+                        <E T="03">Mail:</E>
+                         Send comments to Docket Operations, M-30, U.S. Department of Transportation (DOT), 1200 New Jersey Avenue SE, Room W12-140, West Building Ground Floor, Washington DC, 20590-0001.
+                    </P>
+                    <P>
+                        • 
+                        <E T="03">Hand Delivery or Courier:</E>
+                         Take comments to Docket Operations in Room W12-140 of the West Building Ground Floor at 1200 New Jersey Avenue SE, Washington, DC, between 9 a.m. and 5 p.m., Monday through Friday, except Federal holidays.
+                    </P>
+                    <P>
+                        • 
+                        <E T="03">Fax:</E>
+                         Fax comments to Docket Operations at 202-493-2251.
+                    </P>
+                    <P>
+                        <E T="03">Privacy:</E>
+                         The FAA will post all comments it receives, without change, to 
+                        <E T="03">https://www.regulations.gov/,</E>
+                         including any personal information the commenter provides. Using the search function of the docket website, anyone can find and read the electronic form of all comments received into any FAA docket, including the name of the individual sending the comment (or signing the comment for an association, business, labor union, etc.). DOT's complete Privacy Act Statement can be found in the 
+                        <E T="04">Federal Register</E>
+                         published on April 11, 2000 (65 FR 19477-19478), as well as at 
+                        <E T="03">https://www.dot.gov/privacy</E>
+                        .
+                    </P>
+                    <P>
+                        <E T="03">Docket:</E>
+                         Background documents or comments received may be read at 
+                        <E T="03">https://www.regulations.gov/</E>
+                         at any time. Follow the online instructions for accessing the docket or go to Docket Operations in Room W12-140 of the West Building Ground Floor at 1200 New Jersey Avenue SE, Washington, DC, between 9 a.m. and 5 p.m., Monday through Friday, except Federal holidays.
+                    </P>
+                </ADD>
+                <FURINF>
+                    <HD SOURCE="HED">FOR FURTHER INFORMATION CONTACT:</HD>
+                    <P>
+                        Tara Fitzgerald, Certification Coordination Section, AIR-613, Certification Engagement Branch, Policy and Standards Division, Aircraft Certification Service, Federal Aviation Administration; telephone 781-238-7130; email 
+                        <E T="03">tara.fitzgerald@faa.gov</E>
+                        .
+                    </P>
+                </FURINF>
+            </PREAMB>
+            <SUPLINF>
+                <HD SOURCE="HED">SUPPLEMENTARY INFORMATION:</HD>
+                <P />
+                <HD SOURCE="HD1">Comments Invited</HD>
+                <P>The FAA invites interested people to take part in the development of these airworthiness criteria by sending written comments, data, or views. The most helpful comments reference a specific portion of the airworthiness criteria, explain the reason for any recommended change, and include supporting data. Comments on operational, pilot certification, and maintenance requirements would address issues that are beyond the scope of this document.</P>
+                <P>Except for Confidential Business Information as described in the following paragraph, and other information as described in title 14, Code of Federal Regulations (14 CFR) 11.35, the FAA will file in the docket all comments received, as well as a report summarizing each substantive public contact with FAA personnel concerning these proposed airworthiness criteria. Before acting on this proposal, the FAA will consider all comments received on or before the closing date for comments. The FAA may consider comments filed late if it is possible to do so without incurring delay. The FAA may change these proposed airworthiness criteria based on received comments.</P>
+                <HD SOURCE="HD1">Confidential Business Information</HD>
+                <P>Confidential Business Information (CBI) is commercial or financial information that is both customarily and actually treated as private by its owner. Under the Freedom of Information Act (FOIA) (5 U.S.C. 552), CBI is exempt from public disclosure. If your comments responsive to these proposed airworthiness criteria contain commercial or financial information that is customarily treated as private, that you actually treat as private, and that is relevant or responsive to these proposed airworthiness criteria, it is important that you clearly designate the submitted comments as CBI. Please mark each page of your submission containing CBI as “PROPIN.” The FAA will treat such marked submissions as confidential under the FOIA, and the indicated comments will not be placed in the public docket of these proposed airworthiness criteria. Send submissions containing CBI to the individual listed under For Further Information Contact. Comments that the FAA receives, which are not specifically designated as CBI, will be placed in the public docket for these proposed airworthiness criteria.</P>
+                <HD SOURCE="HD1">Background</HD>
+                <P>The European Union Aviation Safety Agency (EASA) submitted an application to the FAA, on behalf of Blackshape S.p.A., on February 10, 2020, for a special class type certificate under 14 CFR 21.17(b) for the Model BK160-200 VLA.</P>
+                <P>
+                    The BK160-200 is a single reciprocating engine airplane (Lycoming IO-320-D1B with constant speed Hartzell propeller), full carbon composite low wing design, with a retractable tri-cycle landing gear. It has conventional control systems (elevator, aileron, rudder, flaps, and longitudinal trim) and provides seats for two persons in a tandem seat configuration with a maximum takeoff gross weight (MTGW) of 850 kilograms (kg) (1,874 pounds). It also has advanced avionic displays, a stall speed of 50 knots, a rechargeable lithium-ion battery, and will perform night visual flight rules (VFR) operations.
+                    <PRTPAGE P="38" />
+                </P>
+                <HD SOURCE="HD1">Discussion</HD>
+                <P>The FAA establishes airworthiness criteria to ensure the safe operation of aircraft in accordance with 49 U.S.C. 44701(a) and 44704. VLA are eligible for type certification under 14 CFR part 23 or can be type certificated by the FAA as special class aircraft under 14 CFR 21.17(b). Under the provisions of 14 CFR 21.17(b), the airworthiness standards for special class aircraft are those the FAA finds to be appropriate and applicable to the specific type design.</P>
+                <P>
+                    In 1992, the FAA published advisory circular (AC) 21.17-3,
+                    <SU>1</SU>
+                    <FTREF />
+                     “Type Certification of Very Light Airplanes Under [14 CFR] 21.17(b)” to provide guidance on an acceptable means of compliance for type, production, and airworthiness certification for VLA. That AC designates the former Joint Aviation Authorities (JAA) of Europe publication, “Joint Aviation Requirements for Very Light Aeroplanes” (JAR-VLA) dated April 26, 1990, as acceptable airworthiness criteria that provides an equivalent level of safety under 14 CFR 21.17(b) for FAA type certification of VLA as a special class of aircraft. After EASA was formed, EASA developed its VLA certification standards (CS-VLA) from JAR-VLA, with CS-VLA becoming effective on November 14, 2003.
+                </P>
+                <FTNT>
+                    <P>
+                        <SU>1</SU>
+                         Available at 
+                        <E T="03">https://drs.faa.gov</E>
+                        .
+                    </P>
+                </FTNT>
+                <P>The FAA issued its “Policy for Type Certification of Very Light Airplanes as a Special Class of Aircraft” on October 11, 2023 (88 FR 70344). This policy states that the FAA will continue to allow the type certification of VLA as a special class of aircraft under 14 CFR 21.17(b) using CS-VLA or JAR-VLA requirements, while also allowing eligibility for certification as a normal category airplane in accordance with part 23 using accepted means of compliance. The FAA accepts CS-VLA and JAR-VLA airworthiness criteria as providing an equivalent level of safety under § 21.17(b) for special class type certification of VLA airplanes. The policy explains the FAA will consider proposals for airplane designs that differ from the VLA limits defined in AC 21.17-3 for type certification as a special class of aircraft under § 21.17(b), provided the VLA would be certified to the JAR-VLA or CS-VLA requirements plus additional airworthiness criteria the FAA finds appropriate and applicable for the proposed design. The policy includes additional acceptable airworthiness criteria for certain design features that differ from those defined in AC 21.17-3 and that provide an equivalent level of safety under § 21.17(b) for special class type certification of VLA airplanes.</P>
+                <P>The FAA is proposing to certify the Blackshape S.p.A. Model BK160-200 VLA to CS-VLA, Amendment 1, dated March 5, 2009, with additional requirements for advanced avionic displays, VFR night operations, MTGW of 850 kg (1,874 pounds), a stall speed of 50 knots, and a rechargeable lithium-ion battery.</P>
+                <HD SOURCE="HD1">Applicability</HD>
+                <P>These proposed airworthiness criteria, established under the provisions of § 21.17(b), are applicable to the Blackshape S.p.A. Model BK160-200 VLA. Should Blackshape S.p.A. apply at a later date for a change to the type certificate to include another model, these airworthiness criteria would apply to that model as well, provided the FAA finds them appropriate in accordance with the requirements of subpart D to part 21.</P>
+                <HD SOURCE="HD1">Conclusion</HD>
+                <P>This action affects only the airworthiness criteria for one model VLA. It is not a rule of general applicability.</P>
+                <HD SOURCE="HD1">Authority Citation</HD>
+                <P>The authority citation for these airworthiness criteria is as follows:</P>
+                <P>
+                    <E T="03">Authority:</E>
+                     49 U.S.C. 106(g), 40113, 44701, 44702, 44704.
+                </P>
+                <HD SOURCE="HD1">The Proposed Airworthiness Criteria</HD>
+                <P>The FAA proposes to establish the airworthiness criteria for type certification of the Blackshape S.p.A. Model BK160-200 as EASA Certification Specifications (CS) for Very Light Aeroplanes CS-VLA, Amendment 1, dated March 5, 2009, with additional requirements identified in “Policy for Type Certification of Very Light Airplanes as a Special Class of Aircraft” (88 FR 70344, October 11, 2023) for Advanced Avionic Displays, Night-VFR Operations, Increased Maximum Certificated Takeoff Weight and Increased Stall Speed, and Rechargeable Lithium Ion Battery.</P>
+                <SIG>
+                    <DATED>Issued in Washington, DC, on December 22, 2023.</DATED>
+                    <NAME>James Wilborn,</NAME>
+                    <TITLE>Acting Manager, Certification Coordination Section, Policy and Standards Division, Aircraft Certification Service.</TITLE>
+                </SIG>
+            </SUPLINF>
+            <FRDOC>[FR Doc. 2023-28718 Filed 12-29-23; 8:45 am]</FRDOC>
+            <BILCOD>BILLING CODE 4910-13-P</BILCOD>
+        </PRORULE>
+        <NOTICE>
+            <PREAMB>
+                <PRTPAGE P="43" />
+                <AGENCY TYPE="F">DEPARTMENT OF AGRICULTURE</AGENCY>
+                <SUBAGY>Forest Service</SUBAGY>
+                <SUBJECT>Region 5 and Region 6; California, Oregon, and Washington; Forest Plan Amendment for Planning and Management of Northwest Forests Within the Range of the Northern Spotted Owl</SUBJECT>
+                <HD SOURCE="HD2">Correction</HD>
+                <P>In notice document 2023-27742 beginning on page 87393 in the issue of Monday, December 18, 2023, make the following correction:</P>
+                <P>On page 87393, in the second column, in the third and fourth lines from the bottom, “January 29, 2024” should read “February 1, 2024”.</P>
+            </PREAMB>
+            <FRDOC>[FR Doc. C1-2023-27742 Filed 12-29-23; 8:45 am]</FRDOC>
+            <BILCOD>BILLING CODE 0099-10-P</BILCOD>
+        </NOTICE>
+        </FEDREG>

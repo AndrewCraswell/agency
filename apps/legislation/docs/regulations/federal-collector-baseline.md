@@ -2,7 +2,8 @@
 
 Agreed direction, September 14, 2026: license state statutory/regulatory coverage, subject to validation and terms;
 collect federal material directly, using Vaquill's open collectors as starting implementations. Existing bill ingestion
-stays in place. This is a future design, not a validated importer or deployment.
+stays in place. This records the source/reuse decision. Local implementations and their acceptance are recorded in
+[progress](implementation-progress.md); this page is not a current implementation inventory or deployment claim.
 
 ## What improves our earlier plan
 

@@ -1,6 +1,8 @@
 # Legislative embedding model and input bakeoff
 
-Evaluated 2026-08-22. This evaluation did not write vectors to production tables.
+Evaluated 2026-08-22. This evaluation did not write vectors to production tables. The provisional single-model
+recommendation below was superseded by the [routed canary](embedding-canary.md) and
+[accepted mixed routing/current rebuild gate](../docs/engineering/embedding-rollout-plan.md). Results remain unchanged.
 
 ## Corpus and judgments
 
@@ -92,7 +94,7 @@ configuration. Sequential observed latency averaged roughly 260 to 430 milliseco
 one million searches costs about $1,000, so selective activation and query-volume projections matter more than its small
 bakeoff cost.
 
-## Decision
+## Original provisional decision
 
 Use Voyage 4 as the provisional canary model:
 
@@ -115,13 +117,13 @@ Do not use one input template for every product:
 The raw preferred-document excerpt is rejected as the bill fallback. A future sparse-bill experiment may test a
 deterministic, source-grounded synopsis, but it must be judged independently before rollout.
 
-## Limits and next gate
+## Limits and historical follow-up
 
 This is substantially larger than the first canary, but it is not a final production-quality judgment set. Passage,
 amendment, and material queries are known-item paraphrases with one relevant target each; they do not measure all
 relevant passages for broad questions. The bill topics are exhaustive only inside their fixed scopes.
 
-Before broad embedding:
+The original follow-up requirements were:
 
 1. grade the pooled top results from both finalists, including broad and confusable-negative queries for every product;
 2. split results by native/OCR, sparse/rich, jurisdiction, session age, and document length;

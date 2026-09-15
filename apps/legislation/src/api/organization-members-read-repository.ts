@@ -20,7 +20,7 @@ export interface OrganizationMembersReadRepository {
 type OrganizationMembersStore = {
   organizationExists(organizationId: string): Promise<boolean>
   listOrganizationMemberships(input: OrganizationMembersListInput): Promise<OrganizationMembersPage>
-  coverageWarnings(organizationId: string): Promise<string[]>
+  coverageWarnings(organizationId: string, isCurrent: boolean): Promise<string[]>
 }
 
 /**
@@ -41,25 +41,34 @@ export class OrganizationMembersRepository implements OrganizationMembersReadRep
       throw new LegislationError("not_found", `Organization ${input.organizationId} was not found`)
     }
     const page = await this.#store.listOrganizationMemberships(input)
-    if (input.isCurrent === true) {
-      return page
-    }
-    const warnings = await this.#store.coverageWarnings(input.organizationId)
+    const warnings = await this.#store.coverageWarnings(input.organizationId, input.isCurrent === true)
     return warnings.length === 0 ? page : { ...page, warnings: [...(page.warnings ?? []), ...warnings] }
   }
 }
 
 export function createOrganizationMembersRepository(database: LegislationDatabase): OrganizationMembersReadRepository {
   return new OrganizationMembersRepository({
-    coverageWarnings: async (organizationId) => {
+    coverageWarnings: async (organizationId, isCurrent) => {
       const rows = await database
-        .select({ chamber: organizations.chamber, name: organizations.name })
+        .select({
+          chamber: organizations.chamber,
+          name: organizations.name,
+          sourceProvider: organizations.sourceProvider,
+          membershipRelationsComplete: organizations.membershipRelationsComplete
+        })
         .from(organizations)
-        .where(and(eq(organizations.id, organizationId), eq(organizations.sourceProvider, "govinfo")))
+        .where(eq(organizations.id, organizationId))
         .limit(1)
       const organization = rows[0]
       if (organization === undefined) {
         return []
+      }
+      const warnings =
+        organization.membershipRelationsComplete === true
+          ? []
+          : ["Committee membership coverage is incomplete. These are recorded observations, not a complete roster."]
+      if (isCurrent || organization.sourceProvider !== "govinfo") {
+        return warnings
       }
       const checkpoints = await database
         .select({ stream: syncCheckpoints.stream, cursor: syncCheckpoints.cursor })
@@ -67,7 +76,7 @@ export function createOrganizationMembersRepository(database: LegislationDatabas
         .where(
           and(eq(syncCheckpoints.source, "govinfo"), like(syncCheckpoints.stream, "govinfo:committee-directory:%"))
         )
-      return committeeCoverageWarnings(checkpoints, organization)
+      return [...warnings, ...committeeCoverageWarnings(checkpoints, organization)]
     },
     listOrganizationMemberships: async (input) => await listOrganizationMemberships(database, input),
     organizationExists: async (organizationId) => {

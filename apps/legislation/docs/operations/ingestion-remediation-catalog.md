@@ -21,7 +21,12 @@ policy do not need individual entries. A failure belongs here when it exposes a
 new source contract, correctness problem, orchestration defect, unsafe resource
 limit, or terminal cohort that requires an operator decision.
 
-## Current operational snapshot
+## Historical August 21 operational snapshot
+
+Do not use this snapshot to choose today's workers, retry cohorts or rollout status. The reusable
+[document runbook](document-processing-operations.md), [state rollout](openstates-rollout-checklist.md) and
+[embedding guide](../engineering/embedding-rollout-plan.md) own current operating requirements. Incident entries below
+retain their original evidence; this cleanup does not revalidate the production counters or repeat any repair.
 
 At the last refresh, the document corpus contained 4,066,204 processed,
 277,221 evidence-based unsupported, 7,785 pending, 4,322 failed, and 238
@@ -34,7 +39,7 @@ explicitly selects them. The numbers can move in both directions:
 retryable failures return to pending when their backoff expires, and a bulk
 archive pass can move thousands of records directly to processed.
 
-| Workstream | Current state | Next decision |
+| Workstream | State at the recorded snapshot | Decision at that time |
 | --- | --- | --- |
 | Bill documents | Florida and Pennsylvania are the only active tails. At 05:47 UTC on August 21, 4,343,425 of 4,355,770 rows were processed or evidence-based unsupported, leaving 12,345 pending, processing, or failed rows. | Finish the two publisher-limited tails, then validate that no pending, processing, or eligible failed document remains. Review exhausted failures separately; do not silently retry them. |
 | OCR | The 1,009 missing Arizona artifacts were re-downloaded and OCR-processed. The final 38 genuine low-text bill documents exhausted the bounded policy and became terminal `malformed-document`; no bill document remains `ocr-required`, and the temporary historical controller is removed. Supporting-material processing hands image-only rows directly to the permanent OCR worker and waits for the result. | Reconcile every material still classified `ocr-required` before closing the material phase. Treat any future unowned bill-document OCR accumulation as a pipeline defect. |

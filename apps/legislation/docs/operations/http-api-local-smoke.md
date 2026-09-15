@@ -61,8 +61,8 @@ deadline is needed. The harness separately asserts unauthenticated `401` rejecti
 
 The final release profile must have no skipped checks once every manifest operation is unblocked: its reviewed
 full-profile report must have `status: "passed"`, with empty `blocked`, `failed`, and `skipped` arrays. Until then, the
-two OCR-blocked document operations must remain explicit blocked evidence and cannot be promoted by omitting their
-fixtures. To produce the final report, provide jurisdiction and session IDs, bill ID, vote
+missing/blocked fixture checks must remain explicit and cannot be promoted by omitting their fixtures. Historical
+OCR blockers are not current route status; use [API acceptance](passage-search-delivery.md). Provide jurisdiction and session IDs, bill ID, vote
 ID, change ID, material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID,
 both search-query variables, and authenticated mode with an explicit smoke token. A report with any skipped check is
 evidence of an incomplete fixture configuration, not a pass.
@@ -70,8 +70,8 @@ evidence of an incomplete fixture configuration, not a pass.
 For the implemented scoped bill pages, set `LEGISLATION_SMOKE_PROFILE=scoped-bills` with both
 `LEGISLATION_SMOKE_JURISDICTION_ID` and `LEGISLATION_SMOKE_SESSION_ID`. This profile runs health, readiness,
 unknown-route, unsupported-method, and enabled-auth rejection checks, then requires nonempty exact canonical
-`Page<BillSummary>` responses from both scoped bill routes. It intentionally skips the full profile's known
-In-progress and Blocked endpoint set. It also requires `LEGISLATION_SMOKE_CANONICAL_API_BASE_URL` or
+`Page<BillSummary>` responses from both scoped bill routes. Acceptance is limited to that selected profile, not the full
+API. It also requires `LEGISLATION_SMOKE_CANONICAL_API_BASE_URL` or
 `LEGISLATION_PUBLIC_API_BASE_URL`: the value must be a credential-free HTTP(S) origin at its root, without a query or
 fragment. Set the smoke-specific value when the expected configured public base URL differs from
 `LEGISLATION_SMOKE_BASE_URL`; the profile verifies every bill canonical URL against it.
@@ -90,8 +90,9 @@ $env:LEGISLATION_SMOKE_PROFILE = "vote-change"
 $env:LEGISLATION_SMOKE_REQUIRE_AUTH = "true"
 $env:LEGISLATION_SMOKE_VOTE_ID = "vote:approved-fixture"
 $env:LEGISLATION_SMOKE_CHANGE_ID = "change:approved-fixture"
-$env:LEGISLATION_SMOKE_TOKEN = Read-Host "Bearer token"
+$env:LEGISLATION_SMOKE_TOKEN = Read-Host "Bearer token" -MaskInput
 pnpm --filter legislation smoke:api
+Remove-Item Env:LEGISLATION_SMOKE_TOKEN
 ```
 
 ## Shared protocol smoke
@@ -157,13 +158,13 @@ Complete these assertions once per composed server build and repeat mutation ass
       and amendment hits preserve structured/document-backed identity.
 - [ ] Request a document diff for two versions of one bill; verify bounds, counts, ordered operations, canonical source
       mapping, and rejection of cross-bill or nonexistent document pairs.
-- [ ] Confirm universal search and research answers remain absent while their fusion, generation, citation, and budget
-      controls are blocked.
+- [ ] Exercise universal search and research answers through the declared contract, including fusion, citations and
+      budget/dependency failures. Missing acceptance evidence does not mean an implemented route should return 404.
 
 ## Subscription and webhook product gate
 
-Do not execute this section or compose the handler until the backlog's repository, encryption, idempotency, matching,
-and delivery adapters are implemented and reviewed.
+Use isolated fixtures and authorized destinations. Confirm repository, encryption, idempotency, matching and delivery
+prerequisites before executing mutations; passing CRUD does not establish real source-event or channel delivery.
 
 - [ ] Prove organization and personal ownership isolation for list, read, patch, cancel, events, and deliveries.
 - [ ] Prove exact normalized subscription duplicates conflict for both null-organization and organization owners while

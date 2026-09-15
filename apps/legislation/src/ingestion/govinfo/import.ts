@@ -4,6 +4,7 @@ import { upsertBillAggregates } from "../../db/queries/bill-aggregates.js"
 import { bills, syncCheckpoints } from "../../db/schema/schema.js"
 import { federalBillId } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
+import { ingestionErrorSummary } from "../errors.js"
 import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
@@ -95,7 +96,7 @@ export async function importGovInfoPackages(
           return {
             failure: {
               identifier: source.packageId,
-              message: error instanceof Error ? error.message : "Unknown GovInfo package failure",
+              message: ingestionErrorSummary(error),
               retryable: error instanceof ProviderHttpError && error.retryable
             },
             status: "failed" as const
@@ -177,7 +178,7 @@ async function persistPrepared(
       results[index] = {
         failure: {
           identifier: item.source.packageId,
-          message: error instanceof Error ? error.message : "Unknown GovInfo persistence failure",
+          message: ingestionErrorSummary(error),
           retryable: false
         },
         status: "failed"

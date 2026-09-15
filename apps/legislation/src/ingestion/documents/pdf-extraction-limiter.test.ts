@@ -37,4 +37,18 @@ describe("createPdfExtractionLimiter", () => {
   it("rejects an invalid concurrency limit", () => {
     expect(() => createPdfExtractionLimiter(0)).toThrow("positive integer")
   })
+
+  it("releases the shared slot after a failed extraction", async () => {
+    const limiter = createPdfExtractionLimiter()
+    const gate = Promise.withResolvers<void>()
+    const failed = limiter.run("application/pdf", async () => {
+      await gate.promise
+      throw new Error("decoder failed")
+    })
+    const observed = failed.catch((error: unknown) => error)
+    const next = limiter.run("application/pdf", async () => "next batch")
+    gate.resolve()
+    expect(await observed).toEqual(new Error("decoder failed"))
+    await expect(next).resolves.toBe("next batch")
+  })
 })

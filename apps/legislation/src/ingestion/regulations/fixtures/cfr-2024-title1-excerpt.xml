@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CFRDOC><FMTR><TITLEPG>
+            <CODE />
+            <PRTPAGE P="1" />
+            <TITLENUM>Title 1</TITLENUM>
+            <SUBJECT>General Provisions</SUBJECT>
+            <REVISED>Revised as of January 1, 2023</REVISED>
+            <CONTAINS>Containing a codification of documents of general applicability and future effect</CONTAINS>
+            <DATE>As of January 1, 2023</DATE>
+            <PUB>
+                <P>Published by the Office of the Federal Register National Archives and Records Administration as a Special Edition of the Federal Register</P>
+            </PUB>
+        </TITLEPG>
+        </FMTR><TITLE><CFRTITLE>
+            <TITLEHD>
+                <PRTPAGE P="1" />
+                <HD SOURCE="HED">Title 1—General Provisions</HD>
+            </TITLEHD>
+            <CFRTOC>
+                <PTHD>Part</PTHD>
+                <CHAPTI>
+                    <SUBJECT>
+                        <E T="04">chapter i</E>
+                        —Administrative Committee of the Federal Register
+                    </SUBJECT>
+                    <PG>1</PG>
+                </CHAPTI>
+                <CHAPTI>
+                    <SUBJECT>
+                        <E T="04">chapter ii</E>
+                        —Office of the Federal Register
+                    </SUBJECT>
+                    <PG>51</PG>
+                </CHAPTI>
+                <CHAPTI>
+                    <SUBJECT>
+                        <E T="04">chapter iii</E>
+                        —Administrative Conference of the United States
+                    </SUBJECT>
+                    <PG>301</PG>
+                </CHAPTI>
+                <CHAPTI>
+                    <SUBJECT>
+                        <E T="04">chapter iv</E>
+                        —Miscellaneous Agencies
+                    </SUBJECT>
+                    <PG>425</PG>
+                </CHAPTI>
+                <CHAPTI>
+                    <RESERVED>
+                        <E T="04">chapter v</E>
+                         [Reserved]
+                    </RESERVED>
+                </CHAPTI>
+                <CHAPTI>
+                    <SUBJECT>
+                        <E T="04">chapter vi</E>
+                        —National Capital Planning Commission
+                    </SUBJECT>
+                    <PG>602</PG>
+                </CHAPTI>
+            </CFRTOC>
+        </CFRTITLE>
+        <PART>
+                    <EAR>Pt. 1</EAR>
+                    <HD SOURCE="HED">PART 1—DEFINITIONS</HD>
+                    <AUTH>
+                        <HD SOURCE="HED">Authority:</HD>
+                        <P>44 U.S.C. 1506; sec. 6, E.O. 10530, 19 FR 2709; 3 CFR, 1954-1958 Comp., p.189.</P>
+                    </AUTH>
+                    <SECTION>
+                        <SECTNO>§ 1.1</SECTNO>
+                        <SUBJECT>Definitions.</SUBJECT>
+                        <P>As used in this chapter, unless the context requires otherwise—</P>
+                        <P>
+                            <E T="03">Administrative Committee</E>
+                             means the Administrative Committee of the Federal Register established under section 1506 of title 44, United States Code;
+                        </P>
+                        <P>
+                            <E T="03">Agency</E>
+                             means each authority, whether or not within or subject to review by another agency, of the United States, other than the Congress, the courts, the District of Columbia, the Commonwealth of Puerto Rico, and the territories and possessions of the United States;
+                        </P>
+                        <P>
+                            <E T="03">Document</E>
+                             includes any Presidential proclamation or Executive order, and any rule, regulation, order, certificate, code of fair competition, license, notice, or similar instrument issued, prescribed, or promulgated by an agency;
+                        </P>
+                        <P>
+                            <E T="03">Document having general applicability and legal effect</E>
+                             means any document issued under proper authority prescribing a penalty or course of conduct, conferring a right, privilege, authority, or immunity, or imposing an obligation, and relevant or applicable to the general public, members of a class, or persons in a locality, as distinguished from named individuals or organizations; and
+                        </P>
+                        <P>
+                            <E T="03">Filing</E>
+                             means making a document available for public inspection at the Office of the Federal Register during official business hours. A document is filed only after it has been received, processed and assigned a publication date according to the schedule in part 17 of this chapter.
+                        </P>
+                        <P>
+                            <E T="03">Regulation</E>
+                             and 
+                            <E T="03">rule</E>
+                             have the same meaning.
+                        </P>
+                        <CITA>[37 FR 23603, Nov. 4, 1972, as amended at 50 FR 12466, Mar. 28, 1985]</CITA>
+                    </SECTION>
+                </PART>
+                </TITLE></CFRDOC>

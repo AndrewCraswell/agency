@@ -16,21 +16,14 @@ pnpm install
 pnpm --filter legislation dev
 pnpm --filter legislation test
 pnpm --filter legislation check:types
-pnpm --filter legislation verify
-```
-
-The current public HTTP runtime is `apps/legislation` on Next.js 16.3.1. Its `app/api` Route Handlers are the
-deployment boundary. The former `legislation-api` Railway service is deleted and must not be started or redeployed:
-
-```text
-pnpm --filter legislation build
-pnpm --filter legislation test
-pnpm --filter legislation check:types
 pnpm --filter legislation lint
-pnpm --filter legislation dev
+pnpm --filter legislation build
+pnpm verify
 ```
 
-The standalone development server listens on `127.0.0.1:3100` by default and exposes:
+`dev` starts Next.js; `dev:service` starts the retained standalone test/development server on `127.0.0.1:3100` by default.
+The public deployment boundary is the Next.js `app/api` Route Handlers. The deleted `legislation-api` Railway service
+must not be started or redeployed. Both runtime checks expose:
 
 - `GET /health` for process health.
 - `GET /ready` for dependency readiness.
@@ -203,8 +196,9 @@ The profile is cumulative for every enabled route block.
 
 ```powershell
 $env:LEGISLATION_WEB_SMOKE_BASE_URL = 'https://legislation-web-production-b024.up.railway.app'
-$env:LEGISLATION_WEB_SMOKE_TOKEN = Read-Host 'API bearer token'
+$env:LEGISLATION_WEB_SMOKE_TOKEN = Read-Host 'API bearer token' -MaskInput
 pnpm --filter legislation smoke:foundation
+Remove-Item Env:LEGISLATION_WEB_SMOKE_TOKEN
 ```
 
 `LEGISLATION_WEB_SMOKE_TOKEN` is optional for an isolated runtime with authentication disabled and required when the

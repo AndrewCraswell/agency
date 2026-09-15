@@ -155,18 +155,18 @@ assignment.
   [original 1999 Directory, printed page 345](https://www.govinfo.gov/content/pkg/CDIR-1999-06-15/pdf/CDIR-1999-06-15.pdf).
 - Reviewed Cochran name/state contradiction, September 8, 2026:
   [February 8, 1999 Congressional Record, Daily Digest D114](https://www.govinfo.gov/content/pkg/CREC-1999-02-08/pdf/CREC-1999-02-08.pdf).
-- Reviewed Cochran name/state contradiction, September 8, 2026: [official House biography
-  C000567](https://history.house.gov/People/Listing/C/COCHRAN,-William-Thad-(C000567).
+- Reviewed Cochran name/state contradiction, September 8, 2026:
+  [official House biography C000567](https://history.house.gov/People/Listing/C/COCHRAN,-William-Thad-%28C000567%29).
 - Reviewed McIntyre/Dreier spellings, September 8, 2026:
   [McIntyre's official biography, M000485](https://history.house.gov/People/Detail/17932).
 - Reviewed McIntyre/Dreier spellings, September 8, 2026:
   [Military Readiness hearing](https://commdocs.house.gov/committees/security/has081030.000/has081030_0.HTM).
 - Reviewed McIntyre/Dreier spellings, September 8, 2026:
   [Military Procurement hearing, HASC 106-50](https://commdocs.house.gov/committees/security/has076200.000/has076200_0.HTM).
-- Reviewed McIntyre/Dreier spellings, September 8, 2026: [Dreier's official biography,
-  D000492](https://history.house.gov/People/Listing/D/DREIER,-David-Timothy-(D000492).
-- Reviewed Jackson Lee spelling, September 8, 2026: [Official biography
-  J000032](https://history.house.gov/People/Listing/J/JACKSON-LEE,-Sheila-(J000032).
+- Reviewed McIntyre/Dreier spellings, September 8, 2026:
+  [Dreier's official biography, D000492](https://history.house.gov/People/Listing/D/DREIER,-David-Timothy-%28D000492%29).
+- Reviewed Jackson Lee spelling, September 8, 2026:
+  [Official biography J000032](https://history.house.gov/People/Listing/J/JACKSON-LEE,-Sheila-%28J000032%29).
 - Reviewed Jackson Lee spelling, September 8, 2026:
   [Immigration and Claims, June 10, 1999](https://commdocs.house.gov/committees/judiciary/hju62494.000/hju62494_0.HTM).
 - Reviewed Jackson Lee spelling, September 8, 2026:
@@ -181,12 +181,12 @@ assignment.
   [Aviation hearing rosters](https://www.govinfo.gov/content/pkg/CHRG-106shrg86337/html/CHRG-106shrg86337.htm).
 - Reviewed Bennett chair identity, September 8, 2026:
   [February 23, 2000 opening statement](https://www.jec.senate.gov/archive/Documents/Hearings/bennet22300.htm).
-- Reviewed Fowler middle initial, September 8, 2026: [Official biography
-  F000328](https://history.house.gov/People/Listing/F/FOWLER,-Tillie-Kidd-(F000328).
+- Reviewed Fowler middle initial, September 8, 2026:
+  [Official biography F000328](https://history.house.gov/People/Listing/F/FOWLER,-Tillie-Kidd-%28F000328%29).
 - Reviewed Fowler middle initial, September 8, 2026:
   [March 1, 2000 Military Readiness hearing roster](https://commdocs.house.gov/committees/security/has061030.000/has061030_0.HTM).
-- Reviewed McHugh middle initial, September 8, 2026: [official biography
-  M000472](https://history.house.gov/People/Listing/M/MCHUGH,-John-Michael-(M000472).
+- Reviewed McHugh middle initial, September 8, 2026:
+  [official biography M000472](https://history.house.gov/People/Listing/M/MCHUGH,-John-Michael-%28M000472%29).
 - Reviewed McHugh middle initial, September 8, 2026:
   [Research and Development hearing rosters](https://commdocs.house.gov/committees/security/has070010.000/has070010_0.HTM).
 - Reviewed McHugh middle initial, September 8, 2026:

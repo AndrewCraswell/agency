@@ -2,9 +2,9 @@
 
 ## Scope
 
-Future federal regulatory work is specified in [regulatory backfills and workflows](../regulations/acquisition-workflows.md),
-with its own bounded admission and source budgets. Those task IDs and schedules are proposed, not part of the active
-inventory below. Their activation requires the [regulatory validation gates](../regulations/implementation-backlog.md).
+Regulatory work is specified in [backfills and workflows](../regulations/acquisition-workflows.md), with its own bounded
+admission and source budgets. Preparation/copy/rights workers exist locally; that does not add active source schedules
+to this inventory. Activation follows the [production gates](../regulations/production-backlog.md).
 
 Trigger.dev is the only orchestration system for recurring synchronization and bounded historical backfills. TypeScript
 workers own provider calls, normalization, transactions, checkpoints, idempotency, leases, and failure classification.
@@ -83,11 +83,9 @@ jurisdictions can replace one lane with two to eight disjoint document-ID
 partitions, but only after the original lane is terminal and its lease has been
 released. Publisher download leases remain global across lanes, partitions,
 and deployment versions, so more Trigger workers do not bypass a website's host
-limit. Each embedding product uses 16 deterministic shards; the approved
-four-product bulk pass can therefore fill all 64 derived-worker slots. Operators
-reduce that fan-out if provider throttling, retries, or database pressure appear.
-The embedding root-controller queue permits exactly four concurrent product
-waves so waiting shard controllers do not serialize unrelated products.
+limit. Embedding recreation now has a separate sequential 128-shard coordinator and pooled capacity gate; do not reuse
+the original 16-shard/four-product layout as the current full-pass plan. See the
+[embedding contract and rebuild hold](embedding-rollout-plan.md). No new rebuild is authorized here.
 Supporting-material history uses 24 deterministic ID
 shards; each 25-row child has two database connections and a renewable
 60-minute lease, while publisher traffic remains globally limited. OCR uses a
@@ -177,8 +175,8 @@ After the 113-119 cutover corpus passes validation, expand federal history witho
    is complete only when every scheduled unit is terminal, coverage gaps are classified, and no critical validation
    issue remains.
 
-Historical expansion uses manual Trigger tasks and separate rebuild IDs. It must not consume the four-worker recurring
-Congress capacity or delay current-Congress freshness; operators activate each range only after the preceding range has
+Historical expansion uses manual Trigger tasks and separate rebuild IDs under the shared Congress coordinator. Reserve
+capacity for current-Congress freshness; operators activate each range only after the preceding range has
 completed and provider-rate telemetry remains within its observed allowance.
 
 ### Milestone: replace Open States API freshness with self-hosted scrapers
@@ -196,7 +194,7 @@ self-hosted scraper scope:
 4. Schedule bills every 30 minutes, events every two hours, and entity snapshots daily using jurisdiction-scoped queues,
    leases, checkpoints, retry policies, and publisher-aware limits. A failed scraper preserves the prior canonical state
    and retries; it does not fall back to the quota-limited API.
-5. After a jurisdiction passes a seven-day freshness and completeness soak, retire its transitional Open States API
+5. After a jurisdiction passes the current evidence-based freshness and completeness gate, retire its transitional Open States API
    schedule definitions. Complete the milestone only when all 52 jurisdictions have active scraper schedules, no API
    freshness dependency remains, and coverage validation passes.
 

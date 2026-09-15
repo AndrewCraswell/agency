@@ -16,8 +16,9 @@ expired, incorrectly signed, wrong-issuer, or wrong-audience tokens receive the 
 `AUTH_MODE=workos`; production startup rejects missing idempotency or webhook-secret encryption keys.
 
 Use the WorkOS staging application identified by `WORKOS_CLIENT_ID`. Register the exact remote MCP resource URL and only
-approved redirect URIs for the target clients. Enable Client ID Metadata Document support and Dynamic Client
-Registration in WorkOS Connect, and configure the exact MCP endpoint as the default Resource Indicator. The resource
+approved redirect URIs for the target clients. Enable Client ID Metadata Document support; enable Dynamic Client
+Registration only for clients that require it. Register the exact MCP Resource Indicator; a default is needed only for
+a client that omits `resource`. The resource
 server validates bearer tokens from public
 issuer, audience, and JWKS URLs, so it does not require a WorkOS client secret. Rotate signing keys in WorkOS; the bounded
 JWKS cache refreshes them without an application code change. Any OAuth client credential belongs to the client and must
@@ -69,7 +70,8 @@ prove the browser-consent flow. `apps/legislation` is the canonical application 
 test a Resource Indicator against the deleted `legislation-api` service. That service is historical evidence only and is
 neither current nor a rollback target.
 
-The browser-consent procedure can now use the exact endpoint above. Outbound MCP-to-API access uses its own dedicated
+This is retained deployment evidence, not a fresh live check. Confirm the active deployment and configured endpoint before
+running the canary. Outbound MCP-to-API access uses its own dedicated
 machine credential; it must never substitute for the incoming MCP-resource token. Final runtime cleanup remains gated
 on positive deployed MCP acceptance.
 
@@ -98,7 +100,7 @@ use the default Resource Indicator. See [WorkOS MCP authentication](https://work
 
 ### Browser-consent MCP canary
 
-1. Confirm the Current status gate is cleared, then in an MCP client the operator controls add the public Next.js `/mcp`
+1. Confirm the route/configuration prerequisites above, then in an MCP client the operator controls add the public Next.js `/mcp`
    endpoint. Do not paste an access token into the client.
 2. Start a read-only session. The client should receive the server's `401` challenge, discover protected-resource
    metadata, and send the user to WorkOS in the browser.

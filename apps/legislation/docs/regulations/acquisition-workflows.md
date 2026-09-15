@@ -3,7 +3,119 @@
 Proposed implementation contract, September 14, 2026. Parent: [implementation](implementation.md).
 Uses the [data contract](data-contract.md) and [federal reuse decision](federal-collector-baseline.md).
 
+## Implemented passage preparation worker
+
+`src/trigger/tasks/regulatory-passage-preparation.ts` defines an explicit-dispatch task for one published edition or
+publication observation. Its strict payload is `{scope: {kind: "edition" | "publication", id}, model, limit?}`.
+`model` must explicitly select `openai/text-embedding-3-small` or `voyageai/voyage-4`; it chooses the offline tokenizer,
+not an embedding provider request. `limit` defaults to 10 versions and is capped at 25. No caller offsets, text or
+regeneration switches are accepted.
+
+The queue allows two workers, each with a pool of at most two canonical connections and a ten-minute task ceiling.
+The existing canonical preparation service enforces the 120-second renewable lease, fencing and immutable per-version
+checkpoints. Retries allow four attempts with 125–180-second delays, so a killed worker's lease can expire. Only a
+successful pending batch that processed at least one version submits a successor. Submission uses the parent run ID
+as its idempotency key; the successor reloads remaining work from canonical checkpoints. A completed replay stops
+without dispatch. Pools close before submission; invalid counts, no progress, lost leases and database failures do
+not start successors. URLs and the actual database name are checked before preparation to reject the isolated search
+store.
+
+This implements one worker, not the full orchestration graph. It is not deployed or scheduled. Controller admission,
+measured aggregate connection budgets, lost/cancelled task recovery, deployment packaging smoke and load testing remain
+open. Preparation does not acknowledge a search copy, select a model route or enqueue embeddings.
+
+## Implemented passage copy worker
+
+`regulatory-passage-copy` accepts only `{preparationId, afterOrdinal?, limit?}`. It defaults to ordinal -1 and ten
+versions, with a maximum of 25. The service requires a completed, unleased preparation, verifies its item count and
+current source rights, and checks that a supplied cursor belongs to that preparation. It reads one extra item to
+identify continuation. Each immutable generation is copied with the existing transactional copier, including source
+ownership, current rights and exact-content replay validation. Planning connections are released before copying.
+
+The batch stops admitting new copies after 45 seconds; one already-started copy can use the copier's existing
+60-second deadline. Only successfully committed items advance the returned cursor. A failed batch returns no new
+checkpoint; replay from its original cursor safely verifies already copied generations. The Trigger wrapper uses a
+180-second task limit, two-worker queue and two connections per source/target pool. Production configuration requires
+separate PostgreSQL hosts. Both pools close before an idempotent successor is submitted.
+
+`exhausted` means the selected traversal reached the end, not that the whole copy is ready to serve. Arbitrarily skipping
+to a valid later cursor cannot bypass whole-copy validation. The worker never acknowledges an outbox or changes search
+capabilities; `acknowledgeLegalPassageCopy` remains a separate gate. No schedules, deployed worker smoke, controller
+admission or cancellation-recovery dispatcher are provided by this slice.
+
 ## Scope and default backfill order
+
+`inspect:regulatory-canonical --manifest <frozen.json> --replay <complete-replay.json> --report <new-report.json>`
+checks the retained local eCFR database selected by `REGULATORY_TEST_DATABASE_URL`. It requires the exact complete
+replay scope and current parser hash, uses a read-only PostgreSQL connection, and takes one repeatable-read snapshot
+per title. It revalidates the stored raw file, generation/manifest identities, rights, edition dates and head precedence,
+then compares every normalized record against staged payloads and canonical identities, text, tables and memberships.
+Record queries are bounded to 100 records and 8 MiB, with the existing one-large-record exception up to the parser's
+64 MiB record limit. Queries have a 60-second timeout and each title a ten-minute comparison admission deadline.
+Only mismatch keys and categories are reported, capped at twenty samples per title; legal text is not logged.
+
+The existing `importNormalizedRegulatoryUnit` dispatch path now performs this verification before registering a new
+eCFR generation. A verified published edition returns its existing generation/edition IDs without taking a lease,
+creating another parser generation in the database or enqueueing derived work, even if the parser hash or enclosing
+inventory changed. Acquisition semantics and source output must still match exactly. Invalid published data, ambiguous
+generations and active writers block reuse rather than trigger replacement imports. Missing or unpublished units keep
+the existing import/resume path. Internal `reuseOnly: true` forbids that fallback and can execute on a read-only pool.
+The existing `import:regulatory-backfill` CLI exposes `--reuse-only` with a database-enforced read-only connection;
+this mode does not require `--apply` and fails if an input cannot be reused. `--limit` still bounds its selected prefix.
+
+This implements local eCFR reuse at the existing importer entry point. It does not deploy the full Trigger controller,
+activate schedules, acknowledge a search copy or certify a production destination. Snapshot evidence must be regenerated
+at dispatch, and annual CFR/FR retain their separate publication and reconciliation requirements.
+
+`pnpm --filter legislation replay:regulatory-parser --manifest <frozen.json> --locations <locations.json>
+--output <new-normalized-root> --report <new-report.json> [--after-unit <key>] [--limit 5]` replays up to five titles
+sequentially against freshly audited retained inputs. It reuses the existing bounded parser and generation locks.
+The manifest is replay-verified; cursors must belong to it. Completed current generations are fully validated on retry.
+The parser code hash is pinned across the batch and rechecked around each parse. Incomplete or conflicting inputs
+stop progress at the last completed unit; every invocation writes an exclusive report. Replaying that invocation after
+a crash safely revalidates committed output. No acquisition, publication or embedding tasks are dispatched.
+
+Every retained baseline is revalidated and compared with the new summary, including exact shard hashes/bytes, counts,
+source dates, warnings, element inventories and hierarchy represented in the shards. Only parser code hash, runtime
+version and elapsed time are excluded from parity. Changed serialization or shard boundaries conservatively require
+review too. Any difference produces `review_required` and a nonzero CLI exit, without changing canonical records.
+The terminal cursor means traversal exhaustion only; all batch reports and their dispositions must be reconciled
+before claiming complete parity. Canonical verification remains a separate gate even if every record is identical.
+
+`pnpm --filter legislation audit:regulatory-reuse --manifest <frozen.json> --locations <locations.json> --output <report.json>`
+audits retained raw XML and normalized output before dispatch. The locations file is an explicit array of
+`{ "rawDirectory": "...", "normalizedDirectory": "..." }` pairs; relative paths resolve from the command's working
+directory. The CLI hashes the current Python parser itself and writes a new report exclusively. It does not download,
+execute the parser, connect to a database, repair artifacts or dispatch tasks.
+
+The audit replays the frozen inventory, checks receipt identity, file size and streamed SHA-256, then validates every
+normalized shard and record with the existing parser validator. Only the enclosing inventory hash may differ in an
+otherwise identical retained acquisition unit. Competing valid raw hashes or current-parser normalized shard sets remain invalid
+and require review; an intact alternate copy can be selected while damaged copies remain visible. A missing current
+parser generation requires parsing; a missing shard inside an existing generation is damage. One metadata pass, capped
+at 10,000 entries across the explicit roots, also discovers and validates older parser generations separately. Their
+intact records cannot count as current-parser output; unreadable or invalid unassigned summaries remain inventory issues.
+A verified raw file means
+its retained bytes agree with the receipt, not that the publisher's text or canonical projection is correct.
+
+The report distinguishes `acquire`, `parse`, `review_raw`, `review_normalized` and `inspect_canonical` actions.
+`canonicalStatus` remains `not_checked` and `completeCanonicalAudit` remains false. This is the local file portion of
+ING-02; canonical editions/observations, exact memberships/content, intended deployment and dispatch integration remain
+separate work. Reports are point-in-time evidence and cannot authorize later reuse without revalidation. Exit status 1
+means an invalid unit was found; missing inputs are represented in the plan rather than treated as audit failures.
+
+The existing `scripts/plan-regulatory-backfill.ts` now accepts optional `--delivery-output <path>` alongside `--output`.
+It emits a read-only partition plan from replay-verified source evidence: current eCFR titles, FR date windows split by
+month and the cutoff's 90-day baseline, and annual CFR year/title groups with listed volume numbers. Each partition
+records corpus, federal jurisdiction, wave, explicit inclusion/reserved exclusion, expected acquisition units and
+required evidence. Annual printed revision dates remain unresolved until parsing; they are not inferred from year labels.
+An FR window with no listed XML remains `needs_independent_inventory`, with unknown document count, never known empty.
+
+Replay reconstructs the complete manifest from retained inventories and compares its units/exclusions; rehashing an
+omitted unit does not make it valid. Validation also binds inventory hashes to their source, rejects duplicate inventory
+requests and verifies size accounting. Planning makes no canonical writes, dispatches no tasks and enables neither
+embeddings nor recurring ingestion. This is a plan for the supplied scope, not a frozen nationwide release manifest
+or proof that all required renditions exist.
 
 | Wave | Contents | Completion boundary |
 | --- | --- | --- |
@@ -15,8 +127,9 @@ Uses the [data contract](data-contract.md) and [federal reuse decision](federal-
 
 These are implementation defaults, not completed downloads or a launch promise. Record absolute start/end dates and
 discovery cutoff in each manifest; never let `today` change a resumed backfill. Overlap between waves is safe under
-canonical uniqueness. Start recurring collection when the current foundation passes, without waiting for decades of
-history. Historical work sets `historical: true` and does not send customer change notifications by default.
+canonical uniqueness. Execution decision, September 14, 2026: finish the approved frozen backfill waves and their
+validation gates before ingesting ongoing new data. Keep all recurring source schedules disabled until then. Historical
+work sets `historical: true` and does not send customer change notifications by default.
 
 GovInfo documents FR bulk XML from 2000 and annual CFR XML from 1996. Do not copy the inspected scraper's 1994 bulk
 assumption. Discover actual files/volumes through source listings; a year with unavailable XML can have other
@@ -24,6 +137,21 @@ renditions. Before each wave, freeze an inventory and measure its actual bytes, 
 [GovInfo developer hub](https://www.govinfo.gov/developers)
 
 ## Adapter implementation and code reuse
+
+Before treating an FR bulk inventory as a complete wave, run `audit:fr-inventory` against a replay-validated
+FederalRegister.gov metadata snapshot covering the same frozen dates and cutoff. The implemented local audit replays
+both inventories, records each calendar date and distinguishes missing XML, missing metadata, excluded-only content,
+and no records observed. Inventory agreement still requires document reconciliation and artifact validation; a day
+with no observed records is not a verified holiday. The metadata collector bounds each audit to at most 31 days.
+The command writes its report before returning exit 1 for inventory gaps. It makes no network or canonical writes.
+
+The January 3, 2000 smoke found 75 supported publications plus one presidential document in metadata, but no bulk XML
+issue in the official monthly listing. Queue missing renditions for separately validated official PDF/text acquisition;
+do not silently mark the day complete or move the coverage start date. All 75 official PDFs for that day have now been
+acquired, replay-checked and parser-validated across 258 pages. Alternate-rendition text normalization and canonical
+publication remain pending; raw PDF coverage does not clear the bulk XML coverage gap. Prefer the implemented
+document-specific GovInfo HTML adapter before PDF segmentation: it verifies publisher document identity, date, type,
+pages and footer against the frozen metadata. See [alternate text validation](fr-metadata-validation.md#document-specific-govinfo-html).
 
 TypeScript workers own provider HTTP, credentials, host budgets, Azure artifacts, transactions and orchestration.
 Reuse/adapt Vaquill parsing logic from pinned commit `2f7aeb85a434a54a351ac44e3c188fec318f78ba`. Federal HTML website

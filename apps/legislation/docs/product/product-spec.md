@@ -1,112 +1,169 @@
-# Legislative intelligence MVP product specification
+# Legislative intelligence product specification
+
+## Product direction
+
+Updated September 15, 2026. Tabra helps a policy researcher **find relevant legislation, verify what changed, maintain
+an issue, and prepare a cited member or client update**. The outcome is repeatable, checkable research with less preparation
+and review work, not simply more tracked bills or another AI answer.
+
+This specification owns product priorities and boundaries. The [information architecture](information-architecture.md)
+owns navigation and proposed browser routes; the [design handoff](../design/design.md) owns detailed interactions and
+acceptance. The [product backlog](../backlog/backlog.md) tracks delivery. Designs, API contracts and passing tests are
+not interchangeable evidence of a released customer workflow.
 
 ## Primary user
 
-The primary user is a legislative researcher, policy analyst, journalist, or public-affairs professional who needs to
-find and verify state and federal legislation across jurisdictions without learning each source system. They need
-canonical records, official source links, and predictable retrieval through the conversational web application or an
-MCP-capable agent.
+| Priority | Customer and buyer | Job worth paying for | Qualification |
+| --- | --- | --- | --- |
+| Primary organization target | Trade associations/professional bodies with roughly 1-5 policy researchers; policy director or executive director buys | Recurring member/board updates, especially where cross-jurisdiction verification consumes substantial effort | Named issues, supported jurisdictions, recurring output and budget; team use requires delivered shared access/review |
+| Initial individual entry | Independent consultants and boutique public-affairs researchers; owner or partner buys | Verified client answers and recurring client updates | Can evaluate one research task without replacing the firm's entire operating system |
+| Selective next cohort | Funded advocacy/nonprofit policy teams; policy or program director buys | Evidence-based issue updates | Stable funding and a research need, not primarily mass outreach |
 
-## Conversational product experience
+The [ICP strategy](icp.md) owns complete profiles and acquisition/economic hypotheses. These priorities are not validated
+demand. Journalists, specialist lawyers and researchers can use the same evidence workflow without separate product modes.
+Citizens do not set the paid roadmap; enterprise, public-sector and developer offers require their own qualification.
 
-The [designer brief](design.md) is the self-contained handoff for preliminary app designs.
+[Competitors by ICP](competitors.md) shows that tracking, AI, citations and comparisons already exist elsewhere. Start by
+supplementing the buyer's existing tools on a real briefing task. Do not claim cheaper, faster or more accurate than a
+competitor without comparable evidence, or promise to replace its CRM, news, public widgets or analyst service.
 
-The home page is a chat-first research workspace. Users describe what they want to find, understand, compare, or
-follow. Responses combine cited explanations with interactive results, bill progress, activity, and subscription
-controls. The conversation is the main interface to the product. Structured views remain directly accessible through
-stable links, search, updates, and following management.
+## Core jobs and experience
 
-Bills, representatives, and committees are first-class research and following targets in the core product scope.
-Their profiles and activity must be designed together with the conversation, even when implementation is delivered
-in successive slices. This supersedes treating representative and committee profiles as optional later browsing pages.
+Conversation remains home and the flexible entry for a new question. Issues provide durable research and repeat work;
+the user can open an issue, inspect evidence and prepare a brief directly without starting another conversation. No
+dashboard, persona selection, mandatory issue creation or MCP setup stands before the first useful answer.
 
-The design brief defines features, actions, states, and designer acceptance.
-The [information architecture](information-architecture.md) defines navigation, proposed browser routes, content
-relationships, and connected flows. These documents specify intended behavior; they do not certify API or data readiness.
-The [notification experience](notification-experience.md) includes Novu delivery and preference requirements.
-Its [prototype scenarios](design.md#13-prototype-scenarios-and-representative-content) incorporate the simulated persona review.
+The [conversation integration design](../design/conversations.md) defines access from any surface, turns, rendered
+content, references/citations, truthful work progress and explicit writes back to the owning feature. Chat history,
+research references and saved findings/follows remain distinct; this does not add private reasoning display or a second
+issue/brief editor.
 
-### Core capabilities
+| Job | Required journey | Successful outcome |
+| --- | --- | --- |
+| Answer a policy question | Select jurisdiction/session -> find candidates -> inspect source passages, actors and versions -> answer with citations | A useful answer with explicit scope and limitations; saving an issue is optional |
+| Maintain an investigation | Create/reopen issue -> include or exclude records -> retain findings and annotations -> revise scope deliberately | Reusable research across conversations, without automatically following or approving every match |
+| Prepare the recurring update | Select findings and reporting scope -> compare exact versions -> inspect evidence -> review and copy the brief | A checked member/client briefing input, not an automatically published report |
+| Notice and assess changes | Explicitly follow records/queries -> review Updates or issue developments -> inspect change -> revise findings | Relevant legislative changes first; settings and delivery troubleshooting remain accessible but secondary |
+| Collaborate when required | Use authorized workspace -> assign/review selected work -> approve an identified report revision -> share with intended audience | Organization-owned, isolated research; a separate delivery gate, not implied by personal review |
 
-- Discover legislation, representatives, and committees through conversation and structured search.
-- Inspect source-linked bill, representative, and committee activity, including bills, amendments, votes, memberships,
-  meetings, and available materials. Separate an entity's own actions from updates to associated legislation.
-- Visualize a bill's recorded progress using a jurisdiction- and measure-specific path, with supporting actions,
-  uncertain stages, alternative outcomes, and a distinction between enactment and effective dates.
-- Read and compare identified document versions, open exact supporting passages, and retain research context.
-- Follow records and searches through configurable event categories, channels, and delivery frequency; review updates
-  and manage subscriptions through direct controls as well as the conversation.
-- Resume private research conversations, inspect and edit their context, and recover from interrupted requests.
-- Maintain personal issue trackers across conversations, with explicit scope, included records, saved-query follows,
-  exclusions, and source-linked updates. Separate user relevance judgments from official legislative facts.
-- Deliver in-app and email notifications through Novu, with one consistent inbox state, effective preferences,
-  transparent suppression and failure states, and durable application-owned matching and delivery records.
-- Configure external AI access to this product under Settings, Integrations, MCP. The web assistant requires no user
-  MCP setup and uses the same authorized application services as the HTTP API.
+### Essential capabilities and distinctions
 
-Conversation persistence, structured assistant responses, action execution, bill-stage mapping, and expanded activity
-subscriptions require explicit implementation contracts. Existing research-answer and subscription endpoints alone
-do not establish support for the complete experience.
+- Bills, representatives and committees remain first-class research/follow targets. Their activity, meetings, amendments,
+  votes and materials support the research job; they do not require separate persona dashboards or new top-level hubs.
+- Preserve canonical identity, official source links, exact document versions/passages and surrounding qualifiers.
+  Every substantive generated claim must cite retrieved evidence. Separate official facts, generated interpretation
+  and user assessment. Do not silently replace a saved citation with the latest text.
+- Bill progress follows the applicable jurisdiction/measure process and recorded actions, not a completion percentage.
+  Enactment is not the effective date; an individual's vote position is not the aggregate outcome; unknown is not No.
+- An issue contains explicit scope, records, queries, exclusions and selected findings. A conversation contains questions
+  and context. A follow controls monitoring. Opening evidence, adding context, including a record, reviewing a finding
+  and following it are distinct actions. Do not combine their effects to reduce apparent steps.
+- A personal brief preserves its selected evidence and review state. Changing its reviewed content or source selection
+  requires review again. It is not independent approval, an immutable report archive or a shared-client entitlement.
+- Keep one Updates inbox and bell state through Novu for in-app/email. Following defaults to matched legislative events;
+  delivery history is secondary and attempts are disclosed on demand. Accepted, delivered, suppressed, failed and unknown
+  remain distinct per channel/batch; receipt is not human review. No guaranteed alert arrival is implied.
+- Preserve draft, scope, selected evidence, filters and position when returning. Recover an unknown write by checking
+  the original operation; do not blindly retry. Use one meaningful consequence review, with Undo only for a supported reversal.
 
-## Research scenarios and success measures
+## Scope and complexity budget
 
-1. Known-bill lookup: retrieve a bill by canonical ID or jurisdiction, session, and printed identifier. Success means
-   one correct canonical record is returned within two seconds at the service boundary, with title, current status,
-   sponsors when available, and at least one official source link.
-2. Topical discovery: search for bills concerning a topic across selected jurisdictions and dates. Success means the
-   documented evaluation set places a relevant bill in the first ten results for at least 90 percent of test prompts,
-   with explicit pagination and no result outside the requested filters.
-3. Timeline review: explain the ordered actions and votes for a known bill. Success means all stored events are returned
-   in stable chronological and upstream order, ties are deterministic, and relevant official links remain available.
-4. Passage search: find bill sections containing a phrase or semantic concept. Success means exact phrases are found by
-   lexical search, semantic evaluation queries reach 80 percent recall at ten, and every match identifies its bill,
-   document version, section, and source URL.
-5. Version comparison: compare two official versions of a bill. Success means added, removed, and unchanged passages
-   are distinguished, input versions are identified unambiguously, and truncated output reports that fact.
+| Layer | Keep or add | Value and boundary |
+| --- | --- | --- |
+| Core research | Conversation, Issues with Records/Findings/Brief, evidence readers/comparison, Updates and Following | Completes the recurring output job; no separate Research or Reports destination |
+| Supporting discovery | Search and bill/person/committee/meeting directories under Explore | Direct access and scalable browsing without forcing every task through chat |
+| Conditional organization work | Durable ownership, workspace isolation, membership/offboarding, issue assignment and report review | Necessary for association/boutique team sales; never substitute shared personal credentials |
+| Conditional output/distribution | Reviewed exports, branding, named-recipient sharing and additional organization delivery channels | Add only for a qualified reporting requirement, with rights, authorization and delivery acceptance; no publishing platform by default |
+| Secondary setup | Account/privacy, optional Address, notification preferences, external MCP and webhooks under Settings | Keep supported paths, not mandatory professional onboarding or new primary navigation |
+| Separate expansion | Complete regulatory/current-law research, enterprise controls and commercial data distribution | Governed by their own contracts, readiness and economics; not unlocked by an attractive mockup |
 
-## Representative data and lookup program
+Show complexity at the point of need: scope at search/issue controls, source limitations beside affected evidence,
+review consequences before output changes, and delivery diagnostics in selected detail. Avoid generic explanatory rails,
+routine Checked/Updated/As-of decoration and duplicate Open controls. Keep real publication/event/service dates, reporting
+intervals, source uncertainty, permission boundaries and destructive consequences. Simplification must not hide them.
 
-Core representative profiles require current and historical office service, official profiles, sponsorship,
-amendments, votes, committee and event activity. Address-to-representative discovery and linked mentions in legislative
-text remain separately gated by the data roadmap. Raw address input is not an MCP contract and is not retained by
-default. The complete data, extraction, privacy, API, and rollout tasks live in the
-[identity, entity, and representative roadmap](../engineering/identity-and-representative-roadmap.md).
+For proposed complexity, name the target ICP, recurring job, simpler alternative, expected benefit, owner and acceptance
+check. Add it only when needed to complete that job or protect correctness/privacy, not to match a competitor checklist.
+Do not silently cancel already approved API/data work; this hierarchy governs product emphasis and additional scope.
 
-## Definition of done
+## Personal and organization delivery
 
-The product is ready when the package verification suite passes, the [data synchronization catalog](../engineering/data-sync-catalog.md)
-accurately describes deployed capabilities, and required external services have been validated in the target environment.
-Implemented web workflows must also pass the browser acceptance scenarios in the design brief at desktop
-and mobile sizes, including keyboard operation, evidence inspection, and incomplete-data states.
+The first complete acceptance target is a personal researcher performing the core loop in verified source scope.
+The [organization specification](organization-features.md) owns the shared extension: organization as owner, workspace
+as client/initiative access boundary, issue as investigation. It is not a separate research product or a generic CRM.
 
-## Adopted application and API program
+Shared conversations, isolated client work, assignments, approval and recipient grants need actual authorization and
+lifecycle acceptance before organization sales. Personal research stays private when someone joins an organization.
+Adding selected findings must not expose the original conversation or another client's notes. Reusing a source does not
+reuse its audience or approval. Organization switching cannot move unsaved work or grant access.
 
-The next approved product layer is a first-party web application and documented HTTP API over the canonical legislation
-data. It includes retrieval and search for bills, amendments, votes and voter identities, documents and OCR sections,
-supporting materials, people, organizations, commissions and meetings; source-grounded research answers and
-document diffs; and subscriptions with in-app, email, or webhook
-delivery. The [HTTP API contract](../engineering/api/README.md) is the design boundary. It is not evidence that these
-routes are implemented.
+[Pricing](pricing.md) owns plans, seat policy, billing and commercial rights. Paid plans and collaboration are proposed
+delivery, not activated by this specification. Personal copy/review remains useful without DOCX/PDF export, branded
+sharing, Teams/Slack routing or an API resale contract. A customer requiring those capabilities must wait for their
+delivery rather than receive a misleading replacement promise.
 
-The MCP and HTTP API will share one application-service layer. Source-grounded answers are allowed only when every
-nontrivial claim cites retrieved canonical evidence; free-form uncited summaries remain excluded.
+## Acceptance and success measures
+
+### Customer workflow acceptance
+
+| Scenario | Required evidence |
+| --- | --- |
+| Association member update | Scoped issue, irrelevant match excluded, changed provision inspected against exact versions, findings reviewed and copied with source links; reopen for the next update without rebuilding the investigation |
+| Consultant client question | Correct jurisdiction/session resolved, actor/vote context verified when relevant, concise cited answer produced; save only selected work to an issue, without a mandatory setup/migration project |
+| Monitoring and recovery | Trace an update to its source and matching rule; edit/pause/stop deliberately; distinguish suppression/failure/unknown and reconcile an unknown write without duplication |
+| Evidence navigation at scale | Filter/paginate real-sized collections, inspect a deep passage or meeting/vote from contextual and direct entry, then return without losing selection, draft or position |
+| Shared team work, when offered | Authorized colleague reviews an identified output revision; changed content invalidates approval; sharing and offboarding cannot expose personal or another workspace's research |
+
+These scenarios must pass in the integrated browser on desktop and mobile, including keyboard/focus/accessibility,
+empty/partial/unavailable evidence and interrupted operations. A canvas transition note is not a browser test.
+Use a prospect's public issue and supported jurisdictions; record data limitations rather than infer nationwide acceptance.
+
+The [ICP validation plan](icp.md#7-validation-and-decision-rules) measures preparation plus reviewer effort, repeat use,
+paid conversion, support cost and renewal. Its suggested 30% time-saving target is a pilot hypothesis, not a release
+performance claim. No critical citation/version error is acceptable in the reviewed pilot output.
+
+### Retained retrieval targets
+
+These are evaluation requirements, not claims of achieved production performance or whole-corpus completeness.
+
+| Scenario | Target |
+| --- | --- |
+| Known bill | Correct canonical record within two seconds at the service boundary; title, recorded status, available sponsors and an official link |
+| Topical discovery | A relevant bill in the first ten results for at least 90% of documented test prompts; no result outside requested filters; explicit pagination/limits |
+| Timeline | All stored events in stable chronological/upstream order with deterministic ties and available source links |
+| Passage search | Exact phrases found lexically; semantic evaluation recall at ten at least 80%; bill, version, section and source URL on every match |
+| Version comparison | Unambiguous input versions; added/removed/unchanged passages distinguished; truncation disclosed |
+
+Release requires clean repository verification, accurate [data documentation](../engineering/data-sync-catalog.md),
+validated external services and current [API/passage acceptance](../operations/passage-search-delivery.md), plus the
+relevant customer workflows above. State activation/freshness follows per-jurisdiction
+[Open States acceptance](../operations/openstates-rollout-checklist.md); ingestion fixtures alone are insufficient.
+
+## Application and API boundary
+
+The web app, [HTTP API](../engineering/api/README.md) and external MCP use one authorized application-service layer for
+canonical records, search, source-grounded answers, diffs and supported subscriptions. The broad data model includes
+people, organizations/commissions, meetings, materials and OCR sections without turning every object into primary navigation.
+In-app/email use the [notification contract](notification-experience.md); webhooks remain a supported integration path.
+Client authorization, data rights, service commitments and commercial entitlements require their owning acceptance.
+
+Core representative research includes historical/current service, source profiles, sponsorship, amendments, vote
+positions and committee/event activity. Address lookup and extracted mentions remain separately governed by the
+[identity roadmap](../engineering/identity-and-representative-roadmap.md). Manual discovery requires no address;
+raw address input is not an MCP contract and is not retained by default.
 
 ## Explicit exclusions
 
-- General web research, connecting the web assistant to arbitrary external MCP servers, and public conversation
-  sharing remain outside the initial experience. External AI clients connecting to this product's MCP server are included.
-- State recurring ingestion follows the staged [Open States rollout](../operations/openstates-rollout-checklist.md). Nationwide
-  activation and freshness claims require its per-jurisdiction acceptance; pilot extraction alone is insufficient.
-- Committee media, recordings, transcripts, Mux, and Deepgram remain deferred until a research scenario requires media
-  evidence.
-- Uncited AI summaries and autonomous policy conclusions remain deferred. The approved research-answer contract is
-  source-grounded and separately evaluated.
-- Billing, paid plans, and collaborative portfolios remain deferred for implementation; billing/address mockups may
-  be explored under the [design handoff](design.md#design-handoff). Novu is included in notification design scope;
-  implementation and deployment remain subject to the notification integration gates. The application program includes a
-  web interface and narrowly scoped subscriptions, notifications, and webhooks implemented against the HTTP contract.
-- Temporal, LangChain, LangGraph, Redis, OpenSearch, dedicated vector stores, and graph databases remain deferred until
-  measured PostgreSQL or orchestration limits justify additional operational systems.
+- No general web research, arbitrary external MCP servers in the web assistant, public conversation sharing or
+  autonomous policy/legal conclusions. External clients accessing Tabra's MCP remain included.
+- No CRM/PAC, mass advocacy, exclusive newsroom or outsourced analyst service, public member portal, legal citator,
+  compliance obligations register or automated legal deadline determination in the core research product.
+- Committee recordings/transcripts, media processing and calendar actions remain deferred until explicitly approved
+  for a required research scenario. Existing meeting notices, agendas and supported materials remain in scope.
+- Regulatory/current-law and downstream data offers need separate scope, source rights and release acceptance;
+  proposed-law evidence is not a complete legal research product.
+- Temporal, LangChain, LangGraph, Redis, OpenSearch, dedicated vector stores and graph databases remain deferred until
+  measured PostgreSQL/orchestration limits justify them.
 
-Any exclusion is reconsidered only through an architecture or product decision that names the new requirement,
-evidence, cost, owner, and effect on the release contract.
+Reconsider an exclusion only through an explicit product/architecture decision naming the ICP need, evidence, cost,
+owner and effect on the release contract. A broader competitor's feature list is not that decision.

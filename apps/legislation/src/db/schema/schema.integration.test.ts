@@ -5,7 +5,7 @@ import { asc, eq, inArray } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { createAmendmentReadRepository } from "../../api/amendment-read-repository.js"
 import { createBillDetailReadRepository } from "../../api/bill-detail-read-repository.js"
@@ -47,6 +47,7 @@ import { recoverRetriedIngestionJob, runIngestionJob } from "../../ingestion/job
 import { importOpenStatesRecords } from "../../ingestion/openstates/import.js"
 import { openStatesBillSchema } from "../../ingestion/openstates/normalize.js"
 import { withIngestionRun } from "../../ingestion/run-context.js"
+import type { CanonicalBillAggregate } from "../../legislation/model.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
 import { embeddingRouteFor } from "../../models/embedding-routing.js"
 import { encodeSearchCursor, lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
@@ -755,6 +756,117 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       items: [],
       warnings: [expect.stringContaining("source-dependent")]
     })
+  })
+
+  it.each(["single", "bulk"] as const)("preserves enriched people during %s sparse bill imports", async (writer) => {
+    const jurisdiction = {
+      id: `jurisdiction:sparse-${writer}`,
+      name: "Sparse test",
+      classification: "state",
+      countryCode: "US"
+    }
+    const session = {
+      id: `session:sparse-${writer}`,
+      jurisdictionId: jurisdiction.id,
+      identifier: "2026",
+      name: "2026"
+    }
+    const person = {
+      id: `person:sparse-${writer}`,
+      jurisdictionId: jurisdiction.id,
+      name: "Canonical Name",
+      givenName: "Canonical",
+      familyName: "Name",
+      party: "Independent",
+      sourceId: "P001",
+      isActive: false,
+      provenanceComplete: true,
+      sourceUrl: "https://api.congress.gov/v3/member/P001",
+      sourceProvider: "congress",
+      sourceIsOfficial: true,
+      sourceRetrievedAt: new Date("2026-09-01"),
+      sourceUpdatedAt: new Date("2026-08-31"),
+      upstreamIds: { bioguide: "P001" }
+    }
+    const aggregate = {
+      jurisdiction,
+      session,
+      people: [person],
+      bill: {
+        id: `bill:sparse-${writer}:2026:hb:1`,
+        jurisdictionId: jurisdiction.id,
+        sessionId: session.id,
+        identifier: "HB 1",
+        title: "Sparse sponsor test",
+        sourceUrl: "https://example.test/sparse-bill"
+      }
+    }
+    await upsertBillAggregate(database, aggregate)
+    const sparse: CanonicalBillAggregate = {
+      ...aggregate,
+      people: [
+        {
+          id: person.id,
+          name: "Feed Name",
+          sourceUrl: null,
+          givenName: null,
+          isActive: true,
+          upstreamIds: { govinfo: "P001" }
+        },
+        { id: `${person.id}-new`, name: "New Sponsor", upstreamIds: {} }
+      ]
+    }
+    if (writer === "single") {
+      await upsertBillAggregate(database, sparse)
+    } else {
+      await upsertBillAggregates(database, [sparse])
+    }
+    const [saved] = await database.select().from(schema.people).where(eq(schema.people.id, person.id))
+    expect(saved).toMatchObject({ ...person, upstreamIds: { bioguide: "P001", govinfo: "P001" } })
+    await expect(
+      database
+        .select()
+        .from(schema.people)
+        .where(eq(schema.people.id, `${person.id}-new`))
+    ).resolves.toMatchObject([{ name: "New Sponsor" }])
+  })
+
+  it("records the original database cause even when lease cleanup fails", async () => {
+    const failure = new Error("Failed query: insert secret SQL\nparams: secret-parameter", {
+      cause: Object.assign(new Error("person provenance rejected"), {
+        code: "23514",
+        constraint: "people_provenance_complete_check"
+      })
+    })
+    const cleanup = vi.spyOn(database, "execute").mockRejectedValueOnce(new Error("cleanup connection failed"))
+    try {
+      await expect(
+        runIngestionJob(
+          database,
+          {
+            source: "audit-test",
+            operation: "cause-test",
+            scopeKey: "cause-test",
+            scope: {},
+            correlationId: "cause-test",
+            workflowExecutionId: "workflow-cause-test"
+          },
+          async () => {
+            throw failure
+          }
+        )
+      ).rejects.toBe(failure)
+    } finally {
+      cleanup.mockRestore()
+    }
+    const [run] = await database
+      .select()
+      .from(schema.ingestionRuns)
+      .where(eq(schema.ingestionRuns.correlationId, "cause-test"))
+    expect(run).toMatchObject({ status: "failed", workflowExecutionId: "workflow-cause-test" })
+    expect(run?.errorSummary).toContain("SQLSTATE 23514")
+    expect(run?.errorSummary).not.toMatch(/secret SQL|secret-parameter|cleanup connection/)
+    await database.delete(schema.ingestionLocks).where(eq(schema.ingestionLocks.source, "audit-test"))
   })
 
   it("upserts aggregates idempotently and rolls back a failed child replacement", async () => {

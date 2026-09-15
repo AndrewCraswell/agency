@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { EMBEDDING_ROUTES, type EmbeddingRoute } from "./embedding-routing.js"
+import { validateEmbeddingTokenBudget } from "./embedding-tokenizer.js"
 
 const DEFAULT_EMBEDDING_ROUTE = EMBEDDING_ROUTES["document-section"]
 export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_ROUTE.model
@@ -74,38 +75,70 @@ export class OpenRouterEmbeddingClient {
     return { ...this.#metrics }
   }
 
-  async embed(input: string[], inputType: "document" | "query" = "document"): Promise<EmbeddingResult> {
+  async embed(values: string[], inputType: "document" | "query" = "document"): Promise<EmbeddingResult> {
+    const input = [...values]
     if (input.length < 1 || input.length > MAXIMUM_BATCH_SIZE || input.some((value) => value.trim().length === 0)) {
       throw new Error(`Embedding batch must contain 1 to ${MAXIMUM_BATCH_SIZE} nonempty inputs`)
     }
+    if (input.some((value) => value.length > MAX_EMBEDDING_INPUT_CHARACTERS)) {
+      throw new Error(
+        `Embedding inputs exceed ${MAX_EMBEDDING_INPUT_CHARACTERS} characters; split them before submission`
+      )
+    }
+    if (input.some((value) => !value.isWellFormed())) {
+      throw new Error("Embedding inputs must contain well-formed Unicode")
+    }
+    await validateEmbeddingTokenBudget(this.#route.model, input)
     this.#metrics.batches += 1
     this.#metrics.requested += input.length
-    const boundedInput = input.map(limitEmbeddingInput)
+    // Freeze once: every retry must embed exactly the text the caller hashed, even if its array changes.
+    const requestBody = JSON.stringify({
+      ...(this.#route.dimensionsParameter ? { dimensions: this.#route.dimensions } : {}),
+      encoding_format: "float",
+      input,
+      ...(this.#route.documentInputType
+        ? { input_type: inputType === "query" ? this.#route.queryInputType : this.#route.documentInputType }
+        : {}),
+      model: this.#route.model,
+      provider: { allow_fallbacks: false, data_collection: "deny" }
+    })
 
     for (let attempt = 1; attempt <= this.#maximumAttempts; attempt += 1) {
-      const response = await this.#fetch(new URL("embeddings", this.#baseUrl), {
-        body: JSON.stringify({
-          ...(this.#route.dimensionsParameter ? { dimensions: this.#route.dimensions } : {}),
-          encoding_format: "float",
-          input: boundedInput,
-          ...(this.#route.documentInputType
-            ? { input_type: inputType === "query" ? this.#route.queryInputType : this.#route.documentInputType }
-            : {}),
-          model: this.#route.model,
-          provider: { allow_fallbacks: false, data_collection: "deny" }
-        }),
-        headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
-        method: "POST",
-        signal: AbortSignal.timeout(this.#timeoutMs)
-      })
+      let response: Response
+      let body: string
+      const signal = AbortSignal.timeout(this.#timeoutMs)
+      try {
+        response = await this.#fetch(new URL("embeddings", this.#baseUrl), {
+          body: requestBody,
+          headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
+          method: "POST",
+          signal
+        })
+        // The request deadline also covers receiving the body, not just headers.
+        body = await response.text()
+      } catch (error) {
+        const deadlineExpired = signal.aborted || (error instanceof Error && error.name === "TimeoutError")
+        if (!deadlineExpired || attempt === this.#maximumAttempts) {
+          this.#metrics.failed += input.length
+          throw error
+        }
+        this.#metrics.retries += 1
+        await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** (attempt - 1), 2_000)))
+        continue
+      }
 
       if (response.ok) {
-        const result = responseSchema.parse(await response.json())
+        const result = responseSchema.parse(JSON.parse(body))
         const providerModel = this.#route.model.split("/").at(-1)
         if (result.model !== this.#route.model && result.model !== providerModel) {
           throw new Error(`Embedding response used unexpected model ${result.model}`)
         }
-        const embeddings = result.data.toSorted((left, right) => left.index - right.index).map((item) => item.embedding)
+        const ordered = result.data.toSorted((left, right) => left.index - right.index)
+        if (ordered.some((item, index) => item.index !== index)) {
+          this.#metrics.failed += input.length
+          throw new Error("Embedding response indices must cover each input exactly once")
+        }
+        const embeddings = ordered.map((item) => item.embedding)
         if (
           embeddings.length !== input.length ||
           embeddings.some((embedding) => embedding.length !== this.#route.dimensions)
@@ -122,19 +155,7 @@ export class OpenRouterEmbeddingClient {
         }
       }
 
-      const detail = (await response.text()).replaceAll(/\s+/g, " ").trim().slice(0, 500)
-      const oversizedInputIndex =
-        response.status === 400 ? /Invalid 'input\[(\d+)]': maximum input length/.exec(detail)?.[1] : undefined
-      if (oversizedInputIndex !== undefined && attempt < this.#maximumAttempts) {
-        const index = Number.parseInt(oversizedInputIndex, 10)
-        const oversizedInput = boundedInput[index]
-        if (oversizedInput !== undefined && oversizedInput.length > 1) {
-          boundedInput[index] = oversizedInput.slice(0, Math.floor(oversizedInput.length / 2))
-          this.#metrics.retries += 1
-          continue
-        }
-      }
-
+      const detail = body.replaceAll(/\s+/g, " ").trim().slice(0, 500)
       const retryable = response.status === 429 || response.status >= 500
       if (response.status === 429) {
         this.#metrics.rateLimited += 1

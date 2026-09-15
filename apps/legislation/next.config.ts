@@ -6,6 +6,7 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["tiktoken"],
   outputFileTracingIncludes: {
     "/*": ["./node_modules/@swc/helpers/**/*"]
   },

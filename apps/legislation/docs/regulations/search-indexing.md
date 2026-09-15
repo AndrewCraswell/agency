@@ -9,7 +9,7 @@ Build on existing Tabra search infrastructure; regulatory retrieval is a new pro
 | --- | --- |
 | `src/models/embedding-routing.ts` | Add explicit `legal-passage` route and regulatory query route |
 | `src/ingestion/embeddings/jobs.ts` | Reuse freshness/input-hash/client patterns in a legal-passage job |
-| `src/models/openrouter-embeddings.ts` | Reuse provider abstraction, dimension validation, token limits and metrics |
+| `src/models/openrouter-embeddings.ts` | Reuse exact-input submission, dimension validation, character guard and retry metrics |
 | `src/search/passage-search-queue.ts` and replication/readiness modules | Add regulatory outbox/projection consumers with distinct entity kinds |
 | `infra/passage-search/schema.sql` | Add separate legal-passage projection in isolated search DB |
 | `src/evaluation/embedding.ts` and embedding canary scripts | Extend with regulatory fixtures/judgments and historical/version cases |
@@ -19,12 +19,49 @@ to reuse a worker. Add `legal_passages` and route-aware jobs while sharing safe 
 routes differ by product: OpenAI Small/1,536 dimensions for document passages and Voyage 4/1,024 for bills/supporting
 materials. Those evaluated legislative results do not establish the best regulatory model.
 
+The shared client now rejects oversized inputs and never shortens text on provider retries. Existing pipelines use
+character-capped excerpts, now checked with the shared model tokenizer before submission. Token-aware, lossless prose
+preparation is shared in `src/models/embedding-preparation.ts`; it is not a replacement embedding provider. Pinned
+tokenizers are implemented for both existing models. All existing embedding
+regeneration is deferred by user direction; see the [integrity repair and rebuild plan](../engineering/embedding-rollout-plan.md#input-integrity-repair-and-deferred-rebuild-september-15-2026).
+
 Canonical PostgreSQL remains authoritative. The isolated passage-search service is a reconstructible text projection;
 vectors stay in canonical dedicated embedding tables. Its bill passage cutover has a separate readiness gate: inspect
 current status at implementation, do not treat a valid target index as completed copy. This spec does not approve
 replacing the canonical PostgreSQL image, rebuilding existing vectors or bypassing bill search readiness.
 
 ## Passage generation
+
+The initial pure builder is `src/ingestion/regulations/passages.ts`. It validates reader body/generation hashes and
+contiguous UTF-16 offsets, binds passage IDs to exact version/context/tokenizer/budgets, counts the complete prefixed
+input, and emits reader-block spans. Tokenization is injected with an explicit versioned ID; there is no default
+character estimate or selected model. Callers can obtain the real counter from `embeddingTokenizer(model)`.
+Tokenization windows use the shared splitter and fit the 16,000-character transport limit including context, with newline preference
+and surrogate-safe splits. Chunks use no overlap in this foundation. They may be smaller than the 800-token target;
+benchmark chunk packing before selecting the embedding generation.
+
+Tables fitting the 1,200-token hard limit and 16,000-character transport limit stay intact, including reader-split table
+blocks with the same source ordinal. Larger blocks require their retained source XML through `sourceBlocks`.
+`table-passages.ts` checks exact parser-rendered text equality and separates actual tables from surrounding prose and
+other tables inside an appendix wrapper. It maps explicit source rows and repeats the complete caption/column-header
+region, including multilevel headers. Headerless tables receive no invented headings. Consecutive row groups use
+exponential size probes to avoid tokenizing every growing prefix. A row may exceed the target, but never the hard limit.
+Each passage has an exact full-input hash, contiguous `readerSpans` for its original text, and separate `contextSpans`
+for repeated headers. Joining original passage text reproduces the body without duplicated headers or missing text.
+An individually oversized row may use explicit continuations. Source XML identifies the longest cell and the other
+columns. The row text is split while every other column value, the complete column headings, and the nearest explicit spanning group label are
+retained as context. The continuation metadata identifies the complete original row and long column. Exact primary
+text spans still cover the original row without gaps; context spans identify repeated source evidence separately from
+the generated column labels. The shared splitter counts the complete input including all repeated context.
+Nested tables, data cells spanning multiple rows, interleaved header groups, ambiguous spanning continuation cells,
+unresolved ditto references within a continuation, and identifying context that itself exceeds the target remain explicit
+failures for review; no partial generation is returned. Ordinary row groups now retain the nearest explicit spanning
+group label and resolve `Do.`, `ditto`, and `〃` to the prior nonempty single-column source cell. Chains preserve the
+original referenced cell; group changes, missing columns, empty cells and ambiguous spanning cells prevent stale
+reference reuse. Packing stops when required context changes. Resolved values are repeated with labeled source spans,
+never substituted into the original reader text. An unresolved reference fails explicitly. Broader table semantics and
+full-corpus acceptance remain separate gates. Empty source text is explicitly ineligible. This pure function does not
+authorize source rights, persist passages, consume outbox jobs, or mark anything searchable; those remain worker gates.
 
 One provision version may have several passages, but one hit always names its provision and exact text version. A
 publication passage names its document version and distinguishes preamble, proposed/amendatory text, table and appendix.
@@ -37,12 +74,25 @@ without changing legal symbols, enumerated paragraphs, table relationships or so
 
 Target 800 tokens, hard limit 1,200 tokens per passage under the selected model tokenizer, with up to 100 tokens of
 boundary context. Prefer paragraph/subsection boundaries. An oversized table splits by row groups with repeated headers
-and preserved row locators; an oversized paragraph splits with exact offsets. Do not silently truncate long text.
+and preserved row locators; an oversized row uses the bounded continuation contract above, and an oversized paragraph
+splits with exact offsets. Do not silently truncate long text.
 Retain ordinal, XML path/page coordinates where known, plain-text offsets, source content hash and parser/chunk contract.
+Map each retrieval passage to the stable source-reader block/offset in its exact version. Search results carry the
+selected edition/source observation and authorized `/api/legal/versions/{versionId}/text` link/anchor. Reader output
+never repeats embedding context or overlap, and a text version reused in another edition keeps that edition context separate.
 Text-free structural nodes and explicitly empty/repealed placeholders remain browseable but have an explicit embedding
 ineligibility reason. Preserve substantive repeal/adoption text as eligible content.
 
 ## Lexical indexes and projection
+
+Implemented foundation: `passage-storage.ts` atomically stores immutable canonical passage generations for provision
+and publication versions, including the preparation input hashes and exact reader/context spans. The baseline has a
+generated English FTS column and GIN index. Its internal lexical canary is bounded to an explicitly authorized published
+source/version and exact generation, with current display/local-search rights rechecked on every call. See
+[storage validation](storage-validation.md#persistent-passage-generations-and-lexical-canary) for real PostgreSQL and
+retained-source evidence. Isolated copying, whole-scope inspection/acknowledgement, current-provision selection and
+rights cleanup now exist as local services. Broader ranking, resumable large-scope validation, deployment and public
+HTTP/MCP remain open; preparation or copy traversal alone does not acknowledge indexing work.
 
 Create canonical exact-citation B-tree indexes and a PostgreSQL FTS index over normalized legal-passage text for the
 initial lexical path. Rank code title/citation/headings separately from body. Add filtered indexes for current edition
@@ -65,9 +115,10 @@ authority for permissions or exact text. If candidates reference a generation no
 record lag; do not silently relabel old text as current. Cache keys bind authenticated access/rights, normalized query,
 filters, search generation and model contract; restriction changes invalidate caches.
 
-Backfill the projection by deterministic owner-ID shards and keyset pagination. Capture a source outbox watermark,
-perform the snapshot copy, replay through that watermark and drain later changes. Readiness compares all requested
-owner/version counts and hash manifests, including delayed retry rows. Keep source/target transactions separate.
+Backfill by deterministic owner-ID shards and keyset pagination; reconcile committed source work and exact selected
+generation receipts. Do not use an allocated sequence number as a commit-order watermark. Readiness compares all requested
+owner/version counts and hashes, including delayed retries. Keep source/target transactions separate and preserve
+target-commit/source-ack recovery under the [storage handoff](storage-validation.md#scope-publication-current-reads-and-revocation).
 
 ## Embedding job and model decision
 
@@ -109,6 +160,88 @@ The gate means best among tested configurations for this regulatory benchmark, n
 dimensions, input contract, chunking or a materially different state corpus requires a new bounded comparison and API/MCP
 smoke before promotion. Reusing a previous success report with changed inputs is insufficient.
 
+### Local comparison evidence, September 15
+
+The executable diagnostic is `scripts/smoke-regulatory-embeddings.ts` (`smoke:regulatory-embeddings`). It previews by
+default; `--live` explicitly runs both existing models. It accepts a frozen manifest, an optional development/held-out
+split, and an exclusive output path. Inputs are bounded to 512 records and 64 queries, submitted in batches of at most
+64 without shortening retries. The shared embedding client now rejects duplicate, skipped and out-of-range response
+indices, preventing vectors from being assigned to the wrong inputs despite matching response counts/dimensions.
+
+The retained local benchmark has 350 exact-version source excerpts from 12 eCFR parts and 60 source-backed,
+agent-authored queries. Six titles form the 30-query development split; six different titles form the 30-query held-out
+split. The split and single-known-answer labels were frozen before execution. Competing provisions are present, but
+these are bounded leading excerpts, not production tokenized passages. This is a diagnostic with provisional labels,
+not the complete stratified production benchmark or human relevance review required above.
+
+| Configuration | Held-out Recall@5 | Held-out nDCG@10 |
+| --- | ---: | ---: |
+| PostgreSQL English OR/`ts_rank_cd` baseline | 0.467 | 0.402 |
+| OpenAI Small | 0.933 | 0.857 |
+| Voyage 4 | 1.000 | 0.959 |
+| OpenAI Small + Cohere rerank | 0.967 | 0.965 |
+| Voyage 4 + Cohere rerank | 0.967 | 0.965 |
+
+Read exact values from `regulatory-comparison-corrected-results.json` and `regulatory-comparison-rerank-results.json`.
+The unchanged held-out embedding repeat preserved the displayed recall/nDCG results. Both semantic models achieved
+Recall@25=1. RRF with this lexical baseline reduced ranking quality; this is not a benchmark of the intended BM25
+projection. The initial lexical script incorrectly escaped a whitespace regex; its original result is invalid. The
+corrected scorer uses a POSIX whitespace class and retained semantic results without another embedding request.
+
+The 120 sequential Cohere calls reranked each model's top 25 using explicit 4,000-character candidate excerpts,
+matching the existing route limit. Held-out reranker p50/p95 were approximately 296/774 ms for OpenAI candidates and
+267/340 ms for Voyage candidates. These measure additional reranker request latency, not complete query latency; run
+order/network conditions prevent treating their difference as a model latency advantage.
+
+Disagreement review found incomplete labels: 40 CFR 60.1040 also answers the municipal-waste preconstruction question
+whose known answer was 60.1005. Credit-balance questions also need explicit open/closed-end scope. Frozen labels were
+not changed after evaluation. Pool and grade these alternatives before selecting a winner. Voyage without reranking is
+the provisional quality lead; reranking ties the two models in aggregate but moves the expected 45 CFR 164.106 result
+to rank 8. Do not promote any configuration from these scores alone.
+
+Initial embedding usage was 186,721 tokens for OpenAI and 198,033 for Voyage. At the September 15
+[OpenRouter catalog prices](https://openrouter.ai/api/v1/embeddings/models), estimates are $0.00373 and $0.01188
+respectively for that embedding run. These are token-price estimates, not billed totals, and exclude reranking,
+repeats, storage and serving. Per-query serving cost and production passage costs remain unmeasured.
+
+Evidence under `artifacts/regulatory-backfills/`: `regulatory-comparison-corpus.json`,
+`regulatory-comparison-manifest.json`, `regulatory-comparison-semantic.json`,
+`regulatory-comparison-corrected-results.json`, `regulatory-comparison-rerank-journal.jsonl`,
+`regulatory-comparison-rerank-results.json`, `regulatory-comparison-heldout-repeat.json`,
+`regulatory-embedding-prices.json`. No production routes or stored canonical vectors changed. Production reuse integration,
+historical/state/proposal cohorts, exhaustive human judgments, tokenizer/chunking and API/MCP canaries remain open.
+
+The local smoke command now accepts `--cache <directory>` for persistent diagnostic reuse. Immutable entries bind exact
+input, model, dimensions, dimensions parameter, input contract and query/document mode. It deduplicates identical inputs
+within a request, preserves output order and counts cache hits separately from newly billed token usage. Before reuse,
+entries must have the expected key, matching vector checksum, and finite, nonzero vectors of the expected dimension. Corrupt entries stop the run
+instead of silently calling a paid provider. A mismatched provider model cannot populate the cache. Entries are retained
+with exclusive atomic links; concurrent conflicting content is rejected. This filesystem cache is not a rights-aware
+production embedding store and does not replace the canonical worker/storage design below.
+
+Live reuse smoke: 12 retained source excerpts and 12 queries filled both model caches. A second run used a fetch function
+that always throws, yet reproduced every ranking exactly from 24 cache hits per model: zero requests, batches or new
+tokens. Evidence: `regulatory-cache-smoke-manifest.json`, `regulatory-cache-checksummed-fill.json`,
+`regulatory-cache-checksummed-replay.json` and `regulatory-embedding-cache-checksummed/` under the backfill artifact directory.
+Earlier cache-fill/replay artifacts predate vector checksums and remain historical evidence only.
+
+`pool:regulatory-judgments` creates a blind relevance-review packet from a frozen manifest and complete system rankings.
+It pools the first ten candidates per system plus known answers missed by those systems, removes duplicate candidates,
+and orders evidence deterministically without exposing system names, ranks or existing relevance labels in the query
+view. Each candidate retains its exact version ID, input hash and source excerpt, with blank grade/rationale/reviewer
+fields. The scale is 0 (does not answer), 1 (context), 2 (partial), 3 (direct answer). It rejects incomplete query coverage,
+unknown/duplicate ranked IDs, duplicate systems and excessive evidence size. It does not submit or approve judgments.
+The local packet `regulatory-judgment-review.json` has 60 questions and 1,315 candidate excerpts across seven compared
+configurations; `regulatory-review-systems.json` retains its system inputs. No external model requests were needed.
+
+```powershell
+pnpm run pool:regulatory-judgments --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --systems artifacts/regulatory-backfills/regulatory-review-systems.json --output artifacts/regulatory-backfills/fresh-review.json
+```
+
+```powershell
+node --env-file=.env --import tsx scripts/smoke-regulatory-embeddings.ts --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --split held-out --output artifacts/regulatory-backfills/fresh-heldout-output.json --live
+```
+
 ### Vector storage and index build
 
 Use the existing PostgreSQL vector extension and cosine HNSW index pattern. The canary keeps each candidate in a
@@ -146,7 +279,7 @@ increases retries is rejected. Do not inherit a 64/128-worker bill embedding all
 
 ## Query semantics
 
-`POST /api/search/regulations` supports lexical, semantic and hybrid modes. Default corpus is regulatory code plus
+`POST /api/search/legal` supports lexical, semantic and hybrid modes. Default corpus is regulatory code plus
 regulatory publications; statutory-code search uses an explicit `corpora: ["statute"]` filter on the same legal corpus
 service when enabled. Latest validated code editions are the default; publications use explicit kind/date filters.
 Historical queries select edition IDs or a supported asOf date and never intermingle current and historical text implicitly.
@@ -170,8 +303,8 @@ contract. Pages consume that same candidate set and do not re-embed/re-rank arbi
 `400 invalid_request` with a safe restart reason. `nextCursor: null` means the selected bounded candidate set ended,
 not exhaustive proof of no additional relevant law; return `candidateSetTruncated` where applicable.
 
-If semantic dependencies are unavailable, semantic mode returns `503 dependency_unavailable`. Hybrid can use lexical
-only if `allowDegraded: true` was explicitly requested; return `effectiveMode: lexical` and a degradation warning.
+If semantic dependencies are unavailable, return `503 dependency_unavailable` unless `allowDegraded: true` explicitly
+permits semantic or hybrid to use lexical under the legal-search contract; report `effectiveMode: lexical` and degradation.
 No silent mixed-model/fallback ranking. Coverage gaps and source staleness are separate from dependency failures.
 
 ## Evaluation and promotion gates

@@ -53,7 +53,7 @@ Machine-readable lexical and semantic results are in the adjacent `embedding-can
 
 ## Promotion decision
 
-The runtime, identity projection, model routing, selective reranking, and partial-coverage behavior pass. The complete
-pass should use the mixed model contract above in independent product waves. Keep a control holdout until the first
-100,000-row checkpoint and require the larger 23,127-candidate graded bakeoff gains to remain above the 0.02 absolute
-nDCG@10 threshold. Do not apply the Cohere reranker to amendments or supporting materials.
+The August canary passed its bounded runtime, projection, routing and retrieval checks and supported the mixed-model
+decision. It is not current rebuild authorization. The [embedding guide](../docs/engineering/embedding-rollout-plan.md)
+owns later coordinator topology, quality gates and the September exact-input integrity hold. Keep this frozen evidence
+and its limits; do not rerank amendments/materials or regenerate existing vectors solely from this historical approval.

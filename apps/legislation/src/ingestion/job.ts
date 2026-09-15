@@ -3,6 +3,7 @@ import { and, eq, lt, lte, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import { ingestionLocks, ingestionRuns, syncCheckpoints } from "../db/schema/schema.js"
 import { isDeferredIngestionError } from "./deferred.js"
+import { ingestionErrorSummary, sanitizeIngestionMessage } from "./errors.js"
 import { withIngestionRun } from "./run-context.js"
 
 const DEFAULT_JOB_LEASE_DURATION_MINUTES = 5
@@ -51,9 +52,12 @@ export function ingestionFailureSummary(
     failures
       .slice(0, 20)
       .map((failure) =>
-        failure.identifier === undefined ? failure.message : `${failure.identifier}: ${failure.message}`
+        sanitizeIngestionMessage(
+          failure.identifier === undefined ? failure.message : `${failure.identifier}: ${failure.message}`
+        )
       )
-      .join("; ") || null
+      .join("; ")
+      .slice(0, 8000) || null
   )
 }
 
@@ -324,6 +328,7 @@ export async function runIngestionJob(
   }, JOB_LEASE_HEARTBEAT_MS)
   heartbeat.unref()
   let runId: string | undefined
+  let operationFailed = false
   try {
     const inserted = await database
       .insert(ingestionRuns)
@@ -389,6 +394,7 @@ export async function runIngestionJob(
       ? completed
       : { ...completed, workflowExecutionId: input.workflowExecutionId }
   } catch (error) {
+    operationFailed = true
     if (runId !== undefined) {
       if (isDeferredIngestionError(error)) {
         await database
@@ -420,21 +426,31 @@ export async function runIngestionJob(
           ? deferred
           : { ...deferred, workflowExecutionId: input.workflowExecutionId }
       }
-      await database
-        .update(ingestionRuns)
-        .set({ completedAt: new Date(), errorSummary: "Job failed before producing a result", status: "failed" })
-        .where(eq(ingestionRuns.id, runId))
+      try {
+        await database
+          .update(ingestionRuns)
+          .set({ completedAt: new Date(), errorSummary: ingestionErrorSummary(error), status: "failed" })
+          .where(eq(ingestionRuns.id, runId))
+      } catch {
+        // The original failure remains the task's cause if recording it also fails.
+      }
     }
     throw error
   } finally {
     clearInterval(heartbeat)
-    await database.execute(sql`
+    await database
+      .execute(sql`
       delete from legislation.ingestion_locks
       where source = ${input.source}
         and operation = ${input.operation}
         and scope_key = ${input.scopeKey}
         and owner_id = ${ownerId}::uuid
-    `)
+      `)
+      .catch((error: unknown) => {
+        if (!operationFailed) {
+          throw error
+        }
+      })
   }
 }
 

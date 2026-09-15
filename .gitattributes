@@ -1,2 +1,3 @@
 * text=auto eol=lf
 *.pdf binary
+apps/legislation/src/ingestion/regulations/fixtures/fr-2024-01-02-metadata.json -text

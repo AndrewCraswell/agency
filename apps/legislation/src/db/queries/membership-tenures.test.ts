@@ -18,6 +18,26 @@ const historical = {
 } as const
 
 describe("historical membership tenure continuity", () => {
+  it("holds observational replays of ended histories instead of manufacturing a return", () => {
+    for (const endedReason of [
+      "historical_at_first_observation",
+      "roster_removal_detected",
+      "congress_ended"
+    ] as const) {
+      expect(() =>
+        resolveMembershipTenures(
+          [{ ...historical, endedReason: null, isActive: true }],
+          [{ ...historical, endedReason }],
+          { observationOnly: true }
+        )
+      ).toThrow("cannot reopen ended history")
+    }
+  })
+  it("keeps active observation identities stable without inventing start dates", () => {
+    const active = { ...historical, endedReason: null, isActive: true }
+    expect(resolveMembershipTenures([active], [], { observationOnly: true })).toEqual([active])
+    expect(resolveMembershipTenures([active], [active], { observationOnly: true })).toEqual([active])
+  })
   it("keeps unknown dates and one stable tenure across repeated archival observations", () => {
     expect(resolveMembershipTenures([historical], [])).toEqual([historical])
     expect(resolveMembershipTenures([historical], [historical])).toEqual([historical])

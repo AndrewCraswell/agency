@@ -2,14 +2,14 @@
 
 ## Scope and status
 
-Prepared September 14, 2026 from the [designer brief](design.md),
-[information architecture](information-architecture.md), [prototype scenarios](design.md#13-prototype-scenarios-and-representative-content), and
-[notification specification](notification-experience.md). This is the execution backlog for the chat-first product,
+Prepared September 14, 2026; maintained against the [designer brief](../design/design.md),
+[information architecture](../product/information-architecture.md), [conversation handoff](../design/conversations.md), and
+[notification specification](../product/notification-experience.md). This is the execution backlog for the chat-first product,
 including features, pages, persistence, integrations, and release acceptance. It does not create external tickets or
 authorize production activation, external messages, or provider purchases.
 
 Use [API acceptance](../operations/passage-search-delivery.md) for current release gates and recorded fixture acceptance.
-Do not copy its historical Done states into this product backlog. The current source inspection found only the
+Do not copy its historical Done states into this product backlog. The original September 14 source inspection found only the
 foundation `app/page.tsx` and `app/layout.tsx` as product page/layout files, existing research-answer and subscription
 services, and no Novu dependency in the app package. This is a source inventory, not a fresh deployed smoke result.
 Reconcile the current acceptance record and remaining gates before reuse.
@@ -71,7 +71,7 @@ block later UX. Foundation design review covers the whole experience before any 
 | Civic research | VIEW-12 through VIEW-20; VIEW-22 | Identify representative/committee, understand votes and meetings, traverse attributed activity with coverage states |
 | Durable issues | ISSUE-01 through ISSUE-09; ISSUE-11 | Create/resume issue, refine scope, compare evidence, copy reviewed brief without activating alerts implicitly |
 | Follow and receive | ALERT-01 through ALERT-25; CHAT-16 through CHAT-18; ISSUE-10 and ISSUE-12 | Confirm a follow, produce real matched events, receive in-app/email, manage preferences and recover delivery failures |
-| Pilot and release | SHIP-01 through SHIP-14 | MCP settings and all eight user flows verified; five-persona prototype findings resolved; operational release evidence recorded |
+| Pilot and release | SHIP-01 through SHIP-14 | Current connected ICP/evidence flows and external MCP setup verified; critical usability findings resolved; operational release evidence recorded |
 
 Critical dependency paths:
 
@@ -129,7 +129,7 @@ Browser paths are the proposed IA paths, not assertions that routes exist. Conte
 
 These are recorded for future decisions, not hidden requirements for completing the core backlog.
 
-The [organization features proposal](organization-features.md) records the next organization layer, including its
+The [organization features proposal](../product/organization-features.md) records the next organization layer, including its
 placement in the existing design. It does not mark these deferred capabilities implemented or add them to the current
 personal-experience completion gate.
 
@@ -166,13 +166,13 @@ Platform, and QA are role placeholders. BASE items apply across every workstream
 | ID | Deliverable | Lead | Depends on | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | BASE-01 | Reconcile implementation and data readiness | Backend/Data | None | Inventory existing handlers, browser pages and deployed evidence; map each planned flow to populated fixtures or a named missing-data gate; no historical state treated as fresh smoke. |
-| BASE-02 | Complete designer package and scope review | Design/Product | None | Sitemap, desktop/mobile prototype, component inventory, email designs, required states and all five persona paths reviewed against designer brief; record scope decisions. |
+| BASE-02 | Complete designer package and scope review | Design/Product | None | Sitemap, desktop/mobile prototype, components, email designs and current ICP/evidence paths reviewed against owning handoffs; record scope decisions. |
 | BASE-03 | Resolve shared product contracts | Product/Backend | BASE-01 | Decide personal ownership, history/issue deletion and retention, research limits, preference ownership, stage mapping authority and per-feature rollout flags; list remaining provider decisions with owners. |
 | BASE-04 | Prepare representative fixtures and copy review | Design/QA | BASE-01, BASE-02 | Coherent bill/person/committee/meeting/version fixtures plus missing data, reschedule and procedural-vote examples; distinguish illustrative from real; review product strings with Fluent when available. |
 | BASE-05 | Build verified canonical read boundary | Backend | BASE-01 | Reuse existing HTTP/application services; typed error, pagination, source and identity projection; verify nonempty records and private caching; no alternate domain logic in components. |
 | BASE-06 | Complete AuthKit browser lifecycle | Backend/Frontend | BASE-03 | Sign-in, callback, expiry, refresh and sign-out work in target app; safe return destinations; no user token printed or embedded in links; session canary distinct from machine token smoke. |
 | BASE-07 | Enforce private ownership and account isolation | Backend | BASE-03, BASE-06 | Server derives identity for every read/write; reject cross-user/account conversation, issue, subscription and inbox access; membership removal and account switch invalidate cached private data. |
-| BASE-08 | Implement account and session recovery page | Frontend | BASE-06, BASE-07 | Account identity/sign-out, expired-session state and return-to-record work; draft research returns where safe; no pending mutation automatically replays; no implied team roles. |
+| BASE-08 | Integrate account and authentication recovery | Frontend | BASE-06, BASE-07 | Account identity/sign-out and safe return work within existing authentication flows; no standalone lifecycle screens, automatic mutation replay or implied team roles; recover only permitted drafts. |
 | BASE-09 | Build responsive application shell | Frontend | BASE-02, BASE-06 | Chat-first home; Conversations, Updates, Issues, Following, secondary Explore and Settings; navigation states work at wide, medium and narrow sizes. |
 | BASE-10 | Implement evidence navigation and deep links | Frontend | BASE-05, BASE-09 | Context pane and standalone record share identity; Back, close and expand preserve state/focus; copied record link omits private conversation context. |
 | BASE-11 | Build shared API client states | Frontend/Backend | BASE-05, BASE-06 | Typed errors, cancellation, pagination, stale-result prevention, retry policy and correlation IDs; unknown mutation outcomes never trigger automatic duplicate writes. |
@@ -274,7 +274,7 @@ An issue organizes personal research; a subscription monitors a record/query. Ke
 | ISSUE-05 | Implement inclusion and exclusion rules | Backend/Frontend | ISSUE-04 | User choices distinguish manual inclusion from automated relevance; explain exclusion effect on issue versus linked follows; removing exclusion recoverable; version changes don't silently lose selections. |
 | ISSUE-06 | Implement scope revision and baseline preview | Backend/Frontend | ISSUE-05 | Edit terms/jurisdictions/dates shows changed matches and effective time; initial/historical matches distinct from later changes; affected follows require explicit reviewed update. |
 | ISSUE-07 | Add cross-jurisdiction evidence comparison | Backend/Frontend | ISSUE-04, VIEW-09, VIEW-10, CHAT-08 | Bill/version/status date, relevant passages, proposed change and known effective dates comparable; source gaps visible; industry/legal relevance labeled for review. |
-| ISSUE-08 | Build reviewed brief preview and copy | Frontend/Backend | ISSUE-07 | Scope/as-of, chosen findings, exact citations, annotations and limitations persist in copied text; user edits selection; no publish/send or unsupported file export action. |
+| ISSUE-08 | Build reviewed brief preview and copy | Frontend/Backend | ISSUE-07 | Scope/reporting interval, selected findings, exact citations, annotations and limitations persist together; changed selection/content requires review again; no routine freshness badge, publish/send or unsupported export. |
 | ISSUE-09 | Connect issues and conversations | Frontend/Backend | ISSUE-04, CHAT-03, CHAT-11 | Explicit add-to-issue and resume-with-issue actions; selected scope revision visible; older conversation does not mutate when issue scope changes. |
 | ISSUE-10 | Connect issues to following | Backend/Frontend | ISSUE-06, ALERT-13, ALERT-14 | Preview subscriptions created/changed; save confirmations reflected accurately; exclusions affect matching as specified; no hidden notification activation. |
 | ISSUE-11 | Verify issue comparison and evidence journeys | QA | ISSUE-05 through ISSUE-09, BASE-15 | Non-profit/company/lawyer flows preserve ownership, relevance distinctions, pinned versions and copyable citations; deleted/unavailable evidence has explicit state. |
@@ -290,7 +290,7 @@ Team/client spaces, report file formats and immutable matter archives remain def
 ## Following and notifications backlog
 
 All items Planned. Brief reference: section 9.
-The [notification experience](notification-experience.md) owns Novu design semantics. Existing subscription CRUD,
+The [notification experience](../product/notification-experience.md) owns Novu design semantics. Existing subscription CRUD,
 events/deliveries APIs and signed webhooks are reuse inputs, not proof that real change generation or Novu delivery works.
 
 | ID | Deliverable | Lead | Depends on | Acceptance criteria |
@@ -337,16 +337,16 @@ cutover or an external message. Operational decisions and evidence are explicit 
 | ID | Deliverable | Lead | Depends on | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | SHIP-01 | Reconcile external MCP client capability | Backend/Platform | BASE-01, BASE-06 | Verify resource-specific auth/discovery and populated tool calls for supported external clients; document API versus MCP token boundary; no setup-complete claim from URL display alone. |
-| SHIP-02 | Build integration overview and MCP settings | Frontend | SHIP-01, BASE-09, BASE-14 | Copy server URL, supported setup/help and verified status distinction; authorization listing/revocation only where supported; no secret or browser-token copying. |
+| SHIP-02 | Build integration overview and MCP settings | Frontend | SHIP-01, BASE-09, BASE-14 | Copy server URL and supported authentication/setup/help; no in-app connection-status or verification UI; provider-supported revocation only, no secret/browser-token copying. |
 | SHIP-03 | Implement product diagnostics and support evidence | Platform/Backend | CHAT-14, ALERT-12 | Correlation IDs connect user-safe failures to redacted model/API/matching/delivery traces; safe troubleshooting without private queries or client notes in alerts/logs. |
 | SHIP-04 | Define and measure performance/cost budgets | Product/Platform | CHAT-14, VIEW-22, ALERT-25 | Agreed search/record/first-response/completion and notification latency targets; representative workloads and model/email costs measured; no fabricated estimates or freshness SLA. |
 | SHIP-05 | Verify background execution operations | Platform | ALERT-07, ALERT-12 | Trigger.dev concurrency, leases, retry ownership, stalled work and recovery tested; operator can identify processing backlog without confusing it with upstream publication delay. |
 | SHIP-06 | Prepare deployment and recovery plan | Platform | BASE-13, CHAT-02, ISSUE-02, ALERT-10 | Railway environment/secrets and app schema procedure reconciled; per-feature activation gates, approved rollback, retention/backups and configuration restoration documented. |
 | SHIP-07 | Verify privacy and access lifecycle | QA/Backend | CHAT-12, ISSUE-12, ALERT-25, SHIP-02 | Cross-user/account tests cover history/issues/inbox/links/actions; deletion/retention/destination removal and membership changes enforced; private context absent from provider payloads. |
 | SHIP-08 | Complete accessibility and responsive acceptance | QA/Frontend | VIEW-22, ISSUE-12, CHAT-18, ALERT-25, SHIP-02 | Integrated-browser keyboard/names/focus/reflow at desktop/medium/mobile and enlarged text; non-color progress/diffs, restrained streaming announcements, email readability and reduced motion checked. |
-| SHIP-09 | Run five-perspective usability study | Design/Product | BASE-02 | Observe at least one participant per persona on coherent prototype; record scope comprehension, vote/progress meaning, evidence use and follow configuration; fix critical misunderstandings and repeat affected flow. |
+| SHIP-09 | Run target-ICP usability study | Design/Product | BASE-02 | Recruit qualified researchers under the ICP validation plan; observe recurring brief/question journeys and supporting vote/progress/evidence/follow tasks; add specialist perspectives for distinct risks and resolve critical misunderstandings. |
 | SHIP-10 | Complete content and coverage review | Product/Data | SHIP-09, VIEW-22, ISSUE-11, ALERT-20 | Neutral terminology, exact-version/effective-date labels, relevance assessments and missing-data states checked; Fluent review when available, no uncited legal or nationwide-completeness promises. |
-| SHIP-11 | Run complete user-journey acceptance | QA | CHAT-15, CHAT-18, VIEW-22, ISSUE-11, ISSUE-12, ALERT-25, SHIP-02, SHIP-08, SHIP-10 | All eight brief flows pass with populated evidence plus missing-data and failed-action cases; desktop/mobile sessions, deep-link auth recovery and no duplicate mutations verified. |
+| SHIP-11 | Run complete user-journey acceptance | QA | CHAT-15, CHAT-18, VIEW-22, ISSUE-11, ISSUE-12, ALERT-25, SHIP-02, SHIP-08, SHIP-10 | Current product/IA/conversation flows pass with populated evidence plus missing-data and failed-action cases; desktop/mobile, deep-link auth recovery and no duplicate mutations verified. |
 | SHIP-12 | Complete repository and build verification | Engineering | SHIP-11 | Focused checks, `pnpm verify` and application build clean; attach exact output or explicitly named unresolved blockers; no unrelated dirty work modified to mask failures. |
 | SHIP-13 | Run staged authenticated integration canaries | Platform/QA | SHIP-04 through SHIP-07, SHIP-12 | Reviewed build on approved target, migrations/config verified, browser/model/MCP/source-event/Novu/email/webhook canaries pass; release data coverage matrix current. |
 | SHIP-14 | Record release decision and pilot handoff | Product/Platform | SHIP-13 | Named approval and enabled scopes, known limitations, support/runbooks, rollback triggers and pilot observation plan; no feature marked released without deployed evidence. |

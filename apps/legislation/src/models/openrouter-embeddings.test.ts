@@ -19,6 +19,58 @@ function successfulResponse(model: string = EMBEDDING_MODEL, dimensions: number 
 }
 
 describe("OpenRouter embedding client", () => {
+  it.each(["headers", "body"])("retries a deadline during %s with unchanged input", async (phase) => {
+    const timeout = new DOMException("deadline", "TimeoutError")
+    const timedResponse = successfulResponse()
+    vi.spyOn(timedResponse, "text").mockRejectedValue(timeout)
+    const fetchMock = vi.fn<typeof fetch>()
+    if (phase === "headers") {
+      fetchMock.mockRejectedValueOnce(timeout)
+    } else {
+      fetchMock.mockResolvedValueOnce(timedResponse)
+    }
+    fetchMock.mockResolvedValueOnce(successfulResponse())
+    const client = new OpenRouterEmbeddingClient({ apiKey: "fixture", fetch: fetchMock })
+    await expect(client.embed(["exact text"])).resolves.toMatchObject({ model: EMBEDDING_MODEL })
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(fetchMock.mock.calls[1]?.[1]?.body)
+    expect(client.metrics).toMatchObject({ retries: 1, created: 1, failed: 0 })
+  })
+
+  it("bounds timeout retries and does not retry other exceptions", async () => {
+    const timeout = new DOMException("deadline", "TimeoutError")
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(timeout)
+    const client = new OpenRouterEmbeddingClient({ apiKey: "fixture", fetch: fetchMock, maximumAttempts: 2 })
+    await expect(client.embed(["text"])).rejects.toBe(timeout)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(client.metrics).toMatchObject({ retries: 1, failed: 1, created: 0 })
+    const abort = new DOMException("cancelled", "AbortError")
+    fetchMock.mockReset().mockRejectedValue(abort)
+    const cancelled = new OpenRouterEmbeddingClient({ apiKey: "fixture", fetch: fetchMock })
+    await expect(cancelled.embed(["text"])).rejects.toBe(abort)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects token-dense text before HTTP even when its character count fits", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>()
+    const client = new OpenRouterEmbeddingClient({ apiKey: "fixture", fetch })
+    await expect(client.embed(["🧭".repeat(3000)])).rejects.toThrow("embedding_input_token_limit")
+    expect(fetch).not.toHaveBeenCalled()
+  })
+  it.each([
+    [0, 0],
+    [1, 2]
+  ])("rejects response index corruption %j even with the correct vector count", async (...indices) => {
+    const client = new OpenRouterEmbeddingClient({
+      apiKey: "fixture",
+      fetch: async () =>
+        Response.json({
+          model: EMBEDDING_MODEL,
+          data: indices.map((index) => ({ index, embedding: Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.5) }))
+        })
+    })
+    await expect(client.embed(["first", "second"])).rejects.toThrow("indices must cover each input exactly once")
+    expect(client.metrics.failed).toBe(2)
+  })
   it("pins model, dimensions, privacy routing, and validates the response", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(successfulResponse())
     const client = new OpenRouterEmbeddingClient({
@@ -41,48 +93,54 @@ describe("OpenRouter embedding client", () => {
     })
   })
 
-  it("caps inputs below the provider token ceiling", async () => {
+  it("rejects oversized inputs before the request instead of silently truncating them", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(successfulResponse())
     const client = new OpenRouterEmbeddingClient({ apiKey: "secret", fetch: fetchMock })
 
-    await client.embed(["A".repeat(MAX_EMBEDDING_INPUT_CHARACTERS + 1_000)])
-
-    const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
-    expect(request.input[0]).toHaveLength(MAX_EMBEDDING_INPUT_CHARACTERS)
+    await expect(client.embed(["A".repeat(MAX_EMBEDDING_INPUT_CHARACTERS + 1_000)])).rejects.toThrow(
+      "split them before submission"
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(client.metrics.created).toBe(0)
   })
 
-  it("retries only the provider-identified oversized input with a smaller bound", async () => {
+  it("rejects provider token-limit errors without shortening or retrying the input", async () => {
     const requests: Array<{ input: string[] }> = []
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockImplementationOnce(async (_input, init) => {
-        requests.push(JSON.parse(String(init?.body)) as { input: string[] })
-        return new Response(
-          JSON.stringify({ error: { message: "Invalid 'input[1]': maximum input length is 8192 tokens." } }),
-          { status: 400 }
-        )
-      })
-      .mockImplementationOnce(async (_input, init) => {
-        requests.push(JSON.parse(String(init?.body)) as { input: string[] })
-        return new Response(
-          JSON.stringify({
-            data: [
-              { embedding: Array.from({ length: 1536 }, () => 0), index: 0 },
-              { embedding: Array.from({ length: 1536 }, () => 0), index: 1 }
-            ],
-            model: "openai/text-embedding-3-small"
-          }),
-          { status: 200 }
-        )
-      })
+    const fetchMock = vi.fn<typeof fetch>().mockImplementationOnce(async (_input, init) => {
+      requests.push(JSON.parse(String(init?.body)) as { input: string[] })
+      return new Response(
+        JSON.stringify({ error: { message: "Invalid 'input[1]': maximum input length is 8192 tokens." } }),
+        { status: 400 }
+      )
+    })
     const client = new OpenRouterEmbeddingClient({ apiKey: "test", fetch: fetchMock })
 
-    await client.embed(["short", "x".repeat(MAX_EMBEDDING_INPUT_CHARACTERS)])
+    const inputs = ["short", "x".repeat(MAX_EMBEDDING_INPUT_CHARACTERS)]
+    await expect(client.embed(inputs)).rejects.toThrow("HTTP 400")
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.input).toEqual(inputs)
+    expect(client.metrics).toMatchObject({ retries: 0, created: 0, failed: 2 })
+  })
 
-    expect(requests).toHaveLength(2)
-    expect(requests[1]?.input[0]).toBe("short")
-    expect(requests[1]?.input[1]).toHaveLength(MAX_EMBEDDING_INPUT_CHARACTERS / 2)
-    expect(client.metrics.retries).toBe(1)
+  it("freezes exact inputs across transient retries even if the caller mutates its array", async () => {
+    const inputs = ["  Exact source text 🧭\n"]
+    const sent: string[] = []
+    const client = new OpenRouterEmbeddingClient({
+      apiKey: "test",
+      fetch: async (_url, init) => {
+        sent.push(String(init?.body))
+        if (sent.length === 1) {
+          inputs.splice(0, 1, "changed", "another input")
+          return new Response("busy", { status: 503 })
+        }
+        return successfulResponse()
+      }
+    })
+    await expect(client.embed(inputs)).resolves.toMatchObject({ model: EMBEDDING_MODEL })
+    expect(sent).toHaveLength(2)
+    expect(sent[1]).toBe(sent[0])
+    expect(JSON.parse(sent[0] ?? "").input).toEqual(["  Exact source text 🧭\n"])
+    expect(client.metrics).toMatchObject({ requested: 1, created: 1, retries: 1 })
   })
 
   it("uses the canonical Voyage model space and input roles", async () => {

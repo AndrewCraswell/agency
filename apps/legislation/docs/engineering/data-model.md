@@ -38,6 +38,7 @@ document-section vector only when its exact model, input, dimensions, and legacy
 Drizzle schema definitions live in `src/db/schema`, and generated migrations live in `src/db/migrations`. The baseline
 migration enables pgvector before creating vector columns. The build copies migrations beside the compiled database
 runner so production startup and maintenance commands use the same checked-in migration set.
+Migrations run only through an explicit administration/release command; application startup does not apply them.
 
 The PostgreSQL integration suite recreates these schemas in a dedicated `legislation_test` database, verifies the
 extension and vector dimensions, persists a representative bill aggregate, exercises deletion behavior, and confirms

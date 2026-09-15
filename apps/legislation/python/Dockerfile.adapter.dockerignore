@@ -1,0 +1,7 @@
+**
+!python/
+!python/*.py
+!artifacts/
+!artifacts/openstates-runtime/
+!artifacts/openstates-runtime/state-batch-build-inputs/
+!artifacts/openstates-runtime/state-batch-build-inputs/**

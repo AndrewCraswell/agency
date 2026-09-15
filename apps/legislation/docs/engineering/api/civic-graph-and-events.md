@@ -51,7 +51,7 @@ type OrganizationSummary = CanonicalFields & { type: "organization"; jurisdictio
 type OrganizationDetail = OrganizationSummary & { description: string | null; websiteUrl: string | null; contact: PublicContact | null; children: OrganizationSummary[]; memberships: Membership[]; termsOfReference: string | null; childPageInfo: { memberships: ChildCollectionPageInfo } }
 ```
 
-### Meetings and calendars
+### Meeting schemas
 
 | Schema | Required fields |
 | ------ | --------------- |
@@ -129,7 +129,7 @@ limit and report continuation through `childPageInfo`.
 Source coverage may not provide every relationship; empty results include a coverage warning when appropriate.
 Organization children are complete with an ingestion maximum of 250. Membership continuation uses the existing
 `/members` endpoint. Organization members default role then person name ascending; bills default latest-action
-descending; calendars default name ascending; meeting collections default `sort=starts-asc`.
+descending; meeting collections default `sort=starts-asc`. There is no public calendar collection in the current inventory.
 
 ### `GET /api/organizations/{organizationId}/memberships/{membershipId}`
 
@@ -166,9 +166,9 @@ postponed meetings remain addressable and expose their current status and change
 Outcome links are explicit or deterministic-ID relationships. The API never presents semantic similarity or temporal
 proximity as proof that a meeting produced an action or vote.
 Meeting organizations are complete with an ingestion maximum of 50; the other embedded collections consume their
-cursors through the four relationship endpoints above.
-Agenda, document, outcome, and participant collections default respectively to ordinal ascending, classification then
-title ascending, source sequence ascending, and participant name ascending.
+cursors through the three relationship endpoints above. Agenda, document and participant collections default
+respectively to ordinal ascending, classification then title ascending, and participant name ascending.
+Standalone meeting-outcome routes were removed; retained timeline/source relationships do not restore them.
 
 ### Singular meeting child retrieval
 

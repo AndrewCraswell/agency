@@ -1,32 +1,44 @@
 # Tabra documentation
 
-Start with the question you need to answer. Planned product features and dated release evidence are not claims of live availability.
+Start with the question you need to answer. Planned product features and dated release evidence are not claims of live
+availability.
 
-| Question | Read |
-| --- | --- |
-| What are we building? | [Product specification](product/product-spec.md) |
-| What should we build next? | [Single product backlog](product/backlog.md): 106 tasks across six sections |
-| How should it work and look? | [Design brief and handoff](product/design.md), [route inventory](product/information-architecture.md), [mockups](../legislationpen.pen) |
-| What do customers pay for? | [Pricing and offerings](product/pricing.md), [organization features](product/organization-features.md) |
-| What has passed release acceptance? | [API and passage acceptance](operations/passage-search-delivery.md) |
-| How do I develop or operate it? | [Development and runtime](operations/development.md), [API contract](engineering/api/README.md) |
-| How will we add regulations? | [Regulatory plan](regulations/README.md) |
-| How do we implement regulatory ingestion and retrieval? | [Implementation specification](regulations/implementation.md), [phases and tasks](regulations/implementation-backlog.md) |
+| Question                                                | Read                                                                                                                                                                       |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What are we building?                                   | [ICP-focused product specification](product/product-spec.md): core research jobs, scope/value gate and acceptance                                                          |
+| Who should we serve and prioritize?                     | [Ideal customer profiles](product/icp.md): needs, journeys, fit, revenue scenarios and acquisition effort                                                                  |
+| Who competes for each customer's job?                   | [Competitors by ICP](product/competitors.md): alternatives, strengths, gaps and dated commercial evidence                                                                  |
+| What should we build next?                              | [Single product backlog](backlog/backlog.md)                                                                                                                               |
+| How should it work and look?                            | [Design brief and handoff](design/design.md), [task hierarchy and routes](product/information-architecture.md), [mockups](../legislation.pen)                              |
+| How does conversation connect the product?              | [Conversations and product integration](design/conversations.md): entry, turns, content types, references/citations, progress and write-back                               |
+| How do lists scale as data grows?                       | [Discovery and collection behavior](product/information-architecture.md#supporting-discovery): scope, grouping, sorting, pagination and selection                          |
+| How do we complete the core workflows?                  | [Connected IA flows](product/information-architecture.md#connected-acceptance-flows), [customer workflow acceptance](product/product-spec.md#customer-workflow-acceptance) |
+| Where is complexity justified?                          | [Scope and complexity budget](product/product-spec.md#scope-and-complexity-budget), [navigation priorities](product/information-architecture.md#navigation-priorities)     |
+| How do organizations and workspaces work?               | [Navigation and management design](design/organization-workspace-design.md), [organization behavior](product/organization-features.md)                                     |
+| What do customers pay for?                              | [Pricing and offerings](product/pricing.md), [organization and workspace behavior](product/organization-features.md)                                                       |
+| What has passed release acceptance?                     | [API and passage acceptance](operations/passage-search-delivery.md)                                                                                                        |
+| What is the state-ingestion priority?                   | [NC/Alaska end-to-end gate](operations/openstates-rollout-checklist.md), [onboarding queue](operations/openstates-jurisdiction-onboarding.md)                              |
+| How do I develop or operate it?                         | [Development and runtime](operations/development.md), [API contract](engineering/api/README.md)                                                                            |
+| How will we add regulations?                            | [Regulatory plan](regulations/README.md)                                                                                                                                   |
+| How do we implement regulatory ingestion and retrieval? | [Implementation specification](regulations/implementation.md), [remaining production tasks](regulations/production-backlog.md)                                             |
 
 ## Where information belongs
 
-| Folder | Responsibility |
-| --- | --- |
-| `product/` | Scope, design, backlog, notifications, organization workflows and pricing |
-| `engineering/` | Data/source contracts, architecture and technical implementation plans |
-| `operations/` | Setup, procedures, diagnostics, rollout gates and current acceptance |
-| `regulations/` | Future regulatory acquisition and implementation; not delivered coverage |
-| `research/` | Market/provider comparisons, options and experiments supporting a decision |
+| Folder         | Responsibility                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `product/`     | ICP/competition, product scope, information architecture, notifications, organization workflows and pricing |
+| `design/`      | Visual/interaction handoffs and organization management design                                              |
+| `backlog/`     | Product implementation work and acceptance tracking                                                         |
+| `engineering/` | Data/source contracts, architecture and technical implementation plans                                      |
+| `operations/`  | Setup, procedures, diagnostics, rollout gates and current acceptance                                        |
+| `regulations/` | Regulatory contracts, local validation evidence and gated production delivery                               |
+| `research/`    | Market/provider comparisons, options and experiments supporting a decision                                  |
 
-Update the existing owning document first. A backlog row should link to a requirement, not repeat its specification.
-Keep completed rollout narratives out of active guides; retain only evidence needed to explain a decision or reproduce
-a result. Keep source evidence beside reviewed data and benchmarks beside evaluation fixtures. Git history holds superseded committed prose; keep a recovery copy for untracked material before removal. There is no general documentation archive. Do not create a new review/summary page for each conversation. Create a new page only for a distinct contract
-or operating procedure that cannot be read comfortably within its owner. Update this inventory when adding or removing one.
+Update the owning document first; backlog rows link to requirements instead of repeating them. Current work selection
+belongs to the product or regulatory production backlog, not old check-in notes. Keep dated evidence needed to reproduce
+source, rollout and model decisions, but remove superseded instructions and duplicate status summaries. Preserve
+untracked material outside the repository before removing it. Create a page only for a distinct contract/procedure and
+update this index.
 
 ## Full inventory
 
@@ -35,13 +47,18 @@ The catalog below includes every retained document. Most product work needs only
 <details>
 <summary>Product and features</summary>
 
-- [Product experience implementation backlog](product/backlog.md)
-- [Legislative research app design specification](product/design.md)
+- [Product experience implementation backlog](backlog/backlog.md)
+- [Legislative research app design specification](design/design.md)
+- [Conversations and product integration](design/conversations.md)
 - [Information architecture](product/information-architecture.md)
+- [Account, privacy and integrations action plan](product/account-integrations-action-plan.md)
 - [Notification experience and Novu integration](product/notification-experience.md)
 - [Organization features](product/organization-features.md)
+- [Organization and workspace design specification](design/organization-workspace-design.md)
 - [Pricing and offerings](product/pricing.md)
-- [Legislative intelligence MVP product specification](product/product-spec.md)
+- [Ideal customer profiles and opportunity strategy](product/icp.md)
+- [Competitors by ideal customer profile](product/competitors.md)
+- [Legislative intelligence product specification](product/product-spec.md)
 
 </details>
 
@@ -80,22 +97,34 @@ The catalog below includes every retained document. Most product work needs only
 - [Document-processing operations](operations/document-processing-operations.md)
 - [HTTP API local smoke checklist](operations/http-api-local-smoke.md)
 - [Ingestion remediation catalog](operations/ingestion-remediation-catalog.md)
-- [Open States rollout requirements and results](operations/openstates-rollout-checklist.md)
+- [Open States rollout requirements and results](operations/openstates-rollout-checklist.md) includes the bounded local
+  embedding-freshness audit command and per-state evidence.
 - [Open States extraction build](operations/openstates-runtime-build.md)
+- [Open States jurisdiction onboarding and recorded milestones](operations/openstates-jurisdiction-onboarding.md)
+- [Partial Open States people imports and quarantine](operations/openstates-people-quarantine.md)
 - [Passage search and API closeout](operations/passage-search-delivery.md)
 
 </details>
 
 <details>
-<summary>Future regulations</summary>
+<summary>Regulatory program and evidence</summary>
 
 - [Regulatory acquisition, backfills and Trigger.dev workflows](regulations/acquisition-workflows.md)
 - [Regulatory HTTP API and MCP contract](regulations/api-mcp-contract.md)
 - [Competitor regulatory data sourcing](regulations/competitor-sources.md)
 - [Regulatory data and version contract](regulations/data-contract.md)
 - [Federal collector baseline and reuse decision](regulations/federal-collector-baseline.md)
-- [Regulatory implementation phases, tasks and validation gates](regulations/implementation-backlog.md)
+- [Remaining regulatory ingestion and production backlog](regulations/production-backlog.md)
+- [Regulatory source ingestion and orchestration tasks](regulations/ingestion-production-tasks.md)
+- [Regulatory passage, indexing and embedding tasks](regulations/search-production-tasks.md)
+- [Regulatory HTTP and MCP tasks](regulations/api-mcp-production-tasks.md)
+- [Regulatory sync and production operations tasks](regulations/operations-production-tasks.md)
+- [Original regulatory phase IDs and retained milestones](regulations/implementation-backlog.md)
 - [Regulatory implementation specification](regulations/implementation.md)
+- [Regulatory implementation progress and source evidence](regulations/implementation-progress.md)
+- [Federal XML parser and pilot validation](regulations/parser-validation.md)
+- [Regulatory storage and search-lifecycle validation](regulations/storage-validation.md)
+- [Federal Register metadata and rendition validation](regulations/fr-metadata-validation.md)
 - [Regulatory data ingestion proposal](regulations/README.md)
 - [Regulatory indexing, embeddings and retrieval](regulations/search-indexing.md)
 - [Regulatory source catalog](regulations/sources.md)
@@ -120,15 +149,13 @@ The catalog below includes every retained document. Most product work needs only
 - [Azure infrastructure reference](../infra/bicep/README.md)
 - [GovInfo review-data instructions](../src/ingestion/govinfo/review-data/README.md)
 - [Committee source decisions](../src/ingestion/govinfo/review-data/source-decisions.md)
-- [Embedding canary](../evals/embedding-canary.md)
-- [Embedding model bakeoff](../evals/embedding-model-bakeoff.md)
-- [Embedding topic canary](../evals/embedding-topic-canary.md)
-- [Design source](../legislationpen.pen)
-
-Evaluation data: [canary](../evals/embedding-canary.json), [lexical](../evals/embedding-canary.lexical.json),
-[semantic](../evals/embedding-canary.semantic.json), [model inputs](../evals/embedding-model-bakeoff.json),
-[model results](../evals/embedding-model-bakeoff-results.json), [topic inputs](../evals/embedding-topic-canary.json),
-[topic hybrid](../evals/embedding-topic-canary.hybrid.json), [topic lexical](../evals/embedding-topic-canary.lexical.json),
-[topic semantic](../evals/embedding-topic-canary.semantic.json).
-
-Inventory: **53** Markdown pages here and **7** elsewhere in the app, **60 total**, plus one design source and nine evaluation JSON files.
+- [Embedding canary](../evals/embedding-canary.md): [manifest](../evals/embedding-canary.json),
+  [lexical](../evals/embedding-canary.lexical.json), [semantic](../evals/embedding-canary.semantic.json)
+- [Embedding model bakeoff](../evals/embedding-model-bakeoff.md): [inputs](../evals/embedding-model-bakeoff.json),
+  [results](../evals/embedding-model-bakeoff-results.json)
+- [Embedding topic canary](../evals/embedding-topic-canary.md): [inputs](../evals/embedding-topic-canary.json),
+  [hybrid](../evals/embedding-topic-canary.hybrid.json), [lexical](../evals/embedding-topic-canary.lexical.json),
+  [semantic](../evals/embedding-topic-canary.semantic.json)
+- [Pinned tokenizer vocabulary provenance](../src/models/tokenizers/README.md)
+- [Design source](../legislation.pen) Evaluation data: [canary](../evals/embedding-canary.json),
+  [lexical](../evals/embedding-canary.lexical.json),

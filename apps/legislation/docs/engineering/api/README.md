@@ -61,8 +61,8 @@ of these access classes:
 | First-party   | Requires a valid user token and a first-party application client. Raw addresses use this boundary. |
 | Operator      | Requires an operator role and is never part of the public developer API.                          |
 
-The draft assumes all routes are authenticated until a separate exposure review marks a route public. Subscription,
-webhook, representative-lookup, and research-answer routes always remain authenticated or more restrictive.
+The draft assumes all API routes are authenticated until a separate exposure review marks a route public. Subscription,
+webhook and research-answer routes remain authenticated or more restrictive. Representative lookup is not in this inventory.
 
 ## Endpoint inventory
 

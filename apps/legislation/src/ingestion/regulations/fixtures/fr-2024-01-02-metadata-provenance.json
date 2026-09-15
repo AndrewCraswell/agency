@@ -1,0 +1,8 @@
+{
+  "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bpublication_date%5D%5Bgte%5D=2024-01-02&conditions%5Bpublication_date%5D%5Blte%5D=2024-01-02&per_page=1000&order=oldest&fields%5B%5D=document_number&fields%5B%5D=title&fields%5B%5D=type&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=action&fields%5B%5D=agencies&fields%5B%5D=cfr_references&fields%5B%5D=docket_ids&fields%5B%5D=regulation_id_numbers&fields%5B%5D=dates&fields%5B%5D=effective_on&fields%5B%5D=comments_close_on&fields%5B%5D=significant&fields%5B%5D=html_url&fields%5B%5D=pdf_url&fields%5B%5D=full_text_xml_url&fields%5B%5D=json_url&fields%5B%5D=citation&fields%5B%5D=start_page&fields%5B%5D=end_page&fields%5B%5D=volume&fields%5B%5D=correction_of&fields%5B%5D=corrections",
+  "sha256": "8293405067402d1b94263d11d07743fd0fae71e68fc25a29467ff721a9fd8df2",
+  "bytes": 127967,
+  "retrievedAt": "2026-09-14T22:55:10.580Z",
+  "contentType": "application/json; charset=utf-8",
+  "transformation": "None. Exact response body with an explicit metadata field selection."
+}

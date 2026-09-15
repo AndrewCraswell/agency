@@ -14,10 +14,29 @@ import {
   legislativeSessions,
   organizations,
   people,
+  syncCheckpoints,
   votePositions,
   votes
 } from "../schema/schema.js"
+import { assertBillBatchOwnership, type BillBatchOwnership } from "./bill-batch-ownership.js"
+import { preserveBillResolvedLinks } from "./bill-resolved-links.js"
 import { observeCanonicalRecord } from "./changes.js"
+
+/** Bill feeds can fill missing sponsor facts, but entity ingestion owns existing person details. */
+function billPersonUpdate() {
+  return {
+    familyName: sql`coalesce(${people.familyName}, excluded.family_name)`,
+    givenName: sql`coalesce(${people.givenName}, excluded.given_name)`,
+    jurisdictionId: sql`coalesce(${people.jurisdictionId}, excluded.jurisdiction_id)`,
+    party: sql`coalesce(${people.party}, excluded.party)`,
+    sourceId: sql`coalesce(${people.sourceId}, excluded.source_id)`,
+    sourceUpdatedAt: sql`coalesce(${people.sourceUpdatedAt}, excluded.source_updated_at)`,
+    sourceUrl: sql`coalesce(${people.sourceUrl}, excluded.source_url)`,
+    isActive: sql`coalesce(${people.isActive}, excluded.is_active)`,
+    updatedAt: new Date(),
+    upstreamIds: sql`excluded.upstream_ids || ${people.upstreamIds}`
+  }
+}
 
 /** Missing OpenStates entities must be imported before their bill observations can commit. */
 export function assertOpenStatesOrganizationDependencies(
@@ -284,7 +303,10 @@ export async function upsertBillAggregate(
 
     if (aggregate.people !== undefined && aggregate.people.length > 0) {
       for (const person of aggregate.people) {
-        await transaction.insert(people).values(person).onConflictDoUpdate({ set: person, target: people.id })
+        await transaction
+          .insert(people)
+          .values(person)
+          .onConflictDoUpdate({ set: billPersonUpdate(), target: people.id })
       }
     }
 
@@ -460,9 +482,26 @@ const votePositionInsertBatchSize = 100
 
 export async function upsertBillAggregates(
   database: LegislationDatabase,
-  aggregates: readonly CanonicalBillAggregate[]
+  inputAggregates: readonly CanonicalBillAggregate[],
+  options: {
+    /** Immutable per-batch promotion receipt, not a mutable session cursor. */
+    receipt?: { source: string; stream: string; cursor: Record<string, unknown> }
+    ownership?: BillBatchOwnership
+    preserveResolvedLinks?: boolean
+  } = {}
 ): Promise<Set<string>> {
+  let aggregates = inputAggregates
+  if (
+    options.ownership &&
+    (!options.receipt ||
+      (options.receipt.source === options.ownership.source && options.receipt.stream === options.ownership.stream))
+  ) {
+    throw new Error("Owned bill promotion requires a separate immutable receipt")
+  }
   if (aggregates.length === 0) {
+    if (options.receipt) {
+      throw new Error("Cannot receipt an empty bill batch")
+    }
     return new Set()
   }
   for (const aggregate of aggregates) {
@@ -472,6 +511,32 @@ export async function upsertBillAggregates(
   const existing = await database.select({ id: bills.id }).from(bills).where(inArray(bills.id, billIds))
 
   await database.transaction(async (transaction) => {
+    if (options.receipt) {
+      const receipt = options.receipt
+      if (!receipt.source || !receipt.stream) {
+        throw new Error("Invalid bill batch receipt identity")
+      }
+      await transaction.execute(sql`select set_config('statement_timeout', '60000', true),
+        set_config('lock_timeout', '10000', true), set_config('idle_in_transaction_session_timeout', '120000', true)`)
+      await transaction.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${JSON.stringify([receipt.source, receipt.stream])}, 0))`
+      )
+      const previous = await transaction
+        .select({
+          matches: sql<boolean>`${syncCheckpoints.cursor} = ${JSON.stringify(receipt.cursor)}::jsonb`
+        })
+        .from(syncCheckpoints)
+        .where(and(eq(syncCheckpoints.source, receipt.source), eq(syncCheckpoints.stream, receipt.stream)))
+      if (previous.length > 0) {
+        if (!previous[0]?.matches) {
+          throw new Error("Bill batch receipt conflicts with a committed promotion")
+        }
+        return
+      }
+    }
+    if (options.ownership) {
+      await assertBillBatchOwnership(transaction, options.ownership)
+    }
     const jurisdictionValues = uniqueById(aggregates.map((aggregate) => aggregate.jurisdiction))
     await transaction
       .insert(jurisdictions)
@@ -515,25 +580,10 @@ export async function upsertBillAggregates(
 
     const personValues = uniqueById(aggregates.flatMap((aggregate) => aggregate.people ?? []))
     if (personValues.length > 0) {
-      await transaction
-        .insert(people)
-        .values(personValues)
-        .onConflictDoUpdate({
-          set: {
-            familyName: sql`excluded.family_name`,
-            givenName: sql`excluded.given_name`,
-            jurisdictionId: sql`excluded.jurisdiction_id`,
-            name: sql`excluded.name`,
-            party: sql`excluded.party`,
-            sourceId: sql`excluded.source_id`,
-            sourceUpdatedAt: sql`excluded.source_updated_at`,
-            sourceUrl: sql`excluded.source_url`,
-            isActive: sql`coalesce(excluded.is_active, ${people.isActive})`,
-            updatedAt: new Date(),
-            upstreamIds: sql`${people.upstreamIds} || excluded.upstream_ids`
-          },
-          target: people.id
-        })
+      await transaction.insert(people).values(personValues).onConflictDoUpdate({
+        set: billPersonUpdate(),
+        target: people.id
+      })
     }
 
     await transaction
@@ -564,6 +614,9 @@ export async function upsertBillAggregates(
         target: bills.id
       })
 
+    if (options.preserveResolvedLinks) {
+      aggregates = await preserveBillResolvedLinks(transaction, aggregates)
+    }
     const organizationObservations = aggregates.flatMap((aggregate) => aggregate.organizationObservations ?? [])
     if (organizationObservations.length > 0) {
       await insertMissingOrganizationObservations(transaction, organizationObservations)
@@ -587,10 +640,30 @@ export async function upsertBillAggregates(
     const validOrganizationIds = new Set(existingOrganizations.map((organization) => organization.id))
     assertOpenStatesOrganizationDependencies(candidateOrganizationIds, validOrganizationIds)
 
-    await transaction.delete(billActions).where(inArray(billActions.billId, billIds))
-    await transaction.delete(billOrganizations).where(inArray(billOrganizations.billId, billIds))
-    await transaction.delete(votes).where(inArray(votes.billId, billIds))
-    await transaction.delete(billRelations).where(inArray(billRelations.billId, billIds))
+    const actionBillIds = aggregates
+      .filter((aggregate) => aggregate.actions !== undefined)
+      .map((aggregate) => aggregate.bill.id)
+    const organizationBillIds = aggregates
+      .filter((aggregate) => aggregate.organizations !== undefined)
+      .map((aggregate) => aggregate.bill.id)
+    const voteBillIds = aggregates
+      .filter((aggregate) => aggregate.votes !== undefined)
+      .map((aggregate) => aggregate.bill.id)
+    const relationBillIds = aggregates
+      .filter((aggregate) => aggregate.relations !== undefined)
+      .map((aggregate) => aggregate.bill.id)
+    if (actionBillIds.length > 0) {
+      await transaction.delete(billActions).where(inArray(billActions.billId, actionBillIds))
+    }
+    if (organizationBillIds.length > 0) {
+      await transaction.delete(billOrganizations).where(inArray(billOrganizations.billId, organizationBillIds))
+    }
+    if (voteBillIds.length > 0) {
+      await transaction.delete(votes).where(inArray(votes.billId, voteBillIds))
+    }
+    if (relationBillIds.length > 0) {
+      await transaction.delete(billRelations).where(inArray(billRelations.billId, relationBillIds))
+    }
 
     for (const aggregate of aggregates) {
       if (aggregate.sponsors !== undefined) {
@@ -686,6 +759,16 @@ export async function upsertBillAggregates(
           },
           target: billDocuments.id
         })
+    }
+    if (options.receipt) {
+      await transaction.insert(syncCheckpoints).values({
+        ...options.receipt,
+        watermark: new Date(),
+        updatedAt: new Date()
+      })
+    }
+    if (options.ownership) {
+      await assertBillBatchOwnership(transaction, options.ownership)
     }
   })
   return new Set(existing.map((record) => record.id))

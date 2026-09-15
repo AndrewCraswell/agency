@@ -337,6 +337,13 @@
       "when": 1789236000000,
       "tag": "0047_passage_search_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1789430400000,
+      "tag": "0048_regulatory-edition-storage",
+      "breakpoints": true
     }
   ]
 }

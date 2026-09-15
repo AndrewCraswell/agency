@@ -1,6 +1,14 @@
 # Regulatory data and version contract
 
-Implementation specification, September 14, 2026. Proposed tables and fields, not existing schema.
+Implemented alternate-rendition boundary: `fr-publication-input-2026-09-14` normalizes verified GovInfo HTML separately
+from the XML parser contract. It preserves `html_preformatted` text, source-native identity, metadata observation hashes,
+supporting PDF evidence and lossless reader blocks without inferred legal sections. Metadata-only changes affect the
+staging observation key without changing the text key. The dedicated HTML registration/publisher now shares canonical
+persistence with XML while retaining separate format validation; normalization alone still establishes no canonical
+publication. See [HTML publication](storage-validation.md#canonical-html-publication).
+
+Implementation specification, September 14, 2026. Initial eCFR storage schema and writer are implemented; the full contract
+below remains broader than delivered functionality. See [storage validation and boundaries](storage-validation.md).
 Parent: [implementation plan](implementation.md). Applies to direct federal and later licensed state ingestion.
 
 ## Identity and source boundaries
@@ -72,22 +80,43 @@ uniformly current edition. Annual CFR volumes also have title-specific revision 
 Return `legalStatus: unknown` unless a scoped publisher assertion supports a narrower status. A final rule may not yet
 be effective, and a later stay may exist outside our coverage. A source's missing record is not proof of repeal.
 
-Version lookup supports exactly one of: `versionId`, `editionId`, or `asOf`; omission selects latest validated.
+Provision lookup supports `versionId`, `editionId`, or both as an exact membership assertion. `asOf` is exclusive with
+both. Omission on a provision selects latest validated; version-only detail remains neutral about edition-specific
+hierarchy, dates and rights. Delivering provision text requires explicit authorized edition/observation context.
 `asOf` is a publisher-date lookup only where the declared coverage supports it. Return `basis` as
 `publisher_point_in_time`, `published_edition`, or `observed_snapshot`, with actual selected date and source currency.
 Never silently choose the closest earlier annual edition for an arbitrary date. Return `409 conflict` with
 `reason: historical_coverage_unavailable` and available edition bounds when the entity exists but that date is unsupported.
 For observations-only state feeds, dated snapshots are selectable by edition ID; arbitrary `asOf` remains unsupported.
 
+Annual CFR package years are also distinct from printed revision dates. The live title-1 audit found identical XML
+bytes under GovInfo's 2023, 2024 and 2025 package labels, all printing January 1, 2023. The official
+[2024 PDF](https://www.govinfo.gov/content/pkg/CFR-2024-title1-vol1/pdf/CFR-2024-title1-vol1.pdf) and
+[2025 PDF](https://www.govinfo.gov/content/pkg/CFR-2025-title1-vol1/pdf/CFR-2025-title1-vol1.pdf) also print that revision.
+Preserve package identity and printed date independently; content reuse does not establish a legal-validity interval.
+`assessAnnualCfrDates` distinguishes absent, contradictory and mismatched date evidence and never promotes a folder year
+to legal currency. The mismatch remains a publication gate until an explicit supported source/date policy is implemented.
+
 One unchanged text version can appear in multiple editions. Preserve each edition membership and provenance without
 re-embedding identical input. A correction to a previously published edition creates a new source revision/observation;
 retain the superseded revision for citations and expose which revision is currently preferred. ObservedAt permits an
 audit of what Tabra knew at a time; the initial API does not promise full bitemporal legal reconstruction.
 
+Selected context carries edition/provision/version IDs and the source observation, rights-policy revision, parent,
+source locator, selected/currency dates and basis. Validate that tuple rather than selecting an arbitrary membership
+for a reused text hash. Reverse provision-to-edition traversal supports exact version entry points without scanning
+every code edition. A publication version uses publication/source context, never a fabricated code edition.
+
+Readable source blocks are distinct from embedding/retrieval chunks. Their exact body intervals are contiguous and
+non-overlapping; table whitespace and footnotes are retained without duplicated retrieval headers. The local reader
+projection consumes existing normalized text/blocks and leaves parser contracts and raw evidence unchanged.
+
 ## Publication and relationship semantics
 
-Federal Register document number is the publication natural key; corrections published under a new number remain
-separate linked documents. A replacement rendition under the same number creates a new document version. Metadata-only
+Federal Register document number is a source alias, not unconditionally unique: the retained January 18, 2000 issue
+contains two distinct publications numbered `00-113`. ING-05 owns citation/location-qualified canonical identity;
+unresolved collisions remain quarantined, never merged by title or assigned arbitrary suffixes. Corrections published
+under a new number remain separate linked documents. A replacement rendition of a resolved publication creates a new version. Metadata-only
 changes create observations/events without inventing text changes. GovInfo package/granule IDs and FederalRegister.gov
 IDs remain aliases and are reconciled with the document number.
 
@@ -100,6 +129,14 @@ Evidence basis is `publisher_link`, `parsed_citation`, or `reviewed_match`. Sema
 candidates. Store RINs and docket IDs as namespaced aliases, not globally unique action IDs. A shared RIN permits a
 candidate grouping but does not by itself justify merging distinct proceedings. Unresolved U.S. Code/Public Law
 citations are valid references even before the associated statutory corpus arrives.
+
+The local `fr-source-references.ts` projection retains every original agency/identifier occurrence and its ordinal.
+Numeric FederalRegister.gov agency IDs receive stable publisher-scoped aliases; absent IDs receive document-occurrence
+aliases, never name-based matches across publications. Parent IDs remain source relationships. Blank names and identifiers
+retain their evidence with explicit unusable reasons. Docket aliases remain document-scoped until agency/proceeding
+resolution is reviewed. Shared RIN aliases support candidate discovery but assign no canonical action. The projection
+does not validate RIN syntax or infer equivalence from case, punctuation or names; only surrounding whitespace is trimmed
+from identifier values, while the unmodified value is retained. Database reference tables and directory routes remain pending.
 
 ## Acquisition and generation records
 
@@ -132,9 +169,9 @@ acquisition; report both available scope and total requested scope.
 4. In a short transaction, compare-and-swap the expected current generation, publish the validated generation, and
    write outbox work. A slower old backfill cannot replace a newer publisher version; same-date corrections require
    source revision precedence, not worker completion order.
-5. Search workers build a generation then mark it ready. Until ready, keep the previous searchable generation with
-   explicit freshness fields. A first-ever unindexed edition has no searchable claim. Detail can expose newer validated
-   text while search reports its older generation; exact version citations never silently move.
+5. Search workers build and verify a generation before whole-scope acknowledgement. Current selection requires the
+   acknowledged current canonical head; an unindexed newer head fails explicitly rather than returning older text as
+   current. Allowed historical scoped reads stay available separately. Exact citations never silently move.
 6. Removed items are absent only in the new fully validated edition membership. Preserve earlier text and its citations.
    Withdrawals from a license are governed separately by rights policy, never treated as legal repeal.
 

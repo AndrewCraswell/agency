@@ -54,6 +54,7 @@ const sponsorshipSchema = z.object({
   organization: organizationSchema.optional(),
   person: personReferenceSchema.optional(),
   person_id: z.string().optional(),
+  source_observation_id: z.string().min(1).optional(),
   primary: z.boolean().default(false)
 })
 const relationSchema = z.object({
@@ -361,7 +362,10 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
           upstreamIds: { openstates: providerPersonId }
         })
       }
-      const identity = providerPersonId ?? `${sponsor.name}:${sponsor.classification ?? "sponsor"}:${index}`
+      const identity =
+        sponsor.source_observation_id ??
+        providerPersonId ??
+        `${sponsor.name}:${sponsor.classification ?? "sponsor"}:${index}`
       return {
         billId: canonicalBillId,
         classification: sponsor.classification ?? (sponsor.primary ? "primary" : "sponsor"),

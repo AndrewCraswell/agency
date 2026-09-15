@@ -2,17 +2,24 @@
 
 ## Shared behavior
 
+The registered input schemas in [tools.ts](../../src/mcp/tools.ts) and the
+[HTTP adapter](../../src/mcp/http-query-adapter.ts) own exact tool arguments and projection. This guide was checked against
+that registry on September 15, 2026: 25 read tools, no calendar, raw-address, conversation or mutation tools. Product chat
+actions use authorized application services, not an assumed MCP mutation surface. See [authentication](../operations/authentication.md)
+and [API acceptance](../operations/passage-search-delivery.md) for serving and release gates.
+
 Proposed regulatory tools and their API mappings are in [regulatory HTTP API and MCP](../regulations/api-mcp-contract.md).
 They extend the existing API-backed adapter after validation; this link does not mark those tools implemented.
 
-All returned bill records contain canonical IDs and relevant official links. Lookup inputs accept canonical bill IDs or an
-unambiguous jurisdiction, session, bill-type, and bill-number tuple. Provider IDs are metadata, not public identity.
+Returned records contain canonical IDs and available source links. Bill lookup tools accept canonical IDs; resolve an
+ambiguous printed identifier through search first. Provider IDs are metadata, not public identity.
 
 List operations use opaque cursors, default to 20 results, and allow at most 100. Text queries are limited to 500
 characters. Snippets are limited to 500 characters, and a single response contains at most 100,000 text characters.
-Responses include `truncated: true` and a continuation cursor whenever a configured limit removes available content.
+Responses disclose truncation; a cursor exists only when the operation supports continuation. A bounded ranked window
+may require refined filters rather than another page. Per-tool schemas and [search limits](api/search-and-diffs.md) take precedence.
 Source-dependent expansion searches return a warning when no record matches; clients must not interpret an empty result
-as proof that the jurisdiction has no such people, committees, events, calendars, votes, amendments, or materials.
+as proof that the jurisdiction has no such people, committees, events, votes, amendments, or materials.
 
 Stable error categories are `invalid_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`,
 `dependency_unavailable`, and `internal`. Errors include a safe message and correlation ID and never include SQL,
@@ -27,9 +34,8 @@ cursor, and limit. Output: ranked bill summaries with match explanation, source 
 
 ### `get_bill`
 
-Input: canonical ID plus optional `childCursor` and `childLimit`. Output: canonical metadata, sponsors, latest status,
-subjects, documents, relations, amendments, upstream attribution, source links, and `nextChildCursor` when
-any child collection has another bounded page.
+Input: canonical `id` and optional `childLimit` (1-100), not a child cursor. Returns bounded related records with source
+links. Use the relevant relationship/text tool for continuation rather than inventing another `get_bill` argument.
 
 ### `get_bills`
 
@@ -39,7 +45,7 @@ does not discard successful results for the other IDs.
 
 ### `get_bill_timeline`
 
-Input: bill lookup plus optional `childCursor` and `childLimit`. Output: ordered actions and votes with stable event IDs,
+Input: canonical `id`, optional `cursor` and `limit` (1-100). Output: ordered actions and votes with stable event IDs,
 dates or timestamps, description, result, source link, and a continuation cursor when needed.
 
 ### `search_bill_text`
@@ -51,12 +57,12 @@ matching document-section candidates, and rerank them with `cohere/rerank-v3.5` 
 
 ### `get_bill_text`
 
-Input: bill lookup, optional document ID or version code, optional section identifier, and cursor. Output: ordered
+Input: canonical `id`, optional `documentId`, `versionCode` and `cursor`; no section selector. Output: ordered
 document sections, content hash, source link, next cursor, and truncation flag.
 
 ### `compare_bill_versions`
 
-Input: bill lookup and exactly two document IDs or version codes. Output: identified versions and ordered change hunks
+Input: canonical `billId` and `documentIds` containing exactly two document IDs, not version codes. Output: identified versions and ordered change hunks
 classified as added, removed, or unchanged, with source links and truncation signaling.
 
 ### `find_related_bills`
@@ -78,10 +84,11 @@ Discovery accepts bounded name text plus optional jurisdiction, classification, 
 filters. Detail returns the canonical legislature, chamber, committee, or subcommittee with children, memberships, and
 bounded bill activity. Organization availability is source-dependent.
 
-### Events, calendars, votes, amendments, materials, and changes
+### Events, votes, amendments, materials, and changes
 
-`search_events`, `get_event`, and `get_calendar` expose available meeting, hearing, agenda, participant, document, and
-calendar records. `get_bill_votes` is the preferred one-call path for answering who voted for or against a bill. It
+`search_events` and `get_event` expose available meeting, hearing, agenda, participant and document records through the
+canonical meeting API. `get_calendar` was removed; date-filtered events are the supported schedule view.
+`get_bill_votes` is the preferred one-call path for answering who voted for or against a bill. It
 returns up to 25 roll calls per page with every normalized member position and a continuation cursor. The service stops
 the page early before it approaches the response-size ceiling, so unusually large House vote histories continue safely.
 `search_votes`, `get_vote`, and `get_votes` expose the same records as separate discovery and detail operations when

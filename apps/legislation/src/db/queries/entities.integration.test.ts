@@ -4,9 +4,13 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { projectPersonDetailRead } from "../../api/person-detail-read-routes.js"
+import { importPeopleRepository } from "../../ingestion/openstates/people-import.js"
+import { peopleSourceProfiles } from "../../ingestion/openstates/people-repository.js"
 import type { LegislationDatabase } from "../database.js"
 import * as schema from "../schema/schema.js"
 import { replaceEntitySnapshot } from "./entities.js"
+import { getPersonDetailRead } from "./person-detail-read.js"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe
@@ -53,6 +57,260 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     await pool.query("drop schema if exists legislation_migrations cascade")
     await pool.end()
   })
+
+  it("preserves held organizations and memberships during partial observations and rolls back ended-history conflicts", async () => {
+    const initial = snapshot({ complete: true, role: "member" })
+    await replaceEntitySnapshot(database, jurisdictionId, initial)
+    const observation = {
+      ...initial,
+      people: [],
+      terms: [],
+      organizations: initial.organizations.map((organization) => ({
+        ...organization,
+        membershipRelationsComplete: false
+      })),
+      memberships: []
+    }
+    const options = {
+      organizationObservationOnly: true,
+      replacePeople: false,
+      organizationSourceProvider: "openstates"
+    }
+    await replaceEntitySnapshot(database, jurisdictionId, { ...observation, organizations: [] }, options)
+    expect(
+      (await database.select().from(schema.organizations).where(eq(schema.organizations.id, organizationId)))[0]
+        ?.isActive
+    ).toBe(true)
+    await replaceEntitySnapshot(database, jurisdictionId, observation, options)
+    expect((await membershipsForTenure(organizationId))[0]?.isActive).toBe(true)
+    await expect(
+      replaceEntitySnapshot(database, jurisdictionId, { ...observation, organizations: initial.organizations }, options)
+    ).rejects.toThrow("cannot assert complete rosters")
+    await database
+      .update(schema.organizationMemberships)
+      .set({ isActive: false, endedReason: "roster_removal_detected", detectedEndDate: "2026-08-26" })
+      .where(eq(schema.organizationMemberships.id, membershipId))
+    await expect(
+      replaceEntitySnapshot(
+        database,
+        jurisdictionId,
+        {
+          ...observation,
+          organizations: observation.organizations.map((organization) => ({ ...organization, name: "Must roll back" })),
+          memberships: initial.memberships
+        },
+        {
+          ...options,
+          checkpoint: { source: "openstates", stream: "committee-observation-conflict", cursor: { complete: false } }
+        }
+      )
+    ).rejects.toThrow("cannot reopen ended history")
+    expect(
+      (await database.select().from(schema.organizations).where(eq(schema.organizations.id, organizationId)))[0]?.name
+    ).toBe("Entity refresh committee")
+    expect((await membershipsForTenure(organizationId))[0]?.isActive).toBe(false)
+    expect(
+      await database
+        .select()
+        .from(schema.syncCheckpoints)
+        .where(eq(schema.syncCheckpoints.stream, "committee-observation-conflict"))
+    ).toHaveLength(0)
+    await database
+      .delete(schema.organizationMemberships)
+      .where(eq(schema.organizationMemberships.organizationId, organizationId))
+  })
+
+  it("serializes observation checkpoints and rejects older or conflicting deliveries", async () => {
+    const empty = {
+      people: [],
+      organizations: [],
+      terms: [],
+      memberships: [],
+      personAliases: [],
+      personAliasPersonIds: []
+    }
+    const apply = (date: string, revision = "source-revision") =>
+      replaceEntitySnapshot(database, jurisdictionId, empty, {
+        replacePeople: false,
+        replaceOrganizations: false,
+        enforceObservationOrder: true,
+        statementTimeoutMs: 30000,
+        checkpoint: {
+          source: "openstates",
+          stream: "ordering-test",
+          cursor: { retrievedAt: date, revision, complete: false }
+        }
+      })
+    await apply("2026-09-15T00:00:00Z")
+    await Promise.all([apply("2026-09-15T00:00:00Z"), apply("2026-09-15T00:00:00Z")])
+    await expect(apply("2026-09-14T00:00:00Z")).rejects.toThrow("older than the checkpoint")
+    await expect(apply("2026-09-15T00:00:00Z", "conflicting-revision")).rejects.toThrow("conflicts at the same")
+    await expect(apply("not-a-date")).rejects.toThrow(/Invalid/)
+    await apply("2026-09-16T00:00:00Z", "new-revision")
+    const row = await database
+      .select()
+      .from(schema.syncCheckpoints)
+      .where(eq(schema.syncCheckpoints.stream, "ordering-test"))
+    expect(row[0]?.cursor).toEqual({ retrievedAt: "2026-09-16T00:00:00Z", revision: "new-revision", complete: false })
+  })
+
+  it("preserves unobserved people and rejects reactivation of ended terms", async () => {
+    const input = { ...snapshot({ complete: true, role: "member" }), organizations: [], memberships: [] }
+    await replaceEntitySnapshot(database, jurisdictionId, input, { replaceOrganizations: false })
+    await replaceEntitySnapshot(
+      database,
+      jurisdictionId,
+      {
+        people: [],
+        terms: [],
+        organizations: [],
+        memberships: [],
+        personAliases: [],
+        personAliasPersonIds: []
+      },
+      { preserveUnobservedPeople: true, replaceOrganizations: false }
+    )
+    expect((await database.select().from(schema.people).where(eq(schema.people.id, personId)))[0]?.isActive).toBe(true)
+    await database
+      .update(schema.legislativeTerms)
+      .set({ endDate: "2020-01-01", isActive: false })
+      .where(eq(schema.legislativeTerms.id, termId))
+    await expect(
+      replaceEntitySnapshot(database, jurisdictionId, input, {
+        protectTermHistory: true,
+        replaceOrganizations: false,
+        preserveUnobservedPeople: true,
+        statementTimeoutMs: 30000
+      })
+    ).rejects.toThrow("cannot be reactivated")
+    expect(
+      (await database.select().from(schema.legislativeTerms).where(eq(schema.legislativeTerms.id, termId)))[0]?.endDate
+    ).toBe("2020-01-01")
+  })
+
+  it.each(["nc", "ak"] as const)(
+    "imports %s idempotently and preserves quarantined people with partial checkpoints",
+    async (state) => {
+      const profile = peopleSourceProfiles[state]
+      const expectedCount = profile.districts.lower.length + profile.districts.upper.length + 1
+      await database.insert(schema.jurisdictions).values({
+        id: `jurisdiction:${state}`,
+        classification: "state",
+        countryCode: "US",
+        name: state.toUpperCase(),
+        subdivisionCode: state.toUpperCase()
+      })
+      const current = ["lower", "upper"].flatMap((type) =>
+        Array.from(
+          { length: type === "lower" ? profile.districts.lower.length : profile.districts.upper.length },
+          (_, index) => ({
+            path: `data/${state}/legislature/${type}-${index}.yml`,
+            content: JSON.stringify({
+              id: `ocd-person/import-${type}-${index}`,
+              name: `Member ${type} ${index}`,
+              roles: [
+                {
+                  type,
+                  district: (type === "lower" ? profile.districts.lower : profile.districts.upper)[index],
+                  jurisdiction: profile.jurisdiction
+                }
+              ]
+            })
+          })
+        )
+      )
+      current.push({
+        path: `data/${state}/committees/import.yml`,
+        content: JSON.stringify({
+          id: "ocd-organization/import-test",
+          name: "Test committee",
+          classification: "committee",
+          chamber: "lower",
+          jurisdiction: profile.jurisdiction,
+          members: []
+        })
+      })
+      const retired = [
+        {
+          path: `data/${state}/retired/import.yml`,
+          content: JSON.stringify({
+            id: "ocd-person/import-retired",
+            name: "Retired member",
+            roles: [
+              {
+                type: "upper",
+                district: "1",
+                jurisdiction: profile.jurisdiction,
+                end_date: "2010-01-01"
+              }
+            ]
+          })
+        }
+      ]
+      const observedAt = new Date("2026-09-14T00:00:00Z")
+      expect((await importPeopleRepository(database, state, current, retired, observedAt)).status).toBe("imported")
+      const readTerms = () =>
+        database
+          .select()
+          .from(schema.legislativeTerms)
+          .where(eq(schema.legislativeTerms.jurisdictionId, `jurisdiction:${state}`))
+          .orderBy(schema.legislativeTerms.id)
+      const readCheckpoint = () =>
+        database.query.syncCheckpoints.findFirst({
+          where: eq(schema.syncCheckpoints.stream, `${state}-people-history`)
+        })
+      const first = await readTerms()
+      expect(first).toHaveLength(expectedCount)
+      for (const term of [first[0]!, first.at(-1)!]) {
+        const detail = projectPersonDetailRead(
+          await getPersonDetailRead(database, term.personId),
+          "https://api.example.test"
+        )
+        expect(detail.id).toBe(term.personId)
+        expect(detail.jurisdictionIds).toContain(`jurisdiction:${state}`)
+        expect(
+          detail.terms.every((value) => value.officeTitle === "Senator" || value.officeTitle === "Representative")
+        ).toBe(true)
+      }
+      expect(first.filter((term) => term.startDate === null)).toHaveLength(expectedCount)
+      expect(first.filter((term) => term.endDate === "2010-01-01" && term.isActive === false)).toHaveLength(1)
+      expect((await readCheckpoint())?.cursor).toMatchObject({ complete: true, retrievedAt: observedAt.toISOString() })
+      await importPeopleRepository(database, state, current, retired, observedAt)
+      expect((await readTerms()).map((term) => term.id)).toEqual(first.map((term) => term.id))
+      const stored = await readTerms()
+      const quarantinedPerson = await database.query.people.findFirst({
+        where: eq(schema.people.sourceId, "ocd-person/import-lower-0")
+      })
+      const malformed = {
+        ...current[0]!,
+        content: current[0]!.content.replace(
+          '"roles":[',
+          '"roles":[{"type":"upper","jurisdiction":"bad","end_date":"not-a-date"},'
+        )
+      }
+      expect(
+        (
+          await importPeopleRepository(
+            database,
+            state,
+            [malformed, ...current.slice(1)],
+            retired,
+            new Date("2026-09-15T00:00:00Z")
+          )
+        ).status
+      ).toBe("partially_imported")
+      expect((await readTerms()).map((term) => term.id)).toEqual(stored.map((term) => term.id))
+      expect(
+        await database.query.people.findFirst({ where: eq(schema.people.sourceId, "ocd-person/import-lower-0") })
+      ).toEqual(quarantinedPerson)
+      expect((await readCheckpoint())?.cursor).toMatchObject({
+        complete: false,
+        quarantine: [expect.objectContaining({ path: current[0]!.path })]
+      })
+      await importPeopleRepository(database, state, current, retired, new Date("2026-09-16T00:00:00Z"))
+      expect((await readCheckpoint())?.cursor).toMatchObject({ complete: true, quarantine: [] })
+    }
+  )
 
   it("imports a complete directory exceeding one statement's bind parameter budget", async () => {
     const input = snapshot({ complete: true, role: "member" })

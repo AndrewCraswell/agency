@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
+import { z } from "zod"
 import type { EntitySnapshot } from "../../ingestion/entity-snapshot.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -43,7 +44,8 @@ export function resolveMembershipTenures(
     | "effectiveStartDate"
     | "effectiveEndDate"
     | "lastObservedDate"
-  >[]
+  >[],
+  options: Readonly<{ observationOnly?: boolean }> = {}
 ): OrganizationMembershipInsert[] {
   const incomingKeys = new Set<string>()
   const existingByKey = new Map<string, (typeof existingMemberships)[number][]>()
@@ -64,6 +66,13 @@ export function resolveMembershipTenures(
     incomingKeys.add(key)
 
     const history = existingByKey.get(key) ?? []
+    if (
+      options.observationOnly === true &&
+      history.length > 0 &&
+      !history.some((existing) => existing.isActive === true)
+    ) {
+      throw new Error("A membership observation cannot reopen ended history or establish a return tenure")
+    }
     if (
       membership.endedReason === "historical_at_first_observation" &&
       (history.length > 1 || history.some((existing) => existing.endedReason !== "historical_at_first_observation"))
@@ -110,10 +119,14 @@ export async function replaceEntitySnapshot(
   snapshot: EntitySnapshot,
   options: Readonly<{
     checkpoint?: { source: string; stream: string; cursor: Record<string, unknown> }
+    enforceObservationOrder?: boolean
     membershipDetectionDate?: string
     membershipSessionId?: string
     organizationSourceProvider?: string
+    organizationObservationOnly?: boolean
     preserveExistingOrganizations?: boolean
+    preserveUnobservedPeople?: boolean
+    protectTermHistory?: boolean
     replaceOrganizations?: boolean
     replacePeople?: boolean
     statementTimeoutMs?: number
@@ -131,6 +144,16 @@ export async function replaceEntitySnapshot(
   const organizationValues = uniqueById(snapshot.organizations)
   const termValues = uniqueById(snapshot.terms)
   const incomingMembershipValues = uniqueById(snapshot.memberships)
+  if (
+    options.organizationObservationOnly === true &&
+    (organizationValues.some((organization) => organization.membershipRelationsComplete === true) ||
+      incomingMembershipValues.some(
+        (membership) =>
+          membership.isActive !== true || (membership.endedReason !== null && membership.endedReason !== undefined)
+      ))
+  ) {
+    throw new Error("Organization observations cannot assert complete rosters or membership departures")
+  }
   if (options.membershipDetectionDate !== undefined && !isIsoDate(options.membershipDetectionDate)) {
     throw new Error("Membership detection date must use YYYY-MM-DD")
   }
@@ -176,14 +199,63 @@ export async function replaceEntitySnapshot(
   const personJurisdictionValues = snapshot.personJurisdictions ?? []
   const termPersonIds = [...new Set(snapshot.termPersonIds ?? [])]
   const termSourceProvider = snapshot.termSourceProvider
+  const observationSchema = z.object({ retrievedAt: z.iso.datetime({ offset: true }), revision: z.string().min(1) })
+  const observation =
+    options.enforceObservationOrder === true ? observationSchema.parse(options.checkpoint?.cursor) : undefined
 
   await database.transaction(async (transaction) => {
     if (options.statementTimeoutMs !== undefined) {
       await transaction.execute(sql`select set_config('statement_timeout', ${String(options.statementTimeoutMs)}, true),
         set_config('lock_timeout', '10000', true), set_config('idle_in_transaction_session_timeout', '120000', true)`)
     }
+    if (observation !== undefined && options.checkpoint !== undefined) {
+      const checkpoint = options.checkpoint
+      await transaction.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${JSON.stringify(["entity-observation", checkpoint.source, checkpoint.stream])}, 0))`
+      )
+      const previous = await transaction
+        .select({ cursor: syncCheckpoints.cursor })
+        .from(syncCheckpoints)
+        .where(and(eq(syncCheckpoints.source, checkpoint.source), eq(syncCheckpoints.stream, checkpoint.stream)))
+        .limit(1)
+      if (previous[0]) {
+        const retained = observationSchema.parse(previous[0].cursor)
+        const delta = Date.parse(observation.retrievedAt) - Date.parse(retained.retrievedAt)
+        if (delta < 0 || (delta === 0 && observation.revision !== retained.revision)) {
+          throw new Error("Entity observation is older than the checkpoint or conflicts at the same observation time")
+        }
+      }
+    }
+    if (options.protectTermHistory === true) {
+      await transaction.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${`people-history:${jurisdictionId}`}, 0))`
+      )
+      if (termValues.length > 0) {
+        const existing = await transaction
+          .select()
+          .from(legislativeTerms)
+          .where(
+            inArray(
+              legislativeTerms.id,
+              termValues.map((term) => term.id)
+            )
+          )
+        const incoming = new Map(termValues.map((term) => [term.id, term]))
+        if (
+          existing.some(
+            (term) =>
+              term.endDate !== null &&
+              (incoming.get(term.id)?.endDate === null ||
+                incoming.get(term.id)?.endDate === undefined ||
+                incoming.get(term.id)?.isActive === true)
+          )
+        ) {
+          throw new Error("An ended legislative term cannot be reactivated by a history import")
+        }
+      }
+    }
     const replacedOrganizationIds =
-      options.replaceOrganizations === false
+      options.replaceOrganizations === false || options.organizationObservationOnly === true
         ? []
         : await transaction
             .select({ id: organizations.id })
@@ -196,7 +268,7 @@ export async function replaceEntitySnapshot(
                     eq(organizations.sourceProvider, options.organizationSourceProvider)
                   )
             )
-    if (options.replacePeople !== false) {
+    if (options.replacePeople !== false && options.preserveUnobservedPeople !== true) {
       await transaction
         .update(people)
         .set({ isActive: false, updatedAt: new Date() })
@@ -206,7 +278,11 @@ export async function replaceEntitySnapshot(
         .set({ isActive: false, updatedAt: new Date() })
         .where(eq(legislativeTerms.jurisdictionId, jurisdictionId))
     }
-    if (options.replaceOrganizations !== false && options.preserveExistingOrganizations !== true) {
+    if (
+      options.replaceOrganizations !== false &&
+      options.preserveExistingOrganizations !== true &&
+      options.organizationObservationOnly !== true
+    ) {
       await transaction
         .update(organizations)
         .set({ isActive: false, updatedAt: new Date() })
@@ -457,7 +533,9 @@ export async function replaceEntitySnapshot(
         .select()
         .from(organizationMemberships)
         .where(inArray(organizationMemberships.organizationId, organizationIds))
-      membershipValues = resolveMembershipTenures(incomingMembershipValues, existingMembershipValues)
+      membershipValues = resolveMembershipTenures(incomingMembershipValues, existingMembershipValues, {
+        observationOnly: options.organizationObservationOnly
+      })
     }
     if (completeMembershipOrganizationIds.length > 0) {
       await transaction

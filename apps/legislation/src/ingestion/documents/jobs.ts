@@ -17,6 +17,10 @@ import {
   type DocumentFailureCategory
 } from "./process.js"
 
+// All batches in a process share PDF.js and its native memory budget. A limiter
+// per batch permits concurrent bill pipelines to bypass the worker-wide bound.
+const pdfExtractionLimiter = createPdfExtractionLimiter()
+
 const MAX_REPORTED_FAILURES = 20
 const MAX_UPDATE_BATCH_SIZE = 1000
 const RETRY_BASE_DELAY_MS = 5 * 60 * 1000
@@ -1441,7 +1445,6 @@ export async function processPendingDocuments(
   // Retain concurrent network acquisition, but serialize PDF.js extraction in
   // each worker. A 25 MiB compressed PDF can expand substantially in PDF.js;
   // four simultaneous extractions were enough to OOM the Ohio lane.
-  const pdfExtractionLimiter = createPdfExtractionLimiter()
 
   await mapConcurrent(records, options.concurrency, async (record) => {
     if (record.processingStatus === "processed" && options.force !== true) {
@@ -1456,11 +1459,15 @@ export async function processPendingDocuments(
       const downloaded = hasArtifact
         ? await options.artifactStore.read(existingArtifactPath).then((bytes) => ({
             bytes,
-            contentType: detectDocumentContentType(bytes, record.contentType ?? ""),
+            contentType: record.contentType ?? "application/octet-stream",
             sourceUrl: record.sourceUrl
           }))
         : await downloadWithHostLease(options.hostLimiter, record.sourceUrl, () =>
-            downloadDocument(record.sourceUrl, { fetch: options.fetch, timeoutMs: options.timeoutMs })
+            downloadDocument(record.sourceUrl, {
+              detectContentType: false,
+              fetch: options.fetch,
+              timeoutMs: options.timeoutMs
+            })
           )
       const contentHash = createHash("sha256").update(downloaded.bytes).digest("hex")
       const path = artifactPath("documents", record.id, contentHash, downloaded.sourceUrl)
@@ -1468,6 +1475,9 @@ export async function processPendingDocuments(
         await options.artifactStore.put(path, downloaded.bytes)
       }
       persistedArtifact = { blobPath: path, contentType: downloaded.contentType }
+      // Retain bounded source bytes even when we cannot yet extract their format.
+      downloaded.contentType = detectDocumentContentType(downloaded.bytes, downloaded.contentType)
+      persistedArtifact.contentType = downloaded.contentType
       const outcome = await pdfExtractionLimiter.run(
         downloaded.contentType,
         async () =>

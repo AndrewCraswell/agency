@@ -5,6 +5,9 @@
 Status: staged implementation with bounded pilot evidence. The [runtime build](../operations/openstates-runtime-build.md) and
 [rollout requirements/results](../operations/openstates-rollout-checklist.md) record what exists and what remains unverified.
 This document retains the nationwide target and exit gates, not a claim that all work is unstarted or all states are live.
+The current [onboarding queue](../operations/openstates-jurisdiction-onboarding.md) supersedes original rollout timing:
+no fixed seven-day per-state wait, and no new state before NC/Alaska content/search acceptance. Historical effort
+estimates below are planning context, not current delivery commitments or authorization to skip those gates.
 It is the delivery plan for
 [ADR-011](architecture-decisions.md#adr-011-operational-consequences). It makes self-hosted Open States extraction the
 recurring state-freshness path while keeping retained session JSON archives as the historical rebuild source. It does
@@ -262,7 +265,7 @@ comparison. Do not enable a partial lane merely because bills passed.
 
 ### M4: operational controls and one-jurisdiction canary
 
-Estimate: 8 to 10 elapsed days, including a seven-day soak.
+Estimate: re-estimate from implementation and acceptance results; no mandatory observation delay.
 
 Tasks:
 
@@ -271,11 +274,11 @@ Tasks:
 - Add dashboards and alerts described below, then conduct a failed-run, lease-miss, cache-miss, artifact-access, and
   checkpoint-replay drill.
 - Activate North Carolina as the initial ordinary-state canary: bills at 30 minutes, events at two hours when supported,
-  and entities daily. Compare every run during the seven-day soak.
+  and entities daily. Compare every run during the evidence-based observation.
 - Freeze and document the per-state activation checklist, healthy baseline, and rollback action before adding another
   state.
 
-Deliverables: canary schedules, alert dashboard, seven-day evidence package, runbook drill records, and an approved
+Deliverables: canary schedules, alert dashboard, acceptance evidence package, runbook drill records, and an approved
 cohort checklist.
 
 Acceptance gate: 99% or more of due canary runs complete within their cadence plus one scheduled interval; no unclassified
@@ -287,7 +290,7 @@ last rejected or failed manifest. Do not reactivate the transitional API schedul
 
 ### M5: 1, 5, and 15 jurisdiction rollout
 
-Estimate: 2 to 3 elapsed weeks, including three seven-day cohort soaks that may overlap only after the preceding gate
+Estimate: 2 to 3 elapsed weeks, including three cohort acceptance cycles that may overlap only after the preceding gate
 passes.
 
 Tasks:
@@ -300,7 +303,7 @@ Tasks:
 - Re-baseline queue use, source latency, discrepancy rates, cache effectiveness, and database promotion duration at each
   cohort boundary.
 
-Deliverables: activation records and seven-day evidence packages for the 1-, 5-, and 15-jurisdiction cohorts; updated
+Deliverables: activation records and acceptance evidence packages for the 1-, 5-, and 15-jurisdiction cohorts; updated
 capability matrix; approved per-publisher concurrency limits.
 
 Acceptance gate for each cohort: every active jurisdiction passes the M4 gate; aggregate queue saturation stays below
@@ -308,7 +311,7 @@ Acceptance gate for each cohort: every active jurisdiction passes the M4 gate; a
 coverage reports distinguish all expected gaps from failures.
 
 Rollback: remove only the failing jurisdiction/domain from the active cohort, reduce the applicable queue or publisher
-limit, retain all evidence, and re-enter it only after a fresh seven-day soak. Healthy jurisdictions continue.
+limit, retain all evidence, and re-enter it only after a fresh evidence-based observation. Healthy jurisdictions continue.
 
 ### M6: credentialed, California, and 52-jurisdiction completion
 
@@ -321,7 +324,7 @@ Tasks:
 - Build and validate California's dedicated dump and MySQL execution path, including dump integrity, storage lifecycle,
   database startup/teardown, timeout behavior, and resource caps.
 - Roll the remaining ordinary jurisdictions in bounded cohorts sized from observed queue, database, and publisher
-  capacity. Each jurisdiction completes a seven-day soak.
+  capacity. Each jurisdiction completes a evidence-based observation.
 - Reconcile the schedule inventory, remove all transitional API freshness definitions after their replacements have
   passed soak, and prove no deployed task can call the API for freshness.
 
@@ -339,8 +342,8 @@ For a source outage, use the stale-data alert and manual replay when the source 
 
 | Stage | Active jurisdictions | Entry requirement | Promotion evidence | Scope of rollback |
 | --- | ---: | --- | --- | --- |
-| Canary | 1 | M0 through M3 pass; ordinary state selected | Seven-day completeness and freshness evidence | That one jurisdiction/domain |
-| Cohort A | 5 | Canary passes | Seven-day cohort baseline and no unclassified differences | Failing jurisdiction/domain |
+| Canary | 1 | M0 through M3 pass; current NC/AK priority applies | Required completeness/freshness/recovery evidence, not a fixed waiting period | That one jurisdiction/domain |
+| Cohort A | 5 | Canary and current onboarding priority pass | Measured cohort baseline and no unclassified differences | Failing jurisdiction/domain |
 | Cohort B | 15 | Cohort A passes | Publisher, queue, and database limits remain within gate | Failing jurisdiction/domain or publisher limit |
 | Completion | 52 | Credential and California paths independently pass | 28-day final evidence and no-API audit | Failing jurisdiction/domain; never nationwide API reactivation |
 
@@ -378,7 +381,7 @@ runtime resource, and alert delivery health. The application joins them through 
 3. Classify every discrepancy, set publisher limits, and capture the expected count and duration baseline.
 4. Activate only the jurisdiction's scraper lanes. Confirm the first due runs have a raw manifest, successful
    validation, promotion, checkpoint, and expected schedule identity.
-5. Review daily during the seven-day soak. Promote the cohort only when its evidence package meets the gate.
+5. Review daily during the evidence-based observation. Promote the cohort only when its evidence package meets the gate.
 
 ### Failed, stale, or overlapping run
 
@@ -397,7 +400,7 @@ runtime resource, and alert delivery health. The application joins them through 
    normalizer defect, upstream scraper defect, or unexplained discrepancy.
 3. Keep the lane validation-only or suspended until the classification and repair are reviewed. A new scrape cannot
    overwrite the rejected artifact.
-4. After repair, rerun the comparison and restart the jurisdiction's seven-day soak.
+4. After repair, rerun the comparison and restart the jurisdiction's evidence-based observation.
 
 ### Credential or California incident
 

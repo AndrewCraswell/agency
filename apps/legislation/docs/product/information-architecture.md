@@ -2,10 +2,33 @@
 
 ## Design boundary
 
-Initial architecture for the conversational web application, recorded September 14, 2026. Read with the
-[design brief](design.md). Browser routes below are proposals for design and engineering
-alignment, not implemented routes or changes to the canonical [HTTP API](../engineering/api/README.md).
-Canonical IDs are encoded safely as one path segment; display names are labels rather than record identity.
+Updated September 15, 2026 around the [product specification](product-spec.md) and [ICP priorities](icp.md): a policy
+researcher answers a question, maintains an issue, and prepares a recurring member/client update. The
+[design handoff](../design/design.md) owns detailed visual/interaction requirements; this page owns hierarchy, object
+boundaries and navigation. It does not add an interface for every possible buyer or API object.
+
+Browser routes below remain proposals, not implemented routes or changes to the [HTTP API](../engineering/api/README.md).
+Canonical IDs are encoded safely as one path segment; names are labels, not identity. A stable URL can open a shared
+drawer, reader or issue subview without creating a separate page design.
+
+Current canvas alignment was checked read-only against issue overview `ifkHQ`, brief preparation `PMdsp`, reviewed brief
+`AGG8U`, follow detail `ROZoK` and meeting direct entry `fNvTx` in the [design source](../../legislation.pen).
+These establish design intent, not executable prototype links, data readiness or browser acceptance.
+
+## Navigation priorities
+
+| Layer | Destinations | Why it belongs here |
+| --- | --- | --- |
+| Primary work | New conversation, Conversations, Updates, Issues, Following | Ask, resume research, assess changes, maintain findings and control monitoring |
+| Supporting discovery | Global Search; Bills, Representatives, Committees and Meetings in Explore | Reach/refine evidence directly without another prompt or mandatory issue |
+| Linked evidence | Bill/person/body profiles, vote/meeting details, text/amendments/materials and comparison | Answer the current research question; no new primary navigation for each record type |
+| Setup | Account, privacy, optional Address, notification preferences and Integrations | Available when needed, not prerequisites for professional research |
+| Conditional shared work | Organization/workspace context, authorized management and issue-level review | Add only with the shared product's access/lifecycle acceptance; absent from personal-only use |
+
+Conversation is home, not the only way to work. Issues are the repeat-work destination, not an optional persona feature.
+Keep the existing primary navigation order; simplify hierarchy and defaults rather than moving familiar destinations.
+There is no separate dashboard, AI assistant, Research, Reports, Tasks, Clients, or Coverage and sources destination.
+Global search and directory filters reuse the same discovery model rather than introducing parallel search systems.
 
 ## Sitemap and persistent navigation
 
@@ -13,154 +36,204 @@ Canonical IDs are encoded safely as one path segment; display names are labels r
 Application
   New conversation (home)
   Conversations
-    Saved conversation
-      Contextual search results and evidence
+    Conversation and explicit research context
   Updates
-    Notification bell (same inbox)
+    Notification bell (same inbox state)
   Issues
-    Personal issue tracker
-      Scope and included records
-      Matched updates and evidence comparison
-      Brief preview
+    Issue overview and saved scope
+      Records (included, query matches, excluded)
+      Findings and annotations
+      Compare selected evidence
+      Brief (prepare, review, copy)
   Following
-    Subscription detail and delivery history
+    Follow configuration and Matched events (default)
+      Delivery history
+        Selected delivery and optional Attempts
   Explore
-    Search
     Bills
     Representatives
     Committees
+    Meetings
+  Global Search (header entry, same /search destination)
   Settings
     Account
+    Address
+    Data and privacy
     Notifications
     Integrations
-      MCP connection setup
+      External MCP setup
       Webhook destinations
 
-Linked evidence views
-  Bill
-  Representative
-  Committee / other organization
-  Meeting
-  Vote
-  Amendment
-  Document and section
-  Document comparison
-  Supporting material
+When shared work is available and authorized
+  Organization selector (sidebar top; includes Personal)
+  Workspace selector (sidebar bottom, above Settings)
+  Organization/workspace management (Settings)
+  Assignment, review and report sharing (inside the issue)
 ```
 
-Persistent navigation prioritizes New conversation, recent conversations, Updates, and Following. Explore provides
-direct search and directories in a secondary group; Settings stays accessible from the account area. There is no
-separate Research destination competing with the conversational home. The initial empty home presents the composer
-and suggested task types; opening the app does not automatically resume a different investigation.
+Home presents a composer and scope, with recent work available; it does not automatically resume another investigation.
+No mandatory persona, organization, address or integration setup. A useful one-off answer need not become an issue.
+From an existing issue, Resume research carries explicit selected context; Records, Findings, Compare and Brief remain
+within that issue, not top-level applications. Do not make the user revisit chat just to copy a reviewed brief.
 
-The [persona review](design.md#13-prototype-scenarios-and-representative-content) adds Issues as a persistent destination after Updates. It stores ongoing
-research scope across conversations. The bell is a compact Novu inbox opening the same Updates destination, not a
-second activity feed. Following manages notification rules; Issues organizes the research those rules support.
+The [conversation integration design](../design/conversations.md) owns access from every surface. One header command
+opens the active authorized conversation or an empty draft without attaching the current page. Contextual Ask/Add to
+context use the same surface and explicitly stage references without sending. The same contract owns turn content,
+reference tagging, citations, progress and confirmed write-back; no floating assistant or per-record conversation store.
 
-## Workspace and navigation behavior
+## Objects and boundaries
 
-On wide screens, use navigation, a conversation region, and an optional evidence region. Opening a citation or result
-shows the corresponding record alongside the conversation. Expand-to-page opens the same record template at its
-stable URL. On narrow screens, evidence becomes a full-width view with an explicit return to the conversation.
-Panel versus page changes presentation, not record identity or available evidence.
+| Object | Owns | Must not imply |
+| --- | --- | --- |
+| Conversation | Questions, messages, scope/context, evidence references and action receipts | Opening evidence saves it to an issue; deleting chat deletes separate research/follows |
+| Issue | Owner, explicit scope/revisions, included/excluded records, queries, selected findings and follow references | A folder alone, automatic subscriptions, or relevance/approval for every query match |
+| Finding | Selected source/version/passage, interpretation, annotation and review state | An official fact merely because a user or model wrote it |
+| Personal brief | Selected findings, output/reporting scope, text, citations and revision-bound review | Independent approval, automatic publication, client sharing or a permanent report archive |
+| Follow | A record or normalized query, selected events, delivery preferences and matched history | Inclusion in an issue, guaranteed receipt, or user review of evidence |
+| Update | A matched change, subscription reasons, read/archive state and delivery references | A second issue inbox to manage, or stopped following when archived |
+| Canonical record | Source-backed identity, evidence and relationships | Personal notes, client ownership, or source truth changing with workspace selection |
+| Customer organization/workspace | Shared ownership and an authorized client/initiative audience | A civic committee, nested client CRM, or access granted by a label/tag |
+| Shared report revision | Identified output snapshot, approval and recipient grants when delivered | A personal reviewed brief automatically gaining the same controls |
 
-Direct record links work without an originating conversation. An ask-about-record action starts or explicitly adds
-the record to a conversation. Returning to a conversation restores draft, context, selected evidence, filters, and
-scroll position. Browser Back reverses navigation rather than clearing research. Sign-in preserves the intended
-destination. Copy-link on a record returns its standalone URL without private conversation context.
+Creating or editing an issue is not following it. Exclusion must expose its effect on associated query/record follows;
+issue deletion previews which independently owned or shared rules remain and which can be cancelled. Keep the mutation
+receipt available outside a deleted issue. Do not reduce clicks by silently changing subscriptions or sharing evidence.
 
-## Page inventory
+## Surface and route inventory
+
+### Primary work
 
 | Surface | Proposed browser route | Content hierarchy | Main actions |
 | --- | --- | --- | --- |
-| Home | `/` | Composer, scope, suggested tasks, recent work | Ask; select scope; resume |
-| Conversation list | `/conversations` | Private history ordered by recent activity | Open; rename; delete |
-| Conversation | `/conversations/{conversationId}` | Title, context, messages and interactive results, composer, evidence region | Ask; refine; inspect citation; stop; retry; add context |
-| Updates | `/updates` | Matched changes, unread state, filters, subscription reasons | Open; mark read; manage follow |
-| Issues | `/issues` | Personal trackers, scope summaries, recent changes | Create; open; rename; delete with subscription disposition preview |
-| Issue tracker | `/issues/{issueId}` | Scope, included/excluded records, matched updates, evidence comparison, following state | Refine; include/exclude; research; configure follows; preview brief |
-| Issue brief | In-context preview within `/issues/{issueId}` | Reviewed findings, citations, as-of time, annotations and gaps | Inspect evidence; edit selection; copy reviewed text |
-| Following | `/following` | Targets and queries, events, channels, frequency, status | Open; edit; pause; resume; cancel |
-| Subscription | `/following/{subscriptionId}` | Configuration, matching events, delivery history | Edit; inspect failure; pause; cancel |
-| Search | `/search` | Query, entity type, filters, results, coverage | Refine; open; copy link; follow query |
-| Bills | `/bills` | Jurisdiction/session filters, status, sponsor/date filters, results | Browse; open; follow |
-| Representatives | `/representatives` | Name, jurisdiction, office/chamber, service-period filters | Browse; open; follow |
-| Committees | `/committees` | Name, jurisdiction, chamber, classification filters | Browse; open; follow |
-| Bill | `/bills/{billId}` | Identity and latest action, progress, activity, sponsors, amendments, votes, documents | Inspect stage; follow; read; compare |
-| Representative | `/people/{personId}` | Identity and service, activity, bills, votes, amendments, memberships | Filter activity; open relationship; follow |
-| Committee or organization | `/organizations/{organizationId}` | Identity and purpose, membership, activity, bills, meetings, materials | Open member or meeting; follow |
-| Meeting | `/meetings/{meetingId}` | Status/date/timezone/location, agenda, related records, participants, materials | Open agenda evidence or related record |
-| Vote | `/votes/{voteId}` | Question, result, voting body/date, totals, individual positions | Find position; open person or bill; open source |
-| Amendment | `/amendments/{amendmentId}` | Identity, status, sponsor, parent bill, actions, text | Open bill, sponsor, or text; follow |
-| Document | `/documents/{documentId}` | Version identity, section navigation, text, source | Find; select version; copy passage link; compare |
-| Document section | `/documents/{documentId}/sections/{sectionId}` | Same reader focused on an identified section | Read context; copy link; add to conversation |
-| Comparison | `/compare?from={documentId}&to={documentId}` | Explicit version pair, differences, surrounding text | Select pair; navigate changes; open original |
-| Supporting material | `/supporting-materials/{materialId}` | Identity, provenance, related records, available sections | Read; open source; add context |
-| Account | `/settings/account` | Identity and applicable account context | Manage supported account options; sign out |
-| Notifications | `/settings/notifications` | Timezone, defaults, supported destinations | Edit defaults; manage destinations |
-| Integrations | `/settings/integrations` | External AI connection and webhook entries | Open setup or destination management |
-| MCP setup | `/settings/integrations/mcp` | Server URL, supported authentication, capabilities, help | Copy URL; inspect/revoke supported authorizations |
-| Webhooks | `/settings/integrations/webhooks` | Destinations, verification and delivery information | Add; verify; edit; rotate secret; remove |
-| Sign-in | Authentication-provider route, to be confirmed | Authentication and destination recovery | Sign in; return to work |
+| Home | `/` | Composer, editable scope, recent work | Ask; select scope; explicitly resume |
+| Conversations | `/conversations` | History for the authorized personal/workspace context | Open; rename; delete |
+| Conversation | `/conversations/{conversationId}` | Title/context, cited answers/results, composer and optional evidence | Ask; refine; inspect; add context; stop; recover |
+| Updates | `/updates` | Legislative changes, unread/archive state, filters and matching reasons | Open evidence; mark read/archive; manage follow |
+| Issues | `/issues` | Issue names, scope and relevant developments | Create; open; rename; delete with consequence preview |
+| Issue | `/issues/{issueId}` | Bounded overview and scope; Records, Findings, Compare and Brief subviews | Include/exclude; edit scope; save findings; resume research; configure follows |
+| Brief | Within `/issues/{issueId}` | Selection and reporting scope -> generated draft -> evidence review -> reviewed copy | Inspect citations; annotate; edit/regenerate; review; copy |
+| Following | `/following` | Targets/queries, events, effective channels, cadence and state | Open; edit; pause/resume; stop |
+| Follow detail | `/following/{subscriptionId}` | Compact configuration; Matched events default; Delivery history secondary | Open change; edit rule; inspect selected delivery; check original operation |
 
-Representatives map to canonical people; committees map to canonical organizations. Do not introduce duplicate identity
-routes for committees or representatives. Directory labels may be narrower than the underlying record type.
-Search URLs preserve supported query/filter state; private or sensitive context remains in authenticated storage.
-Copied search links may disclose the search terms, which the copy action must make understandable.
+Brief selection, text, annotations, citations and review belong to the same saved draft. Changing reviewed inputs/content
+requires review again; opening a source or adding a finding is not review. Retain reporting interval and source/version
+dates, not a routine As-of badge. Do not invent a separate `/reports` route or public brief link for personal work.
 
-Notifications settings must show effective Novu channel preferences, verified email destination, and suppression reasons.
-The bell and Updates share read/unread/archive state across devices. Archive does not cancel following or remove the
-underlying legislative event. Follow detail retains delivery status even if the Novu inbox is temporarily unavailable.
-Issue deletion previews whether referenced subscriptions will remain or be cancelled; it never silently changes a
-subscription referenced elsewhere. Representative discovery offers manual selection without address collection.
+Updates and the bell use one read/unread/archive state across devices. An issue's recent changes are contextual research
+links, not a separately managed notification inbox. Follow detail retains application-owned matching/delivery evidence
+when Novu is unavailable. Show batch/channel outcome first; expand attempts only for troubleshooting. Do not flatten
+unknown into delayed, accepted into delivered, or a failed history read into a claim that follows are running.
 
-## Content relationships
+### Supporting discovery
 
-| Object | Relationships users can traverse |
-| --- | --- |
-| Bill | Jurisdiction/session, sponsors, committees, actions, amendments, votes, document versions, related bills |
-| Person | Offices and service periods, committee memberships, sponsorships, amendments, recorded vote positions |
-| Organization | Jurisdiction, membership tenures, referred bills, meetings, recorded actions and materials |
-| Meeting | Organizing body, agenda items, linked bills, participants and documents |
-| Vote | Voting body, motion, bill/amendment context, individual positions and people |
-| Document/material | Publisher source, version/date, sections, associated bills or meetings |
-| Conversation | Owner, messages, selected scope, evidence references, action receipts |
-| Personal issue | Owner, name, explicit scope and revisions, included/excluded records, queries, subscription references, user relevance annotations |
-| Subscription | Owner, one record or normalized query, event selection, delivery preferences, matched events |
-| Update | Underlying change, related records, matching subscription reasons, delivery/read state |
-
-Display relationships only when supported by records. A person and a dated office tenure are distinct; observing
-membership on a date does not establish the start of that membership. Retain official terminology alongside normalized
-labels when necessary to explain an action.
-
-## Connected flows for preliminary prototypes
-
-1. Home question -> disambiguation or scope selection -> bill results -> bill in evidence region -> progress stage ->
-   supporting document section -> follow preview -> confirmed subscription.
-2. Representative question -> profile -> recorded vote -> bill -> follow preview with own actions and sponsored-bill
-   updates independently selectable.
-3. Committee question -> committee activity -> meeting -> agenda item -> referred bill -> committee follow preview.
-4. Updates -> changed record -> evidence -> originating subscription -> pause -> updated subscription state.
-5. Recent conversation -> restored scope -> follow-up question -> version comparison -> passage citation.
-6. Settings -> Integrations -> MCP setup -> supported external client authentication -> verified result if available.
-
-## Dependencies and decisions before implementation
-
-| Area | Existing boundary | Work to specify or verify |
+| Surface | Proposed browser route | Scope and actions |
 | --- | --- | --- |
-| Research records | HTTP record/search/diff contracts | Authenticated workflow smoke and coverage for design fixtures |
-| Conversation | Source-grounded research-answer contract | History API/storage, retention/deletion, context limits, streaming/cancellation, structured response types |
-| Assistant actions | Authorized application services and subscription mutations | Tool allowlist, argument validation, confirmation receipts, idempotent retry and unknown-outcome recovery |
-| Bill progress | Canonical actions and statuses | Jurisdiction/measure stage mappings, evidence attribution and domain review |
-| Activity following | Existing restricted target/event matrix | Specific action events, associated-bill semantics, complete event production and delivery verification |
-| Updates | Per-subscription events and deliveries | Combined feed, read state, pagination and overlap/deduplication policy |
-| Novu | Selected for in-app/email design; no deployment implied | Authenticated subscriber identity, workflow/preference mapping, receipt reconciliation, outage recovery, shared inbox state; see notification experience |
-| Personal issues | Search and subscription primitives | Issue CRUD/ownership, scope revisions, exclusions, subscription references, query-change and deletion semantics |
-| Evidence briefs/comparison | Document versions and cited research | Cross-jurisdiction comparison schema, source-version pinning, preview/copy formatting, coverage and assessment labels |
-| MCP settings | Existing protected MCP authentication | Supported client setup and provider support for authorization listing/revocation; no assumed connection status |
-| Account preferences | User and optional organization identity | Ownership/sharing policy and persistence of timezone/default preferences |
+| Search | `/search` | Query, entity type and relevant filters; refine, inspect, add selected evidence, copy supported search link or follow query |
+| Bills | `/bills` | Jurisdiction and Congress/published session; supported status/sponsor/date filters; browse, inspect and follow |
+| Representatives | `/representatives` | Name, jurisdiction, office/chamber and service period; manual discovery without an address |
+| Committees | `/committees` | Jurisdiction, chamber and classification; inspect members, activity and meetings |
+| Meetings | `/meetings` | Today/upcoming, past or undated; body/date/status filters; open shared meeting detail |
 
-Preliminary designs can proceed using these proposed surfaces. Resolve these dependencies before presenting the
-corresponding behavior as implemented. Address lookup, general web research, arbitrary external MCP sources, and
-public conversation sharing are not prerequisites for the core prototype. Visual styling, exact responsive breakpoints,
-tab grouping, and example copy remain designer proposals within the navigation and evidence requirements above.
+Scope, sort, grouping and paging remain distinct. Filter/order the whole supported result set before paging; do not
+create year/month folders for bill identity or filter only the loaded page. Bill scope uses Congress/published session;
+activity groups by its event date, materials by publication date, and service/membership by tenure. Preserve undated items
+without treating them as date matches. Date filters name the actual field; reporting interval is separate from issue scope.
+
+Use bounded rendering, current 20-record collection pages and at-most-five type previews. View all preserves scope;
+it does not promise access beyond a ranked retrieval window. Show truthful totals/limits, preserve filters/page/selection
+on return, and bind selection to record IDs. No all-matches bulk operation without a server-defined result-set contract.
+Keep this scale behavior inside the existing collections rather than adding navigation or summary dashboards.
+
+### Linked evidence
+
+| Surface | Proposed browser route | Shared content and navigation |
+| --- | --- | --- |
+| Bill | `/bills/{billId}` | Identity/status, recorded progress, activity, sponsors/body relationships, amendments, votes and versions; ask, follow, read, compare or add selected evidence |
+| Representative | `/people/{personId}` | Profile/service, office and supported staff information; separate activity, bills, votes, amendments and current/past memberships; Follow and Ask |
+| Committee/civic organization | `/organizations/{organizationId}` | Profile/purpose/office; members, activity, bills, meetings and materials in their own sections; Follow and Ask |
+| Meeting | `/meetings/{meetingId}` | Shared drawer/sheet, including direct entry; status, schedule/timezone/conditions, agenda, related records and materials |
+| Vote | `/votes/{voteId}` | Shared drawer/sheet, including direct entry; motion, body/date, outcome/totals and individual positions with source links |
+| Amendment | `/amendments/{amendmentId}` | Identity/status, parent bill, sponsor, actions and text; affected-section references beside the text with any mapping qualifier |
+| Document | `/documents/{documentId}` | Version identity, section navigation, original source and reading context; find, select version, cite or compare |
+| Section | `/documents/{documentId}/sections/{sectionId}` | Same reader focused on the identified section; exact-range links only under their approved locator contract |
+| Comparison | `/compare?from={documentId}&to={documentId}` | Explicit version pair and differences with context; inspect originals without losing the selected pair |
+| Supporting material | `/supporting-materials/{materialId}` | Shared reader with publisher/type/version/date and related records; read, open source, explicitly download or add context |
+
+Representative and committee directory labels map to canonical people and civic organizations, not duplicate identities.
+Person/body overviews are profiles, not aggregate dashboards repeating their detail tabs. A person and a dated service
+tenure are distinct; observed membership does not establish a start date. A vote position is not a motion's outcome.
+Preserve source terminology and real relationships without decorative metrics, speculative relationships or extra Open buttons.
+
+### Settings and conditional administration
+
+| Surface | Proposed browser route/placement | Boundary |
+| --- | --- | --- |
+| Account | `/settings/account` | Identity, supported account/session actions and sign-out; no provider capability inferred from a mockup |
+| Address | `/settings/address` | Optional single owner for address resolution/retention; return to Your representatives; never the working-jurisdiction filter |
+| Data and privacy | `/settings/privacy` | Actual data categories and owning controls; export/deletion only under approved rights/lifecycle contracts |
+| Notifications | `/settings/notifications` | Effective in-app/email preferences, verified destinations, cadence/timezone defaults and actionable suppression |
+| Integrations | `/settings/integrations` | External MCP and webhook entries; not required by the web assistant |
+| MCP | `/settings/integrations/mcp` | Actual environment URL, authentication method and setup; verify in the external client, with no in-app connection status |
+| Webhooks | `/settings/integrations/webhooks` | Authorized destinations, verification, rotation/removal and selected delivery diagnostics; not a generic automation builder |
+| Organization/workspace settings | Within Settings when authorized; route contracts remain to be defined | Members/access, workspace lifecycle and approved report/integration/billing controls; no extra primary admin application |
+| Billing | Owning account/organization settings, only when commercial contracts are approved | Provider-backed terms and entitlements; no invented cancellation consequences, seats or unlimited promises |
+| Sign-in | Authentication-provider route, to be confirmed | Authorize and restore intended destination; do not replay pending mutations |
+
+The [organization behavior](organization-features.md) and [management design](../design/organization-workspace-design.md)
+own shared work. Show the organization selector at the sidebar top for active membership; show the workspace selector
+above Settings only in organization context. Personal has no workspace selector or mandatory organization setup.
+
+Within shared Issues, Assigned to me, Needs my review and All my workspaces are authorized views, not new destinations
+or access grants. Keep client/initiative boundaries at the workspace and review/export/sharing at the issue's Brief.
+Do not add nested workspaces, a client database, global task suite or standalone report hub.
+
+Direct links authorize the resource before aligning the visible organization/workspace. Switching cannot copy, move or
+retarget drafts, mutations or late responses. Preserve their original context; show the shared audience before composing.
+Membership never exposes personal conversations. Reusing public evidence across clients does not copy private annotations,
+approval or recipient grants without an explicit selection and destination review.
+
+## Evidence entry and return
+
+| Situation | Presentation | Return and state rule |
+| --- | --- | --- |
+| Open evidence during research | Beside the conversation/issue when space permits; full-width on narrow screens | Opening is inspection, not Add to context; retain owning draft, scope, filters, selected versions and focus |
+| Open a vote or meeting | Reuse its drawer/sheet for contextual and direct entry | Close restores origin; parentless meeting exits to Meetings, vote uses a source-supported parent or Search, not a new Votes directory |
+| Open a document/material or comparison | Read/compare immediately using the shared template | No mandatory metadata-only stop; return to the precise origin, including its overlay and list state |
+| Open a copied/deep citation | Resolve exact identity/version/section and authorized range | Do not replace old evidence with latest text; offer newer evidence separately; missing extraction differs from missing source |
+| Back, Close or session recovery | Reverse the current navigation step; Escape closes the topmost transient surface | Do not accumulate duplicate page/drawer history, clear drafts, lose review selection or replay a save |
+
+Use one main content surface on mobile and avoid stacked drawers. Collapse navigation/evidence when columns become too
+narrow. Restore keyboard focus and an explicit safe exit even for parentless entry. Ignore late responses for a different
+record/context. Copy record/passage links without private research context; search links may contain query/filter terms
+and must make that disclosure understandable. Permission denial must not reveal another workspace's content.
+
+## Connected acceptance flows
+
+| Priority and ICP | End-to-end path | Acceptance emphasis |
+| --- | --- | --- |
+| Core: association update | Open/create issue -> scope and Records -> include/exclude -> Findings -> compare exact text -> prepare/review/copy Brief -> reopen next week | Recurring output without rebuilding research; qualifiers/citations and review survive navigation |
+| Core: consultant question | New conversation/Search -> scope/disambiguate -> inspect bill/person/vote evidence -> cited answer -> optionally save findings to issue | No forced issue, address, workspace or integration setup; actor and version meaning stays correct |
+| Core: monitor and respond | Updates or issue change -> source comparison -> revise findings -> originating Follow -> edit/pause/stop or selected delivery recovery | Legislative change before diagnostics; no implied cancellation from archive or duplicate save after unknown outcome |
+| Supporting: committee evidence | Committee Meetings -> shared meeting detail -> agenda bill/material reader -> return | Schedule conditions, source-only/missing states, paging and focus preserved; no calendar/media promise |
+| Conditional: team review | Authorized workspace -> assigned issue -> identified report revision -> review -> permitted recipient sharing | Personal/client separation, changed-output approval invalidation and revocation/offboarding acceptance |
+| Secondary: external AI | Settings -> Integrations -> MCP instructions -> external client authorization | Optional entry; correct setup without an in-app verification or connection-status screen |
+
+Exercise core/supporting flows at desktop/mobile sizes, with keyboard access, large collections, partial sources and
+failed/unknown operations. Shared and integration flows are required when offered, not prerequisites for a personal
+research pilot. The [product specification](product-spec.md#acceptance-and-success-measures) owns release and outcome criteria.
+
+## Dependencies and value gate
+
+| Boundary | Required contract/acceptance, not inferred from design |
+| --- | --- |
+| Research and discovery | Prospect's source scope, search/paging limits, canonical identities, document/range locators and evaluated comparisons |
+| Conversation and actions | Ownership/history, context/streaming/cancellation, structured responses, authorized tool allowlist, confirmation and idempotent unknown-outcome recovery |
+| Issues and briefs | Scope revisions, inclusion/exclusion/follow effects, pinned findings, saved draft/review revisions, concurrency and deletion receipts |
+| Progress and monitoring | Jurisdiction/measure stage mappings, target/event production, associated-bill semantics, pause/backfill policy and verified channels |
+| Novu and preferences | Authorized subscriber mapping, one inbox, deduplication, preference writes, delivery receipts and outage recovery; see [notification experience](notification-experience.md) |
+| Shared ownership and output | Workspace authorization, assignments/approval, export/sharing rights, recipient lifecycle, offboarding and approved commercial terms |
+| Account/integrations | Address retention, provider capabilities, authentication/revocation, webhook secrets and data lifecycle; no placeholder functioning controls |
+
+Do not add navigation to solve an unresolved contract. First ask whether an existing issue subview, evidence template or
+settings detail completes the target ICP's job. New complexity needs the [product value gate](product-spec.md#scope-and-complexity-budget),
+an owner and observable acceptance. This IA does not authorize implementation, new data rights or a broader compliance product.

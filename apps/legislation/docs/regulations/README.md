@@ -1,6 +1,7 @@
 # Regulatory data ingestion proposal
 
-Recorded September 14, 2026. Status: future capability proposal, not implemented or supported coverage.
+Recorded September 14, 2026. Status: implementation started; supported product coverage is not yet available.
+See [implementation progress and backfill evidence](implementation-progress.md).
 
 ## Purpose and decision
 
@@ -18,15 +19,18 @@ Build a dependable, locally stored regulatory corpus before adding regulatory an
 is complete source acquisition, preserved text and versions, and measurable freshness. Bill correlation and AI impact
 analysis depend on that foundation and are not prerequisites for importing the data.
 
-This proposal records the product discussion and public source documentation reviewed on the date above. It does not
-claim authenticated API access, successful downloads, performance measurements, a completed nationwide source audit,
-vendor licensing rights, or production ingestion. Recheck service contracts when implementation begins.
+This proposal records the product discussion and public source documentation reviewed on the date above. Actual local
+downloads and checks are recorded separately in the progress page; they do not establish production ingestion, national
+completeness, vendor licensing rights or searchable product coverage.
 
 - [Shared federal collector baseline and reuse decision](federal-collector-baseline.md)
 - [Source catalog, overlap, bulk access and rate limits](sources.md)
 - [Acquisition, storage, synchronization and release plan](implementation.md)
-- [Granular implementation phases and validation gates](implementation-backlog.md)
+- [Remaining ingestion and production backlog](production-backlog.md)
+- [Original phase IDs and retained milestones](implementation-backlog.md)
 - [Canonical data, versions and rights](data-contract.md)
+- [Implemented edition storage and validation](storage-validation.md)
+- [Federal Register metadata and issue reconciliation](fr-metadata-validation.md)
 - [Backfills, collectors and Trigger.dev workflows](acquisition-workflows.md)
 - [Search indexing and embeddings](search-indexing.md)
 - [Regulatory API endpoints and MCP tools](api-mcp-contract.md)
@@ -102,10 +106,10 @@ one searchable code website was imported.
 
 - [Organization features](../product/organization-features.md) describes shared research, review, reports and delivery. Those
   surfaces can later consume regulatory content; their delivery does not establish regulatory coverage.
-- [Product backlog](../product/backlog.md) keeps regulations deferred. This proposal does not add regulations to the
+- [Product backlog](../backlog/backlog.md) keeps regulations outside the initial personal release gate. This proposal does not add regulations to the
   current personal-experience completion gate.
 - [Legislative synchronization catalog](../engineering/data-sync-catalog.md) and [coverage policy](../engineering/coverage-policy.md) remain the
-  current legislative contracts. Extend those contracts when implementation starts; do not silently reclassify a source
+  legislative contracts. Reconcile them when the relevant regulatory capability passes acceptance; do not silently reclassify a source
   as ingested based on this proposal.
 - [Canonical data model](../engineering/data-model.md), [document processing](../engineering/supporting-material-processing.md),
   [OCR operations](../operations/document-ocr.md), [change events](../engineering/data-model.md#change-events), and

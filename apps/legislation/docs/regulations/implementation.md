@@ -1,8 +1,8 @@
 # Regulatory implementation specification
 
-Recorded September 14, 2026. Status: detailed implementation specification; feature work has not started under this
-specification. This supersedes the earlier high-level regulatory implementation proposal. It defines proposed contracts,
-phases and release gates, not existing tables, routes, tasks, deployments or measured service guarantees.
+Recorded September 14, 2026. Implementation has started with local frozen-inventory and raw-backfill tooling.
+See [implementation progress](implementation-progress.md) for actual completed scope and evidence. The remaining tables,
+routes, Trigger tasks and release gates below remain proposed until their implementation checks pass.
 
 ## Outcome and scope
 
@@ -24,7 +24,8 @@ agency guidance/enforcement and complete bill-to-rule impact analysis are later 
 | [Acquisition and Trigger workflows](acquisition-workflows.md) | Adapters, parser reuse, source windows, backfill units, fan-out, retries, budgets and operator commands |
 | [Search and embeddings](search-indexing.md) | Chunking, lexical projection, model/input routing, query filters, pagination, quality and performance gates |
 | [HTTP API and MCP](api-mcp-contract.md) | Exact proposed route/tool inventory, schemas, version selection, auth, errors, paging and cross-product integration |
-| [Phases and granular tasks](implementation-backlog.md) | Uncompleted task checklist, dependency order, smoke cases, validation and release evidence |
+| [Remaining production backlog](production-backlog.md) | Current execution order, concrete remaining ingestion/search/API/MCP/operations tasks and release gates |
+| [Original implementation phases](implementation-backlog.md) | Historical task IDs and prior implementation scope; retained as prior art |
 | [Vaquill state onboarding](state-onboarding.md) | Future feed/rights contract, adapter mapping, delta recovery, per-state rollout and parity tests |
 
 The [federal baseline](federal-collector-baseline.md) explains what we adopt and change from Vaquill; the
@@ -70,8 +71,10 @@ path behind MCP. Query handlers serve locally stored records and never start bac
 
 ## Delivery and validation
 
-Implement Phases 0–4 for source evidence, schema, adapters, orchestration and current operation. Historical waves and
-search development proceed from the current foundation; API contracts can be developed against synthetic data earlier.
+Implement source evidence, schema, adapters, orchestration and frozen current/historical backfills first. The user's
+September 14 execution instruction takes precedence over the earlier recurrence-first ordering: keep recurring source
+collection disabled until the selected backfill gate G4 passes; SYNC-11 owns activation.
+Search development proceeds from validated backfills; API contracts can be developed against synthetic data earlier.
 Then complete API, MCP and deployed federal release gates. State synthetic contract tests start with the schema; real
 licensed onboarding follows federal delivery and vendor validation. See the task backlog for the exact dependency graph.
 
@@ -85,7 +88,7 @@ readiness -> authenticated API -> API-backed MCP, under retries and live ingesti
 healthy HTTP endpoint alone does not establish coverage. Regulated text/source correctness and rights have zero tolerance
 for fabricated matches or forbidden text; unavailable history and partial states remain explicit.
 
-The [granular backlog](implementation-backlog.md) names planned smoke artifacts and acceptance cases. Tests should verify
+The [production backlog](production-backlog.md) names current tasks, smoke artifacts and acceptance cases. Tests should verify
 implemented runtime behavior, not this prose. Run required repository verification after coherent changes. Any regulatory
 UI requires integrated-browser acceptance; no mockup or component test substitutes for that workflow check.
 

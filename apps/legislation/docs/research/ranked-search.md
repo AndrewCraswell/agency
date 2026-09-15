@@ -222,15 +222,15 @@ deployment or database configuration was changed.
 September 12 update: [paired performance comparison and migration decision](ranked-search.md).
 Production adoption is on hold; the implementation below remains an isolated candidate, not a deployed solution.
 
-September 11, 2026. Status: ranked-query implementation and isolated correctness canary completed;
-production schema, ingestion integration, API cutover and extension rollout **not implemented**.
-The two broad lexical timeout gates remain open. This does not change API acceptance counts.
+September 11 historical candidate: ranked-query implementation and isolated correctness canary completed at that time.
+Its in-place migration plan was not adopted; the later native amendment projection and isolated passage service have
+their own [acceptance](../operations/passage-search-delivery.md). Do not use this section as the active implementation queue.
 
 <a id="text-search-index-evaluation--selected-direction-and-current-implementation"></a>
 
 ### Selected direction and current implementation
 
-Prefer an in-place ParadeDB index on `document_sections`, not a separate search service or a duplicate
+The original candidate preferred an in-place ParadeDB index on `document_sections`, not a separate search service or a duplicate
 full-text projection. Native PostgreSQL still has to score/sort broad match sets: the additional exact
 per-document lateral amendment query hit PostgreSQL's existing 15-second deadline on September 11.
 An amendment-only GIN index would not solve global passage ranking. A separate engine introduces

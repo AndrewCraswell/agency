@@ -2,6 +2,10 @@
 
 ## Sources and default range
 
+This is the desired acquisition scope, not a live-coverage promise. Per-jurisdiction activation, content/search acceptance
+and remaining gaps are recorded in the [state rollout](../operations/openstates-rollout-checklist.md) and
+[API acceptance](../operations/passage-search-delivery.md). Source availability alone does not satisfy either gate.
+
 - Open States session JSON archives are the state historical source. Import every discoverable archive for all 50
   states, Washington, D.C., and Puerto Rico from 2017 onward. Older or missing archives are reported as source gaps,
   never inferred as empty sessions.
@@ -27,7 +31,7 @@ configuration values so deployments can advance or backfill deliberately.
 
 ## Supported jurisdictions
 
-The supported set is the 50 states plus D.C. and Puerto Rico. A jurisdiction/session is `available`, `missing`, `empty`,
+The policy target is the 50 states plus D.C. and Puerto Rico. A jurisdiction/session is `available`, `missing`, `empty`,
 `failed`, or `excluded`. Unavailable sessions remain visible in coverage reports. Other U.S. territories are excluded
 until Open States provides compatible archives and the product contract is updated.
 

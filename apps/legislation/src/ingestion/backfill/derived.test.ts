@@ -19,6 +19,48 @@ afterAll(async () => {
 })
 
 describe("derived backfill drains", () => {
+  it("isolates bill targets while serializing repeated work on the same bill", async () => {
+    const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const processor = vi
+      .fn<NonNullable<DerivedBackfillDependencies["processBillDocuments"]>>()
+      .mockResolvedValue(documentResult(0))
+    for (const billId of ["bill:nc:2025:hb:1", "bill:nc:2025:hb:2", "bill:nc:2025:hb:1"]) {
+      await drainBillDocuments(
+        executionInput(),
+        { billId, jurisdictionId: "jurisdiction:nc", batchSize: 1 },
+        {
+          artifactStore: artifactStore(),
+          processBillDocuments: processor,
+          runIngestionJob: createJobRunner(inputs)
+        }
+      )
+    }
+    expect(inputs[0]?.scopeKey).not.toEqual(inputs[1]?.scopeKey)
+    expect(inputs[0]?.scopeKey).toEqual(inputs[2]?.scopeKey)
+  })
+  it("separates unpartitioned jurisdiction leases and preserves processor scope", async () => {
+    const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const processor = vi
+      .fn<NonNullable<DerivedBackfillDependencies["processBillDocuments"]>>()
+      .mockResolvedValue(documentResult(0))
+    for (const jurisdictionId of ["jurisdiction:nc", "jurisdiction:ak"]) {
+      await drainBillDocuments(
+        executionInput(),
+        { jurisdictionId, batchSize: 1 },
+        {
+          artifactStore: artifactStore(),
+          processBillDocuments: processor,
+          runIngestionJob: createJobRunner(inputs)
+        }
+      )
+      expect(processor).toHaveBeenCalledWith(database, expect.objectContaining({ jurisdictionId }))
+    }
+    expect(inputs.map((input) => input.scopeKey)).toEqual([
+      "jurisdiction:jurisdiction:nc",
+      "jurisdiction:jurisdiction:ak"
+    ])
+  })
+
   it("drains bill documents in finite batches under the legacy lease identity", async () => {
     const inputs: Parameters<typeof runIngestionJob>[1][] = []
     const processor = vi
@@ -530,6 +572,61 @@ describe("derived backfill drains", () => {
       expect.objectContaining({ checkpointStream: "embeddings:bills", operation: "refresh-embeddings-bills" })
     )
     expect(result.checkpoint?.complete).toBe(true)
+  })
+
+  it("isolates bill targets and rechecks freshness after a completed targeted pass", async () => {
+    const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const bills = vi
+      .fn<NonNullable<DerivedBackfillDependencies["embedBills"]>>()
+      .mockResolvedValue({ complete: true, cursor: "", embedded: 1, scanned: 1, skipped: 0 })
+    const sections = vi
+      .fn<NonNullable<DerivedBackfillDependencies["embedDocumentSections"]>>()
+      .mockResolvedValue({ complete: true, cursor: "", embedded: 0, scanned: 0, skipped: 0 })
+    const amendments = vi.fn<NonNullable<DerivedBackfillDependencies["embedAmendments"]>>()
+    const materials = vi.fn<NonNullable<DerivedBackfillDependencies["embedSupportingMaterialSections"]>>()
+    const load = vi.fn<NonNullable<DerivedBackfillDependencies["loadEmbeddingCheckpoint"]>>().mockResolvedValue({
+      amendments: { complete: true, cursor: "old" },
+      bills: { complete: true, cursor: "old" },
+      materials: { complete: true, cursor: "old" },
+      sections: { complete: true, cursor: "old" }
+    })
+    for (const billId of ["bill:nc:2025:hb:1", "bill:ak:34:hb:1"]) {
+      await drainEmbeddings(
+        executionInput(),
+        { billId },
+        {
+          embedBills: bills,
+          embedDocumentSections: sections,
+          embedAmendments: amendments,
+          embedSupportingMaterialSections: materials,
+          embeddingClients: embeddingClients(),
+          loadEmbeddingCheckpoint: load,
+          runIngestionJob: createJobRunner(inputs)
+        }
+      )
+      expect(bills).toHaveBeenLastCalledWith(
+        database,
+        expect.anything(),
+        expect.objectContaining({ billId, afterId: "" })
+      )
+      expect(sections).toHaveBeenLastCalledWith(
+        database,
+        expect.anything(),
+        expect.objectContaining({ billId, afterId: "" })
+      )
+    }
+    expect(amendments).not.toHaveBeenCalled()
+    expect(materials).not.toHaveBeenCalled()
+    expect(load.mock.calls[0]?.[1]).toMatch(/^embeddings:bills\+sections:target:[a-f0-9]{64}$/)
+    expect(load.mock.calls[0]?.[1]).not.toBe(load.mock.calls[1]?.[1])
+    expect(inputs[0]?.scopeKey).not.toBe(inputs[1]?.scopeKey)
+  })
+
+  it("rejects an unscoped product or empty ID in a targeted embedding request", async () => {
+    await expect(
+      drainEmbeddings(executionInput(), { billId: "bill:nc:2025:hb:1", products: ["materials"] })
+    ).rejects.toThrow("matching target ID")
+    await expect(drainEmbeddings(executionInput(), { documentId: " " })).rejects.toThrow("must not be empty")
   })
 
   it("prefetches a bounded bulk page while preserving 64-input provider batches", async () => {

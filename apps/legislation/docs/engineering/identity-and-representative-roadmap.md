@@ -25,10 +25,10 @@ user's home address.
 
 | Program | Status | Completion evidence |
 | --- | --- | --- |
-| Canonical legislation ingestion | Complete | Bills, actions, sponsors, amendments, votes, people, organizations, terms, memberships, events, documents, and supporting materials are persisted under the `legislation` schema. |
-| Document, OCR, and supporting-material processing | Complete | Ordinary ingestion invokes managed OCR, completion gates include retryable and OCR work, and the one-time polling sweep is removed. |
-| Embedding model selection and retrieval canary | Complete | The accepted mixed-model contract, dedicated vector tables, Trigger tasks, MCP retrieval, selective reranking, and treatment/control evaluations pass. |
-| Complete embedding corpus pass | Corpus complete; release gates separate | EMB-005 records complete generation and valid indexes. EMB-006/007 retain evaluation, spend and incremental acceptance gates; old worker-canary descriptions are not current status. |
+| Canonical legislation ingestion | Foundations implemented; scope acceptance separate | Persisted record families do not establish current nationwide entity/history coverage; see [state rollout](../operations/openstates-rollout-checklist.md). |
+| Document, OCR, and supporting-material processing | Shared pipelines implemented; new cohorts remain open | No historical polling sweep; completion includes pending/retryable/OCR work for each explicit cohort. |
+| Embedding model selection and retrieval canary | Dated model/route acceptance | Keep frozen evaluations; source/serving changes require renewed acceptance. |
+| Complete embedding corpus pass | Historical completion; integrity rebuild deferred | EMB-005 is historical generation evidence. The September 15 [exact-input finding and rebuild hold](embedding-rollout-plan.md#input-integrity-repair-and-deferred-rebuild-september-15-2026) supersedes any blanket current-integrity claim. |
 | Canonical official identity expansion | In progress | Phase 1 inventory and federal repairs exist; office and geography expansion remain planned. |
 | District and address resolution | Planned | Phase 3. |
 | Unstructured entity extraction and linking | Planned | Phase 4. |
@@ -132,39 +132,17 @@ The first supported mention types are:
 Topics are classifications rather than canonical named entities unless they
 have a separately governed vocabulary.
 
-## Repository hygiene completed with this roadmap
+## Maintenance
 
-The cleanup is deliberately conservative: remove superseded one-time outputs,
-but keep reusable validation, deployment, recovery, and evaluation entry
-points. A file is not obsolete merely because its first rollout completed.
-
-| Task | Status | Disposition and evidence |
-| --- | --- | --- |
-| HYG-001 | Complete | Replaced version-suffixed canary names with the canonical `embedding-canary` manifest, report, lexical result, and semantic result. |
-| HYG-002 | Complete | Removed intermediate embedding canary outputs from iterations 1 through 6. The accepted routed canary, topic canary, model bakeoff, judgment pool, and regression inputs remain. |
-| HYG-003 | Complete | Renamed the reusable document operations guide from a historical backfill name to `document-processing-operations.md` and repaired the documentation index. |
-| HYG-004 | Complete | Reconciled stale paused-rollout wording with the approved 16-shard-per-product embedding pass without rewriting dated incident evidence as if it were current. |
-| HYG-005 | Complete | Audited every file in `apps/legislation/scripts` against package commands, build behavior, operations, and future regression needs. No current script is dead. |
-| HYG-006 | Complete | Retained `smoke-local.mjs`, `smoke-deployment.mjs`, and `smoke-dependencies.mjs`: they test distinct local startup, deployed MCP behavior, and production database/Blob dependencies. |
-| HYG-007 | Complete | Retained embedding builders, seeders, evaluators, and rerankers as reproducible quality-regression tooling. They are not deployed Trigger tasks and do not run unless explicitly invoked. |
-| HYG-008 | Complete | Retained schedule reconciliation, historical backfill, migration-copy, container-context, and infrastructure what-if scripts because each remains the canonical operator or build entry point. |
-| HYG-009 | Complete | Audited registered Trigger tasks. Removed historical polling behavior remains absent; current ingestion, OCR, embedding, schedule, validation, and resumable-backfill tasks all have permanent runtime or recovery ownership. |
-
-Future cleanup follows these rules:
-
-1. Delete a historical controller only after the corresponding incremental
-   path passes and an accumulation alarm proves ownership.
-2. Keep smoke and evaluation tools while they protect a release or model
-   contract; remove only superseded outputs and versioned snapshots.
-3. Never delete a remediation catalog entry. It is the incident and rollback
-   audit trail, not an active task list.
-4. Delete a Trigger task only after its schedule, parent task, CLI entry point,
-   recovery role, and in-flight runs are all absent.
+Completed file-renaming and cleanup work is not an identity roadmap. Keep reusable smoke/evaluation/recovery tools and
+source-decision evidence; remove obsolete outputs only after identifying their replacement. Retire runtime tasks only
+after checking schedules, callers, recovery ownership and in-flight runs. Incident records remain dated evidence, not a
+parallel active backlog.
 
 ## Phase 0: close the embedding program
 
-Dependency: none. Status: complete for generation and production index maintenance; final MCP transport verification is
-tracked separately.
+Historical generation/index-maintenance record. The September exact-input integrity issue and deferred full rebuild are
+owned by [embedding rollout](embedding-rollout-plan.md); the Complete rows below are not current integrity certification.
 
 | Task | Status | Deliverable and acceptance gate |
 | --- | --- | --- |
@@ -213,7 +191,7 @@ parallel after the shared contracts land.
 | OFF-201 | Partial | CongressClient member collection/detail and bounded Trigger synchronization exist. Audit artifact retention against the proposed archival contract; do not rebuild the client. |
 | OFF-202 | Partial | Detail normalization persists canonical people, profiles, jurisdictions and Congress-specific terms. Separate offices and external-identifier population remain open. |
 | OFF-203 | Partial | Completed the bounded 432-vote-link, 416 committee-sponsor-name and 1,407-person term repairs with API verification. This is not a census of every relationship's historical correctness. |
-| OFF-204 | Planned | Import self-hosted OpenStates people, roles, offices, districts, and memberships without using the hosted API quota. |
+| OFF-204 | Partial | Shared NC/AK people/history import and local replay exist; [people quarantine](../operations/openstates-people-quarantine.md) and [state rollout](../operations/openstates-rollout-checklist.md) own acceptance. Complete remaining source, office/district and hosted lanes without recreating the importer. |
 | OFF-205 | Planned | Reconcile state people with existing sponsors, vote positions, committees, and event participants. |
 | OFF-206 | Planned | Model vacancies, special elections, appointments, resignations, party changes, and overlapping source observations. |
 | OFF-207 | Planned | Add current and historical completeness reports by jurisdiction, chamber, district, and date. |

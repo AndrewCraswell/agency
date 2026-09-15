@@ -39,8 +39,8 @@ export class ProviderHttpError extends Error {
   readonly retryable: boolean
   readonly status?: number
 
-  constructor(message: string, options: Readonly<{ retryable: boolean; status?: number }>) {
-    super(message)
+  constructor(message: string, options: Readonly<{ cause?: unknown; retryable: boolean; status?: number }>) {
+    super(message, { cause: options.cause })
     this.name = "ProviderHttpError"
     this.retryable = options.retryable
     this.status = options.status
@@ -88,14 +88,14 @@ export class RetryingHttpClient {
     return { ...this.#metrics }
   }
 
-  async get(url: URL, init: RequestInit = {}): Promise<Response> {
+  async get(url: URL, init: RequestInit = {}, options: { streamBody?: boolean } = {}): Promise<Response> {
     let lastError: unknown
     for (let attempt = 1; attempt <= this.#maxAttempts; attempt += 1) {
       try {
         await this.#beforeAttempt?.()
         await this.#paceRequest()
         this.#metrics.attempts += 1
-        const response = await this.#request(url, attempt, init)
+        const response = await this.#request(url, attempt, init, options.streamBody !== true)
         if (response.ok) {
           this.#metrics.successfulRequests += 1
           return response
@@ -135,7 +135,7 @@ export class RetryingHttpClient {
           }
           throw error instanceof ProviderHttpError
             ? error
-            : new ProviderHttpError("Provider request failed after retries", { retryable: true })
+            : new ProviderHttpError("Provider request failed after retries", { cause: error, retryable: true })
         }
         this.#metrics.retries += 1
         await delay(Math.min(250 * 2 ** (attempt - 1), 4000))
@@ -228,7 +228,7 @@ export class RetryingHttpClient {
           }
           throw error instanceof ProviderHttpError
             ? error
-            : new ProviderHttpError("Provider download failed after retries", { retryable: true })
+            : new ProviderHttpError("Provider download failed after retries", { cause: error, retryable: true })
         }
         this.#metrics.retries += 1
         await delay(Math.min(250 * 2 ** (attempt - 1), 4000))
@@ -260,10 +260,12 @@ export class RetryingHttpClient {
     this.#cooldownUntil = Math.max(this.#cooldownUntil, Date.now() + milliseconds)
   }
 
-  async #request(url: URL, attempt: number, init: RequestInit): Promise<Response> {
+  async #request(url: URL, attempt: number, init: RequestInit, bufferBody = false): Promise<Response> {
     const startedAt = performance.now()
+    let response: Response | undefined
+    let outcome: { response: Response } | { error: unknown }
     try {
-      const response = await this.#fetch(url, {
+      response = await this.#fetch(url, {
         ...init,
         method: "GET",
         redirect: init.redirect ?? "follow",
@@ -272,29 +274,38 @@ export class RetryingHttpClient {
             ? AbortSignal.timeout(this.#requestTimeoutMs)
             : AbortSignal.any([init.signal, AbortSignal.timeout(this.#requestTimeoutMs)])
       })
-      const telemetry: HttpRequestTelemetry = {
-        attempt,
-        durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
-        method: "GET",
-        rateLimitLimit: parseNonnegativeHeader(response.headers, "x-ratelimit-limit"),
-        rateLimitRemaining: parseNonnegativeHeader(response.headers, "x-ratelimit-remaining"),
-        retryAfterMs: retryAfterMilliseconds(response),
-        status: response.status,
-        url: `${url.origin}${url.pathname}`
+      if (bufferBody && response.ok && response.body !== null) {
+        // Drain inside the timeout/retry boundary while preserving the original
+        // response metadata and unread body. Archives use bounded getBytes instead.
+        await response.clone().arrayBuffer()
       }
-      this.#emitAttemptComplete(telemetry)
-      await this.#afterAttemptComplete?.(telemetry)
-      return response
+      outcome = { response }
     } catch (error) {
-      this.#emitAttemptComplete({
-        attempt,
-        durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
-        errorName: error instanceof Error ? error.name : "UnknownError",
-        method: "GET",
-        url: `${url.origin}${url.pathname}`
-      })
-      throw error
+      outcome = { error }
     }
+    const telemetry: HttpRequestTelemetry = {
+      attempt,
+      durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
+      method: "GET",
+      ...(response === undefined
+        ? {}
+        : {
+            rateLimitLimit: parseNonnegativeHeader(response.headers, "x-ratelimit-limit"),
+            rateLimitRemaining: parseNonnegativeHeader(response.headers, "x-ratelimit-remaining"),
+            retryAfterMs: retryAfterMilliseconds(response),
+            status: response.status
+          }),
+      ...("error" in outcome
+        ? { errorName: outcome.error instanceof Error ? outcome.error.name : "UnknownError" }
+        : {}),
+      url: url.origin + url.pathname
+    }
+    this.#emitAttemptComplete(telemetry)
+    await this.#afterAttemptComplete?.(telemetry)
+    if ("error" in outcome) {
+      throw outcome.error
+    }
+    return outcome.response
   }
 
   #emitAttemptComplete(telemetry: HttpRequestTelemetry): void {
