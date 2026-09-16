@@ -13,6 +13,67 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved the full 49 CFR 1152.32 railroad expense table. Recognition requires the exact expense/account/basis
+headers, a nonempty heading with empty account and assignment cells, and at least two populated children at
+publisher indentation two with matching account-code family suffixes. The heading's varying indentation does
+not define its semantic level. Each recognized run retains its heading and exact earlier assignment reference;
+context ends when the account family or row structure changes. Ordinary missing values are not substituted.
+
+`fixtures/railroad-expense-table.json` retains the full block, verified read-only against canonical content and XML
+hashes in 55438. All 77 table tests, scoped lint and service types passed, including full-table reconstruction and
+both model token recounts, correct bridges/signals/repair headings and invalid header/account-family rejection.
+The completed canonical recheck of all 17 original blocked versions now leaves eight blocked, down from nine.
+Version `64997597-bf83-4592-8475-b6d48814a484` prepares 377 OpenAI passages (maximum 759 tokens) and
+380 Voyage passages (maximum 718 tokens). Parser hash:
+`705e5a8607847a27a41f5bc18efdc5dd69e7da04da87e056042513d66e724c37`.
+Report: `artifacts/regulatory-backfills/ditto-version-recheck.json`; previous report retained as
+`ditto-version-recheck-before-expense-groups.json`. Log: `C:/Users/andcra/AppData/Local/Temp/tabra-expense-ditto-recheck.log`.
+No source/index/vector writes or provider calls occurred. Full 49-title requalification remains open.
+Root `pnpm verify` is still running in command session `78277`, observed alive while pnpm resolves/links
+workspace dependencies before executing checks. Resume that session rather than starting another verification.
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-expense-ditto-verify.log`. No repository-wide pass is claimed.
+Scoped `git diff --check` passed.
+
+Resolved 40 CFR 799.5025's numbered chemical groups. The exact mixture/test/citation headers, an Arabic-numbered
+colon-ended chemical heading, empty sibling cells and consecutive Roman-numbered populated members establish
+the group despite equal publisher indentation. Recognition is bounded to the reviewed i-through-x sequence;
+unsupported or broken sequences remain rejected. Both the composite-substance heading and the numbered group
+are retained as source context, with exact earlier test/date spans for ditto references. Group context does not
+leak into the next composite substance. No original cell text is replaced.
+
+`fixtures/chemical-substance-group-table.json` retains the full source block, verified against canonical content
+and XML hashes read-only from 55438. All 73 table tests, scoped lint and service types passed. The completed
+17-version canonical recheck leaves nine blocked versions, down from ten. Version
+`fb6df7d5-25d9-419f-8d5d-fb6dd315ed98` prepares 25 passages per model, maximum 462 OpenAI / 510 Voyage tokens.
+Parser hash: `486f26cc399ddec86bfdc338611333fcfa3252ef8f8f803ea158086556306bd4`.
+Report: `artifacts/regulatory-backfills/ditto-version-recheck.json`; earlier evidence retained as
+`ditto-version-recheck-before-chemical-groups.json`. Log: `C:/Users/andcra/AppData/Local/Temp/tabra-chemical-ditto-recheck.log`.
+No DB/index/vector writes or provider calls occurred. Full-title requalification and embedding evaluation remain open.
+Root `pnpm verify` stopped before coverage on four unrelated web type errors in `app/chat/agent.ts` and
+`app/chat/clarificationTool.ts` concerning AI SDK Context, Output and DynamicTool exports/types.
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-chemical-ditto-verify.log`. Scoped `git diff --check` passed.
+
+Resolved the Title 25 trust-period appendix's reservation-group boundary using explicit publisher evidence.
+Recognition requires State/Reservation headers, a colon-ended reservation heading with otherwise empty cells,
+populated same-width member rows retaining the state ditto, and an exact `All of above <group>` closing row.
+Group context stops at that closing row. Missing/mismatched closers, incompatible headers and empty members
+remain rejected; ordinary blanks never acquire guessed values.
+
+`fixtures/tribal-trust-period-table.json` retains the full canonical source block, verified read-only against
+content and XML hashes in 55438. All 69 table tests, scoped lint and service types passed. The tests cover
+source references, group termination, negative boundaries, exact reconstruction and independent token recounts.
+The canonical 17-version recheck completed with 10 versions still blocked, down from 11. Title 25 version
+`ccb253a2-5622-4e87-9097-627c9cf7c54a` prepares 156 passages for each model, maximum 465 OpenAI / 630 Voyage tokens.
+Parser hash: `04bcde3f68c472b56a1b6d075d6e6ffe1433006f9978d254b63416666f9b030c`.
+Report: `artifacts/regulatory-backfills/ditto-version-recheck.json`; prior report retained as
+`ditto-version-recheck-before-reservations.json`. Log: `C:/Users/andcra/AppData/Local/Temp/tabra-reservation-ditto-recheck.log`.
+No source/index/vector writes or provider calls occurred. Full 49-title requalification remains required.
+Root `pnpm verify` passed its check phase, then failed in unrelated Shopify email coverage: eight five-second
+timeouts in `packages/shopify-emails/src/admin/build.test.ts` and `cli.test.ts`. Regulatory coverage did not
+complete in that interrupted run. Log: `C:/Users/andcra/AppData/Local/Temp/tabra-reservation-ditto-verify.log`.
+Scoped `git diff --check` passed. The next reviewed source shape is 40 CFR 799.5025's numbered heading followed
+by Roman-numbered children at the same publisher indentation; existing indentation rules correctly do not infer it.
+
 Resolved the designation-table boundary and classification continuations in 40 CFR 81.305. A populated partial-
 county row now supplies context to a more deeply indented `That portion` boundary description with empty sibling
 cells. In the explicit designation/classification header layout, a row continuing the populated classification
@@ -30,6 +91,10 @@ parser hash `41febc55d32866ac42fcf0532d381bd74d76ac57f5bc8bb71fef5a5699cf160b`.
 Previous evidence is retained as `ditto-version-recheck-before-boundaries.json`; log:
 `C:/Users/andcra/AppData/Local/Temp/tabra-boundary-ditto-recheck.log`. No DB/index/vector writes or provider calls
 occurred. Full-title requalification and remaining source blockers are still open.
+Root `pnpm verify` stopped before coverage: `check:lint` reported an I/O error, "The system cannot find the
+file specified" (OS error 2), without identifying the missing path. This is not a passing repository check;
+the cause remains unresolved. Log: `C:/Users/andcra/AppData/Local/Temp/tabra-boundary-ditto-verify.log`.
+The focused regulatory tests, lint and service type-check above passed independently.
 
 Resolved the STCC commodity-exception structure in 49 CFR 1039.11. Recognition requires the explicit STCC
 number/tariff/commodity headers, an `except` parent, blank sibling cells, and exception codes beneath that parent

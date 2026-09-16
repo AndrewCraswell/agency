@@ -39,6 +39,23 @@ and acceptance are execution boundaries, not proposed standalone source packages
 environment-gated; a skipped suite does not establish database acceptance. See [local PostgreSQL](development.md#local-postgresql)
 and the individual suites for their dedicated database variables and safety guards.
 
+## Test quality
+
+Assert observable behavior, not Markdown wording, dependency-version literals or the spelling of TypeScript/SQL
+source. The existing PostgreSQL schema suite checks migrated columns, defaults, enum values, keyset indexes and
+foreign-key actions in the database catalog; its shared setup applies the migration chain once. Constraint behavior
+and transaction/replay tests remain necessary alongside catalog checks. These checks require the guarded test database
+and are not established by a skipped database suite.
+
+Query-builder unit tests should check bound values as well as relevant SQL structure. Test doubles must preserve the
+contract that the service relies on: subscription duplicate lookup compares the persisted fingerprint, not just its
+length. Keep positive and negative examples so a fake that always returns one row cannot establish correctness.
+
+Mocked SDK/HTTP tests protect wiring, authentication, cancellation, limits and error propagation. They do not establish
+deployed latency; keep wall-clock performance gates in a measured integration/benchmark environment. Do not remove
+source-policy, tokenizer, parser or packaging tests merely because they use fixed fixtures or execute generated code.
+Review prose contracts directly instead of maintaining executable tests for document inventories.
+
 ## Full verification
 
 Unfiltered Vitest runs execute web and backend first, ingestion/parsing/tools next, database next, and acceptance last.

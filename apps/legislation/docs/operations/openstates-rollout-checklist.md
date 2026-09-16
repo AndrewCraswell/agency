@@ -2,6 +2,50 @@
 
 ## September 16 continuation and identity verification
 
+- [x] Focused downloader/recovery verification: 44 tests across two files passed after typed unsupported-format errors.
+- [x] Alaska audited inventory offsets 10 and 20: all twenty documents processed and OCR processed, original raw hashes unchanged. Combined with the initial canary, thirty audited repairs are processed; only the initial canary has separate search-copy acceptance so far.
+- [ ] Offset 30 controller `run_06gamhq9l2c80eg5k3angkfm01` submitted after ten exact source guards passed; next inventory offset 40. Queue limits remain unchanged.
+- [ ] Full verification still fails in unrelated Shopify email build/CLI tests and scoring observatory integration; focused success is not a repository-wide pass.
+
+Historical session-30 controller `run_06gamgfpn0829kojiv62dms901` is processing 20 recovered pending documents.
+The scanned PDF for HB268 remains correctly queued for OCR; no lost error category was found there. The downloader's
+unsupported-binary rejection did use an untyped Error, unlike extraction. It now emits `DocumentExtractionError`
+with `unsupported-format`, so callers can distinguish a known unsupported source from an operational failure.
+Historical sessions 31/32 were also checked: binary Excel, Outlook, and an unrecognized ZIP remain unresolved, not requeued.
+
+Historical production inventory confirms stored bills in Alaska sessions 30–34 and NC sessions 2017, 2017e1/e2/e3,
+2019, 2021, 2023, 2025. This is presence evidence, not archive-count completeness. Session-30 recovery found valid
+PDFs and scanned PNGs behind stale unsupported-format outcomes. The retry command now hashes raw bytes before
+extraction and accepts the explicit `ocr-required` category for normal OCR handoff (without inventing extracted text).
+Six safeguard tests pass, including OCR handoff. Existing Outlook and binary Word formats remain unresolved.
+
+The supported-format recovery CLI now reports operational failures with nonzero exit status instead of labeling them
+unsupported content. Five regression checks pass: dry-run no-write, guarded apply with full timestamp precision,
+changed publisher bytes rejected, concurrent change rolled back, and unsupported content left untouched.
+Alaska inventory offset 20 is running as `run_06gamer1icck540f98ik3fcr01` (next offset 30); NC's 100-batch run is
+still executing. Neither running job was restarted. Full verification continues to be blocked by Shopify email tests.
+
+Reusable `tools/openstates/retry-supported-documents.ts` now validates actual downloaded bytes with the shared
+extractor before optionally requeuing unsupported-format records. It requires exact state/session/database selection,
+is bounded to at most 100 candidates, preserves source-hash review when artifacts exist, and guards updates by
+unchanged timestamp/source/error/status. Live Alaska 34 pass requeued 13 supported Office records and left all
+11 MSG failures unresolved. This is queue recovery, not completed hosted extraction or MSG support.
+
+Three additional Alaska current-session unsupported records are recoverable Office documents, not source limitations:
+docids 15122 (Word, 1,494 extracted characters), 11634 (Excel, 45,513), and 14046 (PowerPoint, 2,561).
+Fresh official downloads verified ZIP signatures and extraction with the shared detector; deployed candidate source
+contains the same Office detection/extraction path. Their stale `ocx`/`lsx`/`ptx` failure records had no retained
+blob/hash. Guarded transaction reset only those three exact ID/URL/error/status/null-artifact matches to pending,
+so the ordinary hosted download/OCR/embedding path can retry. Hosted completion remains pending; no invented format aliases.
+
+- [x] Production repeatable-read freshness: NC 2025, observed 17:09:32Z, all 2,338 bill and 36,187 section vectors current; zero missing/stale.
+- [x] Production repeatable-read freshness: Alaska 34, observed 17:07:30Z, all 857 bill and 66,568 section vectors current; zero missing/stale.
+- [x] Alaska first ten audited repairs: all documents processed/OCR processed with original raw hashes retained; all 136 resulting section hashes match hosted search, none missing.
+- [ ] Alaska inventory offset 10: all ten target guards revalidated, next repair controller `run_06gamd449lr9unu23pridkpm01` submitted pinned to `20260916.3`; next inventory offset 20 of 952. No claim that the remaining 932 candidates are repaired.
+
+Vector freshness covers canonical stored content, not missing documents or historical coverage. Search-copy hash equality
+is not a substitute for lexical/semantic/hybrid retrieval acceptance. Those broader gates remain open.
+
 Alaska canary `run_06gamb0lptqui2vjgfgvc0ei01` completed its ten batches; this is not yet downstream acceptance.
 NC is continuing with a bounded 100-batch controller `run_06gambiu9spur3dr4d7l8jd001`, unchanged single-bill
 concurrency and pinned deployment. Production current-session scope contains 2,338 NC bills and 857 Alaska bills.

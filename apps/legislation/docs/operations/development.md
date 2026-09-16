@@ -56,8 +56,18 @@ Individual requests release their clients but must not close the shared pools. T
 the same transaction-local approach without enabling any unapproved search cutover.
 
 Current per-run bounds: 30-second registry tool calls, 120-second total run deadline, eight model
-steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Oversized results are rejected,
-not silently truncated. These limits bound a request and do not impose a conversation count. No transcript is saved
+steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Research serialization omits
+internal embedding and search-index fields. The shared chat/MCP bill discovery contract returns snippets, identifiers, sources, and child
+metadata instead of full summaries and embedded document bodies. Research tools must retrieve relevant passages using
+`search_bill_text` or read a selected version using `get_bill_text` before making substantive claims about provisions.
+Version-text reads omit the duplicate full document body but retain document metadata and complete source sections.
+The shared tool registry splits oversized bill search pages, bill batches, and passage/section pages at complete-record
+boundaries before transport validation; normal page, batch, and child limits remain unchanged. Opaque continuations
+preserve upstream pagination and require the same tool, filters, IDs, and limits. Continuations re-run the original
+read and advance within its result window; they work across stateless requests and replicas without retained data.
+They do not promise snapshot isolation when the underlying records change. Model, UI, and MCP paging share this path;
+individual records that cannot fit still fail explicitly rather than clipping evidence. The public MCP
+transport limit is unchanged. These limits bound a request and do not impose a conversation count. No transcript is saved
 server-side; follow-ups re-fetch evidence instead of trusting client-supplied tool output. Tavily/Firecrawl remain later work.
 Cancellation prevents further calls and discards late results; it does not claim to interrupt an already-running SQL
 statement. Existing database statement deadlines remain responsible for that bound.

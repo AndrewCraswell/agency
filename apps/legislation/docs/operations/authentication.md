@@ -33,6 +33,13 @@ intentionally do not distinguish token failures in greater detail.
 User and optional organization IDs flow through request context and trace metadata. Tokens, claims other than the two
 stable IDs, queries over 2,000 characters, credentials, and full legislative text are not retained in traces.
 
+## Public chat origin validation
+
+Production `/chat` requests require an `Origin` matching the configured HTTPS `LEGISLATION_PUBLIC_API_BASE_URL`
+and a `Host` matching that URL's authority. When no Host header is present, the request URL supplies the host.
+Railway terminates TLS before Next.js, so the internal request URL's origin is not the browser's public origin.
+Forwarded headers do not establish trust. Missing or foreign browser origins and mismatched hosts are rejected.
+
 ## Existing operational smoke credential
 
 The Railway `legislation-web` service already has `WORKOS_SMOKE_CLIENT_ID` and `WORKOS_SMOKE_CLIENT_SECRET`.

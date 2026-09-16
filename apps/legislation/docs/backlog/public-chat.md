@@ -270,8 +270,8 @@ Full theme/shell acceptance and the model runtime remain open. The package-feed 
 the approved archive installation recorded in THEME-01.
 
 Verification note: the theme's 15 focused tests, web type-check, scoped lint, reload/system/keyboard browser checks,
-and 320px header layout pass. Root `pnpm verify` was attempted; `tutor:check:unused` failed with an oxc-parser array-buffer
-allocation error, stopping the check stage before coverage. This is not a clean repository verification result.
+and 320px header layout pass. The root verification attempt stopped during the check stage before coverage. This is not
+a clean repository verification result.
 
 - Work: map background, foreground, surfaces, borders, primary/secondary actions, focus and semantic statuses to shadcn
   tokens. Baseline: surface `#F2F4F3`, ink `#0F1413`, brand `#14463A`, raised white, radii 4/6/8px.

@@ -2,6 +2,33 @@
 
 ## Latest scoped requalification
 
+The latest canonical recheck leaves eight blocked versions after resolving 49 CFR 1152.32. The expense table's
+exact headers, empty-account headings and contiguous populated child rows sharing an account-code family establish
+bounded subgroup context despite varying heading indentation. At least two children are required; broken family
+codes and incompatible headers remain unsupported. The full retained source is `fixtures/railroad-expense-table.json`.
+All 77 table tests passed. The full version prepares 377 OpenAI / 380 Voyage passages. Parser hash:
+`705e5a8607847a27a41f5bc18efdc5dd69e7da04da87e056042513d66e724c37`.
+
+The latest canonical recheck leaves nine blocked versions after resolving 40 CFR 799.5025. Chemical group
+recognition requires the exact mixture/test/citation headers, Arabic-numbered chemical headings with empty
+sibling cells, and consecutive populated Roman-numbered members at equal indentation. Both outer and inner
+heading context survive; ordinary blank cells and broken sequences still fail. The full source fixture is
+`fixtures/chemical-substance-group-table.json`. All 73 table tests passed, including both pinned tokenizers;
+the complete canonical version prepares 25 passages per model. Parser hash:
+`486f26cc399ddec86bfdc338611333fcfa3252ef8f8f803ea158086556306bd4`.
+
+The latest 17-version canonical recheck leaves 10 blocked versions after resolving the Title 25 trust-period
+appendix. Its explicit `Mission Bands:` heading and `All of above Mission Bands` closing row bound the reservation
+group. Same-width populated members and State/Reservation headers are required. State and period ditto references
+retain their exact earlier source spans; the heading supplies context only through the closing row. Ordinary
+blanks, missing/mismatched closing labels and incomplete members remain unsupported. The full retained fixture is
+`fixtures/tribal-trust-period-table.json`; all 69 table tests passed, including both tokenizers. The complete canonical
+version prepares 156 passages under each model. Full-title requalification and model comparison remain open.
+Evidence: `artifacts/regulatory-backfills/ditto-version-recheck.json`, parser hash
+`04bcde3f68c472b56a1b6d075d6e6ffe1433006f9978d254b63416666f9b030c`.
+
+The entries below are earlier dated evidence, superseded by the latest counts above.
+
 Centered category support now also requires explicit publisher styling: a colon-ended centered first cell, empty
 remaining cells with no hidden elements, followed by a same-width left-aligned data row containing data in another
 column. A centered label without the data-row styling does not qualify. Category context survives unindented children;
