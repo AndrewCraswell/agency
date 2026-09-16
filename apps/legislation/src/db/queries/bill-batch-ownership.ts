@@ -112,15 +112,6 @@ export async function claimBillBatchOwnership(
   })
 }
 
-export async function readBillBatchOwnership(
-  database: LegislationDatabase,
-  owner: BillBatchOwnership
-): Promise<Record<string, unknown> | null> {
-  identity.parse(owner)
-  const [row] = await database.select({ cursor: syncCheckpoints.cursor }).from(syncCheckpoints).where(condition(owner))
-  return row?.cursor ?? null
-}
-
 /** Hold the row lock through commit so takeover cannot race with canonical writes. */
 export async function assertBillBatchOwnership(transaction: Transaction, owner: BillBatchOwnership) {
   identity.parse(owner)

@@ -262,23 +262,28 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
       for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
         signal.throwIfAborted()
         const page = await document.getPage(pageNumber)
-        signal.throwIfAborted()
-        const content = await page.getTextContent()
-        signal.throwIfAborted()
-        const text = content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" ")
-        if (normalizeLegalText(text).length >= MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS) {
-          pages.push({ hasRasterImage: false, text })
-          continue
+        try {
+          signal.throwIfAborted()
+          const content = await page.getTextContent()
+          signal.throwIfAborted()
+          const text = content.items.flatMap((item) => ("str" in item ? [item.str] : [])).join(" ")
+          if (normalizeLegalText(text).length >= MIN_USABLE_PDF_PAGE_TEXT_CHARACTERS) {
+            pages.push({ hasRasterImage: false, text })
+            continue
+          }
+          const operators = await page.getOperatorList()
+          signal.throwIfAborted()
+          pages.push({
+            hasRasterImage: operators.fnArray.some((operator) => rasterImageOperators.has(operator)),
+            // Printed PDFs can outline every glyph instead of exposing text or images.
+            // Sparse pages with drawing paths need OCR too; an empty OCR result remains a failure.
+            hasVectorGraphics: operators.fnArray.includes(OPS.constructPath),
+            text
+          })
+        } finally {
+          // Keep only extracted evidence, not decoded page images/operators.
+          page.cleanup()
         }
-        const operators = await page.getOperatorList()
-        signal.throwIfAborted()
-        pages.push({
-          hasRasterImage: operators.fnArray.some((operator) => rasterImageOperators.has(operator)),
-          // Printed PDFs can outline every glyph instead of exposing text or images.
-          // Sparse pages with drawing paths need OCR too; an empty OCR result remains a failure.
-          hasVectorGraphics: operators.fnArray.includes(OPS.constructPath),
-          text
-        })
       }
     },
     () => loadingTask.destroy(),

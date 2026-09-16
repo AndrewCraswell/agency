@@ -47,10 +47,10 @@ export const legalSearchRequestSchema = z
       issue("asOf", "Choose asOf or editionIds")
     }
     if (
-      (value.asOf !== undefined || value.editionIds !== undefined) &&
+      (value.asOf !== undefined || value.editionIds !== undefined || value.codeIds !== undefined) &&
       value.corpora.includes("regulatory_publication")
     ) {
-      issue("corpora", "Historical selection requires code-only corpora")
+      issue("corpora", "Code and historical selection require code-only corpora")
     }
     if (
       (value.publicationKinds !== undefined || value.publishedFrom !== undefined || value.publishedTo !== undefined) &&
@@ -189,4 +189,54 @@ export const legalSearchPageSchema = searchPageSchema
     if (new Set(data.map((item) => item.passageId)).size !== data.length) {
       issue("Duplicate search passages")
     }
+    if (new Set(data.map((item) => JSON.stringify([item.kind, item.id, item.versionId]))).size !== data.length) {
+      issue("Duplicate exact search versions")
+    }
+    if (meta.truncated !== (meta.nextCursor !== null || meta.legal.candidateSetTruncated)) {
+      issue("Truncation must reflect continuation or a capped candidate window")
+    }
+    if (meta.nextCursor !== null && data.length !== meta.limit) {
+      issue("Continuation requires a full result page")
+    }
   })
+
+export type LegalSearchRequest = z.input<typeof legalSearchRequestSchema>
+
+/** Validate the response against the normalized request, in addition to its standalone wire shape. */
+export function validateLegalSearchResponse(value: unknown, request: LegalSearchRequest) {
+  const input = legalSearchRequestSchema.parse(request)
+  const page = legalSearchPageSchema.parse(value)
+  const agencyIds = input.agencyIds
+  if (
+    page.meta.limit !== input.limit ||
+    page.meta.mode !== input.mode ||
+    (page.meta.legal.degraded && !input.allowDegraded) ||
+    (input.cursor !== undefined && page.meta.nextCursor === input.cursor) ||
+    page.data.some((row) => {
+      if (
+        !input.corpora.includes(row.corpus) ||
+        (input.jurisdictionIds !== undefined && !input.jurisdictionIds.includes(row.jurisdiction.id)) ||
+        (agencyIds !== undefined && !row.agencies.some((agency) => agencyIds.includes(agency.sourceAgencyId)))
+      ) {
+        return true
+      }
+      if (row.kind === "provision") {
+        return (
+          (input.codeIds !== undefined && !input.codeIds.includes(row.code.id)) ||
+          (input.editionIds !== undefined && !input.editionIds.includes(row.selectedContext.editionId)) ||
+          (input.asOf !== undefined &&
+            (row.selectedContext.selectedDate !== input.asOf ||
+              row.selectedContext.basis !== "publisher_point_in_time"))
+        )
+      }
+      return (
+        (input.publicationKinds !== undefined && !input.publicationKinds.includes(row.publicationKind)) ||
+        (input.publishedFrom !== undefined && row.publishedOn < input.publishedFrom) ||
+        (input.publishedTo !== undefined && row.publishedOn > input.publishedTo)
+      )
+    })
+  ) {
+    throw new Error("legal_search_response_mismatch")
+  }
+  return page
+}

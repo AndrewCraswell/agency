@@ -2,7 +2,8 @@ import { afterAll, expect, it } from "vitest"
 import { loadConfig } from "../../config/config.js"
 import { createDatabase } from "../../db/database.js"
 import { LocalArtifactStore } from "../documents/artifact-store.js"
-import { processStateContentBatch, stateContentScope } from "./state-content.js"
+import { stateContentScope } from "./state-content-scope.js"
+import { processStateContentBatch } from "./state-content.js"
 
 const config = loadConfig({ NODE_ENV: "test" })
 const { database, pool } = createDatabase(config.database)

@@ -60,6 +60,7 @@ const configSchema = z
     logging: z.object({
       level: z.enum(["debug", "info", "warn", "error"])
     }),
+    legalApi: z.object({ allowedOrganizationIds: z.array(z.string().min(1).max(256)).max(1000) }),
     model: z.object({
       apiKey: optionalSecret,
       baseUrl: z.url({ protocol: /^https$/ }),
@@ -258,6 +259,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
     },
     logging: { level: environment.LOG_LEVEL ?? "info" },
+    legalApi: {
+      allowedOrganizationIds: (environment.LEGISLATION_LEGAL_API_ORGANIZATIONS ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    },
     model: {
       apiKey: environment.OPENROUTER_API_KEY,
       baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",

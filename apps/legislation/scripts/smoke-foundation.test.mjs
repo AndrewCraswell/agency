@@ -18,7 +18,6 @@ let documentDetailError
 let documentSectionsError
 let documentBatchItemError
 let missingFixturePrefix
-let representativeUnavailable = false
 const peopleOrganizationsErrorPaths = new Map()
 const meetingsCalendarsErrorPaths = new Map()
 const meetingsCalendarsNotFoundPaths = new Set()
@@ -78,21 +77,6 @@ function resourceBatchItem(item) {
 }
 
 function batch(pathname, correlationId, requestBody) {
-  if (pathname === "/api/representative-lookups") {
-    return {
-      data: {
-        districts: [],
-        expiresAt: "2026-08-26T00:05:00.000Z",
-        lookupId: "lookup:fixture",
-        quality: "unresolved",
-        representatives: [],
-        resolvedAt: "2026-08-26T00:00:00.000Z",
-        warnings: []
-      },
-      links: { self: pathname },
-      meta: { correlationId, warnings: [] }
-    }
-  }
   if (pathname === "/api/resources/batch") {
     return {
       data: requestBody.items.map(resourceBatchItem),
@@ -384,23 +368,6 @@ beforeAll(async () => {
       return
     }
     if (request.method === "POST") {
-      if (url.pathname === "/api/representative-lookups" && representativeUnavailable) {
-        json(
-          response,
-          correlationId,
-          {
-            error: {
-              category: "dependency_unavailable",
-              correlationId,
-              message: "Representative provider is unavailable",
-              retryable: true
-            }
-          },
-          503,
-          { "cache-control": "private, no-store", "retry-after": "30" }
-        )
-        return
-      }
       if (searchResearchTimeoutPaths.has(url.pathname)) {
         await new Promise((resolve) => setTimeout(resolve, 2_000))
         return
@@ -1356,7 +1323,7 @@ describe("people and organization deployed smoke profile", () => {
 })
 
 describe("meeting and calendar deployed smoke profile", () => {
-  it("cumulatively checks earlier profiles and all fourteen meeting, calendar, and representative routes", async () => {
+  it("cumulatively checks earlier profiles and all thirteen meeting and calendar routes", async () => {
     requests.length = 0
     meetingsCalendarsNotFoundPaths.add("/api/meetings/meeting%3Afixture%2Fwith%20space")
     meetingsCalendarsNotFoundPaths.add(
@@ -1388,9 +1355,6 @@ describe("meeting and calendar deployed smoke profile", () => {
         LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID: "participant-detail-meeting:fixture/with space",
         LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID: "participant-list-meeting:fixture/with space",
         LEGISLATION_WEB_SMOKE_PERSON_ID: "person:fixture",
-        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
-        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944",
-        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "200",
         LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture",
         LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID: "supporting-material-section:fixture",
         LEGISLATION_WEB_SMOKE_TERM_ID: "term:fixture",
@@ -1404,7 +1368,7 @@ describe("meeting and calendar deployed smoke profile", () => {
       expect(result.legislativeRecords.passed).toHaveLength(18)
       expect(result.documentsResources.passed).toHaveLength(9)
       expect(result.peopleOrganizations.passed).toHaveLength(14)
-      expect(result.meetingsCalendars.passed).toHaveLength(9)
+      expect(result.meetingsCalendars.passed).toHaveLength(8)
       expect(result.meetingsCalendars.skipped).toEqual([
         { name: "meeting", reason: "canonical_fixture_not_found" },
         { name: "meeting agenda item", reason: "canonical_fixture_not_found" },
@@ -1412,11 +1376,7 @@ describe("meeting and calendar deployed smoke profile", () => {
         { name: "calendar", reason: "canonical_fixture_not_found" },
         { name: "calendar meetings", reason: "canonical_fixture_not_found" }
       ])
-      expect(result.meetingsCalendars.notFound).toEqual([
-        "meetings_trailing_slash",
-        "calendars_trailing_slash",
-        "representative_lookups_trailing_slash"
-      ])
+      expect(result.meetingsCalendars.notFound).toEqual(["meetings_trailing_slash", "calendars_trailing_slash"])
 
       const meetingsCalendars = requests.filter((request) =>
         /^meetings-calendars-smoke-\d+$/.test(request.correlationId)
@@ -1424,7 +1384,7 @@ describe("meeting and calendar deployed smoke profile", () => {
       const conditional = requests.filter((request) =>
         /^meetings-calendars-smoke-conditional-\d+$/.test(request.correlationId)
       )
-      expect(meetingsCalendars).toHaveLength(14)
+      expect(meetingsCalendars).toHaveLength(13)
       expect(meetingsCalendars.map(requestSignature).sort()).toEqual(
         [
           "GET /api/meetings?limit=1",
@@ -1439,15 +1399,11 @@ describe("meeting and calendar deployed smoke profile", () => {
           "GET /api/meetings/participant-detail-meeting%3Afixture%2Fwith%20space/participants/participant%3Afixture%2Fwith%20space",
           "GET /api/calendars?limit=1",
           "GET /api/calendars/calendar%3Afixture%2Fwith%20space",
-          "GET /api/calendars/calendar%3Afixture%2Fwith%20space/meetings?limit=1",
-          "POST /api/representative-lookups"
+          "GET /api/calendars/calendar%3Afixture%2Fwith%20space/meetings?limit=1"
         ].sort()
       )
       expect(conditional).toHaveLength(8)
       expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
-      expect(meetingsCalendars.find((request) => request.pathname === "/api/representative-lookups")?.body).toEqual({
-        coordinates: { latitude: 38.5816, longitude: -121.4944 }
-      })
     } finally {
       meetingsCalendarsNotFoundPaths.clear()
     }
@@ -1462,8 +1418,7 @@ describe("meeting and calendar deployed smoke profile", () => {
       expect.arrayContaining([
         { name: "meeting", reason: "fixture_not_configured:meetingDetailId" },
         { name: "meeting agenda item", reason: "fixture_not_configured:agendaMeetingId" },
-        { name: "calendar", reason: "fixture_not_configured:calendarId" },
-        { name: "representative lookup", reason: "fixture_not_configured:representativeCoordinates" }
+        { name: "calendar", reason: "fixture_not_configured:calendarId" }
       ])
     )
     expect(requests.some((request) => `${request.pathname}${request.search}`.includes("fixture"))).toBe(false)
@@ -1524,49 +1479,6 @@ describe("meeting and calendar deployed smoke profile", () => {
       meetingsCalendarsErrorPaths.clear()
     }
   })
-
-  it("rejects a malformed representative lookup Resource envelope without exposing request coordinates", async () => {
-    malformedPath = "/api/representative-lookups"
-    try {
-      let error
-      try {
-        await runSmoke({
-          LEGISLATION_WEB_SMOKE_MEETINGS_CALENDARS: "1",
-          LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
-          LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944",
-          LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "200"
-        })
-      } catch (caught) {
-        error = caught
-      }
-      expect(error).toMatchObject({ stderr: expect.any(String) })
-      expect(error.stderr).toContain("POST representative lookup did not return an exact Resource envelope")
-      expect(error.stderr).not.toContain("38.5816")
-      expect(error.stderr).not.toContain("-121.4944")
-    } finally {
-      malformedPath = undefined
-    }
-  })
-
-  it("accepts only the audited dependency-unavailable representative outcome with its retry contract", async () => {
-    representativeUnavailable = true
-    try {
-      const result = await runSmoke({
-        LEGISLATION_WEB_SMOKE_MEETINGS_CALENDARS: "1",
-        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "dependency_unavailable",
-        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
-        LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944"
-      })
-      expect(result.meetingsCalendars.skipped).toContainEqual({
-        name: "representative lookup",
-        reason: "dependency_unavailable"
-      })
-      expect(JSON.stringify(result)).not.toContain("38.5816")
-      expect(JSON.stringify(result)).not.toContain("-121.4944")
-    } finally {
-      representativeUnavailable = false
-    }
-  })
 })
 
 function searchResearchEnvironment(overrides = {}) {
@@ -1594,9 +1506,6 @@ function searchResearchEnvironment(overrides = {}) {
     LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID: "participant-detail-meeting:fixture",
     LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID: "participant-list-meeting:fixture",
     LEGISLATION_WEB_SMOKE_PERSON_ID: "person:fixture",
-    LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME: "200",
-    LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE: "38.5816",
-    LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE: "-121.4944",
     LEGISLATION_WEB_SMOKE_RESEARCH_BILL_ID: "bill:research fixture",
     LEGISLATION_WEB_SMOKE_RESEARCH_EXPECTED_OUTCOME: "200",
     LEGISLATION_WEB_SMOKE_RESEARCH_QUESTION: "What does the private research fixture require?",

@@ -4,6 +4,33 @@ import { AzureDocumentIntelligenceClient, AzureDocumentIntelligenceError } from 
 const credential = { getToken: async () => ({ token: "test-token" }) }
 
 describe("AzureDocumentIntelligenceClient", () => {
+  it.each([
+    ["", "OcrNoUsableTextError"],
+    [" \n\t", "OcrNoUsableTextError"],
+    [undefined, "AzureDocumentIntelligenceError"],
+    [null, "AzureDocumentIntelligenceError"],
+    [42, "AzureDocumentIntelligenceError"]
+  ])("distinguishes empty text from an invalid provider content field (%s)", async (content, name) => {
+    const mockFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          headers: { "operation-location": "https://ocr.example/operations/empty" },
+          status: 202
+        })
+      )
+      .mockResolvedValueOnce(Response.json({ status: "succeeded", analyzeResult: { content } }))
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: mockFetch,
+      pollIntervalMs: 0
+    })
+    await expect(
+      client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "empty" })
+    ).rejects.toMatchObject(name === "AzureDocumentIntelligenceError" ? { name, retryable: true } : { name })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
   it("submits source bytes and returns the prebuilt Read text, pages, and page count", async () => {
     let requestCount = 0
     const mockFetch = vi.fn<typeof fetch>(async () => {

@@ -2,7 +2,7 @@ import { z } from "zod"
 
 const checkpoint = z.object({
   afterBillId: z.string(),
-  pendingEmbeddingBillIds: z.array(z.string()).max(10).default([])
+  pendingEmbeddingBillIds: z.array(z.string()).max(100).default([])
 })
 
 export function readStateContentCheckpoint(value: unknown, prefix: string) {
@@ -17,6 +17,12 @@ export function readStateContentCheckpoint(value: unknown, prefix: string) {
     throw new Error("Content checkpoint contains empty or duplicate pending bill IDs")
   }
   return result
+}
+
+export function prioritizeStateContentBills(priority: readonly string[], pending: readonly string[], prefix: string) {
+  const merged = [...new Set([...priority, ...pending])]
+  return readStateContentCheckpoint({ afterBillId: "", pendingEmbeddingBillIds: merged }, prefix)
+    .pendingEmbeddingBillIds
 }
 
 export function advanceStateContentCheckpoint(input: {

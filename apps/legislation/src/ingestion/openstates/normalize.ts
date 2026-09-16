@@ -387,41 +387,60 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     const counts = new Map<string, number>()
     for (const count of vote.counts) {
       const normalizedOption = normalizeVoteOption(count.option)
-      const bucket = normalizedOption === "yes" || normalizedOption === "no" ? normalizedOption : "other"
-      counts.set(bucket, (counts.get(bucket) ?? 0) + count.value)
+      counts.set(normalizedOption, (counts.get(normalizedOption) ?? 0) + count.value)
     }
     const positions = uniqueBy(
       vote.votes.flatMap((position, sourceSequence) => {
         const providerPersonId = nonBlank(position.voter?.id ?? position.voter_id)
         const sourcePersonId = providerPersonId ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
-        const canonicalPersonId = personId(
-          providerPersonId === undefined ? "openstates-voter-name" : "openstates",
-          sourcePersonId
-        )
-        peopleById.set(canonicalPersonId, {
-          id: canonicalPersonId,
-          jurisdictionId: jurisdiction,
-          name: position.voter_name,
-          sourceId: sourcePersonId,
-          upstreamIds:
-            providerPersonId === undefined
-              ? { openstatesVoteName: position.voter_name }
-              : { openstates: providerPersonId }
-        })
+        const canonicalPersonId = providerPersonId === undefined ? undefined : personId("openstates", providerPersonId)
+        if (canonicalPersonId !== undefined && providerPersonId !== undefined) {
+          peopleById.set(canonicalPersonId, {
+            id: canonicalPersonId,
+            jurisdictionId: jurisdiction,
+            name: position.voter_name,
+            sourceId: sourcePersonId,
+            upstreamIds: { openstates: providerPersonId }
+          })
+        }
         return [
           {
             option: normalizeVoteOption(position.option),
             personId: canonicalPersonId,
             sourceIdentity: sourcePersonId,
             sourceName: position.voter_name,
-            sourcePersonId,
+            sourcePersonId: providerPersonId,
             sourceSequence,
             voteId: canonicalVoteId
           }
         ]
       }),
-      (position) => position.personId
+      (position) => position.sourceIdentity
     )
+    const positionCounts = new Map<string, number>()
+    for (const position of positions) {
+      positionCounts.set(position.option, (positionCounts.get(position.option) ?? 0) + 1)
+    }
+    const countsReconciled =
+      vote.counts.length > 0 &&
+      positions.length > 0 &&
+      positions.length === vote.votes.length &&
+      [...new Set([...counts.keys(), ...positionCounts.keys()])].every(
+        (option) => (counts.get(option) ?? 0) === (positionCounts.get(option) ?? 0)
+      )
+    const countFor = (option: string) => counts.get(option) ?? (countsReconciled ? 0 : undefined)
+    const heldAt =
+      vote.start_date !== undefined && /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(vote.start_date)
+        ? new Date(vote.start_date)
+        : undefined
+    const validHeldAt = heldAt !== undefined && Number.isFinite(heldAt.valueOf()) ? heldAt : undefined
+    let result = vote.result
+    if (result === "pass") {
+      result = "passed"
+    } else if (result === "fail") {
+      result = "failed"
+    }
+    const voteSourceUrl = vote.sources[0]?.url
     return {
       positions,
       vote: {
@@ -431,24 +450,38 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
           nonBlank(vote.motion_classification[0] ?? vote.classification[0])
             ?.toLowerCase()
             .replaceAll("_", "-") ?? "recorded",
-        heldAt:
-          vote.start_date !== undefined && /^\d{4}-\d{2}-\d{2}T/.test(vote.start_date)
-            ? new Date(vote.start_date)
-            : undefined,
+        heldAt: validHeldAt,
         id: canonicalVoteId,
         motion: nonBlank(vote.motion_text) ?? nonBlank(vote.motion) ?? rollCallNumber ?? "Recorded vote",
-        noCount: counts.get("no"),
-        otherCount: counts.get("other"),
+        noCount: countFor("no"),
+        absentCount: countFor("absent"),
+        abstainCount: countFor("abstain"),
+        notVotingCount: countFor("not-voting"),
+        presentCount: countFor("present"),
+        proxyCount: countFor("proxy"),
+        pairedCount: countFor("paired"),
+        otherCount: countFor("other"),
         organizationId:
           providerOrganizationId === undefined ? undefined : organizationId("openstates", providerOrganizationId),
-        result: vote.result,
+        result,
         rollCallNumber,
         sourceId: providerVoteId,
-        sourceUrl: vote.sources[0]?.url,
+        sourceUrl: voteSourceUrl,
+        sourceProvider: "openstates",
+        sourceRetrievedAt: context.retrievedAt,
+        sourceIsOfficial: false,
+        sourceSequence: voteOrdinal,
+        timelineComplete:
+          countsReconciled &&
+          validHeldAt !== undefined &&
+          context.retrievedAt !== undefined &&
+          Number.isFinite(context.retrievedAt.valueOf()) &&
+          voteSourceUrl?.startsWith("https://") === true &&
+          (result === "passed" || result === "failed" || result === "other"),
         voteType:
           (vote.motion_classification.length > 0 ? vote.motion_classification : vote.classification).join(", ") ||
           undefined,
-        yesCount: counts.get("yes")
+        yesCount: countFor("yes")
       }
     }
   })
@@ -469,7 +502,8 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         ),
         organizationId: optionalOrganizationId(sourceOrganizationId),
         ordinal: action.order ?? index,
-        sourceOrganizationId
+        sourceOrganizationId,
+        sourceUrl: billSourceUrl
       }
     }),
     (action) => String(action.ordinal)

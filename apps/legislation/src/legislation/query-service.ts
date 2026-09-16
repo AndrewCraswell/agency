@@ -530,6 +530,7 @@ export interface OrganizationSearchInput {
 }
 
 export interface EventSearchInput {
+  query?: string
   classification?: string[]
   cursor?: string
   from?: Date
@@ -602,6 +603,7 @@ function eventSearchOrder(sort: EventSearchInput["sort"]): SQL[] {
 }
 
 export interface VoteSearchInput {
+  query?: string
   billId?: string
   cursor?: string
   from?: Date
@@ -1995,6 +1997,7 @@ export class LegislationQueryService {
       .from(legislativeEvents)
       .where(
         and(
+          input.query === undefined ? undefined : sql`${legislativeEvents.name} ilike ${`%${input.query}%`}`,
           input.jurisdictionId === undefined ? undefined : eq(legislativeEvents.jurisdictionId, input.jurisdictionId),
           input.organizationId === undefined
             ? undefined
@@ -2124,6 +2127,7 @@ export class LegislationQueryService {
       .leftJoin(votePositions, eq(votePositions.voteId, votes.id))
       .where(
         and(
+          input.query === undefined ? undefined : sql`${votes.motion} ilike ${`%${input.query}%`}`,
           input.billId === undefined ? undefined : eq(votes.billId, input.billId),
           input.organizationId === undefined ? undefined : eq(votes.organizationId, input.organizationId),
           input.personId === undefined ? undefined : eq(votePositions.personId, input.personId),

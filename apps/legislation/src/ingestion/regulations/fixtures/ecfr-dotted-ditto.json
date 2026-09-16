@@ -1,0 +1,16 @@
+{
+  "source": "ecfr",
+  "editionId": "312c93e6-ed1a-47a9-9326-e44b18254cd7",
+  "versionId": "ccb253a2-5622-4e87-9097-627c9cf7c54a",
+  "contentHash": "b2ac1ce561bf60e6341e2c280165a8bfbee3dcdc5906118c1d4e190dbf590bcc",
+  "nativeId": "ecfr:[[\"TITLE\",\"25\"],[\"CHAPTER\",\"I\"],[\"APPENDIX\",\"Appendix to Chapter I\"]]",
+  "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV9[1]",
+  "reason": "passage_table_unresolved_ditto",
+  "sourceSnapshotHash": "066490e45eace11d4ee35532f875a29257ccfde07a3d319823eecd3ab27bcef5",
+  "sourceBlockOrdinal": 3,
+  "excerpt": "First table header and first four data rows, serialized inside a TABLE wrapper; canonical block is unchanged",
+  "block": {
+    "text": "State\nReservation\nE. O. No.\nDate\nPeriod ofextension\nArizona\n*Papago\n2066\nOct. 27, 1914\n10 years.\nDo\n......do\n4464\nJune 28, 1926\nDo.\nCalifornia\nAgua Caliente\n3446\nApr. 30, 1921\nDo.\nDo\n......do\n5580\nMar. 16, 1931\nDo.",
+    "xml": "<TABLE><TR>\n<TH class=\"center border-top-single border-bottom-single border-right-single\">State</TH>\n<TH class=\"center border-top-single border-bottom-single border-right-single\">Reservation</TH>\n<TH class=\"center border-top-single border-bottom-single border-right-single\">E. O. No.</TH>\n<TH class=\"center border-top-single border-bottom-single border-right-single\">Date</TH>\n<TH class=\"center border-top-single border-bottom-single\">Period of<br/>extension</TH>\n</TR><TR>\n<TD class=\"left border-right-single\">Arizona</TD>\n<TD class=\"left border-right-single\">*Papago</TD>\n<TD class=\"right border-right-single\">2066</TD>\n<TD class=\"left border-right-single\">Oct. 27, 1914</TD>\n<TD class=\"left\">10 years.</TD>\n</TR><TR>\n<TD class=\"left border-right-single\">  Do</TD>\n<TD class=\"left border-right-single\">......do</TD>\n<TD class=\"right border-right-single\">4464</TD>\n<TD class=\"left border-right-single\">June 28, 1926</TD>\n<TD class=\"left\">  Do.</TD>\n</TR><TR>\n<TD class=\"left border-right-single\">California</TD>\n<TD class=\"left border-right-single\">Agua Caliente</TD>\n<TD class=\"right border-right-single\">3446</TD>\n<TD class=\"left border-right-single\">Apr. 30, 1921</TD>\n<TD class=\"left\">  Do.</TD>\n</TR><TR>\n<TD class=\"left border-right-single\">  Do</TD>\n<TD class=\"left border-right-single\">......do</TD>\n<TD class=\"right border-right-single\">5580</TD>\n<TD class=\"left border-right-single\">Mar. 16, 1931</TD>\n<TD class=\"left\">  Do.</TD>\n</TR></TABLE>"
+  }
+}

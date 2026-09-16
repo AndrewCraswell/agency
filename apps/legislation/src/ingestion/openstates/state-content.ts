@@ -8,10 +8,13 @@ import type { OcrClient } from "../documents/ocr-client.js"
 import { processOcrRequiredDocuments } from "../documents/ocr-jobs.js"
 import { OCR_MAXIMUM_ATTEMPTS } from "../documents/ocr-retry.js"
 import { createJobCounts, runIngestionJob } from "../job.js"
-import { advanceStateContentCheckpoint, readStateContentCheckpoint } from "./state-content-checkpoint.js"
+import {
+  advanceStateContentCheckpoint,
+  readStateContentCheckpoint,
+  prioritizeStateContentBills
+} from "./state-content-checkpoint.js"
 import { runStateContentBills } from "./state-content-concurrency.js"
-
-export const stateContentScope = z.enum(["nc", "ak"])
+import { stateContentScope } from "./state-content-scope.js"
 
 /** Canonical pending/freshness state is the durable work source, including after a missed callback.
  * Scan rounds deliberately restart: late OCR and updated bills can sort before the last cursor.
@@ -25,6 +28,7 @@ export async function processStateContentBatch(
     billLimit?: number
     documentLimit?: number
     billConcurrency?: number
+    priorityBillIds?: string[]
     artifactStore: ArtifactStore
     ocr?: OcrClient
   }
@@ -76,7 +80,12 @@ export async function processStateContentBatch(
       })
       const cursor = readStateContentCheckpoint(existing?.cursor, prefix)
       const previous = cursor.afterBillId
-      const carried = cursor.pendingEmbeddingBillIds.slice(0, billLimit)
+      const prioritized = prioritizeStateContentBills(
+        options.priorityBillIds ?? [],
+        cursor.pendingEmbeddingBillIds,
+        prefix
+      )
+      const carried = prioritized.slice(0, billLimit)
       // Give one free slot to due document work, including newly requeued files
       // behind the scan cursor. Do not move the discovery cursor for this work.
       if (carried.length < billLimit) {
@@ -117,7 +126,7 @@ export async function processStateContentBatch(
               .orderBy(asc(bills.id))
               .limit(discoveryLimit)
       const selected = [...pending, ...discovered.filter((bill) => !carried.includes(bill.id))]
-      const pendingEmbeddingBillIds = cursor.pendingEmbeddingBillIds.slice(billLimit)
+      const pendingEmbeddingBillIds = prioritized.slice(billLimit)
       const counts = createJobCounts()
       const outcomes: Array<Record<string, unknown>> = []
       await runStateContentBills(selected, billConcurrency, async (bill) => {

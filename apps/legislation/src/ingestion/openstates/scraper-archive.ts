@@ -29,15 +29,28 @@ const requestSchema = z
       .max(10)
       .nullable()
       .optional(),
-    revision: z.literal(revision)
+    revision: z.literal(revision),
+    event_keys: z
+      .array(z.string().regex(/^[HSJ]:[A-Z0-9&]+:[0-9T:+.-]+$/))
+      .min(1)
+      .max(10)
+      .optional()
   })
-  .refine((request) => (request.domain === "bills" ? request.session !== null : request.session === null))
+  .refine((request) =>
+    request.domain === "bills" || request.jurisdiction === "ak" ? request.session !== null : request.session === null
+  )
   .refine((request) =>
     request.jurisdiction === "ak"
-      ? request.domain === "bills" &&
-        request.session === "34" &&
-        !!request.bill_ids?.every((id) => /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/.test(id))
+      ? request.session === "34" &&
+        (request.domain === "events"
+          ? request.bill_ids === null &&
+            request.event_keys !== undefined &&
+            new Set(request.event_keys).size === request.event_keys.length
+          : !!request.bill_ids?.every((id) => /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/.test(id)))
       : request.session !== "34" && (request.bill_ids?.every((id) => /^[HS][1-9][0-9]{0,4}$/.test(id)) ?? true)
+  )
+  .refine(
+    (request) => request.event_keys === undefined || (request.jurisdiction === "ak" && request.domain === "events")
   )
   .refine(
     (request) =>

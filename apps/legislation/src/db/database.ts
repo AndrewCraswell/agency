@@ -35,7 +35,36 @@ function assertStatementTimeout(value: number | undefined): void {
   }
 }
 
-export type LegislationDatabase = ReturnType<typeof createDatabase>["database"]
+export type LegislationDatabase = Omit<ReturnType<typeof createDatabase>["database"], "$client">
+
+export async function withReadOnlyDatabase<Result>(
+  pool: pg.Pool,
+  statementTimeoutMs: number,
+  operation: (database: LegislationDatabase) => Promise<Result>
+): Promise<Result> {
+  assertStatementTimeout(statementTimeoutMs)
+  const client = await pool.connect()
+  let discard = false
+  try {
+    await client.query("BEGIN READ ONLY")
+    await client.query(
+      "SELECT set_config('statement_timeout', $1, true), set_config('idle_in_transaction_session_timeout', '35000', true)",
+      [String(statementTimeoutMs)]
+    )
+    const result = await operation(drizzle(client, { schema }))
+    await client.query("COMMIT")
+    return result
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK")
+    } catch {
+      discard = true
+    }
+    throw error
+  } finally {
+    client.release(discard)
+  }
+}
 
 export function databasePoolSnapshot(pool: pg.Pool) {
   const maximum = pool.options.max

@@ -25,7 +25,7 @@ export function prepareCommitteeRepositoryImport(
     people.snapshot?.people.flatMap((person) => (person.sourceId ? [person.sourceId] : [])) ?? []
   )
   const normalized = normalizeOpenStatesCommittees(
-    plan.eligible.map((committee) => ({
+    plan.identityEligible.map((committee) => ({
       id: committee.committeeId,
       name: committee.name,
       classification: committee.classification,
@@ -34,14 +34,17 @@ export function prepareCommitteeRepositoryImport(
       sources: [
         { url: `https://raw.githubusercontent.com/openstates/people/${committee.revision}/${committee.sourcePath}` }
       ],
-      memberships: committee.members.map((member) => ({
+      memberships: (plan.eligible.some((eligible) => eligible.committeeId === committee.committeeId)
+        ? committee.members
+        : []
+      ).map((member) => ({
         person: { id: member.personId, name: member.name },
         role: member.role
       }))
     })),
     { jurisdictionCode: state, retrievedAt }
   )
-  const observations = new Map(plan.eligible.map((committee) => [committee.committeeId, committee]))
+  const observations = new Map(plan.identityEligible.map((committee) => [committee.committeeId, committee]))
   return {
     plan,
     snapshot: {
@@ -51,6 +54,7 @@ export function prepareCommitteeRepositoryImport(
       terms: [],
       organizations: normalized.organizations.map((organization) => ({
         ...organization,
+        upstreamIds: { ...organization.upstreamIds, ...observations.get(organization.sourceId)?.officialIdentifiers },
         chamber: observations.get(organization.sourceId)?.chamber ?? null,
         membershipRelationsComplete: false,
         childRelationsComplete: false,
@@ -69,7 +73,7 @@ export async function importCommitteeRepository(
   persist: typeof replaceEntitySnapshot = replaceEntitySnapshot
 ) {
   const result = prepareCommitteeRepositoryImport(currentFiles, historyFiles, retrievedAt, state)
-  if (result.plan.eligible.length === 0) {
+  if (result.plan.identityEligible.length === 0) {
     return { status: "held" as const, plan: result.plan }
   }
   await persist(database, `jurisdiction:${state}`, result.snapshot, {
@@ -87,6 +91,8 @@ export async function importCommitteeRepository(
         complete: false,
         eligibleCommittees: result.plan.eligible.length,
         eligibleMemberships: result.plan.eligibleMemberships,
+        eligibleIdentities: result.plan.identityEligible.length,
+        heldIdentities: result.plan.identityHeld.map(({ committeeId, reasons }) => ({ committeeId, reasons })),
         held: result.plan.held.map(({ committeeId, reasons }) => ({ committeeId, reasons }))
       }
     }

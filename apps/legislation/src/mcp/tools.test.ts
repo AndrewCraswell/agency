@@ -61,6 +61,41 @@ async function createClient(service = createService(), name = "legislation-test"
 }
 
 describe("legislation MCP tools", () => {
+  it("keeps date inputs wire-safe through repeated protocol validation", async () => {
+    const { client, service, transport } = await createClient()
+    const timestamp = "2025-01-01T00:00:00Z"
+    try {
+      for (const request of [
+        { name: "search_events", arguments: { from: timestamp, to: timestamp } },
+        { name: "search_votes", arguments: { from: timestamp } },
+        { name: "search_changes", arguments: { observedFrom: timestamp, observedTo: timestamp } }
+      ]) {
+        expect((await client.callTool(request)).isError).not.toBe(true)
+      }
+      expect(service.searchEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ from: new Date(timestamp), to: new Date(timestamp) })
+      )
+      expect(service.searchVotes).toHaveBeenCalledWith(expect.objectContaining({ from: new Date(timestamp) }))
+      expect(service.searchChanges).toHaveBeenCalledWith(
+        expect.objectContaining({ observedFrom: new Date(timestamp), observedTo: new Date(timestamp) })
+      )
+    } finally {
+      await transport.close()
+    }
+  })
+  it("counts both text and structured output against the total response byte budget", async () => {
+    const service = createService()
+    vi.mocked(service.getBill).mockResolvedValue({ text: "x".repeat(500_000) })
+    const { client, transport } = await createClient(service)
+    try {
+      const result = await client.callTool({ name: "get_bill", arguments: { id: "bill:us:119:hr:1234" } })
+      expect(result.isError).toBe(true)
+      expect(JSON.stringify(result)).toContain("result_limit")
+      expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThan(900_000)
+    } finally {
+      await transport.close()
+    }
+  })
   it("advertises the exact bounded tool surface", async () => {
     const { client, transport } = await createClient()
 

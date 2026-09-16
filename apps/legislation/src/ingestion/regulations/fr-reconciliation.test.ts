@@ -21,7 +21,7 @@ const fixtureSource = source
 const metadata = frMetadataPageSchema.parse(
   JSON.parse(await readFile(new URL("fr-2024-01-02-metadata.json", fixtures), "utf8"))
 ).results
-const directory = await mkdtemp(join(tmpdir(), "tabra-fr-reconciliation-"))
+const directory = await mkdtemp(join(tmpdir(), "rostra-fr-reconciliation-"))
 async function loadFixture() {
   const result = await parseRegulatoryArtifact({
     unit: fixtureSource.sourceUnit,

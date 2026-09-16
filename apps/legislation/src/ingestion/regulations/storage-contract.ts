@@ -50,7 +50,9 @@ export function provisionIdentity(record: RegulatoryRecord) {
     ? record.nativeId
     : `source:${record.provenance.sourceId}:${record.nativeId}`
 }
-export function provisionContent(record: RegulatoryRecord) {
+export function provisionContent(
+  record: Pick<RegulatoryRecord, "contract" | "nodeKind" | "heading" | "text" | "blocks">
+) {
   return digest(JSON.stringify([record.contract, record.nodeKind, record.heading, record.text, record.blocks, "en"]))
 }
 

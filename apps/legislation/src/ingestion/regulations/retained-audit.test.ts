@@ -22,7 +22,7 @@ afterEach(async () => {
 })
 
 async function fixture() {
-  const root = await mkdtemp(join(tmpdir(), "tabra-retained-audit-"))
+  const root = await mkdtemp(join(tmpdir(), "rostra-retained-audit-"))
   directories.push(root)
   const manifest = await planRegulatoryBackfill(
     { cutoff: "2026-09-14", ecfrTitles: [1], federalRegister: null, annualCfr: null },

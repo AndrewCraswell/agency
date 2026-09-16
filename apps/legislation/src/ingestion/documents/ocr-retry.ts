@@ -1,4 +1,4 @@
-import { AzureDocumentIntelligenceError } from "./ocr-client.js"
+import { AzureDocumentIntelligenceError, OcrNoUsableTextError } from "./ocr-client.js"
 import { classifyDocumentFailure, type DocumentFailureCategory } from "./process.js"
 
 export const OCR_MAXIMUM_ATTEMPTS = 5
@@ -14,6 +14,11 @@ export interface OcrFailureClassification {
 }
 
 export function classifyOcrFailure(error: unknown, attempt: number, from = Date.now()): OcrFailureClassification {
+  if (error instanceof OcrNoUsableTextError) {
+    // Use the existing terminal unsupported-content contract. Keep the precise
+    // reason: no recognized text does not prove that a source is blank.
+    return { category: "unsupported-format", message: error.message, retryable: false }
+  }
   const documentFailure = classifyDocumentFailure(error)
   const providerRetryable = !(error instanceof AzureDocumentIntelligenceError) || error.retryable
   const retryable = documentFailure.retryable && providerRetryable && attempt < OCR_MAXIMUM_ATTEMPTS

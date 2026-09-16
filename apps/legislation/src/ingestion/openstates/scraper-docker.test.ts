@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { archiveNcBillPlan } from "./scraper-batches.js"
 import { archiveScraperBillDispatch } from "./scraper-dispatch.js"
-import { createScraperDockerAdapter } from "./scraper-docker.js"
+import { createScraperDockerAdapter, extractAlaskaEventsDocker } from "./scraper-docker.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 async function fixture() {
@@ -48,6 +48,25 @@ async function fixture() {
 }
 
 describe("local Docker extraction boundary", () => {
+  it("uses the same shutdown boundary for bounded event keys without shell interpretation", async () => {
+    const { options, command } = await fixture()
+    await expect(
+      extractAlaskaEventsDocker(
+        options,
+        {
+          runId: "event-test",
+          runtimeId: "same-runtime",
+          maxDurationSeconds: 300,
+          eventKeys: ["H:L&C:2025-01-24T09:00:00-09:00"]
+        },
+        command
+      )
+    ).rejects.toThrow("one inspectable attempt")
+    expect(command.mock.calls.map(([args]) => args[0])).toEqual(["info", "run", "info", "rm", "container", "info"])
+    const args = command.mock.calls[1]![0]
+    const payload = JSON.parse(args[args.indexOf("/opt/openstates/adapter/openstates_runner.py") + 1]!)
+    expect(payload).toMatchObject({ domain: "events", bill_ids: null, event_keys: ["H:L&C:2025-01-24T09:00:00-09:00"] })
+  })
   it("requires an immutable image ID", async () => {
     const { options, command } = await fixture()
     expect(() => createScraperDockerAdapter({ ...options, imageId: "mutable:latest" }, command)).toThrow(

@@ -10,6 +10,33 @@ from openstates_source_policy import PATCHES, harden_source
 
 
 class SourcePolicyTests(unittest.TestCase):
+    def test_nc_vote_groups_accept_extra_and_reordered_class_tokens(self):
+        try:
+            from lxml import html
+        except ImportError:
+            self.skipTest("lxml is required; run this regression in the scraper image")
+        selector = next(after for before, after in PATCHES["scrapers/nc/bills.py"]
+                        if before.startswith("vdoc.xpath"))
+        document = html.fromstring('''<main>
+          <div class="row ncga-row-no-gutters mt-3">
+            <div class="row ncga-row-no-gutters"><div>Ayes (Democrat)</div><div>One</div></div>
+          </div>
+          <div class="row ncga-row-no-gutters mt-2"><div>Ayes (Unaffiliated)</div><div>Cunningham; Majeed</div></div>
+          <div class="mt-2 ncga-row-no-gutters row"><div>Not Voting (Republican)</div><div>Two</div></div>
+          <div class="row ncga-row-no-gutters-suffix"><div>Must not match</div></div>
+        </main>''')
+        rows = eval(selector, {"vdoc": document})
+        self.assertEqual(len(rows), 3)
+        self.assertIn("Cunningham; Majeed", rows[1].text_content())
+        self.assertIn("Not Voting", rows[2].text_content())
+
+    def test_nc_not_voting_is_not_abstention(self):
+        replacement = next(after for before, after in PATCHES["scrapers/nc/bills.py"]
+                           if 'vote_type = "abstain"' in before)
+        namespace = {}
+        exec(replacement.strip(), namespace)
+        self.assertEqual(namespace["vote_type"], "not voting")
+
     def test_alaska_selection_requires_all_requested_rows_before_yield(self):
         namespace = {}
         replacement = PATCHES["scrapers/ak/bills.py"][1][1]
@@ -33,6 +60,25 @@ class SourcePolicyTests(unittest.TestCase):
         for session, ids in (("2025", None), ("2025E1", "S1"), ("2025", "S1,H1"), ("2025", "S1,S1")):
             with self.subTest(session=session, ids=ids), self.assertRaises(ValueError):
                 list(policy.scrape(session, ids))
+
+    def test_alaska_event_transport_rejects_http_and_xml_errors(self):
+        replacement = PATCHES["scrapers/ak/events.py"][1][1]
+        page = SimpleNamespace(xpath=Mock(return_value=[]))
+        etree = SimpleNamespace(fromstring=Mock(return_value=page))
+        namespace = {"lxml": SimpleNamespace(etree=etree)}
+        exec("class Policy:\n    def fetch(self, url, args, headers):\n" + replacement, namespace)
+        policy = namespace["Policy"]()
+        response = SimpleNamespace(content=b"xml", raise_for_status=Mock())
+        policy.get = Mock(return_value=response)
+        self.assertIs(policy.fetch("https://www.akleg.gov/", {}, {}), page)
+        policy.get.assert_called_once_with("https://www.akleg.gov/", params={}, headers={}, verify=True, timeout=(10, 60))
+        response.raise_for_status.assert_called_once_with()
+        page.xpath.return_value = [object()]
+        with self.assertRaisesRegex(ValueError, "alaska_meetings_source_error"):
+            policy.fetch("https://www.akleg.gov/", {}, {})
+        response.raise_for_status.side_effect = ValueError("HTTP failure")
+        with self.assertRaisesRegex(ValueError, "HTTP failure"):
+            policy.fetch("https://www.akleg.gov/", {}, {})
 
     def test_selected_feed_membership_is_complete_before_first_yield(self):
         replacement = PATCHES["scrapers/nc/bills.py"][3][1]

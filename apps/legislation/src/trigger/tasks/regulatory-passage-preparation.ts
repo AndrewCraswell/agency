@@ -9,21 +9,24 @@ import {
 const payloadSchema = z.strictObject({
   scope: legalPreparationScopeSchema,
   model: z.enum(["openai/text-embedding-3-small", "voyageai/voyage-4"]),
-  limit: z.int().min(1).max(25).default(10)
+  limit: z.int().min(1).max(25).default(10),
+  retryBlocked: z.boolean().optional()
 })
 const resultSchema = z
   .strictObject({
     preparationId: z.string().regex(/^[a-f0-9]{64}$/),
-    state: z.enum(["pending", "prepared"]),
+    state: z.enum(["pending", "prepared", "blocked"]),
     processed: z.int().min(0).max(25),
     total: z.int().positive(),
-    complete: z.int().nonnegative()
+    complete: z.int().nonnegative(),
+    blocked: z.int().nonnegative()
   })
   .superRefine((result, ctx) => {
     if (
-      result.complete > result.total ||
-      result.processed > result.complete ||
-      (result.state === "prepared") !== (result.complete === result.total)
+      result.complete + result.blocked > result.total ||
+      result.processed > result.complete + result.blocked ||
+      (result.state === "prepared") !== (result.complete === result.total) ||
+      (result.state === "blocked") !== (result.blocked > 0 && result.complete + result.blocked === result.total)
     ) {
       ctx.addIssue({ code: "custom", message: "regulatory_preparation_invalid_counts" })
     }
@@ -46,16 +49,20 @@ export async function continueRegulatoryPassagePreparation(unparsed: unknown, wo
   if (result.processed > payload.limit) {
     throw new Error("regulatory_preparation_batch_limit_exceeded")
   }
-  if (result.state === "prepared") {
+  if (result.state !== "pending") {
     return { ...result, continuationRunId: null }
   }
   if (result.processed === 0) {
     throw new Error("regulatory_preparation_no_progress")
   }
   // The canonical checkpoint selects the remaining items. Never place offsets or source text in task payloads.
-  const next = await tasks.trigger("regulatory-passage-preparation", payload, {
-    idempotencyKey: `regulatory-passage-preparation:continue:${runId}`
-  })
+  const next = await tasks.trigger(
+    "regulatory-passage-preparation",
+    { ...payload, retryBlocked: false },
+    {
+      idempotencyKey: `regulatory-passage-preparation:continue:${runId}`
+    }
+  )
   return { ...result, continuationRunId: next.id }
 }
 

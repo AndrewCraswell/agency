@@ -21,6 +21,7 @@ import {
 import { assertBillBatchOwnership, type BillBatchOwnership } from "./bill-batch-ownership.js"
 import { preserveBillResolvedLinks } from "./bill-resolved-links.js"
 import { observeCanonicalRecord } from "./changes.js"
+import { promotionAlreadyCommitted } from "./promotion-receipt.js"
 
 /** Bill feeds can fill missing sponsor facts, but entity ingestion owns existing person details. */
 function billPersonUpdate() {
@@ -511,28 +512,8 @@ export async function upsertBillAggregates(
   const existing = await database.select({ id: bills.id }).from(bills).where(inArray(bills.id, billIds))
 
   await database.transaction(async (transaction) => {
-    if (options.receipt) {
-      const receipt = options.receipt
-      if (!receipt.source || !receipt.stream) {
-        throw new Error("Invalid bill batch receipt identity")
-      }
-      await transaction.execute(sql`select set_config('statement_timeout', '60000', true),
-        set_config('lock_timeout', '10000', true), set_config('idle_in_transaction_session_timeout', '120000', true)`)
-      await transaction.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${JSON.stringify([receipt.source, receipt.stream])}, 0))`
-      )
-      const previous = await transaction
-        .select({
-          matches: sql<boolean>`${syncCheckpoints.cursor} = ${JSON.stringify(receipt.cursor)}::jsonb`
-        })
-        .from(syncCheckpoints)
-        .where(and(eq(syncCheckpoints.source, receipt.source), eq(syncCheckpoints.stream, receipt.stream)))
-      if (previous.length > 0) {
-        if (!previous[0]?.matches) {
-          throw new Error("Bill batch receipt conflicts with a committed promotion")
-        }
-        return
-      }
+    if (options.receipt && (await promotionAlreadyCommitted(transaction, options.receipt))) {
+      return
     }
     if (options.ownership) {
       await assertBillBatchOwnership(transaction, options.ownership)

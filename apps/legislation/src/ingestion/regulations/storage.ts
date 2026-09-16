@@ -23,7 +23,7 @@ import {
 const importGenerationSchema = z.object({
   id: z.string(),
   contract: z.string(),
-  state: z.enum(["staging", "validated", "materialized", "published", "blocked"]),
+  state: z.enum(["staging", "validated", "materialized", "published", "blocked", "observed"]),
   unit: z.unknown(),
   summary: z.unknown(),
   rights_profile_id: z.string(),
@@ -251,7 +251,7 @@ export async function stageRegulatoryRecords(pool: pg.Pool, lease: RegulatoryLea
   )
   invariant(new Set(records.map((item) => item.recordKey)).size === records.length, "duplicate_batch_record")
   return withLease(pool, lease, async (client, generation) => {
-    invariant(generation.state !== "blocked", "generation_blocked")
+    invariant(generation.state !== "blocked" && generation.state !== "observed", "generation_blocked")
     records.forEach((record) => validateRecord(record, generation))
     const rows = records.map((payload) => ({
       key: payload.recordKey,

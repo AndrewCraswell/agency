@@ -21,6 +21,7 @@ catalog:
 # React and React DOM must resolve to one exact, identical version: react-dom throws on a
 # mismatch, and the registry mirror tags canaries as "latest", so a bare install drifts.
 overrides:
+  ai@7.0.94: file:apps/legislation/vendor/ai-7.0.94.tgz
   react: 19.2.7
   react-dom: 19.2.7
 allowBuilds:
@@ -35,6 +36,8 @@ allowBuilds:
   unrs-resolver: true
   sharp: true
   "@depot/cli": true
+  "@swc/core": true
+  "@sentry/cli": false
 minimumReleaseAgeExclude:
   - vite@8.1.3
   - chromatic@18.0.1

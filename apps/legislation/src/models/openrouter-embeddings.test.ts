@@ -190,6 +190,41 @@ describe("OpenRouter embedding client", () => {
     await expect(wrongDimensions.embed(["text"])).rejects.toThrow("1536-dimensional")
   })
 
+  it.each(["ENOTFOUND", "EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "UND_ERR_SOCKET"])(
+    "retries wrapped connection failure %s with identical inputs",
+    async (code) => {
+      const failure = new TypeError("fetch failed", { cause: Object.assign(new Error("connection failed"), { code }) })
+      const fetchMock = vi.fn<typeof fetch>().mockRejectedValueOnce(failure).mockResolvedValueOnce(successfulResponse())
+      const client = new OpenRouterEmbeddingClient({ apiKey: "test", fetch: fetchMock })
+      await expect(client.embed(["exact source"])).resolves.toMatchObject({ model: EMBEDDING_MODEL })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(fetchMock.mock.calls[0]?.[1]?.body)
+      expect(client.metrics).toMatchObject({ retries: 1, failed: 0, created: 1 })
+    }
+  )
+
+  it("bounds persistent DNS retries and preserves the original failure", async () => {
+    const failure = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("DNS unavailable"), { code: "ENOTFOUND" })
+    })
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(failure)
+    const client = new OpenRouterEmbeddingClient({ apiKey: "test", fetch: fetchMock, maximumAttempts: 2 })
+    await expect(client.embed(["source"])).rejects.toBe(failure)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(client.metrics).toMatchObject({ retries: 1, failed: 1, created: 0 })
+  })
+
+  it.each(["CERT_HAS_EXPIRED", "ERR_INVALID_URL", "UNKNOWN"])(
+    "does not retry unapproved connection code %s",
+    async (code) => {
+      const failure = new TypeError("fetch failed", { cause: Object.assign(new Error("connection failed"), { code }) })
+      const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(failure)
+      const client = new OpenRouterEmbeddingClient({ apiKey: "test", fetch: fetchMock })
+      await expect(client.embed(["source"])).rejects.toBe(failure)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    }
+  )
+
   it("does not leak the API key in errors", async () => {
     const client = new OpenRouterEmbeddingClient({
       apiKey: "super-secret",

@@ -8,6 +8,33 @@ export const EMBEDDING_DIMENSIONS = DEFAULT_EMBEDDING_ROUTE.dimensions
 export const MAX_EMBEDDING_INPUT_CHARACTERS = 16_000
 const MAXIMUM_BATCH_SIZE = 64
 
+const RETRYABLE_CONNECTION_CODES = new Set([
+  "EAI_AGAIN",
+  "ENOTFOUND",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_SOCKET"
+])
+
+function isRetryableConnectionFailure(error: unknown): boolean {
+  // Node fetch wraps DNS/socket failures in `cause`. Bound traversal and never
+  // classify arbitrary TypeErrors, certificate failures or cancellation by text.
+  let current = error
+  for (let depth = 0; depth < 4 && current instanceof Error; depth += 1) {
+    if (current.name === "AbortError") {
+      return false
+    }
+    if ("code" in current && typeof current.code === "string" && RETRYABLE_CONNECTION_CODES.has(current.code)) {
+      return true
+    }
+    current = current.cause
+  }
+  return false
+}
+
 export function limitEmbeddingInput(value: string): string {
   return value.slice(0, MAX_EMBEDDING_INPUT_CHARACTERS)
 }
@@ -118,7 +145,7 @@ export class OpenRouterEmbeddingClient {
         body = await response.text()
       } catch (error) {
         const deadlineExpired = signal.aborted || (error instanceof Error && error.name === "TimeoutError")
-        if (!deadlineExpired || attempt === this.#maximumAttempts) {
+        if ((!deadlineExpired && !isRetryableConnectionFailure(error)) || attempt === this.#maximumAttempts) {
           this.#metrics.failed += input.length
           throw error
         }

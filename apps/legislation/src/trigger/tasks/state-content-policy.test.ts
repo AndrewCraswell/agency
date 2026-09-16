@@ -1,12 +1,41 @@
 import { describe, expect, it, vi } from "vitest"
 import {
   requireStateContentActivation,
+  requireStateRepairScope,
   requireSuccessfulStateContentResult,
   runStateContentContinuations,
-  stateContentPayload
+  stateContentPayload,
+  stateContentSchedulePlan
 } from "./state-content-policy.js"
 
 describe("state content hosted boundaries", () => {
+  it("keeps extraction repairs inside the exact approved session", () => {
+    const repair = {
+      documentId: "document:fixture",
+      billId: "bill:nc:2017e1:hb:1",
+      sourceUrl: "https://www.ncleg.gov/test.pdf",
+      sourceSha256: "a".repeat(64),
+      previousTextHash: "b".repeat(32)
+    }
+    expect(() => requireStateRepairScope("nc", "2017E1", [repair])).not.toThrow()
+    expect(() => requireStateRepairScope("ak", "34", [repair])).toThrow("outside")
+    expect(() => requireStateRepairScope("nc", undefined, [repair])).toThrow("exact session")
+    expect(() => requireStateRepairScope("nc", "2017E1", [repair, repair])).toThrow("Duplicate")
+    expect(() =>
+      stateContentPayload.parse({ state: "nc", extractionRepairs: Array.from({ length: 11 }, () => repair) })
+    ).toThrow(/Too big/)
+  })
+  it("requires an explicitly approved state and exact session for scheduled resumption", () => {
+    expect(stateContentSchedulePlan("nc:2017E1", "nc")).toMatchObject({
+      identity: "nc:2017E1",
+      payload: { state: "nc", session: "2017E1", maxContinuations: 1 }
+    })
+    expect(stateContentSchedulePlan("ak:34", "ak").payload.session).toBe("34")
+    for (const invalid of [undefined, "nc", "ca:2025", "ak:34:extra", "nc:../2025"]) {
+      expect(() => stateContentSchedulePlan(invalid, "nc,ak")).toThrow(/Invalid/)
+    }
+    expect(() => stateContentSchedulePlan("ak:34", "nc")).toThrow("not approved")
+  })
   it("throws recorded failures at the worker boundary and retains successful batch evidence", () => {
     const result = {
       status: "succeeded",

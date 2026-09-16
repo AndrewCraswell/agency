@@ -34,7 +34,14 @@ const payload = {
   model: "voyageai/voyage-4",
   limit: 10
 }
-const pending = { preparationId: "a".repeat(64), state: "pending" as const, processed: 10, complete: 10, total: 25 }
+const pending = {
+  preparationId: "a".repeat(64),
+  state: "pending" as const,
+  processed: 10,
+  complete: 10,
+  blocked: 0,
+  total: 25
+}
 beforeEach(() => {
   vi.resetAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://source/canonical")
@@ -90,9 +97,13 @@ it("closes its bounded pool before enqueuing the same scope and tokenizer for co
     max: 2,
     connectionTimeoutMillis: 10_000
   })
-  expect(mocks.trigger).toHaveBeenCalledWith("regulatory-passage-preparation", payload, {
-    idempotencyKey: "regulatory-passage-preparation:continue:parent"
-  })
+  expect(mocks.trigger).toHaveBeenCalledWith(
+    "regulatory-passage-preparation",
+    { ...payload, retryBlocked: false },
+    {
+      idempotencyKey: "regulatory-passage-preparation:continue:parent"
+    }
+  )
 })
 
 it("reuses its dispatch key after uncertain submission and resumes from canonical checkpoints", async () => {
@@ -118,10 +129,39 @@ it("keeps failures retryable without starting successor work", async () => {
   expect(mocks.trigger).not.toHaveBeenCalled()
 })
 
+it("continues past recorded source blockers and does not propagate an explicit retry to successors", async () => {
+  mocks.prepare.mockResolvedValueOnce({ ...pending, complete: 8, blocked: 2 })
+  expect(await continueRegulatoryPassagePreparation({ ...payload, retryBlocked: true }, "retry-parent")).toMatchObject({
+    blocked: 2,
+    continuationRunId: "child"
+  })
+  expect(mocks.prepare).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ retryBlocked: true }))
+  expect(mocks.trigger).toHaveBeenCalledWith(
+    "regulatory-passage-preparation",
+    { ...payload, retryBlocked: false },
+    { idempotencyKey: "regulatory-passage-preparation:continue:retry-parent" }
+  )
+})
+
+it("stops a fully accounted blocked scope without automatically retrying its source failures", async () => {
+  for (const processed of [1, 0]) {
+    mocks.prepare.mockResolvedValueOnce({ ...pending, state: "blocked", processed, complete: 24, blocked: 1 })
+    expect(await continueRegulatoryPassagePreparation(payload, "parent")).toMatchObject({
+      state: "blocked",
+      blocked: 1,
+      continuationRunId: null
+    })
+  }
+  expect(mocks.trigger).not.toHaveBeenCalled()
+})
+
 it("refuses nonprogress and inconsistent completion receipts", async () => {
   const invalid = [
     { ...pending, processed: 0 },
     { ...pending, complete: 26 },
+    { ...pending, blocked: 16 },
+    { ...pending, state: "blocked" as const, blocked: 1 },
+    { ...pending, complete: 24, blocked: 1 },
     { ...pending, state: "prepared" as const },
     { ...pending, processed: 11, complete: 11 }
   ]

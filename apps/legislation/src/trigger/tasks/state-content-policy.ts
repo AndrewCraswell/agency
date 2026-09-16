@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { stateContentScope } from "../../ingestion/openstates/state-content.js"
+import { extractionRepairEvidence } from "../../ingestion/documents/extraction-repair-evidence.js"
+import { stateContentScope } from "../../ingestion/openstates/state-content-scope.js"
 
 export const stateContentPayload = z.strictObject({
   state: stateContentScope,
@@ -8,11 +9,24 @@ export const stateContentPayload = z.strictObject({
     .regex(/^[A-Za-z0-9-]+$/)
     .optional(),
   billConcurrency: z.number().int().min(1).max(4).default(2),
-  billLimit: z.number().int().min(1).max(10).default(8)
+  billLimit: z.number().int().min(1).max(10).default(8),
+  extractionRepairs: z.array(extractionRepairEvidence).max(10).optional()
 })
 export const stateContentControllerPayload = stateContentPayload.extend({
   maxContinuations: z.number().int().min(1).max(100).default(10)
 })
+
+/** Explicit schedule identity; never silently substitute a current session for a historical one. */
+export function stateContentSchedulePlan(externalId: string | undefined, configured: string | undefined) {
+  const identity = z
+    .string()
+    .regex(/^(nc|ak):[A-Za-z0-9-]+$/)
+    .parse(externalId)
+  const [state, session] = identity.split(":")
+  const payload = stateContentControllerPayload.parse({ state, session, maxContinuations: 1 })
+  requireStateContentActivation(payload.state, configured)
+  return { identity, payload }
+}
 
 const successfulStateContentResult = z.object({
   status: z.literal("succeeded"),
@@ -34,6 +48,24 @@ export function requireStateContentActivation(state: "nc" | "ak", configured: st
   const approved = z.array(stateContentScope).parse(enabled)
   if (!approved.includes(state)) {
     throw new Error(`State content activation is not approved for ${state}`)
+  }
+}
+
+/** Audited repairs cannot cross the explicitly selected state/session boundary. */
+export function requireStateRepairScope(
+  state: "nc" | "ak",
+  session: string | undefined,
+  repairs: z.infer<typeof extractionRepairEvidence>[]
+) {
+  if (repairs.length > 0 && !session) {
+    throw new Error("Extraction repairs require an exact session")
+  }
+  const prefix = `bill:${state}:${session?.toLowerCase()}:`
+  if (repairs.some((repair) => !repair.billId.startsWith(prefix))) {
+    throw new Error("Extraction repair is outside the approved state/session")
+  }
+  if (new Set(repairs.map((repair) => repair.documentId)).size !== repairs.length) {
+    throw new Error("Duplicate extraction repair target")
   }
 }
 

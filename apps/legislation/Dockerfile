@@ -45,6 +45,7 @@ RUN groupadd --system --gid 10001 legislation \
 
 COPY --from=build --chown=legislation:legislation /workspace/apps/legislation/.next/standalone/ ./
 COPY --from=build --chown=legislation:legislation /workspace/apps/legislation/.next/static/ ./apps/legislation/.next/static/
+COPY --from=build --chown=legislation:legislation /workspace/apps/legislation/public/ ./apps/legislation/public/
 
 USER 10001
 WORKDIR /app/apps/legislation

@@ -225,11 +225,3 @@ export async function collectRankedAmendments(
     }
   }
 }
-
-/** No full-text copy: the index stores an expression over the existing section text. */
-export const rankedSectionIndexSql = `create index document_sections_ranked_text_idx
-  on legislation.document_sections using paradedb (
-    id,(document_id::pdb.literal),(heading::pdb.literal),page_start,page_end,
-    ((coalesce(heading,'') || ' ' || text)::pdb.simple('alias=body','stemmer=english')),
-    (search_document_title::pdb.simple('alias=title','stemmer=english')),(search_metadata::pdb.literal)
-  ) with(key_field='id')`

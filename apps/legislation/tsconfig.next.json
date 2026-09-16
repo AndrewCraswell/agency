@@ -11,8 +11,7 @@
     "src/server/next/meeting-calendar-route-handler.ts",
     "src/server/next/search-research-route-handler.ts",
     "src/server/next/subscription-route-handler.ts",
-    "src/server/next/webhook-route-handler.ts",
-    "src/server/next/representative-lookup-provider.ts"
+    "src/server/next/webhook-route-handler.ts"
   ],
   "exclude": ["dist", "node_modules", "src/**/*.test.ts"]
 }

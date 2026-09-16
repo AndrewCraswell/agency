@@ -27,7 +27,7 @@ export function frPdfLocation(value: string, documentNumber: string, date: strin
   return url.href
 }
 
-function correctionTarget(value: string) {
+export function correctionTarget(value: string) {
   const url = new URL(value)
   invariant(
     url.protocol === "https:" &&

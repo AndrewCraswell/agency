@@ -1,8 +1,20 @@
 import { describe, expect, test } from "vitest"
-import { AzureDocumentIntelligenceError } from "./ocr-client.js"
+import { AzureDocumentIntelligenceError, OcrNoUsableTextError } from "./ocr-client.js"
+import { ocrStatusForFailure } from "./ocr-jobs.js"
 import { classifyOcrFailure } from "./ocr-retry.js"
 
 describe("classifyOcrFailure", () => {
+  test("classifies a successful empty analysis as terminal unsupported content, not a transient error", () => {
+    const failure = classifyOcrFailure(new OcrNoUsableTextError(), 1, 0)
+    expect(failure).toEqual({
+      category: "unsupported-format",
+      message: "Azure Document Intelligence returned no usable text",
+      retryable: false
+    })
+    expect(ocrStatusForFailure(failure)).toBe("unsupported")
+    expect(failure.nextAttemptAt).toBeUndefined()
+  })
+
   test("does not retry documents that produced too little usable text", () => {
     expect(classifyOcrFailure(new Error("Document produced too little usable text"), 1, 0)).toEqual({
       category: "malformed-document",

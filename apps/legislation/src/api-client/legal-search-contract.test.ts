@@ -56,6 +56,8 @@ describe("legal search wire contract", () => {
 
   it.each([
     { asOf: "2024-01-01" },
+    { codeIds: ["code"] },
+    { corpora: ["regulatory_publication"], codeIds: ["code"] },
     { corpora: ["regulation"], asOf: "2024-01-01", editionIds: ["edition"] },
     { publishedFrom: "2024-01-01" },
     { corpora: ["regulatory_publication"], publishedFrom: "2024-02-01", publishedTo: "2024-01-01" },
@@ -120,7 +122,7 @@ describe("legal search wire contract", () => {
       kind: "publication",
       corpus: "regulatory_publication",
       id: "publication",
-      canonicalUrl: "https://tabra.test/publication",
+      canonicalUrl: "https://rostra.test/publication",
       sources: [
         {
           provider: "govinfo-fr",

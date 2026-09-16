@@ -29,11 +29,16 @@ def smoke(inputs):
             identifier = "S1" if state == "nc" else "SB1"
             request = {"jurisdiction": state, "domain": domain, "session": session,
                        "timeout_seconds": 1200, "revision": REVISION, "bill_ids": [identifier] if session else None}
+            expected = [domain] + (["session=" + session, "bill_ids=" + identifier] if session else [])
+            if state == "ak" and domain == "events":
+                key = "H:FIN:2025-01-22T13:30:00-09:00"
+                request.update(session="34", event_keys=[key])
+                expected = [domain, "session=34", "event_keys=" + key]
             sys.argv = ["openstates"] + command(request)[3:]
             args, other = parse_args()
             if args.actions != ["scrape"] or args.module != state or not args.strict or args.SCRAPELIB_VERIFY is not True:
                 raise ValueError("unsafe_cli_contract")
-            if other != [domain] + (["session=" + session, "bill_ids=" + identifier] if session else []):
+            if other != expected:
                 raise ValueError("unexpected_scraper_arguments")
     return {"startup_verified": True, "core_version": "6.25.5", "lanes": ["bills", "events"],
             "jurisdictions": list(PROFILES), "revision": REVISION, "live_scrape_verified": False, "canonical_writes": False}

@@ -2426,6 +2426,7 @@ export const legalEditionProvisions = legislationSchema.table(
     check("legal_edition_provisions_ordinal_check", sql`${t.ordinal} >= 0`),
     check("legal_edition_provisions_check", sql`${t.parentId} is distinct from ${t.provisionId}`),
     index("legal_edition_provisions_version_idx").on(t.versionId),
+    index("legal_edition_provisions_children_idx").on(t.editionId, t.parentId, t.ordinal),
     index("legal_edition_provisions_parent_idx").on(t.editionId, t.parentId, t.ordinal)
   ]
 )
@@ -2673,7 +2674,7 @@ export const legalPassagePreparations = legislationSchema.table(
   (t) => [
     check("legal_passage_preparations_scope_check", sql`num_nonnulls(${t.editionId},${t.observationId})=1`),
     check("legal_passage_preparations_count_check", sql`${t.expectedCount}>0`),
-    check("legal_passage_preparations_state_check", sql`${t.state} in ('pending','prepared')`),
+    check("legal_passage_preparations_state_check", sql`${t.state} in ('pending','prepared','blocked')`),
     check("legal_passage_preparations_lease_check", sql`(${t.leaseToken} is null)=(${t.leaseExpiresAt} is null)`)
   ]
 )
@@ -2686,13 +2687,18 @@ export const legalPassagePreparationItems = legislationSchema.table(
     ordinal: integer("ordinal").notNull(),
     versionId: uuid("version_id").notNull(),
     context: text("context").notNull(),
-    generationId: text("generation_id").references(() => legalPassageGenerations.id)
+    generationId: text("generation_id").references(() => legalPassageGenerations.id),
+    failureCode: text("failure_code"),
+    failedAt: timestamp("failed_at", { withTimezone: true })
   },
   (t) => [
     primaryKey({ columns: [t.preparationId, t.ordinal] }),
     unique().on(t.preparationId, t.versionId),
+    check("legal_preparation_item_failure_code", sql`${t.failureCode} ~ '^[a-z_]+$'`),
+    check("legal_preparation_item_failure_time", sql`(${t.failureCode} is null)=(${t.failedAt} is null)`),
+    check("legal_preparation_item_outcome", sql`${t.generationId} is null or ${t.failureCode} is null`),
     index("legal_passage_preparation_pending_idx")
       .on(t.preparationId, t.ordinal)
-      .where(sql`${t.generationId} is null`)
+      .where(sql`${t.generationId} is null and ${t.failureCode} is null`)
   ]
 )

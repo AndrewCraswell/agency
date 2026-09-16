@@ -64,7 +64,7 @@ export async function frPdfTextExtractorHash() {
     new URL("../documents/extract.ts", import.meta.url).href,
     new URL("../../legislation/identifiers.ts", import.meta.url).href,
     new URL("./fr-pdf-validation.ts", import.meta.url).href,
-    new URL("../../../scripts/extract-fr-pdf-text-worker.ts", import.meta.url).href,
+    new URL("./workers/extract-fr-pdf-text.ts", import.meta.url).href,
     import.meta.resolve("pdfjs-dist/package.json"),
     import.meta.resolve("@napi-rs/canvas/package.json")
   ]
@@ -130,7 +130,7 @@ export async function stageFrPdfText(input: {
       throw error
     }
   }
-  const worker = fileURLToPath(new URL("../../../scripts/extract-fr-pdf-text-worker.ts", import.meta.url))
+  const worker = fileURLToPath(new URL("./workers/extract-fr-pdf-text.ts", import.meta.url))
   const result = await execute(
     process.execPath,
     ["--max-old-space-size=512", "--import", "tsx", worker, source, receipt.unit.documentNumber],

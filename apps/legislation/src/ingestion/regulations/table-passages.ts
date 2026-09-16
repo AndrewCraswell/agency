@@ -56,6 +56,237 @@ function parseTableSource(input: { text: string; xml: string }) {
   return $
 }
 
+/** Recognize retained publisher layout rows, never images, unknown cells or row-spanning data. */
+function isEmptySeparatorRow(row: ReturnType<ReturnType<typeof load>>) {
+  if (row.text().trim().length !== 0) {
+    return false
+  }
+  const attributes = row.attr() ?? {}
+  const cells = row.children()
+  if (row.is("ROW")) {
+    // Annual GPO rulings can contain an indented, whitespace-only ENT; FR can have no cells.
+    return (
+      !!attributes.RUL &&
+      Object.keys(attributes).every((name) => ["RUL", "EXPSTB"].includes(name)) &&
+      cells
+        .toArray()
+        .every(
+          (cell) =>
+            cell.name === "ENT" &&
+            cell.children.every((child) => child.type === "text") &&
+            Object.keys(cell.attribs).every((name) => name === "I")
+        )
+    )
+  }
+  return (
+    row.is("TR") &&
+    cells.length > 0 &&
+    Object.keys(attributes).every((name) => name.toLowerCase() === "class") &&
+    cells
+      .toArray()
+      .every(
+        (cell) =>
+          ["TD", "TH"].includes(cell.name) &&
+          cell.children.every((child) => child.type === "text") &&
+          Object.entries(cell.attribs).every(
+            ([name, value]) =>
+              name.toLowerCase() === "class" ||
+              (name.toLowerCase() === "colspan" && /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 1000)
+          )
+      )
+  )
+}
+
+function isTableHeader(row: ReturnType<ReturnType<typeof load>>) {
+  return row.parents("BOXHD, THEAD").length > 0 || (row.find("TH").length > 0 && row.find("TD, ENT").length === 0)
+}
+
+function isDittoMarker(value: string) {
+  // Retained eCFR cells use dotted leaders before "do". They still reference the same
+  // column; the dots are publisher formatting, never a replacement column value.
+  return /^(?:(?:\.{2,})?do\.?|ditto|〃)$/i.test(value)
+}
+
+function rowIndent(row: ReturnType<ReturnType<typeof load>>) {
+  return Number(
+    row
+      .children("TD, TH")
+      .first()
+      .attr("class")
+      ?.match(/(?:^|\s)primary-indent-hanging-(\d+)(?:\s|$)/)?.[1] ?? 0
+  )
+}
+
+/** Require publisher indentation or centered-heading/left-data styling, not blank cells alone. */
+function sourceCategoryLevel(row: ReturnType<ReturnType<typeof load>>) {
+  const cells = row.children("TD")
+  if (
+    !(
+      row.is("TR") &&
+      cells.length > 1 &&
+      sourceText(cells.first()).endsWith(":") &&
+      cells.toArray().every((cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1) &&
+      cells
+        .slice(1)
+        .toArray()
+        .every((cell) => cell.children.every((child) => child.type === "text" && child.data.trim() === "")) &&
+      row.next("TR").children("TD").length === cells.length
+    )
+  ) {
+    return null
+  }
+  if (rowIndent(row.next("TR")) > rowIndent(row)) {
+    return rowIndent(row)
+  }
+  const childCells = row.next("TR").children("TD")
+  if (
+    cells.first().hasClass("center") &&
+    childCells.first().hasClass("left") &&
+    childCells.slice(1).text().trim().length > 0
+  ) {
+    return -1
+  }
+  return null
+}
+
+/** Explicit alphabetic conditions complete a filled "when:" row; ordinary blanks remain boundaries. */
+function sourceConditionRows(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  for (let index = 0; index < nodes.length; index++) {
+    const parent = nodes[index]
+    invariant(parent, "passage_table_row_missing")
+    const cells = $(parent).children("TD")
+    if (
+      !$(parent).is("TR") ||
+      cells.length < 2 ||
+      !/when:\s*$/.test(sourceText(cells.first())) ||
+      !cells
+        .toArray()
+        .every(
+          (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 && sourceText($(cell)).length > 0
+        )
+    ) {
+      continue
+    }
+    const children: typeof nodes = []
+    for (let offset = 1; offset <= 26; offset++) {
+      const child = nodes[index + offset]
+      if (!child) {
+        break
+      }
+      const childCells = $(child).children("TD")
+      const text = sourceText(childCells.first())
+      if (
+        !$(child).is("TR") ||
+        childCells.length !== cells.length ||
+        !text.startsWith(`(${String.fromCharCode(96 + offset)}) `) ||
+        !childCells.toArray().every((cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1) ||
+        !childCells
+          .slice(1)
+          .toArray()
+          .every((cell) => cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+      ) {
+        break
+      }
+      children.push(child)
+      if (text.endsWith(".")) {
+        if (children.length >= 2) {
+          for (const condition of children) {
+            parents.set(condition, parent)
+          }
+        }
+        break
+      }
+      if (!/; or,?$/.test(text)) {
+        break
+      }
+    }
+  }
+  return parents
+}
+
+/** Preserve explicitly listed STCC exceptions without treating arbitrary blank tariff cells as ditto. */
+function sourceCommodityExceptionRows(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  for (let index = 0; index < nodes.length; index++) {
+    const parent = nodes[index]
+    invariant(parent, "passage_table_row_missing")
+    const row = $(parent)
+    const headers = row.parents("TABLE").find("TH")
+    const cells = row.children("TD")
+    const parentCode = sourceText(cells.first())
+    if (
+      headers.length !== 3 ||
+      sourceText(headers.eq(0)) !== "STCC No." ||
+      sourceText(headers.eq(1)) !== "STCC tariff" ||
+      sourceText(headers.eq(2)) !== "Commodity" ||
+      cells.length !== 3 ||
+      !cells.toArray().every((cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1) ||
+      !/^\d+(?: \d+)*$/.test(parentCode) ||
+      sourceText(cells.eq(1)).length === 0 ||
+      !/except:?$/.test(sourceText(cells.eq(2)))
+    ) {
+      continue
+    }
+    const children: typeof nodes = []
+    let complete = false
+    for (let next = index + 1; next < nodes.length; next++) {
+      const child = nodes[next]
+      invariant(child, "passage_table_row_missing")
+      const childCells = $(child).children("TD")
+      if (childCells.length === 3 && sourceText(childCells.first()).length > 0) {
+        complete = true
+        break
+      }
+      const childCode = sourceText(childCells.eq(2))
+        .match(/^\d[\d ]*/)?.[0]
+        .replaceAll(" ", "")
+      if (
+        childCells.length !== 3 ||
+        !childCode?.startsWith(parentCode.replaceAll(" ", "")) ||
+        !childCells.toArray().every((cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1) ||
+        !childCells
+          .slice(0, 2)
+          .toArray()
+          .every((cell) => cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+      ) {
+        break
+      }
+      children.push(child)
+      complete = next === nodes.length - 1
+    }
+    if (complete) {
+      for (const child of children) {
+        parents.set(child, parent)
+      }
+    }
+  }
+  return parents
+}
+
+/** EPA designated-area tables express a partial-county scope as a separate empty-value row. */
+function isPartialCountyScope(row: ReturnType<ReturnType<typeof load>>) {
+  const cells = row.children("TD")
+  const next = row.next("TR").children("TD")
+  return (
+    row.parents("TABLE").find("THEAD TH").first().text().trim() === "Designated area" &&
+    cells.length >= 3 &&
+    next.length === cells.length &&
+    /^[A-Za-z][A-Za-z .'-]* County \(part\)$/.test(sourceText(cells.first())) &&
+    sourceText(next.first()).length > 0 &&
+    !sourceText(next.first()).endsWith("County (part)") &&
+    cells.toArray().every((cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1) &&
+    cells
+      .slice(1)
+      .toArray()
+      .every((cell) => cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+  )
+}
+
 /** Separate actual tables from surrounding prose in a parser block that may contain an entire appendix. */
 export function legalTableLayout(input: { text: string; xml: string }) {
   const $ = parseTableSource(input)
@@ -87,20 +318,32 @@ export function legalTableRows(input: { text: string; xml: string }) {
   invariant(tables.length === 1, "passage_table_complex_structure")
   const rows = tables.find("ROW, TR")
   invariant(rows.length > 0 && rows.find("ROW, TR").length === 0, "passage_table_complex_structure")
+  const conditionParents = sourceConditionRows(rows)
+  const exceptionParents = sourceCommodityExceptionRows(rows)
   const headers = tables.find("BOXHD, THEAD")
   const order = $.root().find("*").toArray()
   type Context = { start: number; end: number; label: string }
   const ranges: { start: number; end: number; context: Context[] }[] = []
-  let group: Context | undefined
+  const rangesByNode = new Map<Parameters<typeof conditionParents.get>[0], (typeof ranges)[number]>()
+  let groups: { span: Context; level: number }[] = []
+  let countyScope: Context | undefined
   const previousCells = new Map<number, Context>()
+  let previousDataWidth = 0
   let position = 0
   for (const row of rows.toArray()) {
     const selection = $(row)
     const text = sourceText(selection)
-    invariant(text.length > 0, "passage_table_empty_row")
-    const isHeader =
-      selection.parents("BOXHD, THEAD").length > 0 ||
-      (selection.find("TH").length > 0 && selection.find("TD, ENT").length === 0)
+    const isHeader = isTableHeader(selection)
+    invariant(!isHeader || ranges.length === 0, "passage_table_interleaved_headers")
+    if (text.length === 0) {
+      invariant(isEmptySeparatorRow(selection), "passage_table_empty_row")
+      // A visual divider cannot supply a group or ditto reference for a later row.
+      groups = []
+      countyScope = undefined
+      previousCells.clear()
+      previousDataWidth = 0
+      continue
+    }
     if (!isHeader) {
       for (const cell of selection.find("[rowspan], [ROWSPAN], [MOREROWS], [morerows]").toArray()) {
         const attributes = $(cell).attr() ?? {}
@@ -138,13 +381,49 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const cells = selection.children("TD, TH, ENT")
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
+      const categoryLevel = sourceCategoryLevel(selection)
       const context: Context[] = []
-      if (isGroup) {
-        group = { start, end: start + text.length, label: "Source row group" }
-        previousCells.clear()
+      const inheritedCountyScope = countyScope
+      countyScope = undefined
+      if (isPartialCountyScope(selection)) {
+        context.push(...groups.map((entry) => entry.span))
+        countyScope = { start, end: start + text.length, label: "Source partial county scope" }
+        if (cells.length !== previousDataWidth) {
+          previousCells.clear()
+          previousDataWidth = 0
+        }
+      } else if (isGroup || categoryLevel !== null) {
+        groups = isGroup ? [] : groups.filter((entry) => entry.level < (categoryLevel ?? -1))
+        context.push(...groups.map((entry) => entry.span))
+        groups.push({
+          span: { start, end: start + text.length, label: "Source row group" },
+          level: isGroup ? -1 : (categoryLevel ?? -1)
+        })
+        // An explicit full-width label supplies no column values. A following ditto can cite the
+        // earlier value in the same table, while retaining the new group label as separate context.
+        // Partial groups and blank separators remain boundaries; never guess a missing column.
+        if (
+          (categoryLevel !== null
+            ? cells.length
+            : Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN"))) !== previousDataWidth
+        ) {
+          previousCells.clear()
+          previousDataWidth = 0
+        }
       } else {
-        if (group) {
-          context.push(group)
+        groups = groups.filter((entry) => entry.level < rowIndent(selection))
+        context.push(...groups.map((entry) => entry.span))
+        if (inheritedCountyScope) {
+          context.push(inheritedCountyScope)
+        }
+        const parentNode = conditionParents.get(row) ?? exceptionParents.get(row)
+        const parentRange = parentNode === undefined ? undefined : rangesByNode.get(parentNode)
+        if (parentRange) {
+          context.push(...parentRange.context, {
+            start: parentRange.start,
+            end: parentRange.end,
+            label: exceptionParents.has(row) ? "Source commodity exception parent" : "Source condition parent"
+          })
         }
         let column = 1
         for (const node of cells.toArray()) {
@@ -158,11 +437,17 @@ export function legalTableRows(input: { text: string; xml: string }) {
             offset >= before.length && text.slice(before.length, offset).trim().length === 0,
             "passage_table_cell_text_mismatch"
           )
-          if (/^(do\.?|ditto|〃)$/i.test(value)) {
+          if (isDittoMarker(value)) {
             const reference = previousCells.get(column)
             invariant(width === 1 && reference, "passage_table_unresolved_ditto")
             context.push(reference)
           } else {
+            const hasParentBlank =
+              (conditionParents.has(row) && column > 1) || (exceptionParents.has(row) && column < 3)
+            if (parentRange && hasParentBlank && value.length === 0 && width === 1) {
+              column += width
+              continue
+            }
             for (let index = column; index < column + width; index++) {
               previousCells.delete(index)
             }
@@ -181,8 +466,12 @@ export function legalTableRows(input: { text: string; xml: string }) {
             previousCells.delete(index)
           }
         }
+        previousDataWidth = column - 1
       }
       ranges.push({ start, end: start + text.length, context })
+      const range = ranges.at(-1)
+      invariant(range, "passage_table_row_missing")
+      rangesByNode.set(row, range)
     }
     position = start + text.length
   }
@@ -205,10 +494,15 @@ export function legalTableRowCells(input: { text: string; xml: string }, rowStar
   let group: { start: number; end: number } | undefined
   for (const node of rows) {
     const row = $(node)
-    if (row.parents("BOXHD, THEAD").length > 0) {
+    const text = sourceText(row)
+    if (text.length === 0) {
+      invariant(isEmptySeparatorRow(row), "passage_table_empty_row")
+      group = undefined
       continue
     }
-    const text = sourceText(row)
+    if (isTableHeader(row)) {
+      continue
+    }
     const cells = row.children("TD, TH, ENT")
     // Only compute a full source prefix for candidate rows or explicit spanning group labels.
     const groupSpan =
@@ -232,6 +526,7 @@ export function legalTableRowCells(input: { text: string; xml: string }, rowStar
       continue
     }
     invariant(cells.length > 0, "passage_table_cells_required")
+    let resolvedRow: ReturnType<typeof legalTableRows>["rows"][number] | undefined
     const spans = cells.toArray().map((cell, index) => {
       const selection = $(cell)
       invariant(
@@ -239,7 +534,17 @@ export function legalTableRowCells(input: { text: string; xml: string }, rowStar
         "passage_table_continuation_spanning_cells"
       )
       const value = sourceText(selection)
-      invariant(!/^(do\.?|ditto|〃)$/i.test(value), "passage_table_continuation_ditto_reference")
+      if (isDittoMarker(value)) {
+        // Cell offsets alone cannot authorize a reference. Reuse the full table's source
+        // validation; passage continuations carry this same row context on every piece.
+        resolvedRow ??= legalTableRows(input).rows.find((candidate) => candidate.start === rowStart)
+        invariant(
+          resolvedRow?.context.some(
+            (span) => span.label === `Column ${index + 1} ditto source` && span.end <= rowStart
+          ),
+          "passage_table_continuation_ditto_reference"
+        )
+      }
       const before = sourceText(row, selection)
       const offset = value ? text.indexOf(value, before.length) : before.length
       invariant(

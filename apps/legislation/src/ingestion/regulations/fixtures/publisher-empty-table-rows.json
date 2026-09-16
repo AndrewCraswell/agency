@@ -1,0 +1,78 @@
+[
+  {
+    "shape": "html_blank_header",
+    "source": "ecfr",
+    "editionId": "0c49cc90-ca79-48fb-87bf-355aecfe989c",
+    "versionId": "22647649-463d-435a-91d4-8e370fbe939e",
+    "contentHash": "b8ddbdd142c1f1d1c66593cf10f423a80ec66e09e5fd746e1179c7ef646cd450",
+    "nativeId": "cfr:7:section:52.38",
+    "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[1]/DIV4[3]/DIV5[2]/DIV6[1]/DIV7[5]/DIV8[5]",
+    "reason": "passage_table_empty_row",
+    "block": {
+      "tag": "DIV",
+      "xml": "<DIV width=\"100%\"><DIV class=\"gpotbl_div\">\n<TABLE border=\"1\" cellpadding=\"1\" cellspacing=\"1\" class=\"gpo_table\" frame=\"void\" width=\"100%\">\n<CAPTION><P class=\"title\">Table I—Canned or Similarly Processed Fruits, Vegetables, and Products Containing Units of Such Size and Character as To Be Readily Separable</P></CAPTION>\n<THEAD>\n<TR>\n<TH rowspan=\"2\" class=\"center border-top-single border-bottom-single border-right-single\">Container size group</TH>\n<TH colspan=\"5\" class=\"center border-top-single border-bottom-single\">Lot size (number of containers) <sup>1</sup></TH>\n</TR>\n<TR>\n<TH class=\"center border-bottom-single border-right-single\"> </TH>\n<TH class=\"center border-bottom-single border-right-single\"> </TH>\n<TH class=\"center border-bottom-single border-right-single\"> </TH>\n<TH class=\"center border-bottom-single border-right-single\"> </TH>\n<TH class=\"center border-bottom-single\"> </TH>\n</TR>\n</THEAD>\n<TBODY>\n<TR>\n<TD class=\"left border-right-single\">Group 1: Any type container of a volume not exceeding that of a No. 303 size can</TD>\n<TD class=\"right border-right-single\">3,000 or<br />less</TD>\n<TD class=\"right border-right-single\">3,001 to<br />12,000</TD>\n<TD class=\"right border-right-single\">12,001 to<br />39,000</TD>\n<TD class=\"right border-right-single\">39,001 to<br />84,000</TD>\n<TD class=\"right\">84,001 to<br />145,000</TD>\n</TR>\n<TR>\n<TD class=\"left border-right-single\">Group 2: Any type of container of a volume exceeding that of a No. 303 size can but not exceeding that of a No. 3 cylinder size can</TD>\n<TD class=\"right border-right-single\">1,500 or<br />less</TD>\n<TD class=\"right border-right-single\">1,501 to<br />6,000</TD>\n<TD class=\"right border-right-single\">6,001 to<br />19,500</TD>\n<TD class=\"right border-right-single\">19,501 to<br />42,000</TD>\n<TD class=\"right\">42,001 to<br />72,500</TD>\n</TR>\n<TR>\n<TD class=\"left border-bottom-single border-right-single\">Group 3: Any type of container of a volume exceeding that of a No. 3 cylinder size can, but not exceeding that of a No. 12 size can</TD>\n<TD class=\"right border-bottom-single border-right-single\">750 or<br />less</TD>\n<TD class=\"right border-bottom-single border-right-single\">751 to<br />3,000</TD>\n<TD class=\"right border-bottom-single border-right-single\">3,001 to<br />9,750</TD>\n<TD class=\"right border-bottom-single border-right-single\">9,751 to<br />21,000</TD>\n<TD class=\"right border-bottom-single\">21,001 to<br />36,250</TD>\n</TR>\n<TR>\n<TD class=\"left border-right-single\">Group 4: Any type of container of a volume exceeding that of a<br />No. 12 size can.</TD>\n<TD class=\"right border-right-single\" />\n<TD class=\"right border-right-single\" />\n<TD class=\"right border-right-single\" />\n<TD class=\"right border-right-single\" />\n<TD class=\"right\" />\n</TR>\n<TR>\n<TD class=\"left border-bottom-single border-right-single\" />\n<TD colspan=\"5\" class=\"center border-bottom-single\">Convert to equivalent number of 6-lb. net weight containers and use group 3</TD>\n</TR>\n<TR>\n<TD class=\"left border-right-single\">Lot inspection sample size (no. of sample units) <sup>2</sup></TD>\n<TD class=\"right border-right-single\">3</TD>\n<TD class=\"right border-right-single\">6</TD>\n<TD class=\"right border-right-single\">13</TD>\n<TD class=\"right border-right-single\">21</TD>\n<TD class=\"right\">29</TD>\n</TR>\n<TR>\n<TD class=\"left border-right-single\">Acceptance number</TD>\n<TD class=\"right border-right-single\">0</TD>\n<TD class=\"right border-right-single\">1</TD>\n<TD class=\"right border-right-single\">2</TD>\n<TD class=\"right border-right-single\">3</TD>\n<TD class=\"right\">4</TD>\n</TR>\n<TR>\n<TD class=\"left border-right-single\">On-line in-plant inspection sample size (no. of sample units) <sup>2</sup></TD>\n<TD class=\"right border-right-single\">3</TD>\n<TD class=\"right border-right-single\">6</TD>\n<TD class=\"right border-right-single\">6</TD>\n<TD class=\"right border-right-single\">13</TD>\n<TD class=\"right\">21</TD>\n</TR>\n<TR>\n<TD class=\"left border-bottom-single border-right-single\">Acceptance number</TD>\n<TD class=\"right border-bottom-single border-right-single\">0</TD>\n<TD class=\"right border-bottom-single border-right-single\">1</TD>\n<TD class=\"right border-bottom-single border-right-single\">1</TD>\n<TD class=\"right border-bottom-single border-right-single\">2</TD>\n<TD class=\"right border-bottom-single\">3\n</TD>\n</TR>\n</TBODY>\n<TFOOT><TR><TD colspan=\"6\"><sup>1</sup> Under on-line in-plant inspection, a 5% overrun in number of containers may be permitted by the inspector before going to the next larger sample size.\n</TD></TR><TR><TD colspan=\"6\"><sup>2</sup> When a standard sample size is not specified in the U.S. grade standards, the sample units for the various container size groups are as follows: Groups 1, 2, and 3—1 container and its entire contents. Group 4 that approximately 2 pounds of product. When determined by the inspector that a 2-pound sample unit is inadequate, a larger sample unit may be substituted.</TD></TR></TFOOT></TABLE>\n</DIV></DIV>\n",
+      "kind": "table",
+      "text": "Table I—Canned or Similarly Processed Fruits, Vegetables, and Products Containing Units of Such Size and Character as To Be Readily Separable\nContainer size group\nLot size (number of containers) 1\nGroup 1: Any type container of a volume not exceeding that of a No. 303 size can\n3,000 orless\n3,001 to12,000\n12,001 to39,000\n39,001 to84,000\n84,001 to145,000\nGroup 2: Any type of container of a volume exceeding that of a No. 303 size can but not exceeding that of a No. 3 cylinder size can\n1,500 orless\n1,501 to6,000\n6,001 to19,500\n19,501 to42,000\n42,001 to72,500\nGroup 3: Any type of container of a volume exceeding that of a No. 3 cylinder size can, but not exceeding that of a No. 12 size can\n750 orless\n751 to3,000\n3,001 to9,750\n9,751 to21,000\n21,001 to36,250\nGroup 4: Any type of container of a volume exceeding that of aNo. 12 size can.\nConvert to equivalent number of 6-lb. net weight containers and use group 3\nLot inspection sample size (no. of sample units) 2\n3\n6\n13\n21\n29\nAcceptance number\n0\n1\n2\n3\n4\nOn-line in-plant inspection sample size (no. of sample units) 2\n3\n6\n6\n13\n21\nAcceptance number\n0\n1\n1\n2\n3\n1 Under on-line in-plant inspection, a 5% overrun in number of containers may be permitted by the inspector before going to the next larger sample size.\n2 When a standard sample size is not specified in the U.S. grade standards, the sample units for the various container size groups are as follows: Groups 1, 2, and 3—1 container and its entire contents. Group 4 that approximately 2 pounds of product. When determined by the inspector that a 2-pound sample unit is inadequate, a larger sample unit may be substituted.",
+      "ordinal": 15
+    },
+    "artifactHash": "449a8094b77f17f2425ee449012ebf3be1176a1a6bdfee7a2a5748d458c63dd7",
+    "sourceUrl": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-09/title-7.xml"
+  },
+  {
+    "shape": "html_caption_only",
+    "source": "ecfr",
+    "editionId": "ebeca63f-12e7-4371-ba01-cbf84568c710",
+    "versionId": "47a1d1ae-2d6d-413f-a6e5-bd94228e73fd",
+    "contentHash": "5e58d64cb1cd8b8c35580b588d56403688cdc2b9e653bf33a350d5d82b015174",
+    "nativeId": "ecfr:[[\"TITLE\",\"20\"],[\"CHAPTER\",\"III\"],[\"PART\",\"404\"],[\"SUBPART\",\"P\"],[\"APPENDIX\",\"Appendix 1 to Subpart P of Part 404\"]]",
+    "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[3]/DIV5[5]/DIV6[16]/DIV9[1]",
+    "reason": "passage_table_empty_row",
+    "block": {
+      "tag": "DIV",
+      "xml": "<DIV width=\"100%\"><DIV class=\"gpotbl_div\">\n<TABLE border=\"1\" cellpadding=\"1\" cellspacing=\"1\" class=\"gpo_table\" frame=\"void\" width=\"100%\">\n<CAPTION><P class=\"title\">Table 2—Chart of Visual Fields</P></CAPTION>\n<THEAD>\n</THEAD>\n<TBODY>\n<TR>\n<TD class=\"left\"> </TD>\n</TR>\n</TBODY>\n</TABLE>\n</DIV></DIV>\n",
+      "kind": "table",
+      "text": "Table 2—Chart of Visual Fields",
+      "ordinal": 352
+    },
+    "artifactHash": "8e692ecba0b7a828ab92e21688b5581686f552961ccd27d0577e0b1fb450905a",
+    "sourceUrl": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-09/title-20.xml"
+  },
+  {
+    "shape": "gpo_blank_ruling_cell",
+    "source": "annual",
+    "editionId": "7691d5f9-b753-45ca-a3bd-3d94ee7fc1e2",
+    "versionId": "35d671b9-f9dc-467b-b541-cc9b1829cf38",
+    "contentHash": "c8f759625b92155ede8c019fad1b5b064e154e6b6c5314bc62200a0f4fbedadf",
+    "nativeId": "cfr:5:section:531.214",
+    "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/SUBCHAP[2]/PART[57]/SUBPART[2]/SUBJGRP[2]/SECTION[4]",
+    "reason": "passage_table_empty_row",
+    "block": {
+      "tag": "GPOTABLE",
+      "xml": "<GPOTABLE COLS=\"2\" OPTS=\"L2,p1,6/7\" CDEF=\"xls20,r130\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n                                    <ROW EXPSTB=\"01\" RUL=\"s\">\n                                        <ENT I=\"01\"> </ENT>\n                                    </ROW>\n                                    <ROW RUL=\"s\">\n                                        <ENT I=\"01\">Promotion Rule—Standard Method</ENT>\n                                    </ROW>\n                                    <ROW EXPSTB=\"00\" RUL=\"s\">\n                                        <ENT I=\"01\">Step A</ENT>\n                                        <ENT>If applicable, apply the geographic conversion rule in § 531.205 to determine the employee's rate(s) and range(s) of basic pay based on the employee's position of record before promotion and the new official worksite, as required by paragraph (b) of this section. Also, if applicable, provide any simultaneous within-grade increase or quality step increase, as required by paragraph (c) of this section. Use the resulting rate(s) of basic pay as the existing rate(s) in effect immediately before promotion in applying steps B and C.</ENT>\n                                    </ROW>\n                                    <ROW RUL=\"s\">\n                                        <ENT I=\"01\">Step B</ENT>\n                                        <ENT>Identify the employee's existing GS rate (or LEO special base rate) in the grade before promotion, and increase that rate by two GS within-grade increases for that grade.</ENT>\n                                    </ROW>\n                                    <ROW RUL=\"s\">\n                                        <ENT I=\"01\">Step C</ENT>\n                                        <ENT>Determine the payable (highest) rate of basic pay for the step or rate determined in step B by applying any locality payment or special rate supplement applicable to the given grade, based on the employee's position of record before promotion and official worksite after promotion. (If the rate determined in step B is above the range maximum, use the same locality payment or special rate supplement that applies to rates within the rate range.)</ENT>\n                                    </ROW>\n                                    <ROW>\n                                        <ENT I=\"01\">Step D</ENT>\n                                        <ENT>Identify the highest applicable rate range for the employee's position of record after promotion and find the lowest step rate in that range that equals or exceeds the rate determined in step C. This is the employee's payable rate of basic pay upon promotion. (If the rate identified in step C exceeds the maximum of the rate range identified in this step, the employee's payable rate is that maximum rate, or, if the employee's existing rate is higher than that maximum rate, a retained rate under 5 CFR part 536 equal to that existing rate.)</ENT>\n                                    </ROW>\n                                </GPOTABLE>\n                                ",
+      "kind": "table",
+      "text": "Promotion Rule—Standard Method\nStep A\nIf applicable, apply the geographic conversion rule in § 531.205 to determine the employee's rate(s) and range(s) of basic pay based on the employee's position of record before promotion and the new official worksite, as required by paragraph (b) of this section. Also, if applicable, provide any simultaneous within-grade increase or quality step increase, as required by paragraph (c) of this section. Use the resulting rate(s) of basic pay as the existing rate(s) in effect immediately before promotion in applying steps B and C.\nStep B\nIdentify the employee's existing GS rate (or LEO special base rate) in the grade before promotion, and increase that rate by two GS within-grade increases for that grade.\nStep C\nDetermine the payable (highest) rate of basic pay for the step or rate determined in step B by applying any locality payment or special rate supplement applicable to the given grade, based on the employee's position of record before promotion and official worksite after promotion. (If the rate determined in step B is above the range maximum, use the same locality payment or special rate supplement that applies to rates within the rate range.)\nStep D\nIdentify the highest applicable rate range for the employee's position of record after promotion and find the lowest step rate in that range that equals or exceeds the rate determined in step C. This is the employee's payable rate of basic pay upon promotion. (If the rate identified in step C exceeds the maximum of the rate range identified in this step, the employee's payable rate is that maximum rate, or, if the employee's existing rate is higher than that maximum rate, a retained rate under 5 CFR part 536 equal to that existing rate.)",
+      "ordinal": 13
+    },
+    "artifactHash": "149efee49275280bfbbbacf5effb108470e37c2fba3dafc7b92b18788862b089",
+    "sourceUrl": "https://www.govinfo.gov/bulkdata/CFR/2025/title-5/CFR-2025-title5-vol1.xml"
+  },
+  {
+    "shape": "html_blank_cells",
+    "source": "ecfr",
+    "editionId": "402c9c08-2f2f-4c0b-9ff6-98e75ce375a8",
+    "versionId": "a2714615-9914-4415-ae44-8cedc254e7c1",
+    "contentHash": "5d7769740450c499970ea67715474fa0b9d91ee9c0590493601fb1b37aac17f7",
+    "nativeId": "ecfr:[[\"TITLE\",\"48\"],[\"CHAPTER\",\"2\"],[\"APPENDIX\",\"Appendix F to Chapter 2\"]]",
+    "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[2]/DIV9[3]",
+    "reason": "passage_table_empty_row",
+    "block": {
+      "tag": "DIV",
+      "xml": "<DIV width=\"100%\"><DIV class=\"gpotbl_div\">\n<TABLE border=\"1\" cellpadding=\"1\" cellspacing=\"1\" class=\"gpo_table\" frame=\"void\" width=\"100%\">\n<THEAD>\n</THEAD>\n<TBODY>\n<TR>\n<TD class=\"center\">17. QUANTITY</TD>\n</TR>\n<TR>\n<TD class=\"left\"> </TD>\n</TR>\n<TR>\n<TD class=\"left\"> </TD>\n</TR>\n</TBODY>\n</TABLE>\n</DIV></DIV>\n",
+      "kind": "table",
+      "text": "17. QUANTITY",
+      "ordinal": 309
+    },
+    "artifactHash": "86ec890963e1d1cdc99514147446066a823a64bf664ec9c828855e754e8f479c",
+    "sourceUrl": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-01/title-48.xml"
+  }
+]

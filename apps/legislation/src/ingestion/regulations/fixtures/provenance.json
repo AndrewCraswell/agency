@@ -73,5 +73,55 @@
     },
     "locators": ["/FEDREG/DATE", "/FEDREG//RULE[1]", "/FEDREG//PRORULE[1]", "/FEDREG//NOTICE[1]"],
     "transformation": "Source element excerpts reserialized as UTF-8; minimal ancestor containers generated. Not a complete title or issue."
+  },
+  {
+    "fixture": "cfr-2025-title5-vol2.xml.gz",
+    "fixtureHash": "f698bb1a9b200dd7a35846e93f119b96c02e66785226e73d3644a8fab61b88c7",
+    "sourceUrl": "https://www.govinfo.gov/bulkdata/CFR/2025/title-5/CFR-2025-title5-vol2.xml",
+    "artifactHash": "f698bb1a9b200dd7a35846e93f119b96c02e66785226e73d3644a8fab61b88c7",
+    "sourceUnit": {
+      "key": "f54d639744af5b2fc7c287e7faa8d3097e2727bbda20cdbb4bd900e0af397d5a",
+      "sourceId": "govinfo-cfr",
+      "nativeId": "CFR-2025-title5-vol2",
+      "edition": "2025",
+      "sourceUrl": "https://www.govinfo.gov/bulkdata/CFR/2025/title-5/CFR-2025-title5-vol2.xml",
+      "inventoryHash": "1494241e457acd36ef76a7de23bd37c35d88e5727fdb630c7661e4b40d293508",
+      "inventoryRevision": "6638e731d1a476873dff66e9d64ad4920067f3791cc8bcc01914fbd14cbce0e0",
+      "issueDate": null,
+      "currencyDate": null,
+      "sourceModifiedText": "27-Aug-2026 19:58",
+      "expectedBytes": 5982142,
+      "format": "xml",
+      "historical": true,
+      "rightsProfileId": "official-federal-text",
+      "externalStandardsIncluded": false
+    },
+    "locators": ["/CFRDOC"],
+    "transformation": "Complete official annual volume compressed losslessly with gzip. fixtureHash identifies the decompressed original XML bytes."
+  },
+  {
+    "fixture": "fr-2000-01-18.xml.gz",
+    "fixtureHash": "5c8fa553adc3c2c5b041ac8b1b1cc6cac1edd4945111037bd4f4fbf574566201",
+    "sourceUrl": "https://www.govinfo.gov/bulkdata/FR/2000/01/FR-2000-01-18.xml",
+    "artifactHash": "5c8fa553adc3c2c5b041ac8b1b1cc6cac1edd4945111037bd4f4fbf574566201",
+    "sourceUnit": {
+      "key": "c5d6444a6e0f5b3b753191095833c1970216a400c1cff6429ac42808b244ba3c",
+      "sourceId": "govinfo-fr",
+      "nativeId": "FR-2000-01-18",
+      "edition": "2000-01-18",
+      "sourceUrl": "https://www.govinfo.gov/bulkdata/FR/2000/01/FR-2000-01-18.xml",
+      "inventoryHash": "ee64b61fff131f6a72506ab701749af9bd1990c424fb6f19df44671f11afa08c",
+      "inventoryRevision": "6b84c0dfb6fc12d12120c7cce372d2beccfa42713604454b0e7b6843a4c48073",
+      "issueDate": "2000-01-18",
+      "currencyDate": null,
+      "sourceModifiedText": "23-Sep-2025 00:42",
+      "expectedBytes": 2800863,
+      "format": "xml",
+      "historical": true,
+      "rightsProfileId": "official-federal-text",
+      "externalStandardsIncluded": false
+    },
+    "locators": ["/FEDREG"],
+    "transformation": "Complete official issue compressed losslessly. fixtureHash identifies decompressed original XML bytes; includes both printed 00-113 documents."
   }
 ]

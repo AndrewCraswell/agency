@@ -388,14 +388,20 @@ describe("createMcpHttpQueryAdapter", () => {
   })
 
   it("maps API error categories and retryability for MCP tool responses", async () => {
-    const fetch = vi
-      .fn<FetchLike>()
-      .mockResolvedValue(
-        jsonResponse(
-          { error: { category: "not_found", correlationId, message: "Bill not found", retryable: false } },
-          404
-        )
+    const fetch = vi.fn<FetchLike>().mockResolvedValue(
+      jsonResponse(
+        {
+          error: {
+            category: "not_found",
+            correlationId,
+            message: "Bill not found",
+            retryable: false,
+            details: { reason: "record_not_visible" }
+          }
+        },
+        404
       )
+    )
     const adapter = createMcpHttpQueryAdapter({
       apiBaseUrl: "https://legislation.example.test",
       fetch,
@@ -406,7 +412,7 @@ describe("createMcpHttpQueryAdapter", () => {
       runWithRequestContext({ correlationId }, async () => await adapter.getBill({ id: "bill:ca:2025:ab:404" }))
     ).rejects.toMatchObject({
       category: "not_found",
-      details: { correlationId, retryable: false, status: 404 },
+      details: { correlationId, retryable: false, status: 404, reason: "record_not_visible" },
       name: LegislationError.name
     })
   })

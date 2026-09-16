@@ -4,6 +4,7 @@ import invariant from "tiny-invariant"
 import { z } from "zod"
 import { embeddingTokenizer } from "../../models/embedding-tokenizer.js"
 import { digest } from "./contracts.js"
+import { legalPassagePreparationBlocker } from "./passage-failure.js"
 import { materializeLegalPassages } from "./passage-storage.js"
 import { legalPassageContract } from "./passages.js"
 import { requireRights } from "./storage.js"
@@ -98,9 +99,15 @@ export async function readLegalPassageInventory(client: pg.PoolClient, scope: Sc
 /** Restartable canonical preparation only. Isolated-index acknowledgements and embedding dispatch are separate gates. */
 export async function runLegalPassagePreparationBatch(
   pool: pg.Pool,
-  input: { scope: Scope; model: "openai/text-embedding-3-small" | "voyageai/voyage-4"; limit?: number }
+  input: {
+    scope: Scope
+    model: "openai/text-embedding-3-small" | "voyageai/voyage-4"
+    limit?: number
+    retryBlocked?: boolean
+  }
 ) {
   const scope = legalPreparationScopeSchema.parse(input.scope)
+  const retryBlocked = z.boolean().parse(input.retryBlocked ?? false)
   const limit = z
     .int()
     .min(1)
@@ -141,6 +148,12 @@ export async function runLegalPassagePreparationBatch(
       [id, token]
     )
     invariant(claimed.rowCount === 1, "legal_preparation_busy_or_delayed")
+    if (retryBlocked) {
+      await client.query(
+        "UPDATE legislation.legal_passage_preparation_items SET failure_code=NULL,failed_at=NULL WHERE preparation_id=$1 AND generation_id IS NULL AND failure_code IS NOT NULL",
+        [id]
+      )
+    }
     return z.int().positive().parse(claimed.rows[0].fence)
   })
   const check = async (client: pg.PoolClient) => {
@@ -154,25 +167,36 @@ export async function runLegalPassagePreparationBatch(
   }
   try {
     const pending = await pool.query(
-      "SELECT ordinal,version_id,context FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1 AND generation_id IS NULL ORDER BY ordinal LIMIT $2",
+      "SELECT ordinal,version_id,context FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1 AND generation_id IS NULL AND failure_code IS NULL ORDER BY ordinal LIMIT $2",
       [id, limit]
     )
     const items = z.array(itemSchema).parse(pending.rows)
     for (const item of items) {
-      const prepared = await materializeLegalPassages(pool, {
-        scope:
-          scope.kind === "edition"
-            ? { kind: "provision", versionId: item.version_id, editionId: scope.id }
-            : { kind: "publication", versionId: item.version_id, observationId: scope.id },
-        model: input.model,
-        context: item.context
-      })
+      let generationId: string | null = null
+      let failureCode: string | null = null
+      try {
+        const prepared = await materializeLegalPassages(pool, {
+          scope:
+            scope.kind === "edition"
+              ? { kind: "provision", versionId: item.version_id, editionId: scope.id }
+              : { kind: "publication", versionId: item.version_id, observationId: scope.id },
+          model: input.model,
+          context: item.context
+        })
+        generationId = prepared.generationId
+      } catch (error) {
+        failureCode = legalPassagePreparationBlocker(error)
+        if (failureCode === null) {
+          throw error
+        }
+      }
       await transaction(pool, async (client) => {
         await check(client)
         const written = await client.query(
-          `UPDATE legislation.legal_passage_preparation_items SET generation_id=$3
-          WHERE preparation_id=$1 AND ordinal=$2 AND generation_id IS NULL`,
-          [id, item.ordinal, prepared.generationId]
+          `UPDATE legislation.legal_passage_preparation_items SET generation_id=$3,failure_code=$4,
+          failed_at=CASE WHEN $4::text IS NULL THEN NULL ELSE clock_timestamp() END
+          WHERE preparation_id=$1 AND ordinal=$2 AND generation_id IS NULL AND failure_code IS NULL`,
+          [id, item.ordinal, generationId, failureCode]
         )
         invariant(written.rowCount === 1, "legal_preparation_checkpoint_conflict")
         const renewed = await client.query(
@@ -185,18 +209,19 @@ export async function runLegalPassagePreparationBatch(
     return await transaction(pool, async (client) => {
       await check(client)
       const result = await client.query(
-        `SELECT count(*)::integer AS total,count(generation_id)::integer AS complete
+        `SELECT count(*)::integer AS total,count(generation_id)::integer AS complete,count(failure_code)::integer AS blocked
         FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1`,
         [id]
       )
-      const counts = z.object({ total: z.int(), complete: z.int() }).parse(result.rows[0])
+      const counts = z.object({ total: z.int(), complete: z.int(), blocked: z.int() }).parse(result.rows[0])
       const job = await client.query(
         "SELECT expected_count,inventory_hash FROM legislation.legal_passage_preparations WHERE id=$1",
         [id]
       )
       invariant(counts.total === job.rows[0].expected_count, "legal_preparation_inventory_missing")
       const isPrepared = counts.complete === counts.total
-      if (isPrepared) {
+      const isFinished = counts.complete + counts.blocked === counts.total
+      if (isFinished) {
         invariant(
           digest(JSON.stringify(await readLegalPassageInventory(client, scope, id))) === job.rows[0].inventory_hash,
           "legal_preparation_checkpoint_inventory_changed"
@@ -214,14 +239,20 @@ export async function runLegalPassagePreparationBatch(
         )
         invariant(missing.rowCount === 0, "legal_preparation_passage_inventory_mismatch")
       }
+      let state: "pending" | "prepared" | "blocked" = "pending"
+      if (isPrepared) {
+        state = "prepared"
+      } else if (isFinished) {
+        state = "blocked"
+      }
       const released = await client.query(
-        "UPDATE legislation.legal_passage_preparations SET state=$2,lease_token=NULL,lease_expires_at=NULL,last_error=NULL WHERE id=$1 AND lease_token=$3 AND fence=$4 AND lease_expires_at>clock_timestamp()",
-        [id, isPrepared ? "prepared" : "pending", token, claim]
+        "UPDATE legislation.legal_passage_preparations SET state=$2,lease_token=NULL,lease_expires_at=NULL,last_error=$5 WHERE id=$1 AND lease_token=$3 AND fence=$4 AND lease_expires_at>clock_timestamp()",
+        [id, state, token, claim, counts.blocked > 0 ? "source_records_blocked" : null]
       )
       invariant(released.rowCount === 1, "legal_preparation_lease_lost")
       return {
         preparationId: id,
-        state: isPrepared ? ("prepared" as const) : ("pending" as const),
+        state,
         processed: items.length,
         ...counts
       }

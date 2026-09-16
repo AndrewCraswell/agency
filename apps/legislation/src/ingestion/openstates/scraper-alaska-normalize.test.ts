@@ -136,7 +136,7 @@ it("distinguishes motions on one journal page and withholds missing positions an
   expect(votes).toHaveLength(3)
   expect(new Set(votes.map((entry) => entry.vote.id)).size).toBe(3)
   expect(votes.every((entry) => entry.positions === undefined && entry.vote.classification === "recorded")).toBe(true)
-  expect(votes.map((entry) => entry.vote.result)).toEqual(["pass", "pass", "unknown"])
+  expect(votes.map((entry) => entry.vote.result)).toEqual(["passed", "passed", "unknown"])
   const corrected = await normalizeFixture([], ["(H) PASSED Y24 N16 #1046"], false)
   expect(corrected[0]?.aggregate.votes?.[0]?.vote.id).toBe(votes[0]?.vote.id)
   await expect(normalizeFixture([], ["(H) PASSED Y23 N17 #1046", "(H) PASSED Y23 N17 #1046"])).rejects.toThrow(

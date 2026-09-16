@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto"
+import { createRequire } from "node:module"
+import { z } from "zod"
 import type { EmbeddingRoute } from "./embedding-routing.js"
 
 export type EmbeddingTokenizer = { id: string; count: (text: string) => number }
@@ -19,14 +21,21 @@ export async function embeddingTokenizer(model: Model): Promise<EmbeddingTokeniz
 
 async function loadTokenizer(model: Model): Promise<EmbeddingTokenizer> {
   if (model === "openai/text-embedding-3-small") {
-    const [{ Tiktoken }, { default: ranks }] = await Promise.all([
-      import("tiktoken/lite"),
-      import("tiktoken/encoders/cl100k_base.json", { with: { type: "json" } })
-    ])
+    const { Tiktoken } = await import("tiktoken/lite")
+    // The hosted bundler externalizes tiktoken and strips dynamic JSON import attributes.
+    // Node's require loader handles the package JSON without depending on preserved attributes.
+    const ranks: unknown = createRequire(import.meta.url)("tiktoken/encoders/cl100k_base.json")
     if (checksum(ranks) !== "49a4e05dea02c8fafbd50cc4725c4aab8f39386c0afedef118e0dfebc2fe523a") {
       throw new Error("embedding_tokenizer_checksum_mismatch")
     }
-    const encoder = new Tiktoken(ranks.bpe_ranks, ranks.special_tokens, ranks.pat_str)
+    const vocabulary = z
+      .object({
+        bpe_ranks: z.string(),
+        special_tokens: z.record(z.string(), z.number()),
+        pat_str: z.string()
+      })
+      .parse(ranks)
+    const encoder = new Tiktoken(vocabulary.bpe_ranks, vocabulary.special_tokens, vocabulary.pat_str)
     return {
       id: "tiktoken:1.0.22:cl100k_base",
       count: (text) => encoder.encode(text, [], []).length

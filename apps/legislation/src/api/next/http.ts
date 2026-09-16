@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
+import { captureException } from "@sentry/core"
 import { LegislationError } from "../../legislation/errors.js"
 import { toPublicApiError } from "../error-mapping.js"
 import type { ModelUsage } from "../research-answers.js"
@@ -133,6 +134,9 @@ export function apiErrorResponse(request: Request, error: unknown, options: Json
       message: publicError instanceof LegislationError ? publicError.message : "The request could not be completed",
       retryable: category === "dependency_unavailable"
     }
+  }
+  if (statusForError(category) >= 500 && !request.signal.aborted) {
+    captureException(error, { tags: { operation: "http_api", category, reference: correlation } })
   }
   return jsonResponse(request, statusForError(category), body, { correlationId: correlation, headers })
 }

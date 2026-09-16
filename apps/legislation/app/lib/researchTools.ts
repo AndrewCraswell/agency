@@ -1,0 +1,31 @@
+export const researchToolLabels: Readonly<Record<string, string>> = {
+  search_bills: "Search bills",
+  get_bill: "Read bill",
+  get_bills: "Read bills",
+  get_bill_timeline: "Read bill timeline",
+  search_bill_text: "Search bill text",
+  get_bill_text: "Read bill text",
+  compare_bill_versions: "Compare bill versions",
+  find_related_bills: "Find related bills",
+  search_people: "Search people",
+  get_person: "Read person",
+  search_organizations: "Search committees and organizations",
+  get_organization: "Read committee or organization",
+  search_events: "Search meetings",
+  get_event: "Read meeting",
+  search_votes: "Search votes",
+  get_bill_votes: "Read bill votes",
+  get_vote: "Read vote",
+  get_votes: "Read votes",
+  search_amendments: "Search amendments",
+  get_amendment: "Read amendment",
+  get_amendments: "Read amendments",
+  search_amendments_for_bills: "Find bill amendments",
+  search_supporting_materials: "Search supporting materials",
+  get_supporting_material: "Read supporting material",
+  search_changes: "Search recorded changes"
+}
+
+export function isResearchTool(name: string) {
+  return Object.hasOwn(researchToolLabels, name)
+}

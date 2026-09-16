@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { correlationId, jsonResponse } from "../../api/next/http.js"
 import { createApiAccessTokenProvider } from "../../auth/api-access-token.js"
+import { createIdentityBoundApiAccessTokenProvider } from "../../auth/identity-bound-api-token.js"
 import { runWithRequestContext } from "../../auth/request-context.js"
 import { AuthenticationError, createWorkosAuthenticator, type WorkosAuthenticatorKeys } from "../../auth/workos.js"
 import { createMcpHttpQueryAdapter } from "../../mcp/http-query-adapter.js"
@@ -20,7 +21,17 @@ const settingsSchema = z
     WORKOS_MCP_AUDIENCE: httpsUrl.refine((value) => new URL(value).pathname === "/mcp"),
     MCP_API_BASE_URL: httpsUrl.refine((value) => new URL(value).pathname === "/"),
     WORKOS_API_M2M_CLIENT_ID: z.string().trim().min(1),
-    WORKOS_API_M2M_CLIENT_SECRET: z.string().trim().min(1)
+    WORKOS_API_M2M_CLIENT_SECRET: z.string().trim().min(1),
+    LEGISLATION_LEGAL_API_ORGANIZATIONS: z
+      .string()
+      .default("")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+      .pipe(z.array(z.string().max(256)).max(1000))
   })
   .refine((value) => value.WORKOS_API_AUDIENCE !== value.WORKOS_MCP_AUDIENCE)
   .refine((value) => new URL(value.MCP_API_BASE_URL).origin === new URL(value.WORKOS_MCP_AUDIENCE).origin)
@@ -54,6 +65,26 @@ export function createNextMcpApplication(
     createMcpHttpQueryAdapter({
       apiBaseUrl: config.MCP_API_BASE_URL,
       getApiAccessToken: provider,
+      ...(config.LEGISLATION_LEGAL_API_ORGANIZATIONS.length === 0
+        ? {}
+        : {
+            legalText: {
+              allowedOrganizationIds: config.LEGISLATION_LEGAL_API_ORGANIZATIONS,
+              getApiAccessToken: createIdentityBoundApiAccessTokenProvider({
+                getToken: provider,
+                authenticateApiToken: createWorkosAuthenticator(
+                  {
+                    m2m: {
+                      audience: config.WORKOS_API_AUDIENCE,
+                      issuer: config.WORKOS_ISSUER,
+                      jwksUrl: config.WORKOS_JWKS_URL
+                    }
+                  },
+                  dependencies.keys
+                )
+              })
+            }
+          }),
       ...(dependencies.fetch === undefined ? {} : { fetch: dependencies.fetch })
     }),
     createLogger({ service: "legislation-mcp", level: "warn" })

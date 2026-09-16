@@ -20,7 +20,7 @@ afterEach(async () => {
 })
 
 async function outputDirectory() {
-  const path = await mkdtemp(join(tmpdir(), "tabra-regulatory-test-"))
+  const path = await mkdtemp(join(tmpdir(), "rostra-regulatory-test-"))
   directories.push(path)
   return path
 }

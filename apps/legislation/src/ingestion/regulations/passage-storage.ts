@@ -5,8 +5,7 @@ import { z } from "zod"
 import { embeddingTokenizer } from "../../models/embedding-tokenizer.js"
 import { digest } from "./contracts.js"
 import { buildLegalPassages } from "./passages.js"
-import { legalTextBlockSchema } from "./reader-contract.js"
-import { buildLegalTextProjection } from "./reader-text.js"
+import { buildLegalTextProjection, storedLegalSourceBlocks } from "./reader-text.js"
 import { storageBatchBytes, storageBatchRecords } from "./storage-contract.js"
 import { requireRights } from "./storage.js"
 
@@ -22,7 +21,8 @@ const snapshotSchema = z.object({
   rights_profile_id: z.string(),
   source_id: z.string(),
   jurisdiction_id: z.string(),
-  input_contract: z.string()
+  input_contract: z.string(),
+  source_hash: z.string().regex(/^[a-f0-9]{64}$/)
 })
 
 async function transaction<T>(pool: pg.Pool, action: (client: pg.PoolClient) => Promise<T>) {
@@ -73,11 +73,11 @@ export async function readLegalPassageSource(client: pg.PoolClient, scope: Scope
   const text =
     scope.kind === "provision"
       ? await client.query(
-          "SELECT body,heading,blocks,input_contract FROM legislation.legal_provision_versions WHERE id=$1 FOR SHARE",
+          "SELECT body,heading,blocks,input_contract,legislation.legal_passage_source_hash(body,heading,blocks,input_contract) AS source_hash FROM legislation.legal_provision_versions WHERE id=$1 FOR SHARE",
           [scope.versionId]
         )
       : await client.query(
-          "SELECT body,heading,blocks,input_contract FROM legislation.regulatory_document_versions WHERE id=$1 FOR SHARE",
+          "SELECT body,heading,blocks,input_contract,legislation.legal_passage_source_hash(body,heading,blocks,input_contract) AS source_hash FROM legislation.regulatory_document_versions WHERE id=$1 FOR SHARE",
           [scope.versionId]
         )
   return snapshotSchema.parse({ ...metadata, ...text.rows[0] })
@@ -92,21 +92,11 @@ export async function materializeLegalPassages(
   const context = z.string().max(16000).parse(input.context).trim()
   const snapshot = await transaction(pool, (client) => readLegalPassageSource(client, scope))
   const tokenizer = await embeddingTokenizer(input.model)
-  let sourceBlocks = snapshot.blocks
-  if (scope.kind === "publication" && snapshot.input_contract === "fr-html-publication-2026-09-14") {
-    const stored = z.array(legalTextBlockSchema).parse(snapshot.blocks)
-    let end = 0
-    for (const block of stored) {
-      invariant(
-        block.start === end && block.kind === "text" && block.sourceOrdinal === null,
-        "legal_passage_html_reader_mismatch"
-      )
-      end = block.end
-    }
-    invariant(stored.map((block) => block.text).join("") === snapshot.body, "legal_passage_html_reader_mismatch")
-    // HTML publications retain preformatted reader text, not XML parser blocks. Bind anchors to the canonical version ID.
-    sourceBlocks = []
-  }
+  const sourceBlocks = storedLegalSourceBlocks({
+    body: snapshot.body,
+    blocks: snapshot.blocks,
+    inputContract: snapshot.input_contract
+  })
   const projection = buildLegalTextProjection({
     versionId: scope.versionId,
     body: snapshot.body,
@@ -183,6 +173,12 @@ export async function materializeLegalPassages(
         start += rows.length
       }
     }
+    await client.query(
+      `INSERT INTO legislation.legal_passage_source_provenance(generation_id,source_hash) VALUES($1,$2)
+      ON CONFLICT(generation_id) DO UPDATE SET source_hash=EXCLUDED.source_hash
+      WHERE legislation.legal_passage_source_provenance.source_hash IS DISTINCT FROM EXCLUDED.source_hash`,
+      [id, current.source_hash]
+    )
     return {
       generationId: id,
       passages: prepared.passages.length,

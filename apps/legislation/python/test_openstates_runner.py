@@ -8,6 +8,15 @@ from openstates_runner import REVISION, child_environment, command, execute, fai
 
 
 class RunnerContractTests(unittest.TestCase):
+    def test_alaska_events_require_bounded_explicit_occurrences(self):
+        key = "H:L&C:2025-01-22T13:30:00-09:00"
+        value = self.request(jurisdiction="ak", domain="events", session="34", bill_ids=None, event_keys=[key])
+        self.assertEqual(command(value)[-2:], ["session=34", "event_keys=" + key])
+        for keys in ([], [key, key], ["bad"], [key] * 11):
+            with self.assertRaisesRegex(ValueError, "invalid_event_batch"):
+                validate_request(dict(value, event_keys=keys))
+        with self.assertRaisesRegex(ValueError, "unexpected_event_keys"):
+            validate_request(self.request(event_keys=[key]))
     def test_alaska_uses_explicit_profile_without_enabling_events(self):
         request = self.request(jurisdiction="ak", session="34", bill_ids=["HB10", "HB2"])
         self.assertEqual(command(request)[3], "ak")
@@ -59,6 +68,9 @@ class RunnerContractTests(unittest.TestCase):
     def test_safe_failure_classification_never_returns_diagnostics(self):
         self.assertEqual(failure_reason([b"requests.exceptions.ReadTimeout: secret url"]), "source_timeout")
         self.assertEqual(failure_reason([b"requests.exceptions.SSLError: secret certificate"]), "source_tls_failure")
+        for exception in ("ConnectionError", "ChunkedEncodingError", "ContentDecodingError"):
+            self.assertEqual(failure_reason([f"requests.exceptions.{exception}: private-url".encode()]), "source_network_failure")
+        self.assertEqual(failure_reason([b"RuntimeError: requests.exceptions.ConnectionError: private-url"]), "subprocess_failure")
         self.assertEqual(failure_reason([b"RuntimeError: requests.exceptions.ReadTimeout: secret"]), "subprocess_failure")
         self.assertEqual(failure_reason([b"\xff"]), "subprocess_failure")
         for code, expected in ((429, "source_http_rate_limited"), (403, "source_http_access_denied"),

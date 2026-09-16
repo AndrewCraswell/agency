@@ -1,5 +1,18 @@
 import { expect, it } from "vitest"
-import { advanceStateContentCheckpoint, readStateContentCheckpoint } from "./state-content-checkpoint.js"
+import {
+  advanceStateContentCheckpoint,
+  readStateContentCheckpoint,
+  prioritizeStateContentBills
+} from "./state-content-checkpoint.js"
+
+it("prioritizes repairs without losing the pre-existing continuation backlog", () => {
+  const prefix = "bill:nc:2025:"
+  const existing = Array.from({ length: 10 }, (_, n) => `${prefix}hb:${n + 1}`)
+  const repair = `${prefix}hb:20`
+  expect(prioritizeStateContentBills([repair, existing[0]!], existing, prefix)).toEqual([repair, ...existing])
+  expect(() => prioritizeStateContentBills(["bill:ak:34:hb:1"], existing, prefix)).toThrow("scope")
+  expect(() => prioritizeStateContentBills([""], existing, prefix)).toThrow("empty")
+})
 
 it("retains queued embeddings without falsely completing a round when no discovery slot remains", () => {
   expect(

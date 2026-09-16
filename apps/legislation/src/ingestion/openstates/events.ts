@@ -87,6 +87,7 @@ export interface OpenStatesEventSnapshot {
   documents: DocumentInsert[]
   event: EventInsert
   organizationIds: string[]
+  organizationReferences?: string[]
   participants: ParticipantInsert[]
   sessionIds: string[]
 }

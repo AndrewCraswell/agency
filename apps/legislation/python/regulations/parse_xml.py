@@ -1,6 +1,6 @@
 """Bounded federal XML normalization. No network, credentials, or database access.
 
-Original Tabra implementation against official source XML, not copied Vaquill code.
+Original Rostra implementation against official source XML, not copied Vaquill code.
 Raw XML blocks are evidence, never trusted HTML. Output stays staged until TS validation.
 """
 from __future__ import annotations
@@ -22,6 +22,43 @@ FR_KINDS = {"RULE": "final_rule", "PRORULE": "proposed_rule", "NOTICE": "notice"
 ANNUAL_KINDS = {"TITLE", "SUBTITLE", "CHAPTER", "SUBCHAP", "PART", "SUBPART", "SUBJGRP", "SECTION", "APPENDIX"}
 TOC_TAGS = {"TOC", "CFRTOC", "CONTENTS", "TITLENO", "FMTR", "BMTR"}
 BREAK_TAGS = {"P", "FP", "PSPACE", "HD", "HEAD", "HED", "ROW", "TR", "SECTNO", "SUBJECT", "FRDOC", "LI"}
+
+# Reviewed against the official printed volume, pp. 39, 43 and 45, and its contents.
+# See docs/regulations/annual-title5-source-review.md. Never generalize this to
+# unreviewed revisions: another source hash must retain the normal scope gate.
+TITLE5_VOLUME2_HASH = "f698bb1a9b200dd7a35846e93f119b96c02e66785226e73d3644a8fab61b88c7"
+
+
+def reviewed_fr_identity(context: dict, path: str, number: str):
+    # Both official documents print 00-113. Citation/page and original locator,
+    # never input order or mixed API metadata, distinguish these observations.
+    # See docs/regulations/fr-source-identities.md for the printed-page review.
+    if (context["unit"]["nativeId"], context["artifactHash"], number) != (
+        "FR-2000-01-18", "5c8fa553adc3c2c5b041ac8b1b1cc6cac1edd4945111037bd4f4fbf574566201", "00-113"
+    ):
+        return None
+    return {
+        "/FEDREG[1]/RULES[1]/RULE[5]": "fr:2000-01-18:65:2537:rule",
+        "/FEDREG[1]/NOTICES[1]/NOTICE[62]": "fr:2000-01-18:65:2639:notice",
+    }.get(path)
+
+
+def reviewed_parent_paths(context: dict) -> dict[str, str]:
+    unit = context["unit"]
+    if (unit["sourceId"], unit["nativeId"], context["artifactHash"]) != (
+        "govinfo-cfr", "CFR-2025-title5-vol2", TITLE5_VOLUME2_HASH
+    ):
+        return {}
+    subchapter = "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/SUBCHAP[1]"
+    part = subchapter + "/PART[7]"
+    revision_a = part + "/SUBPART[1]/SECTION[6]/EFFDNOTP[1]/REVTXT[1]"
+    subpart_b = revision_a + "/SUBPART[2]"
+    revision_b = subpart_b + "/SECTION[6]/EFFDNOTP[1]/REVTXT[1]"
+    return {
+        subpart_b: part,
+        **{f"{revision_b}/SUBPART[{index}]": part for index in range(2, 6)},
+        **{f"{revision_b}/PART[{index}]": subchapter for index in range(1, 41)},
+    }
 
 
 def sha(value: bytes) -> str:
@@ -66,6 +103,7 @@ class Frame:
     parent_key: str | None
     ordinal: int | None
     namespaces: dict
+    logical_parent: Frame | None = None
     children: Counter = field(default_factory=Counter)
     retained_bytes: int = 0
     retained_elements: int = 1
@@ -130,10 +168,12 @@ class FederalParser:
         self.title_roots = 0
         self.quoted_scope_warning = False
         self.quoted_structure_count = 0
+        self.parent_corrections = reviewed_parent_paths(context)
+        self.applied_parent_corrections = set()
         title_match = re.search(r"title-?(\d+)", self.unit["nativeId"])
         self.title_number = title_match[1] if title_match else None
 
-    def is_record(self, tag: str, attrs: dict):
+    def is_record(self, tag: str, attrs: dict, ancestors: list[Frame]):
         if self.source == "ecfr":
             if re.fullmatch(r"DIV\d+", tag) is not None:
                 is_empty_group = attrs.get("TYPE") == "SUBJGRP" and attrs.get("EMPTY") == "true" and attrs.get("N") == ""
@@ -145,14 +185,14 @@ class FederalParser:
             return tag in FR_KINDS
         # Publisher effective-date notes quote replacement sections/subparts. Preserve those quotes
         # inside the enclosing provision; they are not additional current-code identities.
-        in_revision = any(frame.element.tag in {"REVTXT", "EFFDNOTP"} for frame in self.stack)
+        in_revision = any(frame.element.tag in {"REVTXT", "EFFDNOTP"} for frame in ancestors)
         if in_revision and tag in ANNUAL_KINDS:
             self.quoted_structure_count += 1
         if in_revision and (tag in {"TITLE", "CHAPTER", "SUBCHAP"} or self.quoted_structure_count >= 100) and not self.quoted_scope_warning:
             self.quoted_scope_warning = True
             self.warnings.append({"code": "quoted_revision_scope_review", "sourceLocator": self.stack[-1].path,
                                   "detail": "Quoted revision contains title/chapter structure or at least 100 structural nodes; review source nesting before publishing."})
-        return tag in ANNUAL_KINDS and not in_revision and not any(frame.element.tag in TOC_TAGS for frame in self.stack)
+        return tag in ANNUAL_KINDS and not in_revision and not any(frame.element.tag in TOC_TAGS for frame in ancestors)
 
     def start(self, tag, attrs):
         if len(self.stack) >= self.limits["maximumDepth"] or len(attrs) > 256:
@@ -169,13 +209,26 @@ class FederalParser:
             path = f"{parent.path}/{tag}[{parent.children[tag]}]"
         else:
             path = f"/{tag}[1]"
-        is_record = self.is_record(tag, attrs)
-        parent_key = next((frame.key for frame in reversed(self.stack) if frame.is_record), None)
+        logical_parent = self.stack[-1] if self.stack else None
+        if path in self.parent_corrections:
+            target = self.parent_corrections[path]
+            logical_parent = next((frame for frame in self.stack if frame.path == target and frame.is_record), None)
+            if logical_parent is None:
+                raise ValueError("Reviewed source correction parent missing")
+            self.applied_parent_corrections.add(path)
+        ancestors = []
+        ancestor = logical_parent
+        while ancestor is not None:
+            ancestors.append(ancestor)
+            ancestor = ancestor.logical_parent
+        is_record = self.is_record(tag, attrs, ancestors)
+        parent_key = next((frame.key for frame in ancestors if frame.is_record), None)
         ordinal = self.source_records if is_record else None
         key = sha(f"{self.unit['key']}\n{path}".encode()) if is_record else None
         if is_record:
             self.source_records += 1
         frame = Frame(ET.Element(tag, attrs), path, is_record, key, parent_key, ordinal, namespaces,
+                      logical_parent=logical_parent,
                       retained_bytes=len(tag.encode()) + sum(len(k.encode()) + len(v.encode()) for k, v in attrs.items()))
         self.stack.append(frame)
         self.tags[tag] += 1
@@ -253,6 +306,10 @@ class FederalParser:
                 raise ValueError("Federal Register document lacks an unambiguous document number")
             native_id = identities[0][1]
             identity_basis = "document_number"
+            citation_identity = reviewed_fr_identity(self.context, frame.path, native_id)
+            if citation_identity is not None:
+                native_id = citation_identity
+                identity_basis = "citation"
         if native_id in self.native_ids:
             raise ValueError("Duplicate regulatory native identity")
         self.native_ids.add(native_id)
@@ -318,6 +375,8 @@ def parse_file(input_path: Path, output: Path, context: dict):
         parser.Parse(b"", True)
         if input_hash.hexdigest() != context["artifactHash"]:
             raise ValueError("XML artifact hash mismatch")
+        if collector.applied_parent_corrections != set(collector.parent_corrections):
+            raise ValueError("Reviewed source correction inventory mismatch")
         if collector.source_records != shards.records or shards.records == 0:
             raise ValueError("XML record completeness mismatch or empty supported corpus")
         if collector.source != "govinfo-fr" and collector.title_roots != 1:

@@ -82,7 +82,8 @@ export function buildRegulatoryJudgmentPool(input: unknown, systemsInput: unknow
               text: record.input,
               grade: null,
               rationale: null,
-              reviewer: null
+              reviewer: null,
+              reviewerKind: null
             }
           })
       }

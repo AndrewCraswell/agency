@@ -14,6 +14,12 @@ const workosEnvironment = {
 } as const
 
 describe("loadConfig", () => {
+  it("keeps regulatory serving closed unless organizations are explicitly configured", () => {
+    expect(loadConfig({}).legalApi.allowedOrganizationIds).toEqual([])
+    expect(
+      loadConfig({ LEGISLATION_LEGAL_API_ORGANIZATIONS: "org-one, org-two" }).legalApi.allowedOrganizationIds
+    ).toEqual(["org-one", "org-two"])
+  })
   it("provides safe local defaults", () => {
     const config = loadConfig({})
 

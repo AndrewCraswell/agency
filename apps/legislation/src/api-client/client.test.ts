@@ -60,6 +60,33 @@ function client(fetch: FetchLike): LegislationApiClient {
 }
 
 describe("LegislationApiClient", () => {
+  it("preserves structured server error details through the strict client", async () => {
+    const fetch = vi.fn<FetchLike>().mockResolvedValue(
+      jsonResponse(
+        {
+          error: {
+            category: "conflict",
+            correlationId,
+            message: "Historical date selection is not available",
+            retryable: false,
+            details: { reason: "historical_coverage_unavailable" }
+          }
+        },
+        409
+      )
+    )
+    await expect(
+      client(fetch).listLegalProvisions(
+        "00000000-0000-4000-8000-000000000001",
+        { asOf: "2020-01-01" },
+        { correlationId }
+      )
+    ).rejects.toMatchObject({
+      category: "conflict",
+      status: 409,
+      details: { reason: "historical_coverage_unavailable" }
+    })
+  })
   it("injects request auth and propagates correlation IDs without exposing the token", async () => {
     const fetch = vi.fn<FetchLike>().mockResolvedValue(pageResponse())
 

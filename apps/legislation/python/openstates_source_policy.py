@@ -3,6 +3,84 @@
 from pathlib import Path
 
 PATCHES = {
+    "scrapers/ak/events.py": [
+        ('        r = requests.head(video_url)\n', '        r = requests.head(video_url, verify=True, timeout=(10, 60))\n'),
+        ('''        page = self.get(url, params=args, headers=headers, verify=False)
+        page = lxml.etree.fromstring(page.content)
+        return page
+''', '''        response = self.get(url, params=args, headers=headers, verify=True, timeout=(10, 60))
+        response.raise_for_status()
+        page = lxml.etree.fromstring(response.content)
+        if page.xpath("//*[local-name()='Error']"):
+            raise ValueError("alaska_meetings_source_error")
+        return page
+'''),
+        ('''            building = "Alaska State Capitol, 120 4th St, Juneau, AK 99801"
+            room_name = location
+''', '''            building = None
+            room_name = location
+'''),
+        ('''        if room_name:
+            # Combine room name with building address for full address
+            location = f"{room_name.upper()}, {building}"
+        else:
+            # No room name, so just use building address
+            location = building
+''', '''        # Preserve the publisher's location, including an unknown/empty value.
+        # An inferred building is not evidence of where the meeting occurred.
+        location = row.xpath("string(Location)").strip()
+'''),
+        ('self.tsbldg_room_re.match(location).group(1).title()', 'location'),
+        ('self.anch_lio_room_re.match(location).group(1).title()', 'location'),
+        ('''        event_name = f"{name}#{location}#{start_date}"
+        event = Event(
+            start_date=start_date, name=name, location_name=location, status=status
+''', '''        # This is a source occurrence key, not proof of continuity after rescheduling.
+        event_name = f"{row.xpath('string(chamber)')}:{committee_code}:{start_date.isoformat()}"
+        event = Event(
+            upstream_id=event_name,
+            start_date=start_date, name=name, location_name=location, status=status
+'''),
+        ('''                    self.warning(f"Duplicate event: {name}")
+                    continue
+''', '''                    raise ValueError("duplicate_alaska_meeting_occurrence")
+'''),
+        ("%Y-%m-%d%%20%H:00:00", "%Y-%m-%d%%20%H:%M:%S"),
+        ("import requests\n", "import requests\nfrom urllib.parse import quote\n"),
+        ("{committee_code}%20", "{quote(committee_code, safe='')}%20"),
+        ("        yield event, event_name\n", "        if not location:\n            event.location.pop('name', None)\n        yield event, event_name\n"),
+        ("import pytz\n", "import pytz\nimport json\nfrom pathlib import Path\nfrom .meeting_partition import partition_meetings\n"),
+        ("    def scrape(self, chamber=None, session=None, date_filter=None):\n", '''    def scrape(self, chamber=None, session=None, date_filter=None, event_keys=None):
+        selected = event_keys.split(",") if isinstance(event_keys, str) else []
+        if session != "34" or date_filter is not None or not 1 <= len(selected) <= 10 or len(set(selected)) != len(selected):
+            raise ValueError("invalid_event_batch")
+'''),
+        ('''        events_xml = page.xpath("//Meeting")
+''', '''        rows = page.xpath("//Meeting")
+        records = []
+        for row in rows:
+            raw_chamber = row.xpath("string(chamber)").strip()
+            sponsor = row.xpath("string(Sponsor)").strip()
+            scheduled = dateutil.parser.parse(row.xpath("string(Schedule)"))
+            if raw_chamber not in self.CHAMBERS or not sponsor or scheduled.tzinfo is None:
+                raise ValueError("invalid_alaska_meeting_identity")
+            key = f"{raw_chamber}:{sponsor}:{scheduled.isoformat()}"
+            records.append((key, lxml.etree.tostring(row)))
+        accepted, report = partition_meetings(records)
+        accepted_by_key = {}
+        for value in accepted:
+            row = lxml.etree.fromstring(value)
+            key = f"{row.xpath('string(chamber)').strip()}:{row.xpath('string(Sponsor)').strip()}:{dateutil.parser.parse(row.xpath('string(Schedule)')).isoformat()}"
+            accepted_by_key[key] = value
+        if not set(selected).issubset(accepted_by_key):
+            raise ValueError("selected_meeting_missing_or_quarantined")
+        report["selected_occurrences"] = sorted(selected)
+        report_path = Path("_data/ak/meeting_partition.json")
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(report), encoding="utf8")
+        events_xml = [lxml.etree.fromstring(accepted_by_key[key]) for key in sorted(selected)]
+''')
+    ],
     "scrapers/ak/__init__.py": [
         ("settings = dict(SCRAPELIB_TIMEOUT=600)", "settings = dict(SCRAPELIB_TIMEOUT=60)")
     ],
@@ -80,8 +158,15 @@ PATCHES = {
             bill_type = item[7].text
             bill_title = item[4].text
 '''),
+        ('''vdoc.xpath("//div[@class='row ncga-row-no-gutters']")''',
+         '''vdoc.xpath("//div[contains(concat(' ', normalize-space(@class), ' '), ' row ') and contains(concat(' ', normalize-space(@class), ' '), ' ncga-row-no-gutters ')][not(.//div[contains(concat(' ', normalize-space(@class), ' '), ' row ') and contains(concat(' ', normalize-space(@class), ' '), ' ncga-row-no-gutters ')])]")'''),
+        ('                    vote_type = "abstain"\n', '                    vote_type = "not voting"\n'),
     ],
     "scrapers/nc/events.py": [
+        ('''                if when < self._tz.localize(datetime.datetime.now()):
+                    status = "passed"
+''', '''                # Elapsed scheduled time is not evidence that a meeting occurred.
+'''),
         ('''                event = Event(
                     name=com_name,
 ''', '''                notice_urls = row.xpath('.//a[contains(@href,"/Committees/NoticeDocument/")]/@href')
@@ -138,3 +223,4 @@ def harden_source(source):
         path.write_bytes(content.encode("utf8"))
     # Included in the generated file manifest and verified again during image build.
     (source / "scrapers/ak/journal.py").write_bytes(Path(__file__).with_name("alaska_journal.py").read_bytes())
+    (source / "scrapers/ak/meeting_partition.py").write_bytes(Path(__file__).with_name("alaska_meeting_partition.py").read_bytes())

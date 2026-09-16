@@ -3,6 +3,7 @@ import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { digest } from "./contracts.js"
+import { requireLegalCopyReceiptRevisions } from "./copy-receipt-revisions.js"
 import { legalTransferGenerationSchema, legalTransferRowSchema } from "./passage-replication.js"
 import { legalPassageScopeSchema, readLegalPassageScope } from "./passage-storage.js"
 import { requireRights } from "./storage.js"
@@ -39,7 +40,7 @@ export async function searchCopiedLegalPassages(
       (await source.query("SELECT current_database() AS name")).rows[0]?.name !== "legislation_passage_search",
       "legal_search_wrong_source"
     )
-    await source.query("BEGIN")
+    await source.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
     await source.query("SET LOCAL lock_timeout='5s'")
     await source.query("SET LOCAL statement_timeout='15s'")
     const sourceScope = await readLegalPassageScope(source, scope)
@@ -127,6 +128,14 @@ export async function searchCopiedLegalPassages(
           [scopeKind, scopeId, input.preparationId, registration.inventory_hash, registration.expected_count]
         )
         invariant(receipt.rowCount === 1, "legal_search_scope_receipt_changed")
+        await requireLegalCopyReceiptRevisions(source, target, [
+          {
+            kind: scopeKind,
+            id: scopeId,
+            preparationId: z.string().parse(input.preparationId),
+            count: registration.expected_count
+          }
+        ])
       }
       const stored = await target.query(
         "SELECT metadata FROM legislation.legal_search_generations WHERE id=$1 FOR SHARE",

@@ -11,6 +11,18 @@ const systems = [
 ]
 
 describe("regulatory relevance review pool", () => {
+  it("pools no-answer candidates for blind review without inventing a relevant passage", () => {
+    const result = buildRegulatoryJudgmentPool(
+      {
+        ...manifest,
+        queries: [{ id: "q", input: "unsupported question", relevantIds: [], answerability: "no_answer" }]
+      },
+      systems
+    )
+    expect(result.queries[0]?.candidates.map((row) => row.id).sort()).toEqual(["a", "b"])
+    expect(result.queries[0]?.candidates.every((row) => row.grade === null && row.reviewer === null)).toBe(true)
+    expect(result.humanReviewComplete).toBe(false)
+  })
   it("retains pooled candidates and missed known answers without exposing ranking or fabricating grades", () => {
     const result = buildRegulatoryJudgmentPool(manifest, systems, 1)
     expect(result.queries[0]?.candidates.map((row) => row.id).sort()).toEqual(["a", "b", "c"])

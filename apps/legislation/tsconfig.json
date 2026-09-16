@@ -7,6 +7,9 @@
     "lib": ["DOM", "DOM.Iterable", "ES2024"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@/*": ["./app/*"]
+    },
     "noEmit": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
@@ -18,10 +21,16 @@
   },
   "include": [
     "next-env.d.ts",
+    "instrumentation.ts",
+    "instrumentation-client.ts",
+    "sentry.*.config.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
     "proxy.ts",
     "scripts/next-router-acceptance.test.ts",
+    "tools/agent/evaluate-agent.ts",
+    "tools/agent/regrade-agent.ts",
+    "tools/agent/summarize-agent-comparison.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": ["node_modules"]

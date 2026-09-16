@@ -16,7 +16,7 @@ afterEach(async () => {
 })
 
 async function fixture(titles = [1]) {
-  const root = await mkdtemp(join(tmpdir(), "tabra-parser-replay-"))
+  const root = await mkdtemp(join(tmpdir(), "rostra-parser-replay-"))
   roots.push(root)
   const manifest = await planRegulatoryBackfill(
     { cutoff: "2026-09-14", ecfrTitles: titles, federalRegister: null, annualCfr: null },
@@ -91,7 +91,7 @@ async function fixture(titles = [1]) {
   }
 }
 
-describe("bounded retained parser replay", () => {
+describe("bounded retained parser replay", { timeout: 30_000 }, () => {
   // Real parsing plus repeated retained-output validation can exceed five seconds under full coverage.
   it(
     "replays identical bytes offline and revalidates existing current output on retry",
@@ -121,24 +121,28 @@ describe("bounded retained parser replay", () => {
       expect(fetch).not.toHaveBeenCalled()
     }
   )
-  it("requires review when source-date evidence differs even with identical record shards", async () => {
-    const { input, data } = await fixture()
-    const previous = data[0]
-    invariant(previous, "Expected fixture")
-    await writeFile(
-      join(previous.directory, "summary.json"),
-      JSON.stringify({
-        ...previous.summary,
-        warnings: [{ code: "source_date_mismatch", sourceLocator: "/ECFR", detail: "Fixture discrepancy" }]
+  it(
+    "requires review when source-date evidence differs even with identical record shards",
+    { timeout: 30_000 },
+    async () => {
+      const { input, data } = await fixture()
+      const previous = data[0]
+      invariant(previous, "Expected fixture")
+      await writeFile(
+        join(previous.directory, "summary.json"),
+        JSON.stringify({
+          ...previous.summary,
+          warnings: [{ code: "source_date_mismatch", sourceLocator: "/ECFR", detail: "Fixture discrepancy" }]
+        })
+      )
+      const result = await replayRegulatoryParserBatch(input)
+      expect(result).toMatchObject({ exhausted: true, reviewRequired: true, failures: [] })
+      expect(result.results[0]).toMatchObject({
+        disposition: "review_required",
+        comparisons: [expect.objectContaining({ changedFields: ["warnings"], identical: false })]
       })
-    )
-    const result = await replayRegulatoryParserBatch(input)
-    expect(result).toMatchObject({ exhausted: true, reviewRequired: true, failures: [] })
-    expect(result.results[0]).toMatchObject({
-      disposition: "review_required",
-      comparisons: [expect.objectContaining({ changedFields: ["warnings"], identical: false })]
-    })
-  })
+    }
+  )
   // Four real Python parses plus file validation need headroom during repository-wide coverage.
   it(
     "does not advance past a damaged title and resumes from the last completed unit",

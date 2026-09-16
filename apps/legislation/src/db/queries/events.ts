@@ -1,4 +1,5 @@
-import { inArray, sql } from "drizzle-orm"
+import { isDeepStrictEqual } from "node:util"
+import { eq, inArray, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../database.js"
 import {
   eventAgendaItemAmendments,
@@ -11,15 +12,22 @@ import {
   eventSessions,
   legislativeSessions,
   organizations,
-  legislativeEvents
+  legislativeEvents,
+  bills,
+  syncCheckpoints
 } from "../schema/schema.js"
+import { assertBillBatchOwnership, type BillBatchOwnership } from "./bill-batch-ownership.js"
 import { observeCanonicalRecord } from "./changes.js"
+import { resolveAgendaBillReferences } from "./event-bill-references.js"
+import { resolveEventOrganizationReferences } from "./event-organization-references.js"
+import { promotionAlreadyCommitted } from "./promotion-receipt.js"
 
 export interface EventSnapshot {
   agendaItems: EventAgendaItemSnapshot[]
   documents: Array<typeof eventDocuments.$inferInsert>
   event: typeof legislativeEvents.$inferInsert
   organizationIds?: readonly string[]
+  organizationReferences?: readonly string[]
   participants: Array<typeof eventParticipants.$inferInsert>
   sessionIds?: readonly string[]
 }
@@ -29,18 +37,133 @@ export interface EventAgendaItemSnapshot {
   amendmentIds: readonly string[]
   billIds: readonly string[]
   materialIds: readonly string[]
+  /** Explicit source identifiers only; never inferred from agenda prose. */
+  billReferences?: readonly { identifier: string; sessionId: string; jurisdictionId: string }[]
+}
+
+/** Reconcile unchanged admitted snapshots. Readiness refresh is explicit; source facts are never rewritten. */
+export async function reconcileEventSnapshotRelationships(
+  database: LegislationDatabase,
+  snapshots: readonly EventSnapshot[],
+  options: { refreshReadiness?: boolean } = {}
+) {
+  if (snapshots.length === 0) {
+    return { events: 0, billLinks: 0, organizationLinks: 0 }
+  }
+  const prepared = await prepareEventSnapshots(database, snapshots)
+  const ids = prepared.map((item) => item.event.id)
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("Duplicate event reconciliation identity")
+  }
+  const evidenceKey = (event: EventSnapshot["event"]) => [
+    event.id,
+    event.sourceId ?? null,
+    event.sourceUrl ?? null,
+    event.startAt?.toISOString() ?? null,
+    event.name,
+    event.status,
+    event.jurisdictionId,
+    event.classification ?? null,
+    event.description ?? null,
+    event.endAt?.toISOString() ?? null,
+    event.publisherLocalDate ?? null,
+    event.location ?? null,
+    event.virtualAccess ?? null,
+    event.isRemote ?? null,
+    event.allDay ?? false,
+    event.isDeleted ?? false
+  ]
+  return database.transaction(async (transaction) => {
+    await transaction.execute(
+      sql`select set_config('statement_timeout', '60000', true), set_config('lock_timeout', '10000', true)`
+    )
+    const existing = await transaction
+      .select()
+      .from(legislativeEvents)
+      .where(inArray(legislativeEvents.id, ids))
+      .for("update")
+    if (
+      existing.length !== prepared.length ||
+      prepared.some((item) => !existing.some((row) => isDeepStrictEqual(evidenceKey(row), evidenceKey(item.event))))
+    ) {
+      throw new Error("Event changed or is missing; refuse relationship reconciliation")
+    }
+    const agenda = prepared.flatMap((item) => item.agendaItems)
+    const expectedAgenda = agenda.map((item) => item.agendaItem.id).sort()
+    const storedAgenda = await transaction
+      .select({ id: eventAgendaItems.id })
+      .from(eventAgendaItems)
+      .where(inArray(eventAgendaItems.eventId, ids))
+    if (JSON.stringify(storedAgenda.map((item) => item.id).sort()) !== JSON.stringify(expectedAgenda)) {
+      throw new Error("Agenda changed; refuse relationship reconciliation")
+    }
+    const links = agendaItemLinkRows(agenda).billLinks
+    const organizationLinks = prepared.flatMap((item) =>
+      (item.organizationIds ?? []).map((organizationId) => ({ eventId: item.event.id, organizationId }))
+    )
+    if (expectedAgenda.length) {
+      await transaction.delete(eventAgendaItemBills).where(inArray(eventAgendaItemBills.agendaItemId, expectedAgenda))
+    }
+    await transaction.delete(eventOrganizations).where(inArray(eventOrganizations.eventId, ids))
+    if (links.length) {
+      await transaction.insert(eventAgendaItemBills).values(links)
+    }
+    if (organizationLinks.length) {
+      await transaction.insert(eventOrganizations).values(organizationLinks)
+    }
+    if (options.refreshReadiness) {
+      await transaction.delete(eventSessions).where(inArray(eventSessions.eventId, ids))
+      const sessionLinks = prepared.flatMap((item) =>
+        (item.sessionIds ?? []).map((sessionId) => ({ eventId: item.event.id, sessionId }))
+      )
+      if (sessionLinks.length) {
+        await transaction.insert(eventSessions).values(sessionLinks)
+      }
+      for (const item of prepared) {
+        await transaction
+          .update(legislativeEvents)
+          .set({
+            canonicalFactsComplete: item.event.canonicalFactsComplete === true,
+            sessionRelationsComplete: item.event.sessionRelationsComplete === true,
+            organizationRelationsComplete: item.event.organizationRelationsComplete === true
+          })
+          .where(eq(legislativeEvents.id, item.event.id))
+      }
+    }
+    return { events: prepared.length, billLinks: links.length, organizationLinks: organizationLinks.length }
+  })
 }
 
 export async function upsertEventSnapshots(
   database: LegislationDatabase,
-  snapshots: readonly EventSnapshot[]
+  snapshots: readonly EventSnapshot[],
+  options: {
+    receipt?: { source: string; stream: string; cursor: Record<string, unknown> }
+    ownership?: BillBatchOwnership
+  } = {}
 ): Promise<void> {
+  if (
+    options.ownership &&
+    (!options.receipt ||
+      (options.receipt.source === options.ownership.source && options.receipt.stream === options.ownership.stream))
+  ) {
+    throw new Error("Owned event promotion requires a separate immutable receipt")
+  }
   if (snapshots.length === 0) {
+    if (options.receipt) {
+      throw new Error("Cannot receipt an empty event batch")
+    }
     return
   }
   const preparedSnapshots = await prepareEventSnapshots(database, snapshots)
   const eventIds = preparedSnapshots.map((snapshot) => snapshot.event.id)
   await database.transaction(async (transaction) => {
+    if (options.receipt && (await promotionAlreadyCommitted(transaction, options.receipt))) {
+      return
+    }
+    if (options.ownership) {
+      await assertBillBatchOwnership(transaction, options.ownership)
+    }
     await transaction
       .insert(legislativeEvents)
       .values(preparedSnapshots.map((snapshot) => snapshot.event))
@@ -130,6 +253,9 @@ export async function upsertEventSnapshots(
         sourceUpdatedAt: snapshot.event.sourceUpdatedAt ?? undefined
       })
     }
+    if (options.receipt) {
+      await transaction.insert(syncCheckpoints).values({ ...options.receipt, updatedAt: new Date() })
+    }
   })
 }
 
@@ -142,6 +268,35 @@ async function prepareEventSnapshots(
   database: LegislationDatabase,
   snapshots: readonly EventSnapshot[]
 ): Promise<EventSnapshot[]> {
+  const references = snapshots.flatMap((snapshot) => snapshot.agendaItems.flatMap((item) => item.billReferences ?? []))
+  const candidates =
+    references.length === 0
+      ? []
+      : await database
+          .select({
+            id: bills.id,
+            identifier: bills.identifier,
+            sessionId: bills.sessionId,
+            jurisdictionId: bills.jurisdictionId
+          })
+          .from(bills)
+          .where(inArray(bills.sessionId, [...new Set(references.map((item) => item.sessionId))]))
+  snapshots = resolveAgendaBillReferences(snapshots, candidates)
+  const organizationReferenceScopes = [
+    ...new Set(snapshots.filter((item) => item.organizationReferences?.length).map((item) => item.event.jurisdictionId))
+  ]
+  const organizationCandidates =
+    organizationReferenceScopes.length === 0
+      ? []
+      : await database
+          .select({
+            id: organizations.id,
+            jurisdictionId: organizations.jurisdictionId,
+            upstreamIds: organizations.upstreamIds
+          })
+          .from(organizations)
+          .where(inArray(organizations.jurisdictionId, organizationReferenceScopes))
+  snapshots = resolveEventOrganizationReferences(snapshots, organizationCandidates)
   const sessionIds = uniqueIds(
     snapshots.flatMap((snapshot) => [...(snapshot.sessionIds ?? [])]),
     "sessionId"

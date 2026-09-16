@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import { digest } from "./contracts.js"
 import { compareRegulatoryEmbeddingSmoke } from "./embedding-smoke.js"
 
 const manifest = {
@@ -12,7 +13,55 @@ const manifest = {
 const requestSchema = z.object({ model: z.string(), input: z.array(z.string()), input_type: z.string().optional() })
 
 describe("regulatory embedding smoke", () => {
-  it("batches larger corpora without dropping inputs and aggregates document usage", async () => {
+  it(
+    "retains no-answer rankings separately from answerable metrics and does not claim abstention",
+    { timeout: 30_000 },
+    async () => {
+      const result = await compareRegulatoryEmbeddingSmoke(
+        {
+          ...manifest,
+          queries: [
+            ...manifest.queries,
+            { id: "unsupported", input: "uncovered jurisdiction", relevantIds: [], answerability: "no_answer" }
+          ]
+        },
+        {
+          apiKey: "fixture",
+          fetch: async (_url, init) => {
+            const request = requestSchema.parse(JSON.parse(String(init?.body)))
+            const dimensions = request.model.startsWith("openai/") ? 1536 : 1024
+            return Response.json({
+              model: request.model,
+              data: request.input.map((_, index) => ({
+                index,
+                embedding: Array.from({ length: dimensions }, (_value, dimension) => Number(dimension === index))
+              }))
+            })
+          }
+        }
+      )
+      for (const system of result.results) {
+        expect(system.queries[0]).toMatchObject({ answerability: "answerable", metrics: { recallAt25: 1 } })
+        expect(system.queries[1]).toMatchObject({ answerability: "no_answer", metrics: null })
+        expect(system.queries[1]?.ranked).toHaveLength(2)
+      }
+      expect(result.noAnswerEvaluationComplete).toBe(false)
+      expect(result.modelSelected).toBe(false)
+    }
+  )
+  it("requires explicit no-answer intent and rejects contradictory relevant IDs before network", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>()
+    for (const query of [
+      { id: "q", input: "question", relevantIds: [] },
+      { id: "q", input: "question", relevantIds: ["a"], answerability: "no_answer" }
+    ]) {
+      await expect(
+        compareRegulatoryEmbeddingSmoke({ ...manifest, queries: [query] }, { apiKey: "fixture", fetch })
+      ).rejects.toThrow(z.ZodError)
+    }
+    expect(fetch).not.toHaveBeenCalled()
+  })
+  it("batches larger corpora without dropping inputs and aggregates document usage", { timeout: 30_000 }, async () => {
     const lengths: number[] = []
     const records = Array.from({ length: 65 }, (_, index) => ({
       id: `r${index}`,
@@ -62,12 +111,48 @@ describe("regulatory embedding smoke", () => {
     expect(requests.map((request) => request.input_type)).toEqual([undefined, undefined, "document", "query"])
     expect(requests[0]?.input).toEqual(manifest.records.map((record) => record.input))
     expect(result.results.map((row) => row.dimensions)).toEqual([1536, 1024])
+    expect(result.qualification.map((row) => row.model)).toEqual(["openai/text-embedding-3-small", "voyageai/voyage-4"])
+    for (const qualified of result.qualification) {
+      expect(qualified.tokenizerId.length).toBeGreaterThan(0)
+      expect(qualified.records.map((record) => record.inputHash)).toEqual(
+        manifest.records.map((record) => digest(record.input))
+      )
+      expect(
+        qualified.records.every((record) => Number.isInteger(record.tokenCount) && Number(record.tokenCount) > 0)
+      ).toBe(true)
+      expect(qualified.queries[0]?.inputHash).toBe(digest("hazardous chemical warning"))
+    }
     expect(result.results.every((row) => row.queries[0]?.ranked[0]?.versionId === "a1")).toBe(true)
     expect(result).toMatchObject({
       modelSelected: false,
       bulkEmbeddingAuthorized: false,
       heldOutEvaluationComplete: false
     })
+  })
+  it("rejects a token-heavy late batch before sending otherwise valid early batches", { timeout: 30_000 }, async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>()
+    const records = Array.from({ length: 65 }, (_, index) => ({
+      id: `r${index}`,
+      versionId: `v${index}`,
+      input: index === 64 ? "🙂".repeat(4500) : "valid source"
+    }))
+    await expect(
+      compareRegulatoryEmbeddingSmoke(
+        { records, queries: [{ id: "q", input: "source", relevantIds: ["r0"] }] },
+        { apiKey: "fixture", fetch }
+      )
+    ).rejects.toThrow("embedding_input_token_limit")
+    expect(fetch).not.toHaveBeenCalled()
+  })
+  it("rejects an invalid query before embedding documents", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>()
+    await expect(
+      compareRegulatoryEmbeddingSmoke(
+        { ...manifest, queries: [{ id: "q", input: "\ud800", relevantIds: ["a"] }] },
+        { apiKey: "fixture", fetch }
+      )
+    ).rejects.toThrow(z.ZodError)
+    expect(fetch).not.toHaveBeenCalled()
   })
   it("rejects oversized inputs before network and rejects unknown judgment IDs", async () => {
     await expect(

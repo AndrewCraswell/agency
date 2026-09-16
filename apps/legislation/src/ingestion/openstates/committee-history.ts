@@ -1,5 +1,6 @@
 import { parseDocument } from "yaml"
 import { z } from "zod"
+import { alaskaCommitteeIdentifiers } from "./committee-identifiers.js"
 import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
 
 const chamberSchema = z.enum(["upper", "lower", "legislature"])
@@ -11,6 +12,7 @@ const committeeSchema = z.object({
   chamber: chamberSchema.optional(),
   parent: z.string().nullable().optional(),
   links: z.unknown().optional(),
+  sources: z.unknown().optional(),
   members: z.array(
     z.object({
       name: z.string().min(1),
@@ -104,6 +106,19 @@ export function inventoryCommitteeHistory(
     }
     return {
       ...committeeHomepage(committee.links),
+      officialIdentifiers:
+        state === "ak"
+          ? {
+              ...alaskaCommitteeIdentifiers(
+                committee.links,
+                committee.chamber ?? (parentChamber.success ? parentChamber.data : null)
+              ),
+              ...alaskaCommitteeIdentifiers(
+                committee.sources,
+                committee.chamber ?? (parentChamber.success ? parentChamber.data : null)
+              )
+            }
+          : {},
       committeeId: committee.id,
       name: committee.name,
       classification: committee.classification,

@@ -1,6 +1,21 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
 import { linksSchema, resourceSchema, pageSchema, searchPageSchema } from "./envelopes.js"
+import {
+  legalEditionsRequestSchema,
+  legalProvisionsRequestSchema,
+  validateLegalEditionsResponse,
+  validateLegalProvisionsResponse,
+  type LegalEditionsRequest,
+  type LegalProvisionsRequest
+} from "./legal-browse-contract.js"
+import { legalCodesRequestSchema, validateLegalCodesResponse, type LegalCodesRequest } from "./legal-codes-contract.js"
+import {
+  legalSearchRequestSchema,
+  validateLegalSearchResponse,
+  type LegalSearchRequest
+} from "./legal-search-contract.js"
+import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract.js"
 
 const errorCategories = [
   "conflict",
@@ -61,6 +76,7 @@ const errorResponseSchema = z
         category: z.enum(errorCategories),
         correlationId: z.string().min(1),
         message: z.string().min(1),
+        details: z.record(z.string(), z.json()).optional(),
         retryable: z.boolean()
       })
       .strict()
@@ -107,6 +123,7 @@ type Request = Readonly<{
 }>
 
 export class LegislationApiError extends Error {
+  readonly details: ErrorResponse["error"]["details"]
   readonly category: ErrorCategory
   readonly correlationId: string
   readonly retryable: boolean
@@ -115,6 +132,7 @@ export class LegislationApiError extends Error {
   constructor(status: number, response: ErrorResponse) {
     super(response.error.message)
     this.name = "LegislationApiError"
+    this.details = response.error.details
     this.category = response.error.category
     this.correlationId = response.error.correlationId
     this.retryable = response.error.retryable
@@ -369,6 +387,55 @@ export class LegislationApiClient {
     return this.#resource({ method: "GET", path: `/api/documents/${segment(id)}`, query }, options)
   }
 
+  async listLegalCodes(query: LegalCodesRequest = {}, options?: ApiRequestOptions) {
+    const input = legalCodesRequestSchema.parse(query)
+    const result = await this.#request({ method: "GET", path: "/api/legal/codes", query: input }, options)
+    try {
+      return validateLegalCodesResponse(result, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal codes response")
+    }
+  }
+
+  async listLegalEditions(codeId: string, query: LegalEditionsRequest = {}, options?: ApiRequestOptions) {
+    const input = legalEditionsRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/codes/${segment(codeId)}/editions`, query: input },
+      options
+    )
+    try {
+      return validateLegalEditionsResponse(result, codeId, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal editions response")
+    }
+  }
+
+  async listLegalProvisions(codeId: string, query: LegalProvisionsRequest = {}, options?: ApiRequestOptions) {
+    const input = legalProvisionsRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/codes/${segment(codeId)}/provisions`, query: input },
+      options
+    )
+    try {
+      return validateLegalProvisionsResponse(result, codeId, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal provisions response")
+    }
+  }
+
+  async getLegalText(versionId: string, query: LegalTextRequest, options?: ApiRequestOptions) {
+    const input = legalTextRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/versions/${segment(versionId)}/text`, query: input },
+      options
+    )
+    try {
+      return validateLegalTextResponse(result, versionId, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal text response")
+    }
+  }
+
   getDocumentSections(id: string, query?: Query, options?: ApiRequestOptions): Promise<PageResponse> {
     return this.#page({ method: "GET", path: `/api/documents/${segment(id)}/sections`, query }, options)
   }
@@ -434,6 +501,16 @@ export class LegislationApiClient {
 
   getResources(body: ApiRequestBody, options?: ApiRequestOptions): Promise<BatchResponse> {
     return this.#batch({ body, method: "POST", path: "/api/resources/batch" }, options)
+  }
+
+  async searchLegal(body: LegalSearchRequest, options?: ApiRequestOptions) {
+    const input = legalSearchRequestSchema.parse(body)
+    const result = await this.#request({ method: "POST", path: "/api/search/legal", body: input }, options)
+    try {
+      return validateLegalSearchResponse(result, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal search response")
+    }
   }
 
   searchBills(body: ApiRequestBody, options?: ApiRequestOptions): Promise<SearchPageResponse> {

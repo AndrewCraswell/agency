@@ -17,6 +17,14 @@ export interface OcrClient {
   recognize(input: Readonly<{ bytes: Uint8Array; contentType: string; documentId: string }>): Promise<OcrResult>
 }
 
+/** A successful provider analysis found no text; this is not a transport failure. */
+export class OcrNoUsableTextError extends Error {
+  constructor() {
+    super("Azure Document Intelligence returned no usable text")
+    this.name = "OcrNoUsableTextError"
+  }
+}
+
 interface AccessTokenCredential {
   getToken(scopes: string | string[]): Promise<Readonly<{ token: string }> | null>
 }
@@ -119,10 +127,13 @@ export class AzureDocumentIntelligenceClient implements OcrClient {
         throw new AzureDocumentIntelligenceError(providerFailureMessage(body), { retryable: false })
       }
       const content = body.analyzeResult.content
-      if (typeof content !== "string" || content.trim().length === 0) {
-        throw new AzureDocumentIntelligenceError("Azure Document Intelligence returned no usable text", {
-          retryable: false
+      if (typeof content !== "string") {
+        throw new AzureDocumentIntelligenceError("Azure Document Intelligence returned an invalid content field", {
+          retryable: true
         })
+      }
+      if (content.trim().length === 0) {
+        throw new OcrNoUsableTextError()
       }
       const pages = body.analyzeResult.pages
       const pageSpans = parsePageSpans(pages, content)

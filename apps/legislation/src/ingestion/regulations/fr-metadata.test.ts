@@ -252,7 +252,7 @@ describe("Federal Register metadata inventories", () => {
   })
 
   it("reuses immutable cached response evidence and refuses damaged cache files", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "tabra-fr-metadata-"))
+    const directory = await mkdtemp(join(tmpdir(), "rostra-fr-metadata-"))
     directories.push(directory)
     const request = vi.fn<typeof fetch>(async () => Response.json(fixture))
     const read = createFrMetadataReader(directory, { fetch: request, minimumIntervalMs: 0 })
@@ -273,7 +273,7 @@ describe("Federal Register metadata inventories", () => {
     ["throttle", 429, "application/json"],
     ["server", 503, "application/json"]
   ])("retains failure semantics for %s responses", async (_kind, status, contentType) => {
-    const directory = await mkdtemp(join(tmpdir(), "tabra-fr-http-"))
+    const directory = await mkdtemp(join(tmpdir(), "rostra-fr-http-"))
     directories.push(directory)
     const request = vi.fn<typeof fetch>(
       async () => new Response("{}", { status: Number(status), headers: { "content-type": String(contentType) } })
@@ -285,7 +285,7 @@ describe("Federal Register metadata inventories", () => {
   })
 
   it("resumes saved pages after a provider failure and commits only a complete manifest", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "tabra-fr-resume-"))
+    const directory = await mkdtemp(join(tmpdir(), "rostra-fr-resume-"))
     directories.push(directory)
     const first = fixture.results[0]
     const second = fixture.results[1]

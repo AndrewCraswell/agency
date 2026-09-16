@@ -89,7 +89,7 @@ export async function inspectFrPdf(path: string, documentNumber: string) {
 
 /** Hard process timeout and heap ceiling keep malformed local artifacts out of the orchestration process. */
 export async function validateFrPdfInWorker(path: string, documentNumber: string) {
-  const worker = fileURLToPath(new URL("../../../scripts/inspect-fr-pdf.ts", import.meta.url))
+  const worker = fileURLToPath(new URL("./workers/inspect-fr-pdf.ts", import.meta.url))
   const result = await execute(
     process.execPath,
     ["--max-old-space-size=512", "--import", "tsx", worker, path, documentNumber],

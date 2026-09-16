@@ -37,7 +37,7 @@ describe("committee repository observation import", () => {
     (state) => {
       const result = prepareCommitteeRepositoryImport(files(state), [], now, state)
       expect(result.plan.held).toHaveLength(1)
-      expect(result.snapshot.organizations).toHaveLength(1)
+      expect(result.snapshot.organizations).toHaveLength(2)
       expect(result.snapshot.organizations[0]).toMatchObject({
         chamber: "lower",
         membershipRelationsComplete: false,
@@ -55,6 +55,17 @@ describe("committee repository observation import", () => {
       )
     }
   )
+  it("persists identity-only observations when every roster is held", async () => {
+    const input = files("ak").filter((file) => file.path.endsWith("held.yml"))
+    const result = prepareCommitteeRepositoryImport(input, [], now, "ak")
+    expect(result.snapshot.organizations).toHaveLength(1)
+    expect(result.snapshot.memberships).toEqual([])
+    expect(result.snapshot.organizations[0]?.membershipRelationsComplete).toBe(false)
+    const persist = vi.fn<typeof replaceEntitySnapshot>().mockResolvedValue(undefined)
+    const database = drizzle({ connection: "postgresql://unused", schema })
+    await importCommitteeRepository(database, "ak", input, [], now, persist)
+    expect(persist).toHaveBeenCalledOnce()
+  })
   it("uses the guarded atomic writer and keeps the checkpoint incomplete", async () => {
     const persist = vi.fn<typeof replaceEntitySnapshot>().mockResolvedValue(undefined)
     const database = drizzle({ connection: "postgresql://unused", schema })

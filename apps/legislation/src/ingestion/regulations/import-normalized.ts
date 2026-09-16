@@ -5,6 +5,7 @@ import { createInterface } from "node:readline"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import { resolveAnnualCfrObservation } from "./annual-cfr-observations.js"
 import { receiptSchema, validateRegulatoryArtifactRetention } from "./artifact-backfill.js"
 import { inspectCanonicalRegulatoryReuse } from "./canonical-reuse.js"
 import { sameRegulatoryAcquisition, validateManifest } from "./contracts.js"
@@ -66,6 +67,12 @@ export async function importNormalizedRegulatoryUnit(
       [generationId]
     )
     const state = existing.rows[0]?.state
+    if (receipt.unit.sourceId === "govinfo-cfr" && (state === "blocked" || state === "observed")) {
+      const observation = await resolveAnnualCfrObservation(pool, lease)
+      if (observation) {
+        return { generationId, state: "observed", observation, reused: observation.reused }
+      }
+    }
     if (receipt.unit.sourceId === "govinfo-fr" && state === "published") {
       return { generationId, state, reused: true }
     }
@@ -106,6 +113,12 @@ export async function importNormalizedRegulatoryUnit(
     }
     const validated = await validateStagedRegulatoryImport(pool, lease)
     if (validated === "blocked") {
+      if (receipt.unit.sourceId === "govinfo-cfr") {
+        const observation = await resolveAnnualCfrObservation(pool, lease)
+        if (observation) {
+          return { generationId, state: "observed", observation, reused: observation.reused }
+        }
+      }
       const reason = await pool.query<{ blocked_reason: string }>(
         "SELECT blocked_reason FROM legislation.legal_import_generations WHERE id=$1",
         [generationId]
@@ -117,9 +130,9 @@ export async function importNormalizedRegulatoryUnit(
       return {
         generationId,
         editionId,
-        state: "materialized",
-        publicationReady: false,
-        reason: "awaiting_complete_annual_title"
+        state: state === "published" ? "published" : "materialized",
+        publicationReady: state === "published",
+        reason: state === "published" ? undefined : "awaiting_complete_annual_title"
       }
     }
     // Capture expected pointer before materialization. Concurrent publishers force an explicit replay.

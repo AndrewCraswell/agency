@@ -3,6 +3,35 @@ import type { CanonicalBillAggregate } from "../../legislation/model.js"
 import type { LegislationDatabase } from "../database.js"
 import { billActions, billSponsors, votes, votePositions } from "../schema/schema.js"
 
+export function persistedVoteId(
+  incoming: { id: string; billId?: string | null; sourceUrl?: string | null; sourceId?: string | null },
+  previous: readonly { id: string; billId: string | null; sourceUrl: string | null; sourceId: string | null }[]
+): string {
+  const sameId = previous.find((vote) => vote.id === incoming.id)
+  if (
+    sameId &&
+    (sameId.billId !== (incoming.billId ?? null) ||
+      sameId.sourceUrl !== (incoming.sourceUrl ?? null) ||
+      sameId.sourceId !== (incoming.sourceId ?? null))
+  ) {
+    throw new Error("Persisted vote identity changed its source or bill ownership")
+  }
+  const matches = previous.filter(
+    (vote) =>
+      vote.id === incoming.id ||
+      (typeof incoming.billId === "string" &&
+        typeof incoming.sourceUrl === "string" &&
+        typeof incoming.sourceId === "string" &&
+        vote.sourceId === incoming.sourceId &&
+        vote.billId === incoming.billId &&
+        vote.sourceUrl === incoming.sourceUrl)
+  )
+  if (matches.length > 1) {
+    throw new Error("Ambiguous persisted vote source identity")
+  }
+  return matches[0]?.id ?? incoming.id
+}
+
 /** Retain an existing resolution on the same observation, never resolve another observation by name. */
 export async function preserveBillResolvedLinks(
   database: Omit<LegislationDatabase, "$client">,
@@ -40,7 +69,8 @@ export async function preserveBillResolvedLinks(
       }
     }),
     votes: aggregate.votes?.map((entry) => {
-      const previous = votesById.get(entry.vote.id)
+      const voteId = persistedVoteId(entry.vote, previousVotes)
+      const previous = votesById.get(voteId)
       if (
         previous &&
         (previous.billId !== entry.vote.billId || previous.sourceUrl !== (entry.vote.sourceUrl ?? null))
@@ -51,13 +81,14 @@ export async function preserveBillResolvedLinks(
         ...entry,
         vote: {
           ...entry.vote,
+          id: voteId,
           organizationId: entry.vote.organizationId === undefined ? previous?.organizationId : entry.vote.organizationId
         },
         positions:
           entry.positions === undefined
-            ? previousPositions.filter((position) => position.voteId === entry.vote.id)
+            ? previousPositions.filter((position) => position.voteId === voteId)
             : entry.positions.map((position) => {
-                const prior = positionsByKey.get(JSON.stringify([position.voteId, position.sourceIdentity]))
+                const prior = positionsByKey.get(JSON.stringify([voteId, position.sourceIdentity]))
                 if (prior?.personId && position.personId === undefined) {
                   if (
                     prior.sourceName !== (position.sourceName ?? null) ||
@@ -65,9 +96,9 @@ export async function preserveBillResolvedLinks(
                   ) {
                     throw new Error("Resolved vote observation changed source identity")
                   }
-                  return { ...position, personId: prior.personId, sourcePersonId: prior.sourcePersonId }
+                  return { ...position, voteId, personId: prior.personId, sourcePersonId: prior.sourcePersonId }
                 }
-                return position
+                return { ...position, voteId }
               })
       }
     })

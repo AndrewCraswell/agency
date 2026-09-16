@@ -7,7 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const packageDirectory = join(dirname(fileURLToPath(import.meta.url)), "..")
 const packageRequire = createRequire(join(packageDirectory, "package.json"))
-const buildTimeoutMs = 240_000
+// A cold standalone build includes monorepo file tracing and competes with coverage workers.
+// This is setup time, not the API request latency contract below.
+const buildTimeoutMs = 600_000
 const maximumBatchBytes = 5 * 1024 * 1024
 const requestTimeoutMs = 10_000
 const shutdownTimeoutMs = 10_000
@@ -1097,7 +1099,7 @@ async function runNext(
   environment: NodeJS.ProcessEnv,
   timeoutMs: number
 ): Promise<void> {
-  const child = spawn(process.execPath, ["scripts/next.mjs", ...arguments_], {
+  const child = spawn(process.execPath, [packageRequire.resolve("next/dist/bin/next"), ...arguments_], {
     cwd: packageDirectory,
     env: environment,
     stdio: ["ignore", "pipe", "pipe"]

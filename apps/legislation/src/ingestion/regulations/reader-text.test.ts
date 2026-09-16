@@ -8,7 +8,7 @@ import {
   legalSelectionSchema,
   validateLegalEditionContext
 } from "./reader-contract.js"
-import { buildLegalTextProjection, readLegalTextWindow } from "./reader-text.js"
+import { buildLegalTextProjection, buildStoredLegalTextProjection, readLegalTextWindow } from "./reader-text.js"
 
 const scope = {
   callerKey: "caller-a",
@@ -25,6 +25,21 @@ const block = (text: string, ordinal = 0, kind: "text" | "table" | "heading" | "
 })
 
 describe("legal reader contract and source projection", () => {
+  it("uses the same exact stored HTML text for serving and retrieval anchors", () => {
+    const body = "First line\n\nSecond line"
+    const input = {
+      versionId: "stored-version",
+      body,
+      inputContract: "fr-html-publication-2026-09-14",
+      blocks: buildLegalTextProjection({ versionId: "source-version", body, blocks: [] }).blocks
+    }
+    expect(buildStoredLegalTextProjection(input)).toEqual(
+      buildLegalTextProjection({ versionId: "stored-version", body, blocks: [] })
+    )
+    expect(() => buildStoredLegalTextProjection({ ...input, body: "changed" })).toThrow(
+      "legal_passage_html_reader_mismatch"
+    )
+  })
   it("distinguishes unavailable state publications from retained stale code data", () => {
     expect(
       legalCapabilitySchema.parse({ status: "unsupported", isStale: false, reason: "publication_feed_unavailable" })
@@ -126,6 +141,24 @@ describe("legal reader contract and source projection", () => {
     } while (cursor !== undefined)
     expect(output.map((item) => item.text).join("")).toBe(body)
     expect(new Set(output.map((item) => item.id)).size).toBe(output.length)
+  })
+
+  it("preserves publisher zero-width spacing in source gaps without admitting unmapped substantive text", () => {
+    const body = "Heading\n\u200B\nSource note\n\u200B"
+    const blocks = [block("Heading", 0, "heading"), block("Source note", 1)]
+    const projection = buildLegalTextProjection({ versionId: "spacing", body, blocks })
+    expect(projection.bodyHash).toBe(digest(body))
+    expect(projection.blocks.map((item) => item.text).join("")).toBe(body)
+    expect(projection.blocks.filter((item) => item.sourceOrdinal === null).map((item) => item.text)).toEqual([
+      "\n\u200B\n",
+      "\n\u200B"
+    ])
+    expect(projection.blocks.at(-1)?.end).toBe(body.length)
+    for (const altered of [body.replace("\n\u200B\n", "\n\u200Bunmapped\n"), `${body}unmapped`, `${body}\u202E`]) {
+      expect(() => buildLegalTextProjection({ versionId: "spacing", body: altered, blocks })).toThrow(
+        "legal_reader_unmapped_source_text"
+      )
+    }
   })
 
   it("opens a stable late anchor without reading earlier windows", () => {

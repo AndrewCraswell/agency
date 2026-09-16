@@ -17,9 +17,11 @@ catalog:
   "@types/node": 24.13.2
   typescript: 7.0.1-rc
 overrides:
+  ai@7.0.94: file:apps/legislation/vendor/ai-7.0.94.tgz
   react: 19.2.7
   react-dom: 19.2.7
 allowBuilds:
+  "@sentry/cli": false
   esbuild: true
   lefthook: true
   msw: true

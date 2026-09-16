@@ -2,6 +2,7 @@ import invariant from "tiny-invariant"
 import { z } from "zod"
 import { rankingMetrics } from "../../evaluation/embedding.js"
 import { EMBEDDING_ROUTES, type EmbeddingRoute } from "../../models/embedding-routing.js"
+import { validateEmbeddingTokenBudget } from "../../models/embedding-tokenizer.js"
 import { MAX_EMBEDDING_INPUT_CHARACTERS, OpenRouterEmbeddingClient } from "../../models/openrouter-embeddings.js"
 import { digest } from "./contracts.js"
 import { embedCachedRegulatoryInputs } from "./embedding-cache.js"
@@ -10,14 +11,27 @@ const text = z
   .string()
   .min(1)
   .max(MAX_EMBEDDING_INPUT_CHARACTERS)
-  .refine((value) => value.trim().length > 0)
+  .refine((value) => value.trim().length > 0 && value.isWellFormed())
 export const regulatoryEmbeddingSmokeSchema = z.strictObject({
   records: z
     .array(z.strictObject({ id: z.string().min(1), versionId: z.string().min(1), input: text }))
     .min(2)
     .max(512),
   queries: z
-    .array(z.strictObject({ id: z.string().min(1), input: text, relevantIds: z.array(z.string().min(1)).min(1) }))
+    .array(
+      z
+        .strictObject({
+          id: z.string().min(1),
+          input: text,
+          relevantIds: z.array(z.string().min(1)),
+          answerability: z.literal("no_answer").optional()
+        })
+        .refine(
+          (query) =>
+            query.answerability === "no_answer" ? query.relevantIds.length === 0 : query.relevantIds.length > 0,
+          "No-answer intent must be explicit and cannot include relevant passage IDs"
+        )
+    )
     .min(1)
     .max(64)
 })
@@ -42,6 +56,44 @@ export async function compareRegulatoryEmbeddingSmoke(
     "embedding_smoke_invalid_judgments"
   )
   const configurations: EmbeddingRoute[] = [EMBEDDING_ROUTES["document-section"], EMBEDDING_ROUTES.bill]
+  const qualification = []
+  // Qualify the same complete manifest for both routes before cache writes or any provider request.
+  // Batching matches execution, so aggregate token limits are checked as well as individual inputs.
+  for (const route of configurations) {
+    const records = []
+    let tokenizerId = ""
+    for (let offset = 0; offset < manifest.records.length; offset += 64) {
+      const batch = manifest.records.slice(offset, offset + 64)
+      const checked = await validateEmbeddingTokenBudget(
+        route.model,
+        batch.map((record) => record.input)
+      )
+      tokenizerId = checked.tokenizerId
+      records.push(
+        ...batch.map((record, index) => ({
+          id: record.id,
+          versionId: record.versionId,
+          inputHash: digest(record.input),
+          tokenCount: checked.counts[index]
+        }))
+      )
+    }
+    const checkedQueries = await validateEmbeddingTokenBudget(
+      route.model,
+      manifest.queries.map((query) => query.input)
+    )
+    invariant(checkedQueries.tokenizerId === tokenizerId, "embedding_smoke_tokenizer_changed")
+    qualification.push({
+      model: route.model,
+      tokenizerId,
+      records,
+      queries: manifest.queries.map((query, index) => ({
+        id: query.id,
+        inputHash: digest(query.input),
+        tokenCount: checkedQueries.counts[index]
+      }))
+    })
+  }
   const results = []
   for (const route of configurations) {
     const client = new OpenRouterEmbeddingClient({
@@ -51,7 +103,7 @@ export async function compareRegulatoryEmbeddingSmoke(
       maximumAttempts: 1
     })
     const started = performance.now()
-    // Inputs were bounded before this client; one attempt forbids its oversized-input shortening retry.
+    // Shared-client validation remains in place; the single attempt keeps this diagnostic's retry cost bounded.
     const documents: { embeddings: number[][]; totalTokens: number | undefined } = { embeddings: [], totalTokens: 0 }
     let cacheHits = 0
     for (let offset = 0; offset < manifest.records.length; offset += 64) {
@@ -103,10 +155,14 @@ export async function compareRegulatoryEmbeddingSmoke(
       return {
         queryId: query.id,
         ranked,
-        metrics: rankingMetrics(
-          ranked.map((row) => row.id),
-          query.relevantIds.map((id) => ({ id, cohort: "control", relevance: 3 }))
-        )
+        answerability: query.relevantIds.length === 0 ? "no_answer" : "answerable",
+        metrics:
+          query.relevantIds.length === 0
+            ? null
+            : rankingMetrics(
+                ranked.map((row) => row.id),
+                query.relevantIds.map((id) => ({ id, cohort: "control", relevance: 3 }))
+              )
       }
     })
     results.push({
@@ -126,10 +182,12 @@ export async function compareRegulatoryEmbeddingSmoke(
   }
   return {
     manifestHash: digest(JSON.stringify(manifest)),
+    qualification,
     results,
     modelSelected: false,
     bulkEmbeddingAuthorized: false,
     heldOutEvaluationComplete: false,
+    noAnswerEvaluationComplete: false,
     apiMcpCanaryComplete: false,
     canonicalWrites: false
   }

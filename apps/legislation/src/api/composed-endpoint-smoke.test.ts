@@ -17,9 +17,7 @@ import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
 import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search.js"
 import { createBillRelatedReadApiHandler, type BillRelatedReadApi } from "./bill-related-read-routes.js"
 import { createBillTextReadApiHandler, type BillTextReadApi } from "./bill-text-read-routes.js"
-import type { CalendarRead } from "./calendar-read-repository.js"
-import { createCalendarReadApiHandler, type CalendarReadApi } from "./calendar-read-routes.js"
-import type { AmendmentDetail, AmendmentSummary, LegislativeTerm, PersonSummary } from "./canonical-projection.js"
+import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection.js"
 import { createChangeFeedApiHandler, type ChangeFeedApi } from "./change-feed-routes.js"
 import type { CivicSearchApi } from "./civic-search.js"
 import type { CoreReadQueryApi } from "./core-read.js"
@@ -37,11 +35,6 @@ import {
 import { createPassageSearchApiHandler } from "./passage-search.js"
 import { createPersonAmendmentApiHandler, type PersonAmendmentsApi } from "./person-amendment-routes.js"
 import { createPersonDetailReadApiHandler, type PersonDetailReadApi } from "./person-detail-read-routes.js"
-import {
-  createRepresentativeLookupApiHandler,
-  type RepresentativeLookupApi,
-  type RepresentativeLookupResult
-} from "./representative-lookup.js"
 import { createResearchAnswerApiHandler, type ResearchAnswer, type ResearchAnswerApi } from "./research-answers.js"
 import {
   SubscriptionRepositoryError,
@@ -68,7 +61,6 @@ const BILL_ID = "bill:fixture"
 const AMENDMENT_ID = "amendment:fixture"
 const DOCUMENT_ID = "document:fixture:left"
 const DOCUMENT_ID_B = "document:fixture:right"
-const CALENDAR_ID = "calendar:fixture"
 const JURISDICTION_ID = "jurisdiction:fixture"
 const MEETING_ID = "event:fixture"
 const ORGANIZATION_ID = "organization:fixture"
@@ -197,32 +189,6 @@ function jurisdiction(): JurisdictionCollectionRead {
     subdivisionCode: "FX",
     timezone: "America/Los_Angeles",
     updatedAt: new Date("2026-08-20T15:00:00.000Z")
-  }
-}
-
-function calendar(): CalendarRead {
-  return {
-    classification: "legislative-schedule",
-    coverageFrom: "2026-01-01",
-    coverageTo: "2026-12-31",
-    description: "Fixture calendar",
-    id: CALENDAR_ID,
-    isActive: true,
-    jurisdictionId: JURISDICTION_ID,
-    name: "Fixture calendar",
-    organizationId: ORGANIZATION_ID,
-    sourceUrl: "https://source.example.test/calendar",
-    sources: [
-      {
-        isOfficial: true,
-        provider: "fixture",
-        retrievedAt: "2026-08-25T00:00:00.000Z",
-        sourceUpdatedAt: null,
-        sourceUrl: "https://source.example.test/calendar"
-      }
-    ],
-    timezone: "America/Los_Angeles",
-    updatedAt: "2026-08-25T00:00:00.000Z"
   }
 }
 
@@ -422,56 +388,6 @@ function personDetail(): PersonDetailRead {
   }
 }
 
-function representativeLookupResult(): RepresentativeLookupResult {
-  const representativeSource = source("https://source.example.test/representative")
-  const person: PersonSummary = {
-    canonicalUrl: `${API_BASE_URL}/api/people/${encodeURIComponent(PERSON_ID)}`,
-    familyName: "Person",
-    givenName: "Fixture",
-    id: PERSON_ID,
-    imageUrl: null,
-    isActive: true,
-    jurisdictionIds: [JURISDICTION_ID],
-    name: "Fixture Person",
-    party: "Independent",
-    sources: [representativeSource],
-    type: "person" as const,
-    updatedAt: "2026-08-25T00:00:00.000Z"
-  }
-  const term: LegislativeTerm = {
-    canonicalUrl: `${API_BASE_URL}/api/people/${encodeURIComponent(PERSON_ID)}/terms/term%3Afixture`,
-    district: "1",
-    endDate: null,
-    id: "term:fixture",
-    isCurrent: true,
-    jurisdictionId: JURISDICTION_ID,
-    officeTitle: "Representative",
-    organizationId: ORGANIZATION_ID,
-    personId: PERSON_ID,
-    sources: [representativeSource],
-    startDate: "2026-01-01",
-    type: "legislative-term" as const,
-    updatedAt: "2026-08-25T00:00:00.000Z"
-  }
-  const district = {
-    boundarySourceUrl: "https://source.example.test/district",
-    classification: "lower",
-    jurisdictionId: JURISDICTION_ID,
-    label: "1",
-    organizationId: ORGANIZATION_ID,
-    sources: [representativeSource]
-  }
-  return {
-    districts: [district],
-    expiresAt: "2026-08-25T12:05:00.000Z",
-    lookupId: "lookup:fixture",
-    quality: "exact",
-    representatives: [{ district, matchConfidence: 1, person, term }],
-    resolvedAt: "2026-08-25T12:00:00.000Z",
-    warnings: []
-  }
-}
-
 function personAmendment(): PersonAmendmentRead {
   return {
     amendment: {
@@ -651,10 +567,6 @@ function amendmentSearchApi(): AmendmentSearchApi {
       warnings: []
     })
   }
-}
-
-function representativeLookupApi(): RepresentativeLookupApi {
-  return { lookup: async () => representativeLookupResult() }
 }
 
 function researchAnswerApi(): ResearchAnswerApi {
@@ -977,13 +889,6 @@ async function startComposedServer(): Promise<string> {
   const jurisdictionCollectionReadApi: JurisdictionCollectionReadApi = {
     listJurisdictions: async () => ({ items: [jurisdiction()], truncated: false })
   }
-  const calendarReadApi: CalendarReadApi = {
-    assertCalendarExists: async () => undefined,
-    assertOrganizationExists: async () => undefined,
-    getCalendarRead: async () => calendar(),
-    listCalendarMeetings: async () => ({ items: [meeting()], truncated: false }),
-    listCalendars: async () => ({ items: [calendar()], truncated: false })
-  }
   const meetingReadApi: MeetingReadApi = {
     assertJurisdictionExists: async () => undefined,
     assertOrganizationExists: async () => undefined,
@@ -1034,7 +939,6 @@ async function startComposedServer(): Promise<string> {
     createAmendmentSearchApiHandler(amendmentSearchApi(), { apiBaseUrl: API_BASE_URL }),
     createBillRelatedReadApiHandler(billRelatedReadApi, { apiBaseUrl: API_BASE_URL }),
     createBillTextReadApiHandler(billTextReadApi, { apiBaseUrl: API_BASE_URL }),
-    createCalendarReadApiHandler(calendarReadApi, { apiBaseUrl: API_BASE_URL }),
     createChangeFeedApiHandler(changeFeedApi, { apiBaseUrl: API_BASE_URL }),
     createDocumentDiffApiHandler(documentDiffApi, { apiBaseUrl: API_BASE_URL }),
     createJurisdictionCollectionReadApiHandler(jurisdictionCollectionReadApi, { apiBaseUrl: API_BASE_URL }),
@@ -1043,7 +947,6 @@ async function startComposedServer(): Promise<string> {
     createPassageSearchApiHandler(coreService(), { apiBaseUrl: API_BASE_URL }),
     createPersonAmendmentApiHandler(personAmendmentsApi, { apiBaseUrl: API_BASE_URL }),
     createPersonDetailReadApiHandler(personDetailReadApi, { apiBaseUrl: API_BASE_URL }),
-    createRepresentativeLookupApiHandler(representativeLookupApi()),
     createResearchAnswerApiHandler(researchAnswerApi()),
     createUniversalSearchApiHandler(universalSearchApi()),
     createVoteReadApiHandler(voteReadApi, { apiBaseUrl: API_BASE_URL }),
@@ -1080,8 +983,6 @@ describe("composed server endpoint smoke coverage", () => {
       { path: "/api/jurisdictions?limit=1", type: "jurisdiction" },
       { path: "/api/changes?limit=1", type: "change" },
       { path: `/api/bills/${encodeURIComponent(BILL_ID)}/changes?limit=1`, type: "change" },
-      { path: "/api/calendars?limit=1", type: "calendar" },
-      { path: `/api/calendars/${encodeURIComponent(CALENDAR_ID)}/meetings?limit=1`, type: "meeting" },
       { path: "/api/meetings?limit=1", type: "meeting" },
       { path: `/api/people/${encodeURIComponent(PERSON_ID)}/amendments?limit=1`, type: "amendment" },
       { path: "/api/amendments?limit=1", type: "amendment" },
@@ -1119,7 +1020,6 @@ describe("composed server endpoint smoke coverage", () => {
     const resources = [
       { path: `/api/votes/${encodeURIComponent(VOTE_ID)}`, type: "vote" },
       { path: `/api/meetings/${encodeURIComponent(MEETING_ID)}?childLimit=1`, type: "meeting" },
-      { path: `/api/calendars/${encodeURIComponent(CALENDAR_ID)}`, type: "calendar" },
       { path: `/api/people/${encodeURIComponent(PERSON_ID)}`, type: "person" },
       { path: `/api/organizations/${encodeURIComponent(ORGANIZATION_ID)}`, type: "organization" },
       { path: `/api/amendments/${encodeURIComponent(AMENDMENT_ID)}`, type: "amendment" },
@@ -1194,28 +1094,6 @@ describe("composed server endpoint smoke coverage", () => {
       recordType: "amendment"
     })
     expect(universalSearchBody.meta).toMatchObject({ groups: [{ recordType: "amendment", returned: 1 }] })
-
-    const representativeResponse = await fetch(`${baseUrl}/api/representative-lookups`, {
-      body: JSON.stringify({
-        address: {
-          city: "Fixture City",
-          country: "US",
-          line1: "1 Fixture Way",
-          line2: null,
-          postalCode: "00000",
-          region: "FX"
-        }
-      }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-    expect(representativeResponse.status).toBe(200)
-    const representativeBody = resourceBody(await representativeResponse.json(), "/api/representative-lookups")
-    expect(representativeBody.data).toMatchObject({
-      lookupId: "lookup:fixture",
-      quality: "exact",
-      representatives: [{ person: { id: PERSON_ID, type: "person" } }]
-    })
 
     const researchAnswersResponse = await fetch(`${baseUrl}/api/research/answers`, {
       body: JSON.stringify({
@@ -1326,7 +1204,6 @@ describe("composed server endpoint smoke coverage", () => {
       { method: "GET", path: "/api/changes/" },
       { method: "GET", path: `/api/changes/${encodeURIComponent("change:1")}/` },
       { method: "GET", path: `/api/bills/${encodeURIComponent(BILL_ID)}/related/` },
-      { method: "GET", path: `/api/calendars/${encodeURIComponent(CALENDAR_ID)}/meetings/` },
       { method: "POST", path: "/api/document-diffs/" },
       { method: "GET", path: `/api/people/${encodeURIComponent(PERSON_ID)}/profile` },
       { method: "GET", path: `/api/people/${encodeURIComponent(PERSON_ID)}/amendments/extra` },
@@ -1336,7 +1213,6 @@ describe("composed server endpoint smoke coverage", () => {
       { method: "POST", path: "/api/search/amendments/" },
       { method: "POST", path: "/api/search/all/" },
       { method: "POST", path: "/api/search/passages/" },
-      { method: "POST", path: "/api/representative-lookups/" },
       { method: "POST", path: "/api/research/answers/" },
       { method: "POST", path: "/api/webhooks/" },
       { method: "GET", path: `/api/bills/${encodeURIComponent(BILL_ID)}/sections/` }

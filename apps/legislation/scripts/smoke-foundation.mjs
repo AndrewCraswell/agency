@@ -182,36 +182,6 @@ const searchResearchFixtures = {
   researchQuestion: safeEnvironmentText("LEGISLATION_WEB_SMOKE_RESEARCH_QUESTION", 2_000)
 }
 
-function representativeCoordinate(name, minimum, maximum) {
-  const value = fixtureEnvironmentValue(name)
-  if (value === undefined) {
-    return undefined
-  }
-  const coordinate = Number(value)
-  if (!Number.isFinite(coordinate) || coordinate < minimum || coordinate > maximum) {
-    throw new TypeError(`${name} must be a finite coordinate between ${minimum} and ${maximum}`)
-  }
-  return coordinate
-}
-
-const representativeLatitude = representativeCoordinate("LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE", -90, 90)
-const representativeLongitude = representativeCoordinate("LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE", -180, 180)
-if ((representativeLatitude === undefined) !== (representativeLongitude === undefined)) {
-  throw new TypeError(
-    "LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LATITUDE and LEGISLATION_WEB_SMOKE_REPRESENTATIVE_LONGITUDE must be configured together"
-  )
-}
-const representativeExpectedOutcome = fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME")
-if (
-  representativeExpectedOutcome !== undefined &&
-  representativeExpectedOutcome !== "200" &&
-  representativeExpectedOutcome !== "dependency_unavailable"
-) {
-  throw new TypeError(
-    "LEGISLATION_WEB_SMOKE_REPRESENTATIVE_EXPECTED_OUTCOME must be 200 or dependency_unavailable when it is set"
-  )
-}
-
 function smokeBaseUrl(value) {
   let url
   try {
@@ -1581,39 +1551,6 @@ function missingMeetingsCalendarsFixtureName(route) {
   return route.fixtures.find((fixture) => meetingsCalendarsFixtures[fixture] === undefined)
 }
 
-function requireRepresentativeLookupEnvelope(body, name, expectedCorrelationId) {
-  if (!hasExactKeys(body, ["data", "links", "meta"]) || !isRecord(body.data)) {
-    throw new Error(`${name} did not return an exact Resource envelope`)
-  }
-  if (
-    !hasExactKeys(body.meta, ["correlationId", "warnings"]) ||
-    !hasExactKeys(body.links, ["self"]) ||
-    body.meta.correlationId !== expectedCorrelationId ||
-    !Array.isArray(body.meta.warnings) ||
-    body.links.self !== "/api/representative-lookups" ||
-    !hasExactKeys(body.data, [
-      "districts",
-      "expiresAt",
-      "lookupId",
-      "quality",
-      "representatives",
-      "resolvedAt",
-      "warnings"
-    ]) ||
-    !["exact", "interpolated", "postal-centroid", "unresolved"].includes(body.data.quality) ||
-    !Array.isArray(body.data.districts) ||
-    !Array.isArray(body.data.representatives) ||
-    !Array.isArray(body.data.warnings)
-  ) {
-    throw new Error(`${name} did not return the expected representative lookup Resource envelope`)
-  }
-  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
-  requireStringArray(body.data.warnings, `${name} data.warnings`)
-  requireNonEmptyString(body.data.lookupId, `${name} data.lookupId`)
-  requireNonEmptyString(body.data.resolvedAt, `${name} data.resolvedAt`)
-  requireNonEmptyString(body.data.expiresAt, `${name} data.expiresAt`)
-}
-
 async function smokeMeetingsCalendarsRoutes(root) {
   const routes = [
     { fixtures: [], kind: "page", name: "meetings", path: "/api/meetings?limit=1" },
@@ -1694,15 +1631,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
       kind: "page",
       name: "calendar meetings",
       path: ({ calendarId }) => `/api/calendars/${encodeURIComponent(calendarId)}/meetings?limit=1`
-    },
-    {
-      body: () => ({ coordinates: { latitude: representativeLatitude, longitude: representativeLongitude } }),
-      fixtures: [],
-      kind: "representative-lookup",
-      method: "POST",
-      name: "representative lookup",
-      path: "/api/representative-lookups",
-      requiresRepresentativeCoordinates: true
     }
   ]
   const passed = []
@@ -1712,14 +1640,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
     const missingFixture = missingMeetingsCalendarsFixtureName(route)
     if (missingFixture !== undefined) {
       skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
-      continue
-    }
-    if (route.requiresRepresentativeCoordinates && representativeLatitude === undefined) {
-      skipped.push({ name: route.name, reason: "fixture_not_configured:representativeCoordinates" })
-      continue
-    }
-    if (route.requiresRepresentativeCoordinates && representativeExpectedOutcome === undefined) {
-      skipped.push({ name: route.name, reason: "fixture_not_configured:representativeExpectedOutcome" })
       continue
     }
     const path = typeof route.path === "function" ? route.path(meetingsCalendarsFixtures) : route.path
@@ -1746,17 +1666,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
     } catch {
       throw new Error(`${name} did not return a JSON body`)
     }
-    if (route.kind === "representative-lookup" && representativeExpectedOutcome === "dependency_unavailable") {
-      if (response.status !== 503) {
-        throw new Error(`${name} returned status ${response.status}, expected 503`)
-      }
-      if (response.headers.get("retry-after") !== "30") {
-        throw new Error(`${name} did not return retry-after 30`)
-      }
-      requireCanonicalDependencyUnavailable(body, name, correlationId)
-      skipped.push({ name: route.name, reason: "dependency_unavailable" })
-      continue
-    }
     if (route.expectedStatus === 404) {
       if (response.status !== 404) {
         throw new Error(`${name} returned status ${response.status}, expected audited 404`)
@@ -1780,26 +1689,19 @@ async function smokeMeetingsCalendarsRoutes(root) {
     }
     if (route.kind === "page") {
       requirePageEnvelope(body, name, correlationId)
-    } else if (route.kind === "resource") {
-      requireResourceEnvelope(body, name, correlationId, meetingsCalendarsFixtures[route.fixtures.at(-1)])
     } else {
-      requireRepresentativeLookupEnvelope(body, name, correlationId)
+      requireResourceEnvelope(body, name, correlationId, meetingsCalendarsFixtures[route.fixtures.at(-1)])
     }
     passed.push(route.name)
   }
 
   await Promise.all([
     smokeCanonicalApiNotFound(root, "/api/meetings/", "meetings-calendars-smoke-meetings-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/calendars/", "meetings-calendars-smoke-calendars-trailing-slash"),
-    smokeCanonicalApiNotFound(
-      root,
-      "/api/representative-lookups/",
-      "meetings-calendars-smoke-representative-lookups-trailing-slash"
-    )
+    smokeCanonicalApiNotFound(root, "/api/calendars/", "meetings-calendars-smoke-calendars-trailing-slash")
   ])
 
   return {
-    notFound: ["meetings_trailing_slash", "calendars_trailing_slash", "representative_lookups_trailing_slash"],
+    notFound: ["meetings_trailing_slash", "calendars_trailing_slash"],
     passed,
     skipped
   }

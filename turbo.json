@@ -26,7 +26,7 @@
       "outputs": ["coverage/**"]
     },
     "test:coverage": {
-      "passThroughEnv": ["LEGISLATION_COVERAGE_DIRECTORY"],
+      "passThroughEnv": ["LEGISLATION_COVERAGE_DIRECTORY", "VITEST_MAX_WORKERS"],
       "outputs": ["coverage/**"]
     },
     "dev": {

@@ -1,3 +1,7 @@
+import { createLegalBrowser } from "../../api/legal-browse-read.js"
+import { createLegalCodesReader } from "../../api/legal-codes-read.js"
+import { createLegalSearch } from "../../api/legal-search-read.js"
+import { createLegalTextReader } from "../../api/legal-text-read.js"
 import { loadConfig, type LegislationConfig } from "../../config/config.js"
 import { createDatabase, type LegislationDatabase } from "../../db/database.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
@@ -11,6 +15,10 @@ export interface NextLegislationApplication {
   readonly queryService: LegislationQueryService
   readonly retrievalClient: OpenRouterRetrievalClient | undefined
   readonly readiness: NextDatabaseReadiness
+  readonly readLegalText: ReturnType<typeof createLegalTextReader>
+  readonly listLegalCodes: ReturnType<typeof createLegalCodesReader>
+  readonly legalBrowser: ReturnType<typeof createLegalBrowser>
+  readonly searchLegal: ReturnType<typeof createLegalSearch>
   close(): Promise<void>
 }
 
@@ -47,6 +55,10 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     },
     config,
     database,
+    readLegalText: createLegalTextReader(pool, config.legalApi.allowedOrganizationIds),
+    listLegalCodes: createLegalCodesReader(pool, config.legalApi.allowedOrganizationIds),
+    legalBrowser: createLegalBrowser(pool, config.legalApi.allowedOrganizationIds),
+    searchLegal: createLegalSearch(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     queryService: new LegislationQueryService(database, retrievalClient, rankedPassageSearch),
     retrievalClient,
     readiness: createNextDatabaseReadiness(pool, passageSearchDatabase?.pool)

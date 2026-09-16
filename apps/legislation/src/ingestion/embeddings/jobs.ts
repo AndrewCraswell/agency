@@ -574,9 +574,8 @@ export async function embedSupportingMaterialSections(
     )
     .where(
       and(
-        options.materialId === undefined
-          ? gt(supportingMaterialSections.id, selected.afterId)
-          : eq(supportingMaterialSections.materialId, options.materialId),
+        gt(supportingMaterialSections.id, selected.afterId),
+        options.materialId === undefined ? undefined : eq(supportingMaterialSections.materialId, options.materialId),
         shard(supportingMaterialSections.id, options)
       )
     )

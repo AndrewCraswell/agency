@@ -2,6 +2,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { gunzipSync } from "node:zlib"
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 import { acquisitionUnitSchema, digest } from "./contracts.js"
@@ -18,7 +19,7 @@ afterEach(async () => {
 })
 
 async function temporary() {
-  const path = await mkdtemp(join(tmpdir(), "tabra-regulatory-parser-"))
+  const path = await mkdtemp(join(tmpdir(), "rostra-regulatory-parser-"))
   directories.push(path)
   return path
 }
@@ -55,28 +56,130 @@ async function syntheticInput(xml: string) {
   return { ...input, path, artifactHash: digest(xml) }
 }
 
-describe("federal streaming parser and bridge", () => {
-  it("retains quoted future revisions inside annual provisions without creating duplicate current sections", async () => {
-    const input = await fixtureInput("cfr-2024-title1-excerpt.xml")
-    const xml = `<CFRDOC><TITLE><SECTION><SECTNO>§ 1.1</SECTNO><P>Current wording.</P>
-      <EFFDNOTP><P>Effective next month.</P><REVTXT><SUBPART><SECTION><SECTNO>§ 1.1</SECTNO>
-      <P>Future wording.</P></SECTION></SUBPART></REVTXT></EFFDNOTP></SECTION></TITLE></CFRDOC>`
-    const path = join(await temporary(), "quoted-revision.xml")
+// Each case starts real Python processes; coverage and concurrent qualification add startup overhead.
+describe("federal streaming parser and bridge", { timeout: 30_000 }, () => {
+  it(
+    "retains both reviewed same-number FR publications with source-bound citation identities",
+    { timeout: 30_000 },
+    async () => {
+      const input = await fixtureInput("fr-2000-01-18.xml.gz")
+      const xml = gunzipSync(await readFile(input.path))
+      expect(digest(xml)).toBe(input.artifactHash)
+      const path = join(await temporary(), "issue.xml")
+      await writeFile(path, xml)
+      const result = await parseRegulatoryArtifact({ ...input, path })
+      const rows = await records(result.directory)
+      expect(rows).toHaveLength(110)
+      expect(result.summary.warnings).toEqual([])
+      const disputed = rows.filter((row) => row.identityBasis === "citation")
+      expect(disputed.map((row) => row.nativeId)).toEqual([
+        "fr:2000-01-18:65:2537:rule",
+        "fr:2000-01-18:65:2639:notice"
+      ])
+      expect(disputed.map((row) => row.sourceLocator)).toEqual([
+        "/FEDREG[1]/RULES[1]/RULE[5]",
+        "/FEDREG[1]/NOTICES[1]/NOTICE[62]"
+      ])
+      expect(disputed.every((row) => row.blocks.find((block) => block.tag === "FRDOC")?.text.includes("00-113"))).toBe(
+        true
+      )
+      expect(disputed[0]?.heading).toContain("Hobbs")
+      expect(disputed[1]?.heading).toContain("Minnesota")
+      expect(new Set(rows.map((row) => row.nativeId)).size).toBe(110)
+      const changed = Buffer.concat([xml, Buffer.from("\n")])
+      await writeFile(path, changed)
+      await expect(parseRegulatoryArtifact({ ...input, path, artifactHash: digest(changed) })).rejects.toThrow(
+        "duplicate_identity"
+      )
+    }
+  )
+  it(
+    "recovers the reviewed annual volume hierarchy while retaining every quoted section once",
+    { timeout: 30_000 },
+    async () => {
+      const input = await fixtureInput("cfr-2025-title5-vol2.xml.gz")
+      const xml = gunzipSync(await readFile(input.path))
+      expect(digest(xml)).toBe(input.artifactHash)
+      const path = join(await temporary(), "annual.xml")
+      await writeFile(path, xml)
+      const result = await parseRegulatoryArtifact({ ...input, path })
+      const parsed = await records(result.directory)
+      expect(result.summary.warnings).toEqual([])
+      expect(result.summary.sourceDates).toContainEqual(
+        expect.objectContaining({ kind: "printed_revision", value: "2025-01-01" })
+      )
+      const sections = parsed.filter((row) => row.nodeKind === "section")
+      // The 16 printed future sections stay in their owning effective-date notes.
+      const quotedSections = parsed
+        .flatMap((row) => row.blocks)
+        .reduce((count, block) => count + [...block.xml.matchAll(/<SECTION(?:\s|>)/g)].length, 0)
+      expect(quotedSections).toBe(16)
+      expect(sections.length + quotedSections).toBe(result.summary.sourceTagCounts.SECTION)
+      expect(new Set(parsed.map((row) => row.nativeId)).size).toBe(parsed.length)
+      const partPath = "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/SUBCHAP[1]/PART[7]"
+      const part = parsed.find((row) => row.sourceLocator === partPath)
+      expect(part).toBeDefined()
+      const subparts = parsed.filter((row) => row.parentKey === part?.recordKey && row.nodeKind === "subpart")
+      expect(subparts).toHaveLength(6)
+      expect(sections.filter((row) => row.nativeId.startsWith("cfr:5:section:731."))).toHaveLength(22)
+      const aOwner = sections.find((row) => row.nativeId === "cfr:5:section:731.106")
+      const bOwner = sections.find((row) => row.nativeId === "cfr:5:section:731.206")
+      expect(aOwner?.blocks.find((block) => block.tag === "EFFDNOTP")?.xml.match(/<SECTION>/g)).toHaveLength(6)
+      expect(bOwner?.blocks.find((block) => block.tag === "EFFDNOTP")?.xml.match(/<SECTION>/g)).toHaveLength(6)
+      const b = subparts.find((row) => row.heading.startsWith("Subpart B"))
+      expect(b?.sourceLocator).toBe(`${partPath}/SUBPART[1]/SECTION[6]/EFFDNOTP[1]/REVTXT[1]/SUBPART[2]`)
+      expect(sections.find((row) => row.nativeId === "cfr:5:section:731.201")?.parentKey).toBe(b?.recordKey)
+      expect(aOwner?.text).not.toContain("Subpart B")
+      expect(bOwner?.text).not.toContain("Subpart C")
+      const laterParts = parsed.filter((row) => row.nodeKind === "part" && row.sourceLocator.includes("REVTXT"))
+      expect(laterParts).toHaveLength(40)
+      expect(laterParts.every((row) => row.parentKey === part?.parentKey)).toBe(true)
+      expect(laterParts.some((row) => row.text.includes("PART 990 [RESERVED]"))).toBe(true)
+      // Every native section occurrence in the original must still be present exactly once,
+      // either as a current record block or as retained future text, including repeated citations.
+      const sectionNumbers = (value: string) =>
+        [...value.matchAll(/<SECTNO(?:\s[^>]*)?>([\s\S]*?)<\/SECTNO>/g)].map((match) => match[1]).sort()
+      expect(parsed.flatMap((row) => row.blocks.flatMap((block) => sectionNumbers(block.xml))).sort()).toEqual(
+        sectionNumbers(xml.toString("utf8"))
+      )
+    }
+  )
+  it("keeps unreviewed annual bytes quarantinable and rejects a false reviewed hash", { timeout: 30_000 }, async () => {
+    const input = await fixtureInput("cfr-2025-title5-vol2.xml.gz")
+    const xml = `${gunzipSync(await readFile(input.path)).toString("utf8")}\n`
+    const path = join(await temporary(), "unreviewed.xml")
     await writeFile(path, xml)
     const result = await parseRegulatoryArtifact({ ...input, path, artifactHash: digest(xml) })
-    const parsed = await records(result.directory)
-    expect(result.summary.records).toBe(2)
-    const section = parsed.find((row) => row.nodeKind === "section")
-    expect(section?.nativeId).toBe("cfr:1:section:1.1")
-    expect(section?.text).toContain("Current wording.")
-    expect(section?.text).toContain("Future wording.")
-    expect(section?.blocks.find((row) => row.tag === "EFFDNOTP")?.xml).toContain("<REVTXT>")
-    expect(parsed.filter((row) => row.nodeKind === "section")).toHaveLength(1)
-    const ambiguous = xml.replace("<SUBPART>", "<CHAPTER><SUBPART>").replace("</SUBPART>", "</SUBPART></CHAPTER>")
-    await writeFile(path, ambiguous)
-    const flagged = await parseRegulatoryArtifact({ ...input, path, artifactHash: digest(ambiguous) })
-    expect(flagged.summary.warnings).toEqual([expect.objectContaining({ code: "quoted_revision_scope_review" })])
+    expect(result.summary.warnings).toContainEqual(expect.objectContaining({ code: "quoted_revision_scope_review" }))
+    await expect(parseRegulatoryArtifact({ ...input, path, outputRoot: await temporary() })).rejects.toThrow(
+      "Parser source artifact size, type or checksum mismatch"
+    )
   })
+  it(
+    "retains quoted future revisions inside annual provisions without creating duplicate current sections",
+    { timeout: 30_000 },
+    async () => {
+      const input = await fixtureInput("cfr-2024-title1-excerpt.xml")
+      const xml = `<CFRDOC><TITLE><SECTION><SECTNO>§ 1.1</SECTNO><P>Current wording.</P>
+      <EFFDNOTP><P>Effective next month.</P><REVTXT><SUBPART><SECTION><SECTNO>§ 1.1</SECTNO>
+      <P>Future wording.</P></SECTION></SUBPART></REVTXT></EFFDNOTP></SECTION></TITLE></CFRDOC>`
+      const path = join(await temporary(), "quoted-revision.xml")
+      await writeFile(path, xml)
+      const result = await parseRegulatoryArtifact({ ...input, path, artifactHash: digest(xml) })
+      const parsed = await records(result.directory)
+      expect(result.summary.records).toBe(2)
+      const section = parsed.find((row) => row.nodeKind === "section")
+      expect(section?.nativeId).toBe("cfr:1:section:1.1")
+      expect(section?.text).toContain("Current wording.")
+      expect(section?.text).toContain("Future wording.")
+      expect(section?.blocks.find((row) => row.tag === "EFFDNOTP")?.xml).toContain("<REVTXT>")
+      expect(parsed.filter((row) => row.nodeKind === "section")).toHaveLength(1)
+      const ambiguous = xml.replace("<SUBPART>", "<CHAPTER><SUBPART>").replace("</SUBPART>", "</SUBPART></CHAPTER>")
+      await writeFile(path, ambiguous)
+      const flagged = await parseRegulatoryArtifact({ ...input, path, artifactHash: digest(ambiguous) })
+      expect(flagged.summary.warnings).toEqual([expect.objectContaining({ code: "quoted_revision_scope_review" })])
+    }
+  )
   it("recognizes historical FRDOC formatting without guessing missing identities", { timeout: 30_000 }, async () => {
     const input = await fixtureInput("fr-2024-01-02-excerpt.xml")
     const xml =

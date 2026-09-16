@@ -4,6 +4,7 @@ import { digest } from "./contracts.js"
 import { regulatoryRecordSchema } from "./parser-contract.js"
 import {
   legalReaderScopeSchema,
+  legalTextBlockSchema,
   legalTextWindowSchema,
   type LegalReaderScope,
   type LegalTextBlock
@@ -13,6 +14,37 @@ export const legalReaderContract = "legal-source-text-2026-09-14"
 const maximumBlockCharacters = 16_384
 const maximumWindowCharacters = 100_000
 const sourceBlocksSchema = regulatoryRecordSchema.shape.blocks
+// eCFR can retain a zero-width space in an XML element tail outside the named source blocks.
+// Treat only spacing as a gap; append it unchanged so reader offsets and body hashes stay lossless.
+const sourceSpacing = /^[\s\u200B]*$/u
+
+/** Normalize stored HTML reader blocks without changing canonical text or its version-bound anchors. */
+export function buildStoredLegalTextProjection(input: {
+  versionId: string
+  body: string
+  blocks: unknown
+  inputContract: string
+}) {
+  return buildLegalTextProjection({ ...input, blocks: storedLegalSourceBlocks(input) })
+}
+
+export function storedLegalSourceBlocks(input: { body: string; blocks: unknown; inputContract: string }) {
+  let blocks = input.blocks
+  if (input.inputContract === "fr-html-publication-2026-09-14") {
+    const stored = z.array(legalTextBlockSchema).parse(blocks)
+    let end = 0
+    for (const block of stored) {
+      invariant(
+        block.start === end && block.kind === "text" && block.sourceOrdinal === null,
+        "legal_passage_html_reader_mismatch"
+      )
+      end = block.end
+    }
+    invariant(stored.map((block) => block.text).join("") === input.body, "legal_passage_html_reader_mismatch")
+    blocks = []
+  }
+  return sourceBlocksSchema.parse(blocks)
+}
 
 /** Lossless source-body projection. No retrieval prefixes, overlap, repeated headers or raw XML delivery. */
 export function buildLegalTextProjection(input: { versionId: string; body: string; blocks: unknown }) {
@@ -57,14 +89,14 @@ export function buildLegalTextProjection(input: { versionId: string; body: strin
     }
     const start = input.body.indexOf(block.text, position)
     invariant(start >= position, "legal_reader_source_text_mismatch")
-    invariant(input.body.slice(position, start).trim().length === 0, "legal_reader_unmapped_source_text")
+    invariant(sourceSpacing.test(input.body.slice(position, start)), "legal_reader_unmapped_source_text")
     append(position, start, undefined)
     const end = start + block.text.length
     append(start, end, block)
     position = end
   }
   invariant(
-    sourceBlocks.length === 0 || input.body.slice(position).trim().length === 0,
+    sourceBlocks.length === 0 || sourceSpacing.test(input.body.slice(position)),
     "legal_reader_unmapped_source_text"
   )
   append(position, input.body.length, undefined)
@@ -102,7 +134,9 @@ export function readLegalTextWindow(
   let start = 0
   if (input.cursor !== undefined) {
     invariant(input.cursor.length <= 2048 && /^[A-Za-z0-9_-]+$/.test(input.cursor), "invalid_legal_reader_cursor")
-    const cursor = cursorSchema.parse(JSON.parse(Buffer.from(input.cursor, "base64url").toString("utf8")))
+    const parsed = cursorSchema.safeParse(JSON.parse(Buffer.from(input.cursor, "base64url").toString("utf8")))
+    invariant(parsed.success, "invalid_legal_reader_cursor")
+    const cursor = parsed.data
     invariant(cursor.scope === scope && cursor.index < projection.blocks.length, "legal_reader_cursor_scope_mismatch")
     start = cursor.index
   } else if (input.anchor !== undefined) {

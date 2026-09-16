@@ -1,3 +1,4 @@
+import { z } from "zod"
 import {
   LegislationApiAbortError,
   LegislationApiClient,
@@ -23,6 +24,7 @@ export type McpHttpQueryAdapterOptions = Readonly<{
   fetch?: FetchLike
   getApiAccessToken: ApiAccessTokenProvider
   timeoutMs?: number
+  legalText?: Readonly<{ allowedOrganizationIds: readonly string[]; getApiAccessToken: ApiAccessTokenProvider }>
 }>
 
 /**
@@ -32,14 +34,65 @@ export type McpHttpQueryAdapterOptions = Readonly<{
  * the incoming MCP request.
  */
 export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): LegislationQueryApi {
+  const legalText = options.legalText
+  const allowed = new Set(
+    z
+      .array(z.string().min(1).max(256))
+      .max(1000)
+      .parse(legalText?.allowedOrganizationIds ?? [])
+  )
+  const canReadLegalText = () => {
+    const identity = getRequestContext()?.identity
+    return !!identity?.userId && !!identity.organizationId && allowed.has(identity.organizationId)
+  }
   const api = new LegislationApiClient({
     baseUrl: options.apiBaseUrl,
     bearerToken: options.getApiAccessToken,
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs })
   })
+  async function legalRequestOptions() {
+    if (!canReadLegalText()) {
+      throw new LegislationError("forbidden", "Access denied")
+    }
+    const bearerToken = await legalText?.getApiAccessToken()
+    if (!bearerToken) {
+      throw new LegislationError("forbidden", "Access denied")
+    }
+    return { ...requestOptions(), bearerToken }
+  }
 
   return withApiErrors({
+    ...(legalText === undefined
+      ? {}
+      : {
+          canReadLegalText,
+          searchLegal: async (input) => api.searchLegal(input, await legalRequestOptions()),
+          listLegalEditions: async ({ codeId, ...input }) =>
+            api.listLegalEditions(codeId, input, await legalRequestOptions()),
+          listLegalProvisions: async ({ codeId, ...input }) =>
+            api.listLegalProvisions(codeId, input, await legalRequestOptions()),
+          listLegalCodes: async (input) => {
+            if (!canReadLegalText()) {
+              throw new LegislationError("forbidden", "Access denied")
+            }
+            const bearerToken = await legalText.getApiAccessToken()
+            if (!bearerToken) {
+              throw new LegislationError("forbidden", "Access denied")
+            }
+            return api.listLegalCodes(input, { ...requestOptions(), bearerToken })
+          },
+          getLegalText: async ({ versionId, ...input }) => {
+            if (!canReadLegalText()) {
+              throw new LegislationError("forbidden", "Access denied")
+            }
+            const bearerToken = await legalText.getApiAccessToken()
+            if (!bearerToken) {
+              throw new LegislationError("forbidden", "Access denied")
+            }
+            return api.getLegalText(versionId, input, { ...requestOptions(), bearerToken })
+          }
+        }),
     compareBillVersions: async ({ billId, documentIds }) => {
       const [leftDocumentId, rightDocumentId] = documentIds
       if (leftDocumentId === undefined || rightDocumentId === undefined) {
@@ -109,7 +162,28 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
 }
 
 function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
+  const getLegalText = adapter.getLegalText
+  const searchLegal = adapter.searchLegal
+  const listLegalCodes = adapter.listLegalCodes
+  const listLegalEditions = adapter.listLegalEditions
+  const listLegalProvisions = adapter.listLegalProvisions
   return {
+    ...(searchLegal === undefined ? {} : { searchLegal: async (input) => await apiCall(() => searchLegal(input)) }),
+    ...(listLegalEditions === undefined
+      ? {}
+      : { listLegalEditions: async (input) => await apiCall(() => listLegalEditions(input)) }),
+    ...(listLegalProvisions === undefined
+      ? {}
+      : { listLegalProvisions: async (input) => await apiCall(() => listLegalProvisions(input)) }),
+    ...(listLegalCodes === undefined
+      ? {}
+      : { listLegalCodes: async (input) => await apiCall(() => listLegalCodes(input)) }),
+    ...(getLegalText === undefined
+      ? {}
+      : {
+          canReadLegalText: adapter.canReadLegalText,
+          getLegalText: async (input) => await apiCall(() => getLegalText(input))
+        }),
     compareBillVersions: async (input) => await apiCall(() => adapter.compareBillVersions(input)),
     findRelatedBills: async (input) => await apiCall(() => adapter.findRelatedBills(input)),
     getAmendment: async (input) => await apiCall(() => adapter.getAmendment(input)),
@@ -144,7 +218,12 @@ async function apiCall<T>(operation: () => Promise<T>): Promise<T> {
     if (error instanceof LegislationApiError) {
       throw new LegislationError(error.category, error.message, {
         cause: error,
-        details: { correlationId: error.correlationId, retryable: error.retryable, status: error.status }
+        details: {
+          ...error.details,
+          correlationId: error.correlationId,
+          retryable: error.retryable,
+          status: error.status
+        }
       })
     }
     if (error instanceof LegislationApiTimeoutError || error instanceof LegislationApiAbortError) {

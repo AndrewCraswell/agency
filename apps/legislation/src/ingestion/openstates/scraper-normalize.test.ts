@@ -234,6 +234,8 @@ describe("NC raw scraper mapping", () => {
     )[0]
     expect(corrected?.event.id).toBe(first?.event.id)
     expect(corrected?.event.upstreamIds).toEqual({ ncNoticeDocument: "10724" })
+    expect(normalizeNcScraperEvents([{ ...event, status: "passed" }], date)[0]?.event.status).toBe("other")
+    expect(normalizeNcScraperEvents([{ ...event, status: "cancelled" }], date)[0]?.event.status).toBe("cancelled")
     expect(() => normalizeNcScraperEvents([{ ...event, upstream_id: "10725" }], date)).toThrow(/notice identity/)
     expect(() => normalizeNcScraperEvents([event, event], date)).toThrow(/notice identity/)
   })

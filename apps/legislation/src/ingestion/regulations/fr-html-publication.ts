@@ -97,6 +97,7 @@ export async function publishFrHtmlImport(
       const pdf = artifacts.get(publication.supportingPdf.receipt.sha256)
       invariant(pdf, "fr_html_publication_pdf_missing")
       await writeFrPublication(client, {
+        identity: { kind: "publisher_number" },
         generationId: lease.generationId,
         rightsProfileId: generation.rights_profile_id,
         contract,

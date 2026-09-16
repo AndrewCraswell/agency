@@ -15,6 +15,64 @@ beforeAll(async () => {
 })
 
 describe("Open States normalization", () => {
+  it.each([
+    {
+      absent: 1,
+      date: "2025-03-01T10:00:00-05:00",
+      complete: true,
+      otherCount: 0,
+      heldAt: new Date("2025-03-01T15:00:00Z")
+    },
+    {
+      absent: 2,
+      date: "2025-03-01T10:00:00-05:00",
+      complete: false,
+      otherCount: undefined,
+      heldAt: new Date("2025-03-01T15:00:00Z")
+    },
+    { absent: 1, date: "2025-03-01", complete: false, otherCount: 0, heldAt: undefined },
+    { absent: 1, date: "2025-03-01T10:00:00", complete: false, otherCount: 0, heldAt: undefined }
+  ])(
+    "preserves vote categories and gates completeness: $date / $absent",
+    ({ absent, date, complete, otherCount, heldAt }) => {
+      const { aggregate } = normalizeOpenStatesBill(
+        {
+          identifier: "HB 1",
+          legislative_session: "2025",
+          title: "Test bill",
+          sources: [{ url: "https://example.org/bill/1" }],
+          votes: [
+            {
+              result: "pass",
+              start_date: date,
+              motion_text: "Passage",
+              sources: [{ url: "https://example.org/vote/1" }],
+              counts: [
+                { option: "yes", value: 1 },
+                { option: "absent", value: absent }
+              ],
+              votes: [
+                { option: "yes", voter_name: "One", voter_id: "person/one" },
+                { option: "absent", voter_name: "Two", voter_id: "person/two" }
+              ]
+            }
+          ]
+        },
+        { jurisdictionCode: "nc", jurisdictionName: "North Carolina", retrievedAt: new Date("2025-03-02T00:00:00Z") }
+      )
+      expect(aggregate.votes?.[0]?.vote).toMatchObject({
+        yesCount: 1,
+        absentCount: absent,
+        result: "passed",
+        timelineComplete: complete,
+        sourceProvider: "openstates",
+        sourceSequence: 0,
+        sourceUrl: "https://example.org/vote/1"
+      })
+      expect(aggregate.votes?.[0]?.vote.otherCount).toBe(otherCount)
+      expect(aggregate.votes?.[0]?.vote.heldAt).toEqual(heldAt)
+    }
+  )
   it("normalizes a representative state bill aggregate", () => {
     const result = normalizeOpenStatesBill(fixture, {
       jurisdictionCode: "WA",
@@ -31,6 +89,7 @@ describe("Open States normalization", () => {
       upstreamIds: { openstates: "ocd-bill/wa-hb-1234" }
     })
     expect(result.aggregate.actions).toHaveLength(2)
+    expect(result.aggregate.actions?.every((action) => action.sourceUrl === result.aggregate.bill.sourceUrl)).toBe(true)
     expect(result.aggregate.actions?.[0]).toMatchObject({
       organizationId: "organization:openstates:washington-house-of-representatives",
       sourceOrganizationId: "Washington House of Representatives"
@@ -43,13 +102,13 @@ describe("Open States normalization", () => {
       }
     ])
     expect(result.aggregate.sponsors).toHaveLength(2)
-    expect(result.aggregate.people).toHaveLength(2)
+    expect(result.aggregate.people).toHaveLength(1)
     expect(result.aggregate.votes?.[0]).toMatchObject({
       positions: [
         { option: "yes", personId: "person:openstates:ocd-person-example" },
-        { option: "no", personId: "person:openstates-voter-name:vote-name-wa-unmatched-member" }
+        { option: "no", personId: undefined, sourceName: "Unmatched Member" }
       ],
-      vote: { noCount: 8, result: "pass", yesCount: 90 }
+      vote: { noCount: 8, result: "passed", yesCount: 90 }
     })
     expect(result.aggregate.votes?.[0]?.vote.id).toMatch(/^vote:openstates:/)
     expect(result.aggregate.documents).toHaveLength(3)
@@ -225,11 +284,13 @@ describe("Open States normalization", () => {
     expect(result.aggregate.votes?.[0]?.vote.organizationId).toBeUndefined()
     expect(result.aggregate.votes?.[0]?.positions).toEqual([
       expect.objectContaining({
-        personId: "person:openstates-voter-name:vote-name-wa-representative-example",
+        personId: undefined,
+        sourceIdentity: "vote-name:wa:Representative Example",
         sourceSequence: 0
       }),
       expect.objectContaining({
-        personId: "person:openstates-voter-name:vote-name-wa-unmatched-member",
+        personId: undefined,
+        sourceIdentity: "vote-name:wa:Unmatched Member",
         sourceSequence: 1
       })
     ])
@@ -248,7 +309,12 @@ describe("Open States normalization", () => {
 
     const result = normalizeOpenStatesBill(source, { jurisdictionCode: "wa", jurisdictionName: "Washington" })
 
-    expect(result.aggregate.votes?.[0]?.vote).toMatchObject({ otherCount: 7, yesCount: 90 })
+    expect(result.aggregate.votes?.[0]?.vote).toMatchObject({
+      otherCount: 1,
+      absentCount: 4,
+      notVotingCount: 2,
+      yesCount: 90
+    })
     expect(result.aggregate.votes?.[0]?.vote.noCount).toBeUndefined()
   })
 

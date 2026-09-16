@@ -36,6 +36,7 @@ describe("committee dependency plan", () => {
     expect(result.held[0]?.members).toHaveLength(2)
     expect(result.eligibleMemberships).toBe(1)
     expect(result.heldMemberships).toBe(2)
+    expect(result.identityEligible).toHaveLength(2)
     expect(result.departuresEstablished).toBe(false)
     expect(planCommitteeDependencies(source, ["ocd-person/good", "ocd-person/bad"]).held).toEqual([])
   })
@@ -48,6 +49,11 @@ describe("committee dependency plan", () => {
     ]
     const result = planCommitteeDependencies(inventory(rows), ["ocd-person/good"])
     expect(result.eligible).toEqual([])
+    expect(result.identityEligible.map((row) => row.committeeId)).toEqual([
+      "ocd-organization/child",
+      "ocd-organization/held"
+    ])
+    expect(result.identityHeld).toHaveLength(2)
     expect(result.held.flatMap((row) => row.reasons)).toEqual(
       expect.arrayContaining(["held_parent", "missing_parent", "parent_cycle", "unaccepted_person"])
     )

@@ -121,6 +121,7 @@ export async function publishFrIssue(
     )
     for (const row of prepared) {
       await writeFrPublication(client, {
+        identity: { kind: "publisher_number" },
         generationId: lease.generationId,
         rightsProfileId: generation.rights_profile_id,
         contract,

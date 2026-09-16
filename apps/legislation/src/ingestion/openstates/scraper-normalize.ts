@@ -24,6 +24,7 @@ export function normalizeNcScraperEvents(records: readonly unknown[], retrievedA
     const record = z
       .object({
         upstream_id: z.string().regex(/^[1-9][0-9]*$/),
+        status: z.string(),
         sources: z.array(z.object({ url: z.url({ protocol: /^https$/ }) })),
         participants: z.array(z.object({ name: z.string().min(1) }).passthrough()),
         agenda: z.array(z.record(z.string(), z.unknown()))
@@ -39,6 +40,8 @@ export function normalizeNcScraperEvents(records: readonly unknown[], retrievedA
     const snapshot = normalizeOpenStatesEvent(
       {
         ...record,
+        // Pinned upstream used "passed" solely when the scheduled time elapsed, not as an outcome observation.
+        status: record.status === "passed" ? "other" : record.status,
         id: `nc-notice-${record.upstream_id}`,
         sources: [notice],
         participants: record.participants.map((entry) => ({ ...entry, organization: null })),

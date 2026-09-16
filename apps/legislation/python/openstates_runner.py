@@ -15,7 +15,7 @@ from collections import deque
 REVISION = "d43f853796ceeeb49205f7d144790647764ce105"
 PROFILES = {
     "nc": {"session": "2025", "bill_pattern": r"[HS][1-9][0-9]{0,4}", "domains": ("bills", "events")},
-    "ak": {"session": "34", "bill_pattern": r"[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}", "domains": ("bills",)},
+    "ak": {"session": "34", "bill_pattern": r"[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}", "domains": ("bills", "events")},
 }
 
 
@@ -26,11 +26,15 @@ def failure_reason(chunks):
         "requests.exceptions.ReadTimeout": "source_timeout",
         "requests.exceptions.ConnectTimeout": "source_timeout",
         "requests.exceptions.SSLError": "source_tls_failure",
+        "requests.exceptions.ConnectionError": "source_network_failure",
+        "requests.exceptions.ChunkedEncodingError": "source_network_failure",
+        "requests.exceptions.ContentDecodingError": "source_network_failure",
         "requests.exceptions.HTTPError": "source_http_failure",
         "scrapelib.HTTPError": "source_http_failure",
         "lxml.etree.XMLSyntaxError": "source_parse_failure",
         "lxml.etree.ParserError": "source_parse_failure",
         "jsonschema.exceptions.ValidationError": "source_validation_failure",
+        "openstates.exceptions.ScrapeValueError": "source_validation_failure",
     }
     for line in reversed(text.splitlines()):
         exception = line.partition(":")[0]
@@ -109,7 +113,8 @@ def output_inventory(work, jurisdiction="nc"):
 
 
 def validate_request(value):
-    if not isinstance(value, dict) or set(value) != {"jurisdiction", "domain", "session", "timeout_seconds", "revision", "bill_ids"}:
+    required = {"jurisdiction", "domain", "session", "timeout_seconds", "revision", "bill_ids"}
+    if not isinstance(value, dict) or not required.issubset(value) or set(value) - required - {"event_keys"}:
         raise ValueError("invalid_request_fields")
     profile = PROFILES.get(value["jurisdiction"]) if isinstance(value["jurisdiction"], str) else None
     if not profile or value["domain"] not in profile["domains"]:
@@ -119,6 +124,16 @@ def validate_request(value):
     timeout = value["timeout_seconds"]
     if type(timeout) is not int or not 1 <= timeout <= 1500:
         raise ValueError("invalid_timeout")
+    if value["jurisdiction"] == "ak" and value["domain"] == "events":
+        keys = value.get("event_keys")
+        if (value["session"] != "34" or value["bill_ids"] is not None
+                or not isinstance(keys, list) or not 1 <= len(keys) <= 10
+                or any(not isinstance(key, str) or not re.fullmatch(r"[HSJ]:[A-Z0-9&]+:[0-9T:+.-]+", key) for key in keys)
+                or len(set(keys)) != len(keys)):
+            raise ValueError("invalid_event_batch")
+        return value
+    if "event_keys" in value:
+        raise ValueError("unexpected_event_keys")
     if value["domain"] == "bills":
         if value["session"] != profile["session"]:
             raise ValueError("invalid_session")
@@ -140,6 +155,8 @@ def command(request):
     if request["domain"] == "bills":
         args.append("session=" + request["session"])
         args.append("bill_ids=" + ",".join(sorted(request["bill_ids"], key=lambda item: (item[0], int(re.search(r"[0-9]+$", item).group())))))
+    elif request["jurisdiction"] == "ak":
+        args.extend(["session=34", "event_keys=" + ",".join(sorted(request["event_keys"]))])
     return args
 
 
