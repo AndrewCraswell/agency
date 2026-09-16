@@ -57,7 +57,7 @@ run used `expat_2.7.1`. This follows the documented parser/security interfaces, 
 [Python Expat documentation](https://docs.python.org/3/library/pyexpat.html),
 [Python XML security guidance](https://docs.python.org/3/library/xml.html#xml-vulnerabilities).
 
-The federal source patterns from the audited Vaquill project informed acquisition. This parser is original Tabra code
+The federal source patterns from the audited Vaquill project informed acquisition. This parser is original Rostra code
 against retained official XML, rather than a copied upstream parser; no upstream code/license header was removed.
 
 ## Full pilot results

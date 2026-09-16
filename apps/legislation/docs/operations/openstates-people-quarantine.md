@@ -37,9 +37,9 @@ validation does not establish that all accepted historical assertions are factua
 
 Person-detail acceptance: the shared importer retains the normalizer's profile and jurisdiction rows for accepted
 people, preserving supplied name/image/link fields. Office titles come from each state profile's chamber configuration,
-not individual-name exceptions. Unknown dates remain unknown. `pnpm exec tsx scripts/smoke-openstates-people.ts ak`
-uses `LEGISLATION_TEST_DATABASE_URL`, restricted to local `legislation_test`, and checks all collection pages and person
-detail mappings over HTTP. It does not establish hosted authentication, MCP, committee completeness or production health.
+not individual-name exceptions. Unknown dates remain unknown. The temporary local HTTP harness checked all collection
+pages and person-detail mappings, then was removed. This evidence does not establish hosted authentication, MCP,
+committee completeness or production health.
 
 People-detail acceptance included 20 focused and 22 PostgreSQL tests plus retained Alaska HTTP checks for all 164 people
 and 271 terms. Earlier unrelated Knip, shared-coverage, build-lock and timeout failures were superseded by the passing

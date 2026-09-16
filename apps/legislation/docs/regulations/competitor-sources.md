@@ -4,7 +4,7 @@ Parent: [regulatory ingestion proposal](README.md). Public vendor disclosures re
 
 ## What the evidence establishes
 
-There is direct public evidence that competitors collect from the same government source families proposed for Tabra.
+There is direct public evidence that competitors collect from the same government source families proposed for Rostra.
 The strongest disclosures found are FiscalNote's description of direct collection and Quorum's named regulatory sources.
 This supports the feasibility of a public-source foundation; it does not establish equivalent completeness, historical
 depth, processing quality, staff effort or operating cost.
@@ -37,13 +37,13 @@ BillTrack50 uses LegiScan, or that Plural's regulatory corpus comes from Open St
 - [Nimonik's BillTrack50 page](https://nimonik.com/software/billtrack50-legislative-tracking/): regulatory tracking scope;
   not evidence of a specific upstream provider.
 
-## Implications for Tabra
+## Implications for Rostra
 
 The evidence supports investing in collection reliability and normalization rather than assuming competitors have an
 exclusive source of federal regulatory text. That is an inference about the published disclosures, not a claim that
 they have no proprietary or licensed enrichment.
 
-Federal public sources can underpin Tabra's published-rule and code corpus. Broader parity also requires state register
+Federal public sources can underpin Rostra's published-rule and code corpus. Broader parity also requires state register
 and agency acquisition, historical continuity, attached full text, corrections, source reconciliation and operational
 review. Access to the same website is not equivalent to maintaining the same dataset.
 

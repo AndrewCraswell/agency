@@ -212,18 +212,22 @@ function sourceCommodityExceptionRows(rows: ReturnType<ReturnType<typeof load>>)
   const nodes = rows.toArray()
   const $ = load("", { xml: true })
   const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const headers = rows.first().parents("TABLE").find("TH")
+  if (
+    headers.length !== 3 ||
+    sourceText(headers.eq(0)) !== "STCC No." ||
+    sourceText(headers.eq(1)) !== "STCC tariff" ||
+    sourceText(headers.eq(2)) !== "Commodity"
+  ) {
+    return parents
+  }
   for (let index = 0; index < nodes.length; index++) {
     const parent = nodes[index]
     invariant(parent, "passage_table_row_missing")
     const row = $(parent)
-    const headers = row.parents("TABLE").find("TH")
     const cells = row.children("TD")
     const parentCode = sourceText(cells.first())
     if (
-      headers.length !== 3 ||
-      sourceText(headers.eq(0)) !== "STCC No." ||
-      sourceText(headers.eq(1)) !== "STCC tariff" ||
-      sourceText(headers.eq(2)) !== "Commodity" ||
       cells.length !== 3 ||
       !cells.toArray().every((cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1) ||
       !/^\d+(?: \d+)*$/.test(parentCode) ||
@@ -269,11 +273,49 @@ function sourceCommodityExceptionRows(rows: ReturnType<ReturnType<typeof load>>)
 }
 
 /** EPA designated-area tables express a partial-county scope as a separate empty-value row. */
-function isPartialCountyScope(row: ReturnType<ReturnType<typeof load>>) {
+function sourceCountyBoundaryRows(rows: ReturnType<ReturnType<typeof load>>, hasDesignatedAreaHeader: boolean) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  if (!hasDesignatedAreaHeader) {
+    return parents
+  }
+  for (let index = 1; index < nodes.length; index++) {
+    const parent = nodes[index - 1]
+    const child = nodes[index]
+    invariant(parent && child, "passage_table_row_missing")
+    const parentRow = $(parent)
+    const childRow = $(child)
+    const parentCells = parentRow.children("TD")
+    const childCells = childRow.children("TD")
+    if (
+      parentCells.length >= 3 &&
+      childCells.length === parentCells.length &&
+      sourceText(parentCells.first()).endsWith("County (part)") &&
+      sourceText(parentCells.slice(1)).length > 0 &&
+      rowIndent(childRow) > rowIndent(parentRow) &&
+      /^That portion\b/i.test(sourceText(childCells.first())) &&
+      [...parentCells.toArray(), ...childCells.toArray()].every(
+        (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1
+      ) &&
+      childCells
+        .slice(1)
+        .toArray()
+        .every((cell) => cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+    ) {
+      parents.set(child, parent)
+    }
+  }
+  return parents
+}
+
+function isPartialCountyScope(row: ReturnType<ReturnType<typeof load>>, hasDesignatedAreaHeader: boolean) {
+  if (!hasDesignatedAreaHeader) {
+    return false
+  }
   const cells = row.children("TD")
   const next = row.next("TR").children("TD")
   return (
-    row.parents("TABLE").find("THEAD TH").first().text().trim() === "Designated area" &&
     cells.length >= 3 &&
     next.length === cells.length &&
     /^[A-Za-z][A-Za-z .'-]* County \(part\)$/.test(sourceText(cells.first())) &&
@@ -320,6 +362,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
   invariant(rows.length > 0 && rows.find("ROW, TR").length === 0, "passage_table_complex_structure")
   const conditionParents = sourceConditionRows(rows)
   const exceptionParents = sourceCommodityExceptionRows(rows)
+  const hasDesignatedAreaHeader = sourceText(tables.find("THEAD TH").first()) === "Designated area"
+  const countyBoundaryParents = sourceCountyBoundaryRows(rows, hasDesignatedAreaHeader)
   const headers = tables.find("BOXHD, THEAD")
   const order = $.root().find("*").toArray()
   type Context = { start: number; end: number; label: string }
@@ -385,7 +429,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const context: Context[] = []
       const inheritedCountyScope = countyScope
       countyScope = undefined
-      if (isPartialCountyScope(selection)) {
+      if (isPartialCountyScope(selection, hasDesignatedAreaHeader)) {
         context.push(...groups.map((entry) => entry.span))
         countyScope = { start, end: start + text.length, label: "Source partial county scope" }
         if (cells.length !== previousDataWidth) {
@@ -416,13 +460,13 @@ export function legalTableRows(input: { text: string; xml: string }) {
         if (inheritedCountyScope) {
           context.push(inheritedCountyScope)
         }
-        const parentNode = conditionParents.get(row) ?? exceptionParents.get(row)
+        const parentNode = conditionParents.get(row) ?? exceptionParents.get(row) ?? countyBoundaryParents.get(row)
         const parentRange = parentNode === undefined ? undefined : rangesByNode.get(parentNode)
         if (parentRange) {
           context.push(...parentRange.context, {
             start: parentRange.start,
             end: parentRange.end,
-            label: exceptionParents.has(row) ? "Source commodity exception parent" : "Source condition parent"
+            label: "Source continuation parent"
           })
         }
         let column = 1
@@ -443,7 +487,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
             context.push(reference)
           } else {
             const hasParentBlank =
-              (conditionParents.has(row) && column > 1) || (exceptionParents.has(row) && column < 3)
+              ((conditionParents.has(row) || countyBoundaryParents.has(row)) && column > 1) ||
+              (exceptionParents.has(row) && column < 3)
             if (parentRange && hasParentBlank && value.length === 0 && width === 1) {
               column += width
               continue

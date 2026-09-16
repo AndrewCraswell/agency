@@ -4,13 +4,13 @@
 
 September 15, 2026. **The competitive set depends on the ICP, the task and the purchasing scope.** This is not a ranking
 of legislative software in general. Use the segment definitions in [ICPs](icp.md) first, then identify what that prospect
-actually uses and what purchase Tabra would replace or supplement. A vendor can be a direct substitute for one job,
+actually uses and what purchase Rostra would replace or supplement. A vendor can be a direct substitute for one job,
 an adjacent budget competitor for another, and irrelevant to a third.
 
 Our recommended initial focus is association policy research and solo/boutique public-affairs research. Their main
 alternatives are shared trackers, low-cost individual trackers, public sources plus office tools, and existing policy
 subscriptions. Comprehensive legal research and public-affairs CRM become primary competition only when the buyer needs
-those broader jobs. Do not force every ICP into a Quorum-versus-Tabra comparison.
+those broader jobs. Do not force every ICP into a Quorum-versus-Rostra comparison.
 
 ### Evidence standard
 
@@ -25,7 +25,7 @@ LegiScan features and FiscalNote pages returned access denials; State Net retrie
 mean the products lack capabilities or are unavailable. Bloomberg Government and Lexis+ below retain the earlier
 evidence only. No vendor was contacted, no quote/trial was purchased, and no access restriction was bypassed.
 
-Tabra is assessed as documented services plus a developing product/design, **not a shipped equivalent to every listed
+Rostra is assessed as documented services plus a developing product/design, **not a shipped equivalent to every listed
 offering**. [ICP readiness](icp.md#2-what-we-can-credibly-offer), [state rollout](../operations/openstates-rollout-checklist.md),
 [API acceptance](../operations/passage-search-delivery.md), and [regulatory progress](../regulations/implementation-progress.md)
 govern what can be demonstrated. A source-supported field or designed screen is not verified nationwide product coverage.
@@ -58,7 +58,7 @@ is expensive. Ask about that baseline before pitching replacement savings.
 
 **Buying decision:** produce reliable member/board legislative updates with a small policy team.
 
-| Alternative and strength | Gap relative to Tabra | Recommended response |
+| Alternative and strength | Gap relative to Rostra | Recommended response |
 | --- | --- | --- |
 | BillTrack50: shared sheets, custom reports, widgets, unlimited users and API access [S1] | Our shared research, distribution and organization access are not yet delivered equivalents | Win a narrow research-preparation task first; do not promise to replace member-facing widgets or distribution |
 | Plural: paid team AI/comparisons, positions/notes/assignments and shared issue exports [S2] | Direct overlap with our planned research/collaboration; chat and issue tracking alone do not distinguish us | Benchmark source inspection, relevance review and a repeatable briefing task |
@@ -76,7 +76,7 @@ parallel pilot; do not insist on migration before value is demonstrated. Member 
 
 **Buying decision:** answer a client question or prepare a recurring client update faster without weakening evidence.
 
-| Alternative and strength | Gap relative to Tabra | Recommended response |
+| Alternative and strength | Gap relative to Rostra | Recommended response |
 | --- | --- | --- |
 | LegiScan: inexpensive single-jurisdiction/professional tracking [S4, retained] | Basic tracking can cost substantially less than our Professional proposal | Sell reviewed research value, not bill-count capacity or a generic cheaper-tracker claim |
 | Plural Essential: unlimited tracking and alerts for an individual [S2] | Lower listed annual price, though no AI/collaboration in Essential | Compare the actual research job and needed features, not just seat price |
@@ -84,7 +84,7 @@ parallel pilot; do not insist on migration before value is demonstrated. Member 
 | Quorum: stakeholder/advocacy and policy modules [S6] | Established broad workflow represented publicly; our contact and campaign scope is deliberately narrower | Qualify out CRM-led buying rather than expanding the roadmap to win one prospect |
 
 **Potential advantage to prove:** low-setup, explicit-scope research that ends in reusable checked findings. MCP may fit
-an existing AI habit, but it is not exclusive to Tabra. **Proof task:** unfamiliar-session bill question -> amendment
+an existing AI habit, but it is not exclusive to Rostra. **Proof task:** unfamiliar-session bill question -> amendment
 inspection -> cited client update; include the review step and setup time.
 **Switching burden:** personal saved work is lighter than migrating a firm, but confidential client notes make shared
 adoption materially harder. A solo subscription does not grant safe firm-wide sharing. Price discovery must distinguish
@@ -115,7 +115,7 @@ Quorum's policy, stakeholder, data and services modules [S6], PolicyNote's resea
 Government compete when purchased journalism/analysis is central [S12][S13, retained]. Abstract's workflow execution
 is relevant when the buyer wants internal-policy/regulatory automation rather than a research interface [S14].
 
-Their breadth, support and governance expectations are advantages against our developing offering. Tabra's opportunity
+Their breadth, support and governance expectations are advantages against our developing offering. Rostra's opportunity
 is a narrow team-level research task, with a sponsor willing to use it alongside the incumbent. Confirm vendor/security
 approval before treating a low-touch trial as realistic. A focused legislative demo cannot establish complete company
 compliance, certified controls, an SLA or integration parity. Test the complete leadership-brief workflow and procurement
@@ -153,7 +153,7 @@ The Open States site currently emphasizes API-key management and bulk/API access
 to Plural Open [S18]. Official datasets, LegiScan API [S19, retained] and internal research pipelines can be better suited
 to large, reproducible quantitative cohorts than an interactive chat product.
 
-Tabra may reduce work on qualitative evidence gathering and version comparison. It has not established full historical
+Rostra may reduce work on qualitative evidence gathering and version comparison. It has not established full historical
 population coverage or unrestricted redistribution rights. **Proof task:** reproduce a scoped finding with stable source
 versions and explicit missing-data treatment. Compare to the researcher's existing extraction method. Decline a required
 full-corpus data export until rights and dataset completeness are agreed; do not count a free upstream ecosystem as a
@@ -177,7 +177,7 @@ LegiScan API [S19, retained], Open States [S18], official-source acquisition, an
 are the relevant integration baseline. Quorum's Enterprise Data [S6] and GovHawk's custom feeds [S9] enter for broader
 licensed content. Abstract [S14] is more directly relevant if buying executed business workflows instead of raw evidence.
 
-Tabra's intended advantage is a consistent canonical service and evidence model across source systems. Prove that through
+Rostra's intended advantage is a consistent canonical service and evidence model across source systems. Prove that through
 an authenticated integration, stable IDs, version-specific citations, correction/deletion handling and reliable pagination.
 MCP is not a monopoly, and data already accessible upstream is not automatically proprietary advantage. Rights,
 freshness/service commitments and support economics may dominate the decision. Compare total maintenance cost of
@@ -189,10 +189,10 @@ Free official sites and free tracking are the main alternatives. FastDemocracy, 
 discovery/individual entry paths [S1][S3][S18]; LegiScan is also a retained free/low-cost benchmark [S4]. Search engines
 and an existing AI subscription may satisfy occasional explanation needs without another purchase.
 
-Tabra should compete on understandable, verifiable discovery in its free experience, not a paid bill-count increase.
+Rostra should compete on understandable, verifiable discovery in its free experience, not a paid bill-count increase.
 Verify representative identity and procedural-vote understanding, but do not project consumer conversion from usability.
 Professional reporting, client workspaces and delivery diagnostics are not reasons for this user to pay. This segment
-should not set the initial paid acquisition budget or require turning Tabra into a broad political news product.
+should not set the initial paid acquisition budget or require turning Rostra into a broad political news product.
 
 ## 5. Commercial benchmarks for those decisions
 
@@ -213,20 +213,20 @@ add-ons and comparable quotes were not obtained. Missing numeric pricing does no
 | Quorum, GovHawk, StateScape, POLITICO Pro, Abstract | No comparable numeric quote on reviewed pages [S6][S9][S10][S12][S14] | Different modules, content and service; no honest single market-average price |
 | PolicyNote, State Net, Bloomberg Government, Lexis+ | Prior research retained; no current comparable numeric quote verified [S7][S8][S13][S16] | Reconfirm exact package and terms before a proposal |
 | Westlaw / Harvey | Westlaw comparison links to configured offers; no normalized quote collected. Harvey demo-led, no numeric price verified [S15][S17, refreshed] | Legal-suite budget substitutes, not comparable national bill-tracker prices |
-| Tabra proposal | Professional $790/year or $79 monthly; Firm $2,990/year or $299 monthly [pricing](pricing.md) | Not a launched equivalent; seats, rights and enterprise terms undecided |
+| Rostra proposal | Professional $790/year or $79 monthly; Firm $2,990/year or $299 monthly [pricing](pricing.md) | Not a launched equivalent; seats, rights and enterprise terms undecided |
 
 ### What the price comparisons actually imply
 
 - For a single-jurisdiction association, BillTrack50's listed $1,000 shared subscription is below our proposed $2,990
-  Firm price. Do not market Tabra as universally cheaper or charge for unused national coverage as though it creates value.
+  Firm price. Do not market Rostra as universally cheaper or charge for unused national coverage as though it creates value.
 - For a nationwide team, $2,990 is $2,010 below the $5,000 headline offers, but our seats, shipped workflows, rights and
   service are not established equivalents. Price difference is not evidence of a competitive advantage or sustainable margin.
-- For a solo researcher, Tabra's $790 annual proposal exceeds Plural Essential's $609 and LawSignals Starter's $468;
+- For a solo researcher, Rostra's $790 annual proposal exceeds Plural Essential's $609 and LawSignals Starter's $468;
   the task and included features differ. The extra cost needs demonstrated research utility, not an AI label.
 - Free unlimited tracking means ordinary bill following is a weak paid proposition. Reports, evidence work and recurring
   organization jobs must support our price; no quotas/top-ups are implied by competitors' meters.
 - Compare the buyer's incremental cost. If a legal/policy suite is already budgeted, its relevant tools may cost little
-  extra. A supplemental Tabra purchase must save enough work to justify another subscription and onboarding.
+  extra. A supplemental Rostra purchase must save enough work to justify another subscription and onboarding.
 
 For quotes, hold constant ICP, user/recipient counts, jurisdictions, historical depth, source types, research/report
 requirements, API/redistribution rights, service, contract length and renewal/cancellation terms. Do not compare a
@@ -234,7 +234,7 @@ service-rich research team or legal library to a software-only prototype without
 
 ## 6. Competitive gap and response
 
-| Capability | Competitive evidence | Tabra position | Response for our chosen ICPs |
+| Capability | Competitive evidence | Rostra position | Response for our chosen ICPs |
 | --- | --- | --- | --- |
 | Basic search/tracking | Free and paid options already cover this [S1-S4][S18] | Canonical foundations and designed discovery | Required baseline; not the paid positioning alone |
 | AI summaries/chat | Plural, FastDemocracy, Quorum, PolicyNote and others represent AI research [S2][S3][S6][S7] | Source-grounded conversational design | Do not claim AI uniqueness; compare completed research tasks |
@@ -275,7 +275,7 @@ For each qualified ICP pilot, record the actual incumbent/package, scope, users,
 features and switching objections. Identify whether we replace, supplement, or lose to doing nothing. Record facts only
 with the prospect's permission; do not seek confidential competitor contracts or private client material for a public demo.
 
-Use the same public task and source truth set in authorized competitor trials and Tabra: discover scoped relevant bills,
+Use the same public task and source truth set in authorized competitor trials and Rostra: discover scoped relevant bills,
 exclude false matches, compare exact versions, inspect a procedural vote, handle missing evidence, prepare a cited update,
 and repeat after a source change. Add alerts or shared review only for an ICP that needs them and a product that supports them.
 
@@ -293,7 +293,7 @@ not after adding another vendor to a feature spreadsheet.
 
 All refreshed entries below were retrieved September 15, 2026. Retained entries point to the September 14 research and
 its official URLs. Prices and features may change; refresh before public comparison or purchase. Vendor customer counts,
-speed, accuracy and security claims were not independently audited and are not used to estimate Tabra market size.
+speed, accuracy and security claims were not independently audited and are not used to estimate Rostra market size.
 
 | ID | Official source | Evidence and limitations |
 | --- | --- | --- |

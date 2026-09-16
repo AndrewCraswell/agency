@@ -127,7 +127,7 @@ LegiScan, PolicyNote, State Net, Bloomberg Government and Lexis+ use retained Se
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | BillTrack50 | Shared sheets, custom reports, public widgets and unlimited users | Strong shared-tracking alternative; prove preparation value, not just lower price |
 | Plural | Team AI/comparisons, positions, notes, assignments and shared issue exports | Direct workflow overlap; compare verification and review effort |
@@ -172,7 +172,7 @@ Detailed gaps and proof task: [association competitor analysis](competitors.md#a
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | LegiScan | Inexpensive individual and jurisdiction tracking | Sell verified research output, not tracking capacity |
 | Plural | Lower-priced Essential tracking/alerts; team research and collaboration in Professional | Compare the actual package and research task |
@@ -218,7 +218,7 @@ Detailed gaps and proof task: [boutique competitor analysis](competitors.md#b-in
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | Free official tools and trackers | Low-cost discovery and basic following | Establish a paid reason beyond access to bill alerts |
 | FastDemocracy | Free unlimited tracking; paid team reporting and outreach | Research and campaign execution are separate buying decisions |
@@ -263,7 +263,7 @@ Detailed gaps and proof task: [advocacy competitor analysis](competitors.md#c-fu
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | Quorum | Policy, stakeholder, enterprise data and service modules | Wider operating scope; target a research supplement |
 | PolicyNote | AI research/monitoring, analyst offerings and API/MCP | Neither AI access nor analyst-like summaries alone differentiates us |
@@ -309,10 +309,10 @@ Detailed gaps and proof task: [in-house competitor analysis](competitors.md#d-in
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | LawSignals | Curated practice trackers, client-ready reports and paid group sharing/branding | Direct rival for supported practice topics; compare actual report needs |
-| State Net | Legislative/regulatory tracking connected to broader code research | Tabra remains a proposed-law supplement where operative law is needed |
+| State Net | Legislative/regulatory tracking connected to broader code research | Rostra remains a proposed-law supplement where operative law is needed |
 | Westlaw and Lexis+ | Broad legal authorities and established legal-research tools | Do not position as a general legal-research replacement |
 | Harvey | Legal/document collaboration, shared spaces and represented governance controls | Adjacent workflow/budget competitor, not necessarily the bill-monitoring shortlist |
 | Existing trackers, official sources and legal AI | Already-funded discovery and advice-preparation workflow | Win on verified evidence work, not another fluent answer |
@@ -330,7 +330,7 @@ Detailed gaps and proof task: [legal-practice competitor analysis](competitors.m
 | Trigger and alternative | A developing bill story, amendment verification, voting-history investigation or multi-state comparison |
 | Most needed | Fast discovery, exact source passages, motion/position context, historical scope and shareable public evidence links |
 | Not central initially | Client workspaces, report approval, billing administration or recurring executive dashboards |
-| Required gaps | Complete historical source coverage and broader reporting/contact/transcript sources where indispensable; Tabra does not supply exclusive journalism |
+| Required gaps | Complete historical source coverage and broader reporting/contact/transcript sources where indispensable; Rostra does not supply exclusive journalism |
 | Ability to serve | Good research/verification use; purchasing and retention are less certain than professional member/client reporting |
 | Economics | $790 individual hypothesis where sustained value exists; free use is plausible. Team revenue cannot be assumed from newsroom headcount |
 | Marketing difficulty | Medium: observable beats and useful demonstrations, but constrained budgets and project-driven usage |
@@ -353,7 +353,7 @@ Detailed gaps and proof task: [legal-practice competitor analysis](competitors.m
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | Official sources and free trackers | Direct public evidence and inexpensive discovery | Demonstrate reduced verification labor, not exclusive source ownership |
 | State Affairs | Statehouse journalism plus a separate tracking/hearing/transcript product | News and transcript needs may outweigh our research workflow |
@@ -397,7 +397,7 @@ Detailed gaps and proof task: [journalism competitor analysis](competitors.md#f-
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | Open States / Plural Open | API/bulk-data access and public discovery within the same ecosystem | Baseline for research data access, not an independent second paid competitor |
 | Official bulk datasets | Direct-source data for researcher-controlled analysis | Interactive research is not a substitute for a required population dataset |
@@ -440,7 +440,7 @@ Detailed gaps and proof task: [academic competitor analysis](competitors.md#g-ac
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | Official sources and internal systems | Existing institutional processes and authoritative local records | Target external-jurisdiction research, not internal drafting replacement |
 | LegiScan | Low-cost tracking options | A public-sector buyer does not automatically imply high contract value |
@@ -484,12 +484,12 @@ Detailed gaps and proof task: [public-office competitor analysis](competitors.md
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | LegiScan API | Legislative data integration alternative with established commercial packaging | Compare exact rights, scope, limits and maintenance costs |
 | Open States | API and bulk-data entry points | Canonical convenience must add value beyond accessible upstream data |
 | Direct official-source acquisition | Source-level control and no intermediary application requirement | Build-versus-buy depends on engineering and ongoing maintenance costs |
-| PolicyNote API/MCP | Policy data and integration through API/MCP | MCP access is not unique to Tabra |
+| PolicyNote API/MCP | Policy data and integration through API/MCP | MCP access is not unique to Rostra |
 | Quorum Enterprise Data and GovHawk feeds | Broader licensed-data options; GovHawk also advertises custom feeds/support | Data breadth, rights and service may outweigh interface consistency |
 | Abstract | Recurring contextual workflow execution | Relevant when the buyer wants completed automation, not raw evidence |
 
@@ -529,7 +529,7 @@ Detailed gaps and proof task: [developer competitor analysis](competitors.md#i-d
 
 #### Competitors and strengths
 
-| Alternative | Strength for this ICP | Implication for Tabra |
+| Alternative | Strength for this ICP | Implication for Rostra |
 | --- | --- | --- |
 | Congress.gov and legislature sites | Authoritative public legislative information | Compete on understandable, verifiable discovery rather than exclusive access |
 | FastDemocracy | Free unlimited tracked bills and individual email updates | Basic following is already available without paying |
@@ -655,7 +655,7 @@ workflow is ready. Keep interviews distinct from product demos; ask about the la
 missed developments, budget owner, contract dates and indispensable features before presenting our solution.
 
 For each candidate, walk a public, non-sensitive issue from source discovery to reviewed brief. Record baseline active
-work time, Tabra-assisted time, corrections/reviewer effort, coverage failures, repeat use, support time and purchase
+work time, Rostra-assisted time, corrections/reviewer effort, coverage failures, repeat use, support time and purchase
 decision at the disclosed price. Set acceptable accuracy/missed-event criteria with the prospect before testing. Do not
 interpret enthusiasm, free usage, or a letter of intent as recognized revenue or validated renewal.
 

@@ -2,6 +2,24 @@
 
 Recorded September 14, 2026. Status: implementation started; supported product coverage is not yet available.
 See [implementation progress and backfill evidence](implementation-progress.md).
+The [durable preparation dispatcher](preparation-dispatch.md) records bounded submission intent and uncertain-response recovery.
+The [copy-validation checkpoint boundaries](copy-validation-checkpoints.md) track mutation counters and remaining resumable acknowledgement work.
+The [canonical passage inventory](passage-shape-inventory.md) measures retained edition structure and optionally
+checks full-version input eligibility with both pinned tokenizers, without embedding calls.
+The [remaining ditto-source review](ditto-source-review.md) distinguishes unresolved reference shapes and retains exact source excerpts.
+The [exact-text API and MCP slice](legal-text-serving.md) implements authenticated, source-selected reader windows.
+The [published code catalog](legal-code-discovery.md) adds authenticated code discovery through HTTP and MCP.
+The [edition and provision browser](legal-edition-browsing.md) connects discovery to exact version text.
+The [cross-edition lexical canary](edition-search-canary.md) validates selected search copies and canonical hits.
+The [public lexical search slice](legal-search-serving.md) connects this to authenticated HTTP and the typed client.
+The [Federal Register source identity contract](fr-source-identities.md) accounts for duplicated printed numbers
+without merging distinct source publications or accepting conflicting metadata.
+The [Federal Register passage pilot](fr-publication-passage-pilot.md) records full-issue reconstruction, both
+tokenizer manifests and the isolated lexical copy without embedding calls.
+The [annual source observation contract](annual-source-observations.md) distinguishes duplicated package observations
+from verified annual editions without inventing newer revision dates.
+The [annual Title 5 source review](annual-title5-source-review.md) records the exact quoted-revision correction and
+its official printed-page evidence.
 
 ## Purpose and decision
 
@@ -11,11 +29,11 @@ State-only availability, savings, coverage and rights remain unverified. Keep cu
 See [sourcing options and tradeoffs](sourcing-options.md) and [supplier shortlist](supplier-shortlist.md).
 
 The [federal collector baseline](federal-collector-baseline.md) combines our original plan with the inspected Vaquill
-code: reuse its collection patterns, with Tabra update and completeness controls. Paid state coverage plus direct
+code: reuse its collection patterns, with Rostra update and completeness controls. Paid state coverage plus direct
 federal ingestion is the agreed direction, subject to provider validation and terms. Do not build
 duplicate collectors for content a validated licensed feed supplies. [Sourcing options](sourcing-options.md) records current ingestion overlap and broader licensing opportunities.
 
-Build a dependable, locally stored regulatory corpus before adding regulatory analysis to Tabra. The first objective
+Build a dependable, locally stored regulatory corpus before adding regulatory analysis to Rostra. The first objective
 is complete source acquisition, preserved text and versions, and measurable freshness. Bill correlation and AI impact
 analysis depend on that foundation and are not prerequisites for importing the data.
 
@@ -33,6 +51,7 @@ completeness, vendor licensing rights or searchable product coverage.
 - [Federal Register metadata and issue reconciliation](fr-metadata-validation.md)
 - [Backfills, collectors and Trigger.dev workflows](acquisition-workflows.md)
 - [Search indexing and embeddings](search-indexing.md)
+- [Frozen final-passage evaluation protocol](embedding-evaluation-protocol.md)
 - [Regulatory API endpoints and MCP tools](api-mcp-contract.md)
 - [Future Vaquill state onboarding](state-onboarding.md)
 - [Competitor source disclosures and their limits](competitor-sources.md)
@@ -57,9 +76,9 @@ and regulatory planning remain later additions.
 The existence of overlapping content does not mean all endpoints have identical metadata, historical depth, publication
 timing, legal status or identifiers.
 
-## Ingest once, serve from Tabra
+## Ingest once, serve from Rostra
 
-APIs and bulk downloads are collection methods. Both populate Tabra's own storage. A normal customer query searches
+APIs and bulk downloads are collection methods. Both populate Rostra's own storage. A normal customer query searches
 the stored and indexed corpus rather than calling government APIs for every result or answer.
 
 ```text
@@ -95,14 +114,14 @@ operative after subsequent events outside our coverage.
 
 Start by validating licensed state delivery against the source and completeness requirements, alongside the direct
 federal design. Compare broader licensed delivery if its incremental cost is worthwhile. Inventory uncovered official
-sources for targeted supplementation; provider coverage and Tabra's storage/redistribution rights remain unverified.
+sources for targeted supplementation; provider coverage and Rostra's storage/redistribution rights remain unverified.
 
 The nationwide state target should explicitly account for all 50 states and DC. Record Puerto Rico and other territories
 as separately evaluated scope; existing legislative support does not automatically establish regulatory support.
 Each jurisdiction needs both its code and its rulemaking publications assessed. Do not count a state as complete because
 one searchable code website was imported.
 
-## Relationship to existing Tabra plans
+## Relationship to existing Rostra plans
 
 - [Organization features](../product/organization-features.md) describes shared research, review, reports and delivery. Those
   surfaces can later consume regulatory content; their delivery does not establish regulatory coverage.

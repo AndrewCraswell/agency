@@ -1,0 +1,90 @@
+{
+  "contract": "regulatory-final-passage-evaluation",
+  "frozenAt": "2026-09-16T07:00:18Z",
+  "status": "protocol_frozen_corpus_pending",
+  "scope": "direct_federal_regulations",
+  "models": [
+    { "id": "openai/text-embedding-3-small", "dimensions": 1536 },
+    { "id": "voyageai/voyage-4", "dimensions": 1024 }
+  ],
+  "corpus": {
+    "maximumPassages": 512,
+    "minimumQueries": 60,
+    "maximumQueries": 64,
+    "passageMaximumTokensForEachTokenizer": 1200,
+    "identicalInputBytesAndBoundaries": true,
+    "wholeSourceVersionMustQualifyForBothModels": true,
+    "sourceAndGenerationHashesRequired": true,
+    "postFreezeSilentExclusionsAllowed": false
+  },
+  "splits": {
+    "training": "none_no_fine_tuning",
+    "developmentQueries": 30,
+    "heldOutQueries": 30,
+    "grouping": "title_family_for_codes_rulemaking_family_for_publications",
+    "allVersionsAndNearDuplicatesStayInOneSplit": true,
+    "priorDiagnosticTitleFamiliesExcludedFromHeldOut": ["2", "7", "12", "14", "16", "21", "29", "31", "34", "40", "45", "49"],
+    "otherInspectedTitleFamiliesExcludedFromHeldOut": ["3", "5", "9", "23", "25", "33", "38", "47"],
+    "heldOutInspectionOrTuningRequiresReplacement": true
+  },
+  "cohorts": [
+    { "id": "current_prose", "development": 5, "heldOut": 5 },
+    { "id": "current_tables_exceptions_numbers", "development": 5, "heldOut": 5 },
+    { "id": "annual_history_version_selection", "development": 5, "heldOut": 5 },
+    { "id": "proposed_rules", "development": 4, "heldOut": 4 },
+    { "id": "final_rules", "development": 4, "heldOut": 4 },
+    { "id": "notices_scope_and_deadlines", "development": 4, "heldOut": 4 },
+    { "id": "no_answer_in_selected_corpus", "development": 3, "heldOut": 3 }
+  ],
+  "review": {
+    "gradeScale": [0, 1, 2, 3],
+    "relevantGrades": [2, 3],
+    "poolDepthPerSystem": 25,
+    "includeKnownAnswersMissingFromPools": true,
+    "blindModelAndRank": true,
+    "humanAdjudicationRequired": true,
+    "automatedSuggestionsAreNotHumanReview": true,
+    "unresolvedJudgmentsBlockSelection": true
+  },
+  "systems": ["postgresql_english_fts", "each_model_semantic", "each_model_hybrid", "reranker_off_and_on"],
+  "selection": {
+    "primaryMetric": "held_out_ndcg_at_10",
+    "minimumRecallAt25": 0.9,
+    "minimumNdcgAt10": 0.8,
+    "minimumPerAnswerableCohortRecallAt25": 0.9,
+    "minimumPerAnswerableCohortNdcgAt10": 0.8,
+    "maximumNdcgRegressionAgainstLexicalPerCohort": 0.01,
+    "maximumWrongIdentityVersionJurisdictionOrForbiddenHits": 0,
+    "practicalTieNdcgDifferenceBelow": 0.01,
+    "tieBreakers": ["lower_measured_recurring_cost", "lower_measured_end_to_end_p95_latency"],
+    "noAnswerRankingMetrics": null,
+    "noAnswerRequiresReviewedSeparateReport": true,
+    "citationResolutionExcludedFromTopicalScores": true,
+    "sparseOrMissingCohortBlocksSelection": true
+  },
+  "latency": {
+    "concurrentReaders": 20,
+    "ingestionProfileMustBeRunningAndRecorded": true,
+    "warmP95Milliseconds": { "detail": 500, "lexical": 1000, "semantic": 2500, "hybrid": 3000 },
+    "maximumErrorRateExclusive": 0.01,
+    "coldCacheReportedSeparately": true,
+    "providerAndRerankerLatencyReportedSeparately": true,
+    "cacheStateAndRunOrderRequired": true
+  },
+  "cost": {
+    "maximumUsdPerLiveRunIncludingRerankingAndRepeat": 5,
+    "maximumEmbeddingAttemptsPerRequest": 1,
+    "currentProviderPricesRequiredBeforeLiveExecution": true,
+    "unknownOrUnboundedCostBlocksLiveExecution": true,
+    "reportCostPerThousandPassagesAndPerQuery": true
+  },
+  "promotion": {
+    "protocolHashAndManifestHashesRequired": true,
+    "heldOutRepeatRequired": true,
+    "boundedLiveProviderRepeatRequired": true,
+    "persistedGenerationHttpAndMcpCanaryRequired": true,
+    "deployedAcceptanceRequired": true,
+    "modelSelected": false,
+    "bulkEmbeddingAuthorized": false
+  }
+}

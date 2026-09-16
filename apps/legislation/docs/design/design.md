@@ -544,7 +544,7 @@ completed work orders or superseded token replacements. It does not certify the 
   release requirements remain deferred. The removed representative-lookup API is not an available implementation.
 - Mobile push has no approved delivery contract. Current personal notification scope is in-app/email; organization
   digests, Slack and Teams belong to the separate [organization proposal](../product/organization-features.md).
-- The source file still imports the shadcn library. Preserve that import and the deliberate Tabra/shadcn mapping.
+- The source file still imports the shadcn library. Preserve that import and the deliberate Rostra/shadcn mapping.
   The original review's recommendation to remove it is superseded.
 
 <a id="design-handoff--durable-design-constraints"></a>
@@ -553,7 +553,7 @@ completed work orders or superseded token replacements. It does not certify the 
 
 - Keep product canvas content at `x >= 20000` while the imported library boards occupy the left-hand region. Do not
   move product frames into that region without first checking imported-board bounds.
-- Use the existing theme/brand board as the single token reference. Map shadcn semantic colors to Tabra brand tokens;
+- Use the existing theme/brand board as the single token reference. Map shadcn semantic colors to Rostra brand tokens;
   `accent` means the subtle interaction background, not the brand green. Preserve the distinction between brand and evidence.
 - The later review adopted the standard Tailwind/shadcn type and radius scales: 12px is the smallest listed type size;
   do not reintroduce the earlier 11px token or retired brand/signal aliases from the old work order.

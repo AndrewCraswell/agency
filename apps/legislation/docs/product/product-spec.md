@@ -2,7 +2,7 @@
 
 ## Product direction
 
-Updated September 15, 2026. Tabra helps a policy researcher **find relevant legislation, verify what changed, maintain
+Updated September 15, 2026. Rostra helps a policy researcher **find relevant legislation, verify what changed, maintain
 an issue, and prepare a cited member or client update**. The outcome is repeatable, checkable research with less preparation
 and review work, not simply more tracked bills or another AI answer.
 
@@ -155,7 +155,7 @@ raw address input is not an MCP contract and is not retained by default.
 ## Explicit exclusions
 
 - No general web research, arbitrary external MCP servers in the web assistant, public conversation sharing or
-  autonomous policy/legal conclusions. External clients accessing Tabra's MCP remain included.
+  autonomous policy/legal conclusions. External clients accessing Rostra's MCP remain included.
 - No CRM/PAC, mass advocacy, exclusive newsroom or outsourced analyst service, public member portal, legal citator,
   compliance obligations register or automated legal deadline determination in the core research product.
 - Committee recordings/transcripts, media processing and calendar actions remain deferred until explicitly approved

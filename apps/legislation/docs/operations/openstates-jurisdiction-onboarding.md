@@ -232,10 +232,9 @@ No name-only matches were introduced. The next local implementation needs no add
   does not suppress earlier-cycle work; extraction alone did not create a canonical receipt.
 - [ ] Wire the inspected resume state into durable bounded dispatch; full-session processing and activation remain open.
 
-Command: `pnpm inspect:openstates-cycle artifacts/openstates-runtime/local-batch-acceptance`
-`openstates/scraper-plans/nc/2025/local-fc18e787-60dc-494d-832b-c58af90488a0/plan.json` with the isolated local test URL.
-This check launched no scraper, wrote no canonical records and does not claim production readiness even when every
-batch eventually has a promotion receipt. No additional user decision is needed for the next local implementation.
+The temporary cycle inspector used the retained local acceptance artifacts and isolated test database, launched no
+scraper, and wrote no canonical records. It was removed after this checkpoint; durable resume now reports progress from
+the same promotion receipts.
 
 ## Fresh local bill promotion checkpoint (2026-09-15 04:39 UTC)
 
@@ -386,9 +385,9 @@ Alaska rows were preserved. No production data, cloud configuration, credentials
   passed. The preceding regulations lint blocker is cleared.
 - [ ] Successful complete committee detail responses, hosted authentication and production activation remain open.
 
-The MCP protocol transport is in-process; HTTP requests and PostgreSQL reads are real and local. This verifies SDK,
-tool and HTTP-adapter integration, not the hosted WorkOS sign-in flow. The existing
-`pnpm smoke:openstates-committees ak` command now performs both HTTP and local MCP checks and closes both transports.
+The MCP protocol transport was in-process; HTTP requests and PostgreSQL reads were real and local. The temporary
+acceptance harness was removed after verifying SDK, tool, and HTTP-adapter integration. This did not verify the hosted
+WorkOS sign-in flow.
 
 ## Committee HTTP checkpoint (2026-09-15 02:07 UTC)
 
@@ -403,9 +402,9 @@ tool and HTTP-adapter integration, not the hosted WorkOS sign-in flow. The exist
   `src/ingestion/regulations/fr-pdf-boundaries.ts` work. No regulatory files were changed to bypass this check.
 - [ ] Source completeness reconciliation, successful committee details, MCP acceptance and production activation remain open.
 
-Run `pnpm smoke:openstates-committees ak` with local-only `LEGISLATION_TEST_DATABASE_URL`. The command is read-only,
-requires a nonempty dataset, checks membership pagination and current-only warnings, and rejects misleading successful
-detail responses for incomplete rows. Fluent Agent MCP was unavailable; the new API warning was not Fluent-validated.
+The removed local-only harness required a nonempty dataset, checked membership pagination and current-only warnings,
+and rejected misleading successful detail responses for incomplete rows. Fluent Agent MCP was unavailable; the new API
+warning was not Fluent-validated.
 
 ## Committee archive replay checkpoint (2026-09-15 01:45 UTC)
 
@@ -422,11 +421,9 @@ detail responses for incomplete rows. Fluent Agent MCP was unavailable; the new 
 The organization detail reader requires source-complete profiles, child relationships and memberships. Observation-only
 rows intentionally do not satisfy those gates; importing them is not equivalent to enabling complete committee detail.
 
-Reproduce with `pnpm replay:openstates-foundation <archive-directory> <current-manifest> <history-manifest>` and
-`LEGISLATION_TEST_DATABASE_URL` targeting localhost `legislation_test`. This command verifies both archive manifests,
-runs migrations, imports people before committees, and asserts stable committee replay. It never drops schemas and
-rejects remote/production database targets. Source files remain unchanged. This is a local persistence test, not a
-production deployment. The 23-test transaction suite from the preceding checkpoint covers rollback safeguards.
+The temporary local persistence harness verified both archive manifests, imported people before committees, and
+asserted stable committee replay against `legislation_test`. It was removed after the 23-test transaction suite covered
+the rollback safeguards. This was not a production deployment.
 
 ## Committee observation writer checkpoint (2026-09-15)
 
@@ -525,7 +522,7 @@ and configuration. No name-only identity guesses or partial-snapshot departures.
   member is unaccepted; missing parents, parent cycles and parent holds are checked without depending on input order.
   Eight focused tests passed. Alaska plan: 20 eligible committees/136 assertions; 13 held committees/97 assertions.
   The held rosters contain 17 unaccepted-person references. No canonical writes or inferred departures.
-  Run `pnpm plan:openstates-committees <local-archive-directory> <current-manifest> <history-manifest>` for retained plans.
+  The temporary planning harness was removed after retaining the reviewed plans.
 
 - 2026-09-15: Full `pnpm verify` passed with isolated coverage output: 2,820 legislation tests passed, 108 conditional
   tests skipped, plus four webhook receiver tests passed. This clears the earlier repository verification blocker.

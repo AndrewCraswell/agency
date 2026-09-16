@@ -30,21 +30,51 @@ migration 0048. Source fixes can proceed independently of controller deployment.
   controller admission/recovery integration. Local prototype verification does not certify a production destination.
   Evidence: `ecfr-retained-generations-audit.json`, `ecfr-parser-replay-20260915-085444/complete.json`,
   `ecfr-canonical-reuse-audit.json` and `ecfr-canonical-dispatch-reuse-smoke.json` in backfill artifacts.
-- [ ] **ING-03 Resolve annual CFR Title 5 volume 2.** Inspect the real quoted-revision boundaries against official
+- [x] **ING-03 Resolve annual CFR Title 5 volume 2.** Inspect the real quoted-revision boundaries against official
   alternate renditions; determine whether the 1,647 nested sections are quoted content or malformed structural scope.
   Implement a source-evidenced parser rule or retain an explicit unavailable partition. **Done:** current and quoted
   text inventories reconcile without duplicate current identities; the warning is never merely disabled.
+  Closed locally September 15: [source review](annual-title5-source-review.md) confirms 1,631 current sections and
+  16 quoted future sections inside the malformed scope. The exact-artifact correction restores 45 logical parents;
+  changed bytes still require review. All three annual volumes published atomically at the January 1, 2025 revision
+  date. Read-only comparison verified 6,803 staged records and canonical memberships with zero differences, including
+  text, blocks and parents. Evidence: `annual-title5-reviewed-canonical-audit.json` in backfill artifacts.
 - [ ] **ING-04 Complete annual date dispositions.** Persist the existing Title 1 duplicate-revision assessment through
   canonical observation/edition publication and selectors. Broaden checks to every selected annual volume. **Done:**
   later package labels sharing 2023 bytes retain their observations but do not fabricate 2024/2025 text currency;
   conflicting volume dates prevent title publication.
-- [ ] **ING-05 Complete FR collision identities.** Apply the existing citation/source-location evidence to canonical
+  Partial implementation September 15: the normalized importer now persists `observed` annual generations anchored
+  to a verified, published revision-year volume. It compares exact content and hierarchy, preserves original date
+  warnings, and creates no later-year edition or derived work. A fresh isolated Title 1 pilot has one 2023 edition
+  with 368 memberships and two 2024/2025 observations; replay leaves all counts unchanged. Evidence:
+  `annual-title1-observation-audit.json`, `annual-title1-observation-import.json` and
+  `annual-title1-observation-replay.json`. See [observation contract](annual-source-observations.md).
+  Remaining: reconcile this disposition across every annual unit in the final frozen release manifest; pilot
+  completion does not establish release-wide historical coverage.
+- [x] **ING-05 Complete FR collision identities.** Apply the existing citation/source-location evidence to canonical
   identity registration for `00-113`, distinguishing the airspace rule from the land notice despite their shared printed
   number. **Done:** both source observations survive, IDs replay stably, no metadata/text cross-association remains,
   and the issue denominator is reconciled to actual documents rather than unique document numbers.
+  Closed locally September 15: [source-based publication](fr-source-identities.md#canonical-publication-contract)
+  atomically publishes all 110 January 18, 2000 XML records using 107 validated document PDFs and three reviewed
+  issue-PDF extracts. Both `00-113` publications retain distinct citation IDs, corrected metadata and their original
+  footers; `00-1083` has an evidenced title correction. Replay creates no additional versions or events. An independent
+  database audit compares all 110 bodies, headings, blocks, kinds and locators to staged XML with zero differences.
+  Number lookup remains ambiguous; the number-only writer still rejects ambiguous aliases. Original conflicting
+  metadata is retained separately. Evidence: `fr-jan18-source-publication.json`, its replay report and
+  `fr-jan18-source-publication-audit.json`. This is local canonical coverage, not deployed indexing or embeddings.
 - [ ] **ING-06 Finish rendition reconciliation.** Connect existing XML, document HTML and PDF/OCR evidence paths to one
   per-document required-rendition status. Preserve native page spans and shared-page boundaries. **Done:** missing XML
   can use verified alternate text; wrong-subject HTML, adjacent PDF text and unusable OCR remain quarantined. Depends on ING-05.
+  Partial implementation: separate artifact-bound field reviews retain corrected titles, kinds and page intervals
+  for both `00-113` documents and the `00-1083` subscript conflict. Original source evidence remains unchanged.
+  Shared-page boundaries and rejected mixed HTML are explicit.
+  Subsequent local evidence: the complete official PDF passes the existing PDF.js text/operator gate on all 321
+  pages; the sole empty-text page is visibly blank. `stage:fr-pdf-regions` now extracts reviewed columns for the
+  three disputed records with exact hashes, identity/neighbor/footer gates and concurrent replay verification.
+  The January 18 pilot now persists all 110 required-rendition outcomes and consumes them in atomic canonical
+  publication. Remaining: apply the policy across the frozen release inventory and qualify missing-XML/OCR fallback;
+  the reviewed PDF extracts are supporting evidence, not a replacement for canonical XML.
 - [ ] **ING-07 Freeze current eCFR currency.** Reconcile the retained title inventory with an explicit publisher cutoff,
   reserved title 35, import-in-progress titles and per-title issue dates. Plan only genuinely missing/corrected versions.
   **Done:** every requested title is validated, delayed or excluded with evidence; collection time never substitutes
@@ -114,6 +144,13 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   uncertain responses and expired idempotency retention using database uniqueness. **Done:** crash after acceptance
   but before saving a run ID cannot create duplicate canonical work or leave a permanently undiscoverable unit.
   Depends on ORCH-02.
+  Local progress: the explicit preparation dispatcher persists bounded waves before submission, uses fenced leases
+  and global Trigger keys, reuses saved handles and refuses old uncertain keys before TTL expiry. PostgreSQL fault
+  canaries pass; disposition reconciliation, automatic scanning and deployed faults remain open. See
+  [durable preparation dispatch](preparation-dispatch.md).
+  Explicit wave recovery now reads verified stored payloads with bounded keyset paging and read-only preview by
+  default. Executing a page reuses original keys/handles and defers busy/old uncertain intents. It does not yet inspect
+  Trigger run disposition or repair cancelled/expired accepted children.
 - [ ] **ORCH-08 Recover cancelled, lost and expired runs.** Reconcile durable pending work with Trigger run disposition,
   lease expiry and retry time; enqueue a fenced replacement only when eligible. **Done:** cancelled parent, killed
   child, missing run history and late original worker all converge to one valid completion. Depends on ORCH-07.

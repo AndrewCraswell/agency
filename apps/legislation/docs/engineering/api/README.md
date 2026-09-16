@@ -6,7 +6,11 @@ This is the approved public and first-party application contract. The approved r
 application in `apps/legislation`, with one explicit `route.ts` for every documented HTTP operation under
 `apps/legislation/app/api`. Current acceptance is tracked in [API closeout](../../operations/passage-search-delivery.md).
 
-The public contract contains 81 operations. Calendar, meeting-outcome and representative-lookup operations are removed.
+The implemented route inventory contains 86 operations: 81 existing legislative operations plus five organization-gated
+regulatory reads: [codes](../../regulations/legal-code-discovery.md), [editions and provisions](../../regulations/legal-edition-browsing.md),
+and [version text](../../regulations/legal-text-serving.md), plus [lexical search](../../regulations/legal-search-serving.md).
+These regulatory slices are locally implemented;
+deployed acceptance remains open, and their MCP tools are opt-in. Calendar, meeting-outcome and representative-lookup operations are removed.
 Authentication and API-backed MCP are implemented. The latest recorded acceptance and remaining passage-search gate are
 in [API closeout](../../operations/passage-search-delivery.md#september-14-scope-and-acceptance). This contract defines behavior;
 source presence and earlier endpoint smoke do not imply complete corpus coverage or close later search failures.
@@ -30,8 +34,10 @@ The contract is split into focused pages:
 
 ## Design rules
 
-Future regulatory additions are specified in [regulatory HTTP API and MCP](../../regulations/api-mcp-contract.md).
-They are proposed operations, excluded from the implemented inventory/count until their phase gates pass.
+Regulatory additions are specified in [regulatory HTTP API and MCP](../../regulations/api-mcp-contract.md).
+The implemented regulatory inventory contains `GET /api/legal/codes`, `GET /api/legal/codes/{codeId}/editions`,
+`GET /api/legal/codes/{codeId}/provisions` and `GET /api/legal/versions/{versionId}/text`. Other proposed operations
+remain excluded until their implementation gates pass.
 
 1. A canonical record has one top-level retrieval URL. A nested URL represents a relationship or contextual collection,
    not a second identity.

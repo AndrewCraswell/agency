@@ -34,7 +34,7 @@ bulk regulatory embeddings require EVAL-12 and the bounded HTTP/MCP model canary
 | Trigger workers | Explicit preparation, copy and rights-maintenance workers with bounded pools/queues and continuation. Not a deployed acquisition-to-serving graph or a cancellation-recovery controller. |
 | Embedding transport | Shared OpenRouter exact-input bug fixed; pinned OpenAI/Voyage tokenizers and diagnostic reuse cache. No regulatory production vector pipeline or final model decision. |
 | Model evidence | Provisional 60-query/350-excerpt comparison and blind review packets exist. Final passage evaluation, reviewed labels, broader cohorts and deployed route verification remain. |
-| API foundation | Strict legal-search schemas and organization-gated internal search service. No registered legal HTTP routes, callable legal client method or MCP tools. |
+| API foundation | Strict legal-search schemas, organization-gated internal search and exact-version text HTTP/client/MCP delivery. Coverage/discovery, public legal search and deployed canaries remain open. See [reader delivery](legal-text-serving.md). |
 
 These are local evidence statements, not fresh production audits. OPS-01 inventories actual deployed state.
 

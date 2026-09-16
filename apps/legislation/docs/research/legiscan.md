@@ -2,7 +2,7 @@
 
 Alternative provider, not selected or implemented. The current source choices belong to the
 [coverage policy](../engineering/coverage-policy.md). This note retains the useful conclusions of the August 18, 2026
-catalog review. Recheck commercial scope and the current manual before implementation; Tabra should not maintain a copy
+catalog review. Recheck commercial scope and the current manual before implementation; Rostra should not maintain a copy
 of an unselected vendor's entire wire schema and reference database.
 
 ## Collection choices
@@ -11,22 +11,22 @@ of an unselected vendor's entire wire schema and reference database.
 | --- | --- | --- |
 | Pull | Discover sessions, bills, people, votes and document metadata; fetch individual text/amendment/supplement bodies | Polling and quota costs depend on scope and refresh strategy |
 | Bulk | Per-session snapshots containing bill, roll-call and person JSON; CSV alternatives | Weekly snapshots in the reviewed contract; document binaries require separate acquisition |
-| Push | Replication feed to Tabra's endpoint, including dependent objects | Paid cadence, acknowledgement, replay and missing-child handling need a subscription contract |
+| Push | Replication feed to Rostra's endpoint, including dependent objects | Paid cadence, acknowledgement, replay and missing-child handling need a subscription contract |
 
 Push is a replication feed, not a set of independently subscribable product events. The reviewed manual describes
 15-minute to four-hour delivery intervals. Those are delivery intervals after provider detection, not guaranteed time
-from a legislature publishing a change to Tabra receiving it. Source publication, provider detection, transport,
+from a legislature publishing a change to Rostra receiving it. Source publication, provider detection, transport,
 ingestion and customer notification must be measured separately.
 
-Keep original payloads and provider IDs for diagnostics, then normalize into Tabra's own entities and change events.
-The official client's relational schema illustrates client storage; it is not a replacement for Tabra's canonical model.
+Keep original payloads and provider IDs for diagnostics, then normalize into Rostra's own entities and change events.
+The official client's relational schema illustrates client storage; it is not a replacement for Rostra's canonical model.
 
 ## Coverage and overlap
 
 The reviewed API contains bills, actions, sponsors, people, committee references, subjects, relationships, text versions,
 amendments, supplements, roll calls, individual positions and bill-linked calendar information. This overlaps the existing
 legislative pipelines. It does not by itself establish complete committee membership history, regulatory/current-code
-coverage, transcripts or every field required by Tabra's civic APIs.
+coverage, transcripts or every field required by Rostra's civic APIs.
 
 Evaluate replacement against the [synchronization catalog](../engineering/data-sync-catalog.md): required fields,
 historical sessions, original documents, canonical identity continuity, corrections, complete replay, source provenance

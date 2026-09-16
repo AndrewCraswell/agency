@@ -150,11 +150,10 @@ The importer updates existing canonical records only. It refuses to create a rec
 the source payload at the boundary, and advances the `canonical-foundation/jurisdictions-sessions` checkpoint only
 after each durable update. A final audit records whether every persisted jurisdiction and session is route-complete.
 
-Reviewed snapshots live under `apps/legislation/data/canonical-foundation`. Import one explicitly with
-`pnpm --filter legislation foundation:import -- data/canonical-foundation/<snapshot.json> [checkpoint-stream]`; the path
-is package-relative because pnpm runs the script from `apps/legislation`. The command hashes the exact file, uses one
-database connection, and relies on the importer's per-record durable checkpoint. A jurisdiction-scoped snapshot must use
-its own checkpoint stream and does not make the global audit complete.
+Reviewed snapshots live under `apps/legislation/data/canonical-foundation`. The completed bootstrap command was removed;
+future source ingestion must call the authoritative adapter and `importCanonicalFoundationRecords` rather than reviving a
+snapshot-only entry point. A jurisdiction-scoped import must use its own checkpoint stream and does not make the global
+audit complete.
 
 The Alaska snapshot is sourced from the current official Alaska State Legislature site and archive. The publisher labels
 the persisted numbered records as `Legislature`, and the corrected adapter records the normalized lowercase classification

@@ -1,7 +1,12 @@
 # Regulatory HTTP API and MCP contract
 
-Proposed additions, September 14, 2026. These routes/tools are not implemented or added to the current live endpoint
-count by this document. Parent: [implementation](implementation.md). Reuse the normative
+Contract recorded September 14, 2026. The [exact-version text operation](legal-text-serving.md) is implemented locally;
+the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. The
+[published code list](legal-code-discovery.md), [edition/provision browser](legal-edition-browsing.md), and their
+`list_legal_codes`, `list_legal_editions`, `list_legal_provisions` tools are implemented locally.
+[Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;
+the API-backed `search_regulations` tool is also implemented locally. Other routes/tools remain proposed.
+No deployed regulatory coverage is claimed. Parent: [implementation](implementation.md). Reuse the normative
 [shared HTTP schemas](../engineering/api/schemas.md), WorkOS access rules and API-backed MCP architecture.
 
 Naming decision, September 14, 2026: use `/api/legal/` with simple resource names and `/api/search/legal` for ranked
@@ -15,8 +20,15 @@ context and an explicitly configured organization allowlist. It requires a selec
 API/MCP permission before accessing search text. It currently accepts only official federal sources with worldwide
 rights; territory-limited policies fail closed until trusted territory attributes are available. Caller-supplied identity
 or location fields cannot authorize access. These are application-service gates, not a registered route/tool or a billing
-plan implementation. The strict public search DTO, typed client, explicit Next route, MCP tool and token-audience canary
-remain implementation gates below.
+plan implementation. The newer public search implementation below replaces internal preparation selectors with
+edition/code selection. Exact-text serving has a separate registered route and client
+method, using the same WorkOS API boundary with local signed-token audience tests.
+
+The [cross-edition application canary](edition-search-canary.md) additionally accepts discovered edition IDs rather
+than internal preparation/version IDs. It validates selected copy receipts and metadata signatures, ranks unique
+versions across editions and hydrates exact canonical passages. The public route and typed client now use this service
+with provenance projection, current-code selection and frozen paging, including API-backed MCP parity. Publication/agency search,
+semantic retrieval and deployed acceptance remain open; unsupported requested capabilities fail explicitly.
 
 Each operation gets an explicit Next.js `app/api/.../route.ts`, a strict Zod request schema, reusable application query
 service, typed API-client method and HTTP/MCP parity tests. No catch-all regulatory router and no direct provider/model
@@ -74,7 +86,7 @@ entire title text or child collections. Readable text uses ordered source blocks
 | GET `/api/legal/provisions/{provisionId}/versions` | sourceId | `Page<ProvisionVersionSummary>`; first observed date descending/id; edition memberships paged through edition traversal |
 | GET `/api/legal/provisions/{provisionId}/editions` | versionId?; sourceId? | `Page<LegalEditionMembership>`; edition ID ascending; rights-filtered membership discovery |
 | GET `/api/legal/versions/{versionId}` | editionId? for a provision version | `LegalVersionDetail`; immutable identity and optional validated context |
-| GET `/api/legal/versions/{versionId}/text` | editionId required for provision text; anchor OR cursor; limit | `ResourceResponse<LegalTextWindow>`; lossless ordered source blocks |
+| GET `/api/legal/versions/{versionId}/text` | exactly one editionId for provision text OR sourceObservationId for publication text; anchor OR cursor; limit | `ResourceResponse<LegalTextWindow>`; lossless ordered source blocks; locally implemented |
 | GET `/api/legal/versions/{versionId}/passages` | none | `Page<LegalPassage>`; ordinal/id; provision or publication version |
 | GET `/api/legal/passages/{passageId}` | none | `LegalPassage`; exact source/version/locator and bounded text |
 | POST `/api/legal/provisions/resolve` | citation, jurisdictionId, codeId?, editionId? OR asOf? | `CitationResolution`; resolved, ambiguous or not_found result |
@@ -107,8 +119,9 @@ not an unbounded synchronous recomputation on every page.
 
 ## Reader, traversal and source context
 
-The executable foundation is `src/ingestion/regulations/reader-contract.ts` and `reader-text.ts`. Local source projection
-is implemented; database-backed reads, HTTP routes and MCP registration still require their phase gates.
+The executable foundation is `src/ingestion/regulations/reader-contract.ts` and `reader-text.ts`. Database-backed exact
+text reads, the explicit HTTP text route and typed client are implemented behind the organization allowlist.
+Code/edition lists and provision traversal are implemented locally; detail/coverage operations and deployed acceptance remain phase gates.
 
 The text operation returns the normal resource envelope with selection and continuation inside `data`, preserving
 the existing strict envelope metadata. `LegalTextWindow` includes `versionId`, `readerContract`, `bodyHash`,
@@ -173,7 +186,11 @@ publication hits add publication kind, publication date, nullable effective date
 extend SourceReference with publisher, supplier and nullable attribution. Metadata distinguishes requested `mode`
 from `legal.effectiveMode`; the only fallback is an explicit change from semantic/hybrid to lexical. Embedding generation
 and model reporting must agree with effective mode. Duplicate passage IDs and mismatched selected versions are rejected.
-Authorization, supported coverage, cursor binding and permission to degrade still belong to the service boundary.
+Authorization, supported coverage and cursor binding still belong to the service boundary. The shared
+`validateLegalSearchResponse` additionally binds a parsed response to the normalized request: mode, limit, explicit
+degradation permission, corpora, jurisdiction, source-agency IDs, code/edition selection and publication dates/kinds.
+An `asOf` response requires the exact selected date with publisher point-in-time evidence. This validator is a
+prerequisite for endpoint/client wiring; it does not establish those endpoints are shipped.
 
 Strict request fields:
 
@@ -198,8 +215,15 @@ type RegulatorySearchRequest = {
 
 Defaults: lexical, corpora regulation + regulatory_publication, latest validated editions, no implicit publication
 date restriction, allowDegraded false. Lexical limit max 100/default 20; semantic/hybrid max 25/default 10. `asOf` or
-editionIds requires a code-only corpus selection; publication-kind/date filters require publication-only selection.
+editionIds or codeIds requires a code-only corpus selection; publication-kind/date filters require publication-only selection.
 Reject incompatible mixed queries rather than silently ignoring a filter. Clients can issue two explicit queries.
+`agencyIds` contains source-agency directory IDs (`sourceAgencyId`), including unresolved agency references, rather
+than requiring a resolved organization ID. Values within one filter are alternatives; different filters intersect.
+
+Pages reject duplicate exact owner/version pairs even when different passages matched. `truncated` is true exactly
+when a next cursor exists or `candidateSetTruncated` is true. A continuing page must contain the requested number of
+hits; the final capped window can have no next cursor while still reporting truncation. Continuation cannot return
+the cursor that was just submitted. These client checks supplement server authorization and frozen ranking.
 
 Each hit is `kind: provision | publication`, canonical owner ID, version ID, passage ID, title/heading, citation,
 jurisdiction/code/agency references, publication kind where applicable, selected edition/dates, <=500-character snippet,
@@ -216,7 +240,7 @@ appear in responses. Vendor-only source links are labeled as such; do not fabric
 ## Coverage and errors
 
 Coverage distinguishes requested, available and excluded scope; code versus rulemaking publications; current versus
-history; source publisher currency versus Tabra collection; and lexical versus semantic readiness. Include last
+history; source publisher currency versus Rostra collection; and lexical versus semantic readiness. Include last
 successful collection, last attempt, latest validated edition, stage counts, pending age, documented gaps and available
 date/edition selectors. Detailed internal failures stay operator-only; clients receive safe reason codes.
 
@@ -251,7 +275,9 @@ instructions; tool descriptions prohibit treating a proposed rule as current con
 | `get_legal_changes` | GET `/api/legal/events` | Observed changes with historical flags |
 | `get_regulatory_coverage` | GET `/api/legal/coverage` | Scope and freshness before relying on absence |
 
-Inputs match API schemas; use API-client methods and safe error mapping. Wrapping multiple API calls must share a
+Inputs match API schemas; the implemented text tool narrows `limit` to 1–3 (default 3) to bound combined MCP output.
+It verifies that the API credential represents the same organization and subject as the authenticated MCP caller.
+Use API-client methods and safe error mapping. Wrapping multiple API calls must share a
 bounded result budget and propagate exact version selections. No parallel tool-only search algorithm, provider key,
 special unlimited limit, or mutation tool. MCP tools/list advertises the read-only/idempotent annotations supported
 by the installed SDK and feature availability. Capability is registered only after endpoint gates pass.
@@ -297,8 +323,8 @@ separate from these design decisions:
 
 | Area | Required clarification or recommended change |
 | --- | --- |
-| Readable text | Source projection and window schemas implemented locally; database, HTTP and MCP delivery pending. |
-| Exact selection | Combined membership selector/context validation implemented; publisher-date lookup and read-service authorization pending. |
+| Readable text | Source projection, selected database reads, HTTP/client and opt-in MCP text delivery implemented locally; discovery and deployed acceptance pending. |
+| Exact selection | Combined membership validation and source-authorized exact text reads implemented; publisher-date lookup and broader selectors pending. |
 | Browse | Root/direct-child/all-node request validation implemented; database traversal pending. |
 | Discovery | Canonical/unresolved source-reference schema implemented; directory and source-alias filtering pending. |
 | Wire schemas | Reader/capability/context schemas implemented; broader DTOs and shared strict-client integration remain API-01/API-08. |

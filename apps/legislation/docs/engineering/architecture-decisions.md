@@ -28,6 +28,8 @@ reconsideration trigger.
 
 - Status: accepted and implemented in the Next.js application. Public scope is 81 HTTP operations and 25 MCP tools;
   see [API closeout](../operations/passage-search-delivery.md) for dated deployment evidence and the remaining passage-search gate.
+  The local [regulatory text pilot](../regulations/legal-text-serving.md) adds one gated HTTP operation and MCP tool;
+  its deployed acceptance is still open.
 - Explicit API handlers belong under `apps/legislation/app/api`; MCP is composed through the HTTP query adapter.
   WorkOS API/session/MCP audiences remain separate. Source code does not establish corpus completeness.
 - Deploy `legislation-web`; rollback only to a verified prior artifact of that service. Do not recreate the deleted

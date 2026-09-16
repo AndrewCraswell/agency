@@ -75,9 +75,9 @@ Run from `apps/legislation`. Collection defaults to preview; `--apply` fetches m
 Reconciliation and replay read retained inputs and write exclusive output reports.
 
 ```powershell
-pnpm run collect:fr-metadata --start 2024-01-02 --end 2024-01-02 --cutoff 2026-09-14 --page-size 20 --output artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14 --apply
-pnpm run collect:fr-metadata --replay artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --output artifacts/regulatory-backfills/fr-metadata-replay-2026-09-14
-pnpm run reconcile:fr-issue --manifest artifacts/regulatory-backfills/federal-pilot-2026-09-14.json --date 2024-01-02 --raw artifacts/regulatory-backfills/raw --normalized artifacts/regulatory-backfills/normalized --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --output artifacts/regulatory-backfills/fr-issue-reconciliation-2026-09-14.json
+pnpm tool regulations/collect-fr-metadata --start 2024-01-02 --end 2024-01-02 --cutoff 2026-09-14 --page-size 20 --output artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14 --apply
+pnpm tool regulations/collect-fr-metadata --replay artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --output artifacts/regulatory-backfills/fr-metadata-replay-2026-09-14
+pnpm tool regulations/reconcile-fr-issue --manifest artifacts/regulatory-backfills/federal-pilot-2026-09-14.json --date 2024-01-02 --raw artifacts/regulatory-backfills/raw --normalized artifacts/regulatory-backfills/normalized --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --output artifacts/regulatory-backfills/fr-issue-reconciliation-2026-09-14.json
 pnpm exec vitest run src/ingestion/regulations/fr-metadata.test.ts src/ingestion/regulations/fr-reconciliation.test.ts
 ```
 
@@ -111,7 +111,7 @@ Service TypeScript and scoped lint passed. Root `pnpm verify` passed; counts and
 ## PDF rendition acquisition
 
 ```powershell
-pnpm run acquire:fr-pdfs --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --date 2024-01-02 --directory artifacts/regulatory-backfills/fr-pdfs --output artifacts/regulatory-backfills/fr-pdfs-pilot-2026-09-14.json --limit 100
+pnpm tool regulations/acquire-fr-pdfs --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --date 2024-01-02 --directory artifacts/regulatory-backfills/fr-pdfs --output artifacts/regulatory-backfills/fr-pdfs-pilot-2026-09-14.json --limit 100
 ```
 
 Replaying the same command with a fresh output filename verifies and reuses retained receipts. The metadata manifest
@@ -222,7 +222,7 @@ adjacent publication. For this source, prefer the verified HTML rendition over a
 Run from `apps/legislation` with a new output filename:
 
 ```powershell
-pnpm run acquire:fr-html --metadata artifacts/regulatory-backfills/fr-2000-early-metadata/manifest.json --date 2000-01-03 --directory artifacts/regulatory-backfills/fr-2000-early-html --output artifacts/regulatory-backfills/fr-2000-early-html-report.json --limit 100
+pnpm tool regulations/acquire-fr-html --metadata artifacts/regulatory-backfills/fr-2000-early-metadata/manifest.json --date 2000-01-03 --directory artifacts/regulatory-backfills/fr-2000-early-html --output artifacts/regulatory-backfills/fr-2000-early-html-report.json --limit 100
 ```
 
 The same command with a fresh report name validates and reuses retained source bytes. The limit bounds each invocation;
@@ -248,7 +248,7 @@ registration, staging and canonical publication are implemented. HTML and XML ad
 while retaining different source text contracts. See [storage validation](storage-validation.md#canonical-html-publication).
 
 ```powershell
-pnpm run normalize:fr-html-publications --metadata artifacts/regulatory-backfills/fr-2000-early-metadata/manifest.json --date 2000-01-03 --html artifacts/regulatory-backfills/fr-2000-early-html --pdf artifacts/regulatory-backfills/fr-2000-early-pdfs --validation artifacts/regulatory-backfills/fr-2000-early-pdf-validation.json --output artifacts/regulatory-backfills/fr-2000-early-publication-inputs.json
+pnpm tool regulations/normalize-fr-html-publications --metadata artifacts/regulatory-backfills/fr-2000-early-metadata/manifest.json --date 2000-01-03 --html artifacts/regulatory-backfills/fr-2000-early-html --pdf artifacts/regulatory-backfills/fr-2000-early-pdfs --validation artifacts/regulatory-backfills/fr-2000-early-pdf-validation.json --output artifacts/regulatory-backfills/fr-2000-early-publication-inputs.json
 ```
 
 Use a fresh output filename on replay. Each batch is capped at 1,000 publications and 64 MiB serialized input payload;

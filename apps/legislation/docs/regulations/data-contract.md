@@ -100,7 +100,7 @@ to legal currency. The mismatch remains a publication gate until an explicit sup
 One unchanged text version can appear in multiple editions. Preserve each edition membership and provenance without
 re-embedding identical input. A correction to a previously published edition creates a new source revision/observation;
 retain the superseded revision for citations and expose which revision is currently preferred. ObservedAt permits an
-audit of what Tabra knew at a time; the initial API does not promise full bitemporal legal reconstruction.
+audit of what Rostra knew at a time; the initial API does not promise full bitemporal legal reconstruction.
 
 Selected context carries edition/provision/version IDs and the source observation, rights-policy revision, parent,
 source locator, selected/currency dates and basis. Validate that tuple rather than selecting an arbitrary membership

@@ -1,0 +1,13 @@
+{
+  "candidates": [
+    { "id": "baseline", "model": "openai/gpt-5.6-luna-20260709", "promptVersion": 1 },
+    { "id": "prompt-candidate", "model": "openai/gpt-5.6-luna-20260709", "promptVersion": 2 },
+    { "id": "model-candidate", "model": "anthropic/claude-sonnet-4.5", "promptVersion": 1 }
+  ],
+  "repeats": 1,
+  "maximumModelCalls": 1800,
+  "maximumInputCharacters": 1000000,
+  "evaluatorModel": "openai/gpt-6-astra",
+  "evaluate": true,
+  "allowDrafts": true
+}

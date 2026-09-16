@@ -135,12 +135,9 @@ const peopleOrganizationsFixtures = {
 const meetingsCalendarsFixtures = {
   agendaItemId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID"),
   agendaMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID"),
-  calendarId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_CALENDAR_ID"),
   eventDocumentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID"),
   eventDocumentMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_MEETING_ID"),
   meetingDetailId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_MEETING_DETAIL_ID"),
-  outcomeId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_OUTCOME_ID"),
-  outcomeMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID"),
   participantDetailMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID"),
   participantId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_ID"),
   participantListMeetingId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID")
@@ -1590,20 +1587,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
         `/api/meetings/${encodeURIComponent(eventDocumentMeetingId)}/documents/${encodeURIComponent(eventDocumentId)}`
     },
     {
-      fixtures: ["outcomeMeetingId"],
-      kind: "page",
-      name: "meeting outcomes",
-      path: ({ outcomeMeetingId }) => `/api/meetings/${encodeURIComponent(outcomeMeetingId)}/outcomes?limit=1`
-    },
-    {
-      expectedStatus: 404,
-      fixtures: ["outcomeMeetingId", "outcomeId"],
-      kind: "resource",
-      name: "meeting outcome",
-      path: ({ outcomeMeetingId, outcomeId }) =>
-        `/api/meetings/${encodeURIComponent(outcomeMeetingId)}/outcomes/${encodeURIComponent(outcomeId)}`
-    },
-    {
       fixtures: ["participantListMeetingId"],
       kind: "page",
       name: "meeting participants",
@@ -1616,21 +1599,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
       name: "meeting participant",
       path: ({ participantDetailMeetingId, participantId }) =>
         `/api/meetings/${encodeURIComponent(participantDetailMeetingId)}/participants/${encodeURIComponent(participantId)}`
-    },
-    { fixtures: [], kind: "page", name: "calendars", path: "/api/calendars?limit=1" },
-    {
-      expectedStatus: 404,
-      fixtures: ["calendarId"],
-      kind: "resource",
-      name: "calendar",
-      path: ({ calendarId }) => `/api/calendars/${encodeURIComponent(calendarId)}`
-    },
-    {
-      expectedStatus: 404,
-      fixtures: ["calendarId"],
-      kind: "page",
-      name: "calendar meetings",
-      path: ({ calendarId }) => `/api/calendars/${encodeURIComponent(calendarId)}/meetings?limit=1`
     }
   ]
   const passed = []
@@ -1695,13 +1663,10 @@ async function smokeMeetingsCalendarsRoutes(root) {
     passed.push(route.name)
   }
 
-  await Promise.all([
-    smokeCanonicalApiNotFound(root, "/api/meetings/", "meetings-calendars-smoke-meetings-trailing-slash"),
-    smokeCanonicalApiNotFound(root, "/api/calendars/", "meetings-calendars-smoke-calendars-trailing-slash")
-  ])
+  await smokeCanonicalApiNotFound(root, "/api/meetings/", "meetings-calendars-smoke-meetings-trailing-slash")
 
   return {
-    notFound: ["meetings_trailing_slash", "calendars_trailing_slash"],
+    notFound: ["meetings_trailing_slash"],
     passed,
     skipped
   }

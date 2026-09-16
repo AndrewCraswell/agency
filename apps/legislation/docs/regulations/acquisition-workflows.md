@@ -67,7 +67,7 @@ This implements local eCFR reuse at the existing importer entry point. It does n
 activate schedules, acknowledge a search copy or certify a production destination. Snapshot evidence must be regenerated
 at dispatch, and annual CFR/FR retain their separate publication and reconciliation requirements.
 
-`pnpm --filter legislation replay:regulatory-parser --manifest <frozen.json> --locations <locations.json>
+`pnpm --filter legislation tool regulations/replay-regulatory-parser --manifest <frozen.json> --locations <locations.json>
 --output <new-normalized-root> --report <new-report.json> [--after-unit <key>] [--limit 5]` replays up to five titles
 sequentially against freshly audited retained inputs. It reuses the existing bounded parser and generation locks.
 The manifest is replay-verified; cursors must belong to it. Completed current generations are fully validated on retry.
@@ -82,7 +82,7 @@ review too. Any difference produces `review_required` and a nonzero CLI exit, wi
 The terminal cursor means traversal exhaustion only; all batch reports and their dispositions must be reconciled
 before claiming complete parity. Canonical verification remains a separate gate even if every record is identical.
 
-`pnpm --filter legislation audit:regulatory-reuse --manifest <frozen.json> --locations <locations.json> --output <report.json>`
+`pnpm --filter legislation tool regulations/audit-regulatory-reuse --manifest <frozen.json> --locations <locations.json> --output <report.json>`
 audits retained raw XML and normalized output before dispatch. The locations file is an explicit array of
 `{ "rawDirectory": "...", "normalizedDirectory": "..." }` pairs; relative paths resolve from the command's working
 directory. The CLI hashes the current Python parser itself and writes a new report exclusively. It does not download,
@@ -104,7 +104,7 @@ ING-02; canonical editions/observations, exact memberships/content, intended dep
 separate work. Reports are point-in-time evidence and cannot authorize later reuse without revalidation. Exit status 1
 means an invalid unit was found; missing inputs are represented in the plan rather than treated as audit failures.
 
-The existing `scripts/plan-regulatory-backfill.ts` now accepts optional `--delivery-output <path>` alongside `--output`.
+The existing `tools/regulations/plan-regulatory-backfill.ts` now accepts optional `--delivery-output <path>` alongside `--output`.
 It emits a read-only partition plan from replay-verified source evidence: current eCFR titles, FR date windows split by
 month and the cutoff's 90-day baseline, and annual CFR year/title groups with listed volume numbers. Each partition
 records corpus, federal jurisdiction, wave, explicit inclusion/reserved exclusion, expected acquisition units and
@@ -201,7 +201,7 @@ their own shard. Dates with no issue require inventory evidence, not an assumpti
 
 Default recurrence: discover hourly with a 72-hour overlap in source modification time; retry daily recent-window
 reconciliation over 30 publication days; rotate full-history modification/inventory reconciliation so every supported
-year is checked within seven days. These are Tabra operating targets to validate, not upstream freshness guarantees.
+year is checked within seven days. These are Rostra operating targets to validate, not upstream freshness guarantees.
 If a source lacks a dependable modification signal, record that limitation and use revalidated artifact inventories.
 
 ## eCFR acquisition

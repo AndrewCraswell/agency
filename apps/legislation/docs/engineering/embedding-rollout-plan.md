@@ -59,16 +59,10 @@ if the higher stages continue to scale efficiently.
 
 ## Canary status
 
-Keep the evaluation manifests/results with their owning reports rather than copying each experimental iteration here:
-
-| Evidence | What it establishes |
-| --- | --- |
-| [Routed MCP canary](../../evals/embedding-canary.md) | Frozen multi-product treatment/control retrieval, canonical projection, amendment fusion and selective reranking |
-| [Broad-topic canary](../../evals/embedding-topic-canary.md) | Bounded taxonomy-based topic evaluation; not whole-corpus relevance or current production latency |
-| [Model/input bakeoff](../../evals/embedding-model-bakeoff.md) | Per-product model choices, rejected leading-text bill fallback and graded comparisons |
-
-These are dated evidence, not fresh acceptance after input, model, serving or source changes. An earlier single-target
-broad-query score was not a valid topical evaluation. Unverified inline vectors remain non-authoritative.
+The August embedding canary and model-bakeoff artifacts were superseded by the routed production contracts and removed.
+They were dated evidence, not fresh acceptance after input, model, serving, or source changes. Current model routes and
+input contracts are executable source; new model changes require a new preregistered evaluation rather than reviving old
+fixtures. Unverified inline vectors remain non-authoritative.
 
 ## Retrieval products and embedding inputs
 

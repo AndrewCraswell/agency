@@ -7,6 +7,22 @@ context and `src/mcp/`. Do not add direct database/provider access behind MCP or
 
 ## HTTP surface
 
+September 15 discovery slice: [published code discovery](legal-code-discovery.md) adds the strict codes-list contract,
+rights-filtered catalog service, explicit route, typed client and API-backed `list_legal_codes` tool. This advances
+HTTP-02/03/04/14/15 and TOOLS-01/02/04/08/09; code detail, editions, traversal, coverage and deployed gates remain open.
+
+The [edition/provision browser](legal-edition-browsing.md) additionally ships code-edition lists, structural traversal,
+strict client contracts, explicit Next routes and corresponding MCP tools. It advances the same gates and connects
+discovered IDs to exact text. Code detail, edition detail, public coverage and deployed acceptance remain open.
+
+September 15 local slice: [exact-text serving](legal-text-serving.md) implements the selected database read, strict
+response/request contract, typed client and explicit authenticated version-text route. This advances HTTP-01/03/06/14/15;
+their full-scope gates remain open, including passages, discovery, deployed credentials/router and deployed MCP parity.
+
+The exact-text MCP slice adds the typed adapter call, conditional `get_legal_text` registration, same-principal API
+credential verification and bounded continuation. It advances TOOLS-01/03/04/08/09; full tool sets and deployed canaries
+remain open. Shared service credentials cannot authorize another MCP caller's regulatory reads.
+
 Schemas can start now; query-backed delivery depends on INDEX-02/07 and the relevant canonical data. Deliver complete
 vertical slices: application service, serializer, strict client parser, explicit route and focused parity tests together.
 
@@ -39,6 +55,12 @@ vertical slices: application service, serializer, strict client parser, explicit
   service, request-bound response checks, typed client method and explicit POST route. **Done:** lexical searches
   preserve filters, exact versions and pagination; semantic/hybrid requests return explicit unavailable capability
   until HTTP-17 ships, not an empty semantic success. Depends on INDEX-02/07–08, HTTP-01–03.
+  Local progress: `validateLegalSearchResponse` binds mode/limit, degradation permission, scope and date filters to
+  the request and rejects duplicate versions and inconsistent continuation. Wire tests exercise empty-result fallback
+  and exact historical-date evidence. Public projection, current-code/explicit-edition selectors, POST route and typed
+  client are now locally implemented and covered by a real-database authenticated handler canary. Agency/publication
+  scopes and deployed acceptance remain open. The API-backed MCP search tool now passes local real-database
+  search/pagination/text parity; see [serving evidence](legal-search-serving.md).
 - [ ] **HTTP-10 Implement public coverage reporting.** Ship coverage filters and stage-specific capability, requested/
   available/excluded scope, publisher currency and collection attempt fields. **Done:** source collection, canonical,
   lexical and semantic readiness differ correctly; account-inaccessible metadata is not disclosed. Depends on ING-16
@@ -81,6 +103,9 @@ the corresponding endpoint slice. TOOLS-05 is a bounded model gate, not a depend
 - [ ] **TOOLS-03 Add retrieval tools.** Implement `search_regulations`, `get_legal_provision` and `get_legal_text` using
   search/provision/text API methods; preserve exact selected context through composed calls. **Done:** no silent latest
   version substitution or custom MCP-only ranking path. Depends on HTTP-05–06/09, TOOLS-01.
+  Local progress: `search_regulations` calls the strict HTTP client under same-principal credentials. The real-database
+  MCP canary verifies cross-edition hits, continuation and composed exact text against HTTP. Provision detail, broader
+  scope and deployed acceptance remain open.
 - [ ] **TOOLS-04 Enforce combined output budgets.** Apply the existing MCP response byte budget and 100,000-character
   assembled text ceiling, including composed requests, warnings and continuation. **Done:** large tables/documents
   return deterministic continuation; no field bypasses limits or silently truncates evidence. Depends on TOOLS-02–03.

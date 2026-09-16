@@ -9,11 +9,37 @@ one million records; oversized context fails instead of being silently shortened
 jurisdiction, leaving room for future licensed state sources without hard-coding their publisher as Federal Register.
 
 A renewable 120-second lease and incrementing fence prevent stale workers from checkpointing or completing work. A
-generation committed before a checkpoint failure is safely reused on retry. Failed work remains pending with a retry
-delay and a bounded error code. Completion checks source/retained inventory hashes, exact version/context/tokenizer
-associations, and passage counts for every item. `prepared` means canonical preparation passed these checks; it does
+generation committed before a checkpoint failure is safely reused on retry. Infrastructure and unknown failures remain
+pending with a retry delay and a bounded error code. Recognized table/reader/context-budget failures instead persist
+`failure_code` and `failed_at` on the affected item, allowing later records to continue. A checkpoint cannot have both
+a generation and a failure. Completion checks source/retained inventory hashes, exact version/context/tokenizer
+associations, and passage counts for every successful item. `prepared` means every item passed these checks; it does
 not establish isolated-index parity, complete content-hash auditing, authenticated search readiness or embedding quality.
-Publication outbox items remain pending. Trigger dispatch, isolated-index copy/acknowledgement and tombstones remain open.
+Publication outbox items remain pending until the separate index acknowledgement gate passes.
+
+Preparation results include `total`, `complete` and `blocked`. The state stays `pending` while any items remain
+unattempted; after the full inventory is accounted for it becomes `prepared` only with zero blockers, otherwise
+`blocked`. The latter is terminal for Trigger continuation and is rejected by index copying. A source blocker is not
+an accepted exclusion from advertised coverage. Rights checks and lease renewal fence failure checkpoints exactly as
+they fence successful checkpoints; a lease expiring during either write rolls back that transaction.
+
+After a source-backed handling repair, explicitly dispatch `regulatory-passage-preparation` with the same `scope`,
+`model`, bounded `limit` and `retryBlocked: true`. The worker clears only failed checkpoints after checking rights and
+acquiring the lease; it retains successful generations. Subsequent Trigger tasks send `retryBlocked: false` so the
+same unresolved record cannot starve the remaining inventory. Ordinary replay leaves recorded blockers intact.
+This is canonical passage preparation only and never dispatches embedding requests. New schema fields are in the
+unreleased migration baseline; retained older pilot databases are not automatically migrated.
+
+`pnpm tool regulations/inspect-regulatory-readiness --preparation <preparation-id> --limit 25` reads an operator snapshot from the
+canonical `DATABASE_URL`. The current command covers preparation checkpoints only. It reports expected/present/
+prepared/blocked/unattempted counts, missing or extra checkpoints, active lease and retry delay, and at most 100
+failed version identities with symbolic reasons. Use `--after <nextAfterOrdinal>` for the next failure page; each
+invocation is a fresh snapshot, so a concurrent explicit retry can change the failure list between invocations.
+It takes the existing rights locks before reading counts/failures, never returns source bodies or lease tokens, and
+does not dispatch work, acknowledge outboxes or authorize serving. Exit zero means stored preparation checkpoints
+are complete and idle; it does not verify passage hashes, target parity or embedding readiness. Incomplete/blocked/
+delayed/leased work and inspection failures exit nonzero. Missing tables on older pilots require the correct schema;
+the inspector never repairs or migrates them implicitly.
 
 The unreleased storage baseline now includes `legal_passage_generations` and `legal_passages`, with explicit provision
 or publication version ownership, exact preparation metadata, source/context spans, input hashes and an English FTS
@@ -76,7 +102,7 @@ payload conflicts, and moves a complete set to `validated`. It does not create c
 Rights checks remain active during registration and staging. Larger sets require partitioned staging work.
 
 Execution requires `--apply` and a loopback `regulations_test` database. The September 14 smoke uses the separate
-`tabra-fr-html-storage-pilot` container on port 55438. The existing retained XML/eCFR pilot databases are unchanged.
+`rostra-fr-html-storage-pilot` container on port 55438. The existing retained XML/eCFR pilot databases are unchanged.
 The integration suite now passes 23 real PostgreSQL tests, including HTML identity replay, altered-set rejection,
 revoked-rights rejection and strict XML dispatch isolation. Canonical HTML publication is now implemented below.
 
@@ -155,8 +181,8 @@ in place. Fresh FR test/pilot databases on ports 55436/55437 received the comple
 runner. Never point destructive integration tests at the retained pilot.
 
 ```powershell
-pnpm run validate:fr-pdfs --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --date 2024-01-02 --directory artifacts/regulatory-backfills/fr-pdfs --output artifacts/regulatory-backfills/fr-pdf-validation-2026-09-14.json
-pnpm run import:fr-publications --manifest artifacts/regulatory-backfills/federal-pilot-2026-09-14.json --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --validation artifacts/regulatory-backfills/fr-pdf-validation-2026-09-14.json --date 2024-01-02 --raw artifacts/regulatory-backfills/raw --normalized artifacts/regulatory-backfills/normalized --pdfs artifacts/regulatory-backfills/fr-pdfs --output artifacts/regulatory-backfills/fr-publication-storage-2026-09-14.json --apply
+pnpm tool regulations/validate-fr-pdfs --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --date 2024-01-02 --directory artifacts/regulatory-backfills/fr-pdfs --output artifacts/regulatory-backfills/fr-pdf-validation-2026-09-14.json
+pnpm tool regulations/import-fr-publications --manifest artifacts/regulatory-backfills/federal-pilot-2026-09-14.json --metadata artifacts/regulatory-backfills/fr-metadata-pilot-2026-09-14/manifest.json --validation artifacts/regulatory-backfills/fr-pdf-validation-2026-09-14.json --date 2024-01-02 --raw artifacts/regulatory-backfills/raw --normalized artifacts/regulatory-backfills/normalized --pdfs artifacts/regulatory-backfills/fr-pdfs --output artifacts/regulatory-backfills/fr-publication-storage-2026-09-14.json --apply
 ```
 
 The importer requires `REGULATORY_TEST_DATABASE_URL` pointing to a local disposable `regulations_test` database. Without
@@ -298,7 +324,7 @@ the preceding stages and an exclusive new report path. It does not migrate or se
 ```powershell
 # Run from apps/legislation after migrating a disposable database and seeding its canonical US jurisdiction.
 # REGULATORY_TEST_DATABASE_URL must point to that local regulations_test database.
-pnpm run import:regulatory-backfill --manifest artifacts/regulatory-backfills/federal-pilot-2026-09-14.json --raw artifacts/regulatory-backfills/raw --normalized artifacts/regulatory-backfills/normalized --limit 5 --report artifacts/regulatory-backfills/federal-pilot-storage-2026-09-14.json --apply
+pnpm tool regulations/import-regulatory-backfill --manifest artifacts/regulatory-backfills/federal-pilot-2026-09-14.json --raw artifacts/regulatory-backfills/raw --normalized artifacts/regulatory-backfills/normalized --limit 5 --report artifacts/regulatory-backfills/federal-pilot-storage-2026-09-14.json --apply
 pnpm exec vitest run src/ingestion/regulations/storage.integration.test.ts src/ingestion/regulations/storage-contract.test.ts
 ```
 

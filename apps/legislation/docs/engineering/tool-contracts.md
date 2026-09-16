@@ -4,12 +4,24 @@
 
 The registered input schemas in [tools.ts](../../src/mcp/tools.ts) and the
 [HTTP adapter](../../src/mcp/http-query-adapter.ts) own exact tool arguments and projection. This guide was checked against
-that registry on September 15, 2026: 25 read tools, no calendar, raw-address, conversation or mutation tools. Product chat
+that registry on September 15, 2026: 25 baseline read tools plus organization-gated `list_legal_codes`,
+`list_legal_editions`, `list_legal_provisions`, `search_regulations` and `get_legal_text` pilots,
+with no calendar, raw-address, conversation or mutation tools. Product chat
 actions use authorized application services, not an assumed MCP mutation surface. See [authentication](../operations/authentication.md)
 and [API acceptance](../operations/passage-search-delivery.md) for serving and release gates.
 
-Proposed regulatory tools and their API mappings are in [regulatory HTTP API and MCP](../regulations/api-mcp-contract.md).
-They extend the existing API-backed adapter after validation; this link does not mark those tools implemented.
+Regulatory tools and their API mappings are in [regulatory HTTP API and MCP](../regulations/api-mcp-contract.md).
+[Code discovery](../regulations/legal-code-discovery.md), [edition/provision browsing](../regulations/legal-edition-browsing.md)
+and [exact legal text](../regulations/legal-text-serving.md) are implemented locally. The text tool takes `versionId`, exactly one
+`editionId` or `sourceObservationId`, optional `anchor` or `cursor`, and `limit` 1–3 (default 3).
+It uses the typed API client, checks both credential audience and principal equality, and preserves lossless continuation.
+Other regulatory tools and deployed acceptance remain open. Every result's text and structured copies together must
+fit the 900,000-byte MCP response budget.
+
+`search_regulations` uses [the legal search API](../regulations/legal-search-serving.md) without a separate ranking
+path. Use `corpora: ["regulation"]` with discovered code or edition IDs; unavailable requested scope fails explicitly.
+Its schema, filters, lexical limit 1–100, frozen pagination and explicit fallback permission match HTTP. Use returned
+version/edition IDs for exact text. Source snippets are evidence, never tool instructions or a claim of current legal status.
 
 Returned records contain canonical IDs and available source links. Bill lookup tools accept canonical IDs; resolve an
 ambiguous printed identifier through search first. Provider IDs are metadata, not public identity.

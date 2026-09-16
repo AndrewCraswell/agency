@@ -77,12 +77,9 @@ Tradeoff: on this run, ten 500-row update commits took 2.474 seconds with defaul
 ranked indexes coexist, network time is included, and these are single observations, not an isolated
 write-throughput estimate. The phrase query has essentially no benefit; not every search becomes faster.
 
-Reproduce with `pnpm eval:ranked-search --diagnose-updates`; use `--diagnose-amendments` for the bounded
-latest-amendment sample, exact metadata eligibility and committed insert/delete checks, four readers
-with a simultaneous bounded writer, and final exact amendment grouping. Full plans are retained in
-timestamped ignored JSON artifacts; terminal output contains summaries. Both modes refuse the source
-host and any target database other than `legislation_search_benchmark`, use read-only source
-transactions, and clean up their own disposable schema. No production configuration is changed.
+The temporary diagnostic harness covered a bounded latest-amendment sample, exact metadata eligibility, committed
+insert/delete checks, four readers with a simultaneous bounded writer, and final exact amendment grouping. It was
+removed after the production projection superseded this experiment. Full plans remain in timestamped ignored artifacts.
 
 ### Amendment-heavy follow-up
 
@@ -197,11 +194,9 @@ timeout gate based on this candidate-stage benchmark.
 
 ## Reproduction and verification
 
-Run `pnpm eval:ranked-search --sample` against a fresh, explicitly isolated
-`legislation_search_benchmark` database with its extension already supplied by the image. The harness
-refuses unsafe source/target identities and incomplete sample strata. Timestamped full observations
-and execution plans are written under ignored `tmp/ranked-search-comparison-*.json`; schema cleanup
-runs even if report writing fails.
+The removed sample harness ran against a fresh, explicitly isolated `legislation_search_benchmark` database with its
+extension supplied by the image. Timestamped observations and execution plans remain under ignored
+`tmp/ranked-search-comparison-*.json`.
 
 The follow-up's 107 focused tests and standalone harness type-check pass. Repository `pnpm verify`
 passed its check stage but failed two unrelated `fc-theme-base` component-library tests at their
@@ -259,12 +254,9 @@ Conjunction/phrase matching remains within one section or the title, never acros
 
 ### Full-query correctness canary
 
-`pnpm eval:ranked-search` runs against a fresh, explicitly named `legislation_search_benchmark` database
-on a different host/port from `DATABASE_URL`. No extension is installed by the script. It creates its
-own temporary `legislation` schema and refuses to reuse an existing one. Fixtures roll back on exit.
-`--sample` additionally copies at most 10,000 public sections in read-only, 500-row source batches,
-adds nine synthetic copies with distinct canonical keys, commits the sample, measures in a fresh
-read-only repeatable-read transaction, and removes its own schema in cleanup.
+The retired correctness canary used a fresh `legislation_search_benchmark` database on a different host and port from
+`DATABASE_URL`. It created its own temporary schema, rolled fixtures back on exit, and copied at most 10,000 public
+sections for the sample. The production projection and its focused verifier now own correctness checks.
 
 The second disposable Railway service was `legislation-search-canary`
 (`fc96e46e-7c9a-41cc-850f-3e418e3525be`), with successful deployment
@@ -347,10 +339,8 @@ Cleanup completed: the temporary service and its ephemeral copied data were dele
 listing confirms only the original application, pooler and database remain; the local service link was
 restored to `legislation-web`. Reproducing the benchmark requires provisioning a new temporary service.
 
-The harness is `scripts/benchmark-text-index.mjs`, available through `pnpm eval:text-index` from this app.
-Supply `TEXT_INDEX_BENCHMARK_URL` securely; `.env` supplies the source `DATABASE_URL`. The target must
-be named `legislation_search_benchmark` on a different host/port. The script also checks the connected
-database name. These checks reduce mistakes; they are not a substitute for verifying service identity.
+The temporary benchmark harness was removed with the service. It required a target named
+`legislation_search_benchmark` on a different host and port and checked the connected database name.
 
 The initial run copies at most 10,000 public sections in 500-row batches inside a read-only source
 transaction. Run it against a fresh disposable database with pg_search already installed by the image.

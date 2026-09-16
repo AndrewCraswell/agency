@@ -1322,25 +1322,19 @@ describe("people and organization deployed smoke profile", () => {
   })
 })
 
-describe("meeting and calendar deployed smoke profile", () => {
-  it("cumulatively checks earlier profiles and all thirteen meeting and calendar routes", async () => {
+describe("meeting deployed smoke profile", () => {
+  it("cumulatively checks earlier profiles and all eight meeting routes", async () => {
     requests.length = 0
     meetingsCalendarsNotFoundPaths.add("/api/meetings/meeting%3Afixture%2Fwith%20space")
     meetingsCalendarsNotFoundPaths.add(
       "/api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda/agenda-item%3Afixture%2Fwith%20space"
     )
-    meetingsCalendarsNotFoundPaths.add(
-      "/api/meetings/outcome-meeting%3Afixture%2Fwith%20space/outcomes/outcome%3Afixture%2Fwith%20space"
-    )
-    meetingsCalendarsNotFoundPaths.add("/api/calendars/calendar%3Afixture%2Fwith%20space")
-    meetingsCalendarsNotFoundPaths.add("/api/calendars/calendar%3Afixture%2Fwith%20space/meetings")
     try {
       const result = await runSmoke({
         LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID: "agenda-item:fixture/with space",
         LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID: "agenda-meeting:fixture/with space",
         LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
         LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
-        LEGISLATION_WEB_SMOKE_CALENDAR_ID: "calendar:fixture/with space",
         LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
         LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID: "document-section:fixture",
         LEGISLATION_WEB_SMOKE_EVENT_DOCUMENT_ID: "event-document:fixture/with space",
@@ -1349,8 +1343,6 @@ describe("meeting and calendar deployed smoke profile", () => {
         LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID: "membership:fixture",
         LEGISLATION_WEB_SMOKE_MEETINGS_CALENDARS: "1",
         LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: "organization:fixture",
-        LEGISLATION_WEB_SMOKE_OUTCOME_ID: "outcome:fixture/with space",
-        LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID: "outcome-meeting:fixture/with space",
         LEGISLATION_WEB_SMOKE_PARTICIPANT_ID: "participant:fixture/with space",
         LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID: "participant-detail-meeting:fixture/with space",
         LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID: "participant-list-meeting:fixture/with space",
@@ -1368,15 +1360,12 @@ describe("meeting and calendar deployed smoke profile", () => {
       expect(result.legislativeRecords.passed).toHaveLength(18)
       expect(result.documentsResources.passed).toHaveLength(9)
       expect(result.peopleOrganizations.passed).toHaveLength(14)
-      expect(result.meetingsCalendars.passed).toHaveLength(8)
+      expect(result.meetingsCalendars.passed).toHaveLength(6)
       expect(result.meetingsCalendars.skipped).toEqual([
         { name: "meeting", reason: "canonical_fixture_not_found" },
-        { name: "meeting agenda item", reason: "canonical_fixture_not_found" },
-        { name: "meeting outcome", reason: "canonical_fixture_not_found" },
-        { name: "calendar", reason: "canonical_fixture_not_found" },
-        { name: "calendar meetings", reason: "canonical_fixture_not_found" }
+        { name: "meeting agenda item", reason: "canonical_fixture_not_found" }
       ])
-      expect(result.meetingsCalendars.notFound).toEqual(["meetings_trailing_slash", "calendars_trailing_slash"])
+      expect(result.meetingsCalendars.notFound).toEqual(["meetings_trailing_slash"])
 
       const meetingsCalendars = requests.filter((request) =>
         /^meetings-calendars-smoke-\d+$/.test(request.correlationId)
@@ -1384,7 +1373,7 @@ describe("meeting and calendar deployed smoke profile", () => {
       const conditional = requests.filter((request) =>
         /^meetings-calendars-smoke-conditional-\d+$/.test(request.correlationId)
       )
-      expect(meetingsCalendars).toHaveLength(13)
+      expect(meetingsCalendars).toHaveLength(8)
       expect(meetingsCalendars.map(requestSignature).sort()).toEqual(
         [
           "GET /api/meetings?limit=1",
@@ -1393,32 +1382,26 @@ describe("meeting and calendar deployed smoke profile", () => {
           "GET /api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda/agenda-item%3Afixture%2Fwith%20space",
           "GET /api/meetings/event-document-meeting%3Afixture%2Fwith%20space/documents?limit=1",
           "GET /api/meetings/event-document-meeting%3Afixture%2Fwith%20space/documents/event-document%3Afixture%2Fwith%20space",
-          "GET /api/meetings/outcome-meeting%3Afixture%2Fwith%20space/outcomes?limit=1",
-          "GET /api/meetings/outcome-meeting%3Afixture%2Fwith%20space/outcomes/outcome%3Afixture%2Fwith%20space",
           "GET /api/meetings/participant-list-meeting%3Afixture%2Fwith%20space/participants?limit=1",
-          "GET /api/meetings/participant-detail-meeting%3Afixture%2Fwith%20space/participants/participant%3Afixture%2Fwith%20space",
-          "GET /api/calendars?limit=1",
-          "GET /api/calendars/calendar%3Afixture%2Fwith%20space",
-          "GET /api/calendars/calendar%3Afixture%2Fwith%20space/meetings?limit=1"
+          "GET /api/meetings/participant-detail-meeting%3Afixture%2Fwith%20space/participants/participant%3Afixture%2Fwith%20space"
         ].sort()
       )
-      expect(conditional).toHaveLength(8)
+      expect(conditional).toHaveLength(6)
       expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
     } finally {
       meetingsCalendarsNotFoundPaths.clear()
     }
   })
 
-  it("reports each missing audited meeting and calendar fixture as a named skip without requesting it", async () => {
+  it("reports each missing audited meeting fixture as a named skip without requesting it", async () => {
     requests.length = 0
     const result = await runSmoke({ LEGISLATION_WEB_SMOKE_MEETINGS_CALENDARS: "1" })
 
-    expect(result.meetingsCalendars.passed).toEqual(["meetings", "calendars"])
+    expect(result.meetingsCalendars.passed).toEqual(["meetings"])
     expect(result.meetingsCalendars.skipped).toEqual(
       expect.arrayContaining([
         { name: "meeting", reason: "fixture_not_configured:meetingDetailId" },
-        { name: "meeting agenda item", reason: "fixture_not_configured:agendaMeetingId" },
-        { name: "calendar", reason: "fixture_not_configured:calendarId" }
+        { name: "meeting agenda item", reason: "fixture_not_configured:agendaMeetingId" }
       ])
     )
     expect(requests.some((request) => `${request.pathname}${request.search}`.includes("fixture"))).toBe(false)
@@ -1487,7 +1470,6 @@ function searchResearchEnvironment(overrides = {}) {
     LEGISLATION_WEB_SMOKE_AGENDA_MEETING_ID: "agenda-meeting:fixture",
     LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
     LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
-    LEGISLATION_WEB_SMOKE_CALENDAR_ID: "calendar:fixture",
     LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_BILL_ID: "bill:diff fixture",
     LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_EXPECTED_OUTCOME: "200",
     LEGISLATION_WEB_SMOKE_DOCUMENT_DIFF_LEFT_DOCUMENT_ID: "document:left fixture",
@@ -1500,8 +1482,6 @@ function searchResearchEnvironment(overrides = {}) {
     LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID: "membership:fixture",
     LEGISLATION_WEB_SMOKE_SEARCH_RESEARCH: "1",
     LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: "organization:fixture",
-    LEGISLATION_WEB_SMOKE_OUTCOME_ID: "outcome:fixture",
-    LEGISLATION_WEB_SMOKE_OUTCOME_MEETING_ID: "outcome-meeting:fixture",
     LEGISLATION_WEB_SMOKE_PARTICIPANT_ID: "participant:fixture",
     LEGISLATION_WEB_SMOKE_PARTICIPANT_DETAIL_MEETING_ID: "participant-detail-meeting:fixture",
     LEGISLATION_WEB_SMOKE_PARTICIPANT_LIST_MEETING_ID: "participant-list-meeting:fixture",
@@ -1530,9 +1510,6 @@ function searchResearchEnvironment(overrides = {}) {
 function addMeetingsCalendarsNotFoundFixtures() {
   meetingsCalendarsNotFoundPaths.add("/api/meetings/meeting%3Afixture")
   meetingsCalendarsNotFoundPaths.add("/api/meetings/agenda-meeting%3Afixture/agenda/agenda-item%3Afixture")
-  meetingsCalendarsNotFoundPaths.add("/api/meetings/outcome-meeting%3Afixture/outcomes/outcome%3Afixture")
-  meetingsCalendarsNotFoundPaths.add("/api/calendars/calendar%3Afixture")
-  meetingsCalendarsNotFoundPaths.add("/api/calendars/calendar%3Afixture/meetings")
 }
 
 describe("search and research deployed smoke profile", () => {
@@ -1554,7 +1531,7 @@ describe("search and research deployed smoke profile", () => {
     expect(result.legislativeRecords.passed).toHaveLength(18)
     expect(result.documentsResources.passed).toHaveLength(9)
     expect(result.peopleOrganizations.passed).toHaveLength(14)
-    expect(result.meetingsCalendars.passed).toHaveLength(9)
+    expect(result.meetingsCalendars.passed).toHaveLength(6)
     expect(result.searchResearch.passed).toEqual([
       "bill search",
       "amendment search",

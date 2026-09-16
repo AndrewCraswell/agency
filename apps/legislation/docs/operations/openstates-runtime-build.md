@@ -20,17 +20,70 @@ This is one-roll-call acceptance, not full-session voter backfill or production 
 and running document workers were not switched to the new image. Rebuild source inputs rather than rewriting their manifests.
 
 The shared Python runner now uses explicit NC/AK profiles. Alaska accepts Legislature `34`, one chamber and 1–10
-explicit bill identifiers. Alaska events remain disabled: the pinned event scraper requires separate identity,
-location and TLS review. The source policy validates all selected bill IDs before yielding, rejects missing/duplicate
+explicit bill identifiers. Alaska events accept a separate bounded local lane: session `34`, null `bill_ids`, and
+1–10 explicit `event_keys` in publisher `chamber:sponsor:timestamp` form. TLS verification, exact occurrence URLs,
+publisher timestamps and unmodified location text are enforced. Conflicting source variants are retained in
+`meeting_partition.json` and excluded, not resolved by choosing a winner. This is not hosted activation.
+The source policy validates all selected bill IDs before yielding, rejects missing/duplicate
 selected rows, and reduces Alaska's source timeout from 600 to 60 seconds. No new package or credential is required.
+
+For an archived Alaska event batch, run
+`pnpm tool openstates/import-alaska-event-batch <archive-directory> <manifest-path> <approved-build-sha256>`.
+The default validates without writing. `--apply-local` writes only to the isolated localhost test database on port
+55432 through the shared transactional event writer. It verifies archived hashes, the approved build, exact selected
+occurrences, the quarantine report and matching official URLs before admission. Every batch remains a partial
+snapshot; it cannot establish deletions, reschedule continuity, full-session coverage or organization relationships.
+
+Local event admission now commits a manifest-hashed receipt with the rows. Identical committed receipts skip writes;
+conflicting receipts fail. Bill and event admission share the receipt lock/check implementation. The event writer also
+accepts the existing ownership fence for coordinated workers. Integration tests verify replay, conflict rejection and
+transactional rollback against the isolated database.
+It retains a small acceptance receipt; it does not reset the database or write production. The full batch dispatcher
+and ownership lifecycle require hosted activation evidence before this is hosted orchestration.
+
+For local planned execution, `tools/openstates/run-alaska-event-plan.ts` takes retained XML, frozen plan, archive directory,
+immutable image digest, approved build digest and a batch limit (default one). It reconstructs the plan for verification,
+claims existing database ownership with confirmed-release semantics, retains dispatch and extraction evidence, checks
+exact selected occurrences, and atomically promotes rows plus receipt. It shares the bounded Docker boundary with
+bill extraction. Resume skips compatible committed receipts. Unknown worker shutdown keeps the ownership hold;
+never clear it without runtime evidence. The first ten-event batch passed locally; the remaining inventory is not
+complete merely because the controller is running. This sequential local controller does not activate Trigger or Azure.
+
+When fixing forward within a retained inventory, the build argument may be a comma-separated explicit approval list:
+the first digest is required for new extractions; subsequent digests allow already committed receipts to be skipped.
+It does not approve arbitrary old builds or promote failed partial output. A reproduced Energy batch failure showed
+that an empty publisher location violates upstream `location.name` validation. Newly prepared sources omit that optional
+name for empty locations instead of inventing a venue. The occurrence remains admitted with an unknown location.
+
+Alaska agenda normalization retains only explicit scraper bill references whose encoded identifier agrees with the
+source label. The shared event writer resolves these using jurisdiction, session and whitespace-normalized bill
+identifier, accepting a unique match only. It does not parse agenda prose, guess from titles or declare all relationships
+complete. Existing running controllers keep their loaded code; already imported batches require verified archive
+reconciliation after extraction, rather than silently treating earlier receipts as proof of relationship enrichment.
+
+Committee repository normalization now preserves session/code identifiers from exact official Alaska committee URLs
+in addition to the explicit homepage. It rejects wrong hosts, credentials, malformed codes and chamber mismatches.
+The event writer can resolve one organization bearing the exact jurisdiction/session/code identifier; zero or multiple
+matches remain unresolved. This requires replaying verified committee evidence before event reconciliation. Seventeen
+focused committee tests passed locally; deployed data and meeting-detail completeness are not established by those tests.
+
+Verified committee observations were replayed without migration or people writes. Local acceptance retained all 20
+eligible Legislature 34 committee identifiers and linked House Finance by its official code. Held observations remain
+held; this does not establish full event or committee profile coverage.
+
+`python python/plan_alaska_events.py <retained-meetings.xml> <new-plan.json>` freezes a source-hashed inventory into
+at most ten occurrences per batch. The output is created exclusively, never overwritten on resume. The shared
+partitioner excludes conflicts and collapses identical duplicates; an empty or error response fails closed.
+The September 16 discovery yielded 2,846 admitted occurrences in 285 batches and two quarantined keys. This is a
+plan, not evidence those batches have run. Publisher sponsor codes include `L&C`: validators preserve the ampersand,
+and newly prepared scraper URLs percent-encode it so it does not split the `Meeting` query parameter.
 
 `prepare_openstates.py --archive <retained-upstream.tar.gz> <new-input-directory>` reconstructs inputs offline after
 checking the original digest. The adapter Dockerfile now copies explicitly prepared source inputs as well as runner
 code, defaulting to `artifacts/openstates-runtime/state-batch-build-inputs`. Existing running images are not replaced.
 
 The shared archive writer accepts NC/AK paths but rejects mixed-state inventories and mismatched manifest paths.
-`pnpm exec tsx scripts/validate-openstates-scraper.ts <local-archive-directory> <manifest-path> <approved-build-sha256>`
-performs read-only normalization. Alaska journal dates retain day precision in raw evidence; they do not become
+Read-only normalization is covered by the archive and normalization test suites. Alaska journal dates retain day precision in raw evidence; they do not become
 invented canonical timestamps. Canonical promotion still requires dispatch, frozen inventory and ownership wiring.
 
 Live HB1/HB2 extraction succeeded and eight files were locally retained/replayed. Normalization preserves distinct
@@ -39,7 +92,7 @@ name/classification key; resolved person IDs enrich rather than rename them. Exa
 reject. The official HB1 page itself lists some names under both chambers: these are source claims, not verified
 people. Both bills now pass read-only normalization. Shared local fan-out promotion now supports Alaska, with staged acceptance in progress.
 
-Use `pnpm plan:openstates-bills ak <local-archive-directory>` to retain the official range HTML and a frozen Legislature 34 plan.
+The reviewed Legislature 34 plan retains the official range HTML and frozen bill inventory.
 The common resume command reads the plan's jurisdiction/session, not a worker-supplied scope. New plans explicitly record
 jurisdiction and bind inventory identities to scope. Start a fresh cycle for this contract; do not rewrite older immutable plans or receipts.
 Alaska votes use journal URL, date and motion identity because one page may contain multiple votes. Tally corrections do not rename
@@ -101,12 +154,12 @@ command still needs to verify the associated runtime is stopped before invoking 
 Recovery must also establish that the original executor cannot resume and launch work after inspection; container absence
 alone is insufficient if an executor is paused before launch. Do not implement a blind expired-lease release command.
 
-`pnpm recover:openstates-attempt <held-run-id>` now implements local recovery, restricted to `legislation_test` on
+`pnpm tool openstates/recover-openstates-attempt <held-run-id>` now implements local recovery, restricted to `legislation_test` on
 localhost/127.0.0.1. New local claims record host, executor PID and Docker daemon identity. Recovery refuses a live or
 uninspectable PID, another host/daemon, missing provenance, any remaining run-labeled container, or a changed ownership
 token. It does not stop processes/containers. Keep Docker configuration stable during execution and recovery.
-`pnpm smoke:openstates-recovery` uses a short-lived child process to leave a deliberate local hold, then verifies recovery
-after that process exits. It changes only isolated ownership control state and never starts a scraper or writes bills.
+The removed recovery harness used a short-lived child process to leave a deliberate local hold and verified recovery
+after that process exited. Focused ownership tests retain this coverage.
 Hosted Trigger recovery requires its own authoritative executor evidence; local PID checks are not sufficient there.
 
 The Docker adapter compares the recorded daemon ID before launching extraction, before removing the worker and after
@@ -115,16 +168,9 @@ launch raises shutdown uncertainty and preserves the confirmation hold. Keep run
 the operation. Offline dispatch smoke derives both window timestamps from one clock reading to preserve the exact
 thirty-minute upper bound.
 
-`pnpm smoke:openstates-docker <sha256:image-id> <retained-feed-directory> <local-archive-directory>` exercises the
-real local container with networking disabled. It expects a retained failure, confirms container removal, and never
-connects to a database. This does not establish successful source extraction, freshness or promotion acceptance.
-
-`pnpm smoke:openstates-batch <sha256:image-id> <approved-build-sha256> <local-archive-directory>` fetches both live
-NC 2025 discovery feeds, freezes them, and runs only the first batch through the leased Docker path. It requires
-`LEGISLATION_TEST_DATABASE_URL` pointing to localhost/127.0.0.1 and database `legislation_test`; it rejects production
-targets. It verifies the canonical receipt and bill identities, then retries the same retained promotion and checks
-stable data. This is one-batch acceptance, not session completion or schedule activation. The approved fingerprint
-must come from reviewed build inputs, never the returned attempt.
+The completed Docker and first-batch harnesses verified offline container cleanup, local database guards, canonical
+receipt identity, and stable replay. They were removed after acceptance; focused runtime and promotion tests retain the
+same rejection boundaries.
 
 For local acceptance only, `python/Dockerfile.adapter` can refresh runner code on an already verified dependency image
 without downloading packages. Supply `VERIFIED_DEPENDENCY_IMAGE` explicitly, verify the resolved base digest in build
@@ -133,12 +179,7 @@ the Python adapter files. The build runs installed-runtime acceptance. Productio
 Matching source-input fingerprints alone does not prove that an old image contains the current runner: promotion also
 requires the attempt's fingerprint, and missing stamps remain rejected rather than filled in after extraction.
 
-`pnpm inspect:openstates-cycle <local-archive-directory> <plan-path>` reads the same isolated local database and
-verified frozen plan, validates committed promotion receipts, and reports counts and the next unfinished batch.
-It does not launch work, verify archived content bytes again, advance checkpoints or infer production readiness.
-Malformed or inconsistent committed receipts fail closed. Failed/extracted output never counts as a promoted batch.
-
-`pnpm resume:openstates-cycle <sha256:image-id> <approved-build-sha256> <local-archive-directory> <plan-path> [max-batches] [admission-budget-seconds] [concurrency]`
+`pnpm tool openstates/resume-openstates-cycle <sha256:image-id> <approved-build-sha256> <local-archive-directory> <plan-path> [max-batches] [admission-budget-seconds] [concurrency]`
 uses the same local-only database guard. It defaults to one unfinished batch and a 3,600-second admission budget.
 Explicit limits allow 1–235 batches with a budget of 1,800–86,400 seconds and 1–8 concurrent workers (default one). Each step uses the same resume
 path and a fresh attempt identity; it never fetches a replacement inventory or activates a recurring schedule.
@@ -287,13 +328,8 @@ Timeout and nonzero-exit evidence is retained without forwarding raw child diagn
 uploader must verify these hashes again and archive failed attempts before cleanup. The runner's output limits are
 64 MiB per file, 2 GiB total, and 100,000 files; these are rejection limits, not permission to promote partial output.
 
-Retain an attempt using the existing `state-sources` Azure container, or an isolated local destination:
-
-```powershell
-node --env-file=.env --import tsx scripts/archive-openstates-scraper.ts <attempt-directory> azure <run-id>
-```
-
-The handoff validates the runner result, lane/session contract, duplicate paths, size bounds, and all listed file
+The orchestration handoff retains attempts through the shared archive writer using the existing `state-sources` Azure
+container or an isolated local destination. It validates the runner result, lane/session contract, duplicate paths, size bounds, and all listed file
 checksums before publishing `retained.json`. Uploads are create-only and read back for verification. Identical retries
 are accepted; conflicts and corruption are rejected. Failed and timed-out attempts remain failures in the archive.
 The local reader rejects linked paths, and machine-local work-directory values are removed from archived metadata.

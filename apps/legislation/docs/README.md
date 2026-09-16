@@ -1,4 +1,4 @@
-# Tabra documentation
+# Rostra documentation
 
 Start with the question you need to answer. Planned product features and dated release evidence are not claims of live
 availability.
@@ -8,7 +8,7 @@ availability.
 | What are we building?                                   | [ICP-focused product specification](product/product-spec.md): core research jobs, scope/value gate and acceptance                                                          |
 | Who should we serve and prioritize?                     | [Ideal customer profiles](product/icp.md): needs, journeys, fit, revenue scenarios and acquisition effort                                                                  |
 | Who competes for each customer's job?                   | [Competitors by ICP](product/competitors.md): alternatives, strengths, gaps and dated commercial evidence                                                                  |
-| What should we build next?                              | [Single product backlog](backlog/backlog.md)                                                                                                                               |
+| What should we build next?                              | [Public chat launch backlog](backlog/public-chat.md): phased first-experience delivery; [parent product backlog](backlog/backlog.md): full product roadmap                  |
 | How should it work and look?                            | [Design brief and handoff](design/design.md), [task hierarchy and routes](product/information-architecture.md), [mockups](../legislation.pen)                              |
 | How does conversation connect the product?              | [Conversations and product integration](design/conversations.md): entry, turns, content types, references/citations, progress and write-back                               |
 | How do lists scale as data grows?                       | [Discovery and collection behavior](product/information-architecture.md#supporting-discovery): scope, grouping, sorting, pagination and selection                          |
@@ -18,7 +18,10 @@ availability.
 | What do customers pay for?                              | [Pricing and offerings](product/pricing.md), [organization and workspace behavior](product/organization-features.md)                                                       |
 | What has passed release acceptance?                     | [API and passage acceptance](operations/passage-search-delivery.md)                                                                                                        |
 | What is the state-ingestion priority?                   | [NC/Alaska end-to-end gate](operations/openstates-rollout-checklist.md), [onboarding queue](operations/openstates-jurisdiction-onboarding.md)                              |
-| How do I develop or operate it?                         | [Development and runtime](operations/development.md), [API contract](engineering/api/README.md)                                                                            |
+| How do I develop or operate it?                         | [Development and runtime](operations/development.md), including conversation telemetry sessions; [API contract](engineering/api/README.md)                                                                            |
+| How do I run focused or full tests?                     | [Test ownership and execution](operations/testing.md): web, backend, ingestion, parsing, database, tools and acceptance projects |
+| How do I run agent evaluations?                        | [Agent evaluations](operations/agent-evaluations.md): Langfuse-managed online evaluation, complete conversation traces, frozen fixtures, and diagnostic limits |
+| How do we style the frontend?                          | [Frontend styling](engineering/frontend-styling.md): scoped vanilla-extract styles, theme tokens, primitive integration, and verification |
 | How will we add regulations?                            | [Regulatory plan](regulations/README.md)                                                                                                                                   |
 | How do we implement regulatory ingestion and retrieval? | [Implementation specification](regulations/implementation.md), [remaining production tasks](regulations/production-backlog.md)                                             |
 
@@ -47,6 +50,7 @@ The catalog below includes every retained document. Most product work needs only
 <details>
 <summary>Product and features</summary>
 
+- [Public chat launch backlog](backlog/public-chat.md)
 - [Product experience implementation backlog](backlog/backlog.md)
 - [Legislative research app design specification](design/design.md)
 - [Conversations and product integration](design/conversations.md)
@@ -117,6 +121,7 @@ The catalog below includes every retained document. Most product work needs only
 - [Remaining regulatory ingestion and production backlog](regulations/production-backlog.md)
 - [Regulatory source ingestion and orchestration tasks](regulations/ingestion-production-tasks.md)
 - [Regulatory passage, indexing and embedding tasks](regulations/search-production-tasks.md)
+- [Canonical passage shape inventory](regulations/passage-shape-inventory.md)
 - [Regulatory HTTP and MCP tasks](regulations/api-mcp-production-tasks.md)
 - [Regulatory sync and production operations tasks](regulations/operations-production-tasks.md)
 - [Original regulatory phase IDs and retained milestones](regulations/implementation-backlog.md)
@@ -149,13 +154,5 @@ The catalog below includes every retained document. Most product work needs only
 - [Azure infrastructure reference](../infra/bicep/README.md)
 - [GovInfo review-data instructions](../src/ingestion/govinfo/review-data/README.md)
 - [Committee source decisions](../src/ingestion/govinfo/review-data/source-decisions.md)
-- [Embedding canary](../evals/embedding-canary.md): [manifest](../evals/embedding-canary.json),
-  [lexical](../evals/embedding-canary.lexical.json), [semantic](../evals/embedding-canary.semantic.json)
-- [Embedding model bakeoff](../evals/embedding-model-bakeoff.md): [inputs](../evals/embedding-model-bakeoff.json),
-  [results](../evals/embedding-model-bakeoff-results.json)
-- [Embedding topic canary](../evals/embedding-topic-canary.md): [inputs](../evals/embedding-topic-canary.json),
-  [hybrid](../evals/embedding-topic-canary.hybrid.json), [lexical](../evals/embedding-topic-canary.lexical.json),
-  [semantic](../evals/embedding-topic-canary.semantic.json)
 - [Pinned tokenizer vocabulary provenance](../src/models/tokenizers/README.md)
-- [Design source](../legislation.pen) Evaluation data: [canary](../evals/embedding-canary.json),
-  [lexical](../evals/embedding-canary.lexical.json),
+- [Design source](../legislation.pen)

@@ -1,5 +1,454 @@
 # Open States rollout requirements and results
 
+## September 16 continuation and identity verification
+
+- [x] Reject changed bill/source/motion provenance even when an incoming vote reuses a persisted primary ID; seven focused identity tests passed.
+- [x] Confirm previous NC controller completed and no active ingestion leases before resuming pinned deployment `20260916.3`.
+- [ ] NC continuation `run_06gam9ugthb2g7lalq5fascn01`: bounded ten batches, eight bills per batch, one bill at a time. Latest pre-dispatch checkpoint was HB1078 with no pending embedding bills; full scan and search acceptance remain incomplete.
+- [ ] Publish and verify the newer vote importer/persistence changes; these are still local.
+- [ ] Full repository verification: earlier attempt hit a Windows mapped-file lock in regulations. Retry found task-scoped lint issues (corrected) plus a concurrently missing API file; a clean full run is still required.
+
+Alaska activation and broader historical/person-resolution gates remain open. These checks do not establish whole-state readiness.
+
+## Hosted NC repair acceptance, September 16
+
+SB1041 live vote-list acceptance now passes: HTTP 200, two votes, 323 ms. In a guarded transaction,
+cleared only 168 confirmed name-only placeholder references (exact source identity/name and absent
+person provenance). All 170 voter observations remain, with names/options/sequences intact; no people
+were deleted. Person resolution is explicitly incomplete, not falsely claimed by synthetic references.
+The general Open States normalizer now creates people only for actual provider identities and keeps
+name-only observations unresolved; source identity, not an undefined person ID, controls deduplication.
+All 32 focused normalizer/scraper tests pass. Combined main `pnpm verify` started with one worker,
+log `%TEMP%/agency-nc-vote-contract-verify.log`. These importer/persistence fixes are not deployed.
+
+Guarded production vote repair committed two audited SB1041 snapshots, preserving vote IDs and all
+168 existing person references, adding two observations (170 total). Exact bill/motion/tallies and all
+prior source identities/names were checked under row locks; only the verified abstain-to-not-voting
+parser correction was allowed. Live bill detail now returns HTTP 200 (721 ms). Vote list still returns
+422 `Vote position person canonical provenance is incomplete` (correlation `e391a574-7130-4314-9529-31d51cb6df6a`).
+Inspection shows the old links point to `person:openstates-voter-name` name-only placeholders with
+no source URL, not verified legislator identities. Preserving a reference did not validate its person.
+Keep the observed voter names/options; reconcile or explicitly unresolve these placeholder links,
+never fabricate person provenance merely to satisfy the endpoint.
+
+All 32 focused TypeScript normalizer/scraper tests passed in current ingestion project. Existing
+production voter observations match fresh extraction by exact source identity and name: 50/50 Senate,
+118/118 House; all 168 have person links. House adds two source observations. Added shared persistence
+identity reuse requiring the same bill, source URL AND source observation ID, with ambiguous matches
+rejected; position keys follow the retained vote ID so resolved links survive. URL alone is deliberately
+insufficient because Alaska journal pages contain multiple motions. New regression covers distinct
+motion IDs on one source page. Full verification and guarded production reconciliation remain open.
+
+Action-only candidate suite reported one failure: Next acceptance build exceeded its existing 600-second
+deadline; 330 files/2854 tests passed, 386 tests skipped. Not a release pass. Current main Vitest config
+was concurrently reorganized into projects after focused session `85222` started. Stopped only its
+identified Vitest PID 20368 and direct workers and restarted the three normalizer suites explicitly in
+the ingestion project, one worker, session `12848`. No unrelated processes stopped.
+Current scraper vote identity already derives from the official transcript URL; keep it. Old production
+votes have null source IDs, URLs, roll-call numbers and chambers, so provenance correction requires
+explicit retained-evidence reconciliation rather than assuming current generated IDs already exist.
+
+Fresh evidence archived through `archiveScraperAttempt` (seven files) under
+`artifacts/openstates-runtime/nc-vote-repair-archive/openstates/scrapers/d43f853796ceeeb49205f7d144790647764ce105/nc/bills/nc-vote-repair-20260916/retained.json`.
+Shared main normalizer validates both vote rows as timeline-complete with 50/120 positions, exact
+47/110 yes, 0/2 not-voting and 3/8 absent counts, source transcript URLs, and UTC instants
+`2026-07-01T20:27:00Z` / `2026-06-30T22:52:00Z`. This is normalization evidence only: generated vote
+IDs differ from old production rows, so persistence must reconcile identities and avoid duplicates.
+Production votes remain unchanged. Archive/normalization session `15832` and raw export `46614`
+finished successfully. Focused TypeScript test `85222` remains live without a final result.
+
+Fresh S1041 extractor canary COMPLETED (session `96910`, exit zero), build-input digest
+`8976b92870a73ae2448eef8d6468199c6ff39ad569ec2be4f546c111a5921073`, retained directory
+`/prepared/staging/openstates-nc-ll9wvd1v`. Verified every retained file SHA against the attempt manifest.
+Both vote rosters reconcile exactly: Senate 665 has 50 positions (47 yes, three absent), House 769
+has 120 (110 yes, two not voting, eight absent). Fresh timestamps are explicitly Eastern:
+`2026-07-01T16:27:00-04:00` and `2026-06-30T18:52:00-04:00`, matching official transcripts.
+No production votes changed. Canonical normalization/persistence and API acceptance remain required.
+
+Stopped only the identified outdated Windows preparation process (PID 54324/session 70170), because
+its source policy predates the final selector. Regenerated from the pinned archive in local Docker
+volume `legislation-nc-vote-repair-inputs`: 496 files, exit zero. Network-disabled runtime verification
+passed for NC and Alaska with installed Open States 6.25.5. Started bounded S1041 extraction as session
+`96910`, container `legislation-nc-vote-repair-canary`, with the final read-only adapter and regenerated
+source inputs; timeout 1200 seconds. Output retained under `/prepared/staging` in that volume.
+This uses the existing verified dependency image and does not publish an image or write canonical data.
+
+Live vote-parser acceptance: broad class-token matching initially included nested container rows and
+double-counted positions. Restricted the reviewed selector to innermost matching rows and added the
+nested-wrapper regression. Against the official H/769 HTML, the corrected selection/parsing returns
+exactly 120 names: 110 yes, two not voting, eight absent, including Cunningham and Majeed. All ten
+Python policy tests pass inside the scraper image. This is live parser evidence, not a rebuilt-image
+or production-ingestion pass. Preparation session `70170` began before the final selector correction;
+its output must not be treated as current verified build input without regeneration/verification.
+
+NC vote selector regressions now run against lxml inside the existing scraper image with networking
+disabled: all ten Python source-policy tests pass. New coverage checks additional/reordered CSS class
+tokens, rejects a similar class-name suffix, retains unaffiliated groups, and preserves Not Voting.
+Fresh build-input preparation is running as local session `70170` using the pinned retained upstream
+archive into `artifacts/openstates-runtime/nc-vote-repair-build-inputs`. Do not dispatch a new extractor
+until this completes and the refreshed image passes validation. Main focused TypeScript session `85222`
+and candidate action-only verification `75762` are still live; neither has a final result yet.
+
+Official NC House roll-call 769 confirms the omitted voters are Cunningham and Majeed under Ayes
+(Unaffiliated). The row uses `row ncga-row-no-gutters mt-2`; upstream matches the entire class string,
+so this is a scraper omission, not unavailable data or a party-name whitelist. Source policy now matches
+CSS class tokens and preserves Not Voting as `not voting` instead of `abstain`. Eight existing Python
+policy tests passed; rebuilt-image and live extraction acceptance remain open. No runtime activation.
+Official Senate roll-call 665 reports July 1 at 4:27 p.m.; the archive's explicit 13:27 -07:00 denotes
+the same instant as 16:27 Eastern. Existing production 08:27Z is wrong, not the retained offset conversion.
+Sources: https://www.ncleg.gov/Legislation/Votes/RollCallVoteTranscript/2025/H/769 and
+https://www.ncleg.gov/Legislation/Votes/RollCallVoteTranscript/2025/S/665.
+
+Vote contract implementation in main (not yet in the isolated candidate or deployed): preserve all
+reported vote-option count categories, normalize pass/fail results, persist provider/retrieval/source
+sequence, require an explicit timestamp offset, and gate timeline completeness on exact aggregate-count
+versus unique-position reconciliation. Four regressions cover complete data, mismatched counts, date-only
+and offset-free timestamps. Focused test session `85222` is running. Formatting hit a Windows mapped-file
+error and needs retry. Existing action-only full verification session `75762` remains running and cannot
+certify these later vote changes.
+
+Retained SB1041 House roll-call counts sum to 120 but its archive contains 118 voter positions; do not
+mark this source snapshot complete. Its Senate vote has 50 reported/50 listed positions. Archived
+timestamps also differ from the existing production timestamps and require source-level validation
+before any vote repair. No vote rows or completeness flags have been changed in production.
+
+Action provenance follow-up: production SB1041 actions were confirmed to have null `source_url`, while
+the bill retains its official bill lookup URL. The shared Open States normalizer omitted the URL from
+action rows; both single and bulk persistence preserve fields they receive. Added `sourceUrl: billSourceUrl`
+to the shared mapping in main and the isolated candidate, plus a regression assertion. All 28 focused
+normalizer/scraper tests passed. Full candidate verification is running in
+`%TEMP%/agency-action-provenance-verify.log`; this fix is not deployed and existing production actions
+have not been rewritten. Re-import from retained source evidence remains required.
+
+Located SB1041 in retained NC batch `resume-deb47722-2c7a-4106-8d99-156671cbc986` under
+`artifacts/openstates-runtime/local-batch-acceptance`. Its bill-file SHA matches the manifest:
+`85a025acbba1ca8e5de9ecf412e574d7356bd265bf7d2b9214398855d07e700d`. Read-only comparison confirms
+all 46 production action descriptions, dates, classifications and ordered positions match retained
+source observations. The scraper adapter's current generated action IDs differ from production IDs;
+do not blindly replace the aggregate merely to repair provenance. All 46 live source URLs remain null.
+Full verification session `75762` is still running; no production provenance writes occurred.
+
+Subsequent guarded provenance repair committed exactly 46 SB1041 action source URLs, preserving IDs
+and all other fields. The transaction locked the bill/actions and required the manifest SHA, exact bill
+scope/source URL, complete action count, ordinal, date, description, classification and empty-or-equal
+existing provenance. Live timeline now returns HTTP 200 (226 ms). Bill detail progresses to a distinct
+HTTP 422, `Vote canonical persistence is incomplete` (correlation `d28405b2-2967-44f6-b5c4-09df106f25d3`).
+The Open States vote mapper does not populate the canonical timeline contract; investigate shared
+date precision, result/count normalization and provenance rather than setting completeness flags blindly.
+
+- [x] Memory-fix controller `run_06galu420i5ssvdugbokrknm01` on `20260916.3` completed all ten children without failures.
+- [x] All ten audited documents are processed with processed OCR; exact source SHA hashes remain unchanged.
+- [x] All 17 resulting document sections have current routed 1536-dimensional embeddings and matching content hashes in the hosted passage-search database.
+- [x] Previously interrupted SB1041 recovered normally and produced 8323 characters from four pages; no manual claim reset or index rebuild was needed.
+- [ ] Broader NC scan remains incomplete. Controller stopped truthfully at its continuation budget with SB257 still in its bill-level embedding queue, despite the audited document itself being fresh.
+
+After confirming the prior controller completed and no active state-content lease existed, resumed
+the saved checkpoint as `run_06galvrs1p40i2i9vdao863c01`, pinned to `20260916.3`: eight bills per
+batch, one bill at a time, ten continuations. No repair payload replay, default promotion, or Alaska activation.
+The successful ten-document canary is not full state-onboarding acceptance.
+
+- [x] Obtained the existing WorkOS machine smoke token in memory and verified the live SB1041 document-list API returns HTTP 200 (170 ms).
+- [ ] Live SB1041 bill detail returns HTTP 422: `Bill action canonical provenance is not persisted` (correlation `a73dafe1-d5ce-475d-98ed-18e0b170c4b4`). The current projection rejects a null action source URL. Reconcile against retained source evidence through the shared importer; do not weaken this assertion or invent action URLs.
+
+The first smoke requests incorrectly used `/api/v1`; current routes use `/api`. Those route-not-found
+responses were smoke invocation mistakes, not application defects. Positive machine API authentication
+does not establish browser-consent MCP authentication.
+
+## Repair release verification follow-up
+
+Memory fix deployed unpromoted as `20260916.3`, deployment `923hjw4t`, 34 tasks, exit zero.
+Submitted the same audited NC payload pinned to it as `run_06galu420i5ssvdugbokrknm01` with a
+version/digest idempotency key. The main dispatch script was concurrently removed, so submission used
+the installed SDK and the verified candidate's scope validator without restoring unrelated changes.
+No default promotion or Alaska activation occurred. Hosted recovery and resulting freshness remain to verify.
+
+Memory-fix serial full `pnpm verify` PASSED, exit zero: 331 legislation files and 3094 tests passed;
+eight files and 146 tests skipped. All 240 standalone API acceptance tests passed and all nine coverage
+tasks succeeded. Log `%TEMP%/agency-pdf-memory-repair-verify-serial.log`. Publishing the corrected
+candidate with `--skip-promotion` has started; retain the default deployment until hosted acceptance.
+
+At `2026-09-16T15:55Z`, production confirms the NC state-content lease is expired. SB1041 still has its
+interrupted processing claim from `06:49Z`; the shared four-hour worker window plus margin has now
+elapsed. Use normal interrupted-claim recovery after the corrected deployment; no manual reset was made.
+
+Memory-fix full verification retry ended with one setup failure: Next compiled and type-checked but
+exceeded its unchanged 600-second build deadline. There were 330 passing files and 2854 passing tests;
+240 acceptance cases did not run, so this is not a release pass. The process is gone and verification
+has restarted with one Vitest worker to reduce contention, without widening the deadline or skipping
+acceptance. Log: `%TEMP%/agency-pdf-memory-repair-verify-serial.log`. Memory changes remain undeployed.
+
+Exact-source memory smoke with the updated extractor: SB1041's retained 6,571,616-byte PDF was assessed
+in 5665 ms and correctly returned `ocr-required` (three of four pages materially scanned). Peak process
+RSS was 727,696 KiB (about 711 MiB) on local Node24. No provider calls or database writes occurred.
+This is measured local evidence, not proof of the new hosted allocation; hosted retry remains required.
+
+SB1041 memory evidence: retained source SHA `65a6a6ec14b2e47fe10ca66c2770fdd7baa488d4e7eb8d93bfc79ae34bb107e2`
+is a 6,571,616-byte, four-page PDF. Poppler reports one roughly 5050-by-6500 RGB image per page at
+600 DPI. Decoding all four images alone can require roughly 395 MB before parser/runtime overhead,
+despite the small compressed file. Local OCR previously produced 8323 characters from those four pages.
+This supports page-resource cleanup plus an OCR-capable worker allocation; it is not a page-count-limit failure.
+
+Prepared (not dispatched) Alaska's first ten-target repair payload:
+`artifacts/openstates-runtime/production-ocr-audit/ak/payloads/38a34c88dc3314b3ad9c373ec15105887390f2c7f332cf4f32de8e1d557197a6.json`.
+Its retained inventory has 952 differences. A fresh read-only production check confirms all ten targets
+still match the exact audited bill, URL, source hash, text hash and processed state. Alaska activation
+remains off pending NC hosted acceptance; no production repair was submitted for Alaska.
+
+NC recovery check after the crash: the state-content lease expires at `2026-09-16T07:49:01.336Z`.
+SB1041 remains `processing`, last attempted `2026-09-16T06:49:02.450Z`. Shared document-claim recovery
+also enforces the derived-worker duration plus safety margin; lease expiry alone is not permission to
+force-reset that document. The memory-fix verification retry is live and has passed preliminary checks.
+
+Memory follow-up: fourth child `run_06gahuehd0frrrq30cj66ikc01` CRASHED with
+`TASK_PROCESS_OOM_KILLED` while SB1041 was processing. Controller `run_06gahu2v9i0o7a4ujcib9q1201`
+is now FAILED, not running; no overlapping replacement was submitted. The shared state worker now
+matches the dedicated OCR worker's `medium-1x` machine and `large-2x` out-of-memory retry policy.
+PDF extraction also cleans up each page in a finally block rather than retaining decoded resources
+until whole-document disposal. Thirty focused tests passed, including cleanup on success/failure.
+The isolated candidate is running full verification again (`%TEMP%/agency-pdf-memory-repair-verify.log`).
+These changes are not deployed yet. Resume only after verification and recovery/lease checks.
+The first memory-fix verification stopped on mock typing and an unspecified rejection assertion in the
+new regression test. Those test defects were corrected; both cleanup tests pass again. Full verification
+has restarted with log `%TEMP%/agency-pdf-memory-repair-verify-retry.log`.
+
+Hosted correction verified in execution: the first three `20260916.2` workers completed successfully.
+Seven of ten audited documents are now OCR-processed. Their twelve sections all have matching hashes in
+the actual hosted passage-search database; eleven have fresh routed embeddings. HB40's remaining
+embedding is explicitly retained in `pendingEmbeddingBillIds` after a bounded 513-skip pass, not silently
+marked complete. SB1041 is processing; SB257 and SB479 remain pending. The controller and fourth child
+are still live. Initial apparent search gaps caught up through the existing replication path without a
+manual copy or configuration change. Railway CLI access is healthy; the separate Railway MCP returned
+Unauthorized, so it was not used to infer service failure.
+
+Corrected hosted retry: `20260916.2` deployed unpromoted with 34 tasks (deployment `cdlvt1wv`, exit zero).
+The same retained ten-target NC payload was dispatched pinned to that version as
+`run_06gahu2v9i0o7a4ujcib9q1201`, using its version/digest idempotency key. The previous run was confirmed
+FAILED and no `nc:2025` ingestion lease remained before submission. Retry completion and downstream
+freshness are still pending; default production was not promoted and Alaska remains disabled.
+
+Tokenizer correction: isolated candidate full `pnpm verify` exited zero. All nine coverage tasks
+succeeded; legislation reported 330 passing files, 3092 passing tests, eight skipped files and 146
+skipped tests. All 240 standalone route acceptance tests passed. Log:
+`%TEMP%/agency-tokenizer-repair-verify.log`. Unpromoted publication of the corrected candidate has started;
+no retry is submitted until its deployment version is confirmed.
+
+Fresh read-only production audit: the two OCR-repaired documents contain four sections, with zero fresh
+routed embeddings. The other eight targets remain pending and retain embeddings for their old text;
+those are not evidence of completed OCR repair. All ten source hashes still match the retained audit.
+
+Canary result: controller `run_06gahoq3pgdkm1jd3da5446801` FAILED after its worker retries. Two HB171
+documents completed OCR with unchanged source hashes (7705 and 551 characters); eight audited targets
+remain pending. Native ingestion-run diagnostics identify the embedding failure: external
+`tiktoken/encoders/cl100k_base.json` lost its JSON import attribute in the hosted bundle. The loader now
+uses Node's package JSON require path, retaining the vocabulary checksum and validating its shape.
+Focused regression and a Node-targeted bundled smoke with external tiktoken passed. The corrected release
+candidate is undergoing full verification; no repair retry has been submitted yet. Default version remains
+unpromoted, and this partial OCR result is not downstream completion.
+Read-only recovery check found no remaining `openstates-content` lease for `nc:2025` after failure.
+The external-tiktoken bundle also loaded the pinned Voyage tokenizer successfully; both routes counted
+`hello world` as two tokens without provider calls. Hosted retry remains gated on corrected release verification.
+
+Hosted canary started: version `20260916.1` deployed successfully with `--skip-promotion`, deployment
+`hv18sln3`, 34 detected tasks. Explicit NC-only activation was created and read back as `nc`; no Alaska
+activation or recurring schedule was created. The ten-target retained NC payload was submitted pinned to
+that version as `run_06gahoq3pgdkm1jd3da5446801`, using a digest/version idempotency key. Submission is not
+completion: verify extraction, OCR, embeddings and retrieval before closing this gate or promoting.
+
+Release candidate full `pnpm verify` PASSED (exit zero): 329 legislation files passed, eight skipped;
+3091 tests passed, 146 skipped; all nine coverage tasks succeeded. Log:
+`%TEMP%/agency-release-complete-verify.log`. Candidate is `D:/agency-repair-release`; this does not certify
+unrelated current-main dirty changes. Publication with `--skip-promotion` has now started. Default
+production promotion and state-content activation remain off pending hosted canary evidence.
+
+Production deployment readback: Trigger `list_deploys` returned newest deployed version `20260914.2`
+(`mqyvi1ai`, September 14 21:28:38 UTC), with commit message matching local `bda3143`.
+The candidate baseline `4c382c4` descends from it but also adds committed regulatory Trigger tasks.
+The repair overlay is isolated from current dirty work, not from those undeployed baseline additions.
+Do not promote it as a repair-only release without resolving this deployment scope. No deployment made.
+
+Latest terminal full result: 327 passing files, 2850 passing tests, eight skipped files; only Next build
+setup failed at its old four-minute deadline. The isolated candidate now includes the ten-minute setup
+allowance and the dispatch command/tests. Full verification is running again with two workers; no release
+approval is inferred from the prior partial result.
+
+Canary dispatch now has a reusable command: `tools/openstates/run-state-extraction-repairs.ts --payload <file>
+--sha256 <retained-digest> --version <deployment>`. It defaults to a local plan; `--apply` explicitly submits through Trigger.
+The command verifies exact bytes, requires audited targets, validates state/session scope and derives
+an idempotency key from the payload digest and explicit deployment version. It does not enable states or bypass hosted activation.
+The installed SDK supports version-pinned submission and `triggerAndWait` pins children to the executing
+worker version. This permits an unpromoted canary without replacing the default deployment. The updated
+CLI regression passed, as did focused lint/format. No version has been published or triggered by this work.
+Dry-run of the retained NC payload reports ten targets and `dispatched: false`.
+The CLI regression passed in a plugin-free backend test configuration: repeat planning is identical,
+altered checksums reject, and cross-state evidence rejects. The normal frontend-plugin test invocation
+stalled before reporting cases and was stopped after this diagnostic passed; the full release suite was
+left running. Temporary diagnostic configuration was removed. This is a focused pass, not full verification.
+
+Same-drive verification candidate: `D:/agency-repair-release`, detached at `4c382c4`,
+contains the 15 repair source/test files over the committed baseline plus the existing main-checkout
+Turbo passthrough for `VITEST_MAX_WORKERS`. The first same-drive run compiled and type-checked Next,
+fixing the cross-drive module-resolution problem, but timed out during build tracing and six tests.
+Full `pnpm verify` is rerunning with two Vitest workers and unchanged timeout limits. Previously failing
+parser, retrieval and embedding checks have passed in this run; full completion remains unverified.
+The same-drive Trigger dry run exited zero: `.trigger/tmp/build-YjmWIJ`. It warned that optional skill
+discovery timed out and skipped skill bundling. Nothing was published or activated.
+The two-worker full run ended with 326 passing files/2849 passing tests, a Voyage test timeout and another Next build
+timeout, so it cannot be considered a passing release gate. Inspection found that build acceptance
+spawned a synchronous wrapper and timed out that wrapper rather than Next itself. The test now resolves
+and spawns the Next CLI directly. Standalone acceptance passed all 240 tests in 156 seconds, with the
+original four-minute build deadline. Standalone embedding-client tests passed all 13 tests with unchanged
+deadlines. A final single-worker full verification is required; these focused passes do not replace it.
+The single-worker full run also exceeded the four-minute build setup limit. After the 156-second
+standalone acceptance success established functional correctness, the build-only deadline was increased
+to ten minutes for shared-machine cold builds and tracing. API request deadlines and all route assertions
+are unchanged. Lint/format pass; full acceptance with this new setup allowance is still pending.
+Production Trigger variable-name inventory confirms database, blob storage, Azure identity, OCR endpoint,
+OpenRouter and passage-search configuration keys exist (values not inspected or printed).
+`OPENSTATES_CONTENT_ENABLED_STATES` remains absent: workers have not been activated.
+
+- [x] Expanded transactional repair smoke: wrong document/bill/URL, changed source/text,
+  active worker and duplicate attempts all reject; successful requeue resets retry state and
+  preserves served text. Every test mutation rolls back; no production writes.
+- [x] Isolated release coverage ran 2849 passing tests. The regulations parser suite passed all
+  18 tests on a focused rerun; its full-suite failure was a five-second timeout.
+- [ ] Full verification is not green: isolated Next acceptance cannot resolve cross-drive
+  junctioned Next dependencies (`./D:/agency/node_modules/next/...`). The current checkout's
+  `pnpm verify` separately stops on untyped mocks in `VoteDetails.test.tsx` and
+  `resultStore.test.ts`, outside this repair scope. No unrelated files changed to bypass gates.
+- [ ] Hosted repair deployment, activation, NC canary and production downstream validation remain
+  open. Local smoke success is not production onboarding completion.
+
+## Read-only configured production history audit (September 16)
+
+OCR parity follow-up joined by canonical bill and exact source URL, then checked source content hashes before comparing
+text. The temporary comparison harness was removed after retaining its audit artifacts. Local and production document IDs differ;
+ID-only lookup falsely appeared absent and was replaced, without interpreting that as missing source data.
+NC: all 12 local OCR documents matched; two have identical text and ten have longer local text.
+AK: all 2302 matched by bill/URL; five source hashes differ or are unavailable, 1345 texts match,
+and 952 texts differ (852 longer locally). For example, AK HB101 local extraction has 69495 characters
+where production has 409 from the same hashed source. These are concrete production extraction gaps.
+Immutable audit artifacts under `artifacts/openstates-runtime/production-ocr-audit` retain exact
+production IDs, source hashes and text hashes for revalidation before pipeline-based repair. No production
+rows were updated. Length alone is not a quality score; do not overwrite differing results blindly.
+
+Repair safety implementation: `requeueVerifiedExtraction` atomically requires matching document ID,
+source URL, source SHA-256, previous text digest and processed status before marking a document pending.
+It preserves served text and uses the normal downstream pipeline rather than copying local rows.
+Local transactional smoke verified stale source/text rejection, duplicate rejection and text preservation;
+all changes were rolled back. Focused types/lint and the service type-check passed. Production repair
+dispatch and hosted activation remain open. The existing state-content worker now accepts at most ten
+audited repair records, validates state/session scope and duplicates before writes, then uses guarded requeue
+and the existing document/OCR/embedding scan. Controller forwards repairs only to its first child; retry
+safety comes from compare-and-set evidence and durable pending state. Six policy tests and local rollback
+smoke passed; no hosted deployment or production activation was performed.
+
+Hosted preflight (September 16): the documented production API `/ready` ingestion-contract check passed;
+Trigger CLI authenticated to the Legislation project. `trigger deploy --dry-run --skip-update-check
+--skip-telemetry --config trigger.config.ts` built successfully, exit 0, without publication.
+Build output: `.trigger/tmp/build-gid8YS`. The working tree also contains unrelated regulatory task
+edits, so this full bundle has not been promoted as an NC/AK repair release. Latest full verification
+failed in unrelated `app/chat/resultStore.test.ts` mock typing; focused repair checks remain passing.
+
+NC canary payload prepared (not dispatched): `tools/openstates/prepare-state-extraction-repairs.ts` verifies
+the retained audit checksum, validates exact state/session scope, caps batches at ten and retains a
+content-addressed controller payload. Repeat generation produced the same payload hash
+`5298509091077ba5fdea6b8c8adfb63b6c4de54bdba55dc6c8b96b1039783206` for all ten NC candidates.
+Location: `artifacts/openstates-runtime/production-ocr-audit/nc/payloads/5298509091077ba5fdea6b8c8adfb63b6c4de54bdba55dc6c8b96b1039783206.json`.
+Focused types and lint passed. Publication scope for unrelated regulatory edits was raised with the user;
+do not confuse preparing a payload with deployment, activation or successful production repair.
+
+Repair execution priority now merges audited bill IDs ahead of existing pending continuations without
+discarding the previous backlog or advancing the ordinary scan cursor. Checkpoint backlog remains bounded
+at 100 IDs. Four focused checkpoint tests and lint pass; this change still awaits hosted release acceptance.
+
+Isolated release snapshot prepared at
+`C:/Users/andcra/AppData/Local/Temp/legislation-repair-release-d769abb6758942f69ffa3ee59586830c`
+from commit `4c382c43a7e1048ce7597f3ccdefd694f4baebed`, overlaying only 15 OCR/embedding/state-content
+files. Unrelated regulatory/frontend edits are excluded. Existing dependencies are junction-linked for local
+verification only; pnpm's attempted dependency reconciliation was not allowed to purge them. Direct installed
+compiler service types passed, Trigger dry run passed (`.trigger/tmp/build-ybS9xN`), and 37 focused tests
+passed across five files. Temporary test config removed. No deployment or activation occurred.
+
+Isolated full verification is running with `pnpm_config_verify_deps_before_run=warn` to avoid mutating
+the junction-linked shared dependency installation. It reached coverage tests; at least one test has
+failed, so full release verification is not established. Process handle 98558 owns the run, log
+`C:/Users/andcra/AppData/Local/Temp/agency-isolated-repair-verify.log`.
+Live Trigger production configuration lookup confirmed `OPENSTATES_CONTENT_ENABLED_STATES` is absent.
+Hosted content execution remains disabled; no flag, deployment, or schedule was changed.
+
+The completed state-history audit used indexed canonical jurisdiction/session selection and 25-bill document batches,
+read-only transactions, 10-second statement limits and two-second lock limits.
+Canonical session normalization is essential for NC special sessions; uppercase literal IDs initially
+returned zero, corrected by the shared identifier helper and rechecked below. No writes occurred.
+
+| State/session | Bills | Processed documents | Other outcomes |
+| --- | ---: | ---: | --- |
+| AK 30 | 649 | 12079 | 8 malformed, 30 unsupported format |
+| AK 31 | 674 | 7691 | 7 malformed, 1 unsupported format |
+| AK 32 | 831 | 12444 | 7 malformed, 4 unsupported format |
+| AK 33 | 812 | 14110 | 2 malformed, 7 unsupported format |
+| AK 34 | 857 | 15026 | 11 malformed, 27 unsupported format, 2 not found, 2 transient download failures |
+| NC 2017 | 1953 | 6030 | 1 not found |
+| NC 2017E1 | 12 | 32 | None |
+| NC 2017E2 | 8 | 25 | None |
+| NC 2017E3 | 9 | 35 | None |
+| NC 2019 | 2109 | 6505 | None |
+| NC 2021 | 2095 | 5970 | None |
+| NC 2023 | 2005 | 5526 | None |
+| NC 2025 | 2338 | 6192 | None |
+
+Only AK 33 records one OCR completion; all other audited sessions record zero. This differs from local
+current-session OCR results and requires extraction-quality comparison before accepting production
+"processed" status. Do not blindly repeat archive ingestion. These counts establish stored outcomes,
+not source completeness, embedding freshness, or hosted end-to-end acceptance.
+
+## NC document library bounded crawl (September 16)
+
+- [x] Added restart-safe publisher folder discovery with immutable, SHA-256-verified HTML receipts,
+  a 25-second request timeout, streaming 4 MB response limit, request/folder limits, and cycle detection.
+- [x] Crawled Child Fatality Task Force site 512, meeting-documents root 12626:
+  29 folders and 132 distinct file IDs retained. First invocation stopped after 20 requests;
+  the resumed invocation fetched the remaining 9 folders and reported complete.
+  Evidence: `artifacts/openstates-runtime/nc-document-library-crawls/meetings-20260916`.
+- [x] Three focused parser/crawler tests passed; focused TypeScript and lint checks passed.
+- [x] Added `tools/openstates/import-nc-library-content.ts`: requires complete retained evidence, registers
+  all 132 files transactionally using canonical jurisdiction identifiers, rejects conflicting metadata,
+  and invokes the shared supporting-material download/extraction processor in bounded local batches.
+  No inferred document dates or meeting links are inserted. Canary: four processed PDFs and one
+  mixed scanned/digital PDF correctly queued as OCR-required. Expanded local extraction is running;
+  the completed database count confirms all 132 files processed and 610 extracted sections.
+  Focused script types and lint pass. No production writes were performed.
+- [x] The three OCR-required PDFs completed through the existing Azure Document Intelligence client:
+  128 pages, three processed, zero failures. The shared supporting-material pipeline scoped OCR and embedding work to
+  the imported library materials in the local database. The shared supporting-material
+  embedding route and input-hash freshness checks are reused; section cursors advance for large files.
+- [x] Local library embedding pass completed: 610/610 sections have the configured supporting-material
+  model/input-contract embedding and zero missing lexical vectors. Shared query-service smoke returns five
+  canonical NC publisher-backed hits in each of lexical (76 ms), semantic (2162 ms), and hybrid (276 ms)
+  modes. These are one-run timings, not a load-test guarantee. Supporting-material search uses canonical
+  storage; this result does not claim separate bill-passage synchronization, HTTP/MCP, or production acceptance.
+
+Alaska session 34 event import completed all 285 planned batches. Publisher-fact audit compared all
+2846 admitted occurrences with retained official XML: 2846 matched, zero name/location/status/start-time
+mismatches. Quarantined conflicts remain excluded. Final relationship/readiness reconciliation completed
+285 batches and 2846 events, with 3178 bill links and 2304 organization links. Local HTTP/MCP meeting smoke
+passed seven HTTP requests plus MCP search and three detail calls. Production authentication was not tested.
+Source-fact parity alone does not establish full historical state onboarding or production deployment.
+- [x] Download/extract the 132 inventoried files through the shared content pipeline and validate
+  all 610 section embedding-input hashes against current text. Local MCP client/handler lexical,
+  semantic and hybrid supporting-material searches each returned five canonical publisher-backed hits.
+  This is not production OAuth or HTTP-adapter acceptance.
+- [x] Fixed scoped supporting-material embedding pagination: a material filter previously ignored
+  the section cursor. Live-database regression now checks the exact remaining tail after a cursor
+  and rejects any provider call for fresh embeddings. Focused types, lint, and local smoke pass.
+- [ ] Establish meeting relationships from publisher evidence, not filename/date guesses.
+  This single committee library does not establish statewide archival completeness.
+
+Resume with `pnpm tool openstates/crawl-nc-document-library 512 12626 meetings-20260916 20`.
+Reusing the crawl ID reads retained evidence; a fresh sync needs a new crawl ID.
+Full `pnpm verify` remains unsuccessful: formatter cannot save `next.config.ts` because Windows
+reports an open user-mapped section. Do not treat focused checks as full repository acceptance.
+
 ## Blocking delivery priority: NC and Alaska end-to-end ingestion
 
 Scope correction, September 15: production and local scraper validation are different databases.
@@ -39,7 +488,179 @@ that this end-to-end connection has already been implemented or activated.
 
 ## Source and runtime milestones
 
+### North Carolina meeting-status correction (2026-09-16)
+
+- [x] Identified a separate NC committee document-library source omitted by calendar scraping. Added strict publisher
+  folder/file discovery and checksummed local HTML retention. Live site 512/folder 24091
+  exposes six files, including agenda 120383 for August 27, 2026. This is not evidence for the September 15–16 notices;
+  no date/title-based meeting link is created. The parent folder exposes historical year ranges back to 2010–2011.
+  Parser regression covers explicit identities, cross-site targets, untrusted file hosts and unexpected login content.
+- [ ] Crawl approved document-library folders with bounded checkpoints, retain document bytes, process native/OCR text,
+  and validate explicit meeting associations. Current discovery is not completed content ingestion.
+
+- [x] Corrected runtime built locally from verified retained dependencies and 496 source inputs. Input digest:
+  `8dd4689bcfe72cf8b1cee5372c1106bd9f077845bea3187074fe17cc833beaeb`; image manifest:
+  `40285d0f2080700daa604ae9c1c7ba38b2097e4d8bd2d4f483ca143f97926dc0`. Offline startup passed both NC/AK lanes after
+  correcting the stale startup probe to use bounded Alaska event keys. A live 180-second NC canary exited zero and
+  extracted notices 10724/10725/10726 as tentative, with zero agenda items. No database credentials or writes were used.
+  Local retained attempt: `artifacts/openstates-runtime/nc-event-status-canary/openstates-nc-y8xnmtdy`.
+
+- [x] Removed the pinned scraper's elapsed-clock inference of `passed`. Merely reaching a scheduled start is not proof
+  that the meeting occurred. Retained old `passed` records normalize to `other`, not `completed`; explicit cancellation
+  is preserved. Six normalization tests and eight Python source-policy tests passed. Three hash-verified local notice
+  records were replayed from the approved retained build. This does not establish meeting readiness or agenda coverage.
+- [ ] Build and activate the updated NC scraper runtime; the source patch is not yet deployed. Continue source-backed
+  committee/session and notice-agenda validation before exposing these NC meetings.
+
+### Alaska bounded event import and replay (2026-09-16)
+
+- [x] Real MCP client acceptance passed for bounded Alaska `search_events` and three `get_event` calls through the
+  HTTP adapter, retaining canonical IDs and jurisdiction. This exposed and fixed repeated date-schema validation:
+  timestamp strings now remain wire-safe until the service callback converts them to Date. Event, vote and change
+  searches share the correction; a protocol regression covers all three. Fourteen MCP tests passed. Seven HTTP meeting
+  checks also passed. This remains loopback acceptance, not production OAuth verification.
+
+- [x] Explicit local readiness refresh (`reconcile-alaska-event-plan --refresh-readiness`) verified and applied to
+  139 committed batches/1,390 meetings. It checks stored title, status, location, classification, timing, jurisdiction
+  and remaining meeting facts before changing links/readiness, and refuses stale source facts. At the subsequent read,
+  1,099 of 1,430 imported records passed existing public visibility gates; later batches remain pending refresh.
+  Seven loopback HTTP requests passed across meeting list, three details and three organization meeting collections.
+  A temporary acceptance harness exercised real database repositories and HTTP handlers before removal. No production authentication
+  or full historical/session completion is claimed.
+
+- [x] Alaska readiness canary: the source adapter asserts its verified session and explicit single-host scope. The
+  shared organization resolver requires every reference to resolve uniquely within the same jurisdiction; missing or
+  ambiguous references revoke organization completeness before persistence. A blank chamber-only title remains held.
+  Seven focused tests and service type-check passed. Local receipted replay preserved rollback/conflict safeguards.
+  The existing public meeting query and projection returned House Finance occurrence
+  `a779bdb0e2d1e11871e365c3599785a544a28aeab87b90ac047719def26cb3e2` with its canonical organization and session.
+  No public query filters were weakened. The other canary remained hidden. Existing bulk receipts still require reviewed
+  re-promotion to adopt readiness; relationship-only reconciliation deliberately never changes completeness flags.
+
+- [x] Read-only publisher-fact audit (`python/audit_alaska_meeting_facts.py`) compared 1,181 local meetings with the
+  frozen official XML: all titles, publisher locations, scheduled/cancelled statuses and instants matched. Offset-equivalent
+  timestamps are compared as instants. The audit rejects unsafe/conflicting inventory through the shared planner and
+  reports non-admitted occurrences. Its regression test catches invented locations and incorrect statuses.
+- [ ] Public meeting acceptance remains open: live local SQL found no NC/AK meetings with canonical/session/organization
+  completeness asserted. Linked records alone are therefore not visible through the public meeting query. The above
+  four-field audit is not sufficient to raise every completeness flag; validate the source's relation scope and remaining
+  canonical fields before promoting readiness. Do not weaken the API filters to conceal this ingestion gap.
+
+- [x] Decoupled committee identity acceptance from roster acceptance in the shared NC/AK importer. Local AK replay now
+  persists 33 structurally accepted identities while preserving 13 held rosters/97 held membership assertions and 136
+  accepted memberships. No partial roster is labeled complete. Parent cycles, missing parents and unknown chambers
+  still block identity acceptance; parent membership holds do not erase an otherwise verified identity. Eighteen focused
+  committee tests and service type-check passed. Replay preserved membership identities.
+- [x] Reconciled 104 committed batches/1,040 meetings after identity import: 1,329 bill links and 857 organization links.
+  These are local counts, not production acceptance or whole-session completeness. The event controller is still active.
+
+- [x] Relationship-only reconciliation verified against local PostgreSQL for 88 committed batches/880 meetings:
+  1,015 bill links and 550 organization links. Replay leaves event facts and completeness flags unchanged; changed event
+  identity/facts and changed agenda identity sets are rejected. This checks committed archives, not full inventory coverage.
+  The sequential controller remains active; later batches need the same reconciliation before final acceptance.
+- [ ] Resolve remaining organization coverage without inventing identities. Retained Energy and Fisheries committee
+  identities now import independently; their rosters remain held for `unaccepted_person` dependencies.
+  Other unlinked codes include budget subcommittees and joint/conference meetings; absence of a canonical link is not
+  proof that the publisher omitted the organization. Membership acceptance and organization identity need separate review.
+- [x] The continuation schedule is deleted at the user's request; the onboarding goal remains active.
+
+- [x] Replayed verified committee artifacts locally: 20 eligible
+  organizations now carry current Legislature 34 official identifiers; 136 membership identities remained stable on
+  repeat. Thirteen committees/97 assertions remain held. No people rewrite, migration or production write ran.
+- [x] Verified House Finance event-to-organization linking against local PostgreSQL using the exact source committee
+  identifier. General reconciliation of previously admitted event batches remains open; source completeness flags were
+  not promoted to true by this link check.
+
+- [x] Reproduced and fixed a batch-stopping blank-location validation error without inventing a venue. The optional
+  location name is omitted after coordinate matching. Failed partial batches were retained, not promoted. The corrected
+  ten-event Energy batch committed after the prior 310 meetings; controller resumed with explicitly approved builds.
+  Current build inputs: `0aa565ffa56a0784a034b4a6de46447cbaac7ee7744724e9d7139951fc215b08`.
+
+- [x] Shared explicit bill matching tested for unique resolution, duplicate candidates, ambiguity, session separation,
+  jurisdiction separation and unchanged source/completeness claims. Three focused resolver tests passed.
+- [ ] Organization relationships: inspected stored AK committee website URLs refer to Legislature 33, while the event
+  inventory is Legislature 34. Follow-up inspection of the pinned Senate Labor and Commerce YAML found both 33 and 34
+  official URLs under the same source organization ID; the single stored website field omits that evidence. Reconcile
+  the complete retained source URLs before marking meeting detail or organization meetings ready; do not match by name.
+
+- [x] Corrected publisher `L&C` code validation and URL encoding; a live House Labor and Commerce occurrence imported
+  locally with eight agenda items from build `c9eaa836032422585a4a0f4539f36fac3161df30d4243d4855b54f16d85bd061`.
+- [x] Verified durable event receipts against local PostgreSQL: identical replay preserves the row, conflicting receipts
+  reject, and a bad agenda foreign key rolls back both changes and receipt. Shared bill/event receipt admission avoids
+  separate retry semantics. Full event batch execution and recovery wiring remain open.
+
+- [x] Imported two retained official occurrences locally through the shared transactional event writer: House Finance
+  on January 22, 2025 and the House seafood-industry task force on January 9, 2025. Five agenda items were retained.
+- [x] Replayed the same hash-verified archive. Direct SQL still reports exactly two Alaska meetings and five agenda
+  items. Three focused normalization tests pass, including publisher timestamp equivalence, correction-stable identity,
+  distinct rescheduled identity and rejection of mismatched official sources.
+- [x] Kept both conflicting occurrence keys quarantined with all source variants. No production writes occurred.
+- [ ] Expand beyond the two-occurrence batch, reconcile relationships and validate hosted orchestration. This does not
+  close the six end-to-end gates above or prove historical event completeness.
+
+Evidence: archive `ak-events-archive-20260916`, retained run `ak-events-20260916`, upstream revision
+`d43f853796ceeeb49205f7d144790647764ce105`, approved build inputs
+`867b1d2631ea4e8ab78a84c05e3e099bfd7eac5ee62d48f2e58c782b11548235`.
+Focused tests used an isolated diagnostic Vitest configuration; repository-wide verification is a separate gate.
+
+### Local current-session content closure (2026-09-15 22:42Z)
+
+| Complete | Local requirement | Evidence |
+| --- | --- | --- |
+| [x] | Drain NC 2025 and AK 34 document queues | NC 6,192 processed; AK 15,046 processed plus 18 retained unsupported outcomes. Zero pending/processing documents, OCR backlog or active leases. |
+| [x] | Verify retained source artifacts | At 23:00Z all 21,256 NC/AK files existed, were non-empty and had SHA-256 checksums matching their content-addressed storage paths. Zero missing files, invalid paths or checksum mismatches; 8,894,637,798 bytes checked. |
+| [x] | Current extracted-content vectors | Final Alaska audit: 856 bill and 65,882 section vectors, zero missing/stale canonical hashes or dimensions. NC audit at 21:17Z: 2,338 bills and 36,187 sections, zero missing/stale; no subsequent NC processing. |
+| [ ] | Unsupported-format closure | Eleven MSG attachments need supported extraction; seven individually reviewed no-text artifacts remain explicit non-text outcomes, not successful text extraction. |
+| [x] | Local ranked lexical projection and canonical mapping | Copied 102,069 sections into isolated ParadeDB 0.25.9; exact parity verified for IDs, document IDs, headings, text, hashes and page bounds. NC, AK and OCR-document positive searches and a no-results query passed. |
+| [ ] | End-to-end and hosted closure | HTTP/API/MCP and semantic/hybrid acceptance, historical/entity/event coverage, durable hosted handoff and full repository verification remain separate open gates. |
+
 ### Non-document data follow-through (2026-09-15)
+
+Alaska collision handling implemented in shared prepared-source helper `alaska_meeting_partition.py`: exact XML
+duplicates collapse; differing rows under the same occurrence key are all retained in a quarantine report and excluded
+from admission. The scraper writes `_data/ak/meeting_partition.json`, captured by the existing archive inventory.
+The report marks `complete_snapshot: false` whenever conflicts exist. Eleven partition/source-policy tests pass.
+Live source replay matched 2,846 accepted occurrences, five duplicate rows and two quarantined keys containing all
+four conflicting rows. This was read-only validation; it has not yet imported Alaska events. Fresh pinned build inputs
+contain 496 files. Runner/archive contract activation, bounded extraction and canonical promotion remain next.
+
+September 16 01:58Z full Alaska session-34 source audit: 2,855 XML meeting rows form 2,848 occurrence keys.
+Seven keys repeat: five pairs are byte-identical; two keys (H/S LEC, March 18 2026 17:15 -08:00) disagree in
+agenda, location, sponsor attributes and title. Twenty-four rows lack source locations; none are date-only.
+Do not arbitrarily choose a conflicting version. The remaining extraction work must collapse exact duplicate rows,
+retain/quarantine both conflicting variants and admit the 2,846 non-conflicting occurrences independently.
+No canonical writes, active local content workers or leases; hosted jobs remain unverified.
+
+Alaska meeting correctness implementation: source policy now preserves publisher location text (including empty),
+avoids regex crashes on unfamiliar room labels, retains exact minutes/seconds in meeting links, and uses
+chamber/sponsor/scheduled-time occurrence keys instead of title/location keys. Duplicate occurrence keys fail extraction
+rather than silently dropping records. A time change is not claimed to be the same meeting; reschedule reconciliation
+remains open. Eight policy tests and all 495 freshly prepared source files passed verification. An isolated invocation
+of the actual patched scraper passed unknown-location, 13:37:15 URL, occurrence-key and agenda assertions; media HEAD
+was stubbed only in that test. Alaska runtime activation and canonical event import remain pending.
+
+September 16 Alaska event review: the approved official `/publicservice/basis/meetings` endpoint with session 34
+returned 2,855 meetings and agenda content over verified TLS. Its scraper's optional `date` query instead returned
+an `IllegalBasisUrlException` inside HTTP 200. Source policy now requires TLS verification and 10/60-second
+connect/read bounds for API and media probes, checks HTTP status, and rejects XML Error envelopes rather than
+treating them as an empty successful scrape. Eight policy tests pass. Event identity, source location fidelity,
+bounded session extraction and promotion still require implementation; Alaska events are not enabled yet.
+
+September 16 event-lane progress: bounded NC scrape using the existing journal image completed successfully
+(build inputs `fa0a1820148b4ee765dbed9db32b0e8c81d2011f42bba7bc7fc91b946410f526`). Seven raw files were
+archived and checksum-verified under local `artifacts/openstates-runtime/nc-events-archive-20260916`.
+The three official notices 10724, 10725 and 10726 normalized with stable notice identities and were imported through
+the shared transactional event writer into the local test database. All three canonical event-detail reads passed.
+Their output has zero agenda items and no resolved organization IDs; participant names are retained without identity
+guesses. This is current-calendar acceptance, not historical coverage or production import. Alaska events remain
+disabled pending the pinned source's identity/location/TLS review; that guard was not bypassed.
+
+September 16 01:20Z read-only local inventory: NC has 674 people, zero legislative events and zero agenda items;
+Alaska has 164 people, zero legislative events and zero agenda items. These totals do not prove historical completeness
+or current roster accuracy and are not production counts. Upstream people HEAD remains
+`677c6d0a566ad9bd62b6324e502af76acc3d22f3`; no corrected source revision is available. No local content worker or
+ingestion lease was active. The next independent data lane is event-source extraction and bounded promotion acceptance;
+do not mark event endpoints covered by successful passage searches. Hosted Trigger jobs remain unverified.
 
 | Complete | Requirement | Latest evidence / remaining work |
 | --- | --- | --- |
@@ -60,6 +681,93 @@ and no unrelated implementation was changed to hide the failure. Both existing N
 
 ### Shared downstream canary evidence (2026-09-15)
 
+- [x] September 16 01:03Z policy verification: all five Vitest policy tests passed with a temporary minimal configuration (576 ms, exit 0). The normal configuration with one thread also reported five passing cases but was interrupted before clean completion. This narrows the unresolved runner issue to broader setup/teardown; it does not establish its exact cause or a green full suite. Temporary diagnostic config removed. No local worker, active query or lease at check-in; hosted status remains unverified and no schedule activated.
+- [ ] September 16 00:46Z: no local content worker or ingestion lease. Extracted the shared NC/AK schema into `state-content-scope.ts` so schedule-policy validation no longer imports the document-processing runtime. All callers use the same schema. Eight direct schedule-policy assertions, focused lint and service types passed. Vitest still stalled before reporting cases and was stopped; import decoupling did not resolve the test-runner issue. Hosted status remains unverified and schedules remain unactivated.
+- [ ] Scheduled-entry verification: focused lint and service type-check pass. The focused Vitest invocation stalled before reporting cases; no passing test claim. Full verification is blocked by unrelated `regulations/passage-preparation.ts` nested-ternary lint and an origin/main fetch failure. Schedule remains unactivated pending successful tests and hosted acceptance.
+- [ ] Implemented the opt-in `openstates-content-schedule` entry point for durable resumption. An explicitly created schedule must supply an exact `state:session` external ID (for example `nc:2017E1` or `ak:34`) and the state must be approved in `OPENSTATES_CONTENT_ENABLED_STATES`. Each occurrence dispatches one bounded controller continuation with an occurrence idempotency key; existing database leases/checkpoints remain authoritative. No cron or hosted schedule was created. Hosted retry/non-overlap acceptance and activation remain open; this is not an immediate promotion callback or search-sync activation.
+- [x] September 16 00:25Z repeatable local adapter acceptance: `inspect:openstates-ranked-passages --with-models` now includes MCP client → MCP handler → real HTTP adapter → loopback API → query service. All six NC/AK mode cases passed (43–891 ms), alongside nine direct service cases and HTTP invalid-mode rejection. Focused lint and service types passed. Explicit local DB URLs and loopback binding prevent production mutation; listeners, transport and pools close after completion. Production OAuth and hosted acceptance remain open.
+- [x] September 16 00:21Z check-in: no local Open States worker or ingestion lease. Actual loopback HTTP listener using `createLegislationServer` and the real passage API handler passed six POST `/api/search/passages` requests: NC/AK lexical, semantic and hybrid each returned HTTP 200 and three projected results (33–1,120 ms). Invalid mode returned 400. Listener and pools closed afterward. This verifies local HTTP routing/serialization with live models, not production OAuth or the MCP-to-HTTP adapter. Hosted jobs remain unverified; no production changes.
+- [x] September 16 00:04Z check-in: no local content worker, active database query or ingestion lease. Real MCP client negotiation, tool discovery and six `search_bill_text` calls passed through the in-process StreamableHTTP handler backed by the actual local query service and live model client. NC/AK lexical, semantic and hybrid each returned three correctly linked canonical results (81–1,568 ms). This checks MCP protocol/serialization, not the production HTTP API adapter, network listener or OAuth boundary. Hosted Trigger status remains unverified. No production writes or new workers.
+- [x] 23:47Z live model integration passed all nine shared-query-service cases (three modes each for NC education, AK education and OCR-recovered SB133 prior authorization). All returned five canonically mapped results. The temporary inspector was removed after acceptance. HTTP/MCP remained unverified at this checkpoint.
+- [x] 23:34Z check-in: no local Open States Node worker, active canonical query or ingestion lease. Read-only stored-vector self-retrieval through `semanticPassageSearch` returned five correctly mapped results for each state and included the source section (NC 65 ms, AK 57 ms). This verifies the vector retrieval path only, not query-embedding provider integration, hybrid ranking or HTTP/MCP. Hosted Trigger status remains unverified; no jobs dispatched.
+- [ ] Repository verification remains blocked: the final ranked-acceptance `pnpm verify` rerun stopped at unrelated UI unused-dependency/export findings (`class-variance-authority`, `ConversationEmptyState`, `ConversationScrollButton`, `Suggestions`). The new smoke script's focused lint and live rerun passed; no production or end-to-end completion claim is made.
+- [x] Local ranked acceptance at 23:13Z exercised the shared search implementation against canonical port 55432 and isolated search port 55433. Five results each for NC education, AK education and the OCR-recovered SB133 prior-authorization document passed. The temporary inspector was removed after acceptance.
+- [x] 23:00Z artifact acceptance: read-only filesystem audit checked all 21,256 NC/AK document artifacts (8,894,637,798 bytes), including unsupported outcomes. Every file exists and is non-empty; every streamed SHA-256 matches its storage-path hash. Zero unsafe/invalid paths or mismatches. This upgrades the earlier database-reference-only evidence to verified retained bytes.
+- [x] No content worker or active lease at check-in; drained queues were not restarted. No executable/production changes, unrelated dirty work preserved.
+- [ ] MSG parsing, lexical/API/MCP acceptance, historical/entity/event coverage, durable hosted orchestration and full repository verification remain open; no source or activation gate bypassed. Hosted Trigger status not verified.
+
+- [x] 22:42Z local queue milestone: prior bounded worker finished, no process or active leases, and 41 successful batches since 22:22Z. Alaska has 15,046 processed documents, eighteen unsupported (eleven MSG/seven reviewed no-text), 2,302 OCR completions, no pending/processing documents or unresolved OCR, and no processed documents without sections. NC remains 6,192 processed with twelve OCR completions. All document records have blob-path references. No restart is needed solely to rescan this drained queue.
+- [x] Final Alaska freshness audit passed at 22:42:40Z: all 856 bill and 65,882 section vectors present and current, zero missing/stale; both global vector indexes valid/ready. No production changes or new executable changes; unrelated dirty work preserved.
+- [ ] Broader delivery is not complete: remaining gates listed in the local closure table above. Hosted Trigger status unverified; prior full repository verification remains blocked/unclosed and is not replaced by these read-only data checks.
+
+- [x] 22:22Z check-in: Alaska process active, 135 successful batches since 22:06Z, no failures or blocked sessions. Snapshot: 14,998/15,064 processed, 2,293 OCR completions, 46 pending, two processing and eighteen unsupported with all artifacts retained (eleven MSG, seven reviewed no-text). A subsequent queue check had 38 unattempted documents and two transient download retries. NC unchanged; indexes valid/ready. No duplicate dispatch or production changes.
+- [x] Repeatable-read Alaska freshness audit at 22:22:20Z passed all 856 bill and 65,783 section vectors: none missing/stale. This remains a snapshot before the final documents finish, not lexical/API acceptance.
+- [ ] Final document drain, MSG support, final freshness/search/API, historical/entity/event coverage, hosted orchestration and full repository verification remain open. No executable changes this check-in; unrelated work preserved, hosted Trigger status unverified.
+
+- [x] 22:06Z check-in: Alaska process active, 125 successful batches since 21:49Z, no failed content runs or blocked sessions. Local Alaska reached 14,684/15,064 processed documents (up 335), 2,249 OCR completions, 362 pending, one processing and seventeen unsupported with all artifacts retained (ten MSG, seven reviewed no-text). Download retries down to 39. NC remains 6,192 processed and no missing routed vectors; both indexes valid/ready. No duplicate dispatch or production changes.
+- [ ] One OCR operation and sixteen section vectors pending at the moving snapshot. Final content/freshness/search/API, MSG support, historical/entity/event coverage, hosted orchestration and full verification remain open. No executable changes in this check-in; unrelated dirty work preserved. Hosted Trigger status not verified; prior focused checks passed and last full check was blocked by unrelated lint.
+
+- [x] 21:49Z recovery: verified all three old leases expired, no state-content worker and no local database client sessions. Started exactly one bounded 300-batch continuation at the existing concurrency two using ordinary lease admission and checkpoint recovery; four batches succeeded. No manual lease deletion, queue reset, attempt-history rewrite or production writes.
+- [x] Recovery snapshot: Alaska 14,349/15,064 processed, 698 pending, seventeen unsupported, 2,197 OCR completions and all 63,507 routed section vectors present. NC unchanged at 6,192 processed and zero missing routed vectors; both indexes valid/ready. This validates local expiry-based resumption, not durable hosted dispatch or complete ingestion.
+- [ ] Remaining final-processing/freshness/search/API, MSG, historical/entity/event, hosted orchestration and repository-verification gates remain open. No executable changes this check-in; unrelated dirty changes preserved. Hosted Trigger status not verified.
+
+- [x] 21:33Z recovery inventory: no state-content process or database client sessions. All 704 pending Alaska documents are due: 620 unattempted, 73 with one transient download attempt, and eleven with one attempt but no recorded error. None has a future retry time or exhausted attempt budget. No queue reset or attempt-history changes are needed before normal recovery.
+- [ ] State lease still unexpired until 21:39:21Z; document/embedding leases expired. No overlapping worker or forced lease removal. Current vector freshness was verified at 21:17Z; final processing and other delivery gates remain open. No executable/production changes; unrelated work preserved, hosted Trigger status unverified.
+
+- [x] 21:17Z paused-worker validation: repeatable-read input-hash audits passed for Alaska (856 bills, 63,498 sections) and NC (2,338 bills, 36,187 sections), zero missing/stale routed vectors in both. No provider calls or production writes. Open States people HEAD remains `677c6d0a566ad9bd62b6324e502af76acc3d22f3`; existing source holds remain.
+- [ ] Alaska worker still absent with zero database client sessions; document and embedding leases have expired, but the state lease remains valid until 21:39:21Z. No premature restart or lease deletion. The 704 pending documents and final search/API, MSG, historical/entity/event and hosted gates remain open. No executable changes or new full verification run; unrelated dirty changes preserved. Hosted Trigger status unverified.
+
+- [ ] 21:00Z intervention finding: Alaska counts are unchanged at 14,343 processed, 704 pending, seventeen unsupported and zero missing routed vectors. No content process or local PostgreSQL client session exists; the prior tool process session is no longer available. Three leases remain from 20:39Z, so the previous active-worker inference from leases was insufficient. Cause of process disappearance is not established; do not label this another DNS failure.
+- [x] Verified no blocked sessions, no new batches since 20:44Z, all seventeen unsupported artifacts retained, and both vector indexes valid/ready. NC unchanged. Preserved existing leases and did not overlap/restart prematurely: document/embedding leases expire at 21:09Z and the state lease at 21:39:21Z. Next recovery should use normal expiry-based admission and the durable checkpoint after confirming no worker has returned.
+- [ ] All final delivery gates remain open as recorded below. No executable or production changes in this check-in, unrelated dirty work preserved, hosted Trigger status unverified. Full verification remains open; prior focused checks passed.
+
+- [x] 20:44Z check-in: active Alaska database job and state/document/embedding leases observed; 103 successful batches since 20:25Z, one running, no failures or blocked sessions. Local Alaska has 14,343/15,064 processed documents, 2,197 OCR completions, 704 pending and seventeen unsupported, all retained (ten MSG, seven reviewed no-text sources). Download retries fell to 73. NC remains 6,192 processed and no missing routed vectors; both indexes valid/ready. No duplicate dispatch or production changes.
+- [x] Independent repeatable-read Alaska input-hash audit at 20:44:21Z passed: all 856 bill vectors and 63,498 document-section vectors match canonical current input hashes and route dimensions; zero missing/stale. This is a snapshot while further documents are pending, not final content completion or lexical/API acceptance.
+- [ ] Remaining gates: pending Alaska documents and final re-audit, MSG support, search/API acceptance, historical/entity/event coverage, hosted orchestration and full repository verification. No executable changes in this check-in; unrelated dirty work preserved. Hosted Trigger status not verified. Prior focused tests/type checks passed, last full check blocked by unrelated concurrent lint errors.
+
+- [x] 20:25Z check-in: Alaska worker active, 126 successful batches since 20:08Z, no failed content runs or blocked sessions. Local Alaska reached 14,029/15,064 processed documents (up 461), 2,134 OCR completions, 1,018 pending, seventeen unsupported with all artifacts retained (ten MSG, seven reviewed no-text sources) and six section vectors pending. Download retries down to 127. NC remains 6,192 processed and no missing routed vectors; both indexes valid/ready. No new failure class, duplicate worker or production changes.
+- [ ] Final Alaska processing and freshness/search/API acceptance, MSG support, historical/entity/event coverage, hosted orchestration and full repository verification remain open. No executable changes in this check-in; prior focused tests/type checks passed, last full verification blocked by unrelated regulatory lint. Hosted Trigger status not verified; unrelated dirty work preserved.
+
+- [x] 20:08Z check-in: Alaska's prior bounded continuation was idle; last batch succeeded at 19:53:01Z, with 111 successful batches since 19:39Z and no failures, active leases or blocked sessions. Resumed one bounded 500-batch continuation at concurrency two from the durable checkpoint; first batch succeeded. No overlapping worker, production change or index rebuild.
+- [x] Local snapshot before resume: Alaska 13,568/15,064 processed documents, 2,057 OCR completions, 1,479 pending, seventeen unsupported with all artifacts retained (ten MSG and seven reviewed no-text sources), six section vectors pending. NC remains 6,192 processed with no missing routed vectors; both indexes valid/ready.
+- [ ] Final Alaska processing/freshness/search/API acceptance, MSG parsing, historical/entity/event coverage, hosted orchestration and full repository verification remain open. No executable changes in this check-in; prior focused tests/type checks passed and full verification was last blocked by unrelated regulatory lint. Hosted Trigger status not verified; unrelated dirty changes preserved.
+
+- [x] 19:39Z check-in: Alaska worker active, 115 successful batches since 19:22Z, one running, no failures or blocked sessions. Local Alaska reached 13,066/15,064 processed documents (up 478), 1,980 OCR completions, 1,982 pending and sixteen unsupported, all retained (nine MSG, seven reviewed no-text sources). Download retries declined to 204. No duplicate worker, production writes or index rebuild; unrelated dirty regulatory/design changes preserved.
+- [x] SB206's older missing-vector backlog cleared through ordinary processing: zero missing expected model/dimension vectors for that bill. Total current Alaska backlog is 38 section vectors. NC remains 6,192 processed and no missing routed vectors; both vector indexes valid/ready.
+- [ ] Remaining gates unchanged: final Alaska processing/freshness/search/API acceptance, MSG extraction, historical/entity/event coverage and hosted orchestration. Hosted Trigger status not verified. No executable changes or new verification run in this check-in; prior focused tests/type checks passed, full verification remains open after unrelated concurrent lint failures.
+
+- [x] 19:22Z check-in: Alaska worker active with 104 successful batches since 19:06Z, one running, no failures or blocked sessions. Local snapshot: 12,588/15,064 processed documents, 1,898 OCR completions, 2,460 pending, one processing, fifteen unsupported with all artifacts retained; download retries down to 263. NC unchanged at 6,192 processed and zero missing routed vectors. Both indexes valid/ready. No duplicate dispatch or production changes.
+- [x] Individually rendered the new SJR13 no-text artifact `d0d33226944fd9f306e5524f`, SHA-256 `10b5c7b73d1228a697af213a51f5037d5a47a8a4e8e0a3cbe7c5c249664e7808`: one blank letter-sized page, 8,319 bytes. Consistent with the terminal empty-OCR result; no extra OCR charge or invented text. Unsupported outcomes now comprise eight MSG files and seven individually reviewed no-text sources.
+- [ ] 259 section vectors pending, including 37 SB206 sections predating 19:06Z; do not call this backlog cleared. Worker discovery cursor was HJR40 with HB69 carried for embeddings; observe SB206 on the next scan before concluding a persistent failure. Final freshness/search/API, MSG support, entity/event/history and hosted orchestration remain open. No executable changes this check-in; full verification remains unclosed after unrelated concurrent lint failures. Hosted Trigger status not verified.
+
+- [x] 19:06Z check-in: existing Alaska worker active, 75 successful batches since 18:50Z, no failed content runs or blocked sessions. Local Alaska has 12,100/15,064 processed documents (up 503), 1,824 OCR completions, 2,950 pending and fourteen unsupported (eight MSG and six reviewed no-text sources), all retained. Download retries declined to 302. NC remains 6,192 processed and no missing routed vectors. Both vector indexes valid/ready; no duplicate worker, production changes or global index rebuild.
+- [ ] Alaska has 226 section vectors pending in the moving snapshot; final freshness/search/API acceptance is not complete. MSG extraction, historical/entity/event coverage, hosted orchestration and full repository verification remain open. No executable changes in this check-in; prior focused tests/type checks passed, last full check was blocked by unrelated regulations lint. Hosted Trigger status not verified.
+
+- [x] 18:50Z check-in: Alaska recovery remains active, 93 successful batches since 18:32Z, one running, no failed content runs or blocked sessions. Local Alaska reached 11,597/15,064 processed documents, 1,711 OCR completions, 3,452 pending, one processing and fourteen unsupported with retained artifacts (eight MSG attachments plus the six reviewed no-text sources). Download retry backlog declined to 354. No duplicate dispatch or production changes.
+- [x] The pre-failure Alaska section-vector backlog is now cleared: zero sections created before 17:39Z lack the expected model/dimension vector. Only two newer section vectors pending at the snapshot. NC remains 6,192 processed and no missing routed vectors; both vector indexes valid/ready.
+- [ ] Final freshness/lexical/API acceptance, MSG parsing, historical/entity/event coverage and hosted orchestration remain open. Hosted Trigger status not verified. No executable changes or repeated full verification in this check-in while unrelated regulatory implementation remains active; last full check was blocked by its lint errors. Connection-retry/OCR focused checks and legislation type checks passed.
+
+- [x] 18:31Z failure diagnosis: Alaska stopped at 17:38Z after Node fetch reported `getaddrinfo ENOTFOUND openrouter.ai`. Active siblings drained and all leases released; no worker remained. DNS resolved successfully at this check. Implemented bounded retries for recognized DNS/socket codes through the structured error cause chain, preserving exact embedding inputs and existing attempt limits; arbitrary errors, certificate failures and cancellation are not newly retried. Forty-three focused embedding/OCR tests passed.
+- [x] Resumed one bounded local Alaska continuation from its durable checkpoint after confirming no overlap; first two batches succeeded. Snapshot before restart: 11,088/15,064 processed, 1,627 OCR completions, 3,963 pending and thirteen unsupported (seven MSG plus six reviewed no-text sources), all retained. NC unchanged; indexes valid/ready; no blocked sessions. The 58 pending section vectors are not declared resolved: 52 older vectors still remained at the first recovery check.
+- [ ] Full verification blocked by unrelated concurrent `fr-source-inventory.ts` lint errors (nested ternaries and missing braces). No unrelated code altered. Final freshness/search/API, MSG extraction, entity/event/history and hosted orchestration remain open. Hosted Trigger status not verified; these are local worker/database observations.
+
+- [x] 17:29Z check-in: existing Alaska worker active with its state lease; 90 successful batches since 17:12Z and no failed content runs or blocked sessions. Local snapshot: 10,937/15,064 processed documents, 1,600 OCR completions, 4,114 pending, thirteen unsupported with all artifacts retained. Unsupported outcomes are seven MSG attachments and the six already reviewed empty-OCR sources; no new failure class. Download retry backlog fell to 404. No duplicate worker, interruption, production write or index rebuild.
+- [x] Earlier Alaska section-vector backlog cleared: no sections created before 17:12Z lack the expected model/dimension vector. The snapshot's 58 pending vectors belong to newer content; both vector indexes valid/ready. NC remains 6,192 processed documents and no missing routed vectors. Upstream people HEAD unchanged at `677c6d0a566ad9bd62b6324e502af76acc3d22f3`.
+- [ ] Existing source/entity/history holds, MSG parsing, final freshness/lexical/API acceptance and hosted orchestration remain open. Hosted Trigger status not verified. No executable changes in this check-in; concurrent regulatory implementation remains dirty, and the last full-verification attempt was blocked by its lint errors. OCR focused tests and type checks passed previously; full verification is not claimed complete.
+
+- [x] 17:11Z check-in: previous local Alaska continuation was idle, last batch succeeded at 16:55:47Z, and no process or lease remained. Resumed a single bounded 500-batch continuation at the existing concurrency of two from its durable checkpoint; first resumed batch succeeded. No duplicate dispatch, production writes or index rebuild. Local snapshot: 10,363/15,064 processed, 1,505 OCR completions, 4,689 pending, twelve unsupported (all artifacts retained), five pending section vectors. NC unchanged at 6,192 processed and no missing routed vectors; both vector indexes valid/ready. Download retry backlog is 443; no blocked sessions.
+- [x] Rechecked Open States people HEAD: still `677c6d0a566ad9bd62b6324e502af76acc3d22f3`; known roster/history holds remain, without fabricated replacements or tenure changes.
+- [ ] Full verification retry remains blocked by concurrent regulations work: four missing-braces lint errors in `annual-cfr-observations.ts` and `import-normalized.ts`. Earlier parser-test lint error was corrected independently. No unrelated implementation touched. OCR focused tests/type checks remain passed; final repository verification, MSG support, Alaska final acceptance, historical/entity/event coverage and hosted orchestration remain open. Trigger status was not verified (no direct Trigger connector available); local database job status was verified.
+
+- [x] 16:50Z empty-OCR source review: rendered and inspected every page of the five remaining HB121 artifacts (`5fd55675f9763cc33ac7ea92`, `811e101b6858b1b44730c354`, `c45a59caa46a1d22e7c4d9bf`, `f49a5f270c5987e61155ce77`, `f76549badbdd28979d5db280`). Each is a single blank letter-sized page (8,319 or 8,321 bytes). Together with the separately reviewed HJR14 aerial map, all six empty-OCR cases have source evidence consistent with no recognized text. No extra OCR calls or invented sections/vectors.
+- [x] Implemented a structured empty-analysis error in the shared OCR client, classified through the existing terminal unsupported-content category with the precise no-usable-text reason. It no longer reports a transient execution failure. Missing/non-string provider content is separately retryable as an invalid response; empty text alone never asserts that every source is visually blank. Retained artifacts remain available for review. All 21 focused tests and both legislation type checks pass.
+- [x] Reconciled exactly the six visually reviewed local records to `processing_error_category=unsupported-format` and `ocr_status=unsupported`, guarded by their IDs, previous status/reason and retained blob presence. Original errors, attempts, source bytes and identities are unchanged; no documents were marked processed and no provider calls occurred. Future classifications use the generic typed error, not these IDs.
+- [ ] Full `pnpm verify` for the empty-analysis change stopped at unrelated concurrent `src/ingestion/regulations/parser-bridge.test.ts:118` (`vitest/require-to-throw-message`). No unrelated code modified. Final repository verification remains open. At 16:54Z the Alaska worker remained active with 41 successful batches since 16:44Z, one running and no blocked database sessions.
+- [ ] Local Alaska continues: 10,216/15,064 processed documents, 1,471 OCR completions, 4,835 pending, two processing and eleven unsupported at 16:50Z. Five section vectors pending; both indexes valid/ready. NC remains 6,192 processed with no missing routed vectors. MSG support, final Alaska acceptance, source/entity/event coverage, historical auditing and hosted orchestration remain open.
+
+- [x] 16:44Z check-in: Alaska passed 10,001/15,064 processed documents, with 1,438 OCR completions, 5,052 pending, one processing and ten unsupported. All unsupported records at this snapshot have retained source artifacts. Worker active, 90 successful batches since 16:28Z, no failed content runs or blocked sessions. Retry backlog declined to 472. Both vector indexes valid/ready; 27 Alaska section vectors currently pending. NC remains 6,192 processed with all routed vectors present. No duplicate dispatch or production writes; hosted Trigger status not verified.
+- [ ] Remaining gates unchanged: inspect the other empty-OCR artifacts individually, add reviewed MSG extraction support, finish Alaska processing and final freshness/search/API acceptance, then close entity/event and historical/hosted requirements. Git status was clean before this checklist update; no executable changes in this check-in. Previous full verification passed.
+
 - [x] 16:28Z check-in: Alaska worker active, 139 successful content batches since 15:53Z and no failed content runs or blocked database sessions. Local Alaska has 9,359/15,064 processed documents, 5,694 pending, 1,333 OCR completions, 46,848 sections and 11 pending routed section vectors at the repeatable-read snapshot. NC remains 6,192 processed with no missing routed vectors. Both vector indexes valid/ready. No duplicate worker or production writes; hosted Trigger status not verified.
 - [ ] Unsupported Alaska outcomes now comprise six empty OCR responses and five MSG attachments. All empty-OCR source artifacts are retained, but only the earlier HJR14 map has been visually classified; do not extrapolate that finding to the other five. Four MSG artifacts are retained. Requeued exactly HB78 `2c2f0f99130fd7a5cae7e545`, the one older MSG failure lacking a blob, through the normal pending queue without resetting attempt history. MSG parsing remains unsupported. Rate-limit retry backlog fell from 546 to 495. No executable changes; last full verification passed.
 
@@ -71,9 +779,9 @@ and no unrelated implementation was changed to hide the failure. Both existing N
 - [ ] Local Alaska: 8,245 documents processed, 6,816 pending, one processing, two unsupported, 1,136 OCR completions and 461 pending section vectors at 15:53Z. NC remains 6,192 processed with no missing routed vectors. MSG retention replay and SB133 outlined-PDF recovery still pending; code verification does not close these runtime gates. No duplicate workers or production changes.
 
 - [x] 15:45Z MSG investigation: official Alaska HB17 docid 13738 returns HTTP 200 with a 279,040-byte OLE/Outlook file and declared content type `msg`; it is not a mislabeled PDF. Found and fixed a shared retention gap: bill and supporting-material workers now archive bounded downloaded bytes before format classification, preserving unsupported artifacts for later replay. Existing detection still rejects unsupported formats and no text/embeddings are invented. Forty-two focused download/job tests passed.
-- [ ] Requeued exactly the local HB17 MSG record that had no blob path; worker replay must verify retention. MSG extraction remains unimplemented. Full verification stopped at the unused-file gate for unrelated concurrent `scripts/audit-regulatory-reuse.ts`; retention-change focused tests passed and the full check logged clean legislation lint. Alaska continues ingestion; NC current-session content and embedding freshness stay verified, but search/API, hosted and historical gates remain open.
+- [ ] Requeued exactly the local HB17 MSG record that had no blob path; worker replay must verify retention. MSG extraction remains unimplemented. Full verification stopped at the unused-file gate for unrelated concurrent `tools/regulations/audit-regulatory-reuse.ts`; retention-change focused tests passed and the full check logged clean legislation lint. Alaska continues ingestion; NC current-session content and embedding freshness stay verified, but search/API, hosted and historical gates remain open.
 
-- [x] 15:33Z repeatable-read local freshness audit: NC 2025 has all 2,338 bill and 36,187 section vectors matching canonical current input hashes, model contracts and dimensions; zero missing/stale. Alaska 34 has 856 fresh bill vectors; of 40,268 sections, 386 await vectors and zero existing vectors are stale. Reusable bounded read-only command: `pnpm inspect:openstates-embedding-freshness nc` (or `ak`, optional session argument). Returns nonzero for missing/stale vectors or empty scope; does not call providers or write production. Search/API and historical acceptance remain separate.
+- [x] 15:33Z repeatable-read local freshness audit: NC 2025 has all 2,338 bill and 36,187 section vectors matching canonical current input hashes, model contracts and dimensions; zero missing/stale. Alaska 34 has 856 fresh bill vectors; of 40,268 sections, 386 await vectors and zero existing vectors are stale. Reusable bounded read-only command: `pnpm tool openstates/inspect-openstates-embedding-freshness nc` (or `ak`, optional session argument). Returns nonzero for missing/stale vectors or empty scope; does not call providers or write production. Search/API and historical acceptance remain separate.
 - [ ] Alaska retry inventory: 546 pending documents retain HTTP 429 download errors (542 at one attempt, four at two); latest recorded attempt 14:35Z, with scheduled retry times already elapsed. They remain eligible for normal bounded replay. Do not increase source concurrency merely to clear this rate-limit backlog.
 - [x] Full `pnpm verify` passed after registering the reusable freshness audit command. This passing run also includes the pending-document priority implementation.
 
@@ -121,16 +829,15 @@ and no unrelated implementation was changed to hide the failure. Both existing N
 - [x] Content worker and gated Trigger payload now accept an explicit historical session, normalized through the canonical session identifier helper. Default current-session behavior remains unchanged; per-session checkpoints/leases are separate.
 - [ ] Sustained current-content continuation is active (up to 1,000 bounded invocations per state, two bill pipelines each), stopping on failed batches. Historical content acceptance is proceeding independently; do not duplicate the active workers.
 
-Historical replay: `node --env-file=.env --import tsx scripts/replay-openstates-session.ts nc 2017E1`.
-Historical content: `node --env-file=.env --import tsx scripts/run-openstates-content.ts nc 2 8 2017E1`.
-Replay is explicitly local, selects an exact retained manifest entry, retains source bytes and uses the shared checkpointed importer.
+The completed historical replay selected the exact retained NC 2017E1 manifest entry and used the shared checkpointed
+importer. Continue historical content with `pnpm tool openstates/run-openstates-content nc 2 8 2017E1` when needed.
 
 - [x] Added within-state bill fan-out (1–4 concurrent bills) under one state lease/checkpoint, with exact-target document leases and shared database-backed publisher throttling. A failed bill stops new admission and active siblings drain before releasing the state lease; regression tests cover that failure boundary.
 - [x] NC live eight-bill samples: concurrency 1 took 14.0 seconds, 2 took 8.0 seconds, 4 took 7.0 seconds; all succeeded. Different source documents make this directional evidence, not a controlled speedup or full-backfill ETA. Two concurrent bills is the conservative operating default.
 - [x] Alaska eight-bill samples also succeeded: 112.0 seconds at concurrency 1 (two OCR documents), 9.3 at 2 (zero OCR), 8.9 at 4 (two OCR). Workload/provider variance prevents attributing that entire difference to concurrency. Both states continue at two bill pipelines each; four-way samples showed little additional benefit. Database observations showed zero blocked sessions and approximately 5% CPU during one sample.
 - [ ] Ten eight-bill continuation batches per state are running with concurrency two; do not overlap another coordinator for either state. No hosted activation occurred.
 - [ ] Fan-out verification: 30 focused tests and scoped lint passed. Final `pnpm verify` stopped on concurrent regulations integration-test type errors (missing third arguments at lines 259 and 291), not on the state changes. Full verification must pass again before closure.
-- [x] Added `pnpm inspect:openstates-content`: a local-only, repeatable-read, read-only inventory of document outcomes, routed embedding gaps and vector-index validity. It explicitly leaves freshness, lexical/API/MCP, hosted recovery and source-completeness gates unverified.
+- [x] Added `pnpm tool openstates/inspect-openstates-content`: a local-only, repeatable-read, read-only inventory of document outcomes, routed embedding gaps and vector-index validity. It explicitly leaves freshness, lexical/API/MCP, hosted recovery and source-completeness gates unverified.
 - [x] Added a bounded persistent carry-forward queue for incomplete per-bill embedding passes. These bills resume on the next batch rather than waiting for an entire state scan; scope/duplicate guards cover every carried ID, and a full queue cannot falsely complete a scan round.
 - [ ] Closure work begun: 25 further bounded content invocations per state. Do not overlap a running per-state worker. Source completeness (NC upper-district gap; Alaska held people/committees and vote/event limitations), automatic hosted recovery/handoff and search acceptance remain separate gates.
 - [x] Those two 25-invocation continuations completed successfully. At 10:54 UTC: NC 204 processed/5,988 pending documents; Alaska 226 processed/14,837 pending, 25 OCR processed and one unsupported. All processed documents have sections. Existing sections still missing routed embeddings: NC 331, AK 74; bills missing routed embeddings: NC 2,236, AK 746. Existence does not prove input freshness. Both local bill/section HNSW indexes are valid and ready.
@@ -148,7 +855,7 @@ Replay is explicitly local, selects an exact retained manifest entry, retains so
 - [x] Configured PDF.js's installed image decoders for OCR eligibility. A retained Alaska HB118 JBIG2 PDF now replays as `ocr-required` without the missing-decoder warnings. Focused extraction/worker/controller tests: 24 passed.
 - [ ] Hosted interrupted-attempt recovery and automatic producer handoff still require acceptance.
 - [x] Parallel local continuation exposed and fixed a global document-lease collision: unpartitioned exact-jurisdiction jobs now use separate jurisdiction leases. A regression test verifies both lease and processor scoping. NC resumed from its unchanged failed-batch cursor.
-- [ ] Local ranked-search acceptance requires a separate search database: the canonical test database has `vector` 0.8.6 but no available `pg_search` extension.
+- [x] Local ranked-search database provisioned separately as `legislation-openstates-passage-local`, pinned ParadeDB 0.25.9 on localhost 55433; canonical PostgreSQL remains unchanged. Full NC/AK current-session passage copy and service-level lexical smoke passed on September 15. HTTP/MCP acceptance remains open.
 
 A finite local continuation (ten NC/AK pairs, two bills per invocation) completed after canary acceptance:
 NC had 44 processed documents, 22 bill vectors and 142 passage vectors; Alaska had 45 processed documents,
@@ -163,9 +870,9 @@ OCR-processed documents. Pending counts are NC 6,124 and Alaska 14,963. One Alas
 unsupported (insufficient text and no detected raster image), not counted as processed. Full ingestion remains open.
 It resumes from saved state cursors, not from an assumed completed scrape callback.
 
-Local continuation: `node --env-file=.env --import tsx scripts/run-openstates-content.ts <nc|ak>`.
+Local continuation: `pnpm tool openstates/run-openstates-content <nc|ak>`.
 It defaults to eight bills with two concurrent bill pipelines, two document candidates per bill and bounded embedding pages per invocation.
-Optional positional arguments are concurrency (1–4) and bill limit (1–10): `scripts/run-openstates-content.ts nc 2 8`.
+Optional positional arguments are concurrency (1–4) and bill limit (1–10): `tools/openstates/run-openstates-content.ts nc 2 8`.
 Configure `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` with the approved existing endpoint for OCR; provider authentication
 uses the existing Azure credential chain. Missing OCR configuration stays visible in the saved outcomes.
 Scan rounds restart for late OCR/source updates; a completed scan is not a coverage or search-readiness assertion.
@@ -180,10 +887,8 @@ counts were 6,188 and 15,059 respectively. No production writes occurred.
 - [x] Final repository verification passed: 2,966 legislation tests passed, 124 conditional skips, and four receiver tests passed. Focused derived-processing suite: 20 passed.
 - [ ] Durable automatic scraper-to-content handoff, full backlog and lexical/API/MCP acceptance remain open; the OCR canary passed above.
 
-Reproduce locally with `pnpm exec tsx scripts/smoke-openstates-content.ts <nc|ak>` for one pending document.
-Use `node --env-file=.env --import tsx scripts/smoke-openstates-content.ts <nc|ak> pending embeddings`
-for at most four candidates per product from a processed document's bill/document scope. Only the embedding provider
-key is inherited; database and artifact destinations are explicitly local. This smoke command is not the durable coordinator.
+The temporary content smoke harness covered one pending document and bounded embedding candidates, then was removed.
+Use the durable content coordinator above for further processing.
 The initial inline CJS invocation failed module resolution before text extraction; the normal module command succeeded.
 Those attempts used the existing durable retry policy, not a manual content overwrite.
 
@@ -403,7 +1108,7 @@ The clock-corrected local image built successfully with config digest
 `111845cb109225b18cb749360d6b2521dfde5351998092580eb02c967491de45`; offline startup and 28 Python tests passed.
 Eight focused TypeScript mapping/planning tests and the service type-check passed. Full `pnpm verify` was attempted
 but is not clean: concurrently changed regulations files failed lint (`artifact-backfill.ts` and
-`scripts/plan-regulatory-backfill.ts`, nested ternaries). Those files were not changed by this work. Shared bill-write
+`tools/regulations/plan-regulatory-backfill.ts`, nested ternaries). Those files were not changed by this work. Shared bill-write
 code also has concurrent edits; no overlapping changes or production deployment were made. This evidence does not
 close the four items or start the observation clock.
 
@@ -541,17 +1246,8 @@ Do not bypass the incomplete-roster gate or fabricate an OCD identifier. Continu
 while the approved Open States source is missing the member. A confirmed vacancy also needs an explicit reviewed
 coverage policy; the validator does not silently interpret an absent district as vacant.
 
-Run locally from `apps/legislation`:
-
-```sh
-pnpm eval:openstates-pilot
-pnpm replay:openstates-pilot artifacts/openstates-pilot/<run>
-pnpm eval:openstates-history
-pnpm archive:openstates-pilot artifacts/openstates-pilot/<run> artifacts/openstates-archive-canary
-pnpm archive:openstates-pilot artifacts/openstates-history/<run> azure history
-```
-
-Output is under ignored `artifacts/openstates-pilot/<run>/`. `report.json` reports validation and unresolved identities;
+The temporary pilot validation, replay, inventory, and archive commands were removed after the retained evidence was
+accepted. Output remains under ignored `artifacts/openstates-pilot/<run>/`. `report.json` reports validation and unresolved identities;
 `failure.json` records interrupted downloads. The command has a ten-minute source deadline and 30-second request
 timeouts. It calls the pinned Open States people repository, not the hosted Open States API. It cannot promote data.
 The snapshot is current-state only; this first adapter does not yet import historical terms or retired people.
@@ -656,16 +1352,9 @@ The user confirmed on September 14, 2026 that the planned deployment's GPL revie
 dependency, not the implementation obligations: retain notices/license, pinned corresponding source and modifications,
 and apply the reviewed distribution policy to the scraper artifact. Runtime build and activation tests remain pending.
 
-Historical identity reconciliation is now executable, not a manual correction list:
-
-```powershell
-node --env-file=.env --import tsx scripts/reconcile-openstates-committees.ts <committee-directory> <current-manifest> <history-manifest>
-```
-
-The command verifies committee source-tree coverage and hashes, remotely verifies both people archives, and resolves
+Historical identity reconciliation verified committee source-tree coverage and hashes, remotely verified both people archives, and resolved
 only primary or explicitly declared former Open States IDs. It reports `missing_person_id`, `unknown_person_id`,
-`ambiguous_person_id`, or `no_legislative_service`; unresolved output returns exit code 1. It never writes canonical data
-or infers departures. It requires a successful retained committee report, not an incomplete failed download.
+`ambiguous_person_id`, or `no_legislative_service`. The temporary reconciliation harness was removed after this review.
 
 Real reconciliation canary: the retained May 6, 2021 snapshot, replayed against both checksum-verified Azure people
 archives, resolved 1,015 of 1,027 role entries automatically. The remaining 12 have no source person ID and produce

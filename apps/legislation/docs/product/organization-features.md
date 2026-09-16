@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-Documented September 14, 2026 for companies, lobbying firms, unions and law firms using Tabra for shared legislative
+Documented September 14, 2026 for companies, lobbying firms, unions and law firms using Rostra for shared legislative
 research. This is the proposed organization layer over the existing personal experience, not an implementation or
 release claim. The [personal product backlog](../backlog/backlog.md) remains unchanged in scope; these additions require
 their own delivery work and acceptance.
@@ -20,14 +20,14 @@ The [organization and workspace design specification](../design/organization-wor
 organization switcher at the top of navigation, workspace switcher at the bottom, and organization management screens.
 It supersedes the earlier proposal to select workspaces only within Issues. This document owns broader product behavior.
 
-Extend the [information architecture](information-architecture.md) and [Tabra mockups](../../legislation.pen). The issue
+Extend the [information architecture](information-architecture.md) and [Rostra mockups](../../legislation.pen). The issue
 frames `ifkHQ` (issue detail), `wO1CP` (comparison) and `PMdsp`/`AGG8U` (brief preparation/review) anchor the research-to-report journey.
 Navigation names below describe proposed placement, not implemented routes or finalized interface copy.
 
 | Feature | Existing surface | Addition |
 | --- | --- | --- |
 | Organization selection | Top of shared sidebar | Show Personal and authorized organizations when the user has organization membership |
-| Workspace selection | Bottom of shared sidebar, above Settings | Select an authorized workspace inside the active organization |
+| Workspace selection | Bottom of shared sidebar, below Settings | Select an authorized workspace inside the active organization |
 | Client or initiative grouping | Issues | Group related issues by client, practice group or initiative; grant access explicitly |
 | Assignments | Issue detail and its included records | Responsible member, status and optional due date; keep assignments scoped to the issue |
 | Review | Issue, Brief preview | Draft, review request, reviewer comments and approval of an identified report revision |
@@ -90,7 +90,7 @@ Source references can be reused; client commentary requires an explicit selectio
 ### Organization selection and everyday navigation
 
 Show an organization selector at the top of the shared sidebar, above New conversation, when the user belongs to an
-organization. It lists Personal and authorized organizations. Pin a separate workspace selector at the bottom, above
+organization. It lists Personal and authorized organizations. Pin a separate workspace selector at the bottom, below
 Settings, while an organization is active. Personal has no workspace selector. Changing organization restores its last
 accessible workspace, selects its only workspace, or opens a chooser. See the design specification for empty states.
 
@@ -244,7 +244,7 @@ Separate source text, generated explanations and human commentary. Retain exact 
 as-of dates and known coverage gaps. Excluded records and unselected query matches must not enter a report implicitly.
 Do not describe a legislative comparison as a complete survey of current law or infer legal applicability.
 
-Word edits outside Tabra are not approved Tabra revisions. A future live tracking page must be identified as updating,
+Word edits outside Rostra are not approved Rostra revisions. A future live tracking page must be identified as updating,
 not silently replace an issued snapshot. Revocation cannot recall downloaded files or delivered email; automated client
 distribution and a collaborative client portal remain separately gated.
 
@@ -277,7 +277,7 @@ An automated digest collects followed changes. A client brief contains deliberat
 Keep their scheduling and approval semantics separate. Extend the [notification experience](notification-experience.md)
 and existing application-owned matching, batching, preferences and delivery records rather than creating a second inbox.
 
-Channel membership can include guests outside Tabra. Disclose the outbound audience, enforce allowed destinations,
+Channel membership can include guests outside Rostra. Disclose the outbound audience, enforce allowed destinations,
 retain delivery outcomes and stop future dispatch after disconnect. Provider choice remains open: selecting Novu for
 in-app/email does not configure Teams/Slack. Sending a digest does not mark its contents reviewed.
 
@@ -359,7 +359,7 @@ and account. Preserve that rule and the existing typography, spacing variables a
 | Existing node | Exact design extension |
 | --- | --- |
 | `ULB76`, Foundations — Shell rules | Amend sidebar rules to document organization context and shared/personal variants; retain page-owned controls |
-| `x8pNV5`, Shell — Sidebar, 264 px | Add conditional organization selector above New conversation and pinned workspace selector above Settings; reuse both across desktop instances |
+| `x8pNV5`, Shell — Sidebar, 264 px | Add conditional organization selector above New conversation and pinned workspace selector below Settings; reuse both across desktop instances |
 | `fSLz1`, Shell — App Header | Keep header responsibilities unchanged; account remains identity/sign-out, not a second organization switcher |
 | `qFh3d`, Issues — List | Add organization variant: workspace filter, Assigned to me and Needs my review views, workspace/owner labels |
 | `SSExy`, Issues — Create | Put destination workspace and audience before scope fields; preserve the explicit optional Following step |
@@ -403,12 +403,12 @@ restricted client workspace. Revoke the report and remove Alex to demonstrate bo
 
 Official sources checked September 14, 2026. Help documentation is stronger evidence of interaction rules than marketing
 copy. These are documented/advertised capabilities, not findings from authenticated competitor testing. Recommendations
-in the final column are Tabra design judgments; they do not establish that a competitor lacks the recommended behavior.
+in the final column are Rostra design judgments; they do not establish that a competitor lacks the recommended behavior.
 
-| Product | Verified relevant pattern | Implication for Tabra |
+| Product | Verified relevant pattern | Implication for Rostra |
 | --- | --- | --- |
 | Plural | Distinguishes user account, organization and workspace; documents organization/workspace administrator and member roles. [Permission levels](https://help.pluralpolicy.com/accounts-permission-levels-and-workspaces) | Use a clear ownership hierarchy and separate administrative authority from everyday research roles |
-| Plural | Workspace creation sits below organization selection; organization administrators can inspect workspace inventory but need to join to see its contents. [Workspace management](https://help.pluralpolicy.com/team-workspace), [organization administration](https://help.pluralpolicy.com/basic-information-for-organization-administrators) | Make client workspace access explicit and design setup before bulk invitations; use Tabra's agreed top organization and bottom workspace selectors |
+| Plural | Workspace creation sits below organization selection; organization administrators can inspect workspace inventory but need to join to see its contents. [Workspace management](https://help.pluralpolicy.com/team-workspace), [organization administration](https://help.pluralpolicy.com/basic-information-for-organization-administrators) | Make client workspace access explicit and design setup before bulk invitations; use Rostra's agreed top organization and bottom workspace selectors |
 | FastDemocracy | Advertises task assignment, team/client collaboration, customizable scheduled reports and self-updating links/widgets. [Product overview](https://fastdemocracy.com/) | Assignments and useful delivery are expected; visibly distinguish an updating tracker from an approved dated report |
 | Quorum | Describes shared workspaces, permissions, saved searches, internal notes, assignments, activity logs and stakeholder digests. [State platform](https://www.quorum.us/products/state/) | Make handoffs and team responsibility first-class within Issues; broader advocacy and CRM functions remain outside this scope |
 | Notion, an interaction reference | Distinguishes open, closed and private teamspaces, and documents inherited permissions and the broadest effective access grant. [Teamspaces](https://www.notion.com/help/intro-to-teamspaces), [sharing and permissions](https://www.notion.com/en-gb/help/sharing-and-permissions) | Explain the audience before creation; use restricted workspaces by default and avoid complex per-issue overrides initially |
@@ -427,9 +427,11 @@ The agreed navigation places organization selection at the top and workspace sel
 Recommended defaults are restricted client workspaces; one workspace per shared issue; explicit shared-conversation audience; separate billing
 permission; revision-specific independent review for external briefs; and report-only external access.
 
-Before implementation, agree the independent-review exception for solo organizations, owner recovery rules for sensitive
-clients, invitation lifetime, cancellation/retention policy, and exact role combinations. Pricing still owns seat policy,
-Free entitlements and API/MCP packaging. Avoid silently deciding those through design fixture labels. Later extensions
+Before implementation, agree exact role combinations and the cancellation and retention policy that organization closure
+depends on. The [design handoff](../design/organization-workspace-design.md) settles the rest: invitations last seven
+days, a solo organization ships work labeled Prepared without independent review rather than blocked work, owner
+recovery appoints a replacement Manager without granting the owner research access, and closure stays out of the first
+release. Pricing still owns seat policy, Free entitlements and API/MCP packaging. Later extensions
 can include cross-workspace reporting with an audience intersection check, permission groups, automated provisioning
 and collaborative client portals after the initial boundaries are working.
 

@@ -15,7 +15,7 @@ votes, sponsors or actions. Current status below comes from the workspace assess
 
 ## Source allocation under the state-only option
 
-| Data | Tabra status | Source to use | Vaquill equivalent? |
+| Data | Rostra status | Source to use | Vaquill equivalent? |
 | --- | --- | --- | --- |
 | Federal legislative activity | Existing implementation | Congress.gov + GovInfo | Not established |
 | State legislative activity | Existing work / rollout | Open States | Not established |
@@ -42,7 +42,7 @@ different material; they are not prerequisites for keeping Federal Register docu
 The largest expected saving is avoided future collector work. Current bill, vote, member and committee collection,
 text extraction and search remain necessary; no complete existing provider feed is proven replaceable.
 
-Keep Tabra canonical identifiers independent of vendor IDs, retaining the latter as source aliases. Require bulk
+Keep Rostra canonical identifiers independent of vendor IDs, retaining the latter as source aliases. Require bulk
 manifests, corrections, stable-ID behavior and raw artifacts where permitted. Validate the optional federal license
 against publication scope: Vaquill's advertised Federal Register notices are a curated subset.
 
@@ -57,7 +57,7 @@ Treat this as a gradual option, not an instant fallback if a vendor disappears.
 
 ## Delivery and costs
 
-Prefer a licensed bulk baseline plus recurring changes in Tabra's storage. This supports our own search, reproducible
+Prefer a licensed bulk baseline plus recurring changes in Rostra's storage. This supports our own search, reproducible
 citations and serving without a vendor call for every question. A hosted API can make a small lookup pilot cheaper,
 but introduces runtime availability and contract restrictions. API access does not imply permission to mirror a corpus.
 
@@ -66,7 +66,7 @@ coverage QA. Request the same scope for state-only and full-corpus quotes, inclu
 update frequency and export rights. Bundled federal content may cost little extra; using it may still omit material we
 need. Do not equate fewer suppliers with no acquisition work, or state-only with guaranteed savings.
 
-Keep Tabra's flat, feature-based customer pricing. Measure acquisition and serving consumption internally; vendor
+Keep Rostra's flat, feature-based customer pricing. Measure acquisition and serving consumption internally; vendor
 charges do not automatically become customer usage limits.
 
 ## What must be resolved
@@ -78,7 +78,7 @@ charges do not automatically become customer usage limits.
 3. **History:** distinguish amendment notes, snapshots and true point-in-time text. Confirm correction, deletion and
    effective-date behavior; preserve the exact version used for a customer answer.
 4. **Rights:** obtain terms for local indexing, AI answers, displayed text, Word/PDF reports, customer sharing and
-   Tabra API/MCP delivery. Confirm attribution and the right to retain and serve acquired records after termination.
+   Rostra API/MCP delivery. Confirm attribution and the right to retain and serve acquired records after termination.
 5. **Continuity:** full export, stable IDs, removal notices and transition assistance. A local copy provides technical
    resilience only while our license permits its continued use.
 

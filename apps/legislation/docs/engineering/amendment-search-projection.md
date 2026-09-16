@@ -27,7 +27,7 @@ Concurrent deadlocks abort and require normal transaction retry; no maintenance 
 
 1. Apply migration `0046_amendment_section_search` with a bounded lock deadline. It creates an empty narrow table and
    its indexes/triggers; it performs no bulk backfill and changes no existing vector index.
-2. Run `node --env-file=.env --import tsx scripts/backfill-amendment-search.ts --apply` from the app directory.
+2. Run `pnpm tool search/backfill-amendment-search --apply` from the app directory.
    It enumerates amendment document keys, locks at most 250 parents per transaction, then upserts and verifies using fresh
    READ COMMITTED statements. Statements have 15-second deadlines, locks one second, and transient failures three attempts.
    Reruns are idempotent. Existing canonical text and embeddings are never updated. A failure is not completion.
@@ -40,15 +40,11 @@ Concurrent deadlocks abort and require normal transaction retry; no maintenance 
 
 ## Reproducible checks
 
-- `scripts/verify-amendment-search-projection.ts`: refuses the source host and requires an isolated database named
+- `tools/search/verify-amendment-search-projection.ts`: refuses the source host and requires an isolated database named
   `legislation_search_benchmark`; creates and removes its own schema. Tests migration behavior, exact query parity and
   concurrent parent/section maintenance. Its reduced canonical tables are query fixtures, not full schema validation.
-- `pnpm eval:ranked-search --balanced-amendments`: hashes amendment document keys and selects up to 1,000 per available
-  jurisdiction, copies all their available sections, verifies source vector weights, and compares native/ranked search.
-  No synthetic duplicates. Per-batch and total section/byte budgets fail closed instead of truncating documents.
-  It reports missing/unprocessed coverage separately; a balanced key sample is not a corpus-wide latency claim.
-- `scripts/diagnose-amendment-query.ts`: sequential, read-only 15-second plan probes. Single ordered observations are
-  diagnostic evidence, not unbiased performance estimates.
+- The temporary balanced-sample and query-plan harnesses were removed after the rollout evidence below was accepted.
+   The retained projection verifier covers migration behavior and exact query parity.
 
 ## Validation and rollout evidence
 

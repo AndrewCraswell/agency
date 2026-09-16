@@ -410,6 +410,52 @@ describe("regulatory table passages", () => {
     expect(() => legalTableRows(input)).toThrow("passage_table_unresolved_ditto")
   })
 
+  it("retains indented county boundaries and date/type references in the full source table", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/partial-county-boundary-table.json", import.meta.url), "utf8"))
+      )
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "county_boundary_table_required")
+    const rows = legalTableRows(table).rows
+    const boundary = rows.find((row) =>
+      table.text.slice(row.start, row.end).startsWith("That portion of the county that lies south and west")
+    )
+    invariant(boundary, "county_boundary_row_required")
+    expect(boundary.context.map((span) => table.text.slice(span.start, span.end)).join("\n")).toContain(
+      "Solano County (part)"
+    )
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
+  it.each(["primary-indent-hanging-1", ""])(
+    "does not infer county boundary nesting from blank cells alone: %s",
+    (indent) => {
+      const input = {
+        text: "Designated area\tDate\tType\nSolano County (part)\t1998\tAttainment\nThat portion west of the line.\nSonoma County\tDo.\tDo.",
+        xml: `<TABLE><THEAD><TR><TH>Designated area</TH><TH>Date</TH><TH>Type</TH></TR></THEAD><TR><TD class="primary-indent-hanging-1">Solano County (part)</TD><TD>1998</TD><TD>Attainment</TD></TR><TR><TD class="${indent}">That portion west of the line.</TD><TD/><TD/></TR><TR><TD>Sonoma County</TD><TD>Do.</TD><TD>Do.</TD></TR></TABLE>`
+      }
+      expect(() => legalTableRows(input)).toThrow("passage_table_unresolved_ditto")
+    }
+  )
+
   it.each(["center", ""])("does not infer a centered category without left-aligned data: %s", (child) => {
     const input = {
       text: `A\tB\nCategory:\nChild\tDo.`,

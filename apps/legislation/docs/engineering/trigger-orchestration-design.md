@@ -26,9 +26,9 @@ cannot support the configured cadence. A missing, blank, or `false` Open States 
 transitional definitions are removed or replaced.
 
 ```powershell
-pnpm --filter legislation trigger:schedules -- --environment development
-pnpm --filter legislation trigger:schedules -- --environment development --apply
-pnpm --filter legislation trigger:schedules -- --environment development --apply --activate
+pnpm --filter legislation tool trigger/reconcile-trigger-schedules --environment development
+pnpm --filter legislation tool trigger/reconcile-trigger-schedules --environment development --apply
+pnpm --filter legislation tool trigger/reconcile-trigger-schedules --environment development --apply --activate
 ```
 
 ## Synchronization identity
@@ -150,7 +150,7 @@ four-hour execution ceiling; a rare OOM is retried once on `large-1x`. Every arc
 checkpoint and PostgreSQL lease, so fan-out cannot overlap a stream or multiply concurrent writes inside a worker.
 
 ```powershell
-pnpm --filter legislation trigger:backfill -- --start-congress 113 --end-congress 119 `
+pnpm --filter legislation tool trigger/run-trigger-backfill --start-congress 113 --end-congress 119 `
   --manifest-blob <openstates-manifest-blob> --rebuild-id <unique-rebuild-id> --apply
 ```
 

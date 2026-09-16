@@ -1,7 +1,7 @@
 # Regulatory indexing, embeddings and retrieval
 
 Proposed implementation, September 14, 2026. Parent: [implementation](implementation.md).
-Build on existing Tabra search infrastructure; regulatory retrieval is a new product with its own quality gate.
+Build on existing Rostra search infrastructure; regulatory retrieval is a new product with its own quality gate.
 
 ## Existing components and intended extension
 
@@ -130,7 +130,7 @@ different model spaces. No new vendor is required for the canary.
 ### Mandatory model smoke test and comparative evaluation
 
 Model selection is a release gate before bulk embedding expenditure. Implement
-`scripts/smoke-regulatory-embeddings.ts` using the existing embedding/evaluation clients. Its live mode reads a fixed
+`tools/regulations/smoke-regulatory-embeddings.ts` using the existing embedding/evaluation clients. Its live mode reads a fixed
 bounded manifest and records provider/model, dimensions, input types, actual inputs' hashes, token usage, cost, latency
 and vector counts. Verify correct dimensions/finite values, query/document pairing, long-input splitting, repeated-input
 reuse and retrieval of the expected exact passage/version. Include an intentionally wrong model/dimension response in
@@ -162,11 +162,18 @@ smoke before promotion. Reusing a previous success report with changed inputs is
 
 ### Local comparison evidence, September 15
 
-The executable diagnostic is `scripts/smoke-regulatory-embeddings.ts` (`smoke:regulatory-embeddings`). It previews by
+The executable diagnostic is `tools/regulations/smoke-regulatory-embeddings.ts` (`smoke:regulatory-embeddings`). It previews by
 default; `--live` explicitly runs both existing models. It accepts a frozen manifest, an optional development/held-out
 split, and an exclusive output path. Inputs are bounded to 512 records and 64 queries, submitted in batches of at most
 64 without shortening retries. The shared embedding client now rejects duplicate, skipped and out-of-range response
 indices, preventing vectors from being assigned to the wrong inputs despite matching response counts/dimensions.
+
+For a query known to have no answer in the selected corpus, set `answerability: "no_answer"` and `relevantIds: []`.
+An empty list without explicit intent, or a no-answer declaration containing relevant IDs, is rejected before provider
+access. Both the smoke CLI and blind-review pool preserve these cases. The report retains their complete rankings
+with `metrics: null`; recall/nDCG are undefined without relevant documents and must not enter answerable-query means.
+The runner reports `noAnswerEvaluationComplete: false`: producing ranked candidates does not establish successful
+abstention, a calibrated threshold or a reviewed no-answer label. Those remain separate benchmark gates.
 
 The retained local benchmark has 350 exact-version source excerpts from 12 eCFR parts and 60 source-backed,
 agent-authored queries. Six titles form the 30-query development split; six different titles form the 30-query held-out
@@ -235,11 +242,11 @@ The local packet `regulatory-judgment-review.json` has 60 questions and 1,315 ca
 configurations; `regulatory-review-systems.json` retains its system inputs. No external model requests were needed.
 
 ```powershell
-pnpm run pool:regulatory-judgments --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --systems artifacts/regulatory-backfills/regulatory-review-systems.json --output artifacts/regulatory-backfills/fresh-review.json
+pnpm tool regulations/pool-regulatory-judgments --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --systems artifacts/regulatory-backfills/regulatory-review-systems.json --output artifacts/regulatory-backfills/fresh-review.json
 ```
 
 ```powershell
-node --env-file=.env --import tsx scripts/smoke-regulatory-embeddings.ts --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --split held-out --output artifacts/regulatory-backfills/fresh-heldout-output.json --live
+pnpm tool regulations/smoke-regulatory-embeddings --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --split held-out --output artifacts/regulatory-backfills/fresh-heldout-output.json --live
 ```
 
 ### Vector storage and index build

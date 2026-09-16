@@ -22,6 +22,12 @@ pnpm verify
 ```
 
 `dev` starts Next.js; `dev:service` starts the retained standalone test/development server on `127.0.0.1:3100` by default.
+For the VPN-constrained AI SDK installation and its local archive checksum, see the
+[vendor installation note](../../vendor/README.md). Use the root frozen-lockfile install with the configured Microsoft
+feed; no public-registry switch or TLS bypass is required. `pnpm test` runs web-owned tests only. For a focused check,
+change into `apps/legislation` and run `pnpm exec vitest run <exact-test-file>`.
+See [test ownership and execution](testing.md) for backend, ingestion, parsing, database and release checks.
+
 The public deployment boundary is the Next.js `app/api` Route Handlers. The deleted `legislation-api` Railway service
 must not be started or redeployed. Both runtime checks expose:
 
@@ -30,6 +36,123 @@ must not be started or redeployed. Both runtime checks expose:
 
 Copy `.env.example` to an untracked environment file when local overrides are required. The initial foundation supports
 server, logging, and PostgreSQL settings. Defaults are suitable for the app-contained local infrastructure.
+
+## Development chat research connection
+
+The chat route supports a public production demo when the server-side model key and trusted HTTPS
+`LEGISLATION_PUBLIC_API_BASE_URL` are configured. Production requests must match that exact origin; development
+remains same-origin/loopback constrained. Origin checks are browser request protection, not authentication. The owner
+approved anonymous demo access and retaining unmasked Replay for this release. It calls the existing query service
+directly using `createLegislationResearchTools`, the same validated registry used by the public MCP handler. No internal
+HTTP request, MCP URL or bearer token is needed. The old chat-specific MCP URL/token settings have been removed.
+
+OpenRouter still requires its server-side model key, and the existing database configuration must be reachable.
+Public `/api/**` and `/mcp` authentication has not been changed. Chat exposes only the 25 named baseline read tools;
+the organization-gated legal-text reader is not passed to the registry, and private account/mutation tools remain excluded.
+The [research runtime](../../src/server/next/research-runtime.ts) owns a process-cached pool limited to two connections
+per data store. Each operation creates the existing query service against a client-bound Drizzle database inside
+`BEGIN READ ONLY`. Timeouts are applied with transaction-local `set_config`, not rejected PgBouncer startup fields.
+Individual requests release their clients but must not close the shared pools. The optional ranked passage store uses
+the same transaction-local approach without enabling any unapproved search cutover.
+
+Current per-run bounds: 30-second registry tool calls, 120-second total run deadline, eight model
+steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Oversized results are rejected,
+not silently truncated. These limits bound a request and do not impose a conversation count. No transcript is saved
+server-side; follow-ups re-fetch evidence instead of trusting client-supplied tool output. Tavily/Firecrawl remain later work.
+Cancellation prevents further calls and discards late results; it does not claim to interrupt an already-running SQL
+statement. Existing database statement deadlines remain responsible for that bound.
+
+The demo's PgBouncer startup failure is resolved. A live check confirmed a 15-second statement timeout, read-only mode,
+server cancellation at a one-second test deadline, and healthy client reuse after rollback. Public API pool configuration
+and PgBouncer infrastructure were not changed by this demo-specific fix.
+
+Model-facing optional tool fields explicitly accept null, which is removed before the canonical input schema validates
+the request. Empty strings and invented omission markers are not accepted as cursors. Chat only accepts continuation
+tokens observed in successful results during the current turn; backend cursor/query binding remains authoritative.
+
+The original AI-in-education question completed live search and bill-detail calls and returned sponsor names with
+New Jersey A4352 and Massachusetts H614 source links. Two larger detail calls failed before narrower retrieval
+succeeded; broader batch and cancellation acceptance remains open. No full unit suite was run for this repair.
+
+## Conversation reload recovery
+
+The conversation composer supports Up/Down history recall of previously sent, visible user messages. Up moves
+from newest to oldest without wrapping; Down moves forward and restores the unsent draft. Recalled text is selected
+for editing and is never submitted automatically. Editing starts a new recall cycle. For multiline drafts, recall
+starts only at the beginning (Up) or end (Down); modifier keys, other selections, and IME composition retain normal
+editing behavior. Hidden clarification-continuation messages are excluded. Browser checks cover history boundaries,
+draft restoration, edited recalls, multiline caret movement, selected text, composition, and mobile-width keyboard use.
+
+During `next dev`, the current conversation is checkpointed in this tab's `sessionStorage` under
+`rostra.development.conversation`. Full development reloads restore the conversation ID, messages, retrieved evidence,
+draft, and confirmed clarification answers. React Fast Refresh keeps live state rather than replaying an older checkpoint.
+Only one conversation is retained per tab; starting another replaces the checkpoint. This is not server-side history.
+Browser session restoration may also restore session storage, so do not treat closing the browser as guaranteed deletion.
+Clear the entry or the site's storage to remove the checkpoint explicitly.
+
+A full reload interrupts an active model request; it does not resume a running stream. Retained partial output is
+marked incomplete and Retry starts a new response. Unanswered clarification forms restore as expired because their
+server-side state may have disappeared; confirmed answers remain readable. Invalid checkpoints are discarded, and
+unavailable or full browser storage produces a warning rather than crashing chat. Completed conversations and drafts,
+pending-request reload, keyboard Retry, and a 390px mobile layout have been checked in the integrated browser.
+
+Checkpointing is development-only. Production retains the existing in-memory, refresh-expires behavior. This exception
+was requested to keep code edits and full development reloads from erasing demo conversations.
+
+## Sentry error monitoring
+
+The Next.js app uses pinned `@sentry/nextjs` 10.73.0. Set `NEXT_PUBLIC_SENTRY_DSN` to the
+`legislation/legislation` project DSN to enable it, then restart development or rebuild the browser bundle.
+Without a DSN, monitoring is disabled. The DSN is public configuration, not an authentication credential.
+Optional `SENTRY_AUTH_TOKEN` is build-only and enables source-map upload; never expose it through a public variable.
+No Railway settings or deployment have been changed for this integration.
+
+Browser exceptions, React error boundaries, Next request failures, and chat stream/tool failures are captured.
+Caught API 5xx responses are reported in the shared `apiErrorResponse` boundary; expected 4xx validation responses
+are not server errors. AI SDK client transport failures and failed clarification transport/response parsing are
+explicitly reported because handled promise failures do not reach browser global handlers.
+
+Every chat tool failure is observed through the SDK stream, including invalid arguments and unknown tool names
+before execution, clarification-tool errors, and research execution failures. A per-run reporter deduplicates by
+tool-call ID across the execution wrapper and stream. Invalid tool calls are captured before the SDK converts their
+errors to strings. Events retain a run ID, tool-call ID, known tool name, failure category, and reference; available
+duration/result-size metrics are allowlisted. Actual timeouts are reported; intentional user stops are not errors.
+This is observability, not durable orchestration or a replacement for the existing AI SDK research loop.
+The shared event allowlist removes raw messages, request bodies, headers, cookies, user data, breadcrumbs,
+arbitrary tags/contexts, and source code context. It retains standard error types, safe stack locations, the recognized
+`Invalid URL` diagnostic, and known research tool/category
+tags plus the same reference shown in the failed research step. Stop requests do not produce research failure events.
+Error logs and performance tracing remain disabled. Sentry does not register another OpenTelemetry provider.
+This error-event policy does not cover Replay recordings or the pre-existing logging and Langfuse pipelines.
+
+Session Replay is enabled for the demo at 100% in development, 10% of sessions otherwise, and 100% on errors.
+By explicit demo-owner direction, text/input masking and media blocking are disabled: visible questions, answers,
+source content and ordinary form input can be recorded. Use non-sensitive demo data. Request/response body capture
+remains off; custom console/network recording events are discarded. Error events retain only a validated replay ID
+for correlation. Review this deliberately unmasked policy before any public production rollout.
+
+VS Code's `sentry` MCP entry uses hosted OAuth scoped to `legislation/legislation`. Start that server and complete
+Sentry sign-in in VS Code when ready. It is an editor tool, not a public-chat research capability, and no access token
+or model-provider key is stored in its configuration. OAuth and real event receipt have been verified through MCP
+(`LEGISLATION-1`, environment `sentry-smoke-test`); the local DSN is configured. Browser Replay receipt has also
+been verified. Source-map upload remains unverified. The in-memory transport check verifies the error scrubber
+without contacting Sentry.
+
+Verification includes a real SDK/mock-model probe for execution, invalid-input and unknown-tool failures (three
+events, no duplicates), browser transport-event delivery, and malformed citation links rendering without an error
+boundary crash. These focused checks do not establish full ingestion/worker observability or production acceptance.
+
+## Conversation telemetry
+
+With both Langfuse keys configured, the Node server registers the official AI SDK 7 integration.
+Each research run propagates the conversation's persisted `sessionKey` as the Langfuse `sessionId`.
+Turns, retries, and clarification continuations therefore share a session, including after reload recovery;
+new conversations receive a new UUID. Individual runs remain separate traces. Evaluation cases use their
+own session UUID across follow-up turns.
+
+Telemetry is flushed after the streaming response completes. The existing telemetry redaction and truncation
+policy applies, and media uploads are disabled. Model inputs and outputs are recorded, so use non-sensitive
+demo data. Without Langfuse keys, chat telemetry registration is skipped.
 
 ## Local PostgreSQL
 
@@ -49,7 +172,7 @@ Run the real-database integration suite in PowerShell:
 
 ```powershell
 $env:LEGISLATION_TEST_DATABASE_URL = "postgresql://legislation:legislation@127.0.0.1:55432/legislation_test"
-pnpm --filter legislation test
+pnpm --filter legislation test:database
 ```
 
 The integration suite refuses to perform schema cleanup unless the URL targets the dedicated `legislation_test`
@@ -58,21 +181,20 @@ database. It drops only the `legislation` and `legislation_migrations` schemas.
 Run the application startup smoke test with `pnpm --filter legislation smoke:local`. It starts the real server against
 local PostgreSQL, verifies health and readiness, and shuts the process down.
 
-## Permanent operator and evaluation scripts
+## Package scripts and specialist tools
 
-The `scripts` directory contains reusable entry points, not deployed background
-jobs. Keep their ownership explicit so completed rollouts do not leave
-unexplained one-off files:
+Keep `package.json` scripts limited to package lifecycle, local infrastructure, release checks, and deployment
+automation. Specialist maintenance and evaluation programs live under `tools`, grouped by ownership, and run through
+`pnpm tool <area>/<name>`. Use `pnpm tool --list` to discover them. Do not add a package alias for an individual tool.
 
-| Script group | Purpose | Retention rule |
+| Entry point | Purpose | Retention rule |
 | --- | --- | --- |
-| `smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
-| `smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires separate `LEGISLATION_SMOKE_TOKEN` (API) and `LEGISLATION_MCP_SMOKE_TOKEN` (MCP) credentials, a root HTTP(S) base URL, and never logs either token. |
-| `smoke-dependencies.mjs` | Verify production PostgreSQL, pgvector, managed identity, and Blob read/write behavior. | Permanent infrastructure check; packaged with the build intentionally. |
-| `build-embedding-*`, `run-embedding-*`, `evaluate-embedding-canary.ts`, `rerank-embedding-bakeoff.ts` | Rebuild frozen evaluation inputs, seed a bounded treatment, compare retrieval, and reproduce model or reranker decisions. | Keep as regression tooling; remove superseded generated outputs instead. |
-| `run-trigger-backfill.ts` | Plan or explicitly launch a resumable historical rebuild. | Permanent disaster-recovery and future-rebuild entry point. |
-| `reconcile-trigger-schedules.ts` | Diff or explicitly reconcile managed Trigger schedules. | Permanent schedule-control entry point. |
-| `copy-migrations.mjs`, `infra-what-if.mjs` | Package migration files with compiled output and preview infrastructure changes. | Permanent build and deployment tooling. |
+| `scripts/smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
+| `scripts/smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires separate `LEGISLATION_SMOKE_TOKEN` (API) and `LEGISLATION_MCP_SMOKE_TOKEN` (MCP) credentials, a root HTTP(S) base URL, and never logs either token. |
+| `scripts/smoke-dependencies.mjs` | Verify production PostgreSQL, pgvector, managed identity, and Blob read/write behavior. | Permanent infrastructure check; packaged with the build intentionally. |
+| `tools/trigger/run-trigger-backfill.ts` | Plan or explicitly launch a resumable historical rebuild. | Permanent disaster-recovery and future-rebuild entry point. |
+| `tools/trigger/reconcile-trigger-schedules.ts` | Diff or explicitly reconcile managed Trigger schedules. | Permanent schedule-control entry point. |
+| `scripts/copy-migrations.mjs`, `scripts/infra-what-if.mjs` | Package migration files with compiled output and preview infrastructure changes. | Permanent build and deployment tooling. |
 
 ## Container and Railway build
 
@@ -135,7 +257,8 @@ to that app-owned directory. Set an Azure storage account to select the managed-
 ## Workspace boundary
 
 Database code, infrastructure, ingestion, Trigger.dev tasks, MCP tools, authentication, and observability remain in this app.
-Move code to a top-level monorepo package only after another application has a demonstrated need to consume it.
+Named [test projects](testing.md) prepare ownership boundaries for a future package split without moving source code.
+Package extraction remains a separate decision; the test configuration does not imply independent builds or deployments.
 
 <a id="nextjs-runtime"></a>
 
@@ -175,6 +298,9 @@ The contract contains 81 HTTP operations and 25 advertised MCP tools after the S
 Use [API closeout](passage-search-delivery.md#september-14-scope-and-acceptance) for the latest recorded deployment,
 accepted civic fixtures and remaining passage-search gate. Historical September 2 smoke does not establish current
 full-corpus search acceptance. This documentation audit did not perform a fresh production smoke.
+
+The locally implemented [regulatory text pilot](../regulations/legal-text-serving.md) adds one organization-gated HTTP
+operation and MCP tool beyond that deployed baseline. Its production credentials and deployment checks remain open.
 
 The shared Next.js API boundary authenticates supported and catch-all `/api/**` requests in WorkOS mode, installs
 verified user/organization context, and returns the canonical `401` challenge before endpoint handlers run.

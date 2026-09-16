@@ -73,7 +73,7 @@ runtime pacing. No load test or account-specific quota inspection has been perfo
 
 GovInfo's explicit service limits differ from the generic api.data.gov default. Do not substitute the generic default
 for the GovInfo contract. Do not use DEMO_KEY for production: api.data.gov documents much smaller demo limits.
-Regulations.gov's POST/comment-submission limits are not the ingestion limits; Tabra does not need POST access to read.
+Regulations.gov's POST/comment-submission limits are not the ingestion limits; Rostra does not need POST access to read.
 
 Rate limits constrain speed, not simply record count. One listing call may return multiple records, while a single
 record may need a detail request and several attachment downloads. Estimate work as:
@@ -163,7 +163,7 @@ Examples verified during planning:
 
 Evaluate direct sources and licensed feeds against identical sample publications. State Net advertises normalized
 regulatory data and links to text versions through its API, but the reviewed page also distinguishes a forthcoming
-Content API. It does not establish a license for Tabra to replicate, embed, redistribute or serve every full text.
+Content API. It does not establish a license for Rostra to replicate, embed, redistribute or serve every full text.
 See [State Net API description](https://www.lexisnexis.com/en-us/products/lexis-api.page).
 
 Before selecting any feed, obtain sample payloads and establish full-text versus link-only access, agency and state

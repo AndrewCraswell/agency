@@ -115,7 +115,7 @@ type ErrorResponse = {
     message: string
     correlationId: string
     retryable: boolean
-    details?: { field: string; reason: string }[]
+    details?: Record<string, JsonValue>
   }
 }
 ```

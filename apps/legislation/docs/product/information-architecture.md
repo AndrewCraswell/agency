@@ -66,7 +66,7 @@ Application
 
 When shared work is available and authorized
   Organization selector (sidebar top; includes Personal)
-  Workspace selector (sidebar bottom, above Settings)
+  Workspace selector (sidebar bottom, below Settings)
   Organization/workspace management (Settings)
   Assignment, review and report sharing (inside the issue)
 ```
@@ -181,7 +181,7 @@ Preserve source terminology and real relationships without decorative metrics, s
 
 The [organization behavior](organization-features.md) and [management design](../design/organization-workspace-design.md)
 own shared work. Show the organization selector at the sidebar top for active membership; show the workspace selector
-above Settings only in organization context. Personal has no workspace selector or mandatory organization setup.
+below Settings only in organization context. Personal has no workspace selector or mandatory organization setup.
 
 Within shared Issues, Assigned to me, Needs my review and All my workspaces are authorized views, not new destinations
 or access grants. Keep client/initiative boundaries at the workspace and review/export/sharing at the issue's Brief.

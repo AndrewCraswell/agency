@@ -41,7 +41,7 @@ version selection, not a demonstrated new performance advantage.
 
 Continue detecting corrections to older publications through supported source modification discovery and periodic
 inventory reconciliation. Cache with hashes and source version/HTTP metadata; a local file alone is not proof that a
-source has not changed. Keep acquisition, parsing and indexing completion separate. Use the existing Tabra orchestration
+source has not changed. Keep acquisition, parsing and indexing completion separate. Use the existing Rostra orchestration
 and persistence requirements in [implementation](implementation.md), rather than adopting a vendor-specific search stack.
 
 ## What we must change or retain

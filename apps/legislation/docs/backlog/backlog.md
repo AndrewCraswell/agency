@@ -1,5 +1,17 @@
 # Product experience implementation backlog
 
+## Current delivery focus
+
+The [public chat launch backlog](public-chat.md) owns the first deployed Rostra conversation experience: custom-themed
+AI Elements, streaming OpenRouter research, existing API/MCP access, Tavily search, Firecrawl source reading, inline
+clarification and Railway release. It supersedes older demo assumptions about fixed question allowances, federal-only
+coverage and waitlist enrollment. Waitlist implementation is deferred entirely.
+
+The broader signed-in product below remains the parent roadmap, not a prerequisite for this first release. Use the
+launch backlog's dependency and scope handoff before crediting these broader tasks; public chat delivery does not
+establish account-owned history, issues, following or notifications. Conversation retention and public data eligibility
+remain explicit launch decisions. General web research through the selected providers is now in launch scope.
+
 ## Scope and status
 
 Prepared September 14, 2026; maintained against the [designer brief](../design/design.md),
@@ -142,7 +154,7 @@ personal-experience completion gate.
 | SMS, push, chat channels | Provider costs, consent, destination verification and delivery promises |
 | File exports and immutable research archives | Formats, version retention, citation preservation and retention policy |
 | Public conversation sharing | Explicit sharing/revocation model and disclosure review |
-| General web research and external MCP sources | Source permissions, credential custody, trust boundary and citation requirements |
+| Additional web providers and visitor-supplied MCP sources | Tavily Search and Firecrawl Scrape are covered by the [public chat launch](public-chat.md). Additional providers and arbitrary external servers still require source permissions, credential custody, trust-boundary and citation review. |
 | Courts, regulations, legal deadlines, compliance determinations | Regulations have a separate [implementation specification](../regulations/implementation.md) and [technical phase backlog](../regulations/implementation-backlog.md); this does not add them to the current product completion gate. Other capabilities still require scoped coverage and interpretation requirements. |
 | Campaign/contact tools and external messaging | Consent, recipient verification, communications authorization and operational workflow |
 | Billing and paid plans | Entitlements, pricing decision, payment integration and account lifecycle |

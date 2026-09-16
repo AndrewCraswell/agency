@@ -1,7 +1,7 @@
 # Legal data supplier shortlist
 
 Public documentation reviewed September 14, 2026. These are vendor claims and evaluation leads, not tested deliveries,
-negotiated prices or confirmed Tabra licensing rights. OpenLaws is the closest broad alternative found; the other two
+negotiated prices or confirmed Rostra licensing rights. OpenLaws is the closest broad alternative found; the other two
 are narrower or earlier evaluation leads. Their corporate maturity and financial durability were not independently audited.
 
 | Supplier | Potential role | Key limitation | Priority |
@@ -32,7 +32,7 @@ commercial evaluation criteria. No paid API or delivery contract was tested in t
 
 [OpenLaws](https://openlaws.us/about/) identifies itself as a Public Benefit Corporation incorporated in 2022 supplying
 legal data to LegalTech and AI companies. It advertises statutes, regulations, constitutions and court rules across
-federal, 50 states, DC and Puerto Rico, with API and bulk delivery. This makes it a direct sourcing candidate for Tabra.
+federal, 50 states, DC and Puerto Rico, with API and bulk delivery. This makes it a direct sourcing candidate for Rostra.
 
 Its [coverage sheet](https://openlaws.notion.site/) is more informative than the nationwide headline: state collections
 are monthly or quarterly, Colorado regulations are listed at 78%, Maine and Mississippi have limited coverage, California
@@ -45,7 +45,7 @@ the bulk plan. Bulk includes S3 exports and local retrieval/embedding uses; ente
 Request state-only pricing and the right delivery plan before treating a discounted API as a local ingestion solution.
 
 The [public agreement](https://openlaws.us/terms/) makes the order form determine the license and contains restrictions
-on extraction and some AI uses. Reconcile it with current bulk/AI marketing in explicit Tabra terms, including customer
+on extraction and some AI uses. Reconcile it with current bulk/AI marketing in explicit Rostra terms, including customer
 display, exports, API/MCP redistribution and post-termination retention. Marketing alone does not establish those rights.
 
 ## RegCorpus
@@ -73,4 +73,4 @@ delivered text, bulk licensing, source rights, operating history and successful 
 
 Compare Vaquill and OpenLaws first using the same coverage manifest, samples, state-only/full-corpus quotes and license
 requirements in [sourcing options](sourcing-options.md). Neither reviewed offering yet establishes the timely state
-rulemaking feed Tabra would need to match regulatory-monitoring products. Evaluate that gap independently of code search.
+rulemaking feed Rostra would need to match regulatory-monitoring products. Evaluate that gap independently of code search.

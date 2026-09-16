@@ -8,7 +8,7 @@ routes, Trigger tasks and release gates below remain proposed until their implem
 
 Build a locally stored, versioned federal regulatory corpus with resumable backfills, recurring updates, searchable text,
 embeddings, authenticated HTTP endpoints and API-backed MCP. Use Vaquill's audited open federal collectors as starting
-code, while keeping Tabra's durable workflows and completeness controls. Prepare the same contracts for a later licensed
+code, while keeping Rostra's durable workflows and completeness controls. Prepare the same contracts for a later licensed
 Vaquill state statutory/admin-code feed. No nationwide state rulemaking claim follows from a state-code license.
 
 Initial federal pipelines are current eCFR, Federal Register rules/proposals/notices, and U.S. Code for statutory context.
@@ -100,7 +100,7 @@ Rollback pauses intake, retains immutable history/pending work and restores the 
 not delete source data or migrate bill indexes as a shortcut.
 
 Observe source currency, detection/processing lag, stage counts, failed/delayed work, lease age, model/input coverage,
-source/DB/Trigger saturation and cost per completed unit. Track upstream publication separately from Tabra polling.
+source/DB/Trigger saturation and cost per completed unit. Track upstream publication separately from Rostra polling.
 Vendor delivery frequency likewise differs from collection freshness. Preserve the flat, feature-based customer-pricing
 approach; internal consumption metrics do not create customer usage quotas.
 

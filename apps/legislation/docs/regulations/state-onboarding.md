@@ -55,7 +55,7 @@ no-history or full-history assumption from an older article.
 ## Contract and serving rights
 
 Before production import, resolve permission for local raw storage, normalized text, lexical/vector indexes, model
-inputs, search snippets/full text, user-facing AI answers, reports, organization/customer sharing and Tabra API/MCP
+inputs, search snippets/full text, user-facing AI answers, reports, organization/customer sharing and Rostra API/MCP
 delivery. Confirm attribution, white labeling, source exceptions, commercial limits, renewal, termination and deletion
 obligations. Hosting an API is not automatically permission to redistribute bulk data through it.
 
