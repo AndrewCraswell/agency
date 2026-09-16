@@ -14,9 +14,9 @@ Conventions for authoring React components in this monorepo. Hooks have their ow
 - **Wrap every app in `<StrictMode>` and a top-level `react-error-boundary`.** Add the provider required by that app's
   selected UI system, such as `FluentProvider` for Fluent UI. Wrap stories and tests with the same shell so every
   surface shares context.
-- **Choose the UI system at the app or product-surface boundary.** Fluent UI v9 is established in `apps/web`; shadcn/ui
-  is also allowed for apps and product surfaces designed around it. Keep one coherent component system within a
-  product surface unless an explicit integration requires otherwise.
+- **Choose the UI system at the app or product-surface boundary.** Fluent UI v9 and shadcn/ui are both allowed for apps
+  and product surfaces designed around them. Keep one coherent component system within a product surface unless an
+  explicit integration requires otherwise.
 
 ## Styling
 

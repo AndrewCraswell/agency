@@ -1,15 +1,6 @@
-# `Turborepo` Vite starter
+# Agency monorepo
 
-This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub
-Issues will be closed.
-
-## Using this example
-
-Run the following command:
-
-```sh
-npx create-turbo@latest -e with-vite-react
-```
+A Turborepo and pnpm monorepo for the agency's applications and shared packages.
 
 ## What's inside?
 
@@ -17,8 +8,9 @@ This Turborepo includes the following packages and apps:
 
 ### Apps and Packages
 
-- `web`: React ([Vite](https://vitejs.dev)) app with the [React Compiler](https://react.dev/learn/react-compiler),
-  [Fluent UI v9](https://react.fluentui.dev), [Vitest](https://vitest.dev), and [Storybook](https://storybook.js.org)
+- `blog-writer`: Shopify blog-writing application
+- `legislation`: legislation research application
+- `scoring`: fencing scoring application and supporting tools
 - `@repo/oxlint-config`: shared [oxlint](https://oxc.rs) configuration
 - `@repo/storybook-config`: shared [Storybook](https://storybook.js.org) configuration
 - `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
@@ -27,7 +19,7 @@ Each package and app is 100% [TypeScript](https://www.typescriptlang.org/).
 
 ### Install dependencies
 
-The web app uses `@1js` packages from the Office Azure Artifacts feed. Install dependencies normally:
+Some workspaces use `@1js` packages from the Office Azure Artifacts feed. Install dependencies normally:
 
 ```sh
 pnpm install

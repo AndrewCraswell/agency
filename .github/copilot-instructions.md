@@ -1,10 +1,8 @@
 # Agency Monorepo — Project Guidelines
 
-A Turborepo + pnpm monorepo. The `web` app is a React 19 + TypeScript SPA built with Vite, the
-[React Compiler](https://react.dev/learn/react-compiler) (with `<StrictMode>`), and Fluent UI v9. Fluent UI describes
-that app, not a monorepo-wide UI requirement; other apps may use an approved product-level system such as shadcn/ui.
-Shared config lives in `@repo/*` packages under `packages/`. See [README.md](../README.md) for setup and the
-[docs index](../docs/README.md) for conventions.
+A Turborepo + pnpm monorepo with React 19 and TypeScript applications. UI systems are selected at the app or
+product-surface boundary. Shared config lives in `@repo/*` packages under `packages/`. See [README.md](../README.md) for
+setup and the [docs index](../docs/README.md) for conventions.
 
 ## Tooling (differs from common defaults)
 
@@ -33,7 +31,7 @@ workstream currently has that permission for the unrelated legislation dependenc
 
 ## Workspace layout
 
-- `apps/web/` — the React + Vite application.
+- `apps/` — product applications.
 - **Reusable shared config** (extend these; don't redefine per package): `@repo/oxlint-config`,
   `@repo/storybook-config`, `@repo/typescript-config`.
 

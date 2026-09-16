@@ -8,8 +8,8 @@ links here. These conventions apply to all TypeScript/React code in the monorepo
 
 - **`pnpm verify` must be green before finishing.** It runs, in order: `check:format` (oxfmt), `check:lint` (oxlint,
   `--max-warnings=0`), `check:types` (TypeScript 7 RC, `--noEmit`), `check:unused` (knip), and `test:coverage` (Vitest).
-- **New code ships with co-located tests** and must keep the Vitest coverage thresholds (see
-  [`apps/web/vite.config.ts`](../apps/web/vite.config.ts)) green.
+- **New code ships with co-located tests** and must keep the relevant app or package's Vitest coverage thresholds
+  green.
 - Git hooks (lefthook) run `oxlint --fix` + `oxfmt` on commit and `check:types` on push. Don't bypass with
   `--no-verify`.
 
