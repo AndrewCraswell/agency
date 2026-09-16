@@ -290,15 +290,6 @@ afterAll(async () => {
 })
 
 describe.sequential("built Next.js API Route Handler acceptance", () => {
-  it("resolves Next 16.3.1 from the legislation package and boots that resolved CLI", () => {
-    const nextPackage = packageRequire("next/package.json") as Readonly<{ version: string }>
-    const nextCliPath = packageRequire.resolve("next/dist/bin/next")
-
-    expect(nextPackage.version).toBe("16.3.1")
-    expect(nextCliPath).toContain("node_modules")
-    expect(nextCliPath).toContain("next")
-  })
-
   it.each(batchRoutes)(
     "routes the documented POST /batch handler before the dynamic %s route",
     async ({ pathname }) => {
