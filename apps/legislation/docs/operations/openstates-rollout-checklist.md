@@ -2,6 +2,14 @@
 
 ## September 16 continuation and identity verification
 
+Alaska canary `run_06gamb0lptqui2vjgfgvc0ei01` completed its ten batches; this is not yet downstream acceptance.
+NC is continuing with a bounded 100-batch controller `run_06gambiu9spur3dr4d7l8jd001`, unchanged single-bill
+concurrency and pinned deployment. Production current-session scope contains 2,338 NC bills and 857 Alaska bills.
+The freshness audit now supports explicit `--database-env DATABASE_URL` selection, keeps its read-only transaction,
+sets transaction-local timeouts compatible with PgBouncer, and checks sections in 25-bill scopes to avoid a global
+embedding join. Initial whole-state production queries exceeded the 30-second deadline; optimized acceptance is pending.
+Repository verification passed preliminary checks but stopped on unrelated Shopify email CLI five-second test timeouts.
+
 Alaska's ten retained targets were revalidated against current production bill/URL/raw SHA/text hash/status.
 NC hosted repair acceptance satisfied the recorded prerequisite. Content activation is now explicitly `nc,ak`,
 read back from Trigger; no recurring schedule or deployment promotion was added. Initial Alaska run
