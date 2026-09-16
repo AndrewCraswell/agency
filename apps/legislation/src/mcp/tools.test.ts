@@ -1,8 +1,9 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { LegislationError } from "../legislation/errors.js"
 import { createLogger } from "../observability/logger.js"
-import { createLegislationMcpHandler, type LegislationQueryApi } from "./tools.js"
+import { createLegislationMcpHandler, createLegislationResearchTools, type LegislationQueryApi } from "./tools.js"
 
 const handlers = new Set<ReturnType<typeof createLegislationMcpHandler>>()
 const logger = createLogger({ level: "error", service: "legislation-test", write: () => undefined })
@@ -61,6 +62,79 @@ async function createClient(service = createService(), name = "legislation-test"
 }
 
 describe("legislation MCP tools", () => {
+  it("pages oversized results identically through chat registry and stateless MCP requests", async () => {
+    const service = createService()
+    const items = Array.from({ length: 25 }, (_, index) => ({ id: `bill:${index}`, text: "x".repeat(25000) }))
+    vi.mocked(service.searchBills).mockResolvedValue({ items })
+    const definitions = createLegislationResearchTools(service, logger)
+    const search = definitions.find((definition) => definition.name === "search_bills")
+    expect(search).toBeDefined()
+    const result = await search?.execute({ query: "education", limit: 25 })
+    const pageSchema = z.object({
+      items: z.array(z.object({ id: z.string(), text: z.string() })),
+      nextCursor: z.string().optional()
+    })
+    const structured = z.object({ structuredContent: z.object({ data: z.json() }) }).parse(result)
+    const first = pageSchema.parse(structured.structuredContent.data)
+    expect(first.items.length).toBeGreaterThan(5)
+    expect(first.items.length).toBeLessThan(25)
+    const collected = [...first.items]
+    let cursor = first.nextCursor
+    const { client, transport } = await createClient(service)
+    try {
+      const publicResult = await client.callTool({ name: "search_bills", arguments: { query: "education", limit: 25 } })
+      expect(publicResult.structuredContent).toEqual(structured.structuredContent)
+      while (cursor) {
+        const next = await client.callTool({
+          name: "search_bills",
+          arguments: { query: "education", limit: 25, cursor }
+        })
+        expect(next.isError).not.toBe(true)
+        const page = pageSchema.parse(next.structuredContent?.data)
+        collected.push(...page.items)
+        cursor = page.nextCursor
+        expect(collected.length).toBeLessThanOrEqual(25)
+      }
+      expect(collected).toEqual(items)
+    } finally {
+      await transport.close()
+    }
+  })
+
+  it("excludes internal search fields before budgeting nested research results", async () => {
+    const service = createService()
+    vi.mocked(service.getBill).mockResolvedValue({
+      bill: {
+        id: "bill:us:119:hr:1234",
+        title: "Education",
+        summary: "Public bill summary",
+        embedding: Array.from({ length: 1536 }, () => 0.123456),
+        searchVector: "index".repeat(100_000),
+        embeddingInputHash: "internal hash",
+        embeddingModel: "internal model"
+      },
+      documents: [{ id: "document:1", text: "Public source text", searchVector: "internal index" }],
+      nextChildCursor: "opaque-cursor",
+      truncated: true
+    })
+    const { client, transport } = await createClient(service)
+    try {
+      const result = await client.callTool({ name: "get_bill", arguments: { id: "bill:us:119:hr:1234" } })
+      expect(result.isError).not.toBe(true)
+      expect(result.structuredContent).toEqual({
+        data: {
+          bill: { id: "bill:us:119:hr:1234", title: "Education" },
+          documents: [{ id: "document:1", text: "Public source text" }],
+          nextChildCursor: "opaque-cursor",
+          truncated: true
+        }
+      })
+      expect(JSON.stringify(result)).not.toContain("internal")
+    } finally {
+      await transport.close()
+    }
+  })
+
   it("keeps date inputs wire-safe through repeated protocol validation", async () => {
     const { client, service, transport } = await createClient()
     const timestamp = "2025-01-01T00:00:00Z"

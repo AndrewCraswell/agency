@@ -63,6 +63,50 @@ describe("chat boundary", () => {
     ).toBe(false)
   })
 
+  it("accepts the public host behind a TLS-terminating proxy", () => {
+    expect(
+      chatRequestIsAllowed(
+        new Request("http://0.0.0.0:8080/chat", {
+          headers: { host: "research.example", origin: "https://research.example" }
+        }),
+        { NODE_ENV: "production", LEGISLATION_PUBLIC_API_BASE_URL: "https://research.example" }
+      )
+    ).toBe(true)
+  })
+
+  it.each<Record<string, string>>([
+    { host: "research.example" },
+    { host: "research.example", origin: "null" },
+    { host: "research.example", origin: "https://other.example" },
+    { host: "research.example", origin: "http://research.example" },
+    { host: "other.example", origin: "https://research.example" },
+    { host: "research.example:8080", origin: "https://research.example" },
+    {
+      host: "other.example",
+      origin: "https://research.example",
+      "x-forwarded-host": "research.example",
+      "x-forwarded-proto": "https"
+    }
+  ])("rejects untrusted proxy request headers %j", (headers) => {
+    expect(
+      chatRequestIsAllowed(new Request("http://0.0.0.0:8080/chat", { headers }), {
+        NODE_ENV: "production",
+        LEGISLATION_PUBLIC_API_BASE_URL: "https://research.example"
+      })
+    ).toBe(false)
+  })
+
+  it("rejects an untrusted host even when the request URL matches", () => {
+    expect(
+      chatRequestIsAllowed(
+        new Request("https://research.example/chat", {
+          headers: { host: "other.example", origin: "https://research.example" }
+        }),
+        { NODE_ENV: "production", LEGISLATION_PUBLIC_API_BASE_URL: "https://research.example" }
+      )
+    ).toBe(false)
+  })
+
   it.each([
     undefined,
     "not a url",

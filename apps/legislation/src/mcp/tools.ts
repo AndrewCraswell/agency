@@ -14,6 +14,7 @@ import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
 import { errorContext, type Logger } from "../observability/logger.js"
 import type { Telemetry } from "../observability/telemetry.js"
+import { prepareResultPage, readResultPage } from "./result-pages.js"
 
 const canonicalBillId = z.string().regex(/^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$/)
 const canonicalId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}:[a-z0-9-]+(?::[^:]+)*$`))
@@ -49,6 +50,7 @@ const outputSchema = z.object({ data: z.json() })
 const MAXIMUM_RESPONSE_BYTES = 900_000
 const TOOL_TIMEOUT_MILLISECONDS = 30_000
 const MAXIMUM_BATCH_LOOKUPS = 25
+const internalSearchFields = new Set(["embedding", "embeddingInputHash", "embeddingModel", "searchVector"])
 
 type PageInput = Readonly<{ cursor?: string; limit?: number }>
 type EntityInput = Readonly<{ id: string }>
@@ -160,8 +162,7 @@ export type LegislationQueryApi = Readonly<{
   ) => Promise<unknown>
 }>
 
-function success(value: unknown) {
-  const data = toJsonValue(value)
+function success(data: JSONValue) {
   const serialized = JSON.stringify(data)
   const response = { content: [{ text: serialized, type: "text" as const }], structuredContent: { data } }
   // Both copies and JSON escaping count toward the transport budget.
@@ -193,7 +194,11 @@ function toJsonValue(value: unknown): JSONValue {
     return value.map(toJsonValue)
   }
   if (typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, toJsonValue(item)]))
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !internalSearchFields.has(key))
+        .map(([key, item]) => [key, toJsonValue(item)])
+    )
   }
   return null
 }
@@ -227,7 +232,7 @@ function failure(error: unknown, logger: Logger) {
   }
 }
 
-async function tool<T>(
+async function executeTool<T>(
   name: string,
   input: Readonly<Record<string, unknown>>,
   operation: () => Promise<T>,
@@ -254,7 +259,7 @@ async function tool<T>(
         timeout.unref()
       })
     ])
-    return success(value)
+    return { value: toJsonValue(value) }
   } catch (error) {
     return failure(error, logger)
   } finally {
@@ -296,14 +301,40 @@ type ResearchToolDefinition = Readonly<{
 }>
 
 export function createLegislationResearchTools(service: LegislationQueryApi, logger: Logger, telemetry?: Telemetry) {
+  function tool<T>(
+    name: string,
+    input: Readonly<Record<string, unknown>>,
+    operation: () => Promise<T>,
+    logger: Logger,
+    telemetry?: Telemetry
+  ) {
+    return executeTool(name, input, operation, logger, telemetry)
+  }
   const definitions: ResearchToolDefinition[] = []
   const server = {
     registerTool<Schema extends z.ZodType>(
       name: string,
       definition: Omit<ResearchToolDefinition, "name" | "execute" | "inputSchema"> & { inputSchema: Schema },
-      execute: (input: z.output<Schema>) => Promise<ResearchToolResult>
+      execute: (input: z.output<Schema>) => Promise<Awaited<ReturnType<typeof executeTool>>>
     ) {
-      definitions.push({ ...definition, name, execute: (input) => execute(definition.inputSchema.parse(input)) })
+      definitions.push({
+        ...definition,
+        name,
+        execute: async (input) => {
+          try {
+            const parsed = definition.inputSchema.parse(input)
+            const selection = z.record(z.string(), z.unknown()).parse(parsed)
+            const page = readResultPage(name, selection)
+            const result = await execute(definition.inputSchema.parse(page.input))
+            if (!("value" in result)) {
+              return result
+            }
+            return success(prepareResultPage(name, page.input, result.value, page.offset))
+          } catch (error) {
+            return failure(error, logger)
+          }
+        }
+      })
     }
   }
 
@@ -387,7 +418,8 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   server.registerTool(
     "search_bills",
     {
-      description: "Search state and federal bills using structured, lexical, semantic, or hybrid retrieval.",
+      description:
+        "Search state and federal bill identities, metadata, and matching snippets. Full summaries are omitted. Use search_bill_text for evidence about provisions. Follow nextCursor with unchanged filters and limit.",
       inputSchema: z.object({
         ...searchFilters,
         mode: z.enum(["lexical", "semantic", "hybrid"]).default("lexical")
@@ -400,7 +432,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "get_bill",
     {
       description:
-        "Get bounded canonical bill details with sponsors, actions, votes, documents, relations, and structured or document-backed amendments.",
+        "Get canonical bill metadata, sponsors, actions, votes, document metadata, relations, and amendments. Full summaries and document bodies are omitted. Use search_bill_text or get_bill_text with a returned document ID to read provisions.",
       inputSchema: z.object({
         childLimit: z.number().int().min(1).max(100).optional(),
         id: canonicalBillId
@@ -413,8 +445,9 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "get_bills",
     {
       description:
-        "Get multiple canonical bills, including bounded sponsors, actions, votes, documents, relations, organizations, and amendments, in one tool call.",
+        "Get multiple bills with sponsors, actions, votes, document metadata, relations, organizations, and amendments. Full summaries and document bodies are omitted; use search_bill_text or get_bill_text for provisions. Follow nextCursor with identical IDs and childLimit to retrieve remaining bills.",
       inputSchema: z.object({
+        cursor: cursorSchema,
         childLimit: z.number().int().min(1).max(25).optional(),
         ids: z.array(canonicalBillId).min(1).max(MAXIMUM_BATCH_LOOKUPS)
       }),

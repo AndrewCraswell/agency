@@ -1,9 +1,11 @@
 import { dynamicTool, type ToolSet } from "ai"
 import { z } from "zod"
+import { researchResultByteLimit } from "../../src/mcp/result-pages"
 import { createLegislationResearchTools, type LegislationQueryApi } from "../../src/mcp/tools"
 import { createLogger } from "../../src/observability/logger"
 import { getResearchRuntime } from "../../src/server/next/research-runtime"
 import { getNextLegislationApplication } from "../../src/server/next/runtime"
+import { chatIsAvailable } from "../lib/chatRequest"
 import { projectResearchEvidence } from "../lib/evidence"
 import { ResearchFailure, researchFailureCode } from "../lib/researchFailure"
 import { isResearchTool, researchToolLabels } from "../lib/researchTools"
@@ -15,7 +17,7 @@ const resultSchema = z.object({ structuredContent: z.object({ data: z.json() }) 
 const cursorInputSchema = z.object({ cursor: z.string().optional() })
 const failureSchema = z.object({ error: z.string(), message: z.string().optional() })
 
-function modelInputSchema(schema: z.ZodType) {
+export function modelInputSchema(schema: z.ZodType) {
   if (!(schema instanceof z.ZodObject)) {
     throw new Error("Research tools require object inputs")
   }
@@ -62,14 +64,15 @@ export function createResearchTools(
   sessionKey?: string,
   queryServiceOverride?: LegislationQueryApi
 ) {
-  if (environment.NODE_ENV !== "development") {
-    throw new Error("Direct demo research is only available in development.")
+  if (environment.NODE_ENV !== "development" && !chatIsAvailable(environment)) {
+    throw new Error("Research is unavailable in this environment.")
   }
   signal.throwIfAborted()
   const queryService = queryServiceOverride ?? getNextLegislationApplication().queryService
   const logger = createLogger({ service: "legislation-chat", level: "warn" })
   const definitions = createLegislationResearchTools(queryService, logger)
-  async function execute(name: string, input: unknown) {
+  async function execute(name: string, input: unknown, executionSignal = signal) {
+    executionSignal.throwIfAborted()
     if (queryServiceOverride) {
       const definition = definitions.find((candidate) => candidate.name === name)
       if (!definition) {
@@ -78,7 +81,7 @@ export function createResearchTools(
       return definition.execute(input)
     }
     return getResearchRuntime().run(async (service) => {
-      signal.throwIfAborted()
+      executionSignal.throwIfAborted()
       const definition = createLegislationResearchTools(service, logger).find((candidate) => candidate.name === name)
       if (!definition) {
         throw new Error("Research tool is unavailable")
@@ -130,7 +133,7 @@ export function createResearchTools(
             throw new ResearchFailure("invalid_response", reference)
           }
           resultBytes = Buffer.byteLength(JSON.stringify(parsed.data.structuredContent), "utf8")
-          if (resultBytes > 180000) {
+          if (resultBytes > researchResultByteLimit) {
             throw new ResearchFailure("result_limit", reference)
           }
           collectCursors(parsed.data.structuredContent, cursors)
@@ -142,22 +145,13 @@ export function createResearchTools(
                 parsed.data.structuredContent.data,
                 typeof pageInput.query === "string" ? pageInput.query : undefined,
                 async (cursor, pageSignal) => {
-                  const nextResult = await getResearchRuntime().run(async (service) => {
-                    pageSignal.throwIfAborted()
-                    const nextTool = createLegislationResearchTools(service, logger).find(
-                      (candidate) => candidate.name === name
-                    )
-                    if (!nextTool) {
-                      throw new ResearchFailure("not_found", crypto.randomUUID())
-                    }
-                    return nextTool.execute({ ...pageInput, cursor, limit: 5 })
-                  })
+                  const nextResult = await execute(name, { ...pageInput, cursor }, pageSignal)
                   pageSignal.throwIfAborted()
                   if ("isError" in nextResult && nextResult.isError) {
                     throw new ResearchFailure("dependency_unavailable", crypto.randomUUID())
                   }
                   const page = resultSchema.parse(nextResult)
-                  if (Buffer.byteLength(JSON.stringify(page.structuredContent), "utf8") > 180000) {
+                  if (Buffer.byteLength(JSON.stringify(page.structuredContent), "utf8") > researchResultByteLimit) {
                     throw new ResearchFailure("result_limit", crypto.randomUUID())
                   }
                   return page.structuredContent.data

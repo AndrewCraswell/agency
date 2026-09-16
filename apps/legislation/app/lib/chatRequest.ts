@@ -120,5 +120,6 @@ export function chatRequestIsAllowed(request: Request, environment: NodeJS.Proce
     return ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) && origin === url.origin
   }
   const trustedOrigin = productionChatOrigin(environment)
-  return trustedOrigin !== null && origin === trustedOrigin && url.origin === trustedOrigin
+  const host = request.headers.get("host") ?? url.host
+  return trustedOrigin !== null && origin === trustedOrigin && host === new URL(trustedOrigin).host
 }
