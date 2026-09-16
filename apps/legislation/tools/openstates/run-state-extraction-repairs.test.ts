@@ -46,6 +46,13 @@ it("plans deterministically and rejects changed or out-of-scope evidence before 
       idempotencyKey: `state-extraction-repair:nc:20260916.1:${digest}`
     })
     expect((await invoke(digest)).stdout).toBe(first.stdout)
+    await expect(
+      execute(
+        process.execPath,
+        ["--import", "tsx", script, "--payload", path, "--sha256", digest, "--version", "20260916.1", "--apply"],
+        { timeout: 20_000 }
+      )
+    ).rejects.toThrow("ZodError")
     await expect(invoke("0".repeat(64))).rejects.toThrow("Repair payload checksum mismatch")
     const changed = JSON.stringify({ ...payload, state: "ak" })
     await writeFile(path, changed)

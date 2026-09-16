@@ -1,18 +1,23 @@
 import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
-import { configure, tasks } from "@trigger.dev/sdk"
+import { configure, envvars, tasks } from "@trigger.dev/sdk"
 import { Command } from "commander"
 import { z } from "zod"
-import { requireStateRepairScope, stateContentControllerPayload } from "../../src/trigger/tasks/state-content-policy.js"
+import {
+  requireStateContentActivation,
+  requireStateRepairScope,
+  stateContentControllerPayload
+} from "../../src/trigger/tasks/state-content-policy.js"
 
 const options = new Command()
   .name("run-state-extraction-repairs")
   .requiredOption("--payload <path>", "retained repair payload file")
   .requiredOption("--sha256 <digest>", "expected retained payload checksum")
   .requiredOption("--version <deployment>", "explicit Trigger deployment version; never use the moving default")
+  .option("--project <reference>", "Trigger project reference; required when applying")
   .option("--apply", "submit the verified payload to Trigger; otherwise print a plan")
   .parse()
-  .opts<{ payload: string; sha256: string; version: string; apply?: boolean }>()
+  .opts<{ payload: string; sha256: string; version: string; project?: string; apply?: boolean }>()
 
 const version = z
   .string()
@@ -44,11 +49,17 @@ const plan = {
 if (options.apply !== true) {
   process.stdout.write(JSON.stringify({ ...plan, dispatched: false }) + "\n")
 } else {
+  const project = z
+    .string()
+    .regex(/^proj_[a-z0-9]+$/)
+    .parse(options.project)
   const accessToken = process.env.TRIGGER_DEV_API_KEY?.trim() || process.env.TRIGGER_SECRET_KEY?.trim()
   if (!accessToken) {
     throw new Error("TRIGGER_SECRET_KEY or TRIGGER_DEV_API_KEY is required with --apply")
   }
   configure({ accessToken })
+  const activation = await envvars.retrieve(project, "prod", "OPENSTATES_CONTENT_ENABLED_STATES")
+  requireStateContentActivation(payload.state, activation.value)
   const handle = await tasks.trigger("openstates-content-controller", payload, {
     version,
     idempotencyKey,

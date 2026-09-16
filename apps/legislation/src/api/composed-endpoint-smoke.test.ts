@@ -1015,8 +1015,8 @@ describe("composed server endpoint smoke coverage", () => {
     })
 
     // Standalone meeting child routes retain exact URL coverage in meeting-agenda-read-routes.test.ts,
-    // meeting-document-read-routes.test.ts, meeting-outcome-read-routes.test.ts, and
-    // meeting-participant-list-routes.test.ts; this composed slice exercises the bounded detail child collections.
+    // meeting-document-read-routes.test.ts, and meeting-participant-list-routes.test.ts; this composed slice
+    // exercises the bounded detail child collections.
     const resources = [
       { path: `/api/votes/${encodeURIComponent(VOTE_ID)}`, type: "vote" },
       { path: `/api/meetings/${encodeURIComponent(MEETING_ID)}?childLimit=1`, type: "meeting" },

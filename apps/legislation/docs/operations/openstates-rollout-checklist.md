@@ -2,13 +2,24 @@
 
 ## September 16 continuation and identity verification
 
+Alaska's ten retained targets were revalidated against current production bill/URL/raw SHA/text hash/status.
+NC hosted repair acceptance satisfied the recorded prerequisite. Content activation is now explicitly `nc,ak`,
+read back from Trigger; no recurring schedule or deployment promotion was added. Initial Alaska run
+`run_06gamam10n6dq5p2stc86tja01` failed before work at the activation guard because the installed SDK's
+`envvars.update` helper threw locally. Activation was then updated using the supported import operation.
+After confirming that terminal guard failure, submitted the same checksum-verified payload pinned to
+`20260916.3` as `run_06gamb0lptqui2vjgfgvc0ei01`. Hosted results remain unverified.
+The repair CLI now requires `--project` when applying and verifies hosted activation before submission.
+NC continuation `run_06gam9ugthb2g7lalq5fascn01` completed all ten batches, without completing the full scan.
+Full verification retry was blocked by an unrelated Shopify email temporary fixture reported by knip.
+
 - [x] Reject changed bill/source/motion provenance even when an incoming vote reuses a persisted primary ID; seven focused identity tests passed.
 - [x] Confirm previous NC controller completed and no active ingestion leases before resuming pinned deployment `20260916.3`.
 - [ ] NC continuation `run_06gam9ugthb2g7lalq5fascn01`: bounded ten batches, eight bills per batch, one bill at a time. Latest pre-dispatch checkpoint was HB1078 with no pending embedding bills; full scan and search acceptance remain incomplete.
 - [ ] Publish and verify the newer vote importer/persistence changes; these are still local.
 - [ ] Full repository verification: earlier attempt hit a Windows mapped-file lock in regulations. Retry found task-scoped lint issues (corrected) plus a concurrently missing API file; a clean full run is still required.
 
-Alaska activation and broader historical/person-resolution gates remain open. These checks do not establish whole-state readiness.
+Alaska hosted acceptance and broader historical/person-resolution gates remain open. These checks do not establish whole-state readiness.
 
 ## Hosted NC repair acceptance, September 16
 

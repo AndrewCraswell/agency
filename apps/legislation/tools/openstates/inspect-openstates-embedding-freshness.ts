@@ -1,3 +1,4 @@
+import { Command } from "commander"
 import { z } from "zod"
 import { loadConfig } from "../../src/config/config.js"
 import { createDatabase } from "../../src/db/database.js"
@@ -5,23 +6,35 @@ import { billEmbeddingInputHash, sectionEmbeddingInputHash } from "../../src/ing
 import { legislativeSessionId } from "../../src/legislation/identifiers.js"
 import { embeddingRouteFor } from "../../src/models/embedding-routing.js"
 
-const state = z.enum(["nc", "ak"]).parse(process.argv[2])
+const command = new Command()
+  .argument("<state>")
+  .argument("[session]")
+  .option(
+    "--database-env <name>",
+    "read the database URL from this environment variable instead of the local test database"
+  )
+  .parse()
+const options = command.opts<{ databaseEnv?: string }>()
+const state = z.enum(["nc", "ak"]).parse(command.args[0])
 const session = z
   .string()
   .regex(/^[A-Za-z0-9-]+$/)
-  .parse(process.argv[3] ?? (state === "nc" ? "2025" : "34"))
+  .parse(command.args[1] ?? (state === "nc" ? "2025" : "34"))
 const prefix = legislativeSessionId(state, session).replace("session:", "bill:") + ":%"
 const config = loadConfig({
   NODE_ENV: "test",
-  DATABASE_URL: "postgresql://legislation:legislation@127.0.0.1:55432/legislation_test"
+  DATABASE_URL: options.databaseEnv
+    ? z.string().min(1).parse(process.env[options.databaseEnv])
+    : "postgresql://legislation:legislation@127.0.0.1:55432/legislation_test"
 })
-const { pool } = createDatabase(config.database, { statementTimeoutMs: 30_000 })
+const { pool } = createDatabase(config.database)
 const client = await pool.connect()
 const stored = z.object({ id: z.string(), input_hash: z.string().nullable(), dimensions: z.number().nullable() })
 const billRow = stored.extend({ title: z.string(), summary: z.string().nullable(), subjects: z.array(z.string()) })
 const sectionRow = stored.extend({ heading: z.string().nullable(), text: z.string() })
 try {
   await client.query("begin transaction isolation level repeatable read read only")
+  await client.query("set local statement_timeout='30s'")
   const observed = await client.query("select transaction_timestamp() as observed_at")
   const results = []
   for (const product of ["bill", "document-section"] as const) {
@@ -39,11 +52,17 @@ try {
            from legislation.bills b left join legislation.bill_embeddings e
              on e.bill_id=b.id and e.model=$3 and e.input_contract=$4
            where b.id like $1 and b.id>$2 order by b.id limit 500`
-          : `select s.id,s.heading,s.text,e.input_hash,e.dimensions
-           from legislation.document_sections s join legislation.bill_documents d on d.id=s.document_id
+          : `with scoped_documents as materialized (
+             select id from legislation.bill_documents where bill_id like $1
+           ), page as materialized (
+             select s.id,s.heading,s.text from scoped_documents d
+             join legislation.document_sections s on s.document_id=d.id
+             where s.id>$2 order by s.id limit 500
+           )
+           select s.id,s.heading,s.text,e.input_hash,e.dimensions from page s
            left join legislation.document_section_embeddings e
              on e.section_id=s.id and e.model=$3 and e.input_contract=$4
-           where d.bill_id like $1 and s.id>$2 order by s.id limit 500`
+           order by s.id`
       const page = await client.query(query, [prefix, cursor, route.model, route.embeddingInputContract])
       for (const value of page.rows) {
         const row = stored.parse(value)
@@ -76,7 +95,7 @@ try {
     `${JSON.stringify(
       {
         observedAt: observed.rows[0]?.observed_at,
-        environment: "local",
+        databaseSelection: options.databaseEnv ? { environmentVariable: options.databaseEnv } : { localTest: true },
         productionWrites: false,
         state,
         session,

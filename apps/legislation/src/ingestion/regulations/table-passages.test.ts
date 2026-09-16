@@ -427,6 +427,14 @@ describe("regulatory table passages", () => {
     expect(boundary.context.map((span) => table.text.slice(span.start, span.end)).join("\n")).toContain(
       "Solano County (part)"
     )
+    const alameda = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Alameda County"))
+    invariant(alameda, "classification_continuation_reference_required")
+    const classification = alameda.context.find((span) => span.label === "Column 5 ditto source")
+    invariant(classification, "classification_source_required")
+    expect(table.text.slice(classification.start, classification.end)).toContain(
+      "Not classified/Moderate under 23 U.S.C."
+    )
+    expect(table.text.slice(classification.start, classification.end)).toContain("104(b)(2).")
     const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
     const projection = buildLegalTextProjection({
       versionId: digest(table.xml),

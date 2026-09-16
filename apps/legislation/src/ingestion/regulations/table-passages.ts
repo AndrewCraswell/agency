@@ -309,6 +309,47 @@ function sourceCountyBoundaryRows(rows: ReturnType<ReturnType<typeof load>>, has
   return parents
 }
 
+function sourceClassificationRows(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const headers = rows.first().parents("TABLE").find("THEAD TR").first().children("TH")
+  if (
+    headers.length !== 3 ||
+    sourceText(headers.eq(0)) !== "Designated area" ||
+    sourceText(headers.eq(1)) !== "Designation" ||
+    sourceText(headers.eq(2)) !== "Classification"
+  ) {
+    return parents
+  }
+  for (let index = 1; index < nodes.length; index++) {
+    const parent = nodes[index - 1]
+    const child = nodes[index]
+    invariant(parent && child, "passage_table_row_missing")
+    const before = $(parent).children("TD")
+    const after = $(child).children("TD")
+    if (
+      before.length === 5 &&
+      after.length === 5 &&
+      before.toArray().every((cell) => sourceText($(cell)).length > 0) &&
+      after
+        .slice(0, 3)
+        .toArray()
+        .every((cell) => cell.children.every((node) => node.type === "text" && node.data.trim() === "")) &&
+      after
+        .slice(3)
+        .toArray()
+        .every((cell) => sourceText($(cell)).length > 0) &&
+      [...before.toArray(), ...after.toArray()].every(
+        (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1
+      )
+    ) {
+      parents.set(child, parent)
+    }
+  }
+  return parents
+}
+
 function isPartialCountyScope(row: ReturnType<ReturnType<typeof load>>, hasDesignatedAreaHeader: boolean) {
   if (!hasDesignatedAreaHeader) {
     return false
@@ -364,6 +405,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const exceptionParents = sourceCommodityExceptionRows(rows)
   const hasDesignatedAreaHeader = sourceText(tables.find("THEAD TH").first()) === "Designated area"
   const countyBoundaryParents = sourceCountyBoundaryRows(rows, hasDesignatedAreaHeader)
+  const classificationParents = sourceClassificationRows(rows)
   const headers = tables.find("BOXHD, THEAD")
   const order = $.root().find("*").toArray()
   type Context = { start: number; end: number; label: string }
@@ -460,7 +502,11 @@ export function legalTableRows(input: { text: string; xml: string }) {
         if (inheritedCountyScope) {
           context.push(inheritedCountyScope)
         }
-        const parentNode = conditionParents.get(row) ?? exceptionParents.get(row) ?? countyBoundaryParents.get(row)
+        const parentNode =
+          conditionParents.get(row) ??
+          exceptionParents.get(row) ??
+          countyBoundaryParents.get(row) ??
+          classificationParents.get(row)
         const parentRange = parentNode === undefined ? undefined : rangesByNode.get(parentNode)
         if (parentRange) {
           context.push(...parentRange.context, {
@@ -488,7 +534,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
           } else {
             const hasParentBlank =
               ((conditionParents.has(row) || countyBoundaryParents.has(row)) && column > 1) ||
-              (exceptionParents.has(row) && column < 3)
+              (exceptionParents.has(row) && column < 3) ||
+              (classificationParents.has(row) && column <= 3)
             if (parentRange && hasParentBlank && value.length === 0 && width === 1) {
               column += width
               continue
@@ -498,7 +545,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
             }
             if (value && width === 1) {
               previousCells.set(column, {
-                start: start + offset,
+                start:
+                  classificationParents.has(row) && column === 5 && parentRange ? parentRange.start : start + offset,
                 end: start + offset + value.length,
                 label: `Column ${column} ditto source`
               })
