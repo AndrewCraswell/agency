@@ -1,14 +1,14 @@
 import { createServer, request as sendRequest } from "node:http"
 import { runWithRequestContext } from "@repo/legislation-core/auth/request-context"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { executeNextHttpApiHandler } from "./next/node-handler.js"
+import { executeNextHttpApiHandler } from "./next/node-handler"
 import type {
   IdempotentResponse,
   IdempotencyRequest,
   PreflightSubscriptionMutationExecutor,
   SubscriptionTransaction
-} from "./subscription-repository.js"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
+} from "./subscription-repository"
+import { SubscriptionRepositoryError } from "./subscription-repository"
 import {
   createWebhookSecretProtector,
   type EncryptedWebhookSecret,
@@ -16,11 +16,11 @@ import {
   type SubscriptionRepository,
   type Webhook,
   type WebhookRepository
-} from "./subscriptions.js"
-import type { WebhookVerificationRepository } from "./subscriptions.js"
-import type { WebhookVerificationTransport } from "./webhook-challenge-transport.js"
-import { createWebhookMutationApiHandler } from "./webhook-mutation-routes.js"
-import { resolvePublicWebhookUrl } from "./webhook-security.js"
+} from "./subscriptions"
+import type { WebhookVerificationRepository } from "./subscriptions"
+import type { WebhookVerificationTransport } from "./webhook-challenge-transport"
+import { createWebhookMutationApiHandler } from "./webhook-mutation-routes"
+import { resolvePublicWebhookUrl } from "./webhook-security"
 
 const servers = new Set<ReturnType<typeof createServer>>()
 const fixtureRevision = "00000000-0000-4000-8000-000000000001"

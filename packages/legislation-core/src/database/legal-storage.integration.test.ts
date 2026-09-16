@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { digest } from "../legal-text/contracts.js"
+import { digest } from "../legal-text/contracts"
 
 const databaseUrl = process.env.LEGISLATION_CORE_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {

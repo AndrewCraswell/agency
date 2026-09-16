@@ -2,9 +2,9 @@ import { LegislationApiClient } from "@repo/legislation-core/api-client/client"
 import { createWorkosAuthenticator } from "@repo/legislation-core/auth/workos"
 import { generateKeyPair, SignJWT } from "jose"
 import { expect, it, vi } from "vitest"
-import { loadConfig } from "../../configuration/config.js"
-import { executeAuthenticatedApiRequest } from "../next/authenticated-api-request.js"
-import { createLegalCodesApiHandler } from "./legal-codes-routes.js"
+import { loadConfig } from "../../configuration/config"
+import { executeAuthenticatedApiRequest } from "../next/authenticated-api-request"
+import { createLegalCodesApiHandler } from "./legal-codes-routes"
 
 const pair = await generateKeyPair("RS256")
 const issuer = "https://auth.example"

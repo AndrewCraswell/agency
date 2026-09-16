@@ -4,7 +4,7 @@ import { IncomingMessage, ServerResponse, type IncomingHttpHeaders } from "node:
 import { Socket } from "node:net"
 import { runWithRequestContext, type RequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { prepareApiResponse, sendApiError, type HttpApiHandler } from "../http.js"
+import { prepareApiResponse, sendApiError, type HttpApiHandler } from "../http"
 
 const DEFAULT_MAXIMUM_BODY_BYTES = 5 * 1024 * 1024
 

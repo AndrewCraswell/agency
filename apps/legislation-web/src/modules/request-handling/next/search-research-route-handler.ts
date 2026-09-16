@@ -1,23 +1,23 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import type { OpenRouterRetrievalClient } from "../../../services/openrouter/openrouter-retrieval.js"
-import type { LegislationConfig } from "../../configuration/config.js"
-import { readDocumentDiff } from "../../legislation/persistence/queries/document-diff-read.js"
-import { getNextLegislationApplication } from "../../legislation/runtime/runtime.js"
-import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "../api/amendment-search.js"
-import { createCivicSearchApiHandler, type CivicSearchApi } from "../api/civic-search.js"
-import { createDocumentDiffApiHandler } from "../api/document-diff-routes.js"
-import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http.js"
-import { createPassageSearchApiHandler, type PassageSearchApi } from "../api/passage-search.js"
+import type { OpenRouterRetrievalClient } from "../../../services/openrouter/openrouter-retrieval"
+import type { LegislationConfig } from "../../configuration/config"
+import { readDocumentDiff } from "../../legislation/persistence/queries/document-diff-read"
+import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
+import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "../api/amendment-search"
+import { createCivicSearchApiHandler, type CivicSearchApi } from "../api/civic-search"
+import { createDocumentDiffApiHandler } from "../api/document-diff-routes"
+import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http"
+import { createPassageSearchApiHandler, type PassageSearchApi } from "../api/passage-search"
 import {
   createCanonicalResearchEvidenceRetriever,
   createOpenRouterResearchAnswerGenerator,
   createResearchAnswerApiHandler,
   createResearchAnswerService,
   createUnavailableResearchAnswerApi
-} from "../api/research-answers.js"
-import { createProductionUniversalSearchApi } from "../api/universal-search-adapter.js"
-import { createUniversalSearchApiHandler } from "../api/universal-search.js"
-import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
+} from "../api/research-answers"
+import { createUniversalSearchApiHandler } from "../api/universal-search"
+import { createProductionUniversalSearchApi } from "../api/universal-search-adapter"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 
 type SearchResearchQueryService = CivicSearchApi & AmendmentSearchApi & PassageSearchApi
 

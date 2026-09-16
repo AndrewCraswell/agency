@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { JurisdictionCollectionRepository } from "./jurisdiction-collection-read-repository.js"
+import { JurisdictionCollectionRepository } from "./jurisdiction-collection-read-repository"
 
 describe("jurisdiction collection repository", () => {
   it("forwards the complete collection input to the canonical store", async () => {

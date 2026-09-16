@@ -135,15 +135,11 @@ function startLocalServer(secrets: readonly string[], port: number): LocalServer
     PORT: String(port)
   })
   const nextCliPath = createRequire(new URL("../package.json", import.meta.url)).resolve("next/dist/bin/next")
-  const child = spawn(
-    process.execPath,
-    [nextCliPath, "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)],
-    {
-      cwd: appRoot,
-      env: environment,
-      stdio: ["ignore", "pipe", "pipe"]
-    }
-  )
+  const child = spawn(process.execPath, [nextCliPath, "dev", "--hostname", "127.0.0.1", "--port", String(port)], {
+    cwd: appRoot,
+    env: environment,
+    stdio: ["ignore", "pipe", "pipe"]
+  })
   const local: {
     child: ChildProcess
     secrets: readonly string[]

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto"
 import type { IncomingMessage } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
-import type { CanonicalDocumentRead } from "../../legislation/persistence/queries/document-reads.js"
-import { buildDocumentDiff, type DiffGranularity, type DiffHunk, type DiffSection } from "./document-diff.js"
-import { projectDocumentSummaryRead } from "./document-read-routes.js"
+import type { CanonicalDocumentRead } from "../../legislation/persistence/queries/document-reads"
+import { buildDocumentDiff, type DiffGranularity, type DiffHunk, type DiffSection } from "./document-diff"
+import { projectDocumentSummaryRead } from "./document-read-routes"
 import {
   apiResource,
   assertAllowedQueryParameters,
@@ -13,7 +13,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 export interface DocumentDiffApi {
   readDocumentDiff: (input: Readonly<{ billId: string; leftDocumentId: string; rightDocumentId: string }>) => Promise<{

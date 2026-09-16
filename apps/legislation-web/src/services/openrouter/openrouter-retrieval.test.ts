@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { OpenRouterRetrievalClient } from "./openrouter-retrieval.js"
+import { OpenRouterRetrievalClient } from "./openrouter-retrieval"
 
 describe("OpenRouter retrieval client", () => {
   it("routes bill queries to Voyage and selectively reranks bill candidates", async () => {

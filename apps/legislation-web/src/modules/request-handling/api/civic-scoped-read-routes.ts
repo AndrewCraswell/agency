@@ -5,9 +5,9 @@ import type {
   OrganizationMembershipRead,
   PersonTermLookup,
   PersonTermRead
-} from "../../legislation/persistence/queries/civic-scoped-reads.js"
-import { projectLegislativeTerm } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/civic-scoped-reads"
+import { projectLegislativeTerm } from "./canonical-projection"
+import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiResource,
@@ -15,8 +15,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { projectOrganizationMembershipRead } from "./membership-read-projection.js"
+} from "./http"
+import { projectOrganizationMembershipRead } from "./membership-read-projection"
 
 export interface CivicScopedReadApi {
   getOrganizationMembership: (input: OrganizationMembershipLookup) => Promise<OrganizationMembershipRead>

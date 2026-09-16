@@ -9,7 +9,7 @@ import {
 } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql, type SQL } from "drizzle-orm"
-import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection.js"
+import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

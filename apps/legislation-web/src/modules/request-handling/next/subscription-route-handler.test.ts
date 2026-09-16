@@ -4,7 +4,7 @@ import {
   type RequestIdentity
 } from "@repo/legislation-core/auth/request-context"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { HttpApiHandler } from "../api/http.js"
+import type { HttpApiHandler } from "../api/http"
 
 type HandlerFactory = (...arguments_: readonly unknown[]) => HttpApiHandler
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
@@ -53,7 +53,7 @@ import {
   createSubscriptionHttpApiHandler,
   createSubscriptionRequestHandler,
   handleSubscriptionRequest
-} from "./subscription-route-handler.js"
+} from "./subscription-route-handler"
 
 afterEach(() => {
   observedIdentities.length = 0

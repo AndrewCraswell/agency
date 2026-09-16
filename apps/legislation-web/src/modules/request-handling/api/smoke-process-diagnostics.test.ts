@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatSmokeProcessOutput } from "./smoke-process-diagnostics.js"
+import { formatSmokeProcessOutput } from "./smoke-process-diagnostics"
 
 describe("smoke process diagnostics", () => {
   it("surfaces stdout-only startup failures", () => {

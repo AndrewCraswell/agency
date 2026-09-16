@@ -5,9 +5,9 @@ import type {
   PersonBillActivity,
   PersonBillActivityListInput,
   PersonBillActivityPage
-} from "../../legislation/persistence/queries/person-bill-activity.js"
-import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
-import { projectBillSummaryRead, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/person-bill-activity"
+import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection"
+import { projectBillSummaryRead, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -15,7 +15,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -113,7 +113,7 @@ function isActivity(value: unknown): value is PersonBillActivity {
   )
 }
 
-function isBillSummaryRead(value: unknown): value is import("./canonical-read.js").BillSummaryRead {
+function isBillSummaryRead(value: unknown): value is import("./canonical-read").BillSummaryRead {
   if (!isRecord(value)) {
     return false
   }

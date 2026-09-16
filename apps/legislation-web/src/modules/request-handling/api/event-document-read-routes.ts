@@ -1,7 +1,7 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { EventDocumentRead } from "../../legislation/persistence/queries/event-document-read.js"
-import { projectEventDocument } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+import type { EventDocumentRead } from "../../legislation/persistence/queries/event-document-read"
+import { projectEventDocument } from "./canonical-projection"
+import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiResource,
@@ -9,7 +9,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 export interface EventDocumentReadApi {
   getEventDocument: (input: Readonly<{ eventDocumentId: string; meetingId: string }>) => Promise<EventDocumentRead>

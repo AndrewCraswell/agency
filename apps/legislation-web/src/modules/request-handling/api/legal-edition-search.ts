@@ -11,7 +11,7 @@ import { requireRights } from "@repo/legislation-core/legal-text/rights"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { readLegalSearchResultPage } from "./legal-search-results.js"
+import { readLegalSearchResultPage } from "./legal-search-results"
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
 export const legalEditionSearchRequestSchema = z.strictObject({

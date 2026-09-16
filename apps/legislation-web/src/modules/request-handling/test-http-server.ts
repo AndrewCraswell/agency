@@ -4,7 +4,7 @@ import { runWithRequestContext, type RequestIdentity } from "@repo/legislation-c
 import { AuthenticationError } from "@repo/legislation-core/auth/workos"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { errorContext, type Logger } from "@repo/legislation-core/observability/logger"
-import { prepareApiResponse, sendApiError, type HttpApiHandler } from "./api/http.js"
+import { prepareApiResponse, sendApiError, type HttpApiHandler } from "./api/http"
 
 type ServerDependencies = Readonly<{
   apiHandler?: HttpApiHandler

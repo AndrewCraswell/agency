@@ -20,10 +20,10 @@ import {
   type AmendmentSummaryProjectionInput,
   type DocumentSummary,
   type Sponsor
-} from "../../../request-handling/api/canonical-projection.js"
-import { sourceProjectionContext } from "../../../request-handling/api/canonical-read.js"
-import { projectDocumentDetailRead } from "../../../request-handling/api/document-read-routes.js"
-import { getDocumentDetail } from "./document-reads.js"
+} from "../../../request-handling/api/canonical-projection"
+import { sourceProjectionContext } from "../../../request-handling/api/canonical-read"
+import { projectDocumentDetailRead } from "../../../request-handling/api/document-read-routes"
+import { getDocumentDetail } from "./document-reads"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

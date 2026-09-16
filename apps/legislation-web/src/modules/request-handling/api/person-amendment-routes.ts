@@ -3,10 +3,10 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type {
   PersonAmendmentsListInput,
   PersonAmendmentsPage
-} from "../../legislation/persistence/queries/person-amendments.js"
-import { projectPersonAmendmentRead } from "../../legislation/persistence/queries/person-amendments.js"
-import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/person-amendments"
+import { projectPersonAmendmentRead } from "../../legislation/persistence/queries/person-amendments"
+import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   assertAllowedQueryParameters,
@@ -15,7 +15,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const allowedQueryParameters = ["cursor", "from", "limit", "sessionId", "status", "to"] as const
 const MAX_CURSOR_LENGTH = 4_096

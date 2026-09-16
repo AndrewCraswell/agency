@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readDirectoryObservation } from "./committee-directory-observation.js"
+import { readDirectoryObservation } from "./committee-directory-observation"
 
 const previous = {
   packageId: "CDIR-2026-02-20",

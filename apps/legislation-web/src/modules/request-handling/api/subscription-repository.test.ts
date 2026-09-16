@@ -11,13 +11,13 @@ import {
   PostgresSubscriptionRepository,
   SubscriptionIdempotencyTransaction,
   type SubscriptionTransaction
-} from "./subscription-repository.js"
+} from "./subscription-repository"
 import {
   createWebhookSecretProtector,
   SubscriptionService,
   type Subscription,
   type SubscriptionOwner
-} from "./subscriptions.js"
+} from "./subscriptions"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe

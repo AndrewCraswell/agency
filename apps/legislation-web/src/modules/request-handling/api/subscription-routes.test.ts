@@ -7,12 +7,12 @@ import {
   type SubscriptionMutationExecutor,
   SubscriptionRepositoryError,
   type SubscriptionTransaction
-} from "./subscription-repository.js"
+} from "./subscription-repository"
 import {
   createSubscriptionApiHandler,
   createSubscriptionMutationApiHandler,
   createSubscriptionReadApiHandler
-} from "./subscription-routes.js"
+} from "./subscription-routes"
 import {
   createWebhookSecretProtector,
   type Delivery,
@@ -21,7 +21,7 @@ import {
   type Subscription,
   type SubscriptionRepository,
   type WebhookRepository
-} from "./subscriptions.js"
+} from "./subscriptions"
 
 const servers = new Set<ReturnType<typeof createServer>>()
 

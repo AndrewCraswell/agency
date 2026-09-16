@@ -5,7 +5,7 @@ import {
   isOrganizationCivicFoundationComplete,
   isPersonCivicFoundationComplete,
   isTermCivicFoundationComplete
-} from "./civic-foundation.js"
+} from "./civic-foundation"
 
 const source = {
   isOfficial: true,

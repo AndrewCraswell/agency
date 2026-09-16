@@ -5,9 +5,9 @@ import type {
   PersonListInput,
   PersonPage,
   PersonSort
-} from "../../legislation/persistence/queries/people-read.js"
-import { projectPersonSummary } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/people-read"
+import { projectPersonSummary } from "./canonical-projection"
+import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -15,7 +15,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

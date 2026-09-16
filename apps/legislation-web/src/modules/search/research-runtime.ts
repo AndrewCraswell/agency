@@ -1,8 +1,8 @@
 import { createDatabase, withReadOnlyDatabase } from "@repo/legislation-core/database/database"
-import { OpenRouterRetrievalClient } from "../../services/openrouter/openrouter-retrieval.js"
-import { loadConfig, type LegislationConfig } from "../configuration/config.js"
-import { LegislationQueryService } from "../legislation/query-service.js"
-import { createRankedPassageSearch } from "./ranked-passage-search.js"
+import { OpenRouterRetrievalClient } from "../../services/openrouter/openrouter-retrieval"
+import { loadConfig, type LegislationConfig } from "../configuration/config"
+import { LegislationQueryService } from "../legislation/query-service"
+import { createRankedPassageSearch } from "./ranked-passage-search"
 
 declare global {
   var __legislationResearchRuntime: ReturnType<typeof createResearchRuntime> | undefined

@@ -1,5 +1,5 @@
-import { createNextLegislationApplication, type NextLegislationApplication } from "./composition.js"
-import type { NextDatabaseReadiness } from "./readiness.js"
+import { createNextLegislationApplication, type NextLegislationApplication } from "./composition"
+import type { NextDatabaseReadiness } from "./readiness"
 
 declare global {
   var __legislationNextRuntime: NextLegislationRuntime<NextLegislationApplication> | undefined

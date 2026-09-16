@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract.js"
+import { validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract"
 
 const hash = "a".repeat(64)
 const common = {

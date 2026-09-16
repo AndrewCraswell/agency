@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildSupportingMaterialSectionReadQuery,
   supportingMaterialSectionReadFromPersistence
-} from "./supporting-material-section-read.js"
+} from "./supporting-material-section-read"
 
 const pool = new pg.Pool({ connectionString: "postgresql://supporting-material-section-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

@@ -6,8 +6,8 @@ import {
   type BillRelatedMode,
   type BillRelatedPage,
   type BillRelationClassification
-} from "../../legislation/persistence/queries/bill-related-read.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/bill-related-read"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -15,7 +15,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

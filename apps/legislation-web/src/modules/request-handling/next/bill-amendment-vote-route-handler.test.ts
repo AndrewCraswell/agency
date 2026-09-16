@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { HttpApiHandler } from "../api/http.js"
+import type { HttpApiHandler } from "../api/http"
 
 type HandlerFactory = (...arguments_: readonly unknown[]) => HttpApiHandler
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
@@ -66,7 +66,7 @@ vi.mock("../../legislation/runtime/runtime.js", () => ({
 import {
   createBillAmendmentVoteRequestHandler,
   handleBillAmendmentVoteRequest
-} from "./bill-amendment-vote-route-handler.js"
+} from "./bill-amendment-vote-route-handler"
 
 afterEach(() => {
   vi.clearAllMocks()

@@ -1,7 +1,7 @@
 import type pg from "pg"
 import invariant from "tiny-invariant"
-import { digest } from "./contracts.js"
-import { assertRights } from "./storage-contract.js"
+import { digest } from "./contracts"
+import { assertRights } from "./storage-contract"
 
 export async function requireRights(
   client: Pick<pg.PoolClient, "query">,

@@ -11,8 +11,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { createLegalCodesReader } from "./legal-codes-read.js"
+} from "./http"
+import type { createLegalCodesReader } from "./legal-codes-read"
 
 export function createLegalCodesApiHandler(readCodes: ReturnType<typeof createLegalCodesReader>): HttpApiHandler {
   return async (request, response) => {

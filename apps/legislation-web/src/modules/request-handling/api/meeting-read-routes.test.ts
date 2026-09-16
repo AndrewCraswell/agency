@@ -1,9 +1,9 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createMeetingReadApiHandler, type MeetingReadApi } from "./meeting-read-routes.js"
+import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read"
+import { close, createLegislationServer } from "../test-http-server"
+import { createMeetingReadApiHandler, type MeetingReadApi } from "./meeting-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "meeting-read-test", write: () => undefined })

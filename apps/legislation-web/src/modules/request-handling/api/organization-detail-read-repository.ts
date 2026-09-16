@@ -1,22 +1,22 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads.js"
+import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads"
 import {
   getOrganizationDetailRead,
   type OrganizationDetailRead
-} from "../../legislation/persistence/queries/organization-detail-read.js"
+} from "../../legislation/persistence/queries/organization-detail-read"
 import {
   listOrganizationMemberships,
   type OrganizationPage
-} from "../../legislation/persistence/queries/organization-relationships.js"
+} from "../../legislation/persistence/queries/organization-relationships"
 import {
   projectOrganizationDetail,
   type OrganizationDetail,
   type OrganizationSummary,
   type ProjectionContext
-} from "./canonical-projection.js"
-import { projectOrganizationMembershipRead } from "./membership-read-projection.js"
-import { projectOrganizationRow } from "./organization-summary-read-projection.js"
+} from "./canonical-projection"
+import { projectOrganizationMembershipRead } from "./membership-read-projection"
+import { projectOrganizationRow } from "./organization-summary-read-projection"
 
 export interface OrganizationDetailReadInput {
   childLimit: number

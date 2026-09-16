@@ -2,15 +2,9 @@ import { createHash } from "node:crypto"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm"
-import { isRfc3339Timestamp } from "./canonical-projection.js"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
-import type {
-  RepositoryPage,
-  SubscriptionEventType,
-  SubscriptionOwner,
-  Webhook,
-  WebhookStatus
-} from "./subscriptions.js"
+import { isRfc3339Timestamp } from "./canonical-projection"
+import { SubscriptionRepositoryError } from "./subscription-repository"
+import type { RepositoryPage, SubscriptionEventType, SubscriptionOwner, Webhook, WebhookStatus } from "./subscriptions"
 
 const eventTypes = new Set<SubscriptionEventType>([
   "action-added",

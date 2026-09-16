@@ -1,9 +1,9 @@
 import { LegislationApiClient } from "@repo/legislation-core/api-client/client"
 import pg from "pg"
 import { afterEach, expect, it, vi } from "vitest"
-import { createLegalSearch } from "./legal-search-read.js"
-import { createLegalSearchApiHandler } from "./legal-search-routes.js"
-import { executeNextHttpApiHandler } from "./next/node-handler.js"
+import { createLegalSearch } from "./legal-search-read"
+import { createLegalSearchApiHandler } from "./legal-search-routes"
+import { executeNextHttpApiHandler } from "./next/node-handler"
 
 const pool = new pg.Pool()
 afterEach(() => vi.restoreAllMocks())

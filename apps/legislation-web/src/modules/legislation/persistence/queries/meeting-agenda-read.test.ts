@@ -7,7 +7,7 @@ import {
   buildMeetingAgendaListQuery,
   buildMeetingAgendaExistenceQuery,
   meetingAgendaReadFromPersistence
-} from "./meeting-agenda-read.js"
+} from "./meeting-agenda-read"
 
 const pool = new pg.Pool({ connectionString: "postgresql://meeting-agenda-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

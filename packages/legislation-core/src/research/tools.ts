@@ -4,15 +4,15 @@ import {
   legalProvisionsRequestSchema,
   type LegalEditionsRequest,
   type LegalProvisionsRequest
-} from "../api-client/legal-browse-contract.js"
-import { legalCodesRequestSchema, type LegalCodesRequest } from "../api-client/legal-codes-contract.js"
-import { legalSearchRequestSchema, type LegalSearchRequest } from "../api-client/legal-search-contract.js"
-import { legalTextRequestSchema, type LegalTextRequest } from "../api-client/legal-text-contract.js"
-import { getRequestContext } from "../auth/request-context.js"
-import { LegislationError } from "../domain/errors.js"
-import { errorContext, type Logger } from "../observability/logger.js"
-import type { Telemetry } from "../observability/telemetry.js"
-import { prepareResultPage, readResultPage } from "./result-pages.js"
+} from "../api-client/legal-browse-contract"
+import { legalCodesRequestSchema, type LegalCodesRequest } from "../api-client/legal-codes-contract"
+import { legalSearchRequestSchema, type LegalSearchRequest } from "../api-client/legal-search-contract"
+import { legalTextRequestSchema, type LegalTextRequest } from "../api-client/legal-text-contract"
+import { getRequestContext } from "../auth/request-context"
+import { LegislationError } from "../domain/errors"
+import { errorContext, type Logger } from "../observability/logger"
+import type { Telemetry } from "../observability/telemetry"
+import { prepareResultPage, readResultPage } from "./result-pages"
 
 type JSONValue = z.infer<ReturnType<typeof z.json>>
 

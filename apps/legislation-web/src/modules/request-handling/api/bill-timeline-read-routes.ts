@@ -4,7 +4,7 @@ import type {
   BillTimelinePage,
   BillTimelinePersistenceRead,
   BillTimelineType
-} from "../../legislation/persistence/queries/bill-timeline-read.js"
+} from "../../legislation/persistence/queries/bill-timeline-read"
 import {
   isIsoDate,
   isRfc3339Timestamp,
@@ -12,8 +12,8 @@ import {
   projectMeetingOutcome,
   projectVoteSummary,
   type ProjectionContext
-} from "./canonical-projection.js"
-import { projectBillTimelineRead, sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+} from "./canonical-projection"
+import { projectBillTimelineRead, sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   assertAllowedQueryParameters,
@@ -21,8 +21,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { projectOrganizationRow } from "./organization-summary-read-projection.js"
+} from "./http"
+import { projectOrganizationRow } from "./organization-summary-read-projection"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

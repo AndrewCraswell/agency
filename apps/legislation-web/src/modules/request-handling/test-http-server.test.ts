@@ -4,8 +4,8 @@ import { AuthenticationError } from "@repo/legislation-core/auth/workos"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import { readJsonBody, sendApiJson } from "./api/http.js"
-import { close, createLegislationServer } from "./test-http-server.js"
+import { readJsonBody, sendApiJson } from "./api/http"
+import { close, createLegislationServer } from "./test-http-server"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "api-test", write: () => undefined })

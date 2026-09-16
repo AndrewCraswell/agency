@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm"
-import { billActions } from "../database/schema/schema.js"
+import { billActions } from "../database/schema/schema"
 
 /**
  * A date-only legislative action is interpreted as midnight UTC so every

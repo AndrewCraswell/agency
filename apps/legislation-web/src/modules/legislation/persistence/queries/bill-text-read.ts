@@ -3,8 +3,8 @@ import { billDocuments, documentSections } from "@repo/legislation-core/database
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, eq, gt, gte, inArray, lte, or, sql, type SQL } from "drizzle-orm"
 import type { PgColumn } from "drizzle-orm/pg-core"
-import type { CanonicalDocumentSectionRead, DocumentPage } from "./document-reads.js"
-import { documentSectionReadFromPersistence } from "./document-reads.js"
+import type { CanonicalDocumentSectionRead, DocumentPage } from "./document-reads"
+import { documentSectionReadFromPersistence } from "./document-reads"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

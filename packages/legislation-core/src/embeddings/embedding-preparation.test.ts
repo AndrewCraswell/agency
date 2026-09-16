@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { splitEmbeddingText } from "./embedding-preparation.js"
-import { embeddingTokenizer, validateEmbeddingTokenBudget } from "./embedding-tokenizer.js"
+import { splitEmbeddingText } from "./embedding-preparation"
+import { embeddingTokenizer, validateEmbeddingTokenBudget } from "./embedding-tokenizer"
 import voyageReference from "./tokenizers/voyage-reference-counts.json" with { type: "json" }
 
 describe("shared model-aware embedding preparation", () => {

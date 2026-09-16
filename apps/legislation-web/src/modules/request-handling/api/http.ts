@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger, errorContext } from "@repo/legislation-core/observability/logger"
-import { toPublicApiError } from "./error-mapping.js"
+import { toPublicApiError } from "./error-mapping"
 
 const apiLogger = createLogger({ level: "error", service: "legislation-api" })
 

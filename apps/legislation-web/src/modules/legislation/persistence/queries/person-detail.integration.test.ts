@@ -6,8 +6,8 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { projectPersonDetailRead } from "../../../request-handling/api/person-detail-read-routes.js"
-import { getPersonDetailRead } from "./person-detail-read.js"
+import { projectPersonDetailRead } from "../../../request-handling/api/person-detail-read-routes"
+import { getPersonDetailRead } from "./person-detail-read"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 if (databaseUrl !== undefined && new URL(databaseUrl).pathname !== "/legislation_test") {

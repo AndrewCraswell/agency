@@ -1,8 +1,8 @@
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type { PersonCollectionRead } from "../../legislation/persistence/queries/people-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createPeopleReadApiHandler, type PeopleReadApi } from "./people-read-routes.js"
+import type { PersonCollectionRead } from "../../legislation/persistence/queries/people-read"
+import { close, createLegislationServer } from "../test-http-server"
+import { createPeopleReadApiHandler, type PeopleReadApi } from "./people-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "people-read-test", write: () => undefined })

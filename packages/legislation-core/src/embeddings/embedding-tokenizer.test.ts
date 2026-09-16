@@ -1,5 +1,5 @@
 import { expect, it } from "vitest"
-import { embeddingTokenizer, validateEmbeddingTokenBudget } from "./embedding-tokenizer.js"
+import { embeddingTokenizer, validateEmbeddingTokenBudget } from "./embedding-tokenizer"
 
 it("loads the pinned external OpenAI vocabulary and preserves exact token counts", async () => {
   const tokenizer = await embeddingTokenizer("openai/text-embedding-3-small")

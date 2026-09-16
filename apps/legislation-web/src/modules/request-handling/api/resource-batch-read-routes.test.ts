@@ -1,10 +1,10 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { projectJurisdiction } from "./canonical-projection.js"
-import type { ResourceBatchReadRepository, ResourceBatchRequestItem } from "./resource-batch-read-repository.js"
-import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
+import { close, createLegislationServer } from "../test-http-server"
+import { projectJurisdiction } from "./canonical-projection"
+import type { ResourceBatchReadRepository, ResourceBatchRequestItem } from "./resource-batch-read-repository"
+import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({

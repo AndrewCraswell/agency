@@ -29,7 +29,7 @@ import {
   projectVoteSummary,
   type ProjectionContext,
   type SourceReferences
-} from "./canonical-projection.js"
+} from "./canonical-projection"
 
 const context: ProjectionContext = {
   apiBaseUrl: "https://legislation.example.test/",

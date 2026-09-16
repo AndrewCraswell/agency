@@ -3,7 +3,7 @@ import {
   legalEditionsRequestSchema,
   legalProvisionsRequestSchema,
   validateLegalProvisionsResponse
-} from "./legal-browse-contract.js"
+} from "./legal-browse-contract"
 
 it("rejects conflicting traversal, reversed dates and unsupported filters", () => {
   for (const value of [{ issuedFrom: "2026-01-01", issuedTo: "2025-01-01" }, { sourceId: "vendor" }, { extra: true }]) {

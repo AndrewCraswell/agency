@@ -3,10 +3,10 @@ import type {
   ChangeEventRead,
   ChangeFeedListInput,
   ChangeFeedPage
-} from "../../legislation/persistence/queries/change-feed-reads.js"
-import { projectChangeEventRead } from "../../legislation/persistence/queries/change-feed-reads.js"
-import type { CanonicalChangeType } from "../../legislation/persistence/queries/changes.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/change-feed-reads"
+import { projectChangeEventRead } from "../../legislation/persistence/queries/change-feed-reads"
+import type { CanonicalChangeType } from "../../legislation/persistence/queries/changes"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   apiResource,
@@ -18,7 +18,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const globalAllowedQueryParameters = [
   "classification",

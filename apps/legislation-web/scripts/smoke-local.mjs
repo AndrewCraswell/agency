@@ -7,22 +7,18 @@ if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
   throw new RangeError("LEGISLATION_SMOKE_PORT must be an integer between 1 and 65535")
 }
 const nextCliPath = createRequire(new URL("../package.json", import.meta.url)).resolve("next/dist/bin/next")
-const child = spawn(
-  process.execPath,
-  [nextCliPath, "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)],
-  {
-    cwd: fileURLToPath(new URL("..", import.meta.url)),
-    env: {
-      ...process.env,
-      AUTH_MODE: "disabled",
-      LEGISLATION_HOST: "127.0.0.1",
-      LEGISLATION_PORT: String(port),
-      NODE_ENV: "development",
-      PORT: String(port)
-    },
-    stdio: ["ignore", "pipe", "pipe"]
-  }
-)
+const child = spawn(process.execPath, [nextCliPath, "dev", "--hostname", "127.0.0.1", "--port", String(port)], {
+  cwd: fileURLToPath(new URL("..", import.meta.url)),
+  env: {
+    ...process.env,
+    AUTH_MODE: "disabled",
+    LEGISLATION_HOST: "127.0.0.1",
+    LEGISLATION_PORT: String(port),
+    NODE_ENV: "development",
+    PORT: String(port)
+  },
+  stdio: ["ignore", "pipe", "pipe"]
+})
 let diagnostics = ""
 child.stdout.on("data", (chunk) => {
   diagnostics += chunk.toString()

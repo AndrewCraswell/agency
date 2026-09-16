@@ -7,7 +7,7 @@ import {
   type BillSearchCandidateRead,
   type BillSearchExecution,
   type BillSearchMode
-} from "../../request-handling/api/canonical-search.js"
+} from "../../request-handling/api/canonical-search"
 
 export type DirectBillSearchPage = Readonly<{
   items: readonly BillSearchCandidateRead[]

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import type { amendments } from "@repo/legislation-core/database/schema/schema"
-import type { DocumentAmendmentSummaryRow } from "../legislation/persistence/queries/amendment-reads.js"
+import type { DocumentAmendmentSummaryRow } from "../legislation/persistence/queries/amendment-reads"
 
 export type AmendmentSearchMode = "hybrid" | "lexical" | "semantic"
 export type AmendmentSearchRecordType = "document" | "structured"

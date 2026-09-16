@@ -5,8 +5,8 @@ import {
   type AmendmentSearchInput,
   type AmendmentSearchMode,
   type AmendmentSearchPage
-} from "../../search/amendment-search.js"
-import { projectAmendmentSearchHits } from "./canonical-amendment-search.js"
+} from "../../search/amendment-search"
+import { projectAmendmentSearchHits } from "./canonical-amendment-search"
 import {
   apiSearchPage,
   assertAllowedQueryParameters,
@@ -15,12 +15,12 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 export interface AmendmentSearchApi {
   searchAmendmentHits: (
     input: AmendmentSearchInput
-  ) => Promise<AmendmentSearchPage<import("../../search/amendment-search.js").AmendmentSearchCandidate>>
+  ) => Promise<AmendmentSearchPage<import("../../search/amendment-search").AmendmentSearchCandidate>>
 }
 
 const identifier = z.string().trim().min(1).max(256)

@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it } from "vitest"
 import type {
   OrganizationBillRead,
   OrganizationBillReadPage
-} from "../../legislation/persistence/queries/organization-bill-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createOrganizationBillReadApiHandler, type OrganizationBillReadApi } from "./organization-bill-read-routes.js"
+} from "../../legislation/persistence/queries/organization-bill-read"
+import { close, createLegislationServer } from "../test-http-server"
+import { createOrganizationBillReadApiHandler, type OrganizationBillReadApi } from "./organization-bill-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "organization-bill-read-test", write: () => undefined })

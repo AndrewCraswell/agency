@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { OrganizationListInput } from "../../legislation/persistence/queries/organization-relationships.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+import type { OrganizationListInput } from "../../legislation/persistence/queries/organization-relationships"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   assertAllowedQueryParameters,
@@ -9,9 +9,9 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { OrganizationCollectionPage } from "./organization-read-repository.js"
-import { projectOrganizationRow } from "./organization-summary-read-projection.js"
+} from "./http"
+import type { OrganizationCollectionPage } from "./organization-read-repository"
+import { projectOrganizationRow } from "./organization-summary-read-projection"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

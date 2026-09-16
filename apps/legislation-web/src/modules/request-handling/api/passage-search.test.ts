@@ -1,12 +1,8 @@
 import { createServer, type Server } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { afterEach, describe, expect, it } from "vitest"
-import {
-  encodePassageSearchCursor,
-  type PassageSearchInput,
-  type PassageSearchResultPage
-} from "../../search/search.js"
-import { createPassageSearchApiHandler, type PassageSearchApi } from "./passage-search.js"
+import { encodePassageSearchCursor, type PassageSearchInput, type PassageSearchResultPage } from "../../search/search"
+import { createPassageSearchApiHandler, type PassageSearchApi } from "./passage-search"
 
 const servers = new Set<Server>()
 

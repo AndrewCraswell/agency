@@ -1,13 +1,13 @@
 import { createDatabase, type LegislationDatabase } from "@repo/legislation-core/database/database"
-import { OpenRouterRetrievalClient } from "../../../services/openrouter/openrouter-retrieval.js"
-import { loadConfig, type LegislationConfig } from "../../configuration/config.js"
-import { createLegalBrowser } from "../../request-handling/api/legal-browse-read.js"
-import { createLegalCodesReader } from "../../request-handling/api/legal-codes-read.js"
-import { createLegalSearch } from "../../request-handling/api/legal-search-read.js"
-import { createLegalTextReader } from "../../request-handling/api/legal-text-read.js"
-import { createRankedPassageSearch } from "../../search/ranked-passage-search.js"
-import { LegislationQueryService } from "../query-service.js"
-import { createNextDatabaseReadiness, type NextDatabaseReadiness } from "./readiness.js"
+import { OpenRouterRetrievalClient } from "../../../services/openrouter/openrouter-retrieval"
+import { loadConfig, type LegislationConfig } from "../../configuration/config"
+import { createLegalBrowser } from "../../request-handling/api/legal-browse-read"
+import { createLegalCodesReader } from "../../request-handling/api/legal-codes-read"
+import { createLegalSearch } from "../../request-handling/api/legal-search-read"
+import { createLegalTextReader } from "../../request-handling/api/legal-text-read"
+import { createRankedPassageSearch } from "../../search/ranked-passage-search"
+import { LegislationQueryService } from "../query-service"
+import { createNextDatabaseReadiness, type NextDatabaseReadiness } from "./readiness"
 
 export interface NextLegislationApplication {
   readonly config: LegislationConfig

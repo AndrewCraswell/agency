@@ -1,7 +1,7 @@
 import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { AmendmentReadRepository } from "./amendment-read-repository.js"
-import type { AmendmentDetail } from "./canonical-projection.js"
+import type { AmendmentReadRepository } from "./amendment-read-repository"
+import type { AmendmentDetail } from "./canonical-projection"
 import {
   apiPage,
   apiResource,
@@ -16,7 +16,7 @@ import {
   sendApiJson,
   type HttpApiHandler,
   type JsonRecord
-} from "./http.js"
+} from "./http"
 
 const MAX_BATCH_BYTES = 5 * 1024 * 1024
 const MAX_BATCH_ITEMS = 25

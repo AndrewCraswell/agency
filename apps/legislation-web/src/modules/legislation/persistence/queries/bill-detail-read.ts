@@ -25,19 +25,19 @@ import {
   type PersonSummary,
   type Sponsor,
   type VoteDetail
-} from "../../../request-handling/api/canonical-projection.js"
-import { sourceProjectionContext } from "../../../request-handling/api/canonical-read.js"
-import { projectDocumentSummaryRead } from "../../../request-handling/api/document-read-routes.js"
-import { projectOrganizationRow } from "../../../request-handling/api/organization-summary-read-projection.js"
-import { projectVote, projectVoteDetailRead } from "../../../request-handling/api/vote-read-routes.js"
+} from "../../../request-handling/api/canonical-projection"
+import { sourceProjectionContext } from "../../../request-handling/api/canonical-read"
+import { projectDocumentSummaryRead } from "../../../request-handling/api/document-read-routes"
+import { projectOrganizationRow } from "../../../request-handling/api/organization-summary-read-projection"
+import { projectVote, projectVoteDetailRead } from "../../../request-handling/api/vote-read-routes"
 import {
   amendmentContinuationCursor,
   buildDocumentAmendmentListQuery,
   buildStructuredAmendmentListQuery,
   compareAmendmentReadOrder
-} from "./amendment-reads.js"
-import { listBillDocuments } from "./document-reads.js"
-import { assertCanonicalVotePersistence, assertVotePositionSequence, listVotePositionReads } from "./vote-reads.js"
+} from "./amendment-reads"
+import { listBillDocuments } from "./document-reads"
+import { assertCanonicalVotePersistence, assertVotePositionSequence, listVotePositionReads } from "./vote-reads"
 
 const MAX_CHILD_LIMIT = 25
 /** Vote details embed positions, so this relationship keeps the 25-item cap. */

@@ -3,14 +3,10 @@ import { z } from "zod"
 import {
   documentReadFromPersistence,
   documentSectionReadFromPersistence
-} from "../../legislation/persistence/queries/document-reads.js"
-import {
-  decodePassageSearchCursor,
-  type PassageSearchInput,
-  type PassageSearchResultPage
-} from "../../search/search.js"
-import { projectBillSummaryRead, projectDocumentSectionRead } from "./canonical-read.js"
-import { projectDocumentSummaryRead } from "./document-read-routes.js"
+} from "../../legislation/persistence/queries/document-reads"
+import { decodePassageSearchCursor, type PassageSearchInput, type PassageSearchResultPage } from "../../search/search"
+import { projectBillSummaryRead, projectDocumentSectionRead } from "./canonical-read"
+import { projectDocumentSummaryRead } from "./document-read-routes"
 import {
   apiSearchPage,
   assertAllowedQueryParameters,
@@ -19,7 +15,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 

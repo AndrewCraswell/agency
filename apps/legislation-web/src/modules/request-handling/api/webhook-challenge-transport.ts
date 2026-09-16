@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 import type { LookupAddress } from "node:dns"
 import { request as httpsRequest } from "node:https"
-import { signWebhookPayload, type ApprovedWebhookDestination } from "./webhook-security.js"
+import { signWebhookPayload, type ApprovedWebhookDestination } from "./webhook-security"
 
 export type WebhookVerificationAttempt = Readonly<{
   destination: ApprovedWebhookDestination

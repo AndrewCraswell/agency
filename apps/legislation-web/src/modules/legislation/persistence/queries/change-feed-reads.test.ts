@@ -7,7 +7,7 @@ import {
   buildChangeFeedQuery,
   encodeChangeFeedCursor,
   listChangeFeed
-} from "./change-feed-reads.js"
+} from "./change-feed-reads"
 
 const pool = new pg.Pool({ connectionString: "postgresql://change-feed-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

@@ -1,7 +1,7 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describe, expect, it } from "vitest"
-import { CanonicalProjectionError } from "../canonical-projection.js"
-import { apiBatch, apiErrorResponse, apiPage, apiResource, apiSearchPage, jsonResponse, readJsonBody } from "./http.js"
+import { CanonicalProjectionError } from "../canonical-projection"
+import { apiBatch, apiErrorResponse, apiPage, apiResource, apiSearchPage, jsonResponse, readJsonBody } from "./http"
 
 describe("Web API response boundary", () => {
   it("builds resource, page, search, and batch envelopes with the caller correlation ID", async () => {

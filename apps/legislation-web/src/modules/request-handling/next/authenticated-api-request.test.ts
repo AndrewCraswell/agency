@@ -1,12 +1,9 @@
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { AuthenticationError, type WorkosIdentity } from "@repo/legislation-core/auth/workos"
 import { describe, expect, it, vi } from "vitest"
-import type { HttpApiHandler } from "../api/http.js"
-import type { NodeHttpApiHandlerOptions } from "../api/next/node-handler.js"
-import {
-  executeAuthenticatedApiRequest,
-  type AuthenticatedApiRequestDependencies
-} from "./authenticated-api-request.js"
+import type { HttpApiHandler } from "../api/http"
+import type { NodeHttpApiHandlerOptions } from "../api/next/node-handler"
+import { executeAuthenticatedApiRequest, type AuthenticatedApiRequestDependencies } from "./authenticated-api-request"
 
 const handler: HttpApiHandler = async () => true
 type Executor = (request: Request, handler: HttpApiHandler, options?: NodeHttpApiHandlerOptions) => Promise<Response>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { SessionRepository } from "./session-read-repository.js"
+import { SessionRepository } from "./session-read-repository"
 
 const session = {
   classification: "regular",

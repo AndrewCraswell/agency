@@ -2,7 +2,7 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { legislativeSessions } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, desc, eq, gt, gte, lt, lte, or, sql, type SQL } from "drizzle-orm"
-import { isIsoDate } from "../../../request-handling/api/canonical-projection.js"
+import { isIsoDate } from "../../../request-handling/api/canonical-projection"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

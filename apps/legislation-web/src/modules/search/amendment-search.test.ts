@@ -5,7 +5,7 @@ import {
   fuseAmendmentSearchCandidates,
   type AmendmentSearchCandidate,
   type AmendmentSearchInput
-} from "./amendment-search.js"
+} from "./amendment-search"
 
 const input: AmendmentSearchInput = {
   billIds: ["bill:2", "bill:1"],

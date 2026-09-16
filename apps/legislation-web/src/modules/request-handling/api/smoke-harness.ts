@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
+import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection"
 
 export type SmokeCheckStatus = "blocked" | "failed" | "passed" | "skipped"
 export type SmokeProfile = "full" | "scoped-bills" | "vote-change" | "subscription-lifecycle" | "webhook-lifecycle"

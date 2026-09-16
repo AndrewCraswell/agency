@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
-import { LegislationError } from "../domain/errors.js"
+import { LegislationError } from "../domain/errors"
 
 type JSONValue = z.infer<ReturnType<typeof z.json>>
 

@@ -2,24 +2,24 @@ import { randomUUID } from "node:crypto"
 import { createServer } from "node:http"
 import { runWithRequestContext } from "@repo/legislation-core/auth/request-context"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { AmendmentSearchApi } from "./amendment-search.js"
-import type { CivicSearchApi } from "./civic-search.js"
-import type { CoreReadQueryApi } from "./core-read.js"
-import { createLegislationApiHandler } from "./handlers.js"
-import { prepareApiResponse } from "./http.js"
+import type { AmendmentSearchApi } from "./amendment-search"
+import type { CivicSearchApi } from "./civic-search"
+import type { CoreReadQueryApi } from "./core-read"
+import { createLegislationApiHandler } from "./handlers"
+import { prepareApiResponse } from "./http"
 import {
   type IdempotentResponse,
   type IdempotencyRequest,
   type PreflightSubscriptionMutationExecutor,
   type SubscriptionTransaction,
   SubscriptionRepositoryError
-} from "./subscription-repository.js"
+} from "./subscription-repository"
 import {
   createWebhookSecretProtector,
   type EncryptedWebhookSecret,
   type Webhook,
   type WebhookVerificationRepository
-} from "./subscriptions.js"
+} from "./subscriptions"
 
 vi.mock("./webhook-challenge-transport.js", () => ({
   createPinnedWebhookVerificationTransport: () => ({

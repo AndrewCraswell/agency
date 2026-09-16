@@ -1,7 +1,7 @@
 import { runWithRequestContext } from "@repo/legislation-core/auth/request-context"
 import pg from "pg"
 import { afterAll, beforeEach, expect, it, vi } from "vitest"
-import { createLegalSearchCanary } from "./legal-search-canary.js"
+import { createLegalSearchCanary } from "./legal-search-canary"
 const mocks = vi.hoisted(() => ({
   search: vi.fn<typeof import("@repo/legislation-core/legal-text/passage-search").searchCopiedLegalPassages>()
 }))

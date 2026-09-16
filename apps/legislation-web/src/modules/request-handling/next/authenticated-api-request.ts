@@ -1,10 +1,10 @@
 import { AuthenticationError, createWorkosAuthenticator } from "@repo/legislation-core/auth/workos"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { LegislationConfig } from "../../configuration/config.js"
-import { getNextLegislationApplication } from "../../legislation/runtime/runtime.js"
-import type { HttpApiHandler } from "../api/http.js"
-import { apiErrorResponse } from "../api/next/http.js"
-import { executeNextHttpApiHandler } from "../api/next/node-handler.js"
+import type { LegislationConfig } from "../../configuration/config"
+import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
+import type { HttpApiHandler } from "../api/http"
+import { apiErrorResponse } from "../api/next/http"
+import { executeNextHttpApiHandler } from "../api/next/node-handler"
 
 type WorkosConfig = Extract<LegislationConfig["auth"], { mode: "workos" }>
 type Authenticator = ReturnType<typeof createWorkosAuthenticator>

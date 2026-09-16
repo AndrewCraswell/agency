@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { randomUUID } from "node:crypto"
 import pg from "pg"
 import { afterEach, describe, expect, it } from "vitest"
-import { createDatabase } from "./database.js"
+import { createDatabase } from "./database"
 
 const databaseUrl = process.env.LEGISLATION_CORE_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe

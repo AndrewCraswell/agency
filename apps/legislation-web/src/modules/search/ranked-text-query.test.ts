@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { compileRankedTextQuery } from "./ranked-text-query.js"
+import { compileRankedTextQuery } from "./ranked-text-query"
 
 describe("ranked text query compiler", () => {
   it.each([

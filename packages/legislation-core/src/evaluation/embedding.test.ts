@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { rankingMetrics, type RelevanceJudgment } from "./embedding.js"
+import { rankingMetrics, type RelevanceJudgment } from "./embedding"
 
 const judgments: RelevanceJudgment[] = Array.from({ length: 12 }, (_, index) => ({
   cohort: "treatment",

@@ -1,11 +1,13 @@
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { withSentryConfig } from "@sentry/nextjs"
+import { withSentryConfig } from "@sentry/nextjs/config"
 import { createVanillaExtractPlugin } from "@vanilla-extract/next-plugin"
 import type { NextConfig } from "next"
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
-const withVanillaExtract = createVanillaExtractPlugin()
+const withVanillaExtract = createVanillaExtractPlugin({
+  unstable_turbopack: { mode: "auto" }
+})
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -19,13 +21,6 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   turbopack: {
     root: workspaceRoot
-  },
-  webpack(config) {
-    config.resolve.extensionAlias = {
-      ...config.resolve.extensionAlias,
-      ".js": [".js", ".ts", ".tsx"]
-    }
-    return config
   }
 }
 

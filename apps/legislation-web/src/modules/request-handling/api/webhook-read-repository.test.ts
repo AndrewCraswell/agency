@@ -3,8 +3,8 @@ import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
-import { PostgresWebhookReadRepository } from "./webhook-read-repository.js"
+import { SubscriptionRepositoryError } from "./subscription-repository"
+import { PostgresWebhookReadRepository } from "./webhook-read-repository"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe

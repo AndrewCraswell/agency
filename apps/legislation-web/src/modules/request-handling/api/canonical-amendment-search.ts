@@ -1,13 +1,13 @@
 import {
   projectDocumentAmendment,
   projectStructuredAmendment
-} from "../../legislation/persistence/queries/amendment-reads.js"
+} from "../../legislation/persistence/queries/amendment-reads"
 import type {
   AmendmentSearchCandidate,
   AmendmentSearchMatchedField,
   AmendmentSearchMode
-} from "../../search/amendment-search.js"
-import { CanonicalProjectionError, type AmendmentSummary, type SourceReference } from "./canonical-projection.js"
+} from "../../search/amendment-search"
+import { CanonicalProjectionError, type AmendmentSummary, type SourceReference } from "./canonical-projection"
 
 export interface AmendmentSearchHit {
   match: {

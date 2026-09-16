@@ -4,7 +4,7 @@ import {
   createUniversalSearchApiHandler,
   type UniversalProductSearchInput,
   type UniversalSearchApi
-} from "./universal-search.js"
+} from "./universal-search"
 
 const servers = new Set<Server>()
 

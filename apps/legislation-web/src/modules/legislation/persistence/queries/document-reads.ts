@@ -9,7 +9,7 @@ import {
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, count, eq, gt, gte, lte, or, sql, type SQL } from "drizzle-orm"
 import type { PgColumn } from "drizzle-orm/pg-core"
-import { isIsoDate } from "../../../request-handling/api/canonical-projection.js"
+import { isIsoDate } from "../../../request-handling/api/canonical-projection"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

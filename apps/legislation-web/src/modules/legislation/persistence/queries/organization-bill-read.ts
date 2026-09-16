@@ -2,13 +2,13 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { organizations } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { eq } from "drizzle-orm"
-import type { BillSummaryRead } from "../../../request-handling/api/canonical-read.js"
+import type { BillSummaryRead } from "../../../request-handling/api/canonical-read"
 import {
   listOrganizationBills,
   type OrganizationBillListInput,
   type OrganizationBillRow,
   type OrganizationPage
-} from "./organization-relationships.js"
+} from "./organization-relationships"
 
 export type OrganizationBillRead = BillSummaryRead
 export type OrganizationBillReadPage = OrganizationPage<OrganizationBillRead>

@@ -9,7 +9,7 @@ import pg from "pg"
 import invariant from "tiny-invariant"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createLegalEditionSearch } from "./legal-edition-search.js"
+import { createLegalEditionSearch } from "./legal-edition-search"
 
 const sourceUrl = process.env.REGULATORY_TEST_DATABASE_URL
 const targetUrl = process.env.REGULATORY_SEARCH_TEST_DATABASE_URL

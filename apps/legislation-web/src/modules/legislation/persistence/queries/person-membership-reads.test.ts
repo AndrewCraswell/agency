@@ -6,7 +6,7 @@ import {
   buildPersonMembershipListQuery,
   encodePersonMembershipCursor,
   listPersonMemberships
-} from "./person-membership-reads.js"
+} from "./person-membership-reads"
 
 const pool = new pg.Pool({ connectionString: "postgresql://person-memberships-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

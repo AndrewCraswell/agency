@@ -2,13 +2,13 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { organizations, syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, eq, like } from "drizzle-orm"
-import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads.js"
+import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads"
 import {
   listOrganizationMemberships,
   type OrganizationMembershipListInput,
   type OrganizationPage
-} from "../../legislation/persistence/queries/organization-relationships.js"
-import { committeeCoverageWarnings } from "./committee-coverage-warnings.js"
+} from "../../legislation/persistence/queries/organization-relationships"
+import { committeeCoverageWarnings } from "./committee-coverage-warnings"
 
 export type OrganizationMembersListInput = OrganizationMembershipListInput
 export type OrganizationMembersPage = OrganizationPage<OrganizationMembershipRead> & { warnings?: readonly string[] }

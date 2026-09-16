@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it } from "vitest"
 import type {
   OrganizationMembershipRead,
   PersonTermRead
-} from "../../legislation/persistence/queries/civic-scoped-reads.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createCivicScopedReadApiHandler, type CivicScopedReadApi } from "./civic-scoped-read-routes.js"
+} from "../../legislation/persistence/queries/civic-scoped-reads"
+import { close, createLegislationServer } from "../test-http-server"
+import { createCivicScopedReadApiHandler, type CivicScopedReadApi } from "./civic-scoped-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({

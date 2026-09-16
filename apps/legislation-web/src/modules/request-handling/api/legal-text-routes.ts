@@ -12,8 +12,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { createLegalTextReader } from "./legal-text-read.js"
+} from "./http"
+import type { createLegalTextReader } from "./legal-text-read"
 
 export function createLegalTextApiHandler(readText: ReturnType<typeof createLegalTextReader>): HttpApiHandler {
   return async (request, response) => {

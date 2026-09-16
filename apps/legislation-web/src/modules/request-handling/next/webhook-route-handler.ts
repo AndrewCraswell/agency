@@ -4,19 +4,19 @@ import {
   type RequestIdentity
 } from "@repo/legislation-core/auth/request-context"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import { decodeIdempotencyEncryptionKey } from "../../configuration/config.js"
-import { getNextLegislationApplication } from "../../legislation/runtime/runtime.js"
-import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http.js"
+import { decodeIdempotencyEncryptionKey } from "../../configuration/config"
+import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
+import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http"
 import {
   createAes256GcmIdempotencyCipher,
   PostgresSubscriptionRepository,
   SubscriptionIdempotencyTransaction
-} from "../api/subscription-repository.js"
-import { createAes256GcmWebhookSecretProtector, SubscriptionService } from "../api/subscriptions.js"
-import { createWebhookMutationApiHandler } from "../api/webhook-mutation-routes.js"
-import { PostgresWebhookReadRepository } from "../api/webhook-read-repository.js"
-import { createWebhookReadApiHandler } from "../api/webhook-read-routes.js"
-import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
+} from "../api/subscription-repository"
+import { createAes256GcmWebhookSecretProtector, SubscriptionService } from "../api/subscriptions"
+import { createWebhookMutationApiHandler } from "../api/webhook-mutation-routes"
+import { PostgresWebhookReadRepository } from "../api/webhook-read-repository"
+import { createWebhookReadApiHandler } from "../api/webhook-read-routes"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 
 type WebhookRouteApplication = Readonly<{
   config: Readonly<{

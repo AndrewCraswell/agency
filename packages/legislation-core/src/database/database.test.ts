@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { createDatabase } from "./database.js"
+import { createDatabase } from "./database"
 
 const pools: Array<ReturnType<typeof createDatabase>["pool"]> = []
 const config = {

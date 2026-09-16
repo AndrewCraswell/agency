@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, decodeJwt, errors, jwtVerify, type JWTVerifyGetKey } from "jose"
-import type { RequestIdentity } from "./request-context.js"
+import type { RequestIdentity } from "./request-context"
 
 export type AuthenticationErrorCategory = "expired" | "invalid" | "malformed" | "missing" | "temporary"
 

@@ -4,7 +4,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import { z } from "zod"
-import { createLegalEditionSearch } from "./legal-edition-search.js"
+import { createLegalEditionSearch } from "./legal-edition-search"
 
 /** Public search orchestration. Incomplete requested capabilities fail explicitly, never disappear from the scope. */
 export function createLegalSearch(

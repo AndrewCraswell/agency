@@ -2,9 +2,9 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type {
   JurisdictionClassification,
   JurisdictionListInput
-} from "../../legislation/persistence/queries/jurisdictions-read.js"
-import { JURISDICTION_CLASSIFICATIONS } from "../../legislation/persistence/queries/jurisdictions-read.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/jurisdictions-read"
+import { JURISDICTION_CLASSIFICATIONS } from "../../legislation/persistence/queries/jurisdictions-read"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   assertAllowedQueryParameters,
@@ -12,9 +12,9 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { JurisdictionCollectionPage } from "./jurisdiction-collection-read-repository.js"
-import { projectJurisdictionRead } from "./jurisdiction-read-routes.js"
+} from "./http"
+import type { JurisdictionCollectionPage } from "./jurisdiction-collection-read-repository"
+import { projectJurisdictionRead } from "./jurisdiction-read-routes"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

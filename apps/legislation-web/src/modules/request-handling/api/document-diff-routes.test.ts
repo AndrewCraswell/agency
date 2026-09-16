@@ -1,8 +1,8 @@
 import { createServer, type Server } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { afterEach, describe, expect, it } from "vitest"
-import type { CanonicalDocumentRead } from "../../legislation/persistence/queries/document-reads.js"
-import { createDocumentDiffApiHandler, type DocumentDiffApi } from "./document-diff-routes.js"
+import type { CanonicalDocumentRead } from "../../legislation/persistence/queries/document-reads"
+import { createDocumentDiffApiHandler, type DocumentDiffApi } from "./document-diff-routes"
 
 const servers = new Set<Server>()
 

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import type { DocumentSummary, SourceReference } from "./canonical-projection.js"
+import type { DocumentSummary, SourceReference } from "./canonical-projection"
 
 export type DiffGranularity = "paragraph" | "section" | "word"
 export type DiffClassification = "added" | "changed" | "removed" | "unchanged"

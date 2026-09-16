@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
-import type { EmbeddingTokenizer } from "./embedding-tokenizer.js"
+import type { EmbeddingTokenizer } from "./embedding-tokenizer"
 
 /** Lossless contiguous UTF-16 source spans. Call separately for prose regions around atomic tables/sections. */
 export function splitEmbeddingText(input: {

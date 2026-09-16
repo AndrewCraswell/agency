@@ -5,9 +5,9 @@ import type {
   MeetingAgendaItemRead,
   MeetingAgendaListInput,
   MeetingAgendaPage
-} from "../../legislation/persistence/queries/meeting-agenda-read.js"
-import { projectAgendaItem } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/meeting-agenda-read"
+import { projectAgendaItem } from "./canonical-projection"
+import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   apiResource,
@@ -16,7 +16,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

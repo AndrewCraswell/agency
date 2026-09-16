@@ -14,7 +14,7 @@ import {
   reciprocalRankFusion,
   reciprocalRankFusionWithScores,
   semanticSimilarityScore
-} from "./search.js"
+} from "./search"
 
 const dialect = new PgDialect()
 

@@ -15,14 +15,14 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 import {
   type IdempotencyResult,
   type IdempotentResponse,
   principalScopeForSubscriptionOwner,
   SubscriptionRepositoryError,
   type SubscriptionMutationExecutor
-} from "./subscription-repository.js"
+} from "./subscription-repository"
 import {
   type CreateSubscriptionInput,
   type CreateWebhookInput,
@@ -40,8 +40,8 @@ import {
   type SubscriptionTarget,
   type UpdateSubscriptionInput,
   type UpdateWebhookInput
-} from "./subscriptions.js"
-import { resolvePublicWebhookUrl, UnsafeWebhookUrlError } from "./webhook-security.js"
+} from "./subscriptions"
+import { resolvePublicWebhookUrl, UnsafeWebhookUrlError } from "./webhook-security"
 
 /**
  * Implementations must connect to one of `destination.addresses` while using

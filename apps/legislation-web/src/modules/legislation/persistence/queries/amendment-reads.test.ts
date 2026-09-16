@@ -3,7 +3,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
-import type { AmendmentSummary } from "../../../request-handling/api/canonical-projection.js"
+import type { AmendmentSummary } from "../../../request-handling/api/canonical-projection"
 import {
   amendmentContinuationCursor,
   buildDocumentAmendmentListQuery,
@@ -12,7 +12,7 @@ import {
   decodeAmendmentContinuationCursor,
   isStructuredAmendmentComplete,
   type AmendmentReadInput
-} from "./amendment-reads.js"
+} from "./amendment-reads"
 
 const pool = new pg.Pool({ connectionString: "postgresql://amendment-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

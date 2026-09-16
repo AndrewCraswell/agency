@@ -4,9 +4,9 @@ import {
   listAmendmentReads,
   type AmendmentReadInput,
   type AmendmentReadPage
-} from "../../legislation/persistence/queries/amendment-reads.js"
-import { assertBillExists } from "../../legislation/persistence/queries/document-reads.js"
-import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection.js"
+} from "../../legislation/persistence/queries/amendment-reads"
+import { assertBillExists } from "../../legislation/persistence/queries/document-reads"
+import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection"
 
 export interface AmendmentReadRepository {
   assertBill: (billId: string) => Promise<void>

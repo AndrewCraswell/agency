@@ -4,8 +4,8 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
-import type { RankedPassageSearch } from "../search/ranked-passage-search.js"
-import { buildLexicalPassageSearchQuery } from "../search/search.js"
+import type { RankedPassageSearch } from "../search/ranked-passage-search"
+import { buildLexicalPassageSearchQuery } from "../search/search"
 import {
   billSearchExecution,
   amendmentSearchPageState,
@@ -28,7 +28,7 @@ import {
   LegislationQueryService,
   projectDocumentBackedAmendment,
   type SupportingMaterialSearchInput
-} from "./query-service.js"
+} from "./query-service"
 
 const pool = new pg.Pool({ connectionString: "postgresql://query-service-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

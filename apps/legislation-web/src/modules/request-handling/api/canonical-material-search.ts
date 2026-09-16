@@ -3,13 +3,13 @@ import {
   type SourceReference,
   type SupportingMaterialSection,
   type SupportingMaterialSummary
-} from "./canonical-projection.js"
+} from "./canonical-projection"
 import {
   projectSupportingMaterialSectionRead,
   projectSupportingMaterialSummaryRead,
   type SupportingMaterialRead,
   type SupportingMaterialSectionRecord
-} from "./canonical-read.js"
+} from "./canonical-read"
 
 export type SupportingMaterialSearchMode = "hybrid" | "lexical" | "semantic"
 

@@ -2,7 +2,7 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { supportingMaterials, supportingMaterialSections } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, eq } from "drizzle-orm"
-import type { SupportingMaterialSectionRead } from "../../../request-handling/api/canonical-read.js"
+import type { SupportingMaterialSectionRead } from "../../../request-handling/api/canonical-read"
 
 export interface SupportingMaterialSectionLookup {
   materialId: string

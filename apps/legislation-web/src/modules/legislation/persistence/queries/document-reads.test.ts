@@ -12,7 +12,7 @@ import {
   documentReadFromPersistence,
   documentSectionReadFromPersistence,
   supportingMaterialSectionReadFromPersistence
-} from "./document-reads.js"
+} from "./document-reads"
 
 const pool = new pg.Pool({ connectionString: "postgresql://document-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

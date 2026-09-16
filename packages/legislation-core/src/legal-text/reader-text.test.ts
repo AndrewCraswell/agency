@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { digest } from "./contracts.js"
+import { digest } from "./contracts"
 import {
   legalAgencyReferenceSchema,
   legalBrowseSelectionSchema,
   legalCapabilitySchema,
   legalSelectionSchema,
   validateLegalEditionContext
-} from "./reader-contract.js"
-import { buildLegalTextProjection, buildStoredLegalTextProjection, readLegalTextWindow } from "./reader-text.js"
+} from "./reader-contract"
+import { buildLegalTextProjection, buildStoredLegalTextProjection, readLegalTextWindow } from "./reader-text"
 
 const scope = {
   callerKey: "caller-a",

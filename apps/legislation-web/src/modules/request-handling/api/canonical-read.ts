@@ -26,7 +26,7 @@ import {
   type SupportingMaterialDetail,
   type SupportingMaterialSummary,
   type VoteSummary
-} from "./canonical-projection.js"
+} from "./canonical-projection"
 
 export interface SourceDocument {
   createdAt: Date | string
@@ -556,7 +556,7 @@ function isMeetingOutcome(value: unknown): value is MeetingOutcome {
   )
 }
 
-function isBillSummary(value: unknown): value is import("./canonical-projection.js").BillSummary {
+function isBillSummary(value: unknown): value is import("./canonical-projection").BillSummary {
   return (
     isCanonicalRecord(value, "bill") &&
     isNonEmptyString(value.jurisdictionId) &&

@@ -3,7 +3,7 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { requireRights } from "@repo/legislation-core/legal-text/rights"
 import pg from "pg"
 import { afterEach, expect, it, vi } from "vitest"
-import { createLegalEditionSearch } from "./legal-edition-search.js"
+import { createLegalEditionSearch } from "./legal-edition-search"
 
 vi.mock("@repo/legislation-core/legal-text/rights", () => ({ requireRights: vi.fn<() => Promise<void>>() }))
 const editionId = "00000000-0000-4000-8000-000000000001"

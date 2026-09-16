@@ -3,8 +3,8 @@ import { billActions, billSponsors, bills, people } from "@repo/legislation-core
 import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, desc, eq, gt, isNotNull, lt, or, sql, type SQL, type SQLWrapper } from "drizzle-orm"
-import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection.js"
-import type { BillSummaryRead } from "../../../request-handling/api/canonical-read.js"
+import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
+import type { BillSummaryRead } from "../../../request-handling/api/canonical-read"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

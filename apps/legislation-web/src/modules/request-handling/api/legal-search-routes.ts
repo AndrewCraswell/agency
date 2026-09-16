@@ -12,8 +12,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { createLegalSearch } from "./legal-search-read.js"
+} from "./http"
+import type { createLegalSearch } from "./legal-search-read"
 
 export function createLegalSearchApiHandler(
   search: ReturnType<typeof createLegalSearch>,

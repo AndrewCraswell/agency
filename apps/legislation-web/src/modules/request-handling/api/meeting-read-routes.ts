@@ -1,13 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { MeetingAgendaPage } from "../../legislation/persistence/queries/meeting-agenda-read.js"
+import type { MeetingAgendaPage } from "../../legislation/persistence/queries/meeting-agenda-read"
 import type {
   MeetingDocumentPage,
   MeetingDocumentRead
-} from "../../legislation/persistence/queries/meeting-document-read.js"
-import type { MeetingParticipantPage } from "../../legislation/persistence/queries/meeting-participant-reads.js"
-import type { MeetingOrganizationRead, MeetingRead } from "../../legislation/persistence/queries/meeting-read.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/meeting-document-read"
+import type { MeetingParticipantPage } from "../../legislation/persistence/queries/meeting-participant-reads"
+import type { MeetingOrganizationRead, MeetingRead } from "../../legislation/persistence/queries/meeting-read"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   apiResource,
@@ -19,13 +19,13 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { projectMeetingAgendaItemRead } from "./meeting-agenda-read-routes.js"
-import { projectMeetingDocumentRead } from "./meeting-document-read-routes.js"
-import { projectMeetingParticipantRead } from "./meeting-participant-projection.js"
-import { projectMeetingRead } from "./meeting-read-projection.js"
-import type { MeetingCollectionInput, MeetingReadRepository } from "./meeting-read-repository.js"
-import { projectOrganizationRow } from "./organization-summary-read-projection.js"
+} from "./http"
+import { projectMeetingAgendaItemRead } from "./meeting-agenda-read-routes"
+import { projectMeetingDocumentRead } from "./meeting-document-read-routes"
+import { projectMeetingParticipantRead } from "./meeting-participant-projection"
+import { projectMeetingRead } from "./meeting-read-projection"
+import type { MeetingCollectionInput, MeetingReadRepository } from "./meeting-read-repository"
+import { projectOrganizationRow } from "./organization-summary-read-projection"
 
 const DEFAULT_LIMIT = 20
 const DEFAULT_CHILD_LIMIT = 25

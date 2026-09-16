@@ -3,9 +3,9 @@ import type {
   CanonicalSupportingMaterialSectionRead,
   DocumentPage,
   SupportingMaterialSectionListInput
-} from "../../legislation/persistence/queries/document-reads.js"
-import type { SupportingMaterialSectionRead } from "./canonical-read.js"
-import { projectSupportingMaterialSectionRead, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/document-reads"
+import type { SupportingMaterialSectionRead } from "./canonical-read"
+import { projectSupportingMaterialSectionRead, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -15,7 +15,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 export interface SupportingMaterialSectionReadApi {
   assertSupportingMaterialExists?: (materialId: string) => Promise<void>

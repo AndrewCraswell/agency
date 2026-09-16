@@ -6,7 +6,7 @@ import {
   EMBEDDING_ROUTE_PRODUCTS,
   embeddingQueryRouteFor,
   embeddingRouteFor
-} from "./embedding-routing.js"
+} from "./embedding-routing"
 
 describe("embedding routing contract", () => {
   it("pins every searchable product to one model space and storage table", () => {

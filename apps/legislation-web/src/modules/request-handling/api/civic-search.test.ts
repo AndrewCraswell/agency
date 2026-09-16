@@ -1,8 +1,8 @@
 import { createServer, type Server } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
-import { encodeSupportingMaterialSearchCursor } from "../../legislation/query-service.js"
-import { encodeSearchCursor } from "../../search/search.js"
-import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
+import { encodeSupportingMaterialSearchCursor } from "../../legislation/query-service"
+import { encodeSearchCursor } from "../../search/search"
+import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search"
 
 const servers = new Set<Server>()
 

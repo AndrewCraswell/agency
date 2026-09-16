@@ -4,17 +4,17 @@ import {
   type RequestIdentity
 } from "@repo/legislation-core/auth/request-context"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import { decodeIdempotencyEncryptionKey } from "../../configuration/config.js"
-import { getNextLegislationApplication } from "../../legislation/runtime/runtime.js"
-import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http.js"
+import { decodeIdempotencyEncryptionKey } from "../../configuration/config"
+import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
+import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http"
 import {
   createAes256GcmIdempotencyCipher,
   PostgresSubscriptionRepository,
   SubscriptionIdempotencyTransaction
-} from "../api/subscription-repository.js"
-import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "../api/subscription-routes.js"
-import { createWebhookSecretProtector, SubscriptionService } from "../api/subscriptions.js"
-import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
+} from "../api/subscription-repository"
+import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "../api/subscription-routes"
+import { createWebhookSecretProtector, SubscriptionService } from "../api/subscriptions"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 
 type SubscriptionRouteApplication = Readonly<{
   config: Readonly<{

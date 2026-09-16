@@ -6,8 +6,8 @@ import {
   isRfc3339Timestamp,
   projectChangeEvent,
   type ChangeEvent
-} from "../../../request-handling/api/canonical-projection.js"
-import type { CanonicalChangeType } from "./changes.js"
+} from "../../../request-handling/api/canonical-projection"
+import type { CanonicalChangeType } from "./changes"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

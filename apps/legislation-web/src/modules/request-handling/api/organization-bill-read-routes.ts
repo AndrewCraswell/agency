@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { OrganizationBillReadPage } from "../../legislation/persistence/queries/organization-bill-read.js"
-import type { OrganizationBillListInput } from "../../legislation/persistence/queries/organization-relationships.js"
-import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
-import { projectBillSummaryRead, toProjectionLegislationError } from "./canonical-read.js"
+import type { OrganizationBillReadPage } from "../../legislation/persistence/queries/organization-bill-read"
+import type { OrganizationBillListInput } from "../../legislation/persistence/queries/organization-relationships"
+import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection"
+import { projectBillSummaryRead, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -11,7 +11,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -74,7 +74,7 @@ function projectPage(page: OrganizationBillReadPage, apiBaseUrl: string) {
   return { ...page, items: page.items.map((item) => projectBillSummaryRead(billSummaryRead(item), apiBaseUrl)) }
 }
 
-function billSummaryRead(value: unknown): import("./canonical-read.js").BillSummaryRead {
+function billSummaryRead(value: unknown): import("./canonical-read").BillSummaryRead {
   if (!isBillSummaryRead(value)) {
     throw new LegislationError(
       "unprocessable",
@@ -84,7 +84,7 @@ function billSummaryRead(value: unknown): import("./canonical-read.js").BillSumm
   return value
 }
 
-function isBillSummaryRead(value: unknown): value is import("./canonical-read.js").BillSummaryRead {
+function isBillSummaryRead(value: unknown): value is import("./canonical-read").BillSummaryRead {
   if (!isRecord(value)) {
     return false
   }

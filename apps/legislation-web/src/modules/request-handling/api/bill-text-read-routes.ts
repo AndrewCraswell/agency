@@ -1,12 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { BillTextSectionListInput } from "../../legislation/persistence/queries/bill-text-read.js"
-import { normalizeBillTextSectionListInput } from "../../legislation/persistence/queries/bill-text-read.js"
-import type {
-  CanonicalDocumentSectionRead,
-  DocumentPage
-} from "../../legislation/persistence/queries/document-reads.js"
-import { projectDocumentSectionRead, toProjectionLegislationError } from "./canonical-read.js"
+import type { BillTextSectionListInput } from "../../legislation/persistence/queries/bill-text-read"
+import { normalizeBillTextSectionListInput } from "../../legislation/persistence/queries/bill-text-read"
+import type { CanonicalDocumentSectionRead, DocumentPage } from "../../legislation/persistence/queries/document-reads"
+import { projectDocumentSectionRead, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -14,7 +11,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

@@ -1,6 +1,6 @@
 import { generateKeyPair, exportJWK, createLocalJWKSet, SignJWT } from "jose"
 import { beforeAll, describe, expect, it } from "vitest"
-import { AuthenticationError, createWorkosAuthenticator, extractBearerToken } from "./workos.js"
+import { AuthenticationError, createWorkosAuthenticator, extractBearerToken } from "./workos"
 
 const issuer = "https://authkit.example"
 const apiAudience = "client_environment"

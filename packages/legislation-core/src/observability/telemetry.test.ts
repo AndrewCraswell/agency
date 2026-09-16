@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { sanitizeTelemetry } from "./sanitize-telemetry.js"
+import { sanitizeTelemetry } from "./sanitize-telemetry"
 
 describe("telemetry redaction", () => {
   it("redacts credentials and bounds legislative text", () => {

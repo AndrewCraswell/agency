@@ -11,7 +11,7 @@ import type {
   VoteRead,
   VoteResult,
   VoteSort
-} from "../../legislation/persistence/queries/vote-reads.js"
+} from "../../legislation/persistence/queries/vote-reads"
 import {
   isIsoDate,
   isRfc3339Timestamp,
@@ -25,8 +25,8 @@ import {
   type VoteDetail,
   type VotePosition,
   type VoteSummary
-} from "./canonical-projection.js"
-import { sourceProjectionContext } from "./canonical-read.js"
+} from "./canonical-projection"
+import { sourceProjectionContext } from "./canonical-read"
 import {
   apiPage,
   apiResource,
@@ -39,7 +39,7 @@ import {
   sendApiJson,
   type HttpApiHandler,
   type JsonRecord
-} from "./http.js"
+} from "./http"
 
 const MAX_BATCH_BYTES = 5 * 1024 * 1024
 const MAX_BATCH_ITEMS = 25

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { pageSchema } from "./envelopes.js"
+import { pageSchema } from "./envelopes"
 
 export const legalCodesRequestSchema = z.strictObject({
   jurisdictionId: z

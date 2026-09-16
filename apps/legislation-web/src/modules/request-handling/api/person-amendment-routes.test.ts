@@ -1,12 +1,9 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type {
-  PersonAmendmentRead,
-  PersonAmendmentsPage
-} from "../../legislation/persistence/queries/person-amendments.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createPersonAmendmentApiHandler, type PersonAmendmentsApi } from "./person-amendment-routes.js"
+import type { PersonAmendmentRead, PersonAmendmentsPage } from "../../legislation/persistence/queries/person-amendments"
+import { close, createLegislationServer } from "../test-http-server"
+import { createPersonAmendmentApiHandler, type PersonAmendmentsApi } from "./person-amendment-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "person-amendment-test", write: () => undefined })

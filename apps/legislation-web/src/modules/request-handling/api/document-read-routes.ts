@@ -5,15 +5,15 @@ import type {
   CanonicalDocumentRead,
   CanonicalDocumentSectionRead,
   DocumentPage
-} from "../../legislation/persistence/queries/document-reads.js"
+} from "../../legislation/persistence/queries/document-reads"
 import type {
   BillDocumentListInput,
   DocumentClassification,
   DocumentSectionListInput,
   ProcessingStatus
-} from "../../legislation/persistence/queries/document-reads.js"
-import { projectDocumentDetail, projectDocumentSection, projectDocumentSummary } from "./canonical-projection.js"
-import { projectDocumentSectionRead, sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/document-reads"
+import { projectDocumentDetail, projectDocumentSection, projectDocumentSummary } from "./canonical-projection"
+import { projectDocumentSectionRead, sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -23,7 +23,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 /** The bounded database reads used by the public document HTTP slice. */
 export interface DocumentReadApi {

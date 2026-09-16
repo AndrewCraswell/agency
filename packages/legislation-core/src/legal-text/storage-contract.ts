@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { digest } from "./contracts.js"
-import { regulatoryRecordSchema } from "./parser-contract.js"
+import { digest } from "./contracts"
+import { regulatoryRecordSchema } from "./parser-contract"
 
 export const regulatoryStorageContract = "regulatory-edition-storage-2026-09-14"
 export const rightsPolicySchema = z.strictObject({

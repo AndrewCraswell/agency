@@ -1,9 +1,9 @@
-import { getNextLegislationApplication } from "../../legislation/runtime/runtime.js"
-import { createLegalBrowseApiHandler } from "../api/legal-browse-routes.js"
-import { createLegalCodesApiHandler } from "../api/legal-codes-routes.js"
-import { createLegalSearchApiHandler } from "../api/legal-search-routes.js"
-import { createLegalTextApiHandler } from "../api/legal-text-routes.js"
-import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
+import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
+import { createLegalBrowseApiHandler } from "../api/legal-browse-routes"
+import { createLegalCodesApiHandler } from "../api/legal-codes-routes"
+import { createLegalSearchApiHandler } from "../api/legal-search-routes"
+import { createLegalTextApiHandler } from "../api/legal-text-routes"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 
 export async function handleLegalTextRequest(request: Request): Promise<Response> {
   const application = getNextLegislationApplication()

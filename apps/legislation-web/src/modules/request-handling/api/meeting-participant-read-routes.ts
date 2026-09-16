@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { MeetingParticipantRead } from "../../legislation/persistence/queries/meeting-participant-read.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+import type { MeetingParticipantRead } from "../../legislation/persistence/queries/meeting-participant-read"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiResource,
@@ -9,8 +9,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { projectMeetingParticipantRead } from "./meeting-participant-projection.js"
+} from "./http"
+import { projectMeetingParticipantRead } from "./meeting-participant-projection"
 
 export interface MeetingParticipantReadApi {
   getMeetingParticipant: (

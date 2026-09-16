@@ -6,7 +6,7 @@ import {
   LegislationApiProtocolError,
   LegislationApiTimeoutError,
   type FetchLike
-} from "./client.js"
+} from "./client"
 
 const correlationId = "4cfa19c5-0407-4227-8ddd-b0a1441624df"
 

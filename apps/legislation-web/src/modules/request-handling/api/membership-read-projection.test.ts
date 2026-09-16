@@ -1,7 +1,7 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describe, expect, it } from "vitest"
-import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads.js"
-import { projectOrganizationMembershipRead } from "./membership-read-projection.js"
+import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads"
+import { projectOrganizationMembershipRead } from "./membership-read-projection"
 
 function sourceFields() {
   return {

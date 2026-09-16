@@ -3,7 +3,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
-import { createRankedPassageSearch, rankedFilters } from "./ranked-passage-search.js"
+import { createRankedPassageSearch, rankedFilters } from "./ranked-passage-search"
 import {
   assertRankedPassageHydrationFreshness,
   buildRankedPassageHydrationQuery,
@@ -11,7 +11,7 @@ import {
   encodePassageSearchCursor,
   hydrateRankedPassageSearch,
   RankedPassageHydrationError
-} from "./search.js"
+} from "./search"
 
 const pool = new pg.Pool({ connectionString: "postgresql://ranked-passage-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

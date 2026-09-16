@@ -7,16 +7,16 @@ import {
   type SupportingMaterialSearchHitResult,
   type SupportingMaterialSearchInput,
   type VersionComparisonInput
-} from "../../legislation/query-service.js"
+} from "../../legislation/query-service"
 import {
   decodeSearchCursor,
   type PassageSearchInput,
   type PassageSearchResultPage,
   type SearchInput
-} from "../../search/search.js"
-import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
-import { CanonicalProjectionError } from "./canonical-projection.js"
-import { projectBillSearchHits, type BillSearchCandidateRead } from "./canonical-search.js"
+} from "../../search/search"
+import { projectSupportingMaterialSearchHits } from "./canonical-material-search"
+import { CanonicalProjectionError } from "./canonical-projection"
+import { projectBillSearchHits, type BillSearchCandidateRead } from "./canonical-search"
 import {
   apiSearchPage,
   assertAllowedQueryParameters,
@@ -25,7 +25,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 type QueryPage<T> = Readonly<{
   items: readonly T[]

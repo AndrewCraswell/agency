@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { CanonicalProjectionError } from "./canonical-projection.js"
-import { projectBillSearchHit } from "./canonical-search.js"
+import { CanonicalProjectionError } from "./canonical-projection"
+import { projectBillSearchHit } from "./canonical-search"
 
 const candidate = {
   classification: ["bill"],

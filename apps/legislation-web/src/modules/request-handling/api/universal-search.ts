@@ -9,7 +9,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const RECORD_TYPES = [
   "bill",

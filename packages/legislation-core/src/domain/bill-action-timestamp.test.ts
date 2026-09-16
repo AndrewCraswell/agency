@@ -1,7 +1,7 @@
 import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
-import { billActions } from "../database/schema/schema.js"
-import { billActionTimestamp } from "./bill-action-timestamp.js"
+import { billActions } from "../database/schema/schema"
+import { billActionTimestamp } from "./bill-action-timestamp"
 
 describe("bill action timestamp", () => {
   it("decodes computed PostgreSQL timestamps before timeline ordering", () => {

@@ -260,7 +260,7 @@ beforeAll(async () => {
     NODE_ENV: "production"
   }
 
-  await runNext(["build", "--webpack"], environment, buildTimeoutMs)
+  await runNext(["build"], environment, buildTimeoutMs)
   const server = spawn(
     process.execPath,
     ["scripts/next.mjs", "start", "--hostname", "127.0.0.1", "--port", `${port}`],

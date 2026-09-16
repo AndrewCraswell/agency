@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { legalAgencyReferenceSchema, legalEditionContextSchema } from "../legal-text/reader-contract.js"
-import { searchPageSchema } from "./envelopes.js"
+import { legalAgencyReferenceSchema, legalEditionContextSchema } from "../legal-text/reader-contract"
+import { searchPageSchema } from "./envelopes"
 
 const id = z.string().trim().min(1).max(256)
 const hash = z.string().regex(/^[a-f0-9]{64}$/)

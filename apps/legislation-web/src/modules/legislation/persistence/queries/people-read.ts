@@ -2,7 +2,7 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { organizationMemberships, people, personAliases } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, desc, eq, exists, gt, gte, ilike, inArray, isNotNull, lt, lte, or, type SQL } from "drizzle-orm"
-import { isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection.js"
+import { isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { createNextLegislationRuntime, type NextLegislationRuntimeApplication } from "./runtime.js"
+import { createNextLegislationRuntime, type NextLegislationRuntimeApplication } from "./runtime"
 
 function createApplication(readiness: NextLegislationRuntimeApplication["readiness"]) {
   const close = vi.fn<() => Promise<void>>(() => Promise.resolve())

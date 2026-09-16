@@ -8,7 +8,7 @@ import {
   type OrganizationListInput,
   type OrganizationPage,
   type OrganizationRow
-} from "../../legislation/persistence/queries/organization-relationships.js"
+} from "../../legislation/persistence/queries/organization-relationships"
 
 export type JurisdictionOrganizationCollection = "organizations" | "commissions" | "committees"
 

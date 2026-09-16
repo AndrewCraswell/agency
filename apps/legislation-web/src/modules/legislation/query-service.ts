@@ -57,7 +57,7 @@ import {
   type SQLWrapper
 } from "drizzle-orm"
 import { alias, unionAll } from "drizzle-orm/pg-core"
-import type { RetrievalModelClient } from "../../services/openrouter/openrouter-retrieval.js"
+import type { RetrievalModelClient } from "../../services/openrouter/openrouter-retrieval"
 import {
   decodeAmendmentSearchCursor,
   encodeAmendmentSearchCursor,
@@ -65,15 +65,15 @@ import {
   type AmendmentSearchCandidate,
   type AmendmentSearchInput as ApiAmendmentSearchInput,
   type AmendmentSearchPage
-} from "../search/amendment-search.js"
-import type { RankedPassageSearch } from "../search/ranked-passage-search.js"
+} from "../search/amendment-search"
+import type { RankedPassageSearch } from "../search/ranked-passage-search"
 import type {
   BillSearchCandidate,
   BillSearchResultPage,
   PassageSearchInput,
   PassageSearchResultPage,
   SearchInput
-} from "../search/search.js"
+} from "../search/search"
 import {
   encodeSearchCursor,
   lexicalBillSearch,
@@ -90,8 +90,8 @@ import {
   semanticSupportingMaterialSearch,
   validatePassageSearchInput,
   validateSearchInput
-} from "../search/search.js"
-import { findChangeEvents, type CanonicalChangeType } from "./persistence/queries/changes.js"
+} from "../search/search"
+import { findChangeEvents, type CanonicalChangeType } from "./persistence/queries/changes"
 
 const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50

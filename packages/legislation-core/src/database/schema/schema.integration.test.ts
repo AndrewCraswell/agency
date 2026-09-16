@@ -4,8 +4,8 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { isDatabaseAvailable, isDatabaseReady } from "../readiness.js"
-import * as schema from "./schema.js"
+import { isDatabaseAvailable, isDatabaseReady } from "../readiness"
+import * as schema from "./schema"
 
 const databaseUrl = process.env.LEGISLATION_CORE_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe

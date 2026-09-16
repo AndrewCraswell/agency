@@ -4,9 +4,9 @@ import type {
   MeetingDocumentListInput,
   MeetingDocumentPage,
   MeetingDocumentRead
-} from "../../legislation/persistence/queries/meeting-document-read.js"
-import { projectEventDocument } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+} from "../../legislation/persistence/queries/meeting-document-read"
+import { projectEventDocument } from "./canonical-projection"
+import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -14,7 +14,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

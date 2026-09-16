@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   assertAllowedQueryParameters,
@@ -11,9 +11,9 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { projectOrganizationMembershipRead } from "./membership-read-projection.js"
-import type { PersonMembershipsListInput, PersonMembershipsPage } from "./person-membership-read-repository.js"
+} from "./http"
+import { projectOrganizationMembershipRead } from "./membership-read-projection"
+import type { PersonMembershipsListInput, PersonMembershipsPage } from "./person-membership-read-repository"
 
 const allowedQueryParameters = ["cursor", "from", "isCurrent", "limit", "organizationId", "to"] as const
 const MAX_CURSOR_LENGTH = 2_048

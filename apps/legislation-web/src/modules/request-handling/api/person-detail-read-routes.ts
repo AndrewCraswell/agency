@@ -1,5 +1,5 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read.js"
+import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read"
 import {
   projectLegislativeTerm,
   projectPersonDetail,
@@ -7,8 +7,8 @@ import {
   type PersonDetail,
   type ProjectionContext,
   type ProjectionSourceInput
-} from "./canonical-projection.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+} from "./canonical-projection"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiResource,
   assertAllowedQueryParameters,
@@ -16,8 +16,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { projectOrganizationMembershipRead } from "./membership-read-projection.js"
+} from "./http"
+import { projectOrganizationMembershipRead } from "./membership-read-projection"
 
 export interface PersonDetailReadApi {
   getPersonDetail(personId: string): Promise<PersonDetailRead>

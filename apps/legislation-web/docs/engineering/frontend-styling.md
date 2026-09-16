@@ -69,8 +69,11 @@ provider is needed. Keep related responsive rules, pseudo-elements, states, and 
 - Keep reduced-motion and forced-color behavior beside animations. The demo halo remains static under reduced motion
   and is hidden in forced colors; the input focus outline remains available.
 
-`next.config.ts` uses `@vanilla-extract/next-plugin` with the existing Webpack development/build commands.
+`next.config.ts` uses `@vanilla-extract/next-plugin` with its experimental Turbopack integration enabled in `auto`
+mode for the default Turbopack development and build commands.
 `vitest.config.ts` uses `@vanilla-extract/vite-plugin` so component tests compile the actual style imports.
+Keep relative imports extensionless in the app and transpiled `@repo/legislation-core` source. Turbopack resolves the
+TypeScript source directly and does not support Webpack's `.js` extension alias.
 Do not mock style modules or put custom component selectors back into the global stylesheet.
 
 Validate changes with focused component tests and `pnpm --filter legislation-web check:types`, then the

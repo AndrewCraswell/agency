@@ -1,8 +1,8 @@
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type { VoteRead } from "../../legislation/persistence/queries/vote-reads.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createVoteReadApiHandler, projectVote, projectVoteDetailRead, type VoteReadApi } from "./vote-read-routes.js"
+import type { VoteRead } from "../../legislation/persistence/queries/vote-reads"
+import { close, createLegislationServer } from "../test-http-server"
+import { createVoteReadApiHandler, projectVote, projectVoteDetailRead, type VoteReadApi } from "./vote-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "vote-read-routes-test", write: () => undefined })

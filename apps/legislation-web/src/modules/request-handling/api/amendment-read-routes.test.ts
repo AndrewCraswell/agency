@@ -7,11 +7,11 @@ import {
   compareAmendmentReadOrder,
   decodeAmendmentContinuationCursor,
   isStructuredAmendmentComplete
-} from "../../legislation/persistence/queries/amendment-reads.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import type { AmendmentReadRepository } from "./amendment-read-repository.js"
-import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
-import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection.js"
+} from "../../legislation/persistence/queries/amendment-reads"
+import { close, createLegislationServer } from "../test-http-server"
+import type { AmendmentReadRepository } from "./amendment-read-repository"
+import { createAmendmentReadApiHandler } from "./amendment-read-routes"
+import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "legislation-amendment-read-test", write: () => undefined })

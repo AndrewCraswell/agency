@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm"
-import { compileRankedTextQuery } from "./ranked-text-query.js"
+import { compileRankedTextQuery } from "./ranked-text-query"
 
 const arrayFields = [
   "billIds",

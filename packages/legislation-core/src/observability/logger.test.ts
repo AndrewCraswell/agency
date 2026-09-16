@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createLogger, errorContext } from "./logger.js"
+import { createLogger, errorContext } from "./logger"
 
 describe("createLogger", () => {
   it("writes structured records", () => {

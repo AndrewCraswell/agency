@@ -1,6 +1,6 @@
 import { normalizeHttpBillSearchPage } from "@repo/legislation-core/research/canonical-search-output"
 import { describe, expect, it } from "vitest"
-import { normalizeDirectBillSearchPage, type DirectBillSearchPage } from "./canonical-search-output.js"
+import { normalizeDirectBillSearchPage, type DirectBillSearchPage } from "./canonical-search-output"
 
 function directPage(): DirectBillSearchPage {
   return {

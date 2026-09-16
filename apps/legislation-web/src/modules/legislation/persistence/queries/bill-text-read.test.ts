@@ -2,7 +2,7 @@ import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
-import { buildBillTextSectionListQuery, normalizeBillTextSectionListInput } from "./bill-text-read.js"
+import { buildBillTextSectionListQuery, normalizeBillTextSectionListInput } from "./bill-text-read"
 
 const pool = new pg.Pool({ connectionString: "postgresql://bill-text-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

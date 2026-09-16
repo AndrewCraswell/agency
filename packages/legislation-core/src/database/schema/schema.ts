@@ -21,7 +21,7 @@ import {
   uuid,
   vector
 } from "drizzle-orm/pg-core"
-import { organizationMembershipEndReasons, type OrganizationMembershipEndReason } from "../../domain/membership.js"
+import { organizationMembershipEndReasons, type OrganizationMembershipEndReason } from "../../domain/membership"
 
 const tsvector = customType<{ data: string }>({
   dataType: () => "tsvector"

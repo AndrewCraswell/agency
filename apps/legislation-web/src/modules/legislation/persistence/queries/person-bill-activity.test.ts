@@ -6,7 +6,7 @@ import {
   buildPersonBillActivityListQuery,
   buildPersonExistenceQuery,
   encodePersonBillActivityCursor
-} from "./person-bill-activity.js"
+} from "./person-bill-activity"
 
 const pool = new pg.Pool({ connectionString: "postgresql://person-bill-activity-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { captureException } from "@sentry/core"
-import { toPublicApiError } from "../error-mapping.js"
-import type { ModelUsage } from "../research-answers.js"
+import { toPublicApiError } from "../error-mapping"
+import type { ModelUsage } from "../research-answers"
 
 export type JsonRecord = Readonly<Record<string, unknown>>
 

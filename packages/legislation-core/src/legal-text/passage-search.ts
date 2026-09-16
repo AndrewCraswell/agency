@@ -2,11 +2,11 @@ import { isDeepStrictEqual } from "node:util"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { digest } from "./contracts.js"
-import { requireLegalCopyReceiptRevisions } from "./copy-receipt-revisions.js"
-import { legalPassageScopeSchema, legalTransferGenerationSchema, legalTransferRowSchema } from "./passage-contract.js"
-import { readLegalPassageScope } from "./passage-read.js"
-import { requireRights } from "./rights.js"
+import { digest } from "./contracts"
+import { requireLegalCopyReceiptRevisions } from "./copy-receipt-revisions"
+import { legalPassageScopeSchema, legalTransferGenerationSchema, legalTransferRowSchema } from "./passage-contract"
+import { readLegalPassageScope } from "./passage-read"
+import { requireRights } from "./rights"
 
 export async function searchCopiedLegalPassages(
   sourcePool: pg.Pool,

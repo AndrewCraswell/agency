@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { executeNextHttpApiHandler } from "../api/next/node-handler.js"
-import { createSubscriptionHttpApiHandler } from "./subscription-route-handler.js"
+import { executeNextHttpApiHandler } from "../api/next/node-handler"
+import { createSubscriptionHttpApiHandler } from "./subscription-route-handler"
 
 describe("subscription route production identity boundary", () => {
   it("returns forbidden without a resolver before accessing the subscription database", async () => {

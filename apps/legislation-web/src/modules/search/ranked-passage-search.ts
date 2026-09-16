@@ -2,14 +2,14 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import type { SQL } from "drizzle-orm"
 import { z } from "zod"
-import { rankedSectionPageQuery, type RankedSectionFilters } from "./ranked-section-search.js"
+import { rankedSectionPageQuery, type RankedSectionFilters } from "./ranked-section-search"
 import {
   hydrateRankedPassageSearch,
   RankedPassageHydrationError,
   type PassageSearchInput,
   type PassageSearchResultPage,
   validatePassageSearchInput
-} from "./search.js"
+} from "./search"
 
 const rankedRowsSchema = z.array(
   z.object({

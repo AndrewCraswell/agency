@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { DocumentSummary } from "./canonical-projection.js"
-import { diffText, buildDocumentDiff, type DiffSection } from "./document-diff.js"
+import type { DocumentSummary } from "./canonical-projection"
+import { diffText, buildDocumentDiff, type DiffSection } from "./document-diff"
 
 const source = {
   isOfficial: true,

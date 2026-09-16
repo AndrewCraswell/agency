@@ -24,7 +24,7 @@ import {
   type WebhookRepository,
   type WebhookStatus,
   EncryptedWebhookSecret
-} from "./subscriptions.js"
+} from "./subscriptions"
 
 type LegislationTransaction = PgTransaction<
   NodePgQueryResultHKT,

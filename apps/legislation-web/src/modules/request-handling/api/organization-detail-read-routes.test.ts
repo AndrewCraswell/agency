@@ -1,12 +1,12 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import { close, createLegislationServer } from "../test-http-server.js"
-import type { OrganizationDetail } from "./canonical-projection.js"
+import { close, createLegislationServer } from "../test-http-server"
+import type { OrganizationDetail } from "./canonical-projection"
 import {
   createOrganizationDetailReadApiHandler,
   type OrganizationDetailReadApi
-} from "./organization-detail-read-routes.js"
+} from "./organization-detail-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "organization-detail-read-api-test", write: () => undefined })

@@ -10,9 +10,9 @@ import pg from "pg"
 import invariant from "tiny-invariant"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createLegalTextReader } from "./legal-text-read.js"
-import { createLegalTextApiHandler } from "./legal-text-routes.js"
-import { executeNextHttpApiHandler } from "./next/node-handler.js"
+import { createLegalTextReader } from "./legal-text-read"
+import { createLegalTextApiHandler } from "./legal-text-routes"
+import { executeNextHttpApiHandler } from "./next/node-handler"
 
 const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {

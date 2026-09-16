@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { HttpApiHandler } from "../api/http.js"
+import type { HttpApiHandler } from "../api/http"
 
 type HandlerFactory = (...arguments_: readonly unknown[]) => HttpApiHandler
 type NextHttpApiExecutor = (request: Request, handler: HttpApiHandler) => Promise<Response>
@@ -75,7 +75,7 @@ vi.mock("../../legislation/runtime/runtime.js", () => ({
   }))
 }))
 
-import { createCivicEntityRequestHandler, handleCivicEntityRequest } from "./civic-entity-route-handler.js"
+import { createCivicEntityRequestHandler, handleCivicEntityRequest } from "./civic-entity-route-handler"
 
 afterEach(() => {
   vi.clearAllMocks()

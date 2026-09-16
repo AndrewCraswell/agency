@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { runApiSmoke } from "./smoke-harness.js"
-import { formatSmokeProcessOutput } from "./smoke-process-diagnostics.js"
-import { parseSmokeFixtures, parseSmokeToken } from "./smoke-runner-config.js"
+import { runApiSmoke } from "./smoke-harness"
+import { formatSmokeProcessOutput } from "./smoke-process-diagnostics"
+import { parseSmokeFixtures, parseSmokeToken } from "./smoke-runner-config"
 
 function canonical(
   id: string,

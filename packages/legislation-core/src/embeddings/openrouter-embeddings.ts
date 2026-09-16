@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { EMBEDDING_ROUTES, type EmbeddingRoute } from "./embedding-routing.js"
-import { validateEmbeddingTokenBudget } from "./embedding-tokenizer.js"
+import { EMBEDDING_ROUTES, type EmbeddingRoute } from "./embedding-routing"
+import { validateEmbeddingTokenBudget } from "./embedding-tokenizer"
 
 const DEFAULT_EMBEDDING_ROUTE = EMBEDDING_ROUTES["document-section"]
 export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_ROUTE.model

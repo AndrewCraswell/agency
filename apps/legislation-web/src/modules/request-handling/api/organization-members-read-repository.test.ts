@@ -1,6 +1,6 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describe, expect, it } from "vitest"
-import { OrganizationMembersRepository } from "./organization-members-read-repository.js"
+import { OrganizationMembersRepository } from "./organization-members-read-repository"
 
 const input = {
   from: "2026-01-01",

@@ -1,5 +1,5 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import { getPersonDetailRead, type PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read.js"
+import { getPersonDetailRead, type PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read"
 
 export interface PersonDetailReadRepository {
   getPersonDetail(personId: string): Promise<PersonDetailRead>

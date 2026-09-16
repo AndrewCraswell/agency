@@ -12,7 +12,7 @@ import {
   encodeMembershipCursor,
   encodeOrganizationCursor,
   listOrganizations
-} from "./organization-relationships.js"
+} from "./organization-relationships"
 
 const pool = new pg.Pool({ connectionString: "postgresql://organization-relationships-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

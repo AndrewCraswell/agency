@@ -1,6 +1,6 @@
 import { createServer } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
-import { createLegislationApiHandler } from "./handlers.js"
+import { createLegislationApiHandler } from "./handlers"
 import {
   createCanonicalResearchEvidenceRetriever,
   createOpenRouterResearchAnswerGenerator,
@@ -11,7 +11,7 @@ import {
   type ModelUsage,
   type ResearchAnswerApi,
   type ResearchCitation
-} from "./research-answers.js"
+} from "./research-answers"
 
 const servers = new Set<ReturnType<typeof createServer>>()
 const citation: ResearchCitation = {

@@ -1,8 +1,8 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { AmendmentSearchApi } from "./amendment-search.js"
-import type { CivicSearchApi } from "./civic-search.js"
-import { createProductionUniversalSearchApi } from "./universal-search-adapter.js"
+import type { AmendmentSearchApi } from "./amendment-search"
+import type { CivicSearchApi } from "./civic-search"
+import { createProductionUniversalSearchApi } from "./universal-search-adapter"
 
 const mocks = vi.hoisted(() => ({
   listMeetings: vi.fn<(...arguments_: unknown[]) => Promise<{ items: { id: string }[]; truncated: boolean }>>(),

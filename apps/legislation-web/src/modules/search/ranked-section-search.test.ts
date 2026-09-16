@@ -1,6 +1,6 @@
 import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it, vi } from "vitest"
-import { collectRankedAmendments, rankedSectionPageQuery, type RankedSectionHit } from "./ranked-section-search.js"
+import { collectRankedAmendments, rankedSectionPageQuery, type RankedSectionHit } from "./ranked-section-search"
 
 const dialect = new PgDialect()
 type FetchPage = (offset: number, limit: number) => Promise<readonly RankedSectionHit[]>

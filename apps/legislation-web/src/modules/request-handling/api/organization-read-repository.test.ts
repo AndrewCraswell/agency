@@ -7,8 +7,8 @@ import {
   buildOrganizationListQuery,
   type OrganizationListInput,
   type OrganizationPage
-} from "../../legislation/persistence/queries/organization-relationships.js"
-import { OrganizationRepository } from "./organization-read-repository.js"
+} from "../../legislation/persistence/queries/organization-relationships"
+import { OrganizationRepository } from "./organization-read-repository"
 
 const pool = new pg.Pool({ connectionString: "postgresql://organization-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

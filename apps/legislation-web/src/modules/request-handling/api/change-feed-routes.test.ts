@@ -1,10 +1,10 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type { ChangeEventRead, ChangeFeedPage } from "../../legislation/persistence/queries/change-feed-reads.js"
-import { projectChangeEventRead } from "../../legislation/persistence/queries/change-feed-reads.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createChangeFeedApiHandler, type ChangeFeedApi } from "./change-feed-routes.js"
+import type { ChangeEventRead, ChangeFeedPage } from "../../legislation/persistence/queries/change-feed-reads"
+import { projectChangeEventRead } from "../../legislation/persistence/queries/change-feed-reads"
+import { close, createLegislationServer } from "../test-http-server"
+import { createChangeFeedApiHandler, type ChangeFeedApi } from "./change-feed-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "change-feed-test", write: () => undefined })

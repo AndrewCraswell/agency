@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { legalSearchPageSchema, legalSearchRequestSchema } from "./legal-search-contract.js"
+import { legalSearchPageSchema, legalSearchRequestSchema } from "./legal-search-contract"
 
 const generation = "a".repeat(64)
 function page() {

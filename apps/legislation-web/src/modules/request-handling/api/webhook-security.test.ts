@@ -6,7 +6,7 @@ import {
   resolvePublicWebhookUrl,
   signWebhookPayload,
   verifyWebhookSignature
-} from "./webhook-security.js"
+} from "./webhook-security"
 
 describe("webhook security", () => {
   it("rejects hosts with any private DNS answer", async () => {

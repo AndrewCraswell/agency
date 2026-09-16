@@ -1,30 +1,30 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import type { LegislationConfig } from "../../configuration/config.js"
-import { getEventDocumentRead } from "../../legislation/persistence/queries/event-document-read.js"
+import type { LegislationConfig } from "../../configuration/config"
+import { getEventDocumentRead } from "../../legislation/persistence/queries/event-document-read"
 import {
   assertMeetingExists as assertMeetingAgendaParentExists,
   getMeetingAgendaItemRead,
   listMeetingAgenda
-} from "../../legislation/persistence/queries/meeting-agenda-read.js"
+} from "../../legislation/persistence/queries/meeting-agenda-read"
 import {
   assertMeetingExists as assertMeetingDocumentParentExists,
   listMeetingDocuments
-} from "../../legislation/persistence/queries/meeting-document-read.js"
-import { getMeetingParticipantRead } from "../../legislation/persistence/queries/meeting-participant-read.js"
+} from "../../legislation/persistence/queries/meeting-document-read"
+import { getMeetingParticipantRead } from "../../legislation/persistence/queries/meeting-participant-read"
 import {
   assertMeetingExists as assertMeetingParticipantParentExists,
   listMeetingParticipants
-} from "../../legislation/persistence/queries/meeting-participant-reads.js"
-import { getNextLegislationApplication } from "../../legislation/runtime/runtime.js"
-import { createEventDocumentReadApiHandler } from "../api/event-document-read-routes.js"
-import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http.js"
-import { createMeetingAgendaReadApiHandler } from "../api/meeting-agenda-read-routes.js"
-import { createMeetingDocumentReadApiHandler } from "../api/meeting-document-read-routes.js"
-import { createMeetingParticipantListApiHandler } from "../api/meeting-participant-list-routes.js"
-import { createMeetingParticipantReadApiHandler } from "../api/meeting-participant-read-routes.js"
-import { createMeetingReadRepository } from "../api/meeting-read-repository.js"
-import { createMeetingReadApiHandler, type MeetingReadApi } from "../api/meeting-read-routes.js"
-import { executeAuthenticatedApiRequest } from "./authenticated-api-request.js"
+} from "../../legislation/persistence/queries/meeting-participant-reads"
+import { getNextLegislationApplication } from "../../legislation/runtime/runtime"
+import { createEventDocumentReadApiHandler } from "../api/event-document-read-routes"
+import { createCompositeHttpApiHandler, type HttpApiHandler } from "../api/http"
+import { createMeetingAgendaReadApiHandler } from "../api/meeting-agenda-read-routes"
+import { createMeetingDocumentReadApiHandler } from "../api/meeting-document-read-routes"
+import { createMeetingParticipantListApiHandler } from "../api/meeting-participant-list-routes"
+import { createMeetingParticipantReadApiHandler } from "../api/meeting-participant-read-routes"
+import { createMeetingReadRepository } from "../api/meeting-read-repository"
+import { createMeetingReadApiHandler, type MeetingReadApi } from "../api/meeting-read-routes"
+import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
 
 type MeetingCalendarApplication = Readonly<{
   config: Pick<LegislationConfig, "server">

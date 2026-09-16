@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  projectMeetingParticipantRead,
-  type MeetingParticipantProjectionRead
-} from "./meeting-participant-projection.js"
+import { projectMeetingParticipantRead, type MeetingParticipantProjectionRead } from "./meeting-participant-projection"
 
 function read(): MeetingParticipantProjectionRead {
   return {

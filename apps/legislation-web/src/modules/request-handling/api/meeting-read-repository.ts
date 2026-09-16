@@ -10,7 +10,7 @@ import {
   type MeetingOrganizationRead,
   type MeetingPage,
   type MeetingRead
-} from "../../legislation/persistence/queries/meeting-read.js"
+} from "../../legislation/persistence/queries/meeting-read"
 
 export type MeetingCollectionInput = MeetingListInput
 export type MeetingCollectionPage = MeetingPage

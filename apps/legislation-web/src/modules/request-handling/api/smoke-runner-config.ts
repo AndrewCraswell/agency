@@ -1,4 +1,4 @@
-import type { SmokeFixture } from "./smoke-harness.js"
+import type { SmokeFixture } from "./smoke-harness"
 
 export type SmokeRunnerEnvironment = Readonly<Record<string, string | undefined>>
 

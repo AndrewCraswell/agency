@@ -8,7 +8,7 @@ import {
   type JurisdictionSessionListInput,
   type SessionPage,
   type SessionRead
-} from "../../legislation/persistence/queries/session-read.js"
+} from "../../legislation/persistence/queries/session-read"
 
 export type SessionListInput = JurisdictionSessionListInput
 export type SessionListPage = SessionPage

@@ -1,5 +1,5 @@
-import { CanonicalProjectionError, type BillSummary, type SourceReference } from "./canonical-projection.js"
-import { projectBillSummaryRead, type BillSummaryRead } from "./canonical-read.js"
+import { CanonicalProjectionError, type BillSummary, type SourceReference } from "./canonical-projection"
+import { projectBillSummaryRead, type BillSummaryRead } from "./canonical-read"
 
 export type BillSearchMode = "hybrid" | "lexical" | "semantic"
 

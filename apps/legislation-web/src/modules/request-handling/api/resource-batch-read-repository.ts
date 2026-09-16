@@ -1,6 +1,6 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { AmendmentReadRepository } from "./amendment-read-repository.js"
-import type { BillDetailReadRepository } from "./bill-detail-read-repository.js"
+import type { AmendmentReadRepository } from "./amendment-read-repository"
+import type { BillDetailReadRepository } from "./bill-detail-read-repository"
 import type {
   AmendmentDetail,
   BillDetail,
@@ -12,18 +12,18 @@ import type {
   Session,
   SupportingMaterialDetail,
   VoteDetail
-} from "./canonical-projection.js"
-import { projectCoreSupportingMaterialDetailRead, type CoreReadQueryApi } from "./core-read.js"
-import { projectDocumentDetailRead, type DocumentReadApi } from "./document-read-routes.js"
-import type { JurisdictionReadRepository } from "./jurisdiction-read-repository.js"
-import { projectJurisdictionRead } from "./jurisdiction-read-routes.js"
-import { projectMeetingDetailRead, type MeetingReadApi } from "./meeting-read-routes.js"
-import type { OrganizationDetailReadRepository } from "./organization-detail-read-repository.js"
-import type { PersonDetailReadRepository } from "./person-detail-read-repository.js"
-import { projectPersonDetailRead } from "./person-detail-read-routes.js"
-import type { SessionReadRepository } from "./session-read-repository.js"
-import { projectSessionRead } from "./session-read-routes.js"
-import { projectVoteDetailRead, type VoteReadApi } from "./vote-read-routes.js"
+} from "./canonical-projection"
+import { projectCoreSupportingMaterialDetailRead, type CoreReadQueryApi } from "./core-read"
+import { projectDocumentDetailRead, type DocumentReadApi } from "./document-read-routes"
+import type { JurisdictionReadRepository } from "./jurisdiction-read-repository"
+import { projectJurisdictionRead } from "./jurisdiction-read-routes"
+import { projectMeetingDetailRead, type MeetingReadApi } from "./meeting-read-routes"
+import type { OrganizationDetailReadRepository } from "./organization-detail-read-repository"
+import type { PersonDetailReadRepository } from "./person-detail-read-repository"
+import { projectPersonDetailRead } from "./person-detail-read-routes"
+import type { SessionReadRepository } from "./session-read-repository"
+import { projectSessionRead } from "./session-read-routes"
+import { projectVoteDetailRead, type VoteReadApi } from "./vote-read-routes"
 
 export const RESOURCE_TYPES = [
   "jurisdiction",

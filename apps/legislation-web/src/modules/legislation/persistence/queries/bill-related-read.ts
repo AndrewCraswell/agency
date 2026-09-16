@@ -4,8 +4,8 @@ import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-t
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
 import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm"
-import { projectBillSummaryRead, type BillSummaryRead } from "../../../request-handling/api/canonical-read.js"
-import { semanticBillSearch } from "../../../search/search.js"
+import { projectBillSummaryRead, type BillSummaryRead } from "../../../request-handling/api/canonical-read"
+import { semanticBillSearch } from "../../../search/search"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100

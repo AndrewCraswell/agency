@@ -5,9 +5,9 @@ import type {
   MeetingAgendaItemRead,
   MeetingAgendaListInput,
   MeetingAgendaPage
-} from "../../legislation/persistence/queries/meeting-agenda-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createMeetingAgendaReadApiHandler, type MeetingAgendaReadApi } from "./meeting-agenda-read-routes.js"
+} from "../../legislation/persistence/queries/meeting-agenda-read"
+import { close, createLegislationServer } from "../test-http-server"
+import { createMeetingAgendaReadApiHandler, type MeetingAgendaReadApi } from "./meeting-agenda-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "meeting-agenda-read-test", write: () => undefined })

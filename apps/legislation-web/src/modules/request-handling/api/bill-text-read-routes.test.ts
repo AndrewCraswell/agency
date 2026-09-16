@@ -1,9 +1,9 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import { close, createLegislationServer } from "../test-http-server.js"
-import type { BillTextReadApi } from "./bill-text-read-routes.js"
-import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
+import { close, createLegislationServer } from "../test-http-server"
+import type { BillTextReadApi } from "./bill-text-read-routes"
+import { createBillTextReadApiHandler } from "./bill-text-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "legislation-bill-text-read-api-test", write: () => undefined })

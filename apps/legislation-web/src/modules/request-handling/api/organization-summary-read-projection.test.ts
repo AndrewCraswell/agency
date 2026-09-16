@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { OrganizationRow } from "../../legislation/persistence/queries/organization-relationships.js"
-import { projectOrganizationRow } from "./organization-summary-read-projection.js"
+import type { OrganizationRow } from "../../legislation/persistence/queries/organization-relationships"
+import { projectOrganizationRow } from "./organization-summary-read-projection"
 
 function organization(overrides: Partial<OrganizationRow> = {}): OrganizationRow {
   return {

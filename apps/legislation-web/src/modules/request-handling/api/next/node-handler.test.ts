@@ -1,9 +1,9 @@
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describe, expect, it } from "vitest"
-import { CanonicalProjectionError } from "../canonical-projection.js"
-import { readJsonBody, sendApiError, sendApiJson, type HttpApiHandler } from "../http.js"
-import { executeNextHttpApiHandler } from "./node-handler.js"
+import { CanonicalProjectionError } from "../canonical-projection"
+import { readJsonBody, sendApiError, sendApiJson, type HttpApiHandler } from "../http"
+import { executeNextHttpApiHandler } from "./node-handler"
 
 describe("Next Node HTTP handler bridge", () => {
   it("preserves a JSON success response and correlation ID", async () => {

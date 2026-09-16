@@ -11,7 +11,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 import {
   principalScopeForSubscriptionOwner,
   type PreflightSubscriptionMutationExecutor,
@@ -19,7 +19,7 @@ import {
   type IdempotentResponse,
   type SubscriptionMutationExecutor,
   type SubscriptionTransaction
-} from "./subscription-repository.js"
+} from "./subscription-repository"
 import {
   type CreateWebhookInput,
   SubscriptionApiError,
@@ -28,13 +28,13 @@ import {
   type Webhook,
   type WebhookWithSecret,
   type SubscriptionEventType
-} from "./subscriptions.js"
+} from "./subscriptions"
 import {
   createPinnedWebhookVerificationTransport,
   type WebhookVerificationTransport
-} from "./webhook-challenge-transport.js"
-import { assertWebhookReadModel } from "./webhook-read-repository.js"
-import { resolvePublicWebhookUrl, UnsafeWebhookUrlError } from "./webhook-security.js"
+} from "./webhook-challenge-transport"
+import { assertWebhookReadModel } from "./webhook-read-repository"
+import { resolvePublicWebhookUrl, UnsafeWebhookUrlError } from "./webhook-security"
 
 const eventTypes = new Set([
   "action-added",

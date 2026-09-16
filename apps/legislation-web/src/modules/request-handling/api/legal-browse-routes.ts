@@ -15,8 +15,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { createLegalBrowser } from "./legal-browse-read.js"
+} from "./http"
+import type { createLegalBrowser } from "./legal-browse-read"
 
 export function createLegalBrowseApiHandler(browser: ReturnType<typeof createLegalBrowser>): HttpApiHandler {
   return async (request, response) => {

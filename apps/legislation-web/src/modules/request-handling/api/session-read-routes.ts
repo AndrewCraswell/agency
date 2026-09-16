@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { SessionRead } from "../../legislation/persistence/queries/session-read.js"
-import type { Session } from "./canonical-projection.js"
-import { projectSession } from "./canonical-projection.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+import type { SessionRead } from "../../legislation/persistence/queries/session-read"
+import type { Session } from "./canonical-projection"
+import { projectSession } from "./canonical-projection"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiPage,
   apiResource,
@@ -15,8 +15,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { SessionListInput, SessionListPage } from "./session-read-repository.js"
+} from "./http"
+import type { SessionListInput, SessionListPage } from "./session-read-repository"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

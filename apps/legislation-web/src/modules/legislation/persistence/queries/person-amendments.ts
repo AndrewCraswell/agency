@@ -7,8 +7,8 @@ import {
   isRfc3339Timestamp,
   projectAmendmentSummary,
   type AmendmentSummary
-} from "../../../request-handling/api/canonical-projection.js"
-import { sourceProjectionContext } from "../../../request-handling/api/canonical-read.js"
+} from "../../../request-handling/api/canonical-projection"
+import { sourceProjectionContext } from "../../../request-handling/api/canonical-read"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100

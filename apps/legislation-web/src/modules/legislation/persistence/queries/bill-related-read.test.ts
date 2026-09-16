@@ -2,14 +2,14 @@ import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { describe, expect, it } from "vitest"
-import type { BillRelatedHitRead, BillRelationRead } from "./bill-related-read.js"
+import type { BillRelatedHitRead, BillRelationRead } from "./bill-related-read"
 import {
   buildBillRelatedExplicitQuery,
   buildBillRelatedExplicitIdQueries,
   excludeExplicitRelatedBills,
   projectBillRelatedRead,
   type BillRelationCursor
-} from "./bill-related-read.js"
+} from "./bill-related-read"
 
 const pool = new pg.Pool({ connectionString: "postgresql://bill-related-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

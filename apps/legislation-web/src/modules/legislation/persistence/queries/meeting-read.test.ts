@@ -2,7 +2,7 @@ import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { describe, expect, it } from "vitest"
-import { applyCalendarRelations, buildMeetingListQuery } from "./meeting-read.js"
+import { applyCalendarRelations, buildMeetingListQuery } from "./meeting-read"
 
 const pool = new pg.Pool({ connectionString: "postgresql://meeting-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

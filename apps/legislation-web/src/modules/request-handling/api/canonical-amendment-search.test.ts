@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { projectAmendmentSearchHit } from "./canonical-amendment-search.js"
-import { CanonicalProjectionError } from "./canonical-projection.js"
+import { projectAmendmentSearchHit } from "./canonical-amendment-search"
+import { CanonicalProjectionError } from "./canonical-projection"
 
 const structured = {
   amendment: {

@@ -7,7 +7,7 @@ import {
   buildOrganizationChildrenQuery,
   buildOrganizationDetailLookupQuery,
   type OrganizationDetailOrganizationRow
-} from "./organization-detail-read.js"
+} from "./organization-detail-read"
 
 const pool = new pg.Pool({ connectionString: "postgresql://organization-detail-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

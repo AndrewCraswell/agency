@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { projectJurisdiction, type Jurisdiction, type ProjectionContext } from "./canonical-projection.js"
-import { toProjectionLegislationError } from "./canonical-read.js"
+import { projectJurisdiction, type Jurisdiction, type ProjectionContext } from "./canonical-projection"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   apiResource,
   assertAllowedQueryParameters,
@@ -9,8 +9,8 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import type { JurisdictionRead } from "./jurisdiction-read-repository.js"
+} from "./http"
+import type { JurisdictionRead } from "./jurisdiction-read-repository"
 
 const MAX_ID_LENGTH = 256
 

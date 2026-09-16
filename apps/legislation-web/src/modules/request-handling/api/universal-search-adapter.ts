@@ -1,24 +1,24 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { listMeetings } from "../../legislation/persistence/queries/meeting-read.js"
-import { listOrganizations } from "../../legislation/persistence/queries/organization-relationships.js"
-import { listPeople } from "../../legislation/persistence/queries/people-read.js"
-import type { AmendmentSearchApi } from "./amendment-search.js"
-import { projectAmendmentSearchHits } from "./canonical-amendment-search.js"
-import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
-import { projectBillSearchHits } from "./canonical-search.js"
-import type { CivicSearchApi } from "./civic-search.js"
-import { projectMeetingRead } from "./meeting-read-projection.js"
-import { projectOrganizationRow } from "./organization-summary-read-projection.js"
-import { projectPassageSearchHit } from "./passage-search.js"
-import { projectPersonRead } from "./people-read-routes.js"
+import { listMeetings } from "../../legislation/persistence/queries/meeting-read"
+import { listOrganizations } from "../../legislation/persistence/queries/organization-relationships"
+import { listPeople } from "../../legislation/persistence/queries/people-read"
+import type { AmendmentSearchApi } from "./amendment-search"
+import { projectAmendmentSearchHits } from "./canonical-amendment-search"
+import { projectSupportingMaterialSearchHits } from "./canonical-material-search"
+import { projectBillSearchHits } from "./canonical-search"
+import type { CivicSearchApi } from "./civic-search"
+import { projectMeetingRead } from "./meeting-read-projection"
+import { projectOrganizationRow } from "./organization-summary-read-projection"
+import { projectPassageSearchHit } from "./passage-search"
+import { projectPersonRead } from "./people-read-routes"
 import {
   type UniversalProductPage,
   type UniversalProductSearchInput,
   type UniversalSearchApi,
   type UniversalSearchCandidate,
   type SearchModel
-} from "./universal-search.js"
+} from "./universal-search"
 
 type SearchServices = CivicSearchApi & AmendmentSearchApi
 

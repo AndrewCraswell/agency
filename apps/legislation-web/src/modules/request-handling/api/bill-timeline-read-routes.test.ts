@@ -1,8 +1,8 @@
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type { BillTimelinePersistenceRead } from "../../legislation/persistence/queries/bill-timeline-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createBillTimelineReadApiHandler, type BillTimelineReadApi } from "./bill-timeline-read-routes.js"
+import type { BillTimelinePersistenceRead } from "../../legislation/persistence/queries/bill-timeline-read"
+import { close, createLegislationServer } from "../test-http-server"
+import { createBillTimelineReadApiHandler, type BillTimelineReadApi } from "./bill-timeline-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "bill-timeline-read-test", write: () => undefined })

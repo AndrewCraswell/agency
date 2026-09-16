@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
-import { EMBEDDING_ROUTES } from "./embedding-routing.js"
+import { EMBEDDING_ROUTES } from "./embedding-routing"
 import {
   EMBEDDING_DIMENSIONS,
   EMBEDDING_MODEL,
   MAX_EMBEDDING_INPUT_CHARACTERS,
   OpenRouterEmbeddingClient
-} from "./openrouter-embeddings.js"
+} from "./openrouter-embeddings"
 
 function successfulResponse(model: string = EMBEDDING_MODEL, dimensions: number = EMBEDDING_DIMENSIONS) {
   return new Response(

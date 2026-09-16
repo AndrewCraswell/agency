@@ -4,7 +4,7 @@ import {
   type JurisdictionCollectionRead,
   type JurisdictionListInput,
   type JurisdictionPage
-} from "../../legislation/persistence/queries/jurisdictions-read.js"
+} from "../../legislation/persistence/queries/jurisdictions-read"
 
 export type JurisdictionCollectionPage = JurisdictionPage<JurisdictionCollectionRead>
 

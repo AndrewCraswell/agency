@@ -5,8 +5,8 @@ import {
   type BillDetailPage,
   type BillDetailReadInput,
   type BillVoteReadInput
-} from "../../legislation/persistence/queries/bill-detail-read.js"
-import type { BillDetail, VoteDetail } from "./canonical-projection.js"
+} from "../../legislation/persistence/queries/bill-detail-read"
+import type { BillDetail, VoteDetail } from "./canonical-projection"
 
 export interface BillDetailReadRepository {
   getBillDetail(input: BillDetailReadInput): Promise<BillDetail>

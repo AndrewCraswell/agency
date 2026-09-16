@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { toProjectionLegislationError } from "./canonical-read.js"
+import { toProjectionLegislationError } from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiResource,
@@ -8,11 +8,11 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 import type {
   OrganizationDetailReadInput,
   OrganizationDetailReadRepository
-} from "./organization-detail-read-repository.js"
+} from "./organization-detail-read-repository"
 
 const DEFAULT_CHILD_LIMIT = 25
 

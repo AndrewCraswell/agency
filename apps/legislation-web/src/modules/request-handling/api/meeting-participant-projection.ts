@@ -5,8 +5,8 @@ import {
   projectPersonSummary,
   type OrganizationSummary,
   type PersonSummary
-} from "./canonical-projection.js"
-import { sourceProjectionContext } from "./canonical-read.js"
+} from "./canonical-projection"
+import { sourceProjectionContext } from "./canonical-read"
 
 export interface MeetingParticipantProjectionRead {
   meeting: Readonly<{

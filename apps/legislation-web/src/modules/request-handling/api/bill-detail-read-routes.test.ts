@@ -1,14 +1,11 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import {
-  BILL_DETAIL_READ_LIMITS,
-  requiredVoteSourceUrl
-} from "../../legislation/persistence/queries/bill-detail-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import type { BillDetailReadRepository } from "./bill-detail-read-repository.js"
-import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
-import type { BillDetail } from "./canonical-projection.js"
+import { BILL_DETAIL_READ_LIMITS, requiredVoteSourceUrl } from "../../legislation/persistence/queries/bill-detail-read"
+import { close, createLegislationServer } from "../test-http-server"
+import type { BillDetailReadRepository } from "./bill-detail-read-repository"
+import { createBillDetailReadApiHandler } from "./bill-detail-read-routes"
+import type { BillDetail } from "./canonical-projection"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "legislation-bill-detail-read-test", write: () => undefined })

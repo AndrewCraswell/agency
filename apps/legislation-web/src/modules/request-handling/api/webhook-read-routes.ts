@@ -9,14 +9,14 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
-import type { SubscriptionEventType, Webhook, WebhookStatus } from "./subscriptions.js"
+} from "./http"
+import { SubscriptionRepositoryError } from "./subscription-repository"
+import type { SubscriptionEventType, Webhook, WebhookStatus } from "./subscriptions"
 import {
   assertWebhookReadModel,
   type WebhookReadListInput,
   type WebhookReadRepository
-} from "./webhook-read-repository.js"
+} from "./webhook-read-repository"
 
 const eventTypes = new Set<SubscriptionEventType>([
   "action-added",

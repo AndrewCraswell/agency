@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, expect, it, vi } from "vitest"
-import { createLogger } from "../observability/logger.js"
-import { createLegislationResearchTools, type LegislationQueryApi } from "./tools.js"
+import { createLogger } from "../observability/logger"
+import { createLegislationResearchTools, type LegislationQueryApi } from "./tools"
 
 const logger = createLogger({ level: "error", service: "research-test", write: () => undefined })
 function service(): LegislationQueryApi {

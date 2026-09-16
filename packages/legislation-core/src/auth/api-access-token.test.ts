@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ApiAccessTokenError, createApiAccessTokenProvider } from "./api-access-token.js"
+import { ApiAccessTokenError, createApiAccessTokenProvider } from "./api-access-token"
 
 const issuer = "https://authkit.example"
 const clientId = "client_test"

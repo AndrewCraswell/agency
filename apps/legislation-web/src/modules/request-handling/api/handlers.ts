@@ -3,12 +3,12 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import {
   assertBillRelatedParentExists,
   listBillRelatedBills
-} from "../../legislation/persistence/queries/bill-related-read.js"
-import { listBillTextSections } from "../../legislation/persistence/queries/bill-text-read.js"
-import { listBillTimeline } from "../../legislation/persistence/queries/bill-timeline-read.js"
-import { getChangeEvent, listChangeFeed } from "../../legislation/persistence/queries/change-feed-reads.js"
-import { getOrganizationMembership, getPersonTerm } from "../../legislation/persistence/queries/civic-scoped-reads.js"
-import { readDocumentDiff } from "../../legislation/persistence/queries/document-diff-read.js"
+} from "../../legislation/persistence/queries/bill-related-read"
+import { listBillTextSections } from "../../legislation/persistence/queries/bill-text-read"
+import { listBillTimeline } from "../../legislation/persistence/queries/bill-timeline-read"
+import { getChangeEvent, listChangeFeed } from "../../legislation/persistence/queries/change-feed-reads"
+import { getOrganizationMembership, getPersonTerm } from "../../legislation/persistence/queries/civic-scoped-reads"
+import { readDocumentDiff } from "../../legislation/persistence/queries/document-diff-read"
 import {
   assertBillExists,
   assertSupportingMaterialExists,
@@ -17,101 +17,95 @@ import {
   listBillDocuments,
   listDocumentSections,
   listSupportingMaterialSections
-} from "../../legislation/persistence/queries/document-reads.js"
-import { getEventDocumentRead } from "../../legislation/persistence/queries/event-document-read.js"
+} from "../../legislation/persistence/queries/document-reads"
+import { getEventDocumentRead } from "../../legislation/persistence/queries/event-document-read"
 import {
   assertMeetingExists as assertMeetingAgendaParentExists,
   getMeetingAgendaItemRead,
   listMeetingAgenda
-} from "../../legislation/persistence/queries/meeting-agenda-read.js"
-import {
-  assertMeetingExists,
-  listMeetingDocuments
-} from "../../legislation/persistence/queries/meeting-document-read.js"
-import { getMeetingParticipantRead } from "../../legislation/persistence/queries/meeting-participant-read.js"
+} from "../../legislation/persistence/queries/meeting-agenda-read"
+import { assertMeetingExists, listMeetingDocuments } from "../../legislation/persistence/queries/meeting-document-read"
+import { getMeetingParticipantRead } from "../../legislation/persistence/queries/meeting-participant-read"
 import {
   assertMeetingExists as assertMeetingParticipantParentExists,
   listMeetingParticipants
-} from "../../legislation/persistence/queries/meeting-participant-reads.js"
+} from "../../legislation/persistence/queries/meeting-participant-reads"
 import {
   assertOrganizationExists,
   listOrganizationBillReads
-} from "../../legislation/persistence/queries/organization-bill-read.js"
-import { listPeople } from "../../legislation/persistence/queries/people-read.js"
-import { listPersonAmendments } from "../../legislation/persistence/queries/person-amendments.js"
-import {
-  assertPersonExists,
-  listPersonBillActivity
-} from "../../legislation/persistence/queries/person-bill-activity.js"
-import { getSupportingMaterialSectionRead } from "../../legislation/persistence/queries/supporting-material-section-read.js"
-import { createAmendmentReadRepository } from "./amendment-read-repository.js"
-import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
-import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search.js"
-import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
-import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
-import { createBillRelatedReadApiHandler } from "./bill-related-read-routes.js"
-import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
-import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
-import { createChangeFeedApiHandler } from "./change-feed-routes.js"
-import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
-import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
-import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
-import { createDocumentDiffApiHandler } from "./document-diff-routes.js"
-import { createDocumentReadApiHandler, type DocumentReadApi } from "./document-read-routes.js"
-import { createEventDocumentReadApiHandler } from "./event-document-read-routes.js"
-import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http.js"
-import { createJurisdictionCollectionReadRepository } from "./jurisdiction-collection-read-repository.js"
-import { createJurisdictionCollectionReadApiHandler } from "./jurisdiction-collection-read-routes.js"
-import { createJurisdictionOrganizationRepository } from "./jurisdiction-organization-read-repository.js"
-import { createJurisdictionOrganizationReadApiHandler } from "./jurisdiction-organization-read-routes.js"
-import { createJurisdictionReadRepository } from "./jurisdiction-read-repository.js"
-import { createJurisdictionReadApiHandler } from "./jurisdiction-read-routes.js"
-import { createMeetingAgendaReadApiHandler } from "./meeting-agenda-read-routes.js"
-import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-routes.js"
-import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
-import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
-import { createMeetingReadRepository } from "./meeting-read-repository.js"
-import { createMeetingReadApiHandler } from "./meeting-read-routes.js"
-import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes.js"
-import { createOrganizationDetailReadRepository } from "./organization-detail-read-repository.js"
-import { createOrganizationDetailReadApiHandler } from "./organization-detail-read-routes.js"
-import { createOrganizationMembersRepository } from "./organization-members-read-repository.js"
-import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes.js"
-import { createOrganizationReadRepository } from "./organization-read-repository.js"
-import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
-import { createPassageSearchApiHandler } from "./passage-search.js"
-import { createPeopleReadApiHandler } from "./people-read-routes.js"
-import { createPersonAmendmentApiHandler } from "./person-amendment-routes.js"
-import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes.js"
-import { createPersonDetailReadRepository } from "./person-detail-read-repository.js"
-import { createPersonDetailReadApiHandler } from "./person-detail-read-routes.js"
-import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
-import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
+} from "../../legislation/persistence/queries/organization-bill-read"
+import { listPeople } from "../../legislation/persistence/queries/people-read"
+import { listPersonAmendments } from "../../legislation/persistence/queries/person-amendments"
+import { assertPersonExists, listPersonBillActivity } from "../../legislation/persistence/queries/person-bill-activity"
+import { getSupportingMaterialSectionRead } from "../../legislation/persistence/queries/supporting-material-section-read"
+import { createAmendmentReadRepository } from "./amendment-read-repository"
+import { createAmendmentReadApiHandler } from "./amendment-read-routes"
+import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search"
+import { createBillDetailReadRepository } from "./bill-detail-read-repository"
+import { createBillDetailReadApiHandler } from "./bill-detail-read-routes"
+import { createBillRelatedReadApiHandler } from "./bill-related-read-routes"
+import { createBillTextReadApiHandler } from "./bill-text-read-routes"
+import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes"
+import { createChangeFeedApiHandler } from "./change-feed-routes"
+import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes"
+import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search"
+import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read"
+import { createDocumentDiffApiHandler } from "./document-diff-routes"
+import { createDocumentReadApiHandler, type DocumentReadApi } from "./document-read-routes"
+import { createEventDocumentReadApiHandler } from "./event-document-read-routes"
+import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http"
+import { createJurisdictionCollectionReadRepository } from "./jurisdiction-collection-read-repository"
+import { createJurisdictionCollectionReadApiHandler } from "./jurisdiction-collection-read-routes"
+import { createJurisdictionOrganizationRepository } from "./jurisdiction-organization-read-repository"
+import { createJurisdictionOrganizationReadApiHandler } from "./jurisdiction-organization-read-routes"
+import { createJurisdictionReadRepository } from "./jurisdiction-read-repository"
+import { createJurisdictionReadApiHandler } from "./jurisdiction-read-routes"
+import { createMeetingAgendaReadApiHandler } from "./meeting-agenda-read-routes"
+import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-routes"
+import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes"
+import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes"
+import { createMeetingReadRepository } from "./meeting-read-repository"
+import { createMeetingReadApiHandler } from "./meeting-read-routes"
+import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes"
+import { createOrganizationDetailReadRepository } from "./organization-detail-read-repository"
+import { createOrganizationDetailReadApiHandler } from "./organization-detail-read-routes"
+import { createOrganizationMembersRepository } from "./organization-members-read-repository"
+import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes"
+import { createOrganizationReadRepository } from "./organization-read-repository"
+import { createOrganizationReadApiHandler } from "./organization-read-routes"
+import { createPassageSearchApiHandler } from "./passage-search"
+import { createPeopleReadApiHandler } from "./people-read-routes"
+import { createPersonAmendmentApiHandler } from "./person-amendment-routes"
+import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes"
+import { createPersonDetailReadRepository } from "./person-detail-read-repository"
+import { createPersonDetailReadApiHandler } from "./person-detail-read-routes"
+import { createPersonMembershipsRepository } from "./person-membership-read-repository"
+import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes"
 import {
   createResearchAnswerApiHandler,
   createUnavailableResearchAnswerApi,
   type ResearchAnswerApi
-} from "./research-answers.js"
-import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
-import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
-import { createSessionRepository } from "./session-read-repository.js"
-import { createSessionReadApiHandler } from "./session-read-routes.js"
-import type { SubscriptionMutationExecutor } from "./subscription-repository.js"
-import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "./subscription-routes.js"
+} from "./research-answers"
+import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository"
+import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes"
+import { createSessionRepository } from "./session-read-repository"
+import { createSessionReadApiHandler } from "./session-read-routes"
+import type { SubscriptionMutationExecutor } from "./subscription-repository"
+import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "./subscription-routes"
 import {
   createWebhookSecretProtector,
   type SubscriptionRepository,
   type WebhookSecretProtector,
   SubscriptionService
-} from "./subscriptions.js"
-import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
-import { createProductionUniversalSearchApi } from "./universal-search-adapter.js"
-import { createUniversalSearchApiHandler } from "./universal-search.js"
-import { createVoteReadRepository } from "./vote-read-repository.js"
-import { createVoteReadApiHandler } from "./vote-read-routes.js"
-import { createWebhookMutationApiHandler } from "./webhook-mutation-routes.js"
-import type { WebhookReadRepository } from "./webhook-read-repository.js"
-import { createWebhookReadApiHandler } from "./webhook-read-routes.js"
+} from "./subscriptions"
+import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes"
+import { createUniversalSearchApiHandler } from "./universal-search"
+import { createProductionUniversalSearchApi } from "./universal-search-adapter"
+import { createVoteReadRepository } from "./vote-read-repository"
+import { createVoteReadApiHandler } from "./vote-read-routes"
+import { createWebhookMutationApiHandler } from "./webhook-mutation-routes"
+import type { WebhookReadRepository } from "./webhook-read-repository"
+import { createWebhookReadApiHandler } from "./webhook-read-routes"
 
 /**
  * The sole composition point for public HTTP route slices. Domain slices add a

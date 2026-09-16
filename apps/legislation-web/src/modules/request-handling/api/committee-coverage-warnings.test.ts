@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { committeeCoverageWarnings, personCommitteeCoverageWarnings } from "./committee-coverage-warnings.js"
+import { committeeCoverageWarnings, personCommitteeCoverageWarnings } from "./committee-coverage-warnings"
 
 const organization = { chamber: "upper", name: "Appropriations" }
 const checkpoint = {

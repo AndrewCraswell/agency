@@ -7,7 +7,7 @@ import {
   buildJurisdictionReadQuery,
   JurisdictionRepository,
   type JurisdictionRead
-} from "./jurisdiction-read-repository.js"
+} from "./jurisdiction-read-repository"
 
 const pool = new pg.Pool({ connectionString: "postgresql://jurisdiction-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

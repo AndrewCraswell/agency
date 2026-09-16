@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { compareCoverageReports, type CoverageReport } from "./report.js"
+import { compareCoverageReports, type CoverageReport } from "./report"
 
 function report(bills: number, federalBills: number): CoverageReport {
   return {

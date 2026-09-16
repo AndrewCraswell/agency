@@ -9,17 +9,12 @@ import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
-import { createAmendmentReadRepository } from "../../../request-handling/api/amendment-read-repository.js"
-import { createBillDetailReadRepository } from "../../../request-handling/api/bill-detail-read-repository.js"
-import { createCivicSearchApiHandler } from "../../../request-handling/api/civic-search.js"
-import {
-  encodeSearchCursor,
-  lexicalBillSearch,
-  lexicalPassageSearch,
-  semanticBillSearch
-} from "../../../search/search.js"
-import { generateCoverageReport } from "../../coverage/report.js"
-import { LegislationQueryService } from "../../query-service.js"
+import { createAmendmentReadRepository } from "../../../request-handling/api/amendment-read-repository"
+import { createBillDetailReadRepository } from "../../../request-handling/api/bill-detail-read-repository"
+import { createCivicSearchApiHandler } from "../../../request-handling/api/civic-search"
+import { encodeSearchCursor, lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../../search/search"
+import { generateCoverageReport } from "../../coverage/report"
+import { LegislationQueryService } from "../../query-service"
 
 const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
 const describePostgres = databaseUrl === undefined ? describe.skip : describe

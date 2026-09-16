@@ -1,7 +1,7 @@
 import type { EventLocationPayload, EventVirtualAccessPayload } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read.js"
-import { projectMeetingSummary } from "./canonical-projection.js"
+import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read"
+import { projectMeetingSummary } from "./canonical-projection"
 
 export function projectMeetingRead(read: MeetingRead, apiBaseUrl: string) {
   const source = completeSource(read)

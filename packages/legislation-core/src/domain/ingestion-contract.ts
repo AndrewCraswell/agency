@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { organizationMembershipEndReasons } from "./membership.js"
+import { organizationMembershipEndReasons } from "./membership"
 
 export const ingestionContract = { membershipEndReasons: organizationMembershipEndReasons }
 

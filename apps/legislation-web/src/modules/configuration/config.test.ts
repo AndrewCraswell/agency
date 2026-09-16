@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ConfigurationError, decodeIdempotencyEncryptionKey, loadConfig } from "./config.js"
+import { ConfigurationError, decodeIdempotencyEncryptionKey, loadConfig } from "./config"
 
 const encryptionKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 const workosEnvironment = {

@@ -1,13 +1,13 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads.js"
+import type { OrganizationMembershipRead } from "../../legislation/persistence/queries/civic-scoped-reads"
 import {
   projectMembership,
   projectOrganizationSummary,
   projectPersonSummary,
   type OrganizationSummary,
   type PersonSummary
-} from "./canonical-projection.js"
-import { sourceProjectionContext } from "./canonical-read.js"
+} from "./canonical-projection"
+import { sourceProjectionContext } from "./canonical-read"
 
 /** Projects a persisted membership and both required embedded records fail-closed. */
 export function projectOrganizationMembershipRead(read: OrganizationMembershipRead, apiBaseUrl: string) {

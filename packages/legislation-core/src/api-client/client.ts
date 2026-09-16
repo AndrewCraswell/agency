@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
-import { linksSchema, resourceSchema, pageSchema, searchPageSchema } from "./envelopes.js"
+import { linksSchema, resourceSchema, pageSchema, searchPageSchema } from "./envelopes"
 import {
   legalEditionsRequestSchema,
   legalProvisionsRequestSchema,
@@ -8,14 +8,10 @@ import {
   validateLegalProvisionsResponse,
   type LegalEditionsRequest,
   type LegalProvisionsRequest
-} from "./legal-browse-contract.js"
-import { legalCodesRequestSchema, validateLegalCodesResponse, type LegalCodesRequest } from "./legal-codes-contract.js"
-import {
-  legalSearchRequestSchema,
-  validateLegalSearchResponse,
-  type LegalSearchRequest
-} from "./legal-search-contract.js"
-import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract.js"
+} from "./legal-browse-contract"
+import { legalCodesRequestSchema, validateLegalCodesResponse, type LegalCodesRequest } from "./legal-codes-contract"
+import { legalSearchRequestSchema, validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract"
+import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract"
 
 const errorCategories = [
   "conflict",

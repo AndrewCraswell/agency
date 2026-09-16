@@ -8,7 +8,7 @@
     "pnpm": ">=11.0.0 <12.0.0"
   },
   "scripts": {
-    "build": "node scripts/next.mjs build --webpack",
+    "build": "node scripts/next.mjs build",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "tsc --project tsconfig.json --noEmit",
@@ -20,7 +20,7 @@
     "db:status": "pnpm --filter @repo/legislation-core db:status",
     "db:up": "pnpm --filter @repo/legislation-core db:up",
     "db:wait": "pnpm --filter @repo/legislation-core db:wait",
-    "dev": "node scripts/next.mjs dev --webpack",
+    "dev": "node scripts/next.mjs dev",
     "docker:build": "docker build --file Dockerfile --tag legislation-web:local ../..",
     "infra:build": "az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json",
     "infra:lint": "az bicep lint --file infra/bicep/main.bicep",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { normalizeHttpBillSearchPage } from "./canonical-search-output.js"
+import { normalizeHttpBillSearchPage } from "./canonical-search-output"
 
 const source = {
   isOfficial: true,

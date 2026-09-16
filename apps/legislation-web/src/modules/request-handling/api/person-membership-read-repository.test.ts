@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { PersonMembershipsRepository } from "./person-membership-read-repository.js"
+import { PersonMembershipsRepository } from "./person-membership-read-repository"
 
 const input = {
   from: "2026-01-01",

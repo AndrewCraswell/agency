@@ -1,5 +1,5 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { CanonicalProjectionError } from "./canonical-projection.js"
+import { CanonicalProjectionError } from "./canonical-projection"
 
 // SQLSTATE 53100/53200 cover bounded production resource exhaustion (including
 // Railway shared-memory pressure); 42xxx syntax/schema failures remain 500.

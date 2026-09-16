@@ -1,67 +1,67 @@
 import { runWithRequestContext } from "@repo/legislation-core/auth/request-context"
 import { createLogger } from "@repo/legislation-core/observability/logger"
 import { afterEach, describe, expect, it } from "vitest"
-import type { BillRelatedHitRead } from "../../legislation/persistence/queries/bill-related-read.js"
-import type { ChangeEventRead } from "../../legislation/persistence/queries/change-feed-reads.js"
+import type { BillRelatedHitRead } from "../../legislation/persistence/queries/bill-related-read"
+import type { ChangeEventRead } from "../../legislation/persistence/queries/change-feed-reads"
 import type {
   CanonicalDocumentRead,
   CanonicalDocumentSectionRead
-} from "../../legislation/persistence/queries/document-reads.js"
-import type { JurisdictionCollectionRead } from "../../legislation/persistence/queries/jurisdictions-read.js"
-import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read.js"
-import type { PersonAmendmentRead } from "../../legislation/persistence/queries/person-amendments.js"
-import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read.js"
+} from "../../legislation/persistence/queries/document-reads"
+import type { JurisdictionCollectionRead } from "../../legislation/persistence/queries/jurisdictions-read"
+import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read"
+import type { PersonAmendmentRead } from "../../legislation/persistence/queries/person-amendments"
+import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read"
 import type {
   PersonVotePositionRead,
   VotePositionRead,
   VoteRead
-} from "../../legislation/persistence/queries/vote-reads.js"
-import type { AmendmentSearchCandidate } from "../../search/amendment-search.js"
-import type { PassageSearchResultPage } from "../../search/search.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import type { AmendmentReadRepository } from "./amendment-read-repository.js"
-import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
-import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search.js"
-import { createBillRelatedReadApiHandler, type BillRelatedReadApi } from "./bill-related-read-routes.js"
-import { createBillTextReadApiHandler, type BillTextReadApi } from "./bill-text-read-routes.js"
-import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection.js"
-import { createChangeFeedApiHandler, type ChangeFeedApi } from "./change-feed-routes.js"
-import type { CivicSearchApi } from "./civic-search.js"
-import type { CoreReadQueryApi } from "./core-read.js"
-import { createDocumentDiffApiHandler, type DocumentDiffApi } from "./document-diff-routes.js"
-import { createCompositeHttpApiHandler } from "./http.js"
+} from "../../legislation/persistence/queries/vote-reads"
+import type { AmendmentSearchCandidate } from "../../search/amendment-search"
+import type { PassageSearchResultPage } from "../../search/search"
+import { close, createLegislationServer } from "../test-http-server"
+import type { AmendmentReadRepository } from "./amendment-read-repository"
+import { createAmendmentReadApiHandler } from "./amendment-read-routes"
+import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search"
+import { createBillRelatedReadApiHandler, type BillRelatedReadApi } from "./bill-related-read-routes"
+import { createBillTextReadApiHandler, type BillTextReadApi } from "./bill-text-read-routes"
+import type { AmendmentDetail, AmendmentSummary } from "./canonical-projection"
+import { createChangeFeedApiHandler, type ChangeFeedApi } from "./change-feed-routes"
+import type { CivicSearchApi } from "./civic-search"
+import type { CoreReadQueryApi } from "./core-read"
+import { createDocumentDiffApiHandler, type DocumentDiffApi } from "./document-diff-routes"
+import { createCompositeHttpApiHandler } from "./http"
 import {
   createJurisdictionCollectionReadApiHandler,
   type JurisdictionCollectionReadApi
-} from "./jurisdiction-collection-read-routes.js"
-import { createMeetingReadApiHandler, type MeetingReadApi } from "./meeting-read-routes.js"
+} from "./jurisdiction-collection-read-routes"
+import { createMeetingReadApiHandler, type MeetingReadApi } from "./meeting-read-routes"
 import {
   createOrganizationDetailReadApiHandler,
   type OrganizationDetailReadApi
-} from "./organization-detail-read-routes.js"
-import { createPassageSearchApiHandler } from "./passage-search.js"
-import { createPersonAmendmentApiHandler, type PersonAmendmentsApi } from "./person-amendment-routes.js"
-import { createPersonDetailReadApiHandler, type PersonDetailReadApi } from "./person-detail-read-routes.js"
-import { createResearchAnswerApiHandler, type ResearchAnswer, type ResearchAnswerApi } from "./research-answers.js"
+} from "./organization-detail-read-routes"
+import { createPassageSearchApiHandler } from "./passage-search"
+import { createPersonAmendmentApiHandler, type PersonAmendmentsApi } from "./person-amendment-routes"
+import { createPersonDetailReadApiHandler, type PersonDetailReadApi } from "./person-detail-read-routes"
+import { createResearchAnswerApiHandler, type ResearchAnswer, type ResearchAnswerApi } from "./research-answers"
 import {
   SubscriptionRepositoryError,
   type IdempotentResponse,
   type IdempotencyRequest,
   type PreflightSubscriptionMutationExecutor,
   type SubscriptionTransaction
-} from "./subscription-repository.js"
+} from "./subscription-repository"
 import {
   createWebhookSecretProtector,
   EncryptedWebhookSecret,
   SubscriptionService,
   type Webhook,
   type WebhookRepository
-} from "./subscriptions.js"
-import { createUniversalSearchApiHandler, type UniversalSearchApi } from "./universal-search.js"
-import { createVoteReadApiHandler, type VoteReadApi } from "./vote-read-routes.js"
-import type { WebhookVerificationTransport } from "./webhook-challenge-transport.js"
-import { createWebhookMutationApiHandler } from "./webhook-mutation-routes.js"
-import { resolvePublicWebhookUrl } from "./webhook-security.js"
+} from "./subscriptions"
+import { createUniversalSearchApiHandler, type UniversalSearchApi } from "./universal-search"
+import { createVoteReadApiHandler, type VoteReadApi } from "./vote-read-routes"
+import type { WebhookVerificationTransport } from "./webhook-challenge-transport"
+import { createWebhookMutationApiHandler } from "./webhook-mutation-routes"
+import { resolvePublicWebhookUrl } from "./webhook-security"
 
 const API_BASE_URL = "https://api.example.test"
 const BILL_ID = "bill:fixture"

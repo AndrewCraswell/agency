@@ -9,7 +9,7 @@ import {
   type SubscriptionRepository,
   type Webhook,
   type WebhookRepository
-} from "./subscriptions.js"
+} from "./subscriptions"
 
 function repository(): SubscriptionRepository & WebhookRepository {
   const subscriptions = new Map<string, Subscription>()

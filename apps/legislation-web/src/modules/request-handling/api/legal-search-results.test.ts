@@ -1,7 +1,7 @@
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import pg from "pg"
 import { afterEach, expect, it, vi } from "vitest"
-import { readLegalSearchResultPage } from "./legal-search-results.js"
+import { readLegalSearchResultPage } from "./legal-search-results"
 
 const editionId = "00000000-0000-4000-8000-000000000001"
 const snapshotId = "00000000-0000-4000-8000-000000000002"

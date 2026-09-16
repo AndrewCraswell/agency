@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/nextjs"
-import { replayIntegration } from "@sentry/nextjs"
+import { captureRouterTransitionStart, replayIntegration } from "@sentry/nextjs"
 import { privateSentryOptions } from "./services/sentry/sentryPrivacy"
+
+export const onRouterTransitionStart = captureRouterTransitionStart
 
 Sentry.init({
   ...privateSentryOptions,

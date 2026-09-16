@@ -1,6 +1,6 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import type { OrganizationRow } from "../../legislation/persistence/queries/organization-relationships.js"
-import { projectOrganizationSummary, type OrganizationSummary, type ProjectionContext } from "./canonical-projection.js"
+import type { OrganizationRow } from "../../legislation/persistence/queries/organization-relationships"
+import { projectOrganizationSummary, type OrganizationSummary, type ProjectionContext } from "./canonical-projection"
 
 export function projectOrganizationRow(
   row: OrganizationRow,

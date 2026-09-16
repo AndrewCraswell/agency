@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read.js"
-import { projectMeetingRead } from "./meeting-read-projection.js"
+import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read"
+import { projectMeetingRead } from "./meeting-read-projection"
 
 function meeting(calendarId: string | null): MeetingRead {
   return {

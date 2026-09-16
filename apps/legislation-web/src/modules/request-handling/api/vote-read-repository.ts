@@ -7,8 +7,8 @@ import {
   type PersonVoteListInput,
   type VoteListInput,
   type VotePositionListInput
-} from "../../legislation/persistence/queries/vote-reads.js"
-import type { VoteReadApi } from "./vote-read-routes.js"
+} from "../../legislation/persistence/queries/vote-reads"
+import type { VoteReadApi } from "./vote-read-routes"
 
 export function createVoteReadRepository(database: LegislationDatabase): VoteReadApi {
   return {

@@ -1,8 +1,8 @@
 import pg from "pg"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { digest } from "./contracts.js"
-import { requireRights } from "./rights.js"
-import { assertRights, officialFederalRights, rightsPolicySchema } from "./storage-contract.js"
+import { digest } from "./contracts"
+import { requireRights } from "./rights"
+import { assertRights, officialFederalRights, rightsPolicySchema } from "./storage-contract"
 
 afterEach(() => vi.restoreAllMocks())
 

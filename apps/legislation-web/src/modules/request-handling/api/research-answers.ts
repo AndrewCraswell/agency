@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto"
 import { getRequestContext, type RequestIdentity } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
-import type { ResearchAnswerModelClient } from "../../../services/openrouter/openrouter-retrieval.js"
-import { documentSectionReadFromPersistence } from "../../legislation/persistence/queries/document-reads.js"
-import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
-import { isRfc3339Timestamp } from "./canonical-projection.js"
-import { projectDocumentSectionRead, sourceProjectionContext, type SourceDocument } from "./canonical-read.js"
-import { projectBillSearchHits } from "./canonical-search.js"
-import type { CivicSearchApi } from "./civic-search.js"
+import type { ResearchAnswerModelClient } from "../../../services/openrouter/openrouter-retrieval"
+import { documentSectionReadFromPersistence } from "../../legislation/persistence/queries/document-reads"
+import { projectSupportingMaterialSearchHits } from "./canonical-material-search"
+import { isRfc3339Timestamp } from "./canonical-projection"
+import { projectDocumentSectionRead, sourceProjectionContext, type SourceDocument } from "./canonical-read"
+import { projectBillSearchHits } from "./canonical-search"
+import type { CivicSearchApi } from "./civic-search"
 import {
   apiResource,
   assertAllowedQueryParameters,
@@ -17,7 +17,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 type SearchMode = "hybrid" | "lexical" | "semantic"
 type ResearchRecordType = "amendment" | "bill" | "passage" | "supporting-material"

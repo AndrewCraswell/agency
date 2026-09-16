@@ -1,6 +1,6 @@
-import { LegislationError } from "../domain/errors.js"
-import { getRequestContext } from "./request-context.js"
-import type { WorkosIdentity } from "./workos.js"
+import { LegislationError } from "../domain/errors"
+import { getRequestContext } from "./request-context"
+import type { WorkosIdentity } from "./workos"
 
 /** A shared service credential cannot borrow an MCP caller's organization or user authority. */
 export function createIdentityBoundApiAccessTokenProvider(dependencies: {

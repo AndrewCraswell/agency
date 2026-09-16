@@ -1,10 +1,10 @@
 import { createServer } from "node:http"
 import { runWithRequestContext, type RequestIdentity } from "@repo/legislation-core/auth/request-context"
 import { afterEach, describe, expect, it } from "vitest"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
-import type { Webhook } from "./subscriptions.js"
-import type { WebhookReadRepository } from "./webhook-read-repository.js"
-import { createWebhookReadApiHandler } from "./webhook-read-routes.js"
+import { SubscriptionRepositoryError } from "./subscription-repository"
+import type { Webhook } from "./subscriptions"
+import type { WebhookReadRepository } from "./webhook-read-repository"
+import { createWebhookReadApiHandler } from "./webhook-read-routes"
 
 const servers = new Set<ReturnType<typeof createServer>>()
 

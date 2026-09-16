@@ -1,9 +1,9 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describe, expect, it } from "vitest"
-import type { AmendmentSummary } from "../../../request-handling/api/canonical-projection.js"
-import { decodeAmendmentContinuationCursor } from "./amendment-reads.js"
-import { billDetailAmendmentPage, MAX_BILL_VOTE_LIMIT, parseBillVoteLimit } from "./bill-detail-read.js"
-import { assertCanonicalVotePersistence, assertVotePositionSequence } from "./vote-reads.js"
+import type { AmendmentSummary } from "../../../request-handling/api/canonical-projection"
+import { decodeAmendmentContinuationCursor } from "./amendment-reads"
+import { billDetailAmendmentPage, MAX_BILL_VOTE_LIMIT, parseBillVoteLimit } from "./bill-detail-read"
+import { assertCanonicalVotePersistence, assertVotePositionSequence } from "./vote-reads"
 
 const API_BASE_URL = "https://api.example.test"
 const BILL_ID = "bill:us:119:hr:1"

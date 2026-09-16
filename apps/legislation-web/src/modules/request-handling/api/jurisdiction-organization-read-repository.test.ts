@@ -2,12 +2,12 @@ import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
-import { buildJurisdictionOrganizationListQuery } from "../../legislation/persistence/queries/organization-relationships.js"
+import { buildJurisdictionOrganizationListQuery } from "../../legislation/persistence/queries/organization-relationships"
 import {
   buildJurisdictionExistenceQuery,
   JurisdictionOrganizationRepository,
   type JurisdictionOrganizationListInput
-} from "./jurisdiction-organization-read-repository.js"
+} from "./jurisdiction-organization-read-repository"
 
 const pool = new pg.Pool({ connectionString: "postgresql://jurisdiction-organization-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })

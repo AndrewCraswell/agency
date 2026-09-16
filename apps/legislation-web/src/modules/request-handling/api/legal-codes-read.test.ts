@@ -3,7 +3,7 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { officialFederalRights } from "@repo/legislation-core/legal-text/storage-contract"
 import pg from "pg"
 import { afterEach, expect, it, vi } from "vitest"
-import { createLegalCodesReader } from "./legal-codes-read.js"
+import { createLegalCodesReader } from "./legal-codes-read"
 
 const id = "00000000-0000-4000-8000-000000000001"
 const code = {

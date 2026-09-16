@@ -11,7 +11,7 @@ import {
   organizationId,
   organizationMembershipId,
   personId
-} from "./identifiers.js"
+} from "./identifiers"
 
 describe("canonical legislative identifiers", () => {
   it("normalizes state and federal bill variations to stable IDs", () => {

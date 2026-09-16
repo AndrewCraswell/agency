@@ -9,7 +9,7 @@ import {
 } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { asc, desc, eq, sql } from "drizzle-orm"
-import { listPersonMemberships, type PersonMembershipPage } from "./person-membership-reads.js"
+import { listPersonMemberships, type PersonMembershipPage } from "./person-membership-reads"
 
 export const PERSON_DETAIL_ALIAS_MAXIMUM = 250
 export const PERSON_DETAIL_IDENTIFIER_MAXIMUM = 250

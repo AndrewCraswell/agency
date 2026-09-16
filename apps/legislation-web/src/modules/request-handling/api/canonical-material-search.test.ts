@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { projectSupportingMaterialSearchHit, projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
-import { CanonicalProjectionError } from "./canonical-projection.js"
+import { projectSupportingMaterialSearchHit, projectSupportingMaterialSearchHits } from "./canonical-material-search"
+import { CanonicalProjectionError } from "./canonical-projection"
 
 const candidate = {
   amendmentIds: ["amendment:fixture"],

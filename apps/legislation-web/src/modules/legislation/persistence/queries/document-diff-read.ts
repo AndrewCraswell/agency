@@ -2,7 +2,7 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { billDocuments, documentSections } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { asc, inArray } from "drizzle-orm"
-import { documentReadFromPersistence, type CanonicalDocumentRead } from "./document-reads.js"
+import { documentReadFromPersistence, type CanonicalDocumentRead } from "./document-reads"
 
 export interface DocumentDiffRead {
   left: { document: CanonicalDocumentRead; sections: Array<typeof documentSections.$inferSelect> }

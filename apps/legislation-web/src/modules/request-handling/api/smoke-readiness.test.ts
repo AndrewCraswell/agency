@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { fetchWithTimeout } from "./smoke-readiness.js"
+import { fetchWithTimeout } from "./smoke-readiness"
 
 describe("smoke readiness fetch", () => {
   it("passes through a completed readiness response", async () => {

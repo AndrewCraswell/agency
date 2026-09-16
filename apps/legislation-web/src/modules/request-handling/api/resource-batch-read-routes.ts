@@ -8,14 +8,14 @@ import {
   sendApiJson,
   type HttpApiHandler,
   type JsonRecord
-} from "./http.js"
+} from "./http"
 import {
   RESOURCE_TYPES,
   type CanonicalResource,
   type ResourceBatchReadRepository,
   type ResourceBatchRequestItem,
   type ResourceType
-} from "./resource-batch-read-repository.js"
+} from "./resource-batch-read-repository"
 
 const MAX_BATCH_BODY_BYTES = 5 * 1024 * 1024
 const MAX_BATCH_ITEMS = 25

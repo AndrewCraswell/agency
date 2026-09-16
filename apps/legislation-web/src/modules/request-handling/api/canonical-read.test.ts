@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CanonicalProjectionError } from "./canonical-projection.js"
+import { CanonicalProjectionError } from "./canonical-projection"
 import {
   projectBillDetailRead,
   projectBillTimelineRead,
@@ -7,7 +7,7 @@ import {
   projectSupportingMaterialDetailRead,
   projectSupportingMaterialSectionRead,
   projectSupportingMaterialSummaryRead
-} from "./canonical-read.js"
+} from "./canonical-read"
 
 const sourceUrl = "https://api.congress.gov/v3/bill/119/hr/1"
 

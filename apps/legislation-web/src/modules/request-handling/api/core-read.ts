@@ -11,7 +11,7 @@ import type {
   SessionSearchInput,
   SupportingMaterialSearchInput,
   VoteSearchInput
-} from "../../legislation/query-service.js"
+} from "../../legislation/query-service"
 import {
   projectBillSummaryRead,
   projectDocumentSectionRead,
@@ -19,14 +19,14 @@ import {
   projectSupportingMaterialSectionRead,
   projectSupportingMaterialSummaryRead,
   toProjectionLegislationError
-} from "./canonical-read.js"
+} from "./canonical-read"
 import type {
   BillSummaryRead,
   DocumentSectionRead,
   SupportingMaterialDetailRead,
   SupportingMaterialRead,
   SupportingMaterialSectionRead
-} from "./canonical-read.js"
+} from "./canonical-read"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -39,7 +39,7 @@ import {
   sendApiError,
   sendApiJson,
   type HttpApiHandler
-} from "./http.js"
+} from "./http"
 
 export interface CoreReadQueryApi {
   findRelatedBills: (input: BillLookup & { includeSemantic?: boolean; limit?: number }) => Promise<CorePage>

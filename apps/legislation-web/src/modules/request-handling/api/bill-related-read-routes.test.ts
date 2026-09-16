@@ -5,9 +5,9 @@ import type {
   BillRelatedHitRead,
   BillRelatedPage,
   BillRelationRead
-} from "../../legislation/persistence/queries/bill-related-read.js"
-import { close, createLegislationServer } from "../test-http-server.js"
-import { createBillRelatedReadApiHandler, type BillRelatedReadApi } from "./bill-related-read-routes.js"
+} from "../../legislation/persistence/queries/bill-related-read"
+import { close, createLegislationServer } from "../test-http-server"
+import { createBillRelatedReadApiHandler, type BillRelatedReadApi } from "./bill-related-read-routes"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 const logger = createLogger({ level: "error", service: "bill-related-read-test", write: () => undefined })

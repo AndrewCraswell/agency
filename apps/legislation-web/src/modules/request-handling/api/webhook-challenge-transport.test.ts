@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { createPinnedWebhookVerificationTransport } from "./webhook-challenge-transport.js"
-import { resolvePublicWebhookUrl } from "./webhook-security.js"
+import { createPinnedWebhookVerificationTransport } from "./webhook-challenge-transport"
+import { resolvePublicWebhookUrl } from "./webhook-security"
 
 describe("pinned webhook verification transport", () => {
   it("revalidates DNS and connects only to the revalidated address while retaining the TLS hostname", async () => {

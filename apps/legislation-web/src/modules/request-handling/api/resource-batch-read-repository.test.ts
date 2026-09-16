@@ -1,19 +1,19 @@
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { describe, expect, it } from "vitest"
-import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read.js"
-import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read.js"
-import type { SessionRead } from "../../legislation/persistence/queries/session-read.js"
-import type { VotePositionRead, VoteRead } from "../../legislation/persistence/queries/vote-reads.js"
-import { projectAmendmentDetail, projectOrganizationDetail, type ProjectionContext } from "./canonical-projection.js"
-import { projectBillDetailRead } from "./canonical-read.js"
-import type { JurisdictionRead } from "./jurisdiction-read-repository.js"
+import type { MeetingRead } from "../../legislation/persistence/queries/meeting-read"
+import type { PersonDetailRead } from "../../legislation/persistence/queries/person-detail-read"
+import type { SessionRead } from "../../legislation/persistence/queries/session-read"
+import type { VotePositionRead, VoteRead } from "../../legislation/persistence/queries/vote-reads"
+import { projectAmendmentDetail, projectOrganizationDetail, type ProjectionContext } from "./canonical-projection"
+import { projectBillDetailRead } from "./canonical-read"
+import type { JurisdictionRead } from "./jurisdiction-read-repository"
 import {
   createResourceBatchReadRepositoryFromCanonicalReads,
   createResourceBatchReadRepository,
   RESOURCE_TYPES,
   type CanonicalResource,
   type ResourceBatchRequestItem
-} from "./resource-batch-read-repository.js"
+} from "./resource-batch-read-repository"
 
 const jurisdiction: CanonicalResource = {
   canonicalUrl: "https://api.example.test/api/jurisdictions/jurisdiction%3Aus",
