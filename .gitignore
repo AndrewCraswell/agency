@@ -6,7 +6,8 @@ node_modules
 dist
 dist-ssr
 coverage
-!apps/legislation/src/coverage/
+!apps/legislation-web/src/modules/legislation/coverage/
+!apps/legislation-ingestion/src/coverage/
 /apps/scoring/firmware/out/
 storybook-static
 *.local
@@ -35,4 +36,9 @@ apps/legislation/.container/
 *.tsbuildinfo
 
 # Local Python scraper adapter bytecode.
-/apps/legislation/python/__pycache__/
+__pycache__/
+*.pyc
+/apps/legislation-web/tmp/
+/apps/legislation-ingestion/tmp/
+/apps/legislation-mcp/tmp/
+/apps/legislation-web/infra/bicep/main.json

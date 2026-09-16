@@ -22,6 +22,7 @@
     "**/coverage": true,
     "**/storybook-static": true,
     "**/.turbo": true,
+    "**/.next": true,
     "**/build-storybook.log": true,
     "**/build": true,
     "**/.react-router": true
@@ -33,6 +34,7 @@
     "**/coverage": true,
     "**/storybook-static": true,
     "**/.turbo": true,
+    "**/.next": true,
     "**/pnpm-lock.yaml": true,
     "**/build-storybook.log": true,
     "**/build": true,

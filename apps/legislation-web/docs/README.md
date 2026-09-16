@@ -1,0 +1,228 @@
+# Rostra web documentation
+
+W owns the product, browser/chat, HTTP API, sessions, subscriptions/webhooks and query/retrieval runtime. The checkout
+is `apps/legislation-web`. Dated evidence and planned features are not
+claims of live availability or acceptance of the separated deployments.
+
+## Conversation experience
+
+[Composed research conversations](engineering/conversation-experience/README.md) contains the delivery plan and five
+independent workstreams: evidence identity, answer composition, React rendering, ordered streaming, and text animation.
+These are local planning documents, not claims of implemented behavior.
+
+## Start here
+
+| Question | Read |
+| --- | --- |
+| What are we building and for whom? | [Product specification](product/product-spec.md), [ICPs](product/icp.md), [competitors](product/competitors.md) |
+| What should we build next? | [Public chat backlog](backlog/public-chat.md), [product backlog](backlog/backlog.md) |
+| How does the experience fit together? | [Design](design/design.md), [information architecture](product/information-architecture.md), [design source](../legislation.pen) |
+| What are the API and serving contracts? | [HTTP index](engineering/api/README.md), [retrieval dispatch](engineering/retrieval-acceptance.md), [authentication](operations/authentication.md) |
+| What has recorded acceptance? | [API/passage delivery](operations/passage-search-delivery.md); dated evidence, not a fresh deployment audit |
+| How do I work on W? | [Runtime/development](operations/development.md), [testing and final gate](operations/testing.md), [frontend styling](engineering/frontend-styling.md) |
+| Where are source workers and evidence? | [I index](../../legislation-ingestion/docs/README.md), [state rollout](../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md) |
+| Where are shared contracts and databases? | [C index](../../../packages/legislation-core/docs/README.md) |
+| Where are MCP resource and tools? | [M index](../../legislation-mcp/docs/README.md) |
+
+Commands from the repository root: `pnpm --filter legislation-web dev`,
+`pnpm --filter legislation-web build`, `pnpm --filter legislation-web test`, `pnpm verify:legislation`.
+Migrations live once in C and release explicitly through `pnpm --filter legislation-web db:migrate`, never W/I/M startup.
+
+## Product and design
+
+- [Account/privacy/integrations](product/account-integrations-action-plan.md), [notifications](product/notification-experience.md)
+- [Organization features](product/organization-features.md), [pricing](product/pricing.md), [pricing research](research/pricing.md)
+- [Agent evaluation plan](design/agent-evaluation-plan.md), [Langfuse evaluation operations](operations/agent-evaluations.md)
+- [Identity and representative roadmap](engineering/identity-and-representative-roadmap.md)
+
+## Engineering and serving
+
+- [Architecture decisions](engineering/architecture-decisions.md), including separate runtimes and explicit migration releases
+- [Civic graph/events](engineering/api/civic-graph-and-events.md), [membership projection](engineering/committee-membership-history.md)
+- [Legislative records](engineering/api/legislative-records.md), [HTTP schemas](engineering/api/schemas.md)
+- [Search/diffs](engineering/api/search-and-diffs.md), [subscriptions/webhooks](engineering/api/subscriptions-and-webhooks.md)
+- [Amendment search projection](engineering/amendment-search-projection.md), [ranked-search evidence](research/ranked-search.md)
+- [API smoke](operations/http-api-local-smoke.md)
+
+## Regulatory product
+
+- [HTTP contract](regulations/api-mcp-contract.md), [HTTP/product tasks](regulations/api-mcp-production-tasks.md)
+- [Code discovery](regulations/legal-code-discovery.md), [edition/provision browsing](regulations/legal-edition-browsing.md)
+- [Exact text](regulations/legal-text-serving.md), [legal search and promotion](regulations/legal-search-serving.md), [cross-edition canary](regulations/edition-search-canary.md)
+- [I source program](../../legislation-ingestion/docs/regulations/README.md), [C data/rights](../../../packages/legislation-core/docs/regulations/data-contract.md)
+- [M legal tools](../../legislation-mcp/docs/engineering/legal-tools.md) and [MCP consent](../../legislation-mcp/docs/operations/authentication.md)
+
+## Reference boundaries
+
+[Application README](../README.md) links runtime ownership. AGENTS.md and CLAUDE.md remain W-specific.
+The whole [Bicep tree](../infra/bicep/README.md) remains historical combined-runtime reference under W; its model/database
+credentials are not M's deployment contract, while storage/OCR references concern I.
+The [vendor note](../vendor/README.md) stays with W's patched AI SDK. Source review and tokenizer asset documentation
+follow I and C respectively, not this index.
+
+Two pre-existing design references remain unresolved: `design/conversations.md` and
+`design/organization-workspace-design.md`. They were not present in the inventory; no substitute pages were invented.
+Keep one canonical specification and link other owners; do not copy source ledgers or shared contracts into W.
+
+## Detailed navigation
+
+Start with the question you need to answer. Planned product features and dated release evidence are not claims of live
+availability.
+
+| Question                                                | Read                                                                                                                                                                       |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What are we building?                                   | [ICP-focused product specification](product/product-spec.md): core research jobs, scope/value gate and acceptance                                                          |
+| Who should we serve and prioritize?                     | [Ideal customer profiles](product/icp.md): needs, journeys, fit, revenue scenarios and acquisition effort                                                                  |
+| Who competes for each customer's job?                   | [Competitors by ICP](product/competitors.md): alternatives, strengths, gaps and dated commercial evidence                                                                  |
+| What should we build next?                              | [Public chat launch backlog](backlog/public-chat.md): phased first-experience delivery; [parent product backlog](backlog/backlog.md): full product roadmap                  |
+| How should it work and look?                            | [Design brief and handoff](design/design.md), [task hierarchy and routes](product/information-architecture.md), [mockups](../legislation.pen)                              |
+| How does conversation connect the product?              | [Conversations and product integration](design/conversations.md): entry, turns, content types, references/citations, progress and write-back                               |
+| How do lists scale as data grows?                       | [Discovery and collection behavior](product/information-architecture.md#supporting-discovery): scope, grouping, sorting, pagination and selection                          |
+| How do we complete the core workflows?                  | [Connected IA flows](product/information-architecture.md#connected-acceptance-flows), [customer workflow acceptance](product/product-spec.md#customer-workflow-acceptance) |
+| Where is complexity justified?                          | [Scope and complexity budget](product/product-spec.md#scope-and-complexity-budget), [navigation priorities](product/information-architecture.md#navigation-priorities)     |
+| How do organizations and workspaces work?               | [Navigation and management design](design/organization-workspace-design.md), [organization behavior](product/organization-features.md)                                     |
+| What do customers pay for?                              | [Pricing and offerings](product/pricing.md), [organization and workspace behavior](product/organization-features.md)                                                       |
+| What has passed release acceptance?                     | [API and passage acceptance](operations/passage-search-delivery.md)                                                                                                        |
+| What is the state-ingestion priority?                   | [NC/Alaska end-to-end gate](../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md), [onboarding queue](../../legislation-ingestion/docs/operations/openstates-jurisdiction-onboarding.md)                              |
+| How do I develop or operate it?                         | [Development and runtime](operations/development.md), including conversation telemetry sessions; [API contract](engineering/api/README.md)                                                                            |
+| How do I run focused or full tests?                     | [Test ownership and execution](operations/testing.md): project ownership, behavioral assertion quality, database requirements and full verification |
+| How do I run agent evaluations?                        | [Agent evaluations](operations/agent-evaluations.md): Langfuse-managed online evaluation, complete conversation traces, frozen fixtures, and diagnostic limits |
+| How do we style the frontend?                          | [Frontend styling](engineering/frontend-styling.md): scoped vanilla-extract styles, theme tokens, primitive integration, and verification |
+| How will we add regulations?                            | [Regulatory plan](../../legislation-ingestion/docs/regulations/README.md)                                                                                                                                   |
+| How do we implement regulatory ingestion and retrieval? | [Implementation specification](../../legislation-ingestion/docs/regulations/implementation.md), [remaining production tasks](../../legislation-ingestion/docs/regulations/production-backlog.md)                                             |
+
+## Where information belongs
+
+Conversation experience planning: [composed research conversations](../../legislation-web/docs/engineering/conversation-experience/README.md)
+splits evidence identity, answer composition, React rendering, ordered streaming, and text animation into five
+independently scoped workstreams. These are local proposals, not shipped capabilities.
+
+| Folder         | Responsibility                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `product/`     | ICP/competition, product scope, information architecture, notifications, organization workflows and pricing |
+| `design/`      | Visual/interaction handoffs and organization management design                                              |
+| `backlog/`     | Product implementation work and acceptance tracking                                                         |
+| `engineering/` | Data/source contracts, architecture and technical implementation plans                                      |
+| `operations/`  | Setup, procedures, diagnostics, rollout gates and current acceptance                                        |
+| `regulations/` | Regulatory contracts, local validation evidence and gated production delivery                               |
+| `research/`    | Market/provider comparisons, options and experiments supporting a decision                                  |
+
+Update the owning document first; backlog rows link to requirements instead of repeating them. Current work selection
+belongs to the product or regulatory production backlog, not old check-in notes. Keep dated evidence needed to reproduce
+source, rollout and model decisions, but remove superseded instructions and duplicate status summaries. Preserve
+untracked material outside the repository before removing it. Create a page only for a distinct contract/procedure and
+update this index.
+
+## Full inventory
+
+The catalog below includes every retained document. Most product work needs only the entry points above.
+
+<details>
+<summary>Product and features</summary>
+
+- [Public chat launch backlog](backlog/public-chat.md)
+- [Product experience implementation backlog](backlog/backlog.md)
+- [Legislative research app design specification](design/design.md)
+- [Conversations and product integration](design/conversations.md)
+- [Information architecture](product/information-architecture.md)
+- [Account, privacy and integrations action plan](product/account-integrations-action-plan.md)
+- [Notification experience and Novu integration](product/notification-experience.md)
+- [Organization features](product/organization-features.md)
+- [Organization and workspace design specification](design/organization-workspace-design.md)
+- [Pricing and offerings](product/pricing.md)
+- [Ideal customer profiles and opportunity strategy](product/icp.md)
+- [Competitors by ideal customer profile](product/competitors.md)
+- [Legislative intelligence product specification](product/product-spec.md)
+
+</details>
+
+<details>
+<summary>Engineering contracts and plans</summary>
+
+- [Native amendment search projection](engineering/amendment-search-projection.md)
+- [People, organizations, and meetings](engineering/api/civic-graph-and-events.md)
+- [Legislative records and document endpoints](engineering/api/legislative-records.md)
+- [HTTP API contract](engineering/api/README.md)
+- [Shared HTTP API schemas and protocol behavior](engineering/api/schemas.md)
+- [Search, research answers, and document comparison](engineering/api/search-and-diffs.md)
+- [Subscription, delivery, and webhook endpoints](engineering/api/subscriptions-and-webhooks.md)
+- [Architecture decision log](engineering/architecture-decisions.md)
+- [Committee membership history](engineering/committee-membership-history.md)
+- [Historical committee reconciliation](../../legislation-ingestion/docs/engineering/committee-reconciliation.md)
+- [Legislative data coverage policy](../../legislation-ingestion/docs/engineering/coverage-policy.md)
+- [Canonical data model](../../../packages/legislation-core/docs/engineering/data-model.md)
+- [Legislative data synchronization catalog](../../legislation-ingestion/docs/engineering/data-sync-catalog.md)
+- [Embedding rollout and retrieval-quality gate](../../legislation-ingestion/docs/engineering/embedding-rollout-plan.md)
+- [Identity, entity, and representative roadmap](engineering/identity-and-representative-roadmap.md)
+- [Self-hosted Open States scraper implementation milestones](../../legislation-ingestion/docs/engineering/self-hosted-openstates-milestones.md)
+- [Supporting-material processing](../../legislation-ingestion/docs/engineering/supporting-material-processing.md)
+- [Legislative MCP tool contracts](../../legislation-mcp/docs/engineering/tool-contracts.md)
+- [Trigger.dev synchronization orchestration](../../legislation-ingestion/docs/engineering/trigger-orchestration-design.md)
+
+</details>
+
+<details>
+<summary>Operations and acceptance</summary>
+
+- [Authentication and MCP client setup](operations/authentication.md)
+- [Database connection pooling](../../../packages/legislation-core/docs/operations/database-connection-pooling.md)
+- [Development, runtime and observability](operations/development.md)
+- [Document OCR implementation and operations](../../legislation-ingestion/docs/operations/document-ocr.md)
+- [Document-processing operations](../../legislation-ingestion/docs/operations/document-processing-operations.md)
+- [HTTP API local smoke checklist](operations/http-api-local-smoke.md)
+- [Ingestion remediation catalog](../../legislation-ingestion/docs/operations/ingestion-remediation-catalog.md)
+- [Open States rollout requirements and results](../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md) includes the bounded local
+  embedding-freshness audit command and per-state evidence.
+- [Open States extraction build](../../legislation-ingestion/docs/operations/openstates-runtime-build.md)
+- [Open States jurisdiction onboarding and recorded milestones](../../legislation-ingestion/docs/operations/openstates-jurisdiction-onboarding.md)
+- [Partial Open States people imports and quarantine](../../legislation-ingestion/docs/operations/openstates-people-quarantine.md)
+- [Passage search and API closeout](operations/passage-search-delivery.md)
+
+</details>
+
+<details>
+<summary>Regulatory program and evidence</summary>
+
+- [Regulatory acquisition, backfills and Trigger.dev workflows](../../legislation-ingestion/docs/regulations/acquisition-workflows.md)
+- [Regulatory HTTP API and MCP contract](regulations/api-mcp-contract.md)
+- [Competitor regulatory data sourcing](../../legislation-ingestion/docs/regulations/competitor-sources.md)
+- [Regulatory data and version contract](../../../packages/legislation-core/docs/regulations/data-contract.md)
+- [Federal collector baseline and reuse decision](../../legislation-ingestion/docs/regulations/federal-collector-baseline.md)
+- [Remaining regulatory ingestion and production backlog](../../legislation-ingestion/docs/regulations/production-backlog.md)
+- [Regulatory source ingestion and orchestration tasks](../../legislation-ingestion/docs/regulations/ingestion-production-tasks.md)
+- [Regulatory passage, indexing and embedding tasks](../../legislation-ingestion/docs/regulations/search-production-tasks.md)
+- [Canonical passage shape inventory](../../legislation-ingestion/docs/regulations/passage-shape-inventory.md)
+- [Regulatory HTTP and MCP tasks](regulations/api-mcp-production-tasks.md)
+- [Regulatory sync and production operations tasks](../../legislation-ingestion/docs/regulations/operations-production-tasks.md)
+- [Original regulatory phase IDs and retained milestones](../../legislation-ingestion/docs/regulations/implementation-backlog.md)
+- [Regulatory implementation specification](../../legislation-ingestion/docs/regulations/implementation.md)
+- [Regulatory implementation progress and source evidence](../../legislation-ingestion/docs/regulations/implementation-progress.md)
+- [Federal XML parser and pilot validation](../../legislation-ingestion/docs/regulations/parser-validation.md)
+- [Regulatory storage and search-lifecycle validation](../../legislation-ingestion/docs/regulations/storage-validation.md)
+- [Federal Register metadata and rendition validation](../../legislation-ingestion/docs/regulations/fr-metadata-validation.md)
+- [Regulatory data ingestion proposal](../../legislation-ingestion/docs/regulations/README.md)
+- [Regulatory indexing, embeddings and retrieval](../../legislation-ingestion/docs/regulations/search-indexing.md)
+- [Regulatory source catalog](../../legislation-ingestion/docs/regulations/sources.md)
+- [Regulatory sourcing options and tradeoffs](../../legislation-ingestion/docs/regulations/sourcing-options.md)
+- [Future Vaquill state onboarding contract](../../legislation-ingestion/docs/regulations/state-onboarding.md)
+- [Legal data supplier shortlist](../../legislation-ingestion/docs/regulations/supplier-shortlist.md)
+
+</details>
+
+<details>
+<summary>Research and provider references</summary>
+
+- [LegiScan provider evaluation](../../legislation-ingestion/docs/research/legiscan.md)
+- [Initial pricing research](research/pricing.md)
+- [Ranked search performance decision](research/ranked-search.md)
+
+</details>
+
+### App-local guides and evaluation assets
+
+- [Application README](../README.md)
+- [Azure infrastructure reference](../infra/bicep/README.md)
+- [GovInfo review-data instructions](../../legislation-ingestion/src/ingestion/govinfo/review-data/README.md)
+- [Committee source decisions](../../legislation-ingestion/src/ingestion/govinfo/review-data/source-decisions.md)
+- [Pinned tokenizer vocabulary provenance](../../../packages/legislation-core/src/embeddings/tokenizers/README.md)
+- [Design source](../legislation.pen)

@@ -38,6 +38,12 @@ React Compiler), product-level UI-system selection and styling, and the state/er
   than redefining rules per package.
 - **Prefer path/package aliases over deep relative paths** (`../../../`).
 
+Legislation's [workspace boundaries](../apps/legislation-web/docs/engineering/architecture-decisions.md#adr-001-operational-consequences)
+are web, ingestion, MCP and core. Apps consume explicit `@repo/legislation-core` exports, never sibling app source;
+core imports no app. MCP calls web over HTTPS. Web owns explicit migration releases and delegates to core's single
+migration implementation. The [legislation gate](../apps/legislation-web/docs/operations/testing.md#full-verification)
+is `pnpm verify:legislation`; it does not replace the full repository gate above.
+
 ## Logging
 
 - **No `console.*` in product code** (`console.warn`/`console.error` are allowed; lint-enforced). Temporary local

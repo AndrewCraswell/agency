@@ -1,0 +1,28 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "erasableSyntaxOnly": true,
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "target": "ES2024",
+    "types": ["node"],
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "tools/**/*.ts",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "trigger.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["dist", "node_modules", ".trigger"]
+}

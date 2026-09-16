@@ -1,0 +1,357 @@
+# Development, runtime and observability
+
+## Requirements
+
+- Node.js 24 or newer.
+- pnpm 11.
+- Docker Desktop or another Docker Compose-compatible runtime for PostgreSQL integration work.
+- The monorepo dependencies installed from the repository root.
+
+## Commands
+
+From the repository root:
+
+```text
+pnpm install
+pnpm --filter legislation-web dev
+pnpm --filter legislation-web test
+pnpm --filter legislation-web check:types
+pnpm --filter legislation-web lint
+pnpm --filter legislation-web build
+```
+
+`dev` starts W's Next.js runtime. M has its own standalone development command and I has its own worker/relay commands.
+For the VPN-constrained AI SDK installation and its local archive checksum, see the
+[vendor installation note](../../vendor/README.md). Use the root frozen-lockfile install with the configured Microsoft
+feed; no public-registry switch or TLS bypass is required. `pnpm test` runs web-owned tests only. For a focused check,
+change into W and run `pnpm exec vitest run <exact-test-file>`.
+See [test ownership and execution](testing.md) for W-local profiles and the single coordinated legislation gate.
+
+The public deployment boundary is the Next.js `src/app/api` Route Handlers. The deleted `legislation-api` Railway service
+must not be started or redeployed. Both runtime checks expose:
+
+- `GET /health` for process health.
+- `GET /ready` for dependency readiness.
+
+## Local environment after the move
+
+The rename moved tracked files, not local credentials or evidence. In this checkout, the existing `.env`, `data` and
+`artifacts` remain under `apps/legislation`; the new workspace must not be assumed configured. Do not print or read
+secret values into terminal output, chat, documentation or reports during this audit.
+
+Before starting a runtime, manually relocate its required settings locally using a trusted editor or secret manager.
+Use W's `.env.example` as the variable-name reference and an ignored `apps/legislation-web/.env` for Next.js. Put only
+I-owned settings in an ignored `apps/legislation-ingestion/.env`. Do not copy the old combined environment wholesale,
+move unrelated credentials, or change external credentials as part of this path repair. M must receive only its own
+authentication and outbound API settings, never database, source-provider or model keys. Verify ignore status before
+saving a local environment file; never stage it.
+
+Next.js loads W's local environment files. I's `tool`, backfill, schedule and deploy-check launchers explicitly load
+I's `.env`; do not assume every CLI, relay or test command does. For those commands, M, and C's database helpers,
+supply the required process environment through the trusted local runner. W's `db:migrate` delegates to C, which reads
+`DATABASE_URL` from that environment and does not load W's `.env`. Use the direct administration connection for that
+explicit release action. No startup performs migration or credential relocation.
+
+Leave retained local data and artifacts in place unless a specific operation requires an explicit local relocation or
+configured path. Relative defaults now resolve from the owning workspace. Do not overwrite historical inputs, assume
+that new data paths are ignored, or move credentials with Docker build inputs. See [local artifacts](#local-artifacts)
+and [I setup](../../../legislation-ingestion/docs/operations/development.md#local-artifacts).
+
+## Development chat research connection
+
+The chat route supports a public production demo when the server-side model key and trusted HTTPS
+`LEGISLATION_PUBLIC_API_BASE_URL` are configured. Production requests must match that exact origin; development
+remains same-origin/loopback constrained. Origin checks are browser request protection, not authentication. The owner
+approved anonymous demo access and retaining unmasked Replay for this release. It calls the existing query service
+directly using `createLegislationResearchTools`, the same validated registry used by the public MCP handler. No internal
+HTTP request, MCP URL or bearer token is needed. The old chat-specific MCP URL/token settings have been removed.
+
+OpenRouter still requires its server-side model key, and the existing database configuration must be reachable.
+Public `/api/**` and `/mcp` authentication has not been changed. Chat exposes only the 25 named baseline read tools;
+the organization-gated legal-text reader is not passed to the registry, and private account/mutation tools remain excluded.
+The [research runtime](../../src/modules/search/research-runtime.ts) owns a process-cached pool limited to two connections
+per data store. Each operation creates the existing query service against a client-bound Drizzle database inside
+`BEGIN READ ONLY`. Timeouts are applied with transaction-local `set_config`, not rejected PgBouncer startup fields.
+Individual requests release their clients but must not close the shared pools. The optional ranked passage store uses
+the same transaction-local approach without enabling any unapproved search cutover.
+
+Current per-run bounds: 30-second registry tool calls, 120-second total run deadline, eight model
+steps, 24 tool calls, and 180,000 bytes of structured data per model-visible tool result. Research serialization omits
+internal embedding and search-index fields. The shared chat/MCP bill discovery contract returns snippets, identifiers, sources, and child
+metadata instead of full summaries and embedded document bodies. Research tools must retrieve relevant passages using
+`search_bill_text` or read a selected version using `get_bill_text` before making substantive claims about provisions.
+Version-text reads omit the duplicate full document body but retain document metadata and complete source sections.
+The shared tool registry splits oversized bill search pages, bill batches, and passage/section pages at complete-record
+boundaries before transport validation; normal page, batch, and child limits remain unchanged. Opaque continuations
+preserve upstream pagination and require the same tool, filters, IDs, and limits. Continuations re-run the original
+read and advance within its result window; they work across stateless requests and replicas without retained data.
+They do not promise snapshot isolation when the underlying records change. Model, UI, and MCP paging share this path;
+individual records that cannot fit still fail explicitly rather than clipping evidence. The public MCP
+transport limit is unchanged. These limits bound a request and do not impose a conversation count. No transcript is saved
+server-side; follow-ups re-fetch evidence instead of trusting client-supplied tool output. Tavily/Firecrawl remain later work.
+Cancellation prevents further calls and discards late results; it does not claim to interrupt an already-running SQL
+statement. Existing database statement deadlines remain responsible for that bound.
+
+The demo's PgBouncer startup failure is resolved. A live check confirmed a 15-second statement timeout, read-only mode,
+server cancellation at a one-second test deadline, and healthy client reuse after rollback. Public API pool configuration
+and PgBouncer infrastructure were not changed by this demo-specific fix.
+
+Model-facing optional tool fields explicitly accept null, which is removed before the canonical input schema validates
+the request. Empty strings and invented omission markers are not accepted as cursors. Chat only accepts continuation
+tokens observed in successful results during the current turn; backend cursor/query binding remains authoritative.
+
+The original AI-in-education question completed live search and bill-detail calls and returned sponsor names with
+New Jersey A4352 and Massachusetts H614 source links. Two larger detail calls failed before narrower retrieval
+succeeded; broader batch and cancellation acceptance remains open. No full unit suite was run for this repair.
+
+## Conversation reload recovery
+
+The conversation composer supports Up/Down history recall of previously sent, visible user messages. Up moves
+from newest to oldest without wrapping; Down moves forward and restores the unsent draft. Recalled text is selected
+for editing and is never submitted automatically. Editing starts a new recall cycle. For multiline drafts, recall
+starts only at the beginning (Up) or end (Down); modifier keys, other selections, and IME composition retain normal
+editing behavior. Hidden clarification-continuation messages are excluded. Browser checks cover history boundaries,
+draft restoration, edited recalls, multiline caret movement, selected text, composition, and mobile-width keyboard use.
+
+During `next dev`, the current conversation is checkpointed in this tab's `sessionStorage` under
+`rostra.development.conversation`. Full development reloads restore the conversation ID, messages, retrieved evidence,
+draft, and confirmed clarification answers. React Fast Refresh keeps live state rather than replaying an older checkpoint.
+Only one conversation is retained per tab; starting another replaces the checkpoint. This is not server-side history.
+Browser session restoration may also restore session storage, so do not treat closing the browser as guaranteed deletion.
+Clear the entry or the site's storage to remove the checkpoint explicitly.
+
+A full reload interrupts an active model request; it does not resume a running stream. Retained partial output is
+marked incomplete and Retry starts a new response. Unanswered clarification forms restore as expired because their
+server-side state may have disappeared; confirmed answers remain readable. Invalid checkpoints are discarded, and
+unavailable or full browser storage produces a warning rather than crashing chat. Completed conversations and drafts,
+pending-request reload, keyboard Retry, and a 390px mobile layout have been checked in the integrated browser.
+
+Checkpointing is development-only. Production retains the existing in-memory, refresh-expires behavior. This exception
+was requested to keep code edits and full development reloads from erasing demo conversations.
+
+## Sentry error monitoring
+
+The Next.js app uses pinned `@sentry/nextjs` 10.73.0. Set `NEXT_PUBLIC_SENTRY_DSN` to the
+`legislation/legislation` project DSN to enable it, then restart development or rebuild the browser bundle.
+Without a DSN, monitoring is disabled. The DSN is public configuration, not an authentication credential.
+Optional `SENTRY_AUTH_TOKEN` is build-only and enables source-map upload; never expose it through a public variable.
+No Railway settings or deployment have been changed for this integration.
+
+Browser exceptions, React error boundaries, Next request failures, and chat stream/tool failures are captured.
+Caught API 5xx responses are reported in the shared `apiErrorResponse` boundary; expected 4xx validation responses
+are not server errors. AI SDK client transport failures and failed clarification transport/response parsing are
+explicitly reported because handled promise failures do not reach browser global handlers.
+
+Every chat tool failure is observed through the SDK stream, including invalid arguments and unknown tool names
+before execution, clarification-tool errors, and research execution failures. A per-run reporter deduplicates by
+tool-call ID across the execution wrapper and stream. Invalid tool calls are captured before the SDK converts their
+errors to strings. Events retain a run ID, tool-call ID, known tool name, failure category, and reference; available
+duration/result-size metrics are allowlisted. Actual timeouts are reported; intentional user stops are not errors.
+This is observability, not durable orchestration or a replacement for the existing AI SDK research loop.
+The shared event allowlist removes raw messages, request bodies, headers, cookies, user data, breadcrumbs,
+arbitrary tags/contexts, and source code context. It retains standard error types, safe stack locations, the recognized
+`Invalid URL` diagnostic, and known research tool/category
+tags plus the same reference shown in the failed research step. Stop requests do not produce research failure events.
+Error logs and performance tracing remain disabled. Sentry does not register another OpenTelemetry provider.
+This error-event policy does not cover Replay recordings or the pre-existing logging and Langfuse pipelines.
+
+Session Replay is enabled for the demo at 100% in development, 10% of sessions otherwise, and 100% on errors.
+By explicit demo-owner direction, text/input masking and media blocking are disabled: visible questions, answers,
+source content and ordinary form input can be recorded. Use non-sensitive demo data. Request/response body capture
+remains off; custom console/network recording events are discarded. Error events retain only a validated replay ID
+for correlation. Review this deliberately unmasked policy before any public production rollout.
+
+VS Code's `sentry` MCP entry uses hosted OAuth scoped to `legislation/legislation`. Start that server and complete
+Sentry sign-in in VS Code when ready. It is an editor tool, not a public-chat research capability, and no access token
+or model-provider key is stored in its configuration. OAuth and real event receipt have been verified through MCP
+(`LEGISLATION-1`, environment `sentry-smoke-test`); the local DSN is configured. Browser Replay receipt has also
+been verified. Source-map upload remains unverified. The in-memory transport check verifies the error scrubber
+without contacting Sentry.
+
+Verification includes a real SDK/mock-model probe for execution, invalid-input and unknown-tool failures (three
+events, no duplicates), browser transport-event delivery, and malformed citation links rendering without an error
+boundary crash. These focused checks do not establish full ingestion/worker observability or production acceptance.
+
+## Conversation telemetry
+
+With both Langfuse keys configured, the Node server registers the official AI SDK 7 integration.
+Each research run propagates the conversation's persisted `sessionKey` as the Langfuse `sessionId`.
+Turns, retries, and clarification continuations therefore share a session, including after reload recovery;
+new conversations receive a new UUID. Individual runs remain separate traces. Evaluation cases use their
+own session UUID across follow-up turns.
+
+Telemetry is flushed after the streaming response completes. The existing telemetry redaction and truncation
+policy applies, and media uploads are disabled. Model inputs and outputs are recorded, so use non-sensitive
+demo data. Without Langfuse keys, chat telemetry registration is skipped.
+
+## Local PostgreSQL
+
+Follow [C's database setup and reset procedure](../../../../packages/legislation-core/docs/operations/development.md).
+W and I share its schema artifacts, not copies of infrastructure or migrations. W's explicit release command is
+`pnpm --filter legislation-web db:migrate`; neither startup nor readiness applies migrations.
+
+## Package scripts and specialist tools
+
+Keep `package.json` scripts limited to package lifecycle, local infrastructure, release checks, and deployment
+automation. Specialist maintenance and evaluation programs live under `tools`, grouped by ownership, and run through
+`pnpm tool <area>/<name>`. Use `pnpm tool --list` to discover them. Do not add a package alias for an individual tool.
+
+| Entry point | Purpose | Retention rule |
+| --- | --- | --- |
+| `scripts/smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
+| `scripts/smoke-deployment.mjs` | Verify W health, readiness and authenticated API behavior. | W API token and explicit W origin only; M owns its separate smoke. |
+
+Source storage checks, backfills and Trigger schedule reconciliation belong to
+[I's operator guide](../../../legislation-ingestion/docs/operations/development.md). Migration assets belong to C;
+W owns their explicit release invocation. The retained Bicep tree is historical reference, not a deployment template for M.
+
+## Container and Railway build
+
+The recorded Railway service is named `legislation-web`. Its image uses the repository root as Docker context so pnpm
+can resolve the root lockfile, catalog, core and shared TypeScript package. The Dockerfile installs W's dependency closure,
+builds the Next.js application, and runs the standalone output as a non-root process.
+
+From the repository root:
+
+```text
+docker build -f apps/legislation-web/Dockerfile -t legislation-web:local .
+```
+
+Railway config-as-code lives at `apps/legislation-web/railway.json`. Keep the service root
+at the repository root and explicitly configure that path; nested config is not discovered automatically.
+Before release, verify the effective service uses the Dockerfile builder, `apps/legislation-web/Dockerfile`, and `/ready`
+health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
+release operation with `pnpm --filter legislation-web db:migrate`; neither image build nor W/I/M startup runs migrations.
+
+Use [API closeout](passage-search-delivery.md#september-14-scope-and-acceptance) for the latest recorded deployment
+and [Next.js runtime](#nextjs-runtime) for the active runtime contract. Do not copy historical deployment IDs into a
+new rollback command; identify and verify the immediately preceding successful `legislation-web` artifact. The old
+`legislation-api` service is deleted. M owns API-backed MCP and separate authentication; extraction is not live acceptance.
+
+After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
+This required production variable is the trusted base for canonical API URLs; it must not be derived from request headers.
+
+## Local artifacts
+
+W retains chat/evaluation evidence. Source archives, normalized documents, OCR publication and storage-adapter settings
+belong to [I's runtime guide](../../../legislation-ingestion/docs/operations/development.md). Ignored historical artifacts
+were not blanket-moved; documentation relocation does not change their physical paths.
+
+## Workspace boundary
+
+W owns product/API/query runtime, I owns workers, M owns MCP transport, and C owns shared contracts and database assets.
+Apps import selected C subpaths, never sibling app source; C imports no app. M calls W over HTTPS, without database or
+model credentials. Chat calls W's own query runtime directly. W lives at `apps/legislation-web`; ignored local state
+remaining at `apps/legislation` is not another runtime workspace.
+
+<a id="nextjs-runtime"></a>
+
+<a id="nextjs-runtime--nextjs-runtime-and-smoke-boundary"></a>
+
+## Next.js runtime and smoke boundary
+
+<a id="nextjs-runtime--ownership"></a>
+
+### Ownership
+
+W is the product documentation home and owns Next.js, API route handlers and the web smoke harness. The historical
+Railway service identity is `legislation-web`. See the separate [MCP runtime](../../../legislation-mcp/README.md),
+[ingestion runtime](../../../legislation-ingestion/README.md) and [core](../../../../packages/legislation-core/README.md).
+
+The deleted `legislation-api` Railway service is historical evidence only. It is neither a current service nor a
+rollback target. Rollback uses the immediately preceding known-good `legislation-web` deployment.
+
+<a id="nextjs-runtime--runtime-contract"></a>
+
+### Runtime contract
+
+Each documented public operation requires an explicit Next.js Route Handler. Root `GET /health` is liveness and root
+`GET /ready` is database-backed readiness. Neither endpoint runs migrations. Browser code must never receive database
+credentials, a machine-to-machine API secret, or a `NEXT_PUBLIC_*` copy of one.
+
+The runtime is pinned to `next@16.3.1`, `react@19.2.7`, and `react-dom@19.2.7`. Next's build-only TypeScript API uses
+the local `typescript@5.9.3` dependency; the repository's native TypeScript compiler remains the type-checking source
+of truth. The deployment image is credential-free and uses a frozen install without copying workstation registry
+credentials.
+
+<a id="nextjs-runtime--current-release-boundary"></a>
+
+### Current release boundary
+
+The September 14 recorded baseline contains 81 HTTP operations and 25 advertised MCP tools.
+Use [API closeout](passage-search-delivery.md#september-14-scope-and-acceptance) for the latest recorded deployment,
+accepted civic fixtures and remaining passage-search gate. Historical September 2 smoke does not establish current
+full-corpus search acceptance. This documentation audit did not perform a fresh production smoke.
+
+The locally implemented [regulatory text pilot](../regulations/legal-text-serving.md) adds one organization-gated HTTP
+operation and MCP tool beyond that deployed baseline. Its production credentials and deployment checks remain open.
+
+The shared Next.js API boundary authenticates supported and catch-all `/api/**` requests in WorkOS mode, installs
+verified user/organization context, and returns the canonical `401` challenge before endpoint handlers run.
+Health/readiness stay public. M owns `/mcp` and its API-backed adapter with separate WorkOS API and MCP audiences;
+see [API authentication](authentication.md) and [MCP authentication](../../../legislation-mcp/docs/operations/authentication.md).
+
+Production requires `AUTH_MODE=workos`, the public WorkOS verifier configuration, and independent base64 or base64url
+32-byte values for `LEGISLATION_IDEMPOTENCY_ENCRYPTION_SECRET` and `LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY`.
+These names are deployment configuration, never client-visible values. Endpoint acceptance and corpus completeness
+remain separate gates.
+
+<a id="nextjs-runtime--smoke-procedure"></a>
+
+### Smoke procedure
+
+Run the deployed Next.js smoke only with an audited production origin and audited fixtures. The unified harness lives
+in W's `scripts/smoke-foundation.mjs`; use its documented `LEGISLATION_WEB_SMOKE_*` environment variables.
+The profile is cumulative for every enabled route block.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_BASE_URL = Read-Host 'Audited current HTTPS web origin'
+$env:LEGISLATION_WEB_SMOKE_TOKEN = Read-Host 'API bearer token' -MaskInput
+pnpm --filter legislation-web smoke:foundation
+Remove-Item Env:LEGISLATION_WEB_SMOKE_TOKEN
+```
+
+`LEGISLATION_WEB_SMOKE_TOKEN` is optional for an isolated runtime with authentication disabled and required when the
+target uses `AUTH_MODE=workos`. The harness sends it only as an in-memory `Authorization: Bearer` header for `/api/**`
+requests. It does not send the token to `/health`, `/ready`, or the homepage and does not include it in reports or
+diagnostics.
+
+For search, document-difference, and research smoke, configure the audited query, expected-outcome, bill, document,
+and research-fixture variables. Before repeating an expensive profile, verify no index build is active. The harness keeps fixture
+identities, query text, coordinates, research prompts, tokens, and model errors out of its stable report.
+
+Use [API acceptance](passage-search-delivery.md) for the retained release gates. Identify the currently running and preceding successful artifacts in Railway before an operational change.
+
+<a id="observability"></a>
+
+<a id="observability--observability-contract"></a>
+
+## Observability contract
+
+Every W HTTP request has a correlation ID, and OpenTelemetry supplies trace and span IDs. Logs use timestamp, level, service, environment, operation,
+status, duration, error category, correlation ID, and targeted canonical identifiers where applicable.
+
+Railway is the recorded W/database runtime; its service logs and metrics provide that runtime's operating surface.
+I owns worker/run observability and M owns transport telemetry. Each process initializes its own telemetry using C's
+shared redaction primitives. Langfuse owns W research/model observations,
+including retrieval mode, sanitized filters, candidate counts, selected identifiers, provider, pinned model, usage, and
+latency. Correlated observations share the request/run identifiers. Langfuse SDK v5 uses OpenTelemetry and masks credential-shaped fields,
+bearer tokens, long payloads, and full bill text before export.
+
+The `/ready` response includes only safe pool counters: active, idle, total, maximum, waiting, and saturation. It never
+includes database URLs, SQL text, parameters, or credentials, so runtime probes and diagnostics can collect pool pressure.
+
+Expected validation failures are `info`; recoverable provider throttling is `warn`; exhausted dependencies and internal
+errors are `error`; high-volume diagnostic detail is `debug`. Development retains logs for 7 days, staging for 30 days,
+and production for 90 days unless the organization policy is stricter. Production samples successful high-volume search
+spans after a baseline is established but never samples errors or ingestion summaries.
+
+W alert ownership belongs to the legislation on-call rotation for API 5xx, readiness failures and zero ready replicas.
+Worker recovery/notifications belong to I; MCP transport alerts belong to M.
+
+The retained Azure Bicep template defines three rules: MCP 5xx, readiness failure, and zero MCP replicas. Metric alerts use
+Container Apps metrics; the readiness rule parses structured logs in `ContainerAppConsoleLogs_CL`. Rules can exist
+without notification receivers, but each deployed environment should supply an on-call action group.
+
+Configured retention periods and paging ownership above are operating requirements. This audit did not verify live
+receiver wiring, retention configuration or a staffed on-call rotation. See [runtime ownership](#nextjs-runtime).

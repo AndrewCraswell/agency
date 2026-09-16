@@ -1,0 +1,68 @@
+{
+  "name": "legislation-ingestion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0 <12.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "check:format": "oxfmt --check",
+    "check:lint": "pnpm lint",
+    "check:types": "tsc -p tsconfig.json --noEmit",
+    "lint": "oxlint --max-warnings=0 --ignore-pattern .trigger/**",
+    "cli": "tsx src/cli/main.ts",
+    "start": "node --import tsx src/cli/main.ts",
+    "tool": "node scripts/tool.mjs",
+    "test": "vitest run --project ingestion --project parsing --project tools",
+    "test:parsing": "vitest run --project parsing",
+    "test:database": "vitest run --project database",
+    "test:python": "python -m unittest discover -s python -p test_*.py",
+    "test:coverage": "vitest run --coverage --project ingestion --project parsing --project tools",
+    "test:all": "vitest run && pnpm test:python",
+    "trigger:deploy": "node --env-file-if-exists=.env --import tsx scripts/check-api-ingestion-contract.ts && trigger deploy --config trigger.config.ts",
+    "trigger:dev": "trigger dev --config trigger.config.ts",
+    "trigger:backfill": "node --env-file-if-exists=.env --import tsx tools/trigger/run-trigger-backfill.ts",
+    "trigger:schedules": "node --env-file-if-exists=.env --import tsx tools/trigger/reconcile-trigger-schedules.ts",
+    "relay": "tsx src/cli/document-relay.ts"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.13.1",
+    "@azure/storage-blob": "^12.33.0",
+    "@langfuse/otel": "^5.10.0",
+    "@langfuse/tracing": "^5.10.0",
+    "@napi-rs/canvas": "1.0.3",
+    "@opentelemetry/sdk-node": "^0.221.0",
+    "@repo/legislation-core": "workspace:*",
+    "@trigger.dev/python": "4.5.10",
+    "@trigger.dev/sdk": "4.5.10",
+    "cheerio": "^1.2.0",
+    "commander": "^15.0.0",
+    "drizzle-orm": "^0.45.2",
+    "fast-xml-parser": "^5.10.1",
+    "fflate": "^0.8.3",
+    "iconv-lite": "^0.7.3",
+    "pdfjs-dist": "^6.2.108",
+    "pg": "^8.22.0",
+    "tiny-invariant": "^1.3.3",
+    "tsx": "^4.23.0",
+    "yaml": "2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@repo/oxlint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pg": "^8.20.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "oxlint": "^1.72.0",
+    "trigger.dev": "4.5.10",
+    "typescript": "catalog:",
+    "vitest": "^4.1.9"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas-linux-x64-gnu": "1.0.3"
+  }
+}

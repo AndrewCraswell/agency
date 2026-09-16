@@ -1,0 +1,41 @@
+# Ingestion documentation
+
+I owns source acquisition, normalization/import persistence, document/OCR processing, embeddings, index replication,
+source evidence and Trigger orchestration. Dated results are not current deployment acceptance. Applications import C,
+not sibling apps. W lives at `apps/legislation-web`; ignored local state remains at the former combined location.
+
+## Start here
+
+| Need | Canonical page |
+| --- | --- |
+| Commands and isolated worker settings | [README](../README.md), [development](operations/development.md), [testing](operations/testing.md) |
+| Source scope and inventory | [Coverage policy](engineering/coverage-policy.md), [sync catalog](engineering/data-sync-catalog.md) |
+| State activation and retained evidence | [Rollout checklist](operations/openstates-rollout-checklist.md), [onboarding](operations/openstates-jurisdiction-onboarding.md) |
+| Worker dispatch and budgets | [Trigger design](engineering/trigger-orchestration-design.md), [worker capacity](operations/worker-capacity.md) |
+| Retrieval/index work | [Embedding rollout and rebuild hold](engineering/embedding-rollout-plan.md), [search maintenance](operations/search-maintenance.md) |
+| Regulatory source program | [Regulations index](regulations/README.md), [implementation map](regulations/implementation.md), [production backlog](regulations/production-backlog.md) |
+
+Run from the repository root: `pnpm --filter legislation-ingestion cli --help`,
+`pnpm --filter legislation-ingestion tool --list`, `pnpm --filter legislation-ingestion trigger:dev`.
+Package-local `pnpm tool <area>/<name>` examples in these pages run from I. The launcher discovers exact paths from
+the tools directory; old colon aliases in dated logs are historical, not additional commands. Existing ignored artifact
+paths may still refer to the former combined checkout. Resolve them explicitly without overwriting evidence.
+
+## Source and operations catalog
+
+- [Committee history reconstruction](engineering/committee-membership-history.md) and [reconciliation](engineering/committee-reconciliation.md)
+- [Civic identity source authority and evidence](engineering/identity-sources.md)
+- [Open States milestones](engineering/self-hosted-openstates-milestones.md), [runtime build](operations/openstates-runtime-build.md), [people quarantine](operations/openstates-people-quarantine.md)
+- [Supporting-material processing](engineering/supporting-material-processing.md), [document operations](operations/document-processing-operations.md), [OCR](operations/document-ocr.md)
+- [Remediation evidence](operations/ingestion-remediation-catalog.md), [LegiScan research](research/legiscan.md)
+- [GovInfo source decisions](../src/ingestion/govinfo/review-data/source-decisions.md) and [review-data guidance](../src/ingestion/govinfo/review-data/README.md)
+
+## Other owners
+
+- [W product/API index](../../legislation-web/docs/README.md), [API acceptance](../../legislation-web/docs/operations/passage-search-delivery.md)
+- [M transport/tool index](../../legislation-mcp/docs/README.md)
+- [C contracts and database setup](../../../packages/legislation-core/docs/README.md)
+- [Root legislation verification](../../legislation-web/docs/operations/testing.md#full-verification)
+
+Schema/migrations live once in C and release explicitly through W, never worker startup. Keep source/historical tables
+here; shared and serving specs have one canonical owner linked from their former sections.

@@ -4,10 +4,17 @@
     "signature": true
   },
   "tasks": {
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "legislation-ingestion#build": {
+      "dependsOn": ["^check:types", "^transit"],
+      "outputs": []
     },
     "build-storybook": {
       "dependsOn": ["^build"],
@@ -23,9 +30,11 @@
       "dependsOn": ["^check:unused"]
     },
     "test": {
+      "dependsOn": ["^transit"],
       "outputs": ["coverage/**"]
     },
     "test:coverage": {
+      "dependsOn": ["^transit"],
       "passThroughEnv": ["LEGISLATION_COVERAGE_DIRECTORY", "VITEST_MAX_WORKERS"],
       "outputs": ["coverage/**"]
     },

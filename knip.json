@@ -9,15 +9,39 @@
       "entry": ["simulator/src/**/*.test.{ts,tsx}"],
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
-    "apps/legislation": {
+    "apps/legislation-web": {
       "entry": [
-        "trigger.config.ts",
-        "src/api/next/http.ts",
-        "src/server/next/runtime.ts",
-        "src/trigger/tasks/**/*.ts",
-        "tools/**/*.{ts,mjs}"
+        "src/modules/request-handling/api/next/http.ts!",
+        "src/modules/legislation/runtime/runtime.ts!",
+        "scripts/{next,tool,infra-what-if,smoke-dependencies,smoke-deployment,smoke-foundation,smoke-local}.mjs!",
+        "scripts/smoke-api.ts!",
+        "scripts/webhook-verification-receiver/receiver.mjs!",
+        "tools/**/!(*.test|*-worker).{ts,mjs}!"
       ],
       "ignoreDependencies": ["@repo/oxlint-config", "@swc/helpers"]
+    },
+    "apps/legislation-ingestion": {
+      "entry": [
+        "trigger.config.ts!",
+        "scripts/check-api-ingestion-contract.ts!",
+        "scripts/tool.mjs!",
+        "src/cli/{main,document-relay}.ts!",
+        "src/trigger/tasks/**/!(*.test).ts!",
+        "src/ingestion/regulations/workers/*.ts!",
+        "src/ingestion/regulations/fixtures/pdf-fixture.ts",
+        "python/{openstates_runner,prepare_openstates,openstates_source_policy,alaska_journal}.py!",
+        "python/regulations/parse_xml.py!",
+        "tools/**/!(*.test|*-worker).{ts,mjs}!"
+      ],
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    },
+    "apps/legislation-mcp": {
+      "entry": ["src/main.ts!", "scripts/smoke-deployment.mjs!"],
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    },
+    "packages/legislation-core": {
+      "entry": ["scripts/database.ts!", "drizzle.config.ts!"],
+      "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "apps/blog-writer": {
       "entry": [

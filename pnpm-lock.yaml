@@ -14,7 +14,7 @@ catalogs:
       version: 7.0.1-rc
 
 overrides:
-  ai@7.0.94: file:apps/legislation/vendor/ai-7.0.94.tgz
+  ai@7.0.94: file:apps/legislation-web/vendor/ai-7.0.94.tgz
   react: 19.2.7
   react-dom: 19.2.7
 
@@ -305,80 +305,38 @@ importers:
         specifier: ^4.1.9
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@24.13.2)(typescript@7.0.1-rc))(vite@8.1.5(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0))
 
-  apps/legislation:
+  apps/legislation-ingestion:
     dependencies:
-      '@ai-sdk/react':
-        specifier: 4.0.97
-        version: 4.0.97(react@19.2.7)(zod@4.4.3)
       '@azure/identity':
         specifier: ^4.13.1
         version: 4.13.1
       '@azure/storage-blob':
         specifier: ^12.33.0
         version: 12.33.0
-      '@hookform/resolvers':
-        specifier: 5.9.1
-        version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.22.1)(react-hook-form@7.71.2(react@19.2.7))(valibot@1.4.2(typescript@7.0.1-rc))(zod@4.4.3)
-      '@huggingface/tokenizers':
-        specifier: 0.2.0
-        version: 0.2.0
       '@langfuse/otel':
         specifier: ^5.10.0
         version: 5.10.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.221.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))
       '@langfuse/tracing':
         specifier: ^5.10.0
         version: 5.10.0(@opentelemetry/api@1.9.1)
-      '@langfuse/vercel-ai-sdk':
-        specifier: ^5.11.0
-        version: 5.11.0(@opentelemetry/api@1.9.1)(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)
-      '@mantine/hooks':
-        specifier: 9.6.0
-        version: 9.6.0(react@19.2.7)
-      '@modelcontextprotocol/node':
-        specifier: ^2.0.0
-        version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.1)
-      '@modelcontextprotocol/server':
-        specifier: ^2.0.0
-        version: 2.0.0
       '@napi-rs/canvas':
         specifier: 1.0.3
         version: 1.0.3
-      '@openrouter/ai-sdk-provider':
-        specifier: 3.0.0
-        version: 3.0.0(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)
       '@opentelemetry/sdk-node':
         specifier: ^0.221.0
         version: 0.221.0(@opentelemetry/api@1.9.1)
-      '@sentry/core':
-        specifier: 10.73.0
-        version: 10.73.0
-      '@sentry/nextjs':
-        specifier: 10.73.0
-        version: 10.73.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.221.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@16.3.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(@types/node@24.13.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0))(react@19.2.7)(webpack@5.110.3(esbuild@0.28.1))
-      '@swc/helpers':
-        specifier: 0.5.23
-        version: 0.5.23
-      '@tailwindcss/postcss':
-        specifier: 4.3.3
-        version: 4.3.3
+      '@repo/legislation-core':
+        specifier: workspace:*
+        version: link:../../packages/legislation-core
       '@trigger.dev/python':
         specifier: 4.5.10
-        version: 4.5.10(@trigger.dev/build@4.5.10(magicast@0.3.5)(typescript@7.0.1-rc))(@trigger.dev/sdk@4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3))
+        version: 4.5.10(@trigger.dev/build@4.5.10(magicast@0.3.5)(typescript@7.0.1-rc))(@trigger.dev/sdk@4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3))
       '@trigger.dev/sdk':
         specifier: 4.5.10
-        version: 4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3)
-      ai:
-        specifier: file:vendor/ai-7.0.94.tgz
-        version: file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3)
+        version: 4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3)
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
-      class-variance-authority:
-        specifier: 0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: 2.1.1
-        version: 2.1.1
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -394,18 +352,174 @@ importers:
       iconv-lite:
         specifier: ^0.7.3
         version: 0.7.3
+      pdfjs-dist:
+        specifier: ^6.2.108
+        version: 6.2.108
+      pg:
+        specifier: ^8.22.0
+        version: 8.22.0
+      tiny-invariant:
+        specifier: ^1.3.3
+        version: 1.3.3
+      tsx:
+        specifier: ^4.23.0
+        version: 4.23.0
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@repo/oxlint-config':
+        specifier: workspace:*
+        version: link:../../packages/oxlint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      '@vitest/coverage-v8':
+        specifier: ^4.1.9
+        version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      oxlint:
+        specifier: ^1.72.0
+        version: 1.76.0
+      trigger.dev:
+        specifier: 4.5.10
+        version: 4.5.10(react@19.2.7)(typescript@7.0.1-rc)(valibot@1.4.2(typescript@7.0.1-rc))
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.1-rc
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@24.13.2)(typescript@7.0.1-rc))(vite@8.1.5(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0))
+    optionalDependencies:
+      '@napi-rs/canvas-linux-x64-gnu':
+        specifier: 1.0.3
+        version: 1.0.3
+
+  apps/legislation-mcp:
+    dependencies:
+      '@modelcontextprotocol/client':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@modelcontextprotocol/node':
+        specifier: ^2.0.0
+        version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.1)
+      '@modelcontextprotocol/server':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@repo/legislation-core':
+        specifier: workspace:*
+        version: link:../../packages/legislation-core
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@repo/oxlint-config':
+        specifier: workspace:*
+        version: link:../../packages/oxlint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      '@vitest/coverage-v8':
+        specifier: ^4.1.9
+        version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
       jose:
         specifier: ^6.2.8
         version: 6.2.8
+      oxlint:
+        specifier: ^1.72.0
+        version: 1.76.0
+      tsx:
+        specifier: ^4.23.0
+        version: 4.23.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.1-rc
+      vite:
+        specifier: ^8.1.3
+        version: 8.1.5(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0)
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@24.13.2)(typescript@7.0.1-rc))(vite@8.1.5(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0))
+
+  apps/legislation-web:
+    dependencies:
+      '@ai-sdk/react':
+        specifier: 4.0.97
+        version: 4.0.97(react@19.2.7)(zod@4.4.3)
+      '@azure/identity':
+        specifier: ^4.13.1
+        version: 4.13.1
+      '@azure/storage-blob':
+        specifier: ^12.33.0
+        version: 12.33.0
+      '@hookform/resolvers':
+        specifier: 5.9.1
+        version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.22.1)(react-hook-form@7.71.2(react@19.2.7))(valibot@1.4.2(typescript@7.0.1-rc))(zod@4.4.3)
+      '@langfuse/otel':
+        specifier: ^5.10.0
+        version: 5.10.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.221.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))
+      '@langfuse/tracing':
+        specifier: ^5.10.0
+        version: 5.10.0(@opentelemetry/api@1.9.1)
+      '@langfuse/vercel-ai-sdk':
+        specifier: ^5.11.0
+        version: 5.11.0(@opentelemetry/api@1.9.1)(ai@file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)
+      '@mantine/hooks':
+        specifier: 9.6.0
+        version: 9.6.0(react@19.2.7)
+      '@openrouter/ai-sdk-provider':
+        specifier: 3.0.0
+        version: 3.0.0(ai@file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)
+      '@opentelemetry/sdk-node':
+        specifier: ^0.221.0
+        version: 0.221.0(@opentelemetry/api@1.9.1)
+      '@repo/legislation-core':
+        specifier: workspace:*
+        version: link:../../packages/legislation-core
+      '@sentry/core':
+        specifier: 10.73.0
+        version: 10.73.0
+      '@sentry/nextjs':
+        specifier: 10.73.0
+        version: 10.73.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.221.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@16.3.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(@types/node@24.13.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0))(react@19.2.7)(webpack@5.110.3(esbuild@0.28.1))
+      '@swc/helpers':
+        specifier: 0.5.23
+        version: 0.5.23
+      '@tailwindcss/postcss':
+        specifier: 4.3.3
+        version: 4.3.3
+      '@vanilla-extract/css':
+        specifier: ^1.21.2
+        version: 1.21.2
+      ai:
+        specifier: file:vendor/ai-7.0.94.tgz
+        version: file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3)
+      class-variance-authority:
+        specifier: 0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(bun-types@1.3.14)(pg@8.22.0)
       lucide-react:
         specifier: 1.31.0
         version: 1.31.0(react@19.2.7)
       next:
         specifier: 16.3.1
         version: 16.3.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(@types/node@24.13.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0)
-      pdfjs-dist:
-        specifier: ^6.2.108
-        version: 6.2.108
       pg:
         specifier: ^8.22.0
         version: 8.22.0
@@ -433,25 +547,16 @@ importers:
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
-      tiktoken:
-        specifier: 1.0.22
-        version: 1.0.22
       tiny-invariant:
         specifier: ^1.3.3
         version: 1.3.3
       use-stick-to-bottom:
         specifier: ^1.1.6
         version: 1.1.6(react@19.2.7)
-      yaml:
-        specifier: 2.9.0
-        version: 2.9.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@modelcontextprotocol/client':
-        specifier: ^2.0.0
-        version: 2.0.0
       '@repo/oxlint-config':
         specifier: workspace:*
         version: link:../../packages/oxlint-config
@@ -476,9 +581,6 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
-      '@vanilla-extract/css':
-        specifier: ^1.21.2
-        version: 1.21.2
       '@vanilla-extract/next-plugin':
         specifier: ^2.5.2
         version: 2.5.2(@swc/helpers@0.5.23)(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(next@16.3.1(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(@types/node@24.13.2)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0))(sass-embedded@1.100.0)(sass@1.100.0)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.23.0)(webpack@5.110.3(esbuild@0.28.1))(yaml@2.9.0)
@@ -488,18 +590,15 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.9
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
-      drizzle-kit:
-        specifier: ^0.31.10
-        version: 0.31.10
       happy-dom:
         specifier: 20.10.6
         version: 20.10.6
+      jose:
+        specifier: ^6.2.8
+        version: 6.2.8
       oxlint:
         specifier: ^1.72.0
         version: 1.76.0
-      trigger.dev:
-        specifier: 4.5.10
-        version: 4.5.10(react@19.2.7)(typescript@7.0.1-rc)(valibot@1.4.2(typescript@7.0.1-rc))
       tsx:
         specifier: ^4.23.0
         version: 4.23.0
@@ -512,10 +611,6 @@ importers:
       vitest:
         specifier: ^4.1.9
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(msw@2.15.0(@types/node@24.13.2)(typescript@7.0.1-rc))(vite@8.1.5(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0))
-    optionalDependencies:
-      '@napi-rs/canvas-linux-x64-gnu':
-        specifier: 1.0.3
-        version: 1.0.3
 
   apps/scoring:
     dependencies:
@@ -680,6 +775,58 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@26.2.0))(vite@8.1.5(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0))
+
+  packages/legislation-core:
+    dependencies:
+      '@huggingface/tokenizers':
+        specifier: 0.2.0
+        version: 0.2.0
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(bun-types@1.3.14)(pg@8.22.0)
+      jose:
+        specifier: ^6.2.8
+        version: 6.2.8
+      pg:
+        specifier: ^8.22.0
+        version: 8.22.0
+      tiktoken:
+        specifier: 1.0.22
+        version: 1.0.22
+      tiny-invariant:
+        specifier: ^1.3.3
+        version: 1.3.3
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@repo/oxlint-config':
+        specifier: workspace:*
+        version: link:../oxlint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      drizzle-kit:
+        specifier: ^0.31.10
+        version: 0.31.10
+      tsx:
+        specifier: ^4.23.0
+        version: 4.23.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.1-rc
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@24.13.2)(typescript@7.0.1-rc))(vite@8.1.5(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.51.2)(tsx@4.23.0)(yaml@2.9.0))
 
   packages/oxlint-config: {}
 
@@ -901,7 +1048,7 @@ packages:
       react: 19.2.7
 
   '@alloc/quick-lru@5.3.0':
-    resolution: {integrity: sha1-kHPVKtPOu+3Q2Mnz5lqlUn+r0eA=}
+    resolution: {integrity: sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA==}
     engines: {node: '>=10'}
 
   '@ardatan/relay-compiler@13.0.2':
@@ -3010,7 +3157,7 @@ packages:
       '@opentelemetry/api': ^1.9.0
 
   '@langfuse/core@5.11.0':
-    resolution: {integrity: sha1-MPKyKg0zJrxkklQ4KR3f0gJylz8=}
+    resolution: {integrity: sha512-Y5nBcrd8k0bEazb+lcOaEm6ICxxJJLGDkTax7dY4NyiYoO1LlTIFhkfwSOcneQRjpl7EvgL4Dy+9fzDXBDuVaA==}
     peerDependencies:
       '@opentelemetry/api': ^1.9.0
 
@@ -3333,7 +3480,7 @@ packages:
     engines: {node: '>=8.0.0'}
 
   '@opentelemetry/api-logs@0.220.0':
-    resolution: {integrity: sha1-su0jXeS188F2mt+l87wkfYLN+8k=}
+    resolution: {integrity: sha512-CmVa4ImJ+ynfrPMNaAXHET6Bhb44SwzmfyVJFq9ni2jgXJR/l7C6gfVFddNmHP+ZOkP9cf4f9DBe68qVLTHc9w==}
     engines: {node: '>=8.0.0'}
 
   '@opentelemetry/api-logs@0.221.0':
@@ -4350,7 +4497,7 @@ packages:
     resolution: {integrity: sha1-eNR2Mz2F1bHHkuJXvKdLoIDaSaQ=}
 
   '@radix-ui/number@1.1.3':
-    resolution: {integrity: sha1-lmHEu0TekzVZk+Hgn+1PyN+p96Y=}
+    resolution: {integrity: sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA==}
 
   '@radix-ui/primitive@1.1.7':
     resolution: {integrity: sha1-DQkp0gKZ9gsM2KDer615+ASPkwY=}
@@ -4997,7 +5144,7 @@ packages:
         optional: true
 
   '@radix-ui/react-use-previous@1.1.4':
-    resolution: {integrity: sha1-SieJwWjYWnjlH4EsPpcn7wHTAto=}
+    resolution: {integrity: sha512-XoSLhbRbqxFtgJoi2fNHA3C6pDlY34x508vUpUGoFZfvePfHXHbE1lC4FYFMnJWgiCRroSTw6fOsXQoVS9RwZg==}
     peerDependencies:
       '@types/react': '*'
       react: 19.2.7
@@ -5951,7 +6098,7 @@ packages:
     os: [win32]
 
   '@swc/core@1.16.2':
-    resolution: {integrity: sha1-bMDH8nk4vqcghGehirUY+iO3g2c=}
+    resolution: {integrity: sha512-95I4kiSMeveI/Mhi+tE4fiWcWLUMfzfKrk0jtr8LRMqHgOgq+xHS+zExkDqoO4b5OeeuXHMWVdD5MeP3X6sULw==}
     engines: {node: '>=10'}
     peerDependencies:
       '@swc/helpers': '>=0.5.17'
@@ -6326,7 +6473,6 @@ packages:
 
   '@trigger.dev/python@4.5.10':
     resolution: {integrity: sha512-IUemyBa0qkoGrRteZWNQa8Tjc4TOuP53dhWrAHsU+J8eHIclZCwpTSNvRU4gHacG/Bt7q9iiTI4Nwv9SHa0bQA==}
-    version: 4.5.10
     engines: {node: '>=18.20.0'}
     peerDependencies:
       '@trigger.dev/build': ^4.5.10
@@ -6355,7 +6501,6 @@ packages:
 
   '@trigger.dev/sdk@4.5.10':
     resolution: {integrity: sha1-cctMX9tkjy9lAxxnOCWvkfhYhb4=}
-    version: 4.5.10
     engines: {node: '>=18.20.0'}
     peerDependencies:
       '@ai-sdk/otel': '>=1.0.0-0 <2'
@@ -6656,7 +6801,7 @@ packages:
     resolution: {integrity: sha1-2T6iZz/YyfaXNn9e7vwrv6lPA0I=}
 
   '@types/debug@4.1.13':
-    resolution: {integrity: sha1-ItHMnVQtNZPK6nZPl0MGqzYobuc=}
+    resolution: {integrity: sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw==}
 
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha1-M0MRlx06BxIefrkbaEpgXn7qnL0=}
@@ -6671,7 +6816,7 @@ packages:
     resolution: {integrity: sha1-zz8Oh2177hWpOrkluCv1cKOQSiQ=}
 
   '@types/hast@3.0.5':
-    resolution: {integrity: sha1-SAIN5MDmNJL0yp20IGjBCPaLf48=}
+    resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
 
   '@types/history@4.7.11':
     resolution: {integrity: sha1-VliLF66PUMU5g6Uk/DzEdDeWnWQ=}
@@ -7104,8 +7249,8 @@ packages:
     resolution: {integrity: sha1-48121MVI7oldPD/Y3B9sW5Ay56g=}
     engines: {node: '>= 14'}
 
-  ai@file:apps/legislation/vendor/ai-7.0.94.tgz:
-    resolution: {integrity: sha512-y1yOW8sRliU9J/7Z0FZ/f/ZnHYVTzI3C88UvqioWdV078ulwsXsDdfTEjJWMI4cvgSu1OjoGy3Fn+EaqhI0nJQ==, tarball: file:apps/legislation/vendor/ai-7.0.94.tgz}
+  ai@file:apps/legislation-web/vendor/ai-7.0.94.tgz:
+    resolution: {integrity: sha512-y1yOW8sRliU9J/7Z0FZ/f/ZnHYVTzI3C88UvqioWdV078ulwsXsDdfTEjJWMI4cvgSu1OjoGy3Fn+EaqhI0nJQ==, tarball: file:apps/legislation-web/vendor/ai-7.0.94.tgz}
     version: 7.0.94
     engines: {node: '>=22'}
     peerDependencies:
@@ -10570,7 +10715,7 @@ packages:
     engines: {node: '>= 6'}
 
   property-information@7.2.0:
-    resolution: {integrity: sha1-CAmzQmTplcC/zTInAooeNSEK+Ao=}
+    resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
 
   prosemirror-changeset@2.4.1:
     resolution: {integrity: sha1-aFCRJFvzKZzRyuK4mDz5sDQuazk=}
@@ -10872,7 +11017,7 @@ packages:
     engines: {node: '>=9.3.0 || >=8.10.0 <9.0.0'}
 
   require-like@0.1.2:
-    resolution: {integrity: sha1-rW8wwTvs15cBDEaK+ndcDAprR/o=}
+    resolution: {integrity: sha512-oyrU88skkMtDdauHDuKVrgR+zuItqr6/c//FXzvmxRGMexSDc6hNvJInGW3LL46n+8b50RykrvwSUIIQH2LQ5A==}
 
   reselect@5.2.0:
     resolution: {integrity: sha1-84DvdmQzLSbqBsHLoEvbvcqpVfE=}
@@ -12321,7 +12466,7 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 4.0.11
       '@opentelemetry/api': 1.9.1
-      ai: file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3)
+      ai: file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3)
     transitivePeerDependencies:
       - zod
 
@@ -12343,7 +12488,7 @@ snapshots:
       '@ai-sdk/mcp': 2.0.46(zod@4.4.3)
       '@ai-sdk/provider': 4.0.11
       '@ai-sdk/provider-utils': 5.0.37(zod@4.4.3)
-      ai: file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3)
+      ai: file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3)
       react: 19.2.7
       swr: 2.5.1(react@19.2.7)
       throttleit: 2.1.0
@@ -14320,12 +14465,12 @@ snapshots:
       '@langfuse/core': 5.10.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/api': 1.9.1
 
-  '@langfuse/vercel-ai-sdk@5.11.0(@opentelemetry/api@1.9.1)(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)':
+  '@langfuse/vercel-ai-sdk@5.11.0(@opentelemetry/api@1.9.1)(ai@file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       '@ai-sdk/otel': 1.0.94(zod@4.4.3)
       '@langfuse/core': 5.11.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/api': 1.9.1
-      ai: file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3)
+      ai: file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3)
     transitivePeerDependencies:
       - zod
 
@@ -14547,9 +14692,9 @@ snapshots:
 
   '@open-draft/until@2.1.0': {}
 
-  '@openrouter/ai-sdk-provider@3.0.0(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)':
+  '@openrouter/ai-sdk-provider@3.0.0(ai@file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3))(zod@4.4.3)':
     dependencies:
-      ai: file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3)
+      ai: file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3)
       zod: 4.4.3
 
   '@opentelemetry/api-logs@0.218.0':
@@ -17370,11 +17515,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@trigger.dev/python@4.5.10(@trigger.dev/build@4.5.10(magicast@0.3.5)(typescript@7.0.1-rc))(@trigger.dev/sdk@4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3))':
+  '@trigger.dev/python@4.5.10(@trigger.dev/build@4.5.10(magicast@0.3.5)(typescript@7.0.1-rc))(@trigger.dev/sdk@4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3))':
     dependencies:
       '@trigger.dev/build': 4.5.10(magicast@0.3.5)(supports-color@10.2.2)(typescript@7.0.1-rc)
       '@trigger.dev/core': 4.5.10(supports-color@10.2.2)
-      '@trigger.dev/sdk': 4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3)
+      '@trigger.dev/sdk': 4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3)
       tinyexec: 0.3.2
     transitivePeerDependencies:
       - bufferutil
@@ -17395,7 +17540,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@trigger.dev/sdk@4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3)':
+  '@trigger.dev/sdk@4.5.10(@ai-sdk/otel@1.0.94(zod@4.4.3))(react@19.2.7)(supports-color@10.2.2)(zod@4.4.3)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/semantic-conventions': 1.41.1
@@ -17411,7 +17556,6 @@ snapshots:
       zod: 4.4.3
     optionalDependencies:
       '@ai-sdk/otel': 1.0.94(zod@4.4.3)
-      ai: file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3)
       react: 19.2.7
     transitivePeerDependencies:
       - bufferutil
@@ -18440,7 +18584,7 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@file:apps/legislation/vendor/ai-7.0.94.tgz(zod@4.4.3):
+  ai@file:apps/legislation-web/vendor/ai-7.0.94.tgz(zod@4.4.3):
     dependencies:
       '@ai-sdk/gateway': 4.0.76(zod@4.4.3)
       '@ai-sdk/provider': 4.0.11

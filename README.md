@@ -9,13 +9,17 @@ This Turborepo includes the following packages and apps:
 ### Apps and Packages
 
 - `blog-writer`: Shopify blog-writing application
-- `legislation`: legislation research application
+- [legislation-web](apps/legislation-web/README.md): browser product, public HTTP API and query runtime
+- [legislation-ingestion](apps/legislation-ingestion/README.md): source acquisition, workers and indexing
+- [legislation-mcp](apps/legislation-mcp/README.md): standalone authenticated MCP-to-HTTP adapter
+- [@repo/legislation-core](packages/legislation-core/README.md): shared contracts, database schema and primitives
 - `scoring`: fencing scoring application and supporting tools
 - `@repo/oxlint-config`: shared [oxlint](https://oxc.rs) configuration
 - `@repo/storybook-config`: shared [Storybook](https://storybook.js.org) configuration
 - `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
 
-Each package and app is 100% [TypeScript](https://www.typescriptlang.org/).
+Applications and shared packages primarily use [TypeScript](https://www.typescriptlang.org/); legislation ingestion also
+owns Python parser and scraper runtimes.
 
 ### Install dependencies
 
@@ -31,6 +35,11 @@ If installation fails because the feed credentials have expired, refresh them an
 pnpm auth
 pnpm install
 ```
+
+For legislation setup, including local credentials after the workspace moves, see the
+[runtime guide](apps/legislation-web/docs/operations/development.md). From the repository root,
+`pnpm verify:legislation` runs the four-workspace legislation verification suite; `pnpm verify` remains the full
+repository gate. Database release commands are owned by web and delegate to core.
 
 ### Utilities
 

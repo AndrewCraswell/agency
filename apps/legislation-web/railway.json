@@ -1,0 +1,22 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "apps/legislation-web/Dockerfile",
+    "watchPatterns": [
+      "/apps/legislation-web/**",
+      "/packages/legislation-core/**",
+      "/packages/oxlint-config/**",
+      "/packages/typescript-config/**",
+      "/package.json",
+      "/pnpm-lock.yaml",
+      "/pnpm-workspace.yaml"
+    ]
+  },
+  "deploy": {
+    "healthcheckPath": "/ready",
+    "healthcheckTimeout": 300,
+    "restartPolicyMaxRetries": 3,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
