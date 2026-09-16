@@ -2,7 +2,7 @@ import { readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { z } from "zod"
-import { digest } from "../../src/app/evals/contracts"
+import { digest } from "../../src/modules/evaluations/contracts"
 
 const resultSchema = z.object({
   caseId: z.string(),

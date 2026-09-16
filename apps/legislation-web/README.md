@@ -15,15 +15,21 @@ packages/legislation-core/   Shared contracts, database schema and primitives (C
 Applications consume selected core exports, never sibling application source. MCP calls W over HTTPS and has no
 database, model-provider or source-provider runtime. Web chat calls W's own query runtime directly.
 
-Web source has three main directories: `src/app/` for Next routes and app UI, `src/components/` for reusable UI, and
-`src/modules/` for responsibility-owned capabilities. Modules group legislation (including persistence, coverage and
-runtime composition), search (including retrieval and result projections), request handling (including HTTP adapters),
-configuration, and observability (including Sentry). There is no catch-all `server/` directory.
+Web source has four main directories: `src/app/` for Next routes, layouts and error boundaries, `src/components/` for
+reusable UI, `src/modules/` for feature responsibilities, and `src/services/` for external integrations. Conversation
+UI, agent code and request helpers live in `modules/conversations`; evaluation tools live in `modules/evaluations`;
+theme state, initialization and controls live together in `components/theme`. Other modules group legislation (including
+persistence, coverage and runtime composition), search, request handling and configuration. Services contain Sentry
+initialization/privacy helpers, OpenRouter provider/retrieval adapters, and Langfuse HTTP/SDK setup. Prompts, model
+choices, dataset validation and evaluation orchestration stay in their feature modules. Shared cross-app WorkOS and
+embedding clients remain in core. No placeholder integrations or catch-all `server/` directory exist.
 
-`src/proxy.ts` and `src/instrumentation*.ts` are thin Next discovery entrypoints delegating to modules. The proxy
-matcher remains statically declared in its entrypoint. Browser instrumentation loads only its browser-safe observability
-module, not a barrel containing server initialization. The `@/` alias resolves to `src/app/`. Project configuration,
-`public/`, and environment files remain at the workspace root. Tests stay beside each capability.
+`src/proxy.ts` and `src/instrumentation*.ts` contain their framework implementations directly, without forwarding
+wrappers in modules. Sentry initialization and shared privacy helpers live in `services/sentry`; browser instrumentation
+imports only browser-safe helpers. The `@/` alias resolves to `src/`, for example `@/components/ui/button` and
+`@/modules/conversations/components/ChatWorkspace`. Shared components must not import route files. Feature-specific
+components stay in the owning module rather than a second shared components directory. Project configuration, `public/`,
+and environment files remain at the workspace root. Tests stay beside each capability.
 
 Start with the [documentation index](docs/README.md), [ingestion](../legislation-ingestion/README.md),
 [MCP](../legislation-mcp/README.md) or [core](../../packages/legislation-core/README.md).

@@ -2,12 +2,17 @@ import { mkdir, readFile, readdir } from "node:fs/promises"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { z } from "zod"
-import { datasetSchema, digest, experimentSchema } from "../../src/app/evals/contracts"
-import { evaluationInputContract } from "../../src/app/evals/evaluationInput"
-import { evaluateResult } from "../../src/app/evals/evaluators"
-import { createStageJournal, durableCallCounter, withEvaluationLock, writeArtifact } from "../../src/app/evals/journal"
-import { createEvalLangfuse, observeEval } from "../../src/app/evals/langfuse"
-import { caseResultSchema, createCallBudget } from "../../src/app/evals/runner"
+import { datasetSchema, digest, experimentSchema } from "../../src/modules/evaluations/contracts"
+import { evaluationInputContract } from "../../src/modules/evaluations/evaluationInput"
+import { evaluateResult } from "../../src/modules/evaluations/evaluators"
+import {
+  createStageJournal,
+  durableCallCounter,
+  withEvaluationLock,
+  writeArtifact
+} from "../../src/modules/evaluations/journal"
+import { createEvalLangfuse, observeEval } from "../../src/modules/evaluations/langfuse"
+import { caseResultSchema, createCallBudget } from "../../src/modules/evaluations/runner"
 
 const { values } = parseArgs({
   options: { run: { type: "string" }, resume: { type: "string" }, execute: { type: "boolean", default: false } }
@@ -37,10 +42,10 @@ async function main() {
   )
   const implementation = await Promise.all(
     [
-      "../../src/app/evals/evaluators.ts",
-      "../../src/app/evals/evaluationInput.ts",
-      "../../src/app/evals/providerRecovery.ts",
-      "../../src/app/evals/journal.ts",
+      "../../src/modules/evaluations/evaluators.ts",
+      "../../src/modules/evaluations/evaluationInput.ts",
+      "../../src/modules/evaluations/providerRecovery.ts",
+      "../../src/modules/evaluations/journal.ts",
       "./regrade-agent.ts"
     ].map(async (file) => ({ file, hash: digest(await readFile(new URL(file, import.meta.url), "utf8")) }))
   )

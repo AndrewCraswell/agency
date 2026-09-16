@@ -4,7 +4,7 @@ import { useReducedMotion } from "@mantine/hooks"
 import { ArrowDown } from "lucide-react"
 import { useState, type ComponentProps } from "react"
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom"
-import { cn } from "@/lib/utils"
+import { cn } from "@/components/ui/utils"
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>
 

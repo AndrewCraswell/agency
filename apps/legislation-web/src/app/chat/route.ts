@@ -2,34 +2,39 @@ import { captureException } from "@sentry/nextjs"
 import { createUIMessageStream, createUIMessageStreamResponse, toUIMessageStream } from "ai"
 import { after } from "next/server"
 import { z } from "zod"
-import { apiErrorResponse, readJsonBody } from "../../modules/request-handling/api/next/http"
-import { getResearchRuntime } from "../../modules/search/research-runtime"
-import { digest } from "../evals/contracts"
+import {
+  createResearchModel,
+  researchAgentLimits,
+  researchModelId,
+  runResearchAgent
+} from "../../modules/conversations/agent"
+import { observeChatResponse } from "../../modules/conversations/capture"
 import {
   chatIsAvailable,
   chatRequestIsAllowed,
   chatRequestSchema,
   clarificationAnswerRequestSchema,
   referenceSearchSchema
-} from "../lib/chatRequest"
-import { entityPageRequestSchema, ResultExpiredError } from "../lib/entityResults"
+} from "../../modules/conversations/chatRequest"
+import { clarificationStore } from "../../modules/conversations/clarificationStore"
+import { createClarificationTool } from "../../modules/conversations/clarificationTool"
+import { entityPageRequestSchema, ResultExpiredError } from "../../modules/conversations/entityResults"
+import { getResearchPrompt } from "../../modules/conversations/prompt"
 import {
   projectMeetingDetails,
   projectProfileDetails,
   projectVoteDetails,
   recordDetailRequestSchema
-} from "../lib/recordDetails"
-import { ResearchFailure } from "../lib/researchFailure"
-import { createResearchModel, researchAgentLimits, researchModelId, runResearchAgent } from "./agent"
-import { observeChatResponse } from "./capture"
-import { clarificationStore } from "./clarificationStore"
-import { createClarificationTool } from "./clarificationTool"
-import { getResearchPrompt } from "./prompt"
-import { searchReferences } from "./referenceSearch"
-import { createResearchTools } from "./research"
-import { resultStore } from "./resultStore"
-import { flushChatTelemetry } from "./telemetry"
-import { createToolFailureReporter } from "./toolFailures"
+} from "../../modules/conversations/recordDetails"
+import { searchReferences } from "../../modules/conversations/referenceSearch"
+import { createResearchTools } from "../../modules/conversations/research"
+import { ResearchFailure } from "../../modules/conversations/researchFailure"
+import { resultStore } from "../../modules/conversations/resultStore"
+import { flushChatTelemetry } from "../../modules/conversations/telemetry"
+import { createToolFailureReporter } from "../../modules/conversations/toolFailures"
+import { digest } from "../../modules/evaluations/contracts"
+import { apiErrorResponse, readJsonBody } from "../../modules/request-handling/api/next/http"
+import { getResearchRuntime } from "../../modules/search/research-runtime"
 
 export const runtime = "nodejs"
 

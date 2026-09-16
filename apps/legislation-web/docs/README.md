@@ -19,7 +19,7 @@ These are local planning documents, not claims of implemented behavior.
 | How does the experience fit together? | [Design](design/design.md), [information architecture](product/information-architecture.md), [design source](../legislation.pen) |
 | What are the API and serving contracts? | [HTTP index](engineering/api/README.md), [retrieval dispatch](engineering/retrieval-acceptance.md), [authentication](operations/authentication.md) |
 | What has recorded acceptance? | [API/passage delivery](operations/passage-search-delivery.md); dated evidence, not a fresh deployment audit |
-| How do I work on W? | [Runtime/development](operations/development.md), [testing and final gate](operations/testing.md), [frontend styling](engineering/frontend-styling.md) |
+| How do I work on W? | [Source and service organization](../README.md#structure), [runtime/development](operations/development.md), [testing and final gate](operations/testing.md), [frontend styling](engineering/frontend-styling.md) |
 | Where are source workers and evidence? | [I index](../../legislation-ingestion/docs/README.md), [state rollout](../../legislation-ingestion/docs/operations/openstates-rollout-checklist.md) |
 | Where are shared contracts and databases? | [C index](../../../packages/legislation-core/docs/README.md) |
 | Where are MCP resource and tools? | [M index](../../legislation-mcp/docs/README.md) |

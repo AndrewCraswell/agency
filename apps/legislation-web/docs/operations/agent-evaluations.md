@@ -25,7 +25,7 @@ pnpm tool agent/regrade-agent --run tmp/agent-evaluations/OLD_RUN_ID --execute -
 
 The default is a no-network dry-run. `--sync` publishes the selected cases and initial evaluator prompt definitions without
 inference. `--execute` permits paid inference and Langfuse writes. `--case` filters by comma-separated exact case IDs. `--dataset path.json`
-accepts additional cases validated by the canonical schemas in `src/app/evals/contracts.ts`; keep a reviewed cumulative
+accepts additional cases validated by the canonical schemas in `src/modules/evaluations/contracts.ts`; keep a reviewed cumulative
 regression dataset there rather than duplicating schemas. Existing runs retain their own dataset snapshot.
 
 The supplied 12 smoke tasks are synthetic, draft, diagnostic cases, not a reviewed benchmark or representative traffic.
@@ -110,7 +110,7 @@ intervals conditional on gradable pairs. Differential exclusions can bias these 
 Required environment: `OPENROUTER_API_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and HTTPS `LANGFUSE_BASE_URL`.
 Langfuse writes verify the legislation project ID before publishing. Evaluator prompts are published as
 `legislative-research-judge` and `legislative-research-critic` for inspection. The current executable evaluator definitions
-start in `src/app/evals/evaluators.ts`. Runs with judging enabled resolve the Langfuse `evaluation` label once at startup,
+start in `src/modules/evaluations/evaluators.ts`. Runs with judging enabled resolve the Langfuse `evaluation` label once at startup,
 then pin both evaluator versions and text hashes. Move that label to a new version to test an updated rubric.
 
 ## Continuous conversation collection

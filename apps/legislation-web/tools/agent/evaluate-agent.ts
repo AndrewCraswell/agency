@@ -3,28 +3,28 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { z } from "zod"
-import { createResearchModel, researchAgentLimits } from "../../src/app/chat/agent"
-import { getResearchPrompt } from "../../src/app/chat/prompt"
+import { createResearchModel, researchAgentLimits } from "../../src/modules/conversations/agent"
+import { getResearchPrompt } from "../../src/modules/conversations/prompt"
 import {
   assertSafeArtifact,
   datasetSchema,
   digest,
   experimentSchema,
   type EvalScore
-} from "../../src/app/evals/contracts"
-import { evaluationInputContract } from "../../src/app/evals/evaluationInput"
-import { criticInstructions, evaluateResult, judgeInstructions } from "../../src/app/evals/evaluators"
+} from "../../src/modules/evaluations/contracts"
+import { evaluationInputContract } from "../../src/modules/evaluations/evaluationInput"
+import { criticInstructions, evaluateResult, judgeInstructions } from "../../src/modules/evaluations/evaluators"
 import {
   CheckpointMismatch,
   createStageJournal,
   durableCallCounter,
   withEvaluationLock,
   writeArtifact
-} from "../../src/app/evals/journal"
-import { createEvalLangfuse, observeEval } from "../../src/app/evals/langfuse"
-import { createCallBudget, executeCase } from "../../src/app/evals/runner"
-import { caseResultSchema } from "../../src/app/evals/runner"
-import { smokeDataset } from "../../src/app/evals/smoke"
+} from "../../src/modules/evaluations/journal"
+import { createEvalLangfuse, observeEval } from "../../src/modules/evaluations/langfuse"
+import { createCallBudget, executeCase } from "../../src/modules/evaluations/runner"
+import { caseResultSchema } from "../../src/modules/evaluations/runner"
+import { smokeDataset } from "../../src/modules/evaluations/smoke"
 
 const { values } = parseArgs({
   options: {
@@ -292,9 +292,6 @@ async function main() {
       "--others",
       "--exclude-standard",
       "--",
-      "apps/legislation-web/src/app/chat",
-      "apps/legislation-web/src/app/evals",
-      "apps/legislation-web/src/app/lib",
       "apps/legislation-web/src",
       "apps/legislation-web/tools/agent/evaluate-agent.ts",
       "packages/legislation-core/src"

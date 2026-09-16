@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { Fraunces, IBM_Plex_Mono, Newsreader, Public_Sans } from "next/font/google"
 import Script from "next/script"
 import type { ReactNode } from "react"
-import { ChatProviders } from "./components/chat/ChatProviders"
-import { themeInitializationScript } from "./lib/theme"
+import { themeInitializationScript } from "../components/theme/theme"
+import { ChatProviders } from "../modules/conversations/components/ChatProviders"
 import "./styles.css"
 
 const publicSans = Public_Sans({ subsets: ["latin"], display: "swap", variable: "--font-public-sans" })

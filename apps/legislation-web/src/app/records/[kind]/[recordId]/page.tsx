@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { RecordProfile } from "../../../components/chat/RecordProfile"
+import { RecordProfile } from "../../../../modules/conversations/components/RecordProfile"
 
 export default async function Page({
   params,

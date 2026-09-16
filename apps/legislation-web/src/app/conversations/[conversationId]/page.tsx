@@ -1,5 +1,5 @@
-import { ChatWorkspace } from "../../components/chat/ChatWorkspace"
-import { chatIsAvailable } from "../../lib/chatRequest"
+import { chatIsAvailable } from "../../../modules/conversations/chatRequest"
+import { ChatWorkspace } from "../../../modules/conversations/components/ChatWorkspace"
 
 export const dynamic = "force-dynamic"
 

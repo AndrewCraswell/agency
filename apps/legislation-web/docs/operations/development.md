@@ -131,6 +131,11 @@ was requested to keep code edits and full development reloads from erasing demo 
 
 ## Sentry error monitoring
 
+External adapters live in `src/services/sentry`, `src/services/openrouter`, and `src/services/langfuse`. Framework
+instrumentation stays under `src/`. Conversation and evaluation modules supply feature policy to the adapters;
+moving code does not change credentials, provider/model selection, prompt labels, or hosted evaluator configuration.
+Browser instrumentation imports the browser-safe Sentry privacy helper, never the Langfuse Node SDK initializer.
+
 The Next.js app uses pinned `@sentry/nextjs` 10.73.0. Set `NEXT_PUBLIC_SENTRY_DSN` to the
 `legislation/legislation` project DSN to enable it, then restart development or rebuild the browser bundle.
 Without a DSN, monitoring is disabled. The DSN is public configuration, not an authentication credential.

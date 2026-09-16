@@ -5,7 +5,8 @@ import { configDefaults, defineConfig } from "vitest/config"
 const webTests = [
   "src/app/**/*.test.{ts,tsx}",
   "src/components/**/*.test.{ts,tsx}",
-  "src/modules/request-handling/proxy.test.ts"
+  "src/modules/{conversations,evaluations}/**/*.test.{ts,tsx}",
+  "src/proxy.test.ts"
 ]
 const databaseTests = [
   "**/*.integration.test.{ts,tsx,mjs}",
@@ -24,7 +25,7 @@ export default defineConfig({
       {
         extends: true,
         plugins: [vanillaExtractPlugin()],
-        resolve: { alias: { "@": fileURLToPath(new URL("./src/app", import.meta.url)) } },
+        resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
         oxc: { jsx: { runtime: "automatic" } },
         test: {
           name: "web",

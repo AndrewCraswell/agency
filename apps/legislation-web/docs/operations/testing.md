@@ -21,9 +21,13 @@ Run from W (`apps/legislation-web`), or use `pnpm --filter legislation-web <scri
 Use an exact file for focused work, including files outside the web project:
 
 ```powershell
-pnpm exec vitest run app/components/chat/ChatWorkspace.test.tsx
+pnpm exec vitest run src/modules/conversations/components/ChatWorkspace.test.tsx
 pnpm exec vitest list --filesOnly --project web
 ```
+
+The web test project includes routes, shared components, conversation/evaluation/theme modules and the proxy.
+Its `@/` alias resolves to `src/`, matching Next and TypeScript. Backend tests exclude those paths so moved suites
+are collected exactly once. Tests remain colocated with their implementation, not collected under `app/` by convention.
 
 I owns source/parser/Python suites, M owns fixture-HTTP/SDK tests, and C owns shared/schema tests. See
 [I testing](../../../legislation-ingestion/docs/operations/testing.md),

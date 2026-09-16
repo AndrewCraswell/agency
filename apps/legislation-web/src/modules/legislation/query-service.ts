@@ -57,6 +57,7 @@ import {
   type SQLWrapper
 } from "drizzle-orm"
 import { alias, unionAll } from "drizzle-orm/pg-core"
+import type { RetrievalModelClient } from "../../services/openrouter/openrouter-retrieval.js"
 import {
   decodeAmendmentSearchCursor,
   encodeAmendmentSearchCursor,
@@ -65,7 +66,6 @@ import {
   type AmendmentSearchInput as ApiAmendmentSearchInput,
   type AmendmentSearchPage
 } from "../search/amendment-search.js"
-import type { RetrievalModelClient } from "../search/models/openrouter-retrieval.js"
 import type { RankedPassageSearch } from "../search/ranked-passage-search.js"
 import type {
   BillSearchCandidate,

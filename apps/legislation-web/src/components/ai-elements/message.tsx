@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react"
 import { Streamdown } from "streamdown"
-import { cn } from "@/lib/utils"
+import { cn } from "@/components/ui/utils"
 
 type MessageResponseProps = ComponentProps<typeof Streamdown>
 

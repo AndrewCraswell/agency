@@ -263,7 +263,7 @@ the streaming conversation or production-release gates.
 Owner: Frontend/Design. Depends on: THEME-01.
 
 Progress: **In progress; GitHub Copilot**. Rostra tokens and fonts, the
-[theme provider](../../src/app/components/theme/ThemeProvider.tsx), pre-hydration initialization, and the header's
+[theme provider](../../src/components/theme/ThemeProvider.tsx), pre-hydration initialization, and the header's
 three-state theme control are implemented. Theme overrides survive reload; System clears the override and follows OS
 changes. Focused initialization tests and integrated-browser persistence, keyboard and 320px header checks pass.
 Full theme/shell acceptance and the model runtime remain open. The package-feed blocker was subsequently resolved by
@@ -348,8 +348,8 @@ the whole theme/shell phase or production release.
   persist explicit overrides in `rostra.theme`, remove the key for System, and initialize before hydration.
 - Accept: reload preserves an override; System resumes OS changes; no pre-hydration click is lost. Menu selection,
   keyboard opening, Escape/focus return and 320px placement work with accessible names and visible selection.
-- Evidence: [menu](../../src/app/components/theme/ThemeToggle.tsx), [provider](../../src/app/components/theme/ThemeProvider.tsx)
-  and [15 theme tests](../../src/app/lib/theme.test.ts). Focused types/lint and integrated-browser checks passed. At 320px,
+- Evidence: [menu](../../src/components/theme/ThemeToggle.tsx), [provider](../../src/components/theme/ThemeProvider.tsx)
+  and [15 theme tests](../../src/components/theme/theme.test.ts). Focused types/lint and integrated-browser checks passed. At 320px,
   the menu's bounds were x=106, width=193.65625, right=299.65625. Root verification remains blocked as noted in THEME-02.
 - Blocker: none for this task. Next action: reuse the provider/menu as the conversation interface expands.
 
@@ -477,7 +477,7 @@ Owner: Backend/Security. Depends on: DEC-01, DEC-02 and CONV-01.
 Owner: Backend/Platform. Depends on: TOOL-01 and CONV-04.
 
 Status: **In progress; GitHub Copilot**. The database blocker is resolved. The user approved direct in-process service calls for the
-demo. The [chat adapter](../../src/app/chat/research.ts) now invokes the same validated
+demo. The [chat adapter](../../src/modules/conversations/research.ts) now invokes the same validated
 [tool registry](../../../../packages/legislation-core/src/research/tools.ts) as MCP, with the existing Next.js query service. No chat MCP URL/token is required.
 The former internal HTTP path was replaced, not retained as a fallback. Public authentication handlers are unchanged.
 
@@ -493,7 +493,7 @@ The former internal HTTP path was replaced, not retained as a fallback. Public a
 - [ ] Complete broader batch, cancellation and error handling acceptance against the real data service.
 
 Evidence: [bounded read helper](../../../../packages/legislation-core/src/database/database.ts), [research runtime](../../src/modules/search/research-runtime.ts)
-and [model adapter](../../src/app/chat/research.ts). Live search and detail returned sponsors for New Jersey A4352 and
+and [model adapter](../../src/modules/conversations/research.ts). Live search and detail returned sponsors for New Jersey A4352 and
 Massachusetts H614. Two larger detail calls failed before narrower retrieval succeeded, so full batch acceptance is
 not complete. No pooler configuration or ingestion data was changed. API-only capability adapters remain TOOL-03 work.
 
@@ -546,7 +546,7 @@ Owner: Backend/Data. Depends on: TOOL-01 and TOOL-04.
 
 Owner: Backend/Product. Depends on: TOOL-04 through TOOL-06 and CONV-05.
 
-Status: **In progress; GitHub Copilot**. Plain-language [tool activity](../../src/app/components/chat/ResearchActivity.tsx)
+Status: **In progress; GitHub Copilot**. Plain-language [tool activity](../../src/modules/conversations/components/ResearchActivity.tsx)
 renders pending, running, complete, failed and interrupted states from streamed dynamic tool parts. The disclosure
 and step rows are backed by Pencil `h4Q7t`, `k5uXC` and `gVk10`: left chevron, 44px trigger, 14px semibold heading,
 right-aligned count, 16px state icons, 13px row labels, indented 12px query details and recorded returned-page counts.
@@ -588,11 +588,11 @@ binding them to the AI SDK message/run lifecycle remains dependent on CONV-01 an
 - [x] Define bounded single-choice, multiple-choice and free-text inputs, with unique option IDs and valid selection bounds.
 - [x] Bind responses to the expected question ID/revision and reject inactive or superseded questions.
 - [x] Validate allowed choices, cardinality, text bounds, explicit skipping and unknown fields; responses cannot supply an approval flag or substitute a record ID.
-- [x] Pass [19 focused contract tests](../../src/app/lib/clarification.test.ts), scoped lint and the web type-check.
+- [x] Pass [19 focused contract tests](../../src/modules/conversations/clarification.test.ts), scoped lint and the web type-check.
 - [ ] Bind pending requests and accepted responses to the authoritative conversation/run lifecycle.
 - [ ] Ground record-option labels and IDs in retrieved evidence (CLAR-02), and enforce research-only question intent when registering the tool.
 
-Implementation: [clarification contracts](../../src/app/lib/clarification.ts). These schema checks do not establish model
+Implementation: [clarification contracts](../../src/modules/conversations/clarification.ts). These schema checks do not establish model
 continuation. The independently verified question UI is recorded in CLAR-04. Next action: complete lifecycle binding
 once the AI SDK dependency is available.
 
@@ -635,8 +635,8 @@ Status: **Done** for the reusable component and development preview, not live mo
 - [x] Inspect the rendered component and verify no horizontal overflow or clipped labels at 1440, 390 and 320px in
   both theme palettes. The 390px and 320px form widths are 350px and 280px respectively.
 
-Evidence: [component](../../src/app/components/chat/ClarificationQuestion.tsx),
-[component tests](../../src/app/components/chat/ClarificationQuestion.test.tsx), and
+Evidence: [component](../../src/modules/conversations/components/ClarificationQuestion.tsx),
+[component tests](../../src/modules/conversations/components/ClarificationQuestion.test.tsx), and
 [development-only preview](../../src/app/dev/clarification/page.tsx) at `/dev/clarification`.
 The preview uses explicit fixtures, sends no model/research requests, and calls `notFound()` outside development.
 Provider-required question handling, server authorization, record grounding and continuation remain CLAR-02/03/05;

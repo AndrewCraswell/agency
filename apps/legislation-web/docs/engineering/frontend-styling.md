@@ -17,7 +17,7 @@ inspiration. Record the source node IDs with the owning backlog item.
 
 ## Implementation
 
-`AppShell` and `AppHeader` in `src/app/components/shell` own the shared product frame. Both conversation and record pages
+`AppShell` and `AppHeader` in `src/components/shell` own the shared product frame. Both conversation and record pages
 must use them. The header follows `fSLz1` geometry (56px high, 22px mark, 18px Fraunces wordmark, 16px horizontal
 padding); the implemented utilities are Open conversation and the approved theme control. Canonical search,
 sidebar/directory navigation, account and notification surfaces are still incomplete, not design-equivalent omissions.
@@ -25,7 +25,7 @@ Before accepting a page, compare its complete shell, navigation, identity/action
 spacing, populated/empty/error states and mobile composition against the current design. Component geometry alone
 does not establish page fidelity. Do not duplicate a header or replace missing functionality with a decorative control.
 
-Use shadcn/ui components wherever an appropriate component exists. Check the existing `src/app/components/ui` catalog
+Use shadcn/ui components wherever an appropriate component exists. Check the existing `src/components/ui` catalog
 first; add missing components from the configured shadcn registry rather than rebuilding them directly from Radix
 or native elements. Keep domain-specific composition and Rostra's design tokens in the owning component styles.
 Sheet is the standard side-panel structure; use its header, title, close and footer parts. Badge, Table and Progress
@@ -60,8 +60,8 @@ Rostra uses vanilla-extract for custom component styles. Author typed style obje
 files and import their class names into the component. Next.js extracts static CSS at build time; no runtime styling
 provider is needed. Keep related responsive rules, pseudo-elements, states, and keyframes with their owner.
 
-- `src/app/components/chat/ChatWorkspace.css.ts` owns the chat layout, headings, and suggestions.
-- `src/app/components/chat/ChatComposer.css.ts` owns the question field, send controls, and animated halo.
+- `src/modules/conversations/components/ChatWorkspace.css.ts` owns the chat layout, headings, and suggestions.
+- `src/modules/conversations/components/ChatComposer.css.ts` owns the question field, send controls, and animated halo.
 - `src/app/styles.css` is limited to shared theme tokens, resets, accessibility defaults, and Tailwind integration.
 - Existing shadcn and AI Elements primitives retain Tailwind utilities. Compose their classes with the existing `cn`
   utility. Custom vanilla-extract rules are unlayered, preserving their precedence over Tailwind's layered defaults.

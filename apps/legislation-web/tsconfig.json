@@ -8,7 +8,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@/*": ["./src/app/*"]
+      "@/*": ["./src/*"]
     },
     "noEmit": true,
     "noImplicitReturns": true,
