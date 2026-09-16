@@ -36,24 +36,34 @@ try {
   await client.query("begin transaction isolation level repeatable read read only")
   await client.query("set local statement_timeout='30s'")
   const observed = await client.query("select transaction_timestamp() as observed_at")
+  const scopeRows = await client.query("select id from legislation.bills where id like $1 order by id", [prefix])
+  const scopedBillIds = z
+    .array(z.object({ id: z.string() }))
+    .parse(scopeRows.rows)
+    .map((row) => row.id)
+  const sectionScopes: string[][] = []
+  for (let index = 0; index < scopedBillIds.length; index += 25) {
+    sectionScopes.push(scopedBillIds.slice(index, index + 25))
+  }
   const results = []
   for (const product of ["bill", "document-section"] as const) {
     const route = embeddingRouteFor(product)
-    let cursor = ""
     let scanned = 0
     let missing = 0
     let stale = 0
     const issueSample: string[] = []
-    for (;;) {
-      // Only fixed internal query variants; all user scope and cursors are parameters.
-      const query =
-        product === "bill"
-          ? `select b.id,b.title,b.summary,b.subjects,e.input_hash,e.dimensions
+    for (const scope of product === "bill" ? [prefix] : sectionScopes) {
+      let cursor = ""
+      for (;;) {
+        // Only fixed internal query variants; all user scope and cursors are parameters.
+        const query =
+          product === "bill"
+            ? `select b.id,b.title,b.summary,b.subjects,e.input_hash,e.dimensions
            from legislation.bills b left join legislation.bill_embeddings e
              on e.bill_id=b.id and e.model=$3 and e.input_contract=$4
            where b.id like $1 and b.id>$2 order by b.id limit 500`
-          : `with scoped_documents as materialized (
-             select id from legislation.bill_documents where bill_id like $1
+            : `with scoped_documents as materialized (
+             select id from legislation.bill_documents where bill_id=any($1::text[])
            ), page as materialized (
              select s.id,s.heading,s.text from scoped_documents d
              join legislation.document_sections s on s.document_id=d.id
@@ -63,28 +73,29 @@ try {
            left join legislation.document_section_embeddings e
              on e.section_id=s.id and e.model=$3 and e.input_contract=$4
            order by s.id`
-      const page = await client.query(query, [prefix, cursor, route.model, route.embeddingInputContract])
-      for (const value of page.rows) {
-        const row = stored.parse(value)
-        const expected =
-          product === "bill"
-            ? billEmbeddingInputHash(billRow.parse(value))
-            : sectionEmbeddingInputHash(sectionRow.parse(value))
-        scanned += 1
-        cursor = row.id
-        if (row.input_hash === null) {
-          missing += 1
-        } else if (row.input_hash.trim() !== expected || row.dimensions !== route.dimensions) {
-          stale += 1
-        } else {
-          continue
+        const page = await client.query(query, [scope, cursor, route.model, route.embeddingInputContract])
+        for (const value of page.rows) {
+          const row = stored.parse(value)
+          const expected =
+            product === "bill"
+              ? billEmbeddingInputHash(billRow.parse(value))
+              : sectionEmbeddingInputHash(sectionRow.parse(value))
+          scanned += 1
+          cursor = row.id
+          if (row.input_hash === null) {
+            missing += 1
+          } else if (row.input_hash.trim() !== expected || row.dimensions !== route.dimensions) {
+            stale += 1
+          } else {
+            continue
+          }
+          if (issueSample.length < 20) {
+            issueSample.push(row.id)
+          }
         }
-        if (issueSample.length < 20) {
-          issueSample.push(row.id)
+        if (page.rows.length < 500) {
+          break
         }
-      }
-      if (page.rows.length < 500) {
-        break
       }
     }
     results.push({ product, scanned, missing, stale, issueSample })
