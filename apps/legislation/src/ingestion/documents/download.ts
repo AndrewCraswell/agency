@@ -1,6 +1,6 @@
 import { load } from "cheerio"
 import { unzipSync } from "fflate"
-import { MAX_DOCUMENT_BYTES } from "./extract.js"
+import { DocumentExtractionError, MAX_DOCUMENT_BYTES } from "./extract.js"
 import { fetchDocumentWithTrustedIntermediates, relayedDocumentSource } from "./trusted-document-transport.js"
 
 const supportedMediaTypes = new Set([
@@ -733,7 +733,10 @@ export function detectDocumentContentType(bytes: Uint8Array, declaredContentType
   if (!containsNull && prefixBytes.length > 0 && printableBytes / prefixBytes.length >= 0.9) {
     return "text/plain"
   }
-  throw new Error(`Unsupported document content type: ${declaredContentType || "missing"}`)
+  throw new DocumentExtractionError(
+    "unsupported-format",
+    `Unsupported document content type: ${declaredContentType || "missing"}`
+  )
 }
 
 export interface DownloadedDocument {

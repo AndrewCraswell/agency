@@ -36,7 +36,7 @@ export function createClarificationTool(
   signal: AbortSignal,
   onPending: () => void,
   store = clarificationStore
-) {
+): ReturnType<typeof dynamicTool> {
   return dynamicTool({
     description:
       "Pause to ask one research-scope question when missing jurisdiction, period, or comparison preference materially changes the answer. Never request secrets, approvals, personal data, or fabricated record choices. Use text, single or multiple choice. This is not a mandatory onboarding step. Do not call other tools in the same step.",

@@ -410,6 +410,227 @@ describe("regulatory table passages", () => {
     expect(() => legalTableRows(input)).toThrow("passage_table_unresolved_ditto")
   })
 
+  it("retains the source-reviewed wrapped substance name and its limitation across the full table", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/food-contact-material-table.json", import.meta.url), "utf8"))
+      )
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "food_contact_table_required")
+    const rows = legalTableRows(table).rows
+    const continued = rows.find((row) => table.text.slice(row.start, row.end).trim() === "silicate")
+    const next = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Zinc carbonate"))
+    invariant(continued && next, "food_contact_continuation_required")
+    const context = continued.context.map((span) => table.text.slice(span.start, span.end).trim())
+    expect(context).toContain("For use as a colorant only.")
+    expect(context.some((text) => text.startsWith("Titanium dioxide-magnesium"))).toBe(true)
+    expect(next.context.map((span) => table.text.slice(span.start, span.end).trim())).toContain(
+      "For use as a colorant only."
+    )
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
+  it.each([
+    ["List of substances", "Other"],
+    ["Titanium dioxide-magnesium", "Unreviewed substance"]
+  ])("rejects unreviewed wrapped names: %s", async (before, after) => {
+    const fixture = z
+      .object({ block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/food-contact-material-table.json", import.meta.url), "utf8"))
+      )
+    const table = legalTableLayout({
+      text: fixture.block.text.replace(before, after),
+      xml: fixture.block.xml.replace(before, after)
+    })[0]
+    invariant(table, "food_contact_table_required")
+    expect(() => legalTableRows(table)).toThrow("passage_table_unresolved_ditto")
+  })
+
+  it("bounds railroad expense headings by account family across the full source table", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/railroad-expense-table.json", import.meta.url), "utf8")))
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "expense_table_required")
+    const rows = legalTableRows(table).rows
+    const bridge = rows.find((row) => table.text.slice(row.start, row.end).includes("11-13-03"))
+    const signals = rows.find((row) => table.text.slice(row.start, row.end).includes("11-13-04"))
+    const repairs = rows.find((row) => table.text.slice(row.start, row.end).includes("11-23-43"))
+    invariant(bridge && signals && repairs, "expense_rows_required")
+    const references = (row: typeof bridge) => row.context.map((span) => table.text.slice(span.start, span.end).trim())
+    expect(references(bridge)).toEqual(expect.arrayContaining(["Bridges and buildings", "Actual."]))
+    expect(references(signals)).toContain("Signals")
+    expect(references(signals)).not.toContain("Bridges and buildings")
+    expect(references(repairs).some((text) => text.startsWith("Repair and maintenance: Trucks"))).toBe(true)
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
+  it.each([
+    ["Account No.", "Other"],
+    ["11-13-03", "invalid"],
+    ["21-13-03", "21-13-04"]
+  ])("rejects unproven expense grouping: %s", async (before, after) => {
+    const fixture = z
+      .object({ block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/railroad-expense-table.json", import.meta.url), "utf8")))
+    const table = legalTableLayout({
+      text: fixture.block.text.replace(before, after),
+      xml: fixture.block.xml.replace(before, after)
+    })[0]
+    invariant(table, "expense_table_required")
+    expect(() => legalTableRows(table)).toThrow("passage_table_unresolved_ditto")
+  })
+
+  it("retains chemical group hierarchy and exact ditto sources across the complete source table", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/chemical-substance-group-table.json", import.meta.url), "utf8"))
+      )
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "chemical_table_required")
+    const rows = legalTableRows(table).rows
+    const resin = rows.find((row) =>
+      table.text.slice(row.start, row.end).startsWith("(i) 1-Propene, 1,1,2,3,3,3-hexafluoro-")
+    )
+    invariant(resin, "chemical_group_member_required")
+    const context = resin.context.map((span) => table.text.slice(span.start, span.end).trim())
+    expect(context).toEqual(
+      expect.arrayContaining(["Fluoropolymer composite substance:", "Environmental effects.", "July 8, 2005."])
+    )
+    expect(context.some((value) => value.startsWith("(2) For Dry Melt Fluoropolymer Resin"))).toBe(true)
+    const later = rows.find((row) =>
+      table.text.slice(row.start, row.end).startsWith("(i) Perfluoroalkylethyl acrylate")
+    )
+    invariant(later, "next_chemical_group_required")
+    expect(
+      later.context.some((span) => table.text.slice(span.start, span.end).includes("Dry Melt Fluoropolymer Resin"))
+    ).toBe(false)
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
+  it.each([
+    ["Required test", "Other"],
+    ["(i) 1-Propene, 1,1,2,3,3,3-hexafluoro-", "(ii) 1-Propene, 1,1,2,3,3,3-hexafluoro-"],
+    ["(2) For Dry Melt Fluoropolymer Resin", "For Dry Melt Fluoropolymer Resin"]
+  ])("does not infer unproven chemical group structure: %s", async (before, after) => {
+    const fixture = z
+      .object({ block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/chemical-substance-group-table.json", import.meta.url), "utf8"))
+      )
+    const table = legalTableLayout({
+      text: fixture.block.text.replace(before, after),
+      xml: fixture.block.xml.replace(before, after)
+    })[0]
+    invariant(table, "chemical_table_required")
+    expect(() => legalTableRows(table)).toThrow("passage_table_unresolved_ditto")
+  })
+
+  it("bounds explicitly closed reservation groups and qualifies the full retained trust-period table", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/tribal-trust-period-table.json", import.meta.url), "utf8")))
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "reservation_table_required")
+    const rows = legalTableRows(table).rows
+    const augustine = rows.find((row) => table.text.slice(row.start, row.end).includes("Augustine"))
+    const closing = rows.find((row) => table.text.slice(row.start, row.end).includes("All of above Mission Bands"))
+    const following = rows.find((row) => table.text.slice(row.start, row.end).includes("Morongo"))
+    invariant(augustine && closing && following, "reservation_group_rows_required")
+    const references = (row: typeof augustine) =>
+      row.context.map((span) => table.text.slice(span.start, span.end).trim())
+    expect(references(augustine)).toEqual(expect.arrayContaining(["Mission Bands:", "California", "10 years."]))
+    expect(references(closing)).toContain("Mission Bands:")
+    expect(references(following)).not.toContain("Mission Bands:")
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
+  it.each([
+    ["All of above Mission Bands", "Other reservation"],
+    ["All of above Mission Bands", "All of above Other Bands"],
+    ["Reservation", "Other"],
+    ["Augustine", ""]
+  ])("rejects unproven reservation groups: %s", async (before, after) => {
+    const fixture = z
+      .object({ block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/tribal-trust-period-table.json", import.meta.url), "utf8")))
+    const block = { text: fixture.block.text.replace(before, after), xml: fixture.block.xml.replace(before, after) }
+    // The empty-cell variant also removes the text line to match publisher rendering.
+    if (after === "") {
+      block.text = block.text.replace("\n\n", "\n")
+    }
+    const table = legalTableLayout(block)[0]
+    invariant(table, "reservation_table_required")
+    expect(() => legalTableRows(table)).toThrow("passage_table_unresolved_ditto")
+  })
+
   it("retains indented county boundaries and date/type references in the full source table", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })

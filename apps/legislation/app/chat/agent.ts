@@ -22,7 +22,7 @@ export function runResearchAgent(options: {
   signal: AbortSignal
   onChunk?: Parameters<typeof streamText>[0]["onChunk"]
   prepareStep?: Parameters<typeof streamText>[0]["prepareStep"]
-}) {
+}): ReturnType<typeof streamText<ToolSet>> {
   return propagateAttributes(
     { sessionId: options.sessionId, ...(options.captureId ? { metadata: { captureId: options.captureId } } : {}) },
     () =>

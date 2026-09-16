@@ -445,9 +445,11 @@ describe("document downloads", () => {
     const sourceUrl =
       "http://www.legis.state.pa.us/CFDOCS/Legis/PN/Public/btCheck.cfm?txtType=DOC&sessYr=2021&sessInd=0&billBody=H&billTyp=R&billNbr=0170&pn=2702"
 
-    await expect(downloadDocument(sourceUrl, { fetch: fetcher })).rejects.toThrow(
-      "Unsupported document content type: application/msword"
-    )
+    await expect(downloadDocument(sourceUrl, { fetch: fetcher })).rejects.toMatchObject({
+      name: "DocumentExtractionError",
+      category: "unsupported-format",
+      message: "Unsupported document content type: application/msword"
+    })
     expect(fetcher).toHaveBeenCalledWith(
       new URL("https://www.palegis.us/legislation/bills/text/DOC/2021/0/HR0170/PN2702"),
       expect.any(Object)

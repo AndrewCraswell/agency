@@ -309,6 +309,241 @@ function sourceCountyBoundaryRows(rows: ReturnType<ReturnType<typeof load>>, has
   return parents
 }
 
+/** Source-reviewed wrapped substance name; see the published CFR evidence in ditto-source-review.md. */
+function sourceReviewedNameContinuations(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const headers = rows.first().parents("TABLE").find("THEAD TH")
+  if (
+    headers.length !== 2 ||
+    sourceText(headers.eq(0)) !== "List of substances" ||
+    sourceText(headers.eq(1)) !== "Limitations"
+  ) {
+    return parents
+  }
+  for (let index = 1; index < nodes.length; index++) {
+    const parent = nodes[index - 1]
+    const child = nodes[index]
+    invariant(parent && child, "passage_table_row_missing")
+    const before = $(parent).children("TD")
+    const after = $(child).children("TD")
+    if (
+      before.length === 2 &&
+      after.length === 2 &&
+      rowIndent($(parent)) === 1 &&
+      rowIndent($(child)) === 1 &&
+      sourceText(before.first()) === "Titanium dioxide-magnesium" &&
+      isDittoMarker(sourceText(before.eq(1))) &&
+      sourceText(after.first()) === "silicate" &&
+      [...before.toArray(), ...after.toArray()].every(
+        (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1
+      ) &&
+      after
+        .eq(1)
+        .toArray()
+        .every((cell) => cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+    ) {
+      parents.set(child, parent)
+    }
+  }
+  return parents
+}
+
+/** In expense-group tables, empty-account headings scope a populated same-account-family run. */
+function sourceExpenseGroups(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const headers = rows.first().parents("TABLE").find("THEAD TH")
+  if (
+    headers.length !== 3 ||
+    sourceText(headers.eq(0)) !== "Operating expense group and accounts" ||
+    sourceText(headers.eq(1)) !== "Account No." ||
+    sourceText(headers.eq(2)) !== "Basis of assignment to on-branch costs"
+  ) {
+    return parents
+  }
+  for (let index = 0; index < nodes.length; index++) {
+    const parent = nodes[index]
+    invariant(parent, "passage_table_row_missing")
+    const parentRow = $(parent)
+    const cells = parentRow.children("TD")
+    const label = sourceText(cells.first())
+    if (
+      rowIndent(parentRow) > 3 ||
+      cells.length !== 3 ||
+      !label ||
+      !cells
+        .toArray()
+        .every(
+          (cell, column) =>
+            Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+            (column === 0 || cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+        )
+    ) {
+      continue
+    }
+    const members = [parent]
+    let accountFamily: string | undefined
+    for (let next = index + 1; next < nodes.length; next++) {
+      const child = nodes[next]
+      invariant(child, "passage_table_row_missing")
+      const childRow = $(child)
+      const childCells = childRow.children("TD")
+      const account = sourceText(childCells.eq(1))
+      if (
+        rowIndent(childRow) !== 2 ||
+        childCells.length !== 3 ||
+        !/^\d{1,2}-\d{2}-\d{2}$/.test(account) ||
+        !childCells
+          .toArray()
+          .every(
+            (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 && sourceText($(cell)).length > 0
+          )
+      ) {
+        break
+      }
+      const family = account.slice(-5)
+      if (accountFamily !== undefined && family !== accountFamily) {
+        break
+      }
+      accountFamily = family
+      members.push(child)
+    }
+    if (members.length >= 3) {
+      for (const member of members) {
+        parents.set(member, parent)
+      }
+    }
+  }
+  return parents
+}
+
+/** Chemical headings use Arabic group numbers and consecutive Roman-numbered members at equal indentation. */
+function sourceChemicalGroups(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const headers = rows.first().parents("TABLE").find("THEAD TH")
+  if (
+    headers.length !== 3 ||
+    sourceText(headers.eq(0)) !== "Mixture/substance" ||
+    sourceText(headers.eq(1)) !== "Required test" ||
+    sourceText(headers.eq(2)) !== "FR citation"
+  ) {
+    return parents
+  }
+  const numerals = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"]
+  const isHeading = (cells: ReturnType<ReturnType<typeof $>["children"]>) =>
+    cells.length === 3 &&
+    sourceText(cells.first()).endsWith(":") &&
+    cells
+      .toArray()
+      .every(
+        (cell, column) =>
+          Number($(cell).attr("colspan") ?? 1) === 1 && (column === 0 || sourceText($(cell)).length === 0)
+      )
+  for (let index = 0; index < nodes.length; index++) {
+    const parent = nodes[index]
+    invariant(parent, "passage_table_row_missing")
+    const parentRow = $(parent)
+    const cells = parentRow.children("TD")
+    if (!isHeading(cells) || !/^\([1-9]\d*\) .*following chemical substances.*:$/.test(sourceText(cells.first()))) {
+      continue
+    }
+    const members = [parent]
+    let complete = false
+    for (let next = index + 1; next < nodes.length; next++) {
+      const child = nodes[next]
+      invariant(child, "passage_table_row_missing")
+      const childRow = $(child)
+      const childCells = childRow.children("TD")
+      if (isHeading(childCells)) {
+        complete = true
+        break
+      }
+      const numeral = numerals[members.length - 1]
+      if (
+        !numeral ||
+        childCells.length !== 3 ||
+        rowIndent(childRow) !== rowIndent(parentRow) ||
+        !sourceText(childCells.first()).startsWith(`(${numeral}) `) ||
+        !childCells
+          .toArray()
+          .every(
+            (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 && sourceText($(cell)).length > 0
+          )
+      ) {
+        break
+      }
+      members.push(child)
+      complete = next === nodes.length - 1
+    }
+    if (complete && members.length >= 3) {
+      for (const member of members) {
+        parents.set(member, parent)
+      }
+    }
+  }
+  return parents
+}
+
+/** Reservation groups have an explicit heading and matching "All of above" closing row. */
+function sourceReservationGroups(rows: ReturnType<ReturnType<typeof load>>) {
+  const nodes = rows.toArray()
+  const $ = load("", { xml: true })
+  const parents = new Map<(typeof nodes)[number], (typeof nodes)[number]>()
+  const headers = rows.first().parents("TABLE").find("THEAD TH")
+  if (headers.length !== 5 || sourceText(headers.eq(0)) !== "State" || sourceText(headers.eq(1)) !== "Reservation") {
+    return parents
+  }
+  for (let index = 0; index < nodes.length; index++) {
+    const parent = nodes[index]
+    invariant(parent, "passage_table_row_missing")
+    const cells = $(parent).children("TD")
+    const label = sourceText(cells.eq(1))
+    if (
+      cells.length !== 5 ||
+      !/^[A-Za-z][A-Za-z ]+:$/.test(label) ||
+      !cells
+        .toArray()
+        .every(
+          (cell, column) =>
+            Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+            (column === 1 || cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+        )
+    ) {
+      continue
+    }
+    const members = [parent]
+    for (let next = index + 1; next < nodes.length; next++) {
+      const child = nodes[next]
+      invariant(child, "passage_table_row_missing")
+      const childCells = $(child).children("TD")
+      if (
+        childCells.length !== 5 ||
+        !isDittoMarker(sourceText(childCells.first())) ||
+        !childCells
+          .toArray()
+          .every(
+            (cell) => Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 && sourceText($(cell)).length > 0
+          )
+      ) {
+        break
+      }
+      members.push(child)
+      if (sourceText(childCells.eq(1)) === `All of above ${label.slice(0, -1)}`) {
+        for (const member of members) {
+          parents.set(member, parent)
+        }
+        break
+      }
+    }
+  }
+  return parents
+}
+
 function sourceClassificationRows(rows: ReturnType<ReturnType<typeof load>>) {
   const nodes = rows.toArray()
   const $ = load("", { xml: true })
@@ -406,6 +641,10 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const hasDesignatedAreaHeader = sourceText(tables.find("THEAD TH").first()) === "Designated area"
   const countyBoundaryParents = sourceCountyBoundaryRows(rows, hasDesignatedAreaHeader)
   const classificationParents = sourceClassificationRows(rows)
+  const reservationGroups = sourceReservationGroups(rows)
+  const chemicalGroups = sourceChemicalGroups(rows)
+  const expenseGroups = sourceExpenseGroups(rows)
+  const nameContinuations = sourceReviewedNameContinuations(rows)
   const headers = tables.find("BOXHD, THEAD")
   const order = $.root().find("*").toArray()
   type Context = { start: number; end: number; label: string }
@@ -471,7 +710,13 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const context: Context[] = []
       const inheritedCountyScope = countyScope
       countyScope = undefined
-      if (isPartialCountyScope(selection, hasDesignatedAreaHeader)) {
+      if (reservationGroups.get(row) === row || chemicalGroups.get(row) === row || expenseGroups.get(row) === row) {
+        context.push(...groups.map((entry) => entry.span))
+        if (cells.length !== previousDataWidth) {
+          previousCells.clear()
+          previousDataWidth = 0
+        }
+      } else if (isPartialCountyScope(selection, hasDesignatedAreaHeader)) {
         context.push(...groups.map((entry) => entry.span))
         countyScope = { start, end: start + text.length, label: "Source partial county scope" }
         if (cells.length !== previousDataWidth) {
@@ -506,7 +751,11 @@ export function legalTableRows(input: { text: string; xml: string }) {
           conditionParents.get(row) ??
           exceptionParents.get(row) ??
           countyBoundaryParents.get(row) ??
-          classificationParents.get(row)
+          classificationParents.get(row) ??
+          reservationGroups.get(row) ??
+          chemicalGroups.get(row) ??
+          expenseGroups.get(row) ??
+          nameContinuations.get(row)
         const parentRange = parentNode === undefined ? undefined : rangesByNode.get(parentNode)
         if (parentRange) {
           context.push(...parentRange.context, {
@@ -533,7 +782,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
             context.push(reference)
           } else {
             const hasParentBlank =
-              ((conditionParents.has(row) || countyBoundaryParents.has(row)) && column > 1) ||
+              ((conditionParents.has(row) || countyBoundaryParents.has(row) || nameContinuations.has(row)) &&
+                column > 1) ||
               (exceptionParents.has(row) && column < 3) ||
               (classificationParents.has(row) && column <= 3)
             if (parentRange && hasParentBlank && value.length === 0 && width === 1) {
@@ -546,7 +796,10 @@ export function legalTableRows(input: { text: string; xml: string }) {
             if (value && width === 1) {
               previousCells.set(column, {
                 start:
-                  classificationParents.has(row) && column === 5 && parentRange ? parentRange.start : start + offset,
+                  parentRange &&
+                  ((classificationParents.has(row) && column === 5) || (nameContinuations.has(row) && column === 1))
+                    ? parentRange.start
+                    : start + offset,
                 end: start + offset + value.length,
                 label: `Column ${column} ditto source`
               })
