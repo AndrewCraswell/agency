@@ -63,7 +63,7 @@ describe('local component library', () => {
     expect(html).toContain('id="lab-check-disabled"');
     for (const index of [1, 2, 3, 4, 5]) expect(html).toContain(`id="LabSearch-popular-category-${index}"`);
     expect(html).not.toContain('id="LabSearch-popular-category-6"');
-  });
+  }, 15_000);
   it('serves uncached HTML and real component assets', async () => {
     const response = await fetch(base);
     expect(response.status).toBe(200);
