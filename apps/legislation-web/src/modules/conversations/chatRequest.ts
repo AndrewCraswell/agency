@@ -116,10 +116,18 @@ function productionChatOrigin(environment: NodeJS.ProcessEnv) {
 export function chatRequestIsAllowed(request: Request, environment: NodeJS.ProcessEnv) {
   const url = new URL(request.url)
   const origin = request.headers.get("origin")
+  const host = request.headers.get("host") ?? url.host
   if (environment.NODE_ENV === "development") {
-    return ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) && origin === url.origin
+    const browserOrigin = URL.parse(origin ?? "")
+    return (
+      browserOrigin !== null &&
+      origin === browserOrigin.origin &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(browserOrigin.hostname) &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
+      browserOrigin.host === host &&
+      browserOrigin.protocol === url.protocol
+    )
   }
   const trustedOrigin = productionChatOrigin(environment)
-  const host = request.headers.get("host") ?? url.host
   return trustedOrigin !== null && origin === trustedOrigin && host === new URL(trustedOrigin).host
 }

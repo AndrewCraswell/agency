@@ -33,6 +33,12 @@ Do not mock style modules or put custom component selectors back into the global
 
 ## Verification
 
+User override for inline citations: use 16px minimum width, 14px height, 10px monospace numerals, a subtle theme-colored
+outline, no brackets, and a relative upward offset of 0.8em without increasing paragraph line height. Source-list numbers
+retain the filled badge and subtle outline at 16px height and minimum width with 10px numerals. Evidence-panel
+numbers retain their normal size. Inline buttons keep keyboard focus, URL-only tooltips, and evidence
+inspection on activation. The cited-only sources list remains a collapsed accordion by default.
+
 Run focused component tests and `pnpm --filter legislation-web check:types`. Build integration changes also require
 `pnpm --filter legislation-web build`. Verify user-facing styling changes in the browser at desktop and mobile sizes,
 including supported themes, keyboard focus, reduced motion, and forced colors where applicable.

@@ -194,18 +194,41 @@ globalStyle(`${markdown} td, ${markdown} th`, {
   padding: 8,
   textAlign: "left"
 })
-export const citation = style({
-  display: "inline",
+export const citationNumber = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 24,
+  height: 24,
+  flexShrink: 0,
   color: "var(--primary)",
+  fontFamily: "var(--font-ibm-plex-mono), monospace",
   fontSize: 12,
   fontWeight: 600,
+  lineHeight: 1,
   borderRadius: 4,
-  padding: "2px 5px",
-  background: "var(--accent)",
-  cursor: "pointer",
-  verticalAlign: "baseline",
-  ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
+  border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
+  background: "var(--accent)"
 })
+export const citation = style([
+  citationNumber,
+  {
+    minWidth: 16,
+    height: 14,
+    padding: "0 2px",
+    fontSize: 10,
+    borderRadius: 3,
+    position: "relative",
+    top: "-0.8em",
+    cursor: "pointer",
+    verticalAlign: "baseline",
+    ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
+  }
+])
+export const sourceNumber = style([
+  citationNumber,
+  { minWidth: 16, height: 16, padding: "0 2px", marginTop: 2, fontSize: 10, borderRadius: 3 }
+])
 export const source = style({
   display: "flex",
   width: "100%",

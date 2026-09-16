@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest"
-import { citedAnswerSchema, evidenceSnapshotSchema, formatEvidenceCitation } from "./evidence"
+import { createHash } from "node:crypto"
+import { describe, expect, it, vi } from "vitest"
+import {
+  citedAnswerSchema,
+  evidenceSnapshotSchema,
+  evidenceSourceUrl,
+  formatEvidenceCitation,
+  projectResearchEvidence,
+  type EvidenceSourceContext
+} from "./evidence"
 
 const citation = {
   id: "source-1",
@@ -45,6 +53,21 @@ describe("conversation evidence", () => {
     expect(formatEvidenceCitation(evidence)).toBe("Unavailable source")
   })
 
+  it("uses a safe readable destination without replacing copied provenance", () => {
+    const readableUrl = "https://example.org/document.pdf"
+    const evidence = evidenceSnapshotSchema.parse({ ...citation, readableUrl })
+    expect(evidenceSourceUrl(evidence)).toBe(readableUrl)
+    expect(formatEvidenceCitation(evidence)).toContain(citation.sourceUrl)
+    expect(formatEvidenceCitation(evidence)).not.toContain(readableUrl)
+    expect(evidenceSourceUrl({ ...evidence, readableUrl: "javascript:alert(1)" })).toBe(citation.sourceUrl)
+    expect(evidenceSourceUrl({ sourceUrl: null, readableUrl })).toBe(readableUrl)
+    expect(evidenceSourceUrl({ sourceUrl: "https://example.org/?token=secret" })).toBeNull()
+    expect(evidenceSourceUrl({ sourceUrl: null })).toBeNull()
+    expect(
+      evidenceSnapshotSchema.safeParse({ ...citation, readableUrl: "https://example.org/?signature=secret" }).success
+    ).toBe(false)
+  })
+
   it("binds each marker to a unique retained snapshot", () => {
     const answer = {
       claims: [{ id: "claim-1", text: "An interpretation", citationIds: ["source-1"] }],
@@ -70,5 +93,202 @@ describe("conversation evidence", () => {
     expect(
       evidenceSnapshotSchema.safeParse({ ...citation, content: { state, quote: "Invented fallback" } }).success
     ).toBe(false)
+  })
+})
+
+const document = {
+  id: "document:one",
+  billId: "bill:us:119:hr:1",
+  title: "Introduced text",
+  classification: "version",
+  versionCode: "ih",
+  documentDate: "2025-01-03",
+  sourceUrl: "https://www.govinfo.gov/content/pkg/BILLS-119hr1ih/xml/BILLS-119hr1ih.xml",
+  text: null,
+  snippet: null
+}
+const section = {
+  id: "section:one",
+  documentId: document.id,
+  sectionIdentifier: "Section 2",
+  heading: "Retained heading",
+  text: "The exact retained passage.\nSecond paragraph.",
+  snippet: null
+}
+
+function createEvidenceId(identity: string) {
+  return `evidence:${createHash("sha256").update(identity).digest("hex")}`
+}
+
+function project(data: unknown) {
+  return projectResearchEvidence(data, createEvidenceId)
+}
+
+describe("research evidence identity", () => {
+  it("deduplicates repeated search and detail evidence using the supplied identity hash", () => {
+    const createId = vi.fn<typeof createEvidenceId>(createEvidenceId)
+    const search = { items: [{ document, section, score: 1, snippet: "Search excerpt" }] }
+    const detail = { billId: document.billId, document, sections: [section], nextCursor: "next" }
+    const searched = projectResearchEvidence(search, createId)
+    const read = project(detail)
+    expect(searched).toEqual(read)
+    expect(project([search, detail])).toEqual(read)
+    expect(read).toHaveLength(2)
+    expect(read[1]).toMatchObject({
+      title: document.title,
+      sourceUrl: document.sourceUrl,
+      versionLabel: "ih, 2025-01-03",
+      locator: section.sectionIdentifier,
+      content: { state: "available", quote: section.text }
+    })
+    expect(createId.mock.calls[1]?.[0]).toContain(JSON.stringify(section.text))
+    expect(
+      project({ ...document, title: "Changed display label", readableUrl: "https://example.org/text.pdf" })[0]?.id
+    ).toBe(read[0]?.id)
+  })
+
+  it.each([
+    { id: "document:two" },
+    { billId: "bill:us:119:hr:2" },
+    { versionId: "version:two" },
+    { versionCode: "eh" },
+    { documentDate: "2025-02-03" },
+    { sourceObservationId: "observation:two" },
+    { versionHash: "changed-version" },
+    { text: "Changed passage" },
+    { text: "The exact retained passage.\r\nSecond paragraph." }
+  ])("separates record, version, observation, and exact text changes at the same URL: %j", (change) => {
+    const original = { ...document, text: section.text }
+    expect(project([{ ...original, ...change }, original])).toHaveLength(2)
+    expect(project({ ...original, ...change })[0]?.id).not.toBe(project(original)[0]?.id)
+  })
+
+  it("keeps passages, unlabeled sections, source locators, and record types distinct", () => {
+    const original = { ...section, ...document, id: section.id, text: section.text }
+    for (const change of [{ id: "section:two" }, { passageId: "passage:two" }]) {
+      expect(project([original, { ...original, ...change }])).toHaveLength(2)
+    }
+    expect(
+      project({
+        document,
+        sections: [
+          { ...section, sectionIdentifier: null, heading: null },
+          { ...section, id: "section:two", sectionIdentifier: null, heading: null }
+        ]
+      })
+    ).toHaveLength(3)
+    expect(
+      project([
+        { ...document, type: "bill" },
+        { ...document, type: "document" }
+      ])
+    ).toHaveLength(2)
+    expect(
+      project([
+        { ...document, materialId: "same" },
+        { ...document, provisionId: "same" }
+      ])
+    ).toHaveLength(2)
+  })
+
+  it("keeps canonical passage identities stable when detail reads enrich display locators", () => {
+    const { heading: _heading, sectionIdentifier: _identifier, ...searchSection } = section
+    const search = project({ document, sections: [searchSection] })
+    const detail = project({ document, sections: [{ ...section, ordinal: 2, sourceLocator: "page:2" }] })
+    expect(search[1]?.id).toBe(detail[1]?.id)
+    expect(project({ ...document, processingStatus: "failed" })[0]?.content.state).toBe("failed")
+    expect(project({ ...document, availability: "restricted" })[0]?.content.state).toBe("unavailable")
+  })
+
+  it.each([null, undefined, "", "x".repeat(20001)])(
+    "does not turn snippets or unretained text into an exact quote",
+    (text) => {
+      const result = project({ ...document, text, snippet: "An incomplete search excerpt" })
+      expect(result).toHaveLength(1)
+      expect(result[0]?.content).toEqual({ state: "not-collected" })
+    }
+  )
+
+  it("retains nullable document records and never inherits full document text for an empty section", () => {
+    expect(project(document)[0]?.content).toEqual({ state: "not-collected" })
+    const result = project({
+      document: { ...document, text: "Full document body" },
+      sections: [{ ...section, text: null }]
+    })
+    expect(result[1]?.content).toEqual({ state: "not-collected" })
+    expect(project({ ...document, text: "x".repeat(20001) })[0]?.id).not.toBe(
+      project({ ...document, text: "y".repeat(20001) })[0]?.id
+    )
+  })
+
+  it.each([
+    { documentId: "document:other" },
+    { documentId: null },
+    { documentId: undefined },
+    { billId: "bill:other" },
+    { versionCode: "eh" },
+    { versionCode: null },
+    { documentDate: "2025-02-03" },
+    { documentDate: null },
+    { versionId: "version:other" },
+    { sourceObservationId: "observation:other" },
+    { versionHash: "hash:other" }
+  ])("does not inherit document metadata across a conflicting or missing owner/version: %j", (change) => {
+    const ownUrl = "https://other.example/passage.xml"
+    const result = project({ document, sections: [{ ...section, ...change, sourceUrl: ownUrl }] })
+    expect(result[1]).toMatchObject({ sourceUrl: ownUrl, title: section.heading })
+    expect(result[1]?.versionLabel).not.toBe("ih, 2025-01-03")
+  })
+
+  it("does not apply a wrapper's document to foreign bill data or unrelated nested objects", () => {
+    const result = project({
+      billId: "bill:other",
+      document,
+      sections: [section],
+      metadata: { heading: "Unrelated metadata", text: "Not a source" }
+    })
+    expect(result[1]).toMatchObject({ title: section.heading, sourceUrl: null })
+    expect(result[1]?.versionLabel).toBeUndefined()
+    expect(result).toHaveLength(2)
+    expect(project({ document, metadata: { heading: "Not a source", text: "Unrelated" } })).toHaveLength(1)
+    expect(project({ id: "search-hit:one", document, sections: [section] })).toEqual(
+      project({ document, sections: [section] })
+    )
+  })
+
+  it("retains safe fallback state and lets the resolver see all bounded sources without changing identity", () => {
+    const readable = { ...document, id: "readable", sourceUrl: "https://www.govinfo.gov/text.pdf" }
+    const contexts: EvidenceSourceContext[] = []
+    const result = projectResearchEvidence(
+      { documents: [document, readable] },
+      createEvidenceId,
+      (evidence, source, sources) => {
+        contexts.push(source)
+        expect(sources).toHaveLength(2)
+        return { ...evidence, readableUrl: readable.sourceUrl }
+      }
+    )
+    expect(contexts[0]).toMatchObject(document)
+    expect(result[0]).toMatchObject({
+      id: project(document)[0]?.id,
+      sourceUrl: document.sourceUrl,
+      readableUrl: readable.sourceUrl
+    })
+    expect(
+      project({ ...document, sourceUrl: "https://user:secret@example.org/text?token=private" })[0]?.sourceUrl
+    ).toBeNull()
+  })
+
+  it("keeps scanning source metadata beyond the evidence limit and skips embeddings and rendition traversal", () => {
+    const documents = Array.from({ length: 45 }, (_value, index) => ({ ...document, id: `document:${index}` }))
+    const result = projectResearchEvidence({ documents }, createEvidenceId, (evidence, _source, sources) => {
+      expect(sources).toHaveLength(45)
+      return evidence
+    })
+    expect(result).toHaveLength(40)
+    expect(
+      project({ ...document, embedding: [document], renditions: [{ ...document, id: "rendition" }] })
+    ).toHaveLength(1)
+    expect(project([null, 1, { text: 42, child: document }])).toHaveLength(1)
   })
 })

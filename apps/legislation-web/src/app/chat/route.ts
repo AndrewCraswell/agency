@@ -236,7 +236,9 @@ export async function POST(request: Request) {
       signal,
       () => !isAwaitingClarification,
       reportToolFailure,
-      parsed.data.sessionKey
+      parsed.data.sessionKey,
+      undefined,
+      runId
     )
     tools.ask_clarification = createClarificationTool(parsed.data.sessionKey, signal, () => {
       isAwaitingClarification = true

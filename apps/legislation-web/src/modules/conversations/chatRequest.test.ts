@@ -143,6 +143,19 @@ describe("chat boundary", () => {
     ).toBe(false)
   })
 
+  it.each([
+    { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000", allowed: true },
+    { host: "[::1]:3000", origin: "http://[::1]:3000", allowed: true },
+    { host: "127.0.0.1:3000", origin: "http://localhost:3000", allowed: false },
+    { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3001", allowed: false },
+    { host: "127.0.0.1:3000", origin: "https://127.0.0.1:3000", allowed: false },
+    { host: "other.example", origin: "http://other.example", allowed: false },
+    { host: "127.0.0.1:3000", origin: "null", allowed: false }
+  ])("validates the browser loopback host when Next reconstructs localhost: $origin", ({ host, origin, allowed }) => {
+    const request = new Request("http://localhost:3000/chat", { headers: { host, origin } })
+    expect(chatRequestIsAllowed(request, { NODE_ENV: "development" })).toBe(allowed)
+  })
+
   it("keeps text history but strips untrusted extra metadata", () => {
     const parsed = chatRequestSchema.parse({
       sessionKey,

@@ -7,7 +7,7 @@ import { getNextLegislationApplication } from "../legislation/runtime/runtime"
 import { getResearchRuntime } from "../search/research-runtime"
 import { researchAgentLimits } from "./agent"
 import { chatIsAvailable } from "./chatRequest"
-import { projectResearchEvidence } from "./evidence"
+import { createResearchEvidenceProjector } from "./evidenceSource.server"
 import { ResearchFailure, researchFailureCode } from "./researchFailure"
 import { isResearchTool, researchToolLabels } from "./researchTools"
 import { resultStore } from "./resultStore"
@@ -60,9 +60,10 @@ export function createResearchTools(
   environment: NodeJS.ProcessEnv,
   signal: AbortSignal,
   canResearch = () => true,
-  reportFailure = createToolFailureReporter(crypto.randomUUID()),
+  reportFailure?: ReturnType<typeof createToolFailureReporter>,
   sessionKey?: string,
-  queryServiceOverride?: LegislationQueryApi
+  queryServiceOverride?: LegislationQueryApi,
+  runId: string = crypto.randomUUID()
 ) {
   if (environment.NODE_ENV !== "development" && !chatIsAvailable(environment)) {
     throw new Error("Research is unavailable in this environment.")
@@ -70,6 +71,8 @@ export function createResearchTools(
   signal.throwIfAborted()
   const queryService = queryServiceOverride ?? getNextLegislationApplication().queryService
   const logger = createLogger({ service: "legislation-chat", level: "warn" })
+  const projectEvidence = createResearchEvidenceProjector(logger, runId)
+  const failureReporter = reportFailure ?? createToolFailureReporter(runId)
   const definitions = createLegislationResearchTools(queryService, logger)
   async function execute(name: string, input: unknown, executionSignal = signal) {
     executionSignal.throwIfAborted()
@@ -160,7 +163,7 @@ export function createResearchTools(
             : undefined
           return {
             ...parsed.data.structuredContent,
-            evidence: projectResearchEvidence(parsed.data.structuredContent.data, () => crypto.randomUUID()),
+            evidence: projectEvidence(parsed.data.structuredContent.data),
             resultSet
           }
         } catch (error) {
@@ -171,7 +174,7 @@ export function createResearchTools(
           } else if (error instanceof z.ZodError) {
             failure = new ResearchFailure("invalid_request", reference)
           }
-          reportFailure({
+          failureReporter({
             toolCallId,
             toolName: name,
             error: failure,

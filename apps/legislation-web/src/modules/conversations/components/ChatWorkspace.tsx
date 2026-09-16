@@ -18,8 +18,8 @@ import { cn } from "../../../components/ui/utils"
 import { referenceMessageMetadata, type StagedReference } from "../chatRequest"
 import { isClarificationSubmission } from "../chatRequest"
 import { entityPageSchema } from "../entityResults"
-import type { EvidenceSnapshot } from "../evidence"
 import { ChatComposer } from "./ChatComposer"
+import type { CitationSelection } from "./citationPresentation"
 import { ConversationResponse, responseClarification, responseEvidence } from "./ConversationResponse"
 import { useConversationSession } from "./ConversationSession"
 import { EvidencePanel } from "./EvidencePanel"
@@ -74,11 +74,11 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
   const hasSession = conversationId === chat.id
   const [wasStopped, setWasStopped] = useState(false)
   const [referenceMode, setReferenceMode] = useState<"all" | "mention">()
-  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceSnapshot>()
+  const [selectedCitation, setSelectedCitation] = useState<CitationSelection>()
   const evidenceTrigger = useRef<HTMLElement | null>(null)
-  function handleEvidence(evidence: EvidenceSnapshot) {
+  function handleEvidence(selection: CitationSelection) {
     evidenceTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    setSelectedEvidence(evidence)
+    setSelectedCitation(selection)
   }
   const { messages, sendMessage, status, stop, regenerate } = useChat({ chat })
   const isRunning = status === "submitted" || status === "streaming"
@@ -179,7 +179,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
       setReferences(references.filter((reference) => reference.recordId !== recordId))
   }
   return (
-    <AppShell demo className={cn(styles.layout, selectedEvidence && styles.withEvidence)}>
+    <AppShell demo className={cn(styles.layout, selectedCitation && styles.withEvidence)}>
       <Conversation aria-label="Conversation" aria-live="off" className="min-h-0" initial="instant" resize="instant">
         <ConversationContent
           className={cn(styles.content, isConversation && styles.threadContent)}
@@ -352,8 +352,8 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
         </div>
       )}
       <EvidencePanel
-        evidence={selectedEvidence}
-        onClose={() => setSelectedEvidence(undefined)}
+        selection={selectedCitation}
+        onClose={() => setSelectedCitation(undefined)}
         returnFocus={() => evidenceTrigger.current?.focus()}
       />
       {referenceMode && (

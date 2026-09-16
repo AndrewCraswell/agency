@@ -5,26 +5,29 @@ import { Check, Copy, ExternalLink, X } from "lucide-react"
 import { useState } from "react"
 import { Button } from "../../../components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "../../../components/ui/sheet"
-import { formatEvidenceCitation, type EvidenceSnapshot } from "../evidence"
+import { evidenceSourceUrl, formatEvidenceCitation } from "../evidence"
+import type { CitationSelection } from "./citationPresentation"
 import * as styles from "./ConversationResponse.css"
 
 type EvidencePanelProps = Readonly<{
-  evidence: EvidenceSnapshot | undefined
+  selection: CitationSelection | undefined
   onClose: () => void
   returnFocus: () => void
 }>
 
-export function EvidencePanel({ evidence: currentEvidence, onClose, returnFocus }: EvidencePanelProps) {
-  const [lastEvidence, setLastEvidence] = useState(currentEvidence)
-  if (currentEvidence !== undefined && currentEvidence !== lastEvidence) {
-    setLastEvidence(currentEvidence)
+export function EvidencePanel({ selection: currentSelection, onClose, returnFocus }: EvidencePanelProps) {
+  const [lastSelection, setLastSelection] = useState(currentSelection)
+  if (currentSelection !== undefined && currentSelection !== lastSelection) {
+    setLastSelection(currentSelection)
   }
-  const evidence = currentEvidence ?? lastEvidence
+  const selection = currentSelection ?? lastSelection
+  const evidence = selection?.evidence
+  const sourceUrl = evidence && evidenceSourceUrl(evidence)
   const isNarrow = useMediaQuery("(max-width: 63.99rem)", true)
   const clipboard = useClipboard({ timeout: 1800 })
   return (
     <Sheet
-      open={currentEvidence !== undefined}
+      open={currentSelection !== undefined}
       onOpenChange={(open) => {
         if (!open) {
           onClose()
@@ -48,7 +51,9 @@ export function EvidencePanel({ evidence: currentEvidence, onClose, returnFocus 
         aria-describedby={undefined}
       >
         <SheetHeader className="mb-8 flex-row items-center justify-between gap-4 p-0">
-          <SheetTitle className="text-xl font-semibold">Source evidence</SheetTitle>
+          <SheetTitle className="flex items-center gap-2 text-xl font-semibold">
+            Source {selection && <span className={styles.citationNumber}>{selection.number}</span>}
+          </SheetTitle>
           <SheetClose asChild>
             <Button type="button" size="icon" variant="ghost" aria-label="Close evidence">
               <X aria-hidden="true" />
@@ -84,13 +89,15 @@ export function EvidencePanel({ evidence: currentEvidence, onClose, returnFocus 
               <p className="text-sm text-muted-foreground">No passage was retrieved for this source.</p>
             )}
             <div className="flex flex-wrap gap-2">
-              {evidence.sourceUrl && (
+              {sourceUrl ? (
                 <Button asChild variant="outline">
-                  <a href={evidence.sourceUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
                     Open source
                     <ExternalLink aria-hidden="true" />
                   </a>
                 </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">Source unavailable</p>
               )}
               <Button variant="ghost" onClick={() => clipboard.copy(formatEvidenceCitation(evidence))}>
                 {clipboard.copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}Copy citation

@@ -8,9 +8,11 @@ import { createContext, useContext, useState, type ComponentProps } from "react"
 import { z } from "zod"
 import { MessageResponse } from "../../../components/ai-elements/message"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible"
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip"
 import { clarificationRequestSchema } from "../clarification"
 import { entityPageSchema } from "../entityResults"
-import { evidenceSnapshotSchema, sourceUrlSchema, type EvidenceSnapshot } from "../evidence"
+import { evidenceSnapshotSchema, evidenceSourceUrl, sourceUrlSchema, type EvidenceSnapshot } from "../evidence"
+import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ClarificationQuestion, ClarificationReceiptStatus } from "./ClarificationQuestion"
 import { useConversationSession } from "./ConversationSession"
 import { EntityResults } from "./EntityResults"
@@ -19,15 +21,19 @@ import { ResearchActivity } from "./ResearchActivity"
 import * as styles from "./ConversationResponse.css"
 
 const evidenceOutputSchema = z.object({ evidence: z.array(evidenceSnapshotSchema).max(40) })
-type CitationContext = Readonly<{ evidence: EvidenceSnapshot[]; onEvidence: (evidence: EvidenceSnapshot) => void }>
+type CitationContext = Readonly<{
+  presentation: ReturnType<typeof createCitationPresentation>
+  onEvidence: (selection: CitationSelection) => void
+}>
 const EvidenceContext = createContext<CitationContext | undefined>(undefined)
-type ConversationResponseProps = CitationContext &
-  Readonly<{
-    message: UIMessage
-    isRunning: boolean
-    isIncomplete: boolean
-    isLatest?: boolean
-  }>
+type ConversationResponseProps = Readonly<{
+  message: UIMessage
+  isRunning: boolean
+  isIncomplete: boolean
+  isLatest?: boolean
+  evidence: EvidenceSnapshot[]
+  onEvidence: (selection: CitationSelection) => void
+}>
 
 export function responseClarification(message: UIMessage) {
   for (const part of message.parts) {
@@ -59,17 +65,27 @@ export function responseEvidence(message: UIMessage): EvidenceSnapshot[] {
 
 function CitationLink({ href, children }: ComponentProps<"a">) {
   const context = useContext(EvidenceContext)
-  const source = context?.evidence.find((item) => href === `#citation-${item.id}` || href === item.sourceUrl)
-  if (source) {
-    return (
+  const citation = context?.presentation.resolveCitation(href)
+  if (context && citation) {
+    const url = evidenceSourceUrl(citation.evidence)
+    const button = (
       <button
         type="button"
         className={styles.citation}
-        aria-label={`Read source: ${source.title}`}
-        onClick={() => context?.onEvidence(source)}
+        aria-label={`Read source ${citation.number}: ${citation.evidence.title}`}
+        onClick={() => context.onEvidence(citation)}
       >
-        {children}
+        {citation.number}
       </button>
+    )
+    if (!url) {
+      return button
+    }
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent className="max-w-[min(32rem,calc(100vw-2rem))] break-all">{url}</TooltipContent>
+      </Tooltip>
     )
   }
   const safeUrl = sourceUrlSchema.safeParse(href)
@@ -113,6 +129,19 @@ export function ConversationResponse({
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("\n\n")
+  const [citationNumbers, setCitationNumbers] = useState(() => ({
+    answerId: message.id,
+    numbers: new Map<string, number>()
+  }))
+  const presentation = createCitationPresentation(
+    message.id,
+    text,
+    evidence,
+    citationNumbers.answerId === message.id ? citationNumbers.numbers : undefined
+  )
+  if (citationNumbers.answerId !== message.id || citationNumbers.numbers.size !== presentation.numbers.size) {
+    setCitationNumbers({ answerId: message.id, numbers: presentation.numbers })
+  }
   const failed = steps.filter((part) => part.state === "output-error" || part.state === "output-denied").length
   const activitySteps = steps.filter((part) => part.state !== "output-error" && part.state !== "output-denied")
   const number = new Intl.NumberFormat()
@@ -160,7 +189,7 @@ export function ConversationResponse({
           .filter((part) => part.state === "output-error" || part.state === "output-denied")
           .map((part) => <ResearchActivity key={part.toolCallId} part={part} isRunning={isRunning} />)}
       {text && (
-        <EvidenceContext value={{ evidence, onEvidence }}>
+        <EvidenceContext value={{ presentation, onEvidence }}>
           <MessageResponse
             className={styles.markdown}
             mode={isRunning ? "streaming" : "static"}
@@ -206,13 +235,15 @@ export function ConversationResponse({
       {resultPages.map((page) => (
         <EntityResults key={page.id} initialPage={page} answerId={message.id} />
       ))}
-      {evidence.length > 0 && (
-        <section aria-label="Retrieved sources" className="space-y-2">
+      {presentation.citations.length > 0 && (
+        <section aria-label="Sources" className="space-y-2">
           <Collapsible open={areSourcesExpanded} onOpenChange={setAreSourcesExpanded}>
             <h3>
               <CollapsibleTrigger className={styles.sourcesTrigger}>
-                <span>Retrieved sources</span>
-                <span className="font-mono text-xs text-muted-foreground">{number.format(evidence.length)}</span>
+                <span>Sources</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {number.format(presentation.citations.length)}
+                </span>
                 <ChevronDown
                   className={`ml-auto size-4 shrink-0 ${areSourcesExpanded ? "rotate-180" : ""}`}
                   aria-hidden="true"
@@ -220,21 +251,34 @@ export function ConversationResponse({
               </CollapsibleTrigger>
             </h3>
             <CollapsibleContent>
-              {evidence.map((source) => (
-                <button key={source.id} type="button" className={styles.source} onClick={() => onEvidence(source)}>
-                  <span className="min-w-0 flex-1 break-words">
-                    <span className="block font-medium">{source.title}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {source.sourceUrl ? new URL(source.sourceUrl).hostname : "Source unavailable"}
+              {presentation.citations.map((citation) => {
+                const source = citation.evidence
+                const url = evidenceSourceUrl(source)
+                return (
+                  <button
+                    key={source.id}
+                    type="button"
+                    className={styles.source}
+                    aria-label={`Read source ${citation.number}: ${source.title}`}
+                    onClick={() => onEvidence(citation)}
+                  >
+                    <span className={styles.sourceNumber} aria-hidden="true">
+                      {citation.number}
                     </span>
-                    {source.versionLabel && (
-                      <span className="block text-xs text-muted-foreground">{source.versionLabel}</span>
-                    )}
-                    {source.locator && <span className="block text-xs text-muted-foreground">{source.locator}</span>}
-                  </span>
-                  <ExternalLink className="mt-1 size-4 shrink-0" aria-hidden="true" />
-                </button>
-              ))}
+                    <span className="min-w-0 flex-1 break-words">
+                      <span className="block font-medium">{source.title}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {url ? new URL(url).hostname : "Source unavailable"}
+                      </span>
+                      {source.versionLabel && (
+                        <span className="block text-xs text-muted-foreground">{source.versionLabel}</span>
+                      )}
+                      {source.locator && <span className="block text-xs text-muted-foreground">{source.locator}</span>}
+                    </span>
+                    <ExternalLink className="mt-1 size-4 shrink-0" aria-hidden="true" />
+                  </button>
+                )
+              })}
             </CollapsibleContent>
           </Collapsible>
         </section>
