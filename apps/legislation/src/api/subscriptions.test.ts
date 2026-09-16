@@ -1,10 +1,10 @@
-import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import {
   createAes256GcmWebhookSecretProtector,
   createWebhookSecretProtector,
   SubscriptionApiError,
   SubscriptionService,
+  type CreateSubscriptionInput,
   type Subscription,
   type SubscriptionRepository,
   type Webhook,
@@ -13,6 +13,7 @@ import {
 
 function repository(): SubscriptionRepository & WebhookRepository {
   const subscriptions = new Map<string, Subscription>()
+  const fingerprints = new Map<string, string>()
   const webhooks = new Map<string, Webhook>()
   const noEvents = async () => ({ items: [], truncated: false }) as const
   return {
@@ -46,8 +47,9 @@ function repository(): SubscriptionRepository & WebhookRepository {
       webhooks.set(id, next)
       return next
     },
-    createSubscription: async ({ subscription }) => {
+    createSubscription: async ({ fingerprint, subscription }) => {
       subscriptions.set(subscription.id, subscription)
+      fingerprints.set(subscription.id, fingerprint)
       return subscription
     },
     createWebhook: async ({ webhook }) => {
@@ -60,9 +62,7 @@ function repository(): SubscriptionRepository & WebhookRepository {
           subscription.owner.userId === owner.userId &&
           subscription.owner.organizationId === owner.organizationId &&
           subscription.status !== "cancelled" &&
-          // The in-memory test repository does not persist its internal fingerprint.
-          fingerprint.length === 64 &&
-          subscription.target.type === "record"
+          fingerprints.get(subscription.id) === fingerprint
       ),
     getSubscription: async ({ id }) => subscriptions.get(id),
     getWebhook: async ({ id }) => webhooks.get(id),
@@ -139,6 +139,36 @@ describe("SubscriptionService", () => {
     })
   })
 
+  it("rejects only identical active subscriptions and permits recreation after cancellation", async () => {
+    const subject = service()
+    const input: CreateSubscriptionInput = {
+      delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+      eventTypes: ["vote-added"],
+      frequency: "immediate",
+      name: "Floor votes",
+      target: { recordId: "bill:us:119:hr:1", recordType: "bill", type: "record" },
+      timezone: "America/Los_Angeles"
+    }
+    const personalIdentity = { userId: "user:one" }
+    const created = await subject.createSubscription(personalIdentity, input)
+    await expect(
+      subject.createSubscription(personalIdentity, { ...input, name: "Another name" })
+    ).rejects.toMatchObject({
+      category: "conflict"
+    })
+    const different = await subject.createSubscription(personalIdentity, {
+      ...input,
+      target: { recordId: "bill:us:119:hr:2", recordType: "bill", type: "record" }
+    })
+    expect(different.id).not.toBe(created.id)
+    const otherOwner = await subject.createSubscription({ userId: "user:two" }, input)
+    expect(otherOwner.owner).toEqual({ userId: "user:two", organizationId: null })
+    await subject.cancelSubscription(personalIdentity, created.id, created.revision)
+    const recreated = await subject.createSubscription(personalIdentity, input)
+    expect(recreated.id).not.toBe(created.id)
+    expect(recreated.status).toBe("active")
+  })
+
   it("requires a current revision for mutation and cancellation", async () => {
     const subject = service()
     const created = await subject.createSubscription(identity, {
@@ -176,16 +206,6 @@ describe("SubscriptionService", () => {
 })
 
 describe("subscription persistence constraints", () => {
-  it("deduplicates personal subscriptions with a null-safe owner key", async () => {
-    const migration = await readFile(
-      new URL("../db/migrations/0024_subscriptions-webhooks-and-idempotency.sql", import.meta.url),
-      "utf8"
-    )
-    expect(migration).toContain(
-      'CREATE UNIQUE INDEX "subscriptions_exact_active_uidx" ON "legislation"."subscriptions" USING btree (coalesce("owner_organization_id", \'\'),"owner_user_id","target_fingerprint")'
-    )
-  })
-
   it("rejects a webhook secret protector that returns plaintext", async () => {
     const protector = createWebhookSecretProtector(async (plaintext) => plaintext)
     await expect(protector.protect("plaintext-secret")).rejects.toThrow("distinct from plaintext")

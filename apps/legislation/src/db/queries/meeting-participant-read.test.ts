@@ -1,19 +1,24 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
-import { describe, expect, it } from "vitest"
+import { afterAll, describe, expect, it } from "vitest"
 import * as schema from "../schema/schema.js"
 import { buildMeetingParticipantReadQuery } from "./meeting-participant-read.js"
 
 const pool = new pg.Pool({ connectionString: "postgresql://meeting-participant-read-test.invalid/legislation" })
 const database = drizzle(pool, { schema })
 
+afterAll(async () => {
+  await pool.end()
+})
+
 describe("meeting participant repository", () => {
   it("binds the participant to its visible meeting parent and selects canonical fields only", () => {
-    const generated = buildMeetingParticipantReadQuery(database, {
+    const { sql: generated, params } = buildMeetingParticipantReadQuery(database, {
       meetingId: "event:us:119:hearing:1",
       participantId: "participant:us:119:hearing:1:1"
-    }).toSQL().sql
+    }).toSQL()
 
+    expect(params).toEqual(["event:us:119:hearing:1", "participant:us:119:hearing:1:1", false, 1])
     expect(generated).toContain('"event_participants"."event_id" =')
     expect(generated).toContain('"event_participants"."id" =')
     expect(generated).toContain('"legislative_events"."is_deleted" =')

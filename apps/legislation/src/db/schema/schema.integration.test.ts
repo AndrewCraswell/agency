@@ -181,6 +181,163 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     ])
   })
 
+  it("installs nullable canonical facts and fail-closed completeness defaults", async () => {
+    const result = await pool.query<{
+      table_name: string
+      column_name: string
+      is_nullable: string
+      column_default: string | null
+      data_type: string
+    }>(
+      `select table_name, column_name, is_nullable, column_default, data_type
+       from information_schema.columns
+       where table_schema = 'legislation'
+         and table_name in ('organizations', 'event_agenda_items', 'organization_memberships')`
+    )
+    for (const [tableName, columnNames] of [
+      [
+        "organizations",
+        [
+          "description",
+          "website_url",
+          "public_contact_address",
+          "public_contact_phone",
+          "public_contact_email",
+          "terms_of_reference"
+        ]
+      ],
+      ["event_agenda_items", ["description", "title", "status"]]
+    ] as const) {
+      for (const columnName of columnNames) {
+        expect(result.rows).toContainEqual({
+          table_name: tableName,
+          column_name: columnName,
+          is_nullable: "YES",
+          column_default: null,
+          data_type: "text"
+        })
+      }
+    }
+    for (const [tableName, columnNames] of [
+      ["organizations", ["detail_facts_complete", "child_relations_complete", "membership_relations_complete"]],
+      [
+        "event_agenda_items",
+        [
+          "canonical_facts_complete",
+          "bill_relations_complete",
+          "amendment_relations_complete",
+          "material_relations_complete"
+        ]
+      ]
+    ] as const) {
+      for (const columnName of columnNames) {
+        expect(result.rows).toContainEqual({
+          table_name: tableName,
+          column_name: columnName,
+          is_nullable: "NO",
+          column_default: "false",
+          data_type: "boolean"
+        })
+      }
+    }
+    const membershipDates = result.rows
+      .filter((column) => column.table_name === "organization_memberships" && column.data_type === "date")
+      .map((column) => column.column_name)
+      .sort()
+    expect(membershipDates).toEqual([
+      "detected_end_date",
+      "detected_start_date",
+      "effective_end_date",
+      "effective_start_date",
+      "last_observed_date"
+    ])
+    expect(
+      result.rows.some((column) => column.table_name === "event_agenda_items" && column.column_name === "bill_id")
+    ).toBe(false)
+  })
+
+  it("installs calendar keyset indexes and session-scoped membership identity", async () => {
+    const result = await pool.query<{ name: string; unique: boolean; columns: string[] }>(
+      `select index_relation.relname as name, definition.indisunique as unique,
+              array_agg(attribute.attname::text order by key.ordinality) as columns
+       from pg_index definition
+       join pg_class index_relation on index_relation.oid = definition.indexrelid
+       join pg_namespace namespace on namespace.oid = index_relation.relnamespace
+       cross join lateral unnest(definition.indkey) with ordinality as key(attribute_number, ordinality)
+       join pg_attribute attribute on attribute.attrelid = definition.indrelid
+         and attribute.attnum = key.attribute_number
+       where namespace.nspname = 'legislation' and definition.indisvalid and definition.indisready
+         and index_relation.relname = any($1::text[])
+       group by index_relation.relname, definition.indisunique order by index_relation.relname`,
+      [
+        [
+          "calendar_events_event_idx",
+          "calendars_browse_idx",
+          "calendars_name_idx",
+          "calendars_organization_idx",
+          "organization_memberships_session_tenure_uidx"
+        ]
+      ]
+    )
+    expect(result.rows).toEqual([
+      { name: "calendar_events_event_idx", unique: false, columns: ["event_id", "calendar_id"] },
+      { name: "calendars_browse_idx", unique: false, columns: ["jurisdiction_id", "organization_id", "name", "id"] },
+      { name: "calendars_name_idx", unique: false, columns: ["name", "id"] },
+      { name: "calendars_organization_idx", unique: false, columns: ["organization_id", "name", "id"] },
+      {
+        name: "organization_memberships_session_tenure_uidx",
+        unique: true,
+        columns: ["organization_id", "person_id", "legislative_session_id", "tenure_ordinal"]
+      }
+    ])
+    const reasons = await pool.query<{ label: string }>(
+      `select value.enumlabel as label from pg_enum value
+       join pg_type enum_type on enum_type.oid = value.enumtypid
+       join pg_namespace namespace on namespace.oid = enum_type.typnamespace
+       where namespace.nspname = 'legislation' and enum_type.typname = 'organization_membership_end_reason'
+       order by value.enumsortorder`
+    )
+    expect(reasons.rows.map((row) => row.label)).toEqual([
+      "roster_removal_detected",
+      "congress_ended",
+      "historical_at_first_observation"
+    ])
+  })
+
+  it("installs parent cascade and reference restriction rules for calendars and agenda relations", async () => {
+    const result = await pool.query<{ child: string; parent: string; delete_action: string }>(
+      `select child.relname as child, parent.relname as parent, relation.confdeltype::text as delete_action
+       from pg_constraint relation
+       join pg_class child on child.oid = relation.conrelid
+       join pg_class parent on parent.oid = relation.confrelid
+       join pg_namespace namespace on namespace.oid = child.relnamespace
+       where namespace.nspname = 'legislation' and relation.contype = 'f'
+         and child.relname = any($1::text[])
+       order by child.relname, parent.relname`,
+      [
+        [
+          "calendars",
+          "calendar_events",
+          "event_agenda_item_bills",
+          "event_agenda_item_amendments",
+          "event_agenda_item_supporting_materials"
+        ]
+      ]
+    )
+    expect(result.rows).toEqual([
+      { child: "calendar_events", parent: "calendars", delete_action: "c" },
+      { child: "calendar_events", parent: "legislative_events", delete_action: "c" },
+      { child: "calendars", parent: "jurisdictions", delete_action: "r" },
+      { child: "calendars", parent: "organizations", delete_action: "r" },
+      { child: "event_agenda_item_amendments", parent: "amendments", delete_action: "r" },
+      { child: "event_agenda_item_amendments", parent: "event_agenda_items", delete_action: "c" },
+      { child: "event_agenda_item_bills", parent: "bills", delete_action: "r" },
+      { child: "event_agenda_item_bills", parent: "event_agenda_items", delete_action: "c" },
+      { child: "event_agenda_item_supporting_materials", parent: "event_agenda_items", delete_action: "c" },
+      { child: "event_agenda_item_supporting_materials", parent: "supporting_materials", delete_action: "r" }
+    ])
+  })
+
   it("enforces and checkpoints the fail-closed jurisdiction and session foundation", async () => {
     const jurisdictionId = "jurisdiction:foundation"
     const incompleteSessionId = "session:foundation:2026"

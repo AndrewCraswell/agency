@@ -17,8 +17,9 @@ function cursor(value: object): string {
 
 describe("meeting participant reads", () => {
   it("checks the parent by ID and excludes soft-deleted meetings", () => {
-    const query = buildMeetingExistenceQuery(database, "meeting:us:1").toSQL().sql
+    const { sql: query, params } = buildMeetingExistenceQuery(database, "meeting:us:1").toSQL()
 
+    expect(params).toEqual(["meeting:us:1", false, 1])
     expect(query).toContain('from "legislation"."legislative_events"')
     expect(query).toContain('"legislative_events"."id" =')
     expect(query).toContain('"legislative_events"."is_deleted" =')
@@ -26,7 +27,7 @@ describe("meeting participant reads", () => {
   })
 
   it("binds every filter into the cursor scope and pages by participant name then ID", () => {
-    const query = buildMeetingParticipantListQuery(database, {
+    const { sql: query, params } = buildMeetingParticipantListQuery(database, {
       cursor: cursor({
         id: "participant:us:2",
         name: "Baker",
@@ -42,8 +43,19 @@ describe("meeting participant reads", () => {
       organizationId: "organization:us:house",
       personId: "person:us:1",
       role: "witness"
-    }).toSQL().sql
+    }).toSQL()
 
+    expect(params).toEqual([
+      "meeting:us:1",
+      false,
+      "witness",
+      "person:us:1",
+      "organization:us:house",
+      "Baker",
+      "Baker",
+      "participant:us:2",
+      21
+    ])
     expect(query).toContain('from "legislation"."event_participants"')
     expect(query).toContain('inner join "legislation"."legislative_events"')
     expect(query).toContain('"event_participants"."event_id" =')

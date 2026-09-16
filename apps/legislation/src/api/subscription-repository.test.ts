@@ -102,6 +102,46 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
     await pool.end()
   })
 
+  it("enforces null-safe active uniqueness while separating personal owners and cancelled records", async () => {
+    const repository = new PostgresSubscriptionRepository(database, () => fixedNow)
+    const fingerprint = "d".repeat(64)
+    const personalOwner = owner("user:dedup", null)
+    const original = await repository.createSubscription({
+      fingerprint,
+      subscription: subscription("subscription:dedup", personalOwner, "00000000-0000-0000-0000-000000000020")
+    })
+    await expect(
+      repository.createSubscription({
+        fingerprint,
+        subscription: subscription("subscription:duplicate", personalOwner, "00000000-0000-0000-0000-000000000021")
+      })
+    ).rejects.toMatchObject({ category: "conflict" })
+    await expect(
+      repository.createSubscription({
+        fingerprint,
+        subscription: subscription(
+          "subscription:other-owner",
+          owner("user:dedup-other", null),
+          "00000000-0000-0000-0000-000000000022"
+        )
+      })
+    ).resolves.toMatchObject({ id: "subscription:other-owner" })
+    await expect(
+      repository.cancelSubscription({
+        id: original.id,
+        owner: personalOwner,
+        revision: original.revision,
+        when: fixedNow
+      })
+    ).resolves.toMatchObject({ status: "cancelled" })
+    await expect(
+      repository.createSubscription({
+        fingerprint,
+        subscription: subscription("subscription:recreated", personalOwner, "00000000-0000-0000-0000-000000000023")
+      })
+    ).resolves.toMatchObject({ id: "subscription:recreated", status: "active" })
+  })
+
   it("enforces organization sharing, personal isolation, revisions, keyset pages, and event delivery reads", async () => {
     const repository = new PostgresSubscriptionRepository(database, () => fixedNow)
     const sharedOwner = owner("user:one", "org:one")
