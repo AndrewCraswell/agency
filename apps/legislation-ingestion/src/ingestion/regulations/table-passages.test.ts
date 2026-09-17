@@ -410,6 +410,58 @@ describe("regulatory table passages", () => {
     expect(() => legalTableRows(input)).toThrow("passage_table_unresolved_ditto")
   })
 
+  it("retains an approval-date reference across a reserved rule without assigning the reserved rule a date", async () => {
+    const fixtures = z
+      .object({
+        fixtures: z.array(
+          z.object({
+            nativeId: z.string(),
+            blockXmlHash: z.string(),
+            block: z.object({ text: z.string(), xml: z.string() })
+          })
+        )
+      })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/ditto-continuation-tables.json", import.meta.url), "utf8")))
+    const fixture = fixtures.fixtures.find((item) => item.nativeId === "cfr:40:section:52.2723")
+    invariant(fixture, "approval_fixture_required")
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "approval_table_required")
+    const rows = legalTableRows(table).rows
+    const reserved = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Rule 210"))
+    const approved = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Rule 301"))
+    invariant(reserved && approved, "approval_rows_required")
+    expect(reserved.context.some((span) => span.label === "Column 3 ditto source")).toBe(false)
+    expect(approved.context.map((span) => table.text.slice(span.start, span.end))).toEqual(
+      expect.arrayContaining(["PART III, VARIANCE", "1/22/97, 62 FR 3213"])
+    )
+    for (const [before, after] of [
+      ["(Reserved)", "Unspecified"],
+      ["EPA approval date", "Other date"]
+    ]) {
+      invariant(before && after, "negative_replacement_required")
+      expect(() =>
+        legalTableRows({ text: table.text.replace(before, after), xml: table.xml.replace(before, after) })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
   it("retains the source-reviewed wrapped substance name and its limitation across the full table", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })

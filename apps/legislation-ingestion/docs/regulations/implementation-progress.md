@@ -13,6 +13,26 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved 40 CFR 52.2723's approval-date ditto after an explicitly reserved rule. Recognition requires the exact
+Puerto Rico approval-table headers, a `Rule <number>—(Reserved)` label and otherwise empty, unspanned cells.
+Only the earlier EPA approval-date reference survives; the reserved rule acquires no date or ditto context.
+Ordinary unmarked blanks and changed headers remain rejected. The
+[published 2025 CFR table](https://www.govinfo.gov/content/pkg/CFR-2025-title40-vol5/pdf/CFR-2025-title40-vol5-part52-subpartBBB.pdf)
+corroborates the reserved row followed by the approval-date ditto. Original source text is unchanged.
+
+All 81 table tests, scoped lint and ingestion types passed. Tests cover the reserved row's absent date context,
+the following rule's exact prior date and new part heading, negative cases and full-table reconstruction with both
+tokenizers. Canonical version `05827c65-3009-49c2-a97d-3148a31f75fc` is eligible under both models: 30 passages each,
+maximum 407 OpenAI / 484 Voyage tokens. Exact version/edition membership and content hash were checked read-only.
+Parser hash: `e4025abf5ecc47b6740270d1f29b6291352e95c5a93229618fd9e46a6286db79`.
+Report: `artifacts/regulatory-backfills/reserved-rule-version-recheck.json`; test log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-reserved-rule-tests.log`.
+This closes one of seven known remaining blockers; the other six were not rerun here. Full-corpus qualification
+remains open. No source/index/vector writes or provider calls occurred.
+Root `pnpm verify` stopped before coverage on two unrelated web lint findings: a conditional expect in a
+conversation test and the generated Storybook worker's unused eslint-disable directive.
+Log: `C:/Users/andcra/AppData/Local/Temp/tabra-reserved-rule-verify.log`. Scoped `git diff --check` passed.
+
 Docker access is restored, and retained container `tabra-fr-html-storage-pilot` was started without reset or data
 replacement. Recovery preserved inaccessible transient socket directories under timestamped
 `run-before-regulatory-recovery-*` and `docker-secrets-engine-before-regulatory-recovery-*` names; no container

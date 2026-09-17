@@ -309,6 +309,23 @@ function sourceCountyBoundaryRows(rows: ReturnType<ReturnType<typeof load>>, has
   return parents
 }
 
+/** A reserved rule has no approval date; the next explicit ditto still cites the earlier approval entry. */
+function isReservedApprovalRow(row: ReturnType<ReturnType<typeof load>>, hasApprovalHeaders: boolean) {
+  const cells = row.children("TD")
+  return (
+    hasApprovalHeaders &&
+    cells.length === 4 &&
+    /^Rule \d+—\(Reserved\)(?: |$)/.test(sourceText(cells.first())) &&
+    cells
+      .toArray()
+      .every(
+        (cell, column) =>
+          Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+          (column === 0 || cell.children.every((node) => node.type === "text" && node.data.trim() === ""))
+      )
+  )
+}
+
 /** Source-reviewed wrapped substance name; see the published CFR evidence in ditto-source-review.md. */
 function sourceReviewedNameContinuations(rows: ReturnType<ReturnType<typeof load>>) {
   const nodes = rows.toArray()
@@ -645,6 +662,13 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const chemicalGroups = sourceChemicalGroups(rows)
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
+  const approvalHeaders = tables.find("THEAD TH")
+  const hasApprovalHeaders =
+    approvalHeaders.length === 4 &&
+    sourceText(approvalHeaders.eq(0)) === "Puerto Rico regulation" &&
+    sourceText(approvalHeaders.eq(1)) === "Commonwealth effective date" &&
+    sourceText(approvalHeaders.eq(2)) === "EPA approval date" &&
+    sourceText(approvalHeaders.eq(3)) === "Comments"
   const headers = tables.find("BOXHD, THEAD")
   const order = $.root().find("*").toArray()
   type Context = { start: number; end: number; label: string }
@@ -704,6 +728,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
         "passage_table_interleaved_text"
       )
       const cells = selection.children("TD, TH, ENT")
+      const isReservedApproval = isReservedApprovalRow(selection, hasApprovalHeaders)
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
       const categoryLevel = sourceCategoryLevel(selection)
@@ -781,6 +806,10 @@ export function legalTableRows(input: { text: string; xml: string }) {
             invariant(width === 1 && reference, "passage_table_unresolved_ditto")
             context.push(reference)
           } else {
+            if (isReservedApproval && column === 3 && value.length === 0 && width === 1) {
+              column += width
+              continue
+            }
             const hasParentBlank =
               ((conditionParents.has(row) || countyBoundaryParents.has(row) || nameContinuations.has(row)) &&
                 column > 1) ||

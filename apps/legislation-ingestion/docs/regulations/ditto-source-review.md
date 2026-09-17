@@ -2,6 +2,15 @@
 
 ## Latest scoped requalification
 
+The canonical 40 CFR 52.2723 version now qualifies with both models: 30 passages each, maximum 407 / 484 tokens.
+The explicit reserved-rule row preserves only the prior EPA approval-date reference, with no date assigned to the
+reserved rule itself. Exact table headers, reserved syntax and empty unspanned cells are required. The
+[published CFR table](https://www.govinfo.gov/content/pkg/CFR-2025-title40-vol5/pdf/CFR-2025-title40-vol5-part52-subpartBBB.pdf)
+corroborates this reference boundary. All 81 table tests pass. Report:
+`artifacts/regulatory-backfills/reserved-rule-version-recheck.json`, parser hash
+`e4025abf5ecc47b6740270d1f29b6291352e95c5a93229618fd9e46a6286db79`.
+Six of the original known blockers remain; they were not rerun during this one-version check.
+
 The restored canonical database confirms the complete 21 CFR 176.170 version is eligible with both models:
 79 OpenAI / 81 Voyage passages, maximum 798 / 832 tokens. This closes one of the prior eight known blockers;
 the other seven have not been rerun during this check. Evidence:
