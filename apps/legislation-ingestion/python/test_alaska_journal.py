@@ -536,6 +536,20 @@ And so the effective date clause was adopted.
                                  "(S) GOVERNOR VETO SUSTAINED Y4 N2 E2")
         self.assertEqual(len(result), 8)
 
+    def test_joint_total_can_combine_chambers_across_cited_page_boundary(self):
+        house = self.sample("Adams, Brown")
+        senate = self.sample("Evans, Fox").replace("Nays: Clark", "Nays: Green").replace(
+            "Excused: Davis", "Excused: Hill"
+        )
+        text = (
+            "[[JOURNAL_ANCHOR:2468]]\nPage 2468\n" + house
+            + "[[JOURNAL_ANCHOR:2469]]\nPage 2469\n" + senate
+            + "TOTALS\nYEAS: 4 NAYS: 2 EXCUSED: 2 ABSENT: 0\n"
+        )
+        result = parse_roll_call(text, "HB1", (4, 2, 2), "2469", "2469", True,
+                                 "(S) GOVERNOR VETO SUSTAINED Y4 N2 E2")
+        self.assertEqual(len(result), 8)
+
     def test_rejects_joint_total_with_missing_or_overlapping_chamber_positions(self):
         complete = self.sample("Adams, Brown")
         partial = self.sample("Evans")

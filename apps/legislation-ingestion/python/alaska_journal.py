@@ -292,14 +292,15 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
             key=lambda match: match.start(),
         )
         for index, summary in enumerate(summaries):
-            if backward_only and (cited_offset is None or summary.start() >= cited_offset):
-                continue
             totals = tuple(int(value) for value in summary.groups())
             if (totals[0], totals[1], totals[2] + totals[3]) != tuple(expected_counts):
                 continue
             is_joint_total = summary.re is JOINT_SUMMARY or bool(re.search(
-                r"TOTALS?:\s*$", text[max(search_start, summary.start() - 40):summary.start()]
+                r"TOTALS?:?\s*$", text[max(search_start, summary.start() - 40):summary.start()]
             ))
+            if (backward_only and (cited_offset is None
+                                   or (summary.start() >= cited_offset and not is_joint_total))):
+                continue
             # Numeric page anchors can follow the bill heading they identify.
             previous_end = summaries[index - 1].end() if index else max(0, search_start - 1500)
             references = list(BILL.finditer(text[max(previous_end, summary.start() - 1500):summary.start()]))
@@ -307,7 +308,7 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
             if not is_joint_total and expected_bill not in referenced_bills and not source_bill_scoped:
                 continue
             end = summaries[index + 1].start() if index + 1 < len(summaries) else search_end
-            if backward_only and not summary.start() < cited_offset < end:
+            if backward_only and not is_joint_total and not summary.start() < cited_offset < end:
                 continue
             # A later motion can begin after this voter list but before the next
             # tally. Classify from the bounded pre-tally action text so its
@@ -332,6 +333,9 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                 # total only when the two immediately preceding calls independently
                 # validate and sum exactly to it.
                 if index < 2:
+                    continue
+                if (backward_only
+                        and not summaries[index - 2].start() < cited_offset < summary.end()):
                     continue
                 components = []
                 for component_index in (index - 2, index - 1):
@@ -359,7 +363,10 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                     if len({re.sub(r"\s+", "", name).casefold() for _, name in combined}) != len(combined):
                         raise ValueError("journal_duplicate_or_invalid_voter")
                     candidate_page = printed_page_at(text, anchors, summary.start())
-                    if cited_offset is not None and summary.start() < cited_offset < end:
+                    if (cited_offset is not None
+                            and (summary.start() < cited_offset < end or
+                                 (backward_only and summaries[index - 2].start()
+                                  < cited_offset < summary.end()))):
                         candidate_page = anchor_identity(target_anchor)
                     elif cited_range:
                         candidate_page = anchor_identity(fallback_anchor)
