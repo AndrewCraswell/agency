@@ -1,4 +1,7 @@
-import { EMBEDDING_ROUTES, type EmbeddingRoute } from "@repo/legislation-core/embeddings/embedding-routing"
+import {
+  type EmbeddingRoute,
+  regulatoryEmbeddingRouteForModel
+} from "@repo/legislation-core/embeddings/embedding-routing"
 import { validateEmbeddingTokenBudget } from "@repo/legislation-core/embeddings/embedding-tokenizer"
 import {
   MAX_EMBEDDING_INPUT_CHARACTERS,
@@ -58,7 +61,10 @@ export async function compareRegulatoryEmbeddingSmoke(
     ),
     "embedding_smoke_invalid_judgments"
   )
-  const configurations: EmbeddingRoute[] = [EMBEDDING_ROUTES["document-section"], EMBEDDING_ROUTES.bill]
+  const configurations: EmbeddingRoute[] = [
+    regulatoryEmbeddingRouteForModel("openai/text-embedding-3-small"),
+    regulatoryEmbeddingRouteForModel("voyageai/voyage-4")
+  ]
   const qualification = []
   // Qualify the same complete manifest for both routes before cache writes or any provider request.
   // Batching matches execution, so aggregate token limits are checked as well as individual inputs.

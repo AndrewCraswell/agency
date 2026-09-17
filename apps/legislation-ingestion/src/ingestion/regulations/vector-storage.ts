@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
-import { EMBEDDING_ROUTES } from "@repo/legislation-core/embeddings/embedding-routing"
+import { regulatoryEmbeddingRouteForModel } from "@repo/legislation-core/embeddings/embedding-routing"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import invariant from "tiny-invariant"
@@ -30,11 +30,11 @@ const batchRequestSchema = z.strictObject({
 
 const routes = {
   "openai/text-embedding-3-small": {
-    dimensions: EMBEDDING_ROUTES["document-section"].dimensions,
+    dimensions: regulatoryEmbeddingRouteForModel("openai/text-embedding-3-small").dimensions,
     table: "legislation.legal_openai_small_embeddings"
   },
   "voyageai/voyage-4": {
-    dimensions: EMBEDDING_ROUTES.bill.dimensions,
+    dimensions: regulatoryEmbeddingRouteForModel("voyageai/voyage-4").dimensions,
     table: "legislation.legal_voyage_4_embeddings"
   }
 } as const

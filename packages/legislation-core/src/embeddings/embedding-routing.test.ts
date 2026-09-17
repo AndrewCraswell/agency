@@ -4,8 +4,11 @@ import {
   EMBEDDING_QUERY_ROUTES,
   EMBEDDING_ROUTE_MINIMUM_NDCG_IMPROVEMENT,
   EMBEDDING_ROUTE_PRODUCTS,
+  REGULATORY_EMBEDDING_ROUTE_PRODUCTS,
+  configuredRegulatoryEmbeddingRoute,
   embeddingQueryRouteFor,
-  embeddingRouteFor
+  embeddingRouteFor,
+  regulatoryEmbeddingRouteForModel
 } from "./embedding-routing"
 
 describe("embedding routing contract", () => {
@@ -47,6 +50,30 @@ describe("embedding routing contract", () => {
       model: document.model,
       storageTable: document.storageTable
     })
+  })
+
+  it("keeps both regulatory candidates explicit until trusted configuration selects one", () => {
+    expect(REGULATORY_EMBEDDING_ROUTE_PRODUCTS).toEqual([
+      "regulatory-passage-openai-small",
+      "regulatory-passage-voyage-4"
+    ])
+    expect(regulatoryEmbeddingRouteForModel("openai/text-embedding-3-small")).toMatchObject({
+      dimensions: 1536,
+      embeddingInputContract: "legal-passage-context-text",
+      storageTable: "legal_openai_small_embeddings"
+    })
+    expect(regulatoryEmbeddingRouteForModel("voyageai/voyage-4")).toMatchObject({
+      dimensions: 1024,
+      documentInputType: "document",
+      queryInputType: "query",
+      storageTable: "legal_voyage_4_embeddings"
+    })
+    expect(configuredRegulatoryEmbeddingRoute(undefined)).toBeNull()
+    expect(configuredRegulatoryEmbeddingRoute(" ")).toBeNull()
+    expect(configuredRegulatoryEmbeddingRoute("voyageai/voyage-4")).toMatchObject({ dimensions: 1024 })
+    expect(() => configuredRegulatoryEmbeddingRoute("caller/model")).toThrow(
+      "Unsupported configured regulatory embedding model"
+    )
   })
 
   it("pins query dispatch, merge behavior, selective reranking, and the promotion threshold", () => {

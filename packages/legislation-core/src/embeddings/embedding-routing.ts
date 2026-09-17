@@ -3,7 +3,9 @@ export const EMBEDDING_ROUTE_PRODUCTS = [
   "document-section",
   "structured-amendment",
   "document-backed-amendment-section",
-  "supporting-material-section"
+  "supporting-material-section",
+  "regulatory-passage-openai-small",
+  "regulatory-passage-voyage-4"
 ] as const
 
 export type EmbeddingRouteProduct = (typeof EMBEDDING_ROUTE_PRODUCTS)[number]
@@ -27,6 +29,8 @@ export interface EmbeddingRoute {
     | "amendment_embeddings"
     | "bill_embeddings"
     | "document_section_embeddings"
+    | "legal_openai_small_embeddings"
+    | "legal_voyage_4_embeddings"
     | "supporting_material_section_embeddings"
 }
 
@@ -103,8 +107,50 @@ export const EMBEDDING_ROUTES = {
     embeddingInputContract: "supporting-material-section-heading-text",
     product: "supporting-material-section",
     storageTable: "supporting_material_section_embeddings"
+  },
+  "regulatory-passage-openai-small": {
+    ...OPENAI_SMALL,
+    embeddingInput: ["context", "passage"],
+    embeddingInputContract: "legal-passage-context-text",
+    product: "regulatory-passage-openai-small",
+    storageTable: "legal_openai_small_embeddings"
+  },
+  "regulatory-passage-voyage-4": {
+    ...VOYAGE_4,
+    embeddingInput: ["context", "passage"],
+    embeddingInputContract: "legal-passage-context-text",
+    product: "regulatory-passage-voyage-4",
+    storageTable: "legal_voyage_4_embeddings"
   }
 } as const satisfies Record<EmbeddingRouteProduct, EmbeddingRoute>
+
+export const REGULATORY_EMBEDDING_ROUTE_PRODUCTS = [
+  "regulatory-passage-openai-small",
+  "regulatory-passage-voyage-4"
+] as const satisfies readonly EmbeddingRouteProduct[]
+
+export type RegulatoryEmbeddingModel =
+  (typeof EMBEDDING_ROUTES)[(typeof REGULATORY_EMBEDDING_ROUTE_PRODUCTS)[number]]["model"]
+
+/** Internal candidate lookup. Public search requests never select an embedding model. */
+export function regulatoryEmbeddingRouteForModel(model: RegulatoryEmbeddingModel): EmbeddingRoute {
+  const product = REGULATORY_EMBEDDING_ROUTE_PRODUCTS.find((candidate) => EMBEDDING_ROUTES[candidate].model === model)
+  if (!product) {
+    throw new Error(`Unsupported regulatory embedding model: ${model}`)
+  }
+  return EMBEDDING_ROUTES[product]
+}
+
+/** Resolve only trusted server configuration; an absent selection keeps semantic serving disabled. */
+export function configuredRegulatoryEmbeddingRoute(model: string | undefined): EmbeddingRoute | null {
+  if (model === undefined || model.trim().length === 0) {
+    return null
+  }
+  if (model !== "openai/text-embedding-3-small" && model !== "voyageai/voyage-4") {
+    throw new Error(`Unsupported configured regulatory embedding model: ${model}`)
+  }
+  return regulatoryEmbeddingRouteForModel(model)
+}
 
 /**
  * Canonical query-time dispatch. Reranking belongs to the search surface, not
