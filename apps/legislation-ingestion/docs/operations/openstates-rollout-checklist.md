@@ -2,6 +2,15 @@
 
 ## September 16 continuation and identity verification
 
+September 17 vote-date contract diagnosis:
+
+- [x] Production HB1 contains two incomplete vote rows, House passage 40-0 and Senate passage 19-1. Both lack held-at, source URL, provider, retrieval date and source sequence; `timeline_complete` is false. This is not fixed by setting the completeness flag.
+- [x] Checksum-verified original AK34 archive has the same two vote identities and tallies, dated May 7 and May 12, 2026. It contains empty individual-position arrays and no vote-source URLs. Replaying this archive alone cannot produce complete vote detail.
+- [x] Fetched the official [House journal page 2441](https://www.akleg.gov/basis/Journal/Pages/34?Chamber=H&Bill=HB1&Page=02441) and [Senate journal page 2602](https://www.akleg.gov/basis/Journal/Pages/34?Chamber=S&Bill=HB1&Page=02602), both HTTP 200. House lists 40 named yeas; Senate lists 19 named yeas and Kiehl as the sole nay. Both state zero excused and absent. These pages substantiate the dates and outcomes, but do not supply an exact vote instant.
+- [x] Identified a systemic contract mismatch: `normalizeBills` preserves Alaska's date-only source value, but `normalizeOpenStatesBill` accepts only timezone-qualified timestamps for `heldAt`. The canonical database completeness constraint and vote readers require non-null `heldAt`. Even a corrected Alaska scraper with journal provenance and positions therefore cannot close this gate under the current contract. Existing tests intentionally confirm no invented instant, but do not establish serving readiness.
+- [ ] Next coherent implementation: retain a source calendar date separately from an optional exact instant across C schema, I normalization/persistence and W/API/MCP contracts. Preserve exact-time behavior for sources that provide it. Update completeness, ordering, cursors, date-range filtering and consumer validation together; test date-only, exact timestamp, missing date, mixed precision and boundary pagination. Do not represent an unknown time as midnight or bypass completeness.
+- [ ] After that contract is deployed, replay verified scraper journal evidence through ordinary ingestion, preserve source-name positions without fabricated people, and verify HB1 vote/detail endpoints and NC exact-time regressions. Original archive vote records cannot substitute for journal-derived positions. This remains implementation work, not an achieved gate.
+
 September 17 05:01Z action-provenance canary:
 
 - [x] Bounded production audit before repair: AK34 has 21,465 actions, all missing source URLs across 857 bills. NC2025 has 19,976 actions, 19,930 missing across 2,337 bills. The previously reconciled NC S1041 has no missing action URLs. A broad cross-state join timed out; indexed 25-bill batches completed without changing timeouts.
