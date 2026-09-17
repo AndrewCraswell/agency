@@ -185,14 +185,21 @@ whose purpose and regulation are ditto markers, while the
 [official 2025 CFR table](https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol1/pdf/CFR-2025-title33-vol1-part110.pdf)
 prints Anchorage A immediately before B with the referenced values. The reviewed PDF is 517,451 bytes, SHA-256
 `59993d7377fbbecd6a50acec9e524ac3229b514c6e51168dfbdf85a9a7a5ab88`. The parser must not synthesize that missing row
-inside the current eCFR version. Reconcile or explicitly quarantine the source rendition before freezing the final
-passage manifest.
+inside the current eCFR version. It is now explicitly quarantined in the terminal qualification and final passage
+manifests; derived preparation keeps the version accounted for without synthesizing the missing row.
 
 The targeted whole-version recheck bound all ten original diagnostics back to the same source-review hashes and ran
 both pinned tokenizers over all nine affected versions. All 18 preparations succeeded; the maximum passage size was
 894 OpenAI tokens and 899 Voyage tokens. Report hash:
 `4f617bb5e367a2a2a5e72f5ef6083e20834ccc51392df3d77211bcb2bb0f8951`. The single Title 33 table remains a structural
 source gap even though its intact fallback fits the transport budget.
+
+The final current-eCFR manifest is frozen per edition and per candidate model under
+`artifacts/regulatory-backfills/final-passage-manifests-v2`. Both 49-edition catalogs bind all 275,138 version memberships,
+their source/rights/reader contracts, tokenizer identities, context hashes, eligibility and complete passage-input
+manifest hashes. OpenAI Small's catalog hash is
+`182877d0af5398031ae430ae496a4a258245a759d01545cc65c19d8b0ca0b6d8`; Voyage 4's is
+`bb6999acc86604f8dff42237b8c9026f77d270fb9fbcc2a6661f58cc4ffe68d5`.
 
 ## Ditto scope and preparation gates
 

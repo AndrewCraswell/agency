@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Closed PASS-06 with deterministic final passage manifests for both still-eligible model candidates. The streaming
+freezer independently rehashes the terminal qualification NDJSON, rejects missing, reordered or blocked members, and
+writes one immutable edition/model entry stream plus a bound partition manifest. Each version entry retains membership,
+content and locator identity, context hash, eligibility, generation and the hash of the complete prepared passage set,
+which includes every passage input hash. Partition manifests bind the source inventory, qualification data, rights,
+reader/passage contracts, tokenizer and implementation. Existing output is accepted only after exact hash replay.
+
+Both full current-eCFR runs and their second replay passed. Each covers 49 editions and 275,138 versions. OpenAI Small
+has 501,543 passages and catalog hash `182877d0af5398031ae430ae496a4a258245a759d01545cc65c19d8b0ca0b6d8`;
+Voyage 4 has 522,180 passages and catalog hash `bb6999acc86604f8dff42237b8c9026f77d270fb9fbcc2a6661f58cc4ffe68d5`.
+The retained catalogs live below `artifacts/regulatory-backfills/final-passage-manifests-v2`. Focused tests pass. Direct
+ingestion type-check passes. No provider call, vector write or recurring job ran. PASS-08 source reconstruction and
+PASS-09 database materialization remain open, as does reviewed model selection.
+
 Completed HTTP-08 publication and agency discovery locally. The canonical Federal Register agency projector now lives
 in the shared core package, so ingestion, search and browse cannot silently diverge on publisher IDs or deterministic
 document-occurrence identities. `GET /api/legal/publications`, publication detail and publication versions are wired

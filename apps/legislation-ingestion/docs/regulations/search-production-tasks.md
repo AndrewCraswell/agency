@@ -57,9 +57,18 @@ release inventory and tokenizer eligibility remain open.
   as `quarantined_source_gap`, and passage preparation retains `source_review_quarantined` through retries. Applying the
   disposition awaits the current development schema; a fresh 49-title structural and tokenizer run remains required
   before closure.
-- [ ] **PASS-06 Freeze the final passage manifest.** Bind owner/version, source membership, reader/input contracts,
+- [x] **PASS-06 Freeze the final passage manifest.** Bind owner/version, source membership, reader/input contracts,
   tokenizer, context hash, input hash and eligibility in deterministic per-partition manifests. **Done:** replay has
   identical IDs/hashes and changed context produces distinct preparation work. Depends on PASS-05.
+  `freeze-regulatory-passage-manifest` now streams the terminal qualification records into model-specific edition
+  partitions. Every entry binds its edition membership, version/content identity, source locator, context hash,
+  eligibility, generation and passage-input manifest hash; the latter hashes the complete passage objects including
+  each input hash. Per-partition manifests also bind the source inventory, qualification bytes, rights policy, reader
+  and passage contracts, tokenizer and implementation. The complete 49-edition manifests replayed without change for
+  both candidates: OpenAI Small catalog
+  `182877d0af5398031ae430ae496a4a258245a759d01545cc65c19d8b0ca0b6d8` covers 275,138 versions and 501,543 passages;
+  Voyage 4 catalog `bb6999acc86604f8dff42237b8c9026f77d270fb9fbcc2a6661f58cc4ffe68d5` covers the same versions and
+  522,180 passages. These are offline frozen inputs and do not select a model or materialize database passage rows.
 - [x] **PASS-07 Check both tokenizers at scale.** Run offline counts over the full selected manifest; summarize token
   distribution, maximum input, continuation counts and transport-size failures for both models. **Done:** no eligible
   input exceeds configured limits; failures identify exact versions without changing source text. Depends on PASS-06.
@@ -72,7 +81,7 @@ release inventory and tokenizer eligibility remain open.
   is terminal and independently verified with zero tokenizer blockers for either model. Both routes prepared every
   selected record; OpenAI Small produced 501,543 passages/171,181,687 tokens and Voyage 4 produced 522,180 passages/
   187,709,146 tokens. The one remaining Title 33 source rendition gap is explicitly quarantined and exactly accounted,
-  so it does not represent a tokenizer failure. PASS-06 remains open for the persisted final passage manifest.
+  so it does not represent a tokenizer failure. The persisted final passage manifests are recorded under PASS-06.
 - [ ] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
   coverage against retained source; review difficult real samples visually where text extraction loses layout meaning.
   **Done:** zero unexplained dropped/duplicated source spans in the advertised scope. Depends on PASS-05–07.
