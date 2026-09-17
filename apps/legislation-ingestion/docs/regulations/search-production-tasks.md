@@ -191,6 +191,13 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
   common passages. This verifies the database snapshot, not publisher artifact replay, cohort assignment or human review.
   A real canonical pesticide-section export produced 52 shared passages; incorrect edition membership rejected before
   output creation. Final multi-cohort selection and review remain open.
+  `pnpm tool regulations/export-evaluation-publication --observation <uuid> --version <uuid>
+  --content-hash <sha256> --output <new-file>` provides the publication counterpart. It verifies published batch and
+  observation/version/document membership, active rights and a registered supporting PDF in one read-only statement.
+  XML-derived and preformatted-HTML records use their actual original content-hash rules. Source-reviewed metadata is
+  preserved with its own hash, not promoted to reviewed family assignment. The complete version must qualify for both
+  tokenizers before exclusive output creation. A canonical notice produced one common passage; an invalid observation
+  rejected before output creation. Publisher bytes, family/cohort review and final corpus assembly remain separate gates.
   Annual Title 6 for 2023/2024 is now retained and locally published after source/date/complete-volume checks
   (658/659 memberships). This supplies an unexcluded historical family for held-out candidate selection, without
   inspecting its passage text during acquisition. It still needs whole-version qualification and an explicit split

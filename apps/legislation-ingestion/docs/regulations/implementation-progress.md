@@ -13,6 +13,26 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the Federal Register counterpart to canonical evaluation export. One read-only statement binds the published
+batch, observation, document/version, active rights and registered supporting PDF. The verifier reproduces the original
+XML or HTML content-hash rules, checks source/identity/rights/byte bounds, and prepares the complete version for both
+tokenizers. The packet preserves observation metadata and hashes without elevating unapproved source fields or claiming
+publisher-byte replay, family assignment, human review or model selection.
+
+All 14 focused publication/common-passage tests, scoped lint and ingestion types passed. A retained canonical notice
+export produced one common passage, evidence hash `bf8521123802c3ad80cb8414883dcacdb38d096e8ff85c7a284c15562dc5126b`,
+at `artifacts/regulatory-backfills/evaluation-publication-notice.json`. An invalid observation exited 1 with
+`evaluation_publication_observation_unavailable` and created no output. No provider calls or canonical writes occurred.
+The retained publication/annual pilot containers were started without reimporting data. Tests/denial logs:
+`C:/Users/andcra/AppData/Local/Temp/tabra-publication-export-tests.log` and `tabra-publication-export-denied.log`.
+Root `pnpm verify` stopped at unrelated web type errors before coverage; log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-publication-export-verify.log`.
+
+Full-corpus qualification process 40548 remains live. Its progress manifest now includes three completed editions and
+23,071 canonical members, all prepared by both tokenizers with zero preparation failures. Nine empty-table shape
+diagnostics are recorded separately and did not prevent whole-version preparation. The 49-title run remains incomplete.
+Scanner JSON progress is being written to the named stderr log; inspect both logs and the progress manifest.
+
 Added a canonical code-source exporter for EVAL-02. It reads published eCFR/annual-CFR membership, source text and active
 rights together in one read-only database snapshot; verifies requested identity/content hash, canonical parser-content
 hash, rights hash and display/search/embedding/export permissions; then prepares complete common passages for both models.
