@@ -1,5 +1,6 @@
 -- Defaults deliberately preserve all existing rows as timeline-incomplete.
 ALTER TABLE "legislation"."votes"
+  ADD COLUMN IF NOT EXISTS "held_date" date,
   ADD COLUMN IF NOT EXISTS "absent_count" integer,
   ADD COLUMN IF NOT EXISTS "abstain_count" integer,
   ADD COLUMN IF NOT EXISTS "not_voting_count" integer,

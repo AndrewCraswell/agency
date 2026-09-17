@@ -6,6 +6,11 @@ SUMMARY = re.compile(r"YEAS:\s*(\d+)\s+NAYS:\s*(\d+)\s+EXCUSED:\s*(\d+)\s+ABSENT
 GROUP = re.compile(r"^(Yeas|Nays|Excused|Absent):\s*(.*)$")
 BILL = re.compile(r"(?:CS)?(HJR|SJR|HCR|SCR|HB|SB|HR|SR)\s*0*([1-9][0-9]*)(?![0-9])")
 OPTIONS = {"Yeas": "yes", "Nays": "no", "Excused": "excused", "Absent": "absent"}
+PAGE_HEADER = re.compile(r"(?:\d{4}-\d{2}-\d{2}\s+(?:House|Senate) Journal|Page \d+)")
+
+
+def voter_names(lines):
+    return [name.strip() for name in " ".join(lines).split(",") if name.strip()]
 
 
 def parse_roll_call(text, bill_identifier, expected_counts):
@@ -34,6 +39,7 @@ def parse_roll_call(text, bill_identifier, expected_counts):
     totals, body = candidates[0]
     groups = {}
     active = None
+    declared = dict(zip(OPTIONS, totals))
     for line in body.splitlines():
         line = line.strip()
         match = GROUP.fullmatch(line)
@@ -43,15 +49,22 @@ def parse_roll_call(text, bill_identifier, expected_counts):
                 raise ValueError("journal_duplicate_voter_group")
             groups[active] = [match.group(2)]
         elif not line:
-            active = None
+            # Printed page boundaries include blank text nodes. Continue only
+            # while the active source group is still short of its declared tally.
+            if active is not None and len(voter_names(groups[active])) >= declared[active]:
+                active = None
         elif active is not None:
-            # Journal page headers can interrupt a wrapped roll call.
-            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}\s+(House|Senate) Journal\s+Page \d+", line):
+            # The HTML can split one printed header into date/journal and page fragments.
+            if PAGE_HEADER.fullmatch(line):
+                continue
+            if len(voter_names(groups[active])) < declared[active]:
                 groups[active].append(line)
+            else:
+                active = None
     positions = []
     seen = set()
     for (label, option), count in zip(OPTIONS.items(), totals):
-        names = [name.strip() for name in " ".join(groups.get(label, [])).split(",") if name.strip()]
+        names = voter_names(groups.get(label, []))
         if len(names) != count:
             raise ValueError("journal_voter_count_mismatch")
         for name in names:

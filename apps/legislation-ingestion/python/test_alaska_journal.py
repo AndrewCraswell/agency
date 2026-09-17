@@ -24,6 +24,31 @@ class JournalTests(unittest.TestCase):
     def test_accepts_committee_substitute_identifier(self):
         self.assertEqual(len(parse_roll_call(self.sample(heading="CSHB 1(STA)"), "HB1", (2, 1, 1))), 4)
 
+    def test_continues_an_incomplete_group_across_split_printed_page_header(self):
+        text = """HB 10
+Effective Date
+YEAS:  4   NAYS:  1   EXCUSED:  0   ABSENT:  0
+
+Yeas:  Adams, Brown,
+
+2026-05-16                     House Journal
+Page 2680
+
+Clark, Davis
+
+Nays:  Evans
+
+And so the effective date clause was adopted.
+"""
+        self.assertEqual(
+            parse_roll_call(text, "HB10", (4, 1, 0)),
+            [("yes", "Adams"), ("yes", "Brown"), ("yes", "Clark"), ("yes", "Davis"), ("no", "Evans")],
+        )
+
+    def test_does_not_absorb_a_page_header_after_a_complete_group(self):
+        text = self.sample() + "\n2026-05-16 House Journal\nPage 2680\nNarrative, Not A Voter\n"
+        self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1))), 4)
+
 
 if __name__ == "__main__":
     unittest.main()
