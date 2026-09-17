@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto"
 import { resolve } from "node:path"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
@@ -25,6 +24,7 @@ import { RetryingHttpClient, type HttpRequestTelemetry } from "../http-client.js
 import { createJobCounts, runIngestionJob, type JobCounts, type JobResult } from "../job.js"
 import { type OpenStatesClient, OpenStatesClient as DefaultOpenStatesClient } from "../openstates/client.js"
 import { openStatesJurisdictionId, openStatesJurisdictionNames } from "../openstates/coverage.js"
+import { retainOpenStatesBillPage } from "../openstates/current-bill-archive.js"
 import {
   mergeOpenStatesEntitySnapshots,
   normalizeOpenStatesCommittees,
@@ -166,29 +166,40 @@ async function synchronizeOpenStatesBillsForScope(
   const failures: SynchronizationFailure[] = []
   let checkpoint: Readonly<Record<string, unknown>> | undefined
   let page = 1
+  const sourceStore = openStatesSourceStoreFor(context)
 
   for await (const records of client.bills({
     from,
     jurisdiction: openStatesJurisdictionNames[identity.scope]
   })) {
-    const contentHash = createHash("sha256").update(JSON.stringify(records)).digest("hex")
-    const imported = await importOpenStatesRecords(
-      context.database,
-      {
-        jurisdictionCode: identity.scope,
-        jurisdictionName: openStatesJurisdictionNames[identity.scope],
-        retrievedAt: new Date()
-      },
-      records,
-      {
-        concurrency: context.config.ingestion.concurrency,
-        contentHash,
-        stream: `api-${identity.scope}-${from.toISOString()}-${page}`
-      }
-    )
-    addJobCounts(counts, imported.counts)
-    failures.push(...imported.failures)
-    checkpoint = imported.checkpoint
+    const retrievedAt = new Date()
+    const archives = await retainOpenStatesBillPage(sourceStore, records, {
+      from,
+      jurisdiction: identity.scope,
+      jurisdictionName: openStatesJurisdictionNames[identity.scope],
+      page,
+      providerEndpoint: new URL("bills", ensureTrailingSlash(new URL(context.config.ingestion.openStatesApiUrl))).href,
+      retrievedAt
+    })
+    for (const archive of archives) {
+      const imported = await importOpenStatesRecords(
+        context.database,
+        {
+          jurisdictionCode: identity.scope,
+          jurisdictionName: openStatesJurisdictionNames[identity.scope],
+          retrievedAt
+        },
+        archive.records,
+        {
+          concurrency: context.config.ingestion.concurrency,
+          contentHash: archive.contentHash,
+          stream: archive.stream
+        }
+      )
+      addJobCounts(counts, imported.counts)
+      failures.push(...imported.failures)
+      checkpoint = imported.checkpoint
+    }
     page += 1
   }
 
@@ -601,6 +612,22 @@ function sourceStoreFor(context: SynchronizationRouteContext): SourceStore {
     )
   }
   return new LocalSourceStore(resolve(context.config.ingestion.sourceDirectory, "federal"))
+}
+
+function openStatesSourceStoreFor(context: SynchronizationRouteContext): SourceStore {
+  if (context.sourceStore !== undefined) {
+    return context.sourceStore
+  }
+  if (context.config.azure.storageAccount !== undefined) {
+    return new ArtifactSourceStore(
+      new AzureBlobArtifactStore(context.config.azure.storageAccount, context.config.azure.stateSourceContainer)
+    )
+  }
+  return new LocalSourceStore(resolve(context.config.ingestion.sourceDirectory, "state"))
+}
+
+function ensureTrailingSlash(url: URL): URL {
+  return new URL(url.href.endsWith("/") ? url.href : `${url.href}/`)
 }
 
 function openStatesIdentityFor(

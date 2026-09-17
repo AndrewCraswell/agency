@@ -162,6 +162,42 @@ describe("executeSynchronization", () => {
     ).rejects.toThrow("CONGRESS_API_KEY is required")
   })
 
+  it("retains an Open States bill response before attempting canonical writes", async () => {
+    const put = vi.fn(async () => {
+      throw new Error("archive unavailable")
+    })
+    const openStatesClient = {
+      async *bills() {
+        yield [
+          {
+            actions: [],
+            identifier: "HB 1",
+            session: "34",
+            sources: [{ url: "https://www.akleg.gov/basis/Bill/Detail/34?Root=HB1" }],
+            title: "An Act"
+          }
+        ]
+      }
+    }
+
+    await expect(
+      executeSynchronization(executionInput(createOpenStatesSynchronizationIdentity("bills", "ak")), {
+        openStatesBillsFrom: new Date("2026-09-17T08:00:00.000Z"),
+        openStatesClient: openStatesClient as never,
+        runIngestionJob: createJobRunner([]),
+        sourceStore: { put }
+      })
+    ).rejects.toThrow("archive unavailable")
+
+    expect(put).toHaveBeenCalledOnce()
+    expect(put).toHaveBeenCalledWith(
+      "openstates",
+      "api-ak-34-2026-09-17t08-00-00-000z-1",
+      expect.any(Uint8Array),
+      expect.objectContaining({ jurisdiction: "ak", records: 1, session: "34" })
+    )
+  })
+
   it("hydrates and persists Congress member detail through the default daily entity route", async () => {
     const replaceSnapshot = vi.fn<() => Promise<void>>(async () => undefined)
     const getMember = vi.fn<(bioguideId: string) => Promise<unknown>>(async (bioguideId) => ({
