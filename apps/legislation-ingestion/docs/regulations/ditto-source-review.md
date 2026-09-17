@@ -2,6 +2,23 @@
 
 ## Latest scoped requalification
 
+40 CFR 152.175 now qualifies with 52 passages per model, maximum 173 OpenAI / 185 Voyage tokens. The cited
+[1981 final rule, printed page 5699](https://archives.federalregister.gov/issue_slice/1981/1/19/5667-5721.pdf)
+was downloaded and visually reviewed: it unambiguously places the zinc 60%-formulation values in use pattern,
+classification and restriction criteria. PDF SHA256:
+`d8d86fe2a5a0ec921f1a33b11dc735642cdefe1edd07a515260ca3e7eec002af`.
+This resolves the earlier evidence gap from the incomplete current CFR PDF.
+
+An in-memory layout repair requires the exact five headers and complete six-row zinc sequence, including the
+formulation-only row, empty separator, shifted values and following two formulations. It joins those fragments into
+one logical row and checks that the entire source text is identical before/after. Stored XML is untouched. Both
+normal row segmentation and oversized-row cell lookup see the same repaired columns. No values are imported from
+the old rule; it establishes alignment of values already present in the retained XML. Altered identities, quantities
+or following formulations remain rejected. All 88 table tests pass. Canonical report:
+`artifacts/regulatory-backfills/pesticides-alignment-recheck.json`; parser hash
+`fb3051e81e6b0cd20d4a1ce66f8d4ff6421a9b6fa01aff06c14233aeb78775c3`.
+All original known blocked versions have now qualified individually. Full-corpus qualification remains outstanding.
+
 21 CFR 177.1520 now qualifies with 36 OpenAI / 37 Voyage passages, maximum 765 / 795 tokens. Exact polymer-table
 headers, item 3.1c's source identity, density `Not less than 0.92` and empty unspanned final cells bound retention of
 the prior solubility reference. Item 3.1c itself gains no solubility value; item 3.2a's explicit ditto references the

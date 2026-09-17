@@ -529,7 +529,7 @@ describe("regulatory table passages", () => {
     }
   }, 30_000)
 
-  it("retains explicit pesticide criteria across unclassified entries but rejects the shifted zinc record", async () => {
+  it("retains explicit pesticide criteria across unclassified entries", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
       .parse(
@@ -538,7 +538,6 @@ describe("regulatory table passages", () => {
     expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
     const table = legalTableLayout(fixture.block)[0]
     invariant(table, "pesticide_table_required")
-    expect(() => legalTableRows(table)).toThrow("passage_table_unresolved_ditto")
     const zinc = table.xml.indexOf("Zinc Phosphide")
     invariant(zinc > 0, "zinc_boundary_required")
     const prefix = {
@@ -581,6 +580,66 @@ describe("regulatory table passages", () => {
         )
       ).toBe(true)
     }
+  }, 30_000)
+
+  it("restores only the source-reviewed zinc layout while retaining every original source character", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(
+        JSON.parse(await readFile(new URL("./fixtures/restricted-pesticides-table.json", import.meta.url), "utf8"))
+      )
+    const original = JSON.stringify(fixture.block)
+    const rows = legalTableRows(fixture.block).rows
+    const rowStart = fixture.block.text.indexOf("All dry formulations 60% and greater")
+    const row = rows.find((row) => row.start === rowStart)
+    const bait = rows.find((row) => fixture.block.text.slice(row.start, row.end).startsWith("All bait formulations"))
+    invariant(row && bait, "reviewed_zinc_rows_required")
+    expect(fixture.block.text.slice(row.start, row.end)).toContain("All uses\nRestricted\nAcute inhalation toxicity.")
+    const cells = legalTableRowCells(fixture.block, rowStart).cells
+    expect(
+      cells.map((cell) => ({ column: cell.column, value: fixture.block.text.slice(cell.start, cell.end) }))
+    ).toEqual([
+      { column: 1, value: "" },
+      { column: 2, value: "All dry formulations 60% and greater" },
+      { column: 3, value: "All uses" },
+      { column: 4, value: "Restricted" },
+      { column: 5, value: "Acute inhalation toxicity." }
+    ])
+    expect(
+      bait.context
+        .filter((span) => span.label === "Column 4 ditto source")
+        .map((span) => fixture.block.text.slice(span.start, span.end))
+    ).toEqual(["Restricted"])
+    for (const [before, after] of [
+      ["All dry formulations 60% and greater", "All dry formulations 61% and greater"],
+      ["Zinc Phosphide", "Other ingredient"],
+      ["All bait formulations", "Unknown formulation"]
+    ]) {
+      expect(() =>
+        legalTableRows({
+          text: fixture.block.text.replaceAll(before, after),
+          xml: fixture.block.xml.replaceAll(before, after)
+        })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", ...fixture.block }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(fixture.block.xml),
+      body: fixture.block.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(fixture.block.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+    expect(JSON.stringify(fixture.block)).toBe(original)
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
   }, 30_000)
 
   it("preserves reviewed ingredient references without inventing amounts or purposes for blank cells", async () => {

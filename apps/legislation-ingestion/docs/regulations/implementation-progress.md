@@ -13,6 +13,33 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved the last known table blocker in 40 CFR 152.175. The cited 1981 final rule's printed page 5699 provides the
+missing alignment evidence for the zinc-phosphide record. A narrowly bounded in-memory repair joins its exact source
+fragments into one logical row. Both row segmentation and continuation cell lookup use that layout; the complete
+reader text must remain identical and stored XML is unchanged. The match requires all headers and all six reviewed
+rows, refusing changed identities/quantities/neighboring formulations. See [source review](ditto-source-review.md)
+for primary-source evidence and its PDF hash.
+
+All 88 table tests, scoped lint and ingestion types passed, including column positions, exact source preservation,
+ditto evidence and both tokenizers. Canonical version `81d3d42c-0451-4a2b-99e5-4144a821be59` prepares 52 passages
+per model, maximum 173 OpenAI / 185 Voyage tokens. Parser hash:
+`fb3051e81e6b0cd20d4a1ce66f8d4ff6421a9b6fa01aff06c14233aeb78775c3`; report:
+`artifacts/regulatory-backfills/pesticides-alignment-recheck.json`; tests:
+`C:/Users/andcra/AppData/Local/Temp/tabra-zinc-tests.log`. No provider calls or source/index/vector writes occurred.
+All previously known blocked versions have qualified individually; full-corpus qualification remains required.
+
+Process 59028 was confirmed live and deliberately stopped before this parser change, which would invalidate its
+implementation fingerprint. Its old completed/partial output remains retained. This was an intentional revision,
+not a restart inferred from an observation timeout.
+The revised full read-only scan started September 16 at 21:56 local as hidden Node process 40548, confirmed live
+after the first 33-member edition completed without blockers. Output remains
+`artifacts/regulatory-backfills/canonical-preparation-all-current`; implementation fingerprint:
+`2f961df4618361ef08d65c77286e592d0d41a938cc36e236eb9973a72e3df973`. Logs:
+`C:/Users/andcra/AppData/Local/Temp/tabra-current-requalification-zinc.stdout.log` and
+`C:/Users/andcra/AppData/Local/Temp/tabra-current-requalification-zinc.stderr.log`.
+Root `pnpm verify` stopped at repository lint before coverage; focused ingestion checks passed. Full log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-zinc-verify.log`.
+
 Resolved 21 CFR 177.1520's sparse item 3.1c solubility reference. Exact source headers, item identity, density and
 blank-cell structure bound recognition. The blank entry gains no value; the subsequent explicit ditto retains its
 earlier printed source. Current PDF pages 301–302 were visually checked. The full canonical block is retained in

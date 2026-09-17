@@ -53,7 +53,92 @@ function parseTableSource(input: { text: string; xml: string }) {
   invariant(XMLValidator.validate(input.xml) === true, "passage_table_xml_invalid")
   const $ = load(input.xml, { xml: true })
   invariant(sourceText($.root().children()) === input.text, "passage_table_source_text_mismatch")
+  restoreReviewedZincLayout($)
+  invariant(sourceText($.root().children()) === input.text, "passage_table_repaired_text_mismatch")
   return $
+}
+
+/** Layout only: 46 FR 5699 establishes the split zinc row's columns. Stored XML and reader text remain unchanged. */
+function restoreReviewedZincLayout($: ReturnType<typeof load>) {
+  for (const table of $("TABLE").toArray()) {
+    const headers = $(table).children("THEAD").find("TH")
+    const expected = [
+      "Active ingredient",
+      "Formulation",
+      "Use pattern",
+      "Classification 1",
+      "Criteria influencing restriction"
+    ]
+    if (
+      headers.length !== expected.length ||
+      !expected.every((value, index) => sourceText(headers.eq(index)) === value)
+    ) {
+      continue
+    }
+    const rows = $(table).children("TBODY").children("TR").toArray()
+    const matches = (index: number, values: string[]) => {
+      const node = rows[index]
+      if (!node) {
+        return false
+      }
+      const cells = $(node).children()
+      return (
+        cells.length === 5 &&
+        cells
+          .toArray()
+          .every(
+            (cell, column) =>
+              cell.name === "TD" &&
+              Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+              Number(cell.attribs.rowspan ?? cell.attribs.ROWSPAN ?? 1) === 1 &&
+              sourceText(cells.eq(column)) === values[column] &&
+              (values[column] !== "" ||
+                cell.children.every((child) => child.type === "text" && child.data.trim() === ""))
+          )
+      )
+    }
+    for (let index = 0; index < rows.length; index++) {
+      if (
+        !matches(index, [
+          "Zinc Phosphide",
+          "All formulations 2% and less",
+          "All domestic uses and non-domestic uses in and around buildings",
+          "Unclassified",
+          ""
+        ]) ||
+        !matches(index + 1, ["", "All dry formulations 60% and greater", "", "", ""]) ||
+        !matches(index + 2, ["", "", "", "", ""]) ||
+        !matches(index + 3, ["All uses", "Restricted", "Acute inhalation toxicity.", "", ""]) ||
+        !matches(index + 4, [
+          "",
+          "All bait formulations",
+          "Non-domestic outdoor uses (other than around buildings)",
+          "......do",
+          "Hazard to non-target organisms."
+        ]) ||
+        !matches(index + 5, [
+          "",
+          "All dry formulations 10% and greater",
+          "Domestic uses",
+          "......do",
+          "Acute oral toxicity."
+        ])
+      ) {
+        continue
+      }
+      const target = rows[index + 1]
+      const empty = rows[index + 2]
+      const shifted = rows[index + 3]
+      invariant(target && empty && shifted, "passage_table_reviewed_rows_required")
+      const destination = $(target).children("TD")
+      const source = $(shifted).children("TD")
+      for (let column = 0; column < 3; column++) {
+        destination.eq(column + 2).html(source.eq(column).html() ?? "")
+      }
+      $(empty).remove()
+      $(shifted).remove()
+    }
+  }
 }
 
 /** Recognize retained publisher layout rows, never images, unknown cells or row-spanning data. */
