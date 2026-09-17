@@ -1789,3 +1789,29 @@ error message in a new test was corrected before this successful verification. N
 writes occurred. Remaining work includes durable whole-session discovery/scheduling, stable raw-record normalization,
 historical committee promotion, deployed Trigger safeguards, authenticated reads, source roster completeness, and
 the seven-day observation period. The existing 15-minute continuation schedule remains active; none was duplicated.
+
+### September 17 hosted meeting completion pass
+
+The Alaska production planner completed on Trigger deployment `20260917.5` with immutable source inventory
+`24b43a38d3ced425946df56399242e20c2044080fb55456d72042af4ae3f3763`: 2,847 accepted occurrences in 285
+ten-or-fewer occurrence batches, with two occurrences quarantined. The dispatcher started one sequential continuation
+chain. At 2026-09-17T09:38:42Z, production contained 18 exact promotion receipts covering 180 meetings. Azure showed
+one active worker and the preceding sequential workers successful. The observed rate was approximately one batch per
+minute, implying about 4 hours 27 minutes remained if the rate held. This is measured progress, not cycle completion.
+
+The production readiness audit found 35 Alaska and 93 North Carolina organizations, but no organization yet carried an
+`akCommittee:*` or `ncCommittee:*` publisher identifier. Alaska meetings therefore remained held despite 190 having a
+resolved session relation; no event was falsely marked publicly ready. Direct database edits were not used.
+
+Commits `e46023b`, `fd14733`, `fecf2ba`, and `3daa518` close the reusable implementation gaps: NC now has a strict
+current-calendar cloud request, checksum/build-gated archive normalization, single-owner transactional promotion, exact
+NCGA committee URL identifiers, an immutable state-foundation replay task, and a receipt-driven Alaska relationship
+reconciliation chain. The reconciliation replays the exact promoted archives and refuses missing/multiple receipts or
+mismatched batch evidence. These changes are committed but intentionally not deployed while the Alaska continuation
+chain is active; changing the Trigger deployment mid-chain would make the production acceptance run harder to audit.
+
+Next production order after the 285th Alaska receipt: deploy the committed tasks, replay the retained Alaska and North
+Carolina foundation archive pairs, reconcile all Alaska meeting batches, run the NC current-calendar event canary, then
+measure public-ready versus held meeting reasons and smoke-test meeting list/detail and organization-meeting API/MCP
+reads. Historical NC committee document crawling remains a separate source-coverage gate; the current calendar does not
+claim historical meeting completeness.
