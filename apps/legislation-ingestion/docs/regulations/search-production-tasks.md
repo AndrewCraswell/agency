@@ -62,8 +62,10 @@ release inventory and tokenizer eligibility remain open.
   protect report replay. `audit-regulatory-qualification` now requires the expected implementation hash and edition
   count, verifies the terminal inventory, exact selected/result identity, every per-edition report, retained NDJSON hash
   and record count, and aggregates per-model tokens, passages, limits, continuations and failure reasons. It reports
-  tokenizer qualification separately from unresolved table-shape review. The current selected-corpus execution remains
-  active; final acceptance requires its terminal manifest and this audit.
+  tokenizer qualification separately from unresolved table-shape review. The current 49-edition/275,149-record run is
+  terminal and independently verified with zero tokenizer blockers for either model. Its separate table-shape gate stays
+  open for 148 diagnostics across 101 versions, including ten unresolved-ditto layouts across nine versions; PASS-06's
+  final passage manifest cannot silently discard that review scope.
 - [ ] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
   coverage against retained source; review difficult real samples visually where text extraction loses layout meaning.
   **Done:** zero unexplained dropped/duplicated source spans in the advertised scope. Depends on PASS-05–07.

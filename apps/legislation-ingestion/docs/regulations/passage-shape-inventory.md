@@ -142,6 +142,22 @@ The retained text of 7 CFR 1755.397 explicitly identifies information to be supp
 equipment fields: it is a concrete candidate for an unfilled-form disposition, not evidence that values were lost.
 The Title 20 visual-field caption is a separate chart case. These categories need distinct source-backed handling.
 
+The pinned full current-eCFR requalification completed September 17 under implementation hash
+`2f961df4618361ef08d65c77286e592d0d41a938cc36e236eb9973a72e3df973`. Its terminal manifest covers all 49
+nonreserved current editions and 275,149 records. An independent audit rehashed every per-edition report and NDJSON
+stream. OpenAI Small prepared all records into 501,407 passages / 171,162,558 tokens; Voyage 4 prepared all records into
+522,063 passages / 187,689,692 tokens. Neither model has a blocked, invalid, oversized or empty record. Both observed
+maximums are 1,200 tokens and 6,422 input characters; continuation counts are 62 and 91 respectively.
+
+Structural review remains distinct. The same complete run retains 148 table diagnostics across 101 versions: 138
+`passage_table_data_rows_required` cases and ten `passage_table_unresolved_ditto` cases across nine versions. All still
+produce bounded fallback passages, which proves tokenizer transport eligibility but not table-layout fidelity. The ten
+ditto diagnostics occur in 40 CFR 52.730, 52.876 and 81.331; Appendix A to 49 CFR Part 210; 21 CFR 73.1, 155.200 and
+177.2800; 47 CFR 73.182; and 33 CFR 110.214. Exact edition/version/content hashes, locators and table indexes are in
+`canonical-preparation-all-current/table-diagnostics-current.json`; the terminal integrity/count report is
+`canonical-preparation-all-current/audit-2026-09-17.json`. These identities remain a source-review queue and cannot be
+treated as resolved by the zero tokenizer-blocker count.
+
 ## Ditto scope and preparation gates
 
 A fully spanning group heading inside one table can qualify later rows without replacing earlier column values.

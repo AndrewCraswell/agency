@@ -21,11 +21,23 @@ and failure reasons per model. It distinguishes zero tokenizer blockers from unr
 allowing a successful fallback passage to erase structural diagnostics.
 
 Two focused tests passed: one verified aggregate readiness with a retained table-review item, and one rejected a byte
-stream modified after terminal completion. Ingestion TypeScript and scoped lint passed. The pinned read-only current-eCFR
-qualification remains live and had completed 46 of 49 selected editions at the latest observation; no terminal inventory
-or final audit is claimed yet. Root `pnpm verify` completed formatting and all 11 package lint/type tasks, then stopped at
-the unchanged unrelated Knip inventory for 63 theme/template files, two root development dependencies, two binaries and
-nine configuration hints; coverage did not run. No provider, canonical, index or vector writes occurred.
+stream modified after terminal completion. Ingestion TypeScript and scoped lint passed. Root `pnpm verify` completed
+formatting and all 11 package lint/type tasks, then stopped at the unchanged unrelated Knip inventory for 63
+theme/template files, two root development dependencies, two binaries and nine configuration hints; coverage did not
+run. No provider, canonical, index or vector writes occurred.
+
+The pinned read-only current-eCFR qualification then completed all 49 selected editions and 275,149 records under the
+expected implementation hash. The independent auditor verified every retained report and NDJSON hash/count. Both
+tokenizers prepared all 275,149 records with zero blocked, invalid, oversized or empty inputs. OpenAI produced 501,407
+passages / 171,162,558 tokens with 62 continuations; Voyage produced 522,063 passages / 187,689,692 tokens with 91
+continuations. Both observed maxima were 1,200 tokens and 6,422 input characters. The terminal audit is
+`canonical-preparation-all-current/audit-2026-09-17.json`.
+
+The audit deliberately exited nonzero for the separate table-shape gate: 148 diagnostics across 101 versions remain,
+comprising 138 tables with no textual data rows and ten unresolved-ditto layouts across nine versions. These diagnostics
+did not block complete fallback passage preparation, so tokenizer-scale qualification passes while final table-shape
+qualification remains open. Exact identities are retained in `table-diagnostics-current.json`; source review, rather
+than silent acceptance, is required before PASS-05/06 close.
 
 Added the first operator-safe source-scope start command. `run-regulatory-discovery` defaults to a repeatable-read,
 read-only preview of one persisted discovery scope and reports the committed cursor/cutoff, unit and dispatch counts,
