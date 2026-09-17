@@ -182,6 +182,15 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
   canonical 40 CFR 81.324 smoke produced 71 shared passages; actual multi-cohort corpus selection remains open.
   The CLI consumes supplied source JSON and does not independently authenticate its source; canonical export
   provenance must accompany the frozen evaluation manifest.
+  `pnpm tool regulations/export-evaluation-code --edition <uuid> --version <uuid> --content-hash <sha256>
+  --output <new-file>` now prepares common inputs directly from a published canonical eCFR or annual-CFR membership
+  in the explicit local `REGULATORY_TEST_DATABASE_URL`. One read-only statement binds source text, membership and active
+  rights. The exporter recomputes the canonical content hash, checks display/search/embedding/export permissions and
+  rights hash, enforces source-byte/context/passage bounds, then qualifies the whole version for both tokenizers.
+  It writes an exclusive snapshot packet containing source dates/locator, generation/rights/context hashes and complete
+  common passages. This verifies the database snapshot, not publisher artifact replay, cohort assignment or human review.
+  A real canonical pesticide-section export produced 52 shared passages; incorrect edition membership rejected before
+  output creation. Final multi-cohort selection and review remain open.
   Annual Title 6 for 2023/2024 is now retained and locally published after source/date/complete-volume checks
   (658/659 memberships). This supplies an unexcluded historical family for held-out candidate selection, without
   inspecting its passage text during acquisition. It still needs whole-version qualification and an explicit split

@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a canonical code-source exporter for EVAL-02. It reads published eCFR/annual-CFR membership, source text and active
+rights together in one read-only database snapshot; verifies requested identity/content hash, canonical parser-content
+hash, rights hash and display/search/embedding/export permissions; then prepares complete common passages for both models.
+Source/context/passage limits are enforced before creating a new output file. The evidence packet records source
+dates/locator and generation/rights/context hashes, while explicitly leaving publisher-artifact replay, split assignment,
+human review and model selection unverified. No existing embedding freshness contract changed.
+
+All 12 focused snapshot/common-passage tests, scoped lint and ingestion types passed. A real canonical export of
+40 CFR 152.175 produced 52 common passages (maximum 185 tokens under either counter), evidence hash
+`90400a51ac7f174e2483424c31d8f7dbc6e5086cc843ef7e91dc25139c03f872`, at
+`artifacts/regulatory-backfills/evaluation-code-pesticides.json`. A mismatched edition/version CLI canary exited 1 with
+`evaluation_code_published_membership_unavailable` and created no output. Logs:
+`C:/Users/andcra/AppData/Local/Temp/tabra-evaluation-export-tests.log` and `tabra-evaluation-export-denied.log`.
+No provider calls or canonical writes occurred. This is an exporter smoke, not the final frozen multi-cohort corpus.
+Full `pnpm verify` stopped at repository lint before coverage; log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-evaluation-export-verify.log`.
+Full-corpus qualification process 40548 was confirmed live while this independent exporter was implemented.
+
 Resolved the last known table blocker in 40 CFR 152.175. The cited 1981 final rule's printed page 5699 provides the
 missing alignment evidence for the zinc-phosphide record. A narrowly bounded in-memory repair joins its exact source
 fragments into one logical row. Both row segmentation and continuation cell lookup use that layout; the complete
