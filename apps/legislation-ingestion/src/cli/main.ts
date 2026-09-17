@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path"
 import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import { createDatabase, type LegislationDatabase } from "@repo/legislation-core/database/database"
 import { waitForDatabase } from "@repo/legislation-core/database/readiness"
+import { jurisdictionId as canonicalJurisdictionId } from "@repo/legislation-core/domain/identifiers"
 import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
 import { OpenRouterEmbeddingClient } from "@repo/legislation-core/embeddings/openrouter-embeddings"
 import { createLogger, errorContext } from "@repo/legislation-core/observability/logger"
@@ -610,7 +611,7 @@ async function repairOpenStatesMembershipObservationDates(options: { apply?: boo
   await withDatabase(async (database) => {
     const result = await repairOpenStatesMembershipObservations(database, {
       apply: options.apply,
-      jurisdictionId: openStatesJurisdictionId(code)
+      jurisdictionId: canonicalJurisdictionId(code)
     })
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
   }, config)
