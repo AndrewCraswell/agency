@@ -273,6 +273,14 @@ bytes; and exposes rights, shard, lease, attempt, provider-token and reuse count
 exclusive creation for retained evidence. Its gates distinguish permission to dispatch, exact completion eligibility,
 stored completion and later serving readiness. Inspection never performs those transitions.
 
+`pnpm tool regulations/plan-regulatory-vectors --generation <passage-generation-sha256> --output <new-file>` creates the
+pre-dispatch plan for the trusted `REGULATORY_EMBEDDING_MODEL`. It reads every copied passage in a repeatable-read,
+read-only transaction, recomputes input hashes and pinned tokenizer counts, then binds their inventory hash to the
+source passage manifest/metadata, route, dimensions, input contract, totals and 16-shard layout. The plan is self-hashed
+and written with exclusive creation. Planning does not register or dispatch work. Atomic registration of this exact
+plan remains a separate implementation gate; a recheck followed by registration in independent transactions is not an
+acceptable substitute.
+
 Create a unique input identity index and a passage-ID lookup index. Build the new feature's HNSW index after its initial
 bounded load, measure build RSS/time/disk and run ANALYZE before query-plan/recall acceptance. Use the existing index
 maintenance mechanism for an online build when the table already serves traffic; respect PostgreSQL's nontransactional

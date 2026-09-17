@@ -13,13 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added deterministic pre-dispatch planning for one copied passage generation. The read-only planner requires a trusted
+server-selected regulatory route, active search membership, eligible source metadata and the exact pinned tokenizer. It
+pages every passage, recomputes each input hash and token count, and freezes passage/source metadata hashes, vector
+count, tokens, input bytes, dimensions, input contract and the fixed 16-shard layout into one self-hashed plan. Changed
+fields or route identity fail validation. The CLI writes only to a new output file and cannot register or dispatch a
+generation. The two-database smoke generated the plan from a real copied passage and used its hash for the existing
+registration boundary. Focused PostgreSQL and scoped lint passed. Atomic plan registration remains open and will not be
+implemented by composing two transactions around a race-prone recheck.
+
 Added a read-only regulatory vector generation inspector and operator CLI. One repeatable-read snapshot reconciles the
 registered route/manifest, copied passage count, expected tokenizer tokens and input bytes, stored vectors, active
 rights memberships and every shard's state, lease, attempts, possible paid repeats, provider usage and insert/reuse
 counters. It reports separate dispatchable, completable, embedded and ready gates; it cannot initialize, dispatch,
 complete or promote work. The two-database smoke proves pending and embedded reports, exact 0/100 percent coverage,
 21 aggregate shard attempts after injected failures, and disappearance after rights cleanup. The focused PostgreSQL
-test and scoped lint passed. Package type checking reached only unrelated active `congress-events.test.ts` errors.
+test, package type check and scoped lint passed.
 
 Connected the durable regulatory vector shards to Trigger.dev without activating a schedule or dispatching provider
 work. An explicit operator task initializes exactly 16 shards and submits them with stable global idempotency keys. A

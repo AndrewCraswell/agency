@@ -70,6 +70,7 @@ import {
   withLease
 } from "./storage.js"
 import { claimLegalEmbeddingShard, initializeLegalEmbeddingShards, runLegalEmbeddingShardJob } from "./vector-jobs.js"
+import { planLegalEmbeddingGeneration, validateLegalEmbeddingPlan } from "./vector-plan.js"
 import { selectLegalEmbeddingShard } from "./vector-shards.js"
 import { inspectLegalEmbeddingGeneration } from "./vector-status.js"
 import {
@@ -1388,12 +1389,31 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           )
         ).rows[0]
         invariant(passage, "vector_test_passage_missing")
+        const vectorPlan = await planLegalEmbeddingGeneration(
+          target,
+          prepared.generationId,
+          "openai/text-embedding-3-small"
+        )
+        expect(vectorPlan).toMatchObject({
+          contract: "legal-embedding-plan-2026-09-17",
+          passageGenerationId: prepared.generationId,
+          expectedCount: 1,
+          model: "openai/text-embedding-3-small",
+          dimensions: 1536,
+          inputContract: "legal-passage-context-text",
+          shardCount: 16
+        })
+        expect(vectorPlan.expectedTokens).toBeGreaterThan(0)
+        expect(vectorPlan.expectedInputBytes).toBeGreaterThan(0)
+        expect(() => validateLegalEmbeddingPlan({ ...vectorPlan, expectedCount: 2 })).toThrow(
+          "legal_embedding_plan_hash_mismatch"
+        )
         const registration = {
           passageGenerationId: prepared.generationId,
           model: "openai/text-embedding-3-small" as const,
           inputContract: "legal-passage-context-text",
-          manifestHash: digest(JSON.stringify([passage.id, passage.input_hash])),
-          expectedCount: 1
+          manifestHash: vectorPlan.planHash,
+          expectedCount: vectorPlan.expectedCount
         }
         const generation = await registerLegalEmbeddingGeneration(target, registration)
         expect(generation).toMatchObject({ dimensions: 1536, state: "pending", reused: false })
