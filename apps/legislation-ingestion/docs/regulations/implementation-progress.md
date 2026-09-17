@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed the 30-question development draft with exact source evidence and the protocol's cohort allocation. Source review
+also caught a benchmark coverage problem: the shortest proposed-rule candidates were meeting notices about proposals,
+while the shortest final-rule records were correction/deviation actions. Retained them as distractors and added two
+substantive proposals and two final rules, including an 80,192-character Texas SIP proposal prepared in full. The combined
+44-version corpus has 237 passages (137 development, 100 held-out), maximum 1,122 tokens, and passes both tokenizers.
+The four new publication families have no warnings or selected held-out overlap. The duplicate CLI passes with 40 groups
+and no cross-split group. Full packet/reconstruction/input-hash checks passed without source truncation.
+
+All draft evidence quotes resolve to their canonical passages. Development-only smoke schema, unique IDs and relevant-ID
+membership pass; both tokenizers qualify all 30 query inputs (OpenAI max 38 / total 733, Voyage max 43 / total 788).
+The three no-answer cases are explicitly automated proposals requiring full-pool review. No human judgments, held-out
+queries, corpus freeze or model selection are claimed. See [corpus, draft questions and exact receipts](embedding-corpus-candidates.md).
+No provider calls or canonical/index/vector writes occurred. The live current-title run has completed ten editions and
+67,332 members, zero preparation failures; the full 49-title qualification remains incomplete.
+`git diff --check` passed. Root `pnpm verify` stopped at unrelated Knip findings for existing Storybook/generator files,
+root dependencies/binaries and `EntityResults`; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-evaluation-development-verify.log`.
+
 Expanded the canonical evaluation candidates from 26 to 40 complete versions using source-length quantiles rather than
 only the shortest current records. The inventory now has five current prose and five current table versions per split;
 Title 8 supplies only three bounded tables, so two Title 20 tables fill the held-out allocation. All 14 added versions

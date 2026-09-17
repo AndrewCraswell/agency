@@ -1,7 +1,7 @@
 {
   "status": "development_queries_draft",
   "split": "development",
-  "candidateInventoryHash": "e4a7cd754328295d3b953566f6d9d41cd063224a7e408a40ba85f3fd2f27fdbf",
+  "candidateInventoryHash": "6c70ffe9bf936a258404f1ede8f3e2ef164e1849af65c5a21500d8992521b1a9",
   "queries": [
     {
       "id": "development-01",
@@ -13,16 +13,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "28fe7bb7-0366-42b1-811a-0f1ff129cfa3",
-        "contentHash": "43c5cbbfc0f56388a4c53bd85cad6f602f38d9c7dbc11c977b9477ddbc0b82cc",
-        "passageId": "dfefef396926ded4c7624a35bf92c241e4abad5aadc00ab28a1af8c76f8017c5",
-        "inputHash": "43281b2c38b95a9a657ac9945c625506da365069ed3f9651e5b780e54c4fa75a",
-        "packetEvidenceHash": "1826bda13b9b0c5494d991f9664ee536f9a2ac0feb38ad46d65bd569ca758ee7",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[9]/DIV5[3]/DIV6[7]/DIV8[1]",
-        "quote": "Every local, independent, or unaffiliated union with 100 or more members",
-        "expectedAnswer": "The threshold is 100 members; the provision also addresses agents responsible for employment referrals."
-      },
+      "evidence": [
+        {
+          "versionId": "28fe7bb7-0366-42b1-811a-0f1ff129cfa3",
+          "contentHash": "43c5cbbfc0f56388a4c53bd85cad6f602f38d9c7dbc11c977b9477ddbc0b82cc",
+          "passageId": "dfefef396926ded4c7624a35bf92c241e4abad5aadc00ab28a1af8c76f8017c5",
+          "inputHash": "43281b2c38b95a9a657ac9945c625506da365069ed3f9651e5b780e54c4fa75a",
+          "packetEvidenceHash": "1826bda13b9b0c5494d991f9664ee536f9a2ac0feb38ad46d65bd569ca758ee7",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[9]/DIV5[3]/DIV6[7]/DIV8[1]",
+          "quote": "Every local, independent, or unaffiliated union with 100 or more members",
+          "expectedAnswer": "The threshold is 100 members; the provision also addresses agents responsible for employment referrals."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -35,16 +37,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "5b48fc32-0ae4-471e-8758-a7ab71cdc41f",
-        "contentHash": "4f651f7267680f22aaf6cc808866cad384cbf5c7dda575a61bc7f235a3a8167e",
-        "passageId": "f59e4cfe3d113d155215f0b91a2818d9fcb10ac949dd3083d008fb49c1c4c0e9",
-        "inputHash": "f2f2e956969aca71c60530e6f2edf27fe653f4b84db67450264700d3af6c8ac7",
-        "packetEvidenceHash": "1b92ff98c2c0de358d1ef38c18d83a0efc07e9cc2fa72dd240e5bcbaf3239db9",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[5]/DIV4[2]/DIV5[5]/DIV6[2]/DIV7[1]/DIV8[1]",
-        "quote": "Section 13(b)(12) provides an overtime exemption for any employee employed in agriculture.",
-        "expectedAnswer": "Section 13(b)(12) is overtime-only; section 13(a)(6) covers minimum wage and overtime for certain agricultural employees."
-      },
+      "evidence": [
+        {
+          "versionId": "5b48fc32-0ae4-471e-8758-a7ab71cdc41f",
+          "contentHash": "4f651f7267680f22aaf6cc808866cad384cbf5c7dda575a61bc7f235a3a8167e",
+          "passageId": "f59e4cfe3d113d155215f0b91a2818d9fcb10ac949dd3083d008fb49c1c4c0e9",
+          "inputHash": "f2f2e956969aca71c60530e6f2edf27fe653f4b84db67450264700d3af6c8ac7",
+          "packetEvidenceHash": "1b92ff98c2c0de358d1ef38c18d83a0efc07e9cc2fa72dd240e5bcbaf3239db9",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[5]/DIV4[2]/DIV5[5]/DIV6[2]/DIV7[1]/DIV8[1]",
+          "quote": "Section 13(b)(12) provides an overtime exemption for any employee employed in agriculture.",
+          "expectedAnswer": "Section 13(b)(12) is overtime-only; section 13(a)(6) covers minimum wage and overtime for certain agricultural employees."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -57,16 +61,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "63d45a3b-efde-4f17-9ea1-747a7a41b888",
-        "contentHash": "646efb775255609f1a2f18016d9d7179a46344f080e7f3871875d9b25d60e458",
-        "passageId": "87a17d120814c6efd6b8c82ddc7b6ae357beb05b5fe3849da56f0df8c829c51b",
-        "inputHash": "0f7a816abd3dea3b700ea0109224ae010f2f8a857da65f4bfa94ec0559709e56",
-        "packetEvidenceHash": "bd669b7e1c4496dd2ad91a5a09b816d1865e6a7d81a76176a77397acd6e72067",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[10]/DIV8[7]",
-        "quote": "provided that the work is performed using alternative measures which provide effective protection",
-        "expectedAnswer": "No. The minor-servicing exception requires routine, repetitive, integral work and alternative measures providing effective protection."
-      },
+      "evidence": [
+        {
+          "versionId": "63d45a3b-efde-4f17-9ea1-747a7a41b888",
+          "contentHash": "646efb775255609f1a2f18016d9d7179a46344f080e7f3871875d9b25d60e458",
+          "passageId": "87a17d120814c6efd6b8c82ddc7b6ae357beb05b5fe3849da56f0df8c829c51b",
+          "inputHash": "0f7a816abd3dea3b700ea0109224ae010f2f8a857da65f4bfa94ec0559709e56",
+          "packetEvidenceHash": "bd669b7e1c4496dd2ad91a5a09b816d1865e6a7d81a76176a77397acd6e72067",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[10]/DIV8[7]",
+          "quote": "provided that the work is performed using alternative measures which provide effective protection",
+          "expectedAnswer": "No. The minor-servicing exception requires routine, repetitive, integral work and alternative measures providing effective protection."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -79,16 +85,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "68bfa6bc-97cd-46c5-b116-2a78c1360d2e",
-        "contentHash": "111d218b379ceb3f08aa9e9c0ee695aeb85ec5ddab95854b28ea6a93dd7d0fac",
-        "passageId": "39dd76f886da89057076cf2dc75aac69911315148faa025eb2f1b7919d5e6d0e",
-        "inputHash": "b05c860d9a1169f3360cb78f5c4f2fb6fe93ac0cc55f7a7db161535bb02b4375",
-        "packetEvidenceHash": "8f5876d751bb1e60bc72625cce3f686868195a610ffd87c82674bd0dd4d2cc95",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[14]/DIV4[3]/DIV5[1]/DIV8[7]",
-        "quote": "an organizational chart or other diagram showing the members",
-        "expectedAnswer": "An organizational chart or other diagram must show year-end members and their legal relationships; exempt entities may be included but need not be."
-      },
+      "evidence": [
+        {
+          "versionId": "68bfa6bc-97cd-46c5-b116-2a78c1360d2e",
+          "contentHash": "111d218b379ceb3f08aa9e9c0ee695aeb85ec5ddab95854b28ea6a93dd7d0fac",
+          "passageId": "39dd76f886da89057076cf2dc75aac69911315148faa025eb2f1b7919d5e6d0e",
+          "inputHash": "b05c860d9a1169f3360cb78f5c4f2fb6fe93ac0cc55f7a7db161535bb02b4375",
+          "packetEvidenceHash": "8f5876d751bb1e60bc72625cce3f686868195a610ffd87c82674bd0dd4d2cc95",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[14]/DIV4[3]/DIV5[1]/DIV8[7]",
+          "quote": "an organizational chart or other diagram showing the members",
+          "expectedAnswer": "An organizational chart or other diagram must show year-end members and their legal relationships; exempt entities may be included but need not be."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -101,16 +109,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "d986811a-ec16-4836-8b9a-a3bcda3f1f0b",
-        "contentHash": "117fdb85ea13a6c4c1206f24b15e858134265310743b8a3460f12a1b9c05027c",
-        "passageId": "cff563d966f0b336f66e32e1848f5af3dada47295e4bd26a443eef2d6790d4d5",
-        "inputHash": "5b4b5d44ff4fa8f6a4d3fe469b2aa4b4bcc14c647464c30261d9a42aaf68ec5c",
-        "packetEvidenceHash": "95eebda757221555fbfebdc9fa6bd2102d8f03439b844e60e63f8e4eefaf0352",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[1]/DIV5[3]/DIV6[6]/DIV8[2]",
-        "quote": "Such evidence must be filed together with the petition, but must not be served on any other party.",
-        "expectedAnswer": "File the evidence with the petition, but do not serve it on any other party."
-      },
+      "evidence": [
+        {
+          "versionId": "d986811a-ec16-4836-8b9a-a3bcda3f1f0b",
+          "contentHash": "117fdb85ea13a6c4c1206f24b15e858134265310743b8a3460f12a1b9c05027c",
+          "passageId": "cff563d966f0b336f66e32e1848f5af3dada47295e4bd26a443eef2d6790d4d5",
+          "inputHash": "5b4b5d44ff4fa8f6a4d3fe469b2aa4b4bcc14c647464c30261d9a42aaf68ec5c",
+          "packetEvidenceHash": "95eebda757221555fbfebdc9fa6bd2102d8f03439b844e60e63f8e4eefaf0352",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[1]/DIV5[3]/DIV6[6]/DIV8[2]",
+          "quote": "Such evidence must be filed together with the petition, but must not be served on any other party.",
+          "expectedAnswer": "File the evidence with the petition, but do not serve it on any other party."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -123,16 +133,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "5757cb72-82d3-49c9-8153-bd76b01f046a",
-        "contentHash": "1fb3ec31d273a5dcacf43d18255e63a008b93b026b0d19ef8cd9ea837918c0f3",
-        "passageId": "93b17b8b115a69b4e09782bc1c318230cdd4255664ccfec5b7afa31e790b7813",
-        "inputHash": "2419c715bfc770b737073a95770b551f41fa7bfe2ef188323c8678d863629c63",
-        "packetEvidenceHash": "b6c995b09c3fcb1a07297e4944f5dca671da51611effc9ccd7c31a1f36fcce50",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[8]/DIV5[15]/DIV6[6]/DIV8[2]",
-        "quote": "based on a preponderance of the evidence",
-        "expectedAnswer": "Suspension requires adequate evidence and necessity of immediate action, and usually precedes notice. Debarment requires a preponderance and follows notice and an opportunity to contest."
-      },
+      "evidence": [
+        {
+          "versionId": "5757cb72-82d3-49c9-8153-bd76b01f046a",
+          "contentHash": "1fb3ec31d273a5dcacf43d18255e63a008b93b026b0d19ef8cd9ea837918c0f3",
+          "passageId": "93b17b8b115a69b4e09782bc1c318230cdd4255664ccfec5b7afa31e790b7813",
+          "inputHash": "2419c715bfc770b737073a95770b551f41fa7bfe2ef188323c8678d863629c63",
+          "packetEvidenceHash": "b6c995b09c3fcb1a07297e4944f5dca671da51611effc9ccd7c31a1f36fcce50",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[8]/DIV5[15]/DIV6[6]/DIV8[2]",
+          "quote": "based on a preponderance of the evidence",
+          "expectedAnswer": "Suspension requires adequate evidence and necessity of immediate action, and usually precedes notice. Debarment requires a preponderance and follows notice and an opportunity to contest."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -145,16 +157,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "d52eb1ba-25c4-4793-94f4-b6e313eff7b3",
-        "contentHash": "ae03314f6116a9e053370305478ebf7c75c7e2a050c01170a7941c61b675f358",
-        "passageId": "484c2b3ff951e197b0f3a57f5089d106ae8a57b5d0701f9651498be865915d1e",
-        "inputHash": "7f6a5d2b1cf21c36716470349f3f0f059fe9d88e2aa315cebd4f5471df7c3fa3",
-        "packetEvidenceHash": "f6824c792b75f1513bc9098850fd5fa32ae3128d34f381890568567270a28e64",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[8]/DIV8[3]",
-        "quote": "2. Noncombustible building 3\n25\n50\n75",
-        "expectedAnswer": "50 feet in the 3,501–15,000 gallon column; the table footnotes describe protective-structure reductions and building definitions."
-      },
+      "evidence": [
+        {
+          "versionId": "d52eb1ba-25c4-4793-94f4-b6e313eff7b3",
+          "contentHash": "ae03314f6116a9e053370305478ebf7c75c7e2a050c01170a7941c61b675f358",
+          "passageId": "484c2b3ff951e197b0f3a57f5089d106ae8a57b5d0701f9651498be865915d1e",
+          "inputHash": "7f6a5d2b1cf21c36716470349f3f0f059fe9d88e2aa315cebd4f5471df7c3fa3",
+          "packetEvidenceHash": "f6824c792b75f1513bc9098850fd5fa32ae3128d34f381890568567270a28e64",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[8]/DIV8[3]",
+          "quote": "2. Noncombustible building 3\n25\n50\n75",
+          "expectedAnswer": "50 feet in the 3,501–15,000 gallon column; the table footnotes describe protective-structure reductions and building definitions."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -167,16 +181,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "9397a192-bf6a-4d27-a79a-9fac994a05ed",
-        "contentHash": "7fae68371befeb7bf77c98cd569d0d790537ad963ce56c9dd20b69bb516a4480",
-        "passageId": "63505a7b9b1c04c60a79522648c128ec6edba5ecfb4d988c796a1fc218f40ed2",
-        "inputHash": "45ca4f46de5c0ccbfb325c747bf1416b985a408af23af6ea99db96bda6ffe172",
-        "packetEvidenceHash": "2145d5998ec3051a050893b131b42c2737b443756c6282dbc507baed15b327de",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[24]/DIV6[3]/DIV8[2]",
-        "quote": "Dimensions of the critical zone, in. (mm)\n±0.5 in. (12.5 mm).",
-        "expectedAnswer": "A fixed tolerance of ±0.5 inch (12.5 mm), unlike the percentage tolerances for deflection, weight and force."
-      },
+      "evidence": [
+        {
+          "versionId": "9397a192-bf6a-4d27-a79a-9fac994a05ed",
+          "contentHash": "7fae68371befeb7bf77c98cd569d0d790537ad963ce56c9dd20b69bb516a4480",
+          "passageId": "63505a7b9b1c04c60a79522648c128ec6edba5ecfb4d988c796a1fc218f40ed2",
+          "inputHash": "45ca4f46de5c0ccbfb325c747bf1416b985a408af23af6ea99db96bda6ffe172",
+          "packetEvidenceHash": "2145d5998ec3051a050893b131b42c2737b443756c6282dbc507baed15b327de",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[24]/DIV6[3]/DIV8[2]",
+          "quote": "Dimensions of the critical zone, in. (mm)\n±0.5 in. (12.5 mm).",
+          "expectedAnswer": "A fixed tolerance of ±0.5 inch (12.5 mm), unlike the percentage tolerances for deflection, weight and force."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -189,16 +205,18 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "21d126ac-c66a-468d-9a46-940433b10965",
-        "contentHash": "aa1fae8448476597c0edfa1011137baefd6257e2f1623fca7039c49f380b26f1",
-        "passageId": "53d96e9a3d1a44821c4ab80586b8a5e8de51f596251bc232085162d46205ec56",
-        "inputHash": "04015fb054e466d35d539369365c47eb7596817944f796617b3b3212564f1ff4",
-        "packetEvidenceHash": "bb2ae3ff1de17ccd82f764fb97d0ae199f67923266fc1f1793d29a43a72494b3",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[14]/DIV6[3]/DIV8[10]",
-        "quote": "5 short tons in excess.",
-        "expectedAnswer": "Five short tons above the rating, giving a 35-short-ton proof load."
-      },
+      "evidence": [
+        {
+          "versionId": "21d126ac-c66a-468d-9a46-940433b10965",
+          "contentHash": "aa1fae8448476597c0edfa1011137baefd6257e2f1623fca7039c49f380b26f1",
+          "passageId": "53d96e9a3d1a44821c4ab80586b8a5e8de51f596251bc232085162d46205ec56",
+          "inputHash": "04015fb054e466d35d539369365c47eb7596817944f796617b3b3212564f1ff4",
+          "packetEvidenceHash": "bb2ae3ff1de17ccd82f764fb97d0ae199f67923266fc1f1793d29a43a72494b3",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[14]/DIV6[3]/DIV8[10]",
+          "quote": "5 short tons in excess.",
+          "expectedAnswer": "Five short tons above the rating, giving a 35-short-ton proof load."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
     },
     {
@@ -211,17 +229,529 @@
       "families": [
         "code:29"
       ],
-      "evidence": {
-        "versionId": "f47415a8-10f5-4d66-9068-cc09670cc8eb",
-        "contentHash": "c369752b9f61f0b97bc565b1d8c16104fbcc2209471d574130c2eaa79ee9ed61",
-        "passageId": "622523aa6f23a74d97aa4f56a80e08cc60e381f9fa4c59827904cfdd2d18ac54",
-        "inputHash": "0e2fc148e2197885559f0678c3b311bea6dfa653c2f01f47f5c4ef8406eebb04",
-        "packetEvidenceHash": "da4e1fbdc003392946dcd6e300be0b89f3a76d9996c627e08565fc0deca374ac",
-        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[22]/DIV6[6]/DIV8[5]",
-        "quote": "Room heater, radiant type\n36\n36\n18",
-        "expectedAnswer": "Radiant heaters require 36 inches at the sides and rear; circulating heaters require 12 inches. Both list 18 inches for the chimney connector."
-      },
+      "evidence": [
+        {
+          "versionId": "f47415a8-10f5-4d66-9068-cc09670cc8eb",
+          "contentHash": "c369752b9f61f0b97bc565b1d8c16104fbcc2209471d574130c2eaa79ee9ed61",
+          "passageId": "622523aa6f23a74d97aa4f56a80e08cc60e381f9fa4c59827904cfdd2d18ac54",
+          "inputHash": "0e2fc148e2197885559f0678c3b311bea6dfa653c2f01f47f5c4ef8406eebb04",
+          "packetEvidenceHash": "da4e1fbdc003392946dcd6e300be0b89f3a76d9996c627e08565fc0deca374ac",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[22]/DIV6[6]/DIV8[5]",
+          "quote": "Room heater, radiant type\n36\n36\n18",
+          "expectedAnswer": "Radiant heaters require 36 inches at the sides and rear; circulating heaters require 12 inches. Both list 18 inches for the chimney connector."
+        }
+      ],
       "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-11",
+      "input": "Under the January 1, 2025 annual edition of the federal representation-hearing rule, who appoints the hearing officer?",
+      "relevantIds": [
+        "f9d5089480ec718e1945dc79e740985d73e6d2d4d419f3765279f33bdfd2ecfb"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:5"
+      ],
+      "evidence": [
+        {
+          "versionId": "448734d8-5110-48c0-9a40-74bb36972477",
+          "contentHash": "5e6df8c1f07cf31042bba96651b2a5bafa02c673211af1e604d45ea7a5fc0b67",
+          "passageId": "f9d5089480ec718e1945dc79e740985d73e6d2d4d419f3765279f33bdfd2ecfb",
+          "inputHash": "ab96b5706af69d5366202071062ee0d4eb773d2e838722b0627f4503d586d847",
+          "packetEvidenceHash": "0937b9b1c0be87608269c51d203766f1055112b82aaff1471ca947ef2eddac2f",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[9]/SUBCHAP[3]/PART[3]/SECTION[18]",
+          "quote": "The Regional Director appoints a hearing officer",
+          "expectedAnswer": "The Regional Director appoints the hearing officer."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-12",
+      "input": "In the retained September 2026 version of the representation-hearing rule, who assigns the hearing officer?",
+      "relevantIds": [
+        "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:5"
+      ],
+      "evidence": [
+        {
+          "versionId": "6cf29113-0044-4e6f-9147-90df388160ba",
+          "contentHash": "90f132cc98a7fe33ab33625325007a25eec63d8e5077e61be133e627c342b5c9",
+          "passageId": "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b",
+          "inputHash": "0fbc3d1059af4b308435c7684da43ea2e65f131213cb836906b1d755c6aa555a",
+          "packetEvidenceHash": "dffb4b80ba4cf1ecb7a29f1e8cf6bbbb5958ede8072b99ba632b54dfa1ab23b8",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[10]/DIV4[3]/DIV5[3]/DIV8[18]",
+          "quote": "The FLRA assigns a Hearing Officer",
+          "expectedAnswer": "The FLRA assigns the Hearing Officer."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-13",
+      "input": "How did the hearing-officer assignment wording change between the January 2025 annual edition and the retained September 2026 version?",
+      "relevantIds": [
+        "f9d5089480ec718e1945dc79e740985d73e6d2d4d419f3765279f33bdfd2ecfb",
+        "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:5"
+      ],
+      "evidence": [
+        {
+          "versionId": "448734d8-5110-48c0-9a40-74bb36972477",
+          "contentHash": "5e6df8c1f07cf31042bba96651b2a5bafa02c673211af1e604d45ea7a5fc0b67",
+          "passageId": "f9d5089480ec718e1945dc79e740985d73e6d2d4d419f3765279f33bdfd2ecfb",
+          "inputHash": "ab96b5706af69d5366202071062ee0d4eb773d2e838722b0627f4503d586d847",
+          "packetEvidenceHash": "0937b9b1c0be87608269c51d203766f1055112b82aaff1471ca947ef2eddac2f",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[9]/SUBCHAP[3]/PART[3]/SECTION[18]",
+          "quote": "The Regional Director appoints a hearing officer",
+          "expectedAnswer": "The earlier text says the Regional Director appoints; the later text says the FLRA assigns."
+        },
+        {
+          "versionId": "6cf29113-0044-4e6f-9147-90df388160ba",
+          "contentHash": "90f132cc98a7fe33ab33625325007a25eec63d8e5077e61be133e627c342b5c9",
+          "passageId": "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b",
+          "inputHash": "0fbc3d1059af4b308435c7684da43ea2e65f131213cb836906b1d755c6aa555a",
+          "packetEvidenceHash": "dffb4b80ba4cf1ecb7a29f1e8cf6bbbb5958ede8072b99ba632b54dfa1ab23b8",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[10]/DIV4[3]/DIV5[3]/DIV8[18]",
+          "quote": "The FLRA assigns a Hearing Officer",
+          "expectedAnswer": "The earlier text says the Regional Director appoints; the later text says the FLRA assigns."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-14",
+      "input": "What phrase did the January 2025 senior-professional rank-award rule use for excluded positions of a policy character?",
+      "relevantIds": [
+        "e766502231bdfb685051c3ec93a6fb1c15046dd3eac94f5bd20106a02447bd97"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:5"
+      ],
+      "evidence": [
+        {
+          "versionId": "ea0b7aa5-01ee-48dc-92ff-ff03d3ebd7ea",
+          "contentHash": "c4dd178a689abecf4f10e0c3fd2120cf13706a74a4b188bb98d170794745e0a5",
+          "passageId": "e766502231bdfb685051c3ec93a6fb1c15046dd3eac94f5bd20106a02447bd97",
+          "inputHash": "465697d4eb3cd4764ea1e13c5e4bf65c900696c3cf951fb6164b6608cafbce3e",
+          "packetEvidenceHash": "258c85d3b4daa6a4cae27adeadcb435320bf2544872dfb7027c7b32926b64f81",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/SUBCHAP[2]/PART[53]/SUBPART[3]/SECTION[2]",
+          "quote": "confidential or policy-determining character",
+          "expectedAnswer": "It used confidential or policy-determining character."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-15",
+      "input": "How did the description of excluded policy positions in senior-professional rank-award eligibility change between the retained 2025 and 2026 versions?",
+      "relevantIds": [
+        "e766502231bdfb685051c3ec93a6fb1c15046dd3eac94f5bd20106a02447bd97",
+        "d046611a494e7e8d686e3c64281397e208599dc9966d522790dad9814d81cf7d"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:5"
+      ],
+      "evidence": [
+        {
+          "versionId": "ea0b7aa5-01ee-48dc-92ff-ff03d3ebd7ea",
+          "contentHash": "c4dd178a689abecf4f10e0c3fd2120cf13706a74a4b188bb98d170794745e0a5",
+          "passageId": "e766502231bdfb685051c3ec93a6fb1c15046dd3eac94f5bd20106a02447bd97",
+          "inputHash": "465697d4eb3cd4764ea1e13c5e4bf65c900696c3cf951fb6164b6608cafbce3e",
+          "packetEvidenceHash": "258c85d3b4daa6a4cae27adeadcb435320bf2544872dfb7027c7b32926b64f81",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/SUBCHAP[2]/PART[53]/SUBPART[3]/SECTION[2]",
+          "quote": "confidential or policy-determining character",
+          "expectedAnswer": "Policy-determining became policy-making; this question asks about exact wording, not an inferred expansion of legal scope."
+        },
+        {
+          "versionId": "de94160c-8636-4723-b916-30f77877f5a2",
+          "contentHash": "a26df763120f2944cc43a2a0112e0c516da04bd4a87573ef0f7a098ad70dc439",
+          "passageId": "d046611a494e7e8d686e3c64281397e208599dc9966d522790dad9814d81cf7d",
+          "inputHash": "a4c7f35ac5c027ef43a2f7a86c13c87f26bfd0db6951d645b0cb36c67c9607b9",
+          "packetEvidenceHash": "9126ba0690879a83a5fc040c33e9b57b2839c81cf9d2604c6b26e1de921f2415",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[53]/DIV6[3]/DIV8[2]",
+          "quote": "confidential or policy-making character",
+          "expectedAnswer": "Policy-determining became policy-making; this question asks about exact wording, not an inferred expansion of legal scope."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-16",
+      "input": "Did EPA’s January 18, 2000 Texas permitting proposal concern attainment areas or new major sources and major modifications in nonattainment areas?",
+      "relevantIds": [
+        "163777e3b3735474a9be7923138e42fa41353c1bc9c8008c991a28f00f0b8935"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:678d2590c29fb29348496890b56c1270525ea927d8b4500ad6afb26095dba37c"
+      ],
+      "evidence": [
+        {
+          "versionId": "f5ab66dd-65fc-4d52-b6bf-18c0e1622649",
+          "contentHash": "a34ee5d1dd2999ac36903cdaba7a1198650070aafc695dff00f09e0206364db8",
+          "passageId": "163777e3b3735474a9be7923138e42fa41353c1bc9c8008c991a28f00f0b8935",
+          "inputHash": "9ef5bcc47d15e80b5298bfaa2e22d350dbfd7facf1000642288b76260752c09c",
+          "packetEvidenceHash": "20024b9ddefd807d3b85c9a26c320f9826f4360182e3b855f3e9e7d2f98860ad",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[4]",
+          "quote": "Comments must be received on or before February 17, 2000.",
+          "expectedAnswer": "It proposed SIP revisions for new major sources and major modifications in nonattainment areas."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-17",
+      "input": "What was the comment deadline for EPA’s January 18, 2000 Texas nonattainment permitting proposal?",
+      "relevantIds": [
+        "163777e3b3735474a9be7923138e42fa41353c1bc9c8008c991a28f00f0b8935"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:678d2590c29fb29348496890b56c1270525ea927d8b4500ad6afb26095dba37c"
+      ],
+      "evidence": [
+        {
+          "versionId": "f5ab66dd-65fc-4d52-b6bf-18c0e1622649",
+          "contentHash": "a34ee5d1dd2999ac36903cdaba7a1198650070aafc695dff00f09e0206364db8",
+          "passageId": "163777e3b3735474a9be7923138e42fa41353c1bc9c8008c991a28f00f0b8935",
+          "inputHash": "9ef5bcc47d15e80b5298bfaa2e22d350dbfd7facf1000642288b76260752c09c",
+          "packetEvidenceHash": "20024b9ddefd807d3b85c9a26c320f9826f4360182e3b855f3e9e7d2f98860ad",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[4]",
+          "quote": "Comments must be received on or before February 17, 2000.",
+          "expectedAnswer": "February 17, 2000."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-18",
+      "input": "Would the January 2000 Coast Guard proposal let a single-hull tank vessel postpone its OPA phase-out date by adding only a double bottom after August 18, 1990?",
+      "relevantIds": [
+        "4dac229813d897f319462bb3c8ddf3a0eaea086648b88ef224b675be5652d1a3"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:b732d7d85480fa32272311f1c653b1e4d815d242faf94eb965c57e1781fa17ab"
+      ],
+      "evidence": [
+        {
+          "versionId": "ea3e6ca5-6cca-4741-a2a5-ac531c20f50e",
+          "contentHash": "4f373ca7df13252af5fd0124efbebe701b33c581460f420a66b00f6406bf713c",
+          "passageId": "4dac229813d897f319462bb3c8ddf3a0eaea086648b88ef224b675be5652d1a3",
+          "inputHash": "2f8237398c3130415934ce32d59b67b12c7684a3834427502894fef9545bd54a",
+          "packetEvidenceHash": "75e36f5f1166f67e10ffdb4ce3ab3f19dc2f01742cc2861092cbc895374658a9",
+          "sourceLocator": "/FEDREG[1]/NEWPART[5]/PRORULES[1]/PRORULE[1]",
+          "quote": "will not change the vessel's scheduled phase-out date under OPA 90.",
+          "expectedAnswer": "No. Adding only a double bottom or only double sides after that date would not change the scheduled phase-out date."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-19",
+      "input": "For the January 2000 single-hull tank-vessel phase-out proposal, by what date did comments have to reach the docket facility?",
+      "relevantIds": [
+        "4dac229813d897f319462bb3c8ddf3a0eaea086648b88ef224b675be5652d1a3"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:b732d7d85480fa32272311f1c653b1e4d815d242faf94eb965c57e1781fa17ab"
+      ],
+      "evidence": [
+        {
+          "versionId": "ea3e6ca5-6cca-4741-a2a5-ac531c20f50e",
+          "contentHash": "4f373ca7df13252af5fd0124efbebe701b33c581460f420a66b00f6406bf713c",
+          "passageId": "4dac229813d897f319462bb3c8ddf3a0eaea086648b88ef224b675be5652d1a3",
+          "inputHash": "2f8237398c3130415934ce32d59b67b12c7684a3834427502894fef9545bd54a",
+          "packetEvidenceHash": "75e36f5f1166f67e10ffdb4ce3ab3f19dc2f01742cc2861092cbc895374658a9",
+          "sourceLocator": "/FEDREG[1]/NEWPART[5]/PRORULES[1]/PRORULE[1]",
+          "quote": "will not change the vessel's scheduled phase-out date under OPA 90.",
+          "expectedAnswer": "April 17, 2000."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-20",
+      "input": "When did the January 2000 Willamette River drawbridge final rule take effect?",
+      "relevantIds": [
+        "457ea95ad634a7d564761f1ea18b8fea9eb04ba1e608fbcf7ed990f9ec5f9637"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:d187a146502115d0955255b712d30492103bb28fda55d64ceee3ac59b05d6bed"
+      ],
+      "evidence": [
+        {
+          "versionId": "dbd8d1e4-9c0e-4953-9b14-5b117f7a886a",
+          "contentHash": "8737708377b1d1f91e3951af2ceb375057eb751ea1e2bdb0e0baaec9663ab9ec",
+          "passageId": "457ea95ad634a7d564761f1ea18b8fea9eb04ba1e608fbcf7ed990f9ec5f9637",
+          "inputHash": "ad1097d4b6a366c35476351b120c1d4393a926fb3f14bae640590637dbf17175",
+          "packetEvidenceHash": "e9d8dc1e1ad434f9bc27b7bb9d94738aa19c10e21cdacc3195b7eca4407b3435",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[8]",
+          "quote": "This final rule is effective on February 17, 2000.",
+          "expectedAnswer": "February 17, 2000, rather than its January 18 publication date."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-21",
+      "input": "Did the Willamette River final rule apply the new Steel Bridge advance-opening notice requirement to both decks?",
+      "relevantIds": [
+        "2757b283ec155ca01c05209c28a3a8eb60633efd68af01b2628a8dc78db4bf1a"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:d187a146502115d0955255b712d30492103bb28fda55d64ceee3ac59b05d6bed"
+      ],
+      "evidence": [
+        {
+          "versionId": "dbd8d1e4-9c0e-4953-9b14-5b117f7a886a",
+          "contentHash": "8737708377b1d1f91e3951af2ceb375057eb751ea1e2bdb0e0baaec9663ab9ec",
+          "passageId": "2757b283ec155ca01c05209c28a3a8eb60633efd68af01b2628a8dc78db4bf1a",
+          "inputHash": "783e6e87ed56b187c8eda70b094954525b977ff471e5d45c58bcf28d9b61d470",
+          "packetEvidenceHash": "e9d8dc1e1ad434f9bc27b7bb9d94738aa19c10e21cdacc3195b7eca4407b3435",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[8]",
+          "quote": "This notice requirement is not applied to the lower deck",
+          "expectedAnswer": "No. It applied to the upper deck; the lower deck was excluded because it is usually raised except for trains."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-22",
+      "input": "What assessment rate did the January 2000 South Texas onion final rule set per 50-pound container, and how did that compare with the previous rate?",
+      "relevantIds": [
+        "b6f9ccc605ff0dba7896f9930bcce585c5e540b62a3d55b86d69db1d066e1acb"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:7ccab59dd05eaf1e77d48a2f7c2c647769d880ca0388c29076c9c09fa21c1d4e"
+      ],
+      "evidence": [
+        {
+          "versionId": "fba75581-a302-4967-af57-2b7d287999d0",
+          "contentHash": "0fff186df007ec84a1fdf93ff1920269e97573b232a76b1bdaa431647adb4435",
+          "passageId": "b6f9ccc605ff0dba7896f9930bcce585c5e540b62a3d55b86d69db1d066e1acb",
+          "inputHash": "11efc1702457a058087da7479733f7cbcb1db6aee0cb9a1502787e23f9f492a5",
+          "packetEvidenceHash": "00c19ed13b27ace52e3dc078709deccaf0f4f30d18e3383e842d98eda9fa23c9",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[2]",
+          "quote": "from $0.05 to $0.04 per 50-pound container",
+          "expectedAnswer": "It decreased the rate from $0.05 to $0.04 per 50-pound container or equivalent."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-23",
+      "input": "Did the South Texas onion rule’s January 19, 2000 effective date mean assessments only applied to onions handled after that date?",
+      "relevantIds": [
+        "b6f9ccc605ff0dba7896f9930bcce585c5e540b62a3d55b86d69db1d066e1acb",
+        "ded4afed821ef0ecfab02dbf97524b97c65101b43b6454336892faef8e6ba033"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:7ccab59dd05eaf1e77d48a2f7c2c647769d880ca0388c29076c9c09fa21c1d4e"
+      ],
+      "evidence": [
+        {
+          "versionId": "fba75581-a302-4967-af57-2b7d287999d0",
+          "contentHash": "0fff186df007ec84a1fdf93ff1920269e97573b232a76b1bdaa431647adb4435",
+          "passageId": "b6f9ccc605ff0dba7896f9930bcce585c5e540b62a3d55b86d69db1d066e1acb",
+          "inputHash": "11efc1702457a058087da7479733f7cbcb1db6aee0cb9a1502787e23f9f492a5",
+          "packetEvidenceHash": "00c19ed13b27ace52e3dc078709deccaf0f4f30d18e3383e842d98eda9fa23c9",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[2]",
+          "quote": "from $0.05 to $0.04 per 50-pound container",
+          "expectedAnswer": "No. The rule was effective January 19, but its stated applicability began August 1, 1999."
+        },
+        {
+          "versionId": "fba75581-a302-4967-af57-2b7d287999d0",
+          "contentHash": "0fff186df007ec84a1fdf93ff1920269e97573b232a76b1bdaa431647adb4435",
+          "passageId": "ded4afed821ef0ecfab02dbf97524b97c65101b43b6454336892faef8e6ba033",
+          "inputHash": "c306c5a95f9174949efedaa31410014937ed380e746b8ac396d20cab1aff8114",
+          "packetEvidenceHash": "00c19ed13b27ace52e3dc078709deccaf0f4f30d18e3383e842d98eda9fa23c9",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[2]",
+          "quote": "applicable to all assessable onions beginning August 1, 1999",
+          "expectedAnswer": "No. The rule was effective January 19, but its stated applicability began August 1, 1999."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-24",
+      "input": "Which OMB control number was assigned to the Medical Device Recall Authority collection in the January 18, 2000 FDA notice?",
+      "relevantIds": [
+        "1c9e759e59cfe5e1a4ad7e9dba342a6303c1a5a713d07d8d5a159d43591384a3"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:a81f8bc3d59c1006f7c2a79b2d0b8b85a967b0929109cf9ba9e5abe1edb8ccd4"
+      ],
+      "evidence": [
+        {
+          "versionId": "9767ee0c-d91b-4ec8-86b4-f5bc1b66c662",
+          "contentHash": "b05e5444f6113e3576f11d9abe965913add0b1820cf36b32e12e8bacf1a72d97",
+          "passageId": "1c9e759e59cfe5e1a4ad7e9dba342a6303c1a5a713d07d8d5a159d43591384a3",
+          "inputHash": "f2d70c86fe5c2680e216c6a2e0688c0b7601987387967958d301556242ef3b59",
+          "packetEvidenceHash": "4d455d80236de3637543fd58000c18255cca7f7349c4156e6deca1024ffbe0ab",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[50]",
+          "quote": "OMB control number 0910-0432",
+          "expectedAnswer": "0910-0432."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-25",
+      "input": "When did the Medical Device Recall Authority information-collection approval announced in January 2000 expire?",
+      "relevantIds": [
+        "1c9e759e59cfe5e1a4ad7e9dba342a6303c1a5a713d07d8d5a159d43591384a3"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:a81f8bc3d59c1006f7c2a79b2d0b8b85a967b0929109cf9ba9e5abe1edb8ccd4"
+      ],
+      "evidence": [
+        {
+          "versionId": "9767ee0c-d91b-4ec8-86b4-f5bc1b66c662",
+          "contentHash": "b05e5444f6113e3576f11d9abe965913add0b1820cf36b32e12e8bacf1a72d97",
+          "passageId": "1c9e759e59cfe5e1a4ad7e9dba342a6303c1a5a713d07d8d5a159d43591384a3",
+          "inputHash": "f2d70c86fe5c2680e216c6a2e0688c0b7601987387967958d301556242ef3b59",
+          "packetEvidenceHash": "4d455d80236de3637543fd58000c18255cca7f7349c4156e6deca1024ffbe0ab",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[50]",
+          "quote": "OMB control number 0910-0432",
+          "expectedAnswer": "December 31, 2002."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-26",
+      "input": "Which OMB control number was assigned to the Humanitarian Use Devices collection in the January 18, 2000 FDA notice?",
+      "relevantIds": [
+        "0ee69037f1f2c7de4f4fa44aa72a340d2bea75834be75068ae6be2c56479137d"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:ba00fe6a7218da345f2fdf263ce63ee58a47cb0e8a4769a5447eff920ef53223"
+      ],
+      "evidence": [
+        {
+          "versionId": "8a93ee5e-4160-4aab-9b59-85c2df40cc86",
+          "contentHash": "5e620dabe653bb24696081e16a35a427596dae1b673127e2b75fd213aa50d69c",
+          "passageId": "0ee69037f1f2c7de4f4fa44aa72a340d2bea75834be75068ae6be2c56479137d",
+          "inputHash": "fee9843a0d342fc7dd4f3042f17b8cee7c54694a1f68067a4540be445553231e",
+          "packetEvidenceHash": "edea2660950f9ff3942bf814a708eca31656f35a7fd50a112e10cadd07edbad1",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[51]",
+          "quote": "OMB control number 0910-0332",
+          "expectedAnswer": "0910-0332."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-27",
+      "input": "Does the FDA humanitarian-use-device notice require responses to an information collection that lacks a currently valid displayed OMB control number?",
+      "relevantIds": [
+        "0ee69037f1f2c7de4f4fa44aa72a340d2bea75834be75068ae6be2c56479137d"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:ba00fe6a7218da345f2fdf263ce63ee58a47cb0e8a4769a5447eff920ef53223"
+      ],
+      "evidence": [
+        {
+          "versionId": "8a93ee5e-4160-4aab-9b59-85c2df40cc86",
+          "contentHash": "5e620dabe653bb24696081e16a35a427596dae1b673127e2b75fd213aa50d69c",
+          "passageId": "0ee69037f1f2c7de4f4fa44aa72a340d2bea75834be75068ae6be2c56479137d",
+          "inputHash": "fee9843a0d342fc7dd4f3042f17b8cee7c54694a1f68067a4540be445553231e",
+          "packetEvidenceHash": "edea2660950f9ff3942bf814a708eca31656f35a7fd50a112e10cadd07edbad1",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[51]",
+          "quote": "OMB control number 0910-0332",
+          "expectedAnswer": "No. It says a person is not required to respond unless a currently valid OMB control number is displayed."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-28",
+      "input": "How many people actually attended DOT’s March 28, 2000 Los Angeles drug-testing listening session?",
+      "relevantIds": [],
+      "answerability": "no_answer",
+      "cohort": "no_answer_in_selected_corpus",
+      "families": [
+        "publication:f9687c603f656bcdf252de4423170b480bd2ba0f951cf908208470ab9f44c44b"
+      ],
+      "evidence": [
+        {
+          "versionId": "9a88203e-bd62-4124-aa21-663260bf54bf",
+          "contentHash": "dd51733d26d9b3c9071490f7253816f1b551e9add3613db6a29dfc5bf05638f9",
+          "passageId": "614e29c41c21d8fe90842ed99a65950053fad9b58103e461f9de1f106e878acc",
+          "inputHash": "066c0fbba32cf36e4372010c925ee712c0e8b4d15f6364aa02bc198e695057d2",
+          "packetEvidenceHash": "fb87b97670616c2aaba39e194308fd2ee07fc2cb2518ea75dd664ebfd539e218",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[5]",
+          "quote": "on March 28, 2000, at the Hilton Los Angeles Airport",
+          "expectedAnswer": "The selected pre-meeting notice announces the session, not its eventual attendance. No attendance outcome is established by this corpus."
+        }
+      ],
+      "judgmentStatus": "automated_no_answer_proposal_requires_full_pool_review"
+    },
+    {
+      "id": "development-29",
+      "input": "On what exact future date would the South Texas onion assessment next be increased after the January 2000 decrease?",
+      "relevantIds": [],
+      "answerability": "no_answer",
+      "cohort": "no_answer_in_selected_corpus",
+      "families": [
+        "publication:7ccab59dd05eaf1e77d48a2f7c2c647769d880ca0388c29076c9c09fa21c1d4e"
+      ],
+      "evidence": [
+        {
+          "versionId": "fba75581-a302-4967-af57-2b7d287999d0",
+          "contentHash": "0fff186df007ec84a1fdf93ff1920269e97573b232a76b1bdaa431647adb4435",
+          "passageId": "b6f9ccc605ff0dba7896f9930bcce585c5e540b62a3d55b86d69db1d066e1acb",
+          "inputHash": "11efc1702457a058087da7479733f7cbcb1db6aee0cb9a1502787e23f9f492a5",
+          "packetEvidenceHash": "00c19ed13b27ace52e3dc078709deccaf0f4f30d18e3383e842d98eda9fa23c9",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[2]",
+          "quote": "from $0.05 to $0.04 per 50-pound container",
+          "expectedAnswer": "The selected rule continues indefinitely unless modified, suspended or terminated; it does not schedule the next increase."
+        }
+      ],
+      "judgmentStatus": "automated_no_answer_proposal_requires_full_pool_review"
+    },
+    {
+      "id": "development-30",
+      "input": "On what date did EPA finally approve the Texas SIP changes proposed in its January 18, 2000 nonattainment permitting notice?",
+      "relevantIds": [],
+      "answerability": "no_answer",
+      "cohort": "no_answer_in_selected_corpus",
+      "families": [
+        "publication:678d2590c29fb29348496890b56c1270525ea927d8b4500ad6afb26095dba37c"
+      ],
+      "evidence": [
+        {
+          "versionId": "f5ab66dd-65fc-4d52-b6bf-18c0e1622649",
+          "contentHash": "a34ee5d1dd2999ac36903cdaba7a1198650070aafc695dff00f09e0206364db8",
+          "passageId": "163777e3b3735474a9be7923138e42fa41353c1bc9c8008c991a28f00f0b8935",
+          "inputHash": "9ef5bcc47d15e80b5298bfaa2e22d350dbfd7facf1000642288b76260752c09c",
+          "packetEvidenceHash": "20024b9ddefd807d3b85c9a26c320f9826f4360182e3b855f3e9e7d2f98860ad",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[4]",
+          "quote": "Comments must be received on or before February 17, 2000.",
+          "expectedAnswer": "The selected record is a proposal. The later final approval is not established by this selected corpus."
+        }
+      ],
+      "judgmentStatus": "automated_no_answer_proposal_requires_full_pool_review"
     }
   ],
   "humanReviewComplete": false,
