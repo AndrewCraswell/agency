@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { createRequire } from "node:module"
 import { z } from "zod"
-import type { EmbeddingRoute } from "./embedding-routing"
+import type { EmbeddingRoute } from "./embedding-routing.js"
 
 export type EmbeddingTokenizer = { id: string; count: (text: string) => number }
 type Model = EmbeddingRoute["model"]

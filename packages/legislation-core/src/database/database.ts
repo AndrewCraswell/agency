@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
-import * as schema from "./schema/schema"
+import * as schema from "./schema/schema.js"
 
 export type DatabaseConfig = Readonly<{
   url: string
