@@ -1,0 +1,747 @@
+{
+  "status": "held_out_queries_recovered_draft",
+  "split": "held-out",
+  "candidateInventoryHash": "41ce5b9398f37278b8100523d93de8d151f7a406591437ca1917d2418fee0b6c",
+  "reviewState": "automated_proposals_require_human_adjudication_before_scoring",
+  "queries": [
+    {
+      "id": "held-out-01",
+      "input": "Who bears the burden of showing whether internal relocation is reasonable when an asylum applicant's persecutor is a government or is government-sponsored?",
+      "relevantIds": [
+        "673c4e13db41aa864fb9068ebeeebeeeb2eb6cd9913320fb155f48352f1366bc"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "7629dba4-ac70-4cdd-993e-2e9e1ee12fff",
+          "contentHash": "01452687cafe69671b682a622f49982d9a6c7eb273056d2d97bc6179668b0399",
+          "passageId": "673c4e13db41aa864fb9068ebeeebeeeb2eb6cd9913320fb155f48352f1366bc",
+          "inputHash": "2ded45580b8a78da8ad157389105d21f6752a1e451adb7e148437ebcac24623f",
+          "packetEvidenceHash": "c7f90d1d80ed4b193886d88e03579a59d55eaf1378776b586a8e19e57ddf9d39",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[2]/DIV4[2]/DIV5[6]/DIV6[1]/DIV8[13]",
+          "quote": "it shall be presumed that internal relocation would not be reasonable, unless the Department of Homeland Security establishes by a preponderance of the evidence",
+          "expectedAnswer": "Relocation is presumed unreasonable, and DHS must establish by a preponderance of the evidence that relocation would be reasonable."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-02",
+      "input": "Which immigration benefits are unavailable to a Libyan national seeking aviation maintenance, flight operations, or nuclear-related training?",
+      "relevantIds": [
+        "a21558bd5f71897927dad1267804372131dfb34ff3652d3649ee83c932decbcf"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "ef7d2d17-7d8a-43fe-9b8a-b25b232560aa",
+          "contentHash": "e1134cbb53b33c032017e6734e6062f51d6c0fa542d9dcc7bbffc2f03f4ce496",
+          "passageId": "a21558bd5f71897927dad1267804372131dfb34ff3652d3649ee83c932decbcf",
+          "inputHash": "aa042607e8216c1fa07bf5781f0e3e3d52afc33a306f839126010e7d5e811f47",
+          "packetEvidenceHash": "dd077d3b3d0011ffe4e169d01e4f265f80e00606fc9d96ff97f5e0de8c3ce54a",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[16]/DIV6[1]/DIV8[5]",
+          "quote": "(1) Application for school transfer.",
+          "expectedAnswer": "School transfer, extension of stay, employment authorization or practical training, reinstatement of student status, and change of nonimmigrant status are unavailable."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-03",
+      "input": "After a district director decides that an alien's status should be adjusted to nonimmigrant status, how long does the alien have to request retention of immigrant status and file the required waiver forms?",
+      "relevantIds": [
+        "d4c78bb116fd0522afdfd8b67d738b575d247784995213690e87589abbdf30af"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "973832a8-c39a-416e-bfaa-2ea4626c3fcb",
+          "contentHash": "19661133ffaae065d4c851c1c92b11071fcece02ff1c0cefbe8c9eee3af44383",
+          "passageId": "d4c78bb116fd0522afdfd8b67d738b575d247784995213690e87589abbdf30af",
+          "inputHash": "86c5cf17048e2544c1024a55785d9b6716ef9a2c78b31a10b5e2fa93616aa191",
+          "packetEvidenceHash": "4650d5a41a0dac428c724f765a241e55600e4f009dffd5dd3330ea156342a747",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[38]/DIV8[3]",
+          "quote": "within 10 days of receipt of notification of such decision",
+          "expectedAnswer": "The alien has 10 days after receiving the decision to request retention of immigrant status and file Form I-508 and, when applicable, Form I-508F."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-04",
+      "input": "When must a nonexempt alien in the United States apply for registration and fingerprinting after turning 14?",
+      "relevantIds": [
+        "4ad15ad35e78c8c0f2ef46c850e6b5bd5eb4507136b7ca1e050d62338a709f0f"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "782e1501-87cd-45da-9793-3de7a5b76823",
+          "contentHash": "902b3bd9ad1b0a70cd1bc66b31ecbd97e7f73629035c81a55b8c1aed990f7851",
+          "passageId": "4ad15ad35e78c8c0f2ef46c850e6b5bd5eb4507136b7ca1e050d62338a709f0f",
+          "inputHash": "7e16539deaeaafb93b4c28cad8cdc83078741582963c744d1bf35f4ef8f33627",
+          "packetEvidenceHash": "118ca6ebe794c8152c79fd3b3bfecbb50d967f1c11e830d0ec4ec3801bb37230",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[46]/DIV8[1]",
+          "quote": "Within 30 days after reaching the age of 14",
+          "expectedAnswer": "The application is due within 30 days after the alien reaches age 14, subject to the stated exemptions and fingerprinting waivers."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-05",
+      "input": "Which two organizations does 8 CFR 319.5 expressly identify as public international organizations in addition to organizations designated under the International Organizations Immunities Act?",
+      "relevantIds": [
+        "a72552ec3095677d897850fc6267235bdf1276a528452326c98fdcb72153f166"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "8508fe30-b6ec-4f9c-8321-ca32d49b41d2",
+          "contentHash": "21ab15469882c0044cb9e03cae1b36e436eee2fb7367352b82d3108431e5b6a5",
+          "passageId": "a72552ec3095677d897850fc6267235bdf1276a528452326c98fdcb72153f166",
+          "inputHash": "698aed13063b54b2996f936bf1f306edcb92359a4352c07f5a5d31304ab6b84f",
+          "packetEvidenceHash": "41260a8263fc4855ec3a91ac61686d3af5da6f1aee336cb3c23891e8d60988d8",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[3]/DIV5[9]/DIV8[5]",
+          "quote": "The North Atlantic Treaty Organization.",
+          "expectedAnswer": "The provision names NATO and the United Nations, including all agencies and organizations that are part of the UN."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-06",
+      "input": "For January 1990 through June 1999, what average monthly earnings amount in 20 CFR 220.143 Table 1 indicated that substantial gainful activity was performed?",
+      "relevantIds": [
+        "3bb65e19f68dd9e6985f9054af7eb55f0645816f2dc87a8e31c1394a2111a65b"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:20"
+      ],
+      "evidence": [
+        {
+          "versionId": "eff259da-07f7-41a6-b51f-ec779240da9d",
+          "contentHash": "c6353989d5c6c19260ace83d83aa8db5f5b5c173c8b0a95a94d871d664abbdc3",
+          "passageId": "3bb65e19f68dd9e6985f9054af7eb55f0645816f2dc87a8e31c1394a2111a65b",
+          "inputHash": "298f36dd19a7a2b142dbfd175cbb9d3fd706585a305057ea2e3f5a77994b6a1a",
+          "packetEvidenceHash": "bcf59cfdc3adbe9d6daeceb1211d92beef850d408f2c432615bec42236349a06",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[2]/DIV4[2]/DIV5[15]/DIV6[12]/DIV8[4]",
+          "quote": "January 1990-June 1999\n500",
+          "expectedAnswer": "Average monthly earnings of more than $500 indicated substantial gainful activity for that period."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-07",
+      "input": "In the Harold example under 20 CFR 404.408, what monthly disability benefit remains after subtracting the state public disability benefit?",
+      "relevantIds": [
+        "fe34d5bad86b2ab649e492d942104a6620a03ce1f2c41dfb05fee58e49d307db"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:20"
+      ],
+      "evidence": [
+        {
+          "versionId": "fd09e218-d672-4696-9242-bf9eec6ff079",
+          "contentHash": "93d661ebd756d22d208806f25a05418e0b7474671d3b698fbe26dfcbd64f0030",
+          "passageId": "fe34d5bad86b2ab649e492d942104a6620a03ce1f2c41dfb05fee58e49d307db",
+          "inputHash": "99616325668b5cce776339d4ef14d9aab48493edbd12ecb18d7adbaf60ac3703",
+          "packetEvidenceHash": "0603a1e77c1ee05d110e76ba4fa07010e0e8e23dc3cf11fa23ff174ab579d429",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[3]/DIV5[5]/DIV6[5]/DIV8[9]",
+          "quote": "This leaves Harold a reduced monthly disability benefit of $390.00.",
+          "expectedAnswer": "The remaining monthly disability benefit is $390.00."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-08",
+      "input": "What total EOIR fee does the fee table list for Form EOIR-42B, excluding any biometrics fee?",
+      "relevantIds": [
+        "d43de7ebf1b81c40c6d222a24c9436ce732e2ac6e0e90a659da42ab1dcff2969"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "5a578f3a-a3db-4421-b637-ca8a296a306e",
+          "contentHash": "7899a3fbacf24604b5d65dbc3e19c38c96a85e804d4b658f0141e19194cb4bf3",
+          "passageId": "d43de7ebf1b81c40c6d222a24c9436ce732e2ac6e0e90a659da42ab1dcff2969",
+          "inputHash": "a93f717df036ad710cd2c1e831b1e1de76c927e8f98de660c0f0975e2d59020b",
+          "packetEvidenceHash": "3728d268cfb0105a2f598dfaada26a0dcd599c60faddff50f23fc1067b56eef2",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[2]/DIV4[2]/DIV5[2]/DIV8[3]",
+          "quote": "Form EOIR-42B, Application for Cancellation of Removal and Adjustment of Status for Certain Nonpermanent Residents\n100\n1,540\n1,640",
+          "expectedAnswer": "The listed total is $1,640, consisting of a $100 EOIR fee and a $1,540 OBBBA fee."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-09",
+      "input": "For the classifications covered by 8 CFR 214.1(l)(1), how much time may be added before and after the petition validity period, and can the alien work during those extra days?",
+      "relevantIds": [
+        "62a39669725b78a59eb1ea12c6a420a3a0039548aaae448f0686353e8d954eec"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "06c46884-86fd-4e72-abdd-adbecdd02cad",
+          "contentHash": "780b5776cd9a78af6da0ff82c14273b9723d3fe15016063025fd78d77d14f81b",
+          "passageId": "62a39669725b78a59eb1ea12c6a420a3a0039548aaae448f0686353e8d954eec",
+          "inputHash": "0e6ecbeab8bec2952301ecbfe84148b8901b14cc5f14221d6a204d0d8c31ccb0",
+          "packetEvidenceHash": "fc1e867fc658730ad209d6f7150501e45331f73d2df5b4ef4efd73b26c8c96bb",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[16]/DIV6[1]/DIV8[1]",
+          "quote": "up to 10 days before the validity period begins and 10 days after the validity period ends",
+          "expectedAnswer": "Up to 10 days may be added before and after. The alien may work only during the validity period unless separately authorized under 8 CFR 274a.12."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-10",
+      "input": "How long are certain newly legalized temporary residents generally disqualified from the listed federally financed assistance programs, and which entrant groups are expressly excepted?",
+      "relevantIds": [
+        "10ddc31515613ee1498f58c81b8dcf60ac25f90281575852dcdd716f618412df"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:8"
+      ],
+      "evidence": [
+        {
+          "versionId": "b0eb5e76-a1b2-468e-a44a-8f12b708c09e",
+          "contentHash": "e49d179abb6c85a89ebde3465a6f94fc54ec592057e5005e657a9e53a0a3fe09",
+          "passageId": "10ddc31515613ee1498f58c81b8dcf60ac25f90281575852dcdd716f618412df",
+          "inputHash": "4c4ce15a9719233a851f01f5dc61cfb6599ced9a0bb4be104621a7b51e338daf",
+          "packetEvidenceHash": "781fc1d9efe4293a26618572e0d8f3d09bb7b3cac7881c09fb68cfa9d9911ead",
+          "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[36]/DIV6[1]/DIV8[5]",
+          "quote": "is ineligible, for a period of five years from the date such status was obtained",
+          "expectedAnswer": "The general disqualification lasts five years. Cuban or Haitian entrants are excepted, as is specified assistance for an aged, blind, or disabled individual."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-11",
+      "input": "In the January 1, 2023 annual edition of 6 CFR 37.5, on what date would federal agencies stop accepting noncompliant driver's licenses for official purposes?",
+      "relevantIds": [
+        "1a175e133cdbe4dd23b291310b9c76d76d15af82aebef32b419c949a72819b25"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:6"
+      ],
+      "evidence": [
+        {
+          "versionId": "6fb34d43-3bd0-4e91-b3ea-2ec75cf736bb",
+          "contentHash": "7953581624958d55bbc8c41c77365f2a67376347973df8206f1db6f87f046a15",
+          "passageId": "1a175e133cdbe4dd23b291310b9c76d76d15af82aebef32b419c949a72819b25",
+          "inputHash": "4cdffa65f46514abc042742b66f9edaf5e3e68b13f3b44f5be053531b1963202",
+          "packetEvidenceHash": "e6687d24ba483ad4365af9376c2bc65d9712ea66dd9753d9162ad57c5637bbbb",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[1]/SECTION[3]",
+          "quote": "On or after May 3, 2023",
+          "expectedAnswer": "The 2023 annual edition states May 3, 2023."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-12",
+      "input": "In the January 1, 2024 annual edition of 6 CFR 37.5, on what date would federal agencies stop accepting noncompliant driver's licenses for official purposes?",
+      "relevantIds": [
+        "4ffe9c15c226124439cb5353d2b784b175eeebcfce1631651b0484f58763cb82"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:6"
+      ],
+      "evidence": [
+        {
+          "versionId": "9e4dc392-7f61-4d8a-965c-15da978637dc",
+          "contentHash": "803a80f5c0d2a668c9e2fc8034b7e52cd81214bd97d1e19c66ec4419cad991d4",
+          "passageId": "4ffe9c15c226124439cb5353d2b784b175eeebcfce1631651b0484f58763cb82",
+          "inputHash": "d6ef04a6bb6cf1be3db301a2489f12877e4141a29710c90179397e7b5584c328",
+          "packetEvidenceHash": "7ccc43c08a0d1c73cd1495252a63fa0e0066b5d6c51a45803be721da5dc51f14",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[1]/SECTION[4]",
+          "quote": "On or after May 7, 2025",
+          "expectedAnswer": "The 2024 annual edition states May 7, 2025."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-13",
+      "input": "How did the REAL ID federal acceptance deadline change between the January 1, 2023 and January 1, 2024 annual editions of 6 CFR 37.5?",
+      "relevantIds": [
+        "1a175e133cdbe4dd23b291310b9c76d76d15af82aebef32b419c949a72819b25",
+        "4ffe9c15c226124439cb5353d2b784b175eeebcfce1631651b0484f58763cb82"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:6"
+      ],
+      "evidence": [
+        {
+          "versionId": "6fb34d43-3bd0-4e91-b3ea-2ec75cf736bb",
+          "contentHash": "7953581624958d55bbc8c41c77365f2a67376347973df8206f1db6f87f046a15",
+          "passageId": "1a175e133cdbe4dd23b291310b9c76d76d15af82aebef32b419c949a72819b25",
+          "inputHash": "4cdffa65f46514abc042742b66f9edaf5e3e68b13f3b44f5be053531b1963202",
+          "packetEvidenceHash": "e6687d24ba483ad4365af9376c2bc65d9712ea66dd9753d9162ad57c5637bbbb",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[1]/SECTION[3]",
+          "quote": "On or after May 3, 2023",
+          "expectedAnswer": "The 2023 annual edition used May 3, 2023."
+        },
+        {
+          "versionId": "9e4dc392-7f61-4d8a-965c-15da978637dc",
+          "contentHash": "803a80f5c0d2a668c9e2fc8034b7e52cd81214bd97d1e19c66ec4419cad991d4",
+          "passageId": "4ffe9c15c226124439cb5353d2b784b175eeebcfce1631651b0484f58763cb82",
+          "inputHash": "d6ef04a6bb6cf1be3db301a2489f12877e4141a29710c90179397e7b5584c328",
+          "packetEvidenceHash": "7ccc43c08a0d1c73cd1495252a63fa0e0066b5d6c51a45803be721da5dc51f14",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[1]/SECTION[4]",
+          "quote": "On or after May 7, 2025",
+          "expectedAnswer": "The 2024 annual edition moved the deadline to May 7, 2025."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-14",
+      "input": "Which barcode standard did the January 1, 2023 annual edition of 6 CFR 37.19 require, and where did that edition say a copy could be inspected at DHS?",
+      "relevantIds": [
+        "f3a3a986f2011dd9d7a9bb2e2b47c0fda66c814fcf825d8fe1975343e36c020a"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:6"
+      ],
+      "evidence": [
+        {
+          "versionId": "59587622-7d4b-4f1a-a4a0-70713eab5810",
+          "contentHash": "9ffda8fc9490f7e8838d05c0083d6641c30459e8b58046379d863df1d4c20124",
+          "passageId": "f3a3a986f2011dd9d7a9bb2e2b47c0fda66c814fcf825d8fe1975343e36c020a",
+          "inputHash": "32e79aa88e86b18385b6829dd9586b4219742708e653ba72adff0f35dba27df0",
+          "packetEvidenceHash": "ae94580adb37a54112ac56650865252d3f0e4a476a71c54c00c2cfb33c1141ec",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[2]/SECTION[5]",
+          "quote": "Department of Homeland Security, 1621 Kent Street, 9th Floor, Rosslyn, VA",
+          "expectedAnswer": "It required ISO/IEC 15438:2006(E), the PDF417 specification, and identified DHS at 1621 Kent Street, 9th Floor, Rosslyn, Virginia for inspection by appointment."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-15",
+      "input": "What changed in the incorporation-by-reference wording for the PDF417 standard between the 2023 and 2024 annual editions of 6 CFR 37.19?",
+      "relevantIds": [
+        "f3a3a986f2011dd9d7a9bb2e2b47c0fda66c814fcf825d8fe1975343e36c020a",
+        "9d8f8b35934b9816c236a5b771d815ff65b7ff4db6ac4da8dc119420f5dabe14"
+      ],
+      "cohort": "annual_history_version_selection",
+      "families": [
+        "code:6"
+      ],
+      "evidence": [
+        {
+          "versionId": "59587622-7d4b-4f1a-a4a0-70713eab5810",
+          "contentHash": "9ffda8fc9490f7e8838d05c0083d6641c30459e8b58046379d863df1d4c20124",
+          "passageId": "f3a3a986f2011dd9d7a9bb2e2b47c0fda66c814fcf825d8fe1975343e36c020a",
+          "inputHash": "32e79aa88e86b18385b6829dd9586b4219742708e653ba72adff0f35dba27df0",
+          "packetEvidenceHash": "ae94580adb37a54112ac56650865252d3f0e4a476a71c54c00c2cfb33c1141ec",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[2]/SECTION[5]",
+          "quote": "The Director of the Federal Register approves this incorporation by reference",
+          "expectedAnswer": "The 2023 edition included the approval, availability, and inspection details in section 37.19."
+        },
+        {
+          "versionId": "20d41975-10e5-42a2-bf3e-7e524eda9970",
+          "contentHash": "660e52457ca5cacedc40aeddab5742690cfc1518068b619de77077f9d48c87ec",
+          "passageId": "9d8f8b35934b9816c236a5b771d815ff65b7ff4db6ac4da8dc119420f5dabe14",
+          "inputHash": "afb02c12ffaf6f480046573b6b75e48d23c72268bba1113154e5b0c3f1b3727a",
+          "packetEvidenceHash": "6f2e393a802641e1a5b4bbcd364c180284ba9e00d2f5cca6177406746fde95f3",
+          "sourceLocator": "/CFRDOC[1]/TITLE[1]/CHAPTER[1]/PART[16]/SUBPART[2]/SECTION[5]",
+          "quote": "incorporated by reference; see § 37.4",
+          "expectedAnswer": "The 2024 edition shortened the provision and directed readers to section 37.4 for incorporation-by-reference details."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-16",
+      "input": "Why did EPA propose to disapprove South Coast Air Quality Management District Rule 1623?",
+      "relevantIds": [
+        "aa524359450f557e042921d1db1322a9c282bd0eb18136a26fadbc136bc2c9e4"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:884a015ab78b4b7a036c491202a498e4919b7a4e16e97466ecce0dcbf945ff0f"
+      ],
+      "evidence": [
+        {
+          "versionId": "fd9a9a98-7d87-4139-9ce3-8aed10cc4248",
+          "contentHash": "6f10e9e05e98b4ad919ced44cd2235112c60f339f05daf4cc2feae67236a502a",
+          "passageId": "aa524359450f557e042921d1db1322a9c282bd0eb18136a26fadbc136bc2c9e4",
+          "inputHash": "6f442c288cfe4e2ab640d099bd29ecd0ebe9e4104893ec3afb17b4f928e14d07",
+          "packetEvidenceHash": "12790bea87cf87232669b3c27bf33ccad1906c83bf31a9b8c455fe1d31bdc032",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[3]",
+          "quote": "The lack of real, quantifiable, enforceable, and surplus emission reductions generated under the program",
+          "expectedAnswer": "EPA cited the lack of real, quantifiable, enforceable, and surplus reductions, the absence of a program-effectiveness review mechanism, excessive Executive Officer discretion, and no demonstration of accelerated equipment retirement."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-17",
+      "input": "What was the public comment deadline for EPA's proposed disapproval of SCAQMD Rule 1623?",
+      "relevantIds": [
+        "4099be521a11794360e354a73bee330633a8c8040045c09c6093da894c67c0fe"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:884a015ab78b4b7a036c491202a498e4919b7a4e16e97466ecce0dcbf945ff0f"
+      ],
+      "evidence": [
+        {
+          "versionId": "fd9a9a98-7d87-4139-9ce3-8aed10cc4248",
+          "contentHash": "6f10e9e05e98b4ad919ced44cd2235112c60f339f05daf4cc2feae67236a502a",
+          "passageId": "4099be521a11794360e354a73bee330633a8c8040045c09c6093da894c67c0fe",
+          "inputHash": "3ebeeda17b903034295df01affda83ddd4ddc937af101d3fe64cb6177c801e4c",
+          "packetEvidenceHash": "12790bea87cf87232669b3c27bf33ccad1906c83bf31a9b8c455fe1d31bdc032",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[3]",
+          "quote": "Comments must be received on or before February 2, 2000.",
+          "expectedAnswer": "Comments were due on or before February 2, 2000."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-18",
+      "input": "What unsafe condition prompted the FAA's proposed directive for specified McDonnell Douglas MD-80 and MD-90 aircraft?",
+      "relevantIds": [
+        "775ae859a5c70a635d57baa1b5df9730b556c7e9a1a13b20d372004c4aac4ef8"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:2115fd1a0b9431605f83b5ae88c5795ec4d150afb85a08a92408b02991085478"
+      ],
+      "evidence": [
+        {
+          "versionId": "3aab8e05-1817-4021-a771-0934f25d4670",
+          "contentHash": "0971d0374cf5c01459ebf281e2e7ba2fb58b1aecb115895caa34829b50c27169",
+          "passageId": "775ae859a5c70a635d57baa1b5df9730b556c7e9a1a13b20d372004c4aac4ef8",
+          "inputHash": "f111db1c1babea1d422ef0847c610ae0f54c4d3209202ea409d15bbcc7b5bf1f",
+          "packetEvidenceHash": "9faee9671a0229aab9e4bd9f0616cf2f748b823dc0d48b45e7a856e9a23b3dc8",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[1]",
+          "quote": "hydraulic fluid leaking into the APU inlet, and subsequently, into the air conditioning system",
+          "expectedAnswer": "Fatigue vibration and cracking could let hydraulic fluid leak into the APU inlet and then the air-conditioning system, causing smoke and odors in the passenger cabin or cockpit."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-19",
+      "input": "Within what proposed compliance period would affected aircraft need the thicker hydraulic pipe and the APU-area drain and diverter assemblies?",
+      "relevantIds": [
+        "235bf8689d09b08f78307402990152a66c719ade9a2043502ca0f2c5eaca1eae"
+      ],
+      "cohort": "proposed_rules",
+      "families": [
+        "publication:2115fd1a0b9431605f83b5ae88c5795ec4d150afb85a08a92408b02991085478"
+      ],
+      "evidence": [
+        {
+          "versionId": "3aab8e05-1817-4021-a771-0934f25d4670",
+          "contentHash": "0971d0374cf5c01459ebf281e2e7ba2fb58b1aecb115895caa34829b50c27169",
+          "passageId": "235bf8689d09b08f78307402990152a66c719ade9a2043502ca0f2c5eaca1eae",
+          "inputHash": "f2e5feb28c6ac4459466f02c20f07a7f77b4213131526c1955b6d78e47b61913",
+          "packetEvidenceHash": "9faee9671a0229aab9e4bd9f0616cf2f748b823dc0d48b45e7a856e9a23b3dc8",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[1]",
+          "quote": "Within 18 months after the effective date of this AD",
+          "expectedAnswer": "Both actions were proposed within 18 months after the directive's effective date, subject to the aircraft-specific applicability and concurrency provisions."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-20",
+      "input": "When did the Puerto Rico Class E airspace final rule take effect, and which warning areas did its summary say were added?",
+      "relevantIds": [
+        "7e3f427c3f6441718490c884e51d1127ba955d05db8d639b1e92f8dda8860ff8"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:f9e8116aacaf6ef56aba8405a8c7e3731bd8cdd32c9d6f1a97cbd9b7fbbed210"
+      ],
+      "evidence": [
+        {
+          "versionId": "130f2d80-6ca1-472c-b1e6-dd87a485328d",
+          "contentHash": "6495325294220dc6c40f90a6629adbce3e7fa48b4ce8195a92e5420ccc2aec38",
+          "passageId": "7e3f427c3f6441718490c884e51d1127ba955d05db8d639b1e92f8dda8860ff8",
+          "inputHash": "d7c521a7deb91b5024fd9c436cd94bd70e7b5b848c085c8471937ade83447f9b",
+          "packetEvidenceHash": "3a92836abf7cb3cd9d3ceb15a1f851cf238846481e0ca63de3c5990ef00efb51",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[6]",
+          "quote": "0901 UTC, April 20, 2000.",
+          "expectedAnswer": "It took effect at 0901 UTC on April 20, 2000, and the summary identifies Warning Areas W-370A, W-373A, and W-373C."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-21",
+      "input": "Which warning area is excluded from the revised Puerto Rico Class E airspace boundary?",
+      "relevantIds": [
+        "3d27b45fb95d677977a29b3195ba2124790dbb35219ff17996ccd81cef3663c2"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:f9e8116aacaf6ef56aba8405a8c7e3731bd8cdd32c9d6f1a97cbd9b7fbbed210"
+      ],
+      "evidence": [
+        {
+          "versionId": "130f2d80-6ca1-472c-b1e6-dd87a485328d",
+          "contentHash": "6495325294220dc6c40f90a6629adbce3e7fa48b4ce8195a92e5420ccc2aec38",
+          "passageId": "3d27b45fb95d677977a29b3195ba2124790dbb35219ff17996ccd81cef3663c2",
+          "inputHash": "d6c7471e1ceab8f183462a4270ee513c9b48a160e10976a0114ef9a822745146",
+          "packetEvidenceHash": "3a92836abf7cb3cd9d3ceb15a1f851cf238846481e0ca63de3c5990ef00efb51",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[6]",
+          "quote": "excluding that airspace within Warning Area W-371",
+          "expectedAnswer": "Warning Area W-371 is excluded."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-22",
+      "input": "What made the Brownsville Hospital Heliport Class E airspace final rule necessary, and when did it take effect?",
+      "relevantIds": [
+        "167f54020e831d9142f807b50bcb2360d422bf7d040e6554d800ad2e9dfbd8f7"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:cd4bfa1f8f5ccd0d942511aa83d0d9bb3ebe23a654278ffcd09df22d975d1fc7"
+      ],
+      "evidence": [
+        {
+          "versionId": "9b46712f-69e1-4448-bfb4-12a547f57c4a",
+          "contentHash": "09e49b9c6794a99714af722575215c8c8adc65920bf4a69ba351e33927a7f6d9",
+          "passageId": "167f54020e831d9142f807b50bcb2360d422bf7d040e6554d800ad2e9dfbd8f7",
+          "inputHash": "da11030fbcb17514ae228dfc47b169976b714c14956d819d74ef4c8fa4da7def",
+          "packetEvidenceHash": "e514ca99b395b7a76cba1dfc9d874b28aecafba147dde741edeb0236553ad1b1",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[7]",
+          "quote": "Development of a Standard Instrument Approach Procedure (SIAP), 294 Helicopter Point in Space approach has made this action necessary.",
+          "expectedAnswer": "A new helicopter point-in-space standard instrument approach made controlled airspace necessary. The rule took effect at 0901 UTC on February 8, 2000."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-23",
+      "input": "What horizontal radius and lower altitude define the Brownsville Hospital Heliport Class E airspace in the final rule?",
+      "relevantIds": [
+        "a97dacedcc6d8d6712e575cd0a884bd7ea8236a211223ee82539cc041e8bc9ee"
+      ],
+      "cohort": "final_rules",
+      "families": [
+        "publication:cd4bfa1f8f5ccd0d942511aa83d0d9bb3ebe23a654278ffcd09df22d975d1fc7"
+      ],
+      "evidence": [
+        {
+          "versionId": "9b46712f-69e1-4448-bfb4-12a547f57c4a",
+          "contentHash": "09e49b9c6794a99714af722575215c8c8adc65920bf4a69ba351e33927a7f6d9",
+          "passageId": "a97dacedcc6d8d6712e575cd0a884bd7ea8236a211223ee82539cc041e8bc9ee",
+          "inputHash": "fed6b8db0950b5fdf1bbb196d8b9f3c4e846e9f471abaf9560fad18d8e97024c",
+          "packetEvidenceHash": "e514ca99b395b7a76cba1dfc9d874b28aecafba147dde741edeb0236553ad1b1",
+          "sourceLocator": "/FEDREG[1]/RULES[1]/RULE[7]",
+          "quote": "extending upward from 700 feet above the surface within a 6 mile radius",
+          "expectedAnswer": "The airspace extends upward from 700 feet above the surface within a six-mile radius of the heliport."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-24",
+      "input": "When and where was the Shipping Coordinating Committee's stability and fishing-vessel-safety working group scheduled to meet?",
+      "relevantIds": [
+        "cc5fdf15b256b513d7fd482ee4468c8a434fe5a54a7f869e77d60844fa698674"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:0dc0cf6c401c5cddd156408159dfeb966da0b0e7a6bfb13ef92815ff6150aaf5"
+      ],
+      "evidence": [
+        {
+          "versionId": "3b577ce6-fcd2-4544-aee0-d5fb31b4b9b3",
+          "contentHash": "bf15518f953ea48ccd22736ab042b728ab3121fb9b0437ab834f74ac2fb8f5c8",
+          "passageId": "cc5fdf15b256b513d7fd482ee4468c8a434fe5a54a7f869e77d60844fa698674",
+          "inputHash": "abf9bf9722c7c55c03a006a568cd6fa976903d28ac659dba103ad385cfe16bca",
+          "packetEvidenceHash": "9d47ccf884bdcecd2340adbf7d9b34f334de10e7a729ef279f01addd32bbab9d",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[83]",
+          "quote": "at 9 a.m. on Monday, January 31, 2000, in Room 6103, at U.S. Coast Guard Headquarters",
+          "expectedAnswer": "The open meeting was scheduled for 9 a.m. Monday, January 31, 2000, in Room 6103 at U.S. Coast Guard Headquarters, 2100 Second Street SW, Washington, DC."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-25",
+      "input": "Which two vessel-safety codes or guidelines were listed for discussion at the January 31, 2000 Shipping Coordinating Committee meeting?",
+      "relevantIds": [
+        "cc5fdf15b256b513d7fd482ee4468c8a434fe5a54a7f869e77d60844fa698674"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:0dc0cf6c401c5cddd156408159dfeb966da0b0e7a6bfb13ef92815ff6150aaf5"
+      ],
+      "evidence": [
+        {
+          "versionId": "3b577ce6-fcd2-4544-aee0-d5fb31b4b9b3",
+          "contentHash": "bf15518f953ea48ccd22736ab042b728ab3121fb9b0437ab834f74ac2fb8f5c8",
+          "passageId": "cc5fdf15b256b513d7fd482ee4468c8a434fe5a54a7f869e77d60844fa698674",
+          "inputHash": "abf9bf9722c7c55c03a006a568cd6fa976903d28ac659dba103ad385cfe16bca",
+          "packetEvidenceHash": "9d47ccf884bdcecd2340adbf7d9b34f334de10e7a729ef279f01addd32bbab9d",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[83]",
+          "quote": "Revision of the High Speed Craft Code",
+          "expectedAnswer": "The agenda listed revision of the High Speed Craft Code and revisions to the Fishing Vessel Safety Code and Voluntary Guidelines."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-26",
+      "input": "How much in unpaid freight charges did Kawasaki Kisen Kaisha allege, and what other conduct did it accuse Intercontinental Exchange of?",
+      "relevantIds": [
+        "584edfb391a1044956964883953eb5634eaf1b80a950a1da83bd485449b1d573"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:f9cb1c2e886e4d0f7b9d93e0ff831c953a235fdb5e3727ce39aaa5a7058804ef"
+      ],
+      "evidence": [
+        {
+          "versionId": "e5f16684-655e-463d-88f6-4d109abf32b4",
+          "contentHash": "fb8bafdda420887bac9c3385610a619b73b878c6cdc883d525e06b5e4e66a767",
+          "passageId": "584edfb391a1044956964883953eb5634eaf1b80a950a1da83bd485449b1d573",
+          "inputHash": "b9a7baf5d4f252f33093baf81b9f4710bae3bb578ca6a09d3bb270011a1d6e96",
+          "packetEvidenceHash": "acbe810ec119f65a72a3aa10a014b95b52ef898c4e1d33df3e839bbc08f3e071",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[42]",
+          "quote": "in the amount of $265,126.23",
+          "expectedAnswer": "The complaint alleged $265,126.23 in unpaid freight charges, false representations, checks issued without funds, and false wire-transfer requests."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-27",
+      "input": "What deadlines did the Federal Maritime Commission notice set for the initial and final decisions in Kawasaki Kisen Kaisha v. Intercontinental Exchange?",
+      "relevantIds": [
+        "584edfb391a1044956964883953eb5634eaf1b80a950a1da83bd485449b1d573"
+      ],
+      "cohort": "notices_scope_and_deadlines",
+      "families": [
+        "publication:f9cb1c2e886e4d0f7b9d93e0ff831c953a235fdb5e3727ce39aaa5a7058804ef"
+      ],
+      "evidence": [
+        {
+          "versionId": "e5f16684-655e-463d-88f6-4d109abf32b4",
+          "contentHash": "fb8bafdda420887bac9c3385610a619b73b878c6cdc883d525e06b5e4e66a767",
+          "passageId": "584edfb391a1044956964883953eb5634eaf1b80a950a1da83bd485449b1d573",
+          "inputHash": "b9a7baf5d4f252f33093baf81b9f4710bae3bb578ca6a09d3bb270011a1d6e96",
+          "packetEvidenceHash": "acbe810ec119f65a72a3aa10a014b95b52ef898c4e1d33df3e839bbc08f3e071",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[42]",
+          "quote": "the initial decision of the presiding officer in this proceeding shall be issued by January 8, 2001, and the final decision of the Commission shall be issued by May 8, 2001.",
+          "expectedAnswer": "The initial decision was due by January 8, 2001, and the Commission's final decision by May 8, 2001."
+        }
+      ],
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "held-out-28",
+      "input": "How many members of the public actually attended the January 31, 2000 Shipping Coordinating Committee meeting?",
+      "relevantIds": [],
+      "answerability": "no_answer",
+      "cohort": "no_answer_in_selected_corpus",
+      "families": [
+        "publication:0dc0cf6c401c5cddd156408159dfeb966da0b0e7a6bfb13ef92815ff6150aaf5"
+      ],
+      "evidence": [
+        {
+          "versionId": "3b577ce6-fcd2-4544-aee0-d5fb31b4b9b3",
+          "contentHash": "bf15518f953ea48ccd22736ab042b728ab3121fb9b0437ab834f74ac2fb8f5c8",
+          "passageId": "cc5fdf15b256b513d7fd482ee4468c8a434fe5a54a7f869e77d60844fa698674",
+          "inputHash": "abf9bf9722c7c55c03a006a568cd6fa976903d28ac659dba103ad385cfe16bca",
+          "packetEvidenceHash": "9d47ccf884bdcecd2340adbf7d9b34f334de10e7a729ef279f01addd32bbab9d",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[83]",
+          "quote": "Members of the public may attend this meeting up to the seating capacity of the room.",
+          "expectedAnswer": "The selected notice announces the future meeting and permits attendance but does not report actual attendance."
+        }
+      ],
+      "judgmentStatus": "automated_no_answer_proposal_requires_full_pool_review"
+    },
+    {
+      "id": "held-out-29",
+      "input": "Did the Federal Maritime Commission ultimately find that Intercontinental Exchange violated the Shipping Act, and what damages did it award?",
+      "relevantIds": [],
+      "answerability": "no_answer",
+      "cohort": "no_answer_in_selected_corpus",
+      "families": [
+        "publication:f9cb1c2e886e4d0f7b9d93e0ff831c953a235fdb5e3727ce39aaa5a7058804ef"
+      ],
+      "evidence": [
+        {
+          "versionId": "e5f16684-655e-463d-88f6-4d109abf32b4",
+          "contentHash": "fb8bafdda420887bac9c3385610a619b73b878c6cdc883d525e06b5e4e66a767",
+          "passageId": "584edfb391a1044956964883953eb5634eaf1b80a950a1da83bd485449b1d573",
+          "inputHash": "b9a7baf5d4f252f33093baf81b9f4710bae3bb578ca6a09d3bb270011a1d6e96",
+          "packetEvidenceHash": "acbe810ec119f65a72a3aa10a014b95b52ef898c4e1d33df3e839bbc08f3e071",
+          "sourceLocator": "/FEDREG[1]/NOTICES[1]/NOTICE[42]",
+          "quote": "Notice is given that a complaint was filed",
+          "expectedAnswer": "The selected record is only a complaint-filing and assignment notice. It does not establish a final liability finding or damages award."
+        }
+      ],
+      "judgmentStatus": "automated_no_answer_proposal_requires_full_pool_review"
+    },
+    {
+      "id": "held-out-30",
+      "input": "Did EPA ultimately disapprove SCAQMD Rule 1623, and on what date did any final disapproval take effect?",
+      "relevantIds": [],
+      "answerability": "no_answer",
+      "cohort": "no_answer_in_selected_corpus",
+      "families": [
+        "publication:884a015ab78b4b7a036c491202a498e4919b7a4e16e97466ecce0dcbf945ff0f"
+      ],
+      "evidence": [
+        {
+          "versionId": "fd9a9a98-7d87-4139-9ce3-8aed10cc4248",
+          "contentHash": "6f10e9e05e98b4ad919ced44cd2235112c60f339f05daf4cc2feae67236a502a",
+          "passageId": "4099be521a11794360e354a73bee330633a8c8040045c09c6093da894c67c0fe",
+          "inputHash": "3ebeeda17b903034295df01affda83ddd4ddc937af101d3fe64cb6177c801e4c",
+          "packetEvidenceHash": "12790bea87cf87232669b3c27bf33ccad1906c83bf31a9b8c455fe1d31bdc032",
+          "sourceLocator": "/FEDREG[1]/PRORULES[1]/PRORULE[3]",
+          "quote": "The EPA is proposing to disapprove Rule 1623",
+          "expectedAnswer": "The selected record is a proposed rule and does not establish whether or when EPA later issued a final disapproval."
+        }
+      ],
+      "judgmentStatus": "automated_no_answer_proposal_requires_full_pool_review"
+    }
+  ]
+}

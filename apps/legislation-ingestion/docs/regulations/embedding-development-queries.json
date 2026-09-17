@@ -1,13 +1,13 @@
 {
-  "status": "development_queries_draft",
+  "status": "development_queries_recovered_draft",
   "split": "development",
-  "candidateInventoryHash": "6c70ffe9bf936a258404f1ede8f3e2ef164e1849af65c5a21500d8992521b1a9",
+  "candidateInventoryHash": "41ce5b9398f37278b8100523d93de8d151f7a406591437ca1917d2418fee0b6c",
   "queries": [
     {
       "id": "development-01",
       "input": "When does a local union become large enough to have to keep the records needed for EEO-3 reporting?",
       "relevantIds": [
-        "dfefef396926ded4c7624a35bf92c241e4abad5aadc00ab28a1af8c76f8017c5"
+        "27c10d2356f238c2ce28f3cdd63126f9cc0f89bdc3aedd9779059c9003622b83"
       ],
       "cohort": "current_prose",
       "families": [
@@ -15,11 +15,11 @@
       ],
       "evidence": [
         {
-          "versionId": "28fe7bb7-0366-42b1-811a-0f1ff129cfa3",
+          "versionId": "8a24f0b8-ab73-4c51-a550-3dbcbc533ae8",
           "contentHash": "43c5cbbfc0f56388a4c53bd85cad6f602f38d9c7dbc11c977b9477ddbc0b82cc",
-          "passageId": "dfefef396926ded4c7624a35bf92c241e4abad5aadc00ab28a1af8c76f8017c5",
+          "passageId": "27c10d2356f238c2ce28f3cdd63126f9cc0f89bdc3aedd9779059c9003622b83",
           "inputHash": "43281b2c38b95a9a657ac9945c625506da365069ed3f9651e5b780e54c4fa75a",
-          "packetEvidenceHash": "1826bda13b9b0c5494d991f9664ee536f9a2ac0feb38ad46d65bd569ca758ee7",
+          "packetEvidenceHash": "92f884b58cdfc24137bdf127119213764865d5bfdc5f1ee99706cc18a16b5165",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[9]/DIV5[3]/DIV6[7]/DIV8[1]",
           "quote": "Every local, independent, or unaffiliated union with 100 or more members",
           "expectedAnswer": "The threshold is 100 members; the provision also addresses agents responsible for employment referrals."
@@ -31,7 +31,7 @@
       "id": "development-02",
       "input": "Which agricultural employment exemption covers overtime only, and which can cover both minimum wage and overtime?",
       "relevantIds": [
-        "f59e4cfe3d113d155215f0b91a2818d9fcb10ac949dd3083d008fb49c1c4c0e9"
+        "ed960db1b7ddf2da5dbf92b963fa981830889c7763386fa69608832a73674b9d"
       ],
       "cohort": "current_prose",
       "families": [
@@ -39,11 +39,11 @@
       ],
       "evidence": [
         {
-          "versionId": "5b48fc32-0ae4-471e-8758-a7ab71cdc41f",
+          "versionId": "710b5cd8-c2af-4b96-bafb-6172f9b06cac",
           "contentHash": "4f651f7267680f22aaf6cc808866cad384cbf5c7dda575a61bc7f235a3a8167e",
-          "passageId": "f59e4cfe3d113d155215f0b91a2818d9fcb10ac949dd3083d008fb49c1c4c0e9",
+          "passageId": "ed960db1b7ddf2da5dbf92b963fa981830889c7763386fa69608832a73674b9d",
           "inputHash": "f2f2e956969aca71c60530e6f2edf27fe653f4b84db67450264700d3af6c8ac7",
-          "packetEvidenceHash": "1b92ff98c2c0de358d1ef38c18d83a0efc07e9cc2fa72dd240e5bcbaf3239db9",
+          "packetEvidenceHash": "96ff322b440907c381415d968b0819a37fbfc4d14f7443d0d46b0cc24d2eb9c7",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[5]/DIV4[2]/DIV5[5]/DIV6[2]/DIV7[1]/DIV8[1]",
           "quote": "Section 13(b)(12) provides an overtime exemption for any employee employed in agriculture.",
           "expectedAnswer": "Section 13(b)(12) is overtime-only; section 13(a)(6) covers minimum wage and overtime for certain agricultural employees."
@@ -55,7 +55,7 @@
       "id": "development-03",
       "input": "Are routine minor tool adjustments during production exempt from lockout requirements even when no alternative protective measures are used?",
       "relevantIds": [
-        "87a17d120814c6efd6b8c82ddc7b6ae357beb05b5fe3849da56f0df8c829c51b"
+        "8c942ea6ab8c031e43c2ff4b936b2e7e6b4d5210297e6ed6a31346b3ded247ba"
       ],
       "cohort": "current_prose",
       "families": [
@@ -63,11 +63,11 @@
       ],
       "evidence": [
         {
-          "versionId": "63d45a3b-efde-4f17-9ea1-747a7a41b888",
+          "versionId": "114b3d0e-22bf-4778-a776-f4c398416346",
           "contentHash": "646efb775255609f1a2f18016d9d7179a46344f080e7f3871875d9b25d60e458",
-          "passageId": "87a17d120814c6efd6b8c82ddc7b6ae357beb05b5fe3849da56f0df8c829c51b",
+          "passageId": "8c942ea6ab8c031e43c2ff4b936b2e7e6b4d5210297e6ed6a31346b3ded247ba",
           "inputHash": "0f7a816abd3dea3b700ea0109224ae010f2f8a857da65f4bfa94ec0559709e56",
-          "packetEvidenceHash": "bd669b7e1c4496dd2ad91a5a09b816d1865e6a7d81a76176a77397acd6e72067",
+          "packetEvidenceHash": "632bd5158909cce8a3156fbf1f856847946e41c0ee87d0c270994ad20049cb6a",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[10]/DIV8[7]",
           "quote": "provided that the work is performed using alternative measures which provide effective protection",
           "expectedAnswer": "No. The minor-servicing exception requires routine, repetitive, integral work and alternative measures providing effective protection."
@@ -79,7 +79,7 @@
       "id": "development-04",
       "input": "What relationship information must a pension reporting filer submit if its controlled group has more than ten nonexempt members?",
       "relevantIds": [
-        "39dd76f886da89057076cf2dc75aac69911315148faa025eb2f1b7919d5e6d0e"
+        "69f2bb8c784057454b0f1778a3fbba5248c4ae340e19d857b626392f07afc930"
       ],
       "cohort": "current_prose",
       "families": [
@@ -87,11 +87,11 @@
       ],
       "evidence": [
         {
-          "versionId": "68bfa6bc-97cd-46c5-b116-2a78c1360d2e",
+          "versionId": "7abda004-6607-4bcd-a822-28d0a9b0d47e",
           "contentHash": "111d218b379ceb3f08aa9e9c0ee695aeb85ec5ddab95854b28ea6a93dd7d0fac",
-          "passageId": "39dd76f886da89057076cf2dc75aac69911315148faa025eb2f1b7919d5e6d0e",
+          "passageId": "69f2bb8c784057454b0f1778a3fbba5248c4ae340e19d857b626392f07afc930",
           "inputHash": "b05c860d9a1169f3360cb78f5c4f2fb6fe93ac0cc55f7a7db161535bb02b4375",
-          "packetEvidenceHash": "8f5876d751bb1e60bc72625cce3f686868195a610ffd87c82674bd0dd4d2cc95",
+          "packetEvidenceHash": "f121130ae63318822b09307b80d6f984b9cf11bdc469434b7e76fb10e80b0b1d",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[14]/DIV4[3]/DIV5[1]/DIV8[7]",
           "quote": "an organizational chart or other diagram showing the members",
           "expectedAnswer": "An organizational chart or other diagram must show year-end members and their legal relationships; exempt entities may be included but need not be."
@@ -103,7 +103,7 @@
       "id": "development-05",
       "input": "When filing a petition to rescind union-security authority, should the employee support evidence be served on the other parties?",
       "relevantIds": [
-        "cff563d966f0b336f66e32e1848f5af3dada47295e4bd26a443eef2d6790d4d5"
+        "f5b3c75002cefd305a989a17c64443942506fe9168ea2ad63222a861c06fa38a"
       ],
       "cohort": "current_prose",
       "families": [
@@ -111,11 +111,11 @@
       ],
       "evidence": [
         {
-          "versionId": "d986811a-ec16-4836-8b9a-a3bcda3f1f0b",
+          "versionId": "13fa7087-0f1a-462b-9d6d-ef9c76c50fd5",
           "contentHash": "117fdb85ea13a6c4c1206f24b15e858134265310743b8a3460f12a1b9c05027c",
-          "passageId": "cff563d966f0b336f66e32e1848f5af3dada47295e4bd26a443eef2d6790d4d5",
+          "passageId": "f5b3c75002cefd305a989a17c64443942506fe9168ea2ad63222a861c06fa38a",
           "inputHash": "5b4b5d44ff4fa8f6a4d3fe469b2aa4b4bcc14c647464c30261d9a42aaf68ec5c",
-          "packetEvidenceHash": "95eebda757221555fbfebdc9fa6bd2102d8f03439b844e60e63f8e4eefaf0352",
+          "packetEvidenceHash": "b6afc89d8f670ecfc398adf18e42e48633966dbfe49f855a2290ec1052954528",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[1]/DIV5[3]/DIV6[6]/DIV8[2]",
           "quote": "Such evidence must be filed together with the petition, but must not be served on any other party.",
           "expectedAnswer": "File the evidence with the petition, but do not serve it on any other party."
@@ -127,7 +127,7 @@
       "id": "development-06",
       "input": "How do the evidence threshold and timing of notice differ for federal suspension and debarment?",
       "relevantIds": [
-        "93b17b8b115a69b4e09782bc1c318230cdd4255664ccfec5b7afa31e790b7813"
+        "cf0a3fe6e90774571ef8a1a2845c7957df49d01117204d92f94bf0a8ee20024b"
       ],
       "cohort": "current_tables_exceptions_numbers",
       "families": [
@@ -135,11 +135,11 @@
       ],
       "evidence": [
         {
-          "versionId": "5757cb72-82d3-49c9-8153-bd76b01f046a",
+          "versionId": "c8b3f657-ac6a-4965-a039-432a8c842621",
           "contentHash": "1fb3ec31d273a5dcacf43d18255e63a008b93b026b0d19ef8cd9ea837918c0f3",
-          "passageId": "93b17b8b115a69b4e09782bc1c318230cdd4255664ccfec5b7afa31e790b7813",
+          "passageId": "cf0a3fe6e90774571ef8a1a2845c7957df49d01117204d92f94bf0a8ee20024b",
           "inputHash": "2419c715bfc770b737073a95770b551f41fa7bfe2ef188323c8678d863629c63",
-          "packetEvidenceHash": "b6c995b09c3fcb1a07297e4944f5dca671da51611effc9ccd7c31a1f36fcce50",
+          "packetEvidenceHash": "704bef91adb4e8fac8c374697ef67cd348dd13a866ba1b8f7f0b87e465bae8f0",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[8]/DIV5[15]/DIV6[6]/DIV8[2]",
           "quote": "based on a preponderance of the evidence",
           "expectedAnswer": "Suspension requires adequate evidence and necessity of immediate action, and usually precedes notice. Debarment requires a preponderance and follows notice and an opportunity to contest."
@@ -151,7 +151,7 @@
       "id": "development-07",
       "input": "For 10,000 gallons of liquefied hydrogen, what is the table distance to a noncombustible building before any protective-structure reduction?",
       "relevantIds": [
-        "484c2b3ff951e197b0f3a57f5089d106ae8a57b5d0701f9651498be865915d1e"
+        "bf41cdf4fcce0799a0a10dc8c0c2c0c51a9debbd1e684f7aab6f2bd3c50048e6"
       ],
       "cohort": "current_tables_exceptions_numbers",
       "families": [
@@ -159,11 +159,11 @@
       ],
       "evidence": [
         {
-          "versionId": "d52eb1ba-25c4-4793-94f4-b6e313eff7b3",
+          "versionId": "3162ad75-5077-4f62-98b5-b326fc40bf2f",
           "contentHash": "ae03314f6116a9e053370305478ebf7c75c7e2a050c01170a7941c61b675f358",
-          "passageId": "484c2b3ff951e197b0f3a57f5089d106ae8a57b5d0701f9651498be865915d1e",
+          "passageId": "bf41cdf4fcce0799a0a10dc8c0c2c0c51a9debbd1e684f7aab6f2bd3c50048e6",
           "inputHash": "7f6a5d2b1cf21c36716470349f3f0f059fe9d88e2aa315cebd4f5471df7c3fa3",
-          "packetEvidenceHash": "f6824c792b75f1513bc9098850fd5fa32ae3128d34f381890568567270a28e64",
+          "packetEvidenceHash": "278d7f2b13475db72f53db1b15396fd0174df132bf0abfabff746b4b5d324dec",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[8]/DIV8[3]",
           "quote": "2. Noncombustible building 3\n25\n50\n75",
           "expectedAnswer": "50 feet in the 3,501–15,000 gallon column; the table footnotes describe protective-structure reductions and building definitions."
@@ -175,7 +175,7 @@
       "id": "development-08",
       "input": "In testing an agricultural tractor protective frame, is critical-zone dimensional accuracy a percentage or a fixed tolerance?",
       "relevantIds": [
-        "63505a7b9b1c04c60a79522648c128ec6edba5ecfb4d988c796a1fc218f40ed2"
+        "a725b76b2fc195fea3784c9ed253e58017ae3b3880db0ef5a505da38ad6ad8de"
       ],
       "cohort": "current_tables_exceptions_numbers",
       "families": [
@@ -183,11 +183,11 @@
       ],
       "evidence": [
         {
-          "versionId": "9397a192-bf6a-4d27-a79a-9fac994a05ed",
+          "versionId": "d106052a-de81-4462-9e2f-fd2365bc7fc8",
           "contentHash": "7fae68371befeb7bf77c98cd569d0d790537ad963ce56c9dd20b69bb516a4480",
-          "passageId": "63505a7b9b1c04c60a79522648c128ec6edba5ecfb4d988c796a1fc218f40ed2",
+          "passageId": "a725b76b2fc195fea3784c9ed253e58017ae3b3880db0ef5a505da38ad6ad8de",
           "inputHash": "45ca4f46de5c0ccbfb325c747bf1416b985a408af23af6ea99db96bda6ffe172",
-          "packetEvidenceHash": "2145d5998ec3051a050893b131b42c2737b443756c6282dbc507baed15b327de",
+          "packetEvidenceHash": "40d7529ca831990ad1cd98c784a0d002774da2961e025fbe46cb1a450461ad4b",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[24]/DIV6[3]/DIV8[2]",
           "quote": "Dimensions of the critical zone, in. (mm)\n±0.5 in. (12.5 mm).",
           "expectedAnswer": "A fixed tolerance of ±0.5 inch (12.5 mm), unlike the percentage tolerances for deflection, weight and force."
@@ -199,7 +199,7 @@
       "id": "development-09",
       "input": "For marine-terminal special gear with a safe working load of 30 short tons, how much above that rating is the Table A proof load?",
       "relevantIds": [
-        "53d96e9a3d1a44821c4ab80586b8a5e8de51f596251bc232085162d46205ec56"
+        "f51a1da86b8a50071c2f49ffe05b171f9a5929b2b8b38ae815c7c79d4bfda33b"
       ],
       "cohort": "current_tables_exceptions_numbers",
       "families": [
@@ -207,11 +207,11 @@
       ],
       "evidence": [
         {
-          "versionId": "21d126ac-c66a-468d-9a46-940433b10965",
+          "versionId": "6d5f2c1b-e575-4351-8bed-fae9b27373f2",
           "contentHash": "aa1fae8448476597c0edfa1011137baefd6257e2f1623fca7039c49f380b26f1",
-          "passageId": "53d96e9a3d1a44821c4ab80586b8a5e8de51f596251bc232085162d46205ec56",
+          "passageId": "f51a1da86b8a50071c2f49ffe05b171f9a5929b2b8b38ae815c7c79d4bfda33b",
           "inputHash": "04015fb054e466d35d539369365c47eb7596817944f796617b3b3212564f1ff4",
-          "packetEvidenceHash": "bb2ae3ff1de17ccd82f764fb97d0ae199f67923266fc1f1793d29a43a72494b3",
+          "packetEvidenceHash": "406f922daffa6a6286fde06e2d6102377ea0da9de183e2815040320178fcbac6",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[14]/DIV6[3]/DIV8[10]",
           "quote": "5 short tons in excess.",
           "expectedAnswer": "Five short tons above the rating, giving a 35-short-ton proof load."
@@ -223,7 +223,7 @@
       "id": "development-10",
       "input": "Under the standard temporary-heater clearance table, how do radiant room heaters differ from circulating heaters at the sides and rear?",
       "relevantIds": [
-        "622523aa6f23a74d97aa4f56a80e08cc60e381f9fa4c59827904cfdd2d18ac54"
+        "f321bf4c0bd74205b5f5e6919c38b164abf41dc92f1b609f766d01a6d349fa1f"
       ],
       "cohort": "current_tables_exceptions_numbers",
       "families": [
@@ -231,11 +231,11 @@
       ],
       "evidence": [
         {
-          "versionId": "f47415a8-10f5-4d66-9068-cc09670cc8eb",
+          "versionId": "bb1411d3-e230-416d-80a6-f53b703b7bfa",
           "contentHash": "c369752b9f61f0b97bc565b1d8c16104fbcc2209471d574130c2eaa79ee9ed61",
-          "passageId": "622523aa6f23a74d97aa4f56a80e08cc60e381f9fa4c59827904cfdd2d18ac54",
+          "passageId": "f321bf4c0bd74205b5f5e6919c38b164abf41dc92f1b609f766d01a6d349fa1f",
           "inputHash": "0e2fc148e2197885559f0678c3b311bea6dfa653c2f01f47f5c4ef8406eebb04",
-          "packetEvidenceHash": "da4e1fbdc003392946dcd6e300be0b89f3a76d9996c627e08565fc0deca374ac",
+          "packetEvidenceHash": "7f966e761a9dac4ac08370d567cfec8bd142d44170409bad8a9a95b40ce573ab",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[22]/DIV6[6]/DIV8[5]",
           "quote": "Room heater, radiant type\n36\n36\n18",
           "expectedAnswer": "Radiant heaters require 36 inches at the sides and rear; circulating heaters require 12 inches. Both list 18 inches for the chimney connector."
@@ -271,7 +271,7 @@
       "id": "development-12",
       "input": "In the retained September 2026 version of the representation-hearing rule, who assigns the hearing officer?",
       "relevantIds": [
-        "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b"
+        "622ecfc75eadca467af5e93d48c408838136881e4c76245e99426c5ca56c3488"
       ],
       "cohort": "annual_history_version_selection",
       "families": [
@@ -279,11 +279,11 @@
       ],
       "evidence": [
         {
-          "versionId": "6cf29113-0044-4e6f-9147-90df388160ba",
+          "versionId": "bceef8c1-06aa-4112-94d4-2f49267e7bfc",
           "contentHash": "90f132cc98a7fe33ab33625325007a25eec63d8e5077e61be133e627c342b5c9",
-          "passageId": "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b",
+          "passageId": "622ecfc75eadca467af5e93d48c408838136881e4c76245e99426c5ca56c3488",
           "inputHash": "0fbc3d1059af4b308435c7684da43ea2e65f131213cb836906b1d755c6aa555a",
-          "packetEvidenceHash": "dffb4b80ba4cf1ecb7a29f1e8cf6bbbb5958ede8072b99ba632b54dfa1ab23b8",
+          "packetEvidenceHash": "8175890be4444bf7ecf04bfbf579d1ba9e3fc53930011feebd3fa3605d8da2ce",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[10]/DIV4[3]/DIV5[3]/DIV8[18]",
           "quote": "The FLRA assigns a Hearing Officer",
           "expectedAnswer": "The FLRA assigns the Hearing Officer."
@@ -296,7 +296,7 @@
       "input": "How did the hearing-officer assignment wording change between the January 2025 annual edition and the retained September 2026 version?",
       "relevantIds": [
         "f9d5089480ec718e1945dc79e740985d73e6d2d4d419f3765279f33bdfd2ecfb",
-        "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b"
+        "622ecfc75eadca467af5e93d48c408838136881e4c76245e99426c5ca56c3488"
       ],
       "cohort": "annual_history_version_selection",
       "families": [
@@ -314,11 +314,11 @@
           "expectedAnswer": "The earlier text says the Regional Director appoints; the later text says the FLRA assigns."
         },
         {
-          "versionId": "6cf29113-0044-4e6f-9147-90df388160ba",
+          "versionId": "bceef8c1-06aa-4112-94d4-2f49267e7bfc",
           "contentHash": "90f132cc98a7fe33ab33625325007a25eec63d8e5077e61be133e627c342b5c9",
-          "passageId": "efa564055be9151406dcf2af7c6d2802615c1d6f071f1ea9cfc09a77554e4a2b",
+          "passageId": "622ecfc75eadca467af5e93d48c408838136881e4c76245e99426c5ca56c3488",
           "inputHash": "0fbc3d1059af4b308435c7684da43ea2e65f131213cb836906b1d755c6aa555a",
-          "packetEvidenceHash": "dffb4b80ba4cf1ecb7a29f1e8cf6bbbb5958ede8072b99ba632b54dfa1ab23b8",
+          "packetEvidenceHash": "8175890be4444bf7ecf04bfbf579d1ba9e3fc53930011feebd3fa3605d8da2ce",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[10]/DIV4[3]/DIV5[3]/DIV8[18]",
           "quote": "The FLRA assigns a Hearing Officer",
           "expectedAnswer": "The earlier text says the Regional Director appoints; the later text says the FLRA assigns."
@@ -355,7 +355,7 @@
       "input": "How did the description of excluded policy positions in senior-professional rank-award eligibility change between the retained 2025 and 2026 versions?",
       "relevantIds": [
         "e766502231bdfb685051c3ec93a6fb1c15046dd3eac94f5bd20106a02447bd97",
-        "d046611a494e7e8d686e3c64281397e208599dc9966d522790dad9814d81cf7d"
+        "df4858f62fe0439acf8cb6c4feec2f4b6bd0fedbffce1c9f41e07b2490b90068"
       ],
       "cohort": "annual_history_version_selection",
       "families": [
@@ -373,11 +373,11 @@
           "expectedAnswer": "Policy-determining became policy-making; this question asks about exact wording, not an inferred expansion of legal scope."
         },
         {
-          "versionId": "de94160c-8636-4723-b916-30f77877f5a2",
+          "versionId": "4862e679-75f9-4940-bd54-98c3762426a2",
           "contentHash": "a26df763120f2944cc43a2a0112e0c516da04bd4a87573ef0f7a098ad70dc439",
-          "passageId": "d046611a494e7e8d686e3c64281397e208599dc9966d522790dad9814d81cf7d",
+          "passageId": "df4858f62fe0439acf8cb6c4feec2f4b6bd0fedbffce1c9f41e07b2490b90068",
           "inputHash": "a4c7f35ac5c027ef43a2f7a86c13c87f26bfd0db6951d645b0cb36c67c9607b9",
-          "packetEvidenceHash": "9126ba0690879a83a5fc040c33e9b57b2839c81cf9d2604c6b26e1de921f2415",
+          "packetEvidenceHash": "8ba4a770681c8758bf231ce00627b726b5cdfb37548dff2ae56b8fcfa1e1cf23",
           "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[2]/DIV5[53]/DIV6[3]/DIV8[2]",
           "quote": "confidential or policy-making character",
           "expectedAnswer": "Policy-determining became policy-making; this question asks about exact wording, not an inferred expansion of legal scope."

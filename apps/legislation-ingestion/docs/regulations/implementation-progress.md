@@ -3623,3 +3623,27 @@ is quarantined rather than repaired.
 This closes the full-corpus tokenizer and structural-accounting gate for the recovered current eCFR baseline. Persisted
 passage preparation, selected-model lexical copy, held-out embedding comparison, vector generation and authenticated
 HTTP/MCP canaries remain separate gates. Recurring ingestion remains disabled.
+
+## Recovered final-passage evaluation assembly
+
+Rebound the tracked 44-version evaluation selection to the recovered canonical database. Twenty-one current-eCFR
+versions matched their original native ID and content hash exactly. The selected 8 CFR 214.1 version changed before
+freeze and was replaced by the recovered version at the same citation and cohort; its complete common-boundary output
+has 20 passages instead of 14. The resulting inventory has 243 identical model inputs: 137 development and 106 held-out.
+Both pinned tokenizers qualify every input, the maximum remains 1,122 tokens, and the independent duplicate screen has
+zero exact or near-duplicate cross-split conflicts.
+
+Authored 30 source-backed held-out query proposals across current prose, tables and exceptions, annual version selection,
+proposed rules, final rules, notices and no-answer cases. Every answerable proposal binds an exact recovered version,
+content hash, passage ID, input hash, packet hash, source locator and source quote. The three held-out no-answer proposals
+ask for later outcomes absent from the selected announcement, complaint or proposed rule. They retain empty relevant-ID
+sets and explicit source-boundary explanations. All labels remain automated proposals; human adjudication is false.
+
+The combined 243-passage, 60-query manifest passes the executable assignment and dual-tokenizer preview. It verifies the
+30/30 split, all cohort allocations, family/version/input isolation, answer membership and declared near-duplicate groups.
+Normalized manifest hash: `712f47db1218ac76eab1a174d4e6ebd814551f47ef8d0e030ac7046668181169`.
+Assignment hash: `71c82c0f3b5f30027b62493baf6a0939b8de21b887e21d69ed5f882d1826a9f6`.
+The preview made zero provider requests and zero canonical writes. Candidate and query evidence is tracked in
+[the corpus inventory](embedding-corpus-candidates.json), [development queries](embedding-development-queries.json) and
+[held-out queries](embedding-heldout-queries.json). Human relevance review, final freeze, current-price confirmation,
+live model comparison and promotion remain open; bulk embeddings remain disabled.

@@ -1,8 +1,8 @@
 # Canonical embedding evaluation candidates
 
-Recorded September 16, 2026. This is a pre-freeze candidate inventory for EVAL-02, not a completed evaluation or a
+Recorded September 17, 2026. This is a pre-freeze candidate inventory for EVAL-02, not a completed evaluation or a
 representative release corpus. [Candidate identities and hashes](embedding-corpus-candidates.json) bind 44 complete
-canonical versions to 237 common passages: 137 development and 100 held-out candidates. Both pinned tokenizers qualify
+canonical versions to 243 common passages: 137 development and 106 held-out candidates. Both pinned tokenizers qualify
 every version; the largest common input is 1,122 tokens. No provider calls, canonical writes or index/vector writes occurred.
 
 | Cohort | Development versions | Held-out candidate versions |
@@ -18,14 +18,21 @@ Selection used source metadata, size and shape before retrieval scores. The init
 1,000–12,000 source characters; publication candidates to 1,000–64,000. Expansion preserved the qualified 26-version
 inventory and added 14 complete current versions from source-length quantiles through 32,000 characters. Title 8 had
 only three table versions within that range, so two Title 20 tables complete the held-out table quota. Held-out source
-bodies were processed automatically, not read for query writing or tuning. Publications came from singleton groups without
+bodies were not inspected during selection or retrieval tuning. They were inspected only after assignment to create the
+source-backed held-out question and answer proposals described below. Publications came from singleton groups without
 family metadata warnings. Each complete selected version was exported through the canonical code/publication CLI,
 binding published membership or observation, version/content identity and active rights. No candidate failed preparation.
 Existing packets were reused only when selection identity and the complete evidence hash matched.
 
+After recovery of the complete 49-title current eCFR database, 21 selected code versions were rebound by exact native ID
+and content hash. The selected 8 CFR 214.1 source changed before freeze, so it was replaced by the newly recovered version
+with the same citation and cohort. That complete version produces 20 rather than 14 common passages. The tracked recovery
+map records the old and new IDs, dates, hashes and replacement reason. No split, cohort or publication family changed.
+
 An independent local audit checked packet evidence hashes, source/context identity, passage-manifest hashes, full-body
 reconstruction hashes, exact input hashes, both qualification results and token limits. The committed JSON contains
-metadata only. Full inputs remain in ignored `artifacts/regulatory-backfills/evaluation-candidates/<version-id>.json`.
+metadata only. Full inputs remain in ignored
+`artifacts/regulatory-backfills/evaluation-candidates-recovered/<version-id>.json`.
 Publisher artifact replay remains a separate gate; a canonical snapshot is not proof of replaying original source bytes.
 
 ## Rejected initial selection and replacements
@@ -77,11 +84,11 @@ zero cross-split groups. Input/report files are retained locally as
 
 1. Review family and semantic near-duplicate assignments, including any shared notice templates and code/publication links.
 2. Review subject coverage and challenging distractors. The expansion adds prose and tables at different lengths, but
-   237 passages spanning these selected title families do not alone establish representative production performance.
+   243 passages spanning these selected title families do not alone establish representative production performance.
 3. Confirm historical differences are useful legal changes, not only non-substantive wording changes. Record exact source
    evidence for expected answers without using held-out results to tune implementation.
-4. Author the protocol's 60 queries and known-answer evidence, including dates, exceptions, numbers and no-answer cases.
-   Allocate 30 queries per split and validate all family/version/near-duplicate assignments against the final manifest.
+4. Human-review the 60 source-backed query and known-answer proposals, including dates, exceptions, numbers and no-answer
+   cases. The 30/30 allocation and declared family/version/near-duplicate assignments pass the executable preflight.
 5. Freeze the final corpus and assignments, run lexical and bounded provider retrieval, then produce model/rank-blinded
    relevance packets for human adjudication. Automated suggestions cannot satisfy the human-review gate.
 
@@ -97,9 +104,22 @@ effects. Publication questions use substantive proposals/final rules, deadlines,
 dates. The three no-answer proposals concern later attendance, an unspecified future rate increase and later final
 approval; their evidence explains the source boundary, not proof of exhaustive absence. They require full-pool review.
 
-The development-only smoke draft has 137 records and 30 queries. Schema, unique IDs and answer membership pass. Both
-tokenizers qualify every query: OpenAI maximum 38 tokens, 733 total; Voyage maximum 43, 788 total. Manifest hash:
-`125978817e1422976e4e92fd2fe6c56a7ec70a010ae4fe4f92b3bf2387f41333`. Local artifacts:
-`evaluation-development-smoke-input.json` and `evaluation-development-query-qualification.json` under
-`artifacts/regulatory-backfills/`. No provider retrieval ran. No held-out source bodies or results were inspected while
-writing these questions. All thirty held-out questions and human review remain; the corpus is not frozen.
+The recovered development-only smoke draft has 137 records and 30 queries. Schema, unique IDs, answer membership and both
+pinned tokenizers pass. Local artifacts are `evaluation-development-recovered-input.json` and its CLI preview under
+`artifacts/regulatory-backfills/`. No provider retrieval ran.
+
+## Held-out query draft and full preflight
+
+[Thirty held-out questions](embedding-heldout-queries.json) fill the same seven allocation slots with recovered Title 8
+and Title 20 current text, paired Title 6 annual editions, two proposals, two final rules and two notices. Every answerable
+question binds exact version, content, passage, input, packet and source-locator hashes plus a source quote and answer
+proposal. The three no-answer cases ask for later outcomes that the selected announcement, complaint or proposal does not
+establish. All labels remain automated proposals and cannot satisfy human adjudication.
+
+The recovered held-out manifest has 106 passages and 30 questions. The combined manifest has 243 passages and 60
+questions, including six no-answer cases. The assignment preflight passes the frozen protocol's 30/30 split, all cohort
+counts, answer membership, family isolation, version isolation, exact-input isolation and declared near-duplicate groups.
+Normalized manifest hash: `712f47db1218ac76eab1a174d4e6ebd814551f47ef8d0e030ac7046668181169`.
+Assignment hash: `71c82c0f3b5f30027b62493baf6a0939b8de21b887e21d69ed5f882d1826a9f6`.
+The CLI preview made no external request and performed no write. Human relevance review, final freeze, live model calls and
+retrieval scoring remain open.
