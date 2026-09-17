@@ -35,3 +35,36 @@ export function alaskaCommitteeIdentifiers(input: unknown, chamber: string | nul
   }
   return result
 }
+
+/** NC committee type and numeric ID are explicit in the publisher URL; names are never identity evidence. */
+export function northCarolinaCommitteeIdentifiers(input: unknown): Record<string, string> {
+  const links = z.array(z.object({ url: z.string() }).passthrough()).safeParse(input)
+  if (!links.success) {
+    return {}
+  }
+  const result: Record<string, string> = {}
+  for (const { url } of links.data) {
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      continue
+    }
+    const match =
+      /^\/Committees\/CommitteeInfo\/(HouseSelect|HouseStanding|NonStanding|Senate%20Standing|SenateSelect|SenateStanding)\/([1-9][0-9]*)$/.exec(
+        parsed.pathname
+      )
+    if (
+      parsed.origin !== "https://www.ncleg.gov" ||
+      parsed.username ||
+      parsed.password ||
+      parsed.search ||
+      parsed.hash ||
+      !match
+    ) {
+      continue
+    }
+    result[`ncCommittee:${match[1]}:${match[2]}`] = url
+  }
+  return result
+}

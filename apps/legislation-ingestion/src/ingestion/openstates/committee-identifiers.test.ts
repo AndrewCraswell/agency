@@ -1,5 +1,5 @@
 import { expect, it } from "vitest"
-import { alaskaCommitteeIdentifiers } from "./committee-identifiers.js"
+import { alaskaCommitteeIdentifiers, northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
 
 it("retains both session identities independently from homepage selection", () => {
   expect(
@@ -23,5 +23,28 @@ it("rejects wrong chamber, host, credentials and malformed unescaped identifiers
     "https://www.akleg.gov/basis/Committee/Details/34?code=SL&C"
   ]) {
     expect(alaskaCommitteeIdentifiers([{ url }], "upper")).toEqual({})
+  }
+})
+
+it("derives exact North Carolina publisher committee identities without names", () => {
+  expect(
+    northCarolinaCommitteeIdentifiers([
+      { url: "https://www.ncleg.gov/Committees/CommitteeInfo/HouseStanding/42" },
+      { url: "https://www.ncleg.gov/Committees/CommitteeInfo/Senate%20Standing/17", note: "homepage" }
+    ])
+  ).toEqual({
+    "ncCommittee:HouseStanding:42": "https://www.ncleg.gov/Committees/CommitteeInfo/HouseStanding/42",
+    "ncCommittee:Senate%20Standing:17": "https://www.ncleg.gov/Committees/CommitteeInfo/Senate%20Standing/17"
+  })
+})
+
+it("rejects ambiguous routes, foreign hosts, credentials and URL decorations", () => {
+  for (const url of [
+    "https://www.ncleg.gov/Committees/CommitteeInfo/Standing/42",
+    "https://example.org/Committees/CommitteeInfo/HouseStanding/42",
+    "https://user:secret@www.ncleg.gov/Committees/CommitteeInfo/HouseStanding/42",
+    "https://www.ncleg.gov/Committees/CommitteeInfo/HouseStanding/42?name=Rules"
+  ]) {
+    expect(northCarolinaCommitteeIdentifiers([{ url }])).toEqual({})
   }
 })

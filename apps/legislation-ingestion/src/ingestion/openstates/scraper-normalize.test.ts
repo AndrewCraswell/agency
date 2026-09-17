@@ -239,6 +239,24 @@ describe("NC raw scraper mapping", () => {
     expect(() => normalizeNcScraperEvents([{ ...event, upstream_id: "10725" }], date)).toThrow(/notice identity/)
     expect(() => normalizeNcScraperEvents([event, event], date)).toThrow(/notice identity/)
   })
+  it("links NC meetings only through exact publisher committee URLs", () => {
+    const event = {
+      _id: "random",
+      upstream_id: "10724",
+      name: "Meeting",
+      start_date: "2026-09-15T10:00:00-04:00",
+      status: "confirmed",
+      participants: [],
+      agenda: [],
+      sources: [
+        { url: "https://www.ncleg.gov/Committees/CommitteeInfo/HouseStanding/42" },
+        { url: "https://www.ncleg.gov/Committees/NoticeDocument/10724/Meeting" }
+      ]
+    }
+    const snapshot = normalizeNcScraperEvents([event], new Date("2026-09-14T00:00:00Z"))[0]
+    expect(snapshot?.organizationReferences).toEqual(["ncCommittee:HouseStanding:42"])
+    expect(snapshot?.event.organizationRelationsComplete).toBe(true)
+  })
   it("ignores per-run UUIDs and keeps name-only votes unresolved", () => {
     const input = fixture()
     const first = normalizeNcScraperBills(input)

@@ -1,6 +1,7 @@
 import { childId, legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
+import { northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
 import { normalizeOpenStatesEvent } from "./events.js"
 import { normalizeOpenStatesBill } from "./normalize.js"
 import { readArchivedScraperAttempt } from "./scraper-archive.js"
@@ -54,6 +55,9 @@ export function normalizeNcScraperEvents(records: readonly unknown[], retrievedA
     snapshot.event.upstreamIds = { ncNoticeDocument: record.upstream_id }
     snapshot.event.sessionRelationsComplete = true
     snapshot.sessionIds = [legislativeSessionId("nc", "2025")]
+    const organizationReferences = Object.keys(northCarolinaCommitteeIdentifiers(record.sources))
+    snapshot.event.organizationRelationsComplete = organizationReferences.length === 1
+    snapshot.organizationReferences = organizationReferences
     return snapshot
   })
 }
