@@ -129,6 +129,24 @@ describePostgres.sequential("atomic bill batch receipts", () => {
       upsertBillAggregates(database, [input], { receipt: { ...receipt, cursor: { archive: "different" } } })
     ).rejects.toThrow("conflicts")
   })
+  it("does not rewrite search columns for a status-only batch refresh", async () => {
+    const input = aggregate("search-stable")
+    await upsertBillAggregates(database, [input])
+    await database
+      .update(schema.bills)
+      .set({ searchVector: sql`to_tsvector('simple', 'sentinel')` })
+      .where(eq(schema.bills.id, input.bill.id))
+
+    await upsertBillAggregates(database, [
+      { ...input, bill: { ...input.bill, identifier: "SEARCH-STABLE", status: "Referred to committee" } }
+    ])
+
+    const [stored] = await database
+      .select({ searchVector: sql<string>`${schema.bills.searchVector}::text`, status: schema.bills.status })
+      .from(schema.bills)
+      .where(eq(schema.bills.id, input.bill.id))
+    expect(stored).toEqual({ searchVector: "'sentinel':1", status: "Referred to committee" })
+  })
   it("releases only its own lease, rejects renewal, and allows the next batch immediately", async () => {
     const owner = { source, stream: "ownership:release", token: "first-attempt" }
     const next = { ...owner, token: "next-attempt" }

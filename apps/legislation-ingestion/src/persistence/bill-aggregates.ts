@@ -92,6 +92,47 @@ function legislativeSessionChanged() {
   )`
 }
 
+function billNonSearchUpdate() {
+  return {
+    chamber: sql`excluded.chamber`,
+    classification: sql`excluded.classification`,
+    committees: sql`excluded.committees`,
+    identifier: sql`excluded.identifier`,
+    introducedAt: sql`excluded.introduced_at`,
+    jurisdictionId: sql`excluded.jurisdiction_id`,
+    sessionId: sql`excluded.session_id`,
+    sourceUpdatedAt: sql`excluded.source_updated_at`,
+    sourceUrl: sql`excluded.source_url`,
+    status: sql`excluded.status`,
+    updatedAt: new Date(),
+    upstreamIds: sql`${bills.upstreamIds} || excluded.upstream_ids`
+  }
+}
+
+function billSearchUpdate() {
+  return {
+    ...billNonSearchUpdate(),
+    embeddedAt: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embeddedAt} end`,
+    embedding: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embedding} end`,
+    embeddingInputHash: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embeddingInputHash} end`,
+    embeddingModel: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embeddingModel} end`,
+    subjects: sql`excluded.subjects`,
+    summary: sql`excluded.summary`,
+    title: sql`excluded.title`
+  }
+}
+
+function billSearchTextMatches(
+  existing: Pick<typeof bills.$inferSelect, "subjects" | "summary" | "title">,
+  candidate: Pick<typeof bills.$inferInsert, "subjects" | "summary" | "title">
+) {
+  return (
+    existing.title === candidate.title &&
+    existing.summary === (candidate.summary ?? null) &&
+    JSON.stringify(existing.subjects) === JSON.stringify(candidate.subjects ?? [])
+  )
+}
+
 function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
   const billId = aggregate.bill.id
 
@@ -510,7 +551,26 @@ export async function upsertBillAggregates(
     assertAggregateOwnership(aggregate)
   }
   const billIds = aggregates.map((aggregate) => aggregate.bill.id)
-  const existing = await database.select({ id: bills.id }).from(bills).where(inArray(bills.id, billIds))
+  const existing = await database
+    .select({ id: bills.id, subjects: bills.subjects, summary: bills.summary, title: bills.title })
+    .from(bills)
+    .where(inArray(bills.id, billIds))
+  const existingById = new Map(existing.map((record) => [record.id, record]))
+  const newAggregates = aggregates.filter((aggregate) => !existingById.has(aggregate.bill.id))
+  const existingAggregates = aggregates.filter((aggregate) => existingById.has(aggregate.bill.id))
+  const searchStableAggregates: CanonicalBillAggregate[] = []
+  const searchChangedAggregates: CanonicalBillAggregate[] = []
+  for (const aggregate of existingAggregates) {
+    const previous = existingById.get(aggregate.bill.id)
+    if (previous === undefined) {
+      throw new Error("Existing bill snapshot is missing")
+    }
+    if (billSearchTextMatches(previous, aggregate.bill)) {
+      searchStableAggregates.push(aggregate)
+    } else {
+      searchChangedAggregates.push(aggregate)
+    }
+  }
 
   await database.transaction(async (transaction) => {
     if (options.receipt && (await promotionAlreadyCommitted(transaction, options.receipt))) {
@@ -568,33 +628,27 @@ export async function upsertBillAggregates(
       })
     }
 
-    await transaction
-      .insert(bills)
-      .values(aggregates.map((aggregate) => aggregate.bill))
-      .onConflictDoUpdate({
-        set: {
-          chamber: sql`excluded.chamber`,
-          classification: sql`excluded.classification`,
-          committees: sql`excluded.committees`,
-          embeddedAt: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embeddedAt} end`,
-          embedding: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embedding} end`,
-          embeddingInputHash: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embeddingInputHash} end`,
-          embeddingModel: sql`case when ${bills.title} is distinct from excluded.title or ${bills.summary} is distinct from excluded.summary or ${bills.subjects} is distinct from excluded.subjects then null else ${bills.embeddingModel} end`,
-          identifier: sql`excluded.identifier`,
-          introducedAt: sql`excluded.introduced_at`,
-          jurisdictionId: sql`excluded.jurisdiction_id`,
-          sessionId: sql`excluded.session_id`,
-          sourceUpdatedAt: sql`excluded.source_updated_at`,
-          sourceUrl: sql`excluded.source_url`,
-          status: sql`excluded.status`,
-          subjects: sql`excluded.subjects`,
-          summary: sql`excluded.summary`,
-          title: sql`excluded.title`,
-          updatedAt: new Date(),
-          upstreamIds: sql`${bills.upstreamIds} || excluded.upstream_ids`
-        },
-        target: bills.id
-      })
+    if (newAggregates.length > 0) {
+      await transaction
+        .insert(bills)
+        .values(newAggregates.map((aggregate) => aggregate.bill))
+        .onConflictDoUpdate({ set: billSearchUpdate(), target: bills.id })
+    }
+    if (searchStableAggregates.length > 0) {
+      await transaction
+        .insert(bills)
+        .values(searchStableAggregates.map((aggregate) => aggregate.bill))
+        .onConflictDoUpdate({ set: billNonSearchUpdate(), target: bills.id })
+    }
+    // Search-text changes invalidate the legacy inline vector and touch its HNSW
+    // index. Keep each one below the per-statement deadline instead of making one
+    // slow row cancel an otherwise valid durable batch.
+    for (const aggregate of searchChangedAggregates) {
+      await transaction
+        .insert(bills)
+        .values(aggregate.bill)
+        .onConflictDoUpdate({ set: billSearchUpdate(), target: bills.id })
+    }
 
     if (options.preserveResolvedLinks) {
       aggregates = await preserveBillResolvedLinks(transaction, aggregates)
