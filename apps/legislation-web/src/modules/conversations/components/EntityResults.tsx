@@ -220,17 +220,38 @@ function storedFact(record: EntityCard, label: string): CardFact {
   return { label, ...record.fields.find((field) => field.label === label) }
 }
 
+function billActionLabel(description: string | undefined) {
+  if (!description) {
+    return description
+  }
+  const labels: ReadonlyArray<readonly [RegExp, string]> = [
+    [
+      /^(?:In (?:Senate|Assembly|House)\.\s*)?Consideration of Governor['\u2019]s veto pending\.?$/i,
+      "Vetoed; waiting for lawmakers to act"
+    ],
+    [
+      /^(?:In (?:Senate|Assembly|House)\.\s*)?Consideration of Governor['\u2019]s veto stricken from file\.?$/i,
+      "Vetoed; review taken off the agenda"
+    ],
+    [/^In committee:\s*Held under submission\.?$/i, "Waiting for a committee decision"],
+    [/^Read first time\.\s*To print\.?$/i, "First reading done"]
+  ]
+  const normalized = description.trim().replaceAll(/\s+/g, " ")
+  return labels.find(([pattern]) => pattern.test(normalized))?.[1] ?? description
+}
+
 function BillCardBody({ record, isGrouped = false }: Readonly<{ record: EntityCard; isGrouped?: boolean }>) {
   const summary = record.billSummary
   const action = summary?.latestAction
+  const actionLabel = billActionLabel(action?.description)
   const introduced = suppliedFact(record, "Introduced")
   return (
     <FactGrid
       facts={[
         {
           label: "Latest action",
-          value: action?.date ? <DateFact value={action.date} /> : action?.description,
-          detail: !isGrouped && action?.date ? action.description : undefined
+          value: action?.date ? <DateFact value={action.date} /> : actionLabel,
+          detail: !isGrouped && action?.date ? actionLabel : undefined
         },
         { label: "Introduced", value: introduced ? <DateFact value={introduced} /> : undefined },
         { label: "Versions", value: suppliedFact(record, "Versions") }
@@ -376,7 +397,7 @@ function AmendmentCardBody({ record }: Readonly<{ record: EntityCard }>) {
   const latest = storedFact(record, "Latest action")
   const latestDetail =
     typeof latest.detail === "string"
-      ? latest.detail.replace(/^House amendment offered\b/i, "Amendment offered")
+      ? latest.detail.replace(/^House amendment offered\b/i, "Amendment proposed")
       : latest.detail
   return (
     <FactGrid
@@ -404,12 +425,19 @@ function DocumentCard({
   const isExternal = destination ? !destination.startsWith("/") : false
   const isMaterial = record.kind === "material"
   const primaryLabel = isMaterial ? "Open" : "Open in reader"
+  let dateFact: CardFact = { label: "Dated", value: versionDate ? <DateFact value={versionDate} /> : undefined }
+  if (summary?.hearingDates) {
+    dateFact = { label: "Hearing dates" }
+    const dates = summary.hearingDates
+    const firstDate = dates[0]
+    const lastDate = dates.at(-1)
+    if (firstDate && lastDate) {
+      const format = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" })
+      dateFact.value = format.formatRange(new Date(`${firstDate}T00:00:00Z`), new Date(`${lastDate}T00:00:00Z`))
+    }
+  }
   const facts: CardFact[] = isMaterial
-    ? [
-        { label: "Dated", value: versionDate ? <DateFact value={versionDate} /> : undefined },
-        storedFact(record, "Pages"),
-        storedFact(record, "Attached to")
-      ]
+    ? [dateFact, storedFact(record, "Pages"), storedFact(record, "Attached to")]
     : [
         {
           label: "Version",

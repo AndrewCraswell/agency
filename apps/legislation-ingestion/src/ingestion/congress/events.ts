@@ -379,7 +379,7 @@ export function normalizeCongressHearing(input: unknown): CongressHearingSnapsho
   if (title === undefined) {
     return undefined
   }
-  const hearingDates = [...new Set(hearing.dates.map(item => item.date))].sort()
+  const hearingDates = [...new Set(hearing.dates.map((item) => item.date))].sort()
   const committees = uniqueCommittees(hearing.committees)
   const formats = uniqueDocuments(
     hearing.formats.map((format) => ({
@@ -391,7 +391,7 @@ export function normalizeCongressHearing(input: unknown): CongressHearingSnapsho
   )
   const representations = formats.length ? formats : [{ url: source.sourceUrl, format: "API record" }]
   return {
-    materials: representations.map(format => {
+    materials: representations.map((format) => {
       const materialId = supportingMaterialId("congress", format.url)
       return {
         material: {
@@ -405,7 +405,11 @@ export function normalizeCongressHearing(input: unknown): CongressHearingSnapsho
           contentType: contentType(format.format),
           sourceUpdatedAt: hearing.updateDate === undefined ? undefined : new Date(hearing.updateDate)
         },
-        links: committees.map(committee => ({ materialId, organizationId: organizationId("congress", committee.systemCode), classification: "published-hearing" }))
+        links: committees.map((committee) => ({
+          materialId,
+          organizationId: organizationId("congress", committee.systemCode),
+          classification: "published-hearing"
+        }))
       }
     })
   }

@@ -241,8 +241,8 @@ describe("response presentation snapshots", () => {
   })
 
   it.each([
-    ["House amendment offered", "Amendment offered"],
-    ["House amendment offered.", "Amendment offered."],
+    ["House amendment offered", "Amendment proposed"],
+    ["House amendment offered.", "Amendment proposed."],
     ["Referred to the House committee", "Referred to the House committee"]
   ])("formats amendment latest action %s without changing the source", (detail, expected) => {
     const record: EntityCard = {
@@ -255,6 +255,38 @@ describe("response presentation snapshots", () => {
     expect(screen.getByText(expected)).toBeDefined()
     expect(screen.getByText("Jan 3, 2013")).toBeDefined()
     expect(record.fields[0]?.detail).toBe(detail)
+  })
+
+  it.each([
+    ["In Senate. Consideration of Governor's veto pending.", "Vetoed; waiting for lawmakers to act"],
+    ["In Assembly. Consideration of Governor's veto pending.", "Vetoed; waiting for lawmakers to act"],
+    ["Consideration of Governor's veto stricken from file.", "Vetoed; review taken off the agenda"],
+    ["In committee: Held under submission.", "Waiting for a committee decision"],
+    ["Read first time. To print.", "First reading done"],
+    [
+      "In committee: Held under submission pending fiscal review.",
+      "In committee: Held under submission pending fiscal review."
+    ],
+    ["In Senate. Referred to the Judiciary Committee.", "In Senate. Referred to the Judiciary Committee."]
+  ])("shortens common bill actions without changing the source: %s", (description, expected) => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      billSummary: { status: "Vetoed", latestAction: { date: "2024-09-29", description } }
+    }
+    const snapshot = structuredClone(record)
+    const view = render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    expect(screen.getByText(expected)).toBeDefined()
+    expect(screen.getByText("Sep 29, 2024")).toBeDefined()
+    expect(screen.getByText("Vetoed")).toBeDefined()
+    expect(record).toEqual(snapshot)
+    view.rerender(
+      <RecordCard
+        record={{ ...record, billSummary: { latestAction: { description } } }}
+        resultId={resultId}
+        onOpenVote={() => undefined}
+      />
+    )
+    expect(screen.getByText(expected)).toBeDefined()
   })
 
   it("shows the new compact row metadata and neutral supplied status without account actions", () => {

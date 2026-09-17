@@ -53,17 +53,30 @@ export async function synchronizeCongressEvents(
           await saveCheckpoint(database, stream, nextOffset)
           return false
         }
-        const materialIds = publication.materials.map(item => item.material.id)
-        const existing = await database.select({ id: supportingMaterials.id, sourceUpdatedAt: supportingMaterials.sourceUpdatedAt }).from(supportingMaterials)
-          .where(inArray(supportingMaterials.id, materialIds)).limit(materialIds.length)
+        const materialIds = publication.materials.map((item) => item.material.id)
+        const existing = await database
+          .select({ id: supportingMaterials.id, sourceUpdatedAt: supportingMaterials.sourceUpdatedAt })
+          .from(supportingMaterials)
+          .where(inArray(supportingMaterials.id, materialIds))
+          .limit(materialIds.length)
         counts.read += 1
         const isUnchanged = publication.materials.every(({ material }) => {
-          const stored = existing.find(item => item.id === material.id)
-          return stored?.sourceUpdatedAt != null && material.sourceUpdatedAt != null && stored.sourceUpdatedAt >= material.sourceUpdatedAt
+          const stored = existing.find((item) => item.id === material.id)
+          return (
+            stored?.sourceUpdatedAt != null &&
+            material.sourceUpdatedAt != null &&
+            stored.sourceUpdatedAt >= material.sourceUpdatedAt
+          )
         })
-        if (!options.forceRematerialize && isUnchanged) { counts.unchanged += 1 } else {
+        if (!options.forceRematerialize && isUnchanged) {
+          counts.unchanged += 1
+        } else {
           await upsertCongressHearingSnapshot(database, publication)
-          if (existing.length === 0) { counts.inserted += 1 } else { counts.updated += 1 }
+          if (existing.length === 0) {
+            counts.inserted += 1
+          } else {
+            counts.updated += 1
+          }
         }
         nextOffset = item.offset + 1
         await saveCheckpoint(database, stream, nextOffset)

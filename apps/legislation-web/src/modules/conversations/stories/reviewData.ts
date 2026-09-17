@@ -2,6 +2,15 @@ import { z } from "zod"
 import { entityKindSchema, entityPageSchema } from "../entityResults"
 import { meetingDetailsSchema, profileDetailsSchema, voteDetailsSchema } from "../recordDetails"
 
+export const reviewMaterialIds: readonly string[] = [
+  "material:congress:00008593b8c67cc75946c885",
+  "material:congress:053894933dcc6c83974c72ff",
+  "material:congress:0a45898c8a59835bd918a84e",
+  "material:congress:0bdfdd8f9b4c56abd18f1151",
+  "material:congress:0da416a75fa96fa5c8995dd4",
+  "material:congress:10cb5b1f8282379fc0100e66"
+]
+
 export const reviewCaptureSchema = z.object({
   toolName: z.string(),
   input: z.record(z.string(), z.json()),

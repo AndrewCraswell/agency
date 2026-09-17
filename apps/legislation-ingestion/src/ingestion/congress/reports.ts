@@ -56,14 +56,35 @@ function dateOnly(value: string | undefined): string | undefined {
 
 export function congressReportPublicationDate(text: string) {
   const header = text.slice(0, 2500).replaceAll(/\s+/g, " ")
-  if (!/\b\d+(?:th|st|nd|rd)\s+Congress\b/i.test(header) || !/\bREPORT\b/i.test(header)) { return undefined }
-  const months: Record<string, string> = { january: "01", february: "02", march: "03", april: "04", may: "05", june: "06", july: "07", august: "08", september: "09", october: "10", november: "11", december: "12" }
+  if (!/\b\d+(?:th|st|nd|rd)\s+Congress\b/i.test(header) || !/\bREPORT\b/i.test(header)) {
+    return undefined
+  }
+  const months: Record<string, string> = {
+    january: "01",
+    february: "02",
+    march: "03",
+    april: "04",
+    may: "05",
+    june: "06",
+    july: "07",
+    august: "08",
+    september: "09",
+    october: "10",
+    november: "11",
+    december: "12"
+  }
   const dates = new Set<string>()
-  for (const match of header.matchAll(/\b([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s*\.\s*[-\u2013\u2014]+\s*(?:Ordered to be printed|Committed to the Committee of the Whole House on the State of the Union and ordered to be printed)/gi)) {
+  for (const match of header.matchAll(
+    /\b([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s*\.\s*[-\u2013\u2014]+\s*(?:Ordered to be printed|Committed to the Committee of the Whole House on the State of the Union and ordered to be printed)/gi
+  )) {
     const month = months[match[1]!.toLowerCase()]
-    if (!month) { continue }
+    if (!month) {
+      continue
+    }
     const date = z.iso.date().safeParse(`${match[3]}-${month}-${match[2]!.padStart(2, "0")}`)
-    if (date.success) { dates.add(date.data) }
+    if (date.success) {
+      dates.add(date.data)
+    }
   }
   return dates.size === 1 ? [...dates][0] : undefined
 }

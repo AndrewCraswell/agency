@@ -160,7 +160,9 @@ export async function persistProcessedDocument(
       .limit(1)
     if (existing[0]?.contentHash === extraction.contentHash && existing[0].processingStatus === "processed") {
       if (extraction.pageCount !== undefined) {
-        await database.update(billDocuments).set({ pageCount: extraction.pageCount })
+        await database
+          .update(billDocuments)
+          .set({ pageCount: extraction.pageCount })
           .where(and(eq(billDocuments.id, input.documentId), eq(billDocuments.contentHash, extraction.contentHash)))
       }
       return "unchanged"

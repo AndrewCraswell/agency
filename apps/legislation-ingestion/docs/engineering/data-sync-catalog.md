@@ -422,16 +422,16 @@ available through `legislation-backfill` and CLI services.
 | Meeting `witnesses[].position` | string | Ingested | Combined participant role. | `congress-wave-child`, hourly. |
 | Meeting `witnesses[].organization` | string | Ingested | Combined participant role; no canonical organization link. | `congress-wave-child`, hourly. |
 | Meeting `hearingTranscript` or continuation fields | arrays/objects | Artifact only | Available detail is not separately modeled. | `congress-wave-child`, hourly. |
-| Hearing `jacketNumber` | integer or string | Ingested | Event source/upstream ID and canonical ID. | `congress-wave-child`, hourly. |
+| Hearing `jacketNumber` | integer or string | Artifact only | Retained in the source bundle and provider URLs; a publication does not create a meeting ID. | `congress-wave-child`, hourly. |
 | Hearing `congress` | integer | Ingested/derived | Scheduled scope and identity context. | `congress-wave-child`, hourly. |
-| Hearing `chamber` | string | Partial | Present in source; committee participants provide organization links. | `congress-wave-child`, hourly. |
-| Hearing `title` | string | Ingested | `legislative_events.name` and transcript material title. | `congress-wave-child`, hourly. |
-| Hearing `dates[].date` | date string | Partial | First date becomes all-day event start and document date. | `congress-wave-child`, hourly. |
-| Hearing `committees[].systemCode` | string | Ingested | Event-participant relationship ID only; does not materialize or update a canonical federal committee organization. | `congress-wave-child`, hourly. |
-| Hearing `committees[].name` | string | Ingested | Event-participant relationship metadata only; does not materialize or update a canonical federal committee organization. | `congress-wave-child`, hourly. |
+| Hearing `chamber` | string | Artifact only | Retained in the source; not interpreted as a meeting instance. | `congress-wave-child`, hourly. |
+| Hearing `title` | string | Ingested | Transcript material title, not `legislative_events.name`. | `congress-wave-child`, hourly. |
+| Hearing `dates[].date` | date string | Ingested | All distinct exact dates in `supporting_materials.hearing_dates`; never reused as publication dates or synthetic meeting times. | `congress-wave-child`, hourly. |
+| Hearing `committees[].systemCode` | string | Ingested | Exact publication-to-organization links where the organization exists; does not materialize a canonical federal committee. | `congress-wave-child`, hourly. |
+| Hearing `committees[].name` | string | Artifact only | Retained in the source; names do not establish canonical organization identity. | `congress-wave-child`, hourly. |
 | Hearing `formats[].type` | string | Ingested | Transcript material content type. | `congress-wave-child`, hourly. |
-| Hearing `formats[].url` | string URL | Ingested | Event document/supporting material source URL. | `congress-wave-child`, hourly. |
-| Hearing `updateDate` | date-time string | Ingested | `legislative_events.source_updated_at`. | `congress-wave-child`, hourly. |
+| Hearing `formats[].url` | string URL | Ingested | Supporting material source URL and stable format-specific identity. | `congress-wave-child`, hourly. |
+| Hearing `updateDate` | date-time string | Ingested | `supporting_materials.source_updated_at`. | `congress-wave-child`, hourly. |
 | Hearing `citation` | string | Artifact only | Not modeled. | `congress-wave-child`, hourly. |
 | Hearing `libraryOfCongressIdentifier` | string | Artifact only | Not modeled. | `congress-wave-child`, hourly. |
 | Hearing `associatedMeeting` | object | Artifact only | Published-hearing-to-meeting relationship is not modeled. | `congress-wave-child`, hourly. |

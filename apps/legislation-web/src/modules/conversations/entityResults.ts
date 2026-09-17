@@ -78,7 +78,8 @@ export const entityCardSchema = z.object({
       billId: z.string().optional(),
       versionDate: z.iso.date().optional(),
       versionCode: z.string().optional(),
-      sourceHost: z.string().optional()
+      sourceHost: z.string().optional(),
+      hearingDates: z.array(z.iso.date()).optional()
     })
     .optional(),
   voteSummary: z.object({ question: z.string().optional(), outcome: z.string().optional() }).optional(),
@@ -288,7 +289,12 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
     ]) {
       const rows = z.array(z.object({ eventId: z.literal(id) })).safeParse(container[collection])
       let count = record[countKey]
-      if (count === undefined && rows.success && container.truncated !== true) {
+      if (
+        count === undefined &&
+        rows.success &&
+        container.truncated !== true &&
+        (collection !== "agendaItems" || rows.data.length > 0)
+      ) {
         count = rows.data.length
       }
       addCount(label, count, record.canonicalFactsComplete === false ? "Recorded" : undefined)
@@ -528,9 +534,11 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
     case "material": {
       subtitle = text(record, "classification")
       const date = z.iso.date().safeParse(record.documentDate)
+      const hearingDates = z.array(z.iso.date()).safeParse(record.hearingDates)
       documentSummary = {
         versionDate: date.success ? date.data : undefined,
-        sourceHost: source.success ? new URL(source.data).hostname : undefined
+        sourceHost: source.success ? new URL(source.data).hostname : undefined,
+        hearingDates: hearingDates.success ? [...new Set(hearingDates.data)].sort() : undefined
       }
       metadata.unshift(...[documentSummary.sourceHost, subtitle].filter((value): value is string => Boolean(value)))
       break

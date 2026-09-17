@@ -12,6 +12,46 @@ const event = {
 }
 
 describe("record view projections", () => {
+  it.each([
+    { agendaItems: undefined, agendaItemCount: undefined, truncated: false, expected: undefined },
+    { agendaItems: [], agendaItemCount: undefined, truncated: false, expected: undefined },
+    { agendaItems: [], agendaItemCount: null, truncated: false, expected: undefined },
+    { agendaItems: [], agendaItemCount: 0, truncated: false, expected: "0" },
+    { agendaItems: [{ eventId: event.id }], agendaItemCount: undefined, truncated: false, expected: "1" },
+    { agendaItems: [{ eventId: event.id }], agendaItemCount: undefined, truncated: true, expected: undefined },
+    { agendaItems: [{ eventId: event.id }], agendaItemCount: 7, truncated: true, expected: "7" },
+    { agendaItems: [{ eventId: "different-event" }], agendaItemCount: undefined, truncated: false, expected: undefined }
+  ])(
+    "distinguishes missing agendas from explicit counts: %j",
+    ({ agendaItems, agendaItemCount, truncated, expected }) => {
+      const record = projectEntityResult("get_event", {
+        event: { ...event, agendaItemCount, canonicalFactsComplete: true },
+        agendaItems,
+        truncated,
+        documents: [{ eventId: event.id }, { eventId: event.id }]
+      })?.items[0]
+      expect(record?.fields.find((field) => field.label === "Agenda items")?.value).toBe(expected)
+      expect(record?.fields.find((field) => field.label === "Documents")?.value).toBe(truncated ? undefined : "2")
+    }
+  )
+
+  it("keeps hearing publication dates separate from meeting and publication dates", () => {
+    const dates = ["2013-08-05", "2012-10-09", "2013-08-05"]
+    const record = projectEntityResult("get_supporting_material", {
+      material: {
+        id: "material:hearing",
+        title: "Published hearings",
+        classification: "hearing-transcript",
+        hearingDates: dates
+      }
+    })?.items[0]
+    expect(record?.kind).toBe("material")
+    expect(record?.documentSummary?.hearingDates).toEqual(["2012-10-09", "2013-08-05"])
+    expect(record?.documentSummary?.versionDate).toBeUndefined()
+    expect(record?.meetingSummary).toBeUndefined()
+    expect(dates).toEqual(["2013-08-05", "2012-10-09", "2013-08-05"])
+  })
+
   it.each(["text/html", "application/xml", "application/xhtml+xml"])(
     "does not invent physical pages for %s sources",
     (contentType) => {

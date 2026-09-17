@@ -1154,6 +1154,7 @@ export const supportingMaterials = legislationSchema.table(
     classification: text("classification").notNull(),
     title: text("title").notNull(),
     documentDate: date("document_date"),
+    hearingDates: date("hearing_dates").array(),
     pageCount: integer("page_count"),
     sourceUrl: text("source_url").notNull(),
     contentType: text("content_type"),

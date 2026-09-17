@@ -4,7 +4,7 @@ import { entityKindSchema, projectEntityResult } from "../entityResults"
 import { ResearchFailure, researchFailureCode, type ResearchFailureCode } from "../researchFailure"
 import { researchToolLabels } from "../researchTools"
 import captured from "./captured.json"
-import { reviewDatasetSchema, type ReviewCapture } from "./reviewData"
+import { reviewDatasetSchema, reviewMaterialIds, type ReviewCapture } from "./reviewData"
 
 export const reviewData = reviewDatasetSchema.parse(captured)
 for (const capture of reviewData.captures) {
@@ -102,6 +102,9 @@ export const capturedCards = entityKindSchema.options.flatMap((kind) => {
     (capture) =>
       capture.output.resultSet?.items.flatMap((record) => {
         if (record.kind !== kind || seen.has(record.id)) {
+          return []
+        }
+        if (kind === "material" && !reviewMaterialIds.includes(record.id)) {
           return []
         }
         seen.add(record.id)

@@ -22,7 +22,11 @@ import {
   projectVoteDetails
 } from "../src/modules/conversations/recordDetails"
 import { createResultStore } from "../src/modules/conversations/resultStore"
-import { reviewDatasetSchema, type ReviewDataset } from "../src/modules/conversations/stories/reviewData"
+import {
+  reviewDatasetSchema,
+  reviewMaterialIds,
+  type ReviewDataset
+} from "../src/modules/conversations/stories/reviewData"
 import { LegislationQueryService } from "../src/modules/legislation/query-service"
 
 const config = loadConfig()
@@ -211,6 +215,11 @@ try {
     }
     for (const [toolName, input] of requests) {
       await capture(toolName, input)
+    }
+  }
+  for (const id of reviewMaterialIds) {
+    if (!dataset.captures.some((item) => item.toolName === "get_supporting_material" && item.input.id === id)) {
+      await capture("get_supporting_material", { id })
     }
   }
   const detailTools: Record<string, string> = {

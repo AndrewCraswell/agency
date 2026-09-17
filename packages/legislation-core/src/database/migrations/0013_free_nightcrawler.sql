@@ -68,6 +68,7 @@ CREATE TABLE "legislation"."supporting_materials" (
 	"classification" text NOT NULL,
 	"title" text NOT NULL,
 	"document_date" date,
+	"hearing_dates" date[],
 	"page_count" integer,
 	"source_url" text NOT NULL,
 	"content_type" text,

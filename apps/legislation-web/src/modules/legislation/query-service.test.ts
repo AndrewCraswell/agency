@@ -131,6 +131,28 @@ describe("mention discovery", () => {
 })
 
 describe("bill session metadata", () => {
+  it.each(["search", "read"])("uses the approved federal committee source for %s", async (operation) => {
+    const stopped = new Error("Captured query")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      const service = new LegislationQueryService(database)
+      const request =
+        operation === "search"
+          ? service.searchOrganizations({ query: "Agriculture" })
+          : service.getOrganization({ id: "organization:congress:hsag00" })
+      await expect(request).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain("'jurisdiction:us'")
+      expect(statement).toContain("in ('committee', 'subcommittee')")
+      expect(statement).toContain("= 'govinfo'")
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
   it("qualifies document section count correlation to the selected document", async () => {
     const stopped = new Error("Captured query")
     const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {

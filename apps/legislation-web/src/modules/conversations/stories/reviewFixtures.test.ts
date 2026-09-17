@@ -2,9 +2,28 @@ import { safeValidateUIMessages } from "ai"
 import { describe, expect, it } from "vitest"
 import { entityKindSchema, projectEntityResult } from "../entityResults"
 import { researchToolLabels } from "../researchTools"
+import { reviewMaterialIds } from "./reviewData"
 import { activityPart, activityStates, capturedCards, failureCodes, reviewData, toolCaptures } from "./reviewFixtures"
 
 describe("captured Storybook review", () => {
+  it("keeps the reviewed material cohort stable and retains repaired publication metadata", () => {
+    const materials = capturedCards.filter(({ record }) => record.kind === "material")
+    expect(materials.map(({ record }) => record.id).sort()).toEqual([...reviewMaterialIds].sort())
+    for (const { record } of materials) {
+      expect(record.documentSummary?.versionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(record.fields.find((field) => field.label === "Pages")?.value).toMatch(/^(?:[1-9]\d*|Not paginated)$/)
+    }
+  })
+
+  it("retains repaired bill dates and year-precise person tenure", () => {
+    const bill = capturedCards.find(({ record }) => record.id === "bill:ca:20232024:ab:2652")?.record
+    expect(bill?.fields.find((field) => field.label === "Introduced")?.value).toBe("2024-02-14")
+    const person = capturedCards.find(({ record }) => record.id === "person:congress:a000055")?.record
+    expect(person?.fields.find((field) => field.label === "In office since")?.value).toBe("1997")
+    expect(person?.personSummary?.term?.startYear).toBe(2025)
+    expect(person?.personSummary?.term?.startDate).toBeUndefined()
+  })
+
   it("projects current card fields from retained source data", () => {
     for (const capture of reviewData.captures) {
       if (!capture.output.resultSet) {

@@ -122,6 +122,9 @@ not silently repeat a passage. The existing three-block and stream-size limits r
 	metadata produces a partial-view notice.
 - Selected result lists reuse the existing compact rows, session-owned pagination and error/expiry recovery. They are
 	inserted only when selected by the AI, never automatically for every retrieval.
+- Meeting agenda counts remain unknown when the returned collection is missing or empty. Only an explicit source count
+	can establish zero; nonempty, untruncated agenda collections can supply their retrieved count. General event metadata
+	completeness does not establish agenda completeness. Unknown counts display "Not returned".
 - Roll calls show supplied tallies and the first six retrieved member positions with an explicit count. The full-roll-call
 	action opens the existing inspector and restores focus; missing positions or incomplete tallies stay explicit.
 - Not-found cards require an explicit per-record `not_found` batch-lookup result. Not-collected cards describe an

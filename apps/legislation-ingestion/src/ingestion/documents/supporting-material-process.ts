@@ -13,19 +13,32 @@ export async function persistProcessedSupportingMaterial(
 ): Promise<"processed" | "unchanged"> {
   const extraction = await extractDocument(input.materialId, input.bytes, input.contentType)
   const existing = await database
-    .select({ contentHash: supportingMaterials.contentHash, processingStatus: supportingMaterials.processingStatus, classification: supportingMaterials.classification, sourceUrl: supportingMaterials.sourceUrl, documentDate: supportingMaterials.documentDate })
+    .select({
+      contentHash: supportingMaterials.contentHash,
+      processingStatus: supportingMaterials.processingStatus,
+      classification: supportingMaterials.classification,
+      sourceUrl: supportingMaterials.sourceUrl,
+      documentDate: supportingMaterials.documentDate
+    })
     .from(supportingMaterials)
     .where(eq(supportingMaterials.id, input.materialId))
     .limit(1)
   const record = existing[0]
   const source = record ? new URL(record.sourceUrl) : undefined
   let documentDate: string | undefined
-  if (record?.classification === "committee-report" && ["www.congress.gov", "congress.gov"].includes(source?.hostname ?? "")) {
+  if (
+    record?.classification === "committee-report" &&
+    ["www.congress.gov", "congress.gov"].includes(source?.hostname ?? "")
+  ) {
     documentDate = congressReportPublicationDate(extraction.text)
   }
   if (record?.contentHash === extraction.contentHash && record.processingStatus === "processed") {
-    await database.update(supportingMaterials).set({ pageCount: extraction.pageCount ?? null, documentDate: record.documentDate ?? documentDate })
-      .where(and(eq(supportingMaterials.id, input.materialId), eq(supportingMaterials.contentHash, extraction.contentHash)))
+    await database
+      .update(supportingMaterials)
+      .set({ pageCount: extraction.pageCount ?? null, documentDate: record.documentDate ?? documentDate })
+      .where(
+        and(eq(supportingMaterials.id, input.materialId), eq(supportingMaterials.contentHash, extraction.contentHash))
+      )
     return "unchanged"
   }
 

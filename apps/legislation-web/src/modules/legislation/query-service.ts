@@ -610,6 +610,10 @@ function eventSearchOrder(sort: EventSearchInput["sort"]): SQL[] {
   }
 }
 
+function canonicalCommitteeSource() {
+  return sql`case when ${organizations.jurisdictionId} = 'jurisdiction:us' and ${organizations.classification} in ('committee', 'subcommittee') then ${organizations.sourceProvider} = 'govinfo' else true end`
+}
+
 export interface VoteSearchInput {
   query?: string
   billId?: string
@@ -1889,6 +1893,7 @@ export class LegislationQueryService {
         .where(
           and(
             eq(organizations.classification, "committee"),
+            canonicalCommitteeSource(),
             sql`(${organizations.name} ilike ${pattern} or ${committeeScore} > 0.35)`
           )
         )
@@ -1910,7 +1915,7 @@ export class LegislationQueryService {
       })
       .from(organizations)
       .leftJoin(jurisdictions, eq(jurisdictions.id, organizations.jurisdictionId))
-      .where(eq(organizations.id, lookup.id))
+      .where(and(eq(organizations.id, lookup.id), canonicalCommitteeSource()))
       .limit(1)
     if (organization[0] === undefined) {
       throw new LegislationError("not_found", `Organization ${lookup.id} was not found`)
@@ -1919,7 +1924,7 @@ export class LegislationQueryService {
       this.#database
         .select()
         .from(organizations)
-        .where(eq(organizations.parentOrganizationId, lookup.id))
+        .where(and(eq(organizations.parentOrganizationId, lookup.id), canonicalCommitteeSource()))
         .orderBy(asc(organizations.name)),
       this.getMemberships({ limit: lookup.limit, organizationId: lookup.id }),
       this.getCommitteeBillActivity(lookup),
@@ -1942,6 +1947,7 @@ export class LegislationQueryService {
       .from(organizations)
       .where(
         and(
+          canonicalCommitteeSource(),
           input.jurisdictionId === undefined ? undefined : eq(organizations.jurisdictionId, input.jurisdictionId),
           input.parentOrganizationId === undefined
             ? undefined
