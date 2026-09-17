@@ -121,26 +121,36 @@ group labels and ditto references are cleared rather than carried across an empt
 remain unchanged. Unknown attributes, child markup such as images, unsupported row spans and bare unknown rows still fail.
 
 Blank header rows are allowed only before data, using the same header recognition for row layout and cell continuations.
-A table containing only a caption and blank cells still fails with `passage_table_data_rows_required`; the absence of
-textual data is not evidence that a chart or figure was acquired. Four retained publisher fixtures cover a multilevel
-header, a blank form, a GPO ruling cell and that caption-only case. Valid fixture passages are recounted with both pinned
-tokenizers, without embedding calls. Full post-repair qualification remains separately recorded in the progress ledger.
+Direct row segmentation still fails with `passage_table_data_rows_required` when a table contains only publisher
+headings or blank form cells. Structural inventory now records that case as an atomic layout instead of a blocked source
+shape. Complete-version preparation then proves the intact table against the selected tokenizer's 1,200-token and
+16,000-character limits. The absence of textual data is still not evidence that a chart or figure was acquired. Four
+retained publisher fixtures cover a multilevel header, a blank form, a GPO ruling cell and that caption-only case.
+Fixture passages are recounted with both pinned tokenizers, without embedding calls. Full post-repair qualification
+remains separately recorded in the progress ledger.
 
 The September 15 follow-up rechecked all 457 previously blocked source blocks, preserving source hashes and locators.
 It cleared 297 blocks (292 eCFR and five annual); all 297 reconstruct exactly and pass independent OpenAI and Voyage
 token recounts with the fixed `Federal code` context. These are isolated block canaries with synthetic anchors, not
 published canonical passage manifests. No model provider was called and no persisted preparation was replaced.
 
-The remaining 160 blocks have precise dispositions: 138 eCFR blocks contain at least one table with headers/captions
-but no textual data rows after blank layout rows are removed, and 22 retain unresolved ditto references (21 eCFR,
-one annual). Other tables and prose in the same appendix block can still contain substantive text. The first group requires source review,
-including adjacent graphics and intentionally blank forms; do not silently accept a caption as recovered table data.
+The historical follow-up left 160 blocks for disposition: 138 eCFR blocks contain at least one table with
+headers/captions but no textual data rows after blank layout rows are removed, and 22 retain unresolved ditto references
+(21 eCFR, one annual). Other tables and prose in the same appendix block can still contain substantive text. The first
+group required separating intact atomic text from graphics completeness; do not treat a caption as recovered visual
+data.
 Examples include 7 CFR 1755.397 and the visual-field chart in Title 20's disability appendix. The second group requires
 source-backed resolution within the correct column and table. Evidence: `blocked-tables-source.json`,
 `empty-table-row-shapes.json` and `empty-row-repair-check.json` under backfill artifacts.
 The retained text of 7 CFR 1755.397 explicitly identifies information to be supplied by an owner or bidder and blank
 equipment fields: it is a concrete candidate for an unfilled-form disposition, not evidence that values were lost.
 The Title 20 visual-field caption is a separate chart case. These categories need distinct source-backed handling.
+
+The current implementation resolves the 138 text-layout diagnostics without a source waiver. Their retained review
+packet contains 163 individual tables, all no larger than 1,324 characters. Structural inspection preserves those tables
+atomically, while complete-version preparation remains the tokenizer-specific admission gate. Replaying all 138 exact
+source blocks classified all 163 layouts and produced zero blocked blocks. Visual chart completeness remains a separate
+review concern and is not implied by this result.
 
 The pinned full current-eCFR requalification completed September 17 under implementation hash
 `2f961df4618361ef08d65c77286e592d0d41a938cc36e236eb9973a72e3df973`. Its terminal manifest covers all 49

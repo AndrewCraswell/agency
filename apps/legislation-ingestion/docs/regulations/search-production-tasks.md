@@ -44,17 +44,19 @@ release inventory and tokenizer eligibility remain open.
   boundary without evidence; all substitutions point to original source spans. Depends on PASS-02–04.
   Blank publisher-row handling is implemented and checked against all 457 previously blocked retained blocks.
   The [preparation canary](passage-shape-inventory.md#ditto-scope-and-preparation-gates) prepares 445 of those blocks
-  with both tokenizers; 12 fail actual preparation with unresolved ditto references. Structural diagnostics separately
-  report 138 header/caption-only blocks and 21 unresolved-ditto blocks. An explicit full-width group label can retain
-  an earlier same-column value; blank separators still clear context. Remaining concrete work: resolve the 12 actual
-  preparation failures against source; requalify affected accepted tables after the dotted-leader repair;
-  review graphics and blank-form intent for the 138 header-only diagnostics; then requalify full canonical versions.
+  with both tokenizers; 12 fail actual preparation with unresolved ditto references. Historical structural diagnostics
+  separately reported 138 header/caption-only blocks and 21 unresolved-ditto blocks. The 138 blocks now contribute 163
+  atomic layouts, all at most 1,324 characters, and replay with zero blocked source blocks; visual graphics completeness
+  remains a distinct review concern. An explicit full-width group label can retain an earlier same-column value; blank
+  separators still clear context. Remaining concrete work is to complete the fresh full-corpus requalification and
+  retain the exact Title 33 source-gap quarantine in its terminal audit.
   Dotted leaders now use the same exact-column references and unsafe-continuation rejection as plain ditto markers.
   The 457-block recheck still prepares 445 with both tokenizers; 14 CFR 171.311 block 65 gains correct source context.
   The terminal ten-diagnostic review has since resolved nine exact layouts. The remaining 33 CFR 110.214 defect is now
   represented by a provision-level source-review contract: its exact current eCFR table and annual CFR evidence preview
   as `quarantined_source_gap`, and passage preparation retains `source_review_quarantined` through retries. Applying the
-  disposition awaits the current development schema; a fresh 49-title structural run remains required before closure.
+  disposition awaits the current development schema; a fresh 49-title structural and tokenizer run remains required
+  before closure.
 - [ ] **PASS-06 Freeze the final passage manifest.** Bind owner/version, source membership, reader/input contracts,
   tokenizer, context hash, input hash and eligibility in deterministic per-partition manifests. **Done:** replay has
   identical IDs/hashes and changed context produces distinct preparation work. Depends on PASS-05.
@@ -66,10 +68,10 @@ release inventory and tokenizer eligibility remain open.
   protect report replay. `audit-regulatory-qualification` now requires the expected implementation hash and edition
   count, verifies the terminal inventory, exact selected/result identity, every per-edition report, retained NDJSON hash
   and record count, and aggregates per-model tokens, passages, limits, continuations and failure reasons. It reports
-  tokenizer qualification separately from unresolved table-shape review. The current 49-edition/275,149-record run is
-  terminal and independently verified with zero tokenizer blockers for either model. Its separate table-shape gate stays
-  open for 148 diagnostics across 101 versions, including ten unresolved-ditto layouts across nine versions; PASS-06's
-  final passage manifest cannot silently discard that review scope.
+  tokenizer qualification separately from unresolved table-shape review. The prior 49-edition/275,149-record run is
+  terminal and independently verified with zero tokenizer blockers for either model. Its historical 148 diagnostics
+  have since narrowed to the explicitly quarantined Title 33 source rendition gap; a fresh full-corpus run under the
+  atomic-layout implementation is required before PASS-06 freezes the final manifest.
 - [ ] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
   coverage against retained source; review difficult real samples visually where text extraction loses layout meaning.
   **Done:** zero unexplained dropped/duplicated source spans in the advertised scope. Depends on PASS-05–07.

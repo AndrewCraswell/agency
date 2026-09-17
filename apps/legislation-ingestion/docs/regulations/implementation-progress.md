@@ -13,6 +13,16 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Removed the false structural blocker for publisher tables that have no independently segmentable data rows. The table
+inventory now records these layouts as atomic source text and leaves the actual model tokenizer gate responsible for
+proving that each complete table fits. The retained 138-block review packet expands to 163 individual table layouts;
+all are at most 1,324 characters and all 163 now classify with zero blocked source blocks. This does not claim that a
+chart's visual information was recovered. Direct row segmentation still rejects `passage_table_data_rows_required`,
+and complete-version preparation continues to enforce the 1,200-token and 16,000-character limits with both pinned
+tokenizers. Focused passage/table tests passed (96 tests), as did scoped formatting and lint. Commit `3700046` contains
+the implementation. A fresh read-only 49-title dual-tokenizer qualification is running under the new fingerprint;
+recurring schedules, provider embedding calls and canonical/index/vector writes remain disabled.
+
 Added a canonical provision-level source-review disposition and connected it to passage admission. The unreleased
 baseline now binds each review to an exact edition/version membership and table index, validates SHA-256 block and review
 hashes, and limits dispositions to accepted context, source-gap quarantine or non-data tables. Registration revalidates
