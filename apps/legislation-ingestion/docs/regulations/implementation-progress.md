@@ -13,6 +13,27 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved the sparse limitations column in 21 CFR 172.510. The exact common/scientific-name/limitations headers,
+populated name cells and a plain empty limitation cell are required. An empty entry does not acquire a limitation;
+only a later explicit ditto uses the last printed limitation. A newly printed limitation replaces that reference.
+Other tables retain their existing blank-cell boundaries. The
+[published CFR](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol3/pdf/CFR-2025-title21-vol3-sec172-510.pdf)
+corroborates the source's repeated dittos across intervening blank limitations. No legal restriction is inferred for
+an empty row and no source text is substituted.
+
+`fixtures/flavoring-substances-table.json` retains the full canonical block, verified against version/edition
+membership, content hash and XML hash. All 82 table tests, scoped lint and ingestion types passed, including blank
+row context, replacement limitation references, changed-header rejection and both tokenizers' reconstruction/recounts.
+Whole version `33c04c75-c9cf-4e49-a366-828601e74e19` qualifies with 62 passages per model, maximum 356 OpenAI /
+384 Voyage tokens. Parser hash: `602be5ffcf55f23d8c9efdbd371d14fc9b95bef7d9c90211cc388d0ae5d8b308`.
+Report: `artifacts/regulatory-backfills/flavoring-version-recheck.json`; tests:
+`C:/Users/andcra/AppData/Local/Temp/tabra-flavoring-tests.log`. This closes one of six known blockers; five remain
+without a fresh full-corpus requalification. No source/index/vector writes or provider calls occurred.
+The benefits-income table remains under review: its blank parent-only cells require an independent applicability
+interpretation and do not inherit the flavoring table's rule.
+Root `pnpm verify` stopped before coverage on the unrelated generated Storybook worker's unused eslint-disable
+directive. Log: `C:/Users/andcra/AppData/Local/Temp/tabra-flavoring-verify.log`. Scoped `git diff --check` passed.
+
 Resolved 40 CFR 52.2723's approval-date ditto after an explicitly reserved rule. Recognition requires the exact
 Puerto Rico approval-table headers, a `Rule <number>—(Reserved)` label and otherwise empty, unspanned cells.
 Only the earlier EPA approval-date reference survives; the reserved rule acquires no date or ditto context.

@@ -2,6 +2,15 @@
 
 ## Latest scoped requalification
 
+21 CFR 172.510 now qualifies with 62 passages per model, maximum 356 OpenAI / 384 Voyage tokens. The sparse
+limitation column preserves the last printed limitation for a later explicit ditto, while leaving intervening blank
+rows without a limitation reference. Exact flavoring-table headers and populated name columns are required.
+The [published CFR](https://www.govinfo.gov/content/pkg/CFR-2025-title21-vol3/pdf/CFR-2025-title21-vol3-sec172-510.pdf)
+corroborates this convention. All 82 table tests passed, including exact reconstruction, changed limitation sources
+and the absence of fabricated blank-row context. Report: `artifacts/regulatory-backfills/flavoring-version-recheck.json`;
+parser hash `602be5ffcf55f23d8c9efdbd371d14fc9b95bef7d9c90211cc388d0ae5d8b308`.
+Five known versions remain blocked; a new full-corpus qualification is still required.
+
 The canonical 40 CFR 52.2723 version now qualifies with both models: 30 passages each, maximum 407 / 484 tokens.
 The explicit reserved-rule row preserves only the prior EPA approval-date reference, with no date assigned to the
 reserved rule itself. Exact table headers, reserved syntax and empty unspanned cells are required. The

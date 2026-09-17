@@ -410,6 +410,48 @@ describe("regulatory table passages", () => {
     expect(() => legalTableRows(input)).toThrow("passage_table_unresolved_ditto")
   })
 
+  it("resolves reviewed sparse flavoring limitations without filling blank entries", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/flavoring-substances-table.json", import.meta.url), "utf8")))
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "flavoring_table_required")
+    const rows = legalTableRows(table).rows
+    const blank = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Benzoin resin"))
+    const boldo = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Boldus (boldo) leaves"))
+    const cherry = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Cherry-laurel leaves"))
+    invariant(blank && boldo && cherry, "flavoring_rows_required")
+    expect(blank.context.some((span) => span.label === "Column 3 ditto source")).toBe(false)
+    expect(boldo.context.map((span) => table.text.slice(span.start, span.end))).toContain("In alcoholic beverages only")
+    expect(cherry.context.map((span) => table.text.slice(span.start, span.end)).join("\n")).toContain("prussic acid")
+    expect(cherry.context.map((span) => table.text.slice(span.start, span.end))).not.toContain(
+      "In alcoholic beverages only"
+    )
+    expect(() =>
+      legalTableRows({
+        text: table.text.replace("Scientific name", "Other"),
+        xml: table.xml.replace("Scientific name", "Other")
+      })
+    ).toThrow("passage_table_unresolved_ditto")
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
   it("retains an approval-date reference across a reserved rule without assigning the reserved rule a date", async () => {
     const fixtures = z
       .object({
