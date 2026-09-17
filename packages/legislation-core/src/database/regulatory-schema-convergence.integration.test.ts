@@ -42,9 +42,6 @@ describe.skipIf(databaseUrl === undefined).sequential("regulatory schema converg
   let originalMigrationsFolder = ""
 
   beforeAll(async () => {
-    await pool.query("drop schema if exists legislation cascade")
-    await pool.query("drop schema if exists legislation_migrations cascade")
-
     originalMigrationsFolder = await mkdtemp(join(tmpdir(), "legislation-migrations-before-convergence-"))
     await cp(migrationsFolder, originalMigrationsFolder, { recursive: true })
     const journalPath = join(originalMigrationsFolder, "meta", "_journal.json")
@@ -55,40 +52,27 @@ describe.skipIf(databaseUrl === undefined).sequential("regulatory schema converg
     await writeFile(journalPath, `${JSON.stringify(journal, null, 2)}\n`)
     await rm(join(originalMigrationsFolder, "0049_regulatory-schema-convergence.sql"))
     await rm(join(originalMigrationsFolder, "meta", "0049_snapshot.json"))
+  })
 
+  async function installOriginalMigration(): Promise<void> {
+    await pool.query("drop schema if exists legislation cascade")
+    await pool.query("drop schema if exists legislation_migrations cascade")
     await migrate(drizzle(pool), {
       migrationsFolder: originalMigrationsFolder,
       migrationsSchema: "legislation_migrations",
       migrationsTable: "migrations"
     })
+  }
 
-    await pool.query(`drop table ${convergedTables.map((table) => `legislation.${table}`).join(", ")} cascade`)
-    await pool.query(
-      "alter table legislation.legal_edition_provisions drop constraint legal_edition_provisions_edition_id_version_id_key"
-    )
-    await pool.query(
-      "alter table legislation.legal_import_generations drop constraint legal_import_generations_state_check"
-    )
-    await pool.query(
-      `alter table legislation.legal_import_generations add constraint legal_import_generations_state_check
-       check(state in ('staging','validated','materialized','published','blocked'))`
-    )
-
+  async function applyConvergenceMigration(): Promise<void> {
     await migrate(drizzle(pool), {
       migrationsFolder,
       migrationsSchema: "legislation_migrations",
       migrationsTable: "migrations"
     })
-  }, 120_000)
+  }
 
-  afterAll(async () => {
-    await pool.query("drop schema if exists legislation cascade")
-    await pool.query("drop schema if exists legislation_migrations cascade")
-    await pool.end()
-    if (originalMigrationsFolder !== "") await rm(originalMigrationsFolder, { force: true, recursive: true })
-  })
-
-  it("repairs databases that recorded the original regulatory storage migration", async () => {
+  async function expectConvergedSchema(): Promise<void> {
     const tables = await pool.query<{ table_name: string }>(
       `select table_name from information_schema.tables
        where table_schema='legislation' and table_name=any($1::text[])
@@ -118,5 +102,70 @@ describe.skipIf(databaseUrl === undefined).sequential("regulatory schema converg
         name: "legal_import_generations_state_check"
       }
     ])
+    const preparationItem = await pool.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+       where table_schema='legislation' and table_name='legal_passage_preparation_items'
+         and column_name in ('failure_code','failed_at') order by column_name`
+    )
+    expect(preparationItem.rows.map((row) => row.column_name)).toEqual(["failed_at", "failure_code"])
+  }
+
+  async function removeSharedOriginalConstraints(): Promise<void> {
+    await pool.query(
+      "alter table legislation.legal_edition_provisions drop constraint legal_edition_provisions_edition_id_version_id_key"
+    )
+    await pool.query(
+      "alter table legislation.legal_import_generations drop constraint legal_import_generations_state_check"
+    )
+    await pool.query(
+      `alter table legislation.legal_import_generations add constraint legal_import_generations_state_check
+       check(state in ('staging','validated','materialized','published','blocked'))`
+    )
+  }
+
+  afterAll(async () => {
+    await pool.query("drop schema if exists legislation cascade")
+    await pool.query("drop schema if exists legislation_migrations cascade")
+    await pool.end()
+    if (originalMigrationsFolder !== "") await rm(originalMigrationsFolder, { force: true, recursive: true })
   })
+
+  it("repairs databases that recorded the original regulatory storage migration", async () => {
+    await installOriginalMigration()
+    await pool.query(`drop table ${convergedTables.map((table) => `legislation.${table}`).join(", ")} cascade`)
+    await removeSharedOriginalConstraints()
+    await applyConvergenceMigration()
+    await expectConvergedSchema()
+  }, 120_000)
+
+  it("repairs partially evolved passage-preparation tables", async () => {
+    await installOriginalMigration()
+    await pool.query(
+      `drop table ${[
+        "legal_copy_revisions",
+        "legal_discovery_checkpoints",
+        "legal_discovery_dispatches",
+        "legal_discovery_pages",
+        "legal_discovery_units",
+        "legal_passage_source_provenance",
+        "legal_preparation_dispatches",
+        "legal_preparation_plans",
+        "legal_provision_source_reviews"
+      ]
+        .map((table) => `legislation.${table}`)
+        .join(", ")} cascade`
+    )
+    await pool.query("drop index legislation.legal_passage_preparation_pending_idx")
+    await pool.query(
+      `alter table legislation.legal_passage_preparation_items
+       drop constraint legal_passage_preparation_items_failure_code_check,
+       drop constraint legal_passage_preparation_items_check,
+       drop constraint legal_passage_preparation_items_check1,
+       drop column failure_code,
+       drop column failed_at`
+    )
+    await removeSharedOriginalConstraints()
+    await applyConvergenceMigration()
+    await expectConvergedSchema()
+  }, 120_000)
 })

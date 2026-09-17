@@ -321,6 +321,46 @@ CREATE TABLE IF NOT EXISTS legislation.legal_passage_preparation_items (
   UNIQUE(preparation_id,version_id)
 );
 --> statement-breakpoint
+ALTER TABLE legislation.legal_passage_preparation_items ADD COLUMN IF NOT EXISTS failure_code text;
+--> statement-breakpoint
+ALTER TABLE legislation.legal_passage_preparation_items ADD COLUMN IF NOT EXISTS failed_at timestamptz;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='legislation.legal_passage_preparation_items'::regclass
+      AND conname IN ('legal_passage_preparation_items_failure_code_check','legal_passage_preparation_items_convergence_failure_code_check')
+  ) THEN
+    ALTER TABLE legislation.legal_passage_preparation_items
+      ADD CONSTRAINT legal_passage_preparation_items_convergence_failure_code_check
+      CHECK(failure_code ~ '^[a-z_]+$');
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='legislation.legal_passage_preparation_items'::regclass
+      AND conname IN ('legal_passage_preparation_items_check','legal_passage_preparation_items_convergence_failure_pair_check')
+  ) THEN
+    ALTER TABLE legislation.legal_passage_preparation_items
+      ADD CONSTRAINT legal_passage_preparation_items_convergence_failure_pair_check
+      CHECK((failure_code IS NULL)=(failed_at IS NULL));
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='legislation.legal_passage_preparation_items'::regclass
+      AND conname IN ('legal_passage_preparation_items_check1','legal_passage_preparation_items_convergence_generation_failure_check')
+  ) THEN
+    ALTER TABLE legislation.legal_passage_preparation_items
+      ADD CONSTRAINT legal_passage_preparation_items_convergence_generation_failure_check
+      CHECK(generation_id IS NULL OR failure_code IS NULL);
+  END IF;
+END $$;
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS legal_passage_preparation_pending_idx ON legislation.legal_passage_preparation_items(preparation_id,ordinal) WHERE generation_id IS NULL AND failure_code IS NULL;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS legislation.legal_preparation_dispatches (
@@ -444,6 +484,20 @@ CREATE TABLE IF NOT EXISTS legislation.legal_passage_source_provenance (
   generation_id text PRIMARY KEY REFERENCES legislation.legal_passage_generations(id) ON DELETE CASCADE,
   source_hash text NOT NULL CHECK(source_hash ~ '^[a-f0-9]{64}$')
 );
+--> statement-breakpoint
+INSERT INTO legislation.legal_passage_source_provenance(generation_id,source_hash)
+SELECT generation.id,
+  legislation.legal_passage_source_hash(version.body,version.heading,version.blocks,version.input_contract)
+FROM legislation.legal_passage_generations generation
+JOIN legislation.legal_provision_versions version ON version.id=generation.provision_version_id
+ON CONFLICT(generation_id) DO NOTHING;
+--> statement-breakpoint
+INSERT INTO legislation.legal_passage_source_provenance(generation_id,source_hash)
+SELECT generation.id,
+  legislation.legal_passage_source_hash(version.body,version.heading,version.blocks,version.input_contract)
+FROM legislation.legal_passage_generations generation
+JOIN legislation.regulatory_document_versions version ON version.id=generation.document_version_id
+ON CONFLICT(generation_id) DO NOTHING;
 --> statement-breakpoint
 DROP TRIGGER IF EXISTS legal_copy_provenance_revision ON legislation.legal_passage_source_provenance;
 CREATE TRIGGER legal_copy_provenance_revision AFTER INSERT OR UPDATE OR DELETE ON legislation.legal_passage_source_provenance
