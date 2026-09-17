@@ -94,6 +94,9 @@ def motion_matches(hint, context):
         return "NOT TABLED" in context or "/TABLE" in context
     if re.search(r"\bAM\s*(?:NO\.?\s*)?\d+(?:\s+AS\s+AMD)?\s+TABLED\b", hint):
         return ("WAS TABLED" in context or "/TABLE" in context) and "NOT TABLED" not in context
+    if "MOTION TO TABLE BILL" in hint:
+        return (re.search(r"\bSECOND READING\\TABLE\b", context) is not None
+                and re.search(r"\bSHALL\b(?:(?!AMENDMENT).){0,200}\bBE TABLED\b", context) is not None)
     if "WITHDRAW" in hint:
         return "WITHDRAW" in context
     if "RESCIND" in hint:

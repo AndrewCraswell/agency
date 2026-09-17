@@ -398,6 +398,20 @@ And so the effective date clause was adopted.
         result = parse_roll_call(text, "HB1", (2, 1, 1), "AM51", "776", True, "AM NO 51 NOT TABLED")
         self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
+    def test_whole_bill_table_motion_requires_second_reading_question(self):
+        text = (
+            "[[JOURNAL_ANCHOR:1020]]\nPage 1020\n"
+            + self.sample(heading="SB 113").replace(
+                "Final Passage",
+                'The question being: "Shall SB 113 be tabled?"\nSecond Reading\\Table',
+            )
+        )
+        result = parse_roll_call(
+            text, "SB113", (2, 1, 1), "1020", "1020", True,
+            "(H) MOTION TO TABLE BILL FAILED Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_compound_withdraw_action_matches_its_rule_suspension_question(self):
         text = (
             "[[JOURNAL_ANCHOR:1865]]\nPage 1865\nMotion to withdraw HB 1 from Rules.\n"
