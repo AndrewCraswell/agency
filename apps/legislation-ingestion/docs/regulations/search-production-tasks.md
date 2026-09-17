@@ -291,7 +291,9 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
   reviews may provide suggestions but never satisfy human completion; every candidate needs a human judgment, and
   conflicting human grades require human adjudication. The scorer can now report completed protocol evidence instead of
   hard-coding false, while model selection and bulk authorization remain separate. The regenerated all-system packet
-  contains 60 questions and 2,094 still-unreviewed candidates. Domain/product review remains open.
+  contains 60 questions and 2,094 still-unreviewed candidates. A bounded extract/apply tool now pages one to five blind
+  questions at a time, binds each page to the exact packet revision and rejects stale merges or changed source evidence.
+  Domain/product review remains open.
 - [x] **EVAL-05 Close tokenizer/provider accounting evidence.** Recheck the recorded Voyage local/provider usage
   difference with identical text, query/document mode and provider metadata. **Done:** exact input integrity remains
   verified and billing discrepancy is explained or explicitly bounded; no text mutation is introduced to force equality.

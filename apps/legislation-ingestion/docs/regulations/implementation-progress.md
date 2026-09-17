@@ -13,6 +13,19 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Made the 2,094-candidate EVAL-04 review resumable. `page-regulatory-judgments` extracts one to five complete rank-blind
+questions from the immutable review packet and returns a stable next-query cursor. Each page binds the exact packet hash,
+manifest and compared-system identity. Applying a reviewed page to a new exclusive output rechecks every question,
+candidate ID, version, input hash and source excerpt, and rejects stale packet revisions, changed evidence, duplicate
+identities and malformed review/adjudication records. It replaces only the page's reviewed queries; extraction and apply
+make no external request and never select a model.
+
+The first real one-question page extracted from the 60-question recovered packet with next cursor `development-01`.
+Two focused tests pass bounded pagination, merge isolation, continuation, stale-page refusal, evidence-tamper refusal
+and invalid cursors; ingestion format, lint and type-check pass. Artifact:
+`artifacts/regulatory-backfills/evaluation-review-page-001.json`. The page remains unreviewed. EVAL-04 still requires
+actual human judgments and adjudication before EVAL-12 can select a route.
+
 Repaired the blind relevance-review contract so EVAL-04 can actually reach a truthful terminal state. Candidates now
 hold up to eight independent judgments plus a separate adjudication. Every judgment records grade, rationale, reviewer
 and human/automated kind. Automated suggestions can be scored provisionally but never count as human completion. Every

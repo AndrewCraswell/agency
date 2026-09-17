@@ -244,6 +244,17 @@ bound to manifest hash `712f47db1218ac76eab1a174d4e6ebd814551f47ef8d0e030ac70466
 `258ea4afbf37d47da753e2bb6fb0e5dfec1cc0cc5a193b252540d8a0660a9856`. All review arrays are empty and no
 adjudications are claimed.
 
+Use `page-regulatory-judgments` to review this packet without editing the 5 MB source directly. Extraction emits one to
+five complete rank-blind questions and a cursor. The page binds the exact packet revision; apply refuses a stale packet,
+changed question/candidate evidence, duplicate identities or malformed review records. Apply replaces only the selected
+queries in a new exclusive output file. Continue from `nextAfterQueryId`; a null cursor means the ordered query scan is
+exhausted, not that human review is complete.
+
+```powershell
+pnpm tool regulations/page-regulatory-judgments --packet artifacts/regulatory-backfills/evaluation-recovered-all-systems-blind-review-packet-v2.json --limit 1 --output artifacts/regulatory-backfills/review-page.json
+pnpm tool regulations/page-regulatory-judgments --packet artifacts/regulatory-backfills/evaluation-recovered-all-systems-blind-review-packet-v2.json --apply artifacts/regulatory-backfills/review-page.json --output artifacts/regulatory-backfills/reviewed-packet.json
+```
+
 ```powershell
 pnpm tool regulations/pool-regulatory-judgments --manifest artifacts/regulatory-backfills/regulatory-comparison-manifest.json --systems artifacts/regulatory-backfills/regulatory-review-systems.json --output artifacts/regulatory-backfills/fresh-review.json
 ```
