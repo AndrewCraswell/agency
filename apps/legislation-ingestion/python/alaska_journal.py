@@ -52,7 +52,8 @@ def motion_matches(hint, context):
     )
     if nested_amendment:
         return re.search(
-            rf"\bAMENDMENT\s+TO\s+AMENDMENT\s+NO\.?\s*{int(nested_amendment.group(2))}\b",
+            rf"\bAMENDMENT(?:\s+NO\.?\s*{int(nested_amendment.group(1))})?\s+TO\s+"
+            rf"AMENDMENT\s+NO\.?\s*{int(nested_amendment.group(2))}\b",
             context,
         ) is not None
     amendment = re.search(r"\bAM\s*(?:NO\.?\s*)?(\d+)\b", hint)

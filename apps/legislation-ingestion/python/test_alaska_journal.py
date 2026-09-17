@@ -242,6 +242,20 @@ And so the effective date clause was adopted.
         )
         self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
+    def test_nested_amendment_action_matches_explicit_inner_and_parent_numbers(self):
+        text = (
+            "[[JOURNAL_ANCHOR:1143]]\nPage 1143\n"
+            'The question being: "Shall Amendment No. 1 to Amendment No. 2 be adopted?"\n'
+            + self.sample("Adams, Brown").replace(
+                "Final Passage", "Amendment No. 1 to Amendment No. 2"
+            )
+        )
+        result = parse_roll_call(
+            text, "HB1", (2, 1, 1), "1143", "1143", True,
+            "(H) AM 1 TO AM 2 FAILED Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_lower_numbered_ordinary_amendment_ends_named_action(self):
         text = (
             "[[JOURNAL_ANCHOR:AM5]]\n" + self.sample("Adams, Brown")
