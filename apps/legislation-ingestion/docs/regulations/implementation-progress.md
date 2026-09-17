@@ -3659,6 +3659,16 @@ OpenAI Small returned 1,536 dimensions, 107,543 billed input tokens and 11.576 s
 to force agreement. The retained summary is
 `artifacts/regulatory-backfills/evaluation-recovered-live-comparison-summary.json`.
 
+The 546-token difference has an exact mode-bound fingerprint: two tokens for each of 243 document inputs plus one token
+for each of 60 query inputs (`243 * 2 + 60 * 1 = 546`). It does not vary with input length. The pinned local tokenizer
+uses the published Voyage 4 vocabulary without special tokens, and Voyage documents that `input_type` adds separate
+query/document instructions on the backend. OpenRouter documents that its token totals originate with the upstream
+provider. Those public contracts do not identify which layer excludes the observed boundary tokens, so the evidence is
+explicitly bounded rather than assigned an unverified cause. Local counts remain the conservative context/batch-limit
+gate; provider totals remain the billing record. EVAL-05 is complete under its predeclared "explained or explicitly
+bounded" criterion. A fresh two-input probe was attempted on September 17, 2026, but the configured OpenRouter key had
+expired before any vector or billable usage was returned.
+
 At the OpenRouter catalog prices retrieved on September 17, 2026, $0.02 per million input tokens for OpenAI Small and
 $0.06 per million for Voyage 4, the measured calls cost approximately $0.00215 and $0.00695. These are evaluation-call
 estimates from reported tokens, not a customer usage limit or a full-corpus projection.

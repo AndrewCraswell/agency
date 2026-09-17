@@ -252,13 +252,17 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
 - [ ] **EVAL-04 Complete blind relevance review.** Use existing rank-blind packets; record grades, rationales, multiple
   acceptable answers, reviewer and disagreements. **Done:** domain/product review adjudicates ambiguous labels before
   final scoring. Automated judge suggestions are marked as such and do not become human review. Depends on EVAL-03.
-- [ ] **EVAL-05 Close tokenizer/provider accounting evidence.** Recheck the recorded Voyage local/provider usage
+- [x] **EVAL-05 Close tokenizer/provider accounting evidence.** Recheck the recorded Voyage local/provider usage
   difference with identical text, query/document mode and provider metadata. **Done:** exact input integrity remains
   verified and billing discrepancy is explained or explicitly bounded; no text mutation is introduced to force equality.
   Recovered live evidence now bounds the Voyage difference to 546 tokens over 116,353 locally counted tokens, or
   0.47 percent. OpenAI provider and local totals agree exactly at 107,543. The 243 documents and 60 queries were
-  identical within each route and retained under immutable input hashes. Final closure remains coupled to the reviewed
-  comparison rather than treating provider accounting alone as route approval.
+  identical within each route and retained under immutable input hashes. The difference also equals exactly two tokens
+  per document plus one token per query (`243 * 2 + 60 * 1 = 546`), so it is bounded by input count and mode rather than
+  text length. Voyage documents that `input_type` applies mode-specific instructions on the backend, while OpenRouter
+  reports provider-originated usage. The retained evidence cannot prove which layer omits those mode-boundary tokens,
+  so local tokenizer counts remain the conservative limit check and provider usage remains the billing record. This
+  closes the task's explicit-bounding criterion without treating provider accounting as route approval.
 - [ ] **EVAL-06 Run both semantic candidates.** Compare OpenAI Small and Voyage 4 through the repaired shared client
   using identical frozen passages/queries and immutable response cache. **Done:** dimensions, input/output pairing,
   usage, provider errors, latency and model IDs are retained per request. Depends on EVAL-02, EVAL-04–05.
