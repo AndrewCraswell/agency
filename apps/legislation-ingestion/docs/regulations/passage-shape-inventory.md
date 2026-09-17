@@ -178,6 +178,12 @@ prints Anchorage A immediately before B with the referenced values. The reviewed
 inside the current eCFR version. Reconcile or explicitly quarantine the source rendition before freezing the final
 passage manifest.
 
+The targeted whole-version recheck bound all ten original diagnostics back to the same source-review hashes and ran
+both pinned tokenizers over all nine affected versions. All 18 preparations succeeded; the maximum passage size was
+894 OpenAI tokens and 899 Voyage tokens. Report hash:
+`4f617bb5e367a2a2a5e72f5ef6083e20834ccc51392df3d77211bcb2bb0f8951`. The single Title 33 table remains a structural
+source gap even though its intact fallback fits the transport budget.
+
 ## Ditto scope and preparation gates
 
 A fully spanning group heading inside one table can qualify later rows without replacing earlier column values.

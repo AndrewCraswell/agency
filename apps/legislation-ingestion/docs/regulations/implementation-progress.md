@@ -34,6 +34,18 @@ Root `pnpm verify` then stopped before coverage: the global formatter could not 
 `legislation-web` files (`os error 1224`), and that unrelated package also reported eight active lint errors. The
 regulations files passed their focused format, lint, TypeScript and 102-test table suite.
 
+Added a targeted, read-only whole-version requalifier for a hash-bound table source-review packet. It rechecks each
+diagnostic against the current canonical edition membership, content hash, official artifact, active rights and exact
+table bytes, then runs structural inspection and both pinned tokenizers over the complete version. It makes no provider
+call and cannot silently substitute a different version after source review.
+
+The ten-diagnostic packet rechecked nine complete versions in eight seconds. All 18 tokenizer preparations succeeded:
+OpenAI and Voyage each prepared every version with maximum observed passage sizes of 894 and 899 tokens respectively.
+The report retains per-version passage/token counts and the one Title 33 structural source gap at
+`canonical-preparation-all-current/reviewed-version-recheck-2026-09-17.json`, report hash
+`4f617bb5e367a2a2a5e72f5ef6083e20834ccc51392df3d77211bcb2bb0f8951`. This proves the nine repairs remain bounded
+with both models while keeping source fidelity separate from transport eligibility.
+
 Added a read-only table source-review exporter for the terminal qualification diagnostics. It requires an exact
 diagnostic edition/version membership, recomputes the canonical provision content hash, checks the published import
 generation and active display/search rights, selects the exact table block by the retained diagnostic index, and emits
