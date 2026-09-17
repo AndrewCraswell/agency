@@ -158,6 +158,13 @@ ditto diagnostics occur in 40 CFR 52.730, 52.876 and 81.331; Appendix A to 49 CF
 `canonical-preparation-all-current/audit-2026-09-17.json`. These identities remain a source-review queue and cannot be
 treated as resolved by the zero tokenizer-blocker count.
 
+The hash-bound review packet
+`canonical-preparation-all-current/unresolved-ditto-source-reviews.json` joins those ten diagnostics back to their
+published canonical edition memberships, active rights policies and official eCFR artifacts. It retains the exact table
+XML and a row/cell rendering with span and publisher-style attributes. Its report hash is
+`566001f48ba0391db84fd7020f01080e3a5c4d8391f9b67ada9de12ba0b8ad1b`. This packet makes source review reproducible;
+it is not a disposition and does not authorize carrying a value across a blank or group boundary.
+
 ## Ditto scope and preparation gates
 
 A fully spanning group heading inside one table can qualify later rows without replacing earlier column values.

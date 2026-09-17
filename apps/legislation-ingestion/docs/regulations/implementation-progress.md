@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a read-only table source-review exporter for the terminal qualification diagnostics. It requires an exact
+diagnostic edition/version membership, recomputes the canonical provision content hash, checks the published import
+generation and active display/search rights, selects the exact table block by the retained diagnostic index, and emits
+the original XML plus every row, cell, span/style attribute and official source artifact identity. Changed membership,
+content, source locator, ordinal, rights or table index stops export rather than producing review evidence for a
+different source.
+
+The first canonical export retained all ten unresolved-ditto diagnostics across nine versions in
+`canonical-preparation-all-current/unresolved-ditto-source-reviews.json`, report hash
+`566001f48ba0391db84fd7020f01080e3a5c4d8391f9b67ada9de12ba0b8ad1b`. The packet exposes the concrete sparse/group
+boundaries requiring review, including the Union Oil equipment continuation in 40 CFR 52.730, parent/child source
+rows in 40 CFR 52.876 and 81.331, locomotive category boundaries in Appendix A to 49 CFR Part 210, blank intervening
+restriction/limitation cells in three Title 21 tables, the paired AM-station rows in 47 CFR 73.182, and the first-row
+dittos in 33 CFR 110.214. Two focused tests, ingestion TypeScript and scoped lint passed. This creates reproducible
+PASS-05 evidence; it does not approve those layouts or close the table-shape gate.
+
 Added an offline terminal auditor for full-corpus tokenizer qualification. It requires the expected implementation hash
 and edition count, rejects nonterminal or duplicate inventories, binds every result to the exact selected edition and
 tokenizer identities, compares each retained `report.json`, and rehashes every `records.ndjson` while independently
