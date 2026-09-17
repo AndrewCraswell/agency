@@ -29,7 +29,8 @@ or provider 429/outage fault injection.
 The same smoke now also injects a target-table write failure after a simulated provider success. The shard remains
 pending, the failed attempt is retained, and the next claim increments conservative repeat-cost accounting before the
 successful retry. The resulting checkpoint records three attempts and two possible repeated paid attempts without ever
-claiming a partial vector inventory complete.
+claiming a partial vector inventory complete. A separate abandoned claim is forced past its lease deadline; the next
+worker preserves its cursor, records the possible repeat and completes that empty shard without provider access.
 
 Added search-rights fencing to regulatory vector registration, writes and completion. Each operation shares the copied
 passage generation's advisory lock with rights cleanup and requires at least one nonrevoked search membership. Storage
