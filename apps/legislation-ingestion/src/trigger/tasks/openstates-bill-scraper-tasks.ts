@@ -28,8 +28,9 @@ function stateConcurrencyKey(state: "ak" | "nc") {
   return `production:openstates-scraper:bills:${state}`
 }
 
-function attemptId(state: "ak" | "nc", triggerRunId: string) {
-  return `${state}-bill-${createHash("sha256").update(triggerRunId).digest("hex").slice(0, 32)}`
+export function attemptId(state: "ak" | "nc", triggerRunId: string, attemptNumber: number) {
+  const attempt = z.number().int().positive().parse(attemptNumber)
+  return `${state}-bill-${createHash("sha256").update(`${triggerRunId}:${attempt}`).digest("hex").slice(0, 32)}`
 }
 
 export function assertBillPlanState(state: "ak" | "nc", planPath: string) {
@@ -127,7 +128,7 @@ export const openStatesBillScraperCloud = task({
       if (!selected) {
         return { status: "cycle_promoted" as const, inventoryId, completed: before.promotedBatches, pending: 0 }
       }
-      const runId = attemptId(payload.state, ctx.run.id)
+      const runId = attemptId(payload.state, ctx.run.id, ctx.attempt.number)
       result = await executeScraperBillBatch(database, {
         store,
         planPath: payload.planPath,

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import {
   assertBillPlanState,
+  attemptId,
   openStatesBillCloudPayload,
   openStatesBillPlanPayload
 } from "./openstates-bill-scraper-tasks.js"
@@ -35,5 +36,15 @@ describe("hosted Open States bill scraper task contract", () => {
       "does not match"
     )
     expect(assertBillPlanState("ak", "openstates/scraper-plans/ak/34/ak-bills-cycle/plan.json")).toContain("/ak/34/")
+  })
+
+  it("uses a fresh bounded extraction identity for each task attempt", () => {
+    const first = attemptId("ak", "run_06gb21pbhgpg8jqjlcjqmirb01", 1)
+    const retry = attemptId("ak", "run_06gb21pbhgpg8jqjlcjqmirb01", 2)
+    expect(first).toMatch(/^ak-bill-[a-f0-9]{32}$/)
+    expect(retry).toMatch(/^ak-bill-[a-f0-9]{32}$/)
+    expect(retry).not.toBe(first)
+    expect(attemptId("ak", "run_06gb21pbhgpg8jqjlcjqmirb01", 1)).toBe(first)
+    expect(() => attemptId("ak", "run_06gb21pbhgpg8jqjlcjqmirb01", 0)).toThrow()
   })
 })

@@ -169,6 +169,27 @@ And so the effective date clause was adopted.
             4,
         )
 
+    def test_rescind_concurrence_prefers_the_operating_motion(self):
+        rescind = self.sample("Adams, Brown").replace(
+            "Final Passage",
+            'The question being: "Shall the House rescind previous action in concurrence?"',
+        )
+        return_to_rules = self.sample("Evans, Fox").replace(
+            "Final Passage",
+            'The question being: "Shall the bill be returned to the Rules Committee?"',
+        )
+        text = "[[JOURNAL_ANCHOR:1841]]\nPage 1841\n" + rescind + return_to_rules
+        result = parse_roll_call(
+            text,
+            "HB1",
+            (2, 1, 1),
+            "1841",
+            "1841",
+            True,
+            "(H) RESCIND ACTION (CONCURRENCE) PASSED Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_zero_dash_passage_tally_excludes_same_page_reserve_fund_vote(self):
         passage = self.sample(counts="2   NAYS: 0   EXCUSED: 0   ABSENT: 0").replace(
             "Nays: Clark\n\nExcused: Davis\n\n", ""

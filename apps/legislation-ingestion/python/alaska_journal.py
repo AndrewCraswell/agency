@@ -75,6 +75,11 @@ def motion_matches(hint, context):
             rf"\b(?:SUSPEND|WAIVE) (?:UNIFORM )?RULE\s+{int(waive_rule.group(1))}\b",
             context,
         ) is not None
+    # Classify the operative motion before looking at nouns that describe its
+    # subject. A rescission of an earlier concurrence is a rescind vote, not a
+    # new concurrence vote.
+    if "RESCIND" in hint:
+        return "RESCIND" in context
     if "CONCUR" in hint:
         if "THE QUESTION BEING:" in context:
             return re.search(
@@ -107,8 +112,6 @@ def motion_matches(hint, context):
                 and re.search(r"\bSHALL\b(?:(?!AMENDMENT).){0,200}\bBE TABLED\b", context) is not None)
     if "WITHDRAW" in hint:
         return "WITHDRAW" in context
-    if "RESCIND" in hint:
-        return "RESCIND" in context
     if "RULED OUT OF ORDER" in hint:
         return "OUT OF ORDER" in context
     if "BOTTOM OF CALENDAR" in hint:
