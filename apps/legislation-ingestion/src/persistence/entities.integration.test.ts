@@ -449,6 +449,40 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
     expect(checkpoint?.cursor).toEqual({ fingerprint: "saved" })
   })
 
+  it("publishes a complete roster without deactivating unobserved organizations", async () => {
+    const unobservedOrganizationId = "organization:openstates:entity-refresh:unobserved"
+    await database.insert(schema.organizations).values({
+      id: unobservedOrganizationId,
+      jurisdictionId,
+      sourceId: "ocd-organization/unobserved",
+      name: "Unobserved chamber",
+      classification: "chamber",
+      isActive: true,
+      sourceProvider: "openstates"
+    })
+    await replaceEntitySnapshot(database, jurisdictionId, snapshot({ complete: true, role: "member" }), {
+      membershipDetectionDate: "2026-08-26",
+      organizationSourceProvider: "openstates",
+      preserveUnobservedOrganizations: true
+    })
+    const [unobserved] = await database
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, unobservedOrganizationId))
+    const [observed] = await database
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId))
+    expect(unobserved?.isActive).toBe(true)
+    expect(observed?.membershipRelationsComplete).toBe(true)
+    expect((await membershipsForTenure(organizationId))[0]).toMatchObject({
+      detectedStartDate: "2026-08-26",
+      isActive: true,
+      lastObservedDate: "2026-08-26"
+    })
+    await database.delete(schema.organizations).where(eq(schema.organizations.id, unobservedOrganizationId))
+  })
+
   it("refreshes Congress-owned person details on a subsequent snapshot", async () => {
     const congressPersonId = "person:congress:detail-refresh"
     await replaceEntitySnapshot(database, jurisdictionId, congressDetailSnapshot(congressPersonId, "first.jpg"))

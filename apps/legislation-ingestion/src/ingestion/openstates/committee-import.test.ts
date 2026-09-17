@@ -38,18 +38,24 @@ describe("committee repository observation import", () => {
       const result = prepareCommitteeRepositoryImport(files(state), [], now, state)
       expect(result.plan.held).toHaveLength(1)
       expect(result.snapshot.organizations).toHaveLength(2)
-      expect(result.snapshot.organizations[0]).toMatchObject({
+      expect(
+        result.snapshot.organizations.find((organization) => organization.sourceId === "ocd-organization/ready")
+      ).toMatchObject({
         chamber: "lower",
-        membershipRelationsComplete: false,
+        membershipRelationsComplete: true,
         childRelationsComplete: false,
         detailFactsComplete: false,
         websiteUrl: "https://legislature.example/committee"
       })
+      expect(
+        result.snapshot.organizations.find((organization) => organization.sourceId === "ocd-organization/held")
+      ).toMatchObject({ membershipRelationsComplete: false })
       expect(result.snapshot.people).toEqual([])
       expect(result.snapshot.terms).toEqual([])
       expect(result.snapshot.memberships).toHaveLength(1)
       expect(result.snapshot.memberships[0]?.effectiveStartDate).toBeUndefined()
-      expect(result.snapshot.memberships[0]?.detectedStartDate).toBeUndefined()
+      expect(result.snapshot.memberships[0]?.detectedStartDate).toBe("2026-09-15")
+      expect(result.snapshot.memberships[0]?.lastObservedDate).toBe("2026-09-15")
       expect(prepareCommitteeRepositoryImport([...files(state)].reverse(), [], now, state).snapshot).toEqual(
         result.snapshot
       )
@@ -116,7 +122,7 @@ describe("committee repository observation import", () => {
     expect(result.plan.eligible).toHaveLength(1)
     expect(result.snapshot.memberships).toHaveLength(1)
   })
-  it("uses the guarded atomic writer and keeps the checkpoint incomplete", async () => {
+  it("uses the guarded atomic writer and records the observed current roster date", async () => {
     const persist = vi.fn<typeof replaceEntitySnapshot>().mockResolvedValue(undefined)
     const database = drizzle({ connection: "postgresql://unused", schema })
     await importCommitteeRepository(database, "ak", files("ak"), [], now, persist)
@@ -126,7 +132,8 @@ describe("committee repository observation import", () => {
       expect.any(Object),
       expect.objectContaining({
         replacePeople: false,
-        organizationObservationOnly: true,
+        membershipDetectionDate: "2026-09-15",
+        preserveUnobservedOrganizations: true,
         statementTimeoutMs: 30000,
         checkpoint: expect.objectContaining({ cursor: expect.objectContaining({ complete: false }) })
       })

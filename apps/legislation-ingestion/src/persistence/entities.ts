@@ -125,6 +125,7 @@ export async function replaceEntitySnapshot(
     organizationSourceProvider?: string
     organizationObservationOnly?: boolean
     preserveExistingOrganizations?: boolean
+    preserveUnobservedOrganizations?: boolean
     preserveUnobservedPeople?: boolean
     protectTermHistory?: boolean
     replaceOrganizations?: boolean
@@ -255,7 +256,9 @@ export async function replaceEntitySnapshot(
       }
     }
     const replacedOrganizationIds =
-      options.replaceOrganizations === false || options.organizationObservationOnly === true
+      options.replaceOrganizations === false ||
+      options.organizationObservationOnly === true ||
+      options.preserveUnobservedOrganizations === true
         ? []
         : await transaction
             .select({ id: organizations.id })
@@ -281,6 +284,7 @@ export async function replaceEntitySnapshot(
     if (
       options.replaceOrganizations !== false &&
       options.preserveExistingOrganizations !== true &&
+      options.preserveUnobservedOrganizations !== true &&
       options.organizationObservationOnly !== true
     ) {
       await transaction

@@ -6,7 +6,7 @@ import { normalizeOpenStatesCommittees } from "./entities.js"
 import { preparePeopleRepositoryImport } from "./people-import.js"
 import { peopleSourceProfiles, type PeopleRepositoryFile } from "./people-repository.js"
 
-/** Additive observations only. Dependency acceptance does not establish a complete roster or effective dates. */
+/** Current repository rosters are complete only after every referenced identity is accepted. */
 export function prepareCommitteeRepositoryImport(
   currentFiles: readonly PeopleRepositoryFile[],
   historyFiles: readonly PeopleRepositoryFile[],
@@ -45,6 +45,8 @@ export function prepareCommitteeRepositoryImport(
     { jurisdictionCode: state, retrievedAt }
   )
   const observations = new Map(plan.identityEligible.map((committee) => [committee.committeeId, committee]))
+  const completeRosterIds = new Set(plan.eligible.map((committee) => committee.committeeId))
+  const detectedAt = retrievedAt.toISOString().slice(0, 10)
   return {
     plan,
     snapshot: {
@@ -52,11 +54,16 @@ export function prepareCommitteeRepositoryImport(
       // Embedded names never create or overwrite people. Canonical people must already exist (FK enforced).
       people: [],
       terms: [],
+      memberships: normalized.memberships.map((membership) => ({
+        ...membership,
+        detectedStartDate: detectedAt,
+        lastObservedDate: detectedAt
+      })),
       organizations: normalized.organizations.map((organization) => ({
         ...organization,
         upstreamIds: { ...organization.upstreamIds, ...observations.get(organization.sourceId)?.officialIdentifiers },
         chamber: observations.get(organization.sourceId)?.chamber ?? null,
-        membershipRelationsComplete: false,
+        membershipRelationsComplete: completeRosterIds.has(organization.sourceId),
         childRelationsComplete: false,
         detailFactsComplete: false
       }))
@@ -78,9 +85,10 @@ export async function importCommitteeRepository(
   }
   await persist(database, `jurisdiction:${state}`, result.snapshot, {
     replacePeople: false,
-    organizationObservationOnly: true,
     enforceObservationOrder: true,
+    membershipDetectionDate: retrievedAt.toISOString().slice(0, 10),
     organizationSourceProvider: "openstates",
+    preserveUnobservedOrganizations: true,
     statementTimeoutMs: 30000,
     checkpoint: {
       source: "openstates",
@@ -88,7 +96,7 @@ export async function importCommitteeRepository(
       cursor: {
         revision: peopleSourceProfiles[state].revision,
         retrievedAt: retrievedAt.toISOString(),
-        complete: false,
+        complete: result.plan.held.length === 0 && result.plan.identityHeld.length === 0,
         eligibleCommittees: result.plan.eligible.length,
         eligibleMemberships: result.plan.eligibleMemberships,
         eligibleIdentities: result.plan.identityEligible.length,
