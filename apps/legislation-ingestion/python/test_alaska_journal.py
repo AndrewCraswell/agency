@@ -176,6 +176,25 @@ And so the effective date clause was adopted.
         self.assertEqual(merged.count("[[JOURNAL_ANCHOR:2171]]"), 1)
         self.assertEqual(len(parse_roll_call(merged, "HB1", (2, 1, 1), "2170", "2170", True)), 4)
 
+    def test_adjacent_response_appends_next_single_page_when_primary_has_no_overlap(self):
+        primary = (
+            "[[JOURNAL_ANCHOR:2170]]\nPage 2170\nHB 1 Third Reading\n"
+            "YEAS: 2 NAYS: 1 EXCUSED: 1 ABSENT: 0\nYeas: Adams,\n"
+        )
+        adjacent = (
+            "[[JOURNAL_ANCHOR:2171]]\nPage 2171\n"
+            "Brown\nNays: Clark\nExcused: Davis\n"
+        )
+        merged = merge_adjacent_journal_text(primary, adjacent, "2171")
+        self.assertEqual(merged.count("[[JOURNAL_ANCHOR:2171]]"), 1)
+        self.assertEqual(len(parse_roll_call(merged, "HB1", (2, 1, 1), "2170", "2170", True)), 4)
+
+    def test_adjacent_response_rejects_nonconsecutive_single_pages(self):
+        primary = "[[JOURNAL_ANCHOR:2169]]\nPage 2169\nYeas: Adams\n"
+        adjacent = "[[JOURNAL_ANCHOR:2171]]\nPage 2171\nYeas: Brown\n"
+        with self.assertRaises(ValueError):
+            merge_adjacent_journal_text(primary, adjacent, "2171")
+
     def test_numeric_citation_ignores_completed_previous_page_vote(self):
         text = (
             "[[JOURNAL_ANCHOR:0833]]\nPage 0833\n" + self.sample("Adams, Brown")
@@ -326,6 +345,19 @@ And so the effective date clause was adopted.
         text = "[[JOURNAL_ANCHOR:2326]]\n" + concurrence + effective_date
         result = parse_roll_call(text, "HB1", (2, 1, 1), "2326", "2326", True,
                                  "(H) CONCUR AM OF (S) Y2 N1 E1")
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
+    def test_explicit_concurrence_question_allows_shared_effective_date_header(self):
+        concurrence = self.sample("Adams, Brown").replace(
+            "Final Passage",
+            'The question being: "Shall the Senate concur in the House amendments?"\n'
+            "Concur in the House Amendment\nEffective Date(s)",
+        )
+        result = parse_roll_call(
+            "[[JOURNAL_ANCHOR:0697]]\nPage 0697\n" + concurrence,
+            "HB1", (2, 1, 1), "0697", "0697", True,
+            "(S) CONCUR AM OF (H) Y2 N1 E1",
+        )
         self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
 
     def test_explicit_procedural_motion_disambiguates_same_page_tallies(self):

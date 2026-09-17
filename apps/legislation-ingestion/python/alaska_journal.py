@@ -72,6 +72,11 @@ def motion_matches(hint, context):
             context,
         ) is not None
     if "CONCUR" in hint:
+        if "THE QUESTION BEING:" in context:
+            return re.search(
+                r"THE QUESTION BEING:\s*[\"']?SHALL THE [^?]{0,120}\bCONCUR\b",
+                context,
+            ) is not None
         return "CONCUR" in context and "EFFECTIVE DATE" not in context
     if "PASSED ON RECONSIDERATION" in hint:
         return ("FINAL PASSAGE RECONSIDERATION" in context
@@ -155,7 +160,7 @@ def journal_text(document):
 
 
 def merge_adjacent_journal_text(primary, adjacent, page_number):
-    """Replace a truncated overlap page with the complete adjacent response."""
+    """Join adjacent publisher responses without duplicating an overlap page."""
     if (not isinstance(primary, str) or not isinstance(adjacent, str)
             or not isinstance(page_number, str) or not re.fullmatch(r"[1-9][0-9]{0,9}", page_number)):
         raise ValueError("journal_overlap_invalid")
@@ -166,9 +171,17 @@ def merge_adjacent_journal_text(primary, adjacent, page_number):
     adjacent_matches = [match for match in ANCHOR.finditer(adjacent)
                         if anchor_identity(match.group(1)) == identity
                         and is_printed_page_anchor(adjacent, match)]
-    if len(primary_matches) != 1 or len(adjacent_matches) != 1:
+    if len(adjacent_matches) != 1 or len(primary_matches) > 1:
         raise ValueError("journal_overlap_missing_or_ambiguous")
-    return primary[:primary_matches[0].start()] + adjacent[adjacent_matches[0].start():]
+    if len(primary_matches) == 1:
+        return primary[:primary_matches[0].start()] + adjacent[adjacent_matches[0].start():]
+    previous_identity = str(int(page_number) - 1)
+    previous_matches = [match for match in ANCHOR.finditer(primary)
+                        if anchor_identity(match.group(1)) == previous_identity
+                        and is_printed_page_anchor(primary, match)]
+    if len(previous_matches) != 1:
+        raise ValueError("journal_overlap_missing_or_ambiguous")
+    return primary.rstrip() + "\n" + adjacent[adjacent_matches[0].start():]
 
 
 def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, fallback_anchor=None,
