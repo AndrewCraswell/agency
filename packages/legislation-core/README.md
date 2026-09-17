@@ -5,6 +5,10 @@ explicit package subpaths for canonical models/identifiers, legal reader/rights,
 definitions, Node auth/context, database/schema/migrations, embeddings/tokenizers and telemetry sanitization.
 Application environment loading, runtime initialization, query orchestration and source adapters stay app-owned.
 
+The package exports TypeScript source, not emitted JavaScript. Internal dependencies shared with NodeNext consumers and
+Turbopack should use the existing `@repo/legislation-core/...` export paths as well. Relative `.js` specifiers can
+type-check against `.ts` files but fail in Turbopack because no corresponding JavaScript file exists.
+
 Start with the [documentation index](docs/README.md).
 
 ## Commands

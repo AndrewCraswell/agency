@@ -3,9 +3,15 @@
 import * as React from "react"
 import { cn } from "@/components/ui/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+type TableProps = React.ComponentProps<"table"> & { containerProps?: React.ComponentProps<"div"> }
+
+function Table({ className, containerProps, ...props }: TableProps) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      {...containerProps}
+      data-slot="table-container"
+      className={cn("relative w-full overflow-x-auto", containerProps?.className)}
+    >
       <table data-slot="table" className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   )

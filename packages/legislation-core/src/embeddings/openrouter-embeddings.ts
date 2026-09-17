@@ -1,6 +1,6 @@
+import { EMBEDDING_ROUTES, type EmbeddingRoute } from "@repo/legislation-core/embeddings/embedding-routing"
+import { validateEmbeddingTokenBudget } from "@repo/legislation-core/embeddings/embedding-tokenizer"
 import { z } from "zod"
-import { EMBEDDING_ROUTES, type EmbeddingRoute } from "./embedding-routing.js"
-import { validateEmbeddingTokenBudget } from "./embedding-tokenizer.js"
 
 const DEFAULT_EMBEDDING_ROUTE = EMBEDDING_ROUTES["document-section"]
 export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_ROUTE.model

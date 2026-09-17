@@ -273,7 +273,7 @@ function DocumentCard({ record, href }: Readonly<{ record: EntityCard; href?: st
   )
 }
 
-function recordHref(record: EntityCard, resultId: string) {
+export function recordHref(record: EntityCard, resultId: string) {
   if (!["person", "organization", "material"].includes(record.kind)) {
     return undefined
   }

@@ -34,6 +34,7 @@ export function createCitationFailureReporter(context: CitationTelemetryContext)
       }
       reported.add(referenceHash)
       captureException(new Error("Citation does not match retrieved evidence."), {
+        fingerprint: ["citation_resolution", "unmatched_reference"],
         tags: {
           operation: "citation_resolution",
           category: "invalid_response",

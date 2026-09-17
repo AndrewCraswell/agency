@@ -336,6 +336,7 @@ export async function POST(request: Request) {
     return createUIMessageStreamResponse({
       stream: createUIMessageStream({
         execute: ({ writer }) => {
+          const reportedCompositionFailures = new Set<string>()
           if (userMessage) {
             writer.write({
               type: "data-message-accepted",
@@ -348,7 +349,19 @@ export async function POST(request: Request) {
               resolveRecord: presentationRecords.resolve,
               onComplete: composed.resolve,
               onInvalid: (reason) => {
-                captureException(new Error(reason), { tags: { operation: "answer_composition", runId } })
+                if (reportedCompositionFailures.has(reason)) {
+                  return
+                }
+                reportedCompositionFailures.add(reason)
+                captureException(new Error(reason), {
+                  fingerprint: ["answer_composition", reason],
+                  tags: {
+                    operation: "answer_composition",
+                    runId,
+                    model: researchModelId,
+                    promptVersion: String(prompt.version)
+                  }
+                })
               }
             })
           )

@@ -12,6 +12,7 @@ import {
   personId
 } from "@repo/legislation-core/domain/identifiers"
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
+import { openStatesBillStatus } from "@repo/legislation-core/domain/openstates-bill-status"
 import { z } from "zod"
 import { outgoingRelationProvenance } from "../relation-provenance.js"
 
@@ -612,6 +613,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         identifier: source.identifier,
         jurisdictionId: jurisdiction,
         sessionId: session,
+        status: openStatesBillStatus(actions),
         sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
         sourceUrl: billSourceUrl,
         subjects: source.subject,

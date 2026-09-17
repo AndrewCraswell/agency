@@ -112,6 +112,13 @@ export const MixedOutcomes: Story = {
       role: "assistant",
       parts: [activityPart(search, "Complete").part, activityPart(read, "Failed").part]
     }
+  },
+  play: async (context) => {
+    await CompleteExpanded.play?.(context)
+    const canvas = within(context.canvasElement)
+    await expect(canvas.getByRole("button", { name: "Research activity 2 steps" })).toBeVisible()
+    await expect(canvas.getByLabelText("Search bills: Complete")).toBeVisible()
+    await expect(canvas.getByRole("button", { name: "Read bill: Failed" })).toHaveAttribute("aria-expanded", "false")
   }
 }
 export const MixedOutcomesExpanded: Story = {
@@ -150,10 +157,23 @@ export const InterruptedRequest: Story = {
   }
 }
 export const DeniedRequest: Story = {
-  args: { message: { id: "denied", role: "assistant", parts: [activityPart(read, "Denied").part] } }
+  args: { message: { id: "denied", role: "assistant", parts: [activityPart(read, "Denied").part] } },
+  play: CompleteExpanded.play
 }
 export const FailedRequest: Story = {
-  args: { message: { id: "failed", role: "assistant", parts: [activityPart(read, "Failed").part] } }
+  args: { message: { id: "failed", role: "assistant", parts: [activityPart(read, "Failed", "internal").part] } },
+  play: async (context) => {
+    await CompleteExpanded.play?.(context)
+    const canvas = within(context.canvasElement)
+    const failure = canvas.getByRole("button", { name: "Read bill: Failed" })
+    if (failure.getAttribute("aria-expanded") !== "true") {
+      await context.userEvent.click(failure)
+    }
+    await expect(
+      canvas.getByText("This research operation failed. Reference: storybook-simulated-failure")
+    ).toBeVisible()
+    await expect(canvas.queryByText(/Try again/i)).not.toBeInTheDocument()
+  }
 }
 export const NoTools: Story = {
   args: { message: { id: "no-tools", role: "assistant", parts: [] } }

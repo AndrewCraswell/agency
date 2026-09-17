@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { sourceUrlSchema } from "./evidence"
+import { sessionLabel } from "./sessionLabels"
 
 export const entityKindSchema = z.enum([
   "bill",
@@ -78,6 +79,8 @@ export const entityCardSchema = z.object({
   voteSummary: z.object({ question: z.string().optional(), outcome: z.string().optional() }).optional(),
   billSummary: z
     .object({
+      sessionId: z.string().optional(),
+      sessionName: z.string().optional(),
       status: z.string().optional(),
       latestAction: z.object({ description: z.string(), date: z.string().optional() }).optional()
     })
@@ -236,22 +239,19 @@ function projectCard(value: unknown, kind: EntityKind, key: string): EntityCard 
       if (identifier && !title.startsWith(identifier)) {
         displayTitle = `${identifier} ${title}`
       }
-      subtitle = [text(record, "chamber"), text(record, "sessionId")].filter(Boolean).join(", ") || undefined
-      billSummary = { status: text(record, "status") }
-      const actions = z
-        .array(
-          z.object({
-            ordinal: z.number().int().nonnegative(),
-            description: z.string(),
-            actionDate: z.string().nullish()
-          })
-        )
-        .safeParse(container.actions)
-      if (container.truncated === false && actions.success) {
-        const latest = actions.data.toSorted((left, right) => right.ordinal - left.ordinal)[0]
-        if (latest) {
-          billSummary.latestAction = { description: latest.description, date: latest.actionDate ?? undefined }
-        }
+      const sessionId = text(record, "sessionId")
+      const sessionName = sessionId ? sessionLabel(sessionId, text(record, "sessionName")) : text(record, "sessionName")
+      subtitle = [text(record, "chamber"), sessionName].filter(Boolean).join(", ") || undefined
+      billSummary = { sessionId, sessionName, status: text(record, "status") }
+      const latest = z
+        .object({
+          billId: z.literal(id),
+          description: z.string().trim().min(1),
+          actionDate: z.string().nullish()
+        })
+        .safeParse(container.latestAction)
+      if (latest.success) {
+        billSummary.latestAction = { description: latest.data.description, date: latest.data.actionDate ?? undefined }
       }
       break
     }

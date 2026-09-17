@@ -4,17 +4,24 @@ import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react"
 import { createContext, useContext, useRef, useState } from "react"
 import { useStickToBottomContext } from "use-stick-to-bottom"
 import { z } from "zod"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import {
   answerCatalog,
+  comparisonColumns,
+  comparisonValue,
   presentationBlockSchema,
+  presentationReferences,
+  type BillComparisonProps,
   type PresentationBlock,
   type PresentationReference
 } from "../composition"
 import type { EntityCard } from "../entityResults"
 import { useConversationSession } from "./ConversationSession"
 import { RecordCard } from "./EntityResults"
+import { InlineRecordLink } from "./InlineRecordLink"
 import { MeetingDetails } from "./MeetingDetails"
 import { VoteDetails } from "./VoteDetails"
+import * as styles from "./ComposedRecord.css"
 
 const presentationPartSchema = z
   .object({
@@ -25,28 +32,92 @@ const presentationPartSchema = z
   .refine((part) => part.id === part.data.blockId)
 
 type RecordContextValue = Readonly<{
-  record: EntityCard
-  reference: PresentationReference
+  records: EntityCard[]
+  references: PresentationReference[]
   onOpenRecord: (recordId: string) => void
 }>
 const RecordContext = createContext<RecordContextValue | undefined>(undefined)
 type TrustedRecordCardProps = Readonly<{ props: PresentationReference }>
+type TrustedBillComparisonProps = Readonly<{ props: BillComparisonProps }>
 type ReadyRecordProps = Readonly<{ block: Extract<PresentationBlock, { state: "ready" }> }>
 type ComposedRecordProps = Readonly<{ part: unknown; isRunning: boolean }>
 
 function RecordUnavailable() {
-  return <p className="break-words text-xs text-muted-foreground">This record could not be displayed.</p>
+  return <p className="break-words text-xs text-muted-foreground">This content could not be displayed.</p>
 }
 
 function TrustedRecordCard({ props }: TrustedRecordCardProps) {
   const context = useContext(RecordContext)
-  if (!context || props.resultId !== context.reference.resultId || props.recordId !== context.record.id) {
+  const record = context?.records[0]
+  if (
+    !context ||
+    !record ||
+    context.records.length !== 1 ||
+    props.resultId !== context.references[0]?.resultId ||
+    props.recordId !== record.id
+  ) {
     return <RecordUnavailable />
   }
-  return <RecordCard record={context.record} resultId={context.reference.resultId} onOpenVote={context.onOpenRecord} />
+  return <RecordCard record={record} resultId={props.resultId} onOpenVote={context.onOpenRecord} />
 }
 
-const { registry } = defineRegistry(answerCatalog, { components: { RecordCard: TrustedRecordCard } })
+function TrustedBillComparison({ props }: TrustedBillComparisonProps) {
+  const context = useContext(RecordContext)
+  if (
+    !context ||
+    props.records.length !== context.records.length ||
+    props.records.some(
+      (reference, index) =>
+        reference.resultId !== context.references[index]?.resultId || reference.recordId !== context.records[index]?.id
+    )
+  ) {
+    return <RecordUnavailable />
+  }
+  return (
+    <Table
+      className={styles.table}
+      containerProps={{ className: styles.comparison, role: "region", "aria-label": "Bill comparison", tabIndex: 0 }}
+    >
+      <caption className={styles.caption}>Bill comparison</caption>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col" className={`${styles.cell} whitespace-normal`}>
+            Bill
+          </TableHead>
+          {props.columns.map((column) => (
+            <TableHead key={column} scope="col" className={`${styles.cell} whitespace-normal`}>
+              {comparisonColumns[column]}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {context.records.map((record, index) => {
+          const reference = context.references[index]
+          if (!reference) {
+            return null
+          }
+          return (
+            <TableRow key={record.id}>
+              <TableHead scope="row" className={`${styles.cell} whitespace-normal`}>
+                <InlineRecordLink mention={{ record, reference }}>{record.title}</InlineRecordLink>
+              </TableHead>
+              {props.columns.map((column) => (
+                <TableCell key={column} className={`${styles.cell} whitespace-normal`}>
+                  {comparisonValue(record, column) ?? <span className={styles.absent}>Not returned</span>}
+                </TableCell>
+              ))}
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
+  )
+}
+
+const { registry } = defineRegistry(answerCatalog, {
+  components: { RecordCard: TrustedRecordCard, BillComparison: TrustedBillComparison }
+})
 
 function ReadyRecord({ block }: ReadyRecordProps) {
   const [selectedVote, setSelectedVote] = useState<PresentationReference>()
@@ -54,7 +125,8 @@ function ReadyRecord({ block }: ReadyRecordProps) {
   const { stopScroll } = useStickToBottomContext()
   const trigger = useRef<HTMLElement | null>(null)
   const content = useRef<HTMLDivElement>(null)
-  const reference = block.spec.elements[block.spec.root]?.props
+  const references = presentationReferences(block.spec)
+  const reference = references[0]
   if (!reference) {
     return <RecordUnavailable />
   }
@@ -64,7 +136,7 @@ function ReadyRecord({ block }: ReadyRecordProps) {
     stopScroll()
     trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const selection = { resultId, recordId }
-    if (block.record.kind === "meeting") {
+    if (block.records[0]?.kind === "meeting") {
       setMeetingSelection(selection)
     } else {
       setSelectedVote(selection)
@@ -82,7 +154,7 @@ function ReadyRecord({ block }: ReadyRecordProps) {
   return (
     <>
       <div ref={content} className="min-w-0">
-        <RecordContext value={{ record: block.record, reference, onOpenRecord }}>
+        <RecordContext value={{ records: block.records, references, onOpenRecord }}>
           <JSONUIProvider registry={registry}>
             <Renderer spec={block.spec} registry={registry} />
           </JSONUIProvider>
@@ -112,7 +184,7 @@ export function ComposedRecord({ part, isRunning }: ComposedRecordProps) {
     if (!isRunning) {
       return <RecordUnavailable />
     }
-    return <output className="text-xs text-muted-foreground">Loading record...</output>
+    return <output className="text-xs text-muted-foreground">Loading content...</output>
   }
   return <ReadyRecord block={block} />
 }

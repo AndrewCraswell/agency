@@ -58,8 +58,7 @@ function AccordionExamples() {
     },
     { label: "Denied request", parts: [activityPart(read, "Denied").part], running: false },
     { label: "No tools", parts: [], running: false },
-    { label: "No matches", parts: [activityPart(empty, "Complete").part], running: false },
-    { label: "Failure / collapsed", parts: [activityPart(read, "Failed").part], running: false }
+    { label: "No matches", parts: [activityPart(empty, "Complete").part], running: false }
   ]
   return (
     <div className={styles.grid}>

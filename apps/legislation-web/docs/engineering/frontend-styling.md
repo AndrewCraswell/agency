@@ -27,11 +27,101 @@ definitions in component styles.
 `next.config.ts` uses `@vanilla-extract/next-plugin` with its experimental Turbopack integration enabled in `auto`
 mode for the default Turbopack development and build commands.
 `vitest.config.ts` uses `@vanilla-extract/vite-plugin` so component tests compile the actual style imports.
-Keep relative imports extensionless in the app and transpiled `@repo/legislation-core` source. Turbopack resolves the
-TypeScript source directly and does not support Webpack's `.js` extension alias.
+Keep relative imports extensionless in the app. Shared-core internal dependencies use existing
+`@repo/legislation-core/...` exports so both NodeNext consumers and Turbopack resolve their TypeScript sources.
+Relative `.js` specifiers have no emitted file here; Turbopack does not support Webpack's `.js` extension alias.
 Do not mock style modules or put custom component selectors back into the global stylesheet.
 
 ## Verification
+
+Routine response progress stays in the conversation, not below the composer. Waiting, writing, clarification, and stop
+states must not add a composer status row or change the dock height. Disconnected-research and reload-recovery warnings
+remain visible because they explain unavailable functionality or data-loss risk.
+
+The response-level Researching indicator appears only before answer text arrives. Once prose starts streaming, it
+disappears without a replacement writing spinner; Stop remains available in the composer.
+
+Research activity uses a shared caption preset: 12px type with a 16px line height for the toggle, step names, counts,
+details, failure states, and working indicator. Toggle and failure controls retain 44px minimum hit targets. Answer
+prose remains 16px. Comparison tables omit the bottom border on their final row so the Sources divider is not doubled;
+column headers and intermediate row dividers remain visible.
+
+Activity icons use neutral pending and running, green complete, and red failed and interrupted states; labels remain neutral.
+Running activity uses the shared shadcn Spinner with a one-second rotation that stops under reduced motion. The row's
+accessible name supplies the state, so its spinner is decorative.
+
+Vote drawer counts stay on one line in a content-sized column with a 48px minimum, with or without proportion bars.
+The bar absorbs available width; three-digit tallies must not inherit the drawer's arbitrary text wrapping.
+
+Research activity includes every request in its original order and step count, including failed and denied requests.
+Failed and denied rows show a red error icon and persistent "Failed" status inside the activity list, not a separate card.
+Their error details start collapsed and can be expanded from the row using pointer or keyboard controls.
+Query, filter, session, and version summaries remain visible while only the error explanation collapses. The error
+trigger contains both its header and summary, keeping the normal 6px visual gap within a minimum 44px hit target.
+
+Bill comparisons use the shared shadcn table primitives with a caption above column headers, wrapped cells, and a single
+keyboard-focusable horizontal overflow region. They have a 560px minimum table width and no vertical height cap; do not
+nest scroll wrappers or turn rows into cards. The shared Markdown response wrapper sets a 700px maximum table height;
+shorter tables size naturally and taller tables scroll within that limit.
+Comparison row links retain the inline-reference navigation and accessible descriptions below.
+
+Answer composition supports prose, exact inline record links, selected cards, and bill metadata comparisons; retrieval
+does not automatically render cards. The effective chat prompt combines the Langfuse-managed research prompt with
+catalog-generated instructions shipped with the renderer, recording both prompt version and composition hash. Comparison
+instructions call for introduction, comparison, then conclusion, without a duplicate Markdown table. Real-data examples
+live in [ConversationResponse stories](../../src/modules/conversations/stories/ConversationResponse.stories.tsx): Inline
+Mention, Selected Card, Metadata Comparison, and Prose Only. They cover repeated citations and unused retrieved records.
+Source-selection reliability remains separate from correct component selection and placement.
+
+`ComposedRecord` renders the constrained json-render catalog through the existing record cards and comparison table.
+Pending content shows a compact loading state only while the response is running. Interrupted pending blocks, failed
+resolution, and mismatched references use the unavailable state; they do not render guessed metadata. Inspectors retain
+the existing result-store access checks and keyboard focus return. The
+[ComposedRecord stories](../../src/modules/conversations/stories/ComposedRecord.stories.tsx) cover all eight record kinds,
+plus Loading, Interrupted, Invalid Reference, and Unavailable states. Post-render evidence revocation is a separate policy
+question, not a capability of this renderer.
+
+Session display prefers the published session name carried by bill results. The comparison Session column is separate
+from chamber metadata. Without a published name, use conservative labels such as `2023-2024` and `118th Congress`;
+preserve special-session identifiers without guessing a classification. Apply the same labels to research-activity
+session filters and references. Internal session IDs remain unchanged for queries and identity.
+
+Before a matching bill result supplies its published title, activity displays a complete canonical bill ID as the bill
+number, jurisdiction code, and readable session (for example, `AB 2652, CA, 2023-2024`). This applies while receiving
+input, running, interrupted, and inside expanded failure details. Incomplete IDs and other record IDs are not guessed;
+tool inputs and record identity remain unchanged.
+
+Record reads reuse titles from earlier successful result sets in the same response, matched by exact record ID, before
+their own result arrives. This keeps known person and organization names visible through pending, running, interrupted,
+and expanded error states. The current matching result takes precedence; unknown records keep their identifier label.
+
+Activity summaries retain supplied queries alongside scope filters, named record targets, dates, and request limits.
+Transport cursors and anchors are not displayed. Bill searches use `AB 2652, CA, 2023-2024; Up to 5 results` with no
+mode suffix. Bill-text searches omit mode and document-selection details; bill-text reads show only the bill title or
+compact bill label. Other tools retain their supported filters rather than dropping them when a query is present.
+
+The meeting tool accepts jurisdiction, organization, and date filters. With none supplied, the activity is `List meetings`
+and shows `All jurisdictions; Earliest first; Up to 5 meetings`. This reflects the database's ascending start-time order
+over non-deleted records, not an upcoming-only or latest-first search. Filtered requests retain `Search meetings` and
+their actual filters. The limit is the requested maximum, not a returned count. No limit is invented when input is absent.
+Recorded-change and vote searches similarly show their supplied scope, dates, and limits. Storybook includes a simulated
+filtered meeting request beside the captured unfiltered states.
+
+Batch reads display the requested `ids` in input order, separated by semicolons. Batch bill reads keep their compact
+bill labels in every state, including completion; returned full titles do not replace them. The returned count remains
+separate from the requested bill list. Other batch reads can use matching published titles when available.
+
+Version comparisons display the compact bill label from `billId` as soon as it arrives and retain it on completion.
+The next line shows document version codes or titles in requested order, separated by `vs.`. Before completion it
+resolves metadata from preceding bill, batch, and text tool results in the same response, matched by bill and document
+ID. Completion uses the comparison result metadata. Identical labels include available document dates. Missing labels
+explicitly say `Version 1 (label unavailable)` or `Version 2 (label unavailable)`; they are input positions, not inferred
+chronology. Opaque `documentIds` are not shown as version names.
+
+Inline record mentions are ordinary underlined links or text buttons, not superscript citations or pills. Use the
+existing primary/link color, visible focus outline, and external-link icon for publisher destinations. Preserve the
+visible short name as the accessible name; the full retrieved record title is an accessible description. Vote/meeting
+mentions open existing drawers and return focus to the activated mention. Unresolved references remain plain text.
 
 User override for inline citations: use 16px minimum width, 14px height, 10px monospace numerals, a subtle theme-colored
 outline, no brackets, and a relative upward offset of 0.8em without increasing paragraph line height. Source-list numbers

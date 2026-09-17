@@ -6,6 +6,7 @@ const drawerEnter = keyframes({ from: { transform: "translateX(100%)" }, to: { t
 const drawerExit = keyframes({ from: { transform: "translateX(0)" }, to: { transform: "translateX(100%)" } })
 const overlayEnter = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
 const overlayExit = keyframes({ from: { opacity: 1 }, to: { opacity: 0 } })
+const activityCaption = { fontSize: 12, lineHeight: "16px" }
 
 export const questionTurn = style({ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 })
 export const questionHead = style({ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 })
@@ -39,6 +40,7 @@ export const questionBubble = style({
   "@media": { "(max-width: 40rem)": { padding: "12px 20px" } }
 })
 export const answerTurn = style({ display: "flex", flexDirection: "column", gap: 12, minWidth: 0, padding: "4px 0" })
+export const orderedContent = style({ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 })
 export const receiptTurn = style({ gap: 8, paddingTop: 12 })
 export const answerHead = style({ display: "flex", alignItems: "center", gap: 8, minHeight: 15 })
 export const answerAuthor = style({ fontSize: 12, fontWeight: 600, color: "var(--foreground)" })
@@ -55,8 +57,8 @@ export const messageActions = style({
   transition: "opacity 160ms ease-out, transform 160ms ease-out",
   selectors: {
     [`${questionTurn} > &`]: { justifyContent: "flex-end" },
-    [`${answerTurn} > &`]: { marginTop: -4 },
-    [`${receiptTurn} > &`]: { marginTop: 0 },
+    [`${answerTurn} > &, ${answerTurn} > ${orderedContent} > &`]: { marginTop: -4 },
+    [`${receiptTurn} > &, ${receiptTurn} > ${orderedContent} > &`]: { marginTop: 0 },
     [`${questionTurn}:hover > &, ${answerTurn}:hover > &, &:has(:focus-visible)`]: {
       opacity: 1,
       transform: "translateY(0)",
@@ -70,6 +72,7 @@ export const messageActions = style({
 })
 
 export const activityTrigger = style({
+  ...activityCaption,
   display: "flex",
   alignItems: "center",
   gap: 8,
@@ -77,14 +80,12 @@ export const activityTrigger = style({
   minHeight: 44,
   padding: "12px 0",
   textAlign: "left",
-  fontSize: 14,
-  lineHeight: "20px",
-  fontWeight: 600,
+  fontWeight: 500,
   color: "var(--muted-foreground)",
   cursor: "pointer",
   ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
 })
-export const activityCount = style({ fontSize: 12, fontWeight: 400, color: "var(--subtle)", flexShrink: 0 })
+export const activityCount = style({ ...activityCaption, fontWeight: 400, color: "var(--subtle)", flexShrink: 0 })
 export const activityItems = style({
   display: "flex",
   flexDirection: "column",
@@ -96,69 +97,60 @@ export const activityItems = style({
 export const activityStep = style({ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0", minWidth: 0 })
 export const activityHeading = style({ display: "flex", alignItems: "center", gap: 8, minWidth: 0 })
 export const activityLabel = style({
+  ...activityCaption,
   flex: 1,
   minWidth: 0,
   overflowWrap: "anywhere",
-  fontSize: 13,
-  lineHeight: 1.4,
   fontWeight: 500,
   color: "var(--foreground)"
 })
 export const activityDetails = style({
+  ...activityCaption,
   display: "flex",
   gap: 8,
   paddingLeft: 24,
-  fontSize: 12,
-  lineHeight: 1.5,
   color: "var(--subtle)"
 })
 export const activityPending = style({ color: "var(--subtle)" })
 export const activityComplete = style({ color: "var(--state-success)" })
 export const activityFailed = style({ color: "var(--state-danger)" })
-export const failedTool = style({
-  background: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  minWidth: 0
-})
 export const failedToolTrigger = style({
+  ...activityCaption,
   display: "flex",
-  alignItems: "center",
+  flexDirection: "column",
+  alignItems: "stretch",
+  justifyContent: "center",
   width: "100%",
-  gap: 8,
-  padding: 12,
+  gap: 6,
+  padding: 0,
   minHeight: 44,
-  fontSize: 14,
+  textAlign: "left",
   fontWeight: 500,
   cursor: "pointer",
   ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
 })
-export const failedToolBadge = style({
-  background: "var(--state-danger-soft)",
-  color: "var(--state-danger)",
-  fontSize: 12,
-  fontWeight: 400,
-  padding: "4px 8px",
-  borderRadius: 4,
-  flexShrink: 0
+export const failedToolDetails = style({
+  ...activityCaption,
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+  paddingLeft: 24
 })
-export const failedToolDetails = style({ display: "flex", flexDirection: "column", gap: 12, padding: "0 16px 16px" })
 export const failedToolError = style({
+  ...activityCaption,
   background: "var(--state-danger-soft)",
   color: "var(--state-danger)",
   borderRadius: 6,
   padding: 12,
-  fontSize: 13,
-  lineHeight: 1.5,
   overflowWrap: "anywhere"
 })
 
 export const working = style({
+  ...activityCaption,
   display: "flex",
   alignItems: "center",
   gap: 8,
   color: "var(--muted-foreground)",
-  fontSize: 14,
   animation: `${pulse} 1.8s ease-in-out infinite`,
   "@media": { "(prefers-reduced-motion: reduce)": { animation: "none" } }
 })
@@ -170,6 +162,16 @@ export const spinner = style({
   "@media": { "(prefers-reduced-motion: reduce)": { animation: "none" } }
 })
 export const markdown = style({ fontSize: 16, lineHeight: 1.6, overflowWrap: "anywhere", minWidth: 0 })
+export const recordMention = style({
+  color: "var(--primary)",
+  textDecoration: "underline",
+  textUnderlineOffset: "0.2em",
+  textAlign: "inherit",
+  overflowWrap: "anywhere",
+  cursor: "pointer",
+  ":hover": { textDecorationThickness: 2 },
+  ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
+})
 globalStyle(`${markdown} h1, ${markdown} h2, ${markdown} h3`, {
   fontFamily: "var(--font-public-sans), sans-serif",
   fontSize: 20,

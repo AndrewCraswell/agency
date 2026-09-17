@@ -1,11 +1,11 @@
 import * as Sentry from "@sentry/nextjs"
 import { captureRouterTransitionStart, replayIntegration } from "@sentry/nextjs"
-import { privateSentryOptions } from "./services/sentry/sentryPrivacy"
+import { sentryOptions } from "./services/sentry/sentryOptions"
 
 export const onRouterTransitionStart = captureRouterTransitionStart
 
 Sentry.init({
-  ...privateSentryOptions,
+  ...sentryOptions,
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   enabled: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
   environment: process.env.NODE_ENV,

@@ -1,14 +1,14 @@
-import invariant from "tiny-invariant"
-import { z } from "zod"
-import { digest } from "./contracts.js"
-import { regulatoryRecordSchema } from "./parser-contract.js"
+import { digest } from "@repo/legislation-core/legal-text/contracts"
+import { regulatoryRecordSchema } from "@repo/legislation-core/legal-text/parser-contract"
 import {
   legalReaderScopeSchema,
   legalTextBlockSchema,
   legalTextWindowSchema,
   type LegalReaderScope,
   type LegalTextBlock
-} from "./reader-contract.js"
+} from "@repo/legislation-core/legal-text/reader-contract"
+import invariant from "tiny-invariant"
+import { z } from "zod"
 
 export const legalReaderContract = "legal-source-text-2026-09-14"
 const maximumBlockCharacters = 16_384

@@ -39,16 +39,17 @@ export const tallies = style({ display: "flex", flexDirection: "column", gap: 8 
 export const label = style({ fontSize: 12, color: "var(--muted-foreground)" })
 export const tally = style({
   display: "grid",
-  gridTemplateColumns: "102px minmax(0, 1fr) 36px",
+  gridTemplateColumns: "102px minmax(0, 1fr) minmax(48px, max-content)",
   gap: 10,
   alignItems: "center",
   minHeight: 26,
   fontSize: 14,
-  selectors: { '&[data-has-proportion="false"]': { gridTemplateColumns: "102px 36px" } }
+  selectors: { '&[data-has-proportion="false"]': { gridTemplateColumns: "102px minmax(48px, max-content)" } }
 })
 export const count = style({
   gridColumn: 3,
   textAlign: "right",
+  whiteSpace: "nowrap",
   fontSize: 18,
   fontWeight: 600,
   fontVariantNumeric: "tabular-nums",

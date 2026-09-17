@@ -7,7 +7,8 @@ import { getNextLegislationApplication } from "../legislation/runtime/runtime"
 import { getResearchRuntime } from "../search/research-runtime"
 import { researchAgentLimits } from "./agent"
 import { chatIsAvailable } from "./chatRequest"
-import type { EntityPage } from "./entityResults"
+import { recordMentionHref } from "./composition"
+import { entityPageSchema, type EntityPage } from "./entityResults"
 import { evidenceSnapshotSchema } from "./evidence"
 import { createResearchEvidenceProjector } from "./evidenceSource.server"
 import { ResearchFailure, researchFailureCode } from "./researchFailure"
@@ -24,11 +25,24 @@ const modelResultSchema = z.looseObject({
 
 export function researchModelOutput({ output }: { output: unknown }) {
   const result = modelResultSchema.parse(output)
+  const page = entityPageSchema.safeParse(result.resultSet)
+  const recordLinks = page.success
+    ? page.data.items.map((record) => ({
+        recordId: record.id,
+        label: record.title,
+        href: recordMentionHref({ resultId: page.data.id, recordId: record.id })
+      }))
+    : []
   return {
     type: "text" as const,
     value: JSON.stringify({
       ...result,
-      evidence: result.evidence.map(({ citationRef, ...source }) => ({ ...source, id: citationRef }))
+      ...(recordLinks.length > 0 ? { recordLinks } : {}),
+      evidence: result.evidence.map(({ citationRef, ...source }, index) => ({
+        ...source,
+        id: citationRef,
+        citation: `[${index + 1}](#citation-${citationRef})`
+      }))
     })
   }
 }

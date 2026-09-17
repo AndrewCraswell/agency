@@ -1,7 +1,7 @@
+import { digest } from "@repo/legislation-core/legal-text/contracts"
+import { assertRights } from "@repo/legislation-core/legal-text/storage-contract"
 import type pg from "pg"
 import invariant from "tiny-invariant"
-import { digest } from "./contracts.js"
-import { assertRights } from "./storage-contract.js"
 
 export async function requireRights(
   client: Pick<pg.PoolClient, "query">,

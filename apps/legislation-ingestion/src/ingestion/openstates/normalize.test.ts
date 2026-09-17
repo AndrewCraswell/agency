@@ -16,6 +16,57 @@ beforeAll(async () => {
 
 describe("Open States normalization", () => {
   it.each([
+    { classifications: ["executive-veto"], expected: "Vetoed" },
+    { classifications: ["executive-signature"], expected: "Signed by executive" },
+    { classifications: ["executive-signature", "became-law"], expected: "Became law" },
+    { classifications: ["referral-committee"], expected: "Referred to committee" },
+    { classifications: ["introduction", "referral"], expected: "Referred" },
+    { classifications: ["passage"], expected: "Passed in lower chamber" },
+    { classifications: ["veto-override-passage"], expected: "Veto override passed in lower chamber" },
+    { classifications: ["amendment-passage"], expected: undefined },
+    { classifications: [], expected: undefined }
+  ])("projects status from source lifecycle classifications: $classifications", ({ classifications, expected }) => {
+    const result = normalizeOpenStatesBill(
+      {
+        identifier: "AB 1",
+        legislative_session: "20232024",
+        title: "Bill",
+        sources: [{ url: "https://publisher.example/bill" }],
+        actions: [
+          {
+            order: 0,
+            date: "2024-01-01",
+            description: "This prose is not used to infer status: became law",
+            classification: classifications,
+            organization: { id: "house", name: "Assembly", classification: "lower" }
+          },
+          { order: 1, date: "2024-01-02", description: "Administrative note", classification: [] }
+        ]
+      },
+      { jurisdictionCode: "ca", jurisdictionName: "California" }
+    )
+    expect(result.aggregate.bill.status).toBe(expected)
+    expect(result.aggregate.actions?.[0]?.classification).toEqual(classifications)
+  })
+
+  it("uses source order, not input array order or fuzzy dates, for status", () => {
+    const result = normalizeOpenStatesBill(
+      {
+        identifier: "SB 1",
+        legislative_session: "20232024",
+        title: "Bill",
+        sources: [{ url: "https://publisher.example/bill" }],
+        actions: [
+          { order: 9, date: "2024", description: "Governor veto", classification: ["executive-veto"] },
+          { order: 1, date: "2024-01-01", description: "Filed", classification: ["introduction"] }
+        ]
+      },
+      { jurisdictionCode: "ca", jurisdictionName: "California" }
+    )
+    expect(result.aggregate.bill.status).toBe("Vetoed")
+  })
+
+  it.each([
     {
       absent: 1,
       date: "2025-03-01T10:00:00-05:00",

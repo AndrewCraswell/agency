@@ -96,14 +96,14 @@ const meta = {
       await userEvent.click(trigger)
     }
     await expect(trigger).toHaveAttribute("aria-expanded", "true")
-    await expect(expanded.queryByText("Could not complete")).not.toBeInTheDocument()
+    await expect(expanded.getByText("Failed")).toBeVisible()
     const denied = within(canvas.getByRole("region", { name: "Denied expanded" }))
     const denialTrigger = denied.getByRole("button")
     if (denialTrigger.getAttribute("aria-expanded") !== "true") {
       await userEvent.click(denialTrigger)
     }
     await expect(denied.getByText("This operation was not permitted.")).toBeVisible()
-    await expect(denied.queryByText("Could not complete")).not.toBeInTheDocument()
+    await expect(denied.getByText("Failed")).toBeVisible()
   }
 } satisfies Meta<ActivityArgs>
 export default meta
@@ -338,7 +338,7 @@ export const FailureMessages: Story = {
         await userEvent.click(trigger)
       }
       await expect(trigger).toHaveAttribute("aria-expanded", "true")
-      await expect(region.queryByText("Could not complete")).not.toBeInTheDocument()
+      await expect(region.getByText("Failed")).toBeVisible()
     }
   }
 }

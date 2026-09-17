@@ -1,8 +1,41 @@
 import { describe, expect, it, vi } from "vitest"
-import { ResultExpiredError } from "./entityResults"
+import { projectEntityResult, ResultExpiredError } from "./entityResults"
 import { createResultStore } from "./resultStore"
 
 describe("result recovery", () => {
+  it.each([true, false])("uses the independent latest action with truncated=%s", (truncated) => {
+    const bill = { id: "bill:ca:20232024:sb:1047", title: "SB 1047" }
+    const data = {
+      bill,
+      truncated,
+      actions: [{ ordinal: 0, description: "Introduced" }],
+      latestAction: { billId: bill.id, ordinal: 50, description: "Vetoed by Governor.", actionDate: "2024-09-29" }
+    }
+    expect(projectEntityResult("get_bill", data)?.items[0]?.billSummary?.latestAction).toEqual({
+      description: "Vetoed by Governor.",
+      date: "2024-09-29"
+    })
+    expect(
+      projectEntityResult("get_bills", { items: [{ id: bill.id, data }] })?.items[0]?.billSummary?.latestAction
+    ).toEqual({ description: "Vetoed by Governor.", date: "2024-09-29" })
+  })
+
+  it("does not guess latest action from a child page or accept another bill's summary", () => {
+    const data = {
+      bill: { id: "bill:1", title: "Bill" },
+      truncated: false,
+      actions: [{ ordinal: 5, description: "Read" }]
+    }
+    expect(projectEntityResult("get_bill", data)?.items[0]?.billSummary?.latestAction).toBeUndefined()
+    expect(
+      projectEntityResult("get_bill", { ...data, latestAction: { billId: "bill:other", description: "Vetoed" } })
+        ?.items[0]?.billSummary?.latestAction
+    ).toBeUndefined()
+    expect(
+      projectEntityResult("get_bill", { ...data, latestAction: null })?.items[0]?.billSummary?.latestAction
+    ).toBeUndefined()
+  })
+
   function setup() {
     let time = 0
     const store = createResultStore(() => time)

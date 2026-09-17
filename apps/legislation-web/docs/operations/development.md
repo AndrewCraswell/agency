@@ -134,7 +134,7 @@ was requested to keep code edits and full development reloads from erasing demo 
 External adapters live in `src/services/sentry`, `src/services/openrouter`, and `src/services/langfuse`. Framework
 instrumentation stays under `src/`. Conversation and evaluation modules supply feature policy to the adapters;
 moving code does not change credentials, provider/model selection, prompt labels, or hosted evaluator configuration.
-Browser instrumentation imports the browser-safe Sentry privacy helper, never the Langfuse Node SDK initializer.
+Browser instrumentation imports the browser-safe Sentry options, never the Langfuse Node SDK initializer.
 
 The Next.js app uses pinned `@sentry/nextjs` 10.73.0. Set `NEXT_PUBLIC_SENTRY_DSN` to the
 `legislation/legislation` project DSN to enable it, then restart development or rebuild the browser bundle.
@@ -153,25 +153,24 @@ tool-call ID across the execution wrapper and stream. Invalid tool calls are cap
 errors to strings. Events retain a run ID, tool-call ID, known tool name, failure category, and reference; available
 duration/result-size metrics are allowlisted. Actual timeouts are reported; intentional user stops are not errors.
 This is observability, not durable orchestration or a replacement for the existing AI SDK research loop.
-The shared event allowlist removes raw messages, request bodies, headers, cookies, user data, breadcrumbs,
-arbitrary tags/contexts, and source code context. It retains standard error types, safe stack locations, the recognized
-`Invalid URL` diagnostic, and known research tool/category
-tags plus the same reference shown in the failed research step. Stop requests do not produce research failure events.
+By explicit demo-owner direction, no application-level `beforeSend` scrubber rewrites error messages, stack traces,
+tags, contexts, or extra fields. Diagnostic payloads remain available in Sentry as captured. Automatic personal-data
+collection remains disabled; this is not an invitation to send credentials or provider keys. Stop requests do not
+produce research failure events. Citation issue grouping is set by its reporter, independently of Sentry filtering.
 Error logs and performance tracing remain disabled. Sentry does not register another OpenTelemetry provider.
 This error-event policy does not cover Replay recordings or the pre-existing logging and Langfuse pipelines.
 
 Session Replay is enabled for the demo at 100% in development, 10% of sessions otherwise, and 100% on errors.
 By explicit demo-owner direction, text/input masking and media blocking are disabled: visible questions, answers,
 source content and ordinary form input can be recorded. Use non-sensitive demo data. Request/response body capture
-remains off; custom console/network recording events are discarded. Error events retain only a validated replay ID
-for correlation. Review this deliberately unmasked policy before any public production rollout.
+remains off; custom console/network recording events are discarded. Error events retain replay correlation.
+Review this deliberately unmasked policy before any public production rollout.
 
 VS Code's `sentry` MCP entry uses hosted OAuth scoped to `legislation/legislation`. Start that server and complete
 Sentry sign-in in VS Code when ready. It is an editor tool, not a public-chat research capability, and no access token
 or model-provider key is stored in its configuration. OAuth and real event receipt have been verified through MCP
 (`LEGISLATION-1`, environment `sentry-smoke-test`); the local DSN is configured. Browser Replay receipt has also
-been verified. Source-map upload remains unverified. The in-memory transport check verifies the error scrubber
-without contacting Sentry.
+been verified. Source-map upload remains unverified. Citation failure receipt is confirmed in `LEGISLATION-J`.
 
 Verification includes a real SDK/mock-model probe for execution, invalid-input and unknown-tool failures (three
 events, no duplicates), browser transport-event delivery, and malformed citation links rendering without an error

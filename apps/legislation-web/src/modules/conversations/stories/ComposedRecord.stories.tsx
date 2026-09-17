@@ -70,6 +70,64 @@ export const Amendment: Story = { args: { kind: "amendment" } }
 export const Vote: Story = { args: { kind: "vote" } }
 export const Material: Story = { args: { kind: "material" } }
 
+const pendingPart = {
+  type: "data-presentation",
+  id: "pending-record",
+  data: { state: "pending", blockId: "pending-record" }
+}
+
+export const Loading: Story = {
+  render: () => <ComposedRecord isRunning part={pendingPart} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("status")).toHaveTextContent("Loading content...")
+    await expect(within(canvasElement).queryByText("This content could not be displayed.")).not.toBeInTheDocument()
+  }
+}
+
+export const Interrupted: Story = {
+  render: () => <ComposedRecord isRunning={false} part={pendingPart} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("This content could not be displayed.")).toBeVisible()
+    await expect(within(canvasElement).queryByRole("status")).not.toBeInTheDocument()
+  }
+}
+
+export const InvalidReference: Story = {
+  render: () => {
+    const capture = capturedCards.find(({ record }) => record.kind === "bill")
+    invariant(capture, "Missing bill capture")
+    return (
+      <ComposedRecord
+        isRunning={false}
+        part={{
+          type: "data-presentation",
+          id: "mismatched-record",
+          data: {
+            state: "ready",
+            blockId: "mismatched-record",
+            records: [capture.record],
+            spec: {
+              root: "record",
+              elements: {
+                record: {
+                  type: "RecordCard",
+                  props: { resultId: capture.resultId, recordId: "unretrieved-record" },
+                  children: []
+                }
+              }
+            }
+          }
+        }}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText("This content could not be displayed.")).toBeVisible()
+    await expect(canvas.queryByRole("region", { name: /^Bill:/ })).not.toBeInTheDocument()
+  }
+}
+
 export const Unavailable: Story = {
   render: () => (
     <ComposedRecord

@@ -3,7 +3,7 @@ import remarkParse from "remark-parse"
 import { defaultRemarkPlugins } from "streamdown"
 import { unified } from "unified"
 
-type OrderedAnswerPart =
+export type OrderedAnswerPart =
   | Readonly<{ type: "text"; key: string; text: string }>
   | Readonly<{ type: "presentation"; key: string; part: UIMessage["parts"][number] }>
 

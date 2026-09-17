@@ -10,6 +10,7 @@ import {
   bills,
   documentSectionEmbeddings,
   documentSections,
+  legislativeSessions,
   supportingMaterialLinks,
   supportingMaterialSectionEmbeddings,
   supportingMaterialSections,
@@ -100,6 +101,7 @@ export interface BillSearchCandidate {
   score: number
   semanticScore: number | null
   sessionId: string
+  sessionName?: string | null
   snippet: string | null
   sourceUpdatedAt: Date | null
   sourceUrl: string
@@ -541,6 +543,7 @@ async function hydrateLexicalBillCandidates(
   const billRows = await database
     .select({
       bill: billSearchSummaryColumns,
+      sessionName: legislativeSessions.name,
       billSnippet: sql<string | null>`ts_headline(
         'english',
         concat_ws(' ', ${bills.identifier}, ${bills.title}, ${bills.summary}, array_to_string(${bills.subjects}, ' ')),
@@ -549,6 +552,7 @@ async function hydrateLexicalBillCandidates(
       )`
     })
     .from(bills)
+    .leftJoin(legislativeSessions, eq(bills.sessionId, legislativeSessions.id))
     .where(inArray(bills.id, billIds))
   const latestActionRows = await database
     .select({
@@ -610,6 +614,7 @@ async function hydrateLexicalBillCandidates(
     }
     return {
       ...bill.bill,
+      sessionName: bill.sessionName,
       latestActionAt: latestActionsByBillId.get(row.id) ?? null,
       lexicalScore: row.rank,
       matchedFields: billSearchMatchedFields(row),
@@ -1095,10 +1100,12 @@ export async function semanticBillSearch(
     .select({
       bill: bills,
       distance,
+      sessionName: legislativeSessions.name,
       latestActionAt: latestActions.latestActionAt
     })
     .from(bills)
     .innerJoin(billEmbeddings, eq(billEmbeddings.billId, bills.id))
+    .leftJoin(legislativeSessions, eq(bills.sessionId, legislativeSessions.id))
     .leftJoinLateral(latestActions, sql`true`)
     .where(
       and(
@@ -1113,6 +1120,7 @@ export async function semanticBillSearch(
   return paginateSearchDatabaseRows(
     rows.map((row) => ({
       ...row.bill,
+      sessionName: row.sessionName,
       latestActionAt: row.latestActionAt,
       lexicalScore: null,
       matchedFields: ["semantic"],

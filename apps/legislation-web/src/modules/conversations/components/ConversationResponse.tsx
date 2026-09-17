@@ -1,6 +1,5 @@
 "use client"
 
-import { useReducedMotion } from "@mantine/hooks"
 import type { UIMessage } from "ai"
 import { ChevronDown, ChevronRight, ExternalLink, LoaderCircle } from "lucide-react"
 import Image from "next/image"
@@ -16,8 +15,10 @@ import { createCitationPresentation, type CitationSelection } from "./citationPr
 import { ClarificationQuestion, ClarificationReceiptStatus } from "./ClarificationQuestion"
 import { ComposedRecord } from "./ComposedRecord"
 import { useConversationSession } from "./ConversationSession"
+import { InlineRecordLink, responseRecordMentions } from "./InlineRecordLink"
 import { MessageActions } from "./MessageActions"
 import { answerReferenceDefinitions, orderedAnswerParts } from "./orderedAnswer"
+import { OrderedAnswerContent } from "./OrderedAnswerContent"
 import { ResearchActivity } from "./ResearchActivity"
 import * as styles from "./ConversationResponse.css"
 
@@ -25,6 +26,7 @@ const evidenceOutputSchema = z.object({ evidence: z.array(evidenceSnapshotSchema
 const resultWarningsSchema = z.object({ resultSet: entityPageSchema.pick({ warnings: true }) })
 type CitationContext = Readonly<{
   presentation: ReturnType<typeof createCitationPresentation>
+  recordMentions: ReturnType<typeof responseRecordMentions>
   isRunning: boolean
   onEvidence: (selection: CitationSelection) => void
 }>
@@ -34,7 +36,7 @@ type ConversationResponseProps = Readonly<{
   isRunning: boolean
   isIncomplete: boolean
   isLatest?: boolean
-  evidence: EvidenceSnapshot[]
+  evidence?: EvidenceSnapshot[]
   onEvidence: (selection: CitationSelection) => void
 }>
 
@@ -68,6 +70,10 @@ export function responseEvidence(message: UIMessage): EvidenceSnapshot[] {
 
 function CitationLink({ href, children }: ComponentProps<"a">) {
   const context = useContext(EvidenceContext)
+  if (href?.startsWith("#record-")) {
+    const mention = context?.recordMentions.get(href)
+    return mention ? <InlineRecordLink mention={mention}>{children}</InlineRecordLink> : <span>{children}</span>
+  }
   const citation = context?.presentation.resolveCitation(href)
   if (context && citation) {
     const url = evidenceSourceUrl(citation.evidence)
@@ -131,12 +137,36 @@ function OmittedImage() {
 
 const markdownComponents = { a: CitationLink, img: OmittedImage }
 
+function responsePresentation(
+  message: UIMessage,
+  suppliedEvidence: EvidenceSnapshot[] | undefined,
+  previousNumbers?: ReadonlyMap<string, number>
+) {
+  const text = message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n\n")
+  return {
+    message,
+    suppliedEvidence,
+    text,
+    presentation: createCitationPresentation(
+      message.id,
+      text,
+      suppliedEvidence ?? responseEvidence(message),
+      previousNumbers
+    ),
+    referenceDefinitions: answerReferenceDefinitions(text),
+    recordMentions: responseRecordMentions(message)
+  }
+}
+
 export function ConversationResponse({
   message,
   isRunning,
   isIncomplete,
   isLatest = false,
-  evidence,
+  evidence: suppliedEvidence,
   onEvidence
 }: ConversationResponseProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -144,34 +174,24 @@ export function ConversationResponse({
   const { answerClarification, clarificationAnswers } = useConversationSession()
   const clarification = responseClarification(message)
   const acceptedResponse = clarification && clarificationAnswers[clarification.id]
-  const isReducedMotion = useReducedMotion()
   const steps = message.parts
     .filter((part) => part.type === "dynamic-tool")
     .filter(
       (part) => part.toolName !== "ask_clarification" || part.state === "output-error" || part.state === "output-denied"
     )
-  const text = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n\n")
-  const [citationNumbers, setCitationNumbers] = useState(() => ({
-    answerId: message.id,
-    numbers: new Map<string, number>()
-  }))
-  const presentation = createCitationPresentation(
-    message.id,
-    text,
-    evidence,
-    citationNumbers.answerId === message.id ? citationNumbers.numbers : undefined
-  )
-  if (citationNumbers.answerId !== message.id || citationNumbers.numbers.size !== presentation.numbers.size) {
-    setCitationNumbers({ answerId: message.id, numbers: presentation.numbers })
+  const [answer, setAnswer] = useState(() => responsePresentation(message, suppliedEvidence))
+  if (answer.message !== message || answer.suppliedEvidence !== suppliedEvidence) {
+    setAnswer(
+      responsePresentation(
+        message,
+        suppliedEvidence,
+        answer.message.id === message.id ? answer.presentation.numbers : undefined
+      )
+    )
   }
-  const failed = steps.filter((part) => part.state === "output-error" || part.state === "output-denied").length
-  const activitySteps = steps.filter((part) => part.state !== "output-error" && part.state !== "output-denied")
+  const { text, presentation, referenceDefinitions, recordMentions } = answer
   const number = new Intl.NumberFormat()
   const answerParts = orderedAnswerParts(message.parts)
-  const referenceDefinitions = answerReferenceDefinitions(text)
   const resultWarnings = [
     ...new Set(
       message.parts.flatMap((part) => {
@@ -196,7 +216,7 @@ export function ConversationResponse({
         {acceptedResponse && <ClarificationReceiptStatus response={acceptedResponse} />}
         {isIncomplete && <span className="text-xs text-muted-foreground">Incomplete response</span>}
       </div>
-      {activitySteps.length > 0 && (
+      {steps.length > 0 && (
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <CollapsibleTrigger className={styles.activityTrigger}>
             <ChevronRight
@@ -205,151 +225,161 @@ export function ConversationResponse({
             />
             <span className="min-w-0 flex-1">Research activity</span>
             <span className={styles.activityCount}>
-              {number.format(activitySteps.length)} {activitySteps.length === 1 ? "step" : "steps"}
+              {number.format(steps.length)} {steps.length === 1 ? "step" : "steps"}
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className={styles.activityItems}>
-            {activitySteps.map((part) => (
-              <ResearchActivity key={part.toolCallId} part={part} isRunning={isRunning} />
+            {steps.map((part) => (
+              <ResearchActivity
+                key={part.toolCallId}
+                part={part}
+                isRunning={isRunning}
+                previousParts={message.parts.slice(0, message.parts.indexOf(part))}
+              />
             ))}
           </CollapsibleContent>
         </Collapsible>
       )}
-      {failed > 0 &&
-        steps
-          .filter((part) => part.state === "output-error" || part.state === "output-denied")
-          .map((part) => <ResearchActivity key={part.toolCallId} part={part} isRunning={isRunning} />)}
-      <EvidenceContext value={{ presentation, isRunning, onEvidence }}>
-        {answerParts.map((part) => {
-          const key = `${message.id}:${part.key}`
-          if (part.type === "presentation") {
-            return <ComposedRecord key={key} part={part.part} isRunning={isRunning} />
-          }
-          if (!part.text) {
-            return null
-          }
-          return (
-            <MessageResponse
-              key={key}
-              className={styles.markdown}
-              mode={isRunning ? "streaming" : "static"}
-              isAnimating={isRunning}
-              animated={!isReducedMotion}
-              controls={false}
-              skipHtml
-              components={markdownComponents}
-            >
-              {presentation.formatCitationGroups(
-                referenceDefinitions ? `${referenceDefinitions}\n\n${part.text}` : part.text
-              )}
-            </MessageResponse>
-          )
-        })}
-      </EvidenceContext>
-      {clarification && !isRunning && (
-        <ClarificationQuestion
-          request={{
-            ...clarification,
-            state: clarification.state === "pending" && (!isLatest || isIncomplete) ? "superseded" : clarification.state
+      <EvidenceContext value={{ presentation, recordMentions, isRunning, onEvidence }}>
+        <OrderedAnswerContent
+          key={message.id}
+          parts={answerParts}
+          isRunning={isRunning}
+          renderPart={(part, animate) => {
+            const key = `${message.id}:${part.key}`
+            if (part.type === "presentation") {
+              return <ComposedRecord key={key} part={part.part} isRunning={isRunning} />
+            }
+            if (!part.text) {
+              return null
+            }
+            return (
+              <MessageResponse
+                key={key}
+                className={styles.markdown}
+                mode={isRunning ? "streaming" : "static"}
+                isAnimating={isRunning}
+                animated={animate}
+                controls={false}
+                skipHtml
+                components={markdownComponents}
+              >
+                {presentation.formatCitationGroups(
+                  referenceDefinitions ? `${referenceDefinitions}\n\n${part.text}` : part.text
+                )}
+              </MessageResponse>
+            )
           }}
-          acceptedResponse={acceptedResponse}
-          hasAuthorHeader
-          onAnswer={async (response) => {
-            const labels =
-              clarification.input.kind !== "text" && response.status === "answered"
-                ? clarification.input.options
-                    .filter((option) => response.selectedIds.includes(option.id))
-                    .map((option) => option.label)
-                : []
-            const text =
-              response.status === "skipped"
-                ? "Skip this clarification."
-                : [...labels, response.text].filter(Boolean).join("\n")
-            await answerClarification(response, text)
-          }}
-        />
-      )}
-      {isRunning && !clarification && (
-        <output className={styles.working}>
-          <LoaderCircle className={styles.spinner} aria-hidden="true" />
-          {text ? "Writing response..." : "Researching..."}
-        </output>
-      )}
-      {resultWarnings.map((warning) => (
-        <p key={warning} className="break-words text-xs text-muted-foreground">
-          {warning}
-        </p>
-      ))}
-      {presentation.references.length > 0 && (
-        <section aria-label="Sources" className="space-y-2">
-          <Collapsible open={areSourcesExpanded} onOpenChange={setAreSourcesExpanded}>
-            <h3>
-              <CollapsibleTrigger className={styles.sourcesTrigger}>
-                <span>Sources</span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {number.format(presentation.references.length)}
-                </span>
-                <ChevronDown
-                  className={`ml-auto size-4 shrink-0 ${areSourcesExpanded ? "rotate-180" : ""}`}
-                  aria-hidden="true"
-                />
-              </CollapsibleTrigger>
-            </h3>
-            <CollapsibleContent>
-              {presentation.references.map((citation) => {
-                const source = citation.evidence
-                if (!source) {
-                  return (
-                    <div
-                      key={citation.referenceId}
-                      className={styles.unavailableSource}
-                      role="note"
-                      aria-label={
-                        isRunning ? `Source ${citation.number} pending` : `Source ${citation.number} unavailable`
-                      }
-                    >
-                      <span className={styles.unavailableSourceNumber} aria-hidden="true">
-                        {citation.number}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {isRunning ? "Source pending" : "Source unavailable"}
-                      </span>
-                    </div>
-                  )
-                }
-                const url = evidenceSourceUrl(source)
-                return (
-                  <button
-                    key={source.id}
-                    type="button"
-                    className={styles.source}
-                    aria-label={`Read source ${citation.number}: ${source.title}`}
-                    onClick={() =>
-                      onEvidence({ answerId: citation.answerId, number: citation.number, evidence: source })
+        >
+          {clarification && !isRunning && (
+            <ClarificationQuestion
+              request={{
+                ...clarification,
+                state:
+                  clarification.state === "pending" && (!isLatest || isIncomplete) ? "superseded" : clarification.state
+              }}
+              acceptedResponse={acceptedResponse}
+              hasAuthorHeader
+              onAnswer={async (response) => {
+                const labels =
+                  clarification.input.kind !== "text" && response.status === "answered"
+                    ? clarification.input.options
+                        .filter((option) => response.selectedIds.includes(option.id))
+                        .map((option) => option.label)
+                    : []
+                const text =
+                  response.status === "skipped"
+                    ? "Skip this clarification."
+                    : [...labels, response.text].filter(Boolean).join("\n")
+                await answerClarification(response, text)
+              }}
+            />
+          )}
+          {isRunning && !clarification && !text && (
+            <output className={styles.working}>
+              <LoaderCircle className={styles.spinner} aria-hidden="true" />
+              Researching...
+            </output>
+          )}
+          {resultWarnings.map((warning) => (
+            <p key={warning} className="break-words text-xs text-muted-foreground">
+              {warning}
+            </p>
+          ))}
+          {presentation.references.length > 0 && (
+            <section aria-label="Sources" className="space-y-2">
+              <Collapsible open={areSourcesExpanded} onOpenChange={setAreSourcesExpanded}>
+                <h3>
+                  <CollapsibleTrigger className={styles.sourcesTrigger}>
+                    <span>Sources</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {number.format(presentation.references.length)}
+                    </span>
+                    <ChevronDown
+                      className={`ml-auto size-4 shrink-0 ${areSourcesExpanded ? "rotate-180" : ""}`}
+                      aria-hidden="true"
+                    />
+                  </CollapsibleTrigger>
+                </h3>
+                <CollapsibleContent>
+                  {presentation.references.map((citation) => {
+                    const source = citation.evidence
+                    if (!source) {
+                      return (
+                        <div
+                          key={citation.referenceId}
+                          className={styles.unavailableSource}
+                          role="note"
+                          aria-label={
+                            isRunning ? `Source ${citation.number} pending` : `Source ${citation.number} unavailable`
+                          }
+                        >
+                          <span className={styles.unavailableSourceNumber} aria-hidden="true">
+                            {citation.number}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {isRunning ? "Source pending" : "Source unavailable"}
+                          </span>
+                        </div>
+                      )
                     }
-                  >
-                    <span className={styles.sourceNumber} aria-hidden="true">
-                      {citation.number}
-                    </span>
-                    <span className="min-w-0 flex-1 break-words">
-                      <span className="block font-medium">{source.title}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {url ? new URL(url).hostname : "Source unavailable"}
-                      </span>
-                      {source.versionLabel && (
-                        <span className="block text-xs text-muted-foreground">{source.versionLabel}</span>
-                      )}
-                      {source.locator && <span className="block text-xs text-muted-foreground">{source.locator}</span>}
-                    </span>
-                    <ExternalLink className="mt-1 size-4 shrink-0" aria-hidden="true" />
-                  </button>
-                )
-              })}
-            </CollapsibleContent>
-          </Collapsible>
-        </section>
-      )}
-      <MessageActions message={message} isRunning={isRunning} />
+                    const url = evidenceSourceUrl(source)
+                    return (
+                      <button
+                        key={source.id}
+                        type="button"
+                        className={styles.source}
+                        aria-label={`Read source ${citation.number}: ${source.title}`}
+                        onClick={() =>
+                          onEvidence({ answerId: citation.answerId, number: citation.number, evidence: source })
+                        }
+                      >
+                        <span className={styles.sourceNumber} aria-hidden="true">
+                          {citation.number}
+                        </span>
+                        <span className="min-w-0 flex-1 break-words">
+                          <span className="block font-medium">{source.title}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {url ? new URL(url).hostname : "Source unavailable"}
+                          </span>
+                          {source.versionLabel && (
+                            <span className="block text-xs text-muted-foreground">{source.versionLabel}</span>
+                          )}
+                          {source.locator && (
+                            <span className="block text-xs text-muted-foreground">{source.locator}</span>
+                          )}
+                        </span>
+                        <ExternalLink className="mt-1 size-4 shrink-0" aria-hidden="true" />
+                      </button>
+                    )
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
+            </section>
+          )}
+          <MessageActions message={message} isRunning={isRunning} />
+        </OrderedAnswerContent>
+      </EvidenceContext>
     </article>
   )
 }

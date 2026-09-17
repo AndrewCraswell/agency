@@ -1,3 +1,7 @@
+import {
+  organizationMembershipEndReasons,
+  type OrganizationMembershipEndReason
+} from "@repo/legislation-core/domain/membership"
 import { sql } from "drizzle-orm"
 import {
   bigserial,
@@ -21,7 +25,6 @@ import {
   uuid,
   vector
 } from "drizzle-orm/pg-core"
-import { organizationMembershipEndReasons, type OrganizationMembershipEndReason } from "../../domain/membership.js"
 
 const tsvector = customType<{ data: string }>({
   dataType: () => "tsvector"

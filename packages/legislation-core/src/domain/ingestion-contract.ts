@@ -1,5 +1,5 @@
+import { organizationMembershipEndReasons } from "@repo/legislation-core/domain/membership"
 import { z } from "zod"
-import { organizationMembershipEndReasons } from "./membership.js"
 
 export const ingestionContract = { membershipEndReasons: organizationMembershipEndReasons }
 

@@ -1,11 +1,14 @@
 import * as schema from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { embeddingRouteFor } from "@repo/legislation-core/embeddings/embedding-routing"
+import { getTableColumns } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import type { RankedPassageSearch } from "../search/ranked-passage-search"
-import { buildLexicalPassageSearchQuery } from "../search/search"
+import { buildLexicalPassageSearchQuery, lexicalBillSearch, semanticBillSearch } from "../search/search"
 import {
   billSearchExecution,
   amendmentSearchPageState,
@@ -35,6 +38,207 @@ const database = drizzle(pool, { schema })
 
 afterAll(async () => {
   await pool.end()
+})
+
+describe("bill session metadata", () => {
+  it("joins the published session name by exact session ID in direct bill reads", async () => {
+    const stopped = new Error("Query captured without contacting a database")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      const service = new LegislationQueryService(database)
+      await expect(service.getBill({ id: "bill:ca:20232024:ab:2652" })).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('"legislative_sessions"."name"')
+      expect(statement).toContain('left join "legislation"."legislative_sessions"')
+      expect(statement).toContain('"bills"."session_id" = "legislation"."legislative_sessions"."id"')
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("joins the session name in semantic bill result hydration", async () => {
+    const stopped = new Error("Query captured without contacting a database")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      await expect(
+        semanticBillSearch(database, {
+          embedding: Array.from({ length: embeddingRouteFor("bill").dimensions }, () => 0.1)
+        })
+      ).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('"legislative_sessions"."name"')
+      expect(statement).toContain('left join "legislation"."legislative_sessions"')
+      expect(statement).toContain('"bills"."session_id" = "legislation"."legislative_sessions"."id"')
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("joins the session name after lexical bill ranking selects candidates", async () => {
+    const ranked = vi.spyOn(database, "execute").mockResolvedValueOnce({
+      command: "SELECT",
+      rowCount: 1,
+      oid: 0,
+      fields: [],
+      rows: [
+        {
+          id: "bill:ca:20232024:ab:2652",
+          rank: 1,
+          coverageOnly: false,
+          versionCoverageCapped: false,
+          billTextMatches: true,
+          identifierMatches: true,
+          sponsorRank: null,
+          versionRank: null
+        }
+      ]
+    })
+    const stopped = new Error("Query captured without contacting a database")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      await expect(lexicalBillSearch(database, { query: "AB 2652" })).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('"legislative_sessions"."name"')
+      expect(statement).toContain('left join "legislation"."legislative_sessions"')
+      expect(statement).toContain('"bills"."session_id" = "legislation"."legislative_sessions"."id"')
+      expect(ranked).toHaveBeenCalledOnce()
+      expect(query).toHaveBeenCalledOnce()
+    } finally {
+      query.mockRestore()
+      ranked.mockRestore()
+    }
+  })
+})
+
+describe("bill summary independence from child pages", () => {
+  it.each([
+    {
+      childLimit: 1,
+      childCursor: undefined,
+      status: null,
+      provider: "openstates",
+      hasActions: true,
+      expectedStatus: "Vetoed"
+    },
+    {
+      childLimit: 5,
+      childCursor: Buffer.from(JSON.stringify({ offset: 5 })).toString("base64url"),
+      status: null,
+      provider: "openstates",
+      hasActions: true,
+      expectedStatus: "Vetoed"
+    },
+    {
+      childLimit: 1,
+      childCursor: undefined,
+      status: "Published status",
+      provider: "openstates",
+      hasActions: true,
+      expectedStatus: "Published status"
+    },
+    {
+      childLimit: 1,
+      childCursor: undefined,
+      status: null,
+      provider: "govinfo",
+      hasActions: true,
+      expectedStatus: null
+    },
+    {
+      childLimit: 1,
+      childCursor: undefined,
+      status: null,
+      provider: "openstates",
+      hasActions: false,
+      expectedStatus: null
+    }
+  ])(
+    "returns authoritative summary for %j",
+    async ({ childLimit, childCursor, status, provider, hasActions, expectedStatus }) => {
+      const billId = "bill:ca:20232024:sb:1047"
+      const billValues: Record<string, unknown> = {
+        id: billId,
+        title: "SB 1047",
+        jurisdictionId: "jurisdiction:ca",
+        sessionId: "session:ca:20232024",
+        status,
+        upstreamIds: { [provider]: "publisher-id" }
+      }
+      const latestAction = {
+        id: "action:last",
+        billId,
+        ordinal: 51,
+        description: "Returned without signature.",
+        actionDate: "2024-09-29",
+        actionAt: null,
+        sourceUrl: "https://publisher.example/bill"
+      }
+      const statements: { text: string; values: unknown }[] = []
+      const query = vi.spyOn(pool, "query").mockImplementation((config, values) => {
+        const { text } = z.object({ text: z.string() }).parse(config)
+        statements.push({ text, values })
+        let rows: unknown[][] = []
+        if (text.includes('from "legislation"."bills"')) {
+          rows = [
+            [
+              ...Object.keys(getTableColumns(schema.bills)).map((key) => billValues[key] ?? null),
+              "2023-2024 Regular Session"
+            ]
+          ]
+        } else if (text.includes('"classification" &&')) {
+          rows = hasActions ? [[50, ["executive-veto"], "upper"]] : []
+        } else if (text.includes('order by "legislation"."bill_actions"."ordinal" desc')) {
+          rows = hasActions ? [Object.values(latestAction)] : []
+        } else if (text.includes('from "legislation"."bill_documents"')) {
+          rows = Array.from({ length: childLimit + 1 }, (_, index) =>
+            Object.keys(getTableColumns(schema.billDocuments)).map((key) => {
+              if (key === "id") {
+                return `document:${index}`
+              }
+              if (key === "title") {
+                return "Document"
+              }
+              if (key === "billId") {
+                return billId
+              }
+              return null
+            })
+          )
+        }
+        return Promise.resolve({ command: "SELECT", rowCount: rows.length, oid: 0, fields: [], rows })
+      })
+      try {
+        const result = await new LegislationQueryService(database).getBill({ id: billId, childLimit, childCursor })
+        expect(result.truncated).toBe(true)
+        expect(result.actions).toEqual([])
+        expect(result.latestAction).toEqual(hasActions ? latestAction : null)
+        expect(result.bill.status).toBe(expectedStatus)
+        const latestQuery = statements.find(
+          (statement) =>
+            statement.text.includes('order by "legislation"."bill_actions"."ordinal" desc') &&
+            !statement.text.includes('"classification" &&')
+        )
+        expect(latestQuery?.text).not.toContain("offset")
+        expect(latestQuery?.values).toEqual([billId, 1])
+        const statusQueries = statements.filter((statement) => statement.text.includes('"classification" &&'))
+        expect(statusQueries).toHaveLength(status === null && provider === "openstates" ? 1 : 0)
+        for (const statement of statusQueries) {
+          expect(statement.text).not.toContain("offset")
+          expect(statement.text).toContain('"bill_id" = $1')
+        }
+      } finally {
+        query.mockRestore()
+      }
+    }
+  )
 })
 
 describe("ranked passage search routing", () => {

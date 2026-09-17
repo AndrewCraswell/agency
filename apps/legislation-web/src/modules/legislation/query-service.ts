@@ -36,6 +36,10 @@ import {
 import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-timestamp"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import {
+  openStatesBillStatus,
+  openStatesStatusClassifications
+} from "@repo/legislation-core/domain/openstates-bill-status"
+import {
   embeddingQueryRouteFor,
   embeddingRouteFor,
   type EmbeddingSearchTool
@@ -2916,11 +2920,18 @@ export class LegislationQueryService {
   async getBill(lookup: BillLookup) {
     const childLimit = Math.min(Math.max(lookup.childLimit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const childOffset = decodeOffset(lookup.childCursor)
-    const bill = await this.#database.select().from(bills).where(eq(bills.id, lookup.id)).limit(1)
+    const bill = await this.#database
+      .select({ ...getTableColumns(bills), sessionName: legislativeSessions.name })
+      .from(bills)
+      .leftJoin(legislativeSessions, eq(bills.sessionId, legislativeSessions.id))
+      .where(eq(bills.id, lookup.id))
+      .limit(1)
     if (bill[0] === undefined) {
       throw new LegislationError("not_found", `Bill ${lookup.id} was not found`)
     }
     const [
+      latestActions,
+      statusActions,
       actions,
       sponsors,
       billVotes,
@@ -2930,6 +2941,37 @@ export class LegislationQueryService {
       structuredBillAmendments,
       documentBillAmendments
     ] = await Promise.all([
+      this.#database
+        .select({
+          id: billActions.id,
+          billId: billActions.billId,
+          ordinal: billActions.ordinal,
+          description: billActions.description,
+          actionDate: billActions.actionDate,
+          actionAt: billActions.actionAt,
+          sourceUrl: billActions.sourceUrl
+        })
+        .from(billActions)
+        .where(eq(billActions.billId, lookup.id))
+        .orderBy(desc(billActions.ordinal), desc(billActions.id))
+        .limit(1),
+      bill[0].status === null && bill[0].upstreamIds.openstates
+        ? this.#database
+            .select({
+              ordinal: billActions.ordinal,
+              classification: billActions.classification,
+              chamber: billActions.chamber
+            })
+            .from(billActions)
+            .where(
+              and(
+                eq(billActions.billId, lookup.id),
+                arrayOverlaps(billActions.classification, openStatesStatusClassifications)
+              )
+            )
+            .orderBy(desc(billActions.ordinal), desc(billActions.id))
+            .limit(1)
+        : Promise.resolve([]),
       this.#database
         .select()
         .from(billActions)
@@ -3004,7 +3046,8 @@ export class LegislationQueryService {
     return {
       actions: actions.slice(0, childLimit),
       amendments: billAmendments.slice(0, childLimit),
-      bill: bill[0],
+      bill: { ...bill[0], status: bill[0].status ?? openStatesBillStatus(statusActions) ?? null },
+      latestAction: latestActions[0] ?? null,
       documents: documents.slice(0, childLimit),
       nextChildCursor: truncated ? encodeOffset(childOffset + childLimit) : undefined,
       organizations: linkedOrganizations.slice(0, childLimit),

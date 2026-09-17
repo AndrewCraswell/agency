@@ -1,8 +1,8 @@
+import type { legalPassageScopeSchema } from "@repo/legislation-core/legal-text/passage-contract"
+import { requireRights } from "@repo/legislation-core/legal-text/rights"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import type { legalPassageScopeSchema } from "./passage-contract.js"
-import { requireRights } from "./rights.js"
 
 const scopeMetadataSchema = z.object({
   rights_profile_id: z.string(),

@@ -30,6 +30,7 @@
     "./domain/ingestion-contract": "./src/domain/ingestion-contract.ts",
     "./domain/membership": "./src/domain/membership.ts",
     "./domain/model": "./src/domain/model.ts",
+    "./domain/openstates-bill-status": "./src/domain/openstates-bill-status.ts",
     "./embeddings/embedding-preparation": "./src/embeddings/embedding-preparation.ts",
     "./embeddings/embedding-routing": "./src/embeddings/embedding-routing.ts",
     "./embeddings/embedding-tokenizer": "./src/embeddings/embedding-tokenizer.ts",

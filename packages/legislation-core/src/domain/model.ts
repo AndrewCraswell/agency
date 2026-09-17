@@ -12,7 +12,7 @@ import type {
   people,
   votePositions,
   votes
-} from "../database/schema/schema.js"
+} from "@repo/legislation-core/database/schema/schema"
 
 export interface CanonicalVote {
   positions?: Array<typeof votePositions.$inferInsert>

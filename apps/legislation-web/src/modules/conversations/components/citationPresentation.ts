@@ -19,6 +19,9 @@ type CitationReference = Readonly<{
 const markdownParser = unified().use(remarkParse).use(Object.values(defaultRemarkPlugins))
 
 function normalizedSourceUrl(value: string | null | undefined) {
+  if (!value) {
+    return undefined
+  }
   const parsed = sourceUrlSchema.safeParse(value)
   return parsed.success ? new URL(parsed.data).href : undefined
 }
@@ -135,7 +138,7 @@ export function createCitationPresentation(
   }
 
   function formatCitationGroups(markdown: string) {
-    const parsed = markdownParser.parse(markdown)
+    const parsed = markdown === text ? tree : markdownParser.parse(markdown)
     const edits: { start: number; end: number; text: string }[] = []
     function visitGroups(node: typeof parsed | (typeof parsed.children)[number]) {
       if (!("children" in node)) {

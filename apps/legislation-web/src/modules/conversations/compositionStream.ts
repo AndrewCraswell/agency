@@ -6,10 +6,12 @@ import {
   presentationBlockSchema,
   presentationElementSchema,
   presentationReferenceSchema,
+  presentationReferences,
   presentationSpecSchema,
   type PresentationBlock,
   type PresentationReference
 } from "./composition"
+import { createCompositionDiagnostics, type CompositionDiagnostic } from "./compositionDiagnostics"
 import type { EntityCard } from "./entityResults"
 
 const maximumBlocks = 3
@@ -17,16 +19,12 @@ const maximumPatches = 16
 const maximumBlockBytes = 4096
 const unsafeKeys = new Set(["__proto__", "prototype", "constructor", ...Object.getOwnPropertyNames(Object.prototype)])
 const rootSchema = presentationSpecSchema.shape.root.refine((root) => !unsafeKeys.has(root))
-const referenceSchema = presentationReferenceSchema.refine(
-  (reference) =>
-    reference.recordId.trim().length > 0 && !/\p{Cc}/u.test(reference.recordId) && !unsafeKeys.has(reference.recordId)
-)
 const patchSchema = z.union([
   z.strictObject({ op: z.enum(["add", "replace"]), path: z.literal("/root"), value: rootSchema }),
   z.strictObject({
     op: z.enum(["add", "replace"]),
     path: z.string().regex(/^\/elements\/[a-zA-Z][a-zA-Z0-9_-]{0,63}$/),
-    value: presentationElementSchema.extend({ props: referenceSchema })
+    value: presentationElementSchema
   })
 ])
 const specChunkSchema = z.strictObject({
@@ -60,6 +58,9 @@ export function createCompositionStream(
   options: CompositionStreamOptions
 ): ReadableStream<UIMessageChunk> {
   const contexts = new WeakMap<UIMessageChunk, UIMessageChunk>()
+  const boundaries = new WeakSet<UIMessageChunk>()
+  const diagnostics = new WeakMap<UIMessageChunk, CompositionDiagnostic>()
+  const inspect = createCompositionDiagnostics()
   const roots = new Set<string>()
   const records = new Set<string>()
   const textIds = new Set<string>()
@@ -76,8 +77,20 @@ export function createCompositionStream(
   let isSourceClosed = false
   let hasCompleted = false
   let renderedText = ""
+  let outgoingText: Extract<UIMessageChunk, { type: "text-delta" }> | undefined
   let receivedCharacters = 0
+  let invalidFence = false
+  let invalidBlockId = 0
   const renderedBlocks = new Map<string, PresentationBlock>()
+
+  function flushText(controller: ReadableStreamDefaultController<UIMessageChunk>) {
+    if (!outgoingText) {
+      return false
+    }
+    controller.enqueue(outgoingText)
+    outgoingText = undefined
+    return true
+  }
 
   function complete() {
     if (!hasCompleted) {
@@ -134,8 +147,8 @@ export function createCompositionStream(
       emit({ state: "error", blockId: block.blockId }, controller)
       return
     }
-    const reference = spec.data.elements[spec.data.root]?.props
-    if (!reference) {
+    const references = presentationReferences(spec.data)
+    if (references.length === 0) {
       report("Missing presentation reference.")
       emit({ state: "error", blockId: block.blockId }, controller)
       return
@@ -144,23 +157,25 @@ export function createCompositionStream(
       if (!answerCatalog.validate(spec.data).success) {
         throw new Error("Invalid catalog element.")
       }
-      const record = options.resolveRecord(presentationReferenceSchema.parse(reference))
+      const resolvedRecords = references.map((reference) =>
+        options.resolveRecord(presentationReferenceSchema.parse(reference))
+      )
       const ready = presentationBlockSchema.parse({
         state: "ready",
         blockId: block.blockId,
         spec: spec.data,
-        record
+        records: resolvedRecords
       })
       if (ready.state !== "ready") {
         return
       }
-      const recordKey = JSON.stringify([ready.record.kind, ready.record.id])
-      if (records.has(recordKey)) {
+      const recordKeys = ready.records.map((record) => JSON.stringify([record.kind, record.id]))
+      if (recordKeys.some((key) => records.has(key))) {
         report("Duplicate presentation record.")
         emit({ state: "error", blockId: block.blockId }, controller)
         return
       }
-      records.add(recordKey)
+      recordKeys.forEach((key) => records.add(key))
       emit(ready, controller)
     } catch {
       report("Presentation record could not be resolved or validated.")
@@ -169,6 +184,9 @@ export function createCompositionStream(
   }
 
   function acceptPatch(chunk: UIMessageChunk, controller: ReadableStreamDefaultController<UIMessageChunk>) {
+    if (invalidFence) {
+      return
+    }
     if (isTerminated) {
       report("Presentation patch arrived after termination.")
       return
@@ -189,7 +207,7 @@ export function createCompositionStream(
         report("Duplicate presentation root.")
         return
       }
-      if (roots.size >= maximumBlocks) {
+      if (renderedBlocks.size >= maximumBlocks) {
         report("Presentation block limit exceeded.")
         return
       }
@@ -218,6 +236,18 @@ export function createCompositionStream(
     applySpecPatch(pending.spec, patch)
   }
 
+  function enqueueDiagnostic(
+    diagnostic: CompositionDiagnostic,
+    controller: ReadableStreamDefaultController<UIMessageChunk>
+  ) {
+    if (diagnostic.type === "invalid") {
+      controller.enqueue({ type: "text-end", id: "composition-flush" })
+    }
+    const marker: UIMessageChunk = { type: "data-composition-diagnostic", data: null }
+    diagnostics.set(marker, diagnostic)
+    controller.enqueue(marker)
+  }
+
   function enqueueSource(chunk: UIMessageChunk, controller: ReadableStreamDefaultController<UIMessageChunk>) {
     const marker: UIMessageChunk = { type: "data-composition-context", data: null }
     contexts.set(marker, chunk)
@@ -232,7 +262,30 @@ export function createCompositionStream(
     } else {
       controller.enqueue({ type: "text-end", id: "composition-flush" })
     }
-    controller.enqueue(chunk)
+    if (chunk.type === "text-delta") {
+      let start = 0
+      for (const event of inspect.push(chunk.delta)) {
+        if (event.end > start) {
+          controller.enqueue({ ...chunk, delta: chunk.delta.slice(start, event.end) })
+        }
+        start = event.end
+        enqueueDiagnostic(event.diagnostic, controller)
+      }
+      if (start < chunk.delta.length) {
+        controller.enqueue({ ...chunk, delta: chunk.delta.slice(start) })
+      }
+    } else {
+      if (chunk.type === "finish" || chunk.type === "abort" || chunk.type === "error") {
+        inspect.flush(true).forEach((diagnostic) => enqueueDiagnostic(diagnostic, controller))
+      }
+      controller.enqueue(chunk)
+      if (chunk.type === "text-end") {
+        inspect.flush().forEach((diagnostic) => enqueueDiagnostic(diagnostic, controller))
+      }
+    }
+    const boundary: UIMessageChunk = { type: "data-composition-boundary", data: null }
+    boundaries.add(boundary)
+    controller.enqueue(boundary)
   }
 
   const normalized = new ReadableStream<UIMessageChunk>({
@@ -250,6 +303,7 @@ export function createCompositionStream(
           isSourceClosed = true
           source.releaseLock()
           controller.enqueue({ type: "text-end", id: "composition-flush" })
+          inspect.flush(true).forEach((diagnostic) => enqueueDiagnostic(diagnostic, controller))
           return
         }
         if (next.value.type === "text-delta") {
@@ -291,6 +345,7 @@ export function createCompositionStream(
             return
           }
           if (next.done) {
+            flushText(controller)
             seal(controller)
             complete()
             controller.close()
@@ -298,6 +353,33 @@ export function createCompositionStream(
             return
           }
           const chunk = next.value
+          if (boundaries.has(chunk)) {
+            if (flushText(controller)) {
+              return
+            }
+            continue
+          }
+          if (chunk.type !== "text-delta") {
+            flushText(controller)
+          }
+          const diagnostic = diagnostics.get(chunk)
+          if (diagnostic) {
+            if (diagnostic.type === "closed") {
+              invalidFence = false
+            } else {
+              invalidFence = true
+              if (pending) {
+                reject(diagnostic.reason, controller)
+              } else {
+                report(diagnostic.reason)
+                if (renderedBlocks.size < maximumBlocks) {
+                  invalidBlockId += 1
+                  emit({ state: "error", blockId: `invalid-presentation-${invalidBlockId}` }, controller)
+                }
+              }
+            }
+            continue
+          }
           const context = contexts.get(chunk)
           if (context) {
             if (context.type === "text-start" || context.type === "text-delta" || context.type === "text-end") {
@@ -351,7 +433,12 @@ export function createCompositionStream(
             if (chunk.type === "text-end" && sourceText?.type === "text-end") {
               providerMetadata = sourceText.providerMetadata
             }
-            controller.enqueue({ ...chunk, id: activeTextId ?? chunk.id, providerMetadata })
+            const id = activeTextId ?? chunk.id
+            if (chunk.type === "text-delta") {
+              outgoingText = { ...chunk, id, providerMetadata, delta: (outgoingText?.delta ?? "") + chunk.delta }
+              continue
+            }
+            controller.enqueue({ ...chunk, id, providerMetadata })
             if (chunk.type === "text-end") {
               activeTextId = undefined
             }

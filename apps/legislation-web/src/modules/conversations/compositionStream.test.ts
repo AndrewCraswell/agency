@@ -28,6 +28,25 @@ function fence(patches: unknown[]) {
   return `\`\`\`spec\n${patches.map((patch) => JSON.stringify(patch)).join("\n")}\n\`\`\`\n`
 }
 
+function comparisonPatch(root = "first", props: Record<string, unknown> = {}) {
+  return {
+    op: "add",
+    path: `/elements/${root}`,
+    value: {
+      type: "BillComparison",
+      props: {
+        records: [
+          { resultId, recordId: "bill-1" },
+          { resultId: otherResultId, recordId: "bill-2" }
+        ],
+        columns: ["status", "latestAction"],
+        ...props
+      },
+      children: []
+    }
+  }
+}
+
 function textStream(deltas: string[], ending: UIMessageChunk[] = [{ type: "finish", finishReason: "stop" }]) {
   return createUIMessageStream({
     execute({ writer }) {
@@ -102,6 +121,129 @@ async function compose(content: string, resolveRecord = resolver) {
 }
 
 describe("createCompositionStream", () => {
+  it("delivers prose deltas before the upstream text ends", async () => {
+    const input = new TransformStream<UIMessageChunk, UIMessageChunk>()
+    const writer = input.writable.getWriter()
+    const received: UIMessageChunk[] = []
+    const finished = createCompositionStream(input.readable, { resolveRecord: resolver }).pipeTo(
+      new WritableStream<UIMessageChunk>({
+        write(chunk) {
+          received.push(chunk)
+        }
+      })
+    )
+    try {
+      await writer.write({ type: "start", messageId: "answer" })
+      await writer.write({ type: "text-start", id: "original" })
+      await writer.write({ type: "text-delta", id: "original", delta: "Here is" })
+      await vi.waitFor(() => expect(text(received)).toBe("Here is"))
+      await writer.write({ type: "text-delta", id: "original", delta: " an education update." })
+      await vi.waitFor(() => expect(text(received)).toBe("Here is an education update."))
+      expect(received.filter((chunk) => chunk.type === "text-delta").map((chunk) => chunk.delta)).toEqual([
+        "Here is",
+        " an education update."
+      ])
+      expect(received.some((chunk) => chunk.type === "data-composition-boundary")).toBe(false)
+    } finally {
+      await writer.close()
+      await finished
+    }
+  })
+
+  it("does not expand a prose burst into one client update per character", async () => {
+    const content = "Retrieved records remain grounded. ".repeat(50) + "中文 cafe\u0301 😀."
+    const { chunks } = await compose(content)
+    expect(text(chunks)).toBe(content)
+    expect(chunks.filter((chunk) => chunk.type === "text-delta")).toHaveLength(1)
+  })
+
+  it("resolves all comparison rows and preserves prose order through single-character chunks", async () => {
+    const onComplete = vi.fn<NonNullable<Parameters<typeof createCompositionStream>[1]["onComplete"]>>()
+    const resolveRecord = vi.fn<typeof resolver>(resolver)
+    const content = `Before\n${fence([rootPatch(), comparisonPatch()])}After`
+    const chunks = await collect(createCompositionStream(textStream([...content]), { resolveRecord, onComplete }))
+    expect(blocks(chunks).map((block) => block.state)).toEqual(["pending", "ready"])
+    expect(blocks(chunks)[1]).toMatchObject({ records: [record("bill-1"), record("bill-2")] })
+    expect(resolveRecord.mock.calls).toEqual([
+      [{ resultId, recordId: "bill-1" }],
+      [{ resultId: otherResultId, recordId: "bill-2" }]
+    ])
+    expect(text(chunks)).toBe("Before\nAfter")
+    expect(onComplete.mock.calls[0]?.[0]).toMatchObject({
+      isInterrupted: false,
+      blocks: [{ records: [record("bill-1"), record("bill-2")] }]
+    })
+  })
+
+  it.each<Record<string, unknown>>([
+    { records: [{ resultId, recordId: "bill-1" }] },
+    { records: Array.from({ length: 5 }, (_, index) => ({ resultId, recordId: `bill-${index}` })) },
+    {
+      records: [
+        { resultId, recordId: "bill-1" },
+        { resultId: otherResultId, recordId: "bill-1" }
+      ]
+    },
+    {
+      records: [
+        { resultId, recordId: "bill-1" },
+        { resultId: "foreign", recordId: "bill-2" }
+      ]
+    },
+    { columns: [] },
+    { columns: ["status", "status"] },
+    { columns: ["policy"] },
+    { rows: [{ status: "Invented" }] },
+    { columns: ["session"], title: "Invented title" }
+  ])("rejects unsupported comparison props %j before resolving records", async (props) => {
+    const result = await compose(fence([rootPatch(), comparisonPatch("first", props)]))
+    expect(blocks(result.chunks).map((block) => block.state)).toEqual(["pending", "error"])
+    expect(result.resolve).not.toHaveBeenCalled()
+  })
+
+  it("rejects an entire comparison when any selected record is unavailable without reserving valid rows", async () => {
+    const result = await compose(
+      `${fence([rootPatch(), comparisonPatch()])}Next\n${fence([rootPatch("second"), elementPatch("second")])}`,
+      (reference) => {
+        if (reference.recordId === "bill-2") {
+          throw new Error("Private session authorization failure")
+        }
+        return record(reference.recordId)
+      }
+    )
+    expect(blocks(result.chunks).map((block) => block.state)).toEqual(["pending", "error", "pending", "ready"])
+    expect(JSON.stringify(result.chunks)).not.toContain("Private session")
+  })
+
+  it.each(["person", "vote"] as const)("rejects %s records in bill comparisons", async (kind) => {
+    const result = await compose(fence([rootPatch(), comparisonPatch()]), (reference) =>
+      record(reference.recordId, kind)
+    )
+    expect(blocks(result.chunks).map((block) => block.state)).toEqual(["pending", "error"])
+  })
+
+  it.each([true, false])(
+    "deduplicates across cards and comparisons in either order: comparisonFirst=%s",
+    async (comparisonFirst) => {
+      const first = comparisonFirst ? comparisonPatch() : elementPatch()
+      const second = comparisonFirst ? elementPatch("second") : comparisonPatch("second")
+      const result = await compose(fence([rootPatch(), first, rootPatch("second"), second]))
+      expect(blocks(result.chunks).map((block) => block.state)).toEqual(["pending", "ready", "pending", "error"])
+      expect(result.onInvalid).toHaveBeenCalledWith("Duplicate presentation record.")
+    }
+  )
+
+  it("does not resolve an unsealed comparison after cancellation", async () => {
+    const resolveRecord = vi.fn<typeof resolver>(resolver)
+    const chunks = await collect(
+      createCompositionStream(textStream([fence([rootPatch(), comparisonPatch()])], [{ type: "abort" }]), {
+        resolveRecord
+      })
+    )
+    expect(blocks(chunks).map((block) => block.state)).toEqual(["pending", "error"])
+    expect(resolveRecord).not.toHaveBeenCalled()
+  })
+
   it("captures displayed prose and final block states separately from raw spec text", async () => {
     const onComplete = vi.fn<NonNullable<Parameters<typeof createCompositionStream>[1]["onComplete"]>>()
     await collect(
@@ -114,7 +256,7 @@ describe("createCompositionStream", () => {
     expect(onComplete.mock.calls[0]?.[0]).toMatchObject({
       text: "Before\nAfter",
       isInterrupted: false,
-      blocks: [{ state: "ready", record: record("bill-1") }]
+      blocks: [{ state: "ready", records: [record("bill-1")] }]
     })
   })
 
@@ -143,7 +285,7 @@ describe("createCompositionStream", () => {
     expect(finalMessage?.parts[0]).toMatchObject({ text: "Before\n" })
     expect(finalMessage?.parts[1]).toMatchObject({
       id: "presentation-first",
-      data: { state: "ready", record: record("bill-1") }
+      data: { state: "ready", records: [record("bill-1")] }
     })
     expect(finalMessage?.parts[2]).toMatchObject({ text: "After" })
     expect(onBlock.mock.calls.map(([block]) => block.state)).toEqual(["pending", "ready"])
@@ -215,7 +357,7 @@ describe("createCompositionStream", () => {
       ])}Done`
     )
     expect(blocks(result.chunks).map((block) => block.state)).toEqual(["pending", "ready"])
-    expect(blocks(result.chunks)[1]).toMatchObject({ record: record("bill-1") })
+    expect(blocks(result.chunks)[1]).toMatchObject({ records: [record("bill-1")] })
     expect(result.resolve).toHaveBeenCalledTimes(1)
     expect(result.onInvalid).toHaveBeenCalled()
   })
@@ -384,7 +526,7 @@ describe("createCompositionStream", () => {
           {
             type: "text-delta",
             id: "original",
-            delta: `\`\`\`spec\n${JSON.stringify(rootPatch())}\n${JSON.stringify(elementPatch())}`
+            delta: `${JSON.stringify(rootPatch())}\n${JSON.stringify(elementPatch())}`
           },
           { type: "finish", finishReason: "stop" }
         ]),
@@ -489,8 +631,8 @@ describe("createCompositionStream", () => {
         onInvalid,
         onBlock(block) {
           block.blockId = "changed"
-          if (block.state === "ready") {
-            block.record.title = "Changed by observer"
+          if (block.state === "ready" && block.records[0]) {
+            block.records[0].title = "Changed by observer"
             resolved.title = "Changed resolver object"
             throw new Error("Observer failed")
           }
@@ -498,7 +640,7 @@ describe("createCompositionStream", () => {
       })
     )
     expect(blocks(chunks).map((block) => block.state)).toEqual(["pending", "ready"])
-    expect(blocks(chunks)[1]).toMatchObject({ blockId: "presentation-first", record: record("bill-1") })
+    expect(blocks(chunks)[1]).toMatchObject({ blockId: "presentation-first", records: [record("bill-1")] })
     expect(onInvalid).toHaveBeenCalledWith("Presentation block callback failed.")
   })
 
@@ -521,11 +663,15 @@ describe("createCompositionStream", () => {
     expect(onInvalid).toHaveBeenCalledTimes(4)
   })
 
-  it("documents the library's discarded unparseable fence limitation without adding a JSON parser", async () => {
+  it("reports discarded malformed fences once and preserves their position without inventing a card", async () => {
     const result = await compose(`Before\n\`\`\`spec\nnot JSON\n{"type":"Unknown"}\n\`\`\`\nAfter`)
     expect(text(result.chunks)).toBe("Before\nAfter")
-    expect(blocks(result.chunks)).toEqual([])
-    expect(result.onInvalid).not.toHaveBeenCalled()
+    expect(blocks(result.chunks)).toEqual([{ state: "error", blockId: expect.any(String) }])
+    expect(result.onInvalid).toHaveBeenCalledExactlyOnceWith("Malformed presentation fence.")
+    const errorIndex = result.chunks.findIndex((chunk) => chunk.type === "data-presentation")
+    expect(text(result.chunks.slice(0, errorIndex))).toBe("Before\n")
+    expect(text(result.chunks.slice(errorIndex + 1))).toBe("After")
+    expect(result.resolve).not.toHaveBeenCalled()
   })
 
   it("settles a root whose remaining malformed fenced content was discarded by the library", async () => {

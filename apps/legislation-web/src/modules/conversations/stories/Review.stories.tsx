@@ -25,11 +25,18 @@ const prepareAccordions: NonNullable<Story["play"]> = async ({ canvasElement, us
   if (toggle.getAttribute("aria-expanded") !== "true") {
     await userEvent.click(toggle)
   }
-  const collapsed = within(canvas.getByRole("region", { name: "Failure / collapsed" }))
-  const failure = collapsed.getByRole("button", { name: /Could not complete/ })
+  const mixed = within(canvas.getByRole("region", { name: "Mixed outcomes" }))
+  const activity = mixed.getByRole("button", { name: "Research activity 2 steps" })
+  if (activity.getAttribute("aria-expanded") !== "true") {
+    await userEvent.click(activity)
+  }
+  const failure = mixed.getByRole("button", { name: /: Failed$/ })
   if (failure.getAttribute("aria-expanded") !== "false") {
     await userEvent.click(failure)
   }
+  await expect(mixed.getByLabelText("Search bills: Complete")).toBeVisible()
+  await expect(failure).toBeVisible()
+  await expect(canvas.queryByRole("region", { name: "Failure / collapsed" })).not.toBeInTheDocument()
 }
 
 export const All: Story = {

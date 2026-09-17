@@ -111,7 +111,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   const hasRestoredConversation = useRef(false)
   const answerRequest = useRef<AbortController | null>(null)
   const { chat } = session
-  const { messages, status, setMessages } = useChat({ chat })
+  const { messages, status, setMessages } = useChat({ chat, throttle: 50 })
   const [checkpointMessages] = useDebouncedValue(messages, 250)
   const [checkpointDraft] = useDebouncedValue(draft, 250)
 

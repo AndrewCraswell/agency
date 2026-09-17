@@ -20,7 +20,7 @@ import { isClarificationSubmission } from "../chatRequest"
 import { entityPageSchema } from "../entityResults"
 import { ChatComposer } from "./ChatComposer"
 import type { CitationSelection } from "./citationPresentation"
-import { ConversationResponse, responseClarification, responseEvidence } from "./ConversationResponse"
+import { ConversationResponse } from "./ConversationResponse"
 import { useConversationSession } from "./ConversationSession"
 import { EvidencePanel } from "./EvidencePanel"
 import { MessageActions } from "./MessageActions"
@@ -80,7 +80,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
     evidenceTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setSelectedCitation(selection)
   }
-  const { messages, sendMessage, status, stop, regenerate } = useChat({ chat })
+  const { messages, sendMessage, status, stop, regenerate } = useChat({ chat, throttle: 50 })
   const isRunning = status === "submitted" || status === "streaming"
   const isBusy = isRunning || isConfirmingClarification || isRestoringConversation
   const lastMessage = messages.at(-1)
@@ -127,20 +127,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
     textarea.current?.focus()
   }
 
-  let connectionStatus: string | undefined
-  if (!isAvailable) {
-    connectionStatus = "Research is not connected yet."
-  } else if (isConfirmingClarification) {
-    connectionStatus = "Confirming your answer..."
-  } else if (status === "submitted") {
-    connectionStatus = "Waiting for a response..."
-  } else if (status === "streaming") {
-    connectionStatus = "Responding..."
-  } else if (wasStopped) {
-    connectionStatus = "Stopped. The response may be incomplete."
-  } else if (lastMessage?.role === "assistant" && responseClarification(lastMessage)?.state === "pending") {
-    connectionStatus = "Waiting for your answer."
-  }
+  const connectionStatus = isAvailable ? undefined : "Research is not connected yet."
 
   function handleSuggestion(question: string) {
     setDraft(question)
@@ -264,7 +251,6 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
                           message.id === interruptedMessageId ||
                           ((wasStopped || status === "error") && message.id === messages.at(-1)?.id)
                         }
-                        evidence={responseEvidence(message)}
                         onEvidence={handleEvidence}
                       />
                     ) : (

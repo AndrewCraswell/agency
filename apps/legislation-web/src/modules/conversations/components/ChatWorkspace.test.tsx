@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { ChatProviders } from "./ChatProviders"
@@ -31,6 +31,61 @@ function streamedAnswer(text: string) {
 }
 
 describe("ChatWorkspace", () => {
+  it("keeps progress in the conversation without adding a status row below the composer", async () => {
+    const response = Promise.withResolvers<Response>()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockImplementation(() => response.promise)
+    )
+    const stream = new TransformStream<Uint8Array, Uint8Array>()
+    const writer = stream.writable.getWriter()
+    const encoder = new TextEncoder()
+    const user = userEvent.setup()
+    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    await user.type(screen.getByRole("textbox", { name: "Your question" }), "A streamed question")
+    await user.click(screen.getByRole("button", { name: "Send question" }))
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(1))
+    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    view.rerender(<ChatWorkspace key={conversationId} isAvailable conversationId={conversationId} />)
+
+    function expectNoComposerStatus() {
+      const field = screen.getByRole("textbox", { name: "Your question" })
+      expect(field.closest("form")?.parentElement?.querySelector("output")).toBeNull()
+      expect(field.getAttribute("aria-describedby")).toBeNull()
+    }
+
+    expect(screen.getByText("Preparing research...")).toBeDefined()
+    expectNoComposerStatus()
+    await act(async () => {
+      response.resolve(
+        new Response(stream.readable, {
+          headers: { "content-type": "text/event-stream", "x-vercel-ai-ui-message-stream": "v1" }
+        })
+      )
+      await writer.write(encoder.encode('data: {"type":"start","messageId":"progress-answer"}\n\n'))
+    })
+    await screen.findByText("Researching...")
+    expectNoComposerStatus()
+    await act(async () => {
+      await writer.write(encoder.encode('data: {"type":"text-start","id":"answer"}\n\n'))
+      await writer.write(encoder.encode('data: {"type":"text-delta","id":"answer","delta":"Received text"}\n\n'))
+    })
+    await waitFor(() =>
+      expect(screen.getByRole("article", { name: "Rostra response" }).textContent).toContain("Received text")
+    )
+    expect(screen.queryByText("Researching...")).toBeNull()
+    expect(screen.queryByText("Writing response...")).toBeNull()
+    expect(screen.getByRole("article", { name: "Rostra response" }).querySelector("output")).toBeNull()
+    expect(screen.getByRole("button", { name: "Stop response" })).toBeDefined()
+    expectNoComposerStatus()
+    await act(async () => {
+      await writer.write(encoder.encode('data: {"type":"text-end","id":"answer"}\n\ndata: {"type":"finish"}\n\n'))
+      await writer.close()
+    })
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
+    expectNoComposerStatus()
+  })
+
   it("sends the first question once, navigates, and retains the stream without the homepage glow", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => streamedAnswer("A retained response"))
     vi.stubGlobal("fetch", fetchMock)

@@ -3,7 +3,7 @@ import { captureException } from "@sentry/core"
 import type { UIMessageChunk } from "ai"
 import invariant from "tiny-invariant"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { scrubSentryEvent } from "../../services/sentry/sentryPrivacy"
+import { sentryOptions } from "../../services/sentry/sentryOptions"
 import { checkRun } from "../evaluations/checks"
 import type { EvalEvent, EvalTurn } from "../evaluations/contracts"
 import { smokeDataset } from "../evaluations/smoke"
@@ -265,47 +265,14 @@ describe("missing citation telemetry", () => {
     )
   })
 
-  it("retains safe citation diagnostics through the production privacy scrubber", () => {
-    const event = scrubSentryEvent({
-      type: undefined,
-      message: "PRIVATE QUESTION",
-      request: { url: "https://private.example" },
-      tags: {
-        operation: "citation_resolution",
-        category: "invalid_response",
-        ...context,
-        promptVersion: "2",
-        citationReferenceHash: "a".repeat(64),
-        unknown: "PRIVATE"
-      },
-      extra: { evidenceCount: 8, unresolvedCitationCount: 1, prompt: "PRIVATE" },
-      exception: { values: [{ type: "Error", value: "PRIVATE REFERENCE" }] }
-    })
-    expect(event.message).toBe("Citation does not match retrieved evidence.")
-    expect(event.fingerprint).toEqual(["citation_resolution", "unmatched_reference"])
-    expect(event.tags).toMatchObject({
-      operation: "citation_resolution",
-      runId: context.runId,
-      model: context.model,
-      promptVersion: "2",
-      citationReferenceHash: "a".repeat(64)
-    })
-    expect(event.extra).toEqual({ evidenceCount: 8, unresolvedCitationCount: 1 })
-    expect(JSON.stringify(event)).not.toMatch(/PRIVATE|private\.example/)
-  })
-
-  it("does not allow arbitrary citation metadata through the privacy filter", () => {
-    const event = scrubSentryEvent({
-      type: undefined,
-      tags: {
-        operation: "citation_resolution",
-        citationReferenceHash: "private input",
-        model: "https://private.example/?token=secret",
-        promptVersion: "private prompt"
-      },
-      extra: { evidenceCount: -1, unresolvedCitationCount: Number.NaN }
-    })
-    expect(event.tags).toEqual({ operation: "citation_resolution" })
-    expect(event.extra).toBeUndefined()
+  it("does not scrub demo error events and groups citations at the reporter", () => {
+    expect(sentryOptions).not.toHaveProperty("beforeSend")
+    expect(sentryOptions).not.toHaveProperty("beforeBreadcrumb")
+    expect(sentryOptions.sendDefaultPii).toBe(false)
+    createCitationFailureReporter(context)({ ...answer, text: "[1](#citation-missing)" })
+    expect(captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ fingerprint: ["citation_resolution", "unmatched_reference"] })
+    )
   })
 })

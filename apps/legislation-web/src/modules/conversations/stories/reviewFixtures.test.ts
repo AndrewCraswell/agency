@@ -41,6 +41,17 @@ describe("captured Storybook review", () => {
     }
   })
 
+  it.each([
+    { code: "internal", message: "This research operation failed." },
+    { code: "dependency_unavailable", message: "The data service is temporarily unavailable." }
+  ] as const)("shows $code without suggesting an unavailable retry action", ({ code, message }) => {
+    const { part } = activityPart(toolCaptures[0]!, "Failed", code)
+    expect(part).toMatchObject({
+      state: "output-error",
+      errorText: `${message} Reference: storybook-simulated-failure`
+    })
+  })
+
   it("retains real inspector data for every captured interactive variant", () => {
     for (const { record } of capturedCards.filter(({ record }) =>
       ["vote", "meeting", "person", "organization", "material"].includes(record.kind)

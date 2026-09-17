@@ -1,6 +1,6 @@
+import * as schema from "@repo/legislation-core/database/schema/schema"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
-import * as schema from "./schema/schema.js"
 
 export type DatabaseConfig = Readonly<{
   url: string
