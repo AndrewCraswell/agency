@@ -48,6 +48,20 @@ replacement selection file bytes. Formatting the committed report does not chang
 
 ## Required before freeze or live scoring
 
+The reusable screen runs with `pnpm tool regulations/screen-evaluation-duplicates --input <json> --output <new-json>`.
+Input is an array of `{versionId, body, split}` for whole canonical versions, with `split` equal to `development` or
+`held-out`. It accepts at most 128 versions, 200,000 characters per version and 2,000,000 characters overall; the CLI also
+limits input-file bytes to 16 MiB. Exceeding a bound fails explicitly and must not be worked around by dropping source text.
+The screen records raw/normalized body hashes, direct matching pairs and transitive connected groups. Group IDs depend
+on sorted version membership. Normalized equality also covers short inputs with fewer than five words; unrelated short
+inputs do not become duplicates merely because both lack shingles. Output contains no source text.
+
+A cross-split group writes the diagnostic report and exits 1; a report without such groups exits 0. Existing outputs are
+not overwritten. Exit 0 establishes only that this lexical screen found no split conflict, not semantic independence,
+source authenticity or human review. The retained initial inventory exits 1 with one cross-split group; replacements
+exit 0 with 22 groups and no cross-split groups. Input/report files are retained locally as
+`artifacts/regulatory-backfills/evaluation-duplicates-{initial,replacement}-{input,report}.json`.
+
 1. Review family and semantic near-duplicate assignments, including any shared notice templates and code/publication links.
 2. Expand subject coverage and challenging distractors. The shortest-record selection is biased toward short text;
    55 passages and one current table per split do not yet justify a production model decision.

@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a reusable bounded near-duplicate screen for the evaluation corpus. It hashes original and normalized bodies,
+detects normalized equality or five-word-shingle overlap, and groups transitive matches deterministically. The CLI retains
+diagnostic evidence but exits 1 for a cross-split group, preventing a leaking proposal from passing this screening gate.
+It never claims semantic review or authenticates supplied source bodies. It rejects duplicate version IDs, empty lexical
+content and excessive aggregate work; unrelated short inputs are not linked through empty shingle sets.
+
+Four focused tests passed, covering Unicode/short text, transitive leakage, stable same-split historical grouping and
+rejection bounds. Real retained candidate inputs reproduced the prior finding: initial selection exits 1 with one
+cross-split group; replacement selection exits 0 with 22 groups and none crossing splits. Both reports contain metadata
+only, with zero provider calls or canonical writes. See [CLI and evidence paths](embedding-corpus-candidates.md).
+Scoped lint and ingestion types also passed. Root `pnpm verify` stopped during formatting with Windows mapped-file
+error 1224 on concurrently edited web conversation files; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-evaluation-duplicates-verify.log`. The current-title scanner remains live at
+38,485 members across six completed editions, with zero preparation failures; full qualification remains incomplete.
+
 Exported and independently audited 26 canonical evaluation candidate versions across current prose/tables, annual history,
 proposals, final rules and notices. All complete versions qualified under both pinned tokenizers, producing 55 shared
 passages (17 development, 38 held-out candidates), maximum 777 tokens. Before freezing anything, replaced four historical
