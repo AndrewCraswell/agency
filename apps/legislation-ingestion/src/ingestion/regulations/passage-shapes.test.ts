@@ -68,6 +68,18 @@ it("does not label supported column groups as failed spanning rows", () => {
   })
 })
 
+it("accounts for header-only and blank-form tables as atomic layouts", () => {
+  expect(
+    table(
+      "<TABLE><THEAD><TR><TH>Line item</TH><TH>Amount</TH></TR></THEAD><TBODY><TR><TD/><TD/></TR></TBODY></TABLE>",
+      "Line item\tAmount"
+    )
+  ).toMatchObject({
+    blockedTableBlocks: 0,
+    tableBlocks: [{ layouts: 1, dataRows: 0, atomicLayouts: 1, layoutFailure: null }]
+  })
+})
+
 it("inventories appendix wrappers and long cells without truncating identifying text", () => {
   const long = "Long identifier ".repeat(1500)
   const text = `Scope\n${long.trimEnd()}\tB\nEnd`

@@ -52,9 +52,20 @@ function tableShape(block: { ordinal: number; tag: string; text: string; xml: st
     let layoutFailure: string | null = null
     let layouts = 0
     let dataRows = 0
+    let atomicLayouts = 0
     try {
       for (const layout of legalTableLayout(block)) {
-        dataRows += legalTableRows(layout).rows.length
+        try {
+          dataRows += legalTableRows(layout).rows.length
+        } catch (error) {
+          if (sourceFailure(error) !== "passage_table_data_rows_required") {
+            throw error
+          }
+          // Tables containing only publisher-designated headings or blank form cells are still
+          // exact, useful source text. Passage preparation can retain each table atomically and
+          // its tokenizer gate remains responsible for proving that the input fits the model.
+          atomicLayouts++
+        }
         layouts++
       }
     } catch (error) {
@@ -77,6 +88,7 @@ function tableShape(block: { ordinal: number; tag: string; text: string; xml: st
       maximumRawFirstCellCharacters,
       layouts,
       dataRows,
+      atomicLayouts,
       layoutFailure
     }
   } catch (error) {
