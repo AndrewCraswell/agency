@@ -154,6 +154,34 @@ export const legalProvisionDetailSchema = z.strictObject({
   previewTruncated: z.boolean()
 })
 export const legalProvisionResponseSchema = resourceSchema.extend({ data: legalProvisionDetailSchema })
+export const legalProvisionVersionsRequestSchema = z.strictObject({
+  sourceId: z.enum(["ecfr", "govinfo-cfr"]).optional(),
+  cursor,
+  limit
+})
+export type LegalProvisionVersionsRequest = z.input<typeof legalProvisionVersionsRequestSchema>
+export const legalProvisionVersionSummarySchema = legalProvisionVersionSchema.extend({
+  firstObservedAt: z.iso.datetime(),
+  lastObservedAt: z.iso.datetime(),
+  editionCount: z.int().positive()
+})
+export const legalProvisionVersionsResponseSchema = pageSchema.extend({
+  data: z.array(legalProvisionVersionSummarySchema).max(100)
+})
+export const legalProvisionEditionsRequestSchema = z.strictObject({
+  versionId: z.uuid().optional(),
+  sourceId: z.enum(["ecfr", "govinfo-cfr"]).optional(),
+  cursor,
+  limit
+})
+export type LegalProvisionEditionsRequest = z.input<typeof legalProvisionEditionsRequestSchema>
+export const legalProvisionEditionMembershipSchema = legalProvisionContextSchema.extend({
+  provisionId: z.uuid(),
+  versionId: z.uuid()
+})
+export const legalProvisionEditionsResponseSchema = pageSchema.extend({
+  data: z.array(legalProvisionEditionMembershipSchema).max(100)
+})
 
 function validPage(page: z.infer<typeof pageSchema>, count: number, requestedLimit: number) {
   return (
@@ -227,4 +255,54 @@ export function validateLegalProvisionResponse(value: unknown, provisionId: stri
     throw new Error("legal_provision_response_mismatch")
   }
   return response
+}
+
+export function validateLegalProvisionVersionsResponse(
+  value: unknown,
+  provisionId: string,
+  query: LegalProvisionVersionsRequest
+) {
+  const id = z.uuid().parse(provisionId)
+  const input = legalProvisionVersionsRequestSchema.parse(query)
+  const page = legalProvisionVersionsResponseSchema.parse(value)
+  if (
+    !validPage(page, page.data.length, input.limit) ||
+    new Set(page.data.map((row) => row.id)).size !== page.data.length ||
+    page.data.some(
+      (row, index) =>
+        row.provisionId !== id ||
+        row.firstObservedAt > row.lastObservedAt ||
+        (index > 0 &&
+          (row.firstObservedAt > page.data[index - 1]!.firstObservedAt ||
+            (row.firstObservedAt === page.data[index - 1]!.firstObservedAt && row.id <= page.data[index - 1]!.id)))
+    )
+  ) {
+    throw new Error("legal_provision_versions_response_mismatch")
+  }
+  return page
+}
+
+export function validateLegalProvisionEditionsResponse(
+  value: unknown,
+  provisionId: string,
+  query: LegalProvisionEditionsRequest
+) {
+  const id = z.uuid().parse(provisionId)
+  const input = legalProvisionEditionsRequestSchema.parse(query)
+  const page = legalProvisionEditionsResponseSchema.parse(value)
+  if (
+    !validPage(page, page.data.length, input.limit) ||
+    new Set(page.data.map((row) => row.edition.id)).size !== page.data.length ||
+    page.data.some(
+      (row, index) =>
+        row.provisionId !== id ||
+        (input.versionId !== undefined && row.versionId !== input.versionId) ||
+        (input.sourceId !== undefined && row.edition.sourceId !== input.sourceId) ||
+        (index > 0 && row.edition.id <= page.data[index - 1]!.edition.id) ||
+        row.textUrl !== `/api/legal/versions/${row.versionId}/text?editionId=${row.edition.id}`
+    )
+  ) {
+    throw new Error("legal_provision_editions_response_mismatch")
+  }
+  return page
 }

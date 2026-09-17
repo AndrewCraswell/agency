@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed the provision-version history and reverse edition-membership HTTP slice. Strict contracts, typed client
+methods and Next routes now serve `GET /api/legal/provisions/{provisionId}/versions` and
+`GET /api/legal/provisions/{provisionId}/editions`. The first returns immutable version metadata with observed published
+membership bounds and edition counts; the second returns exact edition hierarchy/source context and text URLs, optionally
+filtered by version and source. Both catalog continuations bind caller, provision, filters, limit, current rights and the
+entire visible result, and both fail before returning metadata when no published membership grants API and text rights.
+
+The retained 49-title PostgreSQL database on port 55457 served provision
+`00001627-dc0e-4d64-9d2c-c4b39cd29ebf`, version `bfa1b62b-a806-4cd4-97e9-cae2422ebd95` and edition
+`b6c9e7a0-457f-4cc9-81ac-873b0a412cab` through both new production reader queries. The exact membership text URL matched
+the selected version and edition. Evidence is retained at
+`artifacts/regulatory-backfills/legal-provision-catalog-canary.json`. Six core contract tests and 17 web browse/route
+tests pass; core type-check and scoped lint pass. Web type-check still stops only on four concurrent conversation-test
+errors outside this slice. Required root `pnpm verify` also stopped in unrelated concurrent conversation component/research
+lint errors before coverage; its parallel core type-check additionally exhausted an OS thread after the focused core
+type-check had passed. This advances HTTP-05; direct version detail remains open. No canonical rows, indexes, provider
+state, embeddings, schedules or existing vectors changed.
+
 Removed the remaining operator loop from full preparation-wave planning without authorizing preparation execution. The
 new explicit `controller` mode persists one page of at most ten exact manifest owners, closes its database pool and then
 schedules one self-continuation with a global key bound to wave ID, catalog hash and committed selected count. It reuses

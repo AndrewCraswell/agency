@@ -1,9 +1,13 @@
 import { expect, it } from "vitest"
 import {
   legalEditionsRequestSchema,
+  legalProvisionEditionMembershipSchema,
   legalProvisionRequestSchema,
+  legalProvisionVersionSummarySchema,
   validateLegalEditionResponse,
+  validateLegalProvisionEditionsResponse,
   validateLegalProvisionResponse,
+  validateLegalProvisionVersionsResponse,
   legalProvisionsRequestSchema,
   validateLegalProvisionsResponse
 } from "./legal-browse-contract"
@@ -154,4 +158,93 @@ it("rejects a different selected code even when the provision page is empty", ()
     }
   }
   expect(() => validateLegalProvisionsResponse(response, id, {})).toThrow("legal_provisions_response_mismatch")
+})
+
+it("validates ordered immutable provision-version history", () => {
+  const provisionId = "00000000-0000-4000-8000-000000000001"
+  const codeId = "00000000-0000-4000-8000-000000000002"
+  const versions = [
+    legalProvisionVersionSummarySchema.parse({
+      id: "00000000-0000-4000-8000-000000000004",
+      provisionId,
+      codeId,
+      contentHash: "b".repeat(64),
+      inputContract: "reader",
+      heading: "Current",
+      nodeKind: "section",
+      language: "en",
+      firstObservedAt: "2026-09-15T00:00:00Z",
+      lastObservedAt: "2026-09-16T00:00:00Z",
+      editionCount: 2
+    }),
+    legalProvisionVersionSummarySchema.parse({
+      id: "00000000-0000-4000-8000-000000000003",
+      provisionId,
+      codeId,
+      contentHash: "c".repeat(64),
+      inputContract: "reader",
+      heading: "Prior",
+      nodeKind: "section",
+      language: "en",
+      firstObservedAt: "2025-09-15T00:00:00Z",
+      lastObservedAt: "2025-09-15T00:00:00Z",
+      editionCount: 1
+    })
+  ]
+  const response = {
+    data: versions,
+    links: { self: `/api/legal/provisions/${provisionId}/versions`, next: null },
+    meta: { correlationId: "test", limit: 20, nextCursor: null, truncated: false, warnings: [] }
+  }
+  expect(validateLegalProvisionVersionsResponse(response, provisionId, {}).data).toEqual(versions)
+  expect(() =>
+    validateLegalProvisionVersionsResponse({ ...response, data: versions.toReversed() }, provisionId, {})
+  ).toThrow("legal_provision_versions_response_mismatch")
+})
+
+it("binds edition memberships to the requested provision and exact version", () => {
+  const provisionId = "00000000-0000-4000-8000-000000000001"
+  const codeId = "00000000-0000-4000-8000-000000000002"
+  const versionId = "00000000-0000-4000-8000-000000000003"
+  const editionId = "00000000-0000-4000-8000-000000000004"
+  const membership = legalProvisionEditionMembershipSchema.parse({
+    provisionId,
+    versionId,
+    edition: {
+      id: editionId,
+      codeId,
+      sourceId: "ecfr",
+      jurisdictionId: "jurisdiction:us",
+      rightsProfileId: "official",
+      sourceObservationId: "a".repeat(64),
+      nativeKey: "2026-09-10",
+      sourceRevision: "revision",
+      sourceUrl: "https://www.ecfr.gov/",
+      issueDate: "2026-09-10",
+      sourceCurrencyDate: "2026-09-11",
+      publishedAt: "2026-09-15T00:00:00Z",
+      scope: "current_code_snapshot"
+    },
+    parentId: null,
+    ordinal: 1,
+    nativeId: "1 CFR 1.1",
+    sourceLocator: "/ECFR[1]",
+    isLatestValidated: true,
+    textUrl: `/api/legal/versions/${versionId}/text?editionId=${editionId}`
+  })
+  const response = {
+    data: [membership],
+    links: { self: `/api/legal/provisions/${provisionId}/editions`, next: null },
+    meta: { correlationId: "test", limit: 20, nextCursor: null, truncated: false, warnings: [] }
+  }
+  expect(validateLegalProvisionEditionsResponse(response, provisionId, { versionId, sourceId: "ecfr" }).data).toEqual([
+    membership
+  ])
+  expect(() =>
+    validateLegalProvisionEditionsResponse(
+      { ...response, data: [{ ...membership, versionId: editionId }] },
+      provisionId,
+      { versionId }
+    )
+  ).toThrow("legal_provision_editions_response_mismatch")
 })

@@ -15,14 +15,20 @@ import {
 } from "./legal-agencies-contract"
 import {
   legalEditionsRequestSchema,
+  legalProvisionEditionsRequestSchema,
   legalProvisionRequestSchema,
+  legalProvisionVersionsRequestSchema,
   legalProvisionsRequestSchema,
   validateLegalEditionResponse,
   validateLegalEditionsResponse,
+  validateLegalProvisionEditionsResponse,
   validateLegalProvisionResponse,
+  validateLegalProvisionVersionsResponse,
   validateLegalProvisionsResponse,
   type LegalEditionsRequest,
+  type LegalProvisionEditionsRequest,
   type LegalProvisionRequest,
+  type LegalProvisionVersionsRequest,
   type LegalProvisionsRequest
 } from "./legal-browse-contract"
 import {
@@ -572,6 +578,42 @@ export class LegislationApiClient {
       return validateLegalProvisionResponse(result, id, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal provision response")
+    }
+  }
+
+  async listLegalProvisionVersions(
+    provisionId: string,
+    query: LegalProvisionVersionsRequest = {},
+    options?: ApiRequestOptions
+  ) {
+    const id = z.uuid().parse(provisionId)
+    const input = legalProvisionVersionsRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/provisions/${segment(id)}/versions`, query: input },
+      options
+    )
+    try {
+      return validateLegalProvisionVersionsResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal provision versions response")
+    }
+  }
+
+  async listLegalProvisionEditions(
+    provisionId: string,
+    query: LegalProvisionEditionsRequest = {},
+    options?: ApiRequestOptions
+  ) {
+    const id = z.uuid().parse(provisionId)
+    const input = legalProvisionEditionsRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/provisions/${segment(id)}/editions`, query: input },
+      options
+    )
+    try {
+      return validateLegalProvisionEditionsResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal provision editions response")
     }
   }
 

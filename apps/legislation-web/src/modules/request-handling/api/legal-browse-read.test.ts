@@ -155,6 +155,70 @@ it("returns a context-neutral exact version only after one published membership 
   })
 })
 
+it("lists immutable provision versions with caller-bound continuation", async () => {
+  const firstVersion = {
+    ...provision.selectedVersion,
+    firstObservedAt: "2026-09-15T00:00:00.000000Z",
+    lastObservedAt: "2026-09-16T00:00:00.000000Z",
+    editionCount: 2
+  }
+  const priorVersion = {
+    ...firstVersion,
+    id: "00000000-0000-4000-8000-000000000003",
+    firstObservedAt: "2025-09-15T00:00:00.000000Z",
+    lastObservedAt: "2025-09-15T00:00:00.000000Z",
+    editionCount: 1
+  }
+  const f = fixture()
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  f.rights()
+  f.rows([firstVersion, priorVersion])
+  f.rows()
+  const first = await f.run(() => f.browser.listProvisionVersions(provisionId, { limit: 1, sourceId: "ecfr" }))
+  expect(first.items).toEqual([firstVersion])
+  expect(first.nextCursor).toBeTruthy()
+
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  f.rights()
+  f.rows([firstVersion, priorVersion])
+  f.rows()
+  await expect(
+    f.run(
+      () =>
+        f.browser.listProvisionVersions(provisionId, {
+          limit: 1,
+          sourceId: "ecfr",
+          cursor: first.nextCursor
+        }),
+      "other"
+    )
+  ).rejects.toMatchObject({ category: "conflict" })
+})
+
+it("lists exact edition memberships for one provision version", async () => {
+  const membership = {
+    provisionId,
+    versionId,
+    ...provision.selectedContext!
+  }
+  const f = fixture()
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  f.rights()
+  f.rows([{ data: membership }])
+  f.rows()
+  const result = await f.run(() =>
+    f.browser.listProvisionEditions(provisionId, { versionId, sourceId: "ecfr", limit: 20 })
+  )
+  expect(result.items).toEqual([membership])
+  const catalogQuery = f.query.mock.calls.find(
+    (call) => typeof call[0] === "string" && call[0].includes("'provisionId',m.provision_id")
+  )
+  expect(catalogQuery?.[1]).toEqual([provisionId, ["official"], versionId, "ecfr"])
+})
+
 it("reads an authorized exact edition with current-head and member context", async () => {
   const f = fixture()
   f.begin()

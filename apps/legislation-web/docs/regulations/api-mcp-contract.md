@@ -4,8 +4,9 @@ Contract recorded September 14, 2026. The [exact-version text operation](legal-t
 the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. The
 [published code list](legal-code-discovery.md), [edition/provision browser](legal-edition-browsing.md), and their
 `list_legal_codes`, `get_legal_code`, `list_legal_editions`, `get_legal_edition`, `list_legal_provisions` tools are implemented locally;
-`get_legal_provision` and its typed provision-detail route are also implemented locally with exact edition/version or
-context-neutral version selection;
+`get_legal_provision` and its typed provision-detail route are also implemented locally with exact edition/version,
+current-head or context-neutral version selection. Typed provision-version history and reverse edition-membership routes
+are implemented locally;
 code detail serves authorized metadata, published edition-component counts and the explicit current eCFR edition;
 complete-history and search-capability enrichment remains planned.
 [Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;
@@ -126,8 +127,8 @@ not an unbounded synchronous recomputation on every page.
 
 The executable foundation is C's `src/legal-text/reader-contract.ts` and `reader-text.ts`. Database-backed exact
 text reads, the explicit HTTP text route and typed client are implemented behind the organization allowlist.
-Code/edition lists, provision traversal and stage-specific coverage are implemented locally; remaining detail operations
-and deployed acceptance remain phase gates.
+Code/edition lists, provision traversal, provision detail, version history, reverse edition membership and stage-specific
+coverage are implemented locally; direct version detail, citation resolution and deployed acceptance remain phase gates.
 
 Coverage reports one rights-visible published edition per row. `sourceCollection`, `canonical`, `lexical` and `semantic`
 are independent stages with explicit status, reason and requested/available/excluded counts. Canonical record count comes

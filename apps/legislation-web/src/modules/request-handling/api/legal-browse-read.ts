@@ -3,8 +3,12 @@ import {
   legalEditionDetailSchema,
   legalEditionsRequestSchema,
   legalProvisionDetailSchema,
+  legalProvisionEditionMembershipSchema,
+  legalProvisionEditionsRequestSchema,
   legalProvisionRequestSchema,
   legalProvisionSummarySchema,
+  legalProvisionVersionSummarySchema,
+  legalProvisionVersionsRequestSchema,
   legalProvisionsRequestSchema
 } from "@repo/legislation-core/api-client/legal-browse-contract"
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
@@ -32,6 +36,24 @@ function continuation(value: string | undefined) {
 }
 function encode(scope: string, editionId: string, after: number) {
   return Buffer.from(JSON.stringify({ scope, editionId, after })).toString("base64url")
+}
+const catalogContinuationSchema = z.strictObject({
+  scope: z.string().regex(/^[a-f0-9]{64}$/),
+  itemId: z.uuid(),
+  after: z.int().nonnegative()
+})
+function catalogContinuation(value: string | undefined) {
+  if (value === undefined) {
+    return undefined
+  }
+  try {
+    return catalogContinuationSchema.parse(JSON.parse(Buffer.from(value, "base64url").toString("utf8")))
+  } catch {
+    throw new LegislationError("invalid_request", "Invalid legal continuation")
+  }
+}
+function encodeCatalogContinuation(scope: string, itemId: string, after: number) {
+  return Buffer.from(JSON.stringify({ scope, itemId, after })).toString("base64url")
 }
 const editionColumns = `e.id,e.code_id AS "codeId",e.source_id AS "sourceId",e.jurisdiction_id AS "jurisdictionId",
   e.rights_profile_id AS "rightsProfileId",e.generation_id AS "sourceObservationId",e.native_key AS "nativeKey",
@@ -81,6 +103,44 @@ export function createLegalBrowser(pool: pg.Pool, allowedOrganizationIds: readon
       [profile]
     )
     return z.object({ policy_hash: z.string().regex(/^[a-f0-9]{64}$/) }).parse(row.rows[0]).policy_hash
+  }
+  async function visibleProvisionRights(client: pg.PoolClient, provisionId: string) {
+    const profiles = z
+      .array(z.object({ rights_profile_id: z.string().min(1) }))
+      .max(1000)
+      .parse(
+        (
+          await client.query(
+            `SELECT DISTINCT e.rights_profile_id FROM legislation.legal_edition_provisions m
+            JOIN legislation.legal_editions e ON e.id=m.edition_id AND e.code_id=m.code_id
+            WHERE m.provision_id=$1 AND e.jurisdiction_id='jurisdiction:us'
+              AND e.source_id IN ('ecfr','govinfo-cfr') AND e.published_at IS NOT NULL
+            ORDER BY e.rights_profile_id LIMIT 1001`,
+            [provisionId]
+          )
+        ).rows
+      )
+    if (profiles.length === 0) {
+      throw new LegislationError("not_found", "Published legal provision was not found")
+    }
+    const rights: { id: string; hash: string }[] = []
+    for (const profile of profiles) {
+      try {
+        rights.push({ id: profile.rights_profile_id, hash: await policyHash(client, profile.rights_profile_id, true) })
+      } catch (error) {
+        if (
+          !(error instanceof Error) ||
+          (!error.message.startsWith("rights_denied:") &&
+            error.message !== "Invariant failed: rights_profile_unavailable")
+        ) {
+          throw error
+        }
+      }
+    }
+    if (rights.length === 0) {
+      throw new LegislationError("forbidden", "Access denied")
+    }
+    return rights
   }
   return {
     getProvision: async (value: string, selection: unknown) =>
@@ -316,6 +376,122 @@ export function createLegalBrowser(pool: pg.Pool, allowedOrganizationIds: readon
           warnings: [
             "Published source editions only. Annual volumes are separate components, not a complete historical coverage claim."
           ]
+        }
+      }),
+    listProvisionVersions: async (value: string, query: unknown) =>
+      transaction(async (client, caller) => {
+        const provisionId = z.uuid().parse(value)
+        const input = legalProvisionVersionsRequestSchema.parse(query)
+        const cursor = catalogContinuation(input.cursor)
+        const rights = await visibleProvisionRights(client, provisionId)
+        const rows = await client.query(
+          `SELECT v.id,v.provision_id AS "provisionId",v.code_id AS "codeId",v.content_hash AS "contentHash",
+          v.input_contract AS "inputContract",v.heading,v.node_kind AS "nodeKind",v.language,
+          to_char(min(e.published_at) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "firstObservedAt",
+          to_char(max(e.published_at) AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "lastObservedAt",
+          count(DISTINCT e.id)::integer AS "editionCount"
+          FROM legislation.legal_provision_versions v
+          JOIN legislation.legal_edition_provisions m ON m.version_id=v.id AND m.provision_id=v.provision_id
+          JOIN legislation.legal_editions e ON e.id=m.edition_id AND e.code_id=m.code_id
+          WHERE v.provision_id=$1 AND e.rights_profile_id=ANY($2::text[])
+            AND e.jurisdiction_id='jurisdiction:us' AND e.source_id IN ('ecfr','govinfo-cfr')
+            AND e.published_at IS NOT NULL AND ($3::text IS NULL OR e.source_id=$3)
+          GROUP BY v.id ORDER BY min(e.published_at) DESC,v.id LIMIT 10001`,
+          [provisionId, rights.map(({ id }) => id), input.sourceId ?? null]
+        )
+        invariant(rows.rows.length <= 10000, "legal_provision_versions_catalog_limit")
+        const catalog = z.array(legalProvisionVersionSummarySchema).parse(rows.rows)
+        const scope = digest(
+          JSON.stringify([
+            "legal-provision-versions-2026-09-17",
+            caller,
+            provisionId,
+            input.sourceId ?? null,
+            input.limit,
+            rights,
+            catalog
+          ])
+        )
+        if (cursor && cursor.scope !== scope) {
+          throw new LegislationError("conflict", "Version continuation no longer matches the visible catalog")
+        }
+        const after = cursor ? catalog.findIndex(({ id }) => id === cursor.itemId) : -1
+        if (cursor && (after === -1 || cursor.after !== after)) {
+          throw new LegislationError("invalid_request", "Invalid version continuation")
+        }
+        const items = catalog.slice(after + 1, after + 1 + input.limit)
+        const truncated = after + 1 + items.length < catalog.length
+        const last = items.at(-1)
+        return {
+          items,
+          truncated,
+          ...(truncated && last ? { nextCursor: encodeCatalogContinuation(scope, last.id, after + items.length) } : {}),
+          warnings: [
+            "Published source observations only. Version history does not establish continuous daily coverage."
+          ]
+        }
+      }),
+    listProvisionEditions: async (value: string, query: unknown) =>
+      transaction(async (client, caller) => {
+        const provisionId = z.uuid().parse(value)
+        const input = legalProvisionEditionsRequestSchema.parse(query)
+        const cursor = catalogContinuation(input.cursor)
+        const rights = await visibleProvisionRights(client, provisionId)
+        const rows = await client.query(
+          `SELECT jsonb_build_object(
+            'provisionId',m.provision_id,'versionId',m.version_id,
+            'edition',jsonb_build_object('id',e.id,'codeId',e.code_id,'sourceId',e.source_id,
+              'jurisdictionId',e.jurisdiction_id,'rightsProfileId',e.rights_profile_id,
+              'sourceObservationId',e.generation_id,'nativeKey',e.native_key,'sourceRevision',e.source_revision,
+              'sourceUrl',g.unit->>'sourceUrl','issueDate',e.issue_date::text,
+              'sourceCurrencyDate',e.currency_date::text,
+              'publishedAt',to_char(e.published_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+              'scope',CASE WHEN e.source_id='ecfr' THEN 'current_code_snapshot' ELSE 'annual_volume' END),
+            'parentId',m.parent_id,'ordinal',m.ordinal,'nativeId',m.native_id,'sourceLocator',m.source_locator,
+            'isLatestValidated',EXISTS(SELECT 1 FROM legislation.legal_code_heads h
+              WHERE h.code_id=m.code_id AND h.source_id='ecfr' AND h.edition_id=m.edition_id),
+            'textUrl','/api/legal/versions/'||m.version_id||'/text?editionId='||m.edition_id) AS data
+          FROM legislation.legal_edition_provisions m
+          JOIN legislation.legal_editions e ON e.id=m.edition_id AND e.code_id=m.code_id
+          JOIN legislation.legal_import_generations g ON g.id=e.generation_id
+          WHERE m.provision_id=$1 AND e.rights_profile_id=ANY($2::text[])
+            AND e.jurisdiction_id='jurisdiction:us' AND e.source_id IN ('ecfr','govinfo-cfr')
+            AND e.published_at IS NOT NULL AND ($3::uuid IS NULL OR m.version_id=$3)
+            AND ($4::text IS NULL OR e.source_id=$4)
+          ORDER BY e.id LIMIT 10001 FOR SHARE OF m,e,g`,
+          [provisionId, rights.map(({ id }) => id), input.versionId ?? null, input.sourceId ?? null]
+        )
+        invariant(rows.rows.length <= 10000, "legal_provision_editions_catalog_limit")
+        const catalog = z.array(legalProvisionEditionMembershipSchema).parse(rows.rows.map(({ data }) => data))
+        const scope = digest(
+          JSON.stringify([
+            "legal-provision-editions-2026-09-17",
+            caller,
+            provisionId,
+            input.versionId ?? null,
+            input.sourceId ?? null,
+            input.limit,
+            rights,
+            catalog
+          ])
+        )
+        if (cursor && cursor.scope !== scope) {
+          throw new LegislationError("conflict", "Edition continuation no longer matches the visible catalog")
+        }
+        const after = cursor ? catalog.findIndex(({ edition }) => edition.id === cursor.itemId) : -1
+        if (cursor && (after === -1 || cursor.after !== after)) {
+          throw new LegislationError("invalid_request", "Invalid edition continuation")
+        }
+        const items = catalog.slice(after + 1, after + 1 + input.limit)
+        const truncated = after + 1 + items.length < catalog.length
+        const last = items.at(-1)
+        return {
+          items,
+          truncated,
+          ...(truncated && last
+            ? { nextCursor: encodeCatalogContinuation(scope, last.edition.id, after + items.length) }
+            : {}),
+          warnings: ["Published source memberships only. Annual volumes may be partial components."]
         }
       }),
     listProvisions: async (code: string, value: unknown) =>

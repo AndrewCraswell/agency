@@ -1,7 +1,10 @@
 import { LegislationApiClient } from "@repo/legislation-core/api-client/client"
 import {
   legalEditionDetailSchema,
-  legalProvisionDetailSchema
+  legalEditionSchema,
+  legalProvisionDetailSchema,
+  legalProvisionEditionMembershipSchema,
+  legalProvisionVersionSummarySchema
 } from "@repo/legislation-core/api-client/legal-browse-contract"
 import { createWorkosAuthenticator } from "@repo/legislation-core/auth/workos"
 import { generateKeyPair, SignJWT } from "jose"
@@ -14,7 +17,7 @@ const editionId = "00000000-0000-4000-8000-000000000001"
 const codeId = "00000000-0000-4000-8000-000000000002"
 const provisionId = "00000000-0000-4000-8000-000000000003"
 const versionId = "00000000-0000-4000-8000-000000000004"
-const edition = legalEditionDetailSchema.parse({
+const editionSummary = legalEditionSchema.parse({
   id: editionId,
   codeId,
   sourceId: "ecfr",
@@ -27,7 +30,10 @@ const edition = legalEditionDetailSchema.parse({
   issueDate: "2026-09-10",
   sourceCurrencyDate: "2026-09-11",
   publishedAt: "2026-09-15T00:00:00Z",
-  scope: "current_code_snapshot",
+  scope: "current_code_snapshot"
+})
+const edition = legalEditionDetailSchema.parse({
+  ...editionSummary,
   publishedMembers: 42,
   isCurrent: true,
   annualVolume: null
@@ -53,6 +59,51 @@ const provision = legalProvisionDetailSchema.parse({
   previewTruncated: false
 })
 const getProvision = vi.fn<(id: string, input: unknown) => Promise<typeof provision>>(async () => provision)
+const version = legalProvisionVersionSummarySchema.parse({
+  ...provision.selectedVersion,
+  firstObservedAt: "2026-09-15T00:00:00Z",
+  lastObservedAt: "2026-09-16T00:00:00Z",
+  editionCount: 2
+})
+const membership = legalProvisionEditionMembershipSchema.parse({
+  provisionId,
+  versionId,
+  edition: editionSummary,
+  parentId: null,
+  ordinal: 1,
+  nativeId: "1 CFR 1.1",
+  sourceLocator: "/ECFR[1]",
+  isLatestValidated: true,
+  textUrl: `/api/legal/versions/${versionId}/text?editionId=${editionId}`
+})
+const listProvisionVersions = vi.fn<
+  (
+    id: string,
+    input: unknown
+  ) => Promise<{
+    items: (typeof version)[]
+    truncated: boolean
+    warnings: string[]
+  }>
+>(async () => ({
+  items: [version],
+  truncated: false,
+  warnings: ["Published source observations only."]
+}))
+const listProvisionEditions = vi.fn<
+  (
+    id: string,
+    input: unknown
+  ) => Promise<{
+    items: (typeof membership)[]
+    truncated: boolean
+    warnings: string[]
+  }>
+>(async () => ({
+  items: [membership],
+  truncated: false,
+  warnings: ["Published source memberships only."]
+}))
 const unreachableBrowse = vi.fn<(id: string, input: unknown) => Promise<never>>(async () => {
   throw new Error("Unexpected browse call")
 })
@@ -89,6 +140,8 @@ const execute = (request: Request) =>
       getEdition,
       getProvision,
       listEditions: unreachableBrowse,
+      listProvisionEditions,
+      listProvisionVersions,
       listProvisions: unreachableBrowse
     }),
     { getApplication: () => ({ config }), createAuthenticator: () => authenticate }
@@ -116,13 +169,31 @@ it("serves a context-neutral exact provision version through the typed client", 
   expect(getProvision).toHaveBeenCalledWith(provisionId, { versionId })
 })
 
+it("serves provision version history and edition memberships through the typed client", async () => {
+  listProvisionVersions.mockClear()
+  listProvisionEditions.mockClear()
+  const api = new LegislationApiClient({
+    baseUrl: "https://api.example",
+    bearerToken: await token(),
+    fetch: async (url, init) => execute(new Request(url, init))
+  })
+  expect(await api.listLegalProvisionVersions(provisionId, { sourceId: "ecfr" })).toMatchObject({ data: [version] })
+  expect(await api.listLegalProvisionEditions(provisionId, { versionId, sourceId: "ecfr" })).toMatchObject({
+    data: [membership]
+  })
+  expect(listProvisionVersions).toHaveBeenCalledWith(provisionId, { limit: 20, sourceId: "ecfr" })
+  expect(listProvisionEditions).toHaveBeenCalledWith(provisionId, { limit: 20, sourceId: "ecfr", versionId })
+})
+
 it("rejects invalid selectors and credentials before reading", async () => {
   getEdition.mockClear()
   getProvision.mockClear()
   for (const url of [
     "https://api.example/api/legal/editions/not-a-uuid",
     `https://api.example/api/legal/editions/${editionId}?codeId=${codeId}`,
-    `https://api.example/api/legal/provisions/${provisionId}?editionId=${editionId}&asOf=2025-01-01`
+    `https://api.example/api/legal/provisions/${provisionId}?editionId=${editionId}&asOf=2025-01-01`,
+    `https://api.example/api/legal/provisions/${provisionId}/versions?versionId=${versionId}`,
+    `https://api.example/api/legal/provisions/${provisionId}/editions?sourceId=vendor`
   ]) {
     const response = await execute(new Request(url, { headers: { authorization: `Bearer ${await token()}` } }))
     expect(response.status).toBe(400)
