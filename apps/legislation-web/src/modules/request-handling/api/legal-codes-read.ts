@@ -13,7 +13,7 @@ const profileSchema = z.object({ id: z.string(), policy: z.unknown(), policy_has
 /** Bounded metadata catalog. Publication is not a lexical or semantic readiness claim. */
 export function createLegalCodesReader(pool: pg.Pool, allowedOrganizationIds: readonly string[]) {
   const allowed = new Set(z.array(z.string().min(1).max(256)).max(1000).parse(allowedOrganizationIds))
-  return async (unparsed: unknown) => {
+  const read = async (unparsed: unknown, codeId?: string) => {
     const identity = getRequestContext()?.identity
     if (!identity?.userId) {
       throw new LegislationError("unauthorized", "Bearer token is absent or invalid")
@@ -65,8 +65,9 @@ export function createLegalCodesReader(pool: pg.Pool, allowedOrganizationIds: re
         WHERE e.published_at IS NOT NULL AND e.rights_profile_id=ANY($1::text[])
           AND c.jurisdiction_id='jurisdiction:us' AND e.source_id IN ('ecfr','govinfo-cfr')
           AND ($2::text IS NULL OR c.jurisdiction_id=$2) AND ($3::text IS NULL OR c.kind=$3)
+          AND ($4::uuid IS NULL OR c.id=$4)
         GROUP BY c.id ORDER BY c.jurisdiction_id COLLATE "C",c.name COLLATE "C",c.id LIMIT 10001`,
-        [permitted.map((profile) => profile.id), input.jurisdictionId ?? null, input.kind ?? null]
+        [permitted.map((profile) => profile.id), input.jurisdictionId ?? null, input.kind ?? null, codeId ?? null]
       )
       invariant(result.rows.length <= 10000, "legal_codes_catalog_limit")
       const catalog = z.array(legalCodeSchema).parse(result.rows)
@@ -110,6 +111,19 @@ export function createLegalCodesReader(pool: pg.Pool, allowedOrganizationIds: re
       throw error
     } finally {
       client.release()
+    }
+  }
+  return {
+    listCodes: (input: unknown) => read(input),
+    getCode: async (codeId: string) => {
+      const id = z.uuid().parse(codeId)
+      const page = await read({ limit: 1 }, id)
+      const code = page.items[0]
+      if (code === undefined) {
+        throw new LegislationError("not_found", "Legal code not found")
+      }
+      invariant(code.id === id && page.items.length === 1 && !page.truncated, "legal_code_identity_mismatch")
+      return code
     }
   }
 }

@@ -86,6 +86,7 @@ export type LegislationQueryApi = Readonly<{
   canReadLegalText?: () => boolean
   searchLegal?: (input: LegalSearchRequest) => Promise<unknown>
   listLegalCodes?: (input: LegalCodesRequest) => Promise<unknown>
+  getLegalCode?: (input: { codeId: string }) => Promise<unknown>
   listLegalEditions?: (input: LegalEditionsRequest & { codeId: string }) => Promise<unknown>
   listLegalProvisions?: (input: LegalProvisionsRequest & { codeId: string }) => Promise<unknown>
   getLegalText?: (input: LegalTextRequest & { versionId: string }) => Promise<unknown>
@@ -354,6 +355,20 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   }
 
   const listLegalCodes = service.listLegalCodes
+  const getLegalCode = service.getLegalCode
+  if (getLegalCode !== undefined && service.canReadLegalText?.() === true) {
+    server.registerTool(
+      "get_legal_code",
+      {
+        description:
+          "Read one published federal code by its discovered ID. Code metadata does not establish search or historical coverage.",
+        inputSchema: z.strictObject({ codeId: z.uuid() }),
+        outputSchema,
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      },
+      (input) => tool("get_legal_code", input, () => getLegalCode(input), logger, telemetry)
+    )
+  }
   if (listLegalCodes !== undefined && service.canReadLegalText?.() === true) {
     server.registerTool(
       "list_legal_codes",

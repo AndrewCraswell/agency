@@ -16,7 +16,7 @@ export interface NextLegislationApplication {
   readonly retrievalClient: OpenRouterRetrievalClient | undefined
   readonly readiness: NextDatabaseReadiness
   readonly readLegalText: ReturnType<typeof createLegalTextReader>
-  readonly listLegalCodes: ReturnType<typeof createLegalCodesReader>
+  readonly legalCodes: ReturnType<typeof createLegalCodesReader>
   readonly legalBrowser: ReturnType<typeof createLegalBrowser>
   readonly searchLegal: ReturnType<typeof createLegalSearch>
   close(): Promise<void>
@@ -56,7 +56,7 @@ export function createNextLegislationApplication(config: LegislationConfig = loa
     config,
     database,
     readLegalText: createLegalTextReader(pool, config.legalApi.allowedOrganizationIds),
-    listLegalCodes: createLegalCodesReader(pool, config.legalApi.allowedOrganizationIds),
+    legalCodes: createLegalCodesReader(pool, config.legalApi.allowedOrganizationIds),
     legalBrowser: createLegalBrowser(pool, config.legalApi.allowedOrganizationIds),
     searchLegal: createLegalSearch(pool, passageSearchDatabase?.pool, config.legalApi.allowedOrganizationIds),
     queryService: new LegislationQueryService(database, retrievalClient, rankedPassageSearch),

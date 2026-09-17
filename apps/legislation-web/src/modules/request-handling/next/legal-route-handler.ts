@@ -12,7 +12,7 @@ export async function handleLegalTextRequest(request: Request): Promise<Response
 
 export async function handleLegalCodesRequest(request: Request): Promise<Response> {
   const application = getNextLegislationApplication()
-  return executeAuthenticatedApiRequest(request, createLegalCodesApiHandler(application.listLegalCodes))
+  return executeAuthenticatedApiRequest(request, createLegalCodesApiHandler(application.legalCodes))
 }
 
 export async function handleLegalBrowseRequest(request: Request): Promise<Response> {

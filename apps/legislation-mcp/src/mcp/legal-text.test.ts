@@ -7,7 +7,10 @@ import {
   legalEditionsResponseSchema,
   legalProvisionsResponseSchema
 } from "@repo/legislation-core/api-client/legal-browse-contract"
-import { legalCodesResponseSchema } from "@repo/legislation-core/api-client/legal-codes-contract"
+import {
+  legalCodesResponseSchema,
+  legalCodeResponseSchema
+} from "@repo/legislation-core/api-client/legal-codes-contract"
 import {
   legalSearchPageSchema,
   legalSearchRequestSchema
@@ -210,6 +213,12 @@ async function setup(
             if (path === "/api/legal/codes") {
               return Response.json(page((await codes()).items), { headers })
             }
+            if (path === `/api/legal/codes/${versionId}`) {
+              return Response.json(
+                { data: (await codes()).items[0], links: { self: path }, meta: { correlationId, warnings: [] } },
+                { headers }
+              )
+            }
             if (path === `/api/legal/codes/${versionId}/editions`) {
               return Response.json(page([edition]), { headers })
             }
@@ -396,6 +405,33 @@ it("discovers codes through the authenticated API client and refuses changed API
   ]) {
     const denied = await setup(options)
     expect((await denied.client.callTool({ name: "list_legal_codes", arguments: {} })).isError).toBe(true)
+    expect(denied.apiRequests).toHaveLength(0)
+  }
+})
+
+it("reads code detail through API credentials for the same MCP caller and honors revocation", async () => {
+  const { client, apiRequests, revoke } = await setup()
+  const result = await client.callTool({ name: "get_legal_code", arguments: { codeId: versionId } })
+  expect(result.isError).not.toBe(true)
+  expect(z.strictObject({ data: legalCodeResponseSchema }).parse(result.structuredContent).data.data.id).toBe(versionId)
+  expect(new URL(apiRequests[0]!.url).pathname).toBe(`/api/legal/codes/${versionId}`)
+  const before = apiRequests.length
+  expect(
+    (await client.callTool({ name: "get_legal_code", arguments: { codeId: versionId, organizationId: "spoofed" } }))
+      .isError
+  ).toBe(true)
+  expect(apiRequests).toHaveLength(before)
+  revoke()
+  expect((await client.callTool({ name: "get_legal_code", arguments: { codeId: versionId } })).isError).toBe(true)
+  for (const options of [
+    { apiOrg: "org-other" },
+    { apiUser: "other-client" },
+    { apiAudience: environment.WORKOS_MCP_AUDIENCE }
+  ]) {
+    const denied = await setup(options)
+    expect((await denied.client.callTool({ name: "get_legal_code", arguments: { codeId: versionId } })).isError).toBe(
+      true
+    )
     expect(denied.apiRequests).toHaveLength(0)
   }
 })

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { pageSchema } from "./envelopes"
+import { pageSchema, resourceSchema } from "./envelopes"
 
 export const legalCodesRequestSchema = z.strictObject({
   jurisdictionId: z
@@ -31,6 +31,16 @@ export const legalCodeSchema = z.strictObject({
     .max(1000)
 })
 export const legalCodesResponseSchema = pageSchema.extend({ data: z.array(legalCodeSchema).max(100) })
+export const legalCodeResponseSchema = resourceSchema.extend({ data: legalCodeSchema })
+
+export function validateLegalCodeResponse(value: unknown, codeId: string) {
+  const id = z.uuid().parse(codeId)
+  const response = legalCodeResponseSchema.parse(value)
+  if (response.data.id !== id || response.data.canonicalUrl !== `/api/legal/codes/${id}`) {
+    throw new Error("legal_code_response_mismatch")
+  }
+  return response
+}
 
 export function validateLegalCodesResponse(value: unknown, request: LegalCodesRequest) {
   const input = legalCodesRequestSchema.parse(request)

@@ -29,7 +29,8 @@ function fixture() {
   const client = Object.assign(new pg.Client(), { release: vi.fn<() => void>() })
   const connect = vi.spyOn(pool, "connect").mockImplementation(async () => client)
   const query = vi.spyOn(client, "query")
-  const read = createLegalCodesReader(pool, ["org", "other"])
+  const reader = createLegalCodesReader(pool, ["org", "other"])
+  const read = reader.listCodes
   const page = (input: unknown = {}, userId = "user", organizationId = "org") =>
     runWithRequestContext({ correlationId: "test", identity: { userId, organizationId } }, () => read(input))
   function rows(values: unknown[]) {
@@ -49,7 +50,11 @@ function fixture() {
     rows(items)
     rows([])
   }
-  return { read, page, catalog, query, connect, rows }
+  const detail = (codeId = id) =>
+    runWithRequestContext({ correlationId: "test", identity: { userId: "user", organizationId: "org" } }, () =>
+      reader.getCode(codeId)
+    )
+  return { read, page, detail, catalog, query, connect, rows, reader }
 }
 
 it("requires approved identity before connecting", async () => {
@@ -95,7 +100,7 @@ it("excludes revoked or territory-restricted profiles before aggregation and inv
     const catalogCall = f.query.mock.calls.findLast(
       (call) => typeof call[0] === "string" && call[0].includes("GROUP BY")
     )
-    expect(catalogCall?.[1]).toEqual([[], null, null])
+    expect(catalogCall?.[1]).toEqual([[], null, null, null])
   }
 })
 
@@ -103,4 +108,21 @@ it("rejects malformed continuations before database access", async () => {
   const f = fixture()
   await expect(f.page({ cursor: "bad" })).rejects.toMatchObject({ category: "invalid_request" })
   expect(f.connect).not.toHaveBeenCalled()
+})
+
+it("filters detail by exact code identity and hides missing or revoked codes", async () => {
+  const f = fixture()
+  await expect(f.reader.getCode(id)).rejects.toMatchObject({ category: "unauthorized" })
+  expect(f.connect).not.toHaveBeenCalled()
+  f.catalog([code])
+  expect(await f.detail()).toEqual(code)
+  expect(
+    f.query.mock.calls.findLast((call) => typeof call[0] === "string" && call[0].includes("GROUP BY"))?.[1]
+  ).toEqual([["official"], null, null, id])
+  for (const policy of [officialFederalRights, { ...officialFederalRights, apiMcp: false }]) {
+    f.catalog([], policy)
+    await expect(f.detail()).rejects.toMatchObject({ category: "not_found" })
+  }
+  f.catalog([second])
+  await expect(f.detail()).rejects.toThrow("legal_code_identity_mismatch")
 })

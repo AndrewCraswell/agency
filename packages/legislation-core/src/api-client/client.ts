@@ -9,7 +9,12 @@ import {
   type LegalEditionsRequest,
   type LegalProvisionsRequest
 } from "./legal-browse-contract"
-import { legalCodesRequestSchema, validateLegalCodesResponse, type LegalCodesRequest } from "./legal-codes-contract"
+import {
+  legalCodesRequestSchema,
+  validateLegalCodesResponse,
+  validateLegalCodeResponse,
+  type LegalCodesRequest
+} from "./legal-codes-contract"
 import { legalSearchRequestSchema, validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract"
 import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract"
 
@@ -390,6 +395,16 @@ export class LegislationApiClient {
       return validateLegalCodesResponse(result, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal codes response")
+    }
+  }
+
+  async getLegalCode(codeId: string, options?: ApiRequestOptions) {
+    const id = z.uuid().parse(codeId)
+    const result = await this.#request({ method: "GET", path: `/api/legal/codes/${segment(id)}` }, options)
+    try {
+      return validateLegalCodeResponse(result, id)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal code response")
     }
   }
 

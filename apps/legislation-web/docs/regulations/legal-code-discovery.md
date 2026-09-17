@@ -10,7 +10,11 @@ maximum 100). Unknown or duplicated parameters and malformed cursors return 400.
 ordered by jurisdiction, name using PostgreSQL C collation, then code ID. Names sort lexically, not as title numbers.
 Each row has a canonical code identity, jurisdiction, code key, name, kind, latest authorized publication timestamp
 and authorized source/rights-profile references. This timestamp is catalog publication time, not legal currency.
-Canonical detail URLs identify the planned code resource; code-detail serving is still an open HTTP-04 task.
+Canonical detail URLs now resolve through `GET /api/legal/codes/{codeId}`, C's `getLegalCode` client and the
+`get_legal_code` MCP tool. Detail accepts no query parameters and returns `Resource<LegalCode>` with the same authorized
+metadata as its catalog row. Exact UUID and canonical-URL binding are verified by both server and client. Missing,
+unpublished or entirely rights-denied codes return the same 404, while unauthenticated/unapproved callers remain denied
+before database access. Responses are private and non-cacheable; no provision text is loaded.
 
 Only published editions from `ecfr` and `govinfo-cfr` in `jurisdiction:us` can contribute. Active rights profiles are
 locked and validated for API/MCP access, worldwide territory and matching policy hashes before aggregation. Denied
@@ -29,7 +33,8 @@ mandatory. All pages are private and non-cacheable.
 The [edition and provision browser](legal-edition-browsing.md) now supports edition lists and structural traversal.
 Code membership establishes published metadata availability only. It does not certify complete historical coverage,
 passage preparation, lexical indexing or embeddings. Those capabilities require their own receipts and public
-coverage operation. Code detail, edition detail and public coverage reporting remain open.
+coverage operation. Latest-edition selection and coverage/capability enrichment of code detail remain open, along with
+edition detail, public coverage reporting and deployed acceptance. This metadata slice does not close HTTP-04.
 
 Tests cover bounded pages, stale continuation, caller/filter/limit changes, rights exclusion before aggregation,
 strict HTTP parameters, token audiences, client protocol checks and MCP account isolation. The retained local canary

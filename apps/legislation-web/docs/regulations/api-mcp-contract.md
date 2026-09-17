@@ -3,7 +3,8 @@
 Contract recorded September 14, 2026. The [exact-version text operation](legal-text-serving.md) is implemented locally;
 the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. The
 [published code list](legal-code-discovery.md), [edition/provision browser](legal-edition-browsing.md), and their
-`list_legal_codes`, `list_legal_editions`, `list_legal_provisions` tools are implemented locally.
+`list_legal_codes`, `get_legal_code`, `list_legal_editions`, `list_legal_provisions` tools are implemented locally;
+code detail currently serves authorized metadata, with latest-edition and coverage/capability enrichment still planned.
 [Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;
 the API-backed `search_regulations` tool is also implemented locally. Other routes/tools remain proposed.
 No deployed regulatory coverage is claimed. Parent: [implementation](../../../legislation-ingestion/docs/regulations/implementation.md). Reuse the normative
@@ -78,7 +79,7 @@ entire title text or child collections. Readable text uses ordered source blocks
 | Operation | Input in addition to ID/cursor/limit | Response and ordering |
 | --- | --- | --- |
 | GET `/api/legal/codes` | jurisdictionId, kind (`statute`/`regulation`) | `Page<LegalCode>`; jurisdiction/name/id |
-| GET `/api/legal/codes/{codeId}` | none | `LegalCodeDetail`; latest edition, coverage and available capabilities |
+| GET `/api/legal/codes/{codeId}` | none | Local `Resource<LegalCode>` metadata; latest-edition, coverage and capability enrichment remains planned |
 | GET `/api/legal/codes/{codeId}/editions` | sourceId, issuedFrom, issuedTo | `Page<LegalEdition>`; issue date descending/id |
 | GET `/api/legal/codes/{codeId}/provisions` | editionId OR asOf; traversal (`children`/`all`); parentId; nodeKind | `Page<ProvisionSummary>`; edition structural order/id |
 | GET `/api/legal/editions/{editionId}` | none | `LegalEditionDetail`; manifest coverage, dates, revision and status |

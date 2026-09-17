@@ -1,10 +1,24 @@
 import { LegislationApiClient } from "@repo/legislation-core/api-client/client"
+import { legalCodeSchema } from "@repo/legislation-core/api-client/legal-codes-contract"
 import { createWorkosAuthenticator } from "@repo/legislation-core/auth/workos"
 import { generateKeyPair, SignJWT } from "jose"
 import { expect, it, vi } from "vitest"
 import { loadConfig } from "../../configuration/config"
 import { executeAuthenticatedApiRequest } from "../next/authenticated-api-request"
 import { createLegalCodesApiHandler } from "./legal-codes-routes"
+
+const codeId = "00000000-0000-4000-8000-000000000001"
+const code = legalCodeSchema.parse({
+  id: codeId,
+  jurisdictionId: "jurisdiction:us",
+  codeKey: "cfr-title-1",
+  name: "Title 1",
+  kind: "regulation",
+  canonicalUrl: `/api/legal/codes/${codeId}`,
+  updatedAt: "2026-09-15T00:00:00Z",
+  sources: [{ sourceId: "ecfr", rightsProfileId: "official" }]
+})
+const readCode = vi.fn<() => Promise<typeof code>>(async () => code)
 
 const pair = await generateKeyPair("RS256")
 const issuer = "https://auth.example"
@@ -38,7 +52,7 @@ const read = vi.fn<() => Promise<{ items: never[]; truncated: boolean; warnings:
   warnings: ["No coverage claim"]
 }))
 const execute = (request: Request) =>
-  executeAuthenticatedApiRequest(request, createLegalCodesApiHandler(read), {
+  executeAuthenticatedApiRequest(request, createLegalCodesApiHandler({ listCodes: read, getCode: readCode }), {
     getApplication: () => ({ config }),
     createAuthenticator: () => authenticate
   })
@@ -62,6 +76,42 @@ it("rejects missing or MCP tokens and invalid filters before reading", async () 
     expect(response.status).toBe(400)
   }
   expect(read).not.toHaveBeenCalled()
+})
+
+it("binds code detail to the requested identity and rejects extra selectors before reading", async () => {
+  readCode.mockClear()
+  for (const suffix of ["not-a-uuid", `${codeId}?editionId=${codeId}`, `${codeId}?codeId=${codeId}`]) {
+    const response = await execute(
+      new Request(`https://api.example/api/legal/codes/${suffix}`, {
+        headers: { authorization: `Bearer ${await token()}` }
+      })
+    )
+    expect(response.status).toBe(400)
+  }
+  expect(readCode).not.toHaveBeenCalled()
+  const api = new LegislationApiClient({
+    baseUrl: "https://api.example",
+    bearerToken: await token(),
+    fetch: async (url, init) => execute(new Request(url, init))
+  })
+  expect(await api.getLegalCode(codeId)).toMatchObject({ data: code })
+  expect(readCode).toHaveBeenCalledWith(codeId)
+  readCode.mockResolvedValueOnce({ ...code, id: "00000000-0000-4000-8000-000000000002" })
+  await expect(api.getLegalCode(codeId)).rejects.toMatchObject({ status: 500 })
+  const malformed = new LegislationApiClient({
+    baseUrl: "https://api.example",
+    bearerToken: await token(),
+    fetch: async () =>
+      Response.json(
+        {
+          data: { ...code, canonicalUrl: "/api/legal/codes/wrong" },
+          links: { self: `/api/legal/codes/${codeId}` },
+          meta: { correlationId: "test", warnings: [] }
+        },
+        { headers: { "x-correlation-id": "test" } }
+      )
+  })
+  await expect(malformed.getLegalCode(codeId, { correlationId: "test" })).rejects.toThrow("Invalid legal code response")
 })
 
 it("delivers strict pages through the typed client with no shared cache", async () => {

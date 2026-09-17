@@ -13,6 +13,24 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected published-code canonical URLs to `GET /api/legal/codes/{codeId}`, the strict `getLegalCode` client and
+API-backed `get_legal_code` MCP tool. The detail reader shares the catalog's identity allowlist, locked active rights,
+policy-hash checks and published federal source scope; SQL filters by the exact code ID without loading source bodies.
+The resource schema checks identity and canonical URL on both sides. No query selectors are accepted; missing or
+entirely inaccessible code metadata returns 404. List and detail remain private/non-cacheable. HTTP-04 remains open for
+latest-edition/coverage/capability enrichment, edition detail and deployed acceptance; this is the metadata vertical slice.
+
+Eight focused reader/HTTP/client tests and ten MCP transport tests passed, including identity substitution, unapproved
+audience/account, spoofed fields, rights revocation and malformed server responses. Web, MCP and core type checks passed;
+focused lint passed after fixing the new test typing and assertion. A retained-database authenticated-handler canary
+read `cfr-title-1` (`11a1ed31-e270-4e9f-9340-45dc3dae008f`), confirmed exact list/detail parity and 404/400/401 behavior.
+Receipt: `artifacts/regulatory-backfills/code-detail-http-canary.json`. This uses signed fixture tokens and the composed
+Request handler, not a deployed Next server or live WorkOS tenant. No canonical or embedding writes occurred. Fluent
+Agent MCP was unavailable, so the new tool description was not Fluent-validated.
+`git diff --check` passed. Root `pnpm verify` stopped at unrelated Knip findings for existing Storybook/generator files,
+root dependencies/binaries and `EntityResults`; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-code-detail-verify.log`.
+
 Completed the 30-question development draft with exact source evidence and the protocol's cohort allocation. Source review
 also caught a benchmark coverage problem: the shortest proposed-rule candidates were meeting notices about proposals,
 while the shortest final-rule records were correction/deviation actions. Retained them as distractors and added two

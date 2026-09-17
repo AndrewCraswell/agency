@@ -7,6 +7,10 @@ M owns its adapter/registration. Do not add direct database/provider access behi
 
 ## HTTP surface
 
+Code canonical URLs now resolve through an authenticated metadata detail route, typed client and API-backed
+`get_legal_code` tool. It shares catalog rights filtering and rejects mismatched response identities. Latest-edition,
+coverage/capability enrichment and deployed detail acceptance remain open; this advances but does not close HTTP-04.
+
 September 15 discovery slice: [published code discovery](legal-code-discovery.md) adds the strict codes-list contract,
 rights-filtered catalog service, explicit route, typed client and API-backed `list_legal_codes` tool. This advances
 HTTP-02/03/04/14/15 and TOOLS-01/02/04/08/09; code detail, editions, traversal, coverage and deployed gates remain open.
