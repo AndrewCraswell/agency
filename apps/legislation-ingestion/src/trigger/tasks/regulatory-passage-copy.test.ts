@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   pool: vi.fn<() => void>(),
   end: vi.fn<() => Promise<void>>(),
   copy: vi.fn<typeof import("../../ingestion/regulations/passage-copy-batch.js").runLegalPassageCopyBatch>(),
+  key: vi.fn<(key: string, options: { scope: string }) => Promise<string>>(),
   trigger: vi.fn<(id: string, payload: unknown, options: { idempotencyKey: string }) => Promise<{ id: string }>>()
 }))
 vi.mock("pg", () => ({
@@ -18,7 +19,11 @@ vi.mock("pg", () => ({
     }
   }
 }))
-vi.mock("@trigger.dev/sdk", () => ({ task: (value: unknown) => value, tasks: { trigger: mocks.trigger } }))
+vi.mock("@trigger.dev/sdk", () => ({
+  task: (value: unknown) => value,
+  tasks: { trigger: mocks.trigger },
+  idempotencyKeys: { create: mocks.key }
+}))
 vi.mock("../../ingestion/regulations/passage-copy-batch.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../ingestion/regulations/passage-copy-batch.js")>()),
   runLegalPassageCopyBatch: mocks.copy
@@ -37,6 +42,7 @@ beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "postgresql://source/canonical")
   vi.stubEnv("PASSAGE_SEARCH_DATABASE_URL", "postgresql://target/legislation_passage_search")
   mocks.copy.mockResolvedValue(result)
+  mocks.key.mockResolvedValue("global-validation-key")
   mocks.trigger.mockResolvedValue({ id: "child" })
 })
 afterEach(() => vi.unstubAllEnvs())
@@ -69,17 +75,25 @@ it("closes both pools before advancing only the committed cursor", async () => {
     { idempotencyKey: "regulatory-passage-copy:continue:parent" }
   )
 })
-it("reuses the successor key after uncertain dispatch and stops on exhaustion", async () => {
+it("reuses the successor key after uncertain dispatch and hands exhausted copy to validation", async () => {
   mocks.trigger.mockRejectedValueOnce(new Error("uncertain dispatch"))
   await expect(continueRegulatoryPassageCopy(payload, "parent")).rejects.toThrow("uncertain dispatch")
   await continueRegulatoryPassageCopy(payload, "parent")
   expect(mocks.trigger.mock.calls[0]).toEqual(mocks.trigger.mock.calls[1])
   mocks.copy.mockResolvedValueOnce({ ...result, exhausted: true })
   expect(await continueRegulatoryPassageCopy(payload, "child")).toMatchObject({
-    continuationRunId: null,
+    continuationRunId: "child",
     publicSearchReady: false
   })
-  expect(mocks.trigger).toHaveBeenCalledTimes(2)
+  expect(mocks.key).toHaveBeenCalledWith(`regulatory-passage-copy:validate:${payload.preparationId}`, {
+    scope: "global"
+  })
+  expect(mocks.trigger).toHaveBeenLastCalledWith(
+    "regulatory-copy-validation",
+    { preparationId: payload.preparationId, afterOrdinal: -1, limit: payload.limit },
+    { idempotencyKey: "global-validation-key" }
+  )
+  expect(mocks.trigger).toHaveBeenCalledTimes(3)
 })
 it("does not dispatch on copy failure or a nonadvancing batch", async () => {
   mocks.copy.mockRejectedValueOnce(new Error("target unavailable"))

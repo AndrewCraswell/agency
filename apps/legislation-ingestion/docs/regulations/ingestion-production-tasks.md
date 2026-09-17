@@ -155,6 +155,12 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   route copy exhaustion to resumable INDEX-03 validation before acknowledgement. **Done:** copied-but-unacknowledged
   data remains unavailable, completed stage replay is safe, and no preparation task automatically creates vectors.
   Depends on ORCH-05, INDEX-03.
+  Local progress: a canonically prepared scope now hands off to bounded passage copying with a preparation-scoped global
+  key. Exhausted copy hands off to bounded validation; validation continues from persisted ordinals and submits the
+  separate finalizer only after its last page passes. Finalization remains the only step that acknowledges the lexical
+  outbox, and no handoff creates embeddings. Two real PostgreSQL tests pass partial-copy and complete
+  validation/acknowledgement behavior. Publication-outbox admission, deployed handoff smoke, large-scope resumable
+  finalization and completion accounting remain open.
 - [ ] **ORCH-07 Close submit/ack races.** Persist submission intent and attempt identity around Trigger calls; reconcile
   uncertain responses and expired idempotency retention using database uniqueness. **Done:** crash after acceptance
   but before saving a run ID cannot create duplicate canonical work or leave a permanently undiscoverable unit.

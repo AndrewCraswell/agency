@@ -1,4 +1,4 @@
-import { task, tasks } from "@trigger.dev/sdk"
+import { idempotencyKeys, task, tasks } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
 import {
@@ -49,8 +49,20 @@ export async function continueRegulatoryPassagePreparation(unparsed: unknown, wo
   if (result.processed > payload.limit) {
     throw new Error("regulatory_preparation_batch_limit_exceeded")
   }
-  if (result.state !== "pending") {
+  if (result.state === "blocked") {
     return { ...result, continuationRunId: null }
+  }
+  if (result.state === "prepared") {
+    const next = await tasks.trigger(
+      "regulatory-passage-copy",
+      { preparationId: result.preparationId, afterOrdinal: -1, limit: payload.limit },
+      {
+        idempotencyKey: await idempotencyKeys.create(`regulatory-passage-preparation:copy:${result.preparationId}`, {
+          scope: "global"
+        })
+      }
+    )
+    return { ...result, continuationRunId: next.id }
   }
   if (result.processed === 0) {
     throw new Error("regulatory_preparation_no_progress")

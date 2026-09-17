@@ -1,4 +1,4 @@
-import { task, tasks } from "@trigger.dev/sdk"
+import { idempotencyKeys, task, tasks } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
 import {
@@ -37,7 +37,16 @@ export async function continueRegulatoryPassageCopy(unparsed: unknown, workflowR
     await Promise.allSettled([source.end(), target.end()])
   }
   if (result.exhausted) {
-    return { ...result, continuationRunId: null }
+    const next = await tasks.trigger(
+      "regulatory-copy-validation",
+      { preparationId: result.preparationId, afterOrdinal: -1, limit: payload.limit },
+      {
+        idempotencyKey: await idempotencyKeys.create(`regulatory-passage-copy:validate:${result.preparationId}`, {
+          scope: "global"
+        })
+      }
+    )
+    return { ...result, continuationRunId: next.id }
   }
   if (result.copied === 0 || result.afterOrdinal <= payload.afterOrdinal) {
     throw new Error("regulatory_copy_no_progress")

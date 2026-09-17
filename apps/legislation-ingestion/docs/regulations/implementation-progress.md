@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected the existing passage preparation, isolated search copy and resumable validation workers into one durable
+lexical handoff chain. Canonical `prepared` state submits copy with a global key derived from the immutable preparation
+ID; blocked preparation cannot advance. Exhausted copy submits the first bounded validation page under a separate global
+key. Validation continues from its persisted ordinal and submits finalization only after the final page passes.
+Finalization still rechecks the complete checkpoint inventory and revisions before acknowledging the lexical outbox.
+No handoff submits embeddings or changes an embedding freshness contract.
+
+Twenty-two task tests passed across preparation, copy and validation, including global handoff keys, uncertain
+continuation reuse, blocked/nonadvancing work, failed copy/validation/finalization and explicit finalization. Two targeted
+real-PostgreSQL tests then passed partial-copy protection and complete copy validation/acknowledgement against freshly
+created canonical and isolated search databases; 61 unrelated storage tests were skipped by the focused name filter.
+Ingestion types passed. This advances ORCH-06 locally. Selecting pending publication outbox work, deployed Trigger
+handoffs, national-scale finalization and completion accounting remain open; recurring schedules and bulk embeddings
+remain disabled. Root `pnpm verify` passed formatting and all 11 package lint/type tasks, then stopped at the unchanged
+unrelated Knip inventory described in the next entry; coverage did not run.
+
 Added bounded run-disposition recovery to the manual discovery controller. Each acquisition, parsing or publication
 intent now retains an attempt counter, append-only prior-run history, last observed Trigger disposition and canonical
 completion time. Replacement first increments the persisted attempt and only then submits the same immutable payload

@@ -72,10 +72,22 @@ recovery. Trigger responses were simulated; no child, source, preparation, provi
 Evidence: `artifacts/regulatory-backfills/preparation-dispatch-canary.ts/.json`. Focused worker tests also verify
 wave limits, registration before submission, global key generation, database separation and pool cleanup.
 
-This advances ORCH-02/07 but does not close them. Indexed national manifest selection, background intent scanning,
-Trigger disposition lookup, cancellation/expired-key repair, aggregate database admission and deployed fault injection
-remain open. Source publication/rights validation remains in the preparation worker; submitting an ID grants no source
-read permission and proves no eligibility. Recurring ingestion and bulk embedding gates remain unchanged.
+After a preparation reaches canonical `prepared` state, its worker submits `regulatory-passage-copy` with the immutable
+preparation ID, initial ordinal and the same bounded item limit. The handoff uses a global key derived from the
+preparation ID, so worker replay cannot mint a second copy chain. A blocked preparation does not advance. Copy
+continuations retain their committed ordinal. When copying is exhausted, the copy worker submits the first bounded
+`regulatory-copy-validation` page under a second preparation-scoped global key.
+
+Validation persists checkpoints in pages and advances only from the returned ordinal. An exhausted page submits a
+separate finalization run; it does not acknowledge the lexical outbox itself. Finalization rechecks the full checkpoint
+inventory and current source/target revisions before acknowledging the canonical lexical job. A nonadvancing page,
+copy failure, stale checkpoint or finalization failure dispatches no successor. None of these handoffs creates an
+embedding request or changes the embedding rollout gate.
+
+This advances ORCH-02/06/07 but does not close them. Indexed national manifest selection, publication-outbox admission,
+background intent scanning, preparation-dispatch disposition repair, aggregate database admission and deployed fault
+injection remain open. Source publication/rights validation remains in the preparation worker; submitting an ID grants
+no source read permission and proves no eligibility. Recurring ingestion and bulk embedding gates remain unchanged.
 
 The recovery canary on disposable 55453 additionally verifies five-intent pagination without omissions, preview with
 zero submission calls, recovery of only ready intents, retained-handle replay and rejection of corrupted stored payloads.

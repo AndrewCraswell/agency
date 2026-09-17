@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   end: vi.fn<() => Promise<void>>(),
   query: vi.fn<() => Promise<{ rows: { name: string }[] }>>(),
   prepare: vi.fn<typeof import("../../ingestion/regulations/passage-preparation.js").runLegalPassagePreparationBatch>(),
+  key: vi.fn<(key: string, options: { scope: string }) => Promise<string>>(),
   trigger: vi.fn<(id: string, payload: unknown, options: { idempotencyKey: string }) => Promise<{ id: string }>>()
 }))
 vi.mock("pg", () => ({
@@ -23,7 +24,11 @@ vi.mock("pg", () => ({
     }
   }
 }))
-vi.mock("@trigger.dev/sdk", () => ({ task: (value: unknown) => value, tasks: { trigger: mocks.trigger } }))
+vi.mock("@trigger.dev/sdk", () => ({
+  task: (value: unknown) => value,
+  tasks: { trigger: mocks.trigger },
+  idempotencyKeys: { create: mocks.key }
+}))
 vi.mock("../../ingestion/regulations/passage-preparation.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../ingestion/regulations/passage-preparation.js")>()),
   runLegalPassagePreparationBatch: mocks.prepare
@@ -47,6 +52,7 @@ beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "postgresql://source/canonical")
   mocks.query.mockResolvedValue({ rows: [{ name: "canonical" }] })
   mocks.prepare.mockResolvedValue(pending)
+  mocks.key.mockResolvedValue("global-copy-key")
   mocks.trigger.mockResolvedValue({ id: "child" })
 })
 afterEach(() => vi.unstubAllEnvs())
@@ -114,10 +120,17 @@ it("reuses its dispatch key after uncertain submission and resumes from canonica
   expect(mocks.trigger.mock.calls[0]).toEqual(mocks.trigger.mock.calls[1])
 })
 
-it("stops after completion, including a replay with no new passages", async () => {
+it("hands a completed preparation to copy with one global canonical key", async () => {
   mocks.prepare.mockResolvedValueOnce({ ...pending, state: "prepared", processed: 0, complete: 25 })
-  expect(await continueRegulatoryPassagePreparation(payload, "parent")).toMatchObject({ continuationRunId: null })
-  expect(mocks.trigger).not.toHaveBeenCalled()
+  expect(await continueRegulatoryPassagePreparation(payload, "parent")).toMatchObject({ continuationRunId: "child" })
+  expect(mocks.key).toHaveBeenCalledWith(`regulatory-passage-preparation:copy:${"a".repeat(64)}`, {
+    scope: "global"
+  })
+  expect(mocks.trigger).toHaveBeenCalledWith(
+    "regulatory-passage-copy",
+    { preparationId: "a".repeat(64), afterOrdinal: -1, limit: 10 },
+    { idempotencyKey: "global-copy-key" }
+  )
 })
 
 it("keeps failures retryable without starting successor work", async () => {
