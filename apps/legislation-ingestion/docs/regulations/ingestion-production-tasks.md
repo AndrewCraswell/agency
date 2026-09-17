@@ -139,6 +139,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-04 Add the parser and validation worker adapters.** Invoke the existing Python bridge with bounded
   manifests/shards, resource limits and safe failure summaries. **Done:** process exit, timeout, missing shard and
   invalid envelope leave the unit unpublished; retry preserves deterministic normalized hashes. Depends on ORCH-03.
+  Local progress: acquired current units now use the existing bounded Python parser and full TypeScript shard,
+  provenance, hierarchy, hash and count validation. Parser state commits only after validation and deterministic retry
+  reuses the generation. Deployed runtime/resource smoke and durable submission/lease recovery remain open.
 - [ ] **ORCH-05 Add publication worker adapters.** Invoke existing eCFR/FR/annual writers only after full required-unit
   validation; persist stage completion with the canonical publication transaction. **Done:** missing annual volume or
   failed outbox write cannot partially promote a title. Depends on ORCH-04, ING-11.

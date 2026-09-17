@@ -13,8 +13,11 @@ import {
   regulatoryRecordSchema
 } from "@repo/legislation-core/legal-text/parser-contract"
 import { z } from "zod"
+import { legalDiscoveryUnitSchema, type LegalDiscoveryUnit } from "./discovery-checkpoint.js"
 
 const parserPath = fileURLToPath(new URL("../../../python/regulations/parse_xml.py", import.meta.url))
+const regulatoryParserUnitSchema = z.union([acquisitionUnitSchema, legalDiscoveryUnitSchema])
+type RegulatoryParserUnit = AcquisitionUnit | LegalDiscoveryUnit
 
 async function hashFile(path: string) {
   const hash = createHash("sha256")
@@ -111,7 +114,7 @@ async function runParser(arguments_: string[], executable: string, timeoutMs: nu
 
 export async function validateRegulatoryOutput(
   directory: string,
-  unit: AcquisitionUnit,
+  unit: RegulatoryParserUnit,
   artifactHash: string,
   codeHash: string,
   inspectRecord?: (record: z.infer<typeof regulatoryRecordSchema>) => void | Promise<void>
@@ -238,14 +241,14 @@ export async function validateRegulatoryOutput(
 }
 
 export async function parseRegulatoryArtifact(input: {
-  unit: AcquisitionUnit
+  unit: RegulatoryParserUnit
   artifactHash: string
   path: string
   outputRoot: string
   pythonExecutable?: string
   timeoutMs?: number
 }) {
-  const unit = acquisitionUnitSchema.parse(input.unit)
+  const unit = regulatoryParserUnitSchema.parse(input.unit)
   const artifactHash = z
     .string()
     .regex(/^[a-f0-9]{64}$/)

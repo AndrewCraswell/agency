@@ -3050,7 +3050,25 @@ without another source download. Manifest:
 `artifacts/regulatory-backfills/current-acquisition-canary`.
 
 This is local/disposable evidence. Shared provider admission/cooldown, persisted Trigger submission/lease recovery,
-deployed durable artifact storage, parser handoff and recurring activation remain open.
+deployed durable artifact storage, current-unit parsing/publication and recurring activation remained open at this
+checkpoint; the following parser checkpoint closes the local parsing portion.
+
+## Current-unit parser and normalized checkpoint
+
+The current acquisition contract now enters the same Python normalization and TypeScript validation boundary as the
+historical backfill contract without relabelling `historical: false`. A parsed discovery row records the exact parser
+hash, normalized generation, absolute locator, validated summary and completion time while retaining its acquired
+artifact lineage. The transaction accepts only the matching acquired unit; retry compares the complete stored summary
+and deterministic generation before returning success. Publication and derived indexing remain separate gates.
+
+The existing parser suite passed all 21 subprocess tests after the parser boundary was generalized. Three fresh-migration
+PostgreSQL files passed four tests, including a current acquisition/parse replay, and three Trigger task suites passed 12
+tests. The live Title 1 canary reused the retained 477,387-byte artifact, normalized 368 records into generation
+`f323bb2d85dfbac42e1b7ba36a4c22dee1527c82eede3134d0add3eae5a92804`, then replayed with `reused: true`. Retained
+normalized evidence is under `artifacts/regulatory-backfills/current-normalized-canary`.
+
+This is local/disposable evidence. Persisted Trigger submission/lease recovery, deployed Python resource verification,
+shared artifact/normalized storage, current publication and recurring activation remain open.
 
 ## Pinned resumption of the full current-title qualification
 

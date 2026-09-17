@@ -54,7 +54,7 @@ CREATE TABLE legislation.legal_discovery_units (
   unit_key text NOT NULL CHECK(unit_key ~ '^[a-f0-9]{64}$'),
   payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
   unit jsonb NOT NULL CHECK(jsonb_typeof(unit)='object'),
-  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','acquired','quarantined')),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','acquired','parsed','quarantined')),
   discovered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   registered_at timestamptz,
   artifact_hash text CHECK(artifact_hash IS NULL OR artifact_hash ~ '^[a-f0-9]{64}$'),
@@ -62,16 +62,25 @@ CREATE TABLE legislation.legal_discovery_units (
   storage_locator text,
   acquisition_receipt jsonb,
   acquired_at timestamptz,
+  parser_hash text CHECK(parser_hash IS NULL OR parser_hash ~ '^[a-f0-9]{64}$'),
+  normalized_generation text CHECK(normalized_generation IS NULL OR normalized_generation ~ '^[a-f0-9]{64}$'),
+  normalized_locator text,
+  parse_summary jsonb,
+  parsed_at timestamptz,
   PRIMARY KEY(source_id,scope_key,unit_key),
   FOREIGN KEY(source_id,scope_key) REFERENCES legislation.legal_discovery_checkpoints(source_id,scope_key),
   CHECK(
     (state='pending' AND registered_at IS NULL) OR
-    (state IN ('registered','acquired') AND registered_at IS NOT NULL) OR
+    (state IN ('registered','acquired','parsed') AND registered_at IS NOT NULL) OR
     state='quarantined'
   ),
   CHECK(
-    (state='acquired')=(artifact_hash IS NOT NULL AND artifact_bytes IS NOT NULL AND storage_locator IS NOT NULL AND
+    (state IN ('acquired','parsed'))=(artifact_hash IS NOT NULL AND artifact_bytes IS NOT NULL AND storage_locator IS NOT NULL AND
       acquisition_receipt IS NOT NULL AND acquired_at IS NOT NULL)
+  ),
+  CHECK(
+    (state='parsed')=(parser_hash IS NOT NULL AND normalized_generation IS NOT NULL AND normalized_locator IS NOT NULL AND
+      parse_summary IS NOT NULL AND parsed_at IS NOT NULL)
   )
 );
 --> statement-breakpoint

@@ -33,7 +33,12 @@ their SHA-256 and commits the artifact reference plus receipt to the matching di
 complete but before the database commit reuses and revalidates the retained file. The artifact root comes from
 `REGULATORY_ARTIFACT_DIRECTORY`; deployment still requires a verified shared durable mount or object-store adapter.
 
+`regulatory-discovery-parsing` reloads an acquired unit and its receipt, revalidates the retained artifact, invokes the
+same bounded Python parser used by historical backfills and commits the parser hash, normalized generation, locator and
+summary only after every shard passes TypeScript validation. Retry revalidates and reuses the deterministic generation.
+The normalized root comes from `REGULATORY_NORMALIZED_DIRECTORY`; publication remains a separate transaction and gate.
+
 The discovery-unit and current-manifest contracts require `historical: false`; the existing acquisition/backfill
 contract remains strictly `historical: true`. Keeping these schemas separate prevents recurring observations from
-silently becoming completed backfill coverage. Parser dispatch, deployed shared artifact storage, completion accounting
-and scheduled cadence are separate gates.
+silently becoming completed backfill coverage. Publication dispatch, deployed shared artifact/normalized storage,
+completion accounting and scheduled cadence are separate gates.

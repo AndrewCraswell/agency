@@ -13,6 +13,7 @@ import {
   legalDiscoveryUnitSchema,
   startLegalDiscoveryAttempt
 } from "./discovery-checkpoint.js"
+import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
@@ -24,7 +25,7 @@ if (databaseUrl !== undefined) {
   }
 }
 
-describe.skipIf(databaseUrl === undefined).sequential("current discovery artifact acquisition", () => {
+describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisition and parsing", () => {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 3 })
   const directories: string[] = []
   beforeAll(async () => {
@@ -46,7 +47,7 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery artifac
   })
   afterAll(async () => pool.end())
 
-  it("commits one verified artifact and reuses its checksum-validated bytes on replay", async () => {
+  it("commits and reuses one verified artifact and normalized generation", async () => {
     const query = { endpoint: "titles", titles: [1] }
     const attempt = await startLegalDiscoveryAttempt(pool, { sourceId: "ecfr", query })
     const values = {
@@ -85,7 +86,9 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery artifac
     })
     expect(manifest).not.toBeNull()
     if (manifest === null) throw new Error("Missing manifest")
-    const body = '<?xml version="1.0"?><DLPSTEXTCLASS><DIV1>current title</DIV1></DLPSTEXTCLASS>'
+    const body = `<?xml version="1.0"?><DLPSTEXTCLASS><DIV1 N="1" TYPE="TITLE"><HEAD>Title 1</HEAD>
+      <DIV8 N="1.1" TYPE="SECTION"><HEAD>Current rule</HEAD><P>Current title text.</P></DIV8>
+      </DIV1></DLPSTEXTCLASS>`
     const fetcher = vi.fn<typeof fetch>(
       async () => new Response(body, { headers: { "content-type": "application/xml" } })
     )
@@ -99,18 +102,30 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery artifac
     expect(second).toEqual({ ...first, reused: true })
     expect(fetcher).toHaveBeenCalledOnce()
     expect(await readFile(join(directory, "blobs", `${first.artifactHash}.xml`), "utf8")).toBe(body)
+    const normalized = await mkdtemp(join(tmpdir(), "tabra-current-normalized-"))
+    directories.push(normalized)
+    const parseInput = { manifestId: manifest.id, unitKey: unit.key, outputRoot: normalized }
+    const firstParse = await parseLegalDiscoveryArtifact(pool, parseInput)
+    const secondParse = await parseLegalDiscoveryArtifact(pool, parseInput)
+    expect(firstParse).toMatchObject({ records: 2, reused: false })
+    expect(secondParse).toEqual({ ...firstParse, reused: true })
     const stored = await pool.query(
       `SELECT state,artifact_hash,"artifact_bytes"::text bytes,storage_locator,
-       acquisition_receipt->>'sha256' receipt_hash
+       acquisition_receipt->>'sha256' receipt_hash,parser_hash,normalized_generation,normalized_locator,
+       (parse_summary->>'records')::integer records
        FROM legislation.legal_discovery_units WHERE source_id='ecfr' AND scope_key=$1 AND unit_key=$2`,
       [attempt.scopeKey, unit.key]
     )
     expect(stored.rows[0]).toEqual({
-      state: "acquired",
+      state: "parsed",
       artifact_hash: first.artifactHash,
       bytes: String(first.bytes),
       storage_locator: join(directory, "blobs", `${first.artifactHash}.xml`),
-      receipt_hash: first.artifactHash
+      receipt_hash: first.artifactHash,
+      parser_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      normalized_generation: firstParse.generation,
+      normalized_locator: join(normalized, firstParse.generation),
+      records: 2
     })
   })
 })
