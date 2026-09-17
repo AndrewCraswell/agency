@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { createServer, type Server } from "node:http"
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { toNodeHandler } from "@modelcontextprotocol/node"
+import { legalAgenciesResponseSchema } from "@repo/legislation-core/api-client/legal-agencies-contract"
 import {
   legalEditionSchema,
   legalEditionResponseSchema,
@@ -215,6 +216,29 @@ async function setup(
             if (path === "/api/legal/codes") {
               return Response.json(page((await codes()).items), { headers })
             }
+            if (path === "/api/legal/agencies") {
+              if (isRevoked) {
+                throw new LegislationError("forbidden", "Access denied")
+              }
+              return Response.json(
+                page([
+                  {
+                    status: "unresolved",
+                    organizationId: null,
+                    sourceAgencyId: "fr-agency-406",
+                    name: "Personnel Management Office",
+                    aliases: ["Office of Personnel Management"],
+                    sourceId: "federal-register",
+                    nativeId: "406",
+                    jurisdictionId: "jurisdiction:us",
+                    publicationCount: 2,
+                    firstPublishedOn: "2000-01-18",
+                    lastPublishedOn: "2001-01-18"
+                  }
+                ]),
+                { headers }
+              )
+            }
             if (path === "/api/legal/coverage") {
               if (isRevoked) {
                 throw new LegislationError("forbidden", "Access denied")
@@ -392,6 +416,7 @@ it("advertises the read-only legal tool only for enabled, approved organizations
     expect(tool).toBeUndefined()
     expect((await client.listTools()).tools.some((item) => item.name === "search_regulations")).toBe(false)
     expect((await client.listTools()).tools.some((item) => item.name === "list_legal_codes")).toBe(false)
+    expect((await client.listTools()).tools.some((item) => item.name === "list_legal_agencies")).toBe(false)
     expect((await client.listTools()).tools.some((item) => item.name === "get_regulatory_coverage")).toBe(false)
     expect(
       (await client.listTools()).tools.some((item) =>
@@ -506,6 +531,27 @@ it("discovers codes through the authenticated API client and refuses changed API
     expect((await denied.client.callTool({ name: "list_legal_codes", arguments: {} })).isError).toBe(true)
     expect(denied.apiRequests).toHaveLength(0)
   }
+})
+
+it("discovers Federal Register source agencies through the authenticated API client", async () => {
+  const { client, apiRequests, revoke } = await setup()
+  const definition = (await client.listTools()).tools.find((item) => item.name === "list_legal_agencies")
+  expect(definition?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false })
+  const result = await client.callTool({
+    name: "list_legal_agencies",
+    arguments: { sourceId: "federal-register", q: "personnel", limit: 10 }
+  })
+  expect(result.isError).not.toBe(true)
+  const response = z.strictObject({ data: legalAgenciesResponseSchema }).parse(result.structuredContent).data
+  expect(response.data[0]).toMatchObject({
+    status: "unresolved",
+    sourceAgencyId: "fr-agency-406",
+    organizationId: null
+  })
+  expect(apiRequests).toHaveLength(1)
+  expect(new URL(apiRequests[0]!.url).pathname).toBe("/api/legal/agencies")
+  revoke()
+  expect((await client.callTool({ name: "list_legal_agencies", arguments: {} })).isError).toBe(true)
 })
 
 it("reports staged regulatory coverage through the same authenticated API identity", async () => {

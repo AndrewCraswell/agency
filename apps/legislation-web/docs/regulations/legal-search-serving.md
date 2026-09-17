@@ -87,9 +87,13 @@ versions and rejected changed filters on continuation.
 The retained agency canary filtered the complete partition by `fr-agency-406` and returned only 65 FR 2521 with the
 unresolved Personnel Management Office source reference. All 110 projection identities bind the exact agency
 evidence hash. Of those scopes, 107 have agency references and three explicitly have no source agency metadata.
+The companion source-agency directory canary returned 56 rights-visible identities: 50 publisher IDs and six
+document-occurrence identities. Its `personnel` query returned only `fr-agency-406`; all directory identities remain
+unresolved until reviewed organization mapping exists.
 
-This is not deployed Next-router or real WorkOS credential evidence. Canonical organization resolution, a source-agency
-directory, full-corpus performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
+This is not deployed Next-router or real WorkOS credential evidence. Canonical organization resolution, publication
+browse/detail/version operations, full-corpus performance, semantic/vector search, remaining reconciliation and
+deployment acceptance are open.
 
 ## Target query semantics
 

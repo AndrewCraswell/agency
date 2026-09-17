@@ -61,6 +61,10 @@ vertical slices: application service, serializer, strict client parser, explicit
 - [ ] **HTTP-08 Implement publication and agency discovery.** Ship publication list/detail/versions and source-agency
   directory with publication-date/kind/agency filters. **Done:** unresolved source agencies remain representable, duplicate
   printed numbers resolve to distinct canonical documents, all results retain exact provenance. Depends on ING-05/09, HTTP-01/03.
+  Local progress: the strict `GET /api/legal/agencies` route, typed client and `list_legal_agencies` MCP tool return
+  rights-visible Federal Register publisher references with aliases, publication counts/dates and caller/filter/catalog-
+  bound pagination. The retained pilot exposes 50 publisher identities and six document-occurrence identities; none is
+  presented as a canonical organization. Publication list/detail/version operations remain open.
 - [x] **HTTP-09 Implement lexical legal search end to end.** Connect the strict search schema to corpus-wide query
   service, request-bound response checks, typed client method and explicit POST route. **Done:** lexical searches
   preserve filters, exact versions and pagination; semantic/hybrid requests return explicit unavailable capability

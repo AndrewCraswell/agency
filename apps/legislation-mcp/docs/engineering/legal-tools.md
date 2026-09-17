@@ -18,6 +18,7 @@ untrusted evidence, not instructions or proof that a proposal is current law. No
 | `resolve_legal_citation` | POST `/api/legal/provisions/resolve` | Exact citation or explicit ambiguity |
 | `get_legal_provision` | GET `/api/legal/provisions/{provisionId}` | Metadata and selected version |
 | `get_legal_text` | GET `/api/legal/versions/{versionId}/text` | Bounded source text with exact selected context and continuation |
+| `list_legal_agencies` | GET `/api/legal/agencies` | Discover unresolved Federal Register publisher identities used by search filters |
 | `get_regulatory_document` | GET `/api/legal/publications/{documentId}` | Published proposal/final/notice metadata |
 | `list_regulatory_documents` | GET `/api/legal/publications` | Publication history by kind/date/agency |
 | `get_regulatory_action` | GET `/api/legal/actions/{actionId}` + GET `/api/legal/actions/{actionId}/publications` | Bounded evidence-backed grouping |
@@ -71,4 +72,6 @@ retained former checkout. The organization gate, same-principal provider and com
 The September 17 contract regression additionally sends Federal Register kind/date/source-agency filters and a
 100-result limit through `search_regulations`, verifies the API adapter receives the unchanged request, and confirms the
 only upstream path is `POST /api/search/legal`.
+The agency-directory regression discovers `fr-agency-406` through the typed `GET /api/legal/agencies` client and
+preserves unresolved organization status through `list_legal_agencies`.
 This does not establish standalone/deployed Next-router or live WorkOS acceptance.

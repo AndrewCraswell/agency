@@ -10,6 +10,7 @@
     "./database/bill-read": "./src/database/bill-read.ts",
     "./api-client/client": "./src/api-client/client.ts",
     "./api-client/envelopes": "./src/api-client/envelopes.ts",
+    "./api-client/legal-agencies-contract": "./src/api-client/legal-agencies-contract.ts",
     "./api-client/legal-browse-contract": "./src/api-client/legal-browse-contract.ts",
     "./api-client/legal-coverage-contract": "./src/api-client/legal-coverage-contract.ts",
     "./api-client/legal-codes-contract": "./src/api-client/legal-codes-contract.ts",

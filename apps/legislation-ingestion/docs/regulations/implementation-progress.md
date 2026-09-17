@@ -13,6 +13,16 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Implemented the authenticated Federal Register source-agency directory across the canonical reader, strict HTTP
+contract, typed client and API-backed MCP tool. `GET /api/legal/agencies` now returns rights-visible publisher references
+with aliases, publication counts and first/last publication dates; pagination binds the caller, filters, rights hashes
+and complete visible catalog. It never promotes a publisher reference to an organization without reviewed mapping.
+
+The retained 110-publication canary returned 56 identities: 50 Federal Register publisher IDs and six deterministic
+document-occurrence identities. A case-insensitive `personnel` query returned only `fr-agency-406`, named Personnel
+Management Office, with one retained publication and unresolved organization status. Core contract/tool, web reader/
+authenticated-route, MCP adapter and MCP end-to-end tests pass. Publication list/detail/version discovery remains open.
+
 Promoted official Federal Register agency evidence into the publication search projection and API. Of the 110 retained
 publications, 107 carry 171 source references across 50 publisher agency IDs; three PDF-only records have no agency
 metadata. Six references without publisher IDs retain deterministic document-occurrence identities instead of being

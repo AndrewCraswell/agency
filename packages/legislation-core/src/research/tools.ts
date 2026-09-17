@@ -4,6 +4,7 @@ import {
   type AnalyticsQuery
 } from "@repo/legislation-core/research/analytics-contract"
 import { z } from "zod"
+import { legalAgenciesRequestSchema, type LegalAgenciesRequest } from "../api-client/legal-agencies-contract"
 import {
   legalEditionsRequestSchema,
   legalProvisionsRequestSchema,
@@ -117,6 +118,7 @@ export type LegislationQueryApi = Readonly<{
   canReadLegalText?: () => boolean
   searchLegal?: (input: LegalSearchRequest) => Promise<unknown>
   getRegulatoryCoverage?: (input: LegalCoverageRequest) => Promise<unknown>
+  listLegalAgencies?: (input: LegalAgenciesRequest) => Promise<unknown>
   listLegalCodes?: (input: LegalCodesRequest) => Promise<unknown>
   getLegalCode?: (input: { codeId: string }) => Promise<unknown>
   getLegalEdition?: (input: { editionId: string }) => Promise<unknown>
@@ -592,6 +594,20 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   }
 
   const listLegalCodes = service.listLegalCodes
+  const listLegalAgencies = service.listLegalAgencies
+  if (listLegalAgencies !== undefined && service.canReadLegalText?.() === true) {
+    server.registerTool(
+      "list_legal_agencies",
+      {
+        description:
+          "Discover Federal Register publisher agency references for filtering publications and search. These source identities can be unresolved and must not be treated as canonical organizations. Follow nextCursor with the same filters and limit.",
+        inputSchema: legalAgenciesRequestSchema,
+        outputSchema,
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      },
+      (input) => tool("list_legal_agencies", input, () => listLegalAgencies(input), logger, telemetry)
+    )
+  }
   const getLegalCode = service.getLegalCode
   if (getLegalCode !== undefined && service.canReadLegalText?.() === true) {
     server.registerTool(

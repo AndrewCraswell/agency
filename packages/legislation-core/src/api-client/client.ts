@@ -9,6 +9,11 @@ import {
 } from "../research/record-contracts"
 import { linksSchema, resourceSchema, pageSchema, searchPageSchema } from "./envelopes"
 import {
+  legalAgenciesRequestSchema,
+  validateLegalAgenciesResponse,
+  type LegalAgenciesRequest
+} from "./legal-agencies-contract"
+import {
   legalEditionsRequestSchema,
   legalProvisionsRequestSchema,
   validateLegalEditionResponse,
@@ -430,6 +435,16 @@ export class LegislationApiClient {
       return validateLegalCodesResponse(result, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal codes response")
+    }
+  }
+
+  async listLegalAgencies(query: LegalAgenciesRequest = {}, options?: ApiRequestOptions) {
+    const input = legalAgenciesRequestSchema.parse(query)
+    const result = await this.#request({ method: "GET", path: "/api/legal/agencies", query: input }, options)
+    try {
+      return validateLegalAgenciesResponse(result, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal agencies response")
     }
   }
 
