@@ -3,6 +3,7 @@ import type { OpenRouterEmbeddingClient } from "@repo/legislation-core/embedding
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import { reuseLegalEmbeddingShard } from "./vector-reuse.js"
 import { runLegalEmbeddingShard } from "./vector-worker.js"
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
@@ -186,6 +187,34 @@ export async function runLegalEmbeddingShardJob(
   }
   invariant(claim, "legal_embedding_shard_busy")
   try {
+    const reused = await reuseLegalEmbeddingShard(pool, {
+      generationId: request.generationId,
+      shardCount: 16,
+      shardIndex: request.shardIndex,
+      afterPassageId: claim.afterPassageId
+    })
+    if (reused.saturated) {
+      const result = {
+        generationId: request.generationId,
+        shardCount: 16 as const,
+        shardIndex: request.shardIndex,
+        afterPassageId: claim.afterPassageId,
+        nextAfterPassageId: claim.afterPassageId,
+        exhausted: false,
+        inserted: 0,
+        reused: reused.reused,
+        promptTokens: 0,
+        totalTokens: 0
+      }
+      await finishLegalEmbeddingShard(pool, claim, result)
+      return {
+        ...result,
+        attempts: claim.attempts,
+        possibleRepeatedPaidAttempts: claim.possibleRepeatedPaidAttempts,
+        state: "pending" as const,
+        reusedCheckpoint: false
+      }
+    }
     const result = await runLegalEmbeddingShard(
       pool,
       {
@@ -196,9 +225,10 @@ export async function runLegalEmbeddingShardJob(
       },
       client
     )
-    await finishLegalEmbeddingShard(pool, claim, result)
+    const accounted = { ...result, reused: result.reused + reused.reused }
+    await finishLegalEmbeddingShard(pool, claim, accounted)
     return {
-      ...result,
+      ...accounted,
       attempts: claim.attempts,
       possibleRepeatedPaidAttempts: claim.possibleRepeatedPaidAttempts,
       state: result.exhausted ? ("complete" as const) : ("pending" as const),

@@ -13,6 +13,16 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Implemented exact cross-generation regulatory vector reuse. A leased shard now copies a prior vector only when the
+model, dimensions, input contract and complete input hash match a completed generation with active search rights. It
+locks source and target passage generations against rights cleanup, rechecks the source after locking, preserves the new
+owner's independent vector row and accounts the copy as reused rather than provider-created. Batches of 256 reuse rows
+yield before provider work. Multiple source vectors with different vector hashes for the same identity block the shard
+instead of selecting one. The two-database smoke completed an identical new passage generation with one reused vector
+and zero provider calls, then injected conflicting completed bytes and proved the next generation remained pending with
+`legal_embedding_reuse_conflict`. Rights cleanup removed all three independently owned generations. Focused PostgreSQL,
+package type checking and scoped lint passed.
+
 Added deterministic pre-dispatch planning for one copied passage generation. The read-only planner requires a trusted
 server-selected regulatory route, active search membership, eligible source metadata and the exact pinned tokenizer. It
 pages every passage, recomputes each input hash and token count, and freezes passage/source metadata hashes, vector

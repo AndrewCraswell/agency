@@ -302,15 +302,17 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   The shared client validates and orders provider indices, count, model and dimensions. Route-specific storage then
   validates finite nonzero vectors, exact passage/input hashes and an immutable vector hash. Exact replay succeeds;
   changed vectors, input hashes, model routes and partial-generation completion fail in the PostgreSQL smoke.
-- [ ] **VECTOR-05 Implement retries and reuse.** Reuse permitted identical inputs, preserve multiple owner memberships,
+- [x] **VECTOR-05 Implement retries and reuse.** Reuse permitted identical inputs, preserve multiple owner memberships,
   and recover provider success followed by persistence failure without losing provenance. **Done:** accounting separates
   cache hits, possible repeated paid attempts and new writes; incomplete shards remain pending. Depends on VECTOR-04.
   Durable 16-shard rows now retain a fenced lease, keyset cursor, attempts, possible repeated paid attempts, provider
   tokens and inserted/reused counts. A killed or failed request releases for retry without claiming success; stored
   vectors disappear from the next selection. An explicit Trigger task fans out exactly 16 globally idempotent children;
   each four-worker-queue run processes one bounded page and submits one continuation from the durable cursor. Trusted
-  server configuration must match the registered model before provider access. Cross-generation input reuse and
-  multi-owner reuse accounting remain open.
+  server configuration must match the registered model before provider access. Exact cross-generation reuse now copies
+  only completed, rights-active rows with matching model, dimensions, input contract and input hash into the new owner's
+  generation. Reuse is accounted separately, preserves both ownerships, yields in bounded pages and fails closed when
+  the same identity has conflicting vector hashes.
 - [ ] **VECTOR-06 Fence stale input and revoked rights.** Recheck selected input/route/rights before writes and serving;
   invalidate stale jobs, vector memberships and caches through the correction path. **Done:** a source change or rights
   revocation during provider execution cannot promote stale/forbidden vectors. Depends on VECTOR-04, INDEX-04–05.
@@ -322,7 +324,8 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   with no falsely complete shards; pilot is queryable for EVAL-11. Depends on VECTOR-05–06, ORCH-08–10.
   Local two-database evidence now covers a wrong provider model, target write failure, conservative retry-cost
   accounting, synthetic HTTP 429 and repeated HTTP 503 failures through the shared client, exact replay,
-  incomplete-shard completion rejection, empty-shard completion and rights-revocation cleanup.
+  exact cross-generation reuse, conflicting-reuse rejection, incomplete-shard completion rejection, empty-shard
+  completion and rights-revocation cleanup.
   Focused Trigger tests additionally cover bounded fan-out, global dispatch replay keys, checkpoint continuation and
   finalization by the last shard. Deployed Trigger recovery and authenticated queryability remain open.
 - [ ] **VECTOR-08 Plan full manifest cost and dispatch.** Freeze eligible partitions, expected vectors/tokens, reuse,

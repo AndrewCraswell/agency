@@ -290,9 +290,13 @@ concurrent-build requirements and detect invalid/interrupted indexes explicitly.
 Record HNSW build/search parameters in the generation manifest, begin with the installed extension defaults and tune
 only against exact filtered-neighbor recall and latency. A valid index without complete eligible vectors is not ready.
 
-Use the complete C input identity for reuse; skip only if all fields match. If agency/currency metadata changes without modifying the declared
-input, update projection metadata without paying to re-embed. If text changes, regenerate only affected passages.
-Retained historical versions keep their old vectors where permitted.
+Cross-generation reuse uses the complete model, dimensions, input-contract and input-hash identity. It copies only from
+completed vector generations whose passage owner still has active search rights, while retaining a separate row for the
+new owner. Source and target passage generations are locked against rights cleanup and rechecked before insertion. A
+bounded page of 256 reused rows yields before any provider call. Conflicting vector hashes for one identity block reuse
+instead of choosing by recency. If agency/currency metadata changes without modifying the declared input, this path
+avoids re-embedding; changed input text does not match and proceeds to provider work. Retained permitted historical
+versions keep their independently owned vectors.
 
 Use 16 deterministic shards based on passage IDs and fixed shard-count/hash algorithm stored in the rollout manifest.
 Shard count cannot change mid-wave. Within each shard scan at most 512 rows and submit at most 64 eligible texts per

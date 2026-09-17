@@ -1383,8 +1383,8 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         expect(prepared.passages).toBe(1)
         await replicateLegalPassageGeneration(pool, target, { scope, generationId: prepared.generationId })
         const passage = (
-          await target.query<{ id: string; input_hash: string }>(
-            "SELECT id,data->>'inputHash' AS input_hash FROM legislation.legal_search_passages WHERE generation_id=$1",
+          await target.query<{ data: Record<string, unknown>; id: string; input_hash: string }>(
+            "SELECT id,data,data->>'inputHash' AS input_hash FROM legislation.legal_search_passages WHERE generation_id=$1",
             [prepared.generationId]
           )
         ).rows[0]
@@ -1639,6 +1639,131 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           gates: { blockers: [], completable: false, dispatchable: false, embedded: true, ready: false },
           state: "embedded"
         })
+        const reusePassageGenerationId = digest(
+          JSON.stringify(["vector-reuse-passage-generation", prepared.generationId])
+        )
+        const reusePassageId = digest(JSON.stringify([reusePassageGenerationId, 0]))
+        const reuseData = { ...passage.data, id: reusePassageId }
+        const reusePassageManifestHash = digest(JSON.stringify([reuseData]))
+        await target.query(
+          `INSERT INTO legislation.legal_search_generations(id,metadata)
+          SELECT $2,jsonb_set(jsonb_set(metadata,'{id}',to_jsonb($2::text)),'{manifest_hash}',to_jsonb($3::text))
+          FROM legislation.legal_search_generations WHERE id=$1`,
+          [prepared.generationId, reusePassageGenerationId, reusePassageManifestHash]
+        )
+        await target.query(
+          `INSERT INTO legislation.legal_search_passages(id,generation_id,ordinal,body,input_text,data)
+          SELECT $2,$3,ordinal,body,input_text,$4::jsonb FROM legislation.legal_search_passages
+          WHERE generation_id=$1 AND id=$5`,
+          [prepared.generationId, reusePassageId, reusePassageGenerationId, JSON.stringify(reuseData), passage.id]
+        )
+        await target.query(
+          `INSERT INTO legislation.legal_search_memberships(scope_kind,scope_id,generation_id)
+          VALUES('edition',$1,$2)`,
+          [data.editionId, reusePassageGenerationId]
+        )
+        const reusePlan = await planLegalEmbeddingGeneration(
+          target,
+          reusePassageGenerationId,
+          "openai/text-embedding-3-small"
+        )
+        const reuseGeneration = await registerLegalEmbeddingPlan(target, reusePlan)
+        await initializeLegalEmbeddingShards(target, reuseGeneration.generationId)
+        const reuseShard = Number.parseInt(reusePassageId.slice(0, 2), 16) % 16
+        expect(
+          await runLegalEmbeddingShardJob(
+            target,
+            { generationId: reuseGeneration.generationId, shardIndex: reuseShard },
+            {
+              embed: async () => {
+                throw new Error("exact_cross_generation_reuse_must_not_call_provider")
+              }
+            }
+          )
+        ).toMatchObject({ inserted: 0, items: [], reused: 1, state: "complete" })
+        for (let emptyShard = 0; emptyShard < 16; emptyShard++) {
+          if (emptyShard === reuseShard) continue
+          await runLegalEmbeddingShardJob(
+            target,
+            { generationId: reuseGeneration.generationId, shardIndex: emptyShard },
+            {
+              embed: async () => {
+                throw new Error("empty_shard_provider_call")
+              }
+            }
+          )
+        }
+        expect(await completeLegalEmbeddingGeneration(target, reuseGeneration.generationId)).toMatchObject({
+          reused: false,
+          vectors: 1
+        })
+        expect(await inspectLegalEmbeddingGeneration(target, reuseGeneration.generationId)).toMatchObject({
+          execution: { insertedVectors: 0, reusedVectors: 1 },
+          gates: { embedded: true },
+          inventory: { coveragePercent: 100, vectors: 1 }
+        })
+        const conflictingVector = Array.from({ length: 1536 }, (_value, index) => (index === 1 ? 1 : 0))
+        await target.query(
+          `UPDATE legislation.legal_openai_small_embeddings SET embedding=$2::vector,vector_hash=$3
+          WHERE generation_id=$1`,
+          [reuseGeneration.generationId, JSON.stringify(conflictingVector), digest(JSON.stringify(conflictingVector))]
+        )
+        const conflictTargetPassageGenerationId = digest(
+          JSON.stringify(["vector-reuse-conflict-target", prepared.generationId])
+        )
+        const conflictTargetPassageId = digest(JSON.stringify([conflictTargetPassageGenerationId, 0]))
+        const conflictTargetData = { ...passage.data, id: conflictTargetPassageId }
+        await target.query(
+          `INSERT INTO legislation.legal_search_generations(id,metadata)
+          SELECT $2,jsonb_set(jsonb_set(metadata,'{id}',to_jsonb($2::text)),'{manifest_hash}',to_jsonb($3::text))
+          FROM legislation.legal_search_generations WHERE id=$1`,
+          [prepared.generationId, conflictTargetPassageGenerationId, digest(JSON.stringify([conflictTargetData]))]
+        )
+        await target.query(
+          `INSERT INTO legislation.legal_search_passages(id,generation_id,ordinal,body,input_text,data)
+          SELECT $2,$3,ordinal,body,input_text,$4::jsonb FROM legislation.legal_search_passages
+          WHERE generation_id=$1 AND id=$5`,
+          [
+            prepared.generationId,
+            conflictTargetPassageId,
+            conflictTargetPassageGenerationId,
+            JSON.stringify(conflictTargetData),
+            passage.id
+          ]
+        )
+        await target.query(
+          `INSERT INTO legislation.legal_search_memberships(scope_kind,scope_id,generation_id)
+          VALUES('edition',$1,$2)`,
+          [data.editionId, conflictTargetPassageGenerationId]
+        )
+        const conflictTargetPlan = await planLegalEmbeddingGeneration(
+          target,
+          conflictTargetPassageGenerationId,
+          "openai/text-embedding-3-small"
+        )
+        const conflictTargetGeneration = await registerLegalEmbeddingPlan(target, conflictTargetPlan)
+        await initializeLegalEmbeddingShards(target, conflictTargetGeneration.generationId)
+        const conflictTargetShard = Number.parseInt(conflictTargetPassageId.slice(0, 2), 16) % 16
+        await expect(
+          runLegalEmbeddingShardJob(
+            target,
+            { generationId: conflictTargetGeneration.generationId, shardIndex: conflictTargetShard },
+            {
+              embed: async () => {
+                throw new Error("conflicting_reuse_must_not_call_provider")
+              }
+            }
+          )
+        ).rejects.toThrow("legal_embedding_reuse_conflict")
+        expect(
+          (
+            await target.query(
+              `SELECT state,attempts,last_error FROM legislation.legal_embedding_shards
+              WHERE generation_id=$1 AND shard_index=$2`,
+              [conflictTargetGeneration.generationId, conflictTargetShard]
+            )
+          ).rows[0]
+        ).toEqual({ state: "pending", attempts: 1, last_error: "legal_embedding_worker_failed" })
         await expect(
           target.query("UPDATE legislation.legal_openai_small_embeddings SET dimensions=1024 WHERE generation_id=$1", [
             generation.generationId
@@ -1647,7 +1772,7 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=false")
         expect(
           await reconcileLegalSearchScopeRights(pool, target, { kind: "edition", id: data.editionId })
-        ).toMatchObject({ allowed: false, removedGenerations: 1, removedMemberships: 1, remaining: 0 })
+        ).toMatchObject({ allowed: false, removedGenerations: 3, removedMemberships: 3, remaining: 0 })
         expect(
           (
             await target.query(
@@ -1664,7 +1789,8 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
       } finally {
         await target.end()
       }
-    }
+    },
+    30_000
   )
 
   it("rolls back failed passage writes and detects missing retained passage rows on replay", async () => {
