@@ -9,6 +9,7 @@ import {
   inspectAlaskaEventCycle
 } from "../../ingestion/openstates/scraper-event-cycle.js"
 import { acquireAlaskaEventPlan } from "../../ingestion/openstates/scraper-event-plan.js"
+import { executeNorthCarolinaEventCloudCycle } from "../../ingestion/openstates/scraper-nc-event-cycle.js"
 
 const approvedBuildInputsSha256 = "8dd4689bcfe72cf8b1cee5372c1106bd9f077845bea3187074fe17cc833beaeb"
 
@@ -21,14 +22,20 @@ const payloadSchema = z.strictObject({
     .optional()
 })
 
-function requireAlaskaScraperActivation(value: string | undefined) {
+function requireScraperActivation(jurisdiction: "ak" | "nc", value: string | undefined) {
   const states = new Set(
     (value ?? "")
       .split(",")
       .map((state) => state.trim().toLowerCase())
       .filter(Boolean)
   )
-  if (!states.has("ak")) throw new Error("Alaska self-hosted scraper is not activated")
+  if (!states.has(jurisdiction)) {
+    throw new Error(`${jurisdiction === "ak" ? "Alaska" : "North Carolina"} self-hosted scraper is not activated`)
+  }
+}
+
+function requireAlaskaScraperActivation(value: string | undefined) {
+  requireScraperActivation("ak", value)
 }
 
 function attemptId(triggerRunId: string) {
@@ -36,6 +43,33 @@ function attemptId(triggerRunId: string) {
 }
 
 const concurrencyKey = "production:openstates-scraper:events:ak"
+export const openStatesNorthCarolinaEventsCloud = task({
+  id: "openstates-north-carolina-events-cloud",
+  maxDuration: 3_600,
+  queue: { name: "openstates-scraper-orchestration", concurrencyLimit: 3 },
+  run: async (_raw: unknown, { ctx }) => {
+    requireScraperActivation("nc", process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
+    const config = loadConfig()
+    const queueName = z
+      .string()
+      .regex(/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/)
+      .parse(process.env.OPENSTATES_SCRAPER_QUEUE)
+    if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")
+    const store = new AzureBlobArtifactStore(config.azure.storageAccount, config.azure.stateSourceContainer)
+    const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })
+    try {
+      return await executeNorthCarolinaEventCloudCycle(database, {
+        store,
+        approvedBuildInputsSha256,
+        storageAccount: config.azure.storageAccount,
+        queueName,
+        runId: `nc-event-${createHash("sha256").update(ctx.run.id).digest("hex").slice(0, 32)}`
+      })
+    } finally {
+      await pool.end()
+    }
+  }
+})
 
 export const openStatesAlaskaEventsPlan = task({
   id: "openstates-alaska-events-plan",

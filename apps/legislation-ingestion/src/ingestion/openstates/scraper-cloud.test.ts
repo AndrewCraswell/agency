@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 import type { ArtifactStore } from "../documents/artifact-store.js"
-import { alaskaEventCloudRequest, dispatchCloudScraperAttempt, scraperCloudPaths } from "./scraper-cloud.js"
+import {
+  alaskaEventCloudRequest,
+  dispatchCloudScraperAttempt,
+  northCarolinaEventCloudRequest,
+  scraperCloudPaths
+} from "./scraper-cloud.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 class Store implements ArtifactStore {
@@ -94,5 +99,19 @@ describe("cloud scraper dispatch", () => {
       )
     ).rejects.toThrow("Unsupported cloud scraper request")
     expect(requestFetch).not.toHaveBeenCalled()
+  })
+
+  it("allows only the current-calendar North Carolina event lane", () => {
+    expect(northCarolinaEventCloudRequest()).toEqual({
+      jurisdiction: "nc",
+      domain: "events",
+      session: null,
+      timeout_seconds: 1500,
+      revision: "d43f853796ceeeb49205f7d144790647764ce105",
+      bill_ids: null
+    })
+    expect(() => scraperCloudPaths("run-1", { ...northCarolinaEventCloudRequest(), session: "2025" })).toThrow(
+      "Unsupported cloud scraper request"
+    )
   })
 })

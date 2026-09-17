@@ -1,4 +1,4 @@
-import { childId } from "@repo/legislation-core/domain/identifiers"
+import { childId, legislativeSessionId } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { normalizeOpenStatesEvent } from "./events.js"
@@ -19,6 +19,7 @@ function explicitAlaskaOutcome(motion: string) {
 
 /** Official notice number survives title, time and location corrections; no calendar-row UUID is persisted. */
 export function normalizeNcScraperEvents(records: readonly unknown[], retrievedAt: Date) {
+  z.date().parse(retrievedAt)
   const seen = new Set<string>()
   return records.map((input) => {
     const record = z
@@ -51,8 +52,56 @@ export function normalizeNcScraperEvents(records: readonly unknown[], retrievedA
     )
     snapshot.event.sourceId = record.upstream_id
     snapshot.event.upstreamIds = { ncNoticeDocument: record.upstream_id }
+    snapshot.event.sessionRelationsComplete = true
+    snapshot.sessionIds = [legislativeSessionId("nc", "2025")]
     return snapshot
   })
+}
+
+/** A retained extraction is evidence, not authorization; verify its exact lane and approved build before promotion. */
+export async function prepareArchivedNcScraperEvents(input: {
+  store: Pick<ArtifactStore, "read">
+  manifestPath: string
+  approvedBuildInputsSha256: string
+  retrievedAt: Date
+}) {
+  const approved = z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .parse(input.approvedBuildInputsSha256)
+  z.date().parse(input.retrievedAt)
+  const archive = await readArchivedScraperAttempt(input.store, input.manifestPath)
+  const { attempt, records } = archive
+  if (attempt.build_inputs_sha256 !== approved) {
+    throw new Error("Scraper build is not approved for corrected meeting facts")
+  }
+  if (
+    attempt.status !== "extracted" ||
+    attempt.request.jurisdiction !== "nc" ||
+    attempt.request.domain !== "events" ||
+    attempt.request.session !== null ||
+    attempt.request.bill_ids !== null ||
+    attempt.request.event_keys !== undefined
+  ) {
+    throw new Error("Scraper attempt is not a completed North Carolina event extraction")
+  }
+  const eventRecords = records
+    .filter((record) => record.path.startsWith("_data/nc/event_"))
+    .map((record) => record.value)
+  if (eventRecords.length === 0) {
+    throw new Error("North Carolina event extraction contains no meetings")
+  }
+  return {
+    status: "prepared" as const,
+    canonicalWrites: false as const,
+    provenance: {
+      runId: archive.runId,
+      manifestPath: input.manifestPath,
+      manifestSha256: archive.manifestSha256,
+      buildInputsSha256: approved
+    },
+    snapshots: normalizeNcScraperEvents(eventRecords, input.retrievedAt)
+  }
 }
 
 const source = z.object({ url: z.url({ protocol: /^https$/ }) })

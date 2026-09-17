@@ -30,6 +30,15 @@ const requestSchema = z
     ) {
       return
     }
+    if (
+      request.jurisdiction === "nc" &&
+      request.domain === "events" &&
+      request.session === null &&
+      request.bill_ids === null &&
+      request.event_keys === undefined
+    ) {
+      return
+    }
     context.addIssue({ code: "custom", message: "Unsupported cloud scraper request" })
   })
 const settlementSchema = z.strictObject({
@@ -136,5 +145,16 @@ export function alaskaEventCloudRequest(eventKeys: string[]): CloudScraperReques
     revision,
     bill_ids: null,
     event_keys: eventKeys
+  })
+}
+
+export function northCarolinaEventCloudRequest(): CloudScraperRequest {
+  return requestSchema.parse({
+    jurisdiction: "nc",
+    domain: "events",
+    session: null,
+    timeout_seconds: 1500,
+    revision,
+    bill_ids: null
   })
 }
