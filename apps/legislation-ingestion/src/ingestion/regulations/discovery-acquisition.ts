@@ -40,7 +40,7 @@ export async function acquireLegalDiscoveryArtifact(
     await client.query("SET LOCAL lock_timeout='5s'")
     await client.query("SET LOCAL statement_timeout='30s'")
     const selected = await client.query(
-      `SELECT payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt
+      `SELECT manifest_id,payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt
        FROM legislation.legal_discovery_units
        WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 FOR UPDATE`,
       [manifest.sourceId, manifest.scopeKey, unit.key]
@@ -48,6 +48,7 @@ export async function acquireLegalDiscoveryArtifact(
     invariant(selected.rowCount === 1, "legal_discovery_unit_missing")
     const row = z
       .object({
+        manifest_id: hashSchema,
         payload_hash: hashSchema,
         unit: legalDiscoveryUnitSchema,
         state: z.enum(["registered", "acquired"]),
@@ -58,7 +59,9 @@ export async function acquireLegalDiscoveryArtifact(
       })
       .parse(selected.rows[0])
     invariant(
-      isDeepStrictEqual(row.unit, unit) && row.payload_hash === legalDiscoveryPayloadHash(unit),
+      row.manifest_id === manifest.id &&
+        isDeepStrictEqual(row.unit, unit) &&
+        row.payload_hash === legalDiscoveryPayloadHash(unit),
       "legal_discovery_acquisition_unit_changed"
     )
     await client.query(

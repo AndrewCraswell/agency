@@ -117,9 +117,10 @@ export async function registerLegalDiscoveryManifest(pool: pg.Pool, value: unkno
       "legal_discovery_manifest_conflict"
     )
     const updated = await client.query(
-      `UPDATE legislation.legal_discovery_units SET state='registered',registered_at=clock_timestamp()
-       WHERE source_id=$1 AND scope_key=$2 AND state='pending' AND unit_key=ANY($3::text[])`,
-      [input.sourceId, input.scopeKey, units.map((unit) => unit.key)]
+      `UPDATE legislation.legal_discovery_units
+       SET state='registered',manifest_id=$3,registered_at=clock_timestamp()
+       WHERE source_id=$1 AND scope_key=$2 AND state='pending' AND unit_key=ANY($4::text[])`,
+      [input.sourceId, input.scopeKey, manifest.id, units.map((unit) => unit.key)]
     )
     invariant(updated.rowCount === units.length, "legal_discovery_registration_lost")
     await client.query("COMMIT")

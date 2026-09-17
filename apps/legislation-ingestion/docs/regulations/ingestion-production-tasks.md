@@ -128,8 +128,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   window and persist child handles; submit batches of at most 100. **Done:** restarting the controller resumes its
   manifest without loading or dispatching the whole national inventory. Depends on ORCH-01.
   Local progress: pending discovery rows can now be registered in immutable current-acquisition manifests of at most
-  100 units. Selection, manifest persistence and the registered transition are atomic and use locked bounded rows.
-  Child submission intents/handles and recovery still remain open.
+  100 units. Selection, manifest persistence and the registered transition are atomic and use locked bounded rows. A
+  manual controller now plans the next committed stage with keyset pages of at most 100, persists all child intents and
+  submits them serially with stable global Trigger keys. Automatic continuation and run-disposition recovery remain open.
 - [ ] **ORCH-03 Add the acquisition worker adapter.** Wrap existing source clients/artifact acquisition with strict
   payloads, source budgets, artifact references and committed checkpoints. **Done:** interrupted downloads never
   produce a complete artifact; retry verifies checksum and reuses valid retained bytes. Depends on ORCH-01.
@@ -165,6 +166,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   Explicit wave recovery now reads verified stored payloads with bounded keyset paging and read-only preview by
   default. Executing a page reuses original keys/handles and defers busy/old uncertain intents. It does not yet inspect
   Trigger run disposition or repair cancelled/expired accepted children.
+  The source-stage controller now applies the same persist-before-submit boundary to acquisition, parsing and
+  publication. Each stage intent retains its immutable payload, lease, first attempt and Trigger run ID; uncertain
+  submission retries keep the original key. Trigger disposition reconciliation remains open.
 - [ ] **ORCH-08 Recover cancelled, lost and expired runs.** Reconcile durable pending work with Trigger run disposition,
   lease expiry and retry time; enqueue a fenced replacement only when eligible. **Done:** cancelled parent, killed
   child, missing run history and late original worker all converge to one valid completion. Depends on ORCH-07.

@@ -13,6 +13,7 @@ import {
   legalDiscoveryUnitSchema,
   startLegalDiscoveryAttempt
 } from "./discovery-checkpoint.js"
+import { planLegalDiscoveryDispatchPage, submitLegalDiscoveryDispatch } from "./discovery-dispatch.js"
 import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
@@ -89,6 +90,21 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     })
     expect(manifest).not.toBeNull()
     if (manifest === null) throw new Error("Missing manifest")
+    const planInput = { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 }
+    const acquisitionPlan = await planLegalDiscoveryDispatchPage(pool, planInput)
+    expect(acquisitionPlan.dispatches).toHaveLength(1)
+    expect(acquisitionPlan.dispatches[0]).toMatchObject({ stage: "acquisition", payload: { manifestId: manifest.id } })
+    const acquisitionDispatch = acquisitionPlan.dispatches[0]
+    if (!acquisitionDispatch) throw new Error("Missing acquisition dispatch")
+    const submitted = await submitLegalDiscoveryDispatch(pool, acquisitionDispatch.id, async (stage) => ({
+      id: `run-${stage}`
+    }))
+    expect(submitted).toMatchObject({ runId: "run-acquisition", reused: false })
+    await expect(
+      submitLegalDiscoveryDispatch(pool, acquisitionDispatch.id, async () => {
+        throw new Error("submitted dispatch must be reused")
+      })
+    ).resolves.toEqual({ ...submitted, reused: true })
     const body = `<?xml version="1.0"?><DLPSTEXTCLASS><DIV1 N="1" TYPE="TITLE"><HEAD>Title 1</HEAD>
       <DIV8 N="1.1" TYPE="SECTION"><HEAD>Current rule</HEAD><P>Current title text.</P></DIV8>
       </DIV1></DLPSTEXTCLASS>`
@@ -105,6 +121,23 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     expect(second).toEqual({ ...first, reused: true })
     expect(fetcher).toHaveBeenCalledOnce()
     expect(await readFile(join(directory, "blobs", `${first.artifactHash}.xml`), "utf8")).toBe(body)
+    const parsingPlan = await planLegalDiscoveryDispatchPage(pool, planInput)
+    expect(parsingPlan.dispatches).toHaveLength(1)
+    expect(parsingPlan.dispatches[0]).toMatchObject({ stage: "parsing", payload: { manifestId: manifest.id } })
+    const parsingDispatch = parsingPlan.dispatches[0]
+    if (!parsingDispatch) throw new Error("Missing parsing dispatch")
+    await expect(
+      submitLegalDiscoveryDispatch(pool, parsingDispatch.id, async () => {
+        throw new Error("uncertain parsing submission")
+      })
+    ).rejects.toThrow("uncertain parsing submission")
+    await expect(
+      submitLegalDiscoveryDispatch(pool, parsingDispatch.id, async (stage, payload, options) => {
+        expect(options.idempotencyKey).toBe(`legal-discovery:${parsingDispatch.id}`)
+        expect(payload).toEqual(parsingDispatch.payload)
+        return { id: `run-${stage}` }
+      })
+    ).resolves.toMatchObject({ runId: "run-parsing", reused: false })
     const normalized = await mkdtemp(join(tmpdir(), "tabra-current-normalized-"))
     directories.push(normalized)
     const parseInput = { manifestId: manifest.id, unitKey: unit.key, outputRoot: normalized }
@@ -112,11 +145,23 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const secondParse = await parseLegalDiscoveryArtifact(pool, parseInput)
     expect(firstParse).toMatchObject({ records: 2, reused: false })
     expect(secondParse).toEqual({ ...firstParse, reused: true })
+    const publicationPlan = await planLegalDiscoveryDispatchPage(pool, planInput)
+    expect(publicationPlan.dispatches).toHaveLength(1)
+    expect(publicationPlan.dispatches[0]).toMatchObject({ stage: "publication", payload: { manifestId: manifest.id } })
+    const publicationDispatch = publicationPlan.dispatches[0]
+    if (!publicationDispatch) throw new Error("Missing publication dispatch")
+    await expect(
+      submitLegalDiscoveryDispatch(pool, publicationDispatch.id, async (stage) => ({ id: `run-${stage}` }))
+    ).resolves.toMatchObject({ runId: "run-publication", reused: false })
     const publicationInput = { manifestId: manifest.id, unitKey: unit.key }
     const firstPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
     const secondPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
     expect(firstPublication).toMatchObject({ state: "published", isCurrent: true, reused: false })
     expect(secondPublication).toEqual({ ...firstPublication, reused: true })
+    await expect(planLegalDiscoveryDispatchPage(pool, planInput)).resolves.toMatchObject({
+      selected: 0,
+      exhausted: true
+    })
     const stored = await pool.query(
       `SELECT state,artifact_hash,"artifact_bytes"::text bytes,storage_locator,
        acquisition_receipt->>'sha256' receipt_hash,parser_hash,normalized_generation,normalized_locator,
@@ -146,10 +191,11 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
            (SELECT count(*)::int FROM legislation.legal_editions WHERE published_at IS NOT NULL) editions,
            (SELECT count(*)::int FROM legislation.legal_edition_provisions WHERE edition_id=$1) members,
            (SELECT count(*)::int FROM legislation.legal_derived_outbox WHERE edition_id=$1 AND operation='lexical') lexical_jobs,
-           (SELECT count(*)::int FROM legislation.legal_code_heads WHERE edition_id=$1) heads`,
+           (SELECT count(*)::int FROM legislation.legal_code_heads WHERE edition_id=$1) heads,
+           (SELECT count(*)::int FROM legislation.legal_discovery_dispatches) dispatches`,
           [firstPublication.editionId]
         )
       ).rows[0]
-    ).toEqual({ generations: 1, editions: 1, members: 2, lexical_jobs: 1, heads: 1 })
+    ).toEqual({ generations: 1, editions: 1, members: 2, lexical_jobs: 1, heads: 1, dispatches: 3 })
   })
 })

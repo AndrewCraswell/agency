@@ -46,7 +46,16 @@ accounting. Replay verifies the complete canonical edition and returns the same 
 existing lexical outbox item but does not submit preparation, copying or embeddings. The worker is manual, limited to
 two concurrent publications and has no recurring schedule.
 
+`regulatory-discovery-controller` is the manual bounded fan-out entry point. It first registers at most 100 pending
+units, then selects a keyset page of at most 100 units whose committed state is `registered`, `acquired` or `parsed`.
+Those states map respectively to acquisition, parsing and publication. The controller persists every stage intent before
+the first Trigger submission, submits serially to bound SDK calls, and uses a stable global idempotency key with a
+seven-day retention window. Each intent retains its immutable manifest/unit payload, stage, attempt time, lease and run
+ID. An uncertain submission keeps the original identity for retry or later disposition reconciliation; the controller
+never assumes that a missing response means Trigger rejected the child. Re-running after workers commit state creates
+only the next-stage intent. Pagination exposes the last unit key and exhaustion rather than loading a national scope.
+
 The discovery-unit and current-manifest contracts require `historical: false`; the existing acquisition/backfill
 contract remains strictly `historical: true`. Keeping these schemas separate prevents recurring observations from
-silently becoming completed backfill coverage. Controller dispatch, deployed shared artifact/normalized storage,
-downstream completion accounting and scheduled cadence are separate gates.
+silently becoming completed backfill coverage. Trigger run-disposition recovery, deployed shared artifact/normalized
+storage, downstream completion accounting and scheduled cadence are separate gates.

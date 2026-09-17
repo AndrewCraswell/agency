@@ -12,6 +12,7 @@ import { parseRegulatoryArtifact } from "./parser-bridge.js"
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 const inputSchema = z.strictObject({ manifestId: hashSchema, unitKey: hashSchema, outputRoot: z.string().min(1) })
 const storedUnitSchema = z.object({
+  manifest_id: hashSchema,
   payload_hash: hashSchema,
   unit: legalDiscoveryUnitSchema,
   state: z.enum(["acquired", "parsed"]),
@@ -37,7 +38,7 @@ export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown)
   const manifestUnit = manifest.units.find((candidate) => candidate.key === input.unitKey)
   invariant(manifestUnit, "legal_discovery_manifest_unit_missing")
   const before = await pool.query(
-    `SELECT payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt,
+    `SELECT manifest_id,payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt,
      parser_hash,normalized_generation,normalized_locator,parse_summary
      FROM legislation.legal_discovery_units
      WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3`,
@@ -46,7 +47,8 @@ export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown)
   invariant(before.rowCount === 1, "legal_discovery_unit_missing")
   const acquired = storedUnitSchema.parse(before.rows[0])
   invariant(
-    isDeepStrictEqual(acquired.unit, manifestUnit) &&
+    acquired.manifest_id === manifest.id &&
+      isDeepStrictEqual(acquired.unit, manifestUnit) &&
       acquired.payload_hash === legalDiscoveryPayloadHash(manifestUnit) &&
       acquired.acquisition_receipt.sha256 === acquired.artifact_hash &&
       acquired.acquisition_receipt.bytes === Number(acquired.artifact_bytes),
@@ -72,7 +74,7 @@ export async function parseLegalDiscoveryArtifact(pool: pg.Pool, value: unknown)
     const locked = storedUnitSchema.parse(
       (
         await client.query(
-          `SELECT payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt,
+          `SELECT manifest_id,payload_hash,unit,state,artifact_hash,artifact_bytes::text,storage_locator,acquisition_receipt,
            parser_hash,normalized_generation,normalized_locator,parse_summary
            FROM legislation.legal_discovery_units
            WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 FOR UPDATE`,

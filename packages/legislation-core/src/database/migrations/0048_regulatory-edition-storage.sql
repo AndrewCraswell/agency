@@ -54,6 +54,7 @@ CREATE TABLE legislation.legal_discovery_units (
   unit_key text NOT NULL CHECK(unit_key ~ '^[a-f0-9]{64}$'),
   payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
   unit jsonb NOT NULL CHECK(jsonb_typeof(unit)='object'),
+  manifest_id text,
   state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','acquired','parsed','published','quarantined')),
   discovered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   registered_at timestamptz,
@@ -78,6 +79,11 @@ CREATE TABLE legislation.legal_discovery_units (
     state='quarantined'
   ),
   CHECK(
+    (state='pending' AND manifest_id IS NULL) OR
+    (state IN ('registered','acquired','parsed','published') AND manifest_id IS NOT NULL) OR
+    state='quarantined'
+  ),
+  CHECK(
     (state IN ('acquired','parsed','published'))=(artifact_hash IS NOT NULL AND artifact_bytes IS NOT NULL AND storage_locator IS NOT NULL AND
       acquisition_receipt IS NOT NULL AND acquired_at IS NOT NULL)
   ),
@@ -98,6 +104,36 @@ CREATE TABLE legislation.legal_import_manifests (
   body jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
+--> statement-breakpoint
+ALTER TABLE legislation.legal_discovery_units ADD CONSTRAINT legal_discovery_units_manifest_fk
+  FOREIGN KEY(manifest_id) REFERENCES legislation.legal_import_manifests(id);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_discovery_dispatches (
+  id text PRIMARY KEY CHECK(id ~ '^[a-f0-9]{64}$'),
+  source_id text NOT NULL,
+  scope_key text NOT NULL,
+  unit_key text NOT NULL,
+  manifest_id text NOT NULL REFERENCES legislation.legal_import_manifests(id),
+  stage text NOT NULL CHECK(stage IN ('acquisition','parsing','publication')),
+  payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
+  payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object'),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','submitting','submitted')),
+  first_attempt_at timestamptz,
+  run_id text,
+  lease_token uuid,
+  lease_expires_at timestamptz,
+  last_error text,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  FOREIGN KEY(source_id,scope_key,unit_key)
+    REFERENCES legislation.legal_discovery_units(source_id,scope_key,unit_key),
+  UNIQUE(manifest_id,unit_key,stage),
+  CHECK((lease_token IS NULL)=(lease_expires_at IS NULL)),
+  CHECK((state='submitted')=(run_id IS NOT NULL)),
+  CHECK(state='pending' OR first_attempt_at IS NOT NULL)
+);
+--> statement-breakpoint
+CREATE INDEX legal_discovery_dispatches_pending_idx ON legislation.legal_discovery_dispatches(created_at,id)
+  WHERE state<>'submitted';
 --> statement-breakpoint
 CREATE TABLE legislation.legal_artifacts (
   hash text PRIMARY KEY CHECK (hash ~ '^[a-f0-9]{64}$'),

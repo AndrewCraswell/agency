@@ -53,7 +53,7 @@ describe.skipIf(databaseUrl === undefined).sequential("durable regulatory discov
   }, 60_000)
   beforeEach(async () => {
     await pool.query(
-      "TRUNCATE legislation.legal_discovery_pages,legislation.legal_discovery_units,legislation.legal_discovery_checkpoints"
+      "TRUNCATE legislation.legal_discovery_pages,legislation.legal_discovery_units,legislation.legal_discovery_checkpoints CASCADE"
     )
   })
   afterAll(async () => pool.end())

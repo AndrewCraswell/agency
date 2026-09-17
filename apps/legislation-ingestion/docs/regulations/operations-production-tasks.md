@@ -27,7 +27,8 @@ normalization or direct-to-index update path. Workstream prerequisites: ORCH-01 
   atomically registered into bounded immutable current-acquisition manifests, and a one-unit worker commits a verified
   immutable XML artifact receipt. Separate workers commit a fully validated deterministic normalized generation and
   publish a revalidated current eCFR unit through the existing canonical transaction with durable canonical identities.
-  Deployed shared storage/provider admission, bounded controller handoff, deployed verification and
+  A manual bounded controller now persists and submits the acquisition, parsing and publication fan-out with stable
+  global identities. Deployed shared storage/provider admission, automatic controller continuation, deployed verification and
   the G4-gated hourly schedule remain open. An official live inventory dated 2026-09-15
   produced 49 non-reserved units and one reserved title in the disposable database; immediate replay inserted zero
   units while advancing the durable observation revision.

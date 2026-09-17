@@ -13,6 +13,22 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the manual bounded source-stage controller across current acquisition, parsing and publication. Registration now
+records the immutable manifest directly on each discovery unit. The controller reads only committed unit state, uses
+bounded keyset pages of at most 100, registers every child intent before submission and serializes Trigger API calls.
+Each stage gets a stable global seven-day idempotency key, first-attempt timestamp, short database lease and retained run
+ID. A missing submission response releases the local lease but retains the original intent and key; replay cannot mint a
+different child identity. Stage workers additionally verify that their requested manifest is the one assigned to the
+discovery unit. No schedule or automatic continuation was added.
+
+On a fresh disposable schema, the database integration planned acquisition, advanced the same unit, planned parsing,
+reused an uncertain parsing identity, planned publication, published the canonical edition and then returned an empty
+exhausted page. It retained exactly three stage intents. Five controller/worker task files passed 20 tests; ingestion
+types/lint and `drizzle-kit check` passed. Root `pnpm verify` passed formatting, package lint and package type checks,
+then stopped at the same unrelated Knip inventory recorded below; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-regulatory-discovery-controller-verify.log`. Trigger run-disposition inspection,
+lost/cancelled child replacement and deployed fan-out remain open.
+
 Connected parsed current eCFR discovery units to the existing fenced canonical publication transaction. Current and
 historical import envelopes remain separately validated: historical manifests retain inventory/checksum accounting,
 while current manifests require their immutable discovery identity, official URL and exact unit/receipt match. The new

@@ -13,6 +13,7 @@ const publicationInputSchema = z.strictObject({
   unitKey: hashSchema
 })
 const discoveryRowSchema = z.object({
+  manifest_id: hashSchema,
   state: z.enum(["parsed", "published"]),
   unit: legalDiscoveryUnitSchema,
   acquisition_receipt: currentReceiptSchema,
@@ -44,7 +45,7 @@ export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
   invariant(manifestUnit, "legal_discovery_manifest_unit_missing")
 
   const selected = await pool.query(
-    `SELECT state,unit,acquisition_receipt,storage_locator,parser_hash,normalized_locator,
+    `SELECT manifest_id,state,unit,acquisition_receipt,storage_locator,parser_hash,normalized_locator,
       publication_generation_id,edition_id
      FROM legislation.legal_discovery_units
      WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3`,
@@ -52,6 +53,7 @@ export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
   )
   invariant(selected.rowCount === 1, "legal_discovery_unit_missing")
   const row = discoveryRowSchema.parse(selected.rows[0])
+  invariant(row.manifest_id === manifest.id, "legal_discovery_publication_manifest_mismatch")
   invariant(isDeepStrictEqual(row.unit, manifestUnit), "legal_discovery_publication_unit_mismatch")
   invariant(
     isDeepStrictEqual(row.acquisition_receipt.unit, manifestUnit),
@@ -74,7 +76,7 @@ export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
     await client.query("SET LOCAL lock_timeout='5s'")
     await client.query("SET LOCAL statement_timeout='30s'")
     const lockedResult = await client.query(
-      `SELECT state,unit,acquisition_receipt,storage_locator,parser_hash,normalized_locator,
+      `SELECT manifest_id,state,unit,acquisition_receipt,storage_locator,parser_hash,normalized_locator,
         publication_generation_id,edition_id
        FROM legislation.legal_discovery_units
        WHERE source_id=$1 AND scope_key=$2 AND unit_key=$3 FOR UPDATE`,
@@ -82,7 +84,8 @@ export async function publishLegalDiscoveryUnit(pool: pg.Pool, value: unknown) {
     )
     const locked = discoveryRowSchema.parse(lockedResult.rows[0])
     invariant(
-      isDeepStrictEqual(locked.unit, row.unit) &&
+      locked.manifest_id === row.manifest_id &&
+        isDeepStrictEqual(locked.unit, row.unit) &&
         isDeepStrictEqual(locked.acquisition_receipt, row.acquisition_receipt) &&
         locked.storage_locator === row.storage_locator &&
         locked.parser_hash === row.parser_hash &&
