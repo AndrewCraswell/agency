@@ -42,7 +42,7 @@ export function activityPart(
   capture: ReviewCapture,
   state: ActivityState,
   code: ResearchFailureCode = "dependency_unavailable"
-) {
+): { part: Extract<UIMessage["parts"][number], { type: "dynamic-tool" }>; isRunning: boolean } {
   const base = {
     type: "dynamic-tool",
     toolName: capture.toolName,

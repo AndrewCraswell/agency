@@ -73,7 +73,7 @@ const billComparison: Extract<PresentationBlock, { state: "ready" }> = {
   }
 }
 
-const meta = {
+const meta: Meta<typeof ConversationResponse> = {
   title: "Conversation/ConversationResponse",
   component: ConversationResponse,
   parameters: { layout: "padded" },
@@ -91,7 +91,7 @@ const meta = {
     evidence: [],
     onEvidence: fn()
   }
-} satisfies Meta<typeof ConversationResponse>
+}
 export default meta
 type Story = StoryObj<typeof meta>
 
