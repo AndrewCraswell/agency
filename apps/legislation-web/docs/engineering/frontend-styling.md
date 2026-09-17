@@ -61,12 +61,20 @@ Query, filter, session, and version summaries remain visible while only the erro
 trigger contains both its header and summary, keeping the normal 6px visual gap within a minimum 44px hit target.
 
 Bill comparisons use the shared shadcn table primitives with a caption above column headers, wrapped cells, and a single
-keyboard-focusable horizontal overflow region. They have a 560px minimum table width and no vertical height cap; do not
-nest scroll wrappers or turn rows into cards. The shared Markdown response wrapper sets a 700px maximum table height;
+keyboard-focusable horizontal overflow region. They support two to ten distinct retrieved bills, with a 130px field
+column and 240px bill columns inside the existing 640px maximum-width region. Wider comparisons scroll horizontally
+without shrinking bill columns or overflowing the page. There is no vertical height cap; do not nest scroll wrappers
+or turn rows into cards. The shared Markdown response wrapper sets a 700px maximum table height;
 shorter tables size naturally and taller tables scroll within that limit.
 Comparison row links retain the inline-reference navigation and accessible descriptions below.
 
-Answer composition supports prose, exact inline record links, selected cards, and bill metadata comparisons; retrieval
+The model catalog, reference validation and resolved snapshot bound all use the same ten-bill limit. Presentation
+patches have a 32 KiB cumulative UTF-8 budget; the line inspector uses that bound in characters before byte validation.
+The 16-patch, three-block and total-input limits remain unchanged. Over-limit input is rejected as a complete block,
+never silently truncated; prompts direct larger selections into separate nonoverlapping comparisons or cited prose.
+
+Answer composition supports prose, exact inline record links, selected full/compact cards, source-backed inline views,
+and bill metadata comparisons; retrieval
 does not automatically render cards. The effective chat prompt combines the Langfuse-managed research prompt with
 catalog-generated instructions shipped with the renderer, recording both prompt version and composition hash. Comparison
 instructions call for introduction, comparison, then conclusion, without a duplicate Markdown table. Real-data examples
@@ -75,12 +83,70 @@ Mention, Selected Card, Metadata Comparison, and Prose Only. They cover repeated
 Source-selection reliability remains separate from correct component selection and placement.
 
 `ComposedRecord` renders the constrained json-render catalog through the existing record cards and comparison table.
-Pending content shows a compact loading state only while the response is running. Interrupted pending blocks, failed
-resolution, and mismatched references use the unavailable state; they do not render guessed metadata. Inspectors retain
+Pending content shows a compact loading state only while the response is running. Error blocks carry a bounded reason
+(`presentation`, `records`, or `interrupted`) and the component type when known. Invalid comparison output says
+"Comparison could not be displayed"; unknown visual formats say "Content could not be displayed". Only failed record
+resolution uses "Record unavailable", or explains that a selected record could not be loaded within a comparison.
+Interrupted blocks say "Content incomplete" or "Comparison incomplete". These states have no nonfunctional Retry action
+and do not remove surrounding prose or citations. Earlier failed snapshots are not regenerated or rewritten. Inspectors retain
 the existing result-store access checks and keyboard focus return. The
 [ComposedRecord stories](../../src/modules/conversations/stories/ComposedRecord.stories.tsx) cover all eight record kinds,
-plus Loading, Interrupted, Invalid Reference, and Unavailable states. Post-render evidence revocation is a separate policy
+plus Loading, Interrupted, Invalid Reference, Unavailable, Invalid Comparison and Five Bill Comparison states. The
+five-bill fixture retains exact result projections from Langfuse observation `0b20ee661c71ef46`, capture
+`9afb10ac-63ec-4265-bb57-16c6ce83cb7c`. Replay preserves the records and surrounding prose; this is rendering acceptance,
+not an endorsement of source-data consistency or the generated policy conclusions. Post-render evidence revocation is a separate policy
 question, not a capability of this renderer.
+
+## Inline records and evidence
+
+The AI catalog includes `CompactRecordCard`, `CitationCard`, `PassageQuote`, `ResultList`, `ProgressPath`,
+`RecordTimeline`, `RollCall` and `RecordStatus` alongside full record cards and bill comparisons. The version pin is
+explicitly excluded. Existing prototype account actions are not expanded by this work.
+
+Full and compact record cards use exact current-response `resultId`/`recordId` references. All other new views use an
+opaque `contentId` copied from the successful tool result's `presentationOptions`. Each option lists its permitted
+components; evidence options also identify the exact evidence reference, locator and content state. The server owns
+the bounded snapshot registry for that response and resolves only those IDs. Model-authored quotes, dates, rows, source
+URLs or availability labels are not accepted. Component/content mismatches fail closed. Duplicate evidence blocks do
+not silently repeat a passage. The existing three-block and stream-size limits remain in force.
+
+- Compact cards follow design `CBdbG`/`eeJmn`: desktop title/status row, mobile title/metadata with navigation affordance,
+	no body or account actions. Titles use existing profile/source routes or vote/meeting inspectors.
+- Citation cards and passage quotes follow `cbBs4`/`TjAME`, using the exact retrieved text, source, version and locator.
+	Quotes over 600 characters show a labeled prefix with a working full-passage expansion; the full snapshot remains
+	unchanged. Copy citation and safe publisher links work. Missing, failed and not-collected passages are explicit.
+	Numbering is shared with prose citations and the cited-only Sources list; quote selection is included in composed
+	telemetry. These are inline views, not a reversal of the URL-only citation-tooltip decision.
+- Progress paths show only returned action events in a keyboard-scrollable horizontal track. Timelines preserve returned
+	action/vote ordering and dates. No future stages, passed-law outcome or complete coverage is inferred. Continuation
+	metadata produces a partial-view notice.
+- Selected result lists reuse the existing compact rows, session-owned pagination and error/expiry recovery. They are
+	inserted only when selected by the AI, never automatically for every retrieval.
+- Roll calls show supplied tallies and the first six retrieved member positions with an explicit count. The full-roll-call
+	action opens the existing inspector and restores focus; missing positions or incomplete tallies stay explicit.
+- Not-found cards require an explicit per-record `not_found` batch-lookup result. Not-collected cards describe an
+	unreturned passage, not an unsupported claim that a jurisdiction is outside coverage. A retrieved passage for the
+	same document suppresses the contradictory not-collected option. Neither state adds fake account/recovery actions.
+
+[Inline presentation stories](../../src/modules/conversations/stories/InlinePresentation.stories.tsx) use captured
+document, timeline, vote and result data, with separately simulated absence/failure/loading states.
+[Composed record stories](../../src/modules/conversations/stories/ComposedRecord.stories.tsx) include compact cards,
+ten-bill comparisons and comparison interruption/resolution errors.
+[Input stories](../../src/modules/conversations/stories/ConversationInputs.stories.tsx) cover composer, reference-picker
+and captured AI-suggestion states; [clarification stories](../../src/modules/conversations/stories/ClarificationQuestion.stories.tsx)
+cover single/multiple/free-text questions, receipts, expiry and failed confirmation. No model calls run inside Storybook.
+
+September 17 acceptance: a live Luna answer selected a compact bill card, citation card and recorded progress view in
+conversation `x6g3eywJejYuIa0x`; all three blocks resolved. Desktop/mobile inspection confirmed exact quote expansion,
+shared source numbering, version-specific source links, focus return and keyboard progress scrolling. Inline-view
+stories cover desktop/mobile layouts; compact vote/meeting inspectors and reference-search states were exercised.
+The ten-bill boundary story supplements the earlier five-bill capture with S 1132 from the same retained observation
+and HR 1 from a September 17 read-only canonical lookup. It is a layout boundary example, not an insulin-policy comparison.
+The focused seven-file suite passed 264 tests; three additional copy/pagination/inspector regressions subsequently
+passed in the eleven-test inline-view file. Conversation lint and web types passed. The repository gate reached the
+existing unrelated Knip findings before coverage; this is not a clean full-repository verification claim.
+
+## Record labels
 
 Session display prefers the published session name carried by bill results. The comparison Session column is separate
 from chamber metadata. Without a published name, use conservative labels such as `2023-2024` and `118th Congress`;
@@ -146,6 +212,20 @@ outline, no brackets, and a relative upward offset of 0.8em without increasing p
 retain the filled badge and subtle outline at 16px height and minimum width with 10px numerals. Evidence-panel
 numbers retain their normal size. Inline buttons keep keyboard focus, URL-only tooltips, and evidence
 inspection on activation. The cited-only sources list remains a collapsed accordion by default.
+
+Sent questions render stored mention segments as light inline tags with a person or committee icon and green published
+name, without the typed `@` trigger. Tagged identities are not repeated
+in the submitted-reference row; that row is reserved for separately attached records. Plain typed names never become
+tags by text matching. The existing message text must match its stored draft before that draft is rendered.
+
+Mention suggestions use a stable 420px desktop width, capped to the viewport with 16px gutters. The positioning library
+must not replace that width with `max-content`. Initial and one-character queries show static skeleton rows and the
+typing prompt without claiming a network request; pending searches animate the same three rows and mark the list busy.
+People and committees are grouped; mobile omits the redundant trailing type labels. Errors retain retry and raw text.
+[Mention suggestion stories](../../src/modules/conversations/stories/ComposerSuggestions.stories.tsx) cover initial,
+loading, matching, ambiguity, scrolling, failure/retry, keyboard, limits and mobile states.
+[Sent tag stories](../../src/modules/conversations/stories/MessageQuestion.stories.tsx) cover identity types, repetition,
+long names, narrow wrapping, raw typed names and separate reference attachments.
 
 Run focused component tests and `pnpm --filter legislation-web check:types`. Build integration changes also require
 `pnpm --filter legislation-web build`. Verify user-facing styling changes in the browser at desktop and mobile sizes,

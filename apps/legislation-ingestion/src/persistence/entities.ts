@@ -304,6 +304,7 @@ export async function replaceEntitySnapshot(
           set: {
             familyName: sql`excluded.family_name`,
             givenName: sql`excluded.given_name`,
+            inOfficeSinceYear: sql`excluded.in_office_since_year`,
             isActive: sql`excluded.is_active`,
             jurisdictionId: sql`excluded.jurisdiction_id`,
             name: sql`excluded.name`,
@@ -494,6 +495,7 @@ export async function replaceEntitySnapshot(
             chamber: sql`excluded.chamber`,
             district: sql`excluded.district`,
             endDate: sql`excluded.end_date`,
+            endYear: sql`excluded.end_year`,
             isActive: sql`excluded.is_active`,
             officeTitle: sql`excluded.office_title`,
             organizationId: sql`excluded.organization_id`,
@@ -507,6 +509,7 @@ export async function replaceEntitySnapshot(
             sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
             startDate: sql`excluded.start_date`,
+            startYear: sql`excluded.start_year`,
             updatedAt: new Date()
           },
           target: legislativeTerms.id

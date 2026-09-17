@@ -179,6 +179,21 @@ function exactDate(value: string | undefined, field: string, diagnostics: Normal
   return undefined
 }
 
+function introducedVersionDate(versions: z.infer<typeof documentSchema>[]) {
+  const dates = new Set<string>()
+  for (const version of versions) {
+    if (!/^(?:\d{2}\/\d{2}\/\d{2,4}\s*-\s*)?Introduced$/i.test(version.note?.trim() ?? "")) {
+      continue
+    }
+    const date = z.iso.date().safeParse(version.date)
+    if (!date.success) {
+      return undefined
+    }
+    dates.add(date.data)
+  }
+  return dates.size === 1 ? [...dates][0] : undefined
+}
+
 type OrganizationReference = z.infer<typeof organizationReferenceSchema>
 
 function organizationReferenceId(value: OrganizationReference | undefined): string | undefined {
@@ -605,6 +620,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       actions,
       bill: {
         chamber: chamberFromOrganization(source.from_organization),
+        introducedAt: introducedVersionDate(source.versions),
         classification: source.classification.map((value) => value.toLowerCase().replaceAll(" ", "-")),
         id: canonicalBillId,
         identifier: source.identifier,

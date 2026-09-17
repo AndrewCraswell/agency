@@ -252,7 +252,8 @@ export async function POST(request: Request) {
       undefined,
       runId,
       presentationRecords.register,
-      previousCitationReferences
+      previousCitationReferences,
+      presentationRecords.registerContents
     )
     tools.ask_clarification = createClarificationTool(parsed.data.sessionKey, signal, () => {
       isAwaitingClarification = true
@@ -347,6 +348,7 @@ export async function POST(request: Request) {
           writer.merge(
             createCompositionStream(responseStream, {
               resolveRecord: presentationRecords.resolve,
+              resolveContent: presentationRecords.resolveContent,
               onComplete: composed.resolve,
               onInvalid: (reason) => {
                 if (reportedCompositionFailures.has(reason)) {

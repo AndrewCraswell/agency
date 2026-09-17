@@ -2,6 +2,7 @@ import type { UIMessage } from "ai"
 import { CalendarDays, FileDiff, FileText, Gavel, Landmark, ScrollText, UserRound } from "lucide-react"
 import { Badge } from "../../../components/ui/badge"
 import { messageReferenceSnapshots } from "../chatRequest"
+import { composerReferences, messageComposerDraft } from "../composerDraft"
 import * as styles from "./MessageReferences.css"
 
 const icons = {
@@ -16,7 +17,13 @@ const icons = {
 }
 
 export function MessageReferences({ message }: Readonly<{ message: UIMessage }>) {
-  const references = messageReferenceSnapshots(message)
+  const inline = composerReferences(messageComposerDraft(message))
+  const references = messageReferenceSnapshots(message).filter(
+    (reference) =>
+      !inline.some(
+        (mention) => mention.recordId === reference.recordId && mention.record.kind === reference.record.kind
+      )
+  )
   if (references.length === 0) {
     return null
   }
@@ -35,5 +42,29 @@ export function MessageReferences({ message }: Readonly<{ message: UIMessage }>)
         )
       })}
     </ul>
+  )
+}
+
+export function MessageQuestion({ message }: Readonly<{ message: UIMessage }>) {
+  return (
+    <p className={styles.question}>
+      {messageComposerDraft(message).map((segment, index) => {
+        if (segment.type === "text") {
+          return segment.text
+        }
+        const Icon = icons[segment.reference.record.kind]
+        return (
+          <span
+            key={`${segment.reference.recordId}-${index}`}
+            className={styles.inlineTag}
+            data-type="mention"
+            data-id={segment.reference.recordId}
+          >
+            <Icon className={styles.inlineIcon} aria-hidden="true" />
+            {segment.reference.record.title}
+          </span>
+        )
+      })}
+    </p>
   )
 }

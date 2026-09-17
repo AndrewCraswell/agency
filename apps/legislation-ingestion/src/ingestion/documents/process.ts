@@ -159,6 +159,10 @@ export async function persistProcessedDocument(
       .where(eq(billDocuments.id, input.documentId))
       .limit(1)
     if (existing[0]?.contentHash === extraction.contentHash && existing[0].processingStatus === "processed") {
+      if (extraction.pageCount !== undefined) {
+        await database.update(billDocuments).set({ pageCount: extraction.pageCount })
+          .where(and(eq(billDocuments.id, input.documentId), eq(billDocuments.contentHash, extraction.contentHash)))
+      }
       return "unchanged"
     }
   }
@@ -225,6 +229,7 @@ async function persistDocumentExtraction(
         ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
         contentHash: extraction.contentHash,
         contentType: input.contentType,
+        pageCount: ocr?.pageCount ?? extraction.pageCount ?? null,
         ...(ocr === undefined
           ? {
               ocrCompletedAt: null,

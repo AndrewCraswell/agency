@@ -101,8 +101,8 @@ export type LegislationQueryApi = Readonly<{
   getBillText: (input: BillTextInput) => Promise<unknown>
   getBillTimeline: (input: PageInput & EntityInput) => Promise<unknown>
   getEvent: (input: EntityInput) => Promise<unknown>
-  getOrganization: (input: EntityInput) => Promise<unknown>
-  getPerson: (input: EntityInput) => Promise<unknown>
+  getOrganization: (input: EntityInput & Pick<PageInput, "limit">) => Promise<unknown>
+  getPerson: (input: EntityInput & Pick<PageInput, "limit">) => Promise<unknown>
   getSupportingMaterial: (input: EntityInput) => Promise<unknown>
   getVote: (input: EntityInput) => Promise<unknown>
   searchAmendments: (
@@ -593,7 +593,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     "get_person",
     {
       description: "Get a canonical legislator with terms, memberships, and sponsored bills.",
-      inputSchema: entityLookupSchema("person"),
+      inputSchema: entityLookupSchema("person").extend({ limit: pageSchema.limit }),
       outputSchema
     },
     (input) => tool("get_person", input, () => service.getPerson(input), logger, telemetry)
@@ -619,7 +619,7 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
     {
       description:
         "Get a canonical legislature, chamber, committee, or subcommittee with membership and bill activity.",
-      inputSchema: entityLookupSchema("organization"),
+      inputSchema: entityLookupSchema("organization").extend({ limit: pageSchema.limit }),
       outputSchema
     },
     (input) => tool("get_organization", input, () => service.getOrganization(input), logger, telemetry)

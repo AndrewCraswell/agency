@@ -40,7 +40,117 @@ afterAll(async () => {
   await pool.end()
 })
 
+describe("mention discovery", () => {
+  it("scopes committee-name bill fallback to the selected jurisdiction", async () => {
+    const stopped = new Error("Fallback query captured")
+    const query = vi
+      .spyOn(pool, "query")
+      .mockImplementationOnce(async () => ({ rows: [], fields: [], command: "SELECT", rowCount: 0, oid: 0 }))
+      .mockImplementationOnce(async () => ({
+        rows: [["Education", "jurisdiction:us:co"]],
+        fields: [],
+        command: "SELECT",
+        rowCount: 1,
+        oid: 0
+      }))
+      .mockImplementationOnce(() => {
+        throw stopped
+      })
+    try {
+      await expect(
+        new LegislationQueryService(database).getCommitteeBillActivity({ id: "organization:education" })
+      ).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[2]?.[0]).text
+      expect(statement).toContain('"bills"."jurisdiction_id" = $')
+      expect(statement).toContain('"bills"."committees" @> $')
+      expect(query.mock.calls[2]?.[1]).toContain("jurisdiction:us:co")
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("matches all published name words independently of order and punctuation", async () => {
+    const stopped = new Error("Query captured without contacting a database")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      await expect(
+        new LegislationQueryService(database).searchPeople({ query: "Alexandria Ocasio-Cortez" })
+      ).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('"people"."name" ilike $')
+      expect(query.mock.calls[0]?.[1]).toEqual(expect.arrayContaining(["%Alexandria%", "%Ocasio%", "%Cortez%"]))
+    } finally {
+      query.mockRestore()
+    }
+  })
+  it.each(["person", "organization"] as const)("keeps %s profile subqueries qualified", async (kind) => {
+    const stopped = new Error("Query captured without contacting a database")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      const service = new LegislationQueryService(database)
+      const operation =
+        kind === "person" ? service.getPerson({ id: "person:1" }) : service.getOrganization({ id: "organization:1" })
+      await expect(operation).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain('left join "legislation"."jurisdictions"')
+      expect(statement).toContain('"organization_memberships"."is_active"')
+      expect(statement).not.toContain('where "person_id" = "id"')
+      expect(statement).not.toContain('on "id" = "organization_id"')
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it("uses parameterized bounded name similarity and restricts organizations to committees", async () => {
+    const stopped = new Error("Query captured without contacting a database")
+    const query = vi.spyOn(pool, "query").mockImplementation(() => {
+      throw stopped
+    })
+    try {
+      await expect(new LegislationQueryService(database).searchMentionRecords("Oca%sio")).rejects.toMatchObject({
+        cause: stopped
+      })
+      expect(query).toHaveBeenCalledTimes(2)
+      const statements = query.mock.calls.map((call) => z.object({ text: z.string() }).parse(call[0]).text)
+      expect(
+        statements.every((statement) => statement.includes("word_similarity(") && statement.includes("limit $"))
+      ).toBe(true)
+      expect(statements.every((statement) => !statement.includes("Oca%sio"))).toBe(true)
+      expect(statements[1]).toContain('"organizations"."classification" = $')
+      expect(statements[0]).toContain('"jurisdictions"."name"')
+      expect(query.mock.calls[0]?.[1]).toContain("%Oca\\%sio%")
+      expect(query.mock.calls[1]?.[1]).toContain("committee")
+    } finally {
+      query.mockRestore()
+    }
+  })
+})
+
 describe("bill session metadata", () => {
+  it("qualifies document section count correlation to the selected document", async () => {
+    const stopped = new Error("Captured query")
+    const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
+      throw stopped
+    })
+    try {
+      await expect(
+        new LegislationQueryService(database).getBillText({ id: "bill:1", documentId: "document:1" })
+      ).rejects.toMatchObject({ cause: stopped })
+      const statement = z.object({ text: z.string() }).parse(query.mock.calls[0]?.[0]).text
+      expect(statement).toContain(
+        '"legislation"."document_sections"."document_id" = "legislation"."bill_documents"."id"'
+      )
+      expect(statement).toContain('"legislation"."bills"."id" = "legislation"."bill_documents"."bill_id"')
+      expect(statement).not.toContain('"document_id" = "id"')
+    } finally {
+      query.mockRestore()
+    }
+  })
+
   it("joins the published session name by exact session ID in direct bill reads", async () => {
     const stopped = new Error("Query captured without contacting a database")
     const query = vi.spyOn(pool, "query").mockImplementationOnce(() => {
@@ -886,6 +996,7 @@ describe("document-backed amendments", () => {
           contentType: null,
           createdAt: new Date("2026-08-19T00:00:00.000Z"),
           documentDate: "2026-02-01",
+          pageCount: null,
           id: documentId,
           lastAttemptAt: null,
           nextAttemptAt: null,

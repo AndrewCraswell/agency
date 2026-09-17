@@ -4,7 +4,7 @@ import { expect, fn, within } from "storybook/test"
 import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
 import { ConversationResponse } from "../components/ConversationResponse"
-import { comparisonValue, recordMentionHref, type PresentationBlock } from "../composition"
+import { recordMentionHref, type PresentationBlock } from "../composition"
 import type { EvidenceSnapshot } from "../evidence"
 import { activityPart, reviewData, toolCaptures } from "./reviewFixtures"
 
@@ -25,7 +25,6 @@ invariant(
   "Missing comparison bill captures"
 )
 const selectedReference = { resultId: selectedResult.id, recordId: selected.id }
-const comparedReference = { resultId: comparedResult.id, recordId: compared.id }
 const sources: EvidenceSnapshot[] = [selected, compared].map((record, index) => ({
   id: `review-bill-source-${index + 1}`,
   citationRef: `e${index + 1}`,
@@ -34,8 +33,8 @@ const sources: EvidenceSnapshot[] = [selected, compared].map((record, index) => 
   sourceUrl: record.sourceUrl,
   content: { state: "not-collected" }
 }))
-const before = `For [AB 2652](${recordMentionHref(selectedReference)}), the latest recorded action is "${comparisonValue(selected, "latestAction")}" [1](#citation-e1)`
-const after = `Its recorded status is ${comparisonValue(selected, "status")}. [1](#citation-e1)`
+const before = `For [AB 2652](${recordMentionHref(selectedReference)}), the latest recorded action is "${[selected.billSummary?.latestAction?.date, selected.billSummary?.latestAction?.description].filter(Boolean).join(": ")}" [1](#citation-e1)`
+const after = `Its recorded status is ${selected.billSummary?.status}. [1](#citation-e1)`
 const retrieved: UIMessage["parts"] = [
   activityPart(search, "Complete").part,
   { ...activityPart(read, "Complete").part, toolCallId: "read-selected" },
@@ -57,16 +56,17 @@ const selectedCard: Extract<PresentationBlock, { state: "ready" }> = {
   records: [selected],
   spec: { root: "record", elements: { record: { type: "RecordCard", props: selectedReference, children: [] } } }
 }
-const billComparison: Extract<PresentationBlock, { state: "ready" }> = {
+const billList: Extract<PresentationBlock, { state: "ready" }> = {
   state: "ready",
-  blockId: "compared-bills",
-  records: [selected, compared],
+  blockId: "selected-bills",
+  records: [],
+  content: { id: "33333333-3333-4333-8333-333333333333", kind: "result-list", page: selectedResult },
   spec: {
-    root: "comparison",
+    root: "bills",
     elements: {
-      comparison: {
-        type: "BillComparison",
-        props: { records: [selectedReference, comparedReference], columns: ["session", "status", "latestAction"] },
+      bills: {
+        type: "ResultList",
+        props: { contentId: "33333333-3333-4333-8333-333333333333" },
         children: []
       }
     }
@@ -211,16 +211,14 @@ export const SelectedCard: Story = {
   }
 }
 
-export const MetadataComparison: Story = {
-  args: { message: composedResponse(billComparison), evidence: sources },
+export const CompactBillList: Story = {
+  args: { message: composedResponse(billList), evidence: sources },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const table = canvas.getByRole("table", { name: "Bill comparison" })
-    await expect(table).toBeVisible()
-    await expect(within(table).getAllByRole("row")).toHaveLength(3)
+    await expect(canvas.getByRole("region", { name: "Bills" })).toBeVisible()
+    await expect(canvas.queryByRole("table")).not.toBeInTheDocument()
     await expect(canvas.queryByRole("region", { name: /^Bill:/ })).not.toBeInTheDocument()
     await expect(canvas.getByRole("button", { name: "Sources 1" })).toBeVisible()
-    await expect(within(table).getByText("Vetoed", { exact: true })).toBeVisible()
   }
 }
 

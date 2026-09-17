@@ -3,8 +3,11 @@ import type { UIMessageChunk } from "ai"
 import { z } from "zod"
 import {
   answerCatalog,
+  maximumPresentationBytes,
   presentationBlockSchema,
   presentationElementSchema,
+  presentationComponentSchema,
+  presentationCitation,
   presentationReferenceSchema,
   presentationReferences,
   presentationSpecSchema,
@@ -13,10 +16,10 @@ import {
 } from "./composition"
 import { createCompositionDiagnostics, type CompositionDiagnostic } from "./compositionDiagnostics"
 import type { EntityCard } from "./entityResults"
+import { contentReferenceSchema, type PresentationContent } from "./presentationContent"
 
 const maximumBlocks = 3
 const maximumPatches = 16
-const maximumBlockBytes = 4096
 const unsafeKeys = new Set(["__proto__", "prototype", "constructor", ...Object.getOwnPropertyNames(Object.prototype)])
 const rootSchema = presentationSpecSchema.shape.root.refine((root) => !unsafeKeys.has(root))
 const patchSchema = z.union([
@@ -39,6 +42,7 @@ const textChunkSchema = z.discriminatedUnion("type", [
 
 type CompositionStreamOptions = {
   resolveRecord: (reference: PresentationReference) => EntityCard
+  resolveContent?: (reference: { contentId: string }) => PresentationContent
   onInvalid?: (reason: string) => void
   onBlock?: (block: PresentationBlock) => void
   onComplete?: (answer: ComposedAnswer) => void
@@ -47,6 +51,7 @@ export type ComposedAnswer = { text: string; blocks: PresentationBlock[]; isInte
 type PendingBlock = {
   blockId: string
   root: string
+  component?: z.infer<typeof presentationComponentSchema>
   spec: Spec
   bytes: number
   patches: number
@@ -114,6 +119,10 @@ export function createCompositionStream(
   function emit(block: PresentationBlock, controller?: ReadableStreamDefaultController<UIMessageChunk>) {
     const validated = presentationBlockSchema.parse(block)
     renderedBlocks.set(validated.blockId, validated)
+    const citation = presentationCitation(validated)
+    if (citation) {
+      renderedText += `\n[source](${citation})\n`
+    }
     controller?.enqueue({ type: "data-presentation", id: validated.blockId, data: validated })
     try {
       options.onBlock?.(presentationBlockSchema.parse(validated))
@@ -125,9 +134,12 @@ export function createCompositionStream(
   function reject(reason: string, controller?: ReadableStreamDefaultController<UIMessageChunk>) {
     report(reason)
     if (pending) {
-      const blockId = pending.blockId
+      const { blockId, component } = pending
       pending = undefined
-      emit({ state: "error", blockId }, controller)
+      emit(
+        { state: "error", blockId, component, reason: interruption || isCancelled ? "interrupted" : "presentation" },
+        controller
+      )
     }
   }
 
@@ -144,42 +156,71 @@ export function createCompositionStream(
     const spec = presentationSpecSchema.safeParse(block.spec)
     if (!spec.success) {
       report("Incomplete presentation block.")
-      emit({ state: "error", blockId: block.blockId }, controller)
+      emit({ state: "error", blockId: block.blockId, component: block.component, reason: "presentation" }, controller)
       return
     }
     const references = presentationReferences(spec.data)
-    if (references.length === 0) {
+    const element = spec.data.elements[spec.data.root]
+    const contentReference = element && contentReferenceSchema.safeParse(element.props)
+    if (references.length === 0 && !contentReference?.success) {
       report("Missing presentation reference.")
-      emit({ state: "error", blockId: block.blockId }, controller)
+      emit({ state: "error", blockId: block.blockId, component: block.component, reason: "presentation" }, controller)
       return
     }
+    let resolving = false
     try {
       if (!answerCatalog.validate(spec.data).success) {
         throw new Error("Invalid catalog element.")
       }
+      resolving = true
+      let content: PresentationContent | undefined
+      if (contentReference?.success) {
+        if (!options.resolveContent) {
+          throw new Error("Content resolver is unavailable")
+        }
+        content = options.resolveContent(contentReference.data)
+      }
       const resolvedRecords = references.map((reference) =>
         options.resolveRecord(presentationReferenceSchema.parse(reference))
       )
+      resolving = false
       const ready = presentationBlockSchema.parse({
         state: "ready",
         blockId: block.blockId,
         spec: spec.data,
-        records: resolvedRecords
+        records: resolvedRecords,
+        content
       })
       if (ready.state !== "ready") {
         return
       }
       const recordKeys = ready.records.map((record) => JSON.stringify([record.kind, record.id]))
+      if (ready.content) {
+        recordKeys.push(
+          JSON.stringify([
+            ready.content.kind,
+            ready.content.kind === "evidence" ? ready.content.evidence.id : ready.content.id
+          ])
+        )
+      }
       if (recordKeys.some((key) => records.has(key))) {
         report("Duplicate presentation record.")
-        emit({ state: "error", blockId: block.blockId }, controller)
+        emit({ state: "error", blockId: block.blockId, component: block.component, reason: "presentation" }, controller)
         return
       }
       recordKeys.forEach((key) => records.add(key))
       emit(ready, controller)
     } catch {
       report("Presentation record could not be resolved or validated.")
-      emit({ state: "error", blockId: block.blockId }, controller)
+      emit(
+        {
+          state: "error",
+          blockId: block.blockId,
+          component: block.component,
+          reason: resolving ? "records" : "presentation"
+        },
+        controller
+      )
     }
   }
 
@@ -190,6 +231,19 @@ export function createCompositionStream(
     if (isTerminated) {
       report("Presentation patch arrived after termination.")
       return
+    }
+    const identity = z
+      .object({
+        data: z.object({
+          patch: z.object({
+            path: z.string(),
+            value: z.object({ type: presentationComponentSchema })
+          })
+        })
+      })
+      .safeParse(chunk)
+    if (pending && identity.success && identity.data.data.patch.path === `/elements/${pending.root}`) {
+      pending.component = identity.data.data.patch.value.type
     }
     const parsed = specChunkSchema.safeParse(chunk)
     if (!parsed.success) {
@@ -229,7 +283,7 @@ export function createCompositionStream(
     }
     pending.bytes += encoder.encode(JSON.stringify(patch)).byteLength
     pending.patches += 1
-    if (pending.bytes > maximumBlockBytes || pending.patches > maximumPatches) {
+    if (pending.bytes > maximumPresentationBytes || pending.patches > maximumPatches) {
       reject("Presentation block size limit exceeded.", controller)
       return
     }
@@ -374,7 +428,10 @@ export function createCompositionStream(
                 report(diagnostic.reason)
                 if (renderedBlocks.size < maximumBlocks) {
                   invalidBlockId += 1
-                  emit({ state: "error", blockId: `invalid-presentation-${invalidBlockId}` }, controller)
+                  emit(
+                    { state: "error", blockId: `invalid-presentation-${invalidBlockId}`, reason: "presentation" },
+                    controller
+                  )
                 }
               }
             }

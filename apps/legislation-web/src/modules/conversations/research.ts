@@ -11,6 +11,7 @@ import { recordMentionHref } from "./composition"
 import { entityPageSchema, type EntityPage } from "./entityResults"
 import { evidenceSnapshotSchema } from "./evidence"
 import { createResearchEvidenceProjector } from "./evidenceSource.server"
+import { contentOptions, projectPresentationContents, type PresentationContent } from "./presentationContent"
 import { ResearchFailure, researchFailureCode } from "./researchFailure"
 import { isResearchTool, researchToolLabels } from "./researchTools"
 import { resultStore } from "./resultStore"
@@ -95,7 +96,8 @@ export function createResearchTools(
   queryServiceOverride?: LegislationQueryApi,
   runId: string = crypto.randomUUID(),
   onResultSet?: (page: EntityPage) => void,
-  previousCitationReferences: readonly string[] = []
+  previousCitationReferences: readonly string[] = [],
+  onContents?: (contents: PresentationContent[]) => void
 ) {
   if (environment.NODE_ENV !== "development" && !chatIsAvailable(environment)) {
     throw new Error("Research is unavailable in this environment.")
@@ -197,9 +199,15 @@ export function createResearchTools(
           if (resultSet) {
             onResultSet?.(resultSet)
           }
+          const evidence = projectEvidence(parsed.data.structuredContent.data)
+          const contents = onContents
+            ? projectPresentationContents(name, parsed.data.structuredContent.data, evidence, resultSet)
+            : []
+          onContents?.(contents)
           return {
             ...parsed.data.structuredContent,
-            evidence: projectEvidence(parsed.data.structuredContent.data),
+            evidence,
+            ...(onContents ? { presentationOptions: contents.map(contentOptions) } : {}),
             resultSet
           }
         } catch (error) {

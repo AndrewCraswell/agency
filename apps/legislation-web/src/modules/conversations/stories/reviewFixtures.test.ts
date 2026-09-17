@@ -1,10 +1,25 @@
 import { safeValidateUIMessages } from "ai"
 import { describe, expect, it } from "vitest"
-import { entityKindSchema } from "../entityResults"
+import { entityKindSchema, projectEntityResult } from "../entityResults"
 import { researchToolLabels } from "../researchTools"
 import { activityPart, activityStates, capturedCards, failureCodes, reviewData, toolCaptures } from "./reviewFixtures"
 
 describe("captured Storybook review", () => {
+  it("projects current card fields from retained source data", () => {
+    for (const capture of reviewData.captures) {
+      if (!capture.output.resultSet) {
+        continue
+      }
+      const projected = projectEntityResult(capture.toolName, capture.output.data)
+      for (const record of capture.output.resultSet.items) {
+        expect(record).toEqual(projected?.items.find((item) => item.id === record.id))
+      }
+    }
+    expect(capturedCards.find(({ record }) => record.id === "bill:ca:20232024:ab:2652")?.record.identifier).toBe(
+      "AB 2652"
+    )
+  })
+
   it("covers every tool and card kind using successful real captures", () => {
     expect(reviewData.failures).toEqual([])
     expect(toolCaptures.map((capture) => capture.toolName)).toEqual(Object.keys(researchToolLabels))

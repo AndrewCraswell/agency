@@ -6,14 +6,16 @@ import type { ReactNode } from "react"
 import invariant from "tiny-invariant"
 import { StickToBottom } from "use-stick-to-bottom"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { recordMentionHref, type BillComparisonProps, type PresentationBlock } from "../composition"
+import { recordMentionHref, type PresentationBlock } from "../composition"
 import type { EntityCard, EntityPage } from "../entityResults"
 import type { EvidenceSnapshot } from "../evidence"
 import type { MeetingDetails, VoteDetails } from "../recordDetails"
 import { ChatProviders } from "./ChatProviders"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
 import { ConversationResponse } from "./ConversationResponse"
+import { CompactRecordCard, RecordCard } from "./EntityResults"
 import { EvidencePanel } from "./EvidencePanel"
+import { RecordGroup } from "./RecordGroup"
 import { ResearchActivity } from "./ResearchActivity"
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn<typeof import("@sentry/nextjs").captureException>() }))
@@ -23,6 +25,7 @@ afterEach(() => {
   cleanup()
   vi.clearAllMocks()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 const first: EvidenceSnapshot = {
@@ -119,6 +122,350 @@ function inlineResponse(parts: UIMessage["parts"], isRunning = false) {
 }
 
 describe("response presentation snapshots", () => {
+  it("renders published service years without adding a month or day", () => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "person",
+      fields: [{ label: "In office since", value: "1997" }],
+      personSummary: { term: { startYear: 2025, endYear: 2027, isActive: true } }
+    }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    expect(screen.getByText("1997")).toBeDefined()
+    expect(screen.getByText("2025 to 2027")).toBeDefined()
+    expect(screen.queryByText(/Jan 1/)).toBeNull()
+  })
+
+  it.each([true, false])(
+    "renders a group with one shared action and preserved navigation: compact=%s",
+    async (compact) => {
+      const vote: EntityCard = {
+        ...selectedRecord,
+        kind: "vote",
+        id: "vote:one",
+        title: "Published vote",
+        voteSummary: { outcome: "pass" },
+        tallies: [
+          { label: "Yes", value: 7 },
+          { label: "No", value: 4 },
+          { label: "Other", value: 2 }
+        ]
+      }
+      const onOpen = vi.fn<(id: string) => void>()
+      render(
+        <RecordGroup
+          compact={compact}
+          items={[
+            { record: selectedRecord, resultId },
+            { record: vote, resultId }
+          ]}
+          onOpenRecord={onOpen}
+        />
+      )
+      const group = screen.getByRole("region", { name: "2 records in this answer" })
+      expect(within(group).getByRole("button", { name: "Add all to issue" })).toBeDefined()
+      expect(within(group).queryByRole("button", { name: "Add to issue" })).toBeNull()
+      expect(within(group).getByRole("link", { name: selectedRecord.title }).getAttribute("href")).toBe(
+        selectedRecord.sourceUrl
+      )
+      await userEvent.setup().click(within(group).getByRole("button", { name: vote.title }))
+      expect(onOpen).toHaveBeenCalledWith(vote.id)
+      expect(within(group).queryAllByText("7 yes, 4 no, 2 other")).toHaveLength(compact ? 1 : 0)
+      expect(within(group).getByText("Passed")).toBeDefined()
+      expect(group.querySelectorAll("dl")).toHaveLength(compact ? 0 : 2)
+    }
+  )
+
+  it.each(["HAMDT 10", "HAMDT 10 to HR 152"])("shows amendment identifier only in the title: %s", (title) => {
+    const record: EntityCard = { ...selectedRecord, kind: "amendment", identifier: "HAMDT 10", title }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    const heading = screen.getByRole("link", { name: title })
+    expect(heading.textContent).toBe(title)
+    const eyebrow = screen.getByText("Amendment").parentElement
+    expect(eyebrow?.textContent).not.toContain(record.identifier)
+    expect(screen.getByRole("region", { name: `Amendment: ${title}` }).textContent?.split("HAMDT 10")).toHaveLength(2)
+  })
+
+  it("keeps bill identifiers in the card header", () => {
+    const record = { ...selectedRecord, identifier: "AB 2652", title: "AB 2652 Education" }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    expect(screen.getByText("Bill").parentElement?.textContent).toContain("AB 2652")
+    expect(screen.getByRole("link", { name: record.title }).textContent).toBe("Education")
+  })
+
+  it.each([false, true])("omits the amendment's bill description with grouped=%s", (isGrouped) => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "amendment",
+      title: "HAMDT 10",
+      fields: [{ label: "Bill", value: "HR 152", detail: "Making supplemental appropriations for the fiscal year." }]
+    }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} isGrouped={isGrouped} />)
+    expect(screen.getByText("HR 152")).toBeDefined()
+    expect(screen.queryByText("Making supplemental appropriations for the fiscal year.")).toBeNull()
+    expect(record.fields[0]?.detail).toBe("Making supplemental appropriations for the fiscal year.")
+  })
+
+  it.each([false, true])("omits committee role subtext with grouped=%s", (isGrouped) => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "person",
+      title: "Published member",
+      fields: [{ label: "Committee roles", value: "4", detail: "Recorded active roles" }]
+    }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} isGrouped={isGrouped} />)
+    expect(screen.getByText("Committee roles")).toBeDefined()
+    expect(screen.getByText("4")).toBeDefined()
+    expect(screen.queryByText("Recorded active roles")).toBeNull()
+    expect(record.fields[0]?.detail).toBe("Recorded active roles")
+  })
+
+  it.each([false, true])("omits meeting count subtext with grouped=%s", (isGrouped) => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "meeting",
+      title: "Published meeting",
+      fields: [
+        { label: "Agenda items", value: "0", detail: "Recorded" },
+        { label: "Documents", value: "2", detail: "Recorded" },
+        { label: "Location detail", value: "Capitol" }
+      ]
+    }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} isGrouped={isGrouped} />)
+    expect(screen.getByText("Agenda items")).toBeDefined()
+    expect(screen.getByText("Documents")).toBeDefined()
+    expect(screen.getByText("0")).toBeDefined()
+    expect(screen.getByText("2")).toBeDefined()
+    expect(screen.queryByText("Recorded")).toBeNull()
+    expect(screen.getByText("Capitol")).toBeDefined()
+    expect(record.fields[0]?.detail).toBe("Recorded")
+  })
+
+  it.each([
+    ["House amendment offered", "Amendment offered"],
+    ["House amendment offered.", "Amendment offered."],
+    ["Referred to the House committee", "Referred to the House committee"]
+  ])("formats amendment latest action %s without changing the source", (detail, expected) => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "amendment",
+      title: "HAMDT 2",
+      fields: [{ label: "Latest action", value: "2013-01-03", detail }]
+    }
+    render(<RecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    expect(screen.getByText(expected)).toBeDefined()
+    expect(screen.getByText("Jan 3, 2013")).toBeDefined()
+    expect(record.fields[0]?.detail).toBe(detail)
+  })
+
+  it("shows the new compact row metadata and neutral supplied status without account actions", () => {
+    const record: EntityCard = {
+      ...selectedRecord,
+      subtitle: "House, 2023-2024",
+      billSummary: {
+        status: "In committee",
+        latestAction: { date: "2024-05-16", description: "Held under submission" }
+      }
+    }
+    render(<CompactRecordCard record={record} resultId={resultId} onOpenVote={() => undefined} />)
+    const link = screen.getByRole("link", { name: record.title })
+    expect(link.getAttribute("href")).toBe(record.sourceUrl)
+    expect(link.textContent).toContain("Latest action May 16, 2024")
+    expect(link.textContent).toContain("In committee")
+    expect(screen.queryByRole("button", { name: "Follow record" })).toBeNull()
+  })
+
+  it.each([
+    [true, ["Serving"]],
+    [false, ["Inactive"]],
+    [undefined, []]
+  ] as const)("uses only supplied compact person activity: %s", (isActive, expected) => {
+    render(
+      <CompactRecordCard
+        record={{ ...selectedRecord, kind: "person", subtitle: "Democratic", personSummary: { isActive } }}
+        resultId={resultId}
+        onOpenVote={() => undefined}
+      />
+    )
+    expect(screen.getByText("Democratic")).toBeDefined()
+    expect(screen.queryAllByText(/^(Serving|Inactive)$/).map((element) => element.textContent)).toEqual(expected)
+  })
+
+  it("shows compact vote counts without double-counting Other or treating unrecorded votes as abstentions", async () => {
+    const onOpen = vi.fn<(id: string) => void>()
+    const record: EntityCard = {
+      ...selectedRecord,
+      kind: "vote",
+      subtitle: "2017-01-06T01:30:00+06:00",
+      tallies: [
+        { label: "Yes", value: 231 },
+        { label: "No", value: 187 },
+        { label: "Other", value: 15 },
+        { label: "Absent", value: 10 },
+        { label: "Not recorded", value: 2 }
+      ]
+    }
+    render(<CompactRecordCard record={record} resultId={resultId} onOpenVote={onOpen} />)
+    expect(screen.getByText("231 yes")).toBeDefined()
+    expect(screen.getByText("187 no")).toBeDefined()
+    expect(screen.getByText("15 other")).toBeDefined()
+    expect(screen.getByText("2 not recorded")).toBeDefined()
+    expect(screen.getByText("Jan 5, 2017")).toBeDefined()
+    await userEvent.setup().click(screen.getByRole("button", { name: record.title }))
+    expect(onOpen).toHaveBeenCalledWith(record.id)
+  })
+
+  it("does not invent compact counts, metadata, or status when the source omitted them", () => {
+    render(
+      <CompactRecordCard
+        record={{
+          ...selectedRecord,
+          kind: "organization",
+          subtitle: undefined,
+          sourceUrl: null,
+          billSummary: undefined
+        }}
+        resultId={resultId}
+        onOpenVote={() => undefined}
+      />
+    )
+    const link = screen.getByRole("link", { name: selectedRecord.title })
+    expect(link.textContent).toBe(selectedRecord.title)
+    expect(link.getAttribute("href")).toBe(`/records/organization/${selectedRecord.id}?result=${resultId}`)
+  })
+
+  it.each([
+    ["bill", ["Follow record", "Add to issue"]],
+    ["person", ["Follow record", "Add to issue"]],
+    ["organization", ["Follow record", "Add to issue"]],
+    ["amendment", ["Add to issue"]],
+    ["vote", ["Add to issue"]],
+    ["document", ["Add to issue"]],
+    ["material", ["Add to issue"]]
+  ] satisfies [EntityCard["kind"], string[]][])(
+    "renders ghost %s commands and follow toggles with the prototype alert",
+    async (kind, labels) => {
+      const alert = vi.fn<(message: string) => void>()
+      vi.stubGlobal("alert", alert)
+      const record: EntityCard = { ...selectedRecord, kind }
+      render(<InlineProviders>{inlineResponse([presentationPart(record)])}</InlineProviders>)
+      for (const label of labels) {
+        const button = screen.getByRole("button", { name: label })
+        const isFollow = label === "Follow record"
+        expect(button.getAttribute("data-slot")).toBe(isFollow ? "toggle" : "button")
+        expect(button.getAttribute("aria-pressed")).toBe(isFollow ? "false" : null)
+        expect(button.getAttribute("data-variant")).toBe(isFollow ? null : "ghost")
+        await userEvent.setup().click(button)
+        expect(alert).toHaveBeenLastCalledWith("Not implemented")
+        expect(button.getAttribute("aria-pressed")).toBe(isFollow ? "false" : null)
+        expect(button.textContent).toBe(isFollow ? "Follow" : label)
+      }
+      expect(alert).toHaveBeenCalledTimes(labels.length)
+    }
+  )
+
+  it.each([
+    ["bill", "Open", "link"],
+    ["person", "Open", "link"],
+    ["organization", "Open", "link"],
+    ["amendment", "Open", "link"],
+    ["material", "Open", "link"],
+    ["document", "Open in reader", "link"],
+    ["meeting", "Open", "button"],
+    ["vote", "Open", "button"]
+  ] satisfies [EntityCard["kind"], string, string][])(
+    "renders the %s primary action as a shadcn button",
+    async (kind, label, role) => {
+      const open = vi.fn<(id: string) => void>()
+      const record = { ...selectedRecord, kind }
+      render(<RecordCard record={record} resultId={resultId} onOpenVote={open} />)
+      const action = screen.getByRole(role, { name: label })
+      expect(action.getAttribute("data-slot")).toBe("button")
+      expect(action.getAttribute("data-variant")).toBe("ghost")
+      expect(action.getAttribute("data-size")).toBe("xs")
+      if (kind === "vote" || kind === "meeting") {
+        await userEvent.setup().click(action)
+      }
+      expect(open.mock.calls).toEqual(role === "button" ? [[record.id]] : [])
+      let href = record.sourceUrl
+      let rel: string | null = "noopener noreferrer"
+      if (["person", "organization", "material"].includes(kind)) {
+        href = `/records/${kind}/${record.id}?result=${resultId}`
+        rel = null
+      }
+      if (role === "button") {
+        href = null
+        rel = null
+      }
+      expect(action.getAttribute("href")).toBe(href)
+      expect(action.getAttribute("rel")).toBe(rel)
+    }
+  )
+
+  it.each(["bill", "document"] as const)("omits version comparison from %s cards", (kind) => {
+    render(<RecordCard record={{ ...selectedRecord, kind }} resultId={resultId} onOpenVote={() => undefined} />)
+    expect(screen.queryByRole("button", { name: "Compare versions" })).toBeNull()
+  })
+
+  it("shows interrupted content without a fake Retry button", () => {
+    const pending: UIMessage["parts"][number] = {
+      type: "data-presentation",
+      id: "stopped",
+      data: { state: "pending", blockId: "stopped" }
+    }
+    render(<InlineProviders>{inlineResponse([pending])}</InlineProviders>)
+    expect(screen.getByRole("region", { name: "Content incomplete" })).toBeDefined()
+    expect(screen.getByRole("alert").textContent).toContain("The response ended before this content was ready.")
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
+  })
+
+  it("keeps following state in the footer without adding a header indicator", async () => {
+    const alert = vi.fn<(message: string) => void>()
+    vi.stubGlobal("alert", alert)
+    render(
+      <RecordCard
+        record={selectedRecord}
+        resultId={resultId}
+        onOpenVote={vi.fn<(recordId: string) => void>()}
+        isFollowing
+      />
+    )
+    const toggle = screen.getByRole("button", { name: "Follow record", pressed: true })
+    expect(toggle.textContent).toBe("Following")
+    expect(toggle.getAttribute("data-state")).toBe("on")
+    expect(screen.getAllByText("Following")).toHaveLength(1)
+    expect(screen.getByText("Bill").parentElement?.textContent).not.toContain("Following")
+    expect(document.querySelector(".lucide-bookmark")).toBeNull()
+    toggle.focus()
+    await userEvent.setup().keyboard(" ")
+    expect(alert).toHaveBeenCalledWith("Not implemented")
+    expect(toggle.getAttribute("aria-pressed")).toBe("true")
+    expect(document.activeElement).toBe(toggle)
+  })
+
+  it.each(["2017-01-05T19:30:00.000Z", "2017-01-06T01:30:00+06:00"])(
+    "formats composed vote dates in UTC and retains the timestamp: %s",
+    (subtitle) => {
+      const record: EntityCard = { ...selectedRecord, kind: "vote", title: "Recorded vote", subtitle }
+      render(<InlineProviders>{inlineResponse([presentationPart(record)])}</InlineProviders>)
+      const expected = new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC"
+      }).format(new Date("2017-01-05T19:30:00Z"))
+      const date = screen.getByText(expected)
+      expect(date.tagName).toBe("TIME")
+      expect(date.getAttribute("datetime")).toBe(subtitle)
+      expect(screen.queryByText(subtitle)).toBeNull()
+    }
+  )
+
+  it.each([undefined, "invalid-date"])("omits unavailable vote dates: %s", (subtitle) => {
+    const record: EntityCard = { ...selectedRecord, kind: "vote", title: "Recorded vote", subtitle }
+    render(<InlineProviders>{inlineResponse([presentationPart(record)])}</InlineProviders>)
+    expect(screen.getByRole("region", { name: "Vote: Recorded vote" }).querySelector("time")).toBeNull()
+  })
+
   it("reuses unchanged answer parsing while still applying new message snapshots", () => {
     const current = message("Existing answer text.")
     const onEvidence = vi.fn<(selection: CitationSelection) => void>()
@@ -1132,109 +1479,83 @@ describe("ConversationResponse inline composition", () => {
     expect(table.parentElement?.style.height).toBe("")
   })
 
-  const comparisonBills: EntityCard[] = [
+  it.each([
     {
-      ...selectedRecord,
-      id: "bill:first",
-      title: "First education bill",
-      subtitle: "2023-2024",
-      billSummary: {
-        status: "In committee",
-        latestAction: { date: "2024-04-18", description: "Referred to Education" }
-      }
+      reason: "presentation",
+      component: "ResultList",
+      title: "Content could not be displayed",
+      body: "This content could not be displayed."
     },
-    { ...selectedRecord, id: "bill:second", title: "Second education bill", sourceUrl: null, billSummary: undefined }
-  ]
-  function comparisonPart(columns: BillComparisonProps["columns"] = ["status", "latestAction"]) {
-    const data = {
-      state: "ready",
-      blockId: "comparison",
-      spec: {
-        root: "comparison",
-        elements: {
-          comparison: {
-            type: "BillComparison",
-            props: {
-              records: comparisonBills.map((record) => ({ resultId, recordId: record.id })),
-              columns
-            },
-            children: []
-          }
-        }
-      },
-      records: comparisonBills
-    } satisfies PresentationBlock
-    return { type: "data-presentation", id: data.blockId, data } satisfies UIMessage["parts"][number]
-  }
-
-  it("renders only selected comparison columns in order between prose without duplicate cards or sources", async () => {
-    const user = userEvent.setup()
-    render(
-      inlineResponse([
-        { type: "text", text: "Before comparison." },
-        comparisonPart(),
-        { type: "text", text: "After comparison." }
-      ]),
-      { wrapper: InlineProviders }
-    )
-    const table = screen.getByRole("table", { name: "Bill comparison" })
-    const content = within(table)
-    expect(content.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
-      "Bill",
-      "Status",
-      "Latest action"
-    ])
-    expect(content.getAllByRole("rowheader").map((header) => header.textContent)).toEqual([
-      "First education billOpen record in a new tab: First education bill",
-      "Second education bill"
-    ])
-    expect(content.getByText("2024-04-18: Referred to Education")).toBeDefined()
-    expect(content.getAllByText("Not returned")).toHaveLength(2)
-    expect(screen.queryByText("2023-2024")).toBeNull()
-    expect(screen.queryByRole("region", { name: /^Bill:/ })).toBeNull()
-    expect(screen.queryByRole("region", { name: "Sources" })).toBeNull()
-    expect(screen.getByText("Before comparison.").compareDocumentPosition(table)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
-    expect(table.compareDocumentPosition(screen.getByText("After comparison."))).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
-    await user.tab()
-    expect(document.activeElement).toBe(screen.getByRole("region", { name: "Bill comparison" }))
-    await user.tab()
-    expect(document.activeElement).toBe(content.getByRole("link", { name: "First education bill" }))
-  })
-
-  it("respects selected column order and replaces a pending comparison in place", () => {
-    const pending: UIMessage["parts"][number] = {
-      type: "data-presentation",
-      id: "comparison",
-      data: { state: "pending", blockId: "comparison" }
+    {
+      reason: "records",
+      component: "RecordCard",
+      title: "Record unavailable",
+      body: "A selected record could not be loaded."
+    },
+    {
+      reason: "interrupted",
+      component: "ResultList",
+      title: "Content incomplete",
+      body: "The response ended before this content was ready."
     }
-    const view = render(inlineResponse([pending], true), { wrapper: InlineProviders })
-    expect(screen.getByText("Loading content...")).toBeDefined()
-    view.rerender(inlineResponse([pending, comparisonPart(["latestAction", "session"])], true))
-    const table = screen.getByRole("table", { name: "Bill comparison" })
-    expect(
-      within(table)
-        .getAllByRole("columnheader")
-        .map((header) => header.textContent)
-    ).toEqual(["Bill", "Latest action", "Session"])
-    expect(within(table).getByText("2023-2024")).toBeDefined()
-    expect(within(table).queryByText("In committee")).toBeNull()
-    view.rerender(
-      inlineResponse([comparisonPart(["latestAction", "session"]), { type: "text", text: "Appended prose" }])
-    )
-    expect(screen.getByRole("table", { name: "Bill comparison" })).toBe(table)
-  })
+  ] as const)(
+    "distinguishes $reason failures for $component and preserves prose and citations",
+    ({ reason, component, title, body }) => {
+      render(
+        <ConversationResponse
+          message={{
+            id: "failed-visual",
+            role: "assistant",
+            parts: [
+              { type: "text", text: "Before [1](#citation-first)." },
+              {
+                type: "data-presentation",
+                id: "failed-block",
+                data: { state: "error", blockId: "failed-block", reason, component }
+              },
+              { type: "text", text: "After [1](#citation-first)." }
+            ]
+          }}
+          evidence={[first]}
+          isRunning={false}
+          isIncomplete={false}
+          onEvidence={() => undefined}
+        />,
+        { wrapper: InlineProviders }
+      )
+      expect(screen.getByRole("region", { name: title })).toBeDefined()
+      expect(screen.getByRole("alert").textContent).toBe(body)
+      expect(screen.getAllByRole("button", { name: "Read source 1: First provision" })).toHaveLength(2)
+      expect(screen.getByText(/^Before/)).toBeDefined()
+      expect(screen.getByText(/^After/)).toBeDefined()
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull()
+    }
+  )
 
-  it("does not render an entire comparison when any snapshot does not match", () => {
-    const part = comparisonPart()
+  it("renders a selected bill page as compact rows between prose", () => {
+    const contentId = "33333333-3333-4333-8333-333333333333"
+    const page = resultPart().output.resultSet
+    const data: PresentationBlock = {
+      state: "ready",
+      blockId: "bill-list",
+      records: [],
+      content: { id: contentId, kind: "result-list", page },
+      spec: { root: "bills", elements: { bills: { type: "ResultList", props: { contentId }, children: [] } } }
+    }
     render(
       inlineResponse([
-        { ...part, data: { ...part.data, records: [{ ...selectedRecord, id: "foreign" }, comparisonBills[1]] } }
+        { type: "text", text: "Before list." },
+        { type: "data-presentation", id: data.blockId, data },
+        { type: "text", text: "After list." }
       ]),
       { wrapper: InlineProviders }
     )
-    expect(screen.getByText("This content could not be displayed.")).toBeDefined()
+    const list = screen.getByRole("region", { name: "Bills" })
+    expect(within(list).getAllByRole("link")).toHaveLength(page.items.length)
+    expect(list.querySelector("dl")).toBeNull()
     expect(screen.queryByRole("table")).toBeNull()
-    expect(screen.queryByText("First education bill")).toBeNull()
+    expect(screen.getByText("Before list.").compareDocumentPosition(list)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(list.compareDocumentPosition(screen.getByText("After list."))).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
   function mentionedResult(record: EntityCard = selectedRecord) {
@@ -1476,12 +1797,12 @@ describe("ConversationResponse inline composition", () => {
       data: { state: "pending", blockId: "selected-record" }
     }
     const view = render(inlineResponse([pending], true), { wrapper: InlineProviders })
-    expect(screen.getByText("Loading content...").tagName).toBe("OUTPUT")
+    expect(screen.getByRole("status", { name: "Loading content..." }).tagName).toBe("OUTPUT")
     view.rerender(inlineResponse([pending, presentationPart()], true))
     expect(screen.queryByText("Loading content...")).toBeNull()
     expect(screen.getAllByRole("region", { name: "Bill: Selected published bill" })).toHaveLength(1)
     view.rerender(inlineResponse([pending]))
-    expect(screen.getByText("This content could not be displayed.")).toBeDefined()
+    expect(screen.getByText("The response ended before this content was ready.")).toBeDefined()
     expect(screen.queryByText("Loading content...")).toBeNull()
     expect(screen.queryByText(selectedRecord.title)).toBeNull()
   })
@@ -1579,7 +1900,7 @@ describe("ConversationResponse inline composition", () => {
       part: { ...ready, data: { ...ready.data, records: [{ ...selectedRecord, id: "other" }] } }
     },
     { name: "unknown block state", part: { ...ready, data: { state: "unknown", blockId: ready.id } } },
-    { name: "explicit error", part: { ...ready, data: { state: "error", blockId: ready.id } } },
+    { name: "explicit error", part: { ...ready, data: { state: "error", blockId: ready.id, reason: "presentation" } } },
     {
       name: "missing root element",
       part: { ...ready, data: { ...ready.data, spec: { root: "absent", elements: {} } } }

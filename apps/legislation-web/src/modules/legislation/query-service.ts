@@ -1810,7 +1810,16 @@ export class LegislationQueryService {
   }
 
   async getPerson(lookup: EntityLookup) {
-    const person = await this.#database.select().from(people).where(eq(people.id, lookup.id)).limit(1)
+    const person = await this.#database
+      .select({
+        ...getTableColumns(people),
+        jurisdictionName: jurisdictions.name,
+        recordedCommitteeRoleCount: sql<number>`(select count(distinct (${organizationMemberships.organizationId}, ${organizationMemberships.role}))::integer from ${organizationMemberships} join ${organizations} on ${organizations.id} = ${organizationMemberships.organizationId} where ${organizationMemberships.personId} = ${people.id} and ${organizationMemberships.isActive} = true and ${organizations.classification} in ('committee', 'subcommittee'))`
+      })
+      .from(people)
+      .leftJoin(jurisdictions, eq(jurisdictions.id, people.jurisdictionId))
+      .where(eq(people.id, lookup.id))
+      .limit(1)
     if (person[0] === undefined) {
       throw new LegislationError("not_found", `Person ${lookup.id} was not found`)
     }
@@ -1829,6 +1838,9 @@ export class LegislationQueryService {
   async searchPeople(input: PersonSearchInput) {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
+    const nameWords = input.query?.match(/[\p{L}\p{N}]+/gu) ?? []
+    const nameMatch =
+      nameWords.length > 0 ? and(...nameWords.map((word) => sql`${people.name} ilike ${`%${word}%`}`)) : sql`false`
     const rows = await this.#database
       .selectDistinct({ person: people })
       .from(people)
@@ -1842,7 +1854,7 @@ export class LegislationQueryService {
           input.isActive === undefined ? undefined : eq(people.isActive, input.isActive),
           input.query === undefined
             ? undefined
-            : sql`(${people.name} ilike ${`%${input.query}%`} or ${people.givenName} ilike ${`%${input.query}%`} or ${people.familyName} ilike ${`%${input.query}%`} or ${people.party} ilike ${`%${input.query}%`})`
+            : sql`(${people.name} ilike ${`%${input.query}%`} or ${people.givenName} ilike ${`%${input.query}%`} or ${people.familyName} ilike ${`%${input.query}%`} or ${people.party} ilike ${`%${input.query}%`} or ${nameMatch})`
         )
       )
       .orderBy(asc(people.name), asc(people.id))
@@ -1858,25 +1870,68 @@ export class LegislationQueryService {
     }
   }
 
+  async searchMentionRecords(query: string) {
+    const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`
+    const personScore = sql<number>`word_similarity(${query}, ${people.name})`
+    const committeeScore = sql<number>`word_similarity(${query}, ${organizations.name})`
+    const [personMatches, committeeMatches] = await Promise.all([
+      this.#database
+        .select({ ...getTableColumns(people), jurisdictionName: jurisdictions.name })
+        .from(people)
+        .leftJoin(jurisdictions, eq(people.jurisdictionId, jurisdictions.id))
+        .where(sql`(${people.name} ilike ${pattern} or ${personScore} > 0.35)`)
+        .orderBy(desc(personScore), asc(people.name), asc(people.id))
+        .limit(5),
+      this.#database
+        .select({ ...getTableColumns(organizations), jurisdictionName: jurisdictions.name })
+        .from(organizations)
+        .leftJoin(jurisdictions, eq(organizations.jurisdictionId, jurisdictions.id))
+        .where(
+          and(
+            eq(organizations.classification, "committee"),
+            sql`(${organizations.name} ilike ${pattern} or ${committeeScore} > 0.35)`
+          )
+        )
+        .orderBy(desc(committeeScore), asc(organizations.name), asc(organizations.id))
+        .limit(5)
+    ])
+    return { people: { items: personMatches }, committees: { items: committeeMatches } }
+  }
+
   async getOrganization(lookup: EntityLookup) {
     const organization = await this.#database
-      .select()
+      .select({
+        ...getTableColumns(organizations),
+        jurisdictionName: jurisdictions.name,
+        recordedMemberCount: sql<number>`(select count(distinct ${organizationMemberships.personId})::integer from ${organizationMemberships} where ${organizationMemberships.organizationId} = ${organizations.id} and ${organizationMemberships.isActive} = true)`,
+        chairName: sql<
+          string | null
+        >`(select string_agg(distinct ${people.name}, ', ' order by ${people.name}) from ${organizationMemberships} join ${people} on ${people.id} = ${organizationMemberships.personId} where ${organizationMemberships.organizationId} = ${organizations.id} and ${organizationMemberships.isActive} = true and ${organizationMemberships.role} in ('chair', 'co-chair'))`
+      })
       .from(organizations)
+      .leftJoin(jurisdictions, eq(jurisdictions.id, organizations.jurisdictionId))
       .where(eq(organizations.id, lookup.id))
       .limit(1)
     if (organization[0] === undefined) {
       throw new LegislationError("not_found", `Organization ${lookup.id} was not found`)
     }
-    const [children, memberships, billActivity] = await Promise.all([
+    const [children, memberships, billActivity, meetings] = await Promise.all([
       this.#database
         .select()
         .from(organizations)
         .where(eq(organizations.parentOrganizationId, lookup.id))
         .orderBy(asc(organizations.name)),
       this.getMemberships({ limit: lookup.limit, organizationId: lookup.id }),
-      this.getCommitteeBillActivity(lookup)
+      this.getCommitteeBillActivity(lookup),
+      this.searchEvents({ organizationId: lookup.id, from: new Date(), status: ["scheduled"], limit: 1 })
     ])
-    return { billActivity, children, memberships, organization: organization[0] }
+    return {
+      billActivity,
+      children,
+      memberships,
+      organization: organization[0],
+      nextMeeting: meetings.items[0] ?? null
+    }
   }
 
   async searchOrganizations(input: OrganizationSearchInput) {
@@ -1973,7 +2028,7 @@ export class LegislationQueryService {
       linkedRows.length > 0
         ? undefined
         : await this.#database
-            .select({ name: organizations.name })
+            .select({ name: organizations.name, jurisdictionId: organizations.jurisdictionId })
             .from(organizations)
             .where(eq(organizations.id, lookup.id))
             .limit(1)
@@ -1983,7 +2038,12 @@ export class LegislationQueryService {
         : await this.#database
             .select({ bill: bills })
             .from(bills)
-            .where(sql`${organization[0].name} = any(${bills.committees})`)
+            .where(
+              and(
+                eq(bills.jurisdictionId, organization[0].jurisdictionId),
+                arrayContains(bills.committees, [organization[0].name])
+              )
+            )
             .orderBy(asc(bills.introducedAt), asc(bills.id))
             .limit(limit + 1)
             .offset(offset)
@@ -2156,7 +2216,15 @@ export class LegislationQueryService {
   }
 
   async getVote(lookup: EntityLookup) {
-    const vote = await this.#database.select().from(votes).where(eq(votes.id, lookup.id)).limit(1)
+    const vote = await this.#database
+      .select({
+        ...getTableColumns(votes),
+        organizationName: organizations.name
+      })
+      .from(votes)
+      .leftJoin(organizations, eq(organizations.id, votes.organizationId))
+      .where(eq(votes.id, lookup.id))
+      .limit(1)
     if (vote[0] === undefined) {
       throw new LegislationError("not_found", `Vote ${lookup.id} was not found`)
     }
@@ -2398,7 +2466,18 @@ export class LegislationQueryService {
         votes: []
       }
     }
-    const amendment = await this.#database.select().from(amendments).where(eq(amendments.id, lookup.id)).limit(1)
+    const amendment = await this.#database
+      .select({
+        ...getTableColumns(amendments),
+        jurisdictionName: jurisdictions.name,
+        billIdentifier: bills.identifier,
+        billTitle: bills.title
+      })
+      .from(amendments)
+      .leftJoin(jurisdictions, eq(jurisdictions.id, amendments.jurisdictionId))
+      .leftJoin(bills, eq(bills.id, amendments.billId))
+      .where(eq(amendments.id, lookup.id))
+      .limit(1)
     if (amendment[0] === undefined) {
       throw new LegislationError("not_found", `Amendment ${lookup.id} was not found`)
     }
@@ -2731,7 +2810,20 @@ export class LegislationQueryService {
     const limit = Math.min(Math.max(lookup.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
     const offset = decodeOffset(lookup.cursor)
     const [links, sections, aggregate] = await Promise.all([
-      this.#database.select().from(supportingMaterialLinks).where(eq(supportingMaterialLinks.materialId, lookup.id)),
+      this.#database
+        .select({
+          ...getTableColumns(supportingMaterialLinks),
+          billIdentifier: bills.identifier,
+          amendmentIdentifier: amendments.printedIdentifier,
+          meetingName: legislativeEvents.name,
+          organizationName: organizations.name
+        })
+        .from(supportingMaterialLinks)
+        .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
+        .leftJoin(amendments, eq(amendments.id, supportingMaterialLinks.amendmentId))
+        .leftJoin(legislativeEvents, eq(legislativeEvents.id, supportingMaterialLinks.eventId))
+        .leftJoin(organizations, eq(organizations.id, supportingMaterialLinks.organizationId))
+        .where(eq(supportingMaterialLinks.materialId, lookup.id)),
       this.#database
         .select()
         .from(supportingMaterialSections)
@@ -2754,7 +2846,6 @@ export class LegislationQueryService {
       material: {
         ...materialRead,
         byteSize: null,
-        pageCount: null,
         sectionCount: aggregate[0]?.sectionCount ?? 0,
         storedUrl: null,
         textCharacterCount: aggregate[0]?.textCharacterCount ?? 0
@@ -2921,7 +3012,18 @@ export class LegislationQueryService {
     const childLimit = Math.min(Math.max(lookup.childLimit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const childOffset = decodeOffset(lookup.childCursor)
     const bill = await this.#database
-      .select({ ...getTableColumns(bills), sessionName: legislativeSessions.name })
+      .select({
+        ...getTableColumns(bills),
+        sessionName: legislativeSessions.name,
+        jurisdictionName: sql<
+          string | null
+        >`(select ${jurisdictions.name} from ${jurisdictions} where ${jurisdictions.id} = ${bills.jurisdictionId})`,
+        versionCount: sql<number>`(select count(*)::integer from ${billDocuments} where ${billDocuments.billId} = ${bills.id} and ${billDocuments.classification} = 'version')`,
+        sponsorName: sql<
+          string | null
+        >`(select ${billSponsors.name} from ${billSponsors} where ${billSponsors.billId} = ${bills.id} order by ${billSponsors.isPrimary} desc nulls last, ${billSponsors.id} limit 1)`,
+        sponsorCount: sql<number>`(select count(*)::integer from ${billSponsors} where ${billSponsors.billId} = ${bills.id})`
+      })
       .from(bills)
       .leftJoin(legislativeSessions, eq(bills.sessionId, legislativeSessions.id))
       .where(eq(bills.id, lookup.id))
@@ -2939,7 +3041,8 @@ export class LegislationQueryService {
       relations,
       linkedOrganizations,
       structuredBillAmendments,
-      documentBillAmendments
+      documentBillAmendments,
+      progressActions
     ] = await Promise.all([
       this.#database
         .select({
@@ -3032,7 +3135,21 @@ export class LegislationQueryService {
         .from(billDocuments)
         .where(and(eq(billDocuments.billId, lookup.id), eq(billDocuments.classification, "amendment")))
         .orderBy(asc(billDocuments.documentDate), asc(billDocuments.id))
-        .limit(childOffset + childLimit + 1)
+        .limit(childOffset + childLimit + 1),
+      this.#database
+        .select({
+          id: billActions.id,
+          billId: billActions.billId,
+          ordinal: billActions.ordinal,
+          classification: billActions.classification,
+          chamber: billActions.chamber,
+          actionDate: billActions.actionDate,
+          sourceUrl: billActions.sourceUrl
+        })
+        .from(billActions)
+        .where(eq(billActions.billId, lookup.id))
+        .orderBy(asc(billActions.ordinal), asc(billActions.id))
+        .limit(101)
     ])
     const billAmendments = [
       ...structuredBillAmendments.map((amendment) => ({ ...amendment, recordType: "structured" as const })),
@@ -3048,6 +3165,8 @@ export class LegislationQueryService {
       amendments: billAmendments.slice(0, childLimit),
       bill: { ...bill[0], status: bill[0].status ?? openStatesBillStatus(statusActions) ?? null },
       latestAction: latestActions[0] ?? null,
+      progressActions: progressActions.slice(0, 100),
+      progressTruncated: progressActions.length > 100,
       documents: documents.slice(0, childLimit),
       nextChildCursor: truncated ? encodeOffset(childOffset + childLimit) : undefined,
       organizations: linkedOrganizations.slice(0, childLimit),
@@ -3179,8 +3298,13 @@ export class LegislationQueryService {
   async getBillText(input: BillLookup & { cursor?: string; documentId?: string; versionCode?: string }) {
     const offset = decodeOffset(input.cursor)
     const documents = await this.#database
-      .select()
+      .select({
+        ...getTableColumns(billDocuments),
+        billIdentifier: bills.identifier,
+        sectionCount: sql<number>`(select count(*)::integer from ${documentSections} where ${documentSections.documentId} = ${billDocuments.id})`
+      })
       .from(billDocuments)
+      .leftJoin(bills, eq(bills.id, billDocuments.billId))
       .where(
         and(
           eq(billDocuments.billId, input.id),

@@ -98,13 +98,13 @@ try {
       const person = await database
         .select({ id: people.id, name: people.name })
         .from(people)
-        .where(isNotNull(people.sourceUrl))
+        .where(and(isNotNull(people.sourceUrl), eq(people.isActive, true)))
         .orderBy(asc(people.id))
         .limit(1)
       const organization = await database
         .select({ id: organizations.id, name: organizations.name })
         .from(organizations)
-        .where(eq(organizations.classification, "committee"))
+        .where(and(eq(organizations.classification, "committee"), eq(organizations.membershipRelationsComplete, true)))
         .orderBy(asc(organizations.id))
         .limit(1)
       const meeting = await database
@@ -182,9 +182,9 @@ try {
       ["get_bill_text", { id: billId, documentId: selected.documents[0].id }],
       ["find_related_bills", { id: billId, limit: 5, mode: "lexical" }],
       ["search_people", { query: selected.person.name, limit: 5 }],
-      ["get_person", { id: selected.person.id }],
+      ["get_person", { id: selected.person.id, limit: 5 }],
       ["search_organizations", { query: selected.organization.name, limit: 5 }],
-      ["get_organization", { id: selected.organization.id }],
+      ["get_organization", { id: selected.organization.id, limit: 1 }],
       ["search_events", { limit: 5 }],
       ["get_event", { id: selected.meeting.id }],
       ["search_votes", { limit: 5 }],
@@ -214,6 +214,9 @@ try {
     }
   }
   const detailTools: Record<string, string> = {
+    bill: "get_bill",
+    amendment: "get_amendment",
+    document: "get_bill_text",
     person: "get_person",
     organization: "get_organization",
     meeting: "get_event",
@@ -225,8 +228,23 @@ try {
   )
   for (const record of records.values()) {
     const toolName = detailTools[record.kind]
-    if (toolName && !Object.values(dataset.details).some((details) => details.record.id === record.id)) {
-      await capture(toolName, { id: record.id })
+    const hasDetail = dataset.captures.some(
+      (item) => item.toolName === toolName && item.output.resultSet?.items.some((item) => item.id === record.id)
+    )
+    if (toolName && !hasDetail) {
+      if (record.kind === "document") {
+        invariant(record.documentSummary?.billId, `Missing bill identity for ${record.id}`)
+        await capture(toolName, { id: record.documentSummary.billId, documentId: record.id })
+      } else {
+        const input: Record<string, string | number> = { id: record.id }
+        if (record.kind === "person") {
+          input.limit = 5
+        }
+        if (record.kind === "organization") {
+          input.limit = 1
+        }
+        await capture(toolName, input)
+      }
     }
   }
   const validated = reviewDatasetSchema.parse(redactCredentials(dataset))

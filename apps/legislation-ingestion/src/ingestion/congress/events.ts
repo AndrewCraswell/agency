@@ -61,7 +61,7 @@ const hearingBundleSchema = z.object({
       chamber: z.string().min(1),
       committees: z.array(committeeSchema).default([]),
       congress: z.number().int().positive(),
-      dates: z.array(z.object({ date: z.string().min(1) }).passthrough()).default([]),
+      dates: z.array(z.object({ date: z.iso.date() }).passthrough()).default([]),
       formats: z.array(materialFormatSchema).default([]),
       jacketNumber: z.union([z.string(), z.number()]).transform(String),
       title: optionalString,
@@ -77,6 +77,10 @@ type MaterialLinkInsert = typeof supportingMaterialLinks.$inferInsert
 export interface CongressEventSnapshot extends EventSnapshot {
   billIds: string[]
   materials: Array<{ link: MaterialLinkInsert; material: MaterialInsert }>
+}
+
+export type CongressHearingSnapshot = {
+  materials: Array<{ links: MaterialLinkInsert[]; material: MaterialInsert }>
 }
 
 export interface CongressEventNormalizationContext {
@@ -368,21 +372,14 @@ export function normalizeCongressCommitteeMeeting(
   }
 }
 
-export function normalizeCongressHearing(
-  input: unknown,
-  context: CongressEventNormalizationContext = {}
-): CongressEventSnapshot | undefined {
+export function normalizeCongressHearing(input: unknown): CongressHearingSnapshot | undefined {
   const source = hearingBundleSchema.parse(input)
   const hearing = source.hearing
-  const hearingDate = hearing.dates[0]?.date
   const title = hearing.title
-  if (hearingDate === undefined || title === undefined) {
+  if (title === undefined) {
     return undefined
   }
-  const eventId = legislativeEventId("congress", `published-hearing-${hearing.jacketNumber}`)
-  const date = hearingDate.slice(0, 10)
-  const provenance = eventProvenance(source.sourceUrl, context)
-  const organizationRelationsComplete = hasExplicitCommitteeList(input, "hearing")
+  const hearingDates = [...new Set(hearing.dates.map(item => item.date))].sort()
   const committees = uniqueCommittees(hearing.committees)
   const formats = uniqueDocuments(
     hearing.formats.map((format) => ({
@@ -392,48 +389,24 @@ export function normalizeCongressHearing(
       url: format.url
     }))
   )
+  const representations = formats.length ? formats : [{ url: source.sourceUrl, format: "API record" }]
   return {
-    agendaItems: [],
-    billIds: [],
-    documents: formats.map((format) => ({
-      classification: "hearing-transcript",
-      contentType: contentType(format.format),
-      documentDate: date,
-      eventId,
-      id: eventChildId("document", eventId, format.url),
-      sourceUrl: format.url,
-      title
-    })),
-    event: {
-      allDay: true,
-      canonicalFactsComplete:
-        publisherLocalDate(date) !== undefined && provenance.provenanceComplete && organizationRelationsComplete,
-      classification: "hearing",
-      id: eventId,
-      isDeleted: false,
-      organizationRelationsComplete,
-      ...provenance,
-      publisherLocalDate: date,
-      isRemote: null,
-      jurisdictionId: jurisdictionId("us"),
-      name: title,
-      sourceId: hearing.jacketNumber,
-      sourceUpdatedAt: hearing.updateDate === undefined ? undefined : new Date(hearing.updateDate),
-      sourceUrl: source.sourceUrl,
-      startAt: new Date(`${date}T00:00:00Z`),
-      sessionRelationsComplete: true,
-      status: "other",
-      upstreamIds: { congress: hearing.jacketNumber }
-    },
-    materials: materials(eventId, formats, date),
-    organizationIds: committees.map((committee) => organizationId("congress", committee.systemCode)),
-    participants: committees.map((committee) => ({
-      eventId,
-      id: eventChildId("participant", eventId, `committee:${committee.systemCode}`),
-      name: committeeName(committee),
-      organizationId: organizationId("congress", committee.systemCode),
-      role: "committee"
-    })),
-    sessionIds: [legislativeSessionId("us", String(hearing.congress))]
+    materials: representations.map(format => {
+      const materialId = supportingMaterialId("congress", format.url)
+      return {
+        material: {
+          id: materialId,
+          jurisdictionId: jurisdictionId("us"),
+          sourceId: format.url,
+          sourceUrl: format.url,
+          classification: "hearing-transcript",
+          title,
+          hearingDates,
+          contentType: contentType(format.format),
+          sourceUpdatedAt: hearing.updateDate === undefined ? undefined : new Date(hearing.updateDate)
+        },
+        links: committees.map(committee => ({ materialId, organizationId: organizationId("congress", committee.systemCode), classification: "published-hearing" }))
+      }
+    })
   }
 }

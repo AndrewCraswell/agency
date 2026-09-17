@@ -9,12 +9,12 @@ import invariant from "tiny-invariant"
 import { z } from "zod"
 import {
   conversationTextMessages,
-  referenceMessageMetadata,
   conversationReferenceSchema,
   stagedReferenceSchema,
   type StagedReference
 } from "../chatRequest"
 import { clarificationResponseSchema, type ClarificationResponse } from "../clarification"
+import { composerDraftText, composerMessageMetadata, composerReferences, type ComposerDraft } from "../composerDraft"
 import {
   developmentConversationKey,
   parseDevelopmentConversation,
@@ -67,13 +67,13 @@ function createChatSession(snapshot?: DevelopmentConversation, ownerKey?: string
 
 type ConversationSessionValue = Readonly<{
   chat: Chat<UIMessage>
-  startConversation: (text: string) => string
+  startConversation: (draft: ComposerDraft) => string
   answerClarification: (response: ClarificationResponse, text: string) => Promise<void>
   clarificationAnswers: Record<string, ClarificationResponse>
   isConfirmingClarification: boolean
   cancelClarification: () => void
-  draft: string
-  setDraft: (draft: string) => void
+  draft: ComposerDraft
+  setDraft: (draft: ComposerDraft) => void
   references: StagedReference[]
   setReferences: (references: StagedReference[]) => void
   searchReferences: (query: string, kind: string, signal: AbortSignal) => Promise<StagedReference[]>
@@ -102,7 +102,7 @@ export function ConversationSession({ children }: ConversationSessionProps) {
   const [session, setSession] = useState(createChatSession)
   const [clarificationAnswers, setClarificationAnswers] = useState<Record<string, ClarificationResponse>>({})
   const [isConfirmingClarification, setIsConfirmingClarification] = useState(false)
-  const [draft, setDraft] = useState("")
+  const [draft, setDraft] = useState<ComposerDraft>([])
   const [references, setReferences] = useState<StagedReference[]>([])
   const [meetingSelection, setMeetingSelection] = useState<{ resultId: string; recordId: string }>()
   const [isRestoringConversation, setIsRestoringConversation] = useState(process.env.NODE_ENV === "development")
@@ -328,18 +328,19 @@ export function ConversationSession({ children }: ConversationSessionProps) {
     return details
   }
 
-  function startConversation(text: string) {
+  function startConversation(nextDraft: ComposerDraft) {
     setMeetingSelection(undefined)
     cancelClarification()
     void chat.stop()
-    const nextSession = createChatSession(undefined, references.length > 0 ? session.sessionKey : undefined)
+    const selected = composerReferences(nextDraft, references)
+    const nextSession = createChatSession(undefined, selected.length > 0 ? session.sessionKey : undefined)
     setSession(nextSession)
     setClarificationAnswers({})
-    setDraft("")
+    setDraft([])
     setInterruptedMessageId(undefined)
     void nextSession.chat.sendMessage({
-      text,
-      metadata: referenceMessageMetadata(references)
+      text: composerDraftText(nextDraft),
+      metadata: composerMessageMetadata(nextDraft, references)
     })
     return nextSession.chat.id
   }
@@ -414,7 +415,11 @@ export function ConversationSession({ children }: ConversationSessionProps) {
     if (!response.ok) {
       throw new Error("References could not be loaded. Try again.")
     }
-    return z.object({ references: z.array(stagedReferenceSchema).max(35) }).parse(await response.json()).references
+    const results = z
+      .object({ references: z.array(stagedReferenceSchema).max(35) })
+      .parse(await response.json()).references
+    signal.throwIfAborted()
+    return results
   }
 
   return (

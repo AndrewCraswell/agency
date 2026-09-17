@@ -62,6 +62,7 @@ function materialSearchCandidate() {
     contentType: "application/pdf",
     createdAt: new Date("2026-08-24T00:00:00.000Z"),
     documentDate: "2026-08-20",
+    pageCount: null,
     id: "material:fixture",
     jurisdictionId: "jurisdiction:fixture",
     lastAttemptAt: null,

@@ -4,8 +4,6 @@ import { conversationTextMessages } from "./chatRequest"
 import {
   answerCatalog,
   answerPlainText,
-  billComparisonSchema,
-  comparisonValue,
   compositionInstructions,
   presentationBlockSchema,
   presentationText,
@@ -53,7 +51,7 @@ const message: UIMessage = {
 }
 
 describe("composition contracts", () => {
-  it("uses friendly session names in bill snapshots and comparisons without changing source IDs", () => {
+  it("uses friendly session names in bill snapshots without changing source IDs", () => {
     const id = "session:ca:20232024"
     const input = {
       bill: {
@@ -69,9 +67,8 @@ describe("composition contracts", () => {
       throw new Error("Missing bill fixture")
     }
     expect(record.subtitle).toBe("lower, 2023-2024 Regular Session")
-    expect(comparisonValue(record, "session")).toBe("2023-2024 Regular Session")
+    expect(record.billSummary?.sessionName).toBe("2023-2024 Regular Session")
     expect(input.bill.sessionId).toBe(id)
-    expect(comparisonValue({ ...record, billSummary: undefined, subtitle: id }, "session")).toBe("2023-2024")
   })
 
   it.each([
@@ -101,117 +98,13 @@ describe("composition contracts", () => {
     )
   })
 
-  const comparison: PresentationBlock = {
-    state: "ready",
-    blockId: "comparison",
-    spec: {
-      root: "comparison",
-      elements: {
-        comparison: {
-          type: "BillComparison",
-          props: {
-            records: [
-              { resultId: "11111111-1111-4111-8111-111111111111", recordId: "bill:1" },
-              { resultId: "22222222-2222-4222-8222-222222222222", recordId: "bill:2" }
-            ],
-            columns: ["status", "latestAction"]
-          },
-          children: []
-        }
-      }
-    },
-    records: [
-      {
-        id: "bill:1",
-        kind: "bill",
-        title: "First bill",
-        subtitle: "2025 session",
-        sourceUrl: null,
-        fields: [],
-        tallies: [],
-        billSummary: {
-          status: "Introduced",
-          latestAction: { date: "2025-02-01", description: "Referred to committee" }
-        }
-      },
-      { id: "bill:2", kind: "bill", title: "Second bill", sourceUrl: null, fields: [], tallies: [] }
-    ]
-  }
-
-  it("validates comparison metadata only and requires exact row order and kind", () => {
-    expect(answerCatalog.validate(comparison.spec).success).toBe(true)
-    expect(presentationBlockSchema.safeParse(comparison).success).toBe(true)
-    expect(
-      presentationBlockSchema.safeParse({ ...comparison, records: [...comparison.records].reverse() }).success
-    ).toBe(false)
-    expect(
-      presentationBlockSchema.safeParse({
-        ...comparison,
-        records: comparison.records.map((record) => ({ ...record, kind: "person" }))
-      }).success
-    ).toBe(false)
-    expect(presentationBlockSchema.safeParse({ ...comparison, records: comparison.records.slice(0, 1) }).success).toBe(
-      false
-    )
-    expect(billComparisonSchema.safeParse({ records: [], columns: ["unapproved"] }).success).toBe(false)
-  })
-
-  it("copies selected comparison metadata without inventing absent values or including unselected columns", () => {
-    expect(presentationText(comparison)).toBe(
-      "First bill\nRecord: bill:1\nStatus: Introduced\nLatest action: 2025-02-01: Referred to committee\n\nSecond bill\nRecord: bill:2\nStatus: Not returned\nLatest action: Not returned"
-    )
-    const response: UIMessage = {
-      id: "comparison-answer",
-      role: "assistant",
-      parts: [
-        { type: "text", text: "Before" },
-        { type: "data-presentation", id: comparison.blockId, data: comparison },
-        { type: "text", text: "After" }
-      ]
-    }
-    expect(answerPlainText(response)).toBe(`Before\n\n${presentationText(comparison)}\n\nAfter`)
-    expect(conversationTextMessages([response])[0]?.parts[1]?.text).toBe(presentationText(comparison))
-    const first = comparison.records[0]
-    if (!first) {
-      throw new Error("Missing comparison fixture")
-    }
-    expect(comparisonValue(first, "session")).toBe("2025 session")
-    expect(comparisonValue({ ...first, billSummary: { status: "  " } }, "status")).toBeUndefined()
-  })
-
-  it("restores only complete validated comparison snapshots", async () => {
-    const response: UIMessage = {
-      id: "comparison-answer",
-      role: "assistant",
-      parts: [{ type: "data-presentation", id: comparison.blockId, data: comparison }]
-    }
-    const snapshot = {
-      id: "conversation",
-      sessionKey: "11111111-1111-4111-8111-111111111111",
-      draft: "",
-      clarificationAnswers: {},
-      messages: [response]
-    }
-    expect((await parseDevelopmentConversation(JSON.stringify(snapshot)))?.messages).toEqual([response])
-    const invalid = {
-      ...response,
-      parts: [
-        {
-          type: "data-presentation",
-          id: comparison.blockId,
-          data: { ...comparison, records: comparison.records.slice(0, 1) }
-        }
-      ]
-    }
-    expect(await parseDevelopmentConversation(JSON.stringify({ ...snapshot, messages: [invalid] }))).toBeUndefined()
-  })
-
   it("generates inline catalog instructions for literal references only", () => {
     expect(compositionInstructions).toContain("RecordCard")
     expect(compositionInstructions).toContain("resultId")
     expect(compositionInstructions).toContain("spec")
-    expect(compositionInstructions).toContain("Do not put the conclusion before the comparison.")
-    expect(compositionInstructions).toContain("do not repeat every status, date, and action")
+    expect(compositionInstructions).toContain("ResultList")
+    expect(compositionInstructions).toContain("CompactRecordCard")
+    expect(compositionInstructions).not.toContain("BillComparison")
     expect(answerCatalog.validate(block.spec).success).toBe(true)
     expect(
       presentationBlockSchema.safeParse({ ...block, records: [{ ...block.records[0], id: "foreign" }] }).success
@@ -219,6 +112,7 @@ describe("composition contracts", () => {
   })
 
   it("copies rendered cards in order and passes record identity as untrusted history text", () => {
+    expect(presentationText(block)).toBe("Retrieved bill\nRecord: bill:1\nhttps://example.org/bill")
     expect(answerPlainText(message)).toBe("Before\n\nRetrieved bill\nRecord: bill:1\nhttps://example.org/bill\n\nAfter")
     expect(conversationTextMessages([message])[0]?.parts.map((part) => part.text)).toEqual([
       "Before",
@@ -231,7 +125,7 @@ describe("composition contracts", () => {
     const snapshot = {
       id: "conversation",
       sessionKey: "11111111-1111-4111-8111-111111111111",
-      draft: "",
+      draft: [],
       clarificationAnswers: {},
       messages: [message]
     }

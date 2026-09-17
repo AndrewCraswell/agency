@@ -1,14 +1,16 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { CongressClient, CongressCommitteeMeetingReference, CongressHearingReference } from "./client.js"
-import type { CongressEventSnapshot } from "./events.js"
+import type { CongressEventSnapshot, CongressHearingSnapshot } from "./events.js"
 
 const mocks = vi.hoisted(() => ({
-  upsertCongressEvent: vi.fn<(database: unknown, snapshot: CongressEventSnapshot) => Promise<void>>()
+  upsertCongressEvent: vi.fn<(database: unknown, snapshot: CongressEventSnapshot) => Promise<void>>(),
+  upsertCongressHearing: vi.fn<(database: unknown, snapshot: CongressHearingSnapshot) => Promise<void>>()
 }))
 
 vi.mock("../../persistence/congress-events.js", () => ({
-  upsertCongressEventSnapshot: mocks.upsertCongressEvent
+  upsertCongressEventSnapshot: mocks.upsertCongressEvent,
+  upsertCongressHearingSnapshot: mocks.upsertCongressHearing
 }))
 
 import { synchronizeCongressEvents } from "./events-sync.js"
@@ -73,9 +75,10 @@ function createDatabaseHarness(existingSourceUpdatedAt?: Date): {
 describe("Congress event synchronization", () => {
   beforeEach(() => {
     mocks.upsertCongressEvent.mockReset().mockResolvedValue()
+    mocks.upsertCongressHearing.mockReset().mockResolvedValue()
   })
 
-  it("skips an undated hearing, commits its checkpoint, and continues to the next hearing", async () => {
+  it("stores dated and undated hearing publications without invoking event persistence", async () => {
     const references = [hearingReference(80170), hearingReference(80171)]
     const client: EventClient = {
       async *committeeMeetings() {
@@ -119,13 +122,15 @@ describe("Congress event synchronization", () => {
 
     const result = await synchronizeCongressEvents(harness.database, client, 113, "hearings")
 
-    expect(result.counts).toMatchObject({ discovered: 2, failed: 0, inserted: 1, read: 1, skipped: 1 })
+    expect(result.counts).toMatchObject({ discovered: 2, failed: 0, inserted: 2, read: 2, skipped: 0 })
     expect(result.failures).toEqual([])
     expect(result.checkpoint).toEqual({ nextOffset: 2 })
     expect(harness.readOffset()).toBe(2)
     expect(harness.checkpointWrites).toEqual([1, 2])
-    expect(mocks.upsertCongressEvent).toHaveBeenCalledTimes(1)
-    expect(mocks.upsertCongressEvent.mock.calls[0]?.[1].event.name).toBe("Dated hearing")
+    expect(mocks.upsertCongressEvent).not.toHaveBeenCalled()
+    expect(mocks.upsertCongressHearing).toHaveBeenCalledTimes(2)
+    expect(mocks.upsertCongressHearing.mock.calls[0]?.[1].materials[0]?.material.hearingDates).toEqual([])
+    expect(mocks.upsertCongressHearing.mock.calls[1]?.[1].materials[0]?.material.hearingDates).toEqual(["2014-12-10"])
   })
 
   it("rematerializes equal-timestamp events only when explicitly requested", async () => {

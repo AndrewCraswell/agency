@@ -42,6 +42,7 @@ export interface ExtractedSection {
 
 export interface DocumentExtraction {
   contentHash: string
+  pageCount?: number
   sections: ExtractedSection[]
   text: string
 }
@@ -226,7 +227,7 @@ export function assessPdfOcrEligibility(pages: readonly PdfPageExtractionEvidenc
   return { kind: "digital-text", scannedPageCount }
 }
 
-async function extractPdfText(bytes: Uint8Array): Promise<string> {
+async function extractPdfText(bytes: Uint8Array): Promise<{ text: string; pageCount: number }> {
   // PDF.js loads optional canvas bindings at module initialization. Keep that
   // initialization off the server and CLI startup path so deployments that do
   // not process PDFs are not coupled to the native canvas package.
@@ -311,7 +312,7 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
       "PDF produced too little usable text and contains no raster or vector content"
     )
   }
-  return pages.map((page) => page.text).join("\n\n")
+  return { text: pages.map((page) => page.text).join("\n\n"), pageCount: pages.length }
 }
 
 export function assertPdfTextExtractionPageCount(pageCount: number): void {
@@ -442,6 +443,7 @@ export async function extractDocument(
 
   const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase()
   let extracted: string
+  let pageCount: number | undefined
   if (mediaType === "application/xml" || mediaType === "text/xml" || mediaType?.endsWith("+xml") === true) {
     extracted = extractXmlText(bytes)
   } else if (mediaType === "text/html" || mediaType === "application/xhtml+xml") {
@@ -449,7 +451,9 @@ export async function extractDocument(
   } else if (mediaType === "text/plain") {
     extracted = extractPlainText(bytes, contentType)
   } else if (mediaType === "application/pdf") {
-    extracted = await extractPdfText(bytes)
+    const pdf = await extractPdfText(bytes)
+    extracted = pdf.text
+    pageCount = pdf.pageCount
   } else if (
     mediaType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     mediaType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
@@ -464,5 +468,5 @@ export async function extractDocument(
 
   const text = normalizeLegalText(extracted)
   assertUsefulDocumentText(text)
-  return { contentHash: hash(bytes), sections: segmentLegalText(documentId, text), text }
+  return { contentHash: hash(bytes), sections: segmentLegalText(documentId, text), text, pageCount }
 }

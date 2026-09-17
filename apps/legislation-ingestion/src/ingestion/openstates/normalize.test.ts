@@ -16,6 +16,32 @@ beforeAll(async () => {
 
 describe("Open States normalization", () => {
   it.each([
+    [[{ note: "02/14/24 - Introduced", date: "2024-02-14" }], "2024-02-14"],
+    [[{ note: "Introduced", date: "2024" }], undefined],
+    [[{ note: "Amended", date: "2024-02-14" }], undefined],
+    [
+      [
+        { note: "Introduced", date: "2024-02-14" },
+        { note: "Introduced", date: "2024-02-15" }
+      ],
+      undefined
+    ]
+  ] as const)("uses only unambiguous introduced-version dates: %j", (versions, expected) => {
+    const result = normalizeOpenStatesBill(
+      {
+        identifier: "AB 2652",
+        legislative_session: "20232024",
+        title: "Published bill",
+        sources: [{ url: "https://example.org/bill" }],
+        versions,
+        actions: [{ date: "2024-01-01", description: "Read first time", classification: ["reading-1"] }]
+      },
+      { jurisdictionCode: "ca", jurisdictionName: "California" }
+    )
+    expect(result.aggregate.bill.introducedAt).toBe(expected)
+  })
+
+  it.each([
     { classifications: ["executive-veto"], expected: "Vetoed" },
     { classifications: ["executive-signature"], expected: "Signed by executive" },
     { classifications: ["executive-signature", "became-law"], expected: "Became law" },

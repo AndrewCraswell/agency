@@ -54,16 +54,6 @@ export const homepageGlow = style({
   }
 })
 
-export const question = style({
-  minHeight: "5.25rem",
-  maxHeight: "calc(6 * 1.55em + 26px)",
-  overflowY: "auto",
-  padding: "18px 20px 8px",
-  borderRadius: "1.25rem 1.25rem 0 0",
-  lineHeight: 1.55,
-  fontSize: "1rem"
-})
-
 export const bar = style({
   display: "flex",
   minHeight: "3.5rem",

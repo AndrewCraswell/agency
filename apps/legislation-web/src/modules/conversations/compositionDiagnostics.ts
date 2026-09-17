@@ -1,4 +1,5 @@
 import { parseSpecStreamLine } from "@json-render/core"
+import { maximumPresentationBytes } from "./composition"
 
 export type CompositionDiagnostic =
   | {
@@ -57,7 +58,7 @@ export function createCompositionDiagnostics() {
         const character = text[index]
         if (character === "\n") {
           completeLine().forEach((diagnostic) => events.push({ end: index + 1, diagnostic }))
-        } else if (line.length < 4096) {
+        } else if (line.length < maximumPresentationBytes) {
           line += character
         } else {
           oversized = true

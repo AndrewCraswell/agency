@@ -1,7 +1,7 @@
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
-import { legislativeEvents, syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
-import { and, eq } from "drizzle-orm"
-import { upsertCongressEventSnapshot } from "../../persistence/congress-events.js"
+import { legislativeEvents, supportingMaterials, syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
+import { and, eq, inArray } from "drizzle-orm"
+import { upsertCongressEventSnapshot, upsertCongressHearingSnapshot } from "../../persistence/congress-events.js"
 import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
@@ -45,16 +45,31 @@ export async function synchronizeCongressEvents(
         sourceUrl: item.reference.url
       })
       const normalizationContext = { retrievedAt: new Date() }
-      const snapshot =
-        domain === "meetings"
-          ? normalizeCongressCommitteeMeeting(source, normalizationContext)
-          : normalizeCongressHearing(source, normalizationContext)
-      if (snapshot === undefined) {
-        counts.skipped += 1
+      if (domain === "hearings") {
+        const publication = normalizeCongressHearing(source)
+        if (publication === undefined) {
+          counts.skipped += 1
+          nextOffset = item.offset + 1
+          await saveCheckpoint(database, stream, nextOffset)
+          return false
+        }
+        const materialIds = publication.materials.map(item => item.material.id)
+        const existing = await database.select({ id: supportingMaterials.id, sourceUpdatedAt: supportingMaterials.sourceUpdatedAt }).from(supportingMaterials)
+          .where(inArray(supportingMaterials.id, materialIds)).limit(materialIds.length)
+        counts.read += 1
+        const isUnchanged = publication.materials.every(({ material }) => {
+          const stored = existing.find(item => item.id === material.id)
+          return stored?.sourceUpdatedAt != null && material.sourceUpdatedAt != null && stored.sourceUpdatedAt >= material.sourceUpdatedAt
+        })
+        if (!options.forceRematerialize && isUnchanged) { counts.unchanged += 1 } else {
+          await upsertCongressHearingSnapshot(database, publication)
+          if (existing.length === 0) { counts.inserted += 1 } else { counts.updated += 1 }
+        }
         nextOffset = item.offset + 1
         await saveCheckpoint(database, stream, nextOffset)
-        return false
+        return options.limit !== undefined && counts.read >= options.limit
       }
+      const snapshot = normalizeCongressCommitteeMeeting(source, normalizationContext)
       const existing = await database
         .select({ sourceUpdatedAt: legislativeEvents.sourceUpdatedAt })
         .from(legislativeEvents)

@@ -2,6 +2,8 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
+import { chatRequestSchema, referenceSearchSchema, type StagedReference } from "../chatRequest"
 import { ChatProviders } from "./ChatProviders"
 import { ChatWorkspace } from "./ChatWorkspace"
 import * as composerStyles from "./ChatComposer.css"
@@ -31,6 +33,121 @@ function streamedAnswer(text: string) {
 }
 
 describe("ChatWorkspace", () => {
+  const person: StagedReference = {
+    resultId: "23974c17-3898-4b92-96f7-1c600704e12e",
+    recordId: "person:ocasio-cortez",
+    record: {
+      id: "person:ocasio-cortez",
+      kind: "person",
+      title: "Alexandria Ocasio-Cortez",
+      subtitle: "New York, U.S. House",
+      sourceUrl: null,
+      fields: [],
+      tallies: []
+    }
+  }
+  const committee: StagedReference = {
+    resultId: "969e397c-2013-4525-aab6-e206d64ac3e2",
+    recordId: "organization:education",
+    record: {
+      id: "organization:education",
+      kind: "organization",
+      title: "House Education and Workforce",
+      subtitle: "U.S. House",
+      sourceUrl: null,
+      fields: [],
+      tallies: [],
+      organizationSummary: { classification: "committee" }
+    }
+  }
+
+  it("debounces name lookup and sends exact inline references with the first message", async () => {
+    const lookups: z.infer<typeof referenceSearchSchema>[] = []
+    const submissions: z.infer<typeof chatRequestSchema>[] = []
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockImplementation(async (_input, init) => {
+        const body: unknown = JSON.parse(z.string().parse(init?.body))
+        const lookup = referenceSearchSchema.safeParse(body)
+        if (lookup.success) {
+          lookups.push(lookup.data)
+          return Response.json({ references: lookup.data.query.includes("education") ? [committee] : [person] })
+        }
+        submissions.push(chatRequestSchema.parse(body))
+        return streamedAnswer("Research context received")
+      })
+    )
+    const user = userEvent.setup()
+    const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const input = await screen.findByRole("textbox", { name: "Your question" })
+    input.focus()
+    window.getSelection()?.collapse(input.querySelector("p"), 0)
+    await user.type(input, "Ask @Ocasio", { skipClick: true })
+    expect(lookups).toHaveLength(0)
+    await screen.findByRole("option", { name: /Alexandria Ocasio-Cortez/ })
+    expect(lookups).toHaveLength(1)
+    expect(lookups[0]).toMatchObject({ action: "search-references", query: "Ocasio", kind: "mention" })
+    await user.keyboard("{Enter}")
+    await waitFor(() => expect(input.querySelectorAll('[data-type="mention"]')).toHaveLength(1))
+    expect(input.querySelectorAll("p")).toHaveLength(1)
+    expect(submissions).toHaveLength(0)
+    await user.type(input, "about @education")
+    await user.click(await screen.findByRole("option", { name: /House Education and Workforce/ }))
+    await waitFor(() => expect(input.querySelectorAll('[data-type="mention"]')).toHaveLength(2))
+    expect(input.querySelectorAll("p")).toHaveLength(1)
+    await user.click(screen.getByRole("button", { name: "Send question" }))
+    await waitFor(() => expect(submissions).toHaveLength(1))
+    expect(submissions[0]).toMatchObject({
+      sessionKey: lookups[0]?.sessionKey,
+      references: [
+        { resultId: person.resultId, recordId: person.recordId },
+        { resultId: committee.resultId, recordId: committee.recordId }
+      ],
+      messages: [
+        {
+          role: "user",
+          parts: [{ type: "text", text: "Ask @Alexandria Ocasio-Cortez about @House Education and Workforce " }]
+        }
+      ]
+    })
+    expect(navigation.push).toHaveBeenCalledOnce()
+    const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
+    view.rerender(<ChatWorkspace isAvailable conversationId={conversationId} />)
+    const question = await screen.findByRole("article", { name: "Your question" })
+    await waitFor(() => expect(question.querySelectorAll('[data-type="mention"]')).toHaveLength(2))
+    expect(question.querySelector('[data-id="person:ocasio-cortez"]')?.textContent).toBe("Alexandria Ocasio-Cortez")
+    expect(screen.queryByRole("list", { name: "Submitted references" })).toBeNull()
+  })
+
+  it("aborts superseded name searches and ignores their late results", async () => {
+    const first = Promise.withResolvers<Response>()
+    const signals: (AbortSignal | null | undefined)[] = []
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockImplementation(async (_input, init) => {
+        signals.push(init?.signal)
+        if (signals.length === 1) {
+          return first.promise
+        }
+        return Response.json({ references: [person] })
+      })
+    )
+    const user = userEvent.setup()
+    render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
+    const input = await screen.findByRole("textbox", { name: "Your question" })
+    await user.type(input, "@Oc")
+    await waitFor(() => expect(signals).toHaveLength(1))
+    await user.type(input, "asio")
+    await screen.findByRole("option", { name: /Alexandria Ocasio-Cortez/ })
+    expect(signals[0]?.aborted).toBe(true)
+    await act(async () => {
+      first.resolve(Response.json({ references: [committee] }))
+      await first.promise
+    })
+    expect(screen.queryByRole("option", { name: /House Education and Workforce/ })).toBeNull()
+    expect(screen.getByRole("option", { name: /Alexandria Ocasio-Cortez/ })).toBeDefined()
+  })
+
   it("keeps progress in the conversation without adding a status row below the composer", async () => {
     const response = Promise.withResolvers<Response>()
     vi.stubGlobal(
@@ -42,11 +159,12 @@ describe("ChatWorkspace", () => {
     const encoder = new TextEncoder()
     const user = userEvent.setup()
     const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
-    await user.type(screen.getByRole("textbox", { name: "Your question" }), "A streamed question")
+    await user.type(await screen.findByRole("textbox", { name: "Your question" }), "A streamed question")
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(1))
     const conversationId = navigation.push.mock.calls[0]?.[0].split("/").at(-1)
     view.rerender(<ChatWorkspace key={conversationId} isAvailable conversationId={conversationId} />)
+    await screen.findByRole("textbox", { name: "Your question" })
 
     function expectNoComposerStatus() {
       const field = screen.getByRole("textbox", { name: "Your question" })
@@ -91,9 +209,10 @@ describe("ChatWorkspace", () => {
     vi.stubGlobal("fetch", fetchMock)
     const user = userEvent.setup()
     const view = render(<ChatWorkspace isAvailable />, { wrapper: ChatProviders })
-    const field = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Your question" })
+    const field = await screen.findByRole("textbox", { name: "Your question" })
     expect(field.closest("form")?.classList.contains(composerStyles.homepageGlow)).toBe(true)
     await user.type(field, "First question")
+    await waitFor(() => expect(field.textContent).toBe("First question"))
     await user.click(screen.getByRole("button", { name: "Send question" }))
     await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(1))
     const path = navigation.push.mock.calls[0]?.[0]
@@ -103,7 +222,7 @@ describe("ChatWorkspace", () => {
     await screen.findByText("A retained response")
     expect(screen.getByText("First question")).toBeDefined()
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    const followUp = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Your question" })
+    const followUp = await screen.findByRole("textbox", { name: "Your question" })
     expect(followUp.closest("form")?.classList.contains(composerStyles.homepageGlow)).toBe(false)
     await waitFor(() => expect(screen.queryByRole("button", { name: "Stop response" })).toBeNull())
     await user.type(followUp, "Follow-up question")
@@ -128,20 +247,48 @@ describe("ChatWorkspace", () => {
   it("keeps the demo question editable without enabling disconnected research", async () => {
     const user = userEvent.setup()
     render(<ChatWorkspace />, { wrapper: ChatProviders })
-    const question = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Your question" })
+    const question = await screen.findByRole("textbox", { name: "Your question" })
     await user.type(question, "Compare housing policy")
-    expect(question.value).toBe("Compare housing policy")
+    expect(question.textContent).toBe("Compare housing policy")
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send question" }).disabled).toBe(true)
     expect(screen.getByRole("status").textContent).toBe("Research is not connected yet.")
   })
 
   it("puts a selected suggestion into the question and returns focus for editing", async () => {
     const user = userEvent.setup()
-    render(<ChatWorkspace />, { wrapper: ChatProviders })
-    const suggestion = "Who has sponsored bills on AI in education?"
-    await user.click(screen.getByRole("button", { name: suggestion }))
-    const question = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Your question" })
-    expect(question.value).toBe(suggestion)
+    const suggestion = "How do state bills address repair access for farm equipment?"
+    await act(async () => {
+      render(
+        <ChatWorkspace
+          suggestions={Promise.resolve([
+            { text: suggestion, description: "Compare repair access proposals", kind: "comparison" }
+          ])}
+        />,
+        { wrapper: ChatProviders }
+      )
+    })
+    await user.click(await screen.findByRole("button", { name: suggestion }))
+    const question = screen.getByRole("textbox", { name: "Your question" })
+    expect(question.textContent).toBe(suggestion)
     expect(document.activeElement).toBe(question)
+    expect(navigation.push).not.toHaveBeenCalled()
+  })
+
+  it("keeps the composer usable while suggestions load and omits unavailable suggestions", async () => {
+    const suggestions = Promise.withResolvers<never[]>()
+    const user = userEvent.setup()
+    await act(async () => {
+      render(<ChatWorkspace suggestions={suggestions.promise} />, { wrapper: ChatProviders })
+    })
+    expect(screen.getByRole("status", { name: "Loading research questions" })).toBeDefined()
+    const input = await screen.findByRole("textbox", { name: "Your question" })
+    await act(async () => {
+      await user.type(input, "My own question")
+      suggestions.resolve([])
+      await suggestions.promise
+    })
+    await waitFor(() => expect(screen.queryByRole("status", { name: "Loading research questions" })).toBeNull())
+    expect(screen.queryByRole("region", { name: "Suggested research questions" })).toBeNull()
+    expect(screen.getByRole("textbox", { name: "Your question" }).textContent).toBe("My own question")
   })
 })

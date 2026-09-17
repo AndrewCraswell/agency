@@ -300,6 +300,12 @@ describePostgres.sequential("legislation PostgreSQL serving", () => {
       items: [],
       warnings: [expect.stringContaining("source-dependent")]
     })
+    await expect(service.searchMentionRecords("Eample")).resolves.toMatchObject({
+      people: { items: [expect.objectContaining({ id: "person:openstates:person-1", name: "Representative Example" })] }
+    })
+    await expect(service.searchMentionRecords("Datta")).resolves.toMatchObject({
+      committees: { items: [expect.objectContaining({ id: organizationId, classification: "committee" })] }
+    })
   })
 
   it("retrieves canonical bill text, amendments, votes, versions, and related bills", async () => {

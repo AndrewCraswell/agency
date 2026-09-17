@@ -28,16 +28,15 @@ export const questionBubble = style({
   flexDirection: "column",
   gap: 8,
   minWidth: 0,
-  padding: "16px 20px",
+  padding: "12px 16px",
   border: "1px solid var(--border)",
   borderRadius: 18,
   background: "var(--secondary)",
   color: "var(--foreground)",
-  fontSize: 16,
-  lineHeight: 1.5,
+  fontSize: "var(--text-sm)",
+  lineHeight: "var(--text-sm--line-height)",
   whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
-  "@media": { "(max-width: 40rem)": { padding: "12px 20px" } }
+  overflowWrap: "anywhere"
 })
 export const answerTurn = style({ display: "flex", flexDirection: "column", gap: 12, minWidth: 0, padding: "4px 0" })
 export const orderedContent = style({ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 })
@@ -161,7 +160,12 @@ export const spinner = style({
   animation: `${spin} 1.5s linear infinite`,
   "@media": { "(prefers-reduced-motion: reduce)": { animation: "none" } }
 })
-export const markdown = style({ fontSize: 16, lineHeight: 1.6, overflowWrap: "anywhere", minWidth: 0 })
+export const markdown = style({
+  fontSize: "var(--text-sm)",
+  lineHeight: "var(--text-sm--line-height)",
+  overflowWrap: "anywhere",
+  minWidth: 0
+})
 export const recordMention = style({
   color: "var(--primary)",
   textDecoration: "underline",
@@ -174,9 +178,9 @@ export const recordMention = style({
 })
 globalStyle(`${markdown} h1, ${markdown} h2, ${markdown} h3`, {
   fontFamily: "var(--font-public-sans), sans-serif",
-  fontSize: 20,
+  fontSize: "var(--text-base)",
   fontWeight: 600,
-  lineHeight: 1.4,
+  lineHeight: "var(--text-base--line-height)",
   margin: "24px 0 12px"
 })
 globalStyle(`${markdown} p`, { margin: "12px 0" })
@@ -216,12 +220,12 @@ export const citation = style([
   citationNumber,
   {
     minWidth: 16,
-    height: 14,
+    height: 12,
     padding: "0 2px",
-    fontSize: 10,
+    fontSize: 8,
     borderRadius: 3,
     position: "relative",
-    top: "-0.8em",
+    top: -6,
     cursor: "pointer",
     verticalAlign: "baseline",
     ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }

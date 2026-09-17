@@ -1,27 +1,29 @@
 "use client"
 
 import { defineRegistry, JSONUIProvider, Renderer } from "@json-render/react"
+import { CircleSlash, CircleX, FileText, TriangleAlert } from "lucide-react"
 import { createContext, useContext, useRef, useState } from "react"
 import { useStickToBottomContext } from "use-stick-to-bottom"
 import { z } from "zod"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
+import { Spinner } from "../../../components/ui/spinner"
 import {
   answerCatalog,
-  comparisonColumns,
-  comparisonValue,
   presentationBlockSchema,
   presentationReferences,
-  type BillComparisonProps,
   type PresentationBlock,
   type PresentationReference
 } from "../composition"
 import type { EntityCard } from "../entityResults"
+import { contentComponentSchema, type PresentationContent, type ContentComponent } from "../presentationContent"
+import type { CitationSelection } from "./citationPresentation"
 import { useConversationSession } from "./ConversationSession"
-import { RecordCard } from "./EntityResults"
-import { InlineRecordLink } from "./InlineRecordLink"
+import { CompactRecordCard, RecordCard } from "./EntityResults"
+import { InlinePresentation } from "./InlinePresentation"
 import { MeetingDetails } from "./MeetingDetails"
+import { RecordGroup } from "./RecordGroup"
 import { VoteDetails } from "./VoteDetails"
 import * as styles from "./ComposedRecord.css"
+import * as cardStyles from "./EntityResults.css"
 
 const presentationPartSchema = z
   .object({
@@ -38,15 +40,87 @@ type RecordContextValue = Readonly<{
 }>
 const RecordContext = createContext<RecordContextValue | undefined>(undefined)
 type TrustedRecordCardProps = Readonly<{ props: PresentationReference }>
-type TrustedBillComparisonProps = Readonly<{ props: BillComparisonProps }>
 type ReadyRecordProps = Readonly<{ block: Extract<PresentationBlock, { state: "ready" }> }>
-type ComposedRecordProps = Readonly<{ part: unknown; isRunning: boolean }>
+type ComposedRecordProps = Readonly<{
+  part: unknown
+  isRunning: boolean
+  citation?: CitationSelection
+  onEvidence?: (selection: CitationSelection) => void
+  answerId?: string
+}>
+const ContentContext = createContext<
+  | Readonly<{
+      content: PresentationContent
+      variant: ContentComponent
+      citation?: CitationSelection
+      onEvidence?: (selection: CitationSelection) => void
+      answerId: string
+    }>
+  | undefined
+>(undefined)
 
-function RecordUnavailable() {
-  return <p className="break-words text-xs text-muted-foreground">This content could not be displayed.</p>
+function PresentationFailure({
+  reason = "presentation"
+}: Readonly<{
+  reason?: "presentation" | "records" | "interrupted"
+}>) {
+  let title = "Content could not be displayed"
+  let message = "This content could not be displayed."
+  let status = "Invalid reference"
+  let StatusIcon = CircleX
+  if (reason === "records") {
+    title = "Record unavailable"
+    message = "A selected record could not be loaded."
+    status = "Unavailable"
+    StatusIcon = CircleSlash
+  } else if (reason === "interrupted") {
+    title = "Content incomplete"
+    message = "The response ended before this content was ready."
+    status = "Interrupted"
+    StatusIcon = TriangleAlert
+  }
+  return (
+    <section className={cardStyles.fullCard} aria-label={title}>
+      <div className={cardStyles.identity}>
+        <div className={cardStyles.eyebrow}>
+          <FileText className="size-[13px] shrink-0 text-primary" aria-hidden="true" />
+          <span className={cardStyles.kindLabel}>Content</span>
+          <span className={styles.status}>
+            <StatusIcon className="size-[13px] shrink-0 text-destructive" aria-hidden="true" />
+            {status}
+          </span>
+        </div>
+        <h4 className={styles.title}>{title}</h4>
+      </div>
+      <p className={styles.explanation} role="alert">
+        {message}
+      </p>
+    </section>
+  )
 }
 
-function TrustedRecordCard({ props }: TrustedRecordCardProps) {
+function RecordLoading() {
+  return (
+    <output className={`${cardStyles.fullCard} ${styles.loading}`} aria-label="Loading content...">
+      <span className="sr-only">Loading content...</span>
+      <span className={cardStyles.identity} aria-hidden="true">
+        <span className={cardStyles.eyebrow}>
+          <FileText className="size-[13px] shrink-0 text-primary" />
+          <span className={cardStyles.kindLabel}>Content</span>
+          <span className={styles.status}>
+            <Spinner className="size-[13px] text-muted-foreground" />
+            Reading
+          </span>
+        </span>
+        <span className={`${styles.skeleton} ${styles.skeletonTitle}`} />
+        <span className={`${styles.skeleton} ${styles.skeletonMeta}`} />
+      </span>
+      <span className={styles.explanation}>The selected content is being read.</span>
+    </output>
+  )
+}
+
+function TrustedRecordCard({ props, compact = false }: TrustedRecordCardProps & { compact?: boolean }) {
   const context = useContext(RecordContext)
   const record = context?.records[0]
   if (
@@ -56,67 +130,70 @@ function TrustedRecordCard({ props }: TrustedRecordCardProps) {
     props.resultId !== context.references[0]?.resultId ||
     props.recordId !== record.id
   ) {
-    return <RecordUnavailable />
+    return <PresentationFailure />
+  }
+  if (compact) {
+    return <CompactRecordCard record={record} resultId={props.resultId} onOpenVote={context.onOpenRecord} />
   }
   return <RecordCard record={record} resultId={props.resultId} onOpenVote={context.onOpenRecord} />
 }
 
-function TrustedBillComparison({ props }: TrustedBillComparisonProps) {
+function TrustedCompactRecordCard({ props }: TrustedRecordCardProps) {
+  return <TrustedRecordCard props={props} compact />
+}
+
+function TrustedRecordGroup({
+  props,
+  compact = false
+}: Readonly<{ props: { records: PresentationReference[] }; compact?: boolean }>) {
   const context = useContext(RecordContext)
   if (
     !context ||
     props.records.length !== context.records.length ||
     props.records.some(
       (reference, index) =>
-        reference.resultId !== context.references[index]?.resultId || reference.recordId !== context.records[index]?.id
+        reference.recordId !== context.records[index]?.id || reference.resultId !== context.references[index]?.resultId
     )
   ) {
-    return <RecordUnavailable />
+    return <PresentationFailure />
   }
   return (
-    <Table
-      className={styles.table}
-      containerProps={{ className: styles.comparison, role: "region", "aria-label": "Bill comparison", tabIndex: 0 }}
-    >
-      <caption className={styles.caption}>Bill comparison</caption>
-      <TableHeader>
-        <TableRow>
-          <TableHead scope="col" className={`${styles.cell} whitespace-normal`}>
-            Bill
-          </TableHead>
-          {props.columns.map((column) => (
-            <TableHead key={column} scope="col" className={`${styles.cell} whitespace-normal`}>
-              {comparisonColumns[column]}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {context.records.map((record, index) => {
-          const reference = context.references[index]
-          if (!reference) {
-            return null
-          }
-          return (
-            <TableRow key={record.id}>
-              <TableHead scope="row" className={`${styles.cell} whitespace-normal`}>
-                <InlineRecordLink mention={{ record, reference }}>{record.title}</InlineRecordLink>
-              </TableHead>
-              {props.columns.map((column) => (
-                <TableCell key={column} className={`${styles.cell} whitespace-normal`}>
-                  {comparisonValue(record, column) ?? <span className={styles.absent}>Not returned</span>}
-                </TableCell>
-              ))}
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <RecordGroup
+      compact={compact}
+      items={context.records.map((record, index) => ({ record, resultId: props.records[index]!.resultId }))}
+      onOpenRecord={context.onOpenRecord}
+    />
   )
 }
 
+function TrustedCompactRecordGroup({ props }: Readonly<{ props: { records: PresentationReference[] } }>) {
+  return <TrustedRecordGroup props={props} compact />
+}
+
+function TrustedContent({ props }: Readonly<{ props: { contentId: string } }>) {
+  const context = useContext(ContentContext)
+  if (!context || context.content.id !== props.contentId) {
+    return <PresentationFailure />
+  }
+  return <InlinePresentation {...context} />
+}
+
 const { registry } = defineRegistry(answerCatalog, {
-  components: { RecordCard: TrustedRecordCard, BillComparison: TrustedBillComparison }
+  components: {
+    BillProgressCard: TrustedContent,
+    RecordGroup: TrustedRecordGroup,
+    CompactRecordGroup: TrustedCompactRecordGroup,
+    RecordCard: TrustedRecordCard,
+    CompactRecordCard: TrustedCompactRecordCard,
+    CitationCard: TrustedContent,
+    CompactPassageCard: TrustedContent,
+    PassageQuote: TrustedContent,
+    ResultList: TrustedContent,
+    ProgressPath: TrustedContent,
+    RecordTimeline: TrustedContent,
+    RollCall: TrustedContent,
+    RecordStatus: TrustedContent
+  }
 })
 
 function ReadyRecord({ block }: ReadyRecordProps) {
@@ -128,15 +205,17 @@ function ReadyRecord({ block }: ReadyRecordProps) {
   const references = presentationReferences(block.spec)
   const reference = references[0]
   if (!reference) {
-    return <RecordUnavailable />
+    return <PresentationFailure />
   }
-  const { resultId } = reference
-
   function onOpenRecord(recordId: string) {
+    const selectedReference = references.find((reference) => reference.recordId === recordId)
+    if (!selectedReference) {
+      return
+    }
     stopScroll()
     trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const selection = { resultId, recordId }
-    if (block.records[0]?.kind === "meeting") {
+    const selection = selectedReference
+    if (block.records.find((record) => record.id === recordId)?.kind === "meeting") {
       setMeetingSelection(selection)
     } else {
       setSelectedVote(selection)
@@ -163,7 +242,10 @@ function ReadyRecord({ block }: ReadyRecordProps) {
       <VoteDetails selection={selectedVote} onClose={() => setSelectedVote(undefined)} returnFocus={returnFocus} />
       <MeetingDetails
         selection={
-          meetingSelection?.resultId === reference.resultId && meetingSelection.recordId === reference.recordId
+          references.some(
+            (reference) =>
+              meetingSelection?.resultId === reference.resultId && meetingSelection.recordId === reference.recordId
+          )
             ? meetingSelection
             : undefined
         }
@@ -174,17 +256,36 @@ function ReadyRecord({ block }: ReadyRecordProps) {
   )
 }
 
-export function ComposedRecord({ part, isRunning }: ComposedRecordProps) {
+export function ComposedRecord({
+  part,
+  isRunning,
+  citation,
+  onEvidence,
+  answerId = "inline-content"
+}: ComposedRecordProps) {
   const parsed = presentationPartSchema.safeParse(part)
-  if (!parsed.success || parsed.data.data.state === "error") {
-    return <RecordUnavailable />
+  if (!parsed.success) {
+    return <PresentationFailure />
   }
   const block = parsed.data.data
+  if (block.state === "error") {
+    return <PresentationFailure reason={block.reason} />
+  }
   if (block.state === "pending") {
     if (!isRunning) {
-      return <RecordUnavailable />
+      return <PresentationFailure reason="interrupted" />
     }
-    return <output className="text-xs text-muted-foreground">Loading content...</output>
+    return <RecordLoading />
+  }
+  if (block.content) {
+    const variant = contentComponentSchema.parse(block.spec.elements[block.spec.root]?.type)
+    return (
+      <ContentContext value={{ content: block.content, variant, citation, onEvidence, answerId }}>
+        <JSONUIProvider registry={registry}>
+          <Renderer spec={block.spec} registry={registry} />
+        </JSONUIProvider>
+      </ContentContext>
+    )
   }
   return <ReadyRecord block={block} />
 }

@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto"
 import type { LegislationDatabase } from "@repo/legislation-core/database/database"
 import { supportingMaterials, supportingMaterialSections } from "@repo/legislation-core/database/schema/schema"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
+import { congressReportPublicationDate } from "../congress/reports.js"
 import { extractDocument } from "./extract.js"
 import { mapOcrPagesToDocumentSections, type OcrPageSpan } from "./ocr-page-mapping.js"
 import { boundedProcessingError, type DocumentFailureCategory } from "./process.js"
@@ -12,16 +13,25 @@ export async function persistProcessedSupportingMaterial(
 ): Promise<"processed" | "unchanged"> {
   const extraction = await extractDocument(input.materialId, input.bytes, input.contentType)
   const existing = await database
-    .select({ contentHash: supportingMaterials.contentHash, processingStatus: supportingMaterials.processingStatus })
+    .select({ contentHash: supportingMaterials.contentHash, processingStatus: supportingMaterials.processingStatus, classification: supportingMaterials.classification, sourceUrl: supportingMaterials.sourceUrl, documentDate: supportingMaterials.documentDate })
     .from(supportingMaterials)
     .where(eq(supportingMaterials.id, input.materialId))
     .limit(1)
-  if (existing[0]?.contentHash === extraction.contentHash && existing[0].processingStatus === "processed") {
+  const record = existing[0]
+  const source = record ? new URL(record.sourceUrl) : undefined
+  let documentDate: string | undefined
+  if (record?.classification === "committee-report" && ["www.congress.gov", "congress.gov"].includes(source?.hostname ?? "")) {
+    documentDate = congressReportPublicationDate(extraction.text)
+  }
+  if (record?.contentHash === extraction.contentHash && record.processingStatus === "processed") {
+    await database.update(supportingMaterials).set({ pageCount: extraction.pageCount ?? null, documentDate: record.documentDate ?? documentDate })
+      .where(and(eq(supportingMaterials.id, input.materialId), eq(supportingMaterials.contentHash, extraction.contentHash)))
     return "unchanged"
   }
 
   await persistSupportingMaterialExtraction(database, {
     contentType: input.contentType,
+    documentDate,
     extraction,
     materialId: input.materialId
   })
@@ -34,6 +44,7 @@ export async function persistOcrSupportingMaterial(
     blobPath: string
     contentType: string
     materialId: string
+    pageCount?: number
     pages?: readonly OcrPageSpan[]
     sourceBytes: Uint8Array
     text: string
@@ -49,6 +60,7 @@ export async function persistOcrSupportingMaterial(
     contentType: input.contentType,
     extraction: {
       ...extractedText,
+      pageCount: input.pageCount,
       contentHash: createHash("sha256").update(input.sourceBytes).digest("hex")
     },
     materialId: input.materialId,
@@ -62,6 +74,7 @@ async function persistSupportingMaterialExtraction(
     blobPath?: string
     contentType: string
     extraction: Awaited<ReturnType<typeof extractDocument>>
+    documentDate?: string
     materialId: string
     pageRanges?: ReadonlyMap<string, Readonly<{ pageEnd: number; pageStart: number }>>
   }
@@ -73,6 +86,8 @@ async function persistSupportingMaterialExtraction(
         ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
         contentHash: input.extraction.contentHash,
         contentType: input.contentType,
+        ...(input.documentDate ? { documentDate: input.documentDate } : {}),
+        pageCount: input.extraction.pageCount ?? null,
         nextAttemptAt: null,
         processingError: null,
         processingErrorCategory: null,

@@ -66,42 +66,30 @@ describe("Congress event normalization", () => {
     })
   })
 
-  it("normalizes a published hearing as an all-day event without inventing a meeting time", () => {
+  it("normalizes a multi-date hearing as a publication, not a meeting or series", () => {
     const snapshot = normalizeCongressHearing(
       {
         hearing: {
           chamber: "House",
           committees: [{ name: "Science Committee", systemCode: "hssy00" }],
           congress: 119,
-          dates: [{ date: "2025-03-05" }],
+          dates: [{ date: "2025-03-07" }, { date: "2025-03-05" }, { date: "2025-03-07" }],
           formats: [{ type: "PDF", url: "https://congress.gov/hearing.pdf" }],
           jacketNumber: 58978,
           title: "Assessing the Threat",
           updateDate: "2026-08-17T01:21:42Z"
         },
         sourceUrl: "https://api.congress.gov/v3/hearing/119/house/58978"
-      },
-      context
+      }
     )
     if (snapshot === undefined) {
-      throw new Error("Expected a dated hearing snapshot")
+      throw new Error("Expected a hearing publication snapshot")
     }
 
-    expect(snapshot.event).toMatchObject({
-      allDay: true,
-      classification: "hearing",
-      id: "event:congress:published-hearing-58978",
-      canonicalFactsComplete: true,
-      provenanceComplete: true,
-      publisherLocalDate: "2025-03-05",
-      isRemote: null,
-      sessionRelationsComplete: true,
-      organizationRelationsComplete: true,
-      status: "other"
-    })
-    expect(snapshot.materials[0]?.material.classification).toBe("hearing-transcript")
-    expect(snapshot.sessionIds).toEqual(["session:us:119"])
-    expect(snapshot.organizationIds).toEqual(["organization:congress:hssy00"])
+    expect(snapshot).not.toHaveProperty("event")
+    expect(snapshot.materials[0]?.material).toMatchObject({ classification: "hearing-transcript", hearingDates: ["2025-03-05", "2025-03-07"], sourceUrl: "https://congress.gov/hearing.pdf" })
+    expect(snapshot.materials[0]?.material.documentDate).toBeUndefined()
+    expect(snapshot.materials[0]?.links).toEqual([{ materialId: snapshot.materials[0]?.material.id, organizationId: "organization:congress:hssy00", classification: "published-hearing" }])
   })
 
   it("derives remote status only from an unambiguous source-declared location", () => {
@@ -293,7 +281,7 @@ describe("Congress event normalization", () => {
     expect(snapshot.documents[0]?.sourceUrl).toBe("https://congress.gov/statement.pdf")
   })
 
-  it("skips a published hearing when Congress.gov does not provide an event date", () => {
+  it("retains undated hearing publications without inventing an event or publication date", () => {
     const snapshot = normalizeCongressHearing({
       hearing: {
         chamber: "House",
@@ -305,6 +293,8 @@ describe("Congress event normalization", () => {
       sourceUrl: "https://api.congress.gov/v3/hearing/113/house/80170"
     })
 
-    expect(snapshot).toBeUndefined()
+    expect(snapshot?.materials[0]?.material).toMatchObject({ title: "Undated published hearing", hearingDates: [], sourceUrl: "https://api.congress.gov/v3/hearing/113/house/80170" })
+    expect(snapshot?.materials[0]?.material.documentDate).toBeUndefined()
+    expect(snapshot).not.toHaveProperty("event")
   })
 })

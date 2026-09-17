@@ -10,6 +10,8 @@ CREATE TABLE "legislation"."legislative_terms" (
 	"role" text,
 	"start_date" date,
 	"end_date" date,
+	"start_year" integer,
+	"end_year" integer,
 	"is_active" boolean,
 	"source_url" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

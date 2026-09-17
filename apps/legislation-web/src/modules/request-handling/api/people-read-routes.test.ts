@@ -31,6 +31,7 @@ function person(overrides: Partial<PersonCollectionRead> = {}): PersonCollection
     createdAt: new Date("2026-08-20T15:00:00.000Z"),
     familyName: "Example",
     givenName: "Alex",
+    inOfficeSinceYear: null,
     id: "person:us:alex-example",
     isActive: true,
     jurisdictionId: "jurisdiction:us",

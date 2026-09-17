@@ -3,7 +3,6 @@ import { XMLHttpRequestInterceptor } from "@mswjs/interceptors/XMLHttpRequest"
 import { http, HttpResponse } from "msw"
 import { defineNetwork, InterceptorSource } from "msw/experimental"
 import { z } from "zod"
-import { reviewData } from "../src/modules/conversations/stories/reviewFixtures"
 
 const requestSchema = z.object({
   action: z.string(),
@@ -21,6 +20,7 @@ export const network = defineNetwork({
         return HttpResponse.json({ error: "Model requests are disabled in Storybook." }, { status: 400 })
       }
       const input = parsed.data
+      const { reviewData } = await import("../src/modules/conversations/stories/reviewFixtures")
       const result = reviewData.captures.find((capture) => capture.output.resultSet?.id === input.resultId)?.output
         .resultSet
       if (!result) {

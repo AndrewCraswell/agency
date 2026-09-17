@@ -6,9 +6,28 @@ import {
   supportingMaterialLinks,
   supportingMaterials
 } from "@repo/legislation-core/database/schema/schema"
-import { eq, inArray, sql } from "drizzle-orm"
-import type { CongressEventSnapshot } from "../ingestion/congress/events.js"
+import { and, eq, inArray, sql } from "drizzle-orm"
+import type { CongressEventSnapshot, CongressHearingSnapshot } from "../ingestion/congress/events.js"
 import { upsertEventSnapshots } from "./events.js"
+
+export async function upsertCongressHearingSnapshot(database: LegislationDatabase, snapshot: CongressHearingSnapshot): Promise<void> {
+  if (snapshot.materials.length === 0) { return }
+  const materialIds = snapshot.materials.map(item => item.material.id)
+  const organizationIds = snapshot.materials.flatMap(item => item.links.flatMap(link => link.organizationId ?? []))
+  const known = organizationIds.length ? await database.select({ id: organizations.id }).from(organizations).where(inArray(organizations.id, organizationIds)) : []
+  const knownIds = new Set(known.map(item => item.id))
+  const links = snapshot.materials.flatMap(item => item.links.filter(link => link.organizationId && knownIds.has(link.organizationId)))
+  await database.transaction(async transaction => {
+    await transaction.insert(supportingMaterials).values(snapshot.materials.map(item => item.material)).onConflictDoUpdate({
+      target: supportingMaterials.id,
+      set: { classification: sql`excluded.classification`, contentType: sql`excluded.content_type`,
+        hearingDates: sql`excluded.hearing_dates`, documentDate: sql`excluded.document_date`,
+        sourceUpdatedAt: sql`excluded.source_updated_at`, sourceUrl: sql`excluded.source_url`, title: sql`excluded.title`, updatedAt: new Date() }
+    })
+    await transaction.delete(supportingMaterialLinks).where(and(inArray(supportingMaterialLinks.materialId, materialIds), eq(supportingMaterialLinks.classification, "published-hearing")))
+    if (links.length) { await transaction.insert(supportingMaterialLinks).values(links) }
+  })
+}
 
 export async function upsertCongressEventSnapshot(
   database: LegislationDatabase,

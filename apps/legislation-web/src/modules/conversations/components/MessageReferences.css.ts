@@ -1,5 +1,29 @@
 import { style } from "@vanilla-extract/css"
 
+export const question = style({
+  minWidth: 0,
+  margin: 0,
+  whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
+  lineHeight: 1.8
+})
+export const inlineTag = style({
+  display: "inline",
+  padding: "3px 7px",
+  borderRadius: 5,
+  background: "var(--card)",
+  color: "var(--primary)",
+  fontWeight: 500,
+  boxDecorationBreak: "clone"
+})
+export const inlineIcon = style({
+  display: "inline-block",
+  width: "0.85em",
+  height: "0.85em",
+  marginRight: "0.35em",
+  verticalAlign: "-0.08em"
+})
+
 export const list = style({
   display: "flex",
   flexWrap: "wrap",

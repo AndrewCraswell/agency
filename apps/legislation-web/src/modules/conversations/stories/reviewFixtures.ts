@@ -1,12 +1,25 @@
 import type { UIMessage } from "ai"
 import invariant from "tiny-invariant"
-import { entityKindSchema } from "../entityResults"
+import { entityKindSchema, projectEntityResult } from "../entityResults"
 import { ResearchFailure, researchFailureCode, type ResearchFailureCode } from "../researchFailure"
 import { researchToolLabels } from "../researchTools"
 import captured from "./captured.json"
 import { reviewDatasetSchema, type ReviewCapture } from "./reviewData"
 
 export const reviewData = reviewDatasetSchema.parse(captured)
+for (const capture of reviewData.captures) {
+  const page = capture.output.resultSet
+  if (!page) {
+    continue
+  }
+  const projected = projectEntityResult(capture.toolName, capture.output.data)
+  invariant(projected, `Cannot project captured ${capture.toolName} data.`)
+  page.items = page.items.map((record) => {
+    const current = projected.items.find((item) => item.id === record.id)
+    invariant(current, `Captured record ${record.id} is missing from the source data.`)
+    return current
+  })
+}
 export const activityStates = [
   "Awaiting input",
   "Receiving input",
@@ -72,8 +85,18 @@ export function activityPart(
 
 export const capturedCards = entityKindSchema.options.flatMap((kind) => {
   const seen = new Set<string>()
+  const detailTools = {
+    bill: "get_bill",
+    person: "get_person",
+    organization: "get_organization",
+    meeting: "get_event",
+    document: "get_bill_text",
+    amendment: "get_amendment",
+    vote: "get_vote",
+    material: "get_supporting_material"
+  }
   const candidates = [...reviewData.captures].sort(
-    (left, right) => Number(right.toolName.startsWith("get_")) - Number(left.toolName.startsWith("get_"))
+    (left, right) => Number(right.toolName === detailTools[kind]) - Number(left.toolName === detailTools[kind])
   )
   return candidates.flatMap(
     (capture) =>

@@ -9,6 +9,7 @@ import { MessageResponse } from "../../../components/ai-elements/message"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip"
 import { clarificationRequestSchema } from "../clarification"
+import { presentationCitation, presentationEvidence } from "../composition"
 import { entityPageSchema } from "../entityResults"
 import { evidenceSnapshotSchema, evidenceSourceUrl, sourceUrlSchema, type EvidenceSnapshot } from "../evidence"
 import { createCitationPresentation, type CitationSelection } from "./citationPresentation"
@@ -55,6 +56,12 @@ export function responseClarification(message: UIMessage) {
 export function responseEvidence(message: UIMessage): EvidenceSnapshot[] {
   const found = new Map<string, EvidenceSnapshot>()
   for (const part of message.parts) {
+    if (part.type === "data-presentation") {
+      const source = presentationEvidence(part.data)
+      if (source) {
+        found.set(source.id, source)
+      }
+    }
     if (part.type !== "dynamic-tool" || part.state !== "output-available") {
       continue
     }
@@ -142,9 +149,17 @@ function responsePresentation(
   suppliedEvidence: EvidenceSnapshot[] | undefined,
   previousNumbers?: ReadonlyMap<string, number>
 ) {
-  const text = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
+  const text = orderedAnswerParts(message.parts)
+    .map((part) => {
+      if (part.type === "text") {
+        return part.text
+      }
+      if (part.part.type !== "data-presentation") {
+        return ""
+      }
+      const href = presentationCitation(part.part.data)
+      return href ? `[source](${href})` : ""
+    })
     .join("\n\n")
   return {
     message,
@@ -153,7 +168,13 @@ function responsePresentation(
     presentation: createCitationPresentation(
       message.id,
       text,
-      suppliedEvidence ?? responseEvidence(message),
+      [
+        ...(suppliedEvidence ?? responseEvidence(message)),
+        ...message.parts.flatMap((part) => {
+          const source = part.type === "data-presentation" ? presentationEvidence(part.data) : undefined
+          return source ? [source] : []
+        })
+      ],
       previousNumbers
     ),
     referenceDefinitions: answerReferenceDefinitions(text),
@@ -248,7 +269,17 @@ export function ConversationResponse({
           renderPart={(part, animate) => {
             const key = `${message.id}:${part.key}`
             if (part.type === "presentation") {
-              return <ComposedRecord key={key} part={part.part} isRunning={isRunning} />
+              const href = part.part.type === "data-presentation" ? presentationCitation(part.part.data) : undefined
+              return (
+                <ComposedRecord
+                  key={key}
+                  part={part.part}
+                  isRunning={isRunning}
+                  answerId={message.id}
+                  citation={href ? presentation.resolveCitation(href) : undefined}
+                  onEvidence={onEvidence}
+                />
+              )
             }
             if (!part.text) {
               return null

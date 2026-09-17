@@ -29,7 +29,7 @@ export function refreshStagedReferences(selected: readonly StagedReference[], re
 export const referenceSearchSchema = z.strictObject({
   action: z.literal("search-references"),
   sessionKey: z.uuid(),
-  kind: z.union([z.literal("all"), entityKindSchema.exclude(["document"])]),
+  kind: z.union([z.literal("all"), z.literal("mention"), entityKindSchema.exclude(["document"])]),
   query: z.string().trim().min(2).max(200)
 })
 

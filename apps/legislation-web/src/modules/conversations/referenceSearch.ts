@@ -20,6 +20,13 @@ export async function searchReferences(
     switch (input.kind) {
       case "all":
         throw new Error("Reference search kind was not narrowed")
+      case "mention": {
+        const { people, committees } = await service.searchMentionRecords(query)
+        return [
+          { tool: "search_people", data: people },
+          { tool: "search_organizations", data: committees }
+        ]
+      }
       case "meeting":
         return { tool: "search_events", data: await service.searchEvents({ query, limit: 5 }) }
       case "vote":
@@ -40,11 +47,14 @@ export async function searchReferences(
     }
   })
   signal.throwIfAborted()
-  const page = resultStore.create(input.sessionKey, result.tool, result.data, query, async () => {
-    throw new Error("Search again to refine references")
+  const results = Array.isArray(result) ? result : [result]
+  return results.flatMap((entry) => {
+    const page = resultStore.create(input.sessionKey, entry.tool, entry.data, query, async () => {
+      throw new Error("Search again to refine references")
+    })
+    if (!page) {
+      throw new Error("Reference results could not be read")
+    }
+    return page.items.map((record) => ({ resultId: page.id, recordId: record.id, record }))
   })
-  if (!page) {
-    throw new Error("Reference results could not be read")
-  }
-  return page.items.map((record) => ({ resultId: page.id, recordId: record.id, record }))
 }

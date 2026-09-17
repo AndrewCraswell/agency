@@ -1,60 +1,50 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { Activity, ArrowUpRight, Columns2, Gavel, RotateCcw, Users } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 import { LoaderCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
+import { Suspense, useRef, useState } from "react"
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton
 } from "../../../components/ai-elements/conversation"
-import { Suggestion } from "../../../components/ai-elements/suggestion"
 import { AppShell } from "../../../components/shell/AppShell"
 import { Button } from "../../../components/ui/button"
 import { cn } from "../../../components/ui/utils"
-import { referenceMessageMetadata, type StagedReference } from "../chatRequest"
+import type { StagedReference } from "../chatRequest"
 import { isClarificationSubmission } from "../chatRequest"
+import {
+  composerDraftText,
+  composerMessageMetadata,
+  composerReferences,
+  messageComposerDraft,
+  textDraft
+} from "../composerDraft"
 import { entityPageSchema } from "../entityResults"
+import type { ResearchSuggestion } from "../suggestions"
 import { ChatComposer } from "./ChatComposer"
 import type { CitationSelection } from "./citationPresentation"
+import type { ComposerHandle } from "./ComposerInput"
 import { ConversationResponse } from "./ConversationResponse"
 import { useConversationSession } from "./ConversationSession"
 import { EvidencePanel } from "./EvidencePanel"
 import { MessageActions } from "./MessageActions"
-import { MessageReferences } from "./MessageReferences"
+import { MessageQuestion, MessageReferences } from "./MessageReferences"
 import { ReferencePicker } from "./ReferencePicker"
+import { ResearchSuggestions, ResearchSuggestionsLoading } from "./ResearchSuggestions"
 import * as styles from "./ChatWorkspace.css"
 import * as responseStyles from "./ConversationResponse.css"
 
-const starters = [
-  {
-    text: "Who has sponsored bills on AI in education?",
-    description: "Sponsors, bill numbers, and the proposals they introduced",
-    icon: Users
-  },
-  {
-    text: "What is the latest action on housing affordability bills in Congress?",
-    description: "Recorded actions, dates, and committee referrals",
-    icon: Activity
-  },
-  {
-    text: "How do federal AI bills differ in their requirements for developers?",
-    description: "Requirements compared with the relevant bill text",
-    icon: Columns2
-  },
-  {
-    text: "Which committees have held hearings on student data privacy?",
-    description: "Committee names, hearing dates, and published materials",
-    icon: Gavel
-  }
-]
+type ChatWorkspaceProps = Readonly<{
+  isAvailable?: boolean
+  conversationId?: string
+  suggestions?: Promise<ResearchSuggestion[]>
+}>
 
-type ChatWorkspaceProps = Readonly<{ isAvailable?: boolean; conversationId?: string }>
-
-export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorkspaceProps) {
+export function ChatWorkspace({ isAvailable = false, conversationId, suggestions }: ChatWorkspaceProps) {
   const router = useRouter()
   const {
     chat,
@@ -65,6 +55,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
     setDraft,
     references,
     setReferences,
+    searchReferences,
     isRestoringConversation,
     hasReloadRecoveryError,
     interruptedMessageId,
@@ -73,7 +64,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
   const isConversation = conversationId !== undefined
   const hasSession = conversationId === chat.id
   const [wasStopped, setWasStopped] = useState(false)
-  const [referenceMode, setReferenceMode] = useState<"all" | "mention">()
+  const [isReferencePickerOpen, setReferencePickerOpen] = useState(false)
   const [selectedCitation, setSelectedCitation] = useState<CitationSelection>()
   const evidenceTrigger = useRef<HTMLElement | null>(null)
   function handleEvidence(selection: CitationSelection) {
@@ -86,19 +77,20 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
   const lastMessage = messages.at(-1)
   const messageHistory = messages
     .filter((message) => message.role === "user" && !isClarificationSubmission(message))
-    .map((message) =>
-      message.parts
-        .filter((part) => part.type === "text")
-        .map((part) => part.text)
-        .join("\n")
-    )
-    .filter((text) => text.trim().length > 0)
+    .map(messageComposerDraft)
+    .filter((previous) => composerDraftText(previous).trim().length > 0)
   const hasInterruptedResponse = interruptedMessageId !== undefined && interruptedMessageId === lastMessage?.id
-  const textarea = useRef<HTMLTextAreaElement>(null)
+  const composer = useRef<ComposerHandle>(null)
   const isNavigating = useRef(false)
 
   function handleSend() {
-    if (!isAvailable || isBusy || !draft.trim() || isNavigating.current) {
+    if (
+      !isAvailable ||
+      isBusy ||
+      !composerDraftText(draft).trim() ||
+      composerReferences(draft, references).length > 12 ||
+      isNavigating.current
+    ) {
       return
     }
     if (!isConversation) {
@@ -112,11 +104,11 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
     }
     setWasStopped(false)
     void sendMessage({
-      text: draft,
-      metadata: referenceMessageMetadata(references)
+      text: composerDraftText(draft),
+      metadata: composerMessageMetadata(draft, references)
     })
-    setDraft("")
-    textarea.current?.focus()
+    setDraft([])
+    composer.current?.focus()
   }
 
   function handleStop() {
@@ -124,14 +116,14 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
     markInterrupted()
     cancelClarification()
     void stop()
-    textarea.current?.focus()
+    composer.current?.focus()
   }
 
   const connectionStatus = isAvailable ? undefined : "Research is not connected yet."
 
   function handleSuggestion(question: string) {
-    setDraft(question)
-    textarea.current?.focus()
+    setDraft(textDraft(question))
+    composer.current?.focus()
   }
 
   const availableReferences = new Map<string, StagedReference>()
@@ -160,8 +152,8 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
   }
   const referenceProps = {
     references,
-    onReferenceRequested: () => setReferenceMode("all"),
-    onMentionRequested: () => setReferenceMode("mention"),
+    onReferenceRequested: () => setReferencePickerOpen(true),
+    searchMentions: (query: string, signal: AbortSignal) => searchReferences(query, "mention", signal),
     onRemoveReference: (recordId: string) =>
       setReferences(references.filter((reference) => reference.recordId !== recordId))
   }
@@ -190,32 +182,17 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
                   {...referenceProps}
                   draft={draft}
                   onDraftChange={setDraft}
-                  textareaRef={textarea}
+                  composerRef={composer}
                   onSend={handleSend}
                   hasHomepageGlow
                   isAvailable={isAvailable && !isBusy}
                   status={connectionStatus}
                 />
-                <section aria-label="Suggested research questions">
-                  <div className="grid gap-2">
-                    {starters.map(({ text, description, icon: Icon }, index) => (
-                      <Suggestion
-                        key={text}
-                        suggestion={text}
-                        onClick={handleSuggestion}
-                        aria-label={text}
-                        className={cn(styles.suggestion, index === 3 && styles.suggestionExtra)}
-                      >
-                        <Icon className="size-[15px] text-primary" aria-hidden="true" />
-                        <span className={styles.suggestionCopy}>
-                          <span className={styles.suggestionQuestion}>{text}</span>
-                          <span className={styles.suggestionDescription}>{description}</span>
-                        </span>
-                        <ArrowUpRight className="size-3.5 text-subtle" aria-hidden="true" />
-                      </Suggestion>
-                    ))}
-                  </div>
-                </section>
+                {suggestions && (
+                  <Suspense fallback={<ResearchSuggestionsLoading />}>
+                    <ResearchSuggestions suggestions={suggestions} onSelect={handleSuggestion} />
+                  </Suspense>
+                )}
                 <p className={styles.dataNote}>
                   Ask in your own words. Rostra brings together bill text, votes, and hearing records so you can compare
                   proposals and check the sources. Coverage varies by jurisdiction and date.
@@ -267,16 +244,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
                         </div>
                         <div className={responseStyles.questionBubble}>
                           <MessageReferences message={message} />
-                          {message.parts.map((part, index) => {
-                            if (part.type !== "text") {
-                              return null
-                            }
-                            return (
-                              <p key={`${message.id}-${index}`} className="min-w-0">
-                                {part.text}
-                              </p>
-                            )
-                          })}
+                          <MessageQuestion message={message} />
                         </div>
                         <MessageActions message={message} />
                       </article>
@@ -321,7 +289,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
               {...referenceProps}
               draft={draft}
               onDraftChange={setDraft}
-              textareaRef={textarea}
+              composerRef={composer}
               onSend={handleSend}
               isAvailable={isAvailable}
               isRunning={isBusy}
@@ -342,19 +310,19 @@ export function ChatWorkspace({ isAvailable = false, conversationId }: ChatWorks
         onClose={() => setSelectedCitation(undefined)}
         returnFocus={() => evidenceTrigger.current?.focus()}
       />
-      {referenceMode && (
+      {isReferencePickerOpen && (
         <ReferencePicker
           initial={references}
           available={[...availableReferences.values()]}
-          mention={referenceMode === "mention"}
+          mention={false}
           onClose={() => {
-            setReferenceMode(undefined)
+            setReferencePickerOpen(false)
           }}
           onApply={(next) => {
             setReferences(next)
-            setReferenceMode(undefined)
+            setReferencePickerOpen(false)
           }}
-          returnFocus={() => textarea.current?.focus({ preventScroll: true })}
+          returnFocus={() => composer.current?.focus({ preventScroll: true })}
         />
       )}
     </AppShell>

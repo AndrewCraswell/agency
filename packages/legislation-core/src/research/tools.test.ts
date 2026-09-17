@@ -37,6 +37,16 @@ function definition(api: LegislationQueryApi, name: string) {
 }
 
 describe("shared research definitions", () => {
+  it.each(["get_person", "get_organization"])("preserves bounded child limits for %s", async (name) => {
+    const read = vi.fn(async () => ({ items: [] }))
+    const api = { ...service(), getPerson: read, getOrganization: read }
+    const id = name === "get_person" ? "person:us:one" : "organization:us:one"
+    await definition(api, name).execute({ id, limit: 1 })
+    expect(read).toHaveBeenCalledWith({ id, limit: 1 })
+    expect(await definition(api, name).execute({ id, limit: 101 })).toHaveProperty("isError", true)
+    expect(read).toHaveBeenCalledOnce()
+  })
+
   it.each(["get_vote", "get_votes", "get_bill_votes"])("pages every position losslessly for %s", async (name) => {
     const positions = Array.from({ length: 430 }, (_, index) => ({
       person: { id: `person:us:${index}`, name: `Member ${index}`, biography: "x".repeat(900) },

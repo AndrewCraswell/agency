@@ -179,6 +179,8 @@ export function normalizeCongressMembers(
             personId: canonicalPersonId,
             role: term.chamber,
             sourceId: sourceIdentity,
+            startYear: term.startYear,
+            endYear: term.endYear,
             ...congressProvenance(member.url, context.retrievedAt)
           } satisfies TermInsert
         ]
@@ -245,11 +247,15 @@ export function normalizeCongressMemberDetails(
         }
       }
     }
+    const currentCareerTerms = member.terms.item.filter((term) => term.endYear === undefined)
+    const inOfficeSinceYear =
+      detail.currentMember && currentCareerTerms.length === 1 ? currentCareerTerms[0]?.startYear : undefined
     people.push({
       familyName: detail.lastName,
       givenName: detail.firstName,
       id: canonicalPersonId,
       isActive: detail.currentMember,
+      inOfficeSinceYear,
       jurisdictionId: federalJurisdictionId,
       name: member.name,
       party: member.partyName,
@@ -290,6 +296,8 @@ export function normalizeCongressMemberDetails(
         personId: canonicalPersonId,
         role: term.memberType,
         sourceId: sourceIdentity,
+        startYear: term.startYear,
+        endYear: term.endYear,
         sourceUpdatedAt,
         ...provenance
       })

@@ -104,7 +104,49 @@ The original AI-in-education question completed live search and bill-detail call
 New Jersey A4352 and Massachusetts H614 source links. Two larger detail calls failed before narrower retrieval
 succeeded; broader batch and cancellation acceptance remains open. No full unit suite was run for this repair.
 
+## Homepage research suggestions
+
+The homepage uses Luna (`openai/gpt-5.6-luna-20260709`) and the Langfuse text prompt
+`legislative-research-suggestions`, selected by its `production` label. Version 1 was created September 16, 2026;
+the existing `legislative-research` prompt is unchanged. The server compiles `{{current_date}}` as a UTC calendar date
+and validates exactly four distinct questions with distinct sponsor, action, comparison and hearing approaches.
+Questions are limited to 110 characters and descriptions to 100. They are research invitations, not verified findings;
+the prompt prohibits invented records, unsupported news claims and guaranteed coverage.
+
+Suggestions stream through a local Suspense boundary without blocking the composer. Selection fills and focuses the
+editable question without sending; the existing mobile layout shows the first three. Successful results and in-flight
+generation are shared per server process for one hour. Prompt edits take effect at the next cache expiry or process
+restart. A generation has a 45-second deadline, 2,000 output-token limit and no automatic model retries. Failures produce
+no hardcoded fallback, leave research usable, are reported to Sentry and have a 30-second cooldown. Disconnected research
+does not generate suggestions. There is no public regeneration endpoint or per-visitor profiling.
+
+Generation observations use `legislative-research-suggestions` with the exact prompt version, model, validated output
+and token usage. They are separate from `legislative-research-conversation`, so the existing native conversation
+evaluation rule is not applied to idea generation. Hosted prompt wording owns topical variety and neutral voice;
+source-backed answers still depend on the ordinary research tools and citation checks.
+
 ## Conversation reload recovery
+
+### Inline person and committee tags
+
+Typing `@` opens the grouped name picker. Queries of at least two characters debounce for 300ms; a new query,
+dismissal, blur, or unmount aborts the previous lookup and discards late results. The `search-references` action's
+`mention` kind returns at most five people and five committees. PostgreSQL `pg_trgm` ranks published names with
+`word_similarity`; nickname aliases are not inferred. Organization candidates must have classification `committee`.
+The baseline migration enables `pg_trgm`; existing databases need that extension enabled explicitly before this code
+runs. It was enabled on the configured development database during local acceptance. No application records were reset.
+
+The shared Tiptap editor stores text and atomic mention segments, each carrying the selected `resultId`, `recordId`,
+and display snapshot. Removal drops that inline reference; repeated tags deduplicate by record kind and ID. Ordinary
+typed names do not become references. The separate `+` library remains independent. First messages and follow-ups
+combine explicit references with remaining inline tags, capped at 12 distinct references, and send only reference IDs
+alongside plain message text. The server resolves those IDs against the session-owned result store before adding them
+as identity context, never as instructions, citations, or corpus restrictions. Expired or foreign references fail closed.
+
+History recall and development checkpoints retain structured draft segments rather than guessing identity from names.
+Pasted markup cannot manufacture trusted mention nodes. The input stories use the production composer with isolated
+fixture search, including loading, failure/retry, empty, keyboard, and selected states. Enter chooses an active suggestion
+without sending; outside the picker desktop Enter sends, while Shift+Enter and mobile Enter retain multiline editing.
 
 The conversation composer supports Up/Down history recall of previously sent, visible user messages. Up moves
 from newest to oldest without wrapping; Down moves forward and restores the unsent draft. Recalled text is selected

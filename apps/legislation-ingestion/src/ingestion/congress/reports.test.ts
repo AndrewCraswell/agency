@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest"
-import { normalizeCongressCommitteeReportBundle } from "./reports.js"
+import { congressReportPublicationDate, normalizeCongressCommitteeReportBundle } from "./reports.js"
 
 describe("Congress committee report normalization", () => {
+  it.each([
+    ["115th Congress REPORT 115-15 ERRATA MAY 3, 2017.--Ordered to be printed", "2017-05-03"],
+    ["117th Congress REPORT 117-130 September 27, 2021.--Committed to the Committee of the Whole House on the State of the Union and ordered to be printed", "2021-09-27"],
+    ["117th Congress REPORT 117-187 The bill was introduced October 18, 2022.", undefined],
+    ["117th Congress REPORT February 30, 2022.--Ordered to be printed", undefined],
+    ["117th Congress REPORT January 1, 2022.--Ordered to be printed February 1, 2022.--Ordered to be printed", undefined]
+  ])("extracts only an unambiguous report printing date: %s", (text, expected) => {
+    expect(congressReportPublicationDate(text)).toBe(expected)
+  })
+
   it("normalizes every official text representation and its explicit relationships", () => {
     const snapshot = normalizeCongressCommitteeReportBundle({
       reference: {

@@ -12,6 +12,44 @@ const event = {
 }
 
 describe("record view projections", () => {
+  it.each(["text/html", "application/xml", "application/xhtml+xml"])(
+    "does not invent physical pages for %s sources",
+    (contentType) => {
+      expect(
+        projectEntityResult("get_bill_text", { document: { id: "document:one", title: "Published text", contentType } })
+          ?.items[0]?.fields
+      ).toContainEqual({ label: "Pages", value: "Not paginated", detail: undefined })
+    }
+  )
+
+  it("preserves source years without inventing exact service dates", () => {
+    const record = projectEntityResult("get_person", {
+      person: { id: "person:one", name: "Published member", isActive: true, inOfficeSinceYear: 1997 },
+      terms: [{ startYear: 2025, endYear: 2027, isActive: true }]
+    })?.items[0]
+    expect(record?.fields).toContainEqual({ label: "In office since", value: "1997", detail: undefined })
+    expect(record?.personSummary?.term).toMatchObject({ startYear: 2025, endYear: 2027 })
+    expect(record?.personSummary?.term?.startDate).toBeUndefined()
+  })
+
+  it("uses the selected document's measured page count without counting a partial section page", () => {
+    const document = { id: "document:one", title: "Published PDF", ocrPageCount: 12 }
+    expect(projectEntityResult("get_bill_text", { document })?.items[0]?.fields).toContainEqual({
+      label: "Pages",
+      value: "12",
+      detail: undefined
+    })
+    expect(
+      projectEntityResult("get_bill_text", { document: { ...document, pageCount: 14 } })?.items[0]?.fields
+    ).toContainEqual({ label: "Pages", value: "14", detail: undefined })
+    const missing = projectEntityResult("get_bill_text", {
+      document: { ...document, ocrPageCount: null },
+      sections: [{ pageEnd: 2 }],
+      truncated: true
+    })?.items[0]
+    expect(missing?.fields.some((field) => field.label === "Pages")).toBe(false)
+  })
+
   it("preserves published time zones without inventing times for all-day or unknown-zone meetings", () => {
     const timed = projectEntityResult("get_event", { event })?.items[0]
     expect(timed?.subtitle).toContain("1:30")

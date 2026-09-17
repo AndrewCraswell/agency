@@ -24,7 +24,7 @@ describe("Congress entity normalization", () => {
     )
     expect(result.people).toHaveLength(1)
     expect(result.terms).toHaveLength(1)
-    expect(result.terms[0]).toMatchObject({ chamber: "upper", sourceId: "118:upper:2006:2024" })
+    expect(result.terms[0]).toMatchObject({ chamber: "upper", sourceId: "118:upper:2006:2024", startYear: 2006, endYear: 2024 })
   })
 
   it("retains year-only boundary terms rather than guessing their precise appointment dates", () => {
@@ -295,7 +295,8 @@ describe("Congress entity normalization", () => {
         district: "8",
         isActive: true,
         officeTitle: "Representative",
-        sourceId: "119:lower:2025:current"
+        sourceId: "119:lower:2025:current",
+        startYear: 2025
       })
     ])
   })

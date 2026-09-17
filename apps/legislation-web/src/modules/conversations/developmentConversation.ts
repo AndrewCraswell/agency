@@ -2,6 +2,7 @@ import { safeValidateUIMessages, type UIMessage } from "ai"
 import { z } from "zod"
 import { stagedReferenceSchema, type StagedReference } from "./chatRequest"
 import { clarificationRequestSchema, clarificationResponseSchema, type ClarificationResponse } from "./clarification"
+import { composerDraftSchema, type ComposerDraft } from "./composerDraft"
 import { presentationBlockSchema } from "./composition"
 
 export const developmentConversationKey = "rostra.development.conversation"
@@ -9,7 +10,7 @@ export const developmentConversationKey = "rostra.development.conversation"
 const snapshotSchema = z.object({
   id: z.string().min(1).max(128),
   sessionKey: z.uuid(),
-  draft: z.string(),
+  draft: composerDraftSchema,
   references: z.array(stagedReferenceSchema).max(12).optional(),
   messages: z.array(z.unknown()),
   clarificationAnswers: z.record(z.string(), clarificationResponseSchema),
@@ -19,7 +20,7 @@ const snapshotSchema = z.object({
 export type DevelopmentConversation = Readonly<{
   id: string
   sessionKey: string
-  draft: string
+  draft: ComposerDraft
   references?: StagedReference[]
   messages: UIMessage[]
   clarificationAnswers: Record<string, ClarificationResponse>

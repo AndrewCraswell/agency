@@ -1,28 +1,41 @@
-import { globalStyle, style } from "@vanilla-extract/css"
+import { style } from "@vanilla-extract/css"
 
-export const comparison = style({
-  maxWidth: "100%",
-  overflowX: "auto",
-  margin: "16px 0",
-  ":focus-visible": { outline: "2px solid var(--ring)", outlineOffset: 2 }
+export const status = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+  marginLeft: "auto",
+  minHeight: 18,
+  fontSize: 12,
+  fontWeight: 500,
+  lineHeight: 1.4,
+  color: "var(--foreground)"
 })
-export const table = style({
-  width: "100%",
-  minWidth: 560,
-  tableLayout: "fixed",
-  borderCollapse: "collapse",
+export const title = style({
+  margin: 0,
   fontSize: 14,
-  lineHeight: 1.5
+  fontWeight: 600,
+  lineHeight: 1.3,
+  overflowWrap: "anywhere",
+  color: "var(--foreground)"
 })
-export const caption = style({ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 12 })
-export const cell = style({
-  borderBottom: "1px solid var(--border)",
-  padding: "12px 14px",
-  textAlign: "left",
-  verticalAlign: "top",
+export const explanation = style({
+  display: "block",
+  margin: 0,
+  borderTop: "1px solid var(--border)",
+  padding: "12px 16px",
+  fontSize: 11.5,
+  lineHeight: 1.5,
+  color: "var(--muted-foreground)",
   overflowWrap: "anywhere"
 })
-export const absent = style({ color: "var(--muted-foreground)" })
-globalStyle(`${table} thead`, { background: "var(--muted)", color: "var(--muted-foreground)" })
-globalStyle(`${table} th`, { fontWeight: 500 })
-globalStyle(`${table} tbody tr:last-child > th, ${table} tbody tr:last-child > td`, { borderBottom: 0 })
+export const loading = style({ display: "block" })
+export const skeleton = style({
+  display: "block",
+  width: "100%",
+  height: 9,
+  borderRadius: 2,
+  background: "var(--secondary)"
+})
+export const skeletonTitle = style({ maxWidth: 300, height: 13 })
+export const skeletonMeta = style({ maxWidth: 420, height: 10 })

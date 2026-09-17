@@ -306,6 +306,7 @@ const personDetailRead: PersonDetailRead = {
     createdAt: new Date("2026-08-24T12:00:00.000Z"),
     familyName: "Lovelace",
     givenName: "Ada",
+    inOfficeSinceYear: null,
     id: resourceIds.person,
     isActive: true,
     jurisdictionId: resourceIds.jurisdiction,

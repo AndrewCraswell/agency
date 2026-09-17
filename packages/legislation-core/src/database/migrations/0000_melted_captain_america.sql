@@ -1,5 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 --> statement-breakpoint
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+--> statement-breakpoint
 CREATE SCHEMA "legislation";
 --> statement-breakpoint
 CREATE TABLE "legislation"."bill_actions" (
@@ -24,6 +26,7 @@ CREATE TABLE "legislation"."bill_documents" (
 	"version_code" text,
 	"title" text NOT NULL,
 	"document_date" date,
+	"page_count" integer,
 	"source_url" text NOT NULL,
 	"content_type" text,
 	"blob_path" text,
@@ -152,6 +155,7 @@ CREATE TABLE "legislation"."people" (
 	"name" text NOT NULL,
 	"given_name" text,
 	"family_name" text,
+	"in_office_since_year" integer,
 	"party" text,
 	"source_url" text,
 	"upstream_ids" jsonb DEFAULT '{}'::jsonb NOT NULL,

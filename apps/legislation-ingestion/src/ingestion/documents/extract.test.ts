@@ -95,6 +95,7 @@ describe("legislative document extraction", () => {
 
   it("extracts text from a text-bearing PDF", async () => {
     const pdf = await extractDocument("document:pdf", textPdf, "application/pdf")
+    expect(pdf.pageCount).toBe(1)
     expect(pdf.text).toContain("PDF contains usable legislative text")
     expect(pdf.sections[0]?.identifier).toBe("1.")
   }, 15_000)

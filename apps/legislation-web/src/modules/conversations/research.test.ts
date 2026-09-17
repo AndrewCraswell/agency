@@ -10,6 +10,14 @@ import { createResearchTools, modelInputSchema, researchModelOutput } from "./re
 it("passes copy-ready evidence citations through the actual SDK tool-result boundary", async () => {
   const output = {
     data: { id: "bill:ca:20232024:ab:2652" },
+    presentationOptions: [
+      {
+        contentId: "33333333-3333-4333-8333-333333333333",
+        components: ["CitationCard", "PassageQuote"],
+        label: "Bill record",
+        evidenceId: "e7"
+      }
+    ],
     evidence: [
       {
         id: "stable-snapshot-id",
@@ -72,6 +80,9 @@ it("passes copy-ready evidence citations through the actual SDK tool-result boun
   expect(toolOutputs).toEqual([output])
   const prompt = JSON.stringify(model.doStreamCalls[1]?.prompt)
   expect(prompt).toContain("#citation-e7")
+  expect(prompt).toContain("presentationOptions")
+  expect(prompt).toContain("33333333-3333-4333-8333-333333333333")
+  expect(prompt).toContain("PassageQuote")
   expect(prompt).not.toContain("stable-snapshot-id")
   expect(model.doStreamCalls).toHaveLength(2)
 })
