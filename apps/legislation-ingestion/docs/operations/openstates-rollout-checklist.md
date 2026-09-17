@@ -2,6 +2,16 @@
 
 ## September 16 continuation and identity verification
 
+September 17 04:25Z continuation:
+
+- [x] New-inventory first ten repairs: all ten processed/OCR processed with original raw hashes unchanged; all 63 resulting section IDs/hashes match the hosted search copy. Retrieval behavior is not implied by copy parity.
+- [x] AK33 embedding freshness: 812 bill vectors and 60,938 section vectors, no missing/stale. NC2023: 2,005 and 28,235 respectively; NC2021: 2,095 and 27,096. Each is a read-only production snapshot, not archive-completeness evidence.
+- [x] Audit now distinguishes existing incomplete extraction from absent source records (`c639db5`, nine tests). Four previously "missing" AK sources were existing unsupported documents with stale malformed-text failures, not absent records.
+- [x] Extended guarded recovery to explicitly selected `malformed-document` classifications (`690ec9e`, eight tests). Ten freshly validated scanned PDFs requeued, including the four audit gaps; no failed validation or active record was reset.
+- [ ] Recovery controller `run_06gar6ouqsedi08027r6qg3g01` executing on pinned `20260916.3`, after previous AK run completed and no AK lease remained. HB261 docid15388 already processed/OCR processed with 8,216 characters; the other three audited gaps remained pending at the check.
+- [ ] SB277 docid12203 is a source-version mismatch: official fresh download SHA256 `ab0d701c2699eeae89fcd92d2dbb440ead1dc8f45f3926063272a6b0c4f98904` matches the local reference (10,245,823-byte PDF), while production stores `23150ccff9d5868b8be90c363114d69de60e9edb4f014c8ee9a3a1c5a37e1eca`. Requires reviewed source refresh, not same-source OCR repair. No production mutation for this case yet.
+- [ ] Full verification continues to fail in unrelated web lint; ingestion focused tests/types and commit hooks passed. Neither onboarding is closed.
+
 September 17 continuation after Docker recovery:
 
 - [x] Local reference database restarted; all 2,302 Alaska OCR reference documents are present.
