@@ -78,6 +78,30 @@ CREATE TABLE legislation.legal_voyage_4_embeddings (
   FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id) ON DELETE CASCADE
 );
 CREATE INDEX legal_voyage_4_embeddings_passage_idx ON legislation.legal_voyage_4_embeddings(passage_id,generation_id);
+CREATE TABLE legislation.legal_embedding_shards (
+  generation_id text NOT NULL REFERENCES legislation.legal_embedding_generations(id) ON DELETE CASCADE,
+  shard_count integer NOT NULL CHECK(shard_count=16),
+  shard_index integer NOT NULL CHECK(shard_index>=0 AND shard_index<shard_count),
+  cursor_passage_id text CHECK(cursor_passage_id IS NULL OR cursor_passage_id ~ '^[a-f0-9]{64}$'),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','complete','blocked')),
+  fence integer NOT NULL DEFAULT 0 CHECK(fence>=0),
+  lease_token uuid,
+  lease_expires_at timestamptz,
+  attempts integer NOT NULL DEFAULT 0 CHECK(attempts>=0),
+  last_attempt_state text NOT NULL DEFAULT 'idle' CHECK(last_attempt_state IN ('idle','requesting')),
+  possible_repeated_paid_attempts integer NOT NULL DEFAULT 0 CHECK(possible_repeated_paid_attempts>=0),
+  provider_prompt_tokens bigint NOT NULL DEFAULT 0 CHECK(provider_prompt_tokens>=0),
+  provider_total_tokens bigint NOT NULL DEFAULT 0 CHECK(provider_total_tokens>=0),
+  inserted_vectors integer NOT NULL DEFAULT 0 CHECK(inserted_vectors>=0),
+  reused_vectors integer NOT NULL DEFAULT 0 CHECK(reused_vectors>=0),
+  last_error text,
+  updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(generation_id,shard_count,shard_index),
+  CHECK((lease_token IS NULL)=(lease_expires_at IS NULL)),
+  CHECK(state<>'complete' OR (lease_token IS NULL AND last_attempt_state='idle'))
+);
+CREATE INDEX legal_embedding_shards_pending_idx
+  ON legislation.legal_embedding_shards(generation_id,shard_index) WHERE state='pending';
 CREATE TABLE legislation.legal_search_memberships (
   scope_kind text NOT NULL CHECK(scope_kind IN ('edition','publication')),
   scope_id uuid NOT NULL,

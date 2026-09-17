@@ -67,13 +67,13 @@ import {
   withImportLease,
   withLease
 } from "./storage.js"
+import { initializeLegalEmbeddingShards, runLegalEmbeddingShardJob } from "./vector-jobs.js"
 import { selectLegalEmbeddingShard } from "./vector-shards.js"
 import {
   completeLegalEmbeddingGeneration,
   registerLegalEmbeddingGeneration,
   storeLegalEmbeddingBatch
 } from "./vector-storage.js"
-import { runLegalEmbeddingShard } from "./vector-worker.js"
 
 const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {
@@ -1402,8 +1402,13 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           state: "pending",
           reused: true
         })
+        expect(await initializeLegalEmbeddingShards(target, generation.generationId)).toEqual({
+          generationId: generation.generationId,
+          shardCount: 16
+        })
         const shardIndex = Number.parseInt(passage.id.slice(0, 2), 16) % 16
         const shardRequest = { generationId: generation.generationId, shardCount: 16 as const, shardIndex }
+        const shardJobRequest = { generationId: generation.generationId, shardIndex }
         const selected = await selectLegalEmbeddingShard(target, shardRequest)
         expect(selected).toMatchObject({
           dimensions: 1536,
@@ -1426,19 +1431,44 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
         }
         await expect(
-          runLegalEmbeddingShard(target, shardRequest, {
+          runLegalEmbeddingShardJob(target, shardJobRequest, {
             embed: async () => ({ embeddings: [vector], model: "voyageai/voyage-4" })
           })
         ).rejects.toThrow("legal_embedding_provider_model_mismatch")
         expect(
-          await runLegalEmbeddingShard(target, shardRequest, {
+          await runLegalEmbeddingShardJob(target, shardJobRequest, {
             embed: async (values, inputType) => {
               expect(values).toEqual([selected.items[0]?.inputText])
               expect(inputType).toBe("document")
               return { embeddings: [vector], model: registration.model, promptTokens: 12, totalTokens: 12 }
             }
           })
-        ).toMatchObject({ inserted: 1, reused: 0, promptTokens: 12, totalTokens: 12 })
+        ).toMatchObject({
+          attempts: 2,
+          inserted: 1,
+          possibleRepeatedPaidAttempts: 1,
+          reused: 0,
+          promptTokens: 12,
+          totalTokens: 12,
+          state: "complete"
+        })
+        await expect(completeLegalEmbeddingGeneration(target, generation.generationId)).rejects.toThrow(
+          "legal_embedding_shards_incomplete"
+        )
+        for (let emptyShard = 0; emptyShard < 16; emptyShard++) {
+          if (emptyShard === shardIndex) continue
+          expect(
+            await runLegalEmbeddingShardJob(
+              target,
+              { generationId: generation.generationId, shardIndex: emptyShard },
+              {
+                embed: async () => {
+                  throw new Error("empty_shard_provider_call")
+                }
+              }
+            )
+          ).toMatchObject({ inserted: 0, state: "complete", items: [] })
+        }
         expect(await selectLegalEmbeddingShard(target, shardRequest)).toMatchObject({
           exhausted: true,
           items: [],

@@ -239,7 +239,8 @@ export async function storeLegalEmbeddingBatch(pool: pg.Pool, input: unknown) {
       ),
       "legal_embedding_batch_replay_conflict"
     )
-    return { inserted: inserted.rowCount, reused: rows.length - (inserted.rowCount ?? 0) }
+    const insertedCount = inserted.rowCount ?? 0
+    return { inserted: insertedCount, reused: rows.length - insertedCount }
   })
 }
 
@@ -284,6 +285,15 @@ export async function completeLegalEmbeddingGeneration(pool: pg.Pool, generation
       ])
     ).rows[0]?.count
     invariant(count === generation.expected_count, "legal_embedding_generation_incomplete")
+    const shards = (
+      await client.query<{ complete: number; total: number }>(
+        `SELECT count(*)::integer AS total,
+        count(*) FILTER (WHERE state='complete')::integer AS complete
+        FROM legislation.legal_embedding_shards WHERE generation_id=$1 AND shard_count=16`,
+        [generationId]
+      )
+    ).rows[0]
+    invariant(shards?.total === 16 && shards.complete === 16, "legal_embedding_shards_incomplete")
     const updated = await client.query(
       `UPDATE legislation.legal_embedding_generations
       SET state='embedded',completed_at=clock_timestamp() WHERE id=$1 AND state='pending'`,
