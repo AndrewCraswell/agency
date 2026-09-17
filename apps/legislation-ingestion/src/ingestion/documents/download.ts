@@ -67,12 +67,31 @@ const HAWAII_DOCUMENT_PATH =
   /^\/(?:sessions\/)?(session(?:19|20)\d{2})\/(bills|commreports|testimony)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:htm|html|pdf))$/i
 const VERMONT_LEGACY_ASSET_HOST = "legislature.vermont.gov"
 const VERMONT_LEGACY_ASSET_PATH = /^\/assets(\/Documents\/(?:19|20)\d{2}\/Docs\/[^?#]+)$/i
+const ALASKA_LEGISLATURE_HOSTS = new Set(["akleg.gov", "www.akleg.gov"])
+const ALASKA_BILL_TEXT_PATH = /^\/basis\/Bill\/Text\/([0-9]+)$/i
+const ALASKA_BILL_TEXT_ID = /^[A-Z]{1,5}[0-9]+[A-Z0-9]*$/i
 const KNOWN_INACCESSIBLE_DOCUMENT_HOSTS = new Set(["www.lrc.ky.gov"])
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36"
 
 function isCaliforniaBillPdfUrl(url: URL): boolean {
   return url.hostname === CALIFORNIA_LEGINFO_HOST && url.pathname === CALIFORNIA_BILL_PDF_PATH
+}
+
+function resolveAlaskaBillPlaintextUrl(sourceUrl: URL): URL | undefined {
+  const pathMatch = ALASKA_BILL_TEXT_PATH.exec(sourceUrl.pathname)
+  const documentId = sourceUrl.searchParams.get("Hsid")
+  if (
+    !ALASKA_LEGISLATURE_HOSTS.has(sourceUrl.hostname.toLowerCase()) ||
+    pathMatch?.[1] === undefined ||
+    documentId === null ||
+    !ALASKA_BILL_TEXT_ID.test(documentId)
+  ) {
+    return undefined
+  }
+  const resolved = new URL(`https://www.akleg.gov/basis/Bill/Plaintext/${pathMatch[1]}`)
+  resolved.searchParams.set("Hsid", documentId)
+  return resolved
 }
 
 export function resolveApprovedDocumentUrl(sourceUrl: string): URL {
@@ -870,11 +889,24 @@ export async function downloadDocument(
     fetcher,
     timeoutMs
   )
-  const response = await resolveCaliforniaBillPdf(districtOfColumbiaResponse, url, fetcher, timeoutMs)
+  let response = await resolveCaliforniaBillPdf(districtOfColumbiaResponse, url, fetcher, timeoutMs)
+  let responseUrl = url
+  const alaskaPlaintextUrl = resolveAlaskaBillPlaintextUrl(url)
+  if (!response.ok && alaskaPlaintextUrl !== undefined) {
+    const plaintextResponse = await fetcher(alaskaPlaintextUrl, {
+      headers: { "user-agent": BROWSER_USER_AGENT },
+      redirect: "follow",
+      signal: AbortSignal.timeout(timeoutMs)
+    })
+    if (plaintextResponse.ok) {
+      response = plaintextResponse
+      responseUrl = alaskaPlaintextUrl
+    }
+  }
   if (!response.ok) {
     throw new Error(`Document download failed with HTTP ${response.status}`)
   }
-  const finalUrl = relayedDocumentSource(response) ?? new URL(response.url || url)
+  const finalUrl = relayedDocumentSource(response) ?? new URL(response.url || responseUrl)
   if (finalUrl.protocol !== "https:" && !(options.allowHttp === true && finalUrl.protocol === "http:")) {
     throw new Error("Document redirect changed to an unsupported protocol")
   }
