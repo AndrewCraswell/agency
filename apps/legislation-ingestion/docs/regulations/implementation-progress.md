@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added explicit regulatory candidate routes without changing any existing bill, amendment, document or supporting-
+material route. OpenAI Small and Voyage 4 now each declare their regulatory passage input contract, dimensions, query/
+document mode and isolated storage table. Trusted server configuration may select one of those exact routes; an absent
+selection keeps semantic serving disabled, and an unknown configured model fails. Public requests receive no model
+selector. The bounded smoke comparison now uses these regulatory route definitions rather than borrowing product routes.
+
+Added deterministic regulatory vector shard selection. Each generation is fixed to 16 shards using the first byte of
+the SHA-256 passage ID, and each read-only selection is bounded to 512 scanned rows, 64 submitted inputs and 1 MiB.
+Selection excludes already stored vectors, returns a stable shard key and keyset cursor, rehashes every input, recounts
+the complete batch with the pinned model tokenizer and rejects a stored token-count mismatch. Generation registration
+also rejects a copied passage generation prepared with the wrong tokenizer. The two-database integration test proves
+the correct shard selects the exact passage, a different shard is empty, and the completed vector disappears from
+pending selection. Core routing/client tests (26), ingestion embedding/cache tests (13), TypeScript, scoped lint/format
+and the focused PostgreSQL integration test passed. No provider requests or bulk vector dispatch occurred.
+
 Added the regulatory vector persistence boundary to the isolated `legislation_passage_search` database. One immutable
 generation binds an exact copied passage generation, model, dimensions, input contract, manifest hash and expected
 count. OpenAI Small vectors use a dedicated 1,536-dimension table and Voyage 4 vectors use a separate 1,024-dimension

@@ -284,12 +284,18 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   Voyage 4 tables. Immutable generation registration binds copied passage inventory, route, input contract and manifest;
   exact replay and completion checks reject changed vectors, input hashes, model routes and partial counts. Search-ready
   promotion and HNSW indexes remain VECTOR-10/11 work.
-- [ ] **VECTOR-02 Add the regulatory route and manifest.** Resolve server-configured candidate/selected routes without
+- [x] **VECTOR-02 Add the regulatory route and manifest.** Resolve server-configured candidate/selected routes without
   accepting caller model names; bind vector jobs to frozen passage inventory. **Done:** default existing product routes
   and freshness hashes are unchanged; candidate pilot and production generation are distinct. Depends on VECTOR-01, PASS-06.
-- [ ] **VECTOR-03 Implement token-aware shard selection.** Reuse shared token validation and client limits; select
+  Both candidates now have explicit regulatory input contracts and isolated storage tables. Trusted configuration may
+  select only those routes; no configured selection leaves semantic serving disabled. Immutable vector generations bind
+  route, copied passage generation, input contract, manifest and expected count.
+- [x] **VECTOR-03 Implement token-aware shard selection.** Reuse shared token validation and client limits; select
   deterministic bounded batches by token and item budgets with stable shard keys. **Done:** oversize input is ineligible
   with evidence, never silently shortened; replay selects the same exact inputs. Depends on VECTOR-02.
+  Selection fixes every generation to 16 SHA-256 passage-ID shards and caps a read at 512 candidates, 64 provider inputs
+  and 1 MiB. It excludes stored vectors, rehashes input text, verifies the persisted count with the pinned tokenizer and
+  returns a stable shard key plus keyset cursor. The integration smoke proves shard isolation and completed-row exclusion.
 - [ ] **VECTOR-04 Persist exact paired outputs.** Validate returned indices, count, model, finite dimensions and input
   hash before transactional storage/checkpoint. **Done:** reordered valid responses pair correctly; duplicate/missing/
   corrupt responses cannot acknowledge a batch. Depends on VECTOR-03.

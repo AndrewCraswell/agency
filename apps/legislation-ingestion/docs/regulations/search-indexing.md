@@ -253,6 +253,11 @@ row to the exact copied passage generation, passage ID, model and dimensions. `v
 the passage input hash, finite nonzero vector, immutable vector hash and complete expected count. The `embedded` state
 means storage is complete; it does not imply index validity or serving promotion.
 
+Regulatory candidate routes now own that exact storage identity instead of borrowing another product's route. No model
+is selected by default. `vector-shards.ts` uses 16 stable SHA-256 passage-ID shards, keyset cursors and strict scan/item/
+byte ceilings. It excludes already stored vectors and independently verifies source input hashes and pinned-tokenizer
+counts before a provider batch can be formed.
+
 Create a unique input identity index and a passage-ID lookup index. Build the new feature's HNSW index after its initial
 bounded load, measure build RSS/time/disk and run ANALYZE before query-plan/recall acceptance. Use the existing index
 maintenance mechanism for an online build when the table already serves traffic; respect PostgreSQL's nontransactional
