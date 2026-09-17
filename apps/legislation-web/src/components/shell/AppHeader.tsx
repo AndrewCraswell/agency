@@ -19,7 +19,7 @@ export function AppHeader({ demo = false }: Readonly<{ demo?: boolean }>) {
   return (
     <header className={demo ? `${styles.header} ${styles.demoHeader}` : styles.header}>
       <Link href="/" aria-label="Rostra home" className={styles.brand}>
-        <Image src="/ftkLH.png" alt="" width={demo ? 24 : 22} height={demo ? 24 : 22} priority />
+        <Image src="/logo.png" alt="" width={demo ? 24 : 22} height={demo ? 24 : 22} priority />
         <span className={styles.wordmark}>Rostra</span>
       </Link>
       {demo && <span className={styles.demoLabel}>Live demo</span>}

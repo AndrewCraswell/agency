@@ -18,6 +18,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   description: "Legislative research with source evidence.",
+  icons: {
+    icon: "/logo.png"
+  },
   title: "Rostra"
 }
 

@@ -191,7 +191,7 @@ export function ConversationResponse({
       className={`${styles.answerTurn} ${acceptedResponse ? styles.receiptTurn : ""}`}
     >
       <div className={styles.answerHead}>
-        <Image src="/ftkLH.png" alt="" width={15} height={15} className={styles.answerMark} />
+        <Image src="/logo.png" alt="" width={15} height={15} className={styles.answerMark} />
         <h2 className={styles.answerAuthor}>Rostra</h2>
         {acceptedResponse && <ClarificationReceiptStatus response={acceptedResponse} />}
         {isIncomplete && <span className="text-xs text-muted-foreground">Incomplete response</span>}
