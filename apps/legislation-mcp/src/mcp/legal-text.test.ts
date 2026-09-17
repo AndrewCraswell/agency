@@ -431,6 +431,18 @@ it("searches through the typed HTTP client and checks identity on every call", a
   expect(await apiRequests[0]?.clone().json()).toMatchObject(input)
   expect(apiRequests[0]?.method).toBe("POST")
   expect(new URL(apiRequests[0]!.url).pathname).toBe("/api/search/legal")
+  const publicationInput = {
+    query: "notice",
+    corpora: ["regulatory_publication"],
+    publicationKinds: ["notice"],
+    publishedFrom: "2000-01-18",
+    publishedTo: "2000-01-18",
+    limit: 100
+  }
+  expect((await client.callTool({ name: "search_regulations", arguments: publicationInput })).isError).not.toBe(true)
+  expect(search).toHaveBeenCalledTimes(2)
+  expect(await apiRequests[1]?.clone().json()).toMatchObject(publicationInput)
+  expect(new URL(apiRequests[1]!.url).pathname).toBe("/api/search/legal")
   const before = apiRequests.length
   expect(
     (await client.callTool({ name: "search_regulations", arguments: { ...input, organizationId: "spoofed" } })).isError

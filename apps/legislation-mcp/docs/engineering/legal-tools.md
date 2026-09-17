@@ -68,4 +68,7 @@ parity, the second frozen page, and a composed `get_legal_text` call matching th
 The adapter used separately signed API and MCP audience credentials for the same principal. Unknown tool arguments
 were rejected before HTTP access. Evidence: `artifacts/regulatory-backfills/legal-search-mcp-canary.ts/.json` in the
 retained former checkout. The organization gate, same-principal provider and combined 900,000-byte budget applied.
+The September 17 contract regression additionally sends Federal Register kind/date filters and a 100-result limit
+through `search_regulations`, verifies the API adapter receives the unchanged request, and confirms the only upstream
+path is `POST /api/search/legal`.
 This does not establish standalone/deployed Next-router or live WorkOS acceptance.

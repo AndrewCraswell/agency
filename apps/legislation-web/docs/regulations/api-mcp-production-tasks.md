@@ -110,8 +110,8 @@ evidence in [search production](../../../legislation-ingestion/docs/regulations/
   across editions/publications. Depends on INDEX-01.
   Edition selection validates every requested acknowledged scope. Publication selection uses the isolated filter
   projection before ranking, compares canonical and projected daily identity manifests, verifies rights before target
-  text access and traverses every selected receipt/revision in bounded pages. The retained complete 12-rule partition
-  serves, while the intentionally incomplete notice/proposed-rule partition fails closed.
+  text access and traverses every selected receipt/revision in bounded pages. The retained 110-publication partition
+  now serves across final-rule, notice and proposed-rule filters with exact source/target counts.
 - [ ] **INDEX-05 Complete rights invalidation across serving.** Invalidate filter projections, result/candidate caches
   and later vectors, coordinating I's existing bounded cleanup. Done: immediate read denial, resumable derivative
   removal and preservation of other allowed copies.

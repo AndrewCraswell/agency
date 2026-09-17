@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed the retained January 18, 2000 Federal Register lexical partition. The existing OpenAI-tokenized preparations
+for the 98 missing publications copied with four bounded workers and zero failures, adding 422 passages. Canonical and
+target inventories now match exactly: 12 final rules/451 passages, 92 notices/350 passages and six proposed rules/72
+passages, for 110 scopes, 110 generations and 873 passages. All 110 strict projection hashes validate. No embeddings or
+provider requests were created.
+
+The first serving run above the old 100-document cap verified the whole partition in two receipt/revision pages. An
+unfiltered three-kind search returned 43 matching documents in 185.231 ms; complete kind-filtered searches returned 92
+notices in 153.134 ms and six proposed rules in 71.054 ms. The exact final-rule canary returned 65 FR 2526 in 68.997 ms.
+These are warm local timings on a 110-document issue, not national-volume claims. The typed authenticated HTTP boundary
+returned all 92 notice results, and the MCP contract test now verifies that kind/date publication filters and the
+100-result limit reach only `POST /api/search/legal`. Evidence is retained at
+`artifacts/regulatory-backfills/fr-january-2000-lexical-partition.json`.
+
 Replaced Federal Register search's pre-ranking 101-document source cap with projection-first corpus filtering. The
 serving transaction now compares daily canonical and target identity manifests for the complete kind/date partition,
 checks target receipt/membership/revision integrity, and traverses every selected canonical/target revision fence in
@@ -26,8 +40,8 @@ independent canonical/target clone changed a non-result final-rule version after
 partition was rejected before ranking. An unfiltered request correctly failed: canonical storage has 110 acknowledged
 January 18, 2000 observations, while the target currently has only the 12 final rules; the uncovered 92 notices and six
 proposed rules are now explicit copy work rather than silently omitted search results. INDEX-01 and INDEX-02 are
-complete. Publication cursor paging, representative-volume plans, durable revision manifests, agency mappings and the
-remaining target copies stay open.
+complete. The newer evidence above closes those 98 target copies. Publication cursor paging, representative-volume
+plans, durable revision manifests and agency mappings stay open.
 
 Added a strict filter projection for every acknowledged edition or publication in the isolated search database. Whole-
 copy finalization derives the projection while holding the canonical scope and rights locks, validates its exact

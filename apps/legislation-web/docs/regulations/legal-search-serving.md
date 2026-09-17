@@ -69,11 +69,12 @@ records and canonical lexical acknowledgement; no source content or embeddings c
 The corresponding September 16 MCP parity evidence and transport limits are retained in
 [M's legal tool record](../../../legislation-mcp/docs/engineering/legal-tools.md#retained-search-pilot-evidence).
 
-The retained Federal Register canary now exercises projection-first final-rule retrieval across all 12 copied rules,
-including exact canonical revision verification. A disposable clone rejected both a missing filter-partition member and
-a corrupted projection hash. The canonical pilot also makes the remaining coverage gap explicit: 92 notices and six
-proposed rules are acknowledged in the source database but do not yet have target copies, so an unfiltered publication
-request fails closed while the complete final-rule partition serves.
+The retained Federal Register canary now exercises projection-first retrieval across all 110 January 18, 2000
+publications: 12 final rules, 92 notices and six proposed rules. Canonical and target inventories match at 873 passages,
+and all projection hashes validate. The unfiltered request verifies two receipt/revision pages and returns all three
+publication kinds. Kind-filtered requests return all 92 matching notices and all six proposed rules. A disposable clone
+rejected a missing filter-partition member, a corrupted projection hash and a changed non-result canonical version.
+The typed authenticated HTTP boundary also returned the complete 92-notice result set.
 
 This is not deployed Next-router or real WorkOS credential evidence. Agency retrieval, publication paging, full-corpus
 performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
