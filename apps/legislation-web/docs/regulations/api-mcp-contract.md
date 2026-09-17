@@ -6,7 +6,8 @@ the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. 
 `list_legal_codes`, `get_legal_code`, `list_legal_editions`, `get_legal_edition`, `list_legal_provisions` tools are implemented locally;
 `get_legal_provision` and its typed provision-detail route are also implemented locally with exact edition/version,
 current-head or context-neutral version selection. Typed provision-version history and reverse edition-membership routes
-are implemented locally;
+are implemented locally. The typed direct-version route resolves both provision and Federal Register publication
+namespaces with optional exact source context;
 code detail serves authorized metadata, published edition-component counts and the explicit current eCFR edition;
 complete-history and search-capability enrichment remains planned.
 [Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;
@@ -91,7 +92,7 @@ entire title text or child collections. Readable text uses ordered source blocks
 | GET `/api/legal/provisions/{provisionId}` | editionId and/or versionId OR exclusive asOf | `ProvisionDetail`; selected version and separate context, bounded text preview |
 | GET `/api/legal/provisions/{provisionId}/versions` | sourceId | `Page<ProvisionVersionSummary>`; first observed date descending/id; edition memberships paged through edition traversal |
 | GET `/api/legal/provisions/{provisionId}/editions` | versionId?; sourceId? | `Page<LegalEditionMembership>`; edition ID ascending; rights-filtered membership discovery |
-| GET `/api/legal/versions/{versionId}` | editionId? for a provision version | `LegalVersionDetail`; immutable identity and optional validated context |
+| GET `/api/legal/versions/{versionId}` | editionId? for a provision; sourceObservationId? for a publication | `LegalVersionDetail`; discriminated immutable identity and optional validated context |
 | GET `/api/legal/versions/{versionId}/text` | exactly one editionId for provision text OR sourceObservationId for publication text; anchor OR cursor; limit | `ResourceResponse<LegalTextWindow>`; lossless ordered source blocks; locally implemented |
 | GET `/api/legal/versions/{versionId}/passages` | none | `Page<LegalPassage>`; ordinal/id; provision or publication version |
 | GET `/api/legal/passages/{passageId}` | none | `LegalPassage`; exact source/version/locator and bounded text |
@@ -127,8 +128,8 @@ not an unbounded synchronous recomputation on every page.
 
 The executable foundation is C's `src/legal-text/reader-contract.ts` and `reader-text.ts`. Database-backed exact
 text reads, the explicit HTTP text route and typed client are implemented behind the organization allowlist.
-Code/edition lists, provision traversal, provision detail, version history, reverse edition membership and stage-specific
-coverage are implemented locally; direct version detail, citation resolution and deployed acceptance remain phase gates.
+Code/edition lists, provision traversal, provision detail, version history, reverse edition membership, direct version
+detail and stage-specific coverage are implemented locally; citation resolution and deployed acceptance remain phase gates.
 
 Coverage reports one rights-visible published edition per row. `sourceCollection`, `canonical`, `lexical` and `semantic`
 are independent stages with explicit status, reason and requested/available/excluded counts. Canonical record count comes

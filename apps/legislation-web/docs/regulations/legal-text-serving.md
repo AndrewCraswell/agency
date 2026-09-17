@@ -10,6 +10,11 @@ The selected version must belong to that edition or observation. A mismatched pa
 another version. eCFR reads explicitly describe an observed snapshot; annual CFR reads describe a published edition.
 Publication dates never imply that a notice or proposal is effective law.
 
+`GET /api/legal/versions/{versionId}` and `LegislationApiClient.getLegalVersion` expose the corresponding immutable
+identity without loading body text. The discriminated response identifies a provision or publication. Omission of a
+context selector is intentionally neutral; exact `editionId` and `sourceObservationId` selectors return a separately
+validated context and the matching text URL. Both operations apply API and display-text rights before returning data.
+
 The existing WorkOS API authenticator supplies identity. `LEGISLATION_LEGAL_API_ORGANIZATIONS` is a comma-separated
 organization allowlist, empty by default. It gates this pilot independently of billing. Disabled authentication does
 not bypass the reader's verified-identity requirement. MCP-audience tokens cannot call this API directly.

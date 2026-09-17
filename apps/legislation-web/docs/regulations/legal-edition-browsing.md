@@ -12,6 +12,7 @@ organization allowlist and use separate verified API/MCP audiences and identity-
 | `GET /api/legal/provisions/{provisionId}` | `get_legal_provision` | Optional exact `editionId` and/or `versionId`; default current eCFR head |
 | `GET /api/legal/provisions/{provisionId}/versions` | — | Optional `sourceId`; immutable versions ordered by first published observation |
 | `GET /api/legal/provisions/{provisionId}/editions` | — | Optional exact `versionId` and `sourceId`; reverse edition memberships |
+| `GET /api/legal/versions/{versionId}` | — | Context-neutral identity, optional exact `editionId` or publication `sourceObservationId` |
 
 Both accept cursor and limit, default 20 and maximum 100. Invalid code IDs, unknown or duplicate fields, reversed
 date ranges and conflicting selectors return 400. Date filters apply inclusively to `issueDate`, never currency or
@@ -47,6 +48,11 @@ edition memberships and the number of matching editions. It does not claim conti
 membership returns the exact structural and source context in which a provision version appeared, including its parent,
 ordinal, publisher identity, dates, current-head status and exact text URL. Filtering one list never substitutes a
 different source or version. Both lists are capped at 10,000 visible catalog rows and paged at 20 by default, up to 100.
+
+Direct version detail resolves the collision-checked provision/publication version namespace. With no selector it returns
+only immutable version fields after authorizing at least one published membership or observation. `editionId` adds an
+exact provision context; `sourceObservationId` adds an exact Federal Register publication context. Crossed selectors,
+unknown membership and observation pairs fail instead of borrowing context from a different source occurrence.
 
 All requests authenticate before database access and lock/validate source API rights before disclosing results.
 Traversal also requires `displayText` before loading headings or parent membership. Transactions use repeatable read,

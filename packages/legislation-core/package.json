@@ -17,6 +17,7 @@
     "./api-client/legal-codes-contract": "./src/api-client/legal-codes-contract.ts",
     "./api-client/legal-search-contract": "./src/api-client/legal-search-contract.ts",
     "./api-client/legal-text-contract": "./src/api-client/legal-text-contract.ts",
+    "./api-client/legal-version-contract": "./src/api-client/legal-version-contract.ts",
     "./auth/api-access-token": "./src/auth/api-access-token.ts",
     "./auth/identity-bound-api-token": "./src/auth/identity-bound-api-token.ts",
     "./auth/request-context": "./src/auth/request-context.ts",

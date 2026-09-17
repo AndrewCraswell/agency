@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed local HTTP-05 direct version detail without treating publications as code provisions. The new strict
+`GET /api/legal/versions/{versionId}` route and typed client resolve the collision-checked canonical version namespace
+to either immutable provision fields or immutable Federal Register publication fields. An omitted selector remains
+context-neutral. An exact `editionId` returns only its authorized provision hierarchy/source context; an exact
+`sourceObservationId` returns only its authorized publication context. Crossed selectors, mismatched memberships,
+duplicate parameters, wrong token audiences and version-ID namespace collisions fail closed. API and display-text
+rights are rechecked before either immutable response is committed.
+
+A retained canary read provision version `000033c4-58a9-4fbe-b4a3-b9fbca1c3698` with edition
+`3c2cd6fa-21fc-406a-8839-7503da442026` from the 49-title recovery database and publication version
+`6ffe7d96-7e4f-4700-9052-d57bc722a4e2` with observation `031234eb-8f5f-4cef-932b-d403726f582e` from the retained
+Federal Register pilot. Both neutral responses omitted context; both selected responses emitted exact text URLs.
+Evidence is retained at `artifacts/regulatory-backfills/legal-version-detail-canary.json`. Two core contract tests and
+five web reader/route tests pass; core type-check and scoped lint pass. Web type-check remains blocked only by the same
+four unrelated concurrent conversation-test errors. HTTP-05 is locally implemented; built/deployed router acceptance
+remains under HTTP-14 and OPS-08. No canonical data, provider calls, indexes, embeddings, schedules or vectors changed.
+
 Completed the provision-version history and reverse edition-membership HTTP slice. Strict contracts, typed client
 methods and Next routes now serve `GET /api/legal/provisions/{provisionId}/versions` and
 `GET /api/legal/provisions/{provisionId}/editions`. The first returns immutable version metadata with observed published

@@ -53,6 +53,11 @@ import {
 } from "./legal-publications-contract"
 import { legalSearchRequestSchema, validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract"
 import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract"
+import {
+  legalVersionRequestSchema,
+  validateLegalVersionResponse,
+  type LegalVersionRequest
+} from "./legal-version-contract"
 
 const errorCategories = [
   "conflict",
@@ -627,6 +632,20 @@ export class LegislationApiClient {
       return validateLegalTextResponse(result, versionId, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal text response")
+    }
+  }
+
+  async getLegalVersion(versionId: string, query: LegalVersionRequest = {}, options?: ApiRequestOptions) {
+    const id = z.uuid().parse(versionId)
+    const input = legalVersionRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/versions/${segment(id)}`, query: input },
+      options
+    )
+    try {
+      return validateLegalVersionResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal version response")
     }
   }
 
