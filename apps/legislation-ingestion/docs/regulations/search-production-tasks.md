@@ -59,7 +59,11 @@ release inventory and tokenizer eligibility remain open.
   input exceeds configured limits; failures identify exact versions without changing source text. Depends on PASS-06.
   `inspect:regulatory-shapes --prepare` now runs both pinned tokenizers over complete canonical versions with production
   context, per-model dispositions and independently recounted limits. Mode/tokenizer/context/implementation bindings
-  protect report replay. Full selected-corpus execution and final persisted-manifest acceptance remain open.
+  protect report replay. `audit-regulatory-qualification` now requires the expected implementation hash and edition
+  count, verifies the terminal inventory, exact selected/result identity, every per-edition report, retained NDJSON hash
+  and record count, and aggregates per-model tokens, passages, limits, continuations and failure reasons. It reports
+  tokenizer qualification separately from unresolved table-shape review. The current selected-corpus execution remains
+  active; final acceptance requires its terminal manifest and this audit.
 - [ ] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
   coverage against retained source; review difficult real samples visually where text extraction loses layout meaning.
   **Done:** zero unexplained dropped/duplicated source spans in the advertised scope. Depends on PASS-05–07.

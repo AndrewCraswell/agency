@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added an offline terminal auditor for full-corpus tokenizer qualification. It requires the expected implementation hash
+and edition count, rejects nonterminal or duplicate inventories, binds every result to the exact selected edition and
+tokenizer identities, compares each retained `report.json`, and rehashes every `records.ndjson` while independently
+counting its records. The output aggregates records, table diagnostics, passages, tokens, maximum limits, continuations
+and failure reasons per model. It distinguishes zero tokenizer blockers from unresolved table-shape review instead of
+allowing a successful fallback passage to erase structural diagnostics.
+
+Two focused tests passed: one verified aggregate readiness with a retained table-review item, and one rejected a byte
+stream modified after terminal completion. Ingestion TypeScript and scoped lint passed. The pinned read-only current-eCFR
+qualification remains live and had completed 46 of 49 selected editions at the latest observation; no terminal inventory
+or final audit is claimed yet. Root `pnpm verify` completed formatting and all 11 package lint/type tasks, then stopped at
+the unchanged unrelated Knip inventory for 63 theme/template files, two root development dependencies, two binaries and
+nine configuration hints; coverage did not run. No provider, canonical, index or vector writes occurred.
+
 Added the first operator-safe source-scope start command. `run-regulatory-discovery` defaults to a repeatable-read,
 read-only preview of one persisted discovery scope and reports the committed cursor/cutoff, unit and dispatch counts,
 bounded controller payload and a deterministic plan hash. Apply requires the exact plan hash, an explicit environment
