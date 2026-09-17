@@ -55,6 +55,21 @@ describe("acquireStateBillPlan", () => {
     expect(store.values.has(result.planPath.replace("plan.json", "S.xml"))).toBe(true)
   })
 
+  it("creates one stable frozen cycle per UTC refresh date", async () => {
+    const store = new Store()
+    const request = vi.fn<typeof fetch>(
+      async () => new Response(akHtml, { headers: { "content-type": "text/html; charset=utf-8" } })
+    )
+    const first = await acquireStateBillPlan(store, "ak", { fetch: request, refreshDate: "2026-09-17" })
+    const replay = await acquireStateBillPlan(store, "ak", { fetch: request, refreshDate: "2026-09-17" })
+    const nextDay = await acquireStateBillPlan(store, "ak", { fetch: request, refreshDate: "2026-09-18" })
+    expect(replay.inventoryId).toBe(first.inventoryId)
+    expect(nextDay.inventoryId).not.toBe(first.inventoryId)
+    await expect(acquireStateBillPlan(store, "ak", { fetch: request, refreshDate: "09/18/2026" })).rejects.toThrow(
+      "YYYY-MM-DD"
+    )
+  })
+
   it("rejects an unexpected publisher response before retaining a plan", async () => {
     await expect(
       acquireStateBillPlan(new Store(), "ak", {

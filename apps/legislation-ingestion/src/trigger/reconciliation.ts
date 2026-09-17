@@ -1,4 +1,11 @@
-import type { SynchronizationScheduleManifestEntry } from "./manifest.js"
+export type ManagedScheduleManifestEntry = Readonly<{
+  active: boolean
+  cron: string
+  deduplicationKey: string
+  externalId: string
+  taskIdentifier: string
+  timezone: string
+}>
 
 export type RemoteSynchronizationSchedule = Readonly<{
   active: boolean
@@ -10,16 +17,18 @@ export type RemoteSynchronizationSchedule = Readonly<{
   timezone: string
 }>
 
-export type SynchronizationScheduleReconciliationAction =
-  | Readonly<{ schedule: SynchronizationScheduleManifestEntry; type: "create" }>
+export type SynchronizationScheduleReconciliationAction<
+  TSchedule extends ManagedScheduleManifestEntry = ManagedScheduleManifestEntry
+> =
+  | Readonly<{ schedule: TSchedule; type: "create" }>
   | Readonly<{
       id: string
-      schedule: SynchronizationScheduleManifestEntry
+      schedule: TSchedule
       type: "update"
     }>
   | Readonly<{
       id: string
-      schedule: SynchronizationScheduleManifestEntry
+      schedule: TSchedule
       type: "activate"
     }>
   | Readonly<{
@@ -30,8 +39,10 @@ export type SynchronizationScheduleReconciliationAction =
       type: "deactivate"
     }>
 
-export type SynchronizationScheduleReconciliationPlan = Readonly<{
-  actions: readonly SynchronizationScheduleReconciliationAction[]
+export type SynchronizationScheduleReconciliationPlan<
+  TSchedule extends ManagedScheduleManifestEntry = ManagedScheduleManifestEntry
+> = Readonly<{
+  actions: readonly SynchronizationScheduleReconciliationAction<TSchedule>[]
   unchanged: number
 }>
 
@@ -79,11 +90,11 @@ export function selectSynchronizationScheduleScope(
   }
 }
 
-export function planSynchronizationScheduleReconciliation(
-  manifest: readonly SynchronizationScheduleManifestEntry[],
+export function planSynchronizationScheduleReconciliation<TSchedule extends ManagedScheduleManifestEntry>(
+  manifest: readonly TSchedule[],
   remoteSchedules: readonly RemoteSynchronizationSchedule[]
-): SynchronizationScheduleReconciliationPlan {
-  const actions: SynchronizationScheduleReconciliationAction[] = []
+): SynchronizationScheduleReconciliationPlan<TSchedule> {
+  const actions: SynchronizationScheduleReconciliationAction<TSchedule>[] = []
   const environmentPrefix = managedEnvironmentPrefix(manifest)
   const desiredByKey = new Map(manifest.map((schedule) => [schedule.deduplicationKey, schedule]))
   const remoteByKey = new Map<string, RemoteSynchronizationSchedule>()
@@ -192,7 +203,7 @@ export async function applySynchronizationScheduleReconciliation(
   return counts
 }
 
-function managedEnvironmentPrefix(manifest: readonly SynchronizationScheduleManifestEntry[]): string {
+function managedEnvironmentPrefix(manifest: readonly ManagedScheduleManifestEntry[]): string {
   const firstKey = manifest[0]?.deduplicationKey
   if (firstKey === undefined) {
     throw new Error("Synchronization schedule manifest cannot be empty")
@@ -208,10 +219,7 @@ function managedEnvironmentPrefix(manifest: readonly SynchronizationScheduleMani
   return prefix
 }
 
-function scheduleMatchesRemote(
-  desired: SynchronizationScheduleManifestEntry,
-  remote: RemoteSynchronizationSchedule
-): boolean {
+function scheduleMatchesRemote(desired: ManagedScheduleManifestEntry, remote: RemoteSynchronizationSchedule): boolean {
   return (
     remote.cron === desired.cron &&
     remote.externalId === desired.externalId &&
@@ -233,7 +241,7 @@ function actionPriority(type: SynchronizationScheduleReconciliationAction["type"
   return 3
 }
 
-function mutationInput(schedule: SynchronizationScheduleManifestEntry) {
+function mutationInput(schedule: ManagedScheduleManifestEntry) {
   return {
     cron: schedule.cron,
     externalId: schedule.externalId,
@@ -242,9 +250,10 @@ function mutationInput(schedule: SynchronizationScheduleManifestEntry) {
   }
 }
 
-function disabledMutationInput(schedule: SynchronizationScheduleManifestEntry) {
+function disabledMutationInput(schedule: ManagedScheduleManifestEntry) {
   return {
     ...mutationInput(schedule),
     externalId: `disabled:${schedule.externalId}`
   }
 }
+import type { SynchronizationScheduleManifestEntry } from "./manifest.js"

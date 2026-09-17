@@ -26,6 +26,7 @@
     "trigger:dev": "trigger dev --config trigger.config.ts",
     "trigger:backfill": "node --env-file-if-exists=.env --import tsx tools/trigger/run-trigger-backfill.ts",
     "trigger:schedules": "node --env-file-if-exists=.env --import tsx tools/trigger/reconcile-trigger-schedules.ts",
+    "trigger:scraper-schedules": "node --env-file-if-exists=.env --import tsx tools/trigger/reconcile-scraper-schedules.ts",
     "reconcile:vote-provenance": "node --env-file-if-exists=.env --import tsx tools/openstates/reconcile-vote-provenance.ts",
     "relay": "tsx src/cli/document-relay.ts"
   },

@@ -23,6 +23,7 @@ const program = new Command()
     "--activate-openstates",
     "activate only the OpenStates jurisdictions allowlisted by OPENSTATES_SCHEDULES_ENABLED_STATES; requires --activate and OPENSTATES_SCHEDULES_ENABLED=true"
   )
+  .option("--manage-openstates", "reconcile the legacy OpenStates API schedule inventory without activating it")
   .option("--apply", "apply the reconciliation plan; without this flag the command is read-only")
   .option("--current-congress <number>", "configured current Congress", "119")
   .option("--environment <environment>", "development, staging, or production", "development")
@@ -39,6 +40,7 @@ try {
 async function reconcile(options: {
   activate?: boolean
   activateOpenstates?: boolean
+  manageOpenstates?: boolean
   apply?: boolean
   currentCongress: string
   environment: string
@@ -67,7 +69,7 @@ async function reconcile(options: {
     environment,
     openStatesActiveJurisdictions
   })
-  const scope = options.activateOpenstates === true ? "openstates" : "federal"
+  const scope = options.activateOpenstates === true || options.manageOpenstates === true ? "openstates" : "federal"
   const selected = selectSynchronizationScheduleScope(manifest, await listRemoteSchedules(), scope)
 
   const plan = planSynchronizationScheduleReconciliation(selected.manifest, selected.remoteSchedules)

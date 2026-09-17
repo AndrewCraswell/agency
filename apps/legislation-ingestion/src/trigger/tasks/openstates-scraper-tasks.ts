@@ -43,6 +43,7 @@ function attemptId(triggerRunId: string) {
 }
 
 const concurrencyKey = "production:openstates-scraper:events:ak"
+const northCarolinaConcurrencyKey = "production:openstates-scraper:events:nc"
 
 export const openStatesAlaskaEventsReconcile = task({
   id: "openstates-alaska-events-reconcile",
@@ -103,6 +104,27 @@ export const openStatesNorthCarolinaEventsCloud = task({
   }
 })
 
+export const openStatesNorthCarolinaEventsSchedule = schedules.task({
+  id: "openstates-north-carolina-events-schedule",
+  maxDuration: 60,
+  run: async (payload) => {
+    requireScraperActivation("nc", process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
+    if (payload.externalId !== "openstates-scraper:events:nc:current") {
+      throw new Error("Unexpected North Carolina event schedule identity")
+    }
+    const key = await idempotencyKeys.create(
+      `nc-events:current:${payload.scheduleId}:${payload.timestamp.toISOString()}`,
+      { scope: "global" }
+    )
+    const handle = await tasks.trigger(
+      "openstates-north-carolina-events-cloud",
+      {},
+      { concurrencyKey: northCarolinaConcurrencyKey, idempotencyKey: key }
+    )
+    return { status: "dispatched" as const, eventRunId: handle.id }
+  }
+})
+
 export const openStatesAlaskaEventsPlan = task({
   id: "openstates-alaska-events-plan",
   maxDuration: 120,
@@ -128,7 +150,9 @@ export const openStatesAlaskaEventsSchedule = schedules.task({
   maxDuration: 60,
   run: async (payload) => {
     requireAlaskaScraperActivation(process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
-    if (payload.externalId !== "ak-events-34") throw new Error("Unexpected Alaska event schedule identity")
+    if (payload.externalId !== "openstates-scraper:events:ak:34") {
+      throw new Error("Unexpected Alaska event schedule identity")
+    }
     const key = await idempotencyKeys.create(
       `ak-events:plan:${payload.scheduleId}:${payload.timestamp.toISOString()}`,
       {

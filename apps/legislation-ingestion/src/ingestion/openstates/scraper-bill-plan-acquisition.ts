@@ -31,27 +31,32 @@ async function fetchInventory(request: typeof fetch, url: string, expected: "htm
   return Buffer.from(bytes).toString("utf8")
 }
 
-function cycleId(state: "ak" | "nc", sources: readonly string[]) {
-  return `${state}-bills-${createHash("sha256").update(sources.join("\u001f")).digest("hex").slice(0, 32)}`
+function cycleId(state: "ak" | "nc", sources: readonly string[], refreshDate?: string) {
+  const identity = refreshDate === undefined ? sources : [...sources, `refresh:${refreshDate}`]
+  return `${state}-bills-${createHash("sha256").update(identity.join("\u001f")).digest("hex").slice(0, 32)}`
 }
 
 /** Acquire and freeze the complete publisher bill inventory before any extraction batch is dispatched. */
 export async function acquireStateBillPlan(
   store: ArtifactStore,
   state: "ak" | "nc",
-  dependencies: { fetch?: typeof fetch } = {}
+  dependencies: { fetch?: typeof fetch; refreshDate?: string } = {}
 ) {
   const request = dependencies.fetch ?? fetch
+  const refreshDate = dependencies.refreshDate
+  if (refreshDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(refreshDate)) {
+    throw new Error("Scheduled bill refresh date must use YYYY-MM-DD")
+  }
   if (state === "ak") {
     const html = await fetchInventory(request, alaskaInventoryUrl, "html")
-    const frozen = await archiveAkBillPlan(store, html, cycleId(state, [html]))
+    const frozen = await archiveAkBillPlan(store, html, cycleId(state, [html], refreshDate))
     return summarize(frozen)
   }
   const [house, senate] = await Promise.all([
     fetchInventory(request, northCarolinaInventoryUrls.H, "xml"),
     fetchInventory(request, northCarolinaInventoryUrls.S, "xml")
   ])
-  const frozen = await archiveNcBillPlan(store, { H: house, S: senate }, cycleId(state, [house, senate]))
+  const frozen = await archiveNcBillPlan(store, { H: house, S: senate }, cycleId(state, [house, senate], refreshDate))
   return summarize(frozen)
 }
 

@@ -8,22 +8,28 @@ import {
 } from "./openstates-bill-scraper-tasks.js"
 
 describe("hosted Open States bill scraper task contract", () => {
-  it("uses a manual receipt-driven chain without an implicit schedule", async () => {
+  it("uses a receipt-driven chain with an explicit managed schedule", async () => {
     const source = await readFile(new URL("./openstates-bill-scraper-tasks.ts", import.meta.url), "utf8")
     expect(source).toContain('id: "openstates-bill-scraper-plan"')
     expect(source).toContain('id: "openstates-bill-scraper-dispatch"')
     expect(source).toContain('id: "openstates-bill-scraper-cloud"')
+    expect(source).toContain('id: "openstates-bill-scraper-schedule"')
     expect(source).toContain("acquireStateBillPlan")
     expect(source).toContain("executeScraperBillBatch")
     expect(source).toContain("inspectScraperBillCycle")
     expect(source).toContain("dispatchCloudScraperAttempt")
     expect(source).toContain("after.pending[0]?.id")
-    expect(source).not.toContain("schedules.task")
+    expect(source).toContain("schedules.task")
+    expect(source).toContain('"openstates-content-controller"')
     expect(source).not.toContain("OPENSTATES_API_KEY")
   })
 
   it("accepts only the two explicitly activated current sessions", () => {
     expect(openStatesBillPlanPayload.parse({ state: "ak" })).toEqual({ state: "ak" })
+    expect(openStatesBillPlanPayload.parse({ state: "ak", refreshDate: "2026-09-17" })).toEqual({
+      state: "ak",
+      refreshDate: "2026-09-17"
+    })
     expect(
       openStatesBillCloudPayload.parse({
         state: "nc",

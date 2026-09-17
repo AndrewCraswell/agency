@@ -9,6 +9,7 @@ describe("hosted Open States scraper task contract", () => {
     expect(source).toContain('id: "openstates-alaska-events-plan"')
     expect(source).toContain('id: "openstates-alaska-events-schedule"')
     expect(source).toContain('id: "openstates-north-carolina-events-cloud"')
+    expect(source).toContain('id: "openstates-north-carolina-events-schedule"')
     expect(source).toContain('id: "openstates-alaska-events-reconcile"')
     expect(source).toContain("executeAlaskaEventCloudBatch")
     expect(source).toContain("executeNorthCarolinaEventCloudCycle")
