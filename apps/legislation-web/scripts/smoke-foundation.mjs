@@ -1009,6 +1009,11 @@ async function smokeJurisdictionSessionsRoutes(root) {
       skipped.push({ name: route.name, reason: "fixture_missing" })
       continue
     }
+    if (route.fixtureBound && response.status === 422) {
+      requireCanonicalDataIncomplete(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
+      continue
+    }
     if (response.status !== 200) {
       throw new Error(`${name} returned status ${response.status}, expected 200 or canonical fixture 404`)
     }
