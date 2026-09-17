@@ -12,6 +12,7 @@ import {
 } from "@repo/legislation-core/domain/identifiers"
 import { z } from "zod"
 import type { EventAgendaItemSnapshot } from "../../persistence/events.js"
+import { northCarolinaCommitteeIdentifiers } from "./committee-identifiers.js"
 
 const optionalString = z.preprocess(
   (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
@@ -123,6 +124,29 @@ function httpsSourceUrl(value: string | undefined): value is string {
   }
 }
 
+function northCarolinaNoticeIdentity(upstreamId: string | undefined, sources: readonly { url: string }[]) {
+  if (!upstreamId || !/^[1-9][0-9]*$/.test(upstreamId)) {
+    return undefined
+  }
+  const prefix = `/Committees/NoticeDocument/${upstreamId}/`
+  const source = sources.find(({ url }) => {
+    try {
+      const parsed = new URL(url)
+      return (
+        parsed.origin === "https://www.ncleg.gov" &&
+        !parsed.username &&
+        !parsed.password &&
+        !parsed.search &&
+        !parsed.hash &&
+        parsed.pathname.startsWith(prefix)
+      )
+    } catch {
+      return false
+    }
+  })
+  return source === undefined ? undefined : { noticeId: upstreamId, sourceUrl: source.url }
+}
+
 function uniqueBy<T>(values: T[], identity: (value: T) => string): T[] {
   return [...new Map(values.map((value) => [identity(value), value])).values()]
 }
@@ -175,11 +199,16 @@ export function normalizeOpenStatesEvent(
   context: { jurisdictionCode: string; retrievedAt?: Date }
 ): OpenStatesEventSnapshot {
   const source = eventSchema.parse(input)
-  const canonicalEventId = legislativeEventId("openstates", source.id)
-  const sourceUrl = source.sources[0]?.url
+  const noticeIdentity =
+    context.jurisdictionCode === "nc" ? northCarolinaNoticeIdentity(source.upstream_id, source.sources) : undefined
+  const canonicalSourceId = noticeIdentity === undefined ? source.id : `nc-notice-${noticeIdentity.noticeId}`
+  const canonicalEventId = legislativeEventId("openstates", canonicalSourceId)
+  const sourceUrl = noticeIdentity?.sourceUrl ?? source.sources[0]?.url
   const publisherLocalDate = exactDate(source.start_date)
   const startAt = sourceDate(source.start_date, "start_date")
   const provenanceComplete = httpsSourceUrl(sourceUrl) && context.retrievedAt !== undefined
+  const organizationReferences =
+    context.jurisdictionCode === "nc" ? Object.keys(northCarolinaCommitteeIdentifiers(source.sources)) : []
   const agendaSessionIds = [
     ...new Set(source.agenda.flatMap((item) => item.related_entities.flatMap((entity) => entity.bill?.session ?? [])))
   ].map((session) => legislativeSessionId(context.jurisdictionCode, session))
@@ -231,13 +260,13 @@ export function normalizeOpenStatesEvent(
       jurisdictionId: jurisdictionId(context.jurisdictionCode),
       location: sourceDeclaredLocation(source.location),
       name: source.name,
-      organizationRelationsComplete: false,
+      organizationRelationsComplete: organizationReferences.length > 0,
       provenanceComplete,
       publisherLocalDate,
       sourceIsOfficial: provenanceComplete ? false : undefined,
       sourceProvider: provenanceComplete ? "openstates" : undefined,
       sourceRetrievedAt: context.retrievedAt,
-      sourceId: source.id,
+      sourceId: canonicalSourceId,
       sourceUpdatedAt: optionalSourceDate(source.updated_at, "updated_at"),
       sourceUrl,
       startAt,
@@ -246,11 +275,16 @@ export function normalizeOpenStatesEvent(
       timezone: source.timezone,
       upstreamIds: {
         openstates: source.id,
-        ...(source.upstream_id === undefined ? {} : { provider: source.upstream_id })
+        ...(noticeIdentity === undefined
+          ? source.upstream_id === undefined
+            ? {}
+            : { provider: source.upstream_id }
+          : { ncNoticeDocument: noticeIdentity.noticeId })
       },
       virtualAccess: source.location?.url === undefined ? undefined : { url: source.location.url }
     },
     organizationIds: [],
+    ...(organizationReferences.length === 0 ? {} : { organizationReferences }),
     participants: uniqueBy(
       source.participants.map((participant) => ({
         eventId: canonicalEventId,

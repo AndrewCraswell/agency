@@ -206,4 +206,50 @@ describe("Open States event normalization", () => {
 
     expect(snapshot.event).toMatchObject({ canonicalFactsComplete: false, provenanceComplete: false })
   })
+
+  it("converges an NC API event on its exact official notice identity", () => {
+    const snapshot = normalizeOpenStatesEvent(
+      {
+        id: "ocd-event/api-uuid",
+        name: "Child Fatality Task Force",
+        sources: [
+          { url: "https://www.ncleg.gov/Committees/CommitteeInfo/NonStanding/680" },
+          { url: "https://www.ncleg.gov/Committees/NoticeDocument/12345/CommitteeMeetingNotice" }
+        ],
+        start_date: "2026-09-21T13:00:00-04:00",
+        status: "confirmed",
+        upstream_id: "12345"
+      },
+      { jurisdictionCode: "nc", retrievedAt: new Date("2026-09-17T00:00:00Z") }
+    )
+
+    expect(snapshot.event).toMatchObject({
+      id: "event:openstates:nc-notice-12345",
+      organizationRelationsComplete: true,
+      sourceId: "nc-notice-12345",
+      sourceUrl: "https://www.ncleg.gov/Committees/NoticeDocument/12345/CommitteeMeetingNotice",
+      upstreamIds: { ncNoticeDocument: "12345", openstates: "ocd-event/api-uuid" }
+    })
+    expect(snapshot.organizationReferences).toEqual(["ncCommittee:NonStanding:680"])
+  })
+
+  it("does not trust an NC numeric upstream ID without its matching notice URL", () => {
+    const snapshot = normalizeOpenStatesEvent(
+      {
+        id: "ocd-event/api-uuid",
+        name: "Child Fatality Task Force",
+        sources: [{ url: "https://www.ncleg.gov/Committees/CommitteeInfo/NonStanding/680" }],
+        start_date: "2026-09-21T13:00:00-04:00",
+        status: "confirmed",
+        upstream_id: "12345"
+      },
+      { jurisdictionCode: "nc", retrievedAt: new Date("2026-09-17T00:00:00Z") }
+    )
+
+    expect(snapshot.event).toMatchObject({
+      id: "event:openstates:ocd-event-api-uuid",
+      sourceId: "ocd-event/api-uuid",
+      upstreamIds: { openstates: "ocd-event/api-uuid", provider: "12345" }
+    })
+  })
 })
