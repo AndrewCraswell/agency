@@ -29,9 +29,13 @@ const planSchema = z.strictObject({
 
 export type AlaskaEventPlan = z.infer<typeof planSchema>
 
+export function parseAlaskaEventPlan(value: unknown) {
+  return planSchema.parse(value)
+}
+
 export async function readAlaskaEventPlan(store: Pick<ArtifactStore, "read">, planPath: string) {
   const raw: unknown = JSON.parse(Buffer.from(await store.read(planPath)).toString("utf8"))
-  const plan = planSchema.parse(raw)
+  const plan = parseAlaskaEventPlan(raw)
   const selected = plan.batches.flatMap((batch) => batch.event_keys)
   if (selected.length !== plan.partition.accepted_occurrences || new Set(selected).size !== selected.length) {
     throw new Error("Alaska event plan does not exactly partition accepted occurrences")

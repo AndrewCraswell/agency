@@ -13,6 +13,8 @@ export default defineConfig({
           "./python/prepare_openstates.py",
           "./python/openstates_source_policy.py",
           "./python/alaska_journal.py",
+          "./python/alaska_meeting_partition.py",
+          "./python/plan_alaska_events.py",
           "./python/regulations/parse_xml.py"
         ]
       })
