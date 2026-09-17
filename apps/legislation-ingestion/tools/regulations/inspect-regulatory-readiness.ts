@@ -7,6 +7,10 @@ import {
   legalDiscoveryManifestCompletionSchema
 } from "../../src/ingestion/regulations/discovery-manifest-completion.js"
 import {
+  inspectLegalPassagePipelineCompletion,
+  legalPassagePipelineCompletionSchema
+} from "../../src/ingestion/regulations/passage-pipeline-completion.js"
+import {
   inspectLegalPreparationStatus,
   legalPreparationStatusRequestSchema
 } from "../../src/ingestion/regulations/preparation-status.js"
@@ -22,6 +26,7 @@ async function main() {
       preparation: { type: "string" },
       wave: { type: "string" },
       manifest: { type: "string" },
+      copy: { type: "string" },
       after: { type: "string" },
       limit: { type: "string" }
     }
@@ -33,10 +38,14 @@ async function main() {
         value: legalPreparationStatusRequestSchema
       }),
       z.strictObject({ kind: z.literal("wave"), value: legalPreparationWaveCompletionSchema }),
-      z.strictObject({ kind: z.literal("manifest"), value: legalDiscoveryManifestCompletionSchema })
+      z.strictObject({ kind: z.literal("manifest"), value: legalDiscoveryManifestCompletionSchema }),
+      z.strictObject({ kind: z.literal("copy"), value: legalPassagePipelineCompletionSchema })
     ])
     .parse(
-      values.preparation !== undefined && values.wave === undefined && values.manifest === undefined
+      values.preparation !== undefined &&
+        values.wave === undefined &&
+        values.manifest === undefined &&
+        values.copy === undefined
         ? {
             kind: "preparation",
             value: {
@@ -48,16 +57,25 @@ async function main() {
         : values.wave !== undefined &&
             values.preparation === undefined &&
             values.manifest === undefined &&
+            values.copy === undefined &&
             values.after === undefined &&
             values.limit === undefined
           ? { kind: "wave", value: { waveId: values.wave } }
           : values.manifest !== undefined &&
               values.preparation === undefined &&
               values.wave === undefined &&
+              values.copy === undefined &&
               values.after === undefined &&
               values.limit === undefined
             ? { kind: "manifest", value: { manifestId: values.manifest } }
-            : { kind: "invalid" }
+            : values.copy !== undefined &&
+                values.preparation === undefined &&
+                values.wave === undefined &&
+                values.manifest === undefined &&
+                values.after === undefined &&
+                values.limit === undefined
+              ? { kind: "copy", value: { preparationId: values.copy } }
+              : { kind: "invalid" }
     )
   const url = new URL(z.url().parse(process.env.DATABASE_URL))
   invariant(
@@ -68,6 +86,24 @@ async function main() {
   )
   const pool = new pg.Pool({ connectionString: url.href, max: 1, connectionTimeoutMillis: 10_000 })
   try {
+    if (request.kind === "copy") {
+      const targetUrl = new URL(z.url().parse(process.env.PASSAGE_SEARCH_DATABASE_URL))
+      invariant(
+        [targetUrl.protocol].every((protocol) => ["postgres:", "postgresql:"].includes(protocol)) &&
+          targetUrl.pathname === "/legislation_passage_search" &&
+          targetUrl.host !== url.host,
+        "legal_search_wrong_target"
+      )
+      const target = new pg.Pool({ connectionString: targetUrl.href, max: 1, connectionTimeoutMillis: 10_000 })
+      try {
+        const report = await inspectLegalPassagePipelineCompletion(pool, target, request.value)
+        process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+        if (!report.ready) process.exitCode = 1
+      } finally {
+        await target.end()
+      }
+      return
+    }
     if (request.kind === "manifest") {
       const report = await inspectLegalDiscoveryManifestCompletion(pool, request.value)
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)

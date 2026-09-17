@@ -47,6 +47,7 @@ import {
   inspectLegalPassageCopy,
   verifyLegalPassageCopyPage
 } from "./passage-copy-readiness.js"
+import { inspectLegalPassagePipelineCompletion } from "./passage-pipeline-completion.js"
 import { runLegalPassagePreparationBatch } from "./passage-preparation.js"
 import { replicateLegalPassageGeneration } from "./passage-replication.js"
 import { materializeLegalPassages, searchLegalPassages } from "./passage-storage.js"
@@ -456,6 +457,15 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           preparation: { prepared: 1 },
           lexical: { pending: 1, acknowledged: 0 }
         })
+        await expect(
+          inspectLegalPassagePipelineCompletion(pool, target, { preparationId: prepared.preparationId })
+        ).resolves.toMatchObject({
+          preparation: { state: "prepared", expected: prepared.total, prepared: prepared.total, blocked: 0 },
+          lexical: { state: "pending" },
+          copy: { memberships: 0, validationItems: 0, receiptMatches: false, revisionBound: false },
+          accounted: true,
+          ready: false
+        })
         const request = { preparationId: prepared.preparationId, limit: 1 }
         const firstBatch = await runLegalPassageCopyBatch(pool, target, request)
         expect(firstBatch).toMatchObject({ copied: 1, exhausted: false, publicSearchReady: false })
@@ -502,6 +512,22 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         ).toBe(0)
         expect(await acknowledgeLegalPassageCopy(pool, target, prepared.preparationId)).toMatchObject({
           acknowledged: true
+        })
+        await expect(
+          inspectLegalPassagePipelineCompletion(pool, target, { preparationId: prepared.preparationId })
+        ).resolves.toMatchObject({
+          preparation: { state: "prepared", expected: prepared.total, prepared: prepared.total, blocked: 0 },
+          lexical: { state: "acknowledged", delayed: false },
+          copy: {
+            memberships: prepared.total,
+            validationItems: prepared.total,
+            receiptRevisions: prepared.total,
+            receiptGenerations: prepared.total,
+            receiptMatches: true,
+            revisionBound: true
+          },
+          accounted: true,
+          ready: true
         })
         await expect(inspectLegalPreparationWaveCompletion(pool, { waveId })).resolves.toMatchObject({
           accounted: true,

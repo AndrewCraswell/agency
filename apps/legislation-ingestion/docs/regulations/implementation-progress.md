@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added cross-database completion accounting for one lexical copy pipeline. The new read-only inspector binds canonical
+preparation state, exact item counts, leases/retries, current rights and lexical outbox state to isolated-search
+memberships, bounded-validation checkpoints, the exact scope receipt and the shared serving-time source/target revision
+fences. Copy traversal, checkpoint exhaustion or a target receipt without canonical acknowledgement cannot report ready.
+The readiness CLI accepts `--copy <preparation-hash>`, requires the separate search database and writes neither store.
+
+The focused PostgreSQL copy test moved a real prepared scope from zero target memberships through bounded replay and
+whole-copy acknowledgement. The inspector reported the pre-copy scope accounted but unready, then reported the exact
+membership/checkpoint/receipt/revision counts and `ready: true` only after acknowledgement. The actual CLI reproduced
+the ready receipt for three generations; revoking its source rights made the same command exit 1 before target trust,
+and the disposable rights profile was restored. The focused database test, ingestion types and scoped format passed.
+This advances INDEX-06 and ORCH-15 for a single lexical preparation. Partition reconciliation/repair, oldest-pending
+reporting, run-disposition recovery and scale/deployed acceptance remain open. Recurring schedules and bulk embeddings
+remain disabled. Root `pnpm verify` completed formatting and all 11 package lint/type tasks, then stopped at the
+unchanged unrelated Knip inventory for theme/template files, root dependencies/binaries and configuration hints;
+coverage did not run.
+
 Added bounded source-stage completion accounting for immutable current-acquisition manifests. The read-only inspector
 validates the stored manifest identity and exact unit denominator, then reconciles acquisition, parsing and publication
 intents with canonical unit state, run-attempt history, active leases, uncertain submissions, premature remote

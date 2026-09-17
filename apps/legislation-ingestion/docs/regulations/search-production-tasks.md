@@ -143,6 +143,10 @@ representative-volume plans remain open; these tasks are not closed by the appli
 - [ ] **INDEX-06 Add reconciliation and repair inspection.** Report source/target counts, hashes, selected receipts,
   missing generations, delayed jobs and oldest pending age per partition. **Done:** deliberately corrupt or omit a row
   and the inspector fails without authorizing serving; targeted recopy restores readiness. Depends on INDEX-03–05.
+  Local progress: a read-only per-preparation inspector now reconciles canonical preparation/outbox state with target
+  memberships, bounded-validation checkpoints, the exact scope receipt and current source/target revision fences. It
+  rejects incomplete copy, missing acknowledgement, stale revisions and revoked rights. Partition aggregation, oldest
+  pending age, targeted repair and deliberately corrupted deployed acceptance remain open.
 - [ ] **INDEX-12 Copy and acknowledge full lexical partitions.** Run the existing copy worker followed by INDEX-03's
   verifier; retain inventory/hash receipts. **Done:** every PASS-10 eligible generation is acknowledged or has an
   explicit blocking disposition; copy traversal exhaustion alone cannot pass. Depends on PASS-09–10, INDEX-03/06.

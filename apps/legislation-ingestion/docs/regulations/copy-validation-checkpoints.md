@@ -87,5 +87,14 @@ ordinal/version identities and trimmed preparation context to match the retained
 includes the current document number, publisher and kind. Extra unprepared source provisions cannot be omitted by
 joining only expected generations. Rights checks remain independent of these inventory/revision checks. Full-corpus
 latency and broader hierarchy/correction propagation still need operational validation.
+
+`inspect:regulatory-readiness --copy <preparation-hash>` now reconciles this handoff without writing either database.
+It opens repeatable-read snapshots on the canonical and isolated-search databases, verifies current source rights,
+preparation counts and leases, lexical outbox state, target membership and validation-checkpoint counts, the exact scope
+receipt identity/inventory/counts and every source/target revision fence through the same shared receipt verifier used by
+serving. Copy traversal or a complete checkpoint count alone remains unready. `ready` requires an acknowledged source
+outbox and a matching revision-bound target receipt; rights revocation fails closed. This is one-preparation evidence,
+not partition-level completion or run-disposition recovery.
+
 Do not delete counter tombstones while checkpoints or receipts can refer to them. Cleanup requires an explicit epoch
 policy. National-scale write contention, correction propagation and deployed failure recovery remain unverified.
