@@ -67,7 +67,7 @@ import {
   withImportLease,
   withLease
 } from "./storage.js"
-import { initializeLegalEmbeddingShards, runLegalEmbeddingShardJob } from "./vector-jobs.js"
+import { claimLegalEmbeddingShard, initializeLegalEmbeddingShards, runLegalEmbeddingShardJob } from "./vector-jobs.js"
 import { selectLegalEmbeddingShard } from "./vector-shards.js"
 import {
   completeLegalEmbeddingGeneration,
@@ -1469,8 +1469,35 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
         await expect(completeLegalEmbeddingGeneration(target, generation.generationId)).rejects.toThrow(
           "legal_embedding_shards_incomplete"
         )
+        const expiredShard = (shardIndex + 1) % 16
+        const abandoned = await claimLegalEmbeddingShard(target, {
+          generationId: generation.generationId,
+          shardIndex: expiredShard
+        })
+        invariant(abandoned, "vector_test_shard_claim_missing")
+        await target.query(
+          `UPDATE legislation.legal_embedding_shards SET lease_expires_at=clock_timestamp()-interval '1 second'
+          WHERE generation_id=$1 AND shard_index=$2`,
+          [generation.generationId, expiredShard]
+        )
+        expect(
+          await runLegalEmbeddingShardJob(
+            target,
+            { generationId: generation.generationId, shardIndex: expiredShard },
+            {
+              embed: async () => {
+                throw new Error("empty_shard_provider_call")
+              }
+            }
+          )
+        ).toMatchObject({
+          attempts: 2,
+          items: [],
+          possibleRepeatedPaidAttempts: 1,
+          state: "complete"
+        })
         for (let emptyShard = 0; emptyShard < 16; emptyShard++) {
-          if (emptyShard === shardIndex) continue
+          if (emptyShard === shardIndex || emptyShard === expiredShard) continue
           expect(
             await runLegalEmbeddingShardJob(
               target,
