@@ -1,4 +1,5 @@
 import { digest } from "@repo/legislation-core/legal-text/contracts"
+import { federalRegisterAgencyEvidenceSchema } from "@repo/legislation-core/legal-text/federal-register-agencies"
 import { z } from "zod"
 
 export const frMetadataContract = "federal-register-metadata-2026-09-14"
@@ -54,13 +55,7 @@ export const frMetadataScopeSchema = z
     }
   })
 export type FrMetadataScope = z.infer<typeof frMetadataScopeSchema>
-export const frAgencyEvidenceSchema = z.object({
-  raw_name: z.string(),
-  name: z.string().optional(),
-  id: z.int().optional(),
-  slug: z.string().optional(),
-  parent_id: z.int().nullable().optional()
-})
+export const frAgencyEvidenceSchema = federalRegisterAgencyEvidenceSchema
 export const frMetadataRecordSchema = z
   .object({
     document_number: z.string().min(1).max(128),

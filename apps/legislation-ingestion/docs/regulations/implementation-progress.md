@@ -13,6 +13,19 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Completed HTTP-08 publication and agency discovery locally. The canonical Federal Register agency projector now lives
+in the shared core package, so ingestion, search and browse cannot silently diverge on publisher IDs or deterministic
+document-occurrence identities. `GET /api/legal/publications`, publication detail and publication versions are wired
+through strict contracts, the typed API client and the read-only `list_regulatory_documents`/
+`get_regulatory_document` MCP tools. Browse cursors bind caller, exact filters, limit and current rights-policy hashes;
+detail and version rows retain immutable document/version/observation IDs and exact-text URLs.
+
+The retained canonical database canary paged all 92 notices in four 25-result requests with 92 unique observations.
+Filtering `fr-agency-406` returned only 65 FR 2521, whose detail identity, content hash and exact-text URL matched the
+canonical observation; its version history returned the same exact version/observation pair. Core contracts, shared
+agency projection, ingestion compatibility, web reader/routes, typed client and MCP end-to-end tests pass. This is local
+retained-data evidence, not deployed Next-router or production WorkOS acceptance. No embeddings or recurring jobs ran.
+
 Rechecked the historical full-qualification handle before further passage work. Process 76852 is absent and was not
 restarted. Its older 275,149-record artifact is superseded by the retained recovered-baseline audit at
 `artifacts/regulatory-backfills/ecfr-recovery-qualification-audit-2026-09-17.json`. That audit is terminal across all 49

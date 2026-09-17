@@ -58,13 +58,15 @@ vertical slices: application service, serializer, strict client parser, explicit
 - [ ] **HTTP-07 Implement citation resolution.** Ship provisions/resolve over canonical aliases with jurisdiction/code/
   edition constraints. **Done:** ambiguous and absent citations return the documented result with bounded candidates;
   no fuzzy guess is silently presented as an exact provision. Depends on HTTP-02–03, ING-10.
-- [ ] **HTTP-08 Implement publication and agency discovery.** Ship publication list/detail/versions and source-agency
+- [x] **HTTP-08 Implement publication and agency discovery.** Ship publication list/detail/versions and source-agency
   directory with publication-date/kind/agency filters. **Done:** unresolved source agencies remain representable, duplicate
   printed numbers resolve to distinct canonical documents, all results retain exact provenance. Depends on ING-05/09, HTTP-01/03.
   Local progress: the strict `GET /api/legal/agencies` route, typed client and `list_legal_agencies` MCP tool return
   rights-visible Federal Register publisher references with aliases, publication counts/dates and caller/filter/catalog-
   bound pagination. The retained pilot exposes 50 publisher identities and six document-occurrence identities; none is
-  presented as a canonical organization. Publication list/detail/version operations remain open.
+  presented as a canonical organization. Publication list/detail/version routes now use immutable canonical document,
+  version and observation IDs, rights-filtered keyset pagination, exact source agencies and exact-text URLs. The retained
+  canary returned all 92 notices without duplicates and filtered `fr-agency-406` to the sole 65 FR 2521 final rule.
 - [x] **HTTP-09 Implement lexical legal search end to end.** Connect the strict search schema to corpus-wide query
   service, request-bound response checks, typed client method and explicit POST route. **Done:** lexical searches
   preserve filters, exact versions and pagination; semantic/hybrid requests return explicit unavailable capability

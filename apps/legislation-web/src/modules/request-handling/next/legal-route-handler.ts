@@ -3,6 +3,7 @@ import { createLegalAgenciesApiHandler } from "../api/legal-agencies-routes"
 import { createLegalBrowseApiHandler } from "../api/legal-browse-routes"
 import { createLegalCodesApiHandler } from "../api/legal-codes-routes"
 import { createLegalCoverageApiHandler } from "../api/legal-coverage-routes"
+import { createLegalPublicationsApiHandler } from "../api/legal-publications-routes"
 import { createLegalSearchApiHandler } from "../api/legal-search-routes"
 import { createLegalTextApiHandler } from "../api/legal-text-routes"
 import { executeAuthenticatedApiRequest } from "./authenticated-api-request"
@@ -25,6 +26,11 @@ export async function handleLegalCodesRequest(request: Request): Promise<Respons
 export async function handleLegalCoverageRequest(request: Request): Promise<Response> {
   const application = getNextLegislationApplication()
   return executeAuthenticatedApiRequest(request, createLegalCoverageApiHandler(application.legalCoverage))
+}
+
+export async function handleLegalPublicationsRequest(request: Request): Promise<Response> {
+  const application = getNextLegislationApplication()
+  return executeAuthenticatedApiRequest(request, createLegalPublicationsApiHandler(application.legalPublications))
 }
 
 export async function handleLegalBrowseRequest(request: Request): Promise<Response> {

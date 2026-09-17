@@ -13,6 +13,10 @@ import {
 } from "../api-client/legal-browse-contract"
 import { legalCodesRequestSchema, type LegalCodesRequest } from "../api-client/legal-codes-contract"
 import { legalCoverageRequestSchema, type LegalCoverageRequest } from "../api-client/legal-coverage-contract"
+import {
+  legalPublicationsRequestSchema,
+  type LegalPublicationsRequest
+} from "../api-client/legal-publications-contract"
 import { legalSearchRequestSchema, type LegalSearchRequest } from "../api-client/legal-search-contract"
 import { legalTextRequestSchema, type LegalTextRequest } from "../api-client/legal-text-contract"
 import { getRequestContext } from "../auth/request-context"
@@ -119,6 +123,8 @@ export type LegislationQueryApi = Readonly<{
   searchLegal?: (input: LegalSearchRequest) => Promise<unknown>
   getRegulatoryCoverage?: (input: LegalCoverageRequest) => Promise<unknown>
   listLegalAgencies?: (input: LegalAgenciesRequest) => Promise<unknown>
+  listRegulatoryDocuments?: (input: LegalPublicationsRequest) => Promise<unknown>
+  getRegulatoryDocument?: (input: { documentId: string; versionId?: string }) => Promise<unknown>
   listLegalCodes?: (input: LegalCodesRequest) => Promise<unknown>
   getLegalCode?: (input: { codeId: string }) => Promise<unknown>
   getLegalEdition?: (input: { editionId: string }) => Promise<unknown>
@@ -594,6 +600,34 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   }
 
   const listLegalCodes = service.listLegalCodes
+  const listRegulatoryDocuments = service.listRegulatoryDocuments
+  const getRegulatoryDocument = service.getRegulatoryDocument
+  if (getRegulatoryDocument !== undefined && service.canReadLegalText?.() === true) {
+    server.registerTool(
+      "get_regulatory_document",
+      {
+        description:
+          "Read one Federal Register publication by its discovered document ID, optionally selecting an exact version ID. Source metadata and agencies are evidence and do not establish current legal effect.",
+        inputSchema: z.strictObject({ documentId: z.uuid(), versionId: z.uuid().optional() }),
+        outputSchema,
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      },
+      (input) => tool("get_regulatory_document", input, () => getRegulatoryDocument(input), logger, telemetry)
+    )
+  }
+  if (listRegulatoryDocuments !== undefined && service.canReadLegalText?.() === true) {
+    server.registerTool(
+      "list_regulatory_documents",
+      {
+        description:
+          "Browse rights-visible Federal Register proposals, final rules and notices. Use discovered source agency IDs for filtering and follow nextCursor with unchanged filters.",
+        inputSchema: legalPublicationsRequestSchema,
+        outputSchema,
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      },
+      (input) => tool("list_regulatory_documents", input, () => listRegulatoryDocuments(input), logger, telemetry)
+    )
+  }
   const listLegalAgencies = service.listLegalAgencies
   if (listLegalAgencies !== undefined && service.canReadLegalText?.() === true) {
     server.registerTool(

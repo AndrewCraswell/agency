@@ -177,6 +177,9 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
           canReadLegalText,
           getRegulatoryCoverage: async (input) => api.getRegulatoryCoverage(input, await legalRequestOptions()),
           listLegalAgencies: async (input) => api.listLegalAgencies(input, await legalRequestOptions()),
+          listRegulatoryDocuments: async (input) => api.listRegulatoryDocuments(input, await legalRequestOptions()),
+          getRegulatoryDocument: async ({ documentId, versionId }) =>
+            api.getRegulatoryDocument(documentId, versionId, await legalRequestOptions()),
           searchLegal: async (input) => api.searchLegal(input, await legalRequestOptions()),
           getLegalCode: async ({ codeId }) => api.getLegalCode(codeId, await legalRequestOptions()),
           getLegalEdition: async ({ editionId }) => api.getLegalEdition(editionId, await legalRequestOptions()),
@@ -304,6 +307,8 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
   const searchLegal = adapter.searchLegal
   const getRegulatoryCoverage = adapter.getRegulatoryCoverage
   const listLegalAgencies = adapter.listLegalAgencies
+  const listRegulatoryDocuments = adapter.listRegulatoryDocuments
+  const getRegulatoryDocument = adapter.getRegulatoryDocument
   const listLegalCodes = adapter.listLegalCodes
   const getLegalCode = adapter.getLegalCode
   const getLegalEdition = adapter.getLegalEdition
@@ -324,6 +329,12 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
     ...(listLegalAgencies === undefined
       ? {}
       : { listLegalAgencies: async (input) => await apiCall(() => listLegalAgencies(input)) }),
+    ...(listRegulatoryDocuments === undefined
+      ? {}
+      : { listRegulatoryDocuments: async (input) => await apiCall(() => listRegulatoryDocuments(input)) }),
+    ...(getRegulatoryDocument === undefined
+      ? {}
+      : { getRegulatoryDocument: async (input) => await apiCall(() => getRegulatoryDocument(input)) }),
     ...(listLegalEditions === undefined
       ? {}
       : { listLegalEditions: async (input) => await apiCall(() => listLegalEditions(input)) }),

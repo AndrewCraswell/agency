@@ -33,6 +33,15 @@ import {
   validateLegalCoverageResponse,
   type LegalCoverageRequest
 } from "./legal-coverage-contract"
+import {
+  legalPublicationsRequestSchema,
+  legalPublicationVersionsRequestSchema,
+  validateLegalPublicationResponse,
+  validateLegalPublicationsResponse,
+  validateLegalPublicationVersionsResponse,
+  type LegalPublicationsRequest,
+  type LegalPublicationVersionsRequest
+} from "./legal-publications-contract"
 import { legalSearchRequestSchema, validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract"
 import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract"
 
@@ -455,6 +464,51 @@ export class LegislationApiClient {
       return validateLegalCoverageResponse(result, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid regulatory coverage response")
+    }
+  }
+
+  async listRegulatoryDocuments(query: LegalPublicationsRequest = {}, options?: ApiRequestOptions) {
+    const input = legalPublicationsRequestSchema.parse(query)
+    const result = await this.#request({ method: "GET", path: "/api/legal/publications", query: input }, options)
+    try {
+      return validateLegalPublicationsResponse(result, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid regulatory publications response")
+    }
+  }
+
+  async getRegulatoryDocument(documentId: string, versionId?: string, options?: ApiRequestOptions) {
+    const id = z.uuid().parse(documentId)
+    const result = await this.#request(
+      {
+        method: "GET",
+        path: `/api/legal/publications/${segment(id)}`,
+        query: versionId === undefined ? undefined : { versionId }
+      },
+      options
+    )
+    try {
+      return validateLegalPublicationResponse(result, id, versionId)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid regulatory publication response")
+    }
+  }
+
+  async listRegulatoryDocumentVersions(
+    documentId: string,
+    query: LegalPublicationVersionsRequest = {},
+    options?: ApiRequestOptions
+  ) {
+    const id = z.uuid().parse(documentId)
+    const input = legalPublicationVersionsRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/publications/${segment(id)}/versions`, query: input },
+      options
+    )
+    try {
+      return validateLegalPublicationVersionsResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid regulatory publication versions response")
     }
   }
 

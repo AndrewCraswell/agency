@@ -15,6 +15,10 @@ import {
 } from "@repo/legislation-core/api-client/legal-codes-contract"
 import { legalCoverageResponseSchema } from "@repo/legislation-core/api-client/legal-coverage-contract"
 import {
+  legalPublicationResponseSchema,
+  legalPublicationsResponseSchema
+} from "@repo/legislation-core/api-client/legal-publications-contract"
+import {
   legalSearchPageSchema,
   legalSearchRequestSchema
 } from "@repo/legislation-core/api-client/legal-search-contract"
@@ -239,6 +243,49 @@ async function setup(
                 { headers }
               )
             }
+            const publication = {
+              id: observationId,
+              versionId,
+              sourceObservationId: observationId,
+              jurisdictionId: "jurisdiction:us",
+              sourceId: "federal-register",
+              nativeNumber: "00-100",
+              title: "Retirement eligibility",
+              citation: "65 FR 2521",
+              publicationKind: "final_rule",
+              publishedOn: "2000-01-18",
+              effectiveOn: null,
+              agencies: [
+                {
+                  status: "unresolved",
+                  organizationId: null,
+                  sourceAgencyId: "fr-agency-406",
+                  name: "Personnel Management Office",
+                  sourceId: "federal-register",
+                  nativeId: "406"
+                }
+              ],
+              canonicalUrl: `/api/legal/publications/${observationId}`,
+              textUrl: `/api/legal/versions/${versionId}/text?sourceObservationId=${observationId}`,
+              updatedAt: "2026-09-17T00:00:00Z"
+            }
+            if (path === "/api/legal/publications") return Response.json(page([publication]), { headers })
+            if (path === `/api/legal/publications/${observationId}`) {
+              return Response.json(
+                {
+                  data: {
+                    ...publication,
+                    sourceLocator: "/RULE[1]",
+                    sourceUrl: "https://www.federalregister.gov/documents/2000/01/18/00-100/example",
+                    contentHash: "a".repeat(64),
+                    attribution: "Federal Register"
+                  },
+                  links: { self: path },
+                  meta: { correlationId, warnings: [] }
+                },
+                { headers }
+              )
+            }
             if (path === "/api/legal/coverage") {
               if (isRevoked) {
                 throw new LegislationError("forbidden", "Access denied")
@@ -417,6 +464,7 @@ it("advertises the read-only legal tool only for enabled, approved organizations
     expect((await client.listTools()).tools.some((item) => item.name === "search_regulations")).toBe(false)
     expect((await client.listTools()).tools.some((item) => item.name === "list_legal_codes")).toBe(false)
     expect((await client.listTools()).tools.some((item) => item.name === "list_legal_agencies")).toBe(false)
+    expect((await client.listTools()).tools.some((item) => item.name === "list_regulatory_documents")).toBe(false)
     expect((await client.listTools()).tools.some((item) => item.name === "get_regulatory_coverage")).toBe(false)
     expect(
       (await client.listTools()).tools.some((item) =>
@@ -552,6 +600,29 @@ it("discovers Federal Register source agencies through the authenticated API cli
   expect(new URL(apiRequests[0]!.url).pathname).toBe("/api/legal/agencies")
   revoke()
   expect((await client.callTool({ name: "list_legal_agencies", arguments: {} })).isError).toBe(true)
+})
+
+it("browses and reads Federal Register publications through the authenticated API client", async () => {
+  const { client, apiRequests } = await setup()
+  const listed = await client.callTool({
+    name: "list_regulatory_documents",
+    arguments: { sourceId: "federal-register", sourceAgencyId: "fr-agency-406", kind: "final_rule" }
+  })
+  expect(listed.isError).not.toBe(true)
+  expect(
+    z.strictObject({ data: legalPublicationsResponseSchema }).parse(listed.structuredContent).data.data[0]
+      ?.sourceObservationId
+  ).toBe(observationId)
+  expect(new URL(apiRequests[0]!.url).pathname).toBe("/api/legal/publications")
+  const read = await client.callTool({
+    name: "get_regulatory_document",
+    arguments: { documentId: observationId, versionId }
+  })
+  expect(read.isError).not.toBe(true)
+  expect(
+    z.strictObject({ data: legalPublicationResponseSchema }).parse(read.structuredContent).data.data.versionId
+  ).toBe(versionId)
+  expect(new URL(apiRequests[1]!.url).pathname).toBe(`/api/legal/publications/${observationId}`)
 })
 
 it("reports staged regulatory coverage through the same authenticated API identity", async () => {

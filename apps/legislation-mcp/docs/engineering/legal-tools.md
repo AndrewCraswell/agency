@@ -74,4 +74,6 @@ The September 17 contract regression additionally sends Federal Register kind/da
 only upstream path is `POST /api/search/legal`.
 The agency-directory regression discovers `fr-agency-406` through the typed `GET /api/legal/agencies` client and
 preserves unresolved organization status through `list_legal_agencies`.
+Publication regressions browse the same source agency through `list_regulatory_documents`, then retrieve its immutable
+document/version/observation identity through `get_regulatory_document`. Both tools call the typed legal HTTP client.
 This does not establish standalone/deployed Next-router or live WorkOS acceptance.

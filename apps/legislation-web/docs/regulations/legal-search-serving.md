@@ -90,10 +90,12 @@ evidence hash. Of those scopes, 107 have agency references and three explicitly 
 The companion source-agency directory canary returned 56 rights-visible identities: 50 publisher IDs and six
 document-occurrence identities. Its `personnel` query returned only `fr-agency-406`; all directory identities remain
 unresolved until reviewed organization mapping exists.
+Publication browse/detail/version discovery uses those same shared identities. The retained browse canary returned all
+92 notices without duplicates and resolved the `fr-agency-406` result to the same 65 FR 2521 document, version,
+observation, content hash and exact-text URL served by search.
 
-This is not deployed Next-router or real WorkOS credential evidence. Canonical organization resolution, publication
-browse/detail/version operations, full-corpus performance, semantic/vector search, remaining reconciliation and
-deployment acceptance are open.
+This is not deployed Next-router or real WorkOS credential evidence. Canonical organization resolution, full-corpus
+performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.
 
 ## Target query semantics
 
