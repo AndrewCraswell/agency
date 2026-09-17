@@ -2,6 +2,17 @@
 
 ## September 16 continuation and identity verification
 
+September 17 04:46Z authenticated retrieval diagnosis:
+
+- [x] SB277 docid12203 reviewed source refresh completed: processed/OCR processed, 103,631 characters, source hash `ab0d701c2699eeae89fcd92d2dbb440ead1dc8f45f3926063272a6b0c4f98904` exactly matches reviewed publisher bytes. Downstream embedding/search refresh still needs specific acceptance.
+- [x] The four recovered malformed-document audit gaps have all 37 sections present with matching hashes in the hosted passage-search copy.
+- [ ] Authenticated machine API smoke using existing WorkOS smoke credentials: AK and NC lexical `education` searches return 503 (25.3s/15.8s); semantic/hybrid return 200 with empty data. Machine checks do not satisfy the separate MCP user-consent canary.
+- [x] Confirmed deployed W service `786fbca7-8798-4357-9b45-f0ba092a9750`, deployment `d8e6266c-fb71-4f70-a5dd-6532ef9c4110` SUCCESS. It has no passage-search enablement/database variables; it uses canonical-database lexical search.
+- [x] Dedicated search readiness at 04:45:41Z: backfill complete, pending zero, failed zero, index valid/ready. `cutoverApproved` remains false: corpus parity, full-corpus search, authenticated API/MCP and ingestion-overlap acceptance remain required.
+- [x] Direct read-only dedicated-ranked-search canary including canonical hydration: AK returns two correctly scoped education passages in 5,972ms; NC returns two in 1,481ms. No production config changes made. This is bounded query evidence, not whole-corpus acceptance.
+- [ ] Semantic diagnosis: production pgvector 0.8.6 plan traverses global HNSW index before jurisdiction filtering. Same education embedding returns zero AK candidates under defaults (295ms); transaction-local strict iterative scanning and scope-first exact distance scan both exceed 15s. Do not ship either timed-out experiment as a fix or rebuild the existing global indexes blindly.
+- [ ] Additional API gate: known AK34 HB1 detail returns 422, `Bill action canonical provenance is not persisted`; bill list works. Reconcile persisted action provenance through shared ingestion rather than inventing evidence or hiding the projection error.
+
 September 17 04:37Z validation and source-refresh correction:
 
 - [x] All four stale malformed-document audit gaps completed OCR: HB261 8,216 characters; SB124 73,032; SB148 7,184; SB174 15,287. Their downstream retrieval acceptance remains to be verified.
