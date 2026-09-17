@@ -55,6 +55,30 @@ export type AppliedSynchronizationSchedulePlan = Readonly<{
   updated: number
 }>
 
+export type SynchronizationScheduleScope = "federal" | "openstates"
+
+export function selectSynchronizationScheduleScope(
+  manifest: readonly SynchronizationScheduleManifestEntry[],
+  remoteSchedules: readonly RemoteSynchronizationSchedule[],
+  scope: SynchronizationScheduleScope
+): Readonly<{
+  manifest: readonly SynchronizationScheduleManifestEntry[]
+  remoteSchedules: readonly RemoteSynchronizationSchedule[]
+}> {
+  const selectsOpenStates = scope === "openstates"
+  return {
+    manifest: manifest.filter((schedule) => (schedule.identity.provider === "openstates") === selectsOpenStates),
+    remoteSchedules: remoteSchedules.filter((schedule) => {
+      const externalMatch = schedule.externalId?.startsWith("openstates:") ?? false
+      const keyMatch = schedule.deduplicationKey?.includes(":openstates:") ?? false
+      if (externalMatch !== keyMatch && schedule.externalId != null && schedule.deduplicationKey != null) {
+        throw new Error(`Trigger.dev schedule provider identity is inconsistent: ${schedule.id}`)
+      }
+      return (externalMatch || keyMatch) === selectsOpenStates
+    })
+  }
+}
+
 export function planSynchronizationScheduleReconciliation(
   manifest: readonly SynchronizationScheduleManifestEntry[],
   remoteSchedules: readonly RemoteSynchronizationSchedule[]

@@ -6,6 +6,7 @@ import { createSynchronizationScheduleManifest } from "../../src/trigger/manifes
 import {
   applySynchronizationScheduleReconciliation,
   planSynchronizationScheduleReconciliation,
+  selectSynchronizationScheduleScope,
   type RemoteSynchronizationSchedule
 } from "../../src/trigger/reconciliation.js"
 import {
@@ -72,9 +73,10 @@ async function reconcile(options: {
     environment,
     openStatesActiveJurisdictions
   })
-  const remoteSchedules = await listRemoteSchedules()
+  const scope = options.activateOpenstates === true ? "openstates" : "federal"
+  const selected = selectSynchronizationScheduleScope(manifest, await listRemoteSchedules(), scope)
 
-  const plan = planSynchronizationScheduleReconciliation(manifest, remoteSchedules)
+  const plan = planSynchronizationScheduleReconciliation(selected.manifest, selected.remoteSchedules)
   if (options.apply === true) {
     const applied = await applySynchronizationScheduleReconciliation(plan, {
       activate: (id) => schedules.activate(id),
@@ -82,19 +84,23 @@ async function reconcile(options: {
       deactivate: (id) => schedules.deactivate(id),
       update: (id, input) => schedules.update(id, input)
     })
-    const verification = planSynchronizationScheduleReconciliation(manifest, await listRemoteSchedules())
-    if (verification.actions.length > 0 || verification.unchanged !== manifest.length) {
+    const verificationScope = selectSynchronizationScheduleScope(manifest, await listRemoteSchedules(), scope)
+    const verification = planSynchronizationScheduleReconciliation(
+      verificationScope.manifest,
+      verificationScope.remoteSchedules
+    )
+    if (verification.actions.length > 0 || verification.unchanged !== selected.manifest.length) {
       throw new Error(
-        `Trigger.dev schedule reconciliation did not converge: ${verification.actions.length} actions remain and ${verification.unchanged}/${manifest.length} schedules match`
+        `Trigger.dev schedule reconciliation did not converge: ${verification.actions.length} actions remain and ${verification.unchanged}/${selected.manifest.length} schedules match`
       )
     }
     process.stdout.write(
-      `${JSON.stringify({ active: activeScheduleCounts(manifest), applied, desired: manifest.length, mode: "apply", unchangedBeforeApply: plan.unchanged, verified: verification.unchanged }, null, 2)}\n`
+      `${JSON.stringify({ active: activeScheduleCounts(selected.manifest), applied, desired: selected.manifest.length, mode: "apply", scope, unchangedBeforeApply: plan.unchanged, verified: verification.unchanged }, null, 2)}\n`
     )
     return
   }
   process.stdout.write(
-    `${JSON.stringify({ actions: plan.actions, active: activeScheduleCounts(manifest), desired: manifest.length, mode: "plan", unchanged: plan.unchanged }, null, 2)}\n`
+    `${JSON.stringify({ actions: plan.actions, active: activeScheduleCounts(selected.manifest), desired: selected.manifest.length, mode: "plan", scope, unchanged: plan.unchanged }, null, 2)}\n`
   )
 }
 

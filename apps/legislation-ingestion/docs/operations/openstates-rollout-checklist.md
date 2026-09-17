@@ -1,5 +1,30 @@
 # Open States rollout requirements and results
 
+## California AB 2652 action provenance
+
+The owner authorized extending the guarded repair to `bill:ca:20232024:ab:2652` only. Other California bills and
+sessions are rejected; the existing Alaska and North Carolina scopes are unchanged. The command retains checksum
+verification, complete timeline matching, parent/action locks, conflicting-source rejection and null-only updates.
+
+Retained archive `openstates/ca-20232024/a0374c0fbdfc4e9b74f44d799dbc04fb86b70d9071977e771ab13c8a4c67c96e.source`
+was acquired August 17, 2026 from the recorded Open States California 2023-2024 export. Its SHA-256 matched the
+content-addressed key. All 11 normalized action IDs, ordinals, descriptions, dates and classifications matched the
+stored timeline in the dry run and locked apply. Exactly 11 null source URLs were filled with the archive-supplied
+official bill URL. Repeat dry run reported zero missing provenance; readback confirmed the latest action remains
+"In committee: Held under submission." on May 16, 2024 with its original canonical ID.
+
+The official bill URL returned the correct bill, session and title. The separate history-page extraction/browser
+attempts did not complete, so they are not claimed as independent live history verification. No action facts, bill
+metadata, votes, documents, OCR, embeddings or other bills were changed. The 19 focused scope/timeline safety tests,
+ingestion type-check and scoped lint passed. This closes only the audited bill's stored action-URL gap, not statewide
+provenance coverage or semantic citation reliability.
+
+Fresh local conversation `fYnUy9bhzaJNaDYq` selected the repaired latest-action evidence and reported its publisher link.
+Desktop/mobile evidence panels used that exact URL, preserved the original date and metadata-only state, and passed
+keyboard focus-return and overflow checks. Final root verification passed format, lint, types, change-file checks and
+electrical simulation but stopped on unrelated Knip findings before coverage. The 11 authorized database URL updates
+are already applied.
+
 ## September 16 continuation and identity verification
 
 September 17 Alaska HB1 vote-provenance closure:
@@ -14,7 +39,7 @@ September 17 hosted content continuation:
 - [x] Both prior controllers exhausted their bounded 100-continuation budgets rather than completing ingestion. Authoritative outputs were `ingestionComplete=false`; Alaska had zero complete scan rounds and North Carolina had one. No live state-content leases remained, and the durable cursors were retained at AK `bill:ak:34:sb:200` and NC `bill:nc:2025:hb:1191`.
 - [x] Initial replacement handles entered `PENDING_VERSION`, exposing that the currently promoted Trigger deployment no longer offered the reorganized ingestion task. Deployed clean committed snapshot `2851985` as production Trigger version `20260917.1` with all 36 tasks detected. The snapshot was archived and built separately so unrelated dirty monorepo work was not included.
 - [x] Cancelled only the two never-started `PENDING_VERSION` handles after the new version was active. Replacement controllers `run_06gas18u1m6p5cva4fd8h7qj01` (AK) and `run_06gas19bs3i2tad6l4636a9q01` (NC) are executing on `20260917.1` with new idempotency keys and the existing state/session concurrency keys. No ingestion cursor was reset and no overlapping state lease was launched.
-- [x] Replaced the all-jurisdiction OpenStates schedule switch with an explicit `OPENSTATES_SCHEDULES_ENABLED_STATES` allowlist, still guarded by the existing quota acknowledgement and explicit apply flags. Manifest generation activates only the three bill/entity/event schedules for each allowlisted jurisdiction. This makes an eventual AK/NC canary possible without activating the other 50 jurisdictions. No OpenStates schedule was activated by this code change.
+- [x] Replaced the all-jurisdiction OpenStates schedule switch with an explicit `OPENSTATES_SCHEDULES_ENABLED_STATES` allowlist, still guarded by the existing quota acknowledgement and explicit apply flags. Manifest generation activates only the three bill/entity/event schedules for each allowlisted jurisdiction. Reconciliation now selects either the OpenStates or federal inventory and rejects inconsistent remote identities, so an AK/NC operation cannot activate or deactivate Congress/GovInfo schedules and a later federal operation cannot turn the state schedules off. This makes an eventual AK/NC canary possible without mutating the other 50 jurisdictions or federal schedules. No OpenStates schedule was activated by this code change.
 
 September 17 production vote-order index rollout:
 

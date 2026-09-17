@@ -4,6 +4,7 @@ import { createSynchronizationScheduleManifest } from "./manifest.js"
 import {
   applySynchronizationScheduleReconciliation,
   planSynchronizationScheduleReconciliation,
+  selectSynchronizationScheduleScope,
   type RemoteSynchronizationSchedule
 } from "./reconciliation.js"
 
@@ -122,6 +123,34 @@ describe("planSynchronizationScheduleReconciliation", () => {
     expect(() => planSynchronizationScheduleReconciliation(manifest, [remote, { ...remote, id: "duplicate" }])).toThrow(
       "duplicate managed schedule key"
     )
+  })
+
+  it("isolates state and federal schedule reconciliation", () => {
+    const remote = manifest.map((schedule) => remoteSchedule(schedule))
+    const openStates = selectSynchronizationScheduleScope(manifest, remote, "openstates")
+    const federal = selectSynchronizationScheduleScope(manifest, remote, "federal")
+
+    expect(openStates.manifest).toHaveLength(156)
+    expect(openStates.remoteSchedules).toHaveLength(156)
+    expect(openStates.manifest.every((schedule) => schedule.identity.provider === "openstates")).toBe(true)
+    expect(federal.manifest).toHaveLength(7)
+    expect(federal.remoteSchedules).toHaveLength(7)
+    expect(federal.manifest.every((schedule) => schedule.identity.provider !== "openstates")).toBe(true)
+  })
+
+  it("rejects inconsistent remote provider identities before applying a scoped plan", () => {
+    const desired = manifest.find((schedule) => schedule.identity.provider === "openstates")
+    expect(desired).toBeDefined()
+    if (desired === undefined) {
+      return
+    }
+    expect(() =>
+      selectSynchronizationScheduleScope(
+        manifest,
+        [remoteSchedule(desired, { externalId: "congress:bills:current" })],
+        "openstates"
+      )
+    ).toThrow("provider identity is inconsistent")
   })
 
   it("safely configures newly created inactive schedules", async () => {
