@@ -2978,3 +2978,32 @@ scoped lint and service types passed. Full `pnpm verify` passed; log:
 `C:/Users/andcra/AppData/Local/Temp/rostra-annual-cfr-date-verify.log`. No command from this slice remains active.
 No DB, index, vector or recurring source
 schedule was changed. Other backfill work can continue independently of this annual-date gate.
+
+## Durable regulatory discovery ingress and bounded eCFR change detection
+
+SYNC-01 is implemented locally. The unreleased regulatory migration and Drizzle schema add canonical discovery
+checkpoints, immutable page receipts and deduplicated pending source units. Checkpoints retain source/query scope,
+committed cursor, covered window, overlap, source cutoff, last attempt/success, last page and monotonic revision outside
+Trigger run history. A page uses a serializable transaction and revision/cursor compare-and-swap; unit registration,
+page receipt and cursor advancement commit together. Exact last-page replay is idempotent, while stale or conflicting
+pages fail closed.
+
+The PostgreSQL test injected a conflicting second unit after a valid first unit would have been inserted. The page
+failed, the first insertion rolled back and revision/cursor stayed at zero. Removing the injected conflict allowed the
+same two-unit page to commit; replay retained two units and one page. A second end-to-end database test ran bounded eCFR
+discovery twice from the same official-shape inventory: one changed non-reserved title remained one pending unit while
+two committed discovery observations advanced the checkpoint without duplicate work. Both tests passed again after
+dropping and recreating the disposable database and applying every migration from scratch. Container
+`tabra-regulatory-discovery-tests`, loopback port 55455, database `regulations_test`.
+
+The eCFR adapter validates the complete 50-title inventory, refuses publisher `import_in_progress`, distinguishes
+reserved titles and compares revision plus issue/currency dates with explicit current eCFR heads. Changed titles become
+separately validated `historical: false` discovery units; the existing backfill-unit schema remains strictly historical.
+The manual
+`regulatory-ecfr-discovery` Trigger task has concurrency one and accepts at most 50 unique title IDs. No recurring
+schedule was added or activated. The retained publisher-data qualification process was not restarted.
+
+Focused evidence: two real-PostgreSQL tests and 24 source/task/backfill tests passed; ingestion and core TypeScript,
+scoped oxlint/oxfmt and `drizzle-kit check` passed. This is local code and a disposable-database
+canary. Pending-unit acquisition/dispatch, a live publisher canary, deployed Trigger/database verification and the
+G4/SYNC-11 hourly activation gate remain open, so SYNC-02 is only partial.

@@ -55,6 +55,7 @@ completeness, vendor licensing rights or searchable product coverage.
 - [Implemented edition storage and validation](storage-validation.md)
 - [Federal Register metadata and issue reconciliation](fr-metadata-validation.md)
 - [Backfills, collectors and Trigger.dev workflows](acquisition-workflows.md)
+- [Regulatory source discovery checkpoints](regulatory-discovery.md)
 - [Search indexing and embeddings](search-indexing.md)
 - [Frozen final-passage evaluation protocol](embedding-evaluation-protocol.md)
 - [W regulatory API endpoints](../../../legislation-web/docs/regulations/api-mcp-contract.md)

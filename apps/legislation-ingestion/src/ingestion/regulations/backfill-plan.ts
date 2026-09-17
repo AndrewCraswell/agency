@@ -14,7 +14,7 @@ import {
 } from "@repo/legislation-core/legal-text/contracts"
 import { z } from "zod"
 
-const ecfrInventory = z.object({
+export const ecfrInventorySchema = z.object({
   titles: z
     .array(
       z.object({
@@ -94,7 +94,7 @@ export async function planRegulatoryBackfill(
   }
   if (scope.ecfrTitles.length > 0) {
     const evidence = await read("ecfr", "https://www.ecfr.gov/api/versioner/v1/titles.json")
-    const data = ecfrInventory.parse(JSON.parse(evidence.body))
+    const data = ecfrInventorySchema.parse(JSON.parse(evidence.body))
     if (
       data.meta.import_in_progress ||
       data.meta.date > scope.cutoff ||

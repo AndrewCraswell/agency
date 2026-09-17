@@ -2178,6 +2178,97 @@ export const legalSources = legislationSchema.table(
   (t) => [check("legal_sources_authority_check", sql`${t.authority} in ('official','licensed')`)]
 )
 
+export const legalDiscoveryCheckpoints = legislationSchema.table(
+  "legal_discovery_checkpoints",
+  {
+    sourceId: text("source_id")
+      .notNull()
+      .references(() => legalSources.id),
+    scopeKey: text("scope_key").notNull(),
+    queryHash: text("query_hash").notNull(),
+    query: jsonb("query").$type<Record<string, unknown>>().notNull(),
+    committedCursor: jsonb("committed_cursor"),
+    windowStartedAt: timestamp("window_started_at", { withTimezone: true }),
+    windowEndedAt: timestamp("window_ended_at", { withTimezone: true }),
+    overlapStartedAt: timestamp("overlap_started_at", { withTimezone: true }),
+    sourceCutoff: jsonb("source_cutoff"),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+    lastPageId: text("last_page_id"),
+    revision: bigint("revision", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (t) => [
+    primaryKey({ columns: [t.sourceId, t.scopeKey] }),
+    check("legal_discovery_checkpoints_scope_check", sql`${t.scopeKey} ~ '^[a-f0-9]{64}$'`),
+    check("legal_discovery_checkpoints_query_hash_check", sql`${t.queryHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_discovery_checkpoints_query_check", sql`jsonb_typeof(${t.query})='object'`),
+    check(
+      "legal_discovery_checkpoints_window_check",
+      sql`(${t.windowStartedAt} IS NULL)=(${t.windowEndedAt} IS NULL) AND (${t.windowStartedAt} IS NULL OR ${t.windowStartedAt}<=${t.windowEndedAt})`
+    ),
+    check(
+      "legal_discovery_checkpoints_overlap_check",
+      sql`${t.overlapStartedAt} IS NULL OR ${t.windowStartedAt} IS NULL OR ${t.overlapStartedAt}<=${t.windowStartedAt}`
+    ),
+    check("legal_discovery_checkpoints_revision_check", sql`${t.revision}>=0`)
+  ]
+)
+
+export const legalDiscoveryPages = legislationSchema.table(
+  "legal_discovery_pages",
+  {
+    id: text("id").primaryKey(),
+    sourceId: text("source_id").notNull(),
+    scopeKey: text("scope_key").notNull(),
+    expectedRevision: bigint("expected_revision", { mode: "number" }).notNull(),
+    expectedCursor: jsonb("expected_cursor"),
+    nextCursor: jsonb("next_cursor"),
+    unitCount: integer("unit_count").notNull(),
+    committedAt: timestamp("committed_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.sourceId, t.scopeKey],
+      foreignColumns: [legalDiscoveryCheckpoints.sourceId, legalDiscoveryCheckpoints.scopeKey]
+    }),
+    unique().on(t.sourceId, t.scopeKey, t.expectedRevision),
+    check("legal_discovery_pages_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+    check("legal_discovery_pages_revision_check", sql`${t.expectedRevision}>=0`),
+    check("legal_discovery_pages_unit_count_check", sql`${t.unitCount} BETWEEN 0 AND 100`)
+  ]
+)
+
+export const legalDiscoveryUnits = legislationSchema.table(
+  "legal_discovery_units",
+  {
+    sourceId: text("source_id").notNull(),
+    scopeKey: text("scope_key").notNull(),
+    unitKey: text("unit_key").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    unit: jsonb("unit").$type<Record<string, unknown>>().notNull(),
+    state: text("state").notNull().default("pending"),
+    discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull().defaultNow(),
+    registeredAt: timestamp("registered_at", { withTimezone: true })
+  },
+  (t) => [
+    primaryKey({ columns: [t.sourceId, t.scopeKey, t.unitKey] }),
+    foreignKey({
+      columns: [t.sourceId, t.scopeKey],
+      foreignColumns: [legalDiscoveryCheckpoints.sourceId, legalDiscoveryCheckpoints.scopeKey]
+    }),
+    check("legal_discovery_units_key_check", sql`${t.unitKey} ~ '^[a-f0-9]{64}$'`),
+    check("legal_discovery_units_payload_hash_check", sql`${t.payloadHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_discovery_units_payload_check", sql`jsonb_typeof(${t.unit})='object'`),
+    check("legal_discovery_units_state_check", sql`${t.state} IN ('pending','registered','quarantined')`),
+    check("legal_discovery_units_registered_check", sql`(${t.state}='registered')=(${t.registeredAt} IS NOT NULL)`),
+    index("legal_discovery_units_pending_idx")
+      .on(t.sourceId, t.scopeKey, t.discoveredAt, t.unitKey)
+      .where(sql`${t.state}='pending'`)
+  ]
+)
+
 export const legalImportManifests = legislationSchema.table(
   "legal_import_manifests",
   {

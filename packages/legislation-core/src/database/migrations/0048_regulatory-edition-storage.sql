@@ -13,6 +13,58 @@ CREATE TABLE legislation.legal_sources (
   authority text NOT NULL CHECK (authority IN ('official', 'licensed'))
 );
 --> statement-breakpoint
+CREATE TABLE legislation.legal_discovery_checkpoints (
+  source_id text NOT NULL REFERENCES legislation.legal_sources(id),
+  scope_key text NOT NULL CHECK(scope_key ~ '^[a-f0-9]{64}$'),
+  query_hash text NOT NULL CHECK(query_hash ~ '^[a-f0-9]{64}$'),
+  query jsonb NOT NULL CHECK(jsonb_typeof(query)='object'),
+  committed_cursor jsonb,
+  window_started_at timestamptz,
+  window_ended_at timestamptz,
+  overlap_started_at timestamptz,
+  source_cutoff jsonb,
+  last_attempt_at timestamptz,
+  last_success_at timestamptz,
+  last_page_id text CHECK(last_page_id IS NULL OR last_page_id ~ '^[a-f0-9]{64}$'),
+  revision bigint NOT NULL DEFAULT 0 CHECK(revision>=0),
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(source_id,scope_key),
+  CHECK((window_started_at IS NULL)=(window_ended_at IS NULL)),
+  CHECK(window_started_at IS NULL OR window_started_at<=window_ended_at),
+  CHECK(overlap_started_at IS NULL OR window_started_at IS NULL OR overlap_started_at<=window_started_at)
+);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_discovery_pages (
+  id text PRIMARY KEY CHECK(id ~ '^[a-f0-9]{64}$'),
+  source_id text NOT NULL,
+  scope_key text NOT NULL,
+  expected_revision bigint NOT NULL CHECK(expected_revision>=0),
+  expected_cursor jsonb,
+  next_cursor jsonb,
+  unit_count integer NOT NULL CHECK(unit_count BETWEEN 0 AND 100),
+  committed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  FOREIGN KEY(source_id,scope_key) REFERENCES legislation.legal_discovery_checkpoints(source_id,scope_key),
+  UNIQUE(source_id,scope_key,expected_revision)
+);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_discovery_units (
+  source_id text NOT NULL,
+  scope_key text NOT NULL,
+  unit_key text NOT NULL CHECK(unit_key ~ '^[a-f0-9]{64}$'),
+  payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
+  unit jsonb NOT NULL CHECK(jsonb_typeof(unit)='object'),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','quarantined')),
+  discovered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  registered_at timestamptz,
+  PRIMARY KEY(source_id,scope_key,unit_key),
+  FOREIGN KEY(source_id,scope_key) REFERENCES legislation.legal_discovery_checkpoints(source_id,scope_key),
+  CHECK((state='registered')=(registered_at IS NOT NULL))
+);
+--> statement-breakpoint
+CREATE INDEX legal_discovery_units_pending_idx ON legislation.legal_discovery_units(source_id,scope_key,discovered_at,unit_key)
+  WHERE state='pending';
+--> statement-breakpoint
 CREATE TABLE legislation.legal_import_manifests (
   id text PRIMARY KEY CHECK (id ~ '^[a-f0-9]{64}$'),
   body jsonb NOT NULL,

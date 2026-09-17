@@ -10,13 +10,21 @@ Build and exercise these paths with fixtures and bounded manual development disp
 schedules disabled until SYNC-11. Reuse acquisition, publication, passage, copy and vector stages; do not create a second
 normalization or direct-to-index update path. Workstream prerequisites: ORCH-01 and source contracts.
 
-- [ ] **SYNC-01 Persist discovery checkpoints.** Store source/query scope, last committed cursor/window, overlap,
+- [x] **SYNC-01 Persist discovery checkpoints.** Store source/query scope, last committed cursor/window, overlap,
   last attempt/success and source cutoff independently of Trigger run history. **Done:** an interrupted discovery page
   resumes without advancing past unregistered work; repeat pages create no duplicate units.
+  Implemented locally September 16, 2026. The canonical database owns immutable query scopes, page receipts and
+  pending units. Page registration and cursor advance share one serializable transaction; revision/cursor compare-and-
+  swap prevents competing discovery attempts from skipping work. PostgreSQL fault and replay evidence is recorded in
+  [the implementation ledger](implementation-progress.md). Trigger history is not part of the checkpoint identity.
 - [ ] **SYNC-02 Implement eCFR change discovery.** Poll title metadata under the configured hourly discovery policy,
   accounting for reserved titles, import-in-progress and per-title dates; schedule changed raw observations. **Done:**
   unchanged titles produce no unnecessary parse/vector work and incomplete publisher updates retain prior serving data.
   Depends on SYNC-01, ING-07.
+  Local progress: the bounded `regulatory-ecfr-discovery` task validates all publisher title metadata, refuses an
+  import-in-progress response, classifies reserved/unchanged/changed titles against explicit current heads and registers
+  changed acquisition units. Its concurrency is one and no recurring schedule is registered. Pending-unit acquisition,
+  a live publisher canary and the G4-gated hourly schedule remain open.
 - [ ] **SYNC-03 Implement FR modification discovery.** Query source modification time with overlap, bounded pagination
   and saturation splitting, including edits to old publication dates. **Done:** an old corrected rule enters the same
   acquisition/reconciliation pipeline as a new publication; publication-date-only polling cannot hide the correction.
