@@ -6,6 +6,8 @@ import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import {
   approvedScraperBuildInputsSha256,
+  legacyAlaskaEventBuildInputsSha256,
+  requireApprovedAlaskaEventReceiptBuild,
   requireScraperActivation
 } from "../../ingestion/openstates/scraper-activation.js"
 import {
@@ -18,13 +20,17 @@ import { executeNorthCarolinaEventCloudCycle } from "../../ingestion/openstates/
 
 const payloadSchema = z.strictObject({
   planPath: z.string().regex(/^openstates\/scraper-plans\/ak\/events\/[A-Za-z0-9/_.-]+\.json$/),
-  approvedBuildInputsSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  approvedBuildInputsSha256: z.literal(approvedScraperBuildInputsSha256),
   batchId: z
     .string()
     .regex(/^[a-f0-9]{64}$/)
     .optional()
 })
-const reconciliationPayloadSchema = payloadSchema.omit({ batchId: true }).extend({
+const reconciliationPayloadSchema = payloadSchema.omit({ batchId: true, approvedBuildInputsSha256: true }).extend({
+  approvedBuildInputsSha256: z.union([
+    z.literal(approvedScraperBuildInputsSha256),
+    z.literal(legacyAlaskaEventBuildInputsSha256)
+  ]),
   batchIndex: z.number().int().nonnegative().default(0)
 })
 
@@ -44,6 +50,7 @@ export const openStatesAlaskaEventsReconcile = task({
   queue: { name: "openstates-scraper-orchestration", concurrencyLimit: 3 },
   run: async (raw: unknown) => {
     const payload = reconciliationPayloadSchema.parse(raw)
+    requireApprovedAlaskaEventReceiptBuild(payload.approvedBuildInputsSha256)
     requireAlaskaScraperActivation(process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
     const config = loadConfig()
     if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { approvedScraperBuildInputsSha256, requireScraperActivation } from "./scraper-activation.js"
+import {
+  approvedScraperBuildInputsSha256,
+  legacyAlaskaEventBuildInputsSha256,
+  requireApprovedAlaskaEventReceiptBuild,
+  requireScraperActivation
+} from "./scraper-activation.js"
 
 describe("shared scraper activation", () => {
   it("accepts only an explicitly enabled state", () => {
@@ -10,5 +15,15 @@ describe("shared scraper activation", () => {
 
   it("pins one reviewed runtime fingerprint across state domains", () => {
     expect(approvedScraperBuildInputsSha256).toBe("b9ba2dbe321b86084243119f0f36c83d304abca89e1061457453114629c60314")
+  })
+
+  it("admits only the current runtime and the exact retained Alaska event build for receipt replay", () => {
+    expect(requireApprovedAlaskaEventReceiptBuild(approvedScraperBuildInputsSha256)).toBe(
+      approvedScraperBuildInputsSha256
+    )
+    expect(requireApprovedAlaskaEventReceiptBuild(legacyAlaskaEventBuildInputsSha256)).toBe(
+      legacyAlaskaEventBuildInputsSha256
+    )
+    expect(() => requireApprovedAlaskaEventReceiptBuild("0".repeat(64))).toThrow("not approved")
   })
 })
