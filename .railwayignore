@@ -6,11 +6,17 @@
 
 !/apps/
 /apps/*
-!/apps/legislation/
-!/apps/legislation/**
+!/apps/legislation-ingestion/
+!/apps/legislation-ingestion/**
+!/apps/legislation-mcp/
+!/apps/legislation-mcp/**
+!/apps/legislation-web/
+!/apps/legislation-web/**
 
 !/packages/
 /packages/*
+!/packages/legislation-core/
+!/packages/legislation-core/**
 !/packages/oxlint-config/
 !/packages/oxlint-config/**
 !/packages/typescript-config/
@@ -26,9 +32,10 @@
 **/.turbo/
 **/.cache/
 **/dist/
-/apps/legislation/coverage/
+**/coverage/
 **/tmp/
 **/artifacts/
 **/output/
 **/*.tsbuildinfo
-/apps/legislation/evals/
+/apps/legislation-ingestion/evals/
+/apps/legislation-web/evals/
