@@ -152,6 +152,11 @@ representative-volume plans remain open; these tasks are not closed by the appli
 - [ ] **INDEX-04 Wire correction and removal propagation.** Emit/replay target updates for changed versions, membership
   removal and current-head replacement; distinguish removal from revocation and historical retention. **Done:** stale
   current hits disappear while allowed historical citations remain available. Depends on ING-11, INDEX-01.
+  Local progress: successful copy finalization now treats its fully verified generation inventory as the replacement
+  scope membership. It removes obsolete memberships under the scope lock, locks each obsolete generation against vector
+  work and deletes only ownerless generations, cascading their passages and vectors. Whole-copy inspection still flags
+  extras before mutation, and a generation with another scope membership is retained. Source-side correction outbox
+  emission, deployed replay and serving canaries remain open.
 - [ ] **INDEX-06 Add reconciliation and repair inspection.** Report source/target counts, hashes, selected receipts,
   missing generations, delayed jobs and oldest pending age per partition. **Done:** deliberately corrupt or omit a row
   and the inspector fails without authorizing serving; targeted recopy restores readiness. Depends on INDEX-03–05.
@@ -317,8 +322,10 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   invalidate stale jobs, vector memberships and caches through the correction path. **Done:** a source change or rights
   revocation during provider execution cannot promote stale/forbidden vectors. Depends on VECTOR-04, INDEX-04–05.
   Rights fencing is implemented for registration, batch writes and completion using the copied generation lock and a
-  nonrevoked search membership. Rights cleanup cascades the route-specific vectors and generation. Correction/removal
-  propagation and serving-time semantic selection remain open under INDEX-04/05 and VECTOR-11.
+  nonrevoked search membership. Rights cleanup cascades the route-specific vectors and generation. Fully verified scope
+  replacement now removes obsolete memberships and cascades ownerless passage/vector generations while retaining a
+  generation owned by another allowed scope. Source-side correction dispatch and serving-time semantic selection remain
+  open under INDEX-04/05 and VECTOR-11.
 - [ ] **VECTOR-07 Run the durable pilot.** Exercise malformed response, provider 429/outage, killed worker, lost lease,
   source correction and target write failure on a bounded persisted corpus. **Done:** exact vector inventory recovers
   with no falsely complete shards; pilot is queryable for EVAL-11. Depends on VECTOR-05–06, ORCH-08–10.

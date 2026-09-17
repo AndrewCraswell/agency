@@ -988,20 +988,48 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           await reconcileLegalSearchScopeRights(pool, target, { kind: "edition", id: second.editionId })
         ).toMatchObject({ allowed: true, removedMemberships: 0 })
         // Synthetic extra derived rows exercise the cleanup boundary without modifying any canonical document or vector.
+        const extraIds: string[] = []
         for (let index = 0; index < 30; index++) {
           const id = digest(`cleanup-fixture-${index}`)
+          extraIds.push(id)
           await target.query("INSERT INTO legislation.legal_search_generations(id,metadata) VALUES($1,'{}')", [id])
           await target.query(
             "INSERT INTO legislation.legal_search_memberships(scope_kind,scope_id,generation_id) VALUES('edition',$1,$2)",
             [second.editionId, id]
           )
         }
+        await target.query(
+          "INSERT INTO legislation.legal_search_memberships(scope_kind,scope_id,generation_id) VALUES('edition',$1,$2)",
+          [first.editionId, extraIds[0]]
+        )
         await expect(inspectLegalPassageCopy(pool, target, newer.preparationId)).rejects.toThrow(
           "legal_copy_membership_count_mismatch"
         )
-        await expect(acknowledgeLegalPassageCopy(pool, target, newer.preparationId)).rejects.toThrow(
-          "legal_copy_membership_count_mismatch"
+        expect(await acknowledgeLegalPassageCopy(pool, target, newer.preparationId)).toMatchObject({
+          acknowledged: true,
+          removedGenerations: 29,
+          removedMemberships: 30
+        })
+        expect(
+          (
+            await target.query(
+              "SELECT count(*)::integer AS count FROM legislation.legal_search_generations WHERE id=ANY($1::text[])",
+              [extraIds]
+            )
+          ).rows[0]?.count
+        ).toBe(1)
+        await target.query(
+          "DELETE FROM legislation.legal_search_memberships WHERE scope_kind='edition' AND scope_id=$1 AND generation_id=$2",
+          [first.editionId, extraIds[0]]
         )
+        await target.query("DELETE FROM legislation.legal_search_generations WHERE id=$1", [extraIds[0]])
+        for (const id of extraIds) {
+          await target.query("INSERT INTO legislation.legal_search_generations(id,metadata) VALUES($1,'{}')", [id])
+          await target.query(
+            "INSERT INTO legislation.legal_search_memberships(scope_kind,scope_id,generation_id) VALUES('edition',$1,$2)",
+            [second.editionId, id]
+          )
+        }
         await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=false")
         const partial = await reconcileLegalSearchRightsBatch(pool, target)
         expect(partial.complete).toBe(false)

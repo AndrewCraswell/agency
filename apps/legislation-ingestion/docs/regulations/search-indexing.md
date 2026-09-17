@@ -298,6 +298,12 @@ instead of choosing by recency. If agency/currency metadata changes without modi
 avoids re-embedding; changed input text does not match and proceeds to provider work. Retained permitted historical
 versions keep their independently owned vectors.
 
+Copy finalization is also the correction boundary for one scope. Verification pages tolerate the prior membership while
+the replacement is incomplete, whereas read-only whole-copy inspection continues to reject that stale extra state.
+After the full replacement passes, finalization locks every obsolete generation, removes only the replaced scope's
+memberships and deletes generations with no remaining owner. Cascades remove their passages, vectors and shard state.
+An allowed historical or shared scope membership keeps its generation and vectors intact.
+
 Use 16 deterministic shards based on passage IDs and fixed shard-count/hash algorithm stored in the rollout manifest.
 Shard count cannot change mid-wave. Within each shard scan at most 512 rows and submit at most 64 eligible texts per
 provider request, additionally bounded by model token/byte caps. Persist at most 256 vector rows per transaction.

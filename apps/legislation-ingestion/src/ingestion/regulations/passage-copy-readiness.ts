@@ -117,7 +117,12 @@ async function checkLegalPassageCopy(
           ).rows[0]
         )
       // Expected-row verification alone cannot detect extra generations left attached to this scope.
-      invariant(membershipCount.count === job.expected_count, "legal_copy_membership_count_mismatch")
+      invariant(
+        acknowledge || page !== undefined
+          ? membershipCount.count >= job.expected_count
+          : membershipCount.count === job.expected_count,
+        "legal_copy_membership_count_mismatch"
+      )
       if (useCheckpoints) {
         const count = await target.query(
           "SELECT count(*)::integer AS count FROM legislation.legal_copy_validation_items WHERE preparation_id=$1",
@@ -127,6 +132,7 @@ async function checkLegalPassageCopy(
       }
       let checked = 0
       let passages = 0
+      const checkedGenerationIds: string[] = []
       while (checked < inventory.length) {
         checkDeadline()
         const items = await source.query(
@@ -190,6 +196,7 @@ async function checkLegalPassageCopy(
             "legal_copy_inventory_mismatch"
           )
           const metadata = item.metadata
+          checkedGenerationIds.push(metadata.id)
           invariant(metadata.body_hash === item.current_body_hash, "legal_copy_source_body_changed")
           invariant(item.prepared_source_hash === item.current_source_hash, "legal_copy_source_provenance_changed")
           invariant(
@@ -313,7 +320,49 @@ async function checkLegalPassageCopy(
       }
       checkDeadline()
       const checkedAt = new Date().toISOString()
+      let removedMemberships = 0
+      let removedGenerations = 0
       if (acknowledge) {
+        const obsolete = z.array(z.object({ generation_id: z.string().regex(/^[a-f0-9]{64}$/) })).parse(
+          (
+            await target.query(
+              `SELECT generation_id FROM legislation.legal_search_memberships
+                WHERE scope_kind=$1 AND scope_id=$2 AND NOT (generation_id=ANY($3::text[]))
+                ORDER BY generation_id FOR UPDATE`,
+              [scope.kind, scope.id, checkedGenerationIds]
+            )
+          ).rows
+        )
+        for (const generationId of obsolete.map((row) => row.generation_id)) {
+          await target.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [generationId])
+        }
+        if (obsolete.length > 0) {
+          const obsoleteIds = obsolete.map((row) => row.generation_id)
+          removedMemberships =
+            (
+              await target.query(
+                `DELETE FROM legislation.legal_search_memberships
+                WHERE scope_kind=$1 AND scope_id=$2 AND generation_id=ANY($3::text[])`,
+                [scope.kind, scope.id, obsoleteIds]
+              )
+            ).rowCount ?? 0
+          removedGenerations =
+            (
+              await target.query(
+                `DELETE FROM legislation.legal_search_generations g WHERE g.id=ANY($1::text[])
+                AND NOT EXISTS (
+                  SELECT 1 FROM legislation.legal_search_memberships m WHERE m.generation_id=g.id
+                )`,
+                [obsoleteIds]
+              )
+            ).rowCount ?? 0
+        }
+        const retainedMemberships = await target.query(
+          `SELECT count(*)::integer AS count FROM legislation.legal_search_memberships
+          WHERE scope_kind=$1 AND scope_id=$2 AND generation_id=ANY($3::text[])`,
+          [scope.kind, scope.id, checkedGenerationIds]
+        )
+        invariant(retainedMemberships.rows[0]?.count === job.expected_count, "legal_copy_membership_count_mismatch")
         const updated =
           scope.kind === "edition"
             ? await source.query(
@@ -361,7 +410,8 @@ async function checkLegalPassageCopy(
               checkpointsWritten: checked
             }),
         publicSearchReady: false,
-        acknowledged: acknowledge
+        acknowledged: acknowledge,
+        ...(acknowledge ? { removedMemberships, removedGenerations } : {})
       }
     } catch (error) {
       await source.query("ROLLBACK")

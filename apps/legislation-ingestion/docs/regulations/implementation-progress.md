@@ -13,6 +13,15 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected validated scope replacement to stale search/vector removal. Verification pages may now coexist with an older
+scope generation while they build checkpoints, but read-only whole-copy inspection still rejects extra memberships.
+Only after every replacement generation and passage passes does finalization lock the obsolete generation set, remove
+that scope's old memberships and delete generations that have no other owner; passage and vector rows cascade with the
+orphan. A generation still owned by another scope is retained. The existing rights/copy PostgreSQL smoke now injects 30
+stale generations, verifies inspection rejects them, atomically replaces the scope, removes 30 stale memberships and 29
+orphans, and retains the shared generation until its second membership is explicitly removed. Focused PostgreSQL,
+package type checking and scoped lint passed.
+
 Implemented exact cross-generation regulatory vector reuse. A leased shard now copies a prior vector only when the
 model, dimensions, input contract and complete input hash match a completed generation with active search rights. It
 locks source and target passage generations against rights cleanup, rechecks the source after locking, preserves the new
