@@ -3001,9 +3001,27 @@ reserved titles and compares revision plus issue/currency dates with explicit cu
 separately validated `historical: false` discovery units; the existing backfill-unit schema remains strictly historical.
 The manual
 `regulatory-ecfr-discovery` Trigger task has concurrency one and accepts at most 50 unique title IDs. No recurring
-schedule was added or activated. The retained publisher-data qualification process was not restarted.
+schedule was added or activated.
 
 Focused evidence: two real-PostgreSQL tests and 24 source/task/backfill tests passed; ingestion and core TypeScript,
 scoped oxlint/oxfmt and `drizzle-kit check` passed. This is local code and a disposable-database
 canary. Pending-unit acquisition/dispatch, a live publisher canary, deployed Trigger/database verification and the
 G4/SYNC-11 hourly activation gate remain open, so SYNC-02 is only partial.
+
+## Pinned resumption of the full current-title qualification
+
+The earlier full 49-edition tokenizer qualification stopped after 12 editions with
+`shape_implementation_changed`. Its database inventory remained stable, but a fingerprinted source file changed while
+the long process was running, so the scanner correctly refused to finalize that edition. The 12 complete reports and
+the unfinished `.pending` evidence were retained; no embedding provider was called and no canonical data or existing
+embedding was changed.
+
+The scan resumed from detached worktree `D:/agency-regulatory-qualification-0af8e3f` at commit `0af8e3f`, with its own
+offline-installed dependencies. The output remains
+`artifacts/regulatory-backfills/canonical-preparation-all-current`, and the pinned run revalidated and reused the first
+12 reports under implementation hash `2f961df4618361ef08d65c77286e592d0d41a938cc36e236eb9973a72e3df973` before
+continuing. Local process ID `28776` writes to
+`C:/Users/andcra/AppData/Local/Temp/tabra-current-requalification-pinned.stderr.log`; process IDs are observation-only,
+so completion must be established from a valid `inventory.json` with `complete: true`, all 49 selected editions and the
+same implementation hash. The detached checkout prevents unrelated commits in the active worktree from invalidating
+the scanner's implementation fingerprint again.
