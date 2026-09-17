@@ -1,21 +1,24 @@
 # Canonical embedding evaluation candidates
 
 Recorded September 16, 2026. This is a pre-freeze candidate inventory for EVAL-02, not a completed evaluation or a
-representative release corpus. [Candidate identities and hashes](embedding-corpus-candidates.json) bind 26 complete
-canonical versions to 55 common passages: 17 development and 38 held-out candidates. Both pinned tokenizers qualify
-every version; the largest common input is 777 tokens. No provider calls, canonical writes or index/vector writes occurred.
+representative release corpus. [Candidate identities and hashes](embedding-corpus-candidates.json) bind 40 complete
+canonical versions to 170 common passages: 70 development and 100 held-out candidates. Both pinned tokenizers qualify
+every version; the largest common input is 1,122 tokens. No provider calls, canonical writes or index/vector writes occurred.
 
 | Cohort | Development versions | Held-out candidate versions |
 | --- | --- | --- |
-| Current prose | 2, Title 29 | 2, Title 8 |
-| Current tables | 1, Title 29 | 1, Title 8 |
+| Current prose | 5, Title 29 | 5, Title 8 |
+| Current tables | 5, Title 29 | 3, Title 8; 2, Title 20 |
 | Historical versions | 4, Title 5 annual/current pairs | 4, Title 6 annual 2023/2024 pairs |
 | Proposed rules | 2 | 2 |
 | Final rules | 2 | 2 |
 | Notices | 2 | 2 |
 
-Selection used source metadata, size and shape before retrieval scores. Current/code candidates were bounded to
-1,000–12,000 source characters; publication candidates to 1,000–64,000. Publications came from singleton groups without
+Selection used source metadata, size and shape before retrieval scores. The initial current/code candidates were bounded to
+1,000–12,000 source characters; publication candidates to 1,000–64,000. Expansion preserved the qualified 26-version
+inventory and added 14 complete current versions from source-length quantiles through 32,000 characters. Title 8 had
+only three table versions within that range, so two Title 20 tables complete the held-out table quota. Held-out source
+bodies were processed automatically, not read for query writing or tuning. Publications came from singleton groups without
 family metadata warnings. Each complete selected version was exported through the canonical code/publication CLI,
 binding published membership or observation, version/content identity and active rights. No candidate failed preparation.
 Existing packets were reused only when selection identity and the complete evidence hash matched.
@@ -44,7 +47,7 @@ families. Source text was processed automatically; held-out bodies and retrieval
 
 The initial selection/audit and replacement selection/export receipts are retained locally under
 `artifacts/regulatory-backfills/evaluation-candidate-*`. The selection hash in the committed inventory binds the exact
-replacement selection file bytes. Formatting the committed report does not change that source-file hash.
+expanded selection file bytes. Formatting the committed report does not change that source-file hash.
 
 ## Required before freeze or live scoring
 
@@ -59,12 +62,13 @@ inputs do not become duplicates merely because both lack shingles. Output contai
 A cross-split group writes the diagnostic report and exits 1; a report without such groups exits 0. Existing outputs are
 not overwritten. Exit 0 establishes only that this lexical screen found no split conflict, not semantic independence,
 source authenticity or human review. The retained initial inventory exits 1 with one cross-split group; replacements
-exit 0 with 22 groups and no cross-split groups. Input/report files are retained locally as
-`artifacts/regulatory-backfills/evaluation-duplicates-{initial,replacement}-{input,report}.json`.
+exit 0 with 22 groups and no cross-split groups. The expanded 40-version inventory also exits 0, with 36 groups and
+zero cross-split groups. Input/report files are retained locally as
+`artifacts/regulatory-backfills/evaluation-duplicates-{initial,replacement,expanded}-{input,report}.json`.
 
 1. Review family and semantic near-duplicate assignments, including any shared notice templates and code/publication links.
-2. Expand subject coverage and challenging distractors. The shortest-record selection is biased toward short text;
-   55 passages and one current table per split do not yet justify a production model decision.
+2. Review subject coverage and challenging distractors. The expansion adds prose and tables at different lengths, but
+   170 passages spanning these selected title families do not alone establish representative production performance.
 3. Confirm historical differences are useful legal changes, not only non-substantive wording changes. Record exact source
    evidence for expected answers without using held-out results to tune implementation.
 4. Author the protocol's 60 queries and known-answer evidence, including dates, exceptions, numbers and no-answer cases.
@@ -73,3 +77,13 @@ exit 0 with 22 groups and no cross-split groups. Input/report files are retained
    relevance packets for human adjudication. Automated suggestions cannot satisfy the human-review gate.
 
 EVAL-02/03 remain open. No model was selected and bulk embedding generation remains disabled.
+
+## Development query draft
+
+[Ten development questions](embedding-development-queries.json) now cover the five current-prose and five
+table/exception/number slots. Each binds an exact canonical version, passage/input hash, packet hash, source locator and
+source quote to an automated expected-answer proposal. All ten quoted strings were verified within their named source
+passages. Questions address union records, agricultural exemptions, lockout exceptions, pension filings, support evidence,
+debarment, hydrogen distances, tractor testing, marine proof loads and heater clearances. No held-out questions or source
+bodies were inspected while writing them. The proposals are neither exhaustive relevance judgments nor human review.
+Twenty development questions and all thirty held-out questions remain before the protocol's allocation is complete.

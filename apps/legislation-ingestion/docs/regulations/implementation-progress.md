@@ -13,6 +13,25 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Expanded the canonical evaluation candidates from 26 to 40 complete versions using source-length quantiles rather than
+only the shortest current records. The inventory now has five current prose and five current table versions per split;
+Title 8 supplies only three bounded tables, so two Title 20 tables fill the held-out allocation. All 14 added versions
+qualified, and the combined inventory has 170 common passages (70 development, 100 held-out), maximum 1,122 tokens.
+Independent packet/source/passage hash and reconstruction audits passed. The reusable duplicate CLI exits 0 with 36
+groups and no detected cross-split group. Export/selection/duplicate receipts are retained under
+`artifacts/regulatory-backfills/evaluation-candidate-expanded-*` and `evaluation-duplicates-expanded-*`.
+
+Drafted ten source-backed development questions, covering all five current-prose and five table/exception/number slots.
+Each exact quote was checked against its identified canonical passage; proposals retain version/content/input/packet
+hashes and source locators. These are automated known-answer suggestions, not exhaustive relevance or human judgments.
+Twenty development queries, thirty held-out queries, family/semantic review and final freeze remain open. No held-out
+source bodies or retrieval results were inspected for query writing. See the [expanded corpus and query draft](embedding-corpus-candidates.md).
+No provider calls or canonical/index/vector writes occurred. The full-current scanner continues with eight completed
+editions and 51,022 members, with zero preparation failures; full 49-title qualification remains incomplete.
+`git diff --check` passed. Root `pnpm verify` stopped at unrelated Knip findings for existing Storybook/generator files,
+root dependencies/binaries and `EntityResults`; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-evaluation-expanded-verify.log`.
+
 Added a reusable bounded near-duplicate screen for the evaluation corpus. It hashes original and normalized bodies,
 detects normalized equality or five-word-shingle overlap, and groups transitive matches deterministically. The CLI retains
 diagnostic evidence but exits 1 for a cross-split group, preventing a leaking proposal from passing this screening gate.

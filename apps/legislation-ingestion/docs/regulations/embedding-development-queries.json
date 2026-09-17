@@ -1,0 +1,231 @@
+{
+  "status": "development_queries_draft",
+  "split": "development",
+  "candidateInventoryHash": "e4a7cd754328295d3b953566f6d9d41cd063224a7e408a40ba85f3fd2f27fdbf",
+  "queries": [
+    {
+      "id": "development-01",
+      "input": "When does a local union become large enough to have to keep the records needed for EEO-3 reporting?",
+      "relevantIds": [
+        "dfefef396926ded4c7624a35bf92c241e4abad5aadc00ab28a1af8c76f8017c5"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "28fe7bb7-0366-42b1-811a-0f1ff129cfa3",
+        "contentHash": "43c5cbbfc0f56388a4c53bd85cad6f602f38d9c7dbc11c977b9477ddbc0b82cc",
+        "passageId": "dfefef396926ded4c7624a35bf92c241e4abad5aadc00ab28a1af8c76f8017c5",
+        "inputHash": "43281b2c38b95a9a657ac9945c625506da365069ed3f9651e5b780e54c4fa75a",
+        "packetEvidenceHash": "1826bda13b9b0c5494d991f9664ee536f9a2ac0feb38ad46d65bd569ca758ee7",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[9]/DIV5[3]/DIV6[7]/DIV8[1]",
+        "quote": "Every local, independent, or unaffiliated union with 100 or more members",
+        "expectedAnswer": "The threshold is 100 members; the provision also addresses agents responsible for employment referrals."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-02",
+      "input": "Which agricultural employment exemption covers overtime only, and which can cover both minimum wage and overtime?",
+      "relevantIds": [
+        "f59e4cfe3d113d155215f0b91a2818d9fcb10ac949dd3083d008fb49c1c4c0e9"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "5b48fc32-0ae4-471e-8758-a7ab71cdc41f",
+        "contentHash": "4f651f7267680f22aaf6cc808866cad384cbf5c7dda575a61bc7f235a3a8167e",
+        "passageId": "f59e4cfe3d113d155215f0b91a2818d9fcb10ac949dd3083d008fb49c1c4c0e9",
+        "inputHash": "f2f2e956969aca71c60530e6f2edf27fe653f4b84db67450264700d3af6c8ac7",
+        "packetEvidenceHash": "1b92ff98c2c0de358d1ef38c18d83a0efc07e9cc2fa72dd240e5bcbaf3239db9",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[5]/DIV4[2]/DIV5[5]/DIV6[2]/DIV7[1]/DIV8[1]",
+        "quote": "Section 13(b)(12) provides an overtime exemption for any employee employed in agriculture.",
+        "expectedAnswer": "Section 13(b)(12) is overtime-only; section 13(a)(6) covers minimum wage and overtime for certain agricultural employees."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-03",
+      "input": "Are routine minor tool adjustments during production exempt from lockout requirements even when no alternative protective measures are used?",
+      "relevantIds": [
+        "87a17d120814c6efd6b8c82ddc7b6ae357beb05b5fe3849da56f0df8c829c51b"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "63d45a3b-efde-4f17-9ea1-747a7a41b888",
+        "contentHash": "646efb775255609f1a2f18016d9d7179a46344f080e7f3871875d9b25d60e458",
+        "passageId": "87a17d120814c6efd6b8c82ddc7b6ae357beb05b5fe3849da56f0df8c829c51b",
+        "inputHash": "0f7a816abd3dea3b700ea0109224ae010f2f8a857da65f4bfa94ec0559709e56",
+        "packetEvidenceHash": "bd669b7e1c4496dd2ad91a5a09b816d1865e6a7d81a76176a77397acd6e72067",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[10]/DIV8[7]",
+        "quote": "provided that the work is performed using alternative measures which provide effective protection",
+        "expectedAnswer": "No. The minor-servicing exception requires routine, repetitive, integral work and alternative measures providing effective protection."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-04",
+      "input": "What relationship information must a pension reporting filer submit if its controlled group has more than ten nonexempt members?",
+      "relevantIds": [
+        "39dd76f886da89057076cf2dc75aac69911315148faa025eb2f1b7919d5e6d0e"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "68bfa6bc-97cd-46c5-b116-2a78c1360d2e",
+        "contentHash": "111d218b379ceb3f08aa9e9c0ee695aeb85ec5ddab95854b28ea6a93dd7d0fac",
+        "passageId": "39dd76f886da89057076cf2dc75aac69911315148faa025eb2f1b7919d5e6d0e",
+        "inputHash": "b05c860d9a1169f3360cb78f5c4f2fb6fe93ac0cc55f7a7db161535bb02b4375",
+        "packetEvidenceHash": "8f5876d751bb1e60bc72625cce3f686868195a610ffd87c82674bd0dd4d2cc95",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[14]/DIV4[3]/DIV5[1]/DIV8[7]",
+        "quote": "an organizational chart or other diagram showing the members",
+        "expectedAnswer": "An organizational chart or other diagram must show year-end members and their legal relationships; exempt entities may be included but need not be."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-05",
+      "input": "When filing a petition to rescind union-security authority, should the employee support evidence be served on the other parties?",
+      "relevantIds": [
+        "cff563d966f0b336f66e32e1848f5af3dada47295e4bd26a443eef2d6790d4d5"
+      ],
+      "cohort": "current_prose",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "d986811a-ec16-4836-8b9a-a3bcda3f1f0b",
+        "contentHash": "117fdb85ea13a6c4c1206f24b15e858134265310743b8a3460f12a1b9c05027c",
+        "passageId": "cff563d966f0b336f66e32e1848f5af3dada47295e4bd26a443eef2d6790d4d5",
+        "inputHash": "5b4b5d44ff4fa8f6a4d3fe469b2aa4b4bcc14c647464c30261d9a42aaf68ec5c",
+        "packetEvidenceHash": "95eebda757221555fbfebdc9fa6bd2102d8f03439b844e60e63f8e4eefaf0352",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[1]/DIV5[3]/DIV6[6]/DIV8[2]",
+        "quote": "Such evidence must be filed together with the petition, but must not be served on any other party.",
+        "expectedAnswer": "File the evidence with the petition, but do not serve it on any other party."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-06",
+      "input": "How do the evidence threshold and timing of notice differ for federal suspension and debarment?",
+      "relevantIds": [
+        "93b17b8b115a69b4e09782bc1c318230cdd4255664ccfec5b7afa31e790b7813"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "5757cb72-82d3-49c9-8153-bd76b01f046a",
+        "contentHash": "1fb3ec31d273a5dcacf43d18255e63a008b93b026b0d19ef8cd9ea837918c0f3",
+        "passageId": "93b17b8b115a69b4e09782bc1c318230cdd4255664ccfec5b7afa31e790b7813",
+        "inputHash": "2419c715bfc770b737073a95770b551f41fa7bfe2ef188323c8678d863629c63",
+        "packetEvidenceHash": "b6c995b09c3fcb1a07297e4944f5dca671da51611effc9ccd7c31a1f36fcce50",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[8]/DIV5[15]/DIV6[6]/DIV8[2]",
+        "quote": "based on a preponderance of the evidence",
+        "expectedAnswer": "Suspension requires adequate evidence and necessity of immediate action, and usually precedes notice. Debarment requires a preponderance and follows notice and an opportunity to contest."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-07",
+      "input": "For 10,000 gallons of liquefied hydrogen, what is the table distance to a noncombustible building before any protective-structure reduction?",
+      "relevantIds": [
+        "484c2b3ff951e197b0f3a57f5089d106ae8a57b5d0701f9651498be865915d1e"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "d52eb1ba-25c4-4793-94f4-b6e313eff7b3",
+        "contentHash": "ae03314f6116a9e053370305478ebf7c75c7e2a050c01170a7941c61b675f358",
+        "passageId": "484c2b3ff951e197b0f3a57f5089d106ae8a57b5d0701f9651498be865915d1e",
+        "inputHash": "7f6a5d2b1cf21c36716470349f3f0f059fe9d88e2aa315cebd4f5471df7c3fa3",
+        "packetEvidenceHash": "f6824c792b75f1513bc9098850fd5fa32ae3128d34f381890568567270a28e64",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[8]/DIV6[8]/DIV8[3]",
+        "quote": "2. Noncombustible building 3\n25\n50\n75",
+        "expectedAnswer": "50 feet in the 3,501–15,000 gallon column; the table footnotes describe protective-structure reductions and building definitions."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-08",
+      "input": "In testing an agricultural tractor protective frame, is critical-zone dimensional accuracy a percentage or a fixed tolerance?",
+      "relevantIds": [
+        "63505a7b9b1c04c60a79522648c128ec6edba5ecfb4d988c796a1fc218f40ed2"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "9397a192-bf6a-4d27-a79a-9fac994a05ed",
+        "contentHash": "7fae68371befeb7bf77c98cd569d0d790537ad963ce56c9dd20b69bb516a4480",
+        "passageId": "63505a7b9b1c04c60a79522648c128ec6edba5ecfb4d988c796a1fc218f40ed2",
+        "inputHash": "45ca4f46de5c0ccbfb325c747bf1416b985a408af23af6ea99db96bda6ffe172",
+        "packetEvidenceHash": "2145d5998ec3051a050893b131b42c2737b443756c6282dbc507baed15b327de",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[24]/DIV6[3]/DIV8[2]",
+        "quote": "Dimensions of the critical zone, in. (mm)\n±0.5 in. (12.5 mm).",
+        "expectedAnswer": "A fixed tolerance of ±0.5 inch (12.5 mm), unlike the percentage tolerances for deflection, weight and force."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-09",
+      "input": "For marine-terminal special gear with a safe working load of 30 short tons, how much above that rating is the Table A proof load?",
+      "relevantIds": [
+        "53d96e9a3d1a44821c4ab80586b8a5e8de51f596251bc232085162d46205ec56"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "21d126ac-c66a-468d-9a46-940433b10965",
+        "contentHash": "aa1fae8448476597c0edfa1011137baefd6257e2f1623fca7039c49f380b26f1",
+        "passageId": "53d96e9a3d1a44821c4ab80586b8a5e8de51f596251bc232085162d46205ec56",
+        "inputHash": "04015fb054e466d35d539369365c47eb7596817944f796617b3b3212564f1ff4",
+        "packetEvidenceHash": "bb2ae3ff1de17ccd82f764fb97d0ae199f67923266fc1f1793d29a43a72494b3",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[14]/DIV6[3]/DIV8[10]",
+        "quote": "5 short tons in excess.",
+        "expectedAnswer": "Five short tons above the rating, giving a 35-short-ton proof load."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    },
+    {
+      "id": "development-10",
+      "input": "Under the standard temporary-heater clearance table, how do radiant room heaters differ from circulating heaters at the sides and rear?",
+      "relevantIds": [
+        "622523aa6f23a74d97aa4f56a80e08cc60e381f9fa4c59827904cfdd2d18ac54"
+      ],
+      "cohort": "current_tables_exceptions_numbers",
+      "families": [
+        "code:29"
+      ],
+      "evidence": {
+        "versionId": "f47415a8-10f5-4d66-9068-cc09670cc8eb",
+        "contentHash": "c369752b9f61f0b97bc565b1d8c16104fbcc2209471d574130c2eaa79ee9ed61",
+        "passageId": "622523aa6f23a74d97aa4f56a80e08cc60e381f9fa4c59827904cfdd2d18ac54",
+        "inputHash": "0e2fc148e2197885559f0678c3b311bea6dfa653c2f01f47f5c4ef8406eebb04",
+        "packetEvidenceHash": "da4e1fbdc003392946dcd6e300be0b89f3a76d9996c627e08565fc0deca374ac",
+        "sourceLocator": "/ECFR[1]/DIV1[1]/DIV2[2]/DIV3[10]/DIV5[22]/DIV6[6]/DIV8[5]",
+        "quote": "Room heater, radiant type\n36\n36\n18",
+        "expectedAnswer": "Radiant heaters require 36 inches at the sides and rear; circulating heaters require 12 inches. Both list 18 inches for the chimney connector."
+      },
+      "judgmentStatus": "automated_known_answer_proposal_not_exhaustive"
+    }
+  ],
+  "humanReviewComplete": false,
+  "heldOutQueriesAuthored": false,
+  "corpusFrozen": false,
+  "modelSelected": false
+}
