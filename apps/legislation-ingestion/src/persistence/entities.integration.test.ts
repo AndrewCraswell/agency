@@ -189,7 +189,7 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
   })
 
   it.each(["nc", "ak"] as const)(
-    "imports %s idempotently and preserves quarantined people with partial checkpoints",
+    "imports %s idempotently and reconciles recovered quarantined history",
     async (state) => {
       const profile = peopleSourceProfiles[state]
       const expectedCount = profile.districts.lower.length + profile.districts.upper.length + 1
@@ -292,18 +292,21 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
           )
         ).status
       ).toBe("partially_imported")
-      expect((await readTerms()).map((term) => term.id)).toEqual(stored.map((term) => term.id))
+      const partialTerms = await readTerms()
+      expect(partialTerms.map((term) => term.id)).toEqual(expect.arrayContaining(stored.map((term) => term.id)))
+      expect(partialTerms).toHaveLength(stored.length + 1)
       expect(
         await database.query.people.findFirst({
           where: eq(schema.people.sourceId, `ocd-person/import-${state}-lower-0`)
         })
-      ).toEqual(quarantinedPerson)
+      ).toMatchObject({ id: quarantinedPerson?.id, isActive: true })
       expect((await readCheckpoint())?.cursor).toMatchObject({
         complete: false,
         quarantine: [expect.objectContaining({ path: current[0]!.path })]
       })
       await importPeopleRepository(database, state, current, retired, new Date("2026-09-16T00:00:00Z"))
       expect((await readCheckpoint())?.cursor).toMatchObject({ complete: true, quarantine: [] })
+      expect((await readTerms()).map((term) => term.id)).toEqual(stored.map((term) => term.id))
     }
   )
 

@@ -182,6 +182,11 @@ export function preparePeopleRepositoryImport(
   const snapshot: EntitySnapshot = {
     people,
     terms,
+    // Each accepted person's role history is complete for this repository revision.
+    // Replace that person's Open States terms so a temporary current-roster fallback
+    // cannot remain beside the recovered history after a quarantined file is fixed.
+    termPersonIds: historicalPeople.map((person) => person.id),
+    termSourceProvider: "openstates",
     organizations: [],
     memberships: [],
     personDetails: [
