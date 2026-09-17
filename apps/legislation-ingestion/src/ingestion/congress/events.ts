@@ -397,6 +397,7 @@ export function normalizeCongressHearing(input: unknown): CongressHearingSnapsho
         material: {
           id: materialId,
           jurisdictionId: jurisdictionId("us"),
+          sessionId: legislativeSessionId("us", String(hearing.congress)),
           sourceId: format.url,
           sourceUrl: format.url,
           classification: "hearing-transcript",

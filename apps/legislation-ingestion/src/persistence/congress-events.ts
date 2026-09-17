@@ -39,6 +39,7 @@ export async function upsertCongressHearingSnapshot(
           classification: sql`excluded.classification`,
           contentType: sql`excluded.content_type`,
           hearingDates: sql`excluded.hearing_dates`,
+          sessionId: sql`excluded.session_id`,
           documentDate: sql`excluded.document_date`,
           sourceUpdatedAt: sql`excluded.source_updated_at`,
           sourceUrl: sql`excluded.source_url`,

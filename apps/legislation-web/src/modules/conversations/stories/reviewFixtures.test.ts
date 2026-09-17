@@ -2,17 +2,41 @@ import { safeValidateUIMessages } from "ai"
 import { describe, expect, it } from "vitest"
 import { entityKindSchema, projectEntityResult } from "../entityResults"
 import { researchToolLabels } from "../researchTools"
-import { reviewMaterialIds } from "./reviewData"
+import { reviewMaterialIds, reviewMeetingIds } from "./reviewData"
 import { activityPart, activityStates, capturedCards, failureCodes, reviewData, toolCaptures } from "./reviewFixtures"
 
 describe("captured Storybook review", () => {
   it("keeps the reviewed material cohort stable and retains repaired publication metadata", () => {
     const materials = capturedCards.filter(({ record }) => record.kind === "material")
     expect(materials.map(({ record }) => record.id).sort()).toEqual([...reviewMaterialIds].sort())
-    for (const { record } of materials) {
+    for (const { record } of materials.filter(({ record }) => !record.documentSummary?.hearingDates?.length)) {
       expect(record.documentSummary?.versionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    }
+    for (const { record } of materials) {
       expect(record.fields.find((field) => field.label === "Pages")?.value).toMatch(/^(?:[1-9]\d*|Not paginated)$/)
     }
+  })
+
+  it("retains every exact date of the reviewed hearing publication without inventing a meeting", () => {
+    const hearing = capturedCards.find(
+      ({ record }) => record.id === "material:congress:a82498723ffa1f0caacd9370"
+    )?.record
+    expect(hearing?.kind).toBe("material")
+    expect(hearing?.documentSummary?.hearingDates).toEqual([
+      "2012-10-09",
+      "2012-10-25",
+      "2013-04-11",
+      "2013-05-30",
+      "2013-07-08",
+      "2013-07-09",
+      "2013-07-10",
+      "2013-07-11",
+      "2013-07-30",
+      "2013-08-05"
+    ])
+    expect(hearing?.documentSummary?.versionDate).toBeUndefined()
+    expect(hearing?.meetingSummary).toBeUndefined()
+    expect(hearing?.sourceUrl).toBe("https://congress.gov/114/chrg/CHRG-114hhrg22153/generated/CHRG-114hhrg22153.htm")
   })
 
   it("retains repaired bill dates and year-precise person tenure", () => {
@@ -22,6 +46,16 @@ describe("captured Storybook review", () => {
     expect(person?.fields.find((field) => field.label === "In office since")?.value).toBe("1997")
     expect(person?.personSummary?.term?.startYear).toBe(2025)
     expect(person?.personSummary?.term?.startDate).toBeUndefined()
+  })
+
+  it("reviews actual meetings with missing and source-recorded agendas", () => {
+    const meetings = capturedCards.filter(({ record }) => record.kind === "meeting")
+    expect(meetings.map(({ record }) => record.id).sort()).toEqual([...reviewMeetingIds].sort())
+    expect(meetings.every(({ record }) => !record.id.includes("published-hearing"))).toBe(true)
+    const congress = meetings.find(({ record }) => record.id === reviewMeetingIds[0])?.record
+    const alaska = meetings.find(({ record }) => record.id === reviewMeetingIds[1])?.record
+    expect(congress?.fields.find((field) => field.label === "Agenda items")).toBeUndefined()
+    expect(alaska?.fields.find((field) => field.label === "Agenda items")?.value).toBe("21")
   })
 
   it("projects current card fields from retained source data", () => {

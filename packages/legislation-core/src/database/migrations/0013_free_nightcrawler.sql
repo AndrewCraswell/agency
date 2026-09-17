@@ -64,6 +64,7 @@ CREATE TABLE "legislation"."supporting_material_links" (
 CREATE TABLE "legislation"."supporting_materials" (
 	"id" text PRIMARY KEY NOT NULL,
 	"jurisdiction_id" text NOT NULL,
+	"session_id" text,
 	"source_id" text NOT NULL,
 	"classification" text NOT NULL,
 	"title" text NOT NULL,
@@ -102,6 +103,7 @@ ALTER TABLE "legislation"."supporting_material_links" ADD CONSTRAINT "supporting
 ALTER TABLE "legislation"."supporting_material_links" ADD CONSTRAINT "supporting_material_links_event_id_legislative_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "legislation"."legislative_events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "legislation"."supporting_material_links" ADD CONSTRAINT "supporting_material_links_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "legislation"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "legislation"."supporting_materials" ADD CONSTRAINT "supporting_materials_jurisdiction_id_jurisdictions_id_fk" FOREIGN KEY ("jurisdiction_id") REFERENCES "legislation"."jurisdictions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "legislation"."supporting_materials" ADD CONSTRAINT "supporting_materials_session_id_legislative_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "legislation"."legislative_sessions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "amendment_actions_ordinal_uidx" ON "legislation"."amendment_actions" USING btree ("amendment_id","ordinal");--> statement-breakpoint
 CREATE INDEX "amendment_relations_related_idx" ON "legislation"."amendment_relations" USING btree ("related_amendment_id","classification");--> statement-breakpoint
 CREATE UNIQUE INDEX "amendments_jurisdiction_source_uidx" ON "legislation"."amendments" USING btree ("jurisdiction_id","source_id");--> statement-breakpoint

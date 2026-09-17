@@ -25,6 +25,7 @@ import { createResultStore } from "../src/modules/conversations/resultStore"
 import {
   reviewDatasetSchema,
   reviewMaterialIds,
+  reviewMeetingIds,
   type ReviewDataset
 } from "../src/modules/conversations/stories/reviewData"
 import { LegislationQueryService } from "../src/modules/legislation/query-service"
@@ -108,6 +109,16 @@ try {
       "Missing retained capture identities"
     )
     const requests: Array<[string, Record<string, z.infer<ReturnType<typeof z.json>>>]> = [
+      ["describe_analytics", { datasets: ["bills"] }],
+      [
+        "analyze_legislation",
+        {
+          dataset: "bills",
+          select: ["id", "identifier"],
+          filters: [{ field: "id", op: "eq", values: [billId] }],
+          limit: 1
+        }
+      ],
       [
         "resolve_record",
         { kind: "bill", identifier: "H.R. 1", jurisdictionId: "jurisdiction:us", sessionId: "session:us:116" }
@@ -249,6 +260,11 @@ try {
   for (const id of reviewMaterialIds) {
     if (!dataset.captures.some((item) => item.toolName === "get_supporting_material" && item.input.id === id)) {
       await capture("get_supporting_material", { id })
+    }
+  }
+  for (const id of reviewMeetingIds) {
+    if (!dataset.captures.some((item) => item.toolName === "get_event" && item.input.id === id)) {
+      await capture("get_event", { id })
     }
   }
   const detailTools: Record<string, string> = {

@@ -32,7 +32,11 @@
 **/.turbo/
 **/.cache/
 **/dist/
+**/storybook-static/
+**/*.pen
 **/coverage/
+!/apps/legislation-web/src/modules/legislation/coverage/
+!/apps/legislation-web/src/modules/legislation/coverage/**
 **/tmp/
 **/artifacts/
 **/output/
