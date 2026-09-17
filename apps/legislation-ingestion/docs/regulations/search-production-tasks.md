@@ -321,11 +321,10 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   source correction and target write failure on a bounded persisted corpus. **Done:** exact vector inventory recovers
   with no falsely complete shards; pilot is queryable for EVAL-11. Depends on VECTOR-05–06, ORCH-08–10.
   Local two-database evidence now covers a wrong provider model, target write failure, conservative retry-cost
-  accounting, a synthetic HTTP 429 through the shared client, exact replay, incomplete-shard completion rejection,
-  empty-shard completion and rights-revocation cleanup.
+  accounting, synthetic HTTP 429 and repeated HTTP 503 failures through the shared client, exact replay,
+  incomplete-shard completion rejection, empty-shard completion and rights-revocation cleanup.
   Focused Trigger tests additionally cover bounded fan-out, global dispatch replay keys, checkpoint continuation and
-  finalization by the last shard. Provider-wide outage, deployed Trigger recovery and authenticated queryability remain
-  open.
+  finalization by the last shard. Deployed Trigger recovery and authenticated queryability remain open.
 - [ ] **VECTOR-08 Plan full manifest cost and dispatch.** Freeze eligible partitions, expected vectors/tokens, reuse,
   budget stop conditions and chosen route. **Done:** plan excludes old embedding rebuilds and unqualified historical
   cohorts; operator preview accounts for every selected passage. Depends on EVAL-12, PASS-10.

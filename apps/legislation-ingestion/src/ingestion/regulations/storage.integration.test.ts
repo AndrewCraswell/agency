@@ -1444,6 +1444,23 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             })
           )
         ).rejects.toThrow("HTTP 429")
+        let outageCalls = 0
+        await expect(
+          runLegalEmbeddingShardJob(
+            target,
+            shardJobRequest,
+            new OpenRouterEmbeddingClient({
+              apiKey: "fixture",
+              fetch: async () => {
+                outageCalls += 1
+                return new Response("provider unavailable", { status: 503 })
+              },
+              maximumAttempts: 2,
+              route: regulatoryEmbeddingRouteForModel(registration.model)
+            })
+          )
+        ).rejects.toThrow("HTTP 503")
+        expect(outageCalls).toBe(2)
         await target.query(
           "ALTER TABLE legislation.legal_openai_small_embeddings ADD CONSTRAINT injected_vector_write_failure CHECK (dimensions=1024)"
         )
@@ -1472,9 +1489,9 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             }
           })
         ).toMatchObject({
-          attempts: 4,
+          attempts: 5,
           inserted: 1,
-          possibleRepeatedPaidAttempts: 3,
+          possibleRepeatedPaidAttempts: 4,
           reused: 0,
           promptTokens: 12,
           totalTokens: 12,

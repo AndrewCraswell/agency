@@ -22,11 +22,12 @@ disabled. The last completed shard invokes the exact-count generation gate. Six 
 out, completed-generation replay, unsafe target rejection, absent selection/credentials, model mismatch, continuation
 and finalization. Focused TypeScript, lint and format checks passed. No provider request or vector dispatch occurred.
 
-Extended the two-database vector smoke through the real shared OpenRouter client with a synthetic HTTP 429 response.
-The client made no retry under the test's one-attempt limit, the shard stayed pending, and the following claim counted
-the uncertain request as a possible repeated paid attempt before later failures and successful persistence. The focused
-PostgreSQL test passed with four attempts, three conservatively counted possible repeats and one exact stored vector.
-No external provider request occurred. Provider-wide outage and deployed Trigger recovery remain open.
+Extended the two-database vector smoke through the real shared OpenRouter client with synthetic HTTP 429 and repeated
+HTTP 503 responses. The 429 made no retry under its one-attempt test limit; the outage exhausted both configured client
+attempts. The shard stayed pending after each logical request, and each following claim conservatively counted the prior
+request as a possible paid repeat before later failures and successful persistence. The focused PostgreSQL test passed
+with five shard attempts, four conservatively counted possible repeats and one exact stored vector. No external provider
+request occurred. Deployed Trigger recovery remains open.
 
 Restarted the read-only 49-title qualification after the new regulatory route definitions changed the fingerprinted
 dependency closure. The superseded attempt was stopped cleanly after five editions rather than being allowed to publish
