@@ -520,9 +520,9 @@ describe("legislative record deployed smoke profile", () => {
     )
     expect(legislativeRecords.map(requestSignature).sort()).toEqual(
       [
-        "GET /api/bills?jurisdictionId=jurisdiction:ak&limit=1",
-        "GET /api/amendments?recordType=structured&jurisdictionId=jurisdiction:us&sort=identifier-asc&limit=1",
-        "GET /api/votes?limit=1",
+        "GET /api/bills?jurisdictionId=jurisdiction%3Aak&limit=1",
+        "GET /api/amendments?jurisdictionId=jurisdiction%3Aak&sort=identifier-asc&limit=1",
+        "GET /api/votes?jurisdictionId=jurisdiction%3Aak&limit=1",
         "POST /api/bills/batch",
         "POST /api/bills/amendments/batch",
         "GET /api/bills/bill%3Afixture%2Fwith%20space",
@@ -554,8 +554,8 @@ describe("legislative record deployed smoke profile", () => {
         .map(requestSignature)
         .sort()
     ).toEqual([
-      "GET /api/amendments?recordType=structured&jurisdictionId=jurisdiction:us&sort=identifier-asc&limit=1",
-      "GET /api/bills?jurisdictionId=jurisdiction:ak&limit=1"
+      "GET /api/amendments?jurisdictionId=jurisdiction%3Aak&sort=identifier-asc&limit=1",
+      "GET /api/bills?jurisdictionId=jurisdiction%3Aak&limit=1"
     ])
     expect(
       legislativeRecords
@@ -1118,7 +1118,7 @@ describe("people and organization deployed smoke profile", () => {
     expect(result.jurisdictionSessions.passed).toHaveLength(11)
     expect(result.legislativeRecords.passed).toHaveLength(18)
     expect(result.documentsResources.passed).toHaveLength(9)
-    expect(result.peopleOrganizations.passed).toHaveLength(14)
+    expect(result.peopleOrganizations.passed).toHaveLength(13)
     expect(result.peopleOrganizations.skipped).toEqual([])
     expect(result.peopleOrganizations.notFound).toEqual(["people_trailing_slash", "organizations_trailing_slash"])
 
@@ -1128,26 +1128,25 @@ describe("people and organization deployed smoke profile", () => {
     const conditional = requests.filter((request) =>
       /^people-organizations-smoke-conditional-\d+$/.test(request.correlationId)
     )
-    expect(peopleOrganizations).toHaveLength(14)
+    expect(peopleOrganizations).toHaveLength(13)
     expect(peopleOrganizations.map(requestSignature).sort()).toEqual(
       [
-        "GET /api/people?limit=1",
+        "GET /api/people?jurisdictionId=jurisdiction%3Aak&limit=1",
         "GET /api/people/person%3Afixture%2Fwith%20space",
         "GET /api/people/person%3Afixture%2Fwith%20space/bills?limit=1",
         "GET /api/people/person%3Afixture%2Fwith%20space/amendments?limit=1",
         "GET /api/people/person%3Afixture%2Fwith%20space/votes?limit=1",
         "GET /api/people/person%3Afixture%2Fwith%20space/memberships?limit=1",
         "GET /api/people/person%3Afixture%2Fwith%20space/terms/term%3Afixture%2Fwith%20space",
-        "GET /api/organizations?limit=1",
+        "GET /api/organizations?jurisdictionId=jurisdiction%3Aak&limit=1",
         "GET /api/organizations/organization%3Afixture%2Fwith%20space",
         "GET /api/organizations/organization%3Afixture%2Fwith%20space/members?limit=1",
         "GET /api/organizations/organization%3Afixture%2Fwith%20space/memberships/membership%3Afixture%2Fwith%20space",
         "GET /api/organizations/organization%3Afixture%2Fwith%20space/meetings?limit=1",
-        "GET /api/organizations/organization%3Afixture%2Fwith%20space/bills?limit=1",
-        "GET /api/organizations/organization%3Afixture%2Fwith%20space/calendars?limit=1"
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space/bills?limit=1"
       ].sort()
     )
-    expect(conditional).toHaveLength(14)
+    expect(conditional).toHaveLength(13)
     expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
   })
 
@@ -1189,8 +1188,7 @@ describe("people and organization deployed smoke profile", () => {
         "person memberships",
         "organization members",
         "organization meetings",
-        "organization bills",
-        "organization calendars"
+        "organization bills"
       ])
       expect(result.peopleOrganizations.skipped).toEqual([
         { name: "person", reason: "canonical_data_incomplete" },
@@ -1203,8 +1201,8 @@ describe("people and organization deployed smoke profile", () => {
       const conditional = requests.filter((request) =>
         /^people-organizations-smoke-conditional-\d+$/.test(request.correlationId)
       )
-      expect(primary).toHaveLength(14)
-      expect(conditional).toHaveLength(9)
+      expect(primary).toHaveLength(13)
+      expect(conditional).toHaveLength(8)
       expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
       const output = JSON.stringify(result)
       expect(output).not.toContain(personId)
@@ -1223,7 +1221,7 @@ describe("people and organization deployed smoke profile", () => {
     const result = await runSmoke({ LEGISLATION_WEB_SMOKE_PEOPLE_ORGANIZATIONS: "1" })
 
     expect(result.peopleOrganizations.passed).toEqual(["people", "organizations"])
-    expect(result.peopleOrganizations.skipped).toHaveLength(12)
+    expect(result.peopleOrganizations.skipped).toHaveLength(11)
     expect(result.peopleOrganizations.skipped).toEqual(
       expect.arrayContaining([
         { name: "person", reason: "fixture_not_configured:personId" },
@@ -1325,10 +1323,6 @@ describe("people and organization deployed smoke profile", () => {
 describe("meeting deployed smoke profile", () => {
   it("cumulatively checks earlier profiles and all eight meeting routes", async () => {
     requests.length = 0
-    meetingsCalendarsNotFoundPaths.add("/api/meetings/meeting%3Afixture%2Fwith%20space")
-    meetingsCalendarsNotFoundPaths.add(
-      "/api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda/agenda-item%3Afixture%2Fwith%20space"
-    )
     try {
       const result = await runSmoke({
         LEGISLATION_WEB_SMOKE_AGENDA_ITEM_ID: "agenda-item:fixture/with space",
@@ -1359,12 +1353,9 @@ describe("meeting deployed smoke profile", () => {
       expect(result.jurisdictionSessions.passed).toHaveLength(11)
       expect(result.legislativeRecords.passed).toHaveLength(18)
       expect(result.documentsResources.passed).toHaveLength(9)
-      expect(result.peopleOrganizations.passed).toHaveLength(14)
-      expect(result.meetingsCalendars.passed).toHaveLength(6)
-      expect(result.meetingsCalendars.skipped).toEqual([
-        { name: "meeting", reason: "canonical_fixture_not_found" },
-        { name: "meeting agenda item", reason: "canonical_fixture_not_found" }
-      ])
+      expect(result.peopleOrganizations.passed).toHaveLength(13)
+      expect(result.meetingsCalendars.passed).toHaveLength(8)
+      expect(result.meetingsCalendars.skipped).toEqual([])
       expect(result.meetingsCalendars.notFound).toEqual(["meetings_trailing_slash"])
 
       const meetingsCalendars = requests.filter((request) =>
@@ -1376,7 +1367,7 @@ describe("meeting deployed smoke profile", () => {
       expect(meetingsCalendars).toHaveLength(8)
       expect(meetingsCalendars.map(requestSignature).sort()).toEqual(
         [
-          "GET /api/meetings?limit=1",
+          "GET /api/meetings?jurisdictionId=jurisdiction%3Aak&limit=1",
           "GET /api/meetings/meeting%3Afixture%2Fwith%20space",
           "GET /api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda?limit=1",
           "GET /api/meetings/agenda-meeting%3Afixture%2Fwith%20space/agenda/agenda-item%3Afixture%2Fwith%20space",
@@ -1386,7 +1377,7 @@ describe("meeting deployed smoke profile", () => {
           "GET /api/meetings/participant-detail-meeting%3Afixture%2Fwith%20space/participants/participant%3Afixture%2Fwith%20space"
         ].sort()
       )
-      expect(conditional).toHaveLength(6)
+      expect(conditional).toHaveLength(8)
       expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
     } finally {
       meetingsCalendarsNotFoundPaths.clear()
@@ -1507,15 +1498,9 @@ function searchResearchEnvironment(overrides = {}) {
   }
 }
 
-function addMeetingsCalendarsNotFoundFixtures() {
-  meetingsCalendarsNotFoundPaths.add("/api/meetings/meeting%3Afixture")
-  meetingsCalendarsNotFoundPaths.add("/api/meetings/agenda-meeting%3Afixture/agenda/agenda-item%3Afixture")
-}
-
 describe("search and research deployed smoke profile", () => {
   it("cumulatively checks earlier profiles and exactly seven configured search and research POST operations", async () => {
     requests.length = 0
-    addMeetingsCalendarsNotFoundFixtures()
     const token = "private-foundation-smoke-token"
     let result
     try {
@@ -1530,8 +1515,8 @@ describe("search and research deployed smoke profile", () => {
     expect(result.jurisdictionSessions.passed).toHaveLength(11)
     expect(result.legislativeRecords.passed).toHaveLength(18)
     expect(result.documentsResources.passed).toHaveLength(9)
-    expect(result.peopleOrganizations.passed).toHaveLength(14)
-    expect(result.meetingsCalendars.passed).toHaveLength(6)
+    expect(result.peopleOrganizations.passed).toHaveLength(13)
+    expect(result.meetingsCalendars.passed).toHaveLength(8)
     expect(result.searchResearch.passed).toEqual([
       "bill search",
       "amendment search",
@@ -1590,7 +1575,6 @@ describe("search and research deployed smoke profile", () => {
   it("rejects malformed SearchPage responses without leaking its search query", async () => {
     const query = "private search query must not escape"
     malformedSearchResearchPath = "/api/search/bills"
-    addMeetingsCalendarsNotFoundFixtures()
     try {
       let error
       try {
@@ -1636,7 +1620,6 @@ describe("search and research deployed smoke profile", () => {
   ])("rejects universal search metadata with $name without leaking its query", async ({ mutate, problem }) => {
     const query = "private universal group query must not escape"
     searchResearchResponseMutators.set("/api/search/all", mutate)
-    addMeetingsCalendarsNotFoundFixtures()
     try {
       let error
       try {
@@ -1657,7 +1640,6 @@ describe("search and research deployed smoke profile", () => {
     searchResearchResponseMutators.set("/api/search/bills", (response) => {
       response.meta.groups = [{ nextCursor: null, recordType: "bill", returned: 1 }]
     })
-    addMeetingsCalendarsNotFoundFixtures()
     try {
       await expect(runSmoke(searchResearchEnvironment())).rejects.toThrow("Command failed")
     } finally {
@@ -1693,7 +1675,6 @@ describe("search and research deployed smoke profile", () => {
         retryable: false
       }
     }))
-    addMeetingsCalendarsNotFoundFixtures()
     try {
       const result = await runSmoke(
         searchResearchEnvironment({
@@ -1721,7 +1702,6 @@ describe("search and research deployed smoke profile", () => {
 
   it("fails an unexpected 500 from semantic amendment search without exposing its query or provider error", async () => {
     const query = "private semantic amendment query"
-    addMeetingsCalendarsNotFoundFixtures()
     searchResearchUnexpectedErrorPaths.add("/api/search/amendments")
     try {
       let error
@@ -1747,7 +1727,6 @@ describe("search and research deployed smoke profile", () => {
 
   it("fails an unexpected 500 from hybrid passage search without exposing its query or provider error", async () => {
     const query = "private hybrid passage query"
-    addMeetingsCalendarsNotFoundFixtures()
     searchResearchErrorPaths.set("/api/search/amendments", (correlationId) => ({
       error: {
         category: "dependency_unavailable",
@@ -1784,7 +1763,6 @@ describe("search and research deployed smoke profile", () => {
 
   it("fails a timed-out semantic amendment search with a redacted route-specific diagnostic", async () => {
     const query = "private timed semantic query"
-    addMeetingsCalendarsNotFoundFixtures()
     searchResearchTimeoutPaths.add("/api/search/amendments")
     try {
       let error

@@ -1583,7 +1583,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
       path: `/api/meetings?jurisdictionId=${encodeURIComponent(jurisdictionId)}&limit=1`
     },
     {
-      expectedStatus: 404,
       fixtures: ["meetingDetailId"],
       kind: "resource",
       name: "meeting",
@@ -1596,7 +1595,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
       path: ({ agendaMeetingId }) => `/api/meetings/${encodeURIComponent(agendaMeetingId)}/agenda?limit=1`
     },
     {
-      expectedStatus: 404,
       fixtures: ["agendaMeetingId", "agendaItemId"],
       kind: "resource",
       name: "meeting agenda item",
@@ -1664,14 +1662,6 @@ async function smokeMeetingsCalendarsRoutes(root) {
       body = await response.json()
     } catch {
       throw new Error(`${name} did not return a JSON body`)
-    }
-    if (route.expectedStatus === 404) {
-      if (response.status !== 404) {
-        throw new Error(`${name} returned status ${response.status}, expected audited 404`)
-      }
-      requireCanonicalNotFound(body, name, correlationId)
-      skipped.push({ name: route.name, reason: "canonical_fixture_not_found" })
-      continue
     }
     if (response.status !== 200) {
       throw new Error(`${name} returned status ${response.status}, expected 200`)
