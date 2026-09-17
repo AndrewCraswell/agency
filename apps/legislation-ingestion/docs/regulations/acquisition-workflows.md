@@ -324,6 +324,19 @@ active and its lexical outbox row exists without a delayed retry. Quarantined un
 the manifest ready. This is bounded-manifest evidence; it does not prove that discovery exhausted a frozen source scope
 or that a multi-manifest backfill is complete.
 
+The implemented current-eCFR ingress keeps this window replenishment durable and bounded without registering a
+schedule. `regulatory-ecfr-discovery` first commits the publisher inventory checkpoint and changed units, closes its
+database pool, then submits one `regulatory-discovery-controller` run for a window of at most 25 units. The global
+submission key binds the discovery scope and committed cursor, so replay of the same inventory cannot create a second
+controller chain. An unchanged discovery submits no controller.
+
+Each acquisition, parsing and publication worker advances canonical state, atomically marks its persisted dispatch as
+canonically complete, closes its pool, and then submits another bounded controller run. The continuation key binds the
+completed stage and immutable manifest/unit payload. If controller submission is uncertain, task retry reuses that key;
+if canonical advancement did not occur, completion fails and no continuation is submitted. Publication continuation
+only replenishes source stages. Passage preparation and lexical acknowledgement remain a separate explicit admission
+path, and no part of this chain enables recurring discovery or embedding generation.
+
 Official mechanics: [batch triggering](https://trigger.dev/docs/management/tasks/batch-trigger),
 [idempotency](https://trigger.dev/docs/idempotency), [queues](https://trigger.dev/docs/queue-concurrency).
 Queue concurrency limits active runs, not requests/second. `concurrencyKey` creates per-key queues; it is not a global

@@ -14,7 +14,11 @@ import {
   legalDiscoveryUnitSchema,
   startLegalDiscoveryAttempt
 } from "./discovery-checkpoint.js"
-import { planLegalDiscoveryDispatchPage, submitLegalDiscoveryDispatch } from "./discovery-dispatch.js"
+import {
+  completeLegalDiscoveryDispatch,
+  planLegalDiscoveryDispatchPage,
+  submitLegalDiscoveryDispatch
+} from "./discovery-dispatch.js"
 import { inspectLegalDiscoveryManifestCompletion } from "./discovery-manifest-completion.js"
 import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
@@ -650,6 +654,94 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       heads: 1,
       dispatches: 3,
       preparation_dispatches: 1
+    })
+  })
+
+  it("records canonical acquisition completion only after the unit advances", async () => {
+    const query = { endpoint: "titles", titles: [2] }
+    const attempt = await startLegalDiscoveryAttempt(pool, { sourceId: "ecfr", query })
+    const values = {
+      sourceId: "ecfr" as const,
+      nativeId: "title-2",
+      edition: "2026-09-16",
+      inventoryHash: "a".repeat(64),
+      inventoryRevision: "b".repeat(64),
+      sourceUrl: "https://www.ecfr.gov/api/versioner/v1/full/2026-09-16/title-2.xml",
+      issueDate: "2026-09-16",
+      currencyDate: "2026-09-16",
+      sourceModifiedText: "2026-09-16",
+      expectedBytes: null,
+      format: "xml" as const,
+      historical: false as const,
+      rightsProfileId: "official-federal-text" as const,
+      externalStandardsIncluded: false as const
+    }
+    const unit = legalDiscoveryUnitSchema.parse({ ...values, key: unitIdentity(values) })
+    await commitLegalDiscoveryPage(pool, {
+      sourceId: "ecfr",
+      query,
+      expectedRevision: attempt.revision,
+      expectedCursor: null,
+      nextCursor: { date: "2026-09-16" },
+      windowStartedAt: "2026-09-16T00:00:00.000Z",
+      windowEndedAt: "2026-09-16T01:00:00.000Z",
+      overlapStartedAt: "2026-09-15T23:00:00.000Z",
+      sourceCutoff: { date: "2026-09-16" },
+      units: [unit]
+    })
+    const manifest = await registerLegalDiscoveryManifest(pool, {
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey,
+      limit: 1
+    })
+    if (manifest === null) throw new Error("Missing completion manifest")
+    const plan = await planLegalDiscoveryDispatchPage(pool, {
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey,
+      limit: 1
+    })
+    const dispatch = plan.dispatches[0]
+    if (!dispatch) throw new Error("Missing completion dispatch")
+    await expect(completeLegalDiscoveryDispatch(pool, "acquisition", dispatch.payload)).rejects.toThrow(
+      "legal_discovery_dispatch_canonical_completion_missing"
+    )
+
+    const body = `<?xml version="1.0"?><DLPSTEXTCLASS><DIV1 N="2" TYPE="TITLE"><HEAD>Title 2</HEAD></DIV1></DLPSTEXTCLASS>`
+    const directory = await mkdtemp(join(tmpdir(), "tabra-current-completion-"))
+    directories.push(directory)
+    await acquireLegalDiscoveryArtifact(
+      pool,
+      { manifestId: manifest.id, unitKey: unit.key, artifactDirectory: directory },
+      {
+        client: new RegulatorySourceClient({
+          fetch: async () => new Response(body, { headers: { "content-type": "application/xml" } }),
+          minimumIntervalMs: 0
+        })
+      }
+    )
+    await expect(completeLegalDiscoveryDispatch(pool, "acquisition", dispatch.payload)).resolves.toEqual({
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey
+    })
+    await expect(completeLegalDiscoveryDispatch(pool, "acquisition", dispatch.payload)).resolves.toEqual({
+      sourceId: "ecfr",
+      scopeKey: attempt.scopeKey
+    })
+    await expect(
+      pool.query(
+        `SELECT completed_at IS NOT NULL completed,last_observed_status,lease_token,lease_expires_at
+         FROM legislation.legal_discovery_dispatches WHERE id=$1`,
+        [dispatch.id]
+      )
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          completed: true,
+          last_observed_status: "CANONICAL_COMPLETED",
+          lease_token: null,
+          lease_expires_at: null
+        }
+      ]
     })
   })
 })

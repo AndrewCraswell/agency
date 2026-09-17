@@ -1,7 +1,9 @@
 import { task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
+import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import { publishLegalDiscoveryUnit } from "../../ingestion/regulations/discovery-publication.js"
+import { continueRegulatoryDiscoveryStage } from "./regulatory-discovery-continuation.js"
 
 export const regulatoryDiscoveryPublicationPayloadSchema = z.strictObject({
   manifestId: z.string().regex(/^[a-f0-9]{64}$/),
@@ -14,8 +16,14 @@ export const regulatoryDiscoveryPublication = task({
   maxDuration: 900,
   queue: { name: "regulatory-source-publication", concurrencyLimit: 2 },
   retry: { maxAttempts: 3, minTimeoutInMs: 60_000, maxTimeoutInMs: 600_000, factor: 2, randomize: true },
-  run: async (payload: unknown) => runRegulatoryDiscoveryPublication(payload)
+  run: async (payload: unknown) => continueRegulatoryDiscoveryPublication(payload)
 })
+
+export async function continueRegulatoryDiscoveryPublication(value: unknown) {
+  const result = await runRegulatoryDiscoveryPublication(value)
+  const next = await continueRegulatoryDiscoveryStage("publication", result.payload, result.controllerScope)
+  return { ...result, continuationRunId: next.id }
+}
 
 export async function runRegulatoryDiscoveryPublication(value: unknown) {
   const payload = regulatoryDiscoveryPublicationPayloadSchema.parse(value)
@@ -34,7 +42,9 @@ export async function runRegulatoryDiscoveryPublication(value: unknown) {
     statement_timeout: 60_000
   })
   try {
-    return await publishLegalDiscoveryUnit(pool, payload)
+    const result = await publishLegalDiscoveryUnit(pool, payload)
+    const controllerScope = await completeLegalDiscoveryDispatch(pool, "publication", payload)
+    return { ...result, payload, controllerScope }
   } finally {
     await pool.end()
   }

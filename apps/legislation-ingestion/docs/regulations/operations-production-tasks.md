@@ -28,8 +28,10 @@ normalization or direct-to-index update path. Workstream prerequisites: ORCH-01 
   immutable XML artifact receipt. Separate workers commit a fully validated deterministic normalized generation and
   publish a revalidated current eCFR unit through the existing canonical transaction with durable canonical identities.
   A manual bounded controller now persists and submits the acquisition, parsing and publication fan-out with stable
-  global identities. Deployed shared storage/provider admission, automatic controller continuation, deployed verification and
-  the G4-gated hourly schedule remain open. An official live inventory dated 2026-09-15
+  global identities. Discovery now starts one bounded controller window only when titles changed; each completed worker
+  replenishes the window after canonical completion with a replay-stable global key. No schedule is registered and the
+  publication worker does not admit preparation or embeddings. Deployed shared storage/provider admission, deployed
+  verification and the G4-gated hourly schedule remain open. An official live inventory dated 2026-09-15
   produced 49 non-reserved units and one reserved title in the disposable database; immediate replay inserted zero
   units while advancing the durable observation revision.
 - [ ] **SYNC-03 Implement FR modification discovery.** Query source modification time with overlap, bounded pagination

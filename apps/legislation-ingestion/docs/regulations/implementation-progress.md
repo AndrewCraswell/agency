@@ -13,6 +13,23 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Connected current-eCFR discovery and all three source-stage workers to the bounded controller without enabling a
+schedule. Discovery commits its checkpoint and changed units, closes the canonical pool and submits one 25-unit
+controller window under a global key derived from the scope and committed cursor. An unchanged inventory submits
+nothing. Acquisition, parsing and publication workers now mark their persisted intent canonically complete before pool
+closure, then submit a replay-stable continuation for the same bounded controller. A retry after uncertain submission
+cannot duplicate the chain, and publication continuation does not admit preparation or embeddings.
+
+Nineteen focused task tests passed, covering bounded kickoff, unchanged discovery, stable global keys, canonical
+completion and pool-close-before-continuation ordering. On a database created from the complete migration history, two
+PostgreSQL integration cases passed: the existing acquisition-through-preparation path and a new completion fence that
+rejects a registered unit, accepts the actual acquired unit and replays idempotently. The first database attempt used a
+previously modified disposable container and correctly failed its source-identity guard; the clean container on loopback
+port 55456 passed. Scoped regulatory lint and `git diff --check` passed. Root `pnpm verify` completed formatting and all
+11 package lint/type tasks, including legislation ingestion, then stopped at the unchanged unrelated Knip inventory for
+63 theme/template files, two root development dependencies, two binaries and nine configuration hints; coverage did not
+run. Recurring schedules and bulk embeddings remain disabled.
+
 Added cross-database completion accounting for one lexical copy pipeline. The new read-only inspector binds canonical
 preparation state, exact item counts, leases/retries, current rights and lexical outbox state to isolated-search
 memberships, bounded-validation checkpoints, the exact scope receipt and the shared serving-time source/target revision

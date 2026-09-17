@@ -44,6 +44,10 @@ type Submit = (
   options: { idempotencyKey: string; idempotencyKeyTTL: "7d" }
 ) => Promise<{ id: string }>
 
+function dispatchIdentity(stage: Stage, payload: Payload) {
+  return digest(JSON.stringify(["legal-discovery-dispatch-2026-09-17", stage, payload]))
+}
+
 /** Registers a bounded keyset page of next-stage intents before any remote Trigger submission. */
 export async function planLegalDiscoveryDispatchPage(pool: pg.Pool, value: unknown) {
   const input = legalDiscoveryDispatchPlanSchema.parse(value)
@@ -69,7 +73,7 @@ export async function planLegalDiscoveryDispatchPage(pool: pg.Pool, value: unkno
         unitKey: candidate.unit_key
       })
       const payloadHash = digest(JSON.stringify(payload))
-      const id = digest(JSON.stringify(["legal-discovery-dispatch-2026-09-17", stage, payload]))
+      const id = dispatchIdentity(stage, payload)
       const registered = await client.query(
         `INSERT INTO legislation.legal_discovery_dispatches
          (id,source_id,scope_key,unit_key,manifest_id,stage,payload_hash,payload)
@@ -109,6 +113,32 @@ export async function planLegalDiscoveryDispatchPage(pool: pg.Pool, value: unkno
   } finally {
     client.release()
   }
+}
+
+/** Records canonical stage advancement before a worker admits its bounded controller continuation. */
+export async function completeLegalDiscoveryDispatch(pool: pg.Pool, stageValue: unknown, payloadValue: unknown) {
+  const stage = legalDiscoveryStageSchema.parse(stageValue)
+  const payload = legalDiscoveryDispatchPayloadSchema.parse(payloadValue)
+  const id = dispatchIdentity(stage, payload)
+  const completed = await pool.query(
+    `UPDATE legislation.legal_discovery_dispatches dispatch
+     SET completed_at=COALESCE(completed_at,clock_timestamp()),last_observed_status='CANONICAL_COMPLETED',
+       last_observed_at=clock_timestamp(),last_error=NULL,lease_token=NULL,lease_expires_at=NULL
+     FROM legislation.legal_discovery_units unit
+     WHERE dispatch.id=$1 AND dispatch.stage=$2 AND dispatch.manifest_id=$3 AND dispatch.unit_key=$4
+       AND unit.source_id=dispatch.source_id AND unit.scope_key=dispatch.scope_key AND unit.unit_key=dispatch.unit_key
+       AND (unit.state='quarantined'
+         OR ($2='acquisition' AND unit.state IN ('acquired','parsed','published'))
+         OR ($2='parsing' AND unit.state IN ('parsed','published'))
+         OR ($2='publication' AND unit.state='published'))
+     RETURNING dispatch.source_id,dispatch.scope_key`,
+    [id, stage, payload.manifestId, payload.unitKey]
+  )
+  invariant(completed.rowCount === 1, "legal_discovery_dispatch_canonical_completion_missing")
+  return z
+    .object({ source_id: sourceSchema, scope_key: hashSchema })
+    .transform((row) => ({ sourceId: row.source_id, scopeKey: row.scope_key }))
+    .parse(completed.rows[0])
 }
 
 /** Claims and records one stable remote submission. Stage workers retain authority for canonical state changes. */

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ acquire: vi.fn(), end: vi.fn() }))
+const mocks = vi.hoisted(() => ({ acquire: vi.fn(), complete: vi.fn(), continue: vi.fn(), end: vi.fn() }))
 vi.mock("pg", () => ({
   default: {
     Pool: class MockPool {
@@ -11,13 +11,25 @@ vi.mock("pg", () => ({
 vi.mock("../../ingestion/regulations/discovery-acquisition.js", () => ({
   acquireLegalDiscoveryArtifact: mocks.acquire
 }))
+vi.mock("../../ingestion/regulations/discovery-dispatch.js", async (original) => ({
+  ...(await original<typeof import("../../ingestion/regulations/discovery-dispatch.js")>()),
+  completeLegalDiscoveryDispatch: mocks.complete
+}))
+vi.mock("./regulatory-discovery-continuation.js", () => ({
+  continueRegulatoryDiscoveryStage: mocks.continue
+}))
 
-import { runRegulatoryDiscoveryAcquisition } from "./regulatory-discovery-acquisition.js"
+import {
+  continueRegulatoryDiscoveryAcquisition,
+  runRegulatoryDiscoveryAcquisition
+} from "./regulatory-discovery-acquisition.js"
 
 beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://localhost:5432/legislation")
   vi.stubEnv("REGULATORY_ARTIFACT_DIRECTORY", "D:\\regulatory-artifacts")
+  mocks.complete.mockResolvedValue({ sourceId: "ecfr", scopeKey: "d".repeat(64) })
+  mocks.continue.mockResolvedValue({ id: "controller-run" })
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -29,7 +41,21 @@ it("passes only durable identities and the configured artifact root to acquisiti
     ...payload,
     artifactDirectory: "D:\\regulatory-artifacts"
   })
+  expect(mocks.complete).toHaveBeenCalledWith(expect.anything(), "acquisition", payload)
   expect(mocks.end).toHaveBeenCalledOnce()
+})
+
+it("closes the worker pool before replenishing the bounded controller", async () => {
+  mocks.acquire.mockResolvedValue({ artifactHash: "c".repeat(64), bytes: 42, reused: false })
+  const payload = { manifestId: "a".repeat(64), unitKey: "b".repeat(64) }
+  await expect(continueRegulatoryDiscoveryAcquisition(payload)).resolves.toMatchObject({
+    continuationRunId: "controller-run"
+  })
+  expect(mocks.end.mock.invocationCallOrder[0]).toBeLessThan(mocks.continue.mock.invocationCallOrder[0]!)
+  expect(mocks.continue).toHaveBeenCalledWith("acquisition", payload, {
+    sourceId: "ecfr",
+    scopeKey: "d".repeat(64)
+  })
 })
 
 it.each([

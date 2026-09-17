@@ -1,21 +1,29 @@
 import { task } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
+import { completeLegalDiscoveryDispatch } from "../../ingestion/regulations/discovery-dispatch.js"
 import { parseLegalDiscoveryArtifact } from "../../ingestion/regulations/discovery-parsing.js"
+import { continueRegulatoryDiscoveryStage } from "./regulatory-discovery-continuation.js"
 
 export const regulatoryDiscoveryParsingPayloadSchema = z.strictObject({
   manifestId: z.string().regex(/^[a-f0-9]{64}$/),
   unitKey: z.string().regex(/^[a-f0-9]{64}$/)
 })
 
-/** One acquired unit per parser worker. Publication and downstream dispatch remain separate gates. */
+/** One acquired unit per parser worker. Canonical completion replenishes only the bounded manual controller. */
 export const regulatoryDiscoveryParsing = task({
   id: "regulatory-discovery-parsing",
   maxDuration: 900,
   queue: { name: "regulatory-source-parsing", concurrencyLimit: 4 },
   retry: { maxAttempts: 3, minTimeoutInMs: 60_000, maxTimeoutInMs: 600_000, factor: 2, randomize: true },
-  run: async (payload: unknown) => runRegulatoryDiscoveryParsing(payload)
+  run: async (payload: unknown) => continueRegulatoryDiscoveryParsing(payload)
 })
+
+export async function continueRegulatoryDiscoveryParsing(value: unknown) {
+  const result = await runRegulatoryDiscoveryParsing(value)
+  const next = await continueRegulatoryDiscoveryStage("parsing", result.payload, result.controllerScope)
+  return { ...result, continuationRunId: next.id }
+}
 
 export async function runRegulatoryDiscoveryParsing(value: unknown) {
   const payload = regulatoryDiscoveryParsingPayloadSchema.parse(value)
@@ -35,7 +43,9 @@ export async function runRegulatoryDiscoveryParsing(value: unknown) {
     statement_timeout: 30_000
   })
   try {
-    return await parseLegalDiscoveryArtifact(pool, { ...payload, outputRoot })
+    const result = await parseLegalDiscoveryArtifact(pool, { ...payload, outputRoot })
+    const controllerScope = await completeLegalDiscoveryDispatch(pool, "parsing", payload)
+    return { ...result, payload, controllerScope }
   } finally {
     await pool.end()
   }
