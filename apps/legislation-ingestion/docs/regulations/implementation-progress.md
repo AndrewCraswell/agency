@@ -3581,3 +3581,13 @@ the audit found zero mismatched records or failures.
 This restores the canonical input required for qualification and indexing; it does not itself complete passage
 preparation, lexical copy, API/MCP canaries or held-out embedding-model comparison. No embedding provider request,
 vector write, recurring ingestion schedule or customer notification was enabled during recovery.
+
+The retained-source reader smoke then replayed every recovered title from the frozen manifest through the production
+reader boundary. Report
+`artifacts/regulatory-backfills/ecfr-recovery-reader-smoke-2026-09-17.json` passed all 49 units and reconciled
+275,138 expected records to 275,138 observed records, 5,186,341 source blocks and 440,276 bounded reader windows with
+zero failed records. The run completed in 189.827 seconds with reader contract `legal-source-text-2026-09-14`, parser
+hash `7efa3fb450d20dce118c4f3107b6dc78fd00dd7aa61392608b501ed627f476b2` and reader hash
+`0f87a950daf5cb60a70a8b7840b8e11baa523c62058a0e1f733273a3bd3272ba`. It made no canonical writes, exercised no
+public API and left recurring ingestion disabled. This closes the full retained reader smoke for the current eCFR
+baseline; tokenizer qualification, persisted passage preparation and search serving remain separate gates.
