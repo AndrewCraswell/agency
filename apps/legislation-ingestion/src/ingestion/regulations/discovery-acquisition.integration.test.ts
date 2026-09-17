@@ -18,6 +18,7 @@ import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { recoverLegalDiscoveryDispatchPage } from "./discovery-recovery.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
+import { planLegalPreparationPage } from "./preparation-plan.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
 const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
@@ -365,6 +366,26 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
         }
       ]
     })
+    const preparationWaveId = "00000000-0000-4000-8000-000000000001"
+    const publishedBefore = new Date().toISOString()
+    const preparationPlan = await planLegalPreparationPage(pool, {
+      waveId: preparationWaveId,
+      source: "ecfr",
+      model: "openai/text-embedding-3-small",
+      publishedBefore,
+      pendingOnly: true
+    })
+    expect(preparationPlan).toMatchObject({ planned: 1, selectedCount: 1, exhausted: true, submitted: false })
+    expect(preparationPlan.dispatchIds).toHaveLength(1)
+    await expect(
+      planLegalPreparationPage(pool, {
+        waveId: preparationWaveId,
+        source: "ecfr",
+        model: "openai/text-embedding-3-small",
+        publishedBefore,
+        pendingOnly: true
+      })
+    ).resolves.toMatchObject({ planned: 0, selectedCount: 1, exhausted: true })
     await expect(planLegalDiscoveryDispatchPage(pool, planInput)).resolves.toMatchObject({
       selected: 0,
       exhausted: true
@@ -399,10 +420,19 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
            (SELECT count(*)::int FROM legislation.legal_edition_provisions WHERE edition_id=$1) members,
            (SELECT count(*)::int FROM legislation.legal_derived_outbox WHERE edition_id=$1 AND operation='lexical') lexical_jobs,
            (SELECT count(*)::int FROM legislation.legal_code_heads WHERE edition_id=$1) heads,
-           (SELECT count(*)::int FROM legislation.legal_discovery_dispatches) dispatches`,
+           (SELECT count(*)::int FROM legislation.legal_discovery_dispatches) dispatches,
+           (SELECT count(*)::int FROM legislation.legal_preparation_dispatches) preparation_dispatches`,
           [firstPublication.editionId]
         )
       ).rows[0]
-    ).toEqual({ generations: 1, editions: 1, members: 2, lexical_jobs: 1, heads: 1, dispatches: 3 })
+    ).toEqual({
+      generations: 1,
+      editions: 1,
+      members: 2,
+      lexical_jobs: 1,
+      heads: 1,
+      dispatches: 3,
+      preparation_dispatches: 1
+    })
   })
 })

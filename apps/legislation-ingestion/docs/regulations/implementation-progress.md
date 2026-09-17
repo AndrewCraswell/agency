@@ -13,6 +13,19 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added bounded publication-outbox admission to the preparation dispatcher. A durable plan with `pendingOnly: true`
+selects only due pending lexical jobs for eCFR/annual editions or Federal Register observations, validates rights,
+persists at most ten immutable preparation intents and submits one recovery page. The caller supplies the pinned
+preparation model explicitly; admission does not select an embedding route, create vectors or bypass the model gate.
+The same wave cannot change its source, cutoff, model or selection policy, and replay recovers stored intent rather than
+duplicating it.
+
+Nineteen planner/dispatcher tests passed. A fresh-migration PostgreSQL test then published the current eCFR fixture,
+observed its pending lexical outbox row, admitted exactly one preparation intent and proved identical-wave replay added
+none. The same test retained the acquisition/parsing/publication failure-recovery coverage from the prior slice.
+Ingestion types passed. This closes the local publication-to-preparation admission gap; deployed Trigger execution,
+preparation-run disposition repair, selected-scope scale and completion accounting remain open.
+
 Connected the existing passage preparation, isolated search copy and resumable validation workers into one durable
 lexical handoff chain. Canonical `prepared` state submits copy with a global key derived from the immutable preparation
 ID; blocked preparation cannot advance. Exhausted copy submits the first bounded validation page under a separate global
@@ -24,10 +37,10 @@ Twenty-two task tests passed across preparation, copy and validation, including 
 continuation reuse, blocked/nonadvancing work, failed copy/validation/finalization and explicit finalization. Two targeted
 real-PostgreSQL tests then passed partial-copy protection and complete copy validation/acknowledgement against freshly
 created canonical and isolated search databases; 61 unrelated storage tests were skipped by the focused name filter.
-Ingestion types passed. This advances ORCH-06 locally. Selecting pending publication outbox work, deployed Trigger
-handoffs, national-scale finalization and completion accounting remain open; recurring schedules and bulk embeddings
-remain disabled. Root `pnpm verify` passed formatting and all 11 package lint/type tasks, then stopped at the unchanged
-unrelated Knip inventory described in the next entry; coverage did not run.
+Ingestion types passed. This advances ORCH-06 locally. Deployed Trigger handoffs, national-scale finalization and
+completion accounting remain open; recurring schedules and bulk embeddings remain disabled. Root `pnpm verify` passed
+formatting and all 11 package lint/type tasks, then stopped at the unchanged unrelated Knip inventory described in the
+next entry; coverage did not run.
 
 Added bounded run-disposition recovery to the manual discovery controller. Each acquisition, parsing or publication
 intent now retains an attempt counter, append-only prior-run history, last observed Trigger disposition and canonical

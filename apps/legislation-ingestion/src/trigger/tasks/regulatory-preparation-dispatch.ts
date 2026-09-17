@@ -25,7 +25,8 @@ const initialSchema = z
 const schema = z.union([
   initialSchema,
   z.strictObject({ recovery: preparationRecoverySchema }),
-  z.strictObject({ plan: preparationPlanSchema })
+  z.strictObject({ plan: preparationPlanSchema }),
+  z.strictObject({ admission: preparationPlanSchema.extend({ pendingOnly: z.literal(true) }) })
 ])
 
 /** Explicit, finite operator wave. Enqueue success does not imply preparation, copy or embedding completion. */
@@ -58,14 +59,23 @@ export async function runRegulatoryPreparationDispatch(value: unknown) {
     if (typeof name !== "string" || name === "legislation_passage_search") {
       throw new Error("Regulatory dispatch requires a canonical PostgreSQL database")
     }
-    if ("plan" in input) {
-      return await planLegalPreparationPage(pool, input.plan)
-    }
     const submit: Parameters<typeof submitLegalPreparation>[2] = async (payload, options) =>
       tasks.trigger("regulatory-passage-preparation", payload, {
         ...options,
         idempotencyKey: await idempotencyKeys.create(options.idempotencyKey, { scope: "global" })
       })
+    if ("plan" in input) {
+      return await planLegalPreparationPage(pool, input.plan)
+    }
+    if ("admission" in input) {
+      const planned = await planLegalPreparationPage(pool, input.admission)
+      const recovery = await recoverLegalPreparationPage(
+        pool,
+        { waveId: input.admission.waveId, limit: 10, execute: true },
+        submit
+      )
+      return { planned, recovery }
+    }
     if ("recovery" in input) {
       return await recoverLegalPreparationPage(pool, input.recovery, submit)
     }

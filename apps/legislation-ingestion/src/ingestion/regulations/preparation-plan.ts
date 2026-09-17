@@ -5,9 +5,11 @@ import { z } from "zod"
 import { requireLegalPreparationRights } from "./passage-preparation.js"
 import { preparationDispatchSchema, registerLegalPreparationDispatch } from "./preparation-dispatch.js"
 
-export const preparationPlanSchema = preparationDispatchSchema
-  .omit({ scope: true })
-  .extend({ source: z.enum(["ecfr", "govinfo-cfr", "govinfo-fr"]), publishedBefore: z.iso.datetime({ offset: true }) })
+export const preparationPlanSchema = preparationDispatchSchema.omit({ scope: true }).extend({
+  source: z.enum(["ecfr", "govinfo-cfr", "govinfo-fr"]),
+  publishedBefore: z.iso.datetime({ offset: true }),
+  pendingOnly: z.boolean().default(false)
+})
 
 /** One atomic page of source references and durable intent. Never submits remote work. */
 export async function planLegalPreparationPage(pool: pg.Pool, value: unknown) {
@@ -49,12 +51,30 @@ export async function planLegalPreparationPage(pool: pg.Pool, value: unknown) {
           (
             await client.query(
               kind === "publication"
-                ? `SELECT o.id FROM legislation.regulatory_document_observations o
+                ? request.pendingOnly
+                  ? `SELECT o.id FROM legislation.regulatory_document_observations o
+      JOIN legislation.regulatory_publication_batches b ON b.generation_id=o.generation_id
+      JOIN legislation.regulatory_publication_outbox x
+        ON x.observation_id=o.id AND x.operation='lexical' AND x.state='pending'
+      WHERE o.source_id=$1 AND o.jurisdiction_id='jurisdiction:us' AND b.published_at<=$2::timestamptz
+      AND x.retry_at<=transaction_timestamp()
+      AND o.id>COALESCE($3::uuid,'00000000-0000-0000-0000-000000000000'::uuid)
+      ORDER BY o.id LIMIT 11 FOR SHARE OF o,b,x`
+                  : `SELECT o.id FROM legislation.regulatory_document_observations o
       JOIN legislation.regulatory_publication_batches b ON b.generation_id=o.generation_id
       WHERE o.source_id=$1 AND o.jurisdiction_id='jurisdiction:us' AND b.published_at<=$2::timestamptz
       AND o.id>COALESCE($3::uuid,'00000000-0000-0000-0000-000000000000'::uuid)
       ORDER BY o.id LIMIT 11 FOR SHARE OF o,b`
-                : `SELECT id FROM legislation.legal_editions WHERE source_id=$1 AND jurisdiction_id='jurisdiction:us'
+                : request.pendingOnly
+                  ? `SELECT e.id FROM legislation.legal_editions e
+      JOIN legislation.legal_derived_outbox x
+        ON x.edition_id=e.id AND x.operation='lexical' AND x.state='pending'
+      WHERE e.source_id=$1 AND e.jurisdiction_id='jurisdiction:us'
+      AND e.published_at IS NOT NULL AND e.published_at<=$2::timestamptz
+      AND x.retry_at<=transaction_timestamp()
+      AND e.id>COALESCE($3::uuid,'00000000-0000-0000-0000-000000000000'::uuid)
+      ORDER BY e.id LIMIT 11 FOR SHARE OF e,x`
+                  : `SELECT id FROM legislation.legal_editions WHERE source_id=$1 AND jurisdiction_id='jurisdiction:us'
       AND published_at IS NOT NULL AND published_at<=$2::timestamptz
       AND id>COALESCE($3::uuid,'00000000-0000-0000-0000-000000000000'::uuid)
       ORDER BY id LIMIT 11 FOR SHARE`,

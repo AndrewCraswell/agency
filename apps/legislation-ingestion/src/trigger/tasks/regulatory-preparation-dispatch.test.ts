@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   register:
     vi.fn<typeof import("../../ingestion/regulations/preparation-dispatch.js").registerLegalPreparationDispatch>(),
   plan: vi.fn<typeof import("../../ingestion/regulations/preparation-plan.js").planLegalPreparationPage>(),
+  recover: vi.fn<typeof import("../../ingestion/regulations/preparation-recovery.js").recoverLegalPreparationPage>(),
   key: vi.fn<(key: string, options: { scope: string }) => Promise<string>>(),
   trigger: vi.fn<(task: string, payload: unknown, options: unknown) => Promise<{ id: string }>>()
 }))
@@ -38,6 +39,10 @@ vi.mock("../../ingestion/regulations/preparation-plan.js", async (importOriginal
   ...(await importOriginal<typeof import("../../ingestion/regulations/preparation-plan.js")>()),
   planLegalPreparationPage: mocks.plan
 }))
+vi.mock("../../ingestion/regulations/preparation-recovery.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../ingestion/regulations/preparation-recovery.js")>()),
+  recoverLegalPreparationPage: mocks.recover
+}))
 const dispatch = {
   waveId: "00000000-0000-4000-8000-000000000001",
   scope: { kind: "edition", id: "00000000-0000-4000-8000-000000000002" },
@@ -49,6 +54,12 @@ beforeEach(() => {
   mocks.query.mockResolvedValue({ rows: [{ name: "canonical" }] })
   mocks.key.mockResolvedValue("global-key")
   mocks.trigger.mockResolvedValue({ id: "run" })
+  mocks.recover.mockResolvedValue({
+    waveId: dispatch.waveId,
+    executed: true,
+    results: [{ dispatchId: "a".repeat(64), disposition: "submitted", runId: "run" }],
+    nextAfterId: null
+  })
   mocks.submit.mockImplementation(async (_pool, _value, submit) => {
     const result = await submit(
       {
@@ -85,6 +96,34 @@ it("plans source references without submitting preparation children", async () =
   expect(mocks.submit).not.toHaveBeenCalled()
   expect(mocks.end).toHaveBeenCalledOnce()
 })
+it("plans and submits one bounded pending-outbox admission page with an explicit model", async () => {
+  const admission = {
+    waveId: dispatch.waveId,
+    source: "ecfr" as const,
+    model: dispatch.model,
+    publishedBefore: "2026-09-15T00:00:00Z",
+    pendingOnly: true as const
+  }
+  mocks.plan.mockResolvedValue({
+    waveId: dispatch.waveId,
+    planned: 1,
+    selectedCount: 1,
+    afterId: dispatch.scope.id,
+    exhausted: true,
+    dispatchIds: ["a".repeat(64)],
+    submitted: false
+  })
+  await expect(runRegulatoryPreparationDispatch({ admission })).resolves.toMatchObject({
+    planned: { planned: 1 },
+    recovery: { executed: true, results: [{ disposition: "submitted" }] }
+  })
+  expect(mocks.plan).toHaveBeenCalledWith(expect.anything(), expect.objectContaining(admission))
+  expect(mocks.recover).toHaveBeenCalledWith(
+    expect.anything(),
+    { waveId: dispatch.waveId, limit: 10, execute: true },
+    expect.any(Function)
+  )
+})
 it.each([
   { dispatches: [] },
   { dispatches: [dispatch, dispatch] },
@@ -92,6 +131,20 @@ it.each([
   { dispatches: [{ ...dispatch, limit: 26 }] }
 ])("rejects unbounded or duplicate waves before side effects", async (value) => {
   await expect(runRegulatoryPreparationDispatch(value)).rejects.toThrow(ZodError)
+  expect(mocks.pool).not.toHaveBeenCalled()
+})
+it("requires pending-only selection for admission before opening the database", async () => {
+  await expect(
+    runRegulatoryPreparationDispatch({
+      admission: {
+        waveId: dispatch.waveId,
+        source: "ecfr",
+        model: dispatch.model,
+        publishedBefore: "2026-09-15T00:00:00Z",
+        pendingOnly: false
+      }
+    })
+  ).rejects.toThrow(ZodError)
   expect(mocks.pool).not.toHaveBeenCalled()
 })
 it("submits using global idempotency across parent runs and a bounded pool", async () => {

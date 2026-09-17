@@ -46,6 +46,14 @@ the checkpoint. Source reconciliation and a fresh wave are required after such c
 the page without advancing; it is not silently omitted. Historical completeness, shared database admission, automatic
 controller continuation and deployed throughput qualification remain separate gates.
 
+The task also accepts `{ "admission": { ...plan, "pendingOnly": true } }`. This selects only due pending lexical
+outbox scopes, registers at most ten intents under the durable wave checkpoint and immediately executes one recovery
+page to submit those recorded intents. eCFR and annual CFR admissions join `legal_derived_outbox`; Federal Register
+admissions join `regulatory_publication_outbox`. The caller must supply the model explicitly. Here it chooses the pinned
+tokenizer/input contract for passage preparation and does not promote an embedding route or authorize vector generation.
+Re-running the same immutable wave recovers its stored intents; changing source, cutoff, model or pending-only policy
+fails the plan identity check.
+
 At `2026-09-16T04:50:55Z`, a clone of the 110-observation Federal Register pilot on disposable port 55456 passed
 eleven-page selection and recovery preview without omissions or duplicate scopes. Two concurrent planner calls
 serialized to distinct ten-item pages and cumulative checkpoints of ten and twenty. Rights revocation rolled back
@@ -84,10 +92,10 @@ inventory and current source/target revisions before acknowledging the canonical
 copy failure, stale checkpoint or finalization failure dispatches no successor. None of these handoffs creates an
 embedding request or changes the embedding rollout gate.
 
-This advances ORCH-02/06/07 but does not close them. Indexed national manifest selection, publication-outbox admission,
-background intent scanning, preparation-dispatch disposition repair, aggregate database admission and deployed fault
-injection remain open. Source publication/rights validation remains in the preparation worker; submitting an ID grants
-no source read permission and proves no eligibility. Recurring ingestion and bulk embedding gates remain unchanged.
+This advances ORCH-02/06/07 but does not close them. Indexed national manifest selection, background intent scanning,
+preparation-dispatch disposition repair, aggregate database admission and deployed fault injection remain open. Source
+publication/rights validation remains in the preparation worker; submitting an ID grants no source read permission and
+proves no eligibility. Recurring ingestion and bulk embedding gates remain unchanged.
 
 The recovery canary on disposable 55453 additionally verifies five-intent pagination without omissions, preview with
 zero submission calls, recovery of only ready intents, retained-handle replay and rejection of corrupted stored payloads.

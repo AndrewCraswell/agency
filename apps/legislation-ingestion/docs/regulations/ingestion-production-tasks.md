@@ -159,8 +159,10 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   key. Exhausted copy hands off to bounded validation; validation continues from persisted ordinals and submits the
   separate finalizer only after its last page passes. Finalization remains the only step that acknowledges the lexical
   outbox, and no handoff creates embeddings. Two real PostgreSQL tests pass partial-copy and complete
-  validation/acknowledgement behavior. Publication-outbox admission, deployed handoff smoke, large-scope resumable
-  finalization and completion accounting remain open.
+  validation/acknowledgement behavior. An explicit model-bound admission mode now selects only due pending eCFR,
+  annual-CFR or Federal Register lexical outbox scopes, persists at most ten intents and submits them through recovery.
+  A fresh current-publication database test admitted one lexical job exactly once. Deployed handoff smoke, selected-scope
+  scale, large-scope resumable finalization and completion accounting remain open.
 - [ ] **ORCH-07 Close submit/ack races.** Persist submission intent and attempt identity around Trigger calls; reconcile
   uncertain responses and expired idempotency retention using database uniqueness. **Done:** crash after acceptance
   but before saving a run ID cannot create duplicate canonical work or leave a permanently undiscoverable unit.

@@ -35,6 +35,7 @@ function database(options: { rows?: string[]; exhausted?: boolean; conflict?: bo
     }
     if (
       sql.includes("SELECT id FROM legislation.legal_editions") ||
+      sql.includes("SELECT e.id FROM legislation.legal_editions") ||
       sql.includes("SELECT o.id FROM legislation.regulatory_document_observations")
     ) {
       return { rows: (options.rows ?? ids).map((id) => ({ id })) }
@@ -103,6 +104,17 @@ it("selects Federal Register observations by batch publication time and records 
     expect.objectContaining({ scope: { kind: "publication", id: ids[0] } })
   )
   expect(db.query.mock.calls.some(([sql]) => sql.includes("SELECT id FROM legislation.legal_editions"))).toBe(false)
+})
+it("admits only due pending lexical outbox scopes when requested", async () => {
+  const db = database({ rows: ids.slice(0, 2) })
+  expect(await planLegalPreparationPage(db.pool, { ...input, pendingOnly: true })).toMatchObject({
+    planned: 2,
+    exhausted: true
+  })
+  expect(db.query).toHaveBeenCalledWith(
+    expect.stringMatching(/JOIN legislation\.legal_derived_outbox[\s\S]*x\.state='pending'[\s\S]*x\.retry_at/),
+    ["ecfr", "2026-09-15T00:00:00.000Z", null]
+  )
 })
 it("rolls back rights rejection without recording intent or checkpoint", async () => {
   const db = database()
