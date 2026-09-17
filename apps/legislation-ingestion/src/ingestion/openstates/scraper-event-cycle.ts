@@ -5,7 +5,7 @@ import { syncCheckpoints } from "@repo/legislation-core/database/schema/schema"
 import { and, eq, like } from "drizzle-orm"
 import { z } from "zod"
 import { claimBillBatchOwnership, releaseBillBatchOwnership } from "../../persistence/bill-batch-ownership.js"
-import { upsertEventSnapshots } from "../../persistence/events.js"
+import { reconcileEventSnapshotRelationships, upsertEventSnapshots } from "../../persistence/events.js"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { alaskaEventCloudRequest, dispatchCloudScraperAttempt } from "./scraper-cloud.js"
 import { prepareAlaskaEventBatch } from "./scraper-event-batch.js"
@@ -55,6 +55,68 @@ export async function readAlaskaEventPlan(store: Pick<ArtifactStore, "read">, pl
 
 function receiptStream(plan: AlaskaEventPlan, batchId: string) {
   return `ak-events:34:${plan.source_sha256}:${batchId}`
+}
+
+async function readAlaskaEventReceipt(database: LegislationDatabase, plan: AlaskaEventPlan, batchId: string) {
+  const rows = await database
+    .select({ cursor: syncCheckpoints.cursor })
+    .from(syncCheckpoints)
+    .where(and(eq(syncCheckpoints.source, "openstates"), eq(syncCheckpoints.stream, receiptStream(plan, batchId))))
+  if (rows.length !== 1) throw new Error("Alaska event batch does not have exactly one promotion receipt")
+  return z
+    .object({
+      status: z.literal("promoted"),
+      inventoryId: z.literal(plan.source_sha256),
+      batchId: z.literal(batchId),
+      manifestPath: z.string(),
+      build: digest
+    })
+    .parse(rows[0]!.cursor)
+}
+
+/** Rebuild relationship readiness from immutable promoted evidence after organization foundations change. */
+export async function reconcileAlaskaEventCycleBatch(
+  database: LegislationDatabase,
+  input: {
+    store: Pick<ArtifactStore, "read">
+    planPath: string
+    batchIndex: number
+    approvedBuildInputsSha256: string
+  },
+  dependencies = {
+    readPlan: readAlaskaEventPlan,
+    readReceipt: readAlaskaEventReceipt,
+    prepare: prepareAlaskaEventBatch,
+    reconcile: reconcileEventSnapshotRelationships
+  }
+) {
+  const build = digest.parse(input.approvedBuildInputsSha256)
+  const plan = await dependencies.readPlan(input.store, input.planPath)
+  const batchIndex = z
+    .number()
+    .int()
+    .nonnegative()
+    .max(plan.batches.length - 1)
+    .parse(input.batchIndex)
+  const batch = plan.batches[batchIndex]!
+  const receipt = await dependencies.readReceipt(database, plan, batch.id)
+  if (receipt.build !== build) throw new Error("Alaska event receipt build is not approved")
+  const prepared = await dependencies.prepare(input.store, receipt.manifestPath, build, new Date())
+  if (
+    JSON.stringify(prepared.snapshots.map((item) => item.event.sourceId).sort()) !==
+    JSON.stringify([...batch.event_keys].sort())
+  ) {
+    throw new Error("Promoted archive does not match frozen Alaska event batch")
+  }
+  const result = await dependencies.reconcile(database, prepared.snapshots, { refreshReadiness: true })
+  return {
+    status: "reconciled" as const,
+    inventoryId: plan.source_sha256,
+    batchId: batch.id,
+    batchIndex,
+    totalBatches: plan.batches.length,
+    ...result
+  }
 }
 
 export async function inspectAlaskaEventCycle(

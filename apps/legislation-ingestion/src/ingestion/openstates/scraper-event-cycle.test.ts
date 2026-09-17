@@ -3,7 +3,12 @@ import type { LegislationDatabase } from "@repo/legislation-core/database/databa
 import { describe, expect, it, vi } from "vitest"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import { normalizeAlaskaScraperEvent } from "./scraper-event-batch.js"
-import { executeAlaskaEventCloudBatch, readAlaskaEventPlan, type AlaskaEventPlan } from "./scraper-event-cycle.js"
+import {
+  executeAlaskaEventCloudBatch,
+  readAlaskaEventPlan,
+  reconcileAlaskaEventCycleBatch,
+  type AlaskaEventPlan
+} from "./scraper-event-cycle.js"
 import { ScraperWorkerStopUnconfirmedError } from "./scraper-worker-error.js"
 
 class Store implements ArtifactStore {
@@ -120,5 +125,32 @@ describe("Alaska event cloud cycle", () => {
       )
     ).rejects.toBeInstanceOf(ScraperWorkerStopUnconfirmedError)
     expect(release).not.toHaveBeenCalled()
+  })
+
+  it("replays the exact promoted archive when organization foundations change", async () => {
+    const reconcile = vi.fn(async () => ({ events: 1, billLinks: 0, organizationLinks: 1 }))
+    const result = await reconcileAlaskaEventCycleBatch(
+      {} as LegislationDatabase,
+      {
+        store: new Store(),
+        planPath: "plan.json",
+        batchIndex: 0,
+        approvedBuildInputsSha256: "c".repeat(64)
+      },
+      {
+        readPlan: async () => plan(),
+        readReceipt: async () => ({
+          status: "promoted",
+          inventoryId: source,
+          batchId,
+          manifestPath: "manifest",
+          build: "c".repeat(64)
+        }),
+        prepare: async () => ({ snapshots: [snapshot()], quarantinedOccurrences: 0, completeSnapshot: false }),
+        reconcile
+      }
+    )
+    expect(result).toMatchObject({ status: "reconciled", batchIndex: 0, totalBatches: 1, organizationLinks: 1 })
+    expect(reconcile).toHaveBeenCalledWith({}, [snapshot()], { refreshReadiness: true })
   })
 })

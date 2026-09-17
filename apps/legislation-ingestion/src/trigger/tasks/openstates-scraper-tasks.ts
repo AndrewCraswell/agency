@@ -6,7 +6,8 @@ import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import {
   executeAlaskaEventCloudBatch,
-  inspectAlaskaEventCycle
+  inspectAlaskaEventCycle,
+  reconcileAlaskaEventCycleBatch
 } from "../../ingestion/openstates/scraper-event-cycle.js"
 import { acquireAlaskaEventPlan } from "../../ingestion/openstates/scraper-event-plan.js"
 import { executeNorthCarolinaEventCloudCycle } from "../../ingestion/openstates/scraper-nc-event-cycle.js"
@@ -20,6 +21,9 @@ const payloadSchema = z.strictObject({
     .string()
     .regex(/^[a-f0-9]{64}$/)
     .optional()
+})
+const reconciliationPayloadSchema = payloadSchema.omit({ batchId: true }).extend({
+  batchIndex: z.number().int().nonnegative().default(0)
 })
 
 function requireScraperActivation(jurisdiction: "ak" | "nc", value: string | undefined) {
@@ -43,6 +47,37 @@ function attemptId(triggerRunId: string) {
 }
 
 const concurrencyKey = "production:openstates-scraper:events:ak"
+
+export const openStatesAlaskaEventsReconcile = task({
+  id: "openstates-alaska-events-reconcile",
+  maxDuration: 600,
+  queue: { name: "openstates-scraper-orchestration", concurrencyLimit: 3 },
+  run: async (raw: unknown) => {
+    const payload = reconciliationPayloadSchema.parse(raw)
+    requireAlaskaScraperActivation(process.env.OPENSTATES_SCRAPER_ENABLED_STATES)
+    const config = loadConfig()
+    if (!config.azure.storageAccount) throw new Error("Hosted scraper requires Azure Storage")
+    const store = new AzureBlobArtifactStore(config.azure.storageAccount, config.azure.stateSourceContainer)
+    const { database, pool } = createDatabase({ ...config.database, maxConnections: 2 })
+    let result: Awaited<ReturnType<typeof reconcileAlaskaEventCycleBatch>>
+    try {
+      result = await reconcileAlaskaEventCycleBatch(database, { store, ...payload })
+    } finally {
+      await pool.end()
+    }
+    const nextBatchIndex = result.batchIndex + 1
+    if (nextBatchIndex >= result.totalBatches) return { ...result, status: "cycle_reconciled" as const }
+    const key = await idempotencyKeys.create(`ak-events:reconcile:${result.inventoryId}:${nextBatchIndex}`, {
+      scope: "global"
+    })
+    const continuation = await tasks.trigger(
+      "openstates-alaska-events-reconcile",
+      { ...payload, batchIndex: nextBatchIndex },
+      { concurrencyKey, idempotencyKey: key }
+    )
+    return { ...result, nextBatchIndex, continuationRunId: continuation.id }
+  }
+})
 export const openStatesNorthCarolinaEventsCloud = task({
   id: "openstates-north-carolina-events-cloud",
   maxDuration: 3_600,
