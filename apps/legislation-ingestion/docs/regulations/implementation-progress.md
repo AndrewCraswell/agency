@@ -13,6 +13,20 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the regulatory vector persistence boundary to the isolated `legislation_passage_search` database. One immutable
+generation binds an exact copied passage generation, model, dimensions, input contract, manifest hash and expected
+count. OpenAI Small vectors use a dedicated 1,536-dimension table and Voyage 4 vectors use a separate 1,024-dimension
+table; composite foreign keys prevent a model, dimension, passage owner or passage ID from crossing routes. Batch
+storage validates finite nonzero vectors, exact source input hashes and immutable vector hashes. A retry must reproduce
+the same passage/vector pairs, and completion refuses a partial inventory. Completed batches remain distinct from
+search-ready promotion.
+
+The first implementation incorrectly added these tables to the canonical database baseline. Commit `c75e67d` removes
+that placement and binds persistence to the already separated search projection. A fresh two-database PostgreSQL test
+copied a canonical passage, stored and replayed its vector, rejected changed vectors, input hashes, dimensions and model
+routes, then completed and replayed the exact inventory. Ingestion/core TypeScript, scoped lint/format, Drizzle schema
+check and the focused integration test passed. No provider request, HNSW index, route promotion or bulk dispatch occurred.
+
 Removed the false structural blocker for publisher tables that have no independently segmentable data rows. The table
 inventory now records these layouts as atomic source text and leaves the actual model tokenizer gate responsible for
 proving that each complete table fits. The retained 138-block review packet expands to 163 individual table layouts;

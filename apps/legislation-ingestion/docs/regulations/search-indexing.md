@@ -247,6 +247,12 @@ pnpm tool regulations/smoke-regulatory-embeddings --manifest artifacts/regulator
 Use [C's model/dimension/input identity](../../../../packages/legislation-core/docs/engineering/search-projections.md#legal-lexical-and-vector-identity).
 Canary candidates remain in separate dimension-constrained staging tables, not the active serving generation.
 
+Implemented foundation: the isolated passage-search schema now has one immutable embedding-generation registry plus
+separate OpenAI Small (1,536 dimensions) and Voyage 4 (1,024 dimensions) vector tables. Composite foreign keys bind each
+row to the exact copied passage generation, passage ID, model and dimensions. `vector-storage.ts` additionally verifies
+the passage input hash, finite nonzero vector, immutable vector hash and complete expected count. The `embedded` state
+means storage is complete; it does not imply index validity or serving promotion.
+
 Create a unique input identity index and a passage-ID lookup index. Build the new feature's HNSW index after its initial
 bounded load, measure build RSS/time/disk and run ANALYZE before query-plan/recall acceptance. Use the existing index
 maintenance mechanism for an online build when the table already serves traffic; respect PostgreSQL's nontransactional

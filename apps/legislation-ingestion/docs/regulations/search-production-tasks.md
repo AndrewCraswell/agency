@@ -277,9 +277,13 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
 Extend existing model routing, embedding-job machinery and isolated search storage. A new regulatory owner contract
 must not alter current bill/document embedding freshness. Small pilot writes may precede EVAL-12; bulk dispatch may not.
 
-- [ ] **VECTOR-01 Add regulatory vector schema.** Store passage/input hash, model, dimensions, contract, generation,
+- [x] **VECTOR-01 Add regulatory vector schema.** Store passage/input hash, model, dimensions, contract, generation,
   owner/version and readiness with FK/uniqueness constraints and rights ownership. **Done:** wrong dimensions,
   mismatched owners and duplicate logical vectors fail at validation/storage boundaries; disposable DB migration passes.
+  Implemented in the isolated passage-search schema with separate 1,536-dimension OpenAI Small and 1,024-dimension
+  Voyage 4 tables. Immutable generation registration binds copied passage inventory, route, input contract and manifest;
+  exact replay and completion checks reject changed vectors, input hashes, model routes and partial counts. Search-ready
+  promotion and HNSW indexes remain VECTOR-10/11 work.
 - [ ] **VECTOR-02 Add the regulatory route and manifest.** Resolve server-configured candidate/selected routes without
   accepting caller model names; bind vector jobs to frozen passage inventory. **Done:** default existing product routes
   and freshness hashes are unchanged; candidate pilot and production generation are distinct. Depends on VECTOR-01, PASS-06.
