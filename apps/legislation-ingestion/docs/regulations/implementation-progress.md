@@ -13,6 +13,13 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Restarted the read-only 49-title qualification after the new regulatory route definitions changed the fingerprinted
+dependency closure. The superseded attempt was stopped cleanly after five editions rather than being allowed to publish
+an obsolete terminal manifest. The active release-candidate run uses implementation hash
+`df80596a461d3404ba25fd53ff9f8f0036142cc9cf6163cc7a5b31295f6604e4` and currently retains five completed editions,
+29,621 canonical records and zero structural, OpenAI-tokenizer or Voyage-tokenizer blockers. Its manifest remains
+`complete: false`; these are live checkpoint counts, not terminal qualification evidence.
+
 Added durable execution checkpoints for all 16 regulatory vector shards. Initialization creates the exact shard
 inventory once. Claiming uses a fenced five-minute lease, preserves the keyset cursor, increments attempts and records a
 possible repeated paid attempt whenever a prior provider request was not acknowledged. Successful pages atomically
