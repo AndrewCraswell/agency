@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
   end: vi.fn<() => Promise<void>>(),
   download: vi.fn<() => Promise<{ bytes: Uint8Array; contentType: string }>>(),
   extract: vi.fn<() => Promise<{ contentHash: string; text: string }>>(),
-  apply: false
+  apply: false,
+  category: "unsupported-format"
 }))
 vi.mock("commander", () => ({
   Command: class {
@@ -24,7 +25,14 @@ vi.mock("commander", () => ({
       return this
     }
     opts() {
-      return { state: "ak", session: "34", databaseEnv: "RETRY_TEST_DATABASE_URL", limit: "10", apply: mocks.apply }
+      return {
+        state: "ak",
+        session: "34",
+        databaseEnv: "RETRY_TEST_DATABASE_URL",
+        limit: "10",
+        apply: mocks.apply,
+        category: mocks.category
+      }
     }
   }
 }))
@@ -55,6 +63,7 @@ beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
   mocks.apply = false
+  mocks.category = "unsupported-format"
   process.exitCode = undefined
   vi.stubEnv("RETRY_TEST_DATABASE_URL", "postgresql://unused")
   vi.spyOn(process.stdout, "write").mockReturnValue(true)
@@ -91,7 +100,14 @@ it("guards applied changes using exact source and timestamp evidence", async () 
   await import("./retry-supported-documents.js")
   const update = mocks.query.mock.calls.find(([sql]) => sql.startsWith("update"))
   expect(update?.[0]).toContain("processing_status='unsupported'")
-  expect(update?.[1]).toEqual(["doc", "https://example.org/doc", "2026-09-16 00:00:00.123456+00", sourceHash, "old"])
+  expect(update?.[1]).toEqual([
+    "doc",
+    "https://example.org/doc",
+    "2026-09-16 00:00:00.123456+00",
+    sourceHash,
+    "old",
+    "unsupported-format"
+  ])
 })
 it("does not queue changed publisher bytes", async () => {
   mocks.apply = true
@@ -126,4 +142,19 @@ it("rolls back a concurrent change and reports failure", async () => {
   expect(process.exitCode).toBe(1)
   expect(mocks.query).toHaveBeenCalledWith("rollback")
   expect(mocks.query).not.toHaveBeenCalledWith("commit")
+})
+it("revalidates stale malformed classifications with the same guarded OCR handoff", async () => {
+  const { DocumentExtractionError } = await import("../../src/ingestion/documents/extract.js")
+  mocks.apply = true
+  mocks.category = "malformed-document"
+  mocks.extract.mockRejectedValue(new DocumentExtractionError("ocr-required", "Scanned content"))
+  await import("./retry-supported-documents.js")
+  const update = mocks.query.mock.calls.find(([sql]) => sql.startsWith("update"))
+  expect(update?.[0]).toContain("processing_error_category=$6")
+  expect(update?.[1]?.[5]).toBe("malformed-document")
+})
+it("rejects retry categories outside terminal extraction revalidation", async () => {
+  mocks.category = "processing-transient"
+  await expect(import("./retry-supported-documents.js")).rejects.toThrow()
+  expect(mocks.query).not.toHaveBeenCalled()
 })

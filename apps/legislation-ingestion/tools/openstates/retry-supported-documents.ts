@@ -10,15 +10,17 @@ const options = new Command()
   .requiredOption("--session <session>", "exact legislative session")
   .requiredOption("--database-env <name>", "environment variable holding the database URL")
   .option("--limit <count>", "maximum candidates to validate", "10")
+  .option("--category <category>", "previous terminal extraction category to revalidate", "unsupported-format")
   .option("--apply", "requeue successfully extracted, unchanged records")
   .parse()
-  .opts<{ state: string; session: string; databaseEnv: string; limit: string; apply?: boolean }>()
+  .opts<{ state: string; session: string; databaseEnv: string; limit: string; category: string; apply?: boolean }>()
 const state = z.enum(["ak", "nc"]).parse(options.state)
 const session = z
   .string()
   .regex(/^[A-Za-z0-9-]+$/)
   .parse(options.session)
 const limit = z.coerce.number().int().min(1).max(100).parse(options.limit)
+const category = z.enum(["unsupported-format", "malformed-document"]).parse(options.category)
 const pool = new pg.Pool({ connectionString: z.string().min(1).parse(process.env[options.databaseEnv]) })
 const rowSchema = z.object({
   id: z.string(),
@@ -37,9 +39,9 @@ try {
       (
         await client.query(
           `select id,source_url,content_hash,processing_error,updated_at::text from legislation.bill_documents
-       where bill_id like $1 and processing_status='unsupported' and processing_error_category='unsupported-format'
+       where bill_id like $1 and processing_status='unsupported' and processing_error_category=$3
        order by id limit $2`,
-          [`bill:${state}:${session.toLowerCase()}:%`, limit]
+          [`bill:${state}:${session.toLowerCase()}:%`, limit, category]
         )
       ).rows
     )
@@ -78,8 +80,8 @@ try {
              processing_error=null,processing_error_category=null,next_attempt_at=null,updated_at=now()
              where id=$1 and source_url=$2 and updated_at=$3 and content_hash is not distinct from $4
                and processing_error is not distinct from $5 and processing_status='unsupported'
-               and processing_error_category='unsupported-format' returning id`,
-            [row.id, row.source_url, row.updated_at, row.content_hash, row.processing_error]
+               and processing_error_category=$6 returning id`,
+            [row.id, row.source_url, row.updated_at, row.content_hash, row.processing_error, category]
           )
           requeued = result.rowCount === 1
           if (!requeued) {
