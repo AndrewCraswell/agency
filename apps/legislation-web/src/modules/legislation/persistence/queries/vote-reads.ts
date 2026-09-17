@@ -3,6 +3,7 @@ import { bills, legislativeSessions, people, votePositions, votes } from "@repo/
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, desc, eq, exists, gt, inArray, isNull, lt, or, sql, type SQL } from "drizzle-orm"
 import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
+import { voteDateBound, voteSortInstant, voteSortTimestamp } from "./vote-occurrence"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -132,8 +133,8 @@ export async function listVoteReads(database: LegislationDatabase, input: VoteLi
               eq(bills.jurisdictionId, nonblank(input.jurisdictionId, "jurisdictionId")),
               eq(legislativeSessions.jurisdictionId, nonblank(input.jurisdictionId, "jurisdictionId"))
             ),
-        input.from === undefined ? undefined : dateBound(votes.heldAt, input.from, "from"),
-        input.to === undefined ? undefined : dateBound(votes.heldAt, input.to, "to"),
+        input.from === undefined ? undefined : voteDateBound(input.from, "from"),
+        input.to === undefined ? undefined : voteDateBound(input.to, "to"),
         personPredicate,
         heldPredicate
       )
@@ -240,12 +241,17 @@ export async function listPersonVotePositionReads(
         input.organizationId === undefined
           ? undefined
           : eq(votes.organizationId, nonblank(input.organizationId, "organizationId")),
-        input.from === undefined ? undefined : dateBound(votes.heldAt, input.from, "from"),
-        input.to === undefined ? undefined : dateBound(votes.heldAt, input.to, "to"),
+        input.from === undefined ? undefined : voteDateBound(input.from, "from"),
+        input.to === undefined ? undefined : voteDateBound(input.to, "to"),
         cursor === undefined ? undefined : personVoteAfter(cursor)
       )
     )
-    .orderBy(desc(votes.heldAt), asc(votes.id), asc(votePositions.sourceSequence), asc(votePositions.sourceIdentity))
+    .orderBy(
+      desc(voteSortTimestamp()),
+      asc(votes.id),
+      asc(votePositions.sourceSequence),
+      asc(votePositions.sourceIdentity)
+    )
     .limit(limit + 1)
   const items = rows.slice(0, limit)
   items.forEach((item) => assertVotePositionSequence(item.position))
@@ -281,41 +287,33 @@ export async function assertPersonExists(database: LegislationDatabase, personId
 }
 
 function voteOrder(sort: VoteSort) {
-  return sort === "held-asc" ? [asc(votes.heldAt), asc(votes.id)] : [desc(votes.heldAt), asc(votes.id)]
+  return sort === "held-asc" ? [asc(voteSortTimestamp()), asc(votes.id)] : [desc(voteSortTimestamp()), asc(votes.id)]
 }
 function voteAfter(cursor: VoteCursor, sort: VoteSort): SQL {
   const heldAt = new Date(cursor.heldAt)
   return sort === "held-asc"
-    ? (or(gt(votes.heldAt, heldAt), and(eq(votes.heldAt, heldAt), gt(votes.id, cursor.id))) ?? sql`false`)
-    : (or(lt(votes.heldAt, heldAt), and(eq(votes.heldAt, heldAt), gt(votes.id, cursor.id))) ?? sql`false`)
+    ? (or(gt(voteSortTimestamp(), heldAt), and(eq(voteSortTimestamp(), heldAt), gt(votes.id, cursor.id))) ?? sql`false`)
+    : (or(lt(voteSortTimestamp(), heldAt), and(eq(voteSortTimestamp(), heldAt), gt(votes.id, cursor.id))) ?? sql`false`)
 }
 function personVoteAfter(cursor: PersonVoteCursor): SQL {
   const heldAt = new Date(cursor.heldAt)
   return (
     or(
-      lt(votes.heldAt, heldAt),
-      and(eq(votes.heldAt, heldAt), gt(votes.id, cursor.voteId)),
+      lt(voteSortTimestamp(), heldAt),
+      and(eq(voteSortTimestamp(), heldAt), gt(votes.id, cursor.voteId)),
       and(
-        eq(votes.heldAt, heldAt),
+        eq(voteSortTimestamp(), heldAt),
         eq(votes.id, cursor.voteId),
         gt(votePositions.sourceSequence, cursor.sourceSequence)
       ),
       and(
-        eq(votes.heldAt, heldAt),
+        eq(voteSortTimestamp(), heldAt),
         eq(votes.id, cursor.voteId),
         eq(votePositions.sourceSequence, cursor.sourceSequence),
         gt(votePositions.sourceIdentity, cursor.sourceIdentity)
       )
     ) ?? sql`false`
   )
-}
-function dateBound(expression: typeof votes.heldAt, value: string, direction: "from" | "to"): SQL {
-  if (isIsoDate(value)) {
-    return direction === "from"
-      ? sql`${expression} >= ${value}::date`
-      : sql`${expression} < (${value}::date + interval '1 day')`
-  }
-  return direction === "from" ? sql`${expression} >= ${value}` : sql`${expression} <= ${value}`
 }
 function validateDateRange(from: string | undefined, to: string | undefined): void {
   if (from !== undefined && !validBound(from)) {
@@ -350,10 +348,11 @@ function nonblank(value: string, name: string) {
   return normalized
 }
 function requiredHeldAt(vote: VoteRead) {
-  if (!(vote.heldAt instanceof Date) || Number.isNaN(vote.heldAt.valueOf())) {
-    throw new LegislationError("unprocessable", "Vote heldAt is incomplete")
+  const anchor = voteSortInstant(vote)
+  if (!(anchor instanceof Date) || Number.isNaN(anchor.valueOf())) {
+    throw new LegislationError("unprocessable", "Vote date is incomplete")
   }
-  return vote.heldAt.toISOString()
+  return anchor.toISOString()
 }
 export function assertCanonicalVotePersistence(vote: Pick<VoteRead, "timelineComplete">): void {
   if (!vote.timelineComplete) {

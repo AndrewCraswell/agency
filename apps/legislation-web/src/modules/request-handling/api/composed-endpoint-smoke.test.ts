@@ -210,6 +210,7 @@ function vote(): VoteRead {
     createdAt: new Date("2026-08-25T00:00:00.000Z"),
     eventId: null,
     heldAt: new Date("2026-08-24T12:00:00.000Z"),
+    heldDate: null,
     id: VOTE_ID,
     motion: "On passage",
     noCount: 1,

@@ -1,5 +1,6 @@
 import { mapConcurrent } from "@repo/legislation-core/concurrency/map-concurrent"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
+import { voteOccurrence } from "../../legislation/persistence/queries/vote-occurrence"
 import type {
   Page,
   PersonVoteListInput,
@@ -263,7 +264,7 @@ export function projectVote(vote: VoteRead, apiBaseUrl: string): VoteSummary {
   return projectVoteSummary(voteInput(vote), context(vote, apiBaseUrl))
 }
 function voteInput(vote: VoteRead) {
-  const heldAt = requiredDate(vote.heldAt, "Vote heldAt")
+  const { date, heldAt } = voteOccurrence(vote)
   return {
     billId: vote.billId,
     classification: vote.classification,
@@ -278,7 +279,7 @@ function voteInput(vote: VoteRead) {
       proxy: count(vote.proxyCount, "proxy"),
       yes: count(vote.yesCount, "yes")
     },
-    date: heldAt.toISOString().slice(0, 10),
+    date,
     heldAt,
     id: vote.id,
     motion: vote.motion,

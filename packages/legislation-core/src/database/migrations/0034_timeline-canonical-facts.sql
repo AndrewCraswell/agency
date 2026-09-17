@@ -39,7 +39,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'votes_timeline_complete_check' AND conrelid = 'legislation.votes'::regclass) THEN
     ALTER TABLE "legislation"."votes" ADD CONSTRAINT "votes_timeline_complete_check" CHECK (
       NOT "timeline_complete" OR (
-        "held_at" IS NOT NULL AND "result" IN ('passed', 'failed', 'other') AND
+        ("held_at" IS NOT NULL OR "held_date" IS NOT NULL) AND "result" IN ('passed', 'failed', 'other') AND
         "yes_count" IS NOT NULL AND "no_count" IS NOT NULL AND "absent_count" IS NOT NULL AND
         "abstain_count" IS NOT NULL AND "not_voting_count" IS NOT NULL AND "present_count" IS NOT NULL AND
         "proxy_count" IS NOT NULL AND "paired_count" IS NOT NULL AND "other_count" IS NOT NULL AND

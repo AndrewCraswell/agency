@@ -11,7 +11,7 @@ import {
   votes
 } from "@repo/legislation-core/database/schema/schema"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
-import { and, asc, eq, gt, gte, inArray, isNull, lte, or } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, isNull, or, type SQL } from "drizzle-orm"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import {
   projectAmendmentSummary,
@@ -37,6 +37,7 @@ import {
   compareAmendmentReadOrder
 } from "./amendment-reads"
 import { listBillDocuments } from "./document-reads"
+import { voteDateBound, voteSortInstant, voteSortTimestamp } from "./vote-occurrence"
 import { assertCanonicalVotePersistence, assertVotePositionSequence, listVotePositionReads } from "./vote-reads"
 
 const MAX_CHILD_LIMIT = 25
@@ -125,7 +126,7 @@ export async function getBillDetailRead(
       .select()
       .from(votes)
       .where(eq(votes.billId, id))
-      .orderBy(asc(votes.heldAt), asc(votes.id))
+      .orderBy(asc(voteSortTimestamp()), asc(votes.id))
       .limit(childLimit + 1),
     listBillDocuments(database, { billId: id, limit: childLimit }),
     buildStructuredAmendmentListQuery(database, { billId: id }, undefined, "submitted-desc", childLimit),
@@ -280,15 +281,15 @@ export async function listBillVoteReads(
     .where(
       and(
         eq(votes.billId, billId),
-        after === undefined ? undefined : afterVoteKey(votes.heldAt, votes.id, after),
+        after === undefined ? undefined : afterVoteKey(voteSortTimestamp(), votes.id, after),
         input.classification === undefined ? undefined : eq(votes.classification, input.classification),
-        input.from === undefined ? undefined : gte(votes.heldAt, input.from),
-        input.to === undefined ? undefined : lte(votes.heldAt, input.to),
+        input.from === undefined ? undefined : voteDateBound(input.from.toISOString(), "from"),
+        input.to === undefined ? undefined : voteDateBound(input.to.toISOString(), "to"),
         input.organizationId === undefined ? undefined : eq(votes.organizationId, input.organizationId),
         input.result === undefined ? undefined : voteResultCondition(input.result)
       )
     )
-    .orderBy(asc(votes.heldAt), asc(votes.id))
+    .orderBy(asc(voteSortTimestamp()), asc(votes.id))
     .limit(limit + 1)
   const items: VoteDetail[] = []
   for (const vote of voteRows.slice(0, limit)) {
@@ -641,10 +642,10 @@ function isCursor(value: unknown): value is Readonly<{ key: unknown; scope: unkn
 }
 
 function voteKey(value: typeof votes.$inferSelect): VoteKey {
-  return { heldAt: value.heldAt?.toISOString() ?? null, id: value.id }
+  return { heldAt: voteSortInstant(value)?.toISOString() ?? null, id: value.id }
 }
 
-function afterVoteKey(date: AnyPgColumn, id: AnyPgColumn, key: VoteKey) {
+function afterVoteKey(date: SQL, id: AnyPgColumn, key: VoteKey) {
   return key.heldAt === null
     ? and(isNull(date), gt(id, key.id))
     : or(isNull(date), gt(date, new Date(key.heldAt)), and(eq(date, new Date(key.heldAt)), gt(id, key.id)))

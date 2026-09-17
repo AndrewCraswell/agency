@@ -81,7 +81,7 @@ describe("Open States normalization", () => {
       otherCount: undefined,
       heldAt: new Date("2025-03-01T15:00:00Z")
     },
-    { absent: 1, date: "2025-03-01", complete: false, otherCount: 0, heldAt: undefined },
+    { absent: 1, date: "2025-03-01", complete: true, otherCount: 0, heldAt: undefined },
     { absent: 1, date: "2025-03-01T10:00:00", complete: false, otherCount: 0, heldAt: undefined }
   ])(
     "preserves vote categories and gates completeness: $date / $absent",

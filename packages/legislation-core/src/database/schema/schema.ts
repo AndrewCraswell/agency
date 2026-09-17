@@ -1291,6 +1291,8 @@ export const votes = legislationSchema.table(
     motion: text("motion").notNull(),
     result: text("result"),
     heldAt: timestamp("held_at", { withTimezone: true }),
+    /** Source calendar date when no exact vote instant was reported. */
+    heldDate: date("held_date"),
     yesCount: integer("yes_count"),
     noCount: integer("no_count"),
     absentCount: integer("absent_count"),
@@ -1328,7 +1330,7 @@ export const votes = legislationSchema.table(
     check("votes_source_sequence_check", sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`),
     check(
       "votes_timeline_complete_check",
-      sql`not ${table.timelineComplete} or (${table.heldAt} is not null and ${table.result} in ('passed', 'failed', 'other') and ${table.yesCount} is not null and ${table.noCount} is not null and ${table.absentCount} is not null and ${table.abstainCount} is not null and ${table.notVotingCount} is not null and ${table.presentCount} is not null and ${table.proxyCount} is not null and ${table.pairedCount} is not null and ${table.otherCount} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null and ${table.sourceSequence} is not null)`
+      sql`not ${table.timelineComplete} or ((${table.heldAt} is not null or ${table.heldDate} is not null) and ${table.result} in ('passed', 'failed', 'other') and ${table.yesCount} is not null and ${table.noCount} is not null and ${table.absentCount} is not null and ${table.abstainCount} is not null and ${table.notVotingCount} is not null and ${table.presentCount} is not null and ${table.proxyCount} is not null and ${table.pairedCount} is not null and ${table.otherCount} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null and ${table.sourceSequence} is not null)`
     ),
     index("votes_bill_idx").on(table.billId, table.heldAt),
     index("votes_bill_timeline_idx").on(table.billId, table.heldAt, table.sourceSequence, table.id),

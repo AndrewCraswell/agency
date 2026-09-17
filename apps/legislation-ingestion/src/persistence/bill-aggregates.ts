@@ -453,6 +453,7 @@ export async function upsertBillAggregate(
       await observeCanonicalRecord(transaction, {
         fields: {
           heldAt: vote.vote.heldAt,
+          heldDate: vote.vote.heldDate,
           motion: vote.vote.motion,
           noCount: vote.vote.noCount,
           otherCount: vote.vote.otherCount,

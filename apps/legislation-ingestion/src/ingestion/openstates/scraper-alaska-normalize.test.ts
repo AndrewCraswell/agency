@@ -105,8 +105,15 @@ it("maps Alaska canonical identities without inventing vote instants or people",
   expect(rows).toHaveLength(1)
   expect(rows[0]?.aggregate.bill.id).toContain("ak:34")
   expect(rows[0]?.aggregate.votes?.[0]?.vote.heldAt).toBeUndefined()
+  expect(rows[0]?.aggregate.votes?.[0]?.vote.heldDate).toBe("2026-05-07")
   expect(rows[0]?.aggregate.sponsors?.[0]?.personId).toBeUndefined()
   expect(rows[0]?.unresolvedPositions).toBe(1)
+})
+
+it("accepts a fully evidenced date-only vote without an invented instant", async () => {
+  const rows = await normalizeFixture([], ["(H) PASSED Y1 N0 #2441"])
+  expect(rows[0]?.aggregate.votes?.[0]?.vote).toMatchObject({ heldDate: "2026-05-07", timelineComplete: true })
+  expect(rows[0]?.aggregate.votes?.[0]?.vote.heldAt).toBeUndefined()
 })
 
 it("preserves distinct qualified sponsor observations without resolving people", async () => {

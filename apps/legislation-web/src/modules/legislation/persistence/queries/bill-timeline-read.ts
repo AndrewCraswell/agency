@@ -10,6 +10,7 @@ import { billActionTimestamp } from "@repo/legislation-core/domain/bill-action-t
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { and, asc, eq, gt, gte, lt, lte, or, sql, type SQL, type SQLWrapper } from "drizzle-orm"
 import { isIsoDate, isRfc3339Timestamp } from "../../../request-handling/api/canonical-projection"
+import { voteDateBound, voteSortInstant, voteSortTimestamp } from "./vote-occurrence"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -122,15 +123,15 @@ async function listVotes(
       and(
         eq(votes.billId, scope.billId),
         eq(votes.timelineComplete, true),
-        sql`${votes.heldAt} is not null`,
-        fromPredicate(votes.heldAt, scope.from),
-        toPredicate(votes.heldAt, scope.to),
-        afterCursorPredicate(cursor, votes.heldAt, votes.sourceSequence, "vote", votes.id)
+        sql`${voteSortTimestamp()} is not null`,
+        scope.from === null ? undefined : voteDateBound(scope.from, "from"),
+        scope.to === null ? undefined : voteDateBound(scope.to, "to"),
+        afterCursorPredicate(cursor, voteSortTimestamp(), votes.sourceSequence, "vote", votes.id)
       )
     )
-    .orderBy(asc(votes.heldAt), asc(votes.sourceSequence), asc(votes.id))
+    .orderBy(asc(voteSortTimestamp()), asc(votes.sourceSequence), asc(votes.id))
     .limit(limit)
-  return rows.map(({ vote }) => orderedRow({ kind: "vote", vote }, vote.heldAt, vote.sourceSequence))
+  return rows.map(({ vote }) => orderedRow({ kind: "vote", vote }, voteSortInstant(vote), vote.sourceSequence))
 }
 async function listOutcomes(
   database: LegislationDatabase,

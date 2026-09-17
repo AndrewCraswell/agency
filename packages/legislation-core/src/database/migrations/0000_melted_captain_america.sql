@@ -187,6 +187,7 @@ CREATE TABLE "legislation"."votes" (
 	"motion" text NOT NULL,
 	"result" text,
 	"held_at" timestamp with time zone,
+	"held_date" date,
 	"yes_count" integer,
 	"no_count" integer,
 	"other_count" integer,

@@ -2,6 +2,13 @@
 
 ## September 16 continuation and identity verification
 
+September 17 vote-reader integration:
+
+- [x] W readers now reuse the existing `date`/nullable `heldAt` public shape. Bill detail, vote lists, person-vote pagination and mixed bill timelines use a shared internal ordering anchor; projected unknown instants remain null. The query-service timeline also retains the source calendar date.
+- [x] Documented calendar filtering: exact-time votes retain timestamp comparisons; unknown-time votes match a boundary reporting day conservatively. Internal midnight anchors are not asserted event times. See W [vote date precision](../../../legislation-web/docs/operations/vote-date-precision.md).
+- [x] Sixteen focused reader/projection tests passed. Real PostgreSQL integration passed one-item pagination in both directions, whole-day filters and a midday filter that returns only the unknown-time boundary-day vote. Inserts rolled back in the isolated date-test database. W type-check passed.
+- [ ] Production schema transition, date-aware index/query-plan acceptance, expanded timeline/position pagination acceptance, journal replay and authenticated API/MCP validation remain open. Nothing in this local pass establishes production bill-detail readiness.
+
 September 17 vote-date implementation checkpoint:
 
 - [x] Implemented strict source-date parsing: valid ISO calendar dates produce `heldDate` only; timezone-qualified timestamps produce `heldAt`; invalid dates, fuzzy dates and timezone-less timestamps produce neither. Ten parser cases and the expanded normalizer/Alaska suite pass (47 tests total); ingestion type-check passed.

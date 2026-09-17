@@ -115,7 +115,7 @@ function projectTimelineItem(item: BillTimelinePersistenceRead, apiBaseUrl: stri
     }
     case "vote": {
       const vote = item.vote
-      const heldAt = requiredDate(vote.heldAt, "timeline vote heldAt")
+      const { date, heldAt } = voteOccurrence(vote)
       const summary = projectVoteSummary(
         {
           billId: vote.billId,
@@ -131,7 +131,7 @@ function projectTimelineItem(item: BillTimelinePersistenceRead, apiBaseUrl: stri
             proxy: requiredCount(vote.proxyCount, "proxy"),
             yes: requiredCount(vote.yesCount, "yes")
           },
-          date: heldAt,
+          date,
           heldAt,
           id: vote.id,
           motion: vote.motion,
@@ -367,3 +367,4 @@ function projectActionOrganization(item: Extract<BillTimelinePersistenceRead, { 
 function isDate(value: string): boolean {
   return isIsoDate(value) || isRfc3339Timestamp(value)
 }
+import { voteOccurrence } from "../../legislation/persistence/queries/vote-occurrence"

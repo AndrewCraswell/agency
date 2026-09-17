@@ -6,6 +6,8 @@ do not import I or M source to seed a test. Use canonical seeds or a root-coordi
 
 ## Commands
 
+For date-only and timestamp vote storage/reader acceptance, see [vote date precision](vote-date-precision.md).
+
 Run from W (`apps/legislation-web`), or use `pnpm --filter legislation-web <script>` from the repository root:
 
 | Command | Scope |

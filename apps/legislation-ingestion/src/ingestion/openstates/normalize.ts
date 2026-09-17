@@ -15,6 +15,7 @@ import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model
 import { openStatesBillStatus } from "@repo/legislation-core/domain/openstates-bill-status"
 import { z } from "zod"
 import { outgoingRelationProvenance } from "../relation-provenance.js"
+import { parseVoteDate } from "./vote-date.js"
 
 const safeArray = <T extends z.ZodType>(item: T) =>
   z.preprocess(
@@ -433,11 +434,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         (option) => (counts.get(option) ?? 0) === (positionCounts.get(option) ?? 0)
       )
     const countFor = (option: string) => counts.get(option) ?? (countsReconciled ? 0 : undefined)
-    const heldAt =
-      vote.start_date !== undefined && /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(vote.start_date)
-        ? new Date(vote.start_date)
-        : undefined
-    const validHeldAt = heldAt !== undefined && Number.isFinite(heldAt.valueOf()) ? heldAt : undefined
+    const occurrence = parseVoteDate(vote.start_date)
     let result = vote.result
     if (result === "pass") {
       result = "passed"
@@ -454,7 +451,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
           nonBlank(vote.motion_classification[0] ?? vote.classification[0])
             ?.toLowerCase()
             .replaceAll("_", "-") ?? "recorded",
-        heldAt: validHeldAt,
+        ...occurrence,
         id: canonicalVoteId,
         motion: nonBlank(vote.motion_text) ?? nonBlank(vote.motion) ?? rollCallNumber ?? "Recorded vote",
         noCount: countFor("no"),
@@ -477,7 +474,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         sourceSequence: voteOrdinal,
         timelineComplete:
           countsReconciled &&
-          validHeldAt !== undefined &&
+          (occurrence.heldAt !== undefined || occurrence.heldDate !== undefined) &&
           context.retrievedAt !== undefined &&
           Number.isFinite(context.retrievedAt.valueOf()) &&
           voteSourceUrl?.startsWith("https://") === true &&

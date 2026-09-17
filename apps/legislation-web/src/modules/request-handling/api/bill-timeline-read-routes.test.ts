@@ -112,6 +112,7 @@ function rows(): BillTimelinePersistenceRead[] {
         createdAt: new Date("2026-02-01T12:00:00.000Z"),
         eventId: null,
         heldAt: new Date("2026-02-01T11:00:00.000Z"),
+        heldDate: null,
         id: "vote:1",
         noCount: 2,
         notVotingCount: 1,

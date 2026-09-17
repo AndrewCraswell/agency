@@ -3070,7 +3070,7 @@ export class LegislationQueryService {
         type: "action" as const
       })),
       ...detail.votes.map((vote) => ({
-        date: vote.heldAt?.toISOString(),
+        date: vote.heldAt?.toISOString() ?? vote.heldDate,
         description: vote.motion,
         id: vote.id,
         result: vote.result,

@@ -37,6 +37,7 @@ function vote(overrides: Partial<VoteRead> = {}): VoteRead {
     createdAt: new Date("2026-08-25T00:00:00.000Z"),
     eventId: null,
     heldAt: new Date("2026-08-24T12:00:00.000Z"),
+    heldDate: null,
     id: "vote:us:119:house:1",
     motion: "On passage",
     noCount: 2,
@@ -76,6 +77,11 @@ function service(overrides: Partial<VoteReadApi> = {}): VoteReadApi {
 }
 
 describe("vote read API handler", () => {
+  it("projects a calendar-date vote without a fabricated heldAt timestamp", () => {
+    const summary = projectVote(vote({ heldAt: null, heldDate: "2026-05-07" }), "https://api.example.test")
+    expect(summary.date).toBe("2026-05-07")
+    expect(summary.heldAt).toBeNull()
+  })
   it("preserves persisted nonbinary counts and a bounded position continuation for bill consumers", () => {
     const row = vote({ notVotingCount: 12, presentCount: 1, otherCount: 0, sourceUpdatedAt: null })
     const summary = projectVote(row, "https://api.example.test")
