@@ -3731,7 +3731,23 @@ at 6 CFR 37.5; a bad bearer returned 401. The API-backed MCP tool returned the s
 `artifacts/regulatory-backfills/annual-2024-legal-search-http-canary.json` and
 `artifacts/regulatory-backfills/annual-2024-legal-search-mcp-canary.json`.
 
-This supplies current-code, difficult-table and historical-annual portions of local EVAL-11. It is not a deployed
-canary, contains no vectors and does not yet cover the required Federal Register publication case. Human relevance
-review, selected route, bounded persisted vectors and deployed acceptance remain open. Recurring ingestion and bulk
-embeddings remain disabled.
+The retained Federal Register database contained the other legacy shape: passage tables existed but preparation failure
+columns, provenance and dispatch tables did not. The convergence migration now repairs partial tables and derives the
+immutable source hash for pre-existing passage generations. Its regression covers both the missing-table and partial-table
+forms. The retained database backfilled provenance for all 220 passage generations, after which exact copy validation
+passed instead of correctly stopping at `legal_copy_source_provenance_changed`.
+
+All 12 retained January 18, 2000 final-rule observations were then copied and acknowledged as 12 generations and 451
+passages. The public search implementation now serves the already-declared `regulatory_publication` corpus with
+publication-kind and date filters while locking source rights, acknowledged preparations, target receipts and source/target
+copy revisions. An authenticated HTTP request for the South Texas onions assessment rate returned the exact final-rule
+version `fba75581-a302-4967-af57-2b7d287999d0`, citation 65 FR 2526 and its official source URL; a bad bearer returned 401.
+The API-backed `search_regulations` MCP tool returned the same document/version/citation and called only
+`/api/search/legal` with its separate API credential. Evidence is
+`artifacts/regulatory-backfills/prepare-fr-final-rules-pilot.json`,
+`artifacts/regulatory-backfills/fr-final-rule-legal-search-http-canary.json` and
+`artifacts/regulatory-backfills/fr-final-rule-legal-search-mcp-canary.json`.
+
+This supplies current-code, difficult-table, historical-annual and Federal Register publication portions of local
+EVAL-11. It is not a deployed canary and contains no vectors. Human relevance review, selected route, bounded persisted
+vectors and deployed acceptance remain open. Recurring ingestion and bulk embeddings remain disabled.

@@ -1,10 +1,22 @@
-import { legalSearchRequestSchema } from "@repo/legislation-core/api-client/legal-search-contract"
+import {
+  legalSearchPageSchema,
+  legalSearchRequestSchema
+} from "@repo/legislation-core/api-client/legal-search-contract"
 import { getRequestContext } from "@repo/legislation-core/auth/request-context"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import { z } from "zod"
 import { createLegalEditionSearch } from "./legal-edition-search"
+import { createLegalPublicationSearch } from "./legal-publication-search"
+
+type LegalSearchOperationPage = {
+  items: z.output<typeof legalSearchPageSchema>["data"]
+  nextCursor?: string
+  truncated: boolean
+  warnings: string[]
+  legal: z.output<typeof legalSearchPageSchema>["meta"]["legal"]
+}
 
 /** Public search orchestration. Incomplete requested capabilities fail explicitly, never disappear from the scope. */
 export function createLegalSearch(
@@ -14,7 +26,9 @@ export function createLegalSearch(
 ) {
   const searchEditions =
     target === undefined ? undefined : createLegalEditionSearch(source, target, allowedOrganizations)
-  return async (value: unknown, origin: string) => {
+  const searchPublications =
+    target === undefined ? undefined : createLegalPublicationSearch(source, target, allowedOrganizations)
+  return async (value: unknown, origin: string): Promise<LegalSearchOperationPage> => {
     const identity = getRequestContext()?.identity
     if (!identity?.userId) {
       throw new LegislationError("unauthorized", "Bearer token is absent or invalid")
@@ -32,7 +46,7 @@ export function createLegalSearch(
       new LegislationError("dependency_unavailable", "Requested search capability is not available", {
         details: { reason }
       })
-    if (input.corpora.length !== 1 || input.corpora[0] !== "regulation") {
+    if (input.corpora.length !== 1 || !["regulation", "regulatory_publication"].includes(input.corpora[0] ?? "")) {
       throw unavailable("corpus_search_unavailable")
     }
     if (input.jurisdictionIds?.some((id) => id !== "jurisdiction:us")) {
@@ -46,6 +60,73 @@ export function createLegalSearch(
     }
     if (searchEditions === undefined) {
       throw unavailable("lexical_search_unavailable")
+    }
+    if (input.corpora[0] === "regulatory_publication") {
+      if (searchPublications === undefined) {
+        throw unavailable("lexical_search_unavailable")
+      }
+      const { cursor: _cursor, ...filters } = input
+      const requestBinding = digest(JSON.stringify({ ...filters, corpora: input.corpora.toSorted() }))
+      const page = await searchPublications({
+        query: input.query,
+        publicationKinds: input.publicationKinds,
+        publishedFrom: input.publishedFrom,
+        publishedTo: input.publishedTo,
+        limit: input.limit,
+        requestBinding,
+        ...(input.cursor === undefined ? {} : { cursor: input.cursor })
+      })
+      return {
+        items: page.hits.map((hit) => ({
+          kind: "publication" as const,
+          corpus: "regulatory_publication" as const,
+          id: hit.document_id,
+          versionId: hit.version_id,
+          passageId: hit.passageId,
+          canonicalUrl: new URL(
+            `/api/legal/versions/${hit.version_id}/text?sourceObservationId=${hit.observation_id}`,
+            origin
+          ).href,
+          sources: [
+            {
+              provider: hit.source_id,
+              sourceUrl: hit.source_url,
+              sourceUpdatedAt: null,
+              retrievedAt: hit.retrieved_at,
+              isOfficial: true,
+              publisher: hit.publisher,
+              supplier: hit.publisher,
+              attribution: hit.attribution
+            }
+          ],
+          updatedAt: hit.updated_at,
+          title: hit.heading,
+          heading: hit.heading,
+          citation: hit.citation,
+          jurisdiction: { id: "jurisdiction:us", name: "United States" },
+          agencies: [],
+          snippet: hit.passage.text.slice(0, 500),
+          matchMode: "lexical" as const,
+          sourceLocator: hit.source_locator,
+          versionHash: hit.version_hash,
+          coverageWarnings: ["Agency mapping is not available for this result."],
+          publicationKind: hit.publication_kind,
+          publishedOn: hit.published_on,
+          effectiveOn: hit.effective_on,
+          sourceObservationId: hit.observation_id
+        })),
+        truncated: page.candidateSetTruncated,
+        warnings: page.candidateSetTruncated
+          ? ["The ranked publication window is truncated. Refine the query or date filters."]
+          : [],
+        legal: {
+          lexicalGeneration: page.generation,
+          embeddingGeneration: null,
+          effectiveMode: "lexical" as const,
+          degraded: input.mode !== "lexical",
+          candidateSetTruncated: page.candidateSetTruncated
+        }
+      }
     }
     const explicit = input.editionIds === undefined ? undefined : z.array(z.uuid()).safeParse(input.editionIds)
     const codes = input.codeIds === undefined ? undefined : z.array(z.uuid()).safeParse(input.codeIds)
@@ -95,8 +176,8 @@ export function createLegalSearch(
       items: page.hits.map((hit) => {
         const section = /^cfr:(\d+):section:(.+)$/.exec(hit.nativeId)
         return {
-          kind: "provision",
-          corpus: "regulation",
+          kind: "provision" as const,
+          corpus: "regulation" as const,
           id: hit.provisionId,
           versionId: hit.versionId,
           passageId: hit.passageId,
@@ -121,7 +202,7 @@ export function createLegalSearch(
           agencies: [],
           code: { id: hit.codeId, name: hit.codeName },
           snippet: hit.passage.text.slice(0, 500),
-          matchMode: "lexical",
+          matchMode: "lexical" as const,
           sourceLocator: hit.sourceLocator,
           versionHash: hit.versionHash,
           coverageWarnings: [
@@ -139,8 +220,8 @@ export function createLegalSearch(
             sourceLocator: hit.sourceLocator,
             sourceCurrencyDate: hit.sourceCurrencyDate,
             selectedDate: hit.sourceId === "govinfo-cfr" ? hit.issueDate : null,
-            basis: hit.sourceId === "govinfo-cfr" ? "published_edition" : "observed_snapshot",
-            legalStatus: "unknown"
+            basis: hit.sourceId === "govinfo-cfr" ? ("published_edition" as const) : ("observed_snapshot" as const),
+            legalStatus: "unknown" as const
           }
         }
       }),

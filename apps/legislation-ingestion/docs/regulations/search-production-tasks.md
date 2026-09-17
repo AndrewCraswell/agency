@@ -289,9 +289,10 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
   Title 3 scope. Authenticated typed HTTP and API-backed streamable HTTP MCP both returned the same 3 CFR 102.130
   identity, and invalid API credentials returned 401. The retained 2024 annual Title 6 edition also prepared all 659
   versions into 996 passages and passed exact copy acknowledgement. Edition-scoped HTTP and MCP requests for `REAL ID
-  deadline` returned the expected historical 6 CFR 37.5 version through the API boundary. This remains local lexical
-  evidence: selected-model vectors, a Federal Register publication case and deployed acceptance are still required, so
-  EVAL-11 stays unchecked.
+  deadline` returned the expected historical 6 CFR 37.5 version through the API boundary. Twelve retained Federal
+  Register final rules were copied as 451 passages, and publication-kind/date-filtered HTTP and MCP requests returned
+  the exact 65 FR 2526 final rule. This remains local lexical evidence: selected-model vectors and deployed acceptance
+  are still required, so EVAL-11 stays unchecked.
 - [ ] **EVAL-12 Record the selected regulatory route.** Publish model/dimensions/input contract, optional reranker,
   quality/cost rationale, unpassed cohorts and rollback configuration. **Done:** EVAL-01 thresholds, EVAL-09 and EVAL-11
   pass; explicitly authorize only the qualified regulatory scope for bulk jobs. This does not authorize old-vector rebuilds.
