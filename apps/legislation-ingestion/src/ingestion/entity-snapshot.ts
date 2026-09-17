@@ -31,6 +31,8 @@ export interface EntitySnapshot {
   personExternalIdentifiers?: PersonExternalIdentifierInsert[]
   personJurisdictions?: PersonJurisdictionInsert[]
   people: PersonInsert[]
+  /** Replace only active terms from termSourceProvider for these people, preserving ended history. */
+  activeTermPersonIds?: string[]
   termPersonIds?: string[]
   termSourceProvider?: string
   terms: TermInsert[]

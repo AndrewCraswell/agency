@@ -182,6 +182,10 @@ export function preparePeopleRepositoryImport(
   const snapshot: EntitySnapshot = {
     people,
     terms,
+    // Current source-complete identities can safely replace only their active
+    // Open States term. Preserve any previously accepted ended history while a
+    // contradictory historical file remains quarantined.
+    activeTermPersonIds: currentPeople.map((person) => person.id),
     // Each accepted person's role history is complete for this repository revision.
     // Replace that person's Open States terms so a temporary current-roster fallback
     // cannot remain beside the recovered history after a quarantined file is fixed.

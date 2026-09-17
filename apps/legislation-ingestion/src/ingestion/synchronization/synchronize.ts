@@ -231,7 +231,10 @@ async function synchronizeOpenStatesEntitiesForScope(
       retrievedAt
     })
     const snapshot = mergeOpenStatesEntitySnapshots(normalizedPeople, normalizedCommittees)
-    await replaceEntitySnapshot(context.database, `jurisdiction:${identity.scope}`, snapshot)
+    await replaceEntitySnapshot(context.database, `jurisdiction:${identity.scope}`, snapshot, {
+      membershipDetectionDate: retrievedAt.toISOString().slice(0, 10),
+      organizationSourceProvider: "openstates"
+    })
     const records =
       snapshot.people.length + snapshot.terms.length + snapshot.organizations.length + snapshot.memberships.length
     counts.discovered += records

@@ -274,6 +274,18 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
       const quarantinedPerson = await database.query.people.findFirst({
         where: eq(schema.people.sourceId, `ocd-person/import-${state}-lower-0`)
       })
+      const retainedHistoryId = `${quarantinedPerson?.id}:term:retained-history`
+      await database.insert(schema.legislativeTerms).values({
+        chamber: "lower",
+        endDate: "2020-01-01",
+        id: retainedHistoryId,
+        isActive: false,
+        jurisdictionId: `jurisdiction:${state}`,
+        personId: quarantinedPerson!.id,
+        sourceId: "retained-history",
+        sourceProvider: "openstates",
+        startDate: "2019-01-01"
+      })
       const malformed = {
         ...current[0]!,
         content: current[0]!.content.replace(
@@ -293,8 +305,9 @@ describePostgres.sequential("replaceEntitySnapshot", () => {
         ).status
       ).toBe("partially_imported")
       const partialTerms = await readTerms()
-      expect(partialTerms.map((term) => term.id)).toEqual(expect.arrayContaining(stored.map((term) => term.id)))
       expect(partialTerms).toHaveLength(stored.length + 1)
+      expect(partialTerms.some((term) => term.id === retainedHistoryId && term.isActive === false)).toBe(true)
+      expect(partialTerms.filter((term) => term.personId === quarantinedPerson?.id && term.isActive)).toHaveLength(1)
       expect(
         await database.query.people.findFirst({
           where: eq(schema.people.sourceId, `ocd-person/import-${state}-lower-0`)

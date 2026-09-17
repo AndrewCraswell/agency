@@ -186,6 +186,7 @@ export async function replaceEntitySnapshot(
       (snapshot.personDetailPersonIds?.length ?? 0) > 0 ||
       (snapshot.personExternalIdentifiers?.length ?? 0) > 0 ||
       (snapshot.personJurisdictions?.length ?? 0) > 0 ||
+      (snapshot.activeTermPersonIds?.length ?? 0) > 0 ||
       (snapshot.termPersonIds?.length ?? 0) > 0)
   ) {
     throw new Error("An organization-only entity snapshot cannot contain people or terms")
@@ -198,8 +199,12 @@ export async function replaceEntitySnapshot(
   const personDetailValues = snapshot.personDetails ?? []
   const personExternalIdentifierValues = snapshot.personExternalIdentifiers ?? []
   const personJurisdictionValues = snapshot.personJurisdictions ?? []
+  const activeTermPersonIds = [...new Set(snapshot.activeTermPersonIds ?? [])]
   const termPersonIds = [...new Set(snapshot.termPersonIds ?? [])]
   const termSourceProvider = snapshot.termSourceProvider
+  if ((activeTermPersonIds.length > 0 || termPersonIds.length > 0) && termSourceProvider === undefined) {
+    throw new Error("Term replacement requires a source provider")
+  }
   const observationSchema = z.object({ retrievedAt: z.iso.datetime({ offset: true }), revision: z.string().min(1) })
   const observation =
     options.enforceObservationOrder === true ? observationSchema.parse(options.checkpoint?.cursor) : undefined
@@ -444,6 +449,17 @@ export async function replaceEntitySnapshot(
           and(
             inArray(legislativeTerms.personId, termPersonIds),
             eq(legislativeTerms.sourceProvider, termSourceProvider)
+          )
+        )
+    }
+    if (activeTermPersonIds.length > 0 && termSourceProvider !== undefined) {
+      await transaction
+        .delete(legislativeTerms)
+        .where(
+          and(
+            inArray(legislativeTerms.personId, activeTermPersonIds),
+            eq(legislativeTerms.sourceProvider, termSourceProvider),
+            eq(legislativeTerms.isActive, true)
           )
         )
     }

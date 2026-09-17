@@ -410,6 +410,7 @@ export function normalizeOpenStatesCommittees(
         const sourceIdentity =
           membership.role === undefined ? membership.person.id : `${membership.person.id}:${membership.role}`
         memberships.push({
+          detectedStartDate: context.retrievedAt.toISOString().slice(0, 10),
           id: organizationMembershipId(canonicalOrganizationId, normalizedPerson.person.id, sourceIdentity),
           isActive: true,
           organizationId: canonicalOrganizationId,
@@ -420,7 +421,8 @@ export function normalizeOpenStatesCommittees(
           sourceIsOfficial: false,
           sourceProvider: "openstates",
           sourceRetrievedAt: context.retrievedAt,
-          sourceUrl: canonicalSourceUrl
+          sourceUrl: canonicalSourceUrl,
+          lastObservedDate: context.retrievedAt.toISOString().slice(0, 10)
         })
       }
       return {
