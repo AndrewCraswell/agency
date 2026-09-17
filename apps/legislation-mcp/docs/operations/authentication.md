@@ -25,11 +25,17 @@ sanitized status and correlation IDs.
 
 ### Retained deployment evidence
 
-The positive consent canary remains pending. Historical Railway `legislation-web` deployment
-`60895192-ae34-42ab-9b96-2142750aa73c` from commit `54852f9` reached `SUCCESS` and exposed
-`https://legislation-web-production-b024.up.railway.app/mcp` through Next.js. Health, readiness and protected-resource
-metadata returned 200; anonymous and API-audience requests returned 401. Those rejection checks do not prove consent
-or the new standalone deployment. The former `legislation-api` service is deleted, not a resource or rollback target.
+The positive consent canary remains pending. Standalone Railway deployment
+`08e94031-e73e-4460-9ed2-ee0b91d9f67c` from clean commit `2ab6a85` reached `SUCCESS` at
+`https://legislation-mcp-production.up.railway.app`. Health, readiness and protected-resource metadata return 200 and
+advertise the exact standalone `/mcp` resource. Anonymous requests and a valid API-audience machine token both return
+the expected 401 resource-metadata challenge. A device-authorization request accepted the exact resource indicator,
+but its one-time operator consent window expired before token issuance, so no positive tool call or revocation is
+claimed. No bearer token was printed, persisted or installed as a service variable.
+
+The historical `legislation-web` deployment `60895192-ae34-42ab-9b96-2142750aa73c` exposed the former combined-app
+resource at `https://legislation-web-production-b024.up.railway.app/mcp`. It is stale acceptance evidence after the
+monorepo split, not a rollback target. The former `legislation-api` service is deleted.
 
 Confirm the actual M service, public URL and WorkOS registration before cutover. Preserve the existing resource URL
 when possible; a change requires coordinated metadata, registration and client updates, not fallback audiences or
