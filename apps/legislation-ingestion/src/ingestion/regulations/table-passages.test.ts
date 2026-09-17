@@ -229,7 +229,12 @@ describe("regulatory table passages", () => {
     invariant(radio, "radio_fixture_required")
     const radioTable = legalTableLayout(radio.block)[0]
     invariant(radioTable, "radio_table_required")
-    expect(() => legalTableRows(radioTable)).toThrow("passage_table_unresolved_ditto")
+    expect(() =>
+      legalTableRows({
+        text: radioTable.text.replace("Class of station(s)", "Other"),
+        xml: radioTable.xml.replace("Class of station(s)", "Other")
+      })
+    ).toThrow("passage_table_unresolved_ditto")
   }, 30_000)
 
   it.each(["", "primary-indent-hanging-1"])("does not infer a category without a more-indented child: %s", (indent) => {
@@ -409,6 +414,59 @@ describe("regulatory table passages", () => {
     }
     expect(() => legalTableRows(input)).toThrow("passage_table_unresolved_ditto")
   })
+
+  it("preserves printed station classes for explicit dittos without filling blank frequency entries", async () => {
+    const fixtures = z
+      .object({
+        fixtures: z.array(
+          z.object({
+            nativeId: z.string(),
+            blockXmlHash: z.string(),
+            block: z.object({ text: z.string(), xml: z.string() })
+          })
+        )
+      })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/ditto-final-tables.json", import.meta.url), "utf8")))
+    const fixture = fixtures.fixtures.find((item) => item.nativeId === "cfr:47:section:90.35")
+    invariant(fixture, "frequency_fixture_required")
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "frequency_table_required")
+    const rows = legalTableRows(table).rows
+    const blank = rows.find((row) => table.text.slice(row.start, row.end).startsWith("153.560\n"))
+    const repeated = rows.find((row) => table.text.slice(row.start, row.end).startsWith("153.5675\n"))
+    invariant(blank && repeated, "frequency_rows_required")
+    expect(blank.context.some((span) => span.label === "Column 2 ditto source")).toBe(false)
+    expect(
+      repeated.context
+        .filter((span) => span.label === "Column 2 ditto source")
+        .map((span) => table.text.slice(span.start, span.end))
+    ).toEqual(["Base or mobile."])
+    for (const [before, after] of [
+      ["Class of station(s)", "Other class"],
+      ["153.560", "Unspecified"]
+    ]) {
+      expect(() =>
+        legalTableRows({ text: table.text.replace(before, after), xml: table.xml.replace(before, after) })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
 
   it("resolves reviewed sparse flavoring limitations without filling blank entries", async () => {
     const fixture = z

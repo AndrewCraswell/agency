@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved the sparse station-class reference in 47 CFR 90.35. Exact reviewed headers, numeric frequency, four
+unspanned cells and populated limitations/coordinator cells bound recognition. Blank station-class entries remain
+blank; later explicit dittos retain the last printed class. The complete retained table reconstructs exactly under
+both pinned tokenizers, with independently recounted token limits. Changed headers and nonnumeric intervening rows
+remain rejected. All 83 table tests, scoped lint and ingestion types passed.
+
+Canonical version `7918aef4-df16-4576-88fd-73b18d1e6bf3` qualifies with 341 OpenAI / 354 Voyage passages and maximum
+766 / 793 tokens. Parser hash: `f6363c1f529032b0b104666b8fb4d869395a7cbfdb57e18ac0ca5176998bf95e`.
+Report: `artifacts/regulatory-backfills/frequency-version-recheck.json`; test log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-frequency-tests.log`. Four known source versions remain blocked, pending
+their individual resolution and a fresh full-corpus qualification. No source/index/vector writes or provider calls
+occurred. Root `pnpm verify` stopped at unrelated Storybook dependencies, root binary declarations and the web
+`EntityResults` unused export in knip; coverage was not reached. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-frequency-verify.log`.
+
 Resolved the sparse limitations column in 21 CFR 172.510. The exact common/scientific-name/limitations headers,
 populated name cells and a plain empty limitation cell are required. An empty entry does not acquire a limitation;
 only a later explicit ditto uses the last printed limitation. A newly printed limitation replaces that reference.

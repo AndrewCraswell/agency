@@ -309,6 +309,25 @@ function sourceCountyBoundaryRows(rows: ReturnType<ReturnType<typeof load>>, has
   return parents
 }
 
+/** Reviewed frequency tables can omit station class while later explicit dittos retain the printed class. */
+function isSparseStationClass(row: ReturnType<ReturnType<typeof load>>, hasFrequencyHeaders: boolean) {
+  const cells = row.children("TD")
+  return (
+    hasFrequencyHeaders &&
+    cells.length === 4 &&
+    /^\d+(?:\.\d+)?$/.test(sourceText(cells.first())) &&
+    cells
+      .toArray()
+      .every(
+        (cell, column) =>
+          Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+          (column === 1
+            ? cell.children.every((node) => node.type === "text" && node.data.trim() === "")
+            : sourceText(cells.eq(column)).length > 0)
+      )
+  )
+}
+
 /** Reviewed flavoring tables print sparse limitations; a blank row itself inherits no limitation. */
 function isSparseFlavoringLimitation(row: ReturnType<ReturnType<typeof load>>, hasFlavoringHeaders: boolean) {
   const cells = row.children("TD")
@@ -681,6 +700,12 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
   const approvalHeaders = tables.find("THEAD TH")
+  const hasFrequencyHeaders =
+    approvalHeaders.length === 4 &&
+    sourceText(approvalHeaders.eq(0)) === "Frequency or band" &&
+    sourceText(approvalHeaders.eq(1)) === "Class of station(s)" &&
+    sourceText(approvalHeaders.eq(2)) === "Limitations" &&
+    sourceText(approvalHeaders.eq(3)) === "Coordinator"
   const hasFlavoringHeaders =
     approvalHeaders.length === 3 &&
     sourceText(approvalHeaders.eq(0)) === "Common name" &&
@@ -753,6 +778,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const cells = selection.children("TD, TH, ENT")
       const isReservedApproval = isReservedApprovalRow(selection, hasApprovalHeaders)
       const isSparseLimitation = isSparseFlavoringLimitation(selection, hasFlavoringHeaders)
+      const isSparseStation = isSparseStationClass(selection, hasFrequencyHeaders)
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
       const categoryLevel = sourceCategoryLevel(selection)
@@ -830,7 +856,11 @@ export function legalTableRows(input: { text: string; xml: string }) {
             invariant(width === 1 && reference, "passage_table_unresolved_ditto")
             context.push(reference)
           } else {
-            if ((isReservedApproval || isSparseLimitation) && column === 3 && value.length === 0 && width === 1) {
+            if (
+              (((isReservedApproval || isSparseLimitation) && column === 3) || (isSparseStation && column === 2)) &&
+              value.length === 0 &&
+              width === 1
+            ) {
               column += width
               continue
             }

@@ -2,6 +2,18 @@
 
 ## Latest scoped requalification
 
+47 CFR 90.35 now qualifies with 341 OpenAI / 354 Voyage passages, maximum 766 / 793 tokens. Exact frequency,
+station-class, limitations and coordinator headers plus a numeric frequency and populated sibling cells are required
+to preserve the last printed station class across an empty class cell. Only a later explicit ditto receives that
+reference; the blank row receives none. The
+[published CFR, printed page 287](https://www.govinfo.gov/content/pkg/CFR-2025-title47-vol5/pdf/CFR-2025-title47-vol5-sec90-35.pdf)
+shows the blank class at 153.560 followed by a ditto at 153.5675. All 83 table tests passed, including complete
+reconstruction with both tokenizers and rejection of changed headers or a nonnumeric intervening frequency.
+Report: `artifacts/regulatory-backfills/frequency-version-recheck.json`; parser hash
+`f6363c1f529032b0b104666b8fb4d869395a7cbfdb57e18ac0ca5176998bf95e`.
+Four known versions remain: 40 CFR 152.175, 9 CFR 424.21, 38 CFR 3.261 and 21 CFR 177.1520.
+Full-corpus requalification remains required; this is a single-version canonical check.
+
 21 CFR 172.510 now qualifies with 62 passages per model, maximum 356 OpenAI / 384 Voyage tokens. The sparse
 limitation column preserves the last printed limitation for a later explicit ditto, while leaving intervening blank
 rows without a limitation reference. Exact flavoring-table headers and populated name columns are required.
