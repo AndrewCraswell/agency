@@ -3016,6 +3016,21 @@ test unit under a different scope, explaining its total pending count of 50. No 
 canonical publication or recurring schedule occurred. This closes the local live-source discovery canary; pending-unit
 acquisition/dispatch and deployed verification remain open.
 
+## Bounded discovery-to-acquisition registration
+
+Pending discovery work now crosses an atomic durable boundary before any source download or Trigger fan-out. The
+`regulatory-discovery-registration` task selects at most 100 locked pending units, validates their canonical identity and
+payload hash, inserts one immutable `regulatory-current-acquisition-2026-09-17` manifest and marks exactly those rows
+registered in the same serializable transaction. Competing controllers skip already locked rows; an exhausted scope
+creates no empty manifest. Registration remains manual and does not submit acquisition workers or enable a schedule.
+
+The PostgreSQL integration registered three fixture units as two bounded manifests, then returned no work; database
+counts were three registered, zero pending and two manifests. The live-source disposable canary rediscovered the
+official 2026-09-15 inventory and registered a limit-10 page as manifest
+`2524421a751c0071a24435daf27c4122bf8a6013404d6627c3b45b17bc6ceb56`, leaving 39 pending and 10 registered units.
+Two database files with three tests and four task tests passed. Ingestion TypeScript, scoped oxlint and oxfmt passed.
+Artifact acquisition, persisted submission intent/run handles, parser dispatch and deployed verification remain open.
+
 ## Pinned resumption of the full current-title qualification
 
 The earlier full 49-edition tokenizer qualification stopped after 12 editions with

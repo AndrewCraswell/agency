@@ -127,6 +127,9 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-02 Implement the bounded controller.** Select eligible units by indexed keyset, reserve a finite dispatch
   window and persist child handles; submit batches of at most 100. **Done:** restarting the controller resumes its
   manifest without loading or dispatching the whole national inventory. Depends on ORCH-01.
+  Local progress: pending discovery rows can now be registered in immutable current-acquisition manifests of at most
+  100 units. Selection, manifest persistence and the registered transition are atomic and use locked bounded rows.
+  Child submission intents/handles and recovery still remain open.
 - [ ] **ORCH-03 Add the acquisition worker adapter.** Wrap existing source clients/artifact acquisition with strict
   payloads, source budgets, artifact references and committed checkpoints. **Done:** interrupted downloads never
   produce a complete artifact; retry verifies checksum and reuses valid retained bytes. Depends on ORCH-01.

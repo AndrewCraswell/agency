@@ -20,9 +20,14 @@ unit is consumed may create another zero-new-unit page receipt but cannot duplic
 
 Trigger task `regulatory-ecfr-discovery` is a bounded manual entry point with a single-worker queue. Its optional title
 selection is unique and limited to titles 1–50. It points only at the canonical database. No Trigger schedule is
-registered here; hourly activation remains blocked until G4 and SYNC-11. Discovery currently stops at pending units.
-The acquisition worker adapter, deployed source canary, completion accounting and scheduled cadence are separate gates.
+registered here; hourly activation remains blocked until G4 and SYNC-11.
 
-The discovery-unit contract requires `historical: false`; the existing acquisition/backfill contract remains strictly
-`historical: true`. Keeping these schemas separate prevents recurring observations from silently becoming completed
-backfill coverage and avoids invalidating the pinned passage-preparation implementation fingerprint.
+`regulatory-discovery-registration` moves at most 100 pending units into one immutable current-acquisition manifest.
+Selection, manifest insertion and the pending-to-registered transition share one serializable transaction. Controllers
+use row locks with `SKIP LOCKED`, so competing bounded runs cannot claim the same unit. An empty pending set produces no
+manifest. Registration does not download source bytes, submit a child task or imply that acquisition succeeded.
+
+The discovery-unit and current-manifest contracts require `historical: false`; the existing acquisition/backfill
+contract remains strictly `historical: true`. Keeping these schemas separate prevents recurring observations from
+silently becoming completed backfill coverage. Artifact acquisition, deployed verification, completion accounting and
+scheduled cadence are separate gates.

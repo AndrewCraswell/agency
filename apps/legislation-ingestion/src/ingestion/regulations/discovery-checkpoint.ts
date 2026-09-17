@@ -77,6 +77,10 @@ function encoded(value: unknown) {
   return JSON.stringify(normalizedJson(value))
 }
 
+export function legalDiscoveryPayloadHash(value: unknown) {
+  return digest(encoded(value))
+}
+
 export function legalDiscoveryScope(sourceId: AcquisitionUnit["sourceId"], query: Readonly<Record<string, unknown>>) {
   const source = sourceSchema.parse(sourceId)
   const parsed = jsonObjectSchema.parse(query)
@@ -170,7 +174,7 @@ export async function commitLegalDiscoveryPage(pool: pg.Pool, value: unknown) {
     .map((unit) => {
       invariant(unit.sourceId === scope.sourceId, "legal_discovery_source_mismatch")
       invariant(unit.key === unitIdentity(unit), "legal_discovery_unit_identity_mismatch")
-      return { unit, payloadHash: digest(encoded(unit)) }
+      return { unit, payloadHash: legalDiscoveryPayloadHash(unit) }
     })
     .sort((left, right) => left.unit.key.localeCompare(right.unit.key))
   const pageId = digest(
