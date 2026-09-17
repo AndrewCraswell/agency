@@ -17,6 +17,7 @@ from openstates_source_policy import harden_source
 
 ARCHIVE_SHA256 = "df5e199a0d89b425fd12c68855f4e4bbc8d9906079f74ce5f5a12b774367f51e"
 ARCHIVE_URL = f"https://codeload.github.com/openstates/openstates-scrapers/tar.gz/{REVISION}"
+USAGE = "usage: prepare_openstates.py <new-build-input-directory>"
 
 
 def requirements(lock):
@@ -113,17 +114,25 @@ def verify_prepared(destination):
     return {"revision": REVISION, "verified_files": len(expected["files"]), "runtime_verified": False}
 
 
-if __name__ == "__main__":
-    if len(sys.argv) == 4 and sys.argv[1] == "--archive":
-        manifest = prepare(Path(sys.argv[2]).read_bytes(), sys.argv[3])
+def main(arguments):
+    if arguments in (["--help"], ["-h"]):
+        print(USAGE)
+        return 0
+    if len(arguments) == 3 and arguments[0] == "--archive":
+        manifest = prepare(Path(arguments[1]).read_bytes(), arguments[2])
         print(json.dumps({"revision": REVISION, "files": len(manifest["files"]), "runtime_verified": False}))
-        raise SystemExit(0)
-    if len(sys.argv) == 3 and sys.argv[1] == "--verify":
-        print(json.dumps(verify_prepared(sys.argv[2])))
-        raise SystemExit(0)
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: prepare_openstates.py <new-build-input-directory>")
+        return 0
+    if len(arguments) == 2 and arguments[0] == "--verify":
+        print(json.dumps(verify_prepared(arguments[1])))
+        return 0
+    if len(arguments) != 1 or arguments[0].startswith("-"):
+        raise SystemExit(USAGE)
     with urlopen(ARCHIVE_URL, timeout=60) as response:
         archive = response.read(16 * 1024 * 1024 + 1)
-    manifest = prepare(archive, sys.argv[1])
+    manifest = prepare(archive, arguments[0])
     print(json.dumps({"revision": REVISION, "files": len(manifest["files"]), "runtime_verified": False}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

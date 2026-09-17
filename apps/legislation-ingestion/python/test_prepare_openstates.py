@@ -1,4 +1,5 @@
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 import unittest
 import hashlib
@@ -8,11 +9,23 @@ import os
 import tarfile
 from unittest.mock import patch
 
-from prepare_openstates import REVISION, prepare, requirements, verify_prepared
+from prepare_openstates import REVISION, main, prepare, requirements, verify_prepared
 from openstates_source_policy import PATCHES
 
 
 class BuildInputTests(unittest.TestCase):
+    def test_help_is_side_effect_free(self):
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temporary, patch("prepare_openstates.ARCHIVE_URL", "invalid://must-not-open"), redirect_stdout(output):
+            previous = Path.cwd()
+            try:
+                os.chdir(temporary)
+                self.assertEqual(main(["--help"]), 0)
+                self.assertFalse((Path(temporary) / "--help").exists())
+            finally:
+                os.chdir(previous)
+        self.assertEqual(output.getvalue().strip(), "usage: prepare_openstates.py <new-build-input-directory>")
+
     def package(self, **changes):
         return dict({"name": "example", "version": "1.2.3", "optional": False, "groups": ["main"],
                      "files": [{"hash": "sha256:" + "a" * 64}]}, **changes)
