@@ -13,6 +13,26 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Resolved both sparse-entry defects in 9 CFR 424.21 using the current published PDF, visually checked at printed pages
+577–578. Disodium guanylate's amount and Potassium hydroxide's purpose/products stay blank. Later explicit dittos
+retain source-backed earlier values. Exact headers, row names, blank-cell structure and populated siblings bound the
+rule. The full retained fixture is `fixtures/food-ingredients-table.json`, exported with canonical membership,
+content hash and XML hash checks. All 86 table tests, scoped lint and ingestion types passed, including complete source
+reconstruction and both tokenizers' independent recounts.
+
+Canonical version `59d4eb4f-49cf-420f-b6b2-2f175afbdb92` prepares 160 passages per model, maximum 720 OpenAI /
+790 Voyage tokens. Parser hash: `86b8cf646ee57ef312e17d99314073fbf91a2dcf17b6bd41d9d1406e99cc650a`; report:
+`artifacts/regulatory-backfills/food-ingredients-version-recheck.json`; tests:
+`C:/Users/andcra/AppData/Local/Temp/tabra-ingredients-tests.log`. Two known versions remain blocked, pending their
+resolution and full-corpus qualification. No source/index/vector writes or provider calls occurred.
+
+The zinc-phosphide alignment cannot be repaired from the current official PDF: visual review of printed page 45
+confirms missing values there too. The retained XML's shifted values therefore remain quarantined by failed passage
+qualification. See [source review](ditto-source-review.md) for PDF hashes and the unresolved evidence requirement.
+Root `pnpm verify` stopped before coverage on unrelated web `ResearchActivity.tsx` lint errors and Windows mapped-file
+save errors for web conversation tests/stories. Ingestion lint passed in that run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-ingredients-verify.log`.
+
 Repaired one of two defects in 40 CFR 152.175: sparse criteria preserve the prior printed criterion across verified
 unclassified rows for later explicit dittos. Empty entries acquire no criterion. Recognition requires exact pesticide
 headers, unspanned cells, populated formulation/use/classification, and an explicit or resolved `Unclassified` value.

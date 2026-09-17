@@ -367,6 +367,27 @@ function isSparsePesticideCriteria(row: ReturnType<ReturnType<typeof load>>, has
   )
 }
 
+/** Preserve references only across the two reviewed sparse ingredient rows, without filling their empty cells. */
+function sparseIngredientColumns(row: ReturnType<ReturnType<typeof load>>, hasIngredientHeaders: boolean) {
+  const cells = row.children("TD")
+  const name = sourceText(cells.eq(1))
+  const columns = name === "Disodium guanylate" ? [5] : name === "Potassium hydroxide" ? [3, 4] : []
+  return hasIngredientHeaders &&
+    cells.length === 5 &&
+    columns.length > 0 &&
+    cells
+      .toArray()
+      .every(
+        (cell, index) =>
+          Number(cell.attribs.colspan ?? cell.attribs.COLSPAN ?? 1) === 1 &&
+          (index === 0 || columns.includes(index + 1)
+            ? cell.children.every((node) => node.type === "text" && node.data.trim() === "")
+            : sourceText(cells.eq(index)).length > 0)
+      )
+    ? columns
+    : []
+}
+
 /** Reviewed flavoring tables print sparse limitations; a blank row itself inherits no limitation. */
 function isSparseFlavoringLimitation(row: ReturnType<ReturnType<typeof load>>, hasFlavoringHeaders: boolean) {
   const cells = row.children("TD")
@@ -739,6 +760,10 @@ export function legalTableRows(input: { text: string; xml: string }) {
   const expenseGroups = sourceExpenseGroups(rows)
   const nameContinuations = sourceReviewedNameContinuations(rows)
   const approvalHeaders = tables.find("THEAD TH")
+  const ingredientHeaders = ["Class of substance", "Substance", "Purpose", "Products", "Amount"]
+  const hasIngredientHeaders =
+    approvalHeaders.length === ingredientHeaders.length &&
+    ingredientHeaders.every((value, index) => sourceText(approvalHeaders.eq(index)) === value)
   const pesticideHeaders = [
     "Active ingredient",
     "Formulation",
@@ -841,6 +866,7 @@ export function legalTableRows(input: { text: string; xml: string }) {
       const isSparseStation = isSparseStationClass(selection, hasFrequencyHeaders)
       const isChildIncome = isChildIncomeRow(selection, hasIncomeHeaders)
       const isSparsePesticide = isSparsePesticideCriteria(selection, hasPesticideHeaders)
+      const sparseIngredient = sparseIngredientColumns(selection, hasIngredientHeaders)
       const isGroup =
         cells.length === 1 && Number(cells.first().attr("colspan") ?? cells.first().attr("COLSPAN") ?? 1) > 1
       const categoryLevel = sourceCategoryLevel(selection)
@@ -928,7 +954,8 @@ export function legalTableRows(input: { text: string; xml: string }) {
               (((isReservedApproval || isSparseLimitation) && column === 3) ||
                 (isSparseStation && column === 2) ||
                 (isChildIncome && (column === 2 || column === 3)) ||
-                preservesPesticideCriteria) &&
+                preservesPesticideCriteria ||
+                sparseIngredient.includes(column)) &&
               value.length === 0 &&
               width === 1
             ) {

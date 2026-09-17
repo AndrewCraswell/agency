@@ -2,6 +2,24 @@
 
 ## Latest scoped requalification
 
+9 CFR 424.21 now qualifies with 160 passages per model, maximum 720 OpenAI / 790 Voyage tokens. Exact ingredient
+headers and unspanned five-cell rows recognize two reviewed sparse entries: Disodium guanylate's amount and Potassium
+hydroxide's purpose/products. These blanks receive no references; later explicit dittos retain the earlier printed
+values. The [current published CFR](https://www.govinfo.gov/content/pkg/CFR-2025-title9-vol2/pdf/CFR-2025-title9-vol2-sec424-21.pdf)
+was downloaded and rendered; printed pages 577–578 visually confirm both patterns. PDF SHA256:
+`add72c2142003bb52319cfc2eddcbb435558598ee98e7afa6a1960591cbc4f50`.
+All 86 table tests pass, including full reconstruction, independent token recounts and rejection of changed row labels
+or headers. Canonical report: `artifacts/regulatory-backfills/food-ingredients-version-recheck.json`, parser hash
+`86b8cf646ee57ef312e17d99314073fbf91a2dcf17b6bd41d9d1406e99cc650a`.
+Two known versions remain: 40 CFR 152.175 and 21 CFR 177.1520; full-corpus qualification remains open.
+
+The [2025 pesticide PDF](https://www.govinfo.gov/content/pkg/CFR-2025-title40-vol26/pdf/CFR-2025-title40-vol26-sec152-175.pdf)
+was also downloaded and rendered after browser retrieval failed. Printed page 45 itself omits the use/classification/
+criteria values for the zinc dry-formulation entry; it does not corroborate the shifted XML values. SHA256:
+`2547443dc3fa6f29ebbee93a88f171f34bf99c581d4430cb0762545dbea6819d`.
+Keep this section blocked. A prior promulgating source or authoritative correction must establish the row alignment;
+do not derive the classification from the neighboring unclassified entry or silently move XML cells.
+
 40 CFR 152.175 has two independent defects. The sparse restriction-criteria reference is repaired only for
 unclassified entries with the exact five pesticide headers and populated formulation/use/classification cells.
 Explicit classification dittos must resolve to `Unclassified`; blank criteria receive no inferred restriction.

@@ -583,6 +583,60 @@ describe("regulatory table passages", () => {
     }
   }, 30_000)
 
+  it("preserves reviewed ingredient references without inventing amounts or purposes for blank cells", async () => {
+    const fixture = z
+      .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
+      .parse(JSON.parse(await readFile(new URL("./fixtures/food-ingredients-table.json", import.meta.url), "utf8")))
+    expect(digest(fixture.block.xml)).toBe(fixture.blockXmlHash)
+    const table = legalTableLayout(fixture.block)[0]
+    invariant(table, "ingredients_table_required")
+    const rows = legalTableRows(table).rows
+    const guanylate = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Disodium guanylate"))
+    const inosinate = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Disodium inosinate"))
+    const potassium = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Potassium hydroxide"))
+    const propylene = rows.find((row) => table.text.slice(row.start, row.end).startsWith("Propylene glycol\n"))
+    invariant(guanylate && inosinate && potassium && propylene, "ingredients_rows_required")
+    expect(guanylate.context.some((span) => span.label === "Column 5 ditto source")).toBe(false)
+    expect(
+      potassium.context.some((span) => ["Column 3 ditto source", "Column 4 ditto source"].includes(span.label))
+    ).toBe(false)
+    expect(
+      inosinate.context
+        .filter((span) => span.label === "Column 5 ditto source")
+        .map((span) => table.text.slice(span.start, span.end))
+    ).toEqual(["Sufficient for purpose."])
+    expect(
+      propylene.context
+        .filter((span) => ["Column 3 ditto source", "Column 4 ditto source"].includes(span.label))
+        .map((span) => table.text.slice(span.start, span.end))
+    ).toEqual(["To remove hair", "Hog carcasses"])
+    for (const [before, after] of [
+      ["Class of substance", "Other class"],
+      ["Disodium guanylate", "Unspecified substance"],
+      ["Potassium hydroxide", "Other hydroxide"]
+    ]) {
+      expect(() =>
+        legalTableRows({ text: table.text.replaceAll(before, after), xml: table.xml.replaceAll(before, after) })
+      ).toThrow("passage_table_unresolved_ditto")
+    }
+    const sourceBlocks = [{ ordinal: 0, kind: "table", tag: "TABLE", text: table.text, xml: table.xml }]
+    const projection = buildLegalTextProjection({
+      versionId: digest(table.xml),
+      body: table.text,
+      blocks: sourceBlocks
+    })
+    for (const model of ["openai/text-embedding-3-small", "voyageai/voyage-4"] as const) {
+      const tokenizer = await embeddingTokenizer(model)
+      const prepared = buildLegalPassages({ sourceBlocks, projection, context: "Federal code", tokenizer })
+      expect(prepared.passages.map((passage) => passage.text).join("")).toBe(table.text)
+      expect(
+        prepared.passages.every(
+          (passage) => passage.tokenCount === tokenizer.count(passage.inputText) && passage.tokenCount <= 1200
+        )
+      ).toBe(true)
+    }
+  }, 30_000)
+
   it("resolves reviewed sparse flavoring limitations without filling blank entries", async () => {
     const fixture = z
       .object({ blockXmlHash: z.string(), block: z.object({ text: z.string(), xml: z.string() }) })
