@@ -497,10 +497,71 @@ CREATE TABLE legislation.legal_passages (
   data jsonb NOT NULL,
   search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig,input_text)) STORED,
   UNIQUE(generation_id,ordinal),
+  UNIQUE(generation_id,id),
   CHECK(body=data->>'text' AND input_text=data->>'inputText' AND ordinal=(data->>'ordinal')::integer)
 );
 --> statement-breakpoint
 CREATE INDEX legal_passages_search_idx ON legislation.legal_passages USING gin(search_vector);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_embedding_generations (
+  id text PRIMARY KEY CHECK(id ~ '^[a-f0-9]{64}$'),
+  passage_generation_id text NOT NULL REFERENCES legislation.legal_passage_generations(id),
+  model text NOT NULL,
+  dimensions integer NOT NULL,
+  input_contract text NOT NULL,
+  manifest_hash text NOT NULL CHECK(manifest_hash ~ '^[a-f0-9]{64}$'),
+  expected_count integer NOT NULL CHECK(expected_count > 0),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','embedded','ready','blocked')),
+  completed_at timestamptz,
+  ready_at timestamptz,
+  last_error text,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(id,model,dimensions),
+  UNIQUE(id,passage_generation_id),
+  UNIQUE(passage_generation_id,model,input_contract),
+  CHECK((model='openai/text-embedding-3-small' AND dimensions=1536) OR (model='voyageai/voyage-4' AND dimensions=1024)),
+  CHECK((completed_at IS NOT NULL)=(state IN ('embedded','ready'))),
+  CHECK((ready_at IS NOT NULL)=(state='ready')),
+  CHECK((last_error IS NOT NULL)=(state='blocked'))
+);
+--> statement-breakpoint
+CREATE INDEX legal_embedding_generations_state_idx ON legislation.legal_embedding_generations(state,created_at,id);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_openai_small_embeddings (
+  generation_id text NOT NULL,
+  passage_generation_id text NOT NULL,
+  passage_id text NOT NULL,
+  model text NOT NULL DEFAULT 'openai/text-embedding-3-small' CHECK(model='openai/text-embedding-3-small'),
+  dimensions integer NOT NULL DEFAULT 1536 CHECK(dimensions=1536),
+  input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'),
+  vector_hash text NOT NULL CHECK(vector_hash ~ '^[a-f0-9]{64}$'),
+  embedding vector(1536) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(generation_id,passage_id),
+  FOREIGN KEY(generation_id,model,dimensions) REFERENCES legislation.legal_embedding_generations(id,model,dimensions),
+  FOREIGN KEY(generation_id,passage_generation_id) REFERENCES legislation.legal_embedding_generations(id,passage_generation_id),
+  FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_passages(generation_id,id)
+);
+--> statement-breakpoint
+CREATE INDEX legal_openai_small_embeddings_passage_idx ON legislation.legal_openai_small_embeddings(passage_id,generation_id);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_voyage_4_embeddings (
+  generation_id text NOT NULL,
+  passage_generation_id text NOT NULL,
+  passage_id text NOT NULL,
+  model text NOT NULL DEFAULT 'voyageai/voyage-4' CHECK(model='voyageai/voyage-4'),
+  dimensions integer NOT NULL DEFAULT 1024 CHECK(dimensions=1024),
+  input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'),
+  vector_hash text NOT NULL CHECK(vector_hash ~ '^[a-f0-9]{64}$'),
+  embedding vector(1024) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(generation_id,passage_id),
+  FOREIGN KEY(generation_id,model,dimensions) REFERENCES legislation.legal_embedding_generations(id,model,dimensions),
+  FOREIGN KEY(generation_id,passage_generation_id) REFERENCES legislation.legal_embedding_generations(id,passage_generation_id),
+  FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_passages(generation_id,id)
+);
+--> statement-breakpoint
+CREATE INDEX legal_voyage_4_embeddings_passage_idx ON legislation.legal_voyage_4_embeddings(passage_id,generation_id);
 --> statement-breakpoint
 CREATE TABLE legislation.legal_passage_preparations (
   id text PRIMARY KEY,

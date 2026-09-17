@@ -2805,6 +2805,7 @@ export const legalPassages = legislationSchema.table(
   },
   (t) => [
     unique().on(t.generationId, t.ordinal),
+    unique().on(t.generationId, t.id),
     check("legal_passages_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
     check("legal_passages_ordinal_check", sql`${t.ordinal} >= 0`),
     check(
@@ -2812,6 +2813,130 @@ export const legalPassages = legislationSchema.table(
       sql`${t.body}=${t.data}->>'text' and ${t.inputText}=${t.data}->>'inputText' and ${t.ordinal}=(${t.data}->>'ordinal')::integer`
     ),
     index("legal_passages_search_idx").using("gin", t.searchVector)
+  ]
+)
+
+export const legalEmbeddingGenerations = legislationSchema.table(
+  "legal_embedding_generations",
+  {
+    id: text("id").primaryKey(),
+    passageGenerationId: text("passage_generation_id")
+      .notNull()
+      .references(() => legalPassageGenerations.id),
+    model: text("model").notNull(),
+    dimensions: integer("dimensions").notNull(),
+    inputContract: text("input_contract").notNull(),
+    manifestHash: text("manifest_hash").notNull(),
+    expectedCount: integer("expected_count").notNull(),
+    state: text("state").notNull().default("pending"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    readyAt: timestamp("ready_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    unique().on(t.id, t.model, t.dimensions),
+    unique().on(t.id, t.passageGenerationId),
+    unique().on(t.passageGenerationId, t.model, t.inputContract),
+    check("legal_embedding_generations_id_check", sql`${t.id} ~ '^[a-f0-9]{64}$'`),
+    check("legal_embedding_generations_manifest_hash_check", sql`${t.manifestHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_embedding_generations_count_check", sql`${t.expectedCount} > 0`),
+    check(
+      "legal_embedding_generations_route_check",
+      sql`(${t.model}='openai/text-embedding-3-small' and ${t.dimensions}=1536) or (${t.model}='voyageai/voyage-4' and ${t.dimensions}=1024)`
+    ),
+    check("legal_embedding_generations_state_check", sql`${t.state} in ('pending','embedded','ready','blocked')`),
+    check(
+      "legal_embedding_generations_completed_check",
+      sql`(${t.completedAt} is not null)=(${t.state} in ('embedded','ready'))`
+    ),
+    check("legal_embedding_generations_ready_check", sql`(${t.readyAt} is not null)=(${t.state}='ready')`),
+    check("legal_embedding_generations_error_check", sql`(${t.lastError} is not null)=(${t.state}='blocked')`),
+    index("legal_embedding_generations_state_idx").on(t.state, t.createdAt, t.id)
+  ]
+)
+
+export const legalOpenAiSmallEmbeddings = legislationSchema.table(
+  "legal_openai_small_embeddings",
+  {
+    generationId: text("generation_id").notNull(),
+    passageGenerationId: text("passage_generation_id").notNull(),
+    passageId: text("passage_id").notNull(),
+    model: text("model").notNull().default("openai/text-embedding-3-small"),
+    dimensions: integer("dimensions").notNull().default(1536),
+    inputHash: text("input_hash").notNull(),
+    vectorHash: text("vector_hash").notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    primaryKey({ columns: [t.generationId, t.passageId] }),
+    foreignKey({
+      columns: [t.generationId, t.model, t.dimensions],
+      foreignColumns: [
+        legalEmbeddingGenerations.id,
+        legalEmbeddingGenerations.model,
+        legalEmbeddingGenerations.dimensions
+      ]
+    }),
+    foreignKey({
+      columns: [t.generationId, t.passageGenerationId],
+      foreignColumns: [legalEmbeddingGenerations.id, legalEmbeddingGenerations.passageGenerationId]
+    }),
+    foreignKey({
+      columns: [t.passageGenerationId, t.passageId],
+      foreignColumns: [legalPassages.generationId, legalPassages.id]
+    }),
+    check("legal_openai_small_embeddings_model_check", sql`${t.model}='openai/text-embedding-3-small'`),
+    check("legal_openai_small_embeddings_dimensions_check", sql`${t.dimensions}=1536`),
+    check("legal_openai_small_embeddings_input_hash_check", sql`${t.inputHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_openai_small_embeddings_vector_hash_check", sql`${t.vectorHash} ~ '^[a-f0-9]{64}$'`),
+    index("legal_openai_small_embeddings_passage_idx").on(t.passageId, t.generationId)
+  ]
+)
+
+export const legalVoyage4Embeddings = legislationSchema.table(
+  "legal_voyage_4_embeddings",
+  {
+    generationId: text("generation_id").notNull(),
+    passageGenerationId: text("passage_generation_id").notNull(),
+    passageId: text("passage_id").notNull(),
+    model: text("model").notNull().default("voyageai/voyage-4"),
+    dimensions: integer("dimensions").notNull().default(1024),
+    inputHash: text("input_hash").notNull(),
+    vectorHash: text("vector_hash").notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    primaryKey({ columns: [t.generationId, t.passageId] }),
+    foreignKey({
+      columns: [t.generationId, t.model, t.dimensions],
+      foreignColumns: [
+        legalEmbeddingGenerations.id,
+        legalEmbeddingGenerations.model,
+        legalEmbeddingGenerations.dimensions
+      ]
+    }),
+    foreignKey({
+      columns: [t.generationId, t.passageGenerationId],
+      foreignColumns: [legalEmbeddingGenerations.id, legalEmbeddingGenerations.passageGenerationId]
+    }),
+    foreignKey({
+      columns: [t.passageGenerationId, t.passageId],
+      foreignColumns: [legalPassages.generationId, legalPassages.id]
+    }),
+    check("legal_voyage_4_embeddings_model_check", sql`${t.model}='voyageai/voyage-4'`),
+    check("legal_voyage_4_embeddings_dimensions_check", sql`${t.dimensions}=1024`),
+    check("legal_voyage_4_embeddings_input_hash_check", sql`${t.inputHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_voyage_4_embeddings_vector_hash_check", sql`${t.vectorHash} ~ '^[a-f0-9]{64}$'`),
+    index("legal_voyage_4_embeddings_passage_idx").on(t.passageId, t.generationId)
   ]
 )
 
