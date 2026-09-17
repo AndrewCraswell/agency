@@ -300,7 +300,7 @@ export function createLegalEditionSearch(
               FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY f(value,position)
               JOIN legislation.legal_search_passages p ON p.id=f.value->>'id' AND p.generation_id=f.value->>'generationId'
               JOIN legislation.legal_search_generations g ON g.id=p.generation_id AND g.metadata->>'provision_version_id'=f.value->>'versionId'
-              JOIN legislation.legal_search_memberships m ON m.scope_kind='edition' AND m.scope_id=(f.value->>'editionId')::uuid AND m.generation_id=g.id
+              JOIN legislation.legal_search_memberships m ON m.scope_kind='edition' AND m.scope_id=(f.value->>'scopeId')::uuid AND m.generation_id=g.id
               ORDER BY f.position`,
               [JSON.stringify(page.candidates)]
             )

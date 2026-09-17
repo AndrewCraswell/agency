@@ -13,6 +13,14 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Generalized the frozen lexical candidate snapshot from edition-only identities to explicit edition/publication scope
+identities, then routed Federal Register ranking through it. Publication cursors now bind the principal, normalized
+public request, limit, complete partition generation and candidate hash for 15 minutes; continuation reads the frozen
+order without reranking. The typed HTTP canary returned all 92 notices as pages of 25, 25, 25 and 17 with 92 unique
+versions and one stable generation. Reusing the first cursor with a changed publication-kind filter was rejected. A
+recovered Title 3 edition query still returned its exact version after the shared snapshot change. The focused backend
+suite passed 14 tests. This closes local INDEX-07/08 and HTTP-09 implementation; deployment acceptance remains separate.
+
 Completed the retained January 18, 2000 Federal Register lexical partition. The existing OpenAI-tokenized preparations
 for the 98 missing publications copied with four bounded workers and zero failures, adding 422 passages. Canonical and
 target inventories now match exactly: 12 final rules/451 passages, 92 notices/350 passages and six proposed rules/72

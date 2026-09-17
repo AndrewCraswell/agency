@@ -7,7 +7,8 @@ import { z } from "zod"
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
 const candidateSchema = z.strictObject({
   id: hash,
-  editionId: z.uuid(),
+  scopeKind: z.enum(["edition", "publication"]),
+  scopeId: z.uuid(),
   generationId: hash,
   versionId: z.uuid(),
   score: z.number().nonnegative()
@@ -19,18 +20,18 @@ const candidatesSchema = z
 const cursorSchema = z.strictObject({ id: z.uuid(), offset: z.int().min(1).max(999), hash })
 const stale = () => new LegislationError("conflict", "Search continuation expired or no longer matches the request")
 
-/** Caller validates source rights and selected copy integrity before invoking this inside the target transaction. */
-export async function readLegalSearchResultPage(
-  client: pg.PoolClient,
-  input: {
-    requestHash: string
-    generation: string
-    editionIds: string[]
-    query: string
-    limit: number
-    cursor?: string
-  }
-) {
+type FrozenPageInput = {
+  requestHash: string
+  generation: string
+  limit: number
+  cursor?: string
+  scopeKind: "edition" | "publication"
+  scopeIds?: readonly string[]
+  rank: () => Promise<unknown[]>
+}
+
+/** Caller validates source rights and complete selected-copy integrity before invoking this in the target transaction. */
+async function readFrozenLegalSearchResultPage(client: pg.PoolClient, input: FrozenPageInput) {
   let snapshotId: string | undefined
   let offset = 0
   let candidates: z.infer<typeof candidatesSchema>
@@ -77,23 +78,7 @@ export async function readLegalSearchResultPage(
     const ranked = z
       .array(candidateSchema)
       .max(1001)
-      .parse(
-        (
-          await client.query(
-            `WITH ranked AS (
-      SELECT m.scope_id AS "editionId",p.generation_id AS "generationId",p.id,
-        g.metadata->>'provision_version_id' AS "versionId",ts_rank_cd(p.search_vector,q.query) AS score,
-        row_number() OVER (PARTITION BY g.metadata->>'provision_version_id'
-          ORDER BY ts_rank_cd(p.search_vector,q.query) DESC,m.scope_id,p.id) AS position
-      FROM legislation.legal_search_memberships m JOIN legislation.legal_search_generations g ON g.id=m.generation_id
-      JOIN legislation.legal_search_passages p ON p.generation_id=g.id CROSS JOIN websearch_to_tsquery('english',$2) q(query)
-      WHERE m.scope_kind='edition' AND m.scope_id=ANY($1::uuid[]) AND p.search_vector @@ q.query)
-      SELECT id,"editionId","generationId","versionId",score FROM ranked WHERE position=1
-      ORDER BY score DESC,id,"editionId" LIMIT 1001`,
-            [input.editionIds, input.query]
-          )
-        ).rows
-      )
+      .parse(await input.rank())
     windowTruncated = ranked.length > 1000
     candidates = candidatesSchema.parse(ranked.slice(0, 1000))
     candidateHash = digest(JSON.stringify(candidates))
@@ -111,7 +96,13 @@ export async function readLegalSearchResultPage(
     }
   }
   const selected = candidates.slice(offset, offset + input.limit)
-  if (selected.some((candidate) => !input.editionIds.includes(candidate.editionId))) {
+  if (
+    selected.some(
+      (candidate) =>
+        candidate.scopeKind !== input.scopeKind ||
+        (input.scopeIds !== undefined && !input.scopeIds.includes(candidate.scopeId))
+    )
+  ) {
     throw stale()
   }
   const nextOffset = offset + selected.length
@@ -120,4 +111,91 @@ export async function readLegalSearchResultPage(
       ? Buffer.from(JSON.stringify({ id: snapshotId, offset: nextOffset, hash: candidateHash })).toString("base64url")
       : null
   return { candidates: selected, nextCursor, candidateSetTruncated: windowTruncated }
+}
+
+export async function readLegalSearchResultPage(
+  client: pg.PoolClient,
+  input: {
+    requestHash: string
+    generation: string
+    editionIds: string[]
+    query: string
+    limit: number
+    cursor?: string
+  }
+) {
+  return readFrozenLegalSearchResultPage(client, {
+    requestHash: input.requestHash,
+    generation: input.generation,
+    limit: input.limit,
+    scopeKind: "edition",
+    scopeIds: input.editionIds,
+    ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
+    rank: async () =>
+      (
+        await client.query(
+          `WITH ranked AS (
+      SELECT 'edition' AS "scopeKind",m.scope_id AS "scopeId",p.generation_id AS "generationId",p.id,
+        g.metadata->>'provision_version_id' AS "versionId",ts_rank_cd(p.search_vector,q.query) AS score,
+        row_number() OVER (PARTITION BY g.metadata->>'provision_version_id'
+          ORDER BY ts_rank_cd(p.search_vector,q.query) DESC,m.scope_id,p.id) AS position
+      FROM legislation.legal_search_memberships m JOIN legislation.legal_search_generations g ON g.id=m.generation_id
+      JOIN legislation.legal_search_passages p ON p.generation_id=g.id CROSS JOIN websearch_to_tsquery('english',$2) q(query)
+      WHERE m.scope_kind='edition' AND m.scope_id=ANY($1::uuid[]) AND p.search_vector @@ q.query)
+      SELECT id,"scopeKind","scopeId","generationId","versionId",score FROM ranked WHERE position=1
+      ORDER BY score DESC,id,"scopeId" LIMIT 1001`,
+          [input.editionIds, input.query]
+        )
+      ).rows
+  })
+}
+
+export async function readLegalPublicationSearchResultPage(
+  client: pg.PoolClient,
+  input: {
+    requestHash: string
+    generation: string
+    query: string
+    publicationKinds?: string[]
+    publishedFrom?: string
+    publishedTo?: string
+    limit: number
+    cursor?: string
+  }
+) {
+  return readFrozenLegalSearchResultPage(client, {
+    requestHash: input.requestHash,
+    generation: input.generation,
+    limit: input.limit,
+    scopeKind: "publication",
+    ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
+    rank: async () =>
+      (
+        await client.query(
+          `WITH ranked AS (
+            SELECT 'publication' AS "scopeKind",projection.scope_id AS "scopeId",
+              p.generation_id AS "generationId",p.id,g.metadata->>'document_version_id' AS "versionId",
+              ts_rank_cd(p.search_vector,q.query) AS score,
+              row_number() OVER (PARTITION BY g.metadata->>'document_version_id'
+                ORDER BY ts_rank_cd(p.search_vector,q.query) DESC,projection.scope_id,p.id) AS position
+            FROM legislation.legal_search_scope_projections projection
+            JOIN legislation.legal_search_memberships m
+              ON m.scope_kind=projection.scope_kind AND m.scope_id=projection.scope_id
+            JOIN legislation.legal_search_generations g ON g.id=m.generation_id
+            JOIN legislation.legal_search_passages p ON p.generation_id=g.id
+            CROSS JOIN websearch_to_tsquery('english',$2) q(query)
+            WHERE projection.scope_kind='publication'
+              AND projection.projection->>'corpus'='regulatory_publication'
+              AND projection.projection->>'jurisdiction_id'='jurisdiction:us'
+              AND projection.projection->>'source_id'='govinfo-fr'
+              AND ($1::text[] IS NULL OR projection.projection->>'publication_kind'=ANY($1::text[]))
+              AND ($3::date IS NULL OR projection.projection->>'publication_date' >= $3::date::text)
+              AND ($4::date IS NULL OR projection.projection->>'publication_date' <= $4::date::text)
+              AND p.search_vector @@ q.query)
+           SELECT id,"scopeKind","scopeId","generationId","versionId",score FROM ranked WHERE position=1
+           ORDER BY score DESC,id,"scopeId" LIMIT 1001`,
+          [input.publicationKinds ?? null, input.query, input.publishedFrom ?? null, input.publishedTo ?? null]
+        )
+      ).rows
+  })
 }

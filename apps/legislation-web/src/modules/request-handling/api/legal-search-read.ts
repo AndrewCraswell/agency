@@ -115,7 +115,8 @@ export function createLegalSearch(
           effectiveOn: hit.effective_on,
           sourceObservationId: hit.observation_id
         })),
-        truncated: page.candidateSetTruncated,
+        ...(page.nextCursor === null ? {} : { nextCursor: page.nextCursor }),
+        truncated: page.nextCursor !== null || page.candidateSetTruncated,
         warnings: page.candidateSetTruncated
           ? ["The ranked publication window is truncated. Refine the query or date filters."]
           : [],

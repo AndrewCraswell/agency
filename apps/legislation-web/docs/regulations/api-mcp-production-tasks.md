@@ -61,7 +61,7 @@ vertical slices: application service, serializer, strict client parser, explicit
 - [ ] **HTTP-08 Implement publication and agency discovery.** Ship publication list/detail/versions and source-agency
   directory with publication-date/kind/agency filters. **Done:** unresolved source agencies remain representable, duplicate
   printed numbers resolve to distinct canonical documents, all results retain exact provenance. Depends on ING-05/09, HTTP-01/03.
-- [ ] **HTTP-09 Implement lexical legal search end to end.** Connect the strict search schema to corpus-wide query
+- [x] **HTTP-09 Implement lexical legal search end to end.** Connect the strict search schema to corpus-wide query
   service, request-bound response checks, typed client method and explicit POST route. **Done:** lexical searches
   preserve filters, exact versions and pagination; semantic/hybrid requests return explicit unavailable capability
   until HTTP-17 ships, not an empty semantic success. Depends on INDEX-02/07–08, HTTP-01–03.
@@ -70,7 +70,7 @@ vertical slices: application service, serializer, strict client parser, explicit
   and exact historical-date evidence. Public projection, current-code/explicit-edition selectors, POST route and typed
   client are now locally implemented and covered by a real-database authenticated handler canary. Federal Register
   kind/date search is implemented with projection-first filtering and canonical partition/candidate verification;
-  publication paging, agency filters and deployed acceptance remain open. The API-backed MCP search tool now passes
+  agency filters and deployed acceptance remain open. The API-backed MCP search tool now passes
   local real-database search/pagination/text parity; see [serving evidence](legal-search-serving.md).
 - [ ] **HTTP-10 Implement public coverage reporting.** Ship coverage filters and stage-specific capability, requested/
   available/excluded scope, publisher currency and collection attempt fields. **Done:** source collection, canonical,
@@ -115,12 +115,17 @@ evidence in [search production](../../../legislation-ingestion/docs/regulations/
 - [ ] **INDEX-05 Complete rights invalidation across serving.** Invalidate filter projections, result/candidate caches
   and later vectors, coordinating I's existing bounded cleanup. Done: immediate read denial, resumable derivative
   removal and preservation of other allowed copies.
-- [ ] **INDEX-07 Implement canonical result hydration.** Group by owner/exact version and attach citation, locator,
+- [x] **INDEX-07 Implement canonical result hydration.** Group by owner/exact version and attach citation, locator,
   dates, agencies and warnings without contradictory context or duplicate documents. Depends on INDEX-02, ING-09.
-- [ ] **INDEX-08 Implement lexical cursor binding.** Bind caller, normalized query/filters, limit, stable ranking and
+  Edition and publication candidates are grouped by exact version, compared with canonical passage/generation content
+  and hydrated with source, citation, locator and dates. Unresolved agency mapping remains an explicit empty array and
+  coverage warning rather than inferred metadata.
+- [x] **INDEX-08 Implement lexical cursor binding.** Bind caller, normalized query/filters, limit, stable ranking and
   generation; invalidate incompatible rights/generation. Done: no skipped/duplicate pages and safe changed-account,
   filter and expiry errors. Depends on INDEX-07. Local evidence: a 15-minute, 1,000-version frozen window and DB checks
   for stable pages, caller/query/limit/scope binding, tampering and expiry cleanup; see [pagination](edition-search-canary.md).
+  The shared snapshot now carries explicit edition/publication scope identity. The retained notice canary returned 92
+  unique versions over four pages with one generation and rejected a cursor reused with changed publication filters.
   Broader public/deployed acceptance remains open.
 - [ ] **INDEX-09 Implement frozen semantic/hybrid candidates.** Persist bounded model/generation-bound candidates,
   expiry, caller and truncation metadata, deterministic fusion and selected reranking. Done: no changing rankings across

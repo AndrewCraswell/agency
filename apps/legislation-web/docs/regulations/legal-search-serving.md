@@ -17,14 +17,16 @@ Federal Register publication search supports publication-kind and inclusive publ
 isolated projection before ranking and serves only when the complete canonical filter partition has matching projected
 identities, receipts, memberships and source/target revision fences. It has no document-count cap. Exact verification
 currently traverses receipts in bounded 100-scope pages on each request; representative-volume measurements and a
-durable precomputed revision manifest remain required before national promotion. Publication paging is not implemented,
-so a returned truncated window must be refined by query, kind or date.
+durable precomputed revision manifest remain required before national promotion. Publication ranking uses the same
+15-minute frozen-candidate pagination contract as edition search.
 
 Lexical limit is 1–100, default 20. Pagination persists the frozen ranked window described in
 [cross-edition retrieval](edition-search-canary.md). Repost the same JSON filters with `meta.nextCursor` as `cursor`.
 The next link is the same POST endpoint, not a GET query. Cursors also bind normalized public filters and requested
 mode/fallback permission. Default-current head changes invalidate the underlying selection; they do not silently
-resume a different generation. No national readiness is implied by the two-title pilot.
+resume a different generation. Publication cursors additionally bind the complete kind/date partition generation;
+changed filters or any canonical/target revision fail instead of resuming another result set. No national readiness is
+implied by the retained pilots.
 
 Statute corpora, state jurisdictions and agency filters return 503 with a safe capability reason. The default mixed
 regulation/publication request therefore currently returns 503. Date-based `asOf` returns 409
@@ -74,7 +76,8 @@ publications: 12 final rules, 92 notices and six proposed rules. Canonical and t
 and all projection hashes validate. The unfiltered request verifies two receipt/revision pages and returns all three
 publication kinds. Kind-filtered requests return all 92 matching notices and all six proposed rules. A disposable clone
 rejected a missing filter-partition member, a corrupted projection hash and a changed non-result canonical version.
-The typed authenticated HTTP boundary also returned the complete 92-notice result set.
+The typed authenticated HTTP boundary returned the complete 92-notice result set in four stable pages with no duplicate
+versions and rejected changed filters on continuation.
 
 This is not deployed Next-router or real WorkOS credential evidence. Agency retrieval, publication paging, full-corpus
 performance, semantic/vector search, remaining reconciliation and deployment acceptance are open.

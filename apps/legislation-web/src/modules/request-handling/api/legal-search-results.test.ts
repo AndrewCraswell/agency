@@ -1,7 +1,7 @@
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import pg from "pg"
 import { afterEach, expect, it, vi } from "vitest"
-import { readLegalSearchResultPage } from "./legal-search-results"
+import { readLegalPublicationSearchResultPage, readLegalSearchResultPage } from "./legal-search-results"
 
 const editionId = "00000000-0000-4000-8000-000000000001"
 const snapshotId = "00000000-0000-4000-8000-000000000002"
@@ -14,7 +14,8 @@ const request = {
 }
 const candidate = (index: number) => ({
   id: digest(String(index)),
-  editionId,
+  scopeKind: "edition" as const,
+  scopeId: editionId,
   generationId: "c".repeat(64),
   versionId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
   score: 1 / (index + 1)
@@ -108,4 +109,43 @@ it("does not persist a one-page result and rejects malformed cursors before SQL"
     category: "invalid_request"
   })
   expect(f.query).toHaveBeenCalledTimes(1)
+})
+
+it("freezes filtered publication identities and resumes without reranking", async () => {
+  const f = fixture()
+  const publications = candidates.map((row) => ({ ...row, scopeKind: "publication" as const }))
+  f.rows(publications)
+  f.rows()
+  f.rows()
+  const first = await readLegalPublicationSearchResultPage(f.client, {
+    requestHash: request.requestHash,
+    generation: request.generation,
+    query: "notice",
+    publicationKinds: ["notice"],
+    publishedFrom: "2000-01-18",
+    publishedTo: "2000-01-18",
+    limit: 2
+  })
+  expect(first.candidates).toEqual(publications.slice(0, 2))
+  expect(first.nextCursor).toBeTruthy()
+  expect(f.query.mock.calls[0]?.[0]).toContain("legal_search_scope_projections")
+  expect(f.query.mock.calls[0]?.[1]).toEqual([["notice"], "notice", "2000-01-18", "2000-01-18"])
+
+  const resumed = fixture()
+  resumed.rows([
+    { candidates: publications, candidate_hash: digest(JSON.stringify(publications)), window_truncated: false }
+  ])
+  expect(
+    await readLegalPublicationSearchResultPage(resumed.client, {
+      requestHash: request.requestHash,
+      generation: request.generation,
+      query: "notice",
+      publicationKinds: ["notice"],
+      publishedFrom: "2000-01-18",
+      publishedTo: "2000-01-18",
+      limit: 2,
+      cursor: first.nextCursor ?? undefined
+    })
+  ).toMatchObject({ candidates: [publications[2]], nextCursor: null })
+  expect(resumed.query).toHaveBeenCalledTimes(1)
 })

@@ -14,6 +14,7 @@ import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/sea
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import { readLegalPublicationSearchResultPage } from "./legal-search-results"
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
 const publicationKind = z.enum(["proposed_rule", "final_rule", "notice", "other"])
@@ -23,7 +24,11 @@ const requestSchema = z.strictObject({
   publishedFrom: z.iso.date().optional(),
   publishedTo: z.iso.date().optional(),
   limit: z.int().min(1).max(100),
-  cursor: z.string().optional(),
+  cursor: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/)
+    .max(2048)
+    .optional(),
   requestBinding: hash.optional()
 })
 const publicationSchema = z.object({
@@ -92,9 +97,6 @@ export function createLegalPublicationSearch(
       throw new LegislationError("forbidden", "Access denied")
     }
     const input = requestSchema.parse(value)
-    if (input.cursor !== undefined) {
-      throw new LegislationError("conflict", "Search continuation expired or no longer matches the request")
-    }
     invariant(sourcePool !== targetPool, "legal_search_requires_separate_database")
     const filters = [input.publicationKinds ?? null, input.publishedFrom ?? null, input.publishedTo ?? null]
     const source = await sourcePool.connect()
@@ -308,43 +310,51 @@ export function createLegalPublicationSearch(
           throw unavailable()
         }
         const partitionRevisionHash = revisionHash.digest("hex")
-        const candidates = z.array(candidateSchema).parse(
+        const generation = digest(
+          JSON.stringify([canonicalManifest, projectedManifest, integrity, partitionRevisionHash, rights])
+        )
+        const requestHash = digest(
+          JSON.stringify([
+            "legal-publication-lexical-2026-09-17",
+            identity.organizationId,
+            identity.userId,
+            input.query,
+            input.limit,
+            input.requestBinding ?? null
+          ])
+        )
+        const page = await readLegalPublicationSearchResultPage(target, {
+          requestHash,
+          generation,
+          query: input.query,
+          publicationKinds: input.publicationKinds,
+          publishedFrom: input.publishedFrom,
+          publishedTo: input.publishedTo,
+          limit: input.limit,
+          ...(input.cursor === undefined ? {} : { cursor: input.cursor })
+        })
+        const selected = z.array(candidateSchema).parse(
           (
             await target.query(
-              `with ranked as (
-                select m.scope_id,p.generation_id,p.id,p.ordinal,p.body,p.input_text,p.data,g.metadata,
-                  projection.projection,projection.projection_hash,
-                  ts_rank_cd(p.search_vector,q.query) as score,
-                  row_number() over (partition by g.metadata->>'document_version_id'
-                    order by ts_rank_cd(p.search_vector,q.query) desc,m.scope_id,p.id) as position
-                from legislation.legal_search_scope_projections projection
-                join legislation.legal_search_memberships m
-                  on m.scope_kind=projection.scope_kind and m.scope_id=projection.scope_id
-                join legislation.legal_search_generations g on g.id=m.generation_id
-                join legislation.legal_search_passages p on p.generation_id=g.id
-                cross join websearch_to_tsquery('english',$2) q(query)
-                where projection.scope_kind='publication'
-                  and projection.projection->>'corpus'='regulatory_publication'
-                  and projection.projection->>'jurisdiction_id'='jurisdiction:us'
-                  and projection.projection->>'source_id'='govinfo-fr'
-                  and ($1::text[] is null or projection.projection->>'publication_kind'=any($1::text[]))
-                  and ($3::date is null or projection.projection->>'publication_date' >= $3::date::text)
-                  and ($4::date is null or projection.projection->>'publication_date' <= $4::date::text)
-                  and p.search_vector @@ q.query)
-               select scope_id,generation_id,id,ordinal,body,input_text,data,metadata,projection,projection_hash,score
-               from ranked where position=1 order by score desc,id,scope_id limit $5`,
-              [
-                input.publicationKinds ?? null,
-                input.query,
-                input.publishedFrom ?? null,
-                input.publishedTo ?? null,
-                input.limit + 1
-              ]
+              `select m.scope_id,p.generation_id,p.id,p.ordinal,p.body,p.input_text,p.data,g.metadata,
+                projection.projection,projection.projection_hash,(f.value->>'score')::double precision as score
+              from jsonb_array_elements($1::jsonb) with ordinality f(value,position)
+              join legislation.legal_search_passages p
+                on p.id=f.value->>'id' and p.generation_id=f.value->>'generationId'
+              join legislation.legal_search_generations g on g.id=p.generation_id
+                and g.metadata->>'document_version_id'=f.value->>'versionId'
+              join legislation.legal_search_memberships m on m.scope_kind='publication'
+                and m.scope_id=(f.value->>'scopeId')::uuid and m.generation_id=g.id
+              join legislation.legal_search_scope_projections projection
+                on projection.scope_kind=m.scope_kind and projection.scope_id=m.scope_id
+              order by f.position`,
+              [JSON.stringify(page.candidates)]
             )
           ).rows
         )
-        const candidateSetTruncated = candidates.length > input.limit
-        const selected = candidates.slice(0, input.limit)
+        if (selected.length !== page.candidates.length) {
+          throw unavailable()
+        }
         for (const candidate of selected) {
           invariant(
             digest(JSON.stringify(candidate.projection)) === candidate.projection_hash,
@@ -386,9 +396,6 @@ export function createLegalPublicationSearch(
         if (publications.length !== scopeIds.length) {
           throw unavailable()
         }
-        const generation = digest(
-          JSON.stringify([canonicalManifest, projectedManifest, integrity, partitionRevisionHash, rights, publications])
-        )
         const originals =
           selected.length === 0
             ? []
@@ -439,7 +446,12 @@ export function createLegalPublicationSearch(
         })
         await target.query("commit")
         await source.query("commit")
-        return { hits, generation, candidateSetTruncated }
+        return {
+          hits,
+          generation,
+          nextCursor: page.nextCursor,
+          candidateSetTruncated: page.candidateSetTruncated
+        }
       } catch (error) {
         await target.query("rollback")
         throw error
