@@ -3,6 +3,9 @@
 import re
 
 SUMMARY = re.compile(r"YEAS:\s*(\d+)\s+NAYS:\s*(\d+)\s+EXCUSED:\s*(\d+)\s+ABSENT:\s*(\d+)")
+JOINT_SUMMARY = re.compile(
+    r"TOTALS?:\s*(\d+)\s+YEAS:\s*(\d+)\s+NAYS:\s+EXCUSED:\s*(\d+)\s+ABSENT:\s*(\d+)"
+)
 GROUP = re.compile(r"^(Yeas|Nays|Excused|Absent):\s*(.*)$")
 BILL = re.compile(r"(?:CS)?(HJR|SJR|HCR|SCR|HB|SB|HR|SR)\s*0*([1-9][0-9]*)(?![0-9])")
 OPTIONS = {"Yeas": "yes", "Nays": "no", "Excused": "excused", "Absent": "absent"}
@@ -282,14 +285,18 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
     for (search_start, search_end, preferred_end, cited_offset, backward_only,
          cited_range) in search_ranges:
         range_candidates = []
-        summaries = list(SUMMARY.finditer(text, search_start, search_end))
+        summaries = sorted(
+            [*SUMMARY.finditer(text, search_start, search_end),
+             *JOINT_SUMMARY.finditer(text, search_start, search_end)],
+            key=lambda match: match.start(),
+        )
         for index, summary in enumerate(summaries):
             if backward_only and (cited_offset is None or summary.start() >= cited_offset):
                 continue
             totals = tuple(int(value) for value in summary.groups())
             if (totals[0], totals[1], totals[2] + totals[3]) != tuple(expected_counts):
                 continue
-            is_joint_total = bool(re.search(
+            is_joint_total = summary.re is JOINT_SUMMARY or bool(re.search(
                 r"TOTALS?:\s*$", text[max(search_start, summary.start() - 40):summary.start()]
             ))
             # Numeric page anchors can follow the bill heading they identify.

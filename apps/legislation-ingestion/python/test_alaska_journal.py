@@ -510,6 +510,18 @@ And so the effective date clause was adopted.
         self.assertEqual(len(result), 8)
         self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
 
+    def test_accepts_joint_totals_with_values_before_publisher_column_labels(self):
+        house = self.sample("Adams, Brown")
+        senate = self.sample("Evans, Fox").replace("Nays: Clark", "Nays: Green").replace(
+            "Excused: Davis", "Excused: Hill"
+        )
+        text = "[[JOURNAL_ANCHOR:3041]]\nPage 3041\n" + senate + house + (
+            "TOTALS: 4 YEAS: 2 NAYS: EXCUSED: 2 ABSENT: 0\n"
+        )
+        result = parse_roll_call(text, "HB1", (4, 2, 2), "3041", "3041", True,
+                                 "(S) GOVERNOR VETO SUSTAINED Y4 N2 E2")
+        self.assertEqual(len(result), 8)
+
     def test_rejects_joint_total_with_missing_or_overlapping_chamber_positions(self):
         complete = self.sample("Adams, Brown")
         partial = self.sample("Evans")
