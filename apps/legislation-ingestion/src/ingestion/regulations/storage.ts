@@ -1,10 +1,5 @@
 import { randomUUID } from "node:crypto"
-import {
-  acquisitionUnitSchema,
-  digest,
-  sameRegulatoryAcquisition,
-  validateManifest
-} from "@repo/legislation-core/legal-text/contracts"
+import { digest } from "@repo/legislation-core/legal-text/contracts"
 import {
   parserLimits,
   regulatoryParseSummarySchema,
@@ -27,7 +22,12 @@ import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { assessAnnualCfrDates } from "./annual-cfr-dates.js"
-import { receiptSchema } from "./artifact-backfill.js"
+import {
+  parseRegulatoryImportManifest,
+  regulatoryImportReceiptSchema,
+  regulatoryImportUnitSchema,
+  sameRegulatoryImportUnit
+} from "./regulatory-import-contract.js"
 
 const importGenerationSchema = z.object({
   id: z.string(),
@@ -41,7 +41,7 @@ const importGenerationSchema = z.object({
 })
 const generationSchema = importGenerationSchema.extend({
   expected_records: z.int().positive(),
-  unit: acquisitionUnitSchema,
+  unit: regulatoryImportUnitSchema,
   summary: regulatoryParseSummarySchema
 })
 type Generation = z.infer<typeof generationSchema>
@@ -114,11 +114,11 @@ export async function registerRegulatoryImport(
     artifactLocator: string
   }
 ) {
-  const manifest = validateManifest(input.manifest)
-  const receipt = receiptSchema.parse(input.receipt)
+  const manifest = parseRegulatoryImportManifest(input.manifest)
+  const receipt = regulatoryImportReceiptSchema.parse(input.receipt)
   const summary = regulatoryParseSummarySchema.parse(input.summary)
   const unit = manifest.units.find((item) => item.key === receipt.unit.key)
-  invariant(unit && sameRegulatoryAcquisition(unit, receipt.unit), "unit_manifest_mismatch")
+  invariant(unit && sameRegulatoryImportUnit(unit, receipt.unit), "unit_manifest_mismatch")
   invariant(
     summary.inputHash === receipt.sha256 &&
       summary.inputBytes === receipt.bytes &&

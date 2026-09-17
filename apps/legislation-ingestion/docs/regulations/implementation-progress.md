@@ -1,6 +1,6 @@
 # Federal regulatory implementation progress
 
-Updated September 15, 2026. Implementation is underway. Backfill first: all recurring regulatory source schedules remain
+Updated September 17, 2026. Implementation is underway. Backfill first: all recurring regulatory source schedules remain
 disabled. This is a dated execution ledger, not a recurring-agent configuration or task queue. Older entries describe
 then-current blockers and counters; newer evidence and the production backlog supersede those operational directions.
 
@@ -12,6 +12,31 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 2m43s. Verification log: `C:/Users/andcra/AppData/Local/Temp/rostra-production-backlog-verify.log`.
 
 ## Implementation evidence, newest first
+
+Connected parsed current eCFR discovery units to the existing fenced canonical publication transaction. Current and
+historical import envelopes remain separately validated: historical manifests retain inventory/checksum accounting,
+while current manifests require their immutable discovery identity, official URL and exact unit/receipt match. The new
+manual `regulatory-discovery-publication` worker revalidates source bytes and normalized shards, stages and materializes
+canonical records under a lease, compare-and-swap publishes the code head, emits the lexical outbox item and only then
+records the generation/edition IDs on the discovery unit. Replay verifies and reuses the published edition. No worker
+submits passage preparation, copying or embeddings, and no recurring schedule was added.
+
+A fresh-migration disposable PostgreSQL test passed the complete discovery/acquisition/parse/publication path and its
+replay. The retained official Title 1 canary then reused artifact
+`fe18aad18e3b6e8fde18478d1f64d946bb9963bb74f1c164183627663c695c72` and normalized generation
+`f323bb2d85dfbac42e1b7ba36a4c22dee1527c82eede3134d0add3eae5a92804`, published all 368 members as generation
+`c946ac875b29de8233a8f5a7adf1752be9cd3cd6f0d160be50376dfd83bdff38`, created one current head and one lexical
+outbox item, then returned the same edition on replay. Ingestion types/lint, the publication task tests, three database
+files with four tests, the 59-test historical canonical-storage regression and `drizzle-kit check` passed. Root
+`pnpm verify` passed formatting, package lint and package type checks, then stopped at the existing broad Knip inventory:
+63 unused theme/template files, two root dev dependencies, two root binaries, the concurrently edited web
+`EntityResults` export and configuration hints. No regulation-specific finding was reported; coverage did not run. Log:
+`C:/Users/andcra/AppData/Local/Temp/tabra-current-publication-verify.log`. This is local disposable evidence; bounded
+controller submission, shared deployed storage, deployment/fault smoke and derived-stage dispatch remain open.
+
+The pinned 49-title read-only qualification remains incomplete at 20 of 49 editions and 133,805 canonical records, with
+zero blocked preparations for either tokenizer. Process 28776 was still present at the September 17 observation; the
+progress file remained `complete: false`, so this is progress evidence rather than a completed qualification claim.
 
 Enriched code detail with authorized published edition-component count and nullable current eCFR head. The head is selected
 from `legal_code_heads`, not inferred from the largest date; annual volumes never masquerade as a current whole code.
@@ -3068,7 +3093,8 @@ tests. The live Title 1 canary reused the retained 477,387-byte artifact, normal
 normalized evidence is under `artifacts/regulatory-backfills/current-normalized-canary`.
 
 This is local/disposable evidence. Persisted Trigger submission/lease recovery, deployed Python resource verification,
-shared artifact/normalized storage, current publication and recurring activation remain open.
+shared artifact/normalized storage and recurring activation remain open. The newer publication entry above closes the
+local current eCFR publication handoff.
 
 ## Pinned resumption of the full current-title qualification
 

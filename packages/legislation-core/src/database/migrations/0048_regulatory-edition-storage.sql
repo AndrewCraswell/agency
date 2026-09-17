@@ -54,7 +54,7 @@ CREATE TABLE legislation.legal_discovery_units (
   unit_key text NOT NULL CHECK(unit_key ~ '^[a-f0-9]{64}$'),
   payload_hash text NOT NULL CHECK(payload_hash ~ '^[a-f0-9]{64}$'),
   unit jsonb NOT NULL CHECK(jsonb_typeof(unit)='object'),
-  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','acquired','parsed','quarantined')),
+  state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','registered','acquired','parsed','published','quarantined')),
   discovered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   registered_at timestamptz,
   artifact_hash text CHECK(artifact_hash IS NULL OR artifact_hash ~ '^[a-f0-9]{64}$'),
@@ -67,20 +67,26 @@ CREATE TABLE legislation.legal_discovery_units (
   normalized_locator text,
   parse_summary jsonb,
   parsed_at timestamptz,
+  publication_generation_id text,
+  edition_id uuid,
+  published_at timestamptz,
   PRIMARY KEY(source_id,scope_key,unit_key),
   FOREIGN KEY(source_id,scope_key) REFERENCES legislation.legal_discovery_checkpoints(source_id,scope_key),
   CHECK(
     (state='pending' AND registered_at IS NULL) OR
-    (state IN ('registered','acquired','parsed') AND registered_at IS NOT NULL) OR
+    (state IN ('registered','acquired','parsed','published') AND registered_at IS NOT NULL) OR
     state='quarantined'
   ),
   CHECK(
-    (state IN ('acquired','parsed'))=(artifact_hash IS NOT NULL AND artifact_bytes IS NOT NULL AND storage_locator IS NOT NULL AND
+    (state IN ('acquired','parsed','published'))=(artifact_hash IS NOT NULL AND artifact_bytes IS NOT NULL AND storage_locator IS NOT NULL AND
       acquisition_receipt IS NOT NULL AND acquired_at IS NOT NULL)
   ),
   CHECK(
-    (state='parsed')=(parser_hash IS NOT NULL AND normalized_generation IS NOT NULL AND normalized_locator IS NOT NULL AND
+    (state IN ('parsed','published'))=(parser_hash IS NOT NULL AND normalized_generation IS NOT NULL AND normalized_locator IS NOT NULL AND
       parse_summary IS NOT NULL AND parsed_at IS NOT NULL)
+  ),
+  CHECK(
+    (state='published')=(publication_generation_id IS NOT NULL AND edition_id IS NOT NULL AND published_at IS NOT NULL)
   )
 );
 --> statement-breakpoint
@@ -178,6 +184,12 @@ CREATE TABLE legislation.legal_editions (
 );
 --> statement-breakpoint
 CREATE INDEX legal_editions_source_idx ON legislation.legal_editions(code_id,source_id,issue_date,id);
+--> statement-breakpoint
+ALTER TABLE legislation.legal_discovery_units ADD CONSTRAINT legal_discovery_units_publication_generation_fk
+  FOREIGN KEY(publication_generation_id) REFERENCES legislation.legal_import_generations(id);
+--> statement-breakpoint
+ALTER TABLE legislation.legal_discovery_units ADD CONSTRAINT legal_discovery_units_edition_fk
+  FOREIGN KEY(edition_id) REFERENCES legislation.legal_editions(id);
 --> statement-breakpoint
 CREATE TABLE legislation.legal_annual_editions (
   id text PRIMARY KEY CHECK(id ~ '^[a-f0-9]{64}$'),

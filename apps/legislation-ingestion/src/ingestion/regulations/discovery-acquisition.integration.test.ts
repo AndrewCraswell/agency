@@ -14,6 +14,7 @@ import {
   startLegalDiscoveryAttempt
 } from "./discovery-checkpoint.js"
 import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
+import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
@@ -41,13 +42,15 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     await pool.query(
       "TRUNCATE legislation.legal_artifacts,legislation.legal_import_manifests,legislation.legal_discovery_pages,legislation.legal_discovery_units,legislation.legal_discovery_checkpoints CASCADE"
     )
+    await pool.query(`INSERT INTO legislation.jurisdictions(id,name,classification,country_code)
+      VALUES('jurisdiction:us','United States','country','US') ON CONFLICT DO NOTHING`)
   })
   afterEach(async () => {
     await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })))
   })
   afterAll(async () => pool.end())
 
-  it("commits and reuses one verified artifact and normalized generation", async () => {
+  it("commits and reuses one verified artifact, normalized generation and canonical publication", async () => {
     const query = { endpoint: "titles", titles: [1] }
     const attempt = await startLegalDiscoveryAttempt(pool, { sourceId: "ecfr", query })
     const values = {
@@ -109,15 +112,20 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const secondParse = await parseLegalDiscoveryArtifact(pool, parseInput)
     expect(firstParse).toMatchObject({ records: 2, reused: false })
     expect(secondParse).toEqual({ ...firstParse, reused: true })
+    const publicationInput = { manifestId: manifest.id, unitKey: unit.key }
+    const firstPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
+    const secondPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
+    expect(firstPublication).toMatchObject({ state: "published", isCurrent: true, reused: false })
+    expect(secondPublication).toEqual({ ...firstPublication, reused: true })
     const stored = await pool.query(
       `SELECT state,artifact_hash,"artifact_bytes"::text bytes,storage_locator,
        acquisition_receipt->>'sha256' receipt_hash,parser_hash,normalized_generation,normalized_locator,
-       (parse_summary->>'records')::integer records
+       (parse_summary->>'records')::integer records,publication_generation_id,edition_id::text,published_at IS NOT NULL published
        FROM legislation.legal_discovery_units WHERE source_id='ecfr' AND scope_key=$1 AND unit_key=$2`,
       [attempt.scopeKey, unit.key]
     )
     expect(stored.rows[0]).toEqual({
-      state: "parsed",
+      state: "published",
       artifact_hash: first.artifactHash,
       bytes: String(first.bytes),
       storage_locator: join(directory, "blobs", `${first.artifactHash}.xml`),
@@ -125,7 +133,23 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       parser_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       normalized_generation: firstParse.generation,
       normalized_locator: join(normalized, firstParse.generation),
-      records: 2
+      records: 2,
+      publication_generation_id: firstPublication.generationId,
+      edition_id: firstPublication.editionId,
+      published: true
     })
+    expect(
+      (
+        await pool.query(
+          `SELECT
+           (SELECT count(*)::int FROM legislation.legal_import_generations WHERE state='published') generations,
+           (SELECT count(*)::int FROM legislation.legal_editions WHERE published_at IS NOT NULL) editions,
+           (SELECT count(*)::int FROM legislation.legal_edition_provisions WHERE edition_id=$1) members,
+           (SELECT count(*)::int FROM legislation.legal_derived_outbox WHERE edition_id=$1 AND operation='lexical') lexical_jobs,
+           (SELECT count(*)::int FROM legislation.legal_code_heads WHERE edition_id=$1) heads`,
+          [firstPublication.editionId]
+        )
+      ).rows[0]
+    ).toEqual({ generations: 1, editions: 1, members: 2, lexical_jobs: 1, heads: 1 })
   })
 })

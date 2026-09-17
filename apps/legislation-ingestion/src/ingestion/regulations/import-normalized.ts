@@ -2,7 +2,6 @@ import { createHash } from "node:crypto"
 import { createReadStream } from "node:fs"
 import { join } from "node:path"
 import { createInterface } from "node:readline"
-import { sameRegulatoryAcquisition, validateManifest } from "@repo/legislation-core/legal-text/contracts"
 import { regulatoryRecordSchema } from "@repo/legislation-core/legal-text/parser-contract"
 import {
   storageBatchBytes,
@@ -13,9 +12,14 @@ import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
 import { resolveAnnualCfrObservation } from "./annual-cfr-observations.js"
-import { receiptSchema, validateRegulatoryArtifactRetention } from "./artifact-backfill.js"
+import { validateRegulatoryArtifactRetention } from "./artifact-backfill.js"
 import { inspectCanonicalRegulatoryReuse } from "./canonical-reuse.js"
 import { validateRegulatoryOutput } from "./parser-bridge.js"
+import {
+  parseRegulatoryImportManifest,
+  regulatoryImportReceiptSchema,
+  sameRegulatoryImportUnit
+} from "./regulatory-import-contract.js"
 import {
   claimRegulatoryLease,
   materializeRegulatoryEdition,
@@ -37,10 +41,10 @@ export async function importNormalizedRegulatoryUnit(
     reuseOnly?: boolean
   }
 ) {
-  const manifest = validateManifest(input.manifest)
-  const receipt = receiptSchema.parse(input.receipt)
+  const manifest = parseRegulatoryImportManifest(input.manifest)
+  const receipt = regulatoryImportReceiptSchema.parse(input.receipt)
   const unit = manifest.units.find((item) => item.key === receipt.unit.key)
-  invariant(unit && sameRegulatoryAcquisition(unit, receipt.unit), "unit_manifest_mismatch")
+  invariant(unit && sameRegulatoryImportUnit(unit, receipt.unit), "unit_manifest_mismatch")
   await validateRegulatoryArtifactRetention(input.artifactLocator, receipt.sha256, receipt.bytes)
   // Revalidate every retained shard before creating a database generation. No trust in a prior CLI report.
   const summary = await validateRegulatoryOutput(input.directory, receipt.unit, receipt.sha256, input.parserCodeHash)

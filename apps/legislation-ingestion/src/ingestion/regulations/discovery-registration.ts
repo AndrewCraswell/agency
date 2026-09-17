@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
-import { digest, unitIdentity } from "@repo/legislation-core/legal-text/contracts"
+import { digest, officialUrl, unitIdentity } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
@@ -36,6 +36,21 @@ function manifestIdentity(value: Omit<LegalDiscoveryManifest, "id">) {
       value.units.map((unit) => [unit.key, legalDiscoveryPayloadHash(unit)])
     ])
   )
+}
+
+export function validateLegalDiscoveryManifest(value: unknown) {
+  const manifest = legalDiscoveryManifestSchema.parse(value)
+  invariant(manifest.id === manifestIdentity(manifest), "legal_discovery_manifest_identity_mismatch")
+  invariant(
+    new Set(manifest.units.map((unit) => unit.key)).size === manifest.units.length,
+    "legal_discovery_manifest_duplicate_unit"
+  )
+  for (const unit of manifest.units) {
+    invariant(unit.sourceId === manifest.sourceId, "legal_discovery_manifest_source_mismatch")
+    invariant(unit.key === unitIdentity(unit), "legal_discovery_manifest_unit_identity_mismatch")
+    officialUrl(unit.sourceUrl, unit.sourceId)
+  }
+  return manifest
 }
 
 /** Atomically moves one bounded pending page into an immutable current-acquisition manifest. */
@@ -83,7 +98,7 @@ export async function registerLegalDiscoveryManifest(pool: pg.Pool, value: unkno
       createdFrom: "legal-discovery" as const,
       recurringIngestionEnabled: false as const
     }
-    const manifest = legalDiscoveryManifestSchema.parse({
+    const manifest = validateLegalDiscoveryManifest({
       ...bodyWithoutId,
       id: manifestIdentity(bodyWithoutId)
     })

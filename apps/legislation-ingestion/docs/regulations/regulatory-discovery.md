@@ -36,9 +36,17 @@ complete but before the database commit reuses and revalidates the retained file
 `regulatory-discovery-parsing` reloads an acquired unit and its receipt, revalidates the retained artifact, invokes the
 same bounded Python parser used by historical backfills and commits the parser hash, normalized generation, locator and
 summary only after every shard passes TypeScript validation. Retry revalidates and reuses the deterministic generation.
-The normalized root comes from `REGULATORY_NORMALIZED_DIRECTORY`; publication remains a separate transaction and gate.
+The normalized root comes from `REGULATORY_NORMALIZED_DIRECTORY`.
+
+`regulatory-discovery-publication` accepts one parsed current eCFR identity. It revalidates the immutable current
+manifest, receipt, retained source artifact and normalized shards before using the same leased canonical staging,
+materialization and compare-and-swap publication transaction as historical imports. Only a published canonical
+generation and edition can advance the discovery row to `published`; the row retains both identities for completion
+accounting. Replay verifies the complete canonical edition and returns the same identities. Publication emits the
+existing lexical outbox item but does not submit preparation, copying or embeddings. The worker is manual, limited to
+two concurrent publications and has no recurring schedule.
 
 The discovery-unit and current-manifest contracts require `historical: false`; the existing acquisition/backfill
 contract remains strictly `historical: true`. Keeping these schemas separate prevents recurring observations from
-silently becoming completed backfill coverage. Publication dispatch, deployed shared artifact/normalized storage,
-completion accounting and scheduled cadence are separate gates.
+silently becoming completed backfill coverage. Controller dispatch, deployed shared artifact/normalized storage,
+downstream completion accounting and scheduled cadence are separate gates.

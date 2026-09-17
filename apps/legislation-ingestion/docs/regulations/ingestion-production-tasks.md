@@ -145,6 +145,11 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
 - [ ] **ORCH-05 Add publication worker adapters.** Invoke existing eCFR/FR/annual writers only after full required-unit
   validation; persist stage completion with the canonical publication transaction. **Done:** missing annual volume or
   failed outbox write cannot partially promote a title. Depends on ORCH-04, ING-11.
+  Local progress: a parsed current eCFR unit now revalidates its manifest, receipt, source artifact and normalized shards,
+  then uses the existing fenced canonical staging/materialization/publication path. Its discovery row records the exact
+  published generation and edition only after the canonical transaction succeeds. Real retained Title 1 bytes published
+  368 members, one current head and one lexical outbox item; replay reused the same identities. FR/annual controller
+  handoff, deployed verification and downstream dispatch remain open.
 - [ ] **ORCH-06 Connect preparation, copying and acknowledgement.** Dispatch existing workers from publication state;
   route copy exhaustion to resumable INDEX-03 validation before acknowledgement. **Done:** copied-but-unacknowledged
   data remains unavailable, completed stage replay is safe, and no preparation task automatically creates vectors.

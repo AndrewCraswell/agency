@@ -1,11 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
-import {
-  acquisitionUnitSchema,
-  digest,
-  sameRegulatoryAcquisition,
-  unitIdentity,
-  validateManifest
-} from "@repo/legislation-core/legal-text/contracts"
+import { digest, unitIdentity } from "@repo/legislation-core/legal-text/contracts"
 import { regulatoryParseSummarySchema } from "@repo/legislation-core/legal-text/parser-contract"
 import {
   assertRights,
@@ -21,6 +15,11 @@ import invariant from "tiny-invariant"
 import { z } from "zod"
 import { validateRegulatoryArtifactRetention } from "./artifact-backfill.js"
 import { validateRegulatoryOutput } from "./parser-bridge.js"
+import {
+  parseRegulatoryImportManifest,
+  regulatoryImportUnitSchema,
+  sameRegulatoryImportUnit
+} from "./regulatory-import-contract.js"
 
 const candidateSchema = z.object({
   id: z.string(),
@@ -32,7 +31,7 @@ const candidateSchema = z.object({
   artifact_hash: z.string(),
   parser_hash: z.string(),
   contract: z.string(),
-  unit: acquisitionUnitSchema,
+  unit: regulatoryImportUnitSchema,
   summary: regulatoryParseSummarySchema,
   expected_records: z.int().positive(),
   state: z.string(),
@@ -88,7 +87,7 @@ export async function inspectCanonicalRegulatoryReuse(
   pool: pg.Pool,
   input: { unit: unknown; artifactHash: string; parserCodeHash: string; directory: string }
 ) {
-  const unit = acquisitionUnitSchema.parse(input.unit)
+  const unit = regulatoryImportUnitSchema.parse(input.unit)
   invariant(unit.sourceId === "ecfr" && unitIdentity(unit) === unit.key, "canonical_reuse_requires_ecfr")
   const artifactHash = z
     .string()
@@ -126,14 +125,14 @@ export async function inspectCanonicalRegulatoryReuse(
         candidate.unit_key === unit.key &&
         candidate.artifact_hash === artifactHash &&
         candidate.parser_hash === candidate.summary.parserCodeHash &&
-        sameRegulatoryAcquisition(candidate.unit, unit),
+        sameRegulatoryImportUnit(candidate.unit, unit),
       "canonical_generation_metadata_mismatch"
     )
     const retainedManifest = await client.query<{ body: unknown }>(
       "SELECT body FROM legislation.legal_import_manifests WHERE id=$1",
       [candidate.manifest_id]
     )
-    const manifest = validateManifest(retainedManifest.rows[0]?.body)
+    const manifest = parseRegulatoryImportManifest(retainedManifest.rows[0]?.body)
     invariant(
       manifest.id === candidate.manifest_id &&
         isDeepStrictEqual(
