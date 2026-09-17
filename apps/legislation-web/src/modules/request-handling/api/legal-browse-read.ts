@@ -2,6 +2,8 @@ import {
   legalEditionSchema,
   legalEditionDetailSchema,
   legalEditionsRequestSchema,
+  legalProvisionDetailSchema,
+  legalProvisionRequestSchema,
   legalProvisionSummarySchema,
   legalProvisionsRequestSchema
 } from "@repo/legislation-core/api-client/legal-browse-contract"
@@ -81,6 +83,126 @@ export function createLegalBrowser(pool: pg.Pool, allowedOrganizationIds: readon
     return z.object({ policy_hash: z.string().regex(/^[a-f0-9]{64}$/) }).parse(row.rows[0]).policy_hash
   }
   return {
+    getProvision: async (value: string, selection: unknown) =>
+      transaction(async (client) => {
+        const provisionId = z.uuid().parse(value)
+        const input = legalProvisionRequestSchema.parse(selection)
+        if (input.asOf !== undefined) {
+          throw new LegislationError("conflict", "Historical date selection is not available", {
+            details: { reason: "historical_coverage_unavailable" }
+          })
+        }
+        let selectedEditionId: string | null = null
+        if (input.editionId !== undefined || input.versionId === undefined) {
+          const profile = await client.query(
+            `SELECT e.id AS edition_id,e.rights_profile_id FROM legislation.legal_provisions p
+            JOIN legislation.legal_edition_provisions m ON m.provision_id=p.id AND m.code_id=p.code_id
+            JOIN legislation.legal_editions e ON e.id=m.edition_id AND e.code_id=m.code_id
+            WHERE p.id=$1 AND e.jurisdiction_id='jurisdiction:us' AND e.source_id IN ('ecfr','govinfo-cfr')
+              AND e.published_at IS NOT NULL
+              AND m.edition_id=COALESCE($2::uuid,(SELECT h.edition_id FROM legislation.legal_code_heads h
+                WHERE h.code_id=p.code_id AND h.source_id='ecfr'))
+              AND ($3::uuid IS NULL OR m.version_id=$3)`,
+            [provisionId, input.editionId ?? null, input.versionId ?? null]
+          )
+          if (profile.rows.length === 0) {
+            throw new LegislationError("not_found", "Selected published provision was not found")
+          }
+          invariant(profile.rows.length === 1, "legal_provision_selection_ambiguous")
+          const selected = z
+            .object({ edition_id: z.uuid(), rights_profile_id: z.string().min(1) })
+            .parse(profile.rows[0])
+          await policyHash(client, selected.rights_profile_id, true)
+          selectedEditionId = selected.edition_id
+        } else {
+          const profiles = z
+            .array(z.object({ rights_profile_id: z.string().min(1) }))
+            .max(1000)
+            .parse(
+              (
+                await client.query(
+                  `SELECT DISTINCT e.rights_profile_id FROM legislation.legal_provision_versions v
+                  JOIN legislation.legal_edition_provisions m ON m.version_id=v.id AND m.provision_id=v.provision_id
+                  JOIN legislation.legal_editions e ON e.id=m.edition_id AND e.code_id=m.code_id
+                  WHERE v.id=$1 AND v.provision_id=$2 AND e.jurisdiction_id='jurisdiction:us'
+                    AND e.source_id IN ('ecfr','govinfo-cfr') AND e.published_at IS NOT NULL
+                  ORDER BY e.rights_profile_id LIMIT 1001`,
+                  [input.versionId, provisionId]
+                )
+              ).rows
+            )
+          if (profiles.length === 0) {
+            throw new LegislationError("not_found", "Published provision version was not found")
+          }
+          let authorized = false
+          for (const profile of profiles) {
+            try {
+              await policyHash(client, profile.rights_profile_id, true)
+              authorized = true
+              break
+            } catch (error) {
+              if (
+                !(error instanceof Error) ||
+                (!error.message.startsWith("rights_denied:") &&
+                  error.message !== "Invariant failed: rights_profile_unavailable")
+              ) {
+                throw error
+              }
+            }
+          }
+          if (!authorized) {
+            throw new LegislationError("forbidden", "Access denied")
+          }
+        }
+        const result =
+          selectedEditionId === null
+            ? await client.query(
+                `SELECT jsonb_build_object(
+                'id',p.id,'codeId',p.code_id,'identityKey',p.identity_key,'identityBasis',p.identity_basis,
+                'selectedVersion',jsonb_build_object('id',v.id,'provisionId',v.provision_id,'codeId',v.code_id,
+                  'contentHash',v.content_hash,'inputContract',v.input_contract,'heading',v.heading,
+                  'nodeKind',v.node_kind,'language',v.language),
+                'selectedContext',NULL,'textPreview',left(v.body,500),
+                'previewTruncated',char_length(v.body)>500) AS data
+                FROM legislation.legal_provisions p JOIN legislation.legal_provision_versions v
+                  ON v.provision_id=p.id AND v.code_id=p.code_id
+                WHERE p.id=$1 AND v.id=$2 FOR SHARE OF p,v`,
+                [provisionId, input.versionId]
+              )
+            : await client.query(
+                `SELECT jsonb_build_object(
+                'id',p.id,'codeId',p.code_id,'identityKey',p.identity_key,'identityBasis',p.identity_basis,
+                'selectedVersion',jsonb_build_object('id',v.id,'provisionId',v.provision_id,'codeId',v.code_id,
+                  'contentHash',v.content_hash,'inputContract',v.input_contract,'heading',v.heading,
+                  'nodeKind',v.node_kind,'language',v.language),
+                'selectedContext',jsonb_build_object(
+                  'edition',jsonb_build_object('id',e.id,'codeId',e.code_id,'sourceId',e.source_id,
+                    'jurisdictionId',e.jurisdiction_id,'rightsProfileId',e.rights_profile_id,
+                    'sourceObservationId',e.generation_id,'nativeKey',e.native_key,'sourceRevision',e.source_revision,
+                    'sourceUrl',g.unit->>'sourceUrl','issueDate',e.issue_date::text,
+                    'sourceCurrencyDate',e.currency_date::text,
+                    'publishedAt',to_char(e.published_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+                    'scope',CASE WHEN e.source_id='ecfr' THEN 'current_code_snapshot' ELSE 'annual_volume' END),
+                  'parentId',m.parent_id,'ordinal',m.ordinal,'nativeId',m.native_id,
+                  'sourceLocator',m.source_locator,
+                  'isLatestValidated',EXISTS(SELECT 1 FROM legislation.legal_code_heads h
+                    JOIN legislation.legal_edition_provisions current
+                      ON current.edition_id=h.edition_id AND current.provision_id=p.id
+                    WHERE h.code_id=p.code_id AND h.source_id='ecfr' AND current.version_id=v.id),
+                  'textUrl','/api/legal/versions/'||v.id||'/text?editionId='||e.id),
+                'textPreview',left(v.body,500),'previewTruncated',char_length(v.body)>500) AS data
+                FROM legislation.legal_provisions p
+                JOIN legislation.legal_edition_provisions m ON m.provision_id=p.id AND m.code_id=p.code_id
+                JOIN legislation.legal_provision_versions v
+                  ON v.id=m.version_id AND v.provision_id=m.provision_id AND v.code_id=m.code_id
+                JOIN legislation.legal_editions e ON e.id=m.edition_id AND e.code_id=m.code_id
+                JOIN legislation.legal_import_generations g ON g.id=e.generation_id
+                WHERE p.id=$1 AND m.edition_id=$2 FOR SHARE OF p,m,v,e,g`,
+                [provisionId, selectedEditionId]
+              )
+        invariant(result.rows.length === 1, "legal_provision_disappeared")
+        return legalProvisionDetailSchema.parse(result.rows[0]?.data)
+      }),
     getEdition: async (value: string) =>
       transaction(async (client) => {
         const editionId = z.uuid().parse(value)

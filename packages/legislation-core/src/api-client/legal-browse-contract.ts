@@ -112,6 +112,49 @@ export const legalProvisionsResponseSchema = pageSchema.extend({
   meta: pageSchema.shape.meta.extend({ selectedEdition: legalEditionSchema })
 })
 
+export const legalProvisionRequestSchema = z
+  .strictObject({
+    editionId: z.uuid().optional(),
+    versionId: z.uuid().optional(),
+    asOf: z.iso.date().optional()
+  })
+  .superRefine((value, context) => {
+    if (value.asOf !== undefined && (value.editionId !== undefined || value.versionId !== undefined)) {
+      context.addIssue({ code: "custom", message: "Choose edition/version or asOf" })
+    }
+  })
+export type LegalProvisionRequest = z.input<typeof legalProvisionRequestSchema>
+export const legalProvisionVersionSchema = z.strictObject({
+  id: z.uuid(),
+  provisionId: z.uuid(),
+  codeId: z.uuid(),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  inputContract: z.string().min(1).max(256),
+  heading: z.string().max(16_384),
+  nodeKind: z.string().min(1).max(64),
+  language: z.string().min(2).max(64)
+})
+export const legalProvisionContextSchema = z.strictObject({
+  edition: legalEditionSchema,
+  parentId: z.uuid().nullable(),
+  ordinal: z.int().nonnegative(),
+  nativeId: z.string().min(1).max(4096),
+  sourceLocator: z.string().min(1).max(4096),
+  isLatestValidated: z.boolean(),
+  textUrl: z.string().startsWith("/api/legal/versions/")
+})
+export const legalProvisionDetailSchema = z.strictObject({
+  id: z.uuid(),
+  codeId: z.uuid(),
+  identityKey: z.string().min(1).max(4096),
+  identityBasis: z.string().min(1).max(128),
+  selectedVersion: legalProvisionVersionSchema,
+  selectedContext: legalProvisionContextSchema.nullable(),
+  textPreview: z.string().max(500),
+  previewTruncated: z.boolean()
+})
+export const legalProvisionResponseSchema = resourceSchema.extend({ data: legalProvisionDetailSchema })
+
 function validPage(page: z.infer<typeof pageSchema>, count: number, requestedLimit: number) {
   return (
     page.meta.limit === requestedLimit &&
@@ -160,4 +203,28 @@ export function validateLegalProvisionsResponse(value: unknown, codeId: string, 
     throw new Error("legal_provisions_response_mismatch")
   }
   return page
+}
+
+export function validateLegalProvisionResponse(value: unknown, provisionId: string, query: LegalProvisionRequest) {
+  const id = z.uuid().parse(provisionId)
+  const input = legalProvisionRequestSchema.parse(query)
+  const response = legalProvisionResponseSchema.parse(value)
+  const { data } = response
+  const context = data.selectedContext
+  if (
+    data.id !== id ||
+    data.selectedVersion.provisionId !== id ||
+    data.selectedVersion.codeId !== data.codeId ||
+    (input.versionId !== undefined && data.selectedVersion.id !== input.versionId) ||
+    (input.editionId !== undefined && context?.edition.id !== input.editionId) ||
+    (input.versionId !== undefined && input.editionId === undefined && context !== null) ||
+    (input.versionId === undefined && context === null) ||
+    (context !== null &&
+      (context.edition.codeId !== data.codeId ||
+        context.textUrl !== `/api/legal/versions/${data.selectedVersion.id}/text?editionId=${context.edition.id}`)) ||
+    (data.previewTruncated && data.textPreview.length !== 500)
+  ) {
+    throw new Error("legal_provision_response_mismatch")
+  }
+  return response
 }

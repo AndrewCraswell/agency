@@ -13,6 +13,21 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added the provision-detail vertical slice required to turn hierarchy discovery into stable record retrieval. The strict
+contract and typed client now serve `GET /api/legal/provisions/{provisionId}` with an exact edition/version pair, the
+validated current eCFR membership by default, or an exact context-neutral version. The response separates immutable
+version identity from edition dates/hierarchy, caps the source preview at 500 characters and provides an exact text URL
+only for validated edition context. Unsupported `asOf`, mismatched membership, absent identity and text-rights denial
+fail before source metadata is returned. The API-backed `get_legal_provision` MCP tool uses the existing independent
+same-principal API credential path and treats headings/preview as untrusted evidence.
+
+The retained 49-title database canary read provision `9f4641b4-2abb-4b20-8bed-a587ff41dd83` and version
+`46f575cf-bbd1-49a1-8ef0-f04dec192db6` through exact edition `02b7dbab-aa73-4c1c-abc3-fc1642009a4d`, default-head and
+context-neutral paths. Both contextual reads reported the same current edition and `isLatestValidated: true`; the exact
+version returned null context. Four core contract tests, 14 web browse tests and 45 MCP adapter tests pass; core and MCP
+type-check pass. Web type-check remains blocked by concurrent uncommitted conversation-test type errors outside this
+slice. This advances HTTP-05 and TOOLS-03; version lists, reverse memberships and direct version detail remain open.
+
 Bound production preparation planning to the exact frozen-catalog admission result. The admission report now emits a
 planner-ready descriptor containing catalog hash, model, tokenizer, owner kind and every sorted owner with frozen
 version/passage counts. Each immutable wave persists that descriptor, rejects a descriptor for another model or source

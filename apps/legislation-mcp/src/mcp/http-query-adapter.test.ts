@@ -74,6 +74,47 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe("createMcpHttpQueryAdapter", () => {
+  it("uses a separate API credential for exact provision retrieval", async () => {
+    const provisionId = "00000000-0000-4000-8000-000000000001"
+    const versionId = "00000000-0000-4000-8000-000000000002"
+    const codeId = "00000000-0000-4000-8000-000000000003"
+    const fetch = vi.fn<FetchLike>(async () =>
+      resourceResponse({
+        id: provisionId,
+        codeId,
+        identityKey: "section:1",
+        identityBasis: "citation",
+        selectedVersion: {
+          id: versionId,
+          provisionId,
+          codeId,
+          contentHash: "a".repeat(64),
+          inputContract: "reader",
+          heading: "Purpose",
+          nodeKind: "section",
+          language: "en"
+        },
+        selectedContext: null,
+        textPreview: "Source evidence",
+        previewTruncated: false
+      })
+    )
+    const adapter = createMcpHttpQueryAdapter({
+      apiBaseUrl: "https://api.example.test",
+      fetch,
+      getApiAccessToken: () => "general-token",
+      legalText: { allowedOrganizationIds: ["org"], getApiAccessToken: () => "legal-api-token" }
+    })
+    const result = await runWithRequestContext(
+      { correlationId, identity: { organizationId: "org", userId: "user" } },
+      () => adapter.getLegalProvision?.({ provisionId, versionId })
+    )
+    expect(result).toMatchObject({ data: { id: provisionId, selectedVersion: { id: versionId } } })
+    const [url, init] = fetch.mock.calls[0] ?? []
+    expect(String(url)).toBe(`https://api.example.test/api/legal/provisions/${provisionId}?versionId=${versionId}`)
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer legal-api-token")
+  })
+
   it("forwards analytics plans in one correlated authenticated HTTP request", async () => {
     const fetch = vi.fn<FetchLike>(async () =>
       resourceResponse({ rows: [{ total: 12 }], receipt: { queryHash: "analytics-query" } })

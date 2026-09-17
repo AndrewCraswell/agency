@@ -1,5 +1,8 @@
 import { LegislationApiClient } from "@repo/legislation-core/api-client/client"
-import { legalEditionDetailSchema } from "@repo/legislation-core/api-client/legal-browse-contract"
+import {
+  legalEditionDetailSchema,
+  legalProvisionDetailSchema
+} from "@repo/legislation-core/api-client/legal-browse-contract"
 import { createWorkosAuthenticator } from "@repo/legislation-core/auth/workos"
 import { generateKeyPair, SignJWT } from "jose"
 import { expect, it, vi } from "vitest"
@@ -9,6 +12,8 @@ import { createLegalBrowseApiHandler } from "./legal-browse-routes"
 
 const editionId = "00000000-0000-4000-8000-000000000001"
 const codeId = "00000000-0000-4000-8000-000000000002"
+const provisionId = "00000000-0000-4000-8000-000000000003"
+const versionId = "00000000-0000-4000-8000-000000000004"
 const edition = legalEditionDetailSchema.parse({
   id: editionId,
   codeId,
@@ -28,6 +33,26 @@ const edition = legalEditionDetailSchema.parse({
   annualVolume: null
 })
 const getEdition = vi.fn<(id: string) => Promise<typeof edition>>(async () => edition)
+const provision = legalProvisionDetailSchema.parse({
+  id: provisionId,
+  codeId,
+  identityKey: "section:1",
+  identityBasis: "citation",
+  selectedVersion: {
+    id: versionId,
+    provisionId,
+    codeId,
+    contentHash: "b".repeat(64),
+    inputContract: "reader",
+    heading: "Purpose",
+    nodeKind: "section",
+    language: "en"
+  },
+  selectedContext: null,
+  textPreview: "Source evidence",
+  previewTruncated: false
+})
+const getProvision = vi.fn<(id: string, input: unknown) => Promise<typeof provision>>(async () => provision)
 const unreachableBrowse = vi.fn<(id: string, input: unknown) => Promise<never>>(async () => {
   throw new Error("Unexpected browse call")
 })
@@ -62,6 +87,7 @@ const execute = (request: Request) =>
     request,
     createLegalBrowseApiHandler({
       getEdition,
+      getProvision,
       listEditions: unreachableBrowse,
       listProvisions: unreachableBrowse
     }),
@@ -79,11 +105,24 @@ it("serves an exact authorized edition through the typed client", async () => {
   expect(getEdition).toHaveBeenCalledWith(editionId)
 })
 
+it("serves a context-neutral exact provision version through the typed client", async () => {
+  getProvision.mockClear()
+  const api = new LegislationApiClient({
+    baseUrl: "https://api.example",
+    bearerToken: await token(),
+    fetch: async (url, init) => execute(new Request(url, init))
+  })
+  expect(await api.getLegalProvision(provisionId, { versionId })).toMatchObject({ data: provision })
+  expect(getProvision).toHaveBeenCalledWith(provisionId, { versionId })
+})
+
 it("rejects invalid selectors and credentials before reading", async () => {
   getEdition.mockClear()
+  getProvision.mockClear()
   for (const url of [
     "https://api.example/api/legal/editions/not-a-uuid",
-    `https://api.example/api/legal/editions/${editionId}?codeId=${codeId}`
+    `https://api.example/api/legal/editions/${editionId}?codeId=${codeId}`,
+    `https://api.example/api/legal/provisions/${provisionId}?editionId=${editionId}&asOf=2025-01-01`
   ]) {
     const response = await execute(new Request(url, { headers: { authorization: `Bearer ${await token()}` } }))
     expect(response.status).toBe(400)
@@ -95,4 +134,5 @@ it("rejects invalid selectors and credentials before reading", async () => {
   )
   expect(denied.status).toBe(401)
   expect(getEdition).not.toHaveBeenCalled()
+  expect(getProvision).not.toHaveBeenCalled()
 })

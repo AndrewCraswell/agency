@@ -9,6 +9,7 @@ const codeId = "00000000-0000-4000-8000-000000000001"
 const editionId = "00000000-0000-4000-8000-000000000002"
 const nextEdition = "00000000-0000-4000-8000-000000000003"
 const versionId = "00000000-0000-4000-8000-000000000004"
+const provisionId = "00000000-0000-4000-8000-000000000005"
 const edition = {
   id: editionId,
   codeId,
@@ -37,6 +38,33 @@ const member = {
   sourceLocator: "/DIV8[1]",
   hasChildren: false,
   textUrl: `/api/legal/versions/${versionId}/text?editionId=${editionId}`
+}
+const provision = {
+  id: provisionId,
+  codeId,
+  identityKey: "section:1",
+  identityBasis: "citation",
+  selectedVersion: {
+    id: versionId,
+    provisionId,
+    codeId,
+    contentHash: "b".repeat(64),
+    inputContract: "reader",
+    heading: "Heading",
+    nodeKind: "section",
+    language: "en"
+  },
+  selectedContext: {
+    edition,
+    parentId: null,
+    ordinal: 0,
+    nativeId: "3 CFR 1",
+    sourceLocator: "/DIV8[1]",
+    isLatestValidated: true,
+    textUrl: `/api/legal/versions/${versionId}/text?editionId=${editionId}`
+  },
+  textPreview: "Exact source preview",
+  previewTruncated: false
 }
 const pools: pg.Pool[] = []
 afterEach(async () => {
@@ -88,7 +116,43 @@ it("requires identity before database access", async () => {
   await expect(f.browser.listEditions(codeId, {})).rejects.toMatchObject({ category: "unauthorized" })
   await expect(f.browser.getEdition(editionId)).rejects.toMatchObject({ category: "unauthorized" })
   await expect(f.browser.listProvisions(codeId, {})).rejects.toMatchObject({ category: "unauthorized" })
+  await expect(f.browser.getProvision(provisionId, {})).rejects.toMatchObject({ category: "unauthorized" })
   expect(f.connect).not.toHaveBeenCalled()
+})
+
+it("reads a provision in an authorized exact edition and refuses mismatched selectors", async () => {
+  const f = fixture()
+  f.begin()
+  f.rows([{ edition_id: editionId, rights_profile_id: "official" }])
+  f.rights()
+  f.rows([{ data: provision }])
+  f.rows()
+  await expect(f.run(() => f.browser.getProvision(provisionId, { editionId, versionId }))).resolves.toEqual(provision)
+  const selection = f.query.mock.calls.find(
+    (call) => typeof call[0] === "string" && call[0].includes("m.edition_id=COALESCE")
+  )
+  expect(selection?.[1]).toEqual([provisionId, editionId, versionId])
+
+  const missing = fixture()
+  missing.begin()
+  missing.rows()
+  missing.rows()
+  await expect(
+    missing.run(() => missing.browser.getProvision(provisionId, { editionId, versionId }))
+  ).rejects.toMatchObject({ category: "not_found" })
+})
+
+it("returns a context-neutral exact version only after one published membership authorizes text", async () => {
+  const f = fixture()
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  f.rights()
+  f.rows([{ data: { ...provision, selectedContext: null } }])
+  f.rows()
+  await expect(f.run(() => f.browser.getProvision(provisionId, { versionId }))).resolves.toMatchObject({
+    selectedVersion: { id: versionId },
+    selectedContext: null
+  })
 })
 
 it("reads an authorized exact edition with current-head and member context", async () => {

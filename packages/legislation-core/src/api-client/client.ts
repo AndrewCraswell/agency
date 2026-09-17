@@ -15,11 +15,14 @@ import {
 } from "./legal-agencies-contract"
 import {
   legalEditionsRequestSchema,
+  legalProvisionRequestSchema,
   legalProvisionsRequestSchema,
   validateLegalEditionResponse,
   validateLegalEditionsResponse,
+  validateLegalProvisionResponse,
   validateLegalProvisionsResponse,
   type LegalEditionsRequest,
+  type LegalProvisionRequest,
   type LegalProvisionsRequest
 } from "./legal-browse-contract"
 import {
@@ -555,6 +558,20 @@ export class LegislationApiClient {
       return validateLegalProvisionsResponse(result, codeId, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal provisions response")
+    }
+  }
+
+  async getLegalProvision(provisionId: string, query: LegalProvisionRequest = {}, options?: ApiRequestOptions) {
+    const id = z.uuid().parse(provisionId)
+    const input = legalProvisionRequestSchema.parse(query)
+    const result = await this.#request(
+      { method: "GET", path: `/api/legal/provisions/${segment(id)}`, query: input },
+      options
+    )
+    try {
+      return validateLegalProvisionResponse(result, id, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal provision response")
     }
   }
 

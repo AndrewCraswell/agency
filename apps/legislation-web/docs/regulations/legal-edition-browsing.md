@@ -9,6 +9,7 @@ organization allowlist and use separate verified API/MCP audiences and identity-
 | `GET /api/legal/codes/{codeId}/editions` | `list_legal_editions` | Optional `sourceId`, `issuedFrom`, `issuedTo` |
 | `GET /api/legal/editions/{editionId}` | `get_legal_edition` | Exact published edition ID |
 | `GET /api/legal/codes/{codeId}/provisions` | `list_legal_provisions` | `editionId` or default current eCFR head; traversal and parent |
+| `GET /api/legal/provisions/{provisionId}` | `get_legal_provision` | Optional exact `editionId` and/or `versionId`; default current eCFR head |
 
 Both accept cursor and limit, default 20 and maximum 100. Invalid code IDs, unknown or duplicate fields, reversed
 date ranges and conflicting selectors return 400. Date filters apply inclusively to `issueDate`, never currency or
@@ -33,6 +34,12 @@ contains provision/version/edition IDs, parent, ordinal, source native ID, node 
 and an exact `textUrl`. Source native IDs remain source identities, not display-ready citations. Bodies are never
 loaded by traversal. The `(edition_id,parent_id,ordinal)` index supports child selection and child existence checks.
 
+Provision detail returns the stable provision identity, immutable selected version metadata, a text preview capped at
+500 characters and a separate selected context. An edition selection verifies that the version belongs to that exact
+edition and returns its source dates, parent, structural ordinal, native identity, locator, current-head status and exact
+text URL. A version without an edition is deliberately context-neutral. Omission selects the validated current eCFR
+membership once. Unsupported `asOf` returns the same explicit historical-coverage conflict as traversal.
+
 All requests authenticate before database access and lock/validate source API rights before disclosing results.
 Traversal also requires `displayText` before loading headings or parent membership. Transactions use repeatable read,
 5-second lock timeout and 15-second statement timeout. Edition lists bound rights profiles at 1,000 and editions at
@@ -51,5 +58,7 @@ these details internally, while the existing tool error envelope still presents 
 
 Local evidence covers all 1,237 Title 23 provisions through HTTP and all 33 Title 3 provisions through MCP, followed
 by exact source reconstruction of 3 CFR 100.1. The annual pilot verifies three published Title 5 volumes and exclusion
-of two unpublished editions. See the [implementation ledger](../../../legislation-ingestion/docs/regulations/implementation-progress.md) for reports and limitations.
+of two unpublished editions. A retained-database provision canary also read the same current eCFR version through exact
+edition context, default-head selection and context-neutral version selection; both contextual paths reported
+`isLatestValidated: true`. See the [implementation ledger](../../../legislation-ingestion/docs/regulations/implementation-progress.md) for reports and limitations.
 This does not certify deployed routing, live credentials, search/embedding readiness or national historical coverage.

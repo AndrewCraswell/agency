@@ -187,6 +187,8 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
             api.listLegalEditions(codeId, input, await legalRequestOptions()),
           listLegalProvisions: async ({ codeId, ...input }) =>
             api.listLegalProvisions(codeId, input, await legalRequestOptions()),
+          getLegalProvision: async ({ provisionId, ...input }) =>
+            api.getLegalProvision(provisionId, input, await legalRequestOptions()),
           listLegalCodes: async (input) => {
             if (!canReadLegalText()) {
               throw new LegislationError("forbidden", "Access denied")
@@ -314,6 +316,7 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
   const getLegalEdition = adapter.getLegalEdition
   const listLegalEditions = adapter.listLegalEditions
   const listLegalProvisions = adapter.listLegalProvisions
+  const getLegalProvision = adapter.getLegalProvision
   return {
     ...adapter,
     ...(getLegalCode === undefined ? {} : { getLegalCode: async (input) => await apiCall(() => getLegalCode(input)) }),
@@ -341,6 +344,9 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
     ...(listLegalProvisions === undefined
       ? {}
       : { listLegalProvisions: async (input) => await apiCall(() => listLegalProvisions(input)) }),
+    ...(getLegalProvision === undefined
+      ? {}
+      : { getLegalProvision: async (input) => await apiCall(() => getLegalProvision(input)) }),
     ...(listLegalCodes === undefined
       ? {}
       : { listLegalCodes: async (input) => await apiCall(() => listLegalCodes(input)) }),

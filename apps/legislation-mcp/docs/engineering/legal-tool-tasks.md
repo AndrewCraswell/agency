@@ -15,7 +15,8 @@ acceptance, not a dependency on every remaining tool.
   deployed and broader-data acceptance remains open. Depends on HTTP-04/10, TOOLS-01.
 - [ ] **TOOLS-03 Add retrieval tools.** `search_regulations`, `get_legal_provision`, `get_legal_text`, preserving exact
   context through composed calls. No silent latest substitution or MCP-only ranking. Depends on HTTP-05–06/09, TOOLS-01.
-  Local search/paging/text parity is recorded; provision detail, broader scope and deployed acceptance remain open.
+  Local search/paging/text parity is recorded. `get_legal_provision` now calls the typed API with exact selection and a
+  separately minted same-principal API credential; broader scope and deployed acceptance remain open.
 - [ ] **TOOLS-04 Enforce combined output budgets.** Include composed requests, warnings and continuation in the byte
   and 100,000-character ceilings. Done: deterministic continuation for large tables/documents, no limit bypass or silent
   evidence truncation. Depends on TOOLS-02–03.

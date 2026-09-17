@@ -1,9 +1,11 @@
 import { pageSchema } from "@repo/legislation-core/api-client/envelopes"
 import {
   legalEditionsRequestSchema,
+  legalProvisionRequestSchema,
   legalProvisionsRequestSchema,
   validateLegalEditionResponse,
   validateLegalEditionsResponse,
+  validateLegalProvisionResponse,
   validateLegalProvisionsResponse
 } from "@repo/legislation-core/api-client/legal-browse-contract"
 import { LegislationError } from "@repo/legislation-core/domain/errors"
@@ -24,12 +26,34 @@ export function createLegalBrowseApiHandler(browser: ReturnType<typeof createLeg
   return async (request, response) => {
     const url = requestUrl(request)
     const detail = /^\/api\/legal\/editions\/([^/]+)$/.exec(url.pathname)
+    const provision = /^\/api\/legal\/provisions\/([^/]+)$/.exec(url.pathname)
     const match = /^\/api\/legal\/codes\/([^/]+)\/(editions|provisions)$/.exec(url.pathname)
-    if (request.method !== "GET" || (!match?.[1] && !detail?.[1])) {
+    if (request.method !== "GET" || (!match?.[1] && !detail?.[1] && !provision?.[1])) {
       return false
     }
     response.setHeader("cache-control", "private, no-store")
     try {
+      if (provision?.[1]) {
+        assertAllowedQueryParameters(url, ["editionId", "versionId", "asOf"])
+        let provisionId: string
+        try {
+          provisionId = z.uuid().parse(decodeURIComponent(provision[1]))
+        } catch {
+          throw new LegislationError("invalid_request", "Invalid legal provision ID")
+        }
+        for (const key of url.searchParams.keys()) {
+          if (url.searchParams.getAll(key).length !== 1) {
+            throw new LegislationError("invalid_request", "Duplicate query parameter")
+          }
+        }
+        const parsed = legalProvisionRequestSchema.safeParse(Object.fromEntries(url.searchParams))
+        if (!parsed.success) {
+          throw new LegislationError("invalid_request", "Invalid provision selection")
+        }
+        const item = await browser.getProvision(provisionId, parsed.data)
+        sendApiJson(response, 200, validateLegalProvisionResponse(apiResource(request, item), provisionId, parsed.data))
+        return true
+      }
       if (detail?.[1]) {
         assertAllowedQueryParameters(url, [])
         let editionId: string

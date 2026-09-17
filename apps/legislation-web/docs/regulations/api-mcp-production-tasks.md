@@ -52,6 +52,10 @@ vertical slices: application service, serializer, strict client parser, explicit
 - [ ] **HTTP-05 Implement provision and version reads.** Ship provision detail, versions, reverse edition memberships
   and version detail with context-neutral immutable fields and separately validated selected context. **Done:** exact
   versions remain readable across head changes; responses never mix dates/hierarchy from another edition. Depends on HTTP-02–03.
+  Local progress: provision detail now supports a validated edition/version pair, current-head default and exact
+  context-neutral version. It authorizes text before headings/preview, caps preview at 500 characters and exposes the
+  exact text URL only with validated edition context. Provision-version lists, reverse memberships, direct version
+  detail and deployed acceptance remain open.
 - [ ] **HTTP-06 Implement bounded source-text and passage reads.** Ship version text/passages and passage detail using
   the existing lossless reader, anchors and continuation; enforce body and text limits. **Done:** complete continuation
   reconstructs the selected source, oversized responses are bounded, revoked cached text is refused. Depends on HTTP-05, PASS-08.
