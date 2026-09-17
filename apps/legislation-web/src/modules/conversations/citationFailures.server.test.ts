@@ -265,7 +265,7 @@ describe("missing citation telemetry", () => {
     )
   })
 
-  it("does not scrub demo error events and groups citations at the reporter", () => {
+  it("does not scrub research error events and groups citations at the reporter", () => {
     expect(sentryOptions).not.toHaveProperty("beforeSend")
     expect(sentryOptions).not.toHaveProperty("beforeBreadcrumb")
     expect(sentryOptions.sendDefaultPii).toBe(false)

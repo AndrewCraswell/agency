@@ -244,7 +244,7 @@ describe("ChatWorkspace", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("keeps the demo question editable without enabling disconnected research", async () => {
+  it("keeps the research question editable without enabling disconnected research", async () => {
     const user = userEvent.setup()
     render(<ChatWorkspace />, { wrapper: ChatProviders })
     const question = await screen.findByRole("textbox", { name: "Your question" })

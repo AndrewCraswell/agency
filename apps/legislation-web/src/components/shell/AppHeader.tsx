@@ -10,21 +10,20 @@ import { Button } from "../ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
 import * as styles from "./AppShell.css"
 
-export function AppHeader({ demo = false }: Readonly<{ demo?: boolean }>) {
+export function AppHeader({ isResearch = false }: Readonly<{ isResearch?: boolean }>) {
   const { chat, isRestoringConversation } = useConversationSession()
   const isMounted = useMounted()
   const isReady = isMounted && !isRestoringConversation
   const canResume = isReady && chat.messages.length > 0
   const conversationHref = canResume ? `/conversations/${encodeURIComponent(chat.id)}` : "/"
   return (
-    <header className={demo ? `${styles.header} ${styles.demoHeader}` : styles.header}>
+    <header className={isResearch ? `${styles.header} ${styles.researchHeader}` : styles.header}>
       <Link href="/" aria-label="Rostra home" className={styles.brand}>
-        <Image src="/logo.png" alt="" width={demo ? 24 : 22} height={demo ? 24 : 22} priority />
+        <Image src="/logo.png" alt="" width={isResearch ? 24 : 22} height={isResearch ? 24 : 22} priority />
         <span className={styles.wordmark}>Rostra</span>
       </Link>
-      {demo && <span className={styles.demoLabel}>Live demo</span>}
       <div className={styles.utilities}>
-        {!demo && (
+        {!isResearch && (
           <Tooltip>
             <TooltipTrigger asChild>
               {isReady ? (

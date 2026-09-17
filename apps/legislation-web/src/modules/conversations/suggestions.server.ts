@@ -15,8 +15,6 @@ const promptSchema = z.object({
   prompt: z.string().trim().min(1)
 })
 
-let cached: { expiresAt: number; promise: Promise<ResearchSuggestion[]> } | undefined
-
 async function generateSuggestions() {
   return startActiveObservation(
     promptName,
@@ -45,7 +43,7 @@ async function generateSuggestions() {
       const result = await generateText({
         model: createResearchModel(process.env.OPENROUTER_API_KEY),
         instructions,
-        prompt: "Generate a fresh set of research ideas.",
+        prompt: "Generate exactly six fresh, distinct research ideas covering all four research approaches.",
         output: Output.object({ schema: researchSuggestionsSchema }),
         maxOutputTokens: 2000,
         maxRetries: 0,
@@ -73,19 +71,10 @@ export function getResearchSuggestions(): Promise<ResearchSuggestion[]> {
   ) {
     return Promise.resolve([])
   }
-  if (cached && Date.now() < cached.expiresAt) {
-    return cached.promise
-  }
-  const entry = {
-    expiresAt: Date.now() + 60 * 60 * 1000,
-    promise: generateSuggestions().catch(() => {
-      entry.expiresAt = Date.now() + 30000
-      captureException(new Error("Research suggestions could not be generated."), {
-        tags: { operation: "research_suggestions" }
-      })
-      return []
+  return generateSuggestions().catch(() => {
+    captureException(new Error("Research suggestions could not be generated."), {
+      tags: { operation: "research_suggestions" }
     })
-  }
-  cached = entry
-  return entry.promise
+    return []
+  })
 }

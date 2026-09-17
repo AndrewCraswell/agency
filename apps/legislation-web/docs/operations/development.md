@@ -109,18 +109,21 @@ succeeded; broader batch and cancellation acceptance remains open. No full unit 
 
 ## Homepage research suggestions
 
+The root route `/` renders `HomepageLanding`, including the research composer, source-backed example and the
+connections and coverage sections. Its tests live in `src/app/page.test.tsx`. There is no separate preview route.
+
 The homepage uses Luna (`openai/gpt-5.6-luna-20260709`) and the Langfuse text prompt
 `legislative-research-suggestions`, selected by its `production` label. Version 1 was created September 16, 2026;
 the existing `legislative-research` prompt is unchanged. The server compiles `{{current_date}}` as a UTC calendar date
-and validates exactly four distinct questions with distinct sponsor, action, comparison and hearing approaches.
+and validates exactly six distinct questions covering sponsor, action, comparison and hearing approaches.
 Questions are limited to 110 characters and descriptions to 100. They are research invitations, not verified findings;
 the prompt prohibits invented records, unsupported news claims and guaranteed coverage.
 
 Suggestions stream through a local Suspense boundary without blocking the composer. Selection fills and focuses the
-editable question without sending; the existing mobile layout shows the first three. Successful results and in-flight
-generation are shared per server process for one hour. Prompt edits take effect at the next cache expiry or process
-restart. A generation has a 45-second deadline, 2,000 output-token limit and no automatic model retries. Failures produce
-no hardcoded fallback, leave research usable, are reported to Sentry and have a 30-second cooldown. Disconnected research
+editable question without sending. All six ideas appear in a responsive cloud with matching loading skeletons.
+Each request generates fresh ideas; neither completed results nor in-flight requests are shared or cached.
+A generation has a 45-second deadline, 2,000 output-token limit and no automatic model retries. Failures produce
+no hardcoded fallback, leave research usable, and are reported to Sentry without a cooldown. Disconnected research
 does not generate suggestions. There is no public regeneration endpoint or per-visitor profiling.
 
 Generation observations use `legislative-research-suggestions` with the exact prompt version, model, validated output

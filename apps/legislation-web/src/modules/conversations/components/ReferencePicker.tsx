@@ -94,6 +94,125 @@ export function ReferencePicker({
       request.current?.abort()
     }
   }, [query, kind])
+  const content = (
+    <>
+      <div className={styles.header}>
+        <DialogTitle className={styles.title}>Add references</DialogTitle>
+        <DialogClose asChild>
+          <Button size="icon" variant="ghost" className={styles.close} aria-label="Close reference library">
+            <X className="size-[18px]" aria-hidden="true" />
+          </Button>
+        </DialogClose>
+      </div>
+      <form
+        className={styles.search}
+        onSubmit={(event) => {
+          event.preventDefault()
+          void search()
+        }}
+      >
+        <Search className="size-[18px] shrink-0 text-subtle" aria-hidden="true" />
+        <Input
+          className={styles.input}
+          value={query}
+          onChange={(event) => {
+            request.current?.abort()
+            setIsLoading(false)
+            setQuery(event.target.value)
+          }}
+          aria-label="Search references"
+          placeholder="Search references"
+        />
+      </form>
+      <Select
+        value={kind}
+        onValueChange={(value) => {
+          request.current?.abort()
+          setIsLoading(false)
+          setKind(value)
+          setResults([])
+          setSearched(undefined)
+          setFailure(false)
+        }}
+      >
+        <SelectTrigger aria-label="Reference type" className={styles.type}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {(mention
+            ? ["person", "organization"]
+            : ["all", "bill", "person", "organization", "meeting", "vote", "amendment", "material"]
+          ).map((value) => (
+            <SelectItem key={value} value={value}>
+              {
+                {
+                  all: "All types",
+                  meeting: "Meetings",
+                  vote: "Votes",
+                  bill: "Bills",
+                  person: "People",
+                  organization: "Organizations",
+                  amendment: "Amendments",
+                  material: "Materials"
+                }[value]
+              }
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {isLoading && <output className={styles.metadata}>Searching references...</output>}
+      {failure && (
+        <p role="alert" className={styles.metadata}>
+          References could not be loaded. Try again.
+        </p>
+      )}
+      <div className={styles.list} aria-busy={isLoading}>
+        {visible.map((item) => {
+          const Icon = icons[item.record.kind]
+          const isSelected = selected.some(
+            (reference) => reference.recordId === item.recordId && reference.record.kind === item.record.kind
+          )
+          return (
+            <label key={`${item.record.kind}:${item.recordId}`} className={styles.row}>
+              <Icon className="size-[15px] shrink-0 text-subtle" aria-hidden="true" />
+              <span className={styles.label}>
+                {item.record.title}
+                <span className={`block ${styles.metadata}`}>{item.record.subtitle}</span>
+              </span>
+              <span className={styles.trailing}>{entityLabels[item.record.kind].singular}</span>
+              <Checkbox
+                className={styles.selection}
+                checked={isSelected}
+                disabled={!isSelected && selected.length >= 12}
+                onCheckedChange={(checked) =>
+                  setSelected((current) =>
+                    checked === true
+                      ? [...current, item]
+                      : current.filter(
+                          (reference) =>
+                            reference.recordId !== item.recordId || reference.record.kind !== item.record.kind
+                        )
+                  )
+                }
+                aria-label={item.record.title}
+              />
+            </label>
+          )
+        })}
+        {visible.length === 0 && !isLoading && (
+          <p className="p-3 text-sm text-muted-foreground">No matching references.</p>
+        )}
+      </div>
+      <div className={styles.footer}>
+        <output className={`mr-auto ${styles.metadata}`}>
+          {new Intl.NumberFormat().format(selected.length)} selected
+        </output>
+        <Button className={styles.add} disabled={selected.length === 0} onClick={() => onApply(selected)}>
+          Add references
+        </Button>
+      </div>
+    </>
+  )
   return (
     <Dialog
       open
@@ -111,121 +230,7 @@ export function ReferencePicker({
           returnFocus()
         }}
       >
-        <div className={styles.header}>
-          <DialogTitle className={styles.title}>Add references</DialogTitle>
-          <DialogClose asChild>
-            <Button size="icon" variant="ghost" className={styles.close} aria-label="Close reference library">
-              <X className="size-[18px]" aria-hidden="true" />
-            </Button>
-          </DialogClose>
-        </div>
-        <form
-          className={styles.search}
-          onSubmit={(event) => {
-            event.preventDefault()
-            void search()
-          }}
-        >
-          <Search className="size-[18px] shrink-0 text-subtle" aria-hidden="true" />
-          <Input
-            className={styles.input}
-            value={query}
-            onChange={(event) => {
-              request.current?.abort()
-              setIsLoading(false)
-              setQuery(event.target.value)
-            }}
-            aria-label="Search references"
-            placeholder="Search references"
-          />
-        </form>
-        <Select
-          value={kind}
-          onValueChange={(value) => {
-            request.current?.abort()
-            setIsLoading(false)
-            setKind(value)
-            setResults([])
-            setSearched(undefined)
-            setFailure(false)
-          }}
-        >
-          <SelectTrigger aria-label="Reference type" className={styles.type}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(mention
-              ? ["person", "organization"]
-              : ["all", "bill", "person", "organization", "meeting", "vote", "amendment", "material"]
-            ).map((value) => (
-              <SelectItem key={value} value={value}>
-                {
-                  {
-                    all: "All types",
-                    meeting: "Meetings",
-                    vote: "Votes",
-                    bill: "Bills",
-                    person: "People",
-                    organization: "Organizations",
-                    amendment: "Amendments",
-                    material: "Materials"
-                  }[value]
-                }
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {isLoading && <output className={styles.metadata}>Searching references...</output>}
-        {failure && (
-          <p role="alert" className={styles.metadata}>
-            References could not be loaded. Try again.
-          </p>
-        )}
-        <div className={styles.list} aria-busy={isLoading}>
-          {visible.map((item) => {
-            const Icon = icons[item.record.kind]
-            const isSelected = selected.some(
-              (reference) => reference.recordId === item.recordId && reference.record.kind === item.record.kind
-            )
-            return (
-              <label key={`${item.record.kind}:${item.recordId}`} className={styles.row}>
-                <Icon className="size-[15px] shrink-0 text-subtle" aria-hidden="true" />
-                <span className={styles.label}>
-                  {item.record.title}
-                  <span className={`block ${styles.metadata}`}>{item.record.subtitle}</span>
-                </span>
-                <span className={styles.trailing}>{entityLabels[item.record.kind].singular}</span>
-                <Checkbox
-                  className={styles.selection}
-                  checked={isSelected}
-                  disabled={!isSelected && selected.length >= 12}
-                  onCheckedChange={(checked) =>
-                    setSelected((current) =>
-                      checked === true
-                        ? [...current, item]
-                        : current.filter(
-                            (reference) =>
-                              reference.recordId !== item.recordId || reference.record.kind !== item.record.kind
-                          )
-                    )
-                  }
-                  aria-label={item.record.title}
-                />
-              </label>
-            )
-          })}
-          {visible.length === 0 && !isLoading && (
-            <p className="p-3 text-sm text-muted-foreground">No matching references.</p>
-          )}
-        </div>
-        <div className={styles.footer}>
-          <output className={`mr-auto ${styles.metadata}`}>
-            {new Intl.NumberFormat().format(selected.length)} selected
-          </output>
-          <Button className={styles.add} disabled={selected.length === 0} onClick={() => onApply(selected)}>
-            Add references
-          </Button>
-        </div>
+        {content}
       </DialogContent>
     </Dialog>
   )

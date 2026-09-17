@@ -19,8 +19,8 @@ export const researchSuggestionsSchema = z.strictObject({
         kind: z.enum(["sponsors", "actions", "comparison", "hearings"])
       })
     )
-    .length(4)
-    .refine((items) => new Set(items.map((item) => item.text.toLowerCase())).size === 4, "Questions must be distinct")
+    .length(6)
+    .refine((items) => new Set(items.map((item) => item.text.toLowerCase())).size === 6, "Questions must be distinct")
     .refine((items) => new Set(items.map((item) => item.kind)).size === 4, "Research approaches must be varied")
 })
 

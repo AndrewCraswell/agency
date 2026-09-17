@@ -6,7 +6,6 @@ import type { EditorView } from "@tiptap/pm/view"
 import { Editor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import { exitSuggestion, type SuggestionProps } from "@tiptap/suggestion"
-import { AtSign, Landmark, RotateCcw, User } from "lucide-react"
 import {
   useEffect,
   useEffectEvent,
@@ -18,9 +17,6 @@ import {
   type Ref
 } from "react"
 import { createPortal } from "react-dom"
-import { Button } from "../../../components/ui/button"
-import { Skeleton } from "../../../components/ui/skeleton"
-import { cn } from "../../../components/ui/utils"
 import type { StagedReference } from "../chatRequest"
 import {
   composerDocument,
@@ -29,6 +25,7 @@ import {
   readComposerDraft,
   type ComposerDraft
 } from "../composerDraft"
+import { MentionSuggestions } from "./MentionSuggestions"
 import * as styles from "./ComposerInput.css"
 
 export type ComposerHandle = { focus: (options?: FocusOptions) => void }
@@ -360,8 +357,6 @@ export function ComposerInput(props: ComposerInputProps) {
   }
 
   const suggestions = menu?.suggestions
-  const isInitialQuery = (suggestions?.query.trim().length ?? 0) < 2
-  const hasSkeletons = isInitialQuery || suggestions?.loading
   return (
     <div className={styles.anchor}>
       <EditorContent editor={editor} />
@@ -369,101 +364,23 @@ export function ComposerInput(props: ComposerInputProps) {
         suggestions &&
         editor &&
         createPortal(
-          <section ref={popup} className={styles.picker} aria-label="People and committees">
-            <div className={styles.query} aria-hidden="true">
-              <AtSign size={18} />
-              <span className={styles.queryText}>{suggestions.query}</span>
-              {hasSkeletons && <span className={styles.queryLabel}>People and committees</span>}
-            </div>
-            {hasSkeletons && (
-              <div className={styles.skeletons} aria-hidden="true" data-mention-skeletons>
-                {[styles.skeletonLong, styles.skeletonShort, styles.skeletonMedium].map((width) => (
-                  <Skeleton
-                    key={width}
-                    className={cn(styles.skeleton, width, isInitialQuery && styles.skeletonStatic)}
-                  />
-                ))}
-              </div>
-            )}
-            <div
-              id={`${id}-list`}
-              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Rich options retain focus in the multiline editor.
-              role="listbox"
-              aria-label="People and committees"
-              aria-busy={!isInitialQuery && suggestions.loading}
-              className={styles.results}
-            >
-              {(["person", "organization"] as const).map((kind) => {
-                const items = suggestions.loading ? [] : suggestions.items.filter((item) => item.record.kind === kind)
-                if (items.length === 0) {
-                  return null
-                }
-                const label = kind === "person" ? "People" : "Committees"
-                const Icon = kind === "person" ? User : Landmark
-                return (
-                  <fieldset key={kind} className={styles.group}>
-                    <legend className={styles.groupHeading}>{label}</legend>
-                    {items.map((reference) => {
-                      const index = suggestions.items.indexOf(reference)
-                      return (
-                        <button
-                          key={`${reference.record.kind}:${reference.recordId}`}
-                          id={`${id}-${index}`}
-                          type="button"
-                          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Active-descendant options are not a standalone native select.
-                          role="option"
-                          aria-selected={index === menu.index}
-                          aria-disabled={!canSelect(reference, props.draft, props.references)}
-                          tabIndex={-1}
-                          className={styles.option}
-                          onPointerDown={(event) => event.preventDefault()}
-                          onPointerMove={() => {
-                            activeIndex.current = index
-                            setMenu({ suggestions, index })
-                          }}
-                          onClick={() => choose(reference)}
-                        >
-                          <Icon size={18} aria-hidden="true" />
-                          <span className={styles.identity}>
-                            <span className={styles.name}>{reference.record.title}</span>
-                            <span className={styles.detail}>{reference.record.subtitle}</span>
-                          </span>
-                          <span className={styles.kind}>{kind === "person" ? "Person" : "Committee"}</span>
-                        </button>
-                      )
-                    })}
-                  </fieldset>
-                )
-              })}
-            </div>
-            {isInitialQuery && <output className={styles.loadingFooter}>Keep typing to narrow the list</output>}
-            {!isInitialQuery && suggestions.loading && (
-              <output className={styles.loadingFooter}>Searching people and committees...</output>
-            )}
-            {!isInitialQuery && !suggestions.loading && failure === suggestions.query && (
-              <div className={styles.status}>
-                <p role="alert">People and committees could not be loaded.</p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onPointerDown={(event) => event.preventDefault()}
-                  onClick={() => void retry()}
-                >
-                  <RotateCcw size={16} aria-hidden="true" />
-                  Try again
-                </Button>
-              </div>
-            )}
-            {!suggestions.loading &&
-              failure !== suggestions.query &&
-              suggestions.query.trim().length >= 2 &&
-              suggestions.items.length === 0 && (
-                <output className={styles.status}>No matching people or committees.</output>
-              )}
-            {composerReferences(props.draft, props.references).length >= 12 && (
-              <output className={styles.status}>You can add up to 12 references.</output>
-            )}
-          </section>,
+          <MentionSuggestions
+            popupRef={popup}
+            id={id}
+            query={suggestions.query}
+            items={suggestions.items}
+            activeIndex={menu.index}
+            isLoading={suggestions.loading}
+            hasFailed={failure === suggestions.query}
+            isAtLimit={composerReferences(props.draft, props.references).length >= 12}
+            canSelect={(reference) => canSelect(reference, props.draft, props.references)}
+            onSelect={choose}
+            onActivate={(index) => {
+              activeIndex.current = index
+              setMenu({ suggestions, index })
+            }}
+            onRetry={() => void retry()}
+          />,
           editor.view.dom.ownerDocument.body
         )}
     </div>

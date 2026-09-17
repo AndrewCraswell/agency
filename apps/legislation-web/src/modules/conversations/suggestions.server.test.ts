@@ -54,6 +54,16 @@ const output = researchSuggestionsSchema.parse({
       text: "Which committees have held hearings on prescription drug costs?",
       description: "Find hearing records and published materials",
       kind: "hearings"
+    },
+    {
+      text: "How do states define high-risk artificial intelligence?",
+      description: "Compare definitions in filed bills",
+      kind: "comparison"
+    },
+    {
+      text: "What votes are recorded on housing proposals?",
+      description: "Review recorded legislative decisions",
+      kind: "actions"
     }
   ]
 })
@@ -93,6 +103,7 @@ it("uses the production Langfuse prompt, current date and Luna with structured o
     expect.objectContaining({
       model: "test-luna",
       instructions: "Generate varied, neutral research ideas for 2026-09-16.",
+      prompt: "Generate exactly six fresh, distinct research ideas covering all four research approaches.",
       maxRetries: 0,
       maxOutputTokens: 2000,
       abortSignal: expect.any(AbortSignal)
@@ -107,32 +118,29 @@ it("uses the production Langfuse prompt, current date and Luna with structured o
   expect(mocks.update).toHaveBeenCalledWith({ output: output.suggestions, usageDetails: { input: 300, output: 200 } })
 })
 
-it("shares in-flight generation and caches the result for one hour", async () => {
+it("generates independently for concurrent requests and never reuses a completed result", async () => {
   const pending = Promise.withResolvers<typeof generated>()
   mocks.generate.mockReturnValueOnce(pending.promise)
   const { getResearchSuggestions } = await import("./suggestions.server")
   const first = getResearchSuggestions()
-  expect(getResearchSuggestions()).toBe(first)
+  const second = getResearchSuggestions()
+  expect(second).not.toBe(first)
+  await expect(second).resolves.toEqual(output.suggestions)
+  expect(mocks.generate).toHaveBeenCalledTimes(2)
   pending.resolve(generated)
   await first
-  vi.setSystemTime(new Date("2026-09-16T12:59:59Z"))
-  await getResearchSuggestions()
-  expect(mocks.generate).toHaveBeenCalledTimes(1)
-  vi.setSystemTime(new Date("2026-09-16T13:00:00Z"))
-  await getResearchSuggestions()
-  expect(mocks.generate).toHaveBeenCalledTimes(2)
+  await expect(getResearchSuggestions()).resolves.toEqual(output.suggestions)
+  expect(mocks.generate).toHaveBeenCalledTimes(3)
+  expect(fetch).toHaveBeenCalledTimes(3)
 })
 
-it("returns no hardcoded fallback and uses a short failure cooldown", async () => {
+it("returns no hardcoded fallback and does not cache a failed generation", async () => {
   mocks.generate.mockRejectedValueOnce(new Error("Provider unavailable"))
   const { getResearchSuggestions } = await import("./suggestions.server")
   await expect(getResearchSuggestions()).resolves.toEqual([])
-  await expect(getResearchSuggestions()).resolves.toEqual([])
-  expect(mocks.generate).toHaveBeenCalledTimes(1)
-  expect(mocks.report).toHaveBeenCalledTimes(1)
-  vi.setSystemTime(new Date("2026-09-16T12:00:30Z"))
   await expect(getResearchSuggestions()).resolves.toEqual(output.suggestions)
   expect(mocks.generate).toHaveBeenCalledTimes(2)
+  expect(mocks.report).toHaveBeenCalledTimes(1)
 })
 
 it.each([
@@ -158,8 +166,11 @@ it("does not generate when prompt retrieval fails or credentials are absent", as
 })
 
 it.each([
-  { suggestions: output.suggestions.slice(0, 3) },
-  { suggestions: Array.from({ length: 4 }, () => output.suggestions[0]) },
+  { suggestions: output.suggestions.slice(0, 4) },
+  { suggestions: output.suggestions.slice(0, 5) },
+  { suggestions: [...output.suggestions, output.suggestions[0]] },
+  { suggestions: Array.from({ length: 6 }, () => output.suggestions[0]) },
+  { suggestions: output.suggestions.map((item) => ({ ...item, kind: "comparison" })) },
   { suggestions: output.suggestions.map((item) => ({ ...item, text: "x".repeat(111) })) },
   { suggestions: output.suggestions.map((item) => ({ ...item, kind: "custom-script" })) },
   { suggestions: output.suggestions.map((item) => ({ ...item, description: "Topics \u00b7 policy" })) }

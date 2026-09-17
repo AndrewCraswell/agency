@@ -6,7 +6,7 @@ const failureMessages = {
   timeout: "The research query timed out. Narrow the question or request fewer records.",
   dependency_unavailable: "The data service is temporarily unavailable.",
   not_found: "The requested record was not found. Search for the record before reading it.",
-  forbidden: "This record is not available to the demo.",
+  forbidden: "This record is not available for this research request.",
   invalid_response: "The data service returned an unreadable result.",
   step_limit: "This response reached its research limit. Narrow the question to continue.",
   interrupted: "Research was stopped before this operation finished.",

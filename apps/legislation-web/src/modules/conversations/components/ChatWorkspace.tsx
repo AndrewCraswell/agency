@@ -158,7 +158,7 @@ export function ChatWorkspace({ isAvailable = false, conversationId, suggestions
       setReferences(references.filter((reference) => reference.recordId !== recordId))
   }
   return (
-    <AppShell demo className={cn(styles.layout, selectedCitation && styles.withEvidence)}>
+    <AppShell isResearch className={cn(styles.layout, selectedCitation && styles.withEvidence)}>
       <Conversation aria-label="Conversation" aria-live="off" className="min-h-0" initial="instant" resize="instant">
         <ConversationContent
           className={cn(styles.content, isConversation && styles.threadContent)}

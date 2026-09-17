@@ -6,11 +6,11 @@ import * as styles from "./AppShell.css"
 export function AppShell({
   children,
   className,
-  demo = false
-}: Readonly<{ children: ReactNode; className?: string; demo?: boolean }>) {
+  isResearch = false
+}: Readonly<{ children: ReactNode; className?: string; isResearch?: boolean }>) {
   return (
     <div className={cn(styles.shell, className)}>
-      <AppHeader demo={demo} />
+      <AppHeader isResearch={isResearch} />
       {children}
     </div>
   )

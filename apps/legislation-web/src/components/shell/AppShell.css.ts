@@ -27,12 +27,11 @@ export const wordmark = style({
 })
 export const utilities = style({ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 })
 export const utility = style({ width: 32, height: 32, borderRadius: 4, color: "var(--muted-foreground)" })
-export const demoHeader = style({
+export const researchHeader = style({
   height: 64,
   padding: "0 24px",
-  justifyContent: "flex-start",
+  justifyContent: "space-between",
   gap: 12,
   background: "var(--background)",
   "@media": { "(max-width: 40rem)": { padding: "0 20px" } }
 })
-export const demoLabel = style({ fontSize: 12, fontWeight: 500, color: "var(--subtle)", flex: 1 })
