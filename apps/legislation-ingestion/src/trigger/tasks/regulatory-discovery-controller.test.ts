@@ -54,10 +54,10 @@ beforeEach(() => {
   })
   mocks.submit.mockImplementation(async (_pool, id, submit) => {
     const run = await submit("acquisition", payload, {
-      idempotencyKey: `legal-discovery:${id}`,
+      idempotencyKey: `legal-discovery:${id}:0`,
       idempotencyKeyTTL: "7d"
     })
-    return { dispatchId: id, runId: run.id, reused: false }
+    return { dispatchId: id, runId: run.id, attempt: 0, reused: false }
   })
 })
 afterEach(() => vi.unstubAllEnvs())
@@ -70,7 +70,7 @@ it("persists a bounded page before submitting its stage workers with global keys
     limit: scope.limit
   })
   expect(mocks.plan).toHaveBeenCalledWith(expect.anything(), scope)
-  expect(mocks.key).toHaveBeenCalledWith(`legal-discovery:${"d".repeat(64)}`, { scope: "global" })
+  expect(mocks.key).toHaveBeenCalledWith(`legal-discovery:${"d".repeat(64)}:0`, { scope: "global" })
   expect(mocks.trigger).toHaveBeenCalledWith("regulatory-discovery-acquisition", payload, {
     idempotencyKey: "global-key",
     idempotencyKeyTTL: "7d"

@@ -13,6 +13,26 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added bounded run-disposition recovery to the manual discovery controller. Each acquisition, parsing or publication
+intent now retains an attempt counter, append-only prior-run history, last observed Trigger disposition and canonical
+completion time. Replacement first increments the persisted attempt and only then submits the same immutable payload
+with a new global key. Active runs remain untouched. An uncertain submission without a handle is retained for six days;
+a saved handle missing from Trigger history is retained for seven days. Remote completion without canonical stage
+advancement records a visible mismatch and never authorizes success. Trigger 404 is classified as missing history while
+other API failures propagate. The recovery task is bounded to 25 intents, serialized on the controller queue and has no
+schedule.
+
+The fresh-migration PostgreSQL path exercised active acquisition retention, terminal failure and attempt-1 replacement,
+canonical completion, recent uncertain parsing retention, expired uncertain replacement, missing publication history,
+premature remote completion, final canonical publication and replay. Prior run IDs and dispositions survived in JSON
+history, while each replacement used its incremented attempt key. Three database files passed four tests; five Trigger
+controller/worker files passed 19 tests. Ingestion and core types, scoped lint and `drizzle-kit check` passed. This is
+local disposable evidence. Root `pnpm verify` passed formatting and all 11 package lint/type tasks, then stopped at the
+same unrelated Knip inventory: 63 theme/template files, two root dev dependencies, two root binaries, the concurrently
+edited web `EntityResults` export and configuration hints; coverage did not run. Deployed Trigger cancellation,
+killed-worker, late-original, shared-storage and controller continuation smoke remain open, so ORCH-08 is partial and
+recurring schedules remain disabled.
+
 Added the manual bounded source-stage controller across current acquisition, parsing and publication. Registration now
 records the immutable manifest directly on each discovery unit. The controller reads only committed unit state, uses
 bounded keyset pages of at most 100, registers every child intent before submission and serializes Trigger API calls.

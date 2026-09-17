@@ -3,16 +3,11 @@ import pg from "pg"
 import { z } from "zod"
 import {
   legalDiscoveryDispatchPlanSchema,
+  legalDiscoveryTaskIdentifier,
   planLegalDiscoveryDispatchPage,
   submitLegalDiscoveryDispatch
 } from "../../ingestion/regulations/discovery-dispatch.js"
 import { registerLegalDiscoveryManifest } from "../../ingestion/regulations/discovery-registration.js"
-
-const taskByStage = {
-  acquisition: "regulatory-discovery-acquisition",
-  parsing: "regulatory-discovery-parsing",
-  publication: "regulatory-discovery-publication"
-} as const
 
 /** Manual bounded fan-out. Re-run after children advance durable state; no recurring schedule is registered here. */
 export const regulatoryDiscoveryController = task({
@@ -50,7 +45,7 @@ export async function runRegulatoryDiscoveryController(value: unknown) {
     for (const dispatch of plan.dispatches) {
       results.push(
         await submitLegalDiscoveryDispatch(pool, dispatch.id, async (stage, payload, options) =>
-          tasks.trigger(taskByStage[stage], payload, {
+          tasks.trigger(legalDiscoveryTaskIdentifier(stage), payload, {
             ...options,
             idempotencyKey: await idempotencyKeys.create(options.idempotencyKey, { scope: "global" })
           })

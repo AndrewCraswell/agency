@@ -130,7 +130,7 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   Local progress: pending discovery rows can now be registered in immutable current-acquisition manifests of at most
   100 units. Selection, manifest persistence and the registered transition are atomic and use locked bounded rows. A
   manual controller now plans the next committed stage with keyset pages of at most 100, persists all child intents and
-  submits them serially with stable global Trigger keys. Automatic continuation and run-disposition recovery remain open.
+  submits them serially with stable global Trigger keys. Automatic continuation and deployed verification remain open.
 - [ ] **ORCH-03 Add the acquisition worker adapter.** Wrap existing source clients/artifact acquisition with strict
   payloads, source budgets, artifact references and committed checkpoints. **Done:** interrupted downloads never
   produce a complete artifact; retry verifies checksum and reuses valid retained bytes. Depends on ORCH-01.
@@ -168,10 +168,19 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   Trigger run disposition or repair cancelled/expired accepted children.
   The source-stage controller now applies the same persist-before-submit boundary to acquisition, parsing and
   publication. Each stage intent retains its immutable payload, lease, first attempt and Trigger run ID; uncertain
-  submission retries keep the original key. Trigger disposition reconciliation remains open.
+  submission retries keep the original attempt key. Bounded reconciliation now preserves active and recent uncertain
+  runs, records prior run history and increments the attempt before an eligible replacement receives a new global key.
+  Deployed submit-before-ack and late-worker fault injection remain open.
 - [ ] **ORCH-08 Recover cancelled, lost and expired runs.** Reconcile durable pending work with Trigger run disposition,
   lease expiry and retry time; enqueue a fenced replacement only when eligible. **Done:** cancelled parent, killed
   child, missing run history and late original worker all converge to one valid completion. Depends on ORCH-07.
+  Local progress: the manual source-stage recovery task inspects at most 25 durable intents through Trigger run history.
+  Active runs are retained; terminal failures receive a persisted incremented attempt before replacement. Missing saved
+  handles wait six days and missing remote history waits seven days, matching global idempotency retention. Remote success
+  is accepted only after canonical stage advancement; otherwise the state mismatch remains visible. Fresh PostgreSQL
+  tests cover active retention, failed-run replacement, uncertain submission retention and expiry, missing-history
+  replacement, premature completion, completed-stage reconciliation and replay-safe publication. Deployed cancellation,
+  killed-worker, late-original and parent-replacement smoke still keep ORCH-08 open.
 - [ ] **ORCH-09 Share provider admission and cooldown.** Reuse host/key budgets across GovInfo legislative and regulatory
   callers; persist Retry-After cooldown and bounded jittered retry. **Done:** two parents cannot multiply the provider
   allowance, a 429 pauses the affected budget, and unrelated providers can progress. Depends on ORCH-03.

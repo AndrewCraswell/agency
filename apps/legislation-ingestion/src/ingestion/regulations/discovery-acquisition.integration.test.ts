@@ -16,6 +16,7 @@ import {
 import { planLegalDiscoveryDispatchPage, submitLegalDiscoveryDispatch } from "./discovery-dispatch.js"
 import { parseLegalDiscoveryArtifact } from "./discovery-parsing.js"
 import { publishLegalDiscoveryUnit } from "./discovery-publication.js"
+import { recoverLegalDiscoveryDispatchPage } from "./discovery-recovery.js"
 import { registerLegalDiscoveryManifest } from "./discovery-registration.js"
 import { RegulatorySourceClient } from "./source-client.js"
 
@@ -99,12 +100,68 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const submitted = await submitLegalDiscoveryDispatch(pool, acquisitionDispatch.id, async (stage) => ({
       id: `run-${stage}`
     }))
-    expect(submitted).toMatchObject({ runId: "run-acquisition", reused: false })
+    expect(submitted).toMatchObject({ runId: "run-acquisition", attempt: 0, reused: false })
     await expect(
       submitLegalDiscoveryDispatch(pool, acquisitionDispatch.id, async () => {
         throw new Error("submitted dispatch must be reused")
       })
     ).resolves.toEqual({ ...submitted, reused: true })
+    const retainedActive = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async () => ({ status: "EXECUTING" }),
+      async () => {
+        throw new Error("an active run must not be replaced")
+      }
+    )
+    expect(retainedActive).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: acquisitionDispatch.id,
+          status: "EXECUTING",
+          disposition: "retained",
+          replacement: false
+        }
+      ]
+    })
+    const recovered = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-acquisition")
+        return { status: "FAILED" }
+      },
+      async (stage, payload, options) => {
+        expect(stage).toBe("acquisition")
+        expect(payload).toEqual(acquisitionDispatch.payload)
+        expect(options.idempotencyKey).toBe(`legal-discovery:${acquisitionDispatch.id}:1`)
+        return { id: "run-acquisition-retry" }
+      }
+    )
+    expect(recovered).toMatchObject({
+      inspected: 1,
+      exhausted: true,
+      results: [
+        {
+          dispatchId: acquisitionDispatch.id,
+          status: "FAILED",
+          disposition: "replacement_ready",
+          replacement: { runId: "run-acquisition-retry", attempt: 1, reused: false }
+        }
+      ]
+    })
+    expect(
+      (
+        await pool.query(`SELECT attempt,run_id,run_history FROM legislation.legal_discovery_dispatches WHERE id=$1`, [
+          acquisitionDispatch.id
+        ])
+      ).rows[0]
+    ).toEqual({
+      attempt: 1,
+      run_id: "run-acquisition-retry",
+      run_history: [expect.objectContaining({ attempt: 0, runId: "run-acquisition", status: "FAILED" })]
+    })
     const body = `<?xml version="1.0"?><DLPSTEXTCLASS><DIV1 N="1" TYPE="TITLE"><HEAD>Title 1</HEAD>
       <DIV8 N="1.1" TYPE="SECTION"><HEAD>Current rule</HEAD><P>Current title text.</P></DIV8>
       </DIV1></DLPSTEXTCLASS>`
@@ -121,6 +178,28 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     expect(second).toEqual({ ...first, reused: true })
     expect(fetcher).toHaveBeenCalledOnce()
     expect(await readFile(join(directory, "blobs", `${first.artifactHash}.xml`), "utf8")).toBe(body)
+    const reconciled = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-acquisition-retry")
+        return { status: "COMPLETED" }
+      },
+      async () => {
+        throw new Error("an advanced stage must not submit another replacement")
+      }
+    )
+    expect(reconciled).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: acquisitionDispatch.id,
+          status: "COMPLETED",
+          disposition: "completed",
+          replacement: false
+        }
+      ]
+    })
     const parsingPlan = await planLegalDiscoveryDispatchPage(pool, planInput)
     expect(parsingPlan.dispatches).toHaveLength(1)
     expect(parsingPlan.dispatches[0]).toMatchObject({ stage: "parsing", payload: { manifestId: manifest.id } })
@@ -131,13 +210,48 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
         throw new Error("uncertain parsing submission")
       })
     ).rejects.toThrow("uncertain parsing submission")
-    await expect(
-      submitLegalDiscoveryDispatch(pool, parsingDispatch.id, async (stage, payload, options) => {
-        expect(options.idempotencyKey).toBe(`legal-discovery:${parsingDispatch.id}`)
+    const retainedUncertain = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async () => {
+        throw new Error("a submission without a run ID must not inspect Trigger history")
+      },
+      async () => {
+        throw new Error("a recent uncertain submission must not be replaced")
+      }
+    )
+    expect(retainedUncertain).toMatchObject({
+      inspected: 1,
+      results: [{ dispatchId: parsingDispatch.id, status: "MISSING", disposition: "retained", replacement: false }]
+    })
+    await pool.query(
+      `UPDATE legislation.legal_discovery_dispatches
+       SET first_attempt_at=clock_timestamp()-interval '7 days' WHERE id=$1`,
+      [parsingDispatch.id]
+    )
+    const replacedUncertain = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async () => {
+        throw new Error("a submission without a run ID must not inspect Trigger history")
+      },
+      async (stage, payload, options) => {
+        expect(options.idempotencyKey).toBe(`legal-discovery:${parsingDispatch.id}:1`)
         expect(payload).toEqual(parsingDispatch.payload)
-        return { id: `run-${stage}` }
-      })
-    ).resolves.toMatchObject({ runId: "run-parsing", reused: false })
+        return { id: `run-${stage}-retry` }
+      }
+    )
+    expect(replacedUncertain).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: parsingDispatch.id,
+          status: "MISSING",
+          disposition: "replacement_ready",
+          replacement: { runId: "run-parsing-retry", attempt: 1, reused: false }
+        }
+      ]
+    })
     const normalized = await mkdtemp(join(tmpdir(), "tabra-current-normalized-"))
     directories.push(normalized)
     const parseInput = { manifestId: manifest.id, unitKey: unit.key, outputRoot: normalized }
@@ -145,6 +259,28 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     const secondParse = await parseLegalDiscoveryArtifact(pool, parseInput)
     expect(firstParse).toMatchObject({ records: 2, reused: false })
     expect(secondParse).toEqual({ ...firstParse, reused: true })
+    const parsingCompletion = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-parsing-retry")
+        return { status: "COMPLETED" }
+      },
+      async () => {
+        throw new Error("a parsed unit must not be replaced")
+      }
+    )
+    expect(parsingCompletion).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: parsingDispatch.id,
+          status: "COMPLETED",
+          disposition: "completed",
+          replacement: false
+        }
+      ]
+    })
     const publicationPlan = await planLegalDiscoveryDispatchPage(pool, planInput)
     expect(publicationPlan.dispatches).toHaveLength(1)
     expect(publicationPlan.dispatches[0]).toMatchObject({ stage: "publication", payload: { manifestId: manifest.id } })
@@ -153,11 +289,82 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
     await expect(
       submitLegalDiscoveryDispatch(pool, publicationDispatch.id, async (stage) => ({ id: `run-${stage}` }))
     ).resolves.toMatchObject({ runId: "run-publication", reused: false })
+    await pool.query(
+      `UPDATE legislation.legal_discovery_dispatches
+       SET first_attempt_at=clock_timestamp()-interval '8 days' WHERE id=$1`,
+      [publicationDispatch.id]
+    )
+    const replacedMissing = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-publication")
+        return { status: "MISSING" }
+      },
+      async (stage, payload, options) => {
+        expect(stage).toBe("publication")
+        expect(payload).toEqual(publicationDispatch.payload)
+        expect(options.idempotencyKey).toBe(`legal-discovery:${publicationDispatch.id}:1`)
+        return { id: "run-publication-retry" }
+      }
+    )
+    expect(replacedMissing).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: publicationDispatch.id,
+          status: "MISSING",
+          disposition: "replacement_ready",
+          replacement: { runId: "run-publication-retry", attempt: 1, reused: false }
+        }
+      ]
+    })
+    const prematureCompletion = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async (runId) => {
+        expect(runId).toBe("run-publication-retry")
+        return { status: "COMPLETED" }
+      },
+      async () => {
+        throw new Error("a completed remote run with unchanged canonical state must not be replaced")
+      }
+    )
+    expect(prematureCompletion).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: publicationDispatch.id,
+          status: "COMPLETED",
+          disposition: "state_mismatch",
+          replacement: false
+        }
+      ]
+    })
     const publicationInput = { manifestId: manifest.id, unitKey: unit.key }
     const firstPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
     const secondPublication = await publishLegalDiscoveryUnit(pool, publicationInput)
     expect(firstPublication).toMatchObject({ state: "published", isCurrent: true, reused: false })
     expect(secondPublication).toEqual({ ...firstPublication, reused: true })
+    const publicationCompletion = await recoverLegalDiscoveryDispatchPage(
+      pool,
+      { sourceId: "ecfr", scopeKey: attempt.scopeKey, limit: 10 },
+      async () => ({ status: "COMPLETED" }),
+      async () => {
+        throw new Error("a completed published unit must not be replaced")
+      }
+    )
+    expect(publicationCompletion).toMatchObject({
+      inspected: 1,
+      results: [
+        {
+          dispatchId: publicationDispatch.id,
+          status: "COMPLETED",
+          disposition: "completed",
+          replacement: false
+        }
+      ]
+    })
     await expect(planLegalDiscoveryDispatchPage(pool, planInput)).resolves.toMatchObject({
       selected: 0,
       exhausted: true

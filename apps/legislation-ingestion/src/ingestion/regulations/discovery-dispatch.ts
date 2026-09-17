@@ -7,6 +7,14 @@ import { z } from "zod"
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 const sourceSchema = z.enum(["ecfr", "govinfo-fr", "govinfo-cfr"])
 export const legalDiscoveryStageSchema = z.enum(["acquisition", "parsing", "publication"])
+const taskByStage = {
+  acquisition: "regulatory-discovery-acquisition",
+  parsing: "regulatory-discovery-parsing",
+  publication: "regulatory-discovery-publication"
+} as const
+export function legalDiscoveryTaskIdentifier(stage: z.infer<typeof legalDiscoveryStageSchema>) {
+  return taskByStage[stage]
+}
 export const legalDiscoveryDispatchPayloadSchema = z.strictObject({ manifestId: hashSchema, unitKey: hashSchema })
 export const legalDiscoveryDispatchPlanSchema = z.strictObject({
   sourceId: sourceSchema,
@@ -114,21 +122,28 @@ export async function submitLegalDiscoveryDispatch(pool: pg.Pool, dispatchId: st
      WHERE id=$1 AND state IN ('pending','submitting')
        AND (lease_token IS NULL OR lease_expires_at<clock_timestamp())
        AND (first_attempt_at IS NULL OR first_attempt_at>clock_timestamp()-interval '6 days')
-     RETURNING stage,payload_hash,payload`,
+     RETURNING stage,payload_hash,payload,attempt`,
     [id, token]
   )
   if (claimed.rowCount !== 1) {
-    const existing = z.object({ state: z.string(), run_id: z.string().nullable(), expired: z.boolean() }).parse(
-      (
-        await pool.query(
-          `SELECT state,run_id,COALESCE(first_attempt_at<=clock_timestamp()-interval '6 days',false) expired
+    const existing = z
+      .object({
+        state: z.string(),
+        run_id: z.string().nullable(),
+        attempt: z.int().nonnegative(),
+        expired: z.boolean()
+      })
+      .parse(
+        (
+          await pool.query(
+            `SELECT state,run_id,attempt,COALESCE(first_attempt_at<=clock_timestamp()-interval '6 days',false) expired
              FROM legislation.legal_discovery_dispatches WHERE id=$1`,
-          [id]
-        )
-      ).rows[0]
-    )
+            [id]
+          )
+        ).rows[0]
+      )
     if (existing.state === "submitted" && existing.run_id !== null) {
-      return { dispatchId: id, runId: existing.run_id, reused: true }
+      return { dispatchId: id, runId: existing.run_id, attempt: existing.attempt, reused: true }
     }
     if (existing.expired) throw new Error("legal_discovery_dispatch_requires_reconciliation")
     throw new Error("legal_discovery_dispatch_busy")
@@ -137,14 +152,15 @@ export async function submitLegalDiscoveryDispatch(pool: pg.Pool, dispatchId: st
     .object({
       stage: legalDiscoveryStageSchema,
       payload_hash: hashSchema,
-      payload: legalDiscoveryDispatchPayloadSchema
+      payload: legalDiscoveryDispatchPayloadSchema,
+      attempt: z.int().nonnegative()
     })
     .parse(claimed.rows[0])
   invariant(row.payload_hash === digest(JSON.stringify(row.payload)), "legal_discovery_dispatch_payload_changed")
   try {
     const run = z.object({ id: z.string().min(1).max(256) }).parse(
       await submit(row.stage, row.payload, {
-        idempotencyKey: `legal-discovery:${id}`,
+        idempotencyKey: `legal-discovery:${id}:${row.attempt}`,
         idempotencyKeyTTL: "7d"
       })
     )
@@ -155,7 +171,7 @@ export async function submitLegalDiscoveryDispatch(pool: pg.Pool, dispatchId: st
       [id, token, run.id]
     )
     invariant(saved.rowCount === 1, "legal_discovery_dispatch_lease_lost")
-    return { dispatchId: id, runId: run.id, reused: false }
+    return { dispatchId: id, runId: run.id, attempt: row.attempt, reused: false }
   } catch (error) {
     await pool.query(
       `UPDATE legislation.legal_discovery_dispatches

@@ -55,7 +55,21 @@ ID. An uncertain submission keeps the original identity for retry or later dispo
 never assumes that a missing response means Trigger rejected the child. Re-running after workers commit state creates
 only the next-stage intent. Pagination exposes the last unit key and exhaustion rather than loading a national scope.
 
+`regulatory-discovery-recovery` manually reconciles a keyset page of at most 25 submitted or uncertain stage intents.
+It records each observed Trigger status and preserves active runs. Terminal failures are moved to a new persisted attempt
+before a replacement is submitted, so each attempt has a distinct global idempotency key. A submission with no saved run
+ID is retained for six days; a saved run missing from Trigger history is retained for seven days. After those retention
+windows, recovery appends the prior attempt, run ID and disposition to `run_history`, clears the current handle and
+submits the same immutable payload under the incremented attempt. Late original workers remain safe because stage
+workers can advance only their expected canonical state and all transitions are replay-safe.
+
+A remote `COMPLETED` status is not accepted as stage completion by itself. Recovery marks the dispatch complete only
+when the discovery unit has reached or passed that stage, or records `completed_without_stage_advance` for operator
+inspection. Quarantined units are terminal and visible. Trigger 404 responses become a missing-history disposition;
+other Trigger API failures propagate so the recovery task retries rather than inventing a run outcome. The recovery task
+uses the controller's single-worker queue and has no schedule.
+
 The discovery-unit and current-manifest contracts require `historical: false`; the existing acquisition/backfill
 contract remains strictly `historical: true`. Keeping these schemas separate prevents recurring observations from
-silently becoming completed backfill coverage. Trigger run-disposition recovery, deployed shared artifact/normalized
-storage, downstream completion accounting and scheduled cadence are separate gates.
+silently becoming completed backfill coverage. Deployed recovery/fault injection, shared artifact/normalized storage,
+downstream completion accounting and scheduled cadence are separate gates.
