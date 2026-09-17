@@ -3498,6 +3498,38 @@ This is local/disposable evidence. Persisted Trigger submission/lease recovery, 
 shared artifact/normalized storage and recurring activation remain open. The newer publication entry above closes the
 local current eCFR publication handoff.
 
+## Rights-visible coverage API and destructive-database isolation
+
+The local HTTP/MCP surface now exposes `GET /api/legal/coverage` and `get_regulatory_coverage` through one strict shared
+contract and the existing same-principal API credential boundary. The reader emits one row per rights-visible published
+edition and evaluates source collection, canonical membership, acknowledged lexical copy and exact ready-vector coverage
+independently. Rights-hidden editions do not contribute counts. Missing search storage is reported as unsupported, and a
+partially embedded receipt cannot report semantic readiness. This is local implementation evidence; deployed API/MCP
+credentials, a deployed canary and broader statute/state coverage remain open.
+
+During real-database verification, the web reader suite was found to share `REGULATORY_TEST_DATABASE_URL` with retained
+pilot tooling even though its fixture setup truncates canonical regulatory tables. That test setup truncated the retained
+49-edition database on loopback port 55438 and interrupted the release-candidate qualification after 14 complete edition
+reports. The source database now contains one test edition, two provision versions, one rights profile and one import.
+The current search pilot was also replaced by fixture state. This is a test-isolation defect, not a source or parser
+finding.
+
+All destructive regulatory suites now require `REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL` with database
+`regulations_destructive_test`; destructive search cases additionally require
+`REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL` with database
+`legislation_passage_search_destructive_test`. Both require a loopback host. Runtime database-role checks recognize only
+the production and dedicated destructive-test search names, while source-side checks reject both search roles. Normal
+`REGULATORY_TEST_DATABASE_URL` inspection/import configuration can no longer activate these fixture truncations.
+
+The earlier complete qualification evidence remains intact: `canonical-preparation-all-current/inventory.json` has
+`complete: true`, 49 selected editions and implementation hash
+`2f961df4618361ef08d65c77286e592d0d41a938cc36e236eb9973a72e3df973`, with all per-edition reports retained. Those
+records contain hashes, shape inspection and preparation summaries rather than canonical source bodies, so they cannot
+reconstruct the truncated database. No second 49-edition Docker database or raw full-title artifact set was found. The
+release-candidate output retains 14 complete reports and remains incomplete. Restoring a snapshot or reacquiring the 49
+official eCFR title artifacts is required before that qualification can resume. No provider embedding call, recurring
+schedule or bulk vector generation was started during this recovery.
+
 ## Pinned resumption of the full current-title qualification
 
 The earlier full 49-edition tokenizer qualification stopped after 12 editions with

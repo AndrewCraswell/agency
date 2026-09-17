@@ -16,6 +16,11 @@ import {
   validateLegalCodeResponse,
   type LegalCodesRequest
 } from "./legal-codes-contract"
+import {
+  legalCoverageRequestSchema,
+  validateLegalCoverageResponse,
+  type LegalCoverageRequest
+} from "./legal-coverage-contract"
 import { legalSearchRequestSchema, validateLegalSearchResponse, type LegalSearchRequest } from "./legal-search-contract"
 import { legalTextRequestSchema, validateLegalTextResponse, type LegalTextRequest } from "./legal-text-contract"
 
@@ -396,6 +401,16 @@ export class LegislationApiClient {
       return validateLegalCodesResponse(result, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal codes response")
+    }
+  }
+
+  async getRegulatoryCoverage(query: LegalCoverageRequest = {}, options?: ApiRequestOptions) {
+    const input = legalCoverageRequestSchema.parse(query)
+    const result = await this.#request({ method: "GET", path: "/api/legal/coverage", query: input }, options)
+    try {
+      return validateLegalCoverageResponse(result, input)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid regulatory coverage response")
     }
   }
 

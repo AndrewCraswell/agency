@@ -14,11 +14,11 @@ import { createLegalTextReader } from "./legal-text-read"
 import { createLegalTextApiHandler } from "./legal-text-routes"
 import { executeNextHttpApiHandler } from "./next/node-handler"
 
-const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
+const databaseUrl = process.env.REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {
   const url = new URL(databaseUrl)
-  if (url.pathname !== "/regulations_test" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
-    throw new Error("Regulatory integration checks require a local disposable regulations_test database")
+  if (url.pathname !== "/regulations_destructive_test" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
+    throw new Error("Regulatory integration checks require the dedicated local regulations_destructive_test database")
   }
 }
 

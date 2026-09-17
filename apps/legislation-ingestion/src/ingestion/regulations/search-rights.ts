@@ -1,4 +1,5 @@
 import { digest } from "@repo/legislation-core/legal-text/contracts"
+import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import { rightsPolicySchema } from "@repo/legislation-core/legal-text/storage-contract"
 import type pg from "pg"
 import invariant from "tiny-invariant"
@@ -15,7 +16,7 @@ export async function reconcileLegalSearchScopeRights(sourcePool: pg.Pool, targe
   const target = await targetPool.connect()
   try {
     invariant(
-      (await target.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+      isLegalSearchDatabaseName((await target.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_search_wrong_target"
     )
     await target.query("BEGIN")
@@ -27,7 +28,7 @@ export async function reconcileLegalSearchScopeRights(sourcePool: pg.Pool, targe
     const source = await sourcePool.connect()
     try {
       invariant(
-        (await source.query("SELECT current_database() AS name")).rows[0]?.name !== "legislation_passage_search",
+        !isLegalSearchDatabaseName((await source.query("SELECT current_database() AS name")).rows[0]?.name),
         "legal_search_wrong_source"
       )
       await source.query("BEGIN")
@@ -140,7 +141,7 @@ export async function reconcileLegalSearchRightsBatch(
   const deadline = Date.now() + 60_000
   const cursor = input.cursor ? scopeSchema.parse(input.cursor) : null
   invariant(
-    (await target.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+    isLegalSearchDatabaseName((await target.query("SELECT current_database() AS name")).rows[0]?.name),
     "legal_search_wrong_target"
   )
   const rows = await target.query(

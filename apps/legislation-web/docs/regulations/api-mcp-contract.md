@@ -7,7 +7,8 @@ the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. 
 code detail serves authorized metadata, published edition-component counts and the explicit current eCFR edition;
 complete-history and search-capability enrichment remains planned.
 [Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;
-the API-backed `search_regulations` tool is also implemented locally. Other routes/tools remain proposed.
+the API-backed `search_regulations` tool is also implemented locally. The rights-filtered coverage route, typed client
+and API-backed `get_regulatory_coverage` tool are implemented locally. Other routes/tools remain proposed.
 No deployed regulatory coverage is claimed. Parent: [implementation](../../../legislation-ingestion/docs/regulations/implementation.md). Reuse the normative
 [shared HTTP schemas](../engineering/api/schemas.md), WorkOS access rules and API-backed MCP architecture.
 
@@ -102,7 +103,7 @@ entire title text or child collections. Readable text uses ordered source blocks
 | POST `/api/legal/versions/compare` | leftVersionId, rightVersionId, cursor?, limit? | `Page<LegalDiffHunk>`; source structural order |
 | GET `/api/legal/relationships` | exactly one owner; type; direction; scope (`selected`/`all`); editionId/versionId for selected evidence | `Page<LegalRelationship>`; type/target/id; typed bounded target summaries |
 | GET `/api/legal/events` | jurisdictionId, codeId, documentId, kind, observedFrom, observedTo, cursor | `Page<LegalEvent>`; observedAt ascending/id |
-| GET `/api/legal/coverage` | jurisdictionId, codeId, corpus, sourceId | `Page<RegulatoryCoverage>`; jurisdiction/corpus/source/id |
+| GET `/api/legal/coverage` | jurisdictionId, codeId, corpus, sourceId | `Page<RegulatoryCoverage>`; published edition/id, locally implemented |
 | GET `/api/legal/artifacts/{artifactId}` | none | `LegalArtifactAccess`; metadata plus short-lived authorized download URL where permitted |
 
 `/api/legal/versions` resolves the discriminated provision/publication version identity, so publication text uses the same
@@ -123,7 +124,15 @@ not an unbounded synchronous recomputation on every page.
 
 The executable foundation is C's `src/legal-text/reader-contract.ts` and `reader-text.ts`. Database-backed exact
 text reads, the explicit HTTP text route and typed client are implemented behind the organization allowlist.
-Code/edition lists and provision traversal are implemented locally; detail/coverage operations and deployed acceptance remain phase gates.
+Code/edition lists, provision traversal and stage-specific coverage are implemented locally; remaining detail operations
+and deployed acceptance remain phase gates.
+
+Coverage reports one rights-visible published edition per row. `sourceCollection`, `canonical`, `lexical` and `semantic`
+are independent stages with explicit status, reason and requested/available/excluded counts. Canonical record count comes
+from edition membership. Lexical availability requires an acknowledged preparation whose inventory and target receipt
+still match. Semantic availability requires every target generation for that receipt to be ready and the ready vector
+count to equal the receipt's passage count. A missing search database reports lexical and semantic as unsupported. No
+aggregate count includes rights-hidden editions, and coverage never treats a partially ready semantic scope as ready.
 
 The resource envelope keeps selection/continuation in `data` with strict metadata. C owns
 [body, block, window and continuation invariants](../../../../packages/legislation-core/docs/regulations/reader-contract.md).

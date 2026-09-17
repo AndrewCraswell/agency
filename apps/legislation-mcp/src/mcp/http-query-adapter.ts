@@ -148,6 +148,7 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
       ? {}
       : {
           canReadLegalText,
+          getRegulatoryCoverage: async (input) => api.getRegulatoryCoverage(input, await legalRequestOptions()),
           searchLegal: async (input) => api.searchLegal(input, await legalRequestOptions()),
           getLegalCode: async ({ codeId }) => api.getLegalCode(codeId, await legalRequestOptions()),
           getLegalEdition: async ({ editionId }) => api.getLegalEdition(editionId, await legalRequestOptions()),
@@ -257,6 +258,7 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
 function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
   const getLegalText = adapter.getLegalText
   const searchLegal = adapter.searchLegal
+  const getRegulatoryCoverage = adapter.getRegulatoryCoverage
   const listLegalCodes = adapter.listLegalCodes
   const getLegalCode = adapter.getLegalCode
   const getLegalEdition = adapter.getLegalEdition
@@ -268,6 +270,11 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
       ? {}
       : { getLegalEdition: async (input) => await apiCall(() => getLegalEdition(input)) }),
     ...(searchLegal === undefined ? {} : { searchLegal: async (input) => await apiCall(() => searchLegal(input)) }),
+    ...(getRegulatoryCoverage === undefined
+      ? {}
+      : {
+          getRegulatoryCoverage: async (input) => await apiCall(() => getRegulatoryCoverage(input))
+        }),
     ...(listLegalEditions === undefined
       ? {}
       : { listLegalEditions: async (input) => await apiCall(() => listLegalEditions(input)) }),

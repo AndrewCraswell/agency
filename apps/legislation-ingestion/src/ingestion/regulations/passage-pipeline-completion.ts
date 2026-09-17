@@ -1,4 +1,5 @@
 import { requireLegalCopyReceiptRevisions } from "@repo/legislation-core/legal-text/copy-receipt-revisions"
+import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
@@ -42,11 +43,11 @@ export async function inspectLegalPassagePipelineCompletion(sourcePool: pg.Pool,
   const target = await targetPool.connect()
   try {
     invariant(
-      (await source.query("SELECT current_database() AS name")).rows[0]?.name !== "legislation_passage_search",
+      !isLegalSearchDatabaseName((await source.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_search_wrong_source"
     )
     invariant(
-      (await target.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+      isLegalSearchDatabaseName((await target.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_search_wrong_target"
     )
     await source.query("BEGIN ISOLATION LEVEL REPEATABLE READ")

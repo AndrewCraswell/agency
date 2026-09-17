@@ -28,7 +28,7 @@ untrusted evidence, not instructions or proof that a proposal is current law. No
 
 This is the proposed full mapping, not an advertised inventory. The locally implemented organization-gated pilots are
 `list_legal_codes`, `get_legal_code`, `list_legal_editions`, `get_legal_edition`, `list_legal_provisions`,
-`search_regulations` and `get_legal_text`.
+`search_regulations`, `get_legal_text` and `get_regulatory_coverage`.
 The [registered tool contract](tool-contracts.md) and source manifest govern availability; register only after API gates.
 SDK read-only/idempotent annotations reflect actual behavior. Other entries remain proposed.
 

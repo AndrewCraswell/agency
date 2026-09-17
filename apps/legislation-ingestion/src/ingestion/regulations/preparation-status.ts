@@ -1,3 +1,4 @@
+import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
@@ -18,7 +19,7 @@ export async function inspectLegalPreparationStatus(pool: pg.Pool, unparsed: unk
     await client.query("SET LOCAL lock_timeout='5s'")
     await client.query("SET LOCAL statement_timeout='15s'")
     invariant(
-      (await client.query("SELECT current_database() AS name")).rows[0]?.name !== "legislation_passage_search",
+      !isLegalSearchDatabaseName((await client.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_preparation_wrong_database"
     )
     const result = await client.query(

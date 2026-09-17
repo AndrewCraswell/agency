@@ -1,7 +1,7 @@
 -- Run only in the separately provisioned legislation_passage_search database.
 -- The official image bootstraps pg_search; this file does not install extensions.
 DO $$ BEGIN
-  IF current_database() <> 'legislation_passage_search' THEN
+  IF current_database() NOT IN ('legislation_passage_search', 'legislation_passage_search_destructive_test') THEN
     RAISE EXCEPTION 'Not the isolated passage search database';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname='pg_search' AND extversion='0.25.9') THEN

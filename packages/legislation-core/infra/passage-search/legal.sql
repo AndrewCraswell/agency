@@ -1,6 +1,6 @@
 -- Apply to the isolated search database. This does not modify the bill projection.
 DO $$ BEGIN
-  IF current_database() <> 'legislation_passage_search' THEN
+  IF current_database() NOT IN ('legislation_passage_search', 'legislation_passage_search_destructive_test') THEN
     RAISE EXCEPTION 'Not the isolated passage search database';
   END IF;
 END $$;

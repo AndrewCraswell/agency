@@ -29,10 +29,14 @@ suites whose code checks a name without checking the host.
 | --- | --- | --- |
 | Main ingestion integration | `LEGISLATION_INGESTION_TEST_DATABASE_URL`: `legislation_ingestion_test` | Database name only |
 | Entity refresh, bill organization dependencies, batch receipts | `LEGISLATION_TEST_DATABASE_URL`: `legislation_test` | Database name only |
-| Regulatory storage | `REGULATORY_TEST_DATABASE_URL`: `regulations_test` | `127.0.0.1`, `localhost` or `[::1]` |
-| Regulatory search target checks | `REGULATORY_SEARCH_TEST_DATABASE_URL`: `legislation_passage_search` | `127.0.0.1`, `localhost` or `[::1]` |
+| Destructive regulatory integration | `REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL`: `regulations_destructive_test` | `127.0.0.1`, `localhost` or `[::1]` |
+| Destructive regulatory search checks | `REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL`: `legislation_passage_search_destructive_test` | `127.0.0.1`, `localhost` or `[::1]` |
 | Passage synchronization | `PASSAGE_SEARCH_TEST_SOURCE_URL`: `legislation_passage_source_test`; `PASSAGE_SEARCH_DATABASE_URL`: `legislation_passage_search` | Database names only; also verifies the connected source database name |
 
 Core instead uses `LEGISLATION_CORE_TEST_DATABASE_URL` and a loopback `legislation_core_test` database. Missing URLs
-skip the relevant suites or cases. Several suites drop schemas or truncate search tables, so serialize C/I/W database
-profiles even when their primary database names differ. Never reuse a production search URL for the passage fixture.
+skip the relevant suites or cases. The regulatory integration variables are deliberately distinct from the
+`REGULATORY_TEST_DATABASE_URL` used by retained pilot inspection and import tools. Their dedicated database names are
+also enforced before migrations or fixture setup because the suites truncate canonical and search tables. Serialize
+C/I/W database profiles even when their primary database names differ. When selecting multiple regulatory database test
+files directly, pass Vitest `--no-file-parallelism`. Never reuse a retained pilot or production search URL for a test
+fixture.

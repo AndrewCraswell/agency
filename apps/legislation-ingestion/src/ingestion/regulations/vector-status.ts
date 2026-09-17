@@ -1,4 +1,5 @@
 import { regulatoryEmbeddingRouteForModel } from "@repo/legislation-core/embeddings/embedding-routing"
+import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
@@ -12,7 +13,7 @@ export async function inspectLegalEmbeddingGeneration(pool: pg.Pool, generationI
   const client = await pool.connect()
   try {
     invariant(
-      (await client.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+      isLegalSearchDatabaseName((await client.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_embedding_wrong_target"
     )
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")

@@ -6,6 +6,7 @@ import {
   type LegalProvisionsRequest
 } from "../api-client/legal-browse-contract"
 import { legalCodesRequestSchema, type LegalCodesRequest } from "../api-client/legal-codes-contract"
+import { legalCoverageRequestSchema, type LegalCoverageRequest } from "../api-client/legal-coverage-contract"
 import { legalSearchRequestSchema, type LegalSearchRequest } from "../api-client/legal-search-contract"
 import { legalTextRequestSchema, type LegalTextRequest } from "../api-client/legal-text-contract"
 import { getRequestContext } from "../auth/request-context"
@@ -85,6 +86,7 @@ type BillTextSearchInput = Readonly<{
 export type LegislationQueryApi = Readonly<{
   canReadLegalText?: () => boolean
   searchLegal?: (input: LegalSearchRequest) => Promise<unknown>
+  getRegulatoryCoverage?: (input: LegalCoverageRequest) => Promise<unknown>
   listLegalCodes?: (input: LegalCodesRequest) => Promise<unknown>
   getLegalCode?: (input: { codeId: string }) => Promise<unknown>
   getLegalEdition?: (input: { editionId: string }) => Promise<unknown>
@@ -352,6 +354,21 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
         annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
       },
       (input) => tool("search_regulations", input, () => searchLegal(input), logger, telemetry)
+    )
+  }
+
+  const getRegulatoryCoverage = service.getRegulatoryCoverage
+  if (getRegulatoryCoverage !== undefined && service.canReadLegalText?.() === true) {
+    server.registerTool(
+      "get_regulatory_coverage",
+      {
+        description:
+          "Inspect rights-visible federal regulatory coverage by published edition. Source collection, canonical storage, lexical search and semantic search are reported independently. Follow nextCursor with the same filters and limit. Unavailable-stage counts do not disclose hidden editions.",
+        inputSchema: legalCoverageRequestSchema,
+        outputSchema,
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      },
+      (input) => tool("get_regulatory_coverage", input, () => getRegulatoryCoverage(input), logger, telemetry)
     )
   }
 

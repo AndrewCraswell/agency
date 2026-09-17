@@ -20,6 +20,11 @@ The [edition/provision browser](legal-edition-browsing.md) additionally ships co
 strict client contracts, explicit Next routes and corresponding MCP tools. It advances the same gates and connects
 discovered IDs to exact text. Code detail, edition detail, public coverage and deployed acceptance remain open.
 
+September 17 local slice: stage-specific coverage ships a strict shared contract, rights-filtered database reader,
+explicit `/api/legal/coverage` route, typed client and API-backed `get_regulatory_coverage` tool. Canonical, lexical and
+semantic readiness are derived independently from published membership, acknowledged copy receipts and exact ready
+vector counts. HTTP-10 and TOOLS-02 remain open for deployed canaries and broader statute/state data.
+
 September 15 local slice: [exact-text serving](legal-text-serving.md) implements the selected database read, strict
 response/request contract, typed client and explicit authenticated version-text route. This advances HTTP-01/03/06/14/15;
 their full-scope gates remain open, including passages, discovery, deployed credentials/router and deployed MCP parity.

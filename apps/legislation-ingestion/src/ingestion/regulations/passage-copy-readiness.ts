@@ -4,6 +4,7 @@ import {
   legalTransferGenerationSchema,
   legalTransferRowSchema
 } from "@repo/legislation-core/legal-text/passage-contract"
+import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
@@ -55,7 +56,7 @@ async function checkLegalPassageCopy(
   const target = await targetPool.connect()
   try {
     invariant(
-      (await target.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+      isLegalSearchDatabaseName((await target.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_search_wrong_target"
     )
     await target.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
@@ -64,7 +65,7 @@ async function checkLegalPassageCopy(
     const source = await sourcePool.connect()
     try {
       invariant(
-        (await source.query("SELECT current_database() AS name")).rows[0]?.name !== "legislation_passage_search",
+        !isLegalSearchDatabaseName((await source.query("SELECT current_database() AS name")).rows[0]?.name),
         "legal_search_wrong_source"
       )
       await source.query("BEGIN ISOLATION LEVEL REPEATABLE READ")

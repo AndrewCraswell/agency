@@ -296,8 +296,11 @@ partial or corrupt copies fail closed. Failed inserts roll back the whole target
 This is a private immutable snapshot, with PostgreSQL FTS for a lexical canary. It does not implement BM25, public
 query authorization, rights-revocation tombstones, current-version selection, complete-edition acknowledgement or
 global readiness. Rights may change after copying; callers must not treat retained target text as authorization.
-The separate-database integration test additionally requires `REGULATORY_SEARCH_TEST_DATABASE_URL`, pointing at a
-disposable local `legislation_passage_search` database. Its target tables are truncated by test setup.
+The destructive integration suites require `REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL`, pointing at a dedicated local
+`regulations_destructive_test` database. Separate-search cases additionally require
+`REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL`, pointing at a dedicated local
+`legislation_passage_search_destructive_test` database. Both names and loopback hosts are enforced before setup. The
+suites truncate their source and target tables; retained pilot variables do not activate them.
 
 The generic `import:regulatory-backfill` importer is restricted to an explicitly configured loopback `regulations_test` database and checks
 the connected database name. Preview needs no database. Apply accepts the same saved manifest/raw/normalized paths as

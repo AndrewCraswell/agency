@@ -9,19 +9,20 @@ import pg from "pg"
 import invariant from "tiny-invariant"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
+import { createLegalCoverageReader } from "./legal-coverage-read"
 import { createLegalEditionSearch } from "./legal-edition-search"
 
-const sourceUrl = process.env.REGULATORY_TEST_DATABASE_URL
-const targetUrl = process.env.REGULATORY_SEARCH_TEST_DATABASE_URL
+const sourceUrl = process.env.REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL
+const targetUrl = process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL
 for (const [value, database] of [
-  [sourceUrl, "/regulations_test"],
-  [targetUrl, "/legislation_passage_search"]
+  [sourceUrl, "/regulations_destructive_test"],
+  [targetUrl, "/legislation_passage_search_destructive_test"]
 ]) {
   if (value !== undefined) {
     const url = new URL(value)
     invariant(
       url.pathname === database && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
-      "Legal reader integration checks require local disposable databases"
+      "Legal reader integration checks require their dedicated local destructive-test databases"
     )
   }
 }
@@ -82,6 +83,7 @@ suite.sequential("legal edition reader on real PostgreSQL", () => {
   const source = new pg.Pool({ connectionString: sourceUrl, max: 2, connectionTimeoutMillis: 10_000 })
   const target = new pg.Pool({ connectionString: targetUrl, max: 2, connectionTimeoutMillis: 10_000 })
   const search = createLegalEditionSearch(source, target, [identity.organizationId])
+  const coverage = createLegalCoverageReader(source, target, [identity.organizationId])
   function read(input: { cursor?: string; query?: string; limit?: number } = {}, userId = identity.userId) {
     return runWithRequestContext({ correlationId: "reader-integration", identity: { ...identity, userId } }, () =>
       search({ editionIds: [editionId], query: "ethical", ...input })
@@ -90,12 +92,13 @@ suite.sequential("legal edition reader on real PostgreSQL", () => {
 
   beforeAll(async () => {
     invariant(
-      (await source.query("SELECT current_database() AS name")).rows[0].name === "regulations_test",
-      "Legal reader source must use the regulations_test database"
+      (await source.query("SELECT current_database() AS name")).rows[0].name === "regulations_destructive_test",
+      "Legal reader source must use the regulations_destructive_test database"
     )
     invariant(
-      (await target.query("SELECT current_database() AS name")).rows[0].name === "legislation_passage_search",
-      "Legal reader target must use the legislation_passage_search database"
+      (await target.query("SELECT current_database() AS name")).rows[0].name ===
+        "legislation_passage_search_destructive_test",
+      "Legal reader target must use the legislation_passage_search_destructive_test database"
     )
     await migrate(drizzle(source), {
       migrationsFolder: fileURLToPath(
@@ -249,6 +252,22 @@ suite.sequential("legal edition reader on real PostgreSQL", () => {
 
   afterAll(async () => {
     await Promise.all([source.end(), target.end()])
+  })
+
+  it("reports stage-specific coverage from canonical and isolated search storage", async () => {
+    const page = await runWithRequestContext({ correlationId: "coverage-integration", identity }, () =>
+      coverage({ codeId, corpus: "regulation", sourceId: "ecfr" })
+    )
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]).toMatchObject({
+      id: editionId,
+      stages: {
+        sourceCollection: { status: "available" },
+        canonical: { status: "available", recordCount: 2 },
+        lexical: { status: "available", passageCount: 2 },
+        semantic: { status: "not_ingested", reason: "semantic_vectors_not_ingested" }
+      }
+    })
   })
 
   it("hydrates exact source versions with publisher, rights and edition metadata", async () => {

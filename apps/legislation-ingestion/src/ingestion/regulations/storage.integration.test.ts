@@ -79,11 +79,11 @@ import {
   storeLegalEmbeddingBatch
 } from "./vector-storage.js"
 
-const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
+const databaseUrl = process.env.REGULATORY_DESTRUCTIVE_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {
   const url = new URL(databaseUrl)
-  if (url.pathname !== "/regulations_test" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
-    throw new Error("Regulatory integration checks require a local disposable regulations_test database")
+  if (url.pathname !== "/regulations_destructive_test" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
+    throw new Error("Regulatory integration checks require the dedicated local regulations_destructive_test database")
   }
 }
 const directories: string[] = []
@@ -181,7 +181,7 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 4, connectionTimeoutMillis: 10_000 })
   beforeAll(async () => {
     invariant(
-      (await pool.query("SELECT current_database() AS name")).rows[0].name === "regulations_test",
+      (await pool.query("SELECT current_database() AS name")).rows[0].name === "regulations_destructive_test",
       "unexpected_database"
     )
     await migrate(drizzle(pool), {
@@ -217,12 +217,12 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
     return { id, lease }
   }
 
-  it.skipIf(!process.env.REGULATORY_SEARCH_TEST_DATABASE_URL)(
+  it.skipIf(!process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL)(
     "copies generations atomically to a separate database and detects corruption and revoked rights",
     async () => {
-      const targetUrl = new URL(z.string().parse(process.env.REGULATORY_SEARCH_TEST_DATABASE_URL))
+      const targetUrl = new URL(z.string().parse(process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL))
       invariant(
-        targetUrl.pathname === "/legislation_passage_search" &&
+        targetUrl.pathname === "/legislation_passage_search_destructive_test" &&
           ["localhost", "127.0.0.1", "[::1]"].includes(targetUrl.hostname),
         "unexpected_search_test_database"
       )
@@ -315,13 +315,16 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
             scope: { ...scope, versionId: z.uuid().parse(members.rows[2].version_id) }
           })
         ).rejects.toThrow("legal_search_scope_mismatch")
+        await target.query(
+          "TRUNCATE legislation.legal_search_generations,legislation.legal_search_scopes,legislation.legal_search_revocations CASCADE"
+        )
         const plan = await runLegalPassagePreparationBatch(pool, {
           scope: { kind: "edition", id: data.editionId },
           model: "openai/text-embedding-3-small",
           limit: 25
         })
         await expect(inspectLegalPassageCopy(pool, target, plan.preparationId)).rejects.toThrow(
-          "legal_copy_missing_or_changed_generation"
+          "legal_copy_membership_count_mismatch"
         )
         const items = await pool.query(
           "SELECT version_id,generation_id FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1 ORDER BY ordinal",
@@ -384,6 +387,7 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           "rights_profile_unavailable"
         )
         await pool.query("UPDATE legislation.legal_rights_profiles SET is_active=true")
+        await replicateLegalPassageGeneration(pool, target, request)
         await target.query("DELETE FROM legislation.legal_search_passages")
         await expect(searchCopiedLegalPassages(pool, target, searchRequest)).rejects.toThrow(
           "legal_search_incomplete_generation"
@@ -406,12 +410,13 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
       }
     }
   )
-  it.skipIf(!process.env.REGULATORY_SEARCH_TEST_DATABASE_URL)(
+  it.skipIf(!process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL)(
     "resumes bounded preparation copies without acknowledging partial or skipped inventories",
     async () => {
-      const url = new URL(z.string().parse(process.env.REGULATORY_SEARCH_TEST_DATABASE_URL))
+      const url = new URL(z.string().parse(process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL))
       invariant(
-        url.pathname === "/legislation_passage_search" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
+        url.pathname === "/legislation_passage_search_destructive_test" &&
+          ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
         "unexpected_search_test_database"
       )
       const target = new pg.Pool({ connectionString: url.href, max: 2 })
@@ -558,12 +563,13 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
       }
     }
   )
-  it.skipIf(!process.env.REGULATORY_SEARCH_TEST_DATABASE_URL)(
+  it.skipIf(!process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL)(
     "acknowledges complete copies, follows only the current head, and reconciles revoked shared copies",
     async () => {
-      const url = new URL(z.string().parse(process.env.REGULATORY_SEARCH_TEST_DATABASE_URL))
+      const url = new URL(z.string().parse(process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL))
       invariant(
-        url.pathname === "/legislation_passage_search" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
+        url.pathname === "/legislation_passage_search_destructive_test" &&
+          ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
         "unexpected_search_test_database"
       )
       const target = new pg.Pool({ connectionString: url.href, max: 3 })
@@ -1047,12 +1053,13 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
     60_000
   )
 
-  it.skipIf(!process.env.REGULATORY_SEARCH_TEST_DATABASE_URL)(
+  it.skipIf(!process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL)(
     "acknowledges and revokes one Federal Register observation without completing the other publications",
     async () => {
-      const url = new URL(z.string().parse(process.env.REGULATORY_SEARCH_TEST_DATABASE_URL))
+      const url = new URL(z.string().parse(process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL))
       invariant(
-        url.pathname === "/legislation_passage_search" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
+        url.pathname === "/legislation_passage_search_destructive_test" &&
+          ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
         "unexpected_search_test_database"
       )
       const target = new pg.Pool({ connectionString: url.href, max: 2 })
@@ -1370,12 +1377,12 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
     await expect(materializeLegalPassages(pool, request)).rejects.toThrow("rights_profile_unavailable")
   })
 
-  it.skipIf(!process.env.REGULATORY_SEARCH_TEST_DATABASE_URL)(
+  it.skipIf(!process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL)(
     "isolates dimension-constrained regulatory vectors and completes only an exact passage inventory",
     async () => {
-      const targetUrl = new URL(z.string().parse(process.env.REGULATORY_SEARCH_TEST_DATABASE_URL))
+      const targetUrl = new URL(z.string().parse(process.env.REGULATORY_SEARCH_DESTRUCTIVE_TEST_DATABASE_URL))
       invariant(
-        targetUrl.pathname === "/legislation_passage_search" &&
+        targetUrl.pathname === "/legislation_passage_search_destructive_test" &&
           ["localhost", "127.0.0.1", "[::1]"].includes(targetUrl.hostname),
         "unexpected_search_test_database"
       )

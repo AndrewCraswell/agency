@@ -11,6 +11,7 @@ import { requireRights } from "@repo/legislation-core/legal-text/rights"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import { isLegalSearchDatabaseName } from "./search-database-role.js"
 
 export async function searchCopiedLegalPassages(
   sourcePool: pg.Pool,
@@ -40,7 +41,7 @@ export async function searchCopiedLegalPassages(
   const source = await sourcePool.connect()
   try {
     invariant(
-      (await source.query("SELECT current_database() AS name")).rows[0]?.name !== "legislation_passage_search",
+      !isLegalSearchDatabaseName((await source.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_search_wrong_source"
     )
     await source.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
@@ -107,7 +108,7 @@ export async function searchCopiedLegalPassages(
     const target = await targetPool.connect()
     try {
       invariant(
-        (await target.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+        isLegalSearchDatabaseName((await target.query("SELECT current_database() AS name")).rows[0]?.name),
         "legal_search_wrong_target"
       )
       await target.query("BEGIN ISOLATION LEVEL REPEATABLE READ")
@@ -222,7 +223,7 @@ export async function searchCurrentLegalProvision(
   invariant(current.rows.length === 1, "legal_search_current_provision_unavailable")
   const row = z.object({ edition_id: z.uuid(), version_id: z.uuid() }).parse(current.rows[0])
   invariant(
-    (await target.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+    isLegalSearchDatabaseName((await target.query("SELECT current_database() AS name")).rows[0]?.name),
     "legal_search_wrong_target"
   )
   const receipt = await target.query(

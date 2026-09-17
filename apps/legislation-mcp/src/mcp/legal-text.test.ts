@@ -12,6 +12,7 @@ import {
   legalCodesResponseSchema,
   legalCodeResponseSchema
 } from "@repo/legislation-core/api-client/legal-codes-contract"
+import { legalCoverageResponseSchema } from "@repo/legislation-core/api-client/legal-coverage-contract"
 import {
   legalSearchPageSchema,
   legalSearchRequestSchema
@@ -214,6 +215,63 @@ async function setup(
             if (path === "/api/legal/codes") {
               return Response.json(page((await codes()).items), { headers })
             }
+            if (path === "/api/legal/coverage") {
+              if (isRevoked) {
+                throw new LegislationError("forbidden", "Access denied")
+              }
+              const available = {
+                status: "available",
+                isStale: false,
+                reason: null,
+                requestedEditions: 1,
+                availableEditions: 1,
+                excludedEditions: 0
+              }
+              return Response.json(
+                page([
+                  {
+                    id: observationId,
+                    jurisdictionId: "jurisdiction:us",
+                    code: { id: versionId, name: "Title 1" },
+                    corpus: "regulation",
+                    source: {
+                      id: "ecfr",
+                      publisher: "Office of the Federal Register",
+                      authority: "official"
+                    },
+                    edition: {
+                      id: observationId,
+                      issueDate: "2026-09-10",
+                      sourceCurrencyDate: "2026-09-11",
+                      publishedAt: "2026-09-15T00:00:00Z",
+                      isCurrent: true
+                    },
+                    stages: {
+                      sourceCollection: {
+                        ...available,
+                        lastAttemptAt: "2026-09-14T00:00:00Z",
+                        lastSuccessAt: "2026-09-15T00:00:00Z"
+                      },
+                      canonical: { ...available, recordCount: 1 },
+                      lexical: { ...available, passageCount: 1, verifiedAt: "2026-09-15T01:00:00Z" },
+                      semantic: {
+                        status: "not_ingested",
+                        isStale: false,
+                        reason: "semantic_vectors_not_ingested",
+                        requestedEditions: 1,
+                        availableEditions: 0,
+                        excludedEditions: 1,
+                        dimensions: null,
+                        model: null,
+                        passageCount: 0,
+                        readyAt: null
+                      }
+                    }
+                  }
+                ]),
+                { headers }
+              )
+            }
             if (path === `/api/legal/codes/${versionId}`) {
               return Response.json(
                 {
@@ -334,6 +392,7 @@ it("advertises the read-only legal tool only for enabled, approved organizations
     expect(tool).toBeUndefined()
     expect((await client.listTools()).tools.some((item) => item.name === "search_regulations")).toBe(false)
     expect((await client.listTools()).tools.some((item) => item.name === "list_legal_codes")).toBe(false)
+    expect((await client.listTools()).tools.some((item) => item.name === "get_regulatory_coverage")).toBe(false)
     expect(
       (await client.listTools()).tools.some((item) =>
         ["list_legal_editions", "list_legal_provisions"].includes(item.name)
@@ -434,6 +493,29 @@ it("discovers codes through the authenticated API client and refuses changed API
     expect((await denied.client.callTool({ name: "list_legal_codes", arguments: {} })).isError).toBe(true)
     expect(denied.apiRequests).toHaveLength(0)
   }
+})
+
+it("reports staged regulatory coverage through the same authenticated API identity", async () => {
+  const { client, apiRequests, revoke } = await setup()
+  const definition = (await client.listTools()).tools.find((item) => item.name === "get_regulatory_coverage")
+  expect(definition?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false })
+  const result = await client.callTool({
+    name: "get_regulatory_coverage",
+    arguments: { codeId: versionId, corpus: "regulation" }
+  })
+  expect(result.isError).not.toBe(true)
+  const response = z.strictObject({ data: legalCoverageResponseSchema }).parse(result.structuredContent).data
+  expect(response.data[0]).toMatchObject({
+    id: observationId,
+    stages: {
+      canonical: { status: "available" },
+      lexical: { status: "available" },
+      semantic: { status: "not_ingested" }
+    }
+  })
+  expect(new URL(apiRequests[0]!.url).pathname).toBe("/api/legal/coverage")
+  revoke()
+  expect((await client.callTool({ name: "get_regulatory_coverage", arguments: {} })).isError).toBe(true)
 })
 
 it("reads code detail through API credentials for the same MCP caller and honors revocation", async () => {

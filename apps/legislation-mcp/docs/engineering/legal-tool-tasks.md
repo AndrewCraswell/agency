@@ -11,7 +11,8 @@ acceptance, not a dependency on every remaining tool.
   Depends on HTTP-01 and first shipped routes.
 - [ ] **TOOLS-02 Add coverage and code discovery tools.** `get_regulatory_coverage`, `list_legal_codes`,
   `list_legal_provisions`, aligned inputs and read-only annotations. Done: discover real IDs/unsupported scope; advertise
-  only implemented capabilities. Depends on HTTP-04/10, TOOLS-01.
+  only implemented capabilities. Local coverage and discovery tools are implemented with same-principal API identity;
+  deployed and broader-data acceptance remains open. Depends on HTTP-04/10, TOOLS-01.
 - [ ] **TOOLS-03 Add retrieval tools.** `search_regulations`, `get_legal_provision`, `get_legal_text`, preserving exact
   context through composed calls. No silent latest substitution or MCP-only ranking. Depends on HTTP-05–06/09, TOOLS-01.
   Local search/paging/text parity is recorded; provision detail, broader scope and deployed acceptance remain open.

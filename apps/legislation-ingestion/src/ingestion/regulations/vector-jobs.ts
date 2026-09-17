@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import type { OpenRouterEmbeddingClient } from "@repo/legislation-core/embeddings/openrouter-embeddings"
+import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
@@ -22,7 +23,7 @@ async function transaction<T>(pool: pg.Pool, action: (client: pg.PoolClient) => 
   const client = await pool.connect()
   try {
     invariant(
-      (await client.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
+      isLegalSearchDatabaseName((await client.query("SELECT current_database() AS name")).rows[0]?.name),
       "legal_embedding_wrong_target"
     )
     await client.query("BEGIN")
