@@ -73,6 +73,7 @@ import {
   registerLegalEmbeddingGeneration,
   storeLegalEmbeddingBatch
 } from "./vector-storage.js"
+import { runLegalEmbeddingShard } from "./vector-worker.js"
 
 const databaseUrl = process.env.REGULATORY_TEST_DATABASE_URL
 if (databaseUrl !== undefined) {
@@ -1424,7 +1425,20 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           model: registration.model,
           items: [{ passageId: passage.id, inputHash: passage.input_hash, embedding: vector }]
         }
-        expect(await storeLegalEmbeddingBatch(target, batch)).toEqual({ inserted: 1, reused: 0 })
+        await expect(
+          runLegalEmbeddingShard(target, shardRequest, {
+            embed: async () => ({ embeddings: [vector], model: "voyageai/voyage-4" })
+          })
+        ).rejects.toThrow("legal_embedding_provider_model_mismatch")
+        expect(
+          await runLegalEmbeddingShard(target, shardRequest, {
+            embed: async (values, inputType) => {
+              expect(values).toEqual([selected.items[0]?.inputText])
+              expect(inputType).toBe("document")
+              return { embeddings: [vector], model: registration.model, promptTokens: 12, totalTokens: 12 }
+            }
+          })
+        ).toMatchObject({ inserted: 1, reused: 0, promptTokens: 12, totalTokens: 12 })
         expect(await selectLegalEmbeddingShard(target, shardRequest)).toMatchObject({
           exhausted: true,
           items: [],
