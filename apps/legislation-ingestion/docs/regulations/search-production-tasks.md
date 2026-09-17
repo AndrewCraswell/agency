@@ -317,9 +317,9 @@ must not alter current bill/document embedding freshness. Small pilot writes may
 - [ ] **VECTOR-07 Run the durable pilot.** Exercise malformed response, provider 429/outage, killed worker, lost lease,
   source correction and target write failure on a bounded persisted corpus. **Done:** exact vector inventory recovers
   with no falsely complete shards; pilot is queryable for EVAL-11. Depends on VECTOR-05–06, ORCH-08–10.
-  Local two-database evidence now covers a wrong provider model, conservative retry-cost accounting, exact replay,
-  incomplete-shard completion rejection, empty-shard completion and rights-revocation cleanup. Provider 429/outage,
-  killed-worker lease expiry, target write failure and authenticated queryability remain open.
+  Local two-database evidence now covers a wrong provider model, target write failure, conservative retry-cost
+  accounting, exact replay, incomplete-shard completion rejection, empty-shard completion and rights-revocation cleanup.
+  Provider 429/outage, killed-worker lease expiry and authenticated queryability remain open.
 - [ ] **VECTOR-08 Plan full manifest cost and dispatch.** Freeze eligible partitions, expected vectors/tokens, reuse,
   budget stop conditions and chosen route. **Done:** plan excludes old embedding rebuilds and unqualified historical
   cohorts; operator preview accounts for every selected passage. Depends on EVAL-12, PASS-10.

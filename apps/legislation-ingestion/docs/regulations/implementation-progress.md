@@ -20,11 +20,16 @@ advance the cursor and aggregate provider tokens plus inserted/reused vector cou
 provider call. Failure clears the lease but deliberately retains the unacknowledged-request state for cost accounting.
 Embedding-generation completion now requires all 16 shard checkpoints as well as the exact expected vector count.
 
-The PostgreSQL smoke forced a provider-model failure, reclaimed the shard, recorded two attempts and one possible repeat,
-stored the successful vector, completed all 15 empty shards without provider access and rejected generation completion
+The PostgreSQL smoke forced a provider-model failure, reclaimed the shard, stored the successful vector, completed all
+15 empty shards without provider access and rejected generation completion
 until every checkpoint was complete. It then replayed completion and verified rights cleanup still cascades the entire
 vector inventory. This advances VECTOR-05/07 but does not yet provide cross-generation vector reuse, Trigger deployment
 or provider 429/outage fault injection.
+
+The same smoke now also injects a target-table write failure after a simulated provider success. The shard remains
+pending, the failed attempt is retained, and the next claim increments conservative repeat-cost accounting before the
+successful retry. The resulting checkpoint records three attempts and two possible repeated paid attempts without ever
+claiming a partial vector inventory complete.
 
 Added search-rights fencing to regulatory vector registration, writes and completion. Each operation shares the copied
 passage generation's advisory lock with rights cleanup and requires at least one nonrevoked search membership. Storage
