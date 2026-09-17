@@ -459,7 +459,15 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
           publishedBefore: "2026-09-15T00:00:00.000Z",
           limit: 25,
           retryBlocked: false,
-          pendingOnly: true
+          pendingOnly: true,
+          manifestAdmission: {
+            contract: "legal-passage-manifest-admission",
+            catalogHash: "d".repeat(64),
+            model: "openai/text-embedding-3-small",
+            tokenizerId: "tokenizer",
+            scopeKind: "edition",
+            partitions: [{ ownerId: first.editionId, versions: 3, passages: 3 }]
+          }
         }
         await pool.query(
           `INSERT INTO legislation.legal_preparation_plans

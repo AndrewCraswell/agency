@@ -13,6 +13,19 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Bound production preparation planning to the exact frozen-catalog admission result. The admission report now emits a
+planner-ready descriptor containing catalog hash, model, tokenizer, owner kind and every sorted owner with frozen
+version/passage counts. Each immutable wave persists that descriptor, rejects a descriptor for another model or source
+kind, and compares its next 11 live owners with the corresponding admitted slice before rights checks or dispatch writes.
+Missing, additional, reordered or duplicate owners fail closed; terminal exhaustion requires exact owner accounting.
+The direct bounded manual-dispatch path remains a canary path and does not claim full PASS-09 admission.
+
+Focused planning, admission and Trigger tests pass 23 cases, including model mismatch and all three inventory-drift
+forms; ingestion lint, formatting and type-check pass. The dedicated PostgreSQL integration database could not migrate
+the repository's concurrent uncommitted baseline: it attempts to index `votes(session_id,id)` although that fresh table
+has no `session_id`. The failure occurs in migration setup before either affected regulation test runs. No provider,
+embedding, vector, Trigger submission or recurring ingestion job ran.
+
 Made the 2,094-candidate EVAL-04 review resumable. `page-regulatory-judgments` extracts one to five complete rank-blind
 questions from the immutable review packet and returns a stable next-query cursor. Each page binds the exact packet hash,
 manifest and compared-system identity. Applying a reviewed page to a new exclusive output rechecks every question,

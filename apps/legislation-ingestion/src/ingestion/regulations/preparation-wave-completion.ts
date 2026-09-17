@@ -3,10 +3,10 @@ import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/sea
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
-import { preparationPlanSchema } from "./preparation-plan.js"
+import { preparationPlanParametersSchema } from "./preparation-plan.js"
 
 export const legalPreparationWaveCompletionSchema = z.strictObject({ waveId: z.uuid() })
-const parametersSchema = preparationPlanSchema.omit({ waveId: true })
+const parametersSchema = preparationPlanParametersSchema
 const count = z.int().nonnegative()
 
 const aggregateSchema = z.object({

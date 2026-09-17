@@ -48,6 +48,14 @@ const dispatch = {
   scope: { kind: "edition", id: "00000000-0000-4000-8000-000000000002" },
   model: "openai/text-embedding-3-small"
 }
+const manifestAdmission = {
+  contract: "legal-passage-manifest-admission" as const,
+  catalogHash: "d".repeat(64),
+  model: dispatch.model,
+  tokenizerId: "tokenizer",
+  scopeKind: "edition" as const,
+  partitions: [{ ownerId: dispatch.scope.id, versions: 1, passages: 1 }]
+}
 beforeEach(() => {
   vi.resetAllMocks()
   vi.stubEnv("DATABASE_URL", "postgresql://source/canonical")
@@ -79,7 +87,8 @@ it("plans source references without submitting preparation children", async () =
     waveId: dispatch.waveId,
     source: "ecfr",
     model: dispatch.model,
-    publishedBefore: "2026-09-15T00:00:00Z"
+    publishedBefore: "2026-09-15T00:00:00Z",
+    manifestAdmission
   }
   mocks.plan.mockResolvedValue({
     waveId: dispatch.waveId,
@@ -102,7 +111,8 @@ it("plans and submits one bounded pending-outbox admission page with an explicit
     source: "ecfr" as const,
     model: dispatch.model,
     publishedBefore: "2026-09-15T00:00:00Z",
-    pendingOnly: true as const
+    pendingOnly: true as const,
+    manifestAdmission
   }
   mocks.plan.mockResolvedValue({
     waveId: dispatch.waveId,
@@ -141,7 +151,8 @@ it("requires pending-only selection for admission before opening the database", 
         source: "ecfr",
         model: dispatch.model,
         publishedBefore: "2026-09-15T00:00:00Z",
-        pendingOnly: false
+        pendingOnly: false,
+        manifestAdmission
       }
     })
   ).rejects.toThrow(ZodError)

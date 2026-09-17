@@ -39,8 +39,18 @@ as pending and do not fail admission. The report accounts for every version and 
 passage writes, dispatches, provider calls, readiness promotion or embedding work. Passing admission authorizes only
 preparation against that exact catalog. The wave still requires an explicitly chosen candidate and immutable cutoff.
 
+The audit report includes a compact `admission` object containing the catalog hash, model, tokenizer, scope kind and
+the exact sorted owner inventory with frozen version/passage counts. Copy that object unchanged into `plan` or
+`admission`. The planner persists it in the immutable wave parameters and compares each 11-row database lookahead with
+the corresponding admitted owners before rights checks or intent writes. A missing, additional or reordered owner,
+model mismatch, duplicate owner, changed cutoff or changed admission descriptor fails the transaction. An exhausted
+wave is accepted only when its selected count equals the admitted owner count. This protects a wave from inventory drift
+after the read-only audit; the retained audit report remains the evidence that the supplied catalog hash and counts were
+actually verified.
+
 The same task accepts `{ "plan": { "waveId": "<uuid>", "source": "ecfr", "model":
-"openai/text-embedding-3-small", "publishedBefore": "2026-09-16T00:00:00Z" } }` to select published federal
+"openai/text-embedding-3-small", "publishedBefore": "2026-09-16T00:00:00Z", "manifestAdmission":
+<audit-report.admission> } }` to select published federal
 edition references. `source` is `ecfr`, `govinfo-cfr` or `govinfo-fr`; the model may also be `voyageai/voyage-4`.
 `limit` controls the child preparation batch (default ten, maximum 25), not planner page size. Planning reads at most
 eleven edition IDs and records at most ten intents per call, using a partial `(source_id,id)` index and an immutable
@@ -50,17 +60,19 @@ Register observations using their publication batch's Rostra timestamp and recor
 document date is not the planning cutoff. All retained observations are selected, including multiple observations of
 the same version from different batches; scope-specific preparation identity remains the deduplication boundary.
 
-The wave's normalized parameters and checkpoint are durable. Reusing the wave with changed parameters fails. A row
+The wave's normalized parameters, exact admitted owner inventory and checkpoint are durable. Reusing the wave with
+changed parameters fails. A row
 lock serializes page selection; rights checks, all page intents and the checkpoint commit in one transaction. A lost
 response does not lose intent: recovery scans the wave from its beginning. Calling `plan` again advances the next page;
 it does not replay the previous response. Once exhausted it returns zero without reopening selection. Planning makes
 no remote calls. Use the recovery path below to preview or submit recorded intents. The worker rechecks rights.
 
-This is a bounded scan of published inventory, not a frozen national inventory or proof of completeness. UUID keysets
-and a publication cutoff do not account for concurrent backdated insertions or changed publication timestamps behind
-the checkpoint. Source reconciliation and a fresh wave are required after such changes. A rights-denied edition stops
-the page without advancing; it is not silently omitted. Historical completeness, shared database admission, automatic
-controller continuation and deployed throughput qualification remain separate gates.
+This is a bounded scan against a caller-supplied, previously audited frozen inventory. The planner detects concurrent
+backdated insertions, removals and changed publication eligibility when they alter that exact ordered inventory. Source
+reconciliation and a fresh audit/wave are required after such changes. A rights-denied edition stops the page without
+advancing; it is not silently omitted. The explicit 1–10 `dispatches` path remains useful for manual canaries but does
+not establish full PASS-09 manifest admission. Historical completeness, shared database admission, automatic controller
+continuation and deployed throughput qualification remain separate gates.
 
 The September 17 retained-database admission passed both frozen current-eCFR candidate catalogs. OpenAI Small accounts
 for 49 editions, 275,138 versions and 501,543 passages; 35 versions are already materialized and 275,103 are pending.

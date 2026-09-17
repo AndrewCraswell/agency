@@ -15,13 +15,24 @@ vi.mock("./preparation-dispatch.js", async (original) => ({
   registerLegalPreparationDispatch: mocks.register
 }))
 const waveId = "00000000-0000-4000-8000-000000000001"
+const ids = Array.from({ length: 11 }, (_, n) => `00000000-0000-4000-8000-${String(n + 10).padStart(12, "0")}`)
+function admission(ownerIds = ids, scopeKind: "edition" | "publication" = "edition") {
+  return {
+    contract: "legal-passage-manifest-admission" as const,
+    catalogHash: "d".repeat(64),
+    model: "openai/text-embedding-3-small" as const,
+    tokenizerId: "tokenizer",
+    scopeKind,
+    partitions: ownerIds.map((ownerId) => ({ ownerId, versions: 1, passages: 1 }))
+  }
+}
 const input = {
   waveId,
   source: "ecfr",
   model: "openai/text-embedding-3-small",
-  publishedBefore: "2026-09-15T00:00:00Z"
+  publishedBefore: "2026-09-15T00:00:00Z",
+  manifestAdmission: admission()
 }
-const ids = Array.from({ length: 11 }, (_, n) => `00000000-0000-4000-8000-${String(n + 10).padStart(12, "0")}`)
 function database(options: { rows?: string[]; exhausted?: boolean; conflict?: boolean; search?: boolean } = {}) {
   const query = vi.fn<(sql: string, values?: unknown[]) => Promise<{ rows: unknown[] }>>(async (sql) => {
     if (sql.includes("current_database")) {
@@ -31,7 +42,9 @@ function database(options: { rows?: string[]; exhausted?: boolean; conflict?: bo
       return { rows: options.conflict ? [] : [{ wave_id: waveId }] }
     }
     if (sql.includes("SELECT after_id")) {
-      return { rows: [{ after_id: null, exhausted: options.exhausted ?? false, selected_count: 0 }] }
+      return {
+        rows: [{ after_id: null, exhausted: options.exhausted ?? false, selected_count: options.exhausted ? 11 : 0 }]
+      }
     }
     if (
       sql.includes("SELECT id FROM legislation.legal_editions") ||
@@ -90,7 +103,13 @@ it("selects at most eleven references and atomically records ten intents before 
 })
 it("selects Federal Register observations by batch publication time and records publication scopes", async () => {
   const db = database({ rows: ids.slice(0, 3) })
-  expect(await planLegalPreparationPage(db.pool, { ...input, source: "govinfo-fr" })).toMatchObject({
+  expect(
+    await planLegalPreparationPage(db.pool, {
+      ...input,
+      source: "govinfo-fr",
+      manifestAdmission: admission(ids.slice(0, 3), "publication")
+    })
+  ).toMatchObject({
     planned: 3,
     exhausted: true
   })
@@ -108,7 +127,13 @@ it("selects Federal Register observations by batch publication time and records 
 })
 it("admits only due pending lexical outbox scopes when requested", async () => {
   const db = database({ rows: ids.slice(0, 2) })
-  expect(await planLegalPreparationPage(db.pool, { ...input, pendingOnly: true })).toMatchObject({
+  expect(
+    await planLegalPreparationPage(db.pool, {
+      ...input,
+      pendingOnly: true,
+      manifestAdmission: admission(ids.slice(0, 2))
+    })
+  ).toMatchObject({
     planned: 2,
     exhausted: true
   })
@@ -131,6 +156,30 @@ it("rolls back the entire page when intent persistence fails", async () => {
   await expect(planLegalPreparationPage(db.pool, input)).rejects.toThrow("conflicting intent")
   expect(db.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK")
 })
+it.each([
+  { label: "missing", rows: ids.slice(1) },
+  { label: "reordered", rows: [ids[1], ids[0], ...ids.slice(2)] },
+  { label: "extra", rows: [...ids.slice(0, 10), "00000000-0000-4000-8000-999999999999"], owners: ids.slice(0, 10) }
+])("rejects $label live inventory drift before rights or intent writes", async ({ rows, owners = ids }) => {
+  const db = database({ rows })
+  await expect(planLegalPreparationPage(db.pool, { ...input, manifestAdmission: admission(owners) })).rejects.toThrow(
+    "legal_preparation_manifest_inventory_changed"
+  )
+  expect(mocks.rights).not.toHaveBeenCalled()
+  expect(mocks.register).not.toHaveBeenCalled()
+  expect(db.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK")
+})
+it("rejects a manifest admitted for another model before database access", async () => {
+  const db = database()
+  await expect(
+    planLegalPreparationPage(db.pool, {
+      ...input,
+      model: "voyageai/voyage-4",
+      manifestAdmission: admission()
+    })
+  ).rejects.toThrow("Model mismatch")
+  expect(db.pool.connect).not.toHaveBeenCalled()
+})
 it.each([{ conflict: true }, { search: true }])(
   "rejects invalid plan identity or database before edition reads",
   async (options) => {
@@ -147,7 +196,9 @@ it("does not reopen an exhausted scan", async () => {
 })
 it("marks a final partial page exhausted and rejects unknown selection fields", async () => {
   const db = database({ rows: ids.slice(0, 3) })
-  expect(await planLegalPreparationPage(db.pool, input)).toMatchObject({ planned: 3, exhausted: true })
+  expect(
+    await planLegalPreparationPage(db.pool, { ...input, manifestAdmission: admission(ids.slice(0, 3)) })
+  ).toMatchObject({ planned: 3, exhausted: true })
   await expect(planLegalPreparationPage(db.pool, { ...input, jurisdiction: "CA" })).rejects.toThrow(Error)
   expect(db.pool.connect).toHaveBeenCalledOnce()
 })

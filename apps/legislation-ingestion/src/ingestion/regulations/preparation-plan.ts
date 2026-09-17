@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util"
 import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { isLegalSearchDatabaseName } from "@repo/legislation-core/legal-text/search-database-role"
 import type pg from "pg"
@@ -6,17 +7,62 @@ import { z } from "zod"
 import { requireLegalPreparationRights } from "./passage-preparation.js"
 import { preparationDispatchSchema, registerLegalPreparationDispatch } from "./preparation-dispatch.js"
 
-export const preparationPlanSchema = preparationDispatchSchema.omit({ scope: true }).extend({
+const manifestAdmissionSchema = z.strictObject({
+  contract: z.literal("legal-passage-manifest-admission"),
+  catalogHash: z.string().regex(/^[a-f0-9]{64}$/),
+  model: z.enum(["openai/text-embedding-3-small", "voyageai/voyage-4"]),
+  tokenizerId: z.string().min(1),
+  scopeKind: z.enum(["edition", "publication"]),
+  partitions: z
+    .array(z.strictObject({ ownerId: z.uuid(), versions: z.int().positive(), passages: z.int().nonnegative() }))
+    .min(1)
+    .max(1000)
+})
+const preparationPlanObjectSchema = preparationDispatchSchema.omit({ scope: true }).extend({
   source: z.enum(["ecfr", "govinfo-cfr", "govinfo-fr"]),
   publishedBefore: z.iso.datetime({ offset: true }),
-  pendingOnly: z.boolean().default(false)
+  pendingOnly: z.boolean().default(false),
+  manifestAdmission: manifestAdmissionSchema
 })
+type PreparationPlanConstraint = Pick<
+  z.output<typeof preparationPlanObjectSchema>,
+  "source" | "model" | "manifestAdmission"
+>
+function validatePreparationPlan(value: PreparationPlanConstraint, context: z.RefinementCtx) {
+  const expectedKind = value.source === "govinfo-fr" ? "publication" : "edition"
+  if (value.manifestAdmission.scopeKind !== expectedKind) {
+    context.addIssue({ code: "custom", path: ["manifestAdmission", "scopeKind"], message: "Scope kind mismatch" })
+  }
+  if (value.manifestAdmission.model !== value.model) {
+    context.addIssue({ code: "custom", path: ["manifestAdmission", "model"], message: "Model mismatch" })
+  }
+  const ids = value.manifestAdmission.partitions.map(({ ownerId }) => ownerId)
+  if (new Set(ids).size !== ids.length) {
+    context.addIssue({ code: "custom", path: ["manifestAdmission", "partitions"], message: "Duplicate owner" })
+  }
+}
+export const preparationPlanSchema = preparationPlanObjectSchema.superRefine(validatePreparationPlan)
+export const preparationAdmissionPlanSchema = preparationPlanObjectSchema
+  .extend({ pendingOnly: z.literal(true) })
+  .superRefine(validatePreparationPlan)
+export const preparationPlanParametersSchema = preparationPlanObjectSchema
+  .omit({ waveId: true })
+  .superRefine(validatePreparationPlan)
 
 /** One atomic page of source references and durable intent. Never submits remote work. */
 export async function planLegalPreparationPage(pool: pg.Pool, value: unknown) {
   const input = preparationPlanSchema.parse(value)
   const { waveId, ...parameters } = input
-  const request = { ...parameters, publishedBefore: new Date(parameters.publishedBefore).toISOString() }
+  const request = {
+    ...parameters,
+    publishedBefore: new Date(parameters.publishedBefore).toISOString(),
+    manifestAdmission: {
+      ...parameters.manifestAdmission,
+      partitions: [...parameters.manifestAdmission.partitions].sort((left, right) =>
+        left.ownerId.localeCompare(right.ownerId)
+      )
+    }
+  }
   const requestHash = digest(JSON.stringify(request))
   const kind = request.source === "govinfo-fr" ? "publication" : "edition"
   const client = await pool.connect()
@@ -83,6 +129,16 @@ export async function planLegalPreparationPage(pool: pg.Pool, value: unknown) {
             )
           ).rows
         )
+    const expectedRows = request.manifestAdmission.partitions
+      .slice(state.selected_count, state.selected_count + 11)
+      .map(({ ownerId }) => ownerId)
+    invariant(
+      isDeepStrictEqual(
+        rows.map(({ id }) => id),
+        expectedRows
+      ),
+      "legal_preparation_manifest_inventory_changed"
+    )
     const page = rows.slice(0, 10)
     // Validate the complete page before registering anything; revocation also rolls back the checkpoint.
     for (const row of page) {
@@ -103,6 +159,12 @@ export async function planLegalPreparationPage(pool: pg.Pool, value: unknown) {
     const afterId = page.at(-1)?.id ?? state.after_id
     const exhausted = rows.length <= 10
     const selectedCount = state.selected_count + page.length
+    invariant(
+      exhausted
+        ? selectedCount === request.manifestAdmission.partitions.length
+        : selectedCount < request.manifestAdmission.partitions.length,
+      "legal_preparation_manifest_inventory_changed"
+    )
     await client.query(
       `UPDATE legislation.legal_preparation_plans SET after_id=$2,exhausted=$3,selected_count=$4
       WHERE wave_id=$1`,

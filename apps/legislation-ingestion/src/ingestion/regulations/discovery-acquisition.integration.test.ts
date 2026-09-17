@@ -428,7 +428,15 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
       source: "ecfr",
       model: "openai/text-embedding-3-small",
       publishedBefore,
-      pendingOnly: true
+      pendingOnly: true,
+      manifestAdmission: {
+        contract: "legal-passage-manifest-admission",
+        catalogHash: "d".repeat(64),
+        model: "openai/text-embedding-3-small",
+        tokenizerId: "tokenizer",
+        scopeKind: "edition",
+        partitions: [{ ownerId: firstPublication.editionId, versions: 3, passages: 3 }]
+      }
     })
     expect(preparationPlan).toMatchObject({ planned: 1, selectedCount: 1, exhausted: true, submitted: false })
     expect(preparationPlan.dispatchIds).toHaveLength(1)
@@ -446,7 +454,15 @@ describe.skipIf(databaseUrl === undefined).sequential("current discovery acquisi
         source: "ecfr",
         model: "openai/text-embedding-3-small",
         publishedBefore,
-        pendingOnly: true
+        pendingOnly: true,
+        manifestAdmission: {
+          contract: "legal-passage-manifest-admission",
+          catalogHash: "d".repeat(64),
+          model: "openai/text-embedding-3-small",
+          tokenizerId: "tokenizer",
+          scopeKind: "edition",
+          partitions: [{ ownerId: firstPublication.editionId, versions: 3, passages: 3 }]
+        }
       })
     ).resolves.toMatchObject({ planned: 0, selectedCount: 1, exhausted: true })
     const preparationDispatchId = preparationPlan.dispatchIds[0]

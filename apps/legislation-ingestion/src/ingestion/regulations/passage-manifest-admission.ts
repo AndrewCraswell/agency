@@ -235,6 +235,14 @@ export async function auditLegalPassageManifestAdmission(
       catalogHash: expectedCatalogHash,
       model: catalog.model,
       tokenizerId: catalog.tokenizerId,
+      admission: {
+        contract: "legal-passage-manifest-admission" as const,
+        catalogHash: expectedCatalogHash,
+        model: z.enum(["openai/text-embedding-3-small", "voyageai/voyage-4"]).parse(catalog.model),
+        tokenizerId: catalog.tokenizerId,
+        scopeKind: "edition" as const,
+        partitions: partitions.map(({ ownerId, versions, passages }) => ({ ownerId, versions, passages }))
+      },
       totals: {
         partitions: partitions.length,
         versions: totalVersions,

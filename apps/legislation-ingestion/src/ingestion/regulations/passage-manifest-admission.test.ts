@@ -156,6 +156,14 @@ function database(options: { generation?: boolean; changedManifest?: boolean } =
 it("accounts for frozen entries as materialized or pending", async () => {
   const artifact = await artifacts()
   await expect(auditLegalPassageManifestAdmission(database(), artifact)).resolves.toMatchObject({
+    admission: {
+      contract: "legal-passage-manifest-admission",
+      catalogHash: artifact.catalogHash,
+      model: "openai/text-embedding-3-small",
+      tokenizerId: "tokenizer",
+      scopeKind: "edition",
+      partitions: [{ ownerId, versions: 1, passages: 1 }]
+    },
     totals: { partitions: 1, versions: 1, passages: 1, materialized: 0, pending: 1 }
   })
   await expect(auditLegalPassageManifestAdmission(database({ generation: true }), artifact)).resolves.toMatchObject({

@@ -6,7 +6,11 @@ import {
   registerLegalPreparationDispatch,
   submitLegalPreparation
 } from "../../ingestion/regulations/preparation-dispatch.js"
-import { preparationPlanSchema, planLegalPreparationPage } from "../../ingestion/regulations/preparation-plan.js"
+import {
+  preparationAdmissionPlanSchema,
+  preparationPlanSchema,
+  planLegalPreparationPage
+} from "../../ingestion/regulations/preparation-plan.js"
 import {
   preparationRecoverySchema,
   recoverLegalPreparationPage
@@ -26,7 +30,7 @@ const schema = z.union([
   initialSchema,
   z.strictObject({ recovery: preparationRecoverySchema }),
   z.strictObject({ plan: preparationPlanSchema }),
-  z.strictObject({ admission: preparationPlanSchema.extend({ pendingOnly: z.literal(true) }) })
+  z.strictObject({ admission: preparationAdmissionPlanSchema })
 ])
 
 /** Explicit, finite operator wave. Enqueue success does not imply preparation, copy or embedding completion. */
