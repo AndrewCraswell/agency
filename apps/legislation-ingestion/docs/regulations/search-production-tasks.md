@@ -332,8 +332,9 @@ must not alter current bill/document embedding freshness. Small pilot writes may
   tokenizer tokens, input bytes, raw stored vector bytes, active rights, shard state, provider usage, retry exposure and
   separate dispatchable/completable/embedded/ready gates. It does not price, initialize, dispatch, complete or promote a
   generation. A deterministic read-only planner now verifies and hashes every copied passage input/token count into a
-  one-generation manifest under the trusted configured route. Atomic registration of that exact plan, full selected-
-  scope aggregation, measured reuse and budget stop conditions remain open.
+  one-generation manifest under the trusted configured route. Apply-only registration re-plans and registers inside
+  one serializable, generation-locked transaction. Full selected-scope aggregation, measured reuse and budget stop
+  conditions remain open.
 - [ ] **VECTOR-09 Execute staged bulk waves.** Increase regulatory vector concurrency only within measured provider/DB
   admission; checkpoint partitions and report spend/progress. **Done:** every expected vector has a verified result or
   explicit pending/ineligible disposition, with interrupted-wave replay evidence. Depends on VECTOR-08, ORCH-14, OPS-06.

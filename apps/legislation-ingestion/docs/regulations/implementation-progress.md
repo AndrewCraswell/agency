@@ -19,8 +19,10 @@ pages every passage, recomputes each input hash and token count, and freezes pas
 count, tokens, input bytes, dimensions, input contract and the fixed 16-shard layout into one self-hashed plan. Changed
 fields or route identity fail validation. The CLI writes only to a new output file and cannot register or dispatch a
 generation. The two-database smoke generated the plan from a real copied passage and used its hash for the existing
-registration boundary. Focused PostgreSQL and scoped lint passed. Atomic plan registration remains open and will not be
-implemented by composing two transactions around a race-prone recheck.
+registration boundary. A separate apply-only command now re-plans and registers inside one serializable transaction
+while holding the passage-generation advisory lock. It reuses the canonical registration checks; a valid replay returns
+the existing generation and a self-consistent but stale plan rolls back with no row. Focused PostgreSQL, package type
+checking and scoped lint passed. Neither command dispatches provider work.
 
 Added a read-only regulatory vector generation inspector and operator CLI. One repeatable-read snapshot reconciles the
 registered route/manifest, copied passage count, expected tokenizer tokens and input bytes, stored vectors, active

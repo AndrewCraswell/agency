@@ -78,7 +78,7 @@ async function requireActiveSearchMembership(client: pg.PoolClient, generationId
 }
 
 /** Registers one immutable model-specific vector generation over one exact passage generation. */
-export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unknown) {
+export async function registerLegalEmbeddingGenerationInTransaction(client: pg.PoolClient, input: unknown) {
   const request = generationRequestSchema.parse(input)
   const selected = route(request.model)
   const tokenizer = await embeddingTokenizer(request.model)
@@ -93,65 +93,70 @@ export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unk
       request.expectedCount
     ])
   )
-  return transaction(pool, async (client) => {
-    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id])
-    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [request.passageGenerationId])
-    await requireActiveSearchMembership(client, request.passageGenerationId)
-    const source = (
-      await client.query<{ passage_count: number; eligibility: string; tokenizer_id: string; actual_count: number }>(
-        `SELECT (g.metadata->>'passage_count')::integer AS passage_count,
+  await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [id])
+  await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [request.passageGenerationId])
+  await requireActiveSearchMembership(client, request.passageGenerationId)
+  const source = (
+    await client.query<{ passage_count: number; eligibility: string; tokenizer_id: string; actual_count: number }>(
+      `SELECT (g.metadata->>'passage_count')::integer AS passage_count,
         g.metadata->>'eligibility' AS eligibility,g.metadata->>'tokenizer_id' AS tokenizer_id,
         count(p.id)::integer AS actual_count
         FROM legislation.legal_search_generations g
         LEFT JOIN legislation.legal_search_passages p ON p.generation_id=g.id
         WHERE g.id=$1 GROUP BY g.id`,
-        [request.passageGenerationId]
-      )
-    ).rows[0]
-    invariant(source, "legal_embedding_passage_generation_missing")
-    invariant(source.eligibility === "eligible", "legal_embedding_passage_generation_ineligible")
-    invariant(source.tokenizer_id === tokenizer.id, "legal_embedding_tokenizer_mismatch")
-    invariant(
-      source.passage_count === request.expectedCount && source.actual_count === request.expectedCount,
-      "legal_embedding_passage_inventory_mismatch"
+      [request.passageGenerationId]
     )
-    const inserted = await client.query(
-      `INSERT INTO legislation.legal_embedding_generations
+  ).rows[0]
+  invariant(source, "legal_embedding_passage_generation_missing")
+  invariant(source.eligibility === "eligible", "legal_embedding_passage_generation_ineligible")
+  invariant(source.tokenizer_id === tokenizer.id, "legal_embedding_tokenizer_mismatch")
+  invariant(
+    source.passage_count === request.expectedCount && source.actual_count === request.expectedCount,
+    "legal_embedding_passage_inventory_mismatch"
+  )
+  const inserted = await client.query(
+    `INSERT INTO legislation.legal_embedding_generations
       (id,passage_generation_id,model,dimensions,input_contract,manifest_hash,expected_count)
       VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING RETURNING id`,
-      [
-        id,
-        request.passageGenerationId,
-        request.model,
-        selected.dimensions,
-        request.inputContract,
-        request.manifestHash,
-        request.expectedCount
-      ]
-    )
-    const stored = (
-      await client.query(
-        `SELECT passage_generation_id,model,dimensions,input_contract,manifest_hash,expected_count,state
+    [
+      id,
+      request.passageGenerationId,
+      request.model,
+      selected.dimensions,
+      request.inputContract,
+      request.manifestHash,
+      request.expectedCount
+    ]
+  )
+  const stored = (
+    await client.query(
+      `SELECT passage_generation_id,model,dimensions,input_contract,manifest_hash,expected_count,state
         FROM legislation.legal_embedding_generations WHERE id=$1`,
-        [id]
-      )
-    ).rows[0]
-    invariant(
-      stored?.passage_generation_id === request.passageGenerationId &&
-        stored.model === request.model &&
-        stored.dimensions === selected.dimensions &&
-        stored.input_contract === request.inputContract &&
-        stored.manifest_hash === request.manifestHash &&
-        stored.expected_count === request.expectedCount,
-      "legal_embedding_generation_replay_conflict"
+      [id]
     )
-    return {
-      generationId: id,
-      model: request.model,
-      dimensions: selected.dimensions,
-      state: stored.state,
-      reused: inserted.rowCount === 0
-    }
+  ).rows[0]
+  invariant(
+    stored?.passage_generation_id === request.passageGenerationId &&
+      stored.model === request.model &&
+      stored.dimensions === selected.dimensions &&
+      stored.input_contract === request.inputContract &&
+      stored.manifest_hash === request.manifestHash &&
+      stored.expected_count === request.expectedCount,
+    "legal_embedding_generation_replay_conflict"
+  )
+  return {
+    generationId: id,
+    model: request.model,
+    dimensions: selected.dimensions,
+    state: stored.state,
+    reused: inserted.rowCount === 0
+  }
+}
+
+/** Registers one immutable model-specific vector generation over one exact passage generation. */
+export async function registerLegalEmbeddingGeneration(pool: pg.Pool, input: unknown) {
+  return transaction(pool, async (client) => {
+    return registerLegalEmbeddingGenerationInTransaction(client, input)
   })
 }
 

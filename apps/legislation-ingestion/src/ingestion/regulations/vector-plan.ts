@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { isDeepStrictEqual } from "node:util"
 import {
   regulatoryEmbeddingRouteForModel,
   type RegulatoryEmbeddingModel
@@ -8,6 +9,7 @@ import { digest } from "@repo/legislation-core/legal-text/contracts"
 import type pg from "pg"
 import invariant from "tiny-invariant"
 import { z } from "zod"
+import { registerLegalEmbeddingGenerationInTransaction } from "./vector-storage.js"
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
 const modelSchema = z.enum(["openai/text-embedding-3-small", "voyageai/voyage-4"])
@@ -41,14 +43,16 @@ export function validateLegalEmbeddingPlan(input: unknown): LegalEmbeddingPlan {
   return plan
 }
 
-async function transaction<T>(pool: pg.Pool, action: (client: pg.PoolClient) => Promise<T>) {
+async function transaction<T>(pool: pg.Pool, readOnly: boolean, action: (client: pg.PoolClient) => Promise<T>) {
   const client = await pool.connect()
   try {
     invariant(
       (await client.query("SELECT current_database() AS name")).rows[0]?.name === "legislation_passage_search",
       "legal_embedding_wrong_target"
     )
-    await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+    await client.query(
+      readOnly ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY" : "BEGIN ISOLATION LEVEL SERIALIZABLE"
+    )
     await client.query("SET LOCAL statement_timeout='60s'")
     const result = await action(client)
     await client.query("COMMIT")
@@ -61,6 +65,89 @@ async function transaction<T>(pool: pg.Pool, action: (client: pg.PoolClient) => 
   }
 }
 
+async function buildLegalEmbeddingPlan(
+  client: pg.PoolClient,
+  passageGenerationId: string,
+  model: RegulatoryEmbeddingModel,
+  tokenizer: { count: (text: string) => number | Promise<number>; id: string }
+): Promise<LegalEmbeddingPlan> {
+  const route = regulatoryEmbeddingRouteForModel(model)
+  const generation = (
+    await client.query<{ metadata: Record<string, unknown> }>(
+      `SELECT g.metadata FROM legislation.legal_search_generations g
+        WHERE g.id=$1 AND EXISTS (
+          SELECT 1 FROM legislation.legal_search_memberships m WHERE m.generation_id=g.id AND NOT EXISTS (
+            SELECT 1 FROM legislation.legal_search_revocations r
+            WHERE r.scope_kind=m.scope_kind AND r.scope_id=m.scope_id
+          )
+        )`,
+      [passageGenerationId]
+    )
+  ).rows[0]
+  invariant(generation, "legal_embedding_search_membership_unavailable")
+  const metadata = z
+    .object({
+      manifest_hash: hash,
+      passage_count: z.int().positive(),
+      tokenizer_id: z.string().min(1).max(256),
+      eligibility: z.literal("eligible")
+    })
+    .passthrough()
+    .parse(generation.metadata)
+  invariant(metadata.tokenizer_id === tokenizer.id, "legal_embedding_tokenizer_mismatch")
+  const inventory = createHash("sha256")
+  inventory.update("[")
+  let afterId = ""
+  let count = 0
+  let expectedTokens = 0
+  let expectedInputBytes = 0
+  while (true) {
+    const page = await client.query<{
+      id: string
+      input_hash: string
+      input_text: string
+      token_count: number
+    }>(
+      `SELECT id,input_text,data->>'inputHash' AS input_hash,(data->>'tokenCount')::integer AS token_count
+        FROM legislation.legal_search_passages WHERE generation_id=$1 AND id>$2 ORDER BY id LIMIT 1000`,
+      [passageGenerationId, afterId]
+    )
+    if (page.rows.length === 0) break
+    for (const row of page.rows) {
+      const id = hash.parse(row.id)
+      const inputHash = hash.parse(row.input_hash)
+      const tokenCount = z.int().nonnegative().parse(row.token_count)
+      invariant(digest(row.input_text) === inputHash, "legal_embedding_input_hash_mismatch")
+      invariant((await tokenizer.count(row.input_text)) === tokenCount, "legal_embedding_token_count_mismatch")
+      inventory.update(count === 0 ? "" : ",")
+      inventory.update(JSON.stringify([id, inputHash, tokenCount]))
+      count += 1
+      expectedTokens += tokenCount
+      expectedInputBytes += Buffer.byteLength(row.input_text)
+      invariant(count <= 1_000_000 && expectedInputBytes <= 64 * 1024 * 1024, "legal_embedding_plan_limit")
+      afterId = id
+    }
+  }
+  inventory.update("]")
+  invariant(count === metadata.passage_count, "legal_embedding_passage_inventory_mismatch")
+  const identity = {
+    contract: "legal-embedding-plan-2026-09-17" as const,
+    passageGenerationId,
+    passageManifestHash: metadata.manifest_hash,
+    sourceMetadataHash: digest(JSON.stringify(generation.metadata)),
+    model,
+    dimensions: route.dimensions,
+    inputContract: route.embeddingInputContract,
+    tokenizerId: tokenizer.id,
+    expectedCount: count,
+    expectedTokens,
+    expectedInputBytes,
+    inputInventoryHash: inventory.digest("hex"),
+    shardCount: 16 as const
+  }
+  return validateLegalEmbeddingPlan({ ...identity, planHash: digest(JSON.stringify(identity)) })
+}
+
 /** Freezes one exact copied passage generation without registering or dispatching vector work. */
 export async function planLegalEmbeddingGeneration(
   pool: pg.Pool,
@@ -69,82 +156,26 @@ export async function planLegalEmbeddingGeneration(
 ): Promise<LegalEmbeddingPlan> {
   const passageGenerationId = hash.parse(passageGenerationIdInput)
   const model = modelSchema.parse(modelInput)
-  const route = regulatoryEmbeddingRouteForModel(model)
   const tokenizer = await embeddingTokenizer(model)
-  return transaction(pool, async (client) => {
-    const generation = (
-      await client.query<{ metadata: Record<string, unknown> }>(
-        `SELECT g.metadata FROM legislation.legal_search_generations g
-        WHERE g.id=$1 AND EXISTS (
-          SELECT 1 FROM legislation.legal_search_memberships m WHERE m.generation_id=g.id AND NOT EXISTS (
-            SELECT 1 FROM legislation.legal_search_revocations r
-            WHERE r.scope_kind=m.scope_kind AND r.scope_id=m.scope_id
-          )
-        )`,
-        [passageGenerationId]
-      )
-    ).rows[0]
-    invariant(generation, "legal_embedding_search_membership_unavailable")
-    const metadata = z
-      .object({
-        manifest_hash: hash,
-        passage_count: z.int().positive(),
-        tokenizer_id: z.string().min(1).max(256),
-        eligibility: z.literal("eligible")
-      })
-      .passthrough()
-      .parse(generation.metadata)
-    invariant(metadata.tokenizer_id === tokenizer.id, "legal_embedding_tokenizer_mismatch")
-    const inventory = createHash("sha256")
-    inventory.update("[")
-    let afterId = ""
-    let count = 0
-    let expectedTokens = 0
-    let expectedInputBytes = 0
-    while (true) {
-      const page = await client.query<{
-        id: string
-        input_hash: string
-        input_text: string
-        token_count: number
-      }>(
-        `SELECT id,input_text,data->>'inputHash' AS input_hash,(data->>'tokenCount')::integer AS token_count
-        FROM legislation.legal_search_passages WHERE generation_id=$1 AND id>$2 ORDER BY id LIMIT 1000`,
-        [passageGenerationId, afterId]
-      )
-      if (page.rows.length === 0) break
-      for (const row of page.rows) {
-        const id = hash.parse(row.id)
-        const inputHash = hash.parse(row.input_hash)
-        const tokenCount = z.int().nonnegative().parse(row.token_count)
-        invariant(digest(row.input_text) === inputHash, "legal_embedding_input_hash_mismatch")
-        invariant((await tokenizer.count(row.input_text)) === tokenCount, "legal_embedding_token_count_mismatch")
-        inventory.update(count === 0 ? "" : ",")
-        inventory.update(JSON.stringify([id, inputHash, tokenCount]))
-        count += 1
-        expectedTokens += tokenCount
-        expectedInputBytes += Buffer.byteLength(row.input_text)
-        invariant(count <= 1_000_000 && expectedInputBytes <= 64 * 1024 * 1024, "legal_embedding_plan_limit")
-        afterId = id
-      }
-    }
-    inventory.update("]")
-    invariant(count === metadata.passage_count, "legal_embedding_passage_inventory_mismatch")
-    const identity = {
-      contract: "legal-embedding-plan-2026-09-17" as const,
-      passageGenerationId,
-      passageManifestHash: metadata.manifest_hash,
-      sourceMetadataHash: digest(JSON.stringify(generation.metadata)),
-      model,
-      dimensions: route.dimensions,
-      inputContract: route.embeddingInputContract,
-      tokenizerId: tokenizer.id,
-      expectedCount: count,
-      expectedTokens,
-      expectedInputBytes,
-      inputInventoryHash: inventory.digest("hex"),
-      shardCount: 16 as const
-    }
-    return validateLegalEmbeddingPlan({ ...identity, planHash: digest(JSON.stringify(identity)) })
+  return transaction(pool, true, async (client) => {
+    return buildLegalEmbeddingPlan(client, passageGenerationId, model, tokenizer)
+  })
+}
+
+/** Rechecks and registers the exact plan in one serializable, generation-locked transaction. */
+export async function registerLegalEmbeddingPlan(pool: pg.Pool, input: unknown) {
+  const plan = validateLegalEmbeddingPlan(input)
+  const tokenizer = await embeddingTokenizer(plan.model)
+  return transaction(pool, false, async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [plan.passageGenerationId])
+    const current = await buildLegalEmbeddingPlan(client, plan.passageGenerationId, plan.model, tokenizer)
+    invariant(isDeepStrictEqual(current, plan), "legal_embedding_plan_changed")
+    return registerLegalEmbeddingGenerationInTransaction(client, {
+      passageGenerationId: plan.passageGenerationId,
+      model: plan.model,
+      inputContract: plan.inputContract,
+      manifestHash: plan.planHash,
+      expectedCount: plan.expectedCount
+    })
   })
 }
