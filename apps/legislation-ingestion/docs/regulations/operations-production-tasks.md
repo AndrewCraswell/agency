@@ -24,7 +24,9 @@ normalization or direct-to-index update path. Workstream prerequisites: ORCH-01 
   Local progress: the bounded `regulatory-ecfr-discovery` task validates all publisher title metadata, refuses an
   import-in-progress response, classifies reserved/unchanged/changed titles against explicit current heads and registers
   changed acquisition units. Its concurrency is one and no recurring schedule is registered. Pending-unit acquisition,
-  a live publisher canary and the G4-gated hourly schedule remain open.
+  deployed verification and the G4-gated hourly schedule remain open. An official live inventory dated 2026-09-15
+  produced 49 non-reserved units and one reserved title in the disposable database; immediate replay inserted zero
+  units while advancing the durable observation revision.
 - [ ] **SYNC-03 Implement FR modification discovery.** Query source modification time with overlap, bounded pagination
   and saturation splitting, including edits to old publication dates. **Done:** an old corrected rule enters the same
   acquisition/reconciliation pipeline as a new publication; publication-date-only polling cannot hide the correction.

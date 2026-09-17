@@ -3008,6 +3008,14 @@ scoped oxlint/oxfmt and `drizzle-kit check` passed. This is local code and a dis
 canary. Pending-unit acquisition/dispatch, a live publisher canary, deployed Trigger/database verification and the
 G4/SYNC-11 hourly activation gate remain open, so SYNC-02 is only partial.
 
+The live publisher canary then fetched the official eCFR inventory dated 2026-09-15 into the disposable database. With
+no current heads in that target, it discovered 49 non-reserved titles and one reserved title. Immediate replay against
+the same publisher inventory advanced the observation checkpoint from revision 1 to revision 2, inserted zero new
+units and retained the original 49 full-scope pending units. The database also contains one independent single-title
+test unit under a different scope, explaining its total pending count of 50. No artifact download, Trigger submission,
+canonical publication or recurring schedule occurred. This closes the local live-source discovery canary; pending-unit
+acquisition/dispatch and deployed verification remain open.
+
 ## Pinned resumption of the full current-title qualification
 
 The earlier full 49-edition tokenizer qualification stopped after 12 editions with
