@@ -21,7 +21,7 @@ const program = new Command()
   .option("--activate", "make Congress.gov and GovInfo schedules active")
   .option(
     "--activate-openstates",
-    "activate only the OpenStates jurisdictions allowlisted by OPENSTATES_SCHEDULES_ENABLED_STATES; requires --activate, --apply, and OPENSTATES_SCHEDULES_ENABLED=true"
+    "activate only the OpenStates jurisdictions allowlisted by OPENSTATES_SCHEDULES_ENABLED_STATES; requires --activate and OPENSTATES_SCHEDULES_ENABLED=true"
   )
   .option("--apply", "apply the reconciliation plan; without this flag the command is read-only")
   .option("--current-congress <number>", "configured current Congress", "119")
@@ -54,12 +54,6 @@ async function reconcile(options: {
     throw new Error("current Congress must be a positive integer")
   }
   const environment = parseSynchronizationEnvironment(options.environment)
-  if (options.activate === true && options.apply !== true) {
-    throw new Error("--activate requires --apply")
-  }
-  if (options.activateOpenstates === true && options.apply !== true) {
-    throw new Error("--activate-openstates requires --apply")
-  }
   const openStatesSchedulesEnabled = parseOpenStatesScheduleGate(process.env.OPENSTATES_SCHEDULES_ENABLED)
   const openStatesActiveJurisdictions = resolveOpenStatesScheduleActivation({
     activate: options.activate === true,
