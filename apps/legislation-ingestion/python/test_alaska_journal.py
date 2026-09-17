@@ -374,6 +374,19 @@ And so the effective date clause was adopted.
         )
         self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
 
+    def test_explicit_concurrence_question_accepts_publisher_typographic_quote(self):
+        concurrence = self.sample("Adams, Brown").replace(
+            "Final Passage",
+            "The question being: \u201cShall the Senate concur in the House amendments?\u201d\n"
+            "Court Rule(s) - Effective Date(s)",
+        )
+        result = parse_roll_call(
+            "[[JOURNAL_ANCHOR:2655]]\nPage 2655\n" + concurrence,
+            "HB1", (2, 1, 1), "2655", "2655", True,
+            "(S) CONCUR AM OF (H) Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_explicit_procedural_motion_disambiguates_same_page_tallies(self):
         withdrawn = self.sample("Adams, Brown").replace(
             "Final Passage", "Amendment No. 51/Withdraw"

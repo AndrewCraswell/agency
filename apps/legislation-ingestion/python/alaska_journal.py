@@ -63,7 +63,7 @@ def motion_matches(hint, context):
         return False
     if "CBRF" in hint:
         return re.search(
-            r"THE QUESTION BEING:\s*[\"']?SHALL THE [^?]{0,120}"
+            r"THE QUESTION BEING:\s*[\"'\u2018\u201c]?SHALL THE [^?]{0,120}"
             r"\bCONSTITUTIONAL BUDGET RESERVE",
             context,
         ) is not None
@@ -78,7 +78,7 @@ def motion_matches(hint, context):
     if "CONCUR" in hint:
         if "THE QUESTION BEING:" in context:
             return re.search(
-                r"THE QUESTION BEING:\s*[\"']?SHALL THE [^?]{0,120}\bCONCUR\b",
+                r"THE QUESTION BEING:\s*[\"'\u2018\u201c]?SHALL THE [^?]{0,120}\bCONCUR\b",
                 context,
             ) is not None
         return "CONCUR" in context and "EFFECTIVE DATE" not in context
