@@ -1,5 +1,5 @@
 import unittest
-from alaska_journal import journal_text, parse_roll_call
+from alaska_journal import journal_text, merge_adjacent_journal_text, parse_roll_call
 
 
 class JournalTests(unittest.TestCase):
@@ -133,6 +133,23 @@ And so the effective date clause was adopted.
                                 "(S) PASSED Y2 N1 E1")),
             4,
         )
+
+    def test_adjacent_response_replaces_truncated_overlap_instead_of_duplicating_it(self):
+        primary = (
+            "[[JOURNAL_ANCHOR:2170]]\nPage 2170\nHB 1 Third Reading\n"
+            "YEAS: 2 NAYS: 1 EXCUSED: 1 ABSENT: 0\n"
+            "[[JOURNAL_ANCHOR:2171]]\nPage 2171\nYeas: Adams\n"
+        )
+        adjacent = (
+            "[[JOURNAL_ANCHOR:2170]]\nPage 2170\nRepeated prior page\n"
+            "[[JOURNAL_ANCHOR:2171]]\nPage 2171\n"
+            "Yeas: Adams, Brown\nNays: Clark\nExcused: Davis\n"
+            "[[JOURNAL_ANCHOR:2172]]\nPage 2172\n"
+        )
+        merged = merge_adjacent_journal_text(primary, adjacent, "2171")
+        self.assertNotIn("Repeated prior page", merged)
+        self.assertEqual(merged.count("[[JOURNAL_ANCHOR:2171]]"), 1)
+        self.assertEqual(len(parse_roll_call(merged, "HB1", (2, 1, 1), "2170", "2170", True)), 4)
 
     def test_numeric_citation_ignores_completed_previous_page_vote(self):
         text = (
@@ -330,6 +347,18 @@ And so the effective date clause was adopted.
             len(parse_roll_call(text, "HB1", (2, 1, 1), "776", "776", True, "AM NO 51 TABLED")),
             4,
         )
+
+    def test_tabled_parenthetical_does_not_reclassify_return_to_second_motion(self):
+        generic = self.sample("Adams, Brown").replace(
+            "Final Passage", "Return to Second for Amendments Reconsideration",
+        )
+        specific = self.sample("Evans, Fox").replace(
+            "Final Passage", "Return to Second for Amendment No. 53 Reconsideration",
+        )
+        text = "[[JOURNAL_ANCHOR:2170]]\n" + generic + specific
+        result = parse_roll_call(text, "HB1", (2, 1, 1), "2170", "2170", True,
+                                 "(H) RETURN TO SECOND FOR AM 53(TABLED) FAILED Y2 N1 E1")
+        self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
     def test_procedural_question_can_precede_tally_by_more_than_800_characters(self):
         text = (

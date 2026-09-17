@@ -65,7 +65,7 @@ def motion_matches(hint, context):
         return "FINAL PASSAGE" in context
     if "NOT TABLED" in hint:
         return "NOT TABLED" in context or "/TABLE" in context
-    if re.search(r"\bTABLED\b", hint):
+    if re.search(r"\bAM\s*(?:NO\.?\s*)?\d+(?:\s+AS\s+AMD)?\s+TABLED\b", hint):
         return ("WAS TABLED" in context or "/TABLE" in context) and "NOT TABLED" not in context
     if "WITHDRAW" in hint:
         return "WITHDRAW" in context
@@ -134,6 +134,23 @@ def journal_text(document):
         if re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", name):
             anchor.text = f"\n[[JOURNAL_ANCHOR:{name}]]\n" + (anchor.text or "")
     return "\n".join(pres[0].xpath(".//text()"))
+
+
+def merge_adjacent_journal_text(primary, adjacent, page_number):
+    """Replace a truncated overlap page with the complete adjacent response."""
+    if (not isinstance(primary, str) or not isinstance(adjacent, str)
+            or not isinstance(page_number, str) or not re.fullmatch(r"[1-9][0-9]{0,9}", page_number)):
+        raise ValueError("journal_overlap_invalid")
+    identity = anchor_identity(page_number)
+    primary_matches = [match for match in ANCHOR.finditer(primary)
+                       if anchor_identity(match.group(1)) == identity
+                       and is_printed_page_anchor(primary, match)]
+    adjacent_matches = [match for match in ANCHOR.finditer(adjacent)
+                        if anchor_identity(match.group(1)) == identity
+                        and is_printed_page_anchor(adjacent, match)]
+    if len(primary_matches) != 1 or len(adjacent_matches) != 1:
+        raise ValueError("journal_overlap_missing_or_ambiguous")
+    return primary[:primary_matches[0].start()] + adjacent[adjacent_matches[0].start():]
 
 
 def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, fallback_anchor=None,

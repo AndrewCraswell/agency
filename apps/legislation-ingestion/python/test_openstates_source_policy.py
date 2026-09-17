@@ -50,6 +50,18 @@ class SourcePolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate_selected_bill"):
             list(namespace["select"](doc, ["HB1"]))
 
+    def test_alaska_present_count_action_is_not_treated_as_named_roll_call(self):
+        replacement = next(
+            after for before, after in PATCHES["scrapers/ak/bills.py"]
+            if before.startswith('            if re.search(r"Y')
+        )
+        condition = replacement.strip().removeprefix("if ").removesuffix(":")
+        self.assertTrue(eval(condition, {"re": re, "action": "(H) PASSED Y21 N19"}))
+        self.assertFalse(eval(condition, {
+            "re": re,
+            "action": "(H) ADJOURNED TO 4/13 CALENDAR Y21 N14 P5",
+        }))
+
     def test_batch_entry_rejects_unbounded_and_mixed_chamber_requests(self):
         namespace = {"re": re}
         exec("class Policy:\n" + PATCHES["scrapers/nc/bills.py"][1][1], namespace)

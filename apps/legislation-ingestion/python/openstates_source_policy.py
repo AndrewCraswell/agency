@@ -107,7 +107,9 @@ PATCHES = {
             bill_link = indexed[identifier]
 '''),
         ("import datetime\n", "import datetime\nfrom urllib.parse import parse_qs, urlencode, urlsplit\n"),
-        ("from . import actions\n", "from . import actions\nfrom .journal import journal_text, parse_roll_call\n"),
+        ("from . import actions\n", "from . import actions\nfrom .journal import journal_text, merge_adjacent_journal_text, parse_roll_call\n"),
+        ('            if re.search(r"Y(\\d+)", action):\n',
+         '            if re.search(r"Y(\\d+)", action) and not re.search(r"\\bP\\d+\\b", action):\n'),
         ("        vote.add_source(url)\n", '''        vote.add_source(url)
         response = self.get(url, timeout=(10, 60))
         response.raise_for_status()
@@ -139,7 +141,8 @@ PATCHES = {
             next_response.raise_for_status()
             next_text = journal_text(lxml.html.fromstring(next_response.text))
             positions = parse_roll_call(
-                text + "\\n" + next_text, bill.identifier, (yes, no, other), anchor, page_anchor,
+                merge_adjacent_journal_text(text, next_text, str(int(page_anchor) + 1)),
+                bill.identifier, (yes, no, other), anchor, page_anchor,
                 source_bill_scoped, action
             )
         for option, name in positions:
