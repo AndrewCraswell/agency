@@ -13,6 +13,14 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Rechecked the historical full-qualification handle before further passage work. Process 76852 is absent and was not
+restarted. Its older 275,149-record artifact is superseded by the retained recovered-baseline audit at
+`artifacts/regulatory-backfills/ecfr-recovery-qualification-audit-2026-09-17.json`. That audit is terminal across all 49
+selected editions and 275,138 records: both pinned tokenizers prepared every record with zero tokenizer blockers,
+`terminalIntegrity`, `tokenizerQualified` and `tableShapeAccounted` are true, and the sole Title 33 publisher-source gap
+is exactly quarantined. PASS-07 is therefore closed. PASS-06 final-manifest persistence and PASS-09 materialization remain
+open; no process, provider call, embedding write or recurring ingestion was started.
+
 Implemented the authenticated Federal Register source-agency directory across the canonical reader, strict HTTP
 contract, typed client and API-backed MCP tool. `GET /api/legal/agencies` now returns rights-visible publisher references
 with aliases, publication counts and first/last publication dates; pagination binds the caller, filters, rights hashes

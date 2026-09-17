@@ -60,7 +60,7 @@ release inventory and tokenizer eligibility remain open.
 - [ ] **PASS-06 Freeze the final passage manifest.** Bind owner/version, source membership, reader/input contracts,
   tokenizer, context hash, input hash and eligibility in deterministic per-partition manifests. **Done:** replay has
   identical IDs/hashes and changed context produces distinct preparation work. Depends on PASS-05.
-- [ ] **PASS-07 Check both tokenizers at scale.** Run offline counts over the full selected manifest; summarize token
+- [x] **PASS-07 Check both tokenizers at scale.** Run offline counts over the full selected manifest; summarize token
   distribution, maximum input, continuation counts and transport-size failures for both models. **Done:** no eligible
   input exceeds configured limits; failures identify exact versions without changing source text. Depends on PASS-06.
   `inspect:regulatory-shapes --prepare` now runs both pinned tokenizers over complete canonical versions with production
@@ -68,10 +68,11 @@ release inventory and tokenizer eligibility remain open.
   protect report replay. `audit-regulatory-qualification` now requires the expected implementation hash and edition
   count, verifies the terminal inventory, exact selected/result identity, every per-edition report, retained NDJSON hash
   and record count, and aggregates per-model tokens, passages, limits, continuations and failure reasons. It reports
-  tokenizer qualification separately from unresolved table-shape review. The prior 49-edition/275,149-record run is
-  terminal and independently verified with zero tokenizer blockers for either model. Its historical 148 diagnostics
-  have since narrowed to the explicitly quarantined Title 33 source rendition gap; a fresh full-corpus run under the
-  atomic-layout implementation is required before PASS-06 freezes the final manifest.
+  tokenizer qualification separately from unresolved table-shape review. The recovered 49-edition/275,138-record run
+  is terminal and independently verified with zero tokenizer blockers for either model. Both routes prepared every
+  selected record; OpenAI Small produced 501,543 passages/171,181,687 tokens and Voyage 4 produced 522,180 passages/
+  187,709,146 tokens. The one remaining Title 33 source rendition gap is explicitly quarantined and exactly accounted,
+  so it does not represent a tokenizer failure. PASS-06 remains open for the persisted final passage manifest.
 - [ ] **PASS-08 Validate source reconstruction.** Independently compare reconstructed reader bodies and table cell
   coverage against retained source; review difficult real samples visually where text extraction loses layout meaning.
   **Done:** zero unexplained dropped/duplicated source spans in the advertised scope. Depends on PASS-05–07.
