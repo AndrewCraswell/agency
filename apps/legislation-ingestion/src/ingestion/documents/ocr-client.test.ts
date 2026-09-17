@@ -4,6 +4,40 @@ import { AzureDocumentIntelligenceClient, AzureDocumentIntelligenceError } from 
 const credential = { getToken: async () => ({ token: "test-token" }) }
 
 describe("AzureDocumentIntelligenceClient", () => {
+  it("preserves bounded nested provider diagnostics without exposing the response body", async () => {
+    const mockFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          headers: { "operation-location": "https://ocr.example/operations/failed" },
+          status: 202
+        })
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          status: "failed",
+          secret: "must-not-appear",
+          error: {
+            code: "InvalidRequest",
+            message: "Invalid request.",
+            innererror: { code: "InvalidContent", message: "Unsupported image encoding." },
+            details: [{ code: "UnsupportedContent", message: "Invalid image content." }]
+          }
+        })
+      )
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: mockFetch,
+      pollIntervalMs: 0
+    })
+    await expect(
+      client.recognize({ bytes: new Uint8Array([1]), contentType: "image/png", documentId: "failed" })
+    ).rejects.toMatchObject({
+      retryable: false,
+      message:
+        "Azure Document Intelligence analysis failed: [InvalidRequest] Invalid request.; [InvalidContent] Unsupported image encoding.; [UnsupportedContent] Invalid image content."
+    })
+  })
   it.each([
     ["", "OcrNoUsableTextError"],
     [" \n\t", "OcrNoUsableTextError"],

@@ -185,8 +185,29 @@ function retryAfter(value: string | null): number | undefined {
 }
 
 function providerFailureMessage(value: Record<string, unknown>): string {
-  if (isRecord(value.error) && typeof value.error.message === "string") {
-    return `Azure Document Intelligence analysis failed: ${value.error.message}`
+  if (isRecord(value.error)) {
+    const details: string[] = []
+    const pending: unknown[] = [value.error]
+    for (let index = 0; index < Math.min(pending.length, 8); index += 1) {
+      const current = pending[index]
+      if (!isRecord(current)) {
+        continue
+      }
+      const code = typeof current.code === "string" ? current.code.slice(0, 100) : ""
+      const message = typeof current.message === "string" ? current.message.slice(0, 400) : ""
+      if (code || message) {
+        details.push(`${code ? `[${code}] ` : ""}${message}`.trim())
+      }
+      if (isRecord(current.innererror)) {
+        pending.push(current.innererror)
+      }
+      if (Array.isArray(current.details)) {
+        pending.push(...current.details.slice(0, 3))
+      }
+    }
+    if (details.length > 0) {
+      return `Azure Document Intelligence analysis failed: ${details.join("; ")}`
+    }
   }
   return `Azure Document Intelligence analysis finished with status ${String(value.status)}`
 }
