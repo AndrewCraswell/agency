@@ -13,6 +13,15 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Removed the remaining operator loop from full preparation-wave planning without authorizing preparation execution. The
+new explicit `controller` mode persists one page of at most ten exact manifest owners, closes its database pool and then
+schedules one self-continuation with a global key bound to wave ID, catalog hash and committed selected count. It reuses
+the durable checkpoint and immutable admission descriptor until exact owner exhaustion, then returns a null continuation.
+It only registers intents; recovery/submission, passage generation, provider calls, copying and embeddings remain separate.
+Twelve focused dispatch tests pass bounded continuation, post-pool scheduling, terminal exhaustion, stable global keys,
+manual planning, admission and dispatch recovery; ingestion lint and type-check pass. This advances ORCH-02 while keeping
+PASS-09 execution gated on reviewed model selection.
+
 Added the provision-detail vertical slice required to turn hierarchy discovery into stable record retrieval. The strict
 contract and typed client now serve `GET /api/legal/provisions/{provisionId}` with an exact edition/version pair, the
 validated current eCFR membership by default, or an exact context-neutral version. The response separates immutable

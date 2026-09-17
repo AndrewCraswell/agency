@@ -134,6 +134,10 @@ Workstream prerequisites: ING-01 for durable identities and OPS-01–03 before l
   after committing changed units, and every canonically completed source-stage worker replenishes that bounded window
   with a replay-stable global key after closing its database pool. Multi-source admission, deployed verification and
   measured aggregate limits remain open.
+  Model-bound preparation waves now also have an explicit planning controller. It registers at most ten admitted owners
+  per run, closes the pool and schedules one replay-stable continuation bound to the catalog and committed selected
+  count. It stops only at exact manifest exhaustion and never submits preparation children; recovery remains a separate
+  inspected step.
 - [ ] **ORCH-03 Add the acquisition worker adapter.** Wrap existing source clients/artifact acquisition with strict
   payloads, source budgets, artifact references and committed checkpoints. **Done:** interrupted downloads never
   produce a complete artifact; retry verifies checksum and reuses valid retained bytes. Depends on ORCH-01.

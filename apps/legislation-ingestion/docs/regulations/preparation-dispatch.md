@@ -67,6 +67,12 @@ response does not lose intent: recovery scans the wave from its beginning. Calli
 it does not replay the previous response. Once exhausted it returns zero without reopening selection. Planning makes
 no remote calls. Use the recovery path below to preview or submit recorded intents. The worker rechecks rights.
 
+For full admitted inventory planning, send the same payload as `{ "controller": <plan> }`. One run persists at most ten
+intents, closes its database pool, then schedules exactly one continuation under a global key bound to wave, catalog and
+the committed selected count. Each continuation reuses the immutable plan and durable checkpoint. Exact exhaustion stops
+the chain with `continuationRunId: null`. This controller registers intent only: it does not submit preparation children,
+call a model provider, copy passages or create embeddings. Run recovery separately after inspecting the complete wave.
+
 This is a bounded scan against a caller-supplied, previously audited frozen inventory. The planner detects concurrent
 backdated insertions, removals and changed publication eligibility when they alter that exact ordered inventory. Source
 reconciliation and a fresh audit/wave are required after such changes. A rights-denied edition stops the page without
@@ -150,7 +156,7 @@ inventory and current source/target revisions before acknowledging the canonical
 copy failure, stale checkpoint or finalization failure dispatches no successor. None of these handoffs creates an
 embedding request or changes the embedding rollout gate.
 
-This advances ORCH-02/06/07/08 but does not close them. Indexed national manifest selection, background intent scanning,
+This advances ORCH-02/06/07/08 but does not close them. Indexed multi-source national manifest selection,
 aggregate database admission and deployed fault injection remain open. Source
 publication/rights validation remains in the preparation worker; submitting an ID grants no source read permission and
 proves no eligibility. Recurring ingestion and bulk embedding gates remain unchanged.

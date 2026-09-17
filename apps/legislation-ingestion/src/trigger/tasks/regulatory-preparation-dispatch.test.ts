@@ -105,6 +105,62 @@ it("plans source references without submitting preparation children", async () =
   expect(mocks.submit).not.toHaveBeenCalled()
   expect(mocks.end).toHaveBeenCalledOnce()
 })
+it("continues bounded manifest planning only after closing the database pool", async () => {
+  const controller = {
+    waveId: dispatch.waveId,
+    source: "ecfr" as const,
+    model: dispatch.model,
+    publishedBefore: "2026-09-15T00:00:00Z",
+    manifestAdmission
+  }
+  mocks.plan.mockResolvedValue({
+    waveId: dispatch.waveId,
+    planned: 1,
+    selectedCount: 1,
+    afterId: dispatch.scope.id,
+    exhausted: false,
+    dispatchIds: ["a".repeat(64)],
+    submitted: false
+  })
+  await expect(runRegulatoryPreparationDispatch({ controller })).resolves.toMatchObject({
+    planned: 1,
+    selectedCount: 1,
+    continuationRunId: "run"
+  })
+  expect(mocks.trigger).toHaveBeenCalledWith(
+    "regulatory-preparation-dispatch",
+    { controller: expect.objectContaining({ waveId: dispatch.waveId }) },
+    { idempotencyKey: "global-key", idempotencyKeyTTL: "7d" }
+  )
+  expect(mocks.key).toHaveBeenCalledWith(expect.stringMatching(/^legal-preparation-plan:[a-f0-9]{64}$/), {
+    scope: "global"
+  })
+  expect(mocks.end.mock.invocationCallOrder[0]).toBeLessThan(mocks.trigger.mock.invocationCallOrder[0]!)
+  expect(mocks.recover).not.toHaveBeenCalled()
+})
+it("stops controller planning at exact admitted exhaustion", async () => {
+  mocks.plan.mockResolvedValue({
+    waveId: dispatch.waveId,
+    planned: 0,
+    selectedCount: 1,
+    afterId: dispatch.scope.id,
+    exhausted: true,
+    dispatchIds: [],
+    submitted: false
+  })
+  await expect(
+    runRegulatoryPreparationDispatch({
+      controller: {
+        waveId: dispatch.waveId,
+        source: "ecfr",
+        model: dispatch.model,
+        publishedBefore: "2026-09-15T00:00:00Z",
+        manifestAdmission
+      }
+    })
+  ).resolves.toMatchObject({ exhausted: true, continuationRunId: null })
+  expect(mocks.trigger).not.toHaveBeenCalled()
+})
 it("plans and submits one bounded pending-outbox admission page with an explicit model", async () => {
   const admission = {
     waveId: dispatch.waveId,

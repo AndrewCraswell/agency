@@ -1,3 +1,4 @@
+import { digest } from "@repo/legislation-core/legal-text/contracts"
 import { idempotencyKeys, task, tasks } from "@trigger.dev/sdk"
 import pg from "pg"
 import { z } from "zod"
@@ -30,8 +31,18 @@ const schema = z.union([
   initialSchema,
   z.strictObject({ recovery: preparationRecoverySchema }),
   z.strictObject({ plan: preparationPlanSchema }),
+  z.strictObject({ controller: preparationPlanSchema }),
   z.strictObject({ admission: preparationAdmissionPlanSchema })
 ])
+const plannedPageSchema = z.strictObject({
+  waveId: z.uuid(),
+  planned: z.int().min(0).max(10),
+  selectedCount: z.int().nonnegative(),
+  afterId: z.uuid().nullable(),
+  exhausted: z.boolean(),
+  dispatchIds: z.array(z.string().regex(/^[a-f0-9]{64}$/)).max(10),
+  submitted: z.literal(false)
+})
 
 /** Explicit, finite operator wave. Enqueue success does not imply preparation, copy or embedding completion. */
 export const regulatoryPreparationDispatch = task({
@@ -42,8 +53,31 @@ export const regulatoryPreparationDispatch = task({
   run: async (payload: unknown) => runRegulatoryPreparationDispatch(payload)
 })
 
-export async function runRegulatoryPreparationDispatch(value: unknown) {
+export async function runRegulatoryPreparationDispatch(value: unknown): Promise<unknown> {
   const input = schema.parse(value)
+  if ("controller" in input) {
+    const planned = plannedPageSchema.parse(await runRegulatoryPreparationDispatch({ plan: input.controller }))
+    if (planned.exhausted) {
+      return { ...planned, continuationRunId: null }
+    }
+    const key = digest(
+      JSON.stringify([
+        "legal-preparation-plan-controller-2026-09-17",
+        input.controller.waveId,
+        input.controller.manifestAdmission.catalogHash,
+        planned.selectedCount
+      ])
+    )
+    const continuation = await tasks.trigger(
+      "regulatory-preparation-dispatch",
+      { controller: input.controller },
+      {
+        idempotencyKey: await idempotencyKeys.create(`legal-preparation-plan:${key}`, { scope: "global" }),
+        idempotencyKeyTTL: "7d"
+      }
+    )
+    return { ...planned, continuationRunId: z.string().min(1).max(256).parse(continuation.id) }
+  }
   const url = new URL(z.url().parse(process.env.DATABASE_URL))
   if (
     !["postgres:", "postgresql:"].includes(url.protocol) ||
