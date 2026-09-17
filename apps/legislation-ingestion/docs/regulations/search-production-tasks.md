@@ -268,6 +268,11 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
 - [ ] **EVAL-07 Compare lexical, hybrid and reranked retrieval.** Use actual PostgreSQL lexical behavior and the proposed
   fusion/rerank path; distinguish PostgreSQL FTS from BM25. **Done:** configuration, Recall@k, nDCG@k, per-cohort failures,
   latency and incremental cost are reproducible. Depends on EVAL-06, INDEX-09–11.
+  The recovered PostgreSQL `websearch_to_tsquery`/`ts_rank_cd` run is now reproducible and shows a held-out nDCG@10 of
+  0.1641 and Recall@25 of 0.1852. RRF k=60 over 100 lexical and 100 semantic candidates slightly improves OpenAI
+  nDCG@10, slightly reduces Voyage nDCG@10 and changes neither route's Recall@25. The five-system blind pool adds only
+  one candidate beyond the two semantic systems. Human-reviewed scoring and reranker evaluation remain open, so
+  EVAL-07 stays unchecked.
 - [ ] **EVAL-08 Audit failures against source.** Review false positives/negatives, proposal/current confusion and table
   mistakes; fix pipeline defects without tuning against held-out answers. **Done:** changes produce a new frozen
   development run; any held-out contamination requires a new held-out set. Depends on EVAL-07.
@@ -282,8 +287,11 @@ be sent. This does not establish source provenance, passage eligibility, reviewe
   hashes, dimensions, citations and mode metadata agree end to end. Depends on VECTOR-01–07, HTTP-14/17, TOOLS-05.
   A recovered local lexical pilot now persists two difficult-table generations and a complete, acknowledged 33-version
   Title 3 scope. Authenticated typed HTTP and API-backed streamable HTTP MCP both returned the same 3 CFR 102.130
-  identity, and invalid API credentials returned 401. This is local lexical evidence only: selected-model vectors,
-  historical/publication coverage and deployed acceptance remain required, so EVAL-11 stays unchecked.
+  identity, and invalid API credentials returned 401. The retained 2024 annual Title 6 edition also prepared all 659
+  versions into 996 passages and passed exact copy acknowledgement. Edition-scoped HTTP and MCP requests for `REAL ID
+  deadline` returned the expected historical 6 CFR 37.5 version through the API boundary. This remains local lexical
+  evidence: selected-model vectors, a Federal Register publication case and deployed acceptance are still required, so
+  EVAL-11 stays unchecked.
 - [ ] **EVAL-12 Record the selected regulatory route.** Publish model/dimensions/input contract, optional reranker,
   quality/cost rationale, unpassed cohorts and rollback configuration. **Done:** EVAL-01 thresholds, EVAL-09 and EVAL-11
   pass; explicitly authorize only the qualified regulatory scope for bulk jobs. This does not authorize old-vector rebuilds.

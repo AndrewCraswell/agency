@@ -3676,6 +3676,25 @@ rationale, reviewer and reviewer kind remains null. It is retained as
 does not close EVAL-04 or select a model. EVAL-06 remains unchecked because its dependency on human-reviewed labels is
 deliberate. `modelSelected`, `humanReviewComplete` and `bulkEmbeddingAuthorized` remain false.
 
+Ran the same 243 inputs and 60 questions through the actual PostgreSQL production lexical expression:
+`to_tsvector('english', input_text)`, `websearch_to_tsquery('english', query)` and `ts_rank_cd`. It used a temporary table
+inside `legislation_passage_search`, the same generated-vector shape as the persistent table, and rolled the transaction
+back. Median query time was 4.198 ms, p95 was 7.818 ms and maximum was 15.307 ms on this small in-memory-hot corpus.
+These are ranking-kernel timings, not API latency or national-corpus performance.
+
+The strict web-search baseline is a material quality failure for full-sentence regulatory questions. Held-out MRR is
+0.1574, nDCG@10 is 0.1641 and Recall@25 is 0.1852. It retrieves no expected answer in the annual-history, final-rule or
+notice cohorts. RRF at k=60 over 100 lexical and 100 semantic candidates does not improve Voyage: held-out nDCG@10 moves
+from 0.9451 to 0.9425. OpenAI's held-out nDCG@10 moves from 0.9215 to 0.9303, while Recall@5 remains 0.9630. This supports
+keeping semantic-only retrieval as the current provisional lead and treating the production lexical query formulation
+as a separate search-quality defect; it still does not authorize model selection.
+
+The semantic, lexical and two hybrid rankings were pooled again without system or rank disclosure. The all-system blind
+packet has 2,094 candidates, only one more than the semantic-only packet, and remains entirely ungraded. Evidence is
+`artifacts/regulatory-backfills/evaluation-recovered-postgresql-comparison.json` and
+`artifacts/regulatory-backfills/evaluation-recovered-all-systems-blind-review-packet.json`. Reranking was not invoked;
+its additional provider cost is unjustified before the pooled relevance labels are reviewed.
+
 ## Recovered persisted lexical and authenticated API/MCP canary
 
 Provisioned the empty isolated search database `legislation_passage_search` on loopback port 55458 and persisted two
@@ -3696,8 +3715,23 @@ credential was not forwarded. Retained reports are
 `artifacts/regulatory-backfills/recovered-legal-search-http-canary.json` and
 `artifacts/regulatory-backfills/recovered-legal-search-mcp-canary.json`.
 
-This renews local recovered-database lexical HTTP/MCP acceptance and supplies current-code plus difficult-table portions
-of EVAL-11. It is not a deployed canary, does not contain vectors, and does not yet cover the required historical annual
-CFR or Federal Register publication case. Human relevance review, actual PostgreSQL lexical/hybrid comparison, selected
-route, bounded persisted vectors and deployed acceptance remain open. Recurring ingestion and bulk embeddings remain
-disabled.
+The retained 2024 annual Title 6 edition then exposed a migration-history defect: its ledger recorded migration 0048,
+but that already-applied migration file had later gained tables and constraints, so the annual database did not contain
+the passage-preparation schema. Migration 0049 now converges that recorded original schema without rewriting its data.
+It applied to both the older annual database and the fresh recovered database. A dedicated PostgreSQL regression first
+installs through 0048, removes the objects absent from the recorded original, then proves 0049 restores all 18 tables,
+the edition/version key and the `observed` generation state. Drizzle schema check and the focused regression pass.
+
+After convergence, the 2024 annual Title 6 edition prepared all 659 provision versions in 27 bounded batches with zero
+blockers, copied 996 passages in 27 batches and acknowledged exact source/target equality. An edition-scoped `REAL ID
+deadline` request through authenticated HTTP returned the expected historical version `9e4dc392-7f61-4d8a-965c-15da978637dc`
+at 6 CFR 37.5; a bad bearer returned 401. The API-backed MCP tool returned the same historical version and called only
+`/api/search/legal` with its separate API credential. Evidence is
+`artifacts/regulatory-backfills/prepare-annual-2024-edition-pilot.json`,
+`artifacts/regulatory-backfills/annual-2024-legal-search-http-canary.json` and
+`artifacts/regulatory-backfills/annual-2024-legal-search-mcp-canary.json`.
+
+This supplies current-code, difficult-table and historical-annual portions of local EVAL-11. It is not a deployed
+canary, contains no vectors and does not yet cover the required Federal Register publication case. Human relevance
+review, selected route, bounded persisted vectors and deployed acceptance remain open. Recurring ingestion and bulk
+embeddings remain disabled.
