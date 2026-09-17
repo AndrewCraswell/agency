@@ -106,7 +106,7 @@ PATCHES = {
         for identifier in selected:
             bill_link = indexed[identifier]
 '''),
-        ("import datetime\n", "import datetime\nfrom urllib.parse import parse_qs, urlsplit\n"),
+        ("import datetime\n", "import datetime\nfrom urllib.parse import parse_qs, urlencode, urlsplit\n"),
         ("from . import actions\n", "from . import actions\nfrom .journal import journal_text, parse_roll_call\n"),
         ("        vote.add_source(url)\n", '''        vote.add_source(url)
         response = self.get(url, timeout=(10, 60))
@@ -116,9 +116,33 @@ PATCHES = {
         parsed_url = urlsplit(url)
         anchor = parsed_url.fragment or None
         page_values = parse_qs(parsed_url.query, keep_blank_values=True).get("Page", [])
+        bill_values = parse_qs(parsed_url.query, keep_blank_values=True).get("Bill", [])
         page_anchor = (str(int(page_values[0])) if len(page_values) == 1
                        and re.fullmatch(r"0*[1-9][0-9]{0,9}", page_values[0]) else None)
-        for option, name in parse_roll_call(text, bill.identifier, (yes, no, other), anchor, page_anchor):
+        source_bill_scoped = (len(bill_values) == 1
+                              and re.sub(r"\\s+", "", bill_values[0]).upper() == bill.identifier.upper())
+        try:
+            positions = parse_roll_call(
+                text, bill.identifier, (yes, no, other), anchor, page_anchor, source_bill_scoped, action
+            )
+        except ValueError as error:
+            if str(error) != "journal_roll_call_missing_or_ambiguous" or page_anchor is None:
+                raise
+            # A roll-call heading can begin at the bottom of the cited printed
+            # page while its tally and names continue on the next page. Fetch
+            # exactly that adjacent page; the parser still requires one exact
+            # bill/tally match and complete named positions across both pages.
+            next_query = parse_qs(parsed_url.query, keep_blank_values=True)
+            next_query["Page"] = [str(int(page_anchor) + 1)]
+            next_url = parsed_url._replace(query=urlencode(next_query, doseq=True), fragment="").geturl()
+            next_response = self.get(next_url, timeout=(10, 60))
+            next_response.raise_for_status()
+            next_text = journal_text(lxml.html.fromstring(next_response.text))
+            positions = parse_roll_call(
+                text + "\\n" + next_text, bill.identifier, (yes, no, other), anchor, page_anchor,
+                source_bill_scoped, action
+            )
+        for option, name in positions:
             vote.vote(option, name)
 ''')
     ],

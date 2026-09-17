@@ -14,73 +14,52 @@ def voter_names(lines):
     return [name.strip() for name in " ".join(lines).split(",") if name.strip()]
 
 
-def journal_text(document):
-    """Preserve named source anchors while converting the journal HTML to text."""
-    pres = document.xpath("//pre")
-    if len(pres) != 1:
-        raise ValueError("journal_pre_missing_or_ambiguous")
-    for anchor in pres[0].xpath(".//a[@name]"):
-        name = anchor.get("name", "")
-        if re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", name):
-            anchor.text = f"\n[[JOURNAL_ANCHOR:{name}]]\n" + (anchor.text or "")
-    return "\n".join(pres[0].xpath(".//text()"))
+def anchor_identity(value):
+    """Compare printed-page anchors numerically while preserving named anchors."""
+    return str(int(value)) if value.isdigit() else value.casefold()
 
 
-def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, fallback_anchor=None):
-    """Require a unique bill/tally match and complete disjoint named positions.
+def is_printed_page_anchor(text, match):
+    name = match.group(1)
+    if not name.isdigit():
+        return False
+    following = text[match.end():match.end() + 100]
+    return re.match(r"\s*Page\s+0*" + re.escape(str(int(name))) + r"(?![0-9])", following) is not None
 
-    Multiple same-tally motions on a journal page are deliberately ambiguous.
-    Unknown formatting fails the batch instead of publishing partial voter lists.
-    """
-    if len(text) > 2 * 1024 * 1024:
-        raise ValueError("journal_size_limit")
-    expected_bill = re.sub(r"\s+", "", bill_identifier).upper()
-    search_ranges = [(0, len(text))]
-    if target_anchor is not None:
-        if not isinstance(target_anchor, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", target_anchor):
-            raise ValueError("journal_anchor_invalid")
-        anchors = list(ANCHOR.finditer(text))
-        selected = [index for index, match in enumerate(anchors) if match.group(1).casefold() == target_anchor.casefold()]
-        if not selected and fallback_anchor is not None:
-            if not isinstance(fallback_anchor, str) or not re.fullmatch(r"[1-9][0-9]{0,9}", fallback_anchor):
-                raise ValueError("journal_fallback_anchor_invalid")
-            selected = [index for index, match in enumerate(anchors) if match.group(1) == fallback_anchor]
-            target_anchor = fallback_anchor
-        if not selected:
-            raise ValueError("journal_anchor_missing_or_ambiguous")
-        search_ranges = []
-        for selected_index in selected:
-            search_start = anchors[selected_index].end()
-            search_end = len(text)
-            # A numeric fragment identifies the printed page where an action
-            # starts; the roll call can continue across later amendment/page
-            # anchors. Its exact bill+tally must remain unique in the suffix.
-            if not target_anchor.isdigit():
-                for later in anchors[selected_index + 1:]:
-                    name = re.sub(r"\s+", "", later.group(1)).upper()
-                    # Bill and printed-page anchors are references inside one journal action.
-                    if name.isdigit() or BILL.fullmatch(name):
-                        continue
-                    search_end = later.start()
-                    break
-            search_ranges.append((search_start, search_end))
-    candidates = []
-    for search_start, search_end in search_ranges:
-        summaries = list(SUMMARY.finditer(text, search_start, search_end))
-        for index, summary in enumerate(summaries):
-            totals = tuple(int(value) for value in summary.groups())
-            if (totals[0], totals[1], totals[2] + totals[3]) != tuple(expected_counts):
-                continue
-            # Numeric page anchors can follow the bill heading they identify.
-            previous_end = summaries[index - 1].end() if index else max(0, search_start - 1500)
-            references = list(BILL.finditer(text[max(previous_end, summary.start() - 1500):summary.start()]))
-            if not references or "".join(references[-1].groups()) != expected_bill:
-                continue
-            end = summaries[index + 1].start() if index + 1 < len(summaries) else search_end
-            candidates.append((totals, text[summary.end():end]))
-    if len(candidates) != 1:
-        raise ValueError("journal_roll_call_missing_or_ambiguous")
-    totals, body = candidates[0]
+
+def printed_page_at(text, anchors, offset):
+    pages = [match for match in anchors if match.start() < offset and is_printed_page_anchor(text, match)]
+    return anchor_identity(pages[-1].group(1)) if pages else None
+
+
+def motion_matches(hint, context):
+    if hint is None:
+        return True
+    hint = re.sub(r"\s+", " ", hint).upper()
+    context = re.sub(r"\s+", " ", context).upper()
+    amendment = re.search(r"\bAM\s*(?:NO\.?\s*)?(\d+)\b", hint)
+    if amendment and not re.search(
+        rf"\bAM(?:ENDMENT)?\s*(?:NO\.?\s*)?{int(amendment.group(1))}\b", context
+    ):
+        return False
+    if "CBRF" in hint:
+        return "CONSTITUTIONAL BUDGET RESERVE" in context
+    if re.fullmatch(r"\([HS]\)\s+PASSED(?:\s+[YNEA]\d+)*", hint):
+        return "FINAL PASSAGE" in context
+    if "NOT TABLED" in hint:
+        return "NOT TABLED" in context or "/TABLE" in context
+    if re.search(r"\bTABLED\b", hint):
+        return ("WAS TABLED" in context or "/TABLE" in context) and "NOT TABLED" not in context
+    if "WITHDRAW" in hint:
+        return "WITHDRAW" in context
+    if "RESCIND" in hint:
+        return "RESCIND" in context
+    if "RULED OUT OF ORDER" in hint:
+        return "OUT OF ORDER" in context
+    return True
+
+
+def parse_positions(body, totals):
     groups = {}
     active = None
     declared = dict(zip(OPTIONS, totals))
@@ -117,6 +96,207 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                 raise ValueError("journal_duplicate_or_invalid_voter")
             seen.add(key)
             positions.append((option, name))
+    return positions
+
+
+def journal_text(document):
+    """Preserve named source anchors while converting the journal HTML to text."""
+    pres = document.xpath("//pre")
+    if len(pres) != 1:
+        raise ValueError("journal_pre_missing_or_ambiguous")
+    for anchor in pres[0].xpath(".//a[@name]"):
+        name = anchor.get("name", "")
+        if re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", name):
+            anchor.text = f"\n[[JOURNAL_ANCHOR:{name}]]\n" + (anchor.text or "")
+    return "\n".join(pres[0].xpath(".//text()"))
+
+
+def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, fallback_anchor=None,
+                    source_bill_scoped=False, motion_hint=None):
+    """Require a unique bill/tally match and complete disjoint named positions.
+
+    Multiple same-tally motions on a journal page are deliberately ambiguous.
+    Unknown formatting fails the batch instead of publishing partial voter lists.
+    """
+    if len(text) > 2 * 1024 * 1024:
+        raise ValueError("journal_size_limit")
+    expected_bill = re.sub(r"\s+", "", bill_identifier).upper()
+    anchors = list(ANCHOR.finditer(text))
+    search_ranges = [(0, len(text), None, None, False)]
+    if target_anchor is not None:
+        if not isinstance(target_anchor, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", target_anchor):
+            raise ValueError("journal_anchor_invalid")
+        selected = [index for index, match in enumerate(anchors)
+                    if anchor_identity(match.group(1)) == anchor_identity(target_anchor)]
+        if not selected and fallback_anchor is not None:
+            if not isinstance(fallback_anchor, str) or not re.fullmatch(r"[1-9][0-9]{0,9}", fallback_anchor):
+                raise ValueError("journal_fallback_anchor_invalid")
+            selected = [index for index, match in enumerate(anchors)
+                        if anchor_identity(match.group(1)) == anchor_identity(fallback_anchor)]
+            target_anchor = fallback_anchor
+        if not selected:
+            raise ValueError("journal_anchor_missing_or_ambiguous")
+        search_ranges = []
+        for selected_index in selected:
+            search_start = anchors[selected_index].end()
+            search_end = len(text)
+            preferred_end = None
+            cited_offset = None
+            backward_start = None
+            # A numeric fragment identifies the printed page where an action
+            # starts. A voter list can continue onto the immediately following
+            # printed page, but later pages contain independent motions whose
+            # identical tallies must not create false ambiguity.
+            if target_anchor.isdigit():
+                cited_offset = anchors[selected_index].start()
+                prior_pages = [earlier for earlier in anchors[:selected_index]
+                               if is_printed_page_anchor(text, earlier)]
+                if prior_pages:
+                    backward_start = prior_pages[-1].end()
+                later_pages = [later for later in anchors[selected_index + 1:]
+                               if is_printed_page_anchor(text, later)]
+                if len(later_pages) >= 2:
+                    search_end = later_pages[1].start()
+            else:
+                target_amendment = re.fullmatch(r"AM([1-9][0-9]*)", target_anchor.upper())
+                for later in anchors[selected_index + 1:]:
+                    if preferred_end is None and is_printed_page_anchor(text, later):
+                        preferred_end = later.start()
+                    name = re.sub(r"\s+", "", later.group(1)).upper()
+                    # Bill and printed-page anchors are references inside one journal action.
+                    if name.isdigit() or BILL.fullmatch(name):
+                        continue
+                    later_amendment = re.fullmatch(r"AM([1-9][0-9]*)", name)
+                    if target_amendment and later_amendment:
+                        # Cross a lower-numbered anchor only when the publisher
+                        # explicitly identifies it as an amendment to this
+                        # amendment. A later ordinary lower-numbered amendment
+                        # starts a separate action and must end the range.
+                        nearby = re.sub(r"\s+", " ", text[
+                            max(search_start, later.start() - 500):min(len(text), later.end() + 500)
+                        ]).upper()
+                        nearby = re.sub(r"\[\[JOURNAL_ANCHOR:[^\]]+\]\]", " ", nearby)
+                        nested = re.search(
+                            rf"AMENDMENT\s+NO\.\s*{int(later_amendment.group(1))}\s+TO\s+"
+                            rf"AMENDMENT\s+NO\.\s*{int(target_amendment.group(1))}\b",
+                            nearby,
+                        )
+                        if nested:
+                            continue
+                    search_end = later.start()
+                    break
+            search_ranges.append((search_start, search_end, preferred_end, None, False))
+            if backward_start is not None:
+                search_ranges.append((backward_start, search_end, preferred_end, cited_offset, True))
+    candidates = []
+    cited_candidates = []
+    for search_start, search_end, preferred_end, cited_offset, backward_only in search_ranges:
+        range_candidates = []
+        summaries = list(SUMMARY.finditer(text, search_start, search_end))
+        for index, summary in enumerate(summaries):
+            if backward_only and (cited_offset is None or summary.start() >= cited_offset):
+                continue
+            totals = tuple(int(value) for value in summary.groups())
+            if (totals[0], totals[1], totals[2] + totals[3]) != tuple(expected_counts):
+                continue
+            is_joint_total = bool(re.search(
+                r"TOTALS?:\s*$", text[max(search_start, summary.start() - 40):summary.start()]
+            ))
+            # Numeric page anchors can follow the bill heading they identify.
+            previous_end = summaries[index - 1].end() if index else max(0, search_start - 1500)
+            references = list(BILL.finditer(text[max(previous_end, summary.start() - 1500):summary.start()]))
+            referenced_bills = {"".join(reference.groups()) for reference in references}
+            if not is_joint_total and expected_bill not in referenced_bills and not source_bill_scoped:
+                continue
+            end = summaries[index + 1].start() if index + 1 < len(summaries) else search_end
+            if backward_only and not summary.start() < cited_offset < end:
+                continue
+            # A later motion can begin after this voter list but before the next
+            # tally. Classify from the bounded pre-tally action text so its
+            # descriptor cannot be contaminated by the following motion.
+            # The source pads journal lines to a fixed display width, so a raw
+            # character window can contain mostly whitespace and omit the
+            # nearby motion descriptor. Bound semantic matching by normalized
+            # text instead, while retaining enough raw input to cross the
+            # preceding printed-page boundary when an action spans pages.
+            context_start = (summaries[index - 1].end() if index else
+                             max(search_start, summary.start() - 12000))
+            candidate_context = re.sub(
+                r"\s+", " ", text[context_start:summary.end()]
+            )[-1500:]
+            if not motion_matches(motion_hint, candidate_context):
+                continue
+            if is_joint_total:
+                # Joint veto actions publish complete House and Senate roll calls,
+                # followed by a source total without another voter list. Accept the
+                # total only when the two immediately preceding calls independently
+                # validate and sum exactly to it.
+                if index < 2:
+                    continue
+                components = []
+                for component_index in (index - 2, index - 1):
+                    component = summaries[component_index]
+                    component_totals = tuple(int(value) for value in component.groups())
+                    component_previous_end = (summaries[component_index - 1].end()
+                                              if component_index else max(0, search_start - 1500))
+                    component_references = list(BILL.finditer(
+                        text[max(component_previous_end, component.start() - 1500):component.start()]
+                    ))
+                    if (expected_bill not in {"".join(reference.groups()) for reference in component_references}
+                            and not source_bill_scoped):
+                        components = []
+                        break
+                    component_end = summaries[component_index + 1].start()
+                    try:
+                        positions = parse_positions(text[component.end():component_end], component_totals)
+                    except ValueError:
+                        components = []
+                        break
+                    components.append((component_totals, positions))
+                if (len(components) == 2
+                        and tuple(sum(component[0][offset] for component in components) for offset in range(4)) == totals):
+                    combined = components[0][1] + components[1][1]
+                    if len({re.sub(r"\s+", "", name).casefold() for _, name in combined}) != len(combined):
+                        raise ValueError("journal_duplicate_or_invalid_voter")
+                    candidate_page = printed_page_at(text, anchors, summary.start())
+                    if cited_offset is not None and summary.start() < cited_offset < end:
+                        candidate_page = anchor_identity(target_anchor)
+                    range_candidates.append((summary.start(), candidate_page, combined))
+            else:
+                try:
+                    candidate_page = printed_page_at(text, anchors, summary.start())
+                    positions = parse_positions(text[summary.end():end], totals)
+                    if backward_only:
+                        try:
+                            parse_positions(text[summary.end():cited_offset], totals)
+                        except ValueError:
+                            pass
+                        else:
+                            # The voter list was already complete before the
+                            # cited page, so this is a prior action rather than
+                            # a cross-page continuation.
+                            continue
+                        candidate_page = anchor_identity(target_anchor)
+                    range_candidates.append((summary.start(), candidate_page,
+                                             positions))
+                except ValueError:
+                    continue
+        cited_page = anchor_identity(fallback_anchor) if fallback_anchor is not None else None
+        cited = [candidate for candidate in range_candidates if candidate[1] == cited_page]
+        preferred = ([candidate for candidate in range_candidates if candidate[0] < preferred_end]
+                     if preferred_end is not None else [])
+        if cited:
+            cited_candidates.extend(positions for _, _, positions in cited)
+        else:
+            selected_candidates = preferred or range_candidates
+            if target_anchor is not None and target_anchor.isdigit() and selected_candidates:
+                selected_candidates = selected_candidates[:1]
+            candidates.extend(positions for _, _, positions in selected_candidates)
+    if cited_candidates:
+        candidates = cited_candidates
+    if len(candidates) != 1:
+        raise ValueError("journal_roll_call_missing_or_ambiguous")
+    positions = candidates[0]
     if not 1 <= len(positions) <= 60:
         raise ValueError("journal_invalid_chamber_count")
     return positions
