@@ -13,6 +13,12 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added input-identity covering indexes to both isolated regulatory vector tables. Exact cross-generation reuse can now
+seek by input hash and read generation, passage-owner and vector-hash identity from the index instead of scanning a
+route's full vector table. The existing passage-ID indexes remain for owner/passage lookups; HNSW serving indexes are
+still deferred until the bounded load/index benchmark. The complete isolated search schema applied cleanly to a fresh
+temporary pgvector database, and both covering indexes were present in `pg_indexes`.
+
 Connected validated scope replacement to stale search/vector removal. Verification pages may now coexist with an older
 scope generation while they build checkpoints, but read-only whole-copy inspection still rejects extra memberships.
 Only after every replacement generation and passage passes does finalization lock the obsolete generation set, remove

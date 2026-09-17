@@ -62,6 +62,9 @@ CREATE TABLE legislation.legal_openai_small_embeddings (
   FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id) ON DELETE CASCADE
 );
 CREATE INDEX legal_openai_small_embeddings_passage_idx ON legislation.legal_openai_small_embeddings(passage_id,generation_id);
+CREATE INDEX legal_openai_small_embeddings_input_idx
+  ON legislation.legal_openai_small_embeddings(input_hash,generation_id,passage_id)
+  INCLUDE(passage_generation_id,vector_hash);
 CREATE TABLE legislation.legal_voyage_4_embeddings (
   generation_id text NOT NULL,
   passage_generation_id text NOT NULL,
@@ -78,6 +81,9 @@ CREATE TABLE legislation.legal_voyage_4_embeddings (
   FOREIGN KEY(passage_generation_id,passage_id) REFERENCES legislation.legal_search_passages(generation_id,id) ON DELETE CASCADE
 );
 CREATE INDEX legal_voyage_4_embeddings_passage_idx ON legislation.legal_voyage_4_embeddings(passage_id,generation_id);
+CREATE INDEX legal_voyage_4_embeddings_input_idx
+  ON legislation.legal_voyage_4_embeddings(input_hash,generation_id,passage_id)
+  INCLUDE(passage_generation_id,vector_hash);
 CREATE TABLE legislation.legal_embedding_shards (
   generation_id text NOT NULL REFERENCES legislation.legal_embedding_generations(id) ON DELETE CASCADE,
   shard_count integer NOT NULL CHECK(shard_count=16),

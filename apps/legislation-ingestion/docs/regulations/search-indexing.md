@@ -296,7 +296,8 @@ new owner. Source and target passage generations are locked against rights clean
 bounded page of 256 reused rows yields before any provider call. Conflicting vector hashes for one identity block reuse
 instead of choosing by recency. If agency/currency metadata changes without modifying the declared input, this path
 avoids re-embedding; changed input text does not match and proceeds to provider work. Retained permitted historical
-versions keep their independently owned vectors.
+versions keep their independently owned vectors. Each route table has an input-hash-first covering index for this reuse
+lookup; passage-ID indexes remain separate for owner/passage access.
 
 Copy finalization is also the correction boundary for one scope. Verification pages tolerate the prior membership while
 the replacement is incomplete, whereas read-only whole-copy inspection continues to reject that stale extra state.
