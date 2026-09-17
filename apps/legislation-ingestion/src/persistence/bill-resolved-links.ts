@@ -3,6 +3,44 @@ import { billActions, billSponsors, votes, votePositions } from "@repo/legislati
 import type { CanonicalBillAggregate } from "@repo/legislation-core/domain/model"
 import { inArray } from "drizzle-orm"
 
+type SponsorInsert = NonNullable<CanonicalBillAggregate["sponsors"]>[number]
+type SponsorRow = typeof billSponsors.$inferSelect
+
+/** Preserve prior resolved observations without assigning people by name. */
+export function preserveResolvedSponsorObservations(
+  billId: string,
+  incoming: readonly SponsorInsert[],
+  previousSponsors: readonly SponsorRow[]
+) {
+  const sponsorsById = new Map(previousSponsors.map((sponsor) => [sponsor.id, sponsor]))
+  const incomingIds = new Set(incoming.map((sponsor) => sponsor.id))
+  const reconciled = incoming.map((sponsor) => {
+    const previous = sponsorsById.get(sponsor.id)
+    if (
+      previous &&
+      (previous.billId !== sponsor.billId ||
+        previous.name !== sponsor.name ||
+        previous.classification !== sponsor.classification ||
+        previous.sourceUrl !== (sponsor.sourceUrl ?? null))
+    ) {
+      throw new Error("Sponsor observation changed source identity")
+    }
+    return {
+      ...sponsor,
+      personId: sponsor.personId == null ? (previous?.personId ?? sponsor.personId) : sponsor.personId
+    }
+  })
+  if (!incoming.some((sponsor) => sponsor.personId == null)) return reconciled
+
+  // An unresolved collection cannot prove that a differently identified,
+  // resolved source observation disappeared. Preserve that prior row as its
+  // own observation without assigning its person to any name-matched input.
+  const retained = previousSponsors.filter(
+    (sponsor) => sponsor.billId === billId && sponsor.personId && !incomingIds.has(sponsor.id)
+  )
+  return [...reconciled, ...retained]
+}
+
 export function persistedVoteId(
   incoming: { id: string; billId?: string | null; sourceUrl?: string | null; sourceId?: string | null },
   previous: readonly { id: string; billId: string | null; sourceUrl: string | null; sourceId: string | null }[]
@@ -43,7 +81,6 @@ export async function preserveBillResolvedLinks(
   }
   const previousActions = await database.select().from(billActions).where(inArray(billActions.billId, billIds))
   const previousSponsors = await database.select().from(billSponsors).where(inArray(billSponsors.billId, billIds))
-  const sponsorsById = new Map(previousSponsors.map((sponsor) => [sponsor.id, sponsor]))
   const previousVotes = await database.select().from(votes).where(inArray(votes.billId, billIds))
   const voteIds = previousVotes.map((vote) => vote.id)
   const previousPositions =
@@ -105,28 +142,6 @@ export async function preserveBillResolvedLinks(
   }))
 
   function reconcileSponsors(aggregate: CanonicalBillAggregate) {
-    const incoming = aggregate.sponsors ?? []
-    const incomingIds = new Set(incoming.map((sponsor) => sponsor.id))
-    if (
-      incoming.some((sponsor) => sponsor.personId === undefined) &&
-      previousSponsors.some(
-        (sponsor) => sponsor.billId === aggregate.bill.id && sponsor.personId && !incomingIds.has(sponsor.id)
-      )
-    ) {
-      throw new Error("Unresolved sponsor collection would replace resolved observations")
-    }
-    return incoming.map((sponsor) => {
-      const previous = sponsorsById.get(sponsor.id)
-      if (
-        previous &&
-        (previous.billId !== sponsor.billId ||
-          previous.name !== sponsor.name ||
-          previous.classification !== sponsor.classification ||
-          previous.sourceUrl !== (sponsor.sourceUrl ?? null))
-      ) {
-        throw new Error("Sponsor observation changed source identity")
-      }
-      return { ...sponsor, personId: sponsor.personId === undefined ? previous?.personId : sponsor.personId }
-    })
+    return preserveResolvedSponsorObservations(aggregate.bill.id, aggregate.sponsors ?? [], previousSponsors)
   }
 }

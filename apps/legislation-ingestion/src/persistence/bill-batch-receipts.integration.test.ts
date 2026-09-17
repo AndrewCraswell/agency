@@ -290,11 +290,23 @@ describePostgres.sequential("atomic bill batch receipts", () => {
       (await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, `${sponsor.id}:new`) }))
         ?.personId
     ).toBeNull()
-    for (const incoming of [[{ ...sponsor, id: "different-source-id" }], [{ ...sponsor, name: "Changed identity" }]]) {
-      await expect(
-        upsertBillAggregates(database, [{ ...input, sponsors: incoming }], { preserveResolvedLinks: true })
-      ).rejects.toThrow(/resolved observations|source identity/)
-    }
+    await upsertBillAggregates(database, [{ ...input, sponsors: [{ ...sponsor, id: "different-source-id" }] }], {
+      preserveResolvedLinks: true
+    })
+    expect(
+      await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsor.id) })
+    ).toMatchObject({
+      personId
+    })
+    expect(
+      (await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, "different-source-id") }))
+        ?.personId
+    ).toBeNull()
+    await expect(
+      upsertBillAggregates(database, [{ ...input, sponsors: [{ ...sponsor, name: "Changed identity" }] }], {
+        preserveResolvedLinks: true
+      })
+    ).rejects.toThrow("source identity")
     expect(
       (await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsor.id) }))?.personId
     ).toBe(personId)
