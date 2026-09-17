@@ -54,7 +54,8 @@ Vote drawer counts stay on one line in a content-sized column with a 48px minimu
 The bar absorbs available width; three-digit tallies must not inherit the drawer's arbitrary text wrapping.
 
 Research activity includes every request in its original order and step count, including failed and denied requests.
-Failed and denied rows show a red error icon and persistent "Failed" status inside the activity list, not a separate card.
+Failed and denied rows show a red error icon and persistent "Failed" or "Denied" status respectively inside the activity
+list, not a separate card. "Interrupted" is reserved for unfinished requests after execution stops.
 Their error details start collapsed and can be expanded from the row using pointer or keyboard controls.
 Query, filter, session, and version summaries remain visible while only the error explanation collapses. The error
 trigger contains both its header and summary, keeping the normal 6px visual gap within a minimum 44px hit target.
@@ -86,10 +87,9 @@ from chamber metadata. Without a published name, use conservative labels such as
 preserve special-session identifiers without guessing a classification. Apply the same labels to research-activity
 session filters and references. Internal session IDs remain unchanged for queries and identity.
 
-Before a matching bill result supplies its published title, activity displays a complete canonical bill ID as the bill
-number, jurisdiction code, and readable session (for example, `AB 2652, CA, 2023-2024`). This applies while receiving
-input, running, interrupted, and inside expanded failure details. Incomplete IDs and other record IDs are not guessed;
-tool inputs and record identity remain unchanged.
+Single and batch bill reads keep the compact bill number, jurisdiction code, and readable session (for example,
+`AB 2652, CA, 2023-2024`) across states, rather than switching to full bill titles. Bill-text reads retain their
+title-focused display. Incomplete IDs and other record IDs are not guessed; request identity remains unchanged.
 
 Record reads reuse titles from earlier successful result sets in the same response, matched by exact record ID, before
 their own result arrives. This keeps known person and organization names visible through pending, running, interrupted,
@@ -98,11 +98,29 @@ and expanded error states. The current matching result takes precedence; unknown
 Activity summaries retain supplied queries alongside scope filters, named record targets, dates, and request limits.
 Transport cursors and anchors are not displayed. Bill searches use `AB 2652, CA, 2023-2024; Up to 5 results` with no
 mode suffix. Bill-text searches omit mode and document-selection details; bill-text reads show only the bill title or
-compact bill label. Other tools retain their supported filters rather than dropping them when a query is present.
+compact bill label. Mode is hidden for every tool. Technical filter values use readable names such as `Reports`,
+`Committees`, and `Regulations`; structural enumeration uses `All provisions` or `Direct children`. Other meaningful
+filters stay visible rather than disappearing when a query is present.
+
+Activity titles use `Search` when substantive filters are supplied and `List` for unfiltered requests. Limits, modes,
+and cursors do not count as scope; explicit false boolean filters do. Before input arrives, do not assume list scope.
+Organization operations use `Search organizations`/`List organizations` and `Read organization`; amendment lookup by
+bill uses `Find amendments for bills`. Tool API names do not change.
+
+Every explicit limit uses `Up to 5 results` (or `Up to 1 result`), independently of the actual `5 returned` count.
+Date labels omit colons: `From Sep 1, 2026`, `To Sep 16, 2026`, and paired bounds use `Between` with an em dash.
+Unfiltered recorded-change requests show `All records, all jurisdictions`. Scope refers to stored data, not guaranteed
+global coverage. Repeated unnamed batch records are grouped, such as `2 selected votes`, while known names are retained.
+
+Supporting-material searches hide mode, retain queries and scope filters, and use short bill labels such as `HR 152`.
+Unfiltered requests show `All supporting materials; Up to 5 results`; actual returned counts stay separate. Material
+reads prefer the matching published title from current or earlier results, otherwise `Selected supporting material`,
+without exposing an opaque record ID. Single and batch amendment reads use `HR 152: HAMDT 10` when the related bill is
+known, otherwise the amendment identifier alone. Find amendments for bills uses short bill labels and the requested limit.
 
 The meeting tool accepts jurisdiction, organization, and date filters. With none supplied, the activity is `List meetings`
-and shows `All jurisdictions; Earliest first; Up to 5 meetings`. This reflects the database's ascending start-time order
-over non-deleted records, not an upcoming-only or latest-first search. Filtered requests retain `Search meetings` and
+and shows `All jurisdictions; Up to 5 results`. Ordering is not narrated; the database still uses ascending start-time
+order over non-deleted records, not an upcoming-only or latest-first search. Filtered requests retain `Search meetings` and
 their actual filters. The limit is the requested maximum, not a returned count. No limit is invented when input is absent.
 Recorded-change and vote searches similarly show their supplied scope, dates, and limits. Storybook includes a simulated
 filtered meeting request beside the captured unfiltered states.

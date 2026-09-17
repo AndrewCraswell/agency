@@ -96,6 +96,59 @@ const priorOutputSchema = z.object({
   data: documentContainerSchema.extend({ items: z.array(z.object({ data: documentContainerSchema })).optional() })
 })
 
+const amendmentNameSchema = z.object({
+  id: z.string(),
+  printedIdentifier: z.string().nullish(),
+  billId: z.string().nullish()
+})
+const amendmentOutputSchema = z.object({
+  data: z.object({
+    amendment: z.unknown().optional(),
+    items: z.array(z.unknown()).optional()
+  })
+})
+const batchAmendmentSchema = z.object({ data: z.object({ amendment: z.unknown() }) })
+
+function shortBillLabel(id: string) {
+  const bill = /^bill:[a-z0-9-]+:[^:]+:([a-z0-9]+):([a-z0-9-]+)$/.exec(id)
+  if (bill?.[1] && bill[2]) {
+    return `${bill[1].toUpperCase()} ${bill[2].toUpperCase()}`
+  }
+  return undefined
+}
+
+function amendmentActivityName(id: string, parts: UIMessage["parts"]) {
+  let name: string | undefined
+  for (const part of parts) {
+    if (part.type !== "dynamic-tool" || part.state !== "output-available") {
+      continue
+    }
+    const output = amendmentOutputSchema.safeParse(part.output)
+    if (!output.success) {
+      continue
+    }
+    for (const candidate of [output.data.data.amendment, ...(output.data.data.items ?? [])]) {
+      const batch = batchAmendmentSchema.safeParse(candidate)
+      const parsed = amendmentNameSchema.safeParse(batch.success ? batch.data.data.amendment : candidate)
+      if (!parsed.success || parsed.data.id !== id) {
+        continue
+      }
+      const amendment = parsed.data
+      const identifier = amendment.printedIdentifier?.trim()
+      if (identifier) {
+        name = identifier
+        if (amendment.billId) {
+          const bill = shortBillLabel(amendment.billId)
+          if (bill) {
+            name = `${bill}: ${identifier}`
+          }
+        }
+      }
+    }
+  }
+  return name
+}
+
 function comparisonVersions(part: ResearchActivityProps["part"], previousParts: UIMessage["parts"]) {
   if (part.toolName !== "compare_bill_versions") {
     return undefined
@@ -145,10 +198,54 @@ function comparisonVersions(part: ResearchActivityProps["part"], previousParts: 
     .join(" vs. ")
 }
 
+function readableFilter(value: string) {
+  const labels: Record<string, string> = {
+    bill: "Bills",
+    resolution: "Resolutions",
+    committee: "Committees",
+    subcommittee: "Subcommittees",
+    chamber: "Chambers",
+    legislature: "Legislatures",
+    report: "Reports",
+    hearing: "Hearings",
+    fiscal_note: "Fiscal notes",
+    "fiscal-note": "Fiscal notes",
+    analysis: "Analyses",
+    testimony: "Testimony",
+    regulation: "Regulations",
+    statute: "Statutes",
+    regulatory_publication: "Regulatory publications",
+    proposed_rule: "Proposed rules",
+    final_rule: "Final rules",
+    notice: "Notices",
+    other: "Other",
+    companion: "Companion bills"
+  }
+  const text = value.replaceAll(/[-_]/g, " ")
+  return labels[value] ?? text.charAt(0).toUpperCase() + text.slice(1)
+}
+
 function activityRecordLabel(id: string) {
+  const vote = /^vote:congress:(house|senate)-([1-9][0-9]*)-([1-9][0-9]*)-([1-9][0-9]*)$/.exec(id)
+  if (vote) {
+    const chamber = vote[1] === "house" ? "House" : "Senate"
+    return `${chamber} roll call ${vote[4]}, ${sessionLabel(`session:us:${vote[2]}`)}, session ${vote[3]}`
+  }
   const match = /^bill:([a-z0-9-]+):([a-z0-9-]+):([a-z0-9]+):([a-z0-9-]+)$/.exec(id)
   if (!match) {
-    return id
+    const recordLabels: Record<string, string> = {
+      bill: "Selected bill",
+      person: "Selected person",
+      organization: "Selected organization",
+      event: "Selected meeting",
+      vote: "Selected vote",
+      amendment: "Selected amendment",
+      material: "Selected supporting material"
+    }
+    if (id.includes(":document:")) {
+      return "Selected document"
+    }
+    return recordLabels[id.split(":")[0] ?? ""] ?? "Selected record"
   }
   const [, jurisdiction, session, billType, billNumber] = match
   if (!jurisdiction || !session || !billType || !billNumber) {
@@ -166,16 +263,18 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
   let stateClass = styles.activityPending
   const versions = comparisonVersions(part, previousParts)
   const input = activityInputSchema.safeParse(part.input)
-  const isMeetingList =
-    part.toolName === "search_events" &&
+  const isList =
+    part.toolName.startsWith("search_") &&
+    label.startsWith("Search ") &&
     input.success &&
-    !input.data.query &&
-    !input.data.jurisdictionId &&
-    !input.data.organizationId &&
-    !input.data.from &&
-    !input.data.to
-  if (isMeetingList) {
-    label = "List meetings"
+    !Object.entries(input.data).some(([key, value]) => {
+      if (["limit", "mode"].includes(key) || value === undefined || value === null || value === "") {
+        return false
+      }
+      return !Array.isArray(value) || value.length > 0
+    })
+  if (isList) {
+    label = label.replace(/^Search /, "List ")
   }
   const output = part.state === "output-available" ? activityOutputSchema.safeParse(part.output) : undefined
   const result = part.state === "output-available" ? activityResultSchema.safeParse(part.output) : undefined
@@ -208,8 +307,14 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
   if (input.success) {
     const filters = input.data
     const parts: string[] = []
-    if (isMeetingList) {
+    if (isList && ["search_events", "search_people", "search_organizations", "search_votes"].includes(part.toolName)) {
       parts.push("All jurisdictions")
+    }
+    if (isList && part.toolName === "search_changes") {
+      parts.push("All records, all jurisdictions")
+    }
+    if (isList && part.toolName === "search_bills") {
+      parts.push("All bills, all jurisdictions")
     }
     if (part.toolName === "search_bills") {
       const jurisdictions = new Set<string>()
@@ -237,6 +342,20 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
     } else if (filters.query) {
       parts.push(filters.query)
     }
+    if (part.toolName === "search_amendments" && !filters.billId) {
+      parts.push(filters.jurisdictionId ? "All bills" : "All bills, all jurisdictions")
+    }
+    if (
+      part.toolName === "search_supporting_materials" &&
+      !filters.query &&
+      !filters.billId &&
+      !filters.amendmentId &&
+      !filters.eventId &&
+      !filters.jurisdictionId &&
+      !filters.classification
+    ) {
+      parts.push("All supporting materials")
+    }
     const ids = [
       filters.id,
       ...(filters.ids ?? []),
@@ -251,12 +370,54 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
       filters.amendmentId,
       filters.eventId
     ]
+    const recordLabels: string[] = []
     for (const id of new Set(ids.filter((id): id is string => typeof id === "string" && id.length > 0))) {
       const record = result?.success ? result.data.resultSet.items.find((candidate) => candidate.id === id) : undefined
-      if (part.toolName === "get_bills" || id === filters.billId || filters.billIds?.includes(id)) {
-        parts.push(activityRecordLabel(id))
+      const amendmentName = ["get_amendment", "get_amendments"].includes(part.toolName)
+        ? amendmentActivityName(id, [...previousParts, part])
+        : undefined
+      if (amendmentName) {
+        recordLabels.push(amendmentName)
+      } else if (
+        (part.toolName === "search_amendments_for_bills" && filters.billIds?.includes(id)) ||
+        (part.toolName === "search_supporting_materials" && id === filters.billId) ||
+        (part.toolName === "search_changes" && id === filters.recordId)
+      ) {
+        recordLabels.push(shortBillLabel(id) || activityRecordLabel(id))
+      } else if (part.toolName === "search_amendments" && id === filters.billId) {
+        recordLabels.push(`Amendments to ${activityRecordLabel(id)}`)
+      } else if (
+        ["get_bill", "get_bills"].includes(part.toolName) ||
+        id === filters.billId ||
+        filters.billIds?.includes(id)
+      ) {
+        recordLabels.push(activityRecordLabel(id))
       } else {
-        parts.push(record?.title || knownTitles.get(id) || activityRecordLabel(id))
+        recordLabels.push(record?.title || knownTitles.get(id) || activityRecordLabel(id))
+      }
+    }
+    const unnamedPlurals: Record<string, string> = {
+      "Selected bill": "bills",
+      "Selected person": "people",
+      "Selected organization": "organizations",
+      "Selected meeting": "meetings",
+      "Selected vote": "votes",
+      "Selected amendment": "amendments",
+      "Selected supporting material": "supporting materials",
+      "Selected document": "documents",
+      "Selected record": "records"
+    }
+    const grouped = new Set<string>()
+    for (const recordLabel of recordLabels) {
+      const plural = unnamedPlurals[recordLabel]
+      if (!plural) {
+        parts.push(recordLabel)
+        continue
+      }
+      if (!grouped.has(recordLabel)) {
+        const count = recordLabels.filter((candidate) => candidate === recordLabel).length
+        parts.push(count > 1 ? `${count} selected ${plural}` : recordLabel)
+        grouped.add(recordLabel)
       }
     }
     for (const id of new Set([filters.jurisdictionId, ...(filters.jurisdictionIds ?? [])])) {
@@ -264,22 +425,21 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
         parts.push(id.replace(/^jurisdiction:/, "").toUpperCase())
       }
     }
-    if (filters.recordType) {
-      parts.push(`Record type: ${filters.recordType}`)
+    if (filters.recordType && part.toolName !== "search_changes") {
+      parts.push(`Record: ${readableFilter(filters.recordType)}`)
     }
-    if (filters.classification) {
-      const label = part.toolName === "search_changes" ? "Change" : "Classification"
-      parts.push(`${label}: ${filters.classification.replaceAll("-", " ")}`)
+    if (filters.classification && part.toolName !== "search_changes") {
+      parts.push(readableFilter(filters.classification))
     }
     for (const [label, values] of [
-      ["Classification", filters.classifications],
+      ["", filters.classifications],
       ["Status", filters.statuses],
       ["Subject", filters.subjects],
-      ["Corpus", filters.corpora],
-      ["Publication type", filters.publicationKinds]
+      ["", filters.corpora],
+      ["", filters.publicationKinds]
     ] as const) {
       if (values?.length) {
-        parts.push(`${label}: ${values.join(", ")}`)
+        parts.push(label ? `${label}: ${values.join(", ")}` : values.map(readableFilter).join(", "))
       }
     }
     if (typeof filters.isActive === "boolean") {
@@ -302,15 +462,16 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
       }
     }
     for (const [label, value] of [
-      ["Mode", ["search_bills", "search_bill_text"].includes(part.toolName) ? undefined : filters.mode],
-      ["Kind", filters.kind],
+      ["", filters.kind],
       ["Source", filters.sourceId],
-      ["Node kind", filters.nodeKind],
-      ["Traversal", filters.traversal]
+      ["", filters.nodeKind]
     ] as const) {
       if (value) {
-        parts.push(`${label}: ${value}`)
+        parts.push(label ? `${label}: ${value}` : readableFilter(value))
       }
+    }
+    if (filters.traversal) {
+      parts.push(filters.traversal === "all" ? "All provisions" : "Direct children")
     }
     for (const [label, ids] of [
       ["Code", [filters.codeId, ...(filters.codeIds ?? [])]],
@@ -321,7 +482,12 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
     ] as const) {
       const selected = [...ids].filter((id): id is string => typeof id === "string" && id.length > 0)
       if (selected.length) {
-        parts.push(`${label}: ${selected.map((id) => knownTitles.get(id) || id).join(", ")}`)
+        const names = selected.map((id) => knownTitles.get(id))
+        if (names.every((name) => Boolean(name))) {
+          parts.push(`${label}: ${names.join(", ")}`)
+        } else {
+          parts.push(`${label}: ${selected.length} selected`)
+        }
       }
     }
     const from = filters.from || filters.observedFrom
@@ -337,7 +503,7 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
       return Number.isNaN(date.getTime()) ? value : dateFormat.format(date)
     }
     if (from && to) {
-      parts.push(`Between ${formatDate(from)} -- ${formatDate(to)}`)
+      parts.push(`Between ${formatDate(from)} \u2014 ${formatDate(to)}`)
     }
     for (const [label, value] of [
       ["From", to ? undefined : from],
@@ -351,20 +517,13 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
       ["As of", filters.asOf]
     ]) {
       if (value) {
-        parts.push(`${label}: ${formatDate(value)}`)
+        parts.push(`${label} ${formatDate(value)}`)
       }
     }
     detail = parts.join("; ")
     if (filters.limit) {
       const count = new Intl.NumberFormat("en-US").format(filters.limit)
-      let noun = filters.limit === 1 ? "result" : "results"
-      if (part.toolName === "search_changes") {
-        noun = filters.limit === 1 ? "recorded change" : "recorded changes"
-      } else if (part.toolName === "search_votes") {
-        noun = filters.limit === 1 ? "vote" : "votes"
-      } else if (part.toolName === "search_events") {
-        noun = filters.limit === 1 ? "meeting" : "meetings"
-      }
+      const noun = filters.limit === 1 ? "result" : "results"
       detail = [detail, `Up to ${count} ${noun}`].filter(Boolean).join("; ")
     }
   }
@@ -380,7 +539,7 @@ export function ResearchActivity({ part, isRunning, previousParts = [] }: Resear
     Icon = CircleCheck
     stateClass = styles.activityComplete
   } else if (part.state === "output-error" || part.state === "output-denied") {
-    state = "Failed"
+    state = part.state === "output-denied" ? "Denied" : "Failed"
     Icon = CircleAlert
     stateClass = styles.activityFailed
   } else if (!isRunning) {

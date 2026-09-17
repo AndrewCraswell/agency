@@ -157,14 +157,14 @@ describe("ResearchActivity details", () => {
       { wrapper: InlineProviders }
     )
     const activity = screen.getByRole("button", { name: "Research activity 3 steps" })
-    expect(screen.queryByRole("button", { name: "Search bills: Failed" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "List bills: Failed" })).toBeNull()
     await userEvent.click(activity)
-    expect(screen.getAllByLabelText(/^Search bills:/).map((row) => row.getAttribute("aria-label"))).toEqual([
+    expect(screen.getAllByLabelText(/^(Search|List) bills:/).map((row) => row.getAttribute("aria-label"))).toEqual([
       "Search bills: Complete",
-      "Search bills: Failed",
+      "List bills: Failed",
       "Search bills: Complete"
     ])
-    const failure = screen.getByRole("button", { name: "Search bills: Failed" })
+    const failure = screen.getByRole("button", { name: "List bills: Failed" })
     expect(failure.querySelector("svg.lucide-circle-alert")).not.toBeNull()
     await userEvent.click(failure)
     expect(screen.getByText("Unable to load the next page.")).toBeDefined()
@@ -186,7 +186,7 @@ describe("ResearchActivity details", () => {
       { wrapper: InlineProviders }
     )
     await userEvent.click(screen.getByRole("button", { name: "Research activity 1 step" }))
-    await userEvent.click(screen.getByRole("button", { name: "Search bills: Failed" }))
+    await userEvent.click(screen.getByRole("button", { name: "List bills: Denied" }))
     expect(screen.getByText("This operation was not permitted.")).toBeDefined()
   })
 
@@ -307,7 +307,8 @@ describe("ResearchActivity details", () => {
         />
       )
       if (state === "output-error" || state === "output-denied") {
-        await userEvent.click(screen.getByRole("button", { name: "Read person: Failed" }))
+        const status = state === "output-denied" ? "Denied" : "Failed"
+        await userEvent.click(screen.getByRole("button", { name: `Read person: ${status}` }))
       }
       expect(screen.getByText("Abercrombie, Neil")).toBeDefined()
       expect(screen.queryByText(base.input.id)).toBeNull()
@@ -346,7 +347,7 @@ describe("ResearchActivity details", () => {
         ]}
       />
     )
-    expect(screen.getByText("person:congress:a000014")).toBeDefined()
+    expect(screen.getByText("Selected person")).toBeDefined()
     expect(screen.queryByText("Unrelated person")).toBeNull()
   })
 
@@ -354,7 +355,7 @@ describe("ResearchActivity details", () => {
     {
       toolName: "search_events",
       input: { jurisdictionId: "jurisdiction:us", from: "2026-09-01T00:00:00Z", to: "2026-09-16T23:59:59Z" },
-      expected: "US; From: Sep 1, 2026; To: Sep 16, 2026"
+      expected: "US; Between Sep 1, 2026 \u2014 Sep 16, 2026"
     },
     {
       toolName: "search_changes",
@@ -364,7 +365,7 @@ describe("ResearchActivity details", () => {
         classification: "relationship-change",
         observedFrom: "2026-09-01T00:00:00Z"
       },
-      expected: "AB 2652, CA, 2023-2024; Record type: bill; Change: relationship change; From: Sep 1, 2026"
+      expected: "AB 2652; From Sep 1, 2026"
     }
   ])("shows actual filters for $toolName", ({ toolName, input, expected }) => {
     render(
@@ -377,10 +378,10 @@ describe("ResearchActivity details", () => {
   })
 
   it.each([
-    { toolName: "search_events", limit: 5, expected: "All jurisdictions; Earliest first; Up to 5 meetings" },
-    { toolName: "search_changes", limit: 5, expected: "Up to 5 recorded changes" },
-    { toolName: "search_events", limit: 1, expected: "All jurisdictions; Earliest first; Up to 1 meeting" },
-    { toolName: "search_changes", limit: 1, expected: "Up to 1 recorded change" }
+    { toolName: "search_events", limit: 5, expected: "All jurisdictions; Up to 5 results" },
+    { toolName: "search_changes", limit: 5, expected: "All records, all jurisdictions; Up to 5 results" },
+    { toolName: "search_events", limit: 1, expected: "All jurisdictions; Up to 1 result" },
+    { toolName: "search_changes", limit: 1, expected: "All records, all jurisdictions; Up to 1 result" }
   ])("describes an unfiltered $toolName request with limit $limit", ({ toolName, limit, expected }) => {
     const { rerender } = render(
       <ResearchActivity
@@ -444,7 +445,7 @@ describe("ResearchActivity details", () => {
         ]}
       />
     )
-    expect(screen.getByText("House; From: Jan 1, 2026; Up to 100 votes")).toBeDefined()
+    expect(screen.getByText("House; From Jan 1, 2026; Up to 100 results")).toBeDefined()
     expect(screen.queryByText(/private-cursor/)).toBeNull()
   })
 
@@ -462,7 +463,7 @@ describe("ResearchActivity details", () => {
         classification: "committee",
         isActive: true
       },
-      expected: "Education; House; Classification: committee; Active only"
+      expected: "Education; House; Committees; Active only"
     },
     {
       toolName: "search_bills",
@@ -475,8 +476,7 @@ describe("ResearchActivity details", () => {
         introducedFrom: "2024-01-01",
         mode: "hybrid"
       },
-      expected:
-        "schools, CA; Classification: bill; Status: introduced; Subject: Education; Introduced from: Jan 1, 2024"
+      expected: "schools, CA; Bills; Status: introduced; Subject: Education; Introduced from Jan 1, 2024"
     },
     {
       toolName: "search_bill_text",
@@ -496,12 +496,12 @@ describe("ResearchActivity details", () => {
     {
       toolName: "find_related_bills",
       input: { id: "bill:ca:20232024:ab:2652", classification: "companion", mode: "semantic" },
-      expected: "AB 2652, CA, 2023-2024; Classification: companion; Mode: semantic"
+      expected: "AB 2652, CA, 2023-2024; Companion bills"
     },
     {
       toolName: "search_amendments",
       input: { query: "education", billId: "bill:ca:20232024:ab:2652", sponsorPersonId: "person:known" },
-      expected: "education; AB 2652, CA, 2023-2024; Known sponsor"
+      expected: "education; Amendments to AB 2652, CA, 2023-2024; Known sponsor"
     },
     {
       toolName: "search_amendments_for_bills",
@@ -510,17 +510,17 @@ describe("ResearchActivity details", () => {
         billIds: ["bill:ca:20232024:ab:2652", "bill:ca:20232024:sb:1047"],
         sponsorPersonId: "person:known"
       },
-      expected: "education; AB 2652, CA, 2023-2024; SB 1047, CA, 2023-2024; Known sponsor"
+      expected: "education; AB 2652; SB 1047; Known sponsor"
     },
     {
       toolName: "search_supporting_materials",
       input: { query: "analysis", amendmentId: "amendment:known", eventId: "event:known", classification: "report" },
-      expected: "analysis; Known amendment; Known meeting; Classification: report"
+      expected: "analysis; Known amendment; Known meeting; Reports"
     },
     {
       toolName: "search_regulations",
       input: { query: "safety", corpora: ["regulation"], codeIds: ["code-id"], asOf: "2024-01-01", limit: 10 },
-      expected: "safety; Corpus: regulation; Code: code-id; As of: Jan 1, 2024; Up to 10 results"
+      expected: "safety; Regulations; Code: 1 selected; As of Jan 1, 2024; Up to 10 results"
     }
   ])("retains query and semantic filters for $toolName", ({ toolName, input, expected }) => {
     render(
@@ -577,7 +577,7 @@ describe("ResearchActivity details", () => {
       />
     )
     await userEvent.click(screen.getByRole("button", { name: "Search votes: Failed" }))
-    expect(screen.getByText("House; From: Jan 1, 2026; Up to 100 votes")).toBeDefined()
+    expect(screen.getByText("House; From Jan 1, 2026; Up to 100 results")).toBeDefined()
     expect(screen.queryByText(/hidden-cursor/)).toBeNull()
   })
 
@@ -595,7 +595,7 @@ describe("ResearchActivity details", () => {
         }}
       />
     )
-    expect(screen.getByText(bill.title)).toBeDefined()
+    expect(screen.getByText("AB 2652, CA, 2023-2024")).toBeDefined()
     expect(screen.getByLabelText("Read bill: Complete")).toBeDefined()
     expect(screen.queryByText(selectedRecord.title)).toBeNull()
   })
@@ -627,9 +627,9 @@ describe("ResearchActivity details", () => {
     ["bill:us:118:hr:1234", "HR 1234, US, 118th Congress"],
     ["bill:ca:2023s1:ab:2", "AB 2, CA, Session 2023s1"],
     ["bill:ny:2025-2026:a:123", "A 123, NY, 2025-2026"],
-    ["bill:ca:20232024:ab:", "bill:ca:20232024:ab:"],
-    ["bill:ca:20232024:ab:2652:document:abc", "bill:ca:20232024:ab:2652:document:abc"],
-    ["person:openstates:abc", "person:openstates:abc"]
+    ["bill:ca:20232024:ab:", "Selected bill"],
+    ["bill:ca:20232024:ab:2652:document:abc", "Selected document"],
+    ["person:openstates:abc", "Selected person"]
   ])("formats only complete canonical bill identifiers: %s", (id, label) => {
     render(
       <ResearchActivity
@@ -833,7 +833,7 @@ describe("ResearchActivity details", () => {
     expect(screen.queryByText("Unable to read bill.")).toBeNull()
   })
 
-  it("keeps denied activity collapsed until opened and retains its failure status", async () => {
+  it("keeps denied activity collapsed until opened and retains its denied status", async () => {
     render(
       <ResearchActivity
         isRunning={false}
@@ -847,12 +847,12 @@ describe("ResearchActivity details", () => {
         }}
       />
     )
-    const trigger = screen.getByRole("button", { name: "Search bills: Failed" })
+    const trigger = screen.getByRole("button", { name: "Search bills: Denied" })
     expect(trigger.getAttribute("aria-expanded")).toBe("false")
     expect(screen.queryByText("This operation was not permitted.")).toBeNull()
     await userEvent.click(trigger)
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
-    expect(screen.getByText("Failed")).toBeDefined()
+    expect(screen.getByText("Denied")).toBeDefined()
     expect(screen.getByText("This operation was not permitted.")).toBeDefined()
   })
 

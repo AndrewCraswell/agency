@@ -5,7 +5,7 @@ import invariant from "tiny-invariant"
 import { ResearchActivity } from "../components/ResearchActivity"
 import type { ResearchFailureCode } from "../researchFailure"
 import { researchToolLabels } from "../researchTools"
-import { activityPart, activityStates, failureCodes, toolCaptures } from "./reviewFixtures"
+import { activityPart, activityStates, capturedCards, failureCodes, toolCaptures } from "./reviewFixtures"
 import * as styles from "./ReviewGallery.css"
 
 type ActivityArgs = {
@@ -24,6 +24,12 @@ const meta = {
   render: ({ toolName, failureCode }) => {
     const capture = toolCaptures.find((candidate) => candidate.toolName === toolName)
     invariant(capture, `Missing capture for ${toolName}`)
+    const previousParts = toolCaptures
+      .slice(0, toolCaptures.indexOf(capture))
+      .map((previous) => activityPart(previous, "Complete").part)
+    if (toolName === "get_supporting_material") {
+      previousParts.push({ ...activityPart(capture, "Complete").part, toolCallId: "previous-material-read" })
+    }
     return (
       <section aria-label={`${researchToolLabels[toolName]} states`}>
         <h2 className={styles.groupHeading}>{researchToolLabels[toolName]}</h2>
@@ -53,33 +59,53 @@ const meta = {
           {activityStates.map((state) => (
             <section key={state} className={styles.sample} aria-label={state} data-review-state={state}>
               <h3 className={styles.label}>{state}</h3>
-              <ResearchActivity
-                {...activityPart(capture, state, failureCode)}
-                previousParts={toolCaptures
-                  .slice(0, toolCaptures.indexOf(capture))
-                  .map((previous) => activityPart(previous, "Complete").part)}
-              />
+              <ResearchActivity {...activityPart(capture, state, failureCode)} previousParts={previousParts} />
             </section>
           ))}
           <section className={styles.sample} aria-label="Failed expanded" data-review-state="Failed expanded">
             <h3 className={styles.label}>Failed expanded</h3>
-            <ResearchActivity
-              {...activityPart(capture, "Failed", failureCode)}
-              previousParts={toolCaptures
-                .slice(0, toolCaptures.indexOf(capture))
-                .map((previous) => activityPart(previous, "Complete").part)}
-            />
+            <ResearchActivity {...activityPart(capture, "Failed", failureCode)} previousParts={previousParts} />
           </section>
           <section className={styles.sample} aria-label="Denied expanded" data-review-state="Denied expanded">
             <h3 className={styles.label}>Denied expanded</h3>
-            <ResearchActivity
-              {...activityPart(capture, "Denied")}
-              previousParts={toolCaptures
-                .slice(0, toolCaptures.indexOf(capture))
-                .map((previous) => activityPart(previous, "Complete").part)}
-            />
+            <ResearchActivity {...activityPart(capture, "Denied")} previousParts={previousParts} />
           </section>
         </div>
+        {toolName === "get_supporting_material" && (
+          <div className={styles.grid}>
+            {capturedCards
+              .filter(({ record }) => record.kind === "material")
+              .map(({ record }) => (
+                <section
+                  key={record.id}
+                  className={styles.sample}
+                  aria-label={record.title}
+                  data-review-material={record.id}
+                >
+                  <ResearchActivity
+                    isRunning
+                    previousParts={[
+                      {
+                        type: "dynamic-tool",
+                        toolCallId: `previous-${record.id}`,
+                        toolName: "get_supporting_material",
+                        state: "output-available",
+                        input: { id: record.id },
+                        output: { resultSet: { items: [record] } }
+                      }
+                    ]}
+                    part={{
+                      type: "dynamic-tool",
+                      toolCallId: `read-${record.id}`,
+                      toolName: "get_supporting_material",
+                      state: "input-available",
+                      input: { id: record.id }
+                    }}
+                  />
+                </section>
+              ))}
+          </div>
+        )}
       </section>
     )
   },
@@ -103,7 +129,7 @@ const meta = {
       await userEvent.click(denialTrigger)
     }
     await expect(denied.getByText("This operation was not permitted.")).toBeVisible()
-    await expect(denied.getByText("Failed")).toBeVisible()
+    await expect(denied.getByText("Denied", { selector: "span" })).toBeVisible()
   }
 } satisfies Meta<ActivityArgs>
 export default meta
@@ -119,8 +145,8 @@ export const CompareBillVersions: Story = { args: { toolName: "compare_bill_vers
 export const FindRelatedBills: Story = { args: { toolName: "find_related_bills" } }
 export const SearchPeople: Story = { args: { toolName: "search_people" } }
 export const ReadPerson: Story = { args: { toolName: "get_person" } }
-export const SearchCommitteesAndOrganizations: Story = { args: { toolName: "search_organizations" } }
-export const ReadCommitteeOrOrganization: Story = { args: { toolName: "get_organization" } }
+export const SearchOrganizations: Story = { args: { toolName: "search_organizations" } }
+export const ReadOrganization: Story = { args: { toolName: "get_organization" } }
 export const SearchMeetings: Story = { args: { toolName: "search_events" } }
 export const ReadMeeting: Story = { args: { toolName: "get_event" } }
 export const SearchVotes: Story = { args: { toolName: "search_votes" } }
@@ -130,7 +156,7 @@ export const ReadVotes: Story = { args: { toolName: "get_votes" } }
 export const SearchAmendments: Story = { args: { toolName: "search_amendments" } }
 export const ReadAmendment: Story = { args: { toolName: "get_amendment" } }
 export const ReadAmendments: Story = { args: { toolName: "get_amendments" } }
-export const FindBillAmendments: Story = { args: { toolName: "search_amendments_for_bills" } }
+export const FindAmendmentsForBills: Story = { args: { toolName: "search_amendments_for_bills" } }
 export const SearchSupportingMaterials: Story = { args: { toolName: "search_supporting_materials" } }
 export const ReadSupportingMaterial: Story = { args: { toolName: "get_supporting_material" } }
 export const SearchRecordedChanges: Story = { args: { toolName: "search_changes" } }
