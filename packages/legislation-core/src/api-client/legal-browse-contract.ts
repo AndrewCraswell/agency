@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { pageSchema } from "./envelopes"
+import { pageSchema, resourceSchema } from "./envelopes"
 
 const cursor = z
   .string()
@@ -37,6 +37,38 @@ export const legalEditionSchema = z.strictObject({
   scope: z.enum(["current_code_snapshot", "annual_volume"])
 })
 export const legalEditionsResponseSchema = pageSchema.extend({ data: z.array(legalEditionSchema).max(100) })
+export const legalEditionDetailSchema = legalEditionSchema.extend({
+  publishedMembers: z.int().positive(),
+  isCurrent: z.boolean(),
+  annualVolume: z
+    .strictObject({
+      annualEditionId: z.string().regex(/^[a-f0-9]{64}$/),
+      codeId: z.uuid(),
+      packageYear: z.int().min(1996).max(9999),
+      revisionDate: z.iso.date(),
+      volume: z.int().positive(),
+      expectedVolumes: z.int().min(1).max(200),
+      coverage: z.json()
+    })
+    .nullable()
+})
+export const legalEditionResponseSchema = resourceSchema.extend({ data: legalEditionDetailSchema })
+
+export function validateLegalEditionResponse(value: unknown, editionId: string) {
+  const id = z.uuid().parse(editionId)
+  const response = legalEditionResponseSchema.parse(value)
+  if (
+    response.data.id !== id ||
+    (response.data.isCurrent && response.data.sourceId !== "ecfr") ||
+    (response.data.annualVolume === null) !== (response.data.sourceId === "ecfr") ||
+    (response.data.annualVolume !== null &&
+      (response.data.annualVolume.codeId !== response.data.codeId ||
+        response.data.annualVolume.volume > response.data.annualVolume.expectedVolumes))
+  ) {
+    throw new Error("legal_edition_response_mismatch")
+  }
+  return response
+}
 
 export const legalProvisionsRequestSchema = z
   .strictObject({

@@ -5,7 +5,7 @@
 M's [registration](../../src/mcp/tools.ts) and [HTTP adapter](../../src/mcp/http-query-adapter.ts) consume C's shared
 research definitions, input schemas and canonical wire validation. W executes queries/models. This guide was checked against
 that registry on September 16, 2026: 25 baseline read tools plus organization-gated `list_legal_codes`, `get_legal_code`,
-`list_legal_editions`, `list_legal_provisions`, `search_regulations` and `get_legal_text` pilots,
+`list_legal_editions`, `get_legal_edition`, `list_legal_provisions`, `search_regulations` and `get_legal_text` pilots,
 with no calendar, raw-address, conversation or mutation tools. Product chat
 actions use authorized application services, not an assumed MCP mutation surface. See [authentication](../operations/authentication.md)
 and [W API acceptance](../../../legislation-web/docs/operations/passage-search-delivery.md) for serving and release gates.

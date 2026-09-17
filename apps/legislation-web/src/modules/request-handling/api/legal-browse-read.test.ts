@@ -86,8 +86,65 @@ function fixture() {
 it("requires identity before database access", async () => {
   const f = fixture()
   await expect(f.browser.listEditions(codeId, {})).rejects.toMatchObject({ category: "unauthorized" })
+  await expect(f.browser.getEdition(editionId)).rejects.toMatchObject({ category: "unauthorized" })
   await expect(f.browser.listProvisions(codeId, {})).rejects.toMatchObject({ category: "unauthorized" })
   expect(f.connect).not.toHaveBeenCalled()
+})
+
+it("reads an authorized exact edition with current-head and member context", async () => {
+  const f = fixture()
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  f.rights(false)
+  f.rows([{ ...edition, publishedMembers: 14, isCurrent: true, annualVolume: null }])
+  f.rows()
+  const result = await f.run(() => f.browser.getEdition(editionId))
+  expect(result).toMatchObject({ id: editionId, publishedMembers: 14, isCurrent: true, annualVolume: null })
+})
+
+it("returns annual manifest context and authorizes before reading it", async () => {
+  const f = fixture()
+  const annualVolume = {
+    annualEditionId: "b".repeat(64),
+    codeId,
+    packageYear: 2025,
+    revisionDate: "2025-01-01",
+    volume: 2,
+    expectedVolumes: 2,
+    coverage: { isComplete: true }
+  }
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  f.rights(false)
+  f.rows([
+    {
+      ...edition,
+      sourceId: "govinfo-cfr",
+      scope: "annual_volume",
+      publishedMembers: 20,
+      isCurrent: false,
+      annualVolume
+    }
+  ])
+  f.rows()
+  expect(await f.run(() => f.browser.getEdition(editionId))).toMatchObject({ annualVolume })
+  const detailQuery = f.query.mock.calls.find(
+    (call) => typeof call[0] === "string" && call[0].includes("publishedMembers")
+  )
+  expect(detailQuery?.[1]).toEqual([editionId, "official"])
+})
+
+it("does not read exact-edition metadata when API rights are denied", async () => {
+  const f = fixture()
+  f.begin()
+  f.rows([{ rights_profile_id: "official" }])
+  const policy = { ...officialFederalRights, apiMcp: false }
+  f.rows([{ policy, policy_hash: digest(JSON.stringify(policy)) }])
+  f.rows()
+  await expect(f.run(() => f.browser.getEdition(editionId))).rejects.toMatchObject({ category: "forbidden" })
+  expect(f.query.mock.calls.some((call) => typeof call[0] === "string" && call[0].includes("publishedMembers"))).toBe(
+    false
+  )
 })
 
 it("pins default-head continuation to the original edition and preserves source order", async () => {

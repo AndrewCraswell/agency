@@ -2,6 +2,7 @@ import { pageSchema } from "@repo/legislation-core/api-client/envelopes"
 import {
   legalEditionsRequestSchema,
   legalProvisionsRequestSchema,
+  validateLegalEditionResponse,
   validateLegalEditionsResponse,
   validateLegalProvisionsResponse
 } from "@repo/legislation-core/api-client/legal-browse-contract"
@@ -9,6 +10,7 @@ import { LegislationError } from "@repo/legislation-core/domain/errors"
 import { z } from "zod"
 import {
   apiPage,
+  apiResource,
   assertAllowedQueryParameters,
   queryInteger,
   requestUrl,
@@ -21,12 +23,28 @@ import type { createLegalBrowser } from "./legal-browse-read"
 export function createLegalBrowseApiHandler(browser: ReturnType<typeof createLegalBrowser>): HttpApiHandler {
   return async (request, response) => {
     const url = requestUrl(request)
+    const detail = /^\/api\/legal\/editions\/([^/]+)$/.exec(url.pathname)
     const match = /^\/api\/legal\/codes\/([^/]+)\/(editions|provisions)$/.exec(url.pathname)
-    if (request.method !== "GET" || !match?.[1]) {
+    if (request.method !== "GET" || (!match?.[1] && !detail?.[1])) {
       return false
     }
     response.setHeader("cache-control", "private, no-store")
     try {
+      if (detail?.[1]) {
+        assertAllowedQueryParameters(url, [])
+        let editionId: string
+        try {
+          editionId = z.uuid().parse(decodeURIComponent(detail[1]))
+        } catch {
+          throw new LegislationError("invalid_request", "Invalid legal edition ID")
+        }
+        const edition = await browser.getEdition(editionId)
+        sendApiJson(response, 200, validateLegalEditionResponse(apiResource(request, edition), editionId))
+        return true
+      }
+      if (!match?.[1]) {
+        return false
+      }
       let codeId: string
       try {
         codeId = z.uuid().parse(decodeURIComponent(match[1]))

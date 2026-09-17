@@ -1,5 +1,6 @@
 import {
   legalEditionSchema,
+  legalEditionDetailSchema,
   legalEditionsRequestSchema,
   legalProvisionSummarySchema,
   legalProvisionsRequestSchema
@@ -80,6 +81,42 @@ export function createLegalBrowser(pool: pg.Pool, allowedOrganizationIds: readon
     return z.object({ policy_hash: z.string().regex(/^[a-f0-9]{64}$/) }).parse(row.rows[0]).policy_hash
   }
   return {
+    getEdition: async (value: string) =>
+      transaction(async (client) => {
+        const editionId = z.uuid().parse(value)
+        // Read only the governing profile before authorization; no edition metadata escapes on denial.
+        const profile = await client.query(
+          `SELECT rights_profile_id FROM legislation.legal_editions
+          WHERE id=$1 AND jurisdiction_id='jurisdiction:us' AND source_id IN ('ecfr','govinfo-cfr')
+            AND published_at IS NOT NULL`,
+          [editionId]
+        )
+        if (profile.rows.length === 0) {
+          throw new LegislationError("not_found", "Published legal edition was not found")
+        }
+        invariant(profile.rows.length === 1, "legal_edition_identity_ambiguous")
+        const rightsProfileId = z.object({ rights_profile_id: z.string() }).parse(profile.rows[0]).rights_profile_id
+        await policyHash(client, rightsProfileId, false)
+        const rows = await client.query(
+          `SELECT ${editionColumns},
+          (SELECT count(*)::integer FROM legislation.legal_edition_provisions m WHERE m.edition_id=e.id) AS "publishedMembers",
+          EXISTS(SELECT 1 FROM legislation.legal_code_heads h WHERE h.code_id=e.code_id AND h.source_id=e.source_id AND h.edition_id=e.id) AS "isCurrent",
+          CASE WHEN ae.id IS NULL THEN NULL ELSE jsonb_build_object(
+            'annualEditionId',ae.id,'codeId',ae.code_id,'packageYear',ae.package_year,
+            'revisionDate',ae.revision_date::text,'volume',av.volume,
+            'expectedVolumes',ae.expected_volumes,'coverage',ae.coverage) END AS "annualVolume"
+          FROM legislation.legal_editions e
+          JOIN legislation.legal_import_generations g ON g.id=e.generation_id
+          LEFT JOIN legislation.legal_annual_edition_volumes av ON av.edition_id=e.id AND av.code_id=e.code_id
+          LEFT JOIN legislation.legal_annual_editions ae ON ae.id=av.annual_edition_id AND ae.code_id=e.code_id
+          WHERE e.id=$1 AND e.rights_profile_id=$2 AND e.jurisdiction_id='jurisdiction:us'
+            AND e.source_id IN ('ecfr','govinfo-cfr') AND e.published_at IS NOT NULL
+          FOR SHARE OF e,g`,
+          [editionId, rightsProfileId]
+        )
+        invariant(rows.rows.length === 1, "legal_edition_disappeared")
+        return legalEditionDetailSchema.parse(rows.rows[0])
+      }),
     listEditions: async (code: string, value: unknown) =>
       transaction(async (client, caller) => {
         const codeId = z.uuid().parse(code)

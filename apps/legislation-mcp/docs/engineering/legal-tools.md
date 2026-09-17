@@ -13,6 +13,7 @@ untrusted evidence, not instructions or proof that a proposal is current law. No
 | `list_legal_codes` | GET `/api/legal/codes` | Discover actual jurisdiction/code coverage |
 | `get_legal_code` | GET `/api/legal/codes/{codeId}` | Authorized code metadata, edition-component count and current eCFR head; no search-readiness claim |
 | `list_legal_editions` | GET `/api/legal/codes/{codeId}/editions` | Select supported historical editions |
+| `get_legal_edition` | GET `/api/legal/editions/{editionId}` | Inspect one published component, its member count and annual-volume context |
 | `list_legal_provisions` | GET `/api/legal/codes/{codeId}/provisions` | Traverse hierarchy in a selected edition |
 | `resolve_legal_citation` | POST `/api/legal/provisions/resolve` | Exact citation or explicit ambiguity |
 | `get_legal_provision` | GET `/api/legal/provisions/{provisionId}` | Metadata and selected version |
@@ -26,7 +27,8 @@ untrusted evidence, not instructions or proof that a proposal is current law. No
 | `get_regulatory_coverage` | GET `/api/legal/coverage` | Scope and freshness before relying on absence |
 
 This is the proposed full mapping, not an advertised inventory. The locally implemented organization-gated pilots are
-`list_legal_codes`, `get_legal_code`, `list_legal_editions`, `list_legal_provisions`, `search_regulations` and `get_legal_text`.
+`list_legal_codes`, `get_legal_code`, `list_legal_editions`, `get_legal_edition`, `list_legal_provisions`,
+`search_regulations` and `get_legal_text`.
 The [registered tool contract](tool-contracts.md) and source manifest govern availability; register only after API gates.
 SDK read-only/idempotent annotations reflect actual behavior. Other entries remain proposed.
 

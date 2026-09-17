@@ -150,6 +150,7 @@ export function createMcpHttpQueryAdapter(options: McpHttpQueryAdapterOptions): 
           canReadLegalText,
           searchLegal: async (input) => api.searchLegal(input, await legalRequestOptions()),
           getLegalCode: async ({ codeId }) => api.getLegalCode(codeId, await legalRequestOptions()),
+          getLegalEdition: async ({ editionId }) => api.getLegalEdition(editionId, await legalRequestOptions()),
           listLegalEditions: async ({ codeId, ...input }) =>
             api.listLegalEditions(codeId, input, await legalRequestOptions()),
           listLegalProvisions: async ({ codeId, ...input }) =>
@@ -258,10 +259,14 @@ function withApiErrors(adapter: LegislationQueryApi): LegislationQueryApi {
   const searchLegal = adapter.searchLegal
   const listLegalCodes = adapter.listLegalCodes
   const getLegalCode = adapter.getLegalCode
+  const getLegalEdition = adapter.getLegalEdition
   const listLegalEditions = adapter.listLegalEditions
   const listLegalProvisions = adapter.listLegalProvisions
   return {
     ...(getLegalCode === undefined ? {} : { getLegalCode: async (input) => await apiCall(() => getLegalCode(input)) }),
+    ...(getLegalEdition === undefined
+      ? {}
+      : { getLegalEdition: async (input) => await apiCall(() => getLegalEdition(input)) }),
     ...(searchLegal === undefined ? {} : { searchLegal: async (input) => await apiCall(() => searchLegal(input)) }),
     ...(listLegalEditions === undefined
       ? {}

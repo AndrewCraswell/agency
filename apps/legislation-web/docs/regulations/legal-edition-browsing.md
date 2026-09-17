@@ -7,6 +7,7 @@ organization allowlist and use separate verified API/MCP audiences and identity-
 | HTTP operation | MCP tool | Selection |
 | --- | --- | --- |
 | `GET /api/legal/codes/{codeId}/editions` | `list_legal_editions` | Optional `sourceId`, `issuedFrom`, `issuedTo` |
+| `GET /api/legal/editions/{editionId}` | `get_legal_edition` | Exact published edition ID |
 | `GET /api/legal/codes/{codeId}/provisions` | `list_legal_provisions` | `editionId` or default current eCFR head; traversal and parent |
 
 Both accept cursor and limit, default 20 and maximum 100. Invalid code IDs, unknown or duplicate fields, reversed
@@ -18,7 +19,8 @@ source/date filter returns an empty page with a coverage warning.
 Edition metadata includes code ID, source ID, source observation, native key, revision, publisher source URL, issue
 date, source currency and publication timestamp. `scope` distinguishes `current_code_snapshot` from `annual_volume`.
 An annual volume is not a complete annual title or proof of continuous historical coverage. Unpublished/staged volumes
-remain inaccessible. Edition detail and annual title coverage endpoints are still separate implementation gates.
+remain inaccessible. Exact edition detail adds its published member count and current-head state. Annual components
+also include their volume number, expected volume count, package year, revision date and stored coverage assessment.
 
 Provision traversal defaults to `children`: omit `parentId` for roots, or supply it for direct children. `all` enumerates
 all members in their stored structural order and cannot be combined with a parent. `nodeKind` filters that traversal.

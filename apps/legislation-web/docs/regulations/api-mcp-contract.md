@@ -3,7 +3,7 @@
 Contract recorded September 14, 2026. The [exact-version text operation](legal-text-serving.md) is implemented locally;
 the corresponding opt-in `get_legal_text` MCP tool is also implemented locally. The
 [published code list](legal-code-discovery.md), [edition/provision browser](legal-edition-browsing.md), and their
-`list_legal_codes`, `get_legal_code`, `list_legal_editions`, `list_legal_provisions` tools are implemented locally;
+`list_legal_codes`, `get_legal_code`, `list_legal_editions`, `get_legal_edition`, `list_legal_provisions` tools are implemented locally;
 code detail serves authorized metadata, published edition-component counts and the explicit current eCFR edition;
 complete-history and search-capability enrichment remains planned.
 [Federal lexical search](legal-search-serving.md) is also locally implemented as a POST route and typed client;

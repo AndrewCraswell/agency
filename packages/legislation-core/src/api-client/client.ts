@@ -4,6 +4,7 @@ import { linksSchema, resourceSchema, pageSchema, searchPageSchema } from "./env
 import {
   legalEditionsRequestSchema,
   legalProvisionsRequestSchema,
+  validateLegalEditionResponse,
   validateLegalEditionsResponse,
   validateLegalProvisionsResponse,
   type LegalEditionsRequest,
@@ -418,6 +419,16 @@ export class LegislationApiClient {
       return validateLegalEditionsResponse(result, codeId, input)
     } catch {
       throw new LegislationApiProtocolError("Invalid legal editions response")
+    }
+  }
+
+  async getLegalEdition(editionId: string, options?: ApiRequestOptions) {
+    const id = z.uuid().parse(editionId)
+    const result = await this.#request({ method: "GET", path: `/api/legal/editions/${segment(id)}` }, options)
+    try {
+      return validateLegalEditionResponse(result, id)
+    } catch {
+      throw new LegislationApiProtocolError("Invalid legal edition response")
     }
   }
 

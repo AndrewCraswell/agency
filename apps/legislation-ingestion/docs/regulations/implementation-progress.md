@@ -1095,7 +1095,10 @@ HTTP routes, typed client methods and `list_legal_editions` / `list_legal_provis
 edition filters and root/child/all structural traversal, preserve exact version membership, and pin continuation to
 the selected edition even when selection began at the current eCFR head. Traversal checks API/MCP and display rights
 before headings or parent membership. Unsupported `asOf` returns 409 without substituting nearby text. See
-[edition and provision browsing](../../../legislation-web/docs/regulations/legal-edition-browsing.md). Code/edition detail and coverage reporting remain open.
+[edition and provision browsing](../../../legislation-web/docs/regulations/legal-edition-browsing.md). Exact edition
+detail is also implemented through `GET /api/legal/editions/{editionId}` and `get_legal_edition`, with authorization
+before metadata access, published member counts, current-head state and annual-volume manifest context. Aggregate
+coverage reporting remains open.
 
 The current-corpus canary at `2026-09-16T03:01:35Z` verified all 1,237 Title 23 provisions across 13 HTTP pages in
 exact database structural order, plus root/child traversal. Through real MCP transport and its API-backed client it

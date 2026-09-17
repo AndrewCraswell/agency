@@ -4,6 +4,7 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import { toNodeHandler } from "@modelcontextprotocol/node"
 import {
   legalEditionSchema,
+  legalEditionResponseSchema,
   legalEditionsResponseSchema,
   legalProvisionsResponseSchema
 } from "@repo/legislation-core/api-client/legal-browse-contract"
@@ -238,6 +239,16 @@ async function setup(
             if (path === `/api/legal/codes/${versionId}/editions`) {
               return Response.json(page([edition]), { headers })
             }
+            if (path === `/api/legal/editions/${observationId}`) {
+              return Response.json(
+                {
+                  data: { ...edition, publishedMembers: 1, isCurrent: true, annualVolume: null },
+                  links: { self: path },
+                  meta: { correlationId, warnings: [] }
+                },
+                { headers }
+              )
+            }
             if (path === `/api/legal/codes/${versionId}/provisions`) {
               return Response.json(page([], { selectedEdition: edition }), { headers })
             }
@@ -458,6 +469,13 @@ it("exposes edition and provision browsing through the HTTP client with strict s
   expect(editions.isError).not.toBe(true)
   const listed = z.strictObject({ data: legalEditionsResponseSchema }).parse(editions.structuredContent).data
   expect(listed.data[0]?.id).toBe(observationId)
+  const exact = await client.callTool({ name: "get_legal_edition", arguments: { editionId: observationId } })
+  expect(exact.isError).not.toBe(true)
+  expect(z.strictObject({ data: legalEditionResponseSchema }).parse(exact.structuredContent).data.data).toMatchObject({
+    id: observationId,
+    publishedMembers: 1,
+    isCurrent: true
+  })
   const provisions = await client.callTool({
     name: "list_legal_provisions",
     arguments: { codeId: versionId, editionId: observationId }
@@ -467,6 +485,7 @@ it("exposes edition and provision browsing through the HTTP client with strict s
   expect(browsed.meta.selectedEdition.id).toBe(observationId)
   expect(apiRequests.map((request) => new URL(request.url).pathname)).toEqual([
     `/api/legal/codes/${versionId}/editions`,
+    `/api/legal/editions/${observationId}`,
     `/api/legal/codes/${versionId}/provisions`
   ])
   for (const args of [
@@ -478,10 +497,17 @@ it("exposes edition and provision browsing through the HTTP client with strict s
       (await client.callTool({ name: "list_legal_provisions", arguments: { codeId: versionId, ...args } })).isError
     ).toBe(true)
   }
-  expect(apiRequests).toHaveLength(2)
-  for (const name of ["list_legal_editions", "list_legal_provisions"]) {
+  expect(apiRequests).toHaveLength(3)
+  for (const name of ["get_legal_edition", "list_legal_editions", "list_legal_provisions"]) {
     const denied = await setup({ apiOrg: "other" })
-    expect((await denied.client.callTool({ name, arguments: { codeId: versionId } })).isError).toBe(true)
+    expect(
+      (
+        await denied.client.callTool({
+          name,
+          arguments: name === "get_legal_edition" ? { editionId: observationId } : { codeId: versionId }
+        })
+      ).isError
+    ).toBe(true)
     expect(denied.apiRequests).toHaveLength(0)
   }
 })

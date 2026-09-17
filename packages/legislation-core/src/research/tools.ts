@@ -87,6 +87,7 @@ export type LegislationQueryApi = Readonly<{
   searchLegal?: (input: LegalSearchRequest) => Promise<unknown>
   listLegalCodes?: (input: LegalCodesRequest) => Promise<unknown>
   getLegalCode?: (input: { codeId: string }) => Promise<unknown>
+  getLegalEdition?: (input: { editionId: string }) => Promise<unknown>
   listLegalEditions?: (input: LegalEditionsRequest & { codeId: string }) => Promise<unknown>
   listLegalProvisions?: (input: LegalProvisionsRequest & { codeId: string }) => Promise<unknown>
   getLegalText?: (input: LegalTextRequest & { versionId: string }) => Promise<unknown>
@@ -384,6 +385,20 @@ export function createLegislationResearchTools(service: LegislationQueryApi, log
   }
 
   const listLegalEditions = service.listLegalEditions
+  const getLegalEdition = service.getLegalEdition
+  if (getLegalEdition !== undefined && service.canReadLegalText?.() === true) {
+    server.registerTool(
+      "get_legal_edition",
+      {
+        description:
+          "Read one published federal code edition by its discovered ID, including its member count, current-head state and annual volume context. Metadata does not establish search readiness or legal status.",
+        inputSchema: z.strictObject({ editionId: z.uuid() }),
+        outputSchema,
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      },
+      (input) => tool("get_legal_edition", input, () => getLegalEdition(input), logger, telemetry)
+    )
+  }
   if (listLegalEditions !== undefined && service.canReadLegalText?.() === true) {
     server.registerTool(
       "list_legal_editions",
