@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { ArtifactStore } from "../documents/artifact-store.js"
 import {
   alaskaEventCloudRequest,
+  billCloudRequest,
   dispatchCloudScraperAttempt,
   northCarolinaEventCloudRequest,
   scraperCloudPaths
@@ -113,5 +114,23 @@ describe("cloud scraper dispatch", () => {
     expect(() => scraperCloudPaths("run-1", { ...northCarolinaEventCloudRequest(), session: "2025" })).toThrow(
       "Unsupported cloud scraper request"
     )
+  })
+
+  it("accepts only exact same-chamber bill batches for the two activated sessions", () => {
+    expect(billCloudRequest("ak", ["HB1", "HB2"])).toMatchObject({
+      jurisdiction: "ak",
+      domain: "bills",
+      session: "34",
+      bill_ids: ["HB1", "HB2"]
+    })
+    expect(billCloudRequest("nc", ["S1", "S2"])).toMatchObject({
+      jurisdiction: "nc",
+      domain: "bills",
+      session: "2025",
+      bill_ids: ["S1", "S2"]
+    })
+    expect(() => billCloudRequest("ak", ["HB1", "SB1"])).toThrow("Unsupported cloud scraper request")
+    expect(() => billCloudRequest("nc", ["HB1"])).toThrow("Unsupported cloud scraper request")
+    expect(() => billCloudRequest("nc", ["H1", "H1"])).toThrow("Unsupported cloud scraper request")
   })
 })

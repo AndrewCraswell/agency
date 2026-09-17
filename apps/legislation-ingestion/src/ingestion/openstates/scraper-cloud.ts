@@ -21,6 +21,22 @@ const requestSchema = z
   })
   .superRefine((request, context) => {
     if (
+      request.domain === "bills" &&
+      request.event_keys === undefined &&
+      request.bill_ids !== null &&
+      request.bill_ids !== undefined &&
+      new Set(request.bill_ids).size === request.bill_ids.length &&
+      new Set(request.bill_ids.map((id) => id[0])).size === 1 &&
+      ((request.jurisdiction === "ak" &&
+        request.session === "34" &&
+        request.bill_ids.every((id) => /^[HS](?:B|R|JR|J|CR|SC|SCR)[1-9][0-9]{0,4}$/.test(id))) ||
+        (request.jurisdiction === "nc" &&
+          request.session === "2025" &&
+          request.bill_ids.every((id) => /^[HS][1-9][0-9]{0,4}$/.test(id))))
+    ) {
+      return
+    }
+    if (
       request.jurisdiction === "ak" &&
       request.domain === "events" &&
       request.session === "34" &&
@@ -156,5 +172,16 @@ export function northCarolinaEventCloudRequest(): CloudScraperRequest {
     timeout_seconds: 1500,
     revision,
     bill_ids: null
+  })
+}
+
+export function billCloudRequest(jurisdiction: "ak" | "nc", billIds: string[]): CloudScraperRequest {
+  return requestSchema.parse({
+    jurisdiction,
+    domain: "bills",
+    session: jurisdiction === "ak" ? "34" : "2025",
+    timeout_seconds: 1500,
+    revision,
+    bill_ids: billIds
   })
 }

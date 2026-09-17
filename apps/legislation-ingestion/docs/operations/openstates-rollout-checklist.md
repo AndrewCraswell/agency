@@ -1823,3 +1823,19 @@ Carolina foundation archive pairs, reconcile all Alaska meeting batches, run the
 measure public-ready versus held meeting reasons and smoke-test meeting list/detail and organization-meeting API/MCP
 reads. Historical NC committee document crawling remains a separate source-coverage gate; the current calendar does not
 claim historical meeting completeness.
+
+### September 17 complete-session bill orchestration
+
+The shared bill runtime now has a manual, unscheduled Trigger controller for Alaska Legislature 34 and North Carolina
+session 2025. Each invocation first downloads and immutably freezes the complete official publisher inventory, then
+dispatches one ten-or-fewer-bill, same-chamber batch at a time. Alaska and North Carolina use distinct concurrency keys,
+so the two states may progress in parallel without overlapping two batches within either state. The continuation chain
+advances only after re-reading the canonical promotion receipt; a successful container exit or retained file alone is
+not completion. Retry after a committed batch resumes from the first receipt-proven pending batch.
+
+Cloud admission accepts only the two reviewed state/session combinations and the existing approved image fingerprint.
+It rejects mixed chambers, duplicates, unbounded input and API-key fallback. There is deliberately no recurring bill
+scraper schedule yet: first complete both frozen cycles, reconcile actions and votes, and pass recovery and downstream
+acceptance before activation. The Trigger dry build and focused acquisition, cloud-request, activation and task-contract
+tests pass. These tasks remain undeployed while the already-running Alaska meeting chain owns the production scraper
+lane; do not replace that deployment or start bill extraction until its 285 promotion receipts are complete.

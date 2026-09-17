@@ -5,14 +5,16 @@ import { z } from "zod"
 import { loadConfig } from "../../config/config.js"
 import { AzureBlobArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import {
+  approvedScraperBuildInputsSha256,
+  requireScraperActivation
+} from "../../ingestion/openstates/scraper-activation.js"
+import {
   executeAlaskaEventCloudBatch,
   inspectAlaskaEventCycle,
   reconcileAlaskaEventCycleBatch
 } from "../../ingestion/openstates/scraper-event-cycle.js"
 import { acquireAlaskaEventPlan } from "../../ingestion/openstates/scraper-event-plan.js"
 import { executeNorthCarolinaEventCloudCycle } from "../../ingestion/openstates/scraper-nc-event-cycle.js"
-
-const approvedBuildInputsSha256 = "8dd4689bcfe72cf8b1cee5372c1106bd9f077845bea3187074fe17cc833beaeb"
 
 const payloadSchema = z.strictObject({
   planPath: z.string().regex(/^openstates\/scraper-plans\/ak\/events\/[A-Za-z0-9/_.-]+\.json$/),
@@ -25,18 +27,6 @@ const payloadSchema = z.strictObject({
 const reconciliationPayloadSchema = payloadSchema.omit({ batchId: true }).extend({
   batchIndex: z.number().int().nonnegative().default(0)
 })
-
-function requireScraperActivation(jurisdiction: "ak" | "nc", value: string | undefined) {
-  const states = new Set(
-    (value ?? "")
-      .split(",")
-      .map((state) => state.trim().toLowerCase())
-      .filter(Boolean)
-  )
-  if (!states.has(jurisdiction)) {
-    throw new Error(`${jurisdiction === "ak" ? "Alaska" : "North Carolina"} self-hosted scraper is not activated`)
-  }
-}
 
 function requireAlaskaScraperActivation(value: string | undefined) {
   requireScraperActivation("ak", value)
@@ -95,7 +85,7 @@ export const openStatesNorthCarolinaEventsCloud = task({
     try {
       return await executeNorthCarolinaEventCloudCycle(database, {
         store,
-        approvedBuildInputsSha256,
+        approvedBuildInputsSha256: approvedScraperBuildInputsSha256,
         storageAccount: config.azure.storageAccount,
         queueName,
         runId: `nc-event-${createHash("sha256").update(ctx.run.id).digest("hex").slice(0, 32)}`
@@ -118,7 +108,7 @@ export const openStatesAlaskaEventsPlan = task({
     const key = await idempotencyKeys.create(`ak-events:dispatch:${inventory.inventoryId}`, { scope: "global" })
     const handle = await tasks.trigger(
       "openstates-alaska-events-dispatch",
-      { planPath: inventory.planPath, approvedBuildInputsSha256 },
+      { planPath: inventory.planPath, approvedBuildInputsSha256: approvedScraperBuildInputsSha256 },
       { concurrencyKey, idempotencyKey: key }
     )
     return { ...inventory, status: "dispatched" as const, dispatchRunId: handle.id }
