@@ -54,6 +54,7 @@ import { materializeLegalPassages, searchLegalPassages } from "./passage-storage
 import { registerLegalPreparationDispatch } from "./preparation-dispatch.js"
 import { inspectLegalPreparationStatus } from "./preparation-status.js"
 import { inspectLegalPreparationWaveCompletion } from "./preparation-wave-completion.js"
+import { registerLegalProvisionSourceReview } from "./provision-source-review.js"
 import { reconcileLegalSearchRightsBatch, reconcileLegalSearchScopeRights } from "./search-rights.js"
 import {
   claimRegulatoryLease,
@@ -1119,6 +1120,107 @@ suite.sequential("regulatory edition storage on real PostgreSQL", () => {
     expect(await validateStagedRegulatoryImport(pool, result.lease)).toBe("validated")
     return { ...result, editionId: await materializeRegulatoryEdition(pool, result.lease) }
   }
+
+  it("persists exact provision source dispositions and rejects changed replay evidence", async () => {
+    const data = await materialized(
+      await input({
+        body: `<DIV8 N="1.1" TYPE="SECTION"><HEAD>Reviewed table</HEAD><P>Introductory text.</P><TABLE><TR><TH>Label</TH><TH>Value</TH></TR><TR><TD>B</TD><TD>......do</TD></TR></TABLE></DIV8>`
+      })
+    )
+    await publishRegulatoryEdition(pool, data.lease, null)
+    const row = (
+      await pool.query<{
+        artifact_hash: string
+        blocks: Array<{ kind: string; xml: string }>
+        content_hash: string
+        generation_id: string
+        native_id: string
+        policy_hash: string
+        rights_profile_id: string
+        source_id: string
+        source_locator: string
+        source_url: string
+        version_id: string
+      }>(
+        `SELECT g.artifact_hash,v.blocks,v.content_hash,e.generation_id,m.native_id,r.policy_hash,
+          e.rights_profile_id,e.source_id,m.source_locator,g.unit->>'sourceUrl' AS source_url,m.version_id
+        FROM legislation.legal_edition_provisions m
+        JOIN legislation.legal_provision_versions v ON v.id=m.version_id
+        JOIN legislation.legal_editions e ON e.id=m.edition_id
+        JOIN legislation.legal_import_generations g ON g.id=e.generation_id
+        JOIN legislation.legal_rights_profiles r ON r.id=e.rights_profile_id
+        WHERE m.edition_id=$1 AND m.ordinal=1`,
+        [data.editionId]
+      )
+    ).rows[0]
+    invariant(row, "source_review_test_member_missing")
+    const table = row.blocks.find((block) => block.kind === "table")
+    invariant(table, "source_review_test_table_missing")
+    const request = {
+      editionId: data.editionId,
+      versionId: row.version_id,
+      tableIndex: 0,
+      disposition: "quarantined_source_gap" as const,
+      reason: "publisher_source_missing_reference_row",
+      expected: {
+        contentHash: row.content_hash,
+        blockHash: digest(table.xml),
+        nativeId: row.native_id,
+        sourceLocator: row.source_locator,
+        sourceId: row.source_id,
+        generationId: row.generation_id,
+        artifactHash: row.artifact_hash,
+        sourceUrl: row.source_url,
+        rightsProfileId: row.rights_profile_id,
+        rightsHash: row.policy_hash
+      },
+      corroboration: [
+        {
+          sourceUrl: "https://www.govinfo.gov/example.pdf",
+          artifactHash: "1".repeat(64),
+          bytes: 100,
+          observation: "The annual rendition contains the missing predecessor row."
+        }
+      ],
+      canonicalBodyChanged: false as const,
+      contextInjected: false as const,
+      derivedPassagesAllowed: false
+    }
+    const first = await registerLegalProvisionSourceReview(pool, request)
+    const replay = await registerLegalProvisionSourceReview(pool, request)
+    expect(first.reused).toBe(false)
+    expect(replay).toMatchObject({ reviewHash: first.reviewHash, reused: true })
+    const prepared = await runLegalPassagePreparationBatch(pool, {
+      scope: { kind: "edition", id: data.editionId },
+      model: "openai/text-embedding-3-small",
+      limit: 25
+    })
+    expect(prepared).toMatchObject({ state: "blocked", blocked: 1 })
+    expect(
+      (
+        await pool.query(
+          "SELECT failure_code FROM legislation.legal_passage_preparation_items WHERE preparation_id=$1 AND version_id=$2",
+          [prepared.preparationId, row.version_id]
+        )
+      ).rows
+    ).toEqual([{ failure_code: "source_review_quarantined" }])
+    const retried = await runLegalPassagePreparationBatch(pool, {
+      scope: { kind: "edition", id: data.editionId },
+      model: "openai/text-embedding-3-small",
+      limit: 25,
+      retryBlocked: true
+    })
+    expect(retried).toMatchObject({ state: "blocked", blocked: 1, processed: 0 })
+    await expect(
+      registerLegalProvisionSourceReview(pool, { ...request, reason: "changed_after_review" })
+    ).rejects.toThrow("legal_provision_source_review_replay_conflict")
+    await expect(
+      registerLegalProvisionSourceReview(pool, {
+        ...request,
+        expected: { ...request.expected, blockHash: "2".repeat(64) }
+      })
+    ).rejects.toThrow("legal_provision_source_review_table_changed")
+  })
 
   async function annualInputs(
     options: { duplicateSection?: boolean; conflictingDate?: boolean; packageYear?: number } = {}

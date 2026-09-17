@@ -157,9 +157,36 @@ export async function runLegalPassagePreparationBatch(
     )
     invariant(claimed.rowCount === 1, "legal_preparation_busy_or_delayed")
     if (retryBlocked) {
+      if (scope.kind === "edition") {
+        await client.query(
+          `UPDATE legislation.legal_passage_preparation_items item SET failure_code=NULL,failed_at=NULL
+          WHERE item.preparation_id=$1 AND item.generation_id IS NULL AND item.failure_code IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM legislation.legal_provision_source_reviews review
+            WHERE review.edition_id=$2 AND review.version_id=item.version_id
+            AND review.disposition='quarantined_source_gap'
+          )`,
+          [id, scope.id]
+        )
+      } else {
+        await client.query(
+          "UPDATE legislation.legal_passage_preparation_items SET failure_code=NULL,failed_at=NULL WHERE preparation_id=$1 AND generation_id IS NULL AND failure_code IS NOT NULL",
+          [id]
+        )
+      }
+    }
+    if (scope.kind === "edition") {
       await client.query(
-        "UPDATE legislation.legal_passage_preparation_items SET failure_code=NULL,failed_at=NULL WHERE preparation_id=$1 AND generation_id IS NULL AND failure_code IS NOT NULL",
-        [id]
+        `UPDATE legislation.legal_passage_preparation_items item
+        SET failure_code='source_review_quarantined',failed_at=clock_timestamp()
+        WHERE item.preparation_id=$1 AND item.generation_id IS NULL
+        AND (item.failure_code IS NULL OR item.failure_code='source_review_quarantined')
+        AND EXISTS (
+          SELECT 1 FROM legislation.legal_provision_source_reviews review
+          WHERE review.edition_id=$2 AND review.version_id=item.version_id
+          AND review.disposition='quarantined_source_gap'
+        )`,
+        [id, scope.id]
       )
     }
     return z.int().positive().parse(claimed.rows[0].fence)

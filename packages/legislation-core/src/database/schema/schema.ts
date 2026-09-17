@@ -2543,6 +2543,7 @@ export const legalEditionProvisions = legislationSchema.table(
   (t) => [
     primaryKey({ columns: [t.editionId, t.provisionId] }),
     unique().on(t.editionId, t.ordinal),
+    unique().on(t.editionId, t.versionId),
     foreignKey({ columns: [t.editionId, t.codeId], foreignColumns: [legalEditions.id, legalEditions.codeId] }),
     foreignKey({
       columns: [t.versionId, t.provisionId, t.codeId],
@@ -2554,6 +2555,36 @@ export const legalEditionProvisions = legislationSchema.table(
     index("legal_edition_provisions_version_idx").on(t.versionId),
     index("legal_edition_provisions_children_idx").on(t.editionId, t.parentId, t.ordinal),
     index("legal_edition_provisions_parent_idx").on(t.editionId, t.parentId, t.ordinal)
+  ]
+)
+
+export const legalProvisionSourceReviews = legislationSchema.table(
+  "legal_provision_source_reviews",
+  {
+    editionId: uuid("edition_id").notNull(),
+    versionId: uuid("version_id").notNull(),
+    tableIndex: integer("table_index").notNull(),
+    blockHash: text("block_hash").notNull(),
+    reviewHash: text("review_hash").notNull(),
+    disposition: text("disposition").notNull(),
+    evidence: jsonb("evidence").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`)
+  },
+  (t) => [
+    primaryKey({ columns: [t.editionId, t.versionId, t.tableIndex] }),
+    foreignKey({
+      columns: [t.editionId, t.versionId],
+      foreignColumns: [legalEditionProvisions.editionId, legalEditionProvisions.versionId]
+    }),
+    check("legal_provision_source_reviews_table_index_check", sql`${t.tableIndex} >= 0`),
+    check("legal_provision_source_reviews_block_hash_check", sql`${t.blockHash} ~ '^[a-f0-9]{64}$'`),
+    check("legal_provision_source_reviews_review_hash_check", sql`${t.reviewHash} ~ '^[a-f0-9]{64}$'`),
+    check(
+      "legal_provision_source_reviews_disposition_check",
+      sql`${t.disposition} in ('accepted_context', 'quarantined_source_gap', 'non_data_table')`
+    )
   ]
 )
 

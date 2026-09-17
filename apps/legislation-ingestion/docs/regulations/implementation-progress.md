@@ -13,6 +13,25 @@ gates. Documentation review and `git diff --check` passed; root `pnpm verify` pa
 
 ## Implementation evidence, newest first
 
+Added a canonical provision-level source-review disposition and connected it to passage admission. The unreleased
+baseline now binds each review to an exact edition/version membership and table index, validates SHA-256 block and review
+hashes, and limits dispositions to accepted context, source-gap quarantine or non-data tables. Registration revalidates
+the published generation, canonical content, active display/search rights, source artifact, URL and exact table bytes in
+one serializable transaction. Replay with changed evidence fails rather than replacing the original review.
+
+The retained Title 33 evidence now has an operator preview for the unresolved 33 CFR 110.214 table. It validated the
+current eCFR edition/version/content/table/artifact and rights identities against canonical port 55438, then independently
+validated the 517,451-byte official annual CFR PDF. Plan
+`b77d5d7def27b27d289034ef78e9288338a0d7313cd6fca041f2a7af421bff54` binds review hash
+`ecf5cc3a79c7d2324f5f245af88b0e91e8dc87ec220ad16ac931978cd8d31a6a`. It records no canonical mutation, no borrowed
+context and no derived-passage eligibility. The retained pilot was not mutated because it predates the current baseline;
+the disposition can be applied after OPS-03 installs the schema in development.
+
+Fresh PostgreSQL migration and integration evidence proves insert, exact replay, changed-review rejection and table-hash
+rejection. A quarantined version is now retained in preparation completion accounting with
+`source_review_quarantined`; retrying other blocked inputs cannot clear it. The focused database test, ingestion/core
+TypeScript, Drizzle schema check, scoped lint and diff checks passed.
+
 Resolved nine of the ten terminal unresolved-ditto diagnostics with exact source-reviewed boundaries. The retained
 fixtures bind the canonical edition/version/content and table hashes to the official eCFR artifacts. Narrow rules now
 cover the Illinois equipment continuation, Kansas facility parent/children, EPA `Designated Area` capitalization,

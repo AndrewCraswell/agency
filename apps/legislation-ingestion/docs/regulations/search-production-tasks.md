@@ -51,6 +51,10 @@ release inventory and tokenizer eligibility remain open.
   review graphics and blank-form intent for the 138 header-only diagnostics; then requalify full canonical versions.
   Dotted leaders now use the same exact-column references and unsafe-continuation rejection as plain ditto markers.
   The 457-block recheck still prepares 445 with both tokenizers; 14 CFR 171.311 block 65 gains correct source context.
+  The terminal ten-diagnostic review has since resolved nine exact layouts. The remaining 33 CFR 110.214 defect is now
+  represented by a provision-level source-review contract: its exact current eCFR table and annual CFR evidence preview
+  as `quarantined_source_gap`, and passage preparation retains `source_review_quarantined` through retries. Applying the
+  disposition awaits the current development schema; a fresh 49-title structural run remains required before closure.
 - [ ] **PASS-06 Freeze the final passage manifest.** Bind owner/version, source membership, reader/input contracts,
   tokenizer, context hash, input hash and eligibility in deterministic per-partition manifests. **Done:** replay has
   identical IDs/hashes and changed context produces distinct preparation work. Depends on PASS-05.

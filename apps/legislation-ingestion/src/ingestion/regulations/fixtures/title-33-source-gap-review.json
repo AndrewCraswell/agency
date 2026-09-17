@@ -1,0 +1,30 @@
+{
+  "editionId": "e5484bde-7863-43a0-a944-c7f8823deef0",
+  "versionId": "e6f5ffb5-5359-4309-82a0-86aec1f95289",
+  "tableIndex": 10,
+  "disposition": "quarantined_source_gap",
+  "reason": "publisher_source_missing_reference_row",
+  "expected": {
+    "contentHash": "e809ddaf40a73e39b97fa9647225465777f30ec77f38aebbee78f379b5accc0d",
+    "blockHash": "a1417270fbf7c02ea0e4c28b6e74d0a8fd44e06bcda49ec80429c135373de926",
+    "nativeId": "cfr:33:section:110.214",
+    "sourceLocator": "/ECFR[1]/DIV1[1]/DIV3[1]/DIV4[9]/DIV5[2]/DIV6[2]/DIV8[48]",
+    "sourceId": "ecfr",
+    "generationId": "a37225795c5e4c793a2e0ab4f1f95036351a59465d5b963640b2d7461a7cc8e8",
+    "artifactHash": "22095016312078d36e5c469f9523b3db95eed620635d0cf0d22be75a8aafa080",
+    "sourceUrl": "https://www.ecfr.gov/api/versioner/v1/full/2026-09-10/title-33.xml",
+    "rightsProfileId": "official-federal-text:c974a2d229cd34b2c38e337d6a0fd333960efc0ee8edaeccbca4281b0e10a7db",
+    "rightsHash": "c974a2d229cd34b2c38e337d6a0fd333960efc0ee8edaeccbca4281b0e10a7db"
+  },
+  "corroboration": [
+    {
+      "sourceUrl": "https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol1/pdf/CFR-2025-title33-vol1-part110.pdf",
+      "artifactHash": "59993d7377fbbecd6a50acec9e524ac3229b514c6e51168dfbdf85a9a7a5ab88",
+      "bytes": 517451,
+      "observation": "The official 2025 annual CFR places Anchorage A immediately before B with Los Angeles Harbor, Commercial, and Note a. The current eCFR source begins at B, whose first two ditto cells therefore have no predecessor in the canonical source bytes."
+    }
+  ],
+  "canonicalBodyChanged": false,
+  "contextInjected": false,
+  "derivedPassagesAllowed": false
+}

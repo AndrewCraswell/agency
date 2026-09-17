@@ -20,8 +20,11 @@ Anchorage A values referenced by its first two ditto cells. The
 [official 2025 annual CFR table](https://www.govinfo.gov/content/pkg/CFR-2025-title33-vol1/pdf/CFR-2025-title33-vol1-part110.pdf)
 contains the A row directly before B. The reviewed 517,451-byte PDF has SHA-256
 `59993d7377fbbecd6a50acec9e524ac3229b514c6e51168dfbdf85a9a7a5ab88`. Keep the current eCFR table structurally blocked
-until rendition reconciliation or an explicit quarantine disposition is recorded; external values are not injected
-into its canonical body or embedding inputs.
+until rendition reconciliation or the exact quarantine disposition is applied to a current-schema environment; external
+values are not injected into its canonical body or embedding inputs. The operator preview binds the canonical identities,
+active rights and annual PDF to plan `b77d5d7def27b27d289034ef78e9288338a0d7313cd6fca041f2a7af421bff54` and review hash
+`ecf5cc3a79c7d2324f5f245af88b0e91e8dc87ec220ad16ac931978cd8d31a6a`. The retained pilot predates the new source-review
+table, so preview succeeded read-only and application remains part of the development-schema gate.
 
 ## Latest scoped requalification
 

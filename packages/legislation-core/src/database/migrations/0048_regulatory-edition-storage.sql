@@ -310,6 +310,7 @@ CREATE TABLE legislation.legal_edition_provisions (
   native_id text NOT NULL,
   PRIMARY KEY(edition_id,provision_id),
   UNIQUE(edition_id,ordinal),
+  UNIQUE(edition_id,version_id),
   FOREIGN KEY(edition_id,code_id) REFERENCES legislation.legal_editions(id,code_id),
   FOREIGN KEY(version_id,provision_id,code_id) REFERENCES legislation.legal_provision_versions(id,provision_id,code_id),
   FOREIGN KEY(edition_id,parent_id) REFERENCES legislation.legal_edition_provisions(edition_id,provision_id),
@@ -321,6 +322,19 @@ CREATE INDEX legal_edition_provisions_version_idx ON legislation.legal_edition_p
 CREATE INDEX legal_edition_provisions_children_idx ON legislation.legal_edition_provisions(edition_id,parent_id,ordinal);
 --> statement-breakpoint
 CREATE INDEX legal_edition_provisions_parent_idx ON legislation.legal_edition_provisions(edition_id,parent_id,ordinal);
+--> statement-breakpoint
+CREATE TABLE legislation.legal_provision_source_reviews (
+  edition_id uuid NOT NULL,
+  version_id uuid NOT NULL,
+  table_index integer NOT NULL CHECK (table_index >= 0),
+  block_hash text NOT NULL CHECK (block_hash ~ '^[a-f0-9]{64}$'),
+  review_hash text NOT NULL CHECK (review_hash ~ '^[a-f0-9]{64}$'),
+  disposition text NOT NULL CHECK (disposition IN ('accepted_context','quarantined_source_gap','non_data_table')),
+  evidence jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(edition_id,version_id,table_index),
+  FOREIGN KEY(edition_id,version_id) REFERENCES legislation.legal_edition_provisions(edition_id,version_id)
+);
 --> statement-breakpoint
 CREATE TABLE legislation.legal_code_heads (
   code_id uuid NOT NULL,
