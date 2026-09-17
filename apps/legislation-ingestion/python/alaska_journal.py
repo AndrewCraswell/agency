@@ -103,6 +103,10 @@ def motion_matches(hint, context):
         return "RESCIND" in context
     if "RULED OUT OF ORDER" in hint:
         return "OUT OF ORDER" in context
+    if "BOTTOM OF CALENDAR" in hint:
+        return re.search(r"\bMOVE(?:D)? TO (?:THE )?BOTTOM OF (?:THE )?CALENDAR\b", context) is not None
+    if "RETURNED TO RULES COMMITTEE" in hint:
+        return re.search(r"\bRETURN(?:ED)? TO (?:THE )?RULES COMMITTEE\b", context) is not None
     if "RESCIND" in context or "RESCINDED" in context:
         return False
     if "WITHDRAW" in context:
@@ -224,19 +228,16 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
             cited_offset = None
             backward_start = None
             # A numeric fragment identifies the printed page where an action
-            # starts. A voter list can continue onto the immediately following
-            # printed page, but later pages contain independent motions whose
-            # identical tallies must not create false ambiguity.
+            # starts. Amendment text can span many printed pages before its
+            # tally. The publisher response and the parser's size ceiling bound
+            # this scan; bill, motion, tally, and voter validation identify the
+            # first matching action after the cited page.
             if target_anchor.isdigit():
                 cited_offset = anchors[selected_index].start()
                 prior_pages = [earlier for earlier in anchors[:selected_index]
                                if is_printed_page_anchor(text, earlier)]
                 if prior_pages:
                     backward_start = prior_pages[-1].end()
-                later_pages = [later for later in anchors[selected_index + 1:]
-                               if is_printed_page_anchor(text, later)]
-                if len(later_pages) >= 2:
-                    search_end = later_pages[1].start()
             else:
                 target_amendment = re.fullmatch(r"AM([1-9][0-9]*)", target_anchor.upper())
                 for later in anchors[selected_index + 1:]:
@@ -280,10 +281,7 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
                               if anchor_identity(match.group(1)) == anchor_identity(fallback_anchor)
                               and is_printed_page_anchor(text, match)]
             for fallback_page in fallback_pages:
-                later_pages = [later for later in anchors if later.start() > fallback_page.start()
-                               and is_printed_page_anchor(text, later)]
-                fallback_end = later_pages[1].start() if len(later_pages) >= 2 else len(text)
-                search_ranges.append((fallback_page.end(), fallback_end, None, None, False, True))
+                search_ranges.append((fallback_page.end(), len(text), None, None, False, True))
     candidates = []
     cited_candidates = []
     for (search_start, search_end, preferred_end, cited_offset, backward_only,

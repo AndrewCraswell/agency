@@ -46,6 +46,28 @@ And so the effective date clause was adopted.
             [("yes", "Adams"), ("yes", "Brown"), ("yes", "Clark"), ("yes", "Davis"), ("no", "Evans")],
         )
 
+    def test_bounded_response_can_span_long_amendment_before_tally_and_voters(self):
+        amendment_pages = "".join(
+            f"[[JOURNAL_ANCHOR:{page}]]\nPage {page}\nAmendment text continued.\n"
+            for page in range(2800, 2806)
+        )
+        text = (
+            "[[JOURNAL_ANCHOR:2799]]\nPage 2799\nAmendment No. 7 to Amendment No. 2 was offered.\n"
+            + amendment_pages
+            + "[[JOURNAL_ANCHOR:2806]]\nPage 2806\n"
+            'The question being: "Shall Amendment No. 7 to Amendment No. 2 be adopted?"\n'
+            "SB 180\nAmendment No. 7 to Amendment No. 2\n"
+            "YEAS: 2 NAYS: 1 EXCUSED: 1 ABSENT: 0\n"
+            "[[JOURNAL_ANCHOR:2807]]\nPage 2807\n"
+            "Yeas: Adams, Brown\nNays: Clark\nExcused: Davis\n"
+            "[[JOURNAL_ANCHOR:2808]]\nPage 2808\nA later action begins.\n"
+        )
+        result = parse_roll_call(
+            text, "SB180", (2, 1, 1), "2799", "2799", True,
+            "(H) AM 7 TO AM 2 ADOPTED Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
     def test_does_not_absorb_a_page_header_after_a_complete_group(self):
         text = self.sample() + "\n2026-05-16 House Journal\nPage 2680\nNarrative, Not A Voter\n"
         self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1))), 4)
@@ -411,6 +433,24 @@ And so the effective date clause was adopted.
             "(H) MOTION TO TABLE BILL FAILED Y2 N1 E1",
         )
         self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
+
+    def test_return_to_rules_disambiguates_identical_calendar_motion_tally(self):
+        bottom = self.sample("Adams, Brown", heading="SB 180").replace(
+            "Final Passage",
+            'The question being: "Shall SB 180 be moved to the bottom of the calendar?"\n'
+            "Move to bottom of the calendar",
+        )
+        returned = self.sample("Evans, Fox", heading="SB 180").replace(
+            "Final Passage",
+            'The question being: "Shall SB 180 be returned to the Rules Committee?"\n'
+            "Return to Rules Committee",
+        ).replace("Nays: Clark", "Nays: Green").replace("Excused: Davis", "Excused: Hill")
+        result = parse_roll_call(
+            "[[JOURNAL_ANCHOR:2921]]\nPage 2921\n" + bottom + returned,
+            "SB180", (2, 1, 1), "2921", "2921", True,
+            "(H) RETURNED TO RULES COMMITTEE Y2 N1 E1",
+        )
+        self.assertEqual(result[:2], [("yes", "Evans"), ("yes", "Fox")])
 
     def test_compound_withdraw_action_matches_its_rule_suspension_question(self):
         text = (
