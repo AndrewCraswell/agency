@@ -27,7 +27,7 @@ bulk regulatory embeddings require EVAL-12 and the bounded HTTP/MCP model canary
 
 | Foundation | Verified boundary; work not to repeat |
 | --- | --- |
-| Current eCFR import | 49 nonreserved titles, 275,149 members in the retained local pilot. Not a production deployment or searchable national corpus. Reuse retained artifacts and verify their hashes. |
+| Current eCFR import | 49 nonreserved titles, 275,138 members in the isolated September 17 recovery database. The complete retained parser replay and canonical audit both verify every member with zero mismatches. This is not a production deployment or searchable national corpus. |
 | Canonical editions and publications | Baseline migration 0048, version/membership/rights storage, atomic writers, annual all-volume publication, modern and alternate-rendition FR pilots. Full inventories and unresolved source exceptions remain. |
 | Reader and passage preparation | Lossless block projection, real pinned tokenizers, bounded prose/table splitting, durable preparation checkpoints and per-version hashes. Remaining table shapes and full-corpus qualification need PASS tasks. |
 | Search copy | Separate legal search tables, FTS, exact copy/replay checks, copy batches, scope receipts, acknowledgement and rights cleanup. Full-corpus search, resumable large-scope acknowledgement and production load acceptance remain. |
