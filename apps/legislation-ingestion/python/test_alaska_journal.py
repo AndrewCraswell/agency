@@ -121,6 +121,19 @@ And so the effective date clause was adopted.
         result = parse_roll_call(text, "HB1", (2, 1, 1), "834", "834")
         self.assertEqual(result[:2], [("yes", "Adams"), ("yes", "Brown")])
 
+    def test_numeric_citation_uses_motion_descriptor_before_page_anchor(self):
+        text = (
+            'The question being: "Shall HB 1 pass the Senate?"\n'
+            "HB 1 Third Reading - Final Passage\n"
+            "[[JOURNAL_ANCHOR:2876]]\nPage 2876\n"
+            + self.sample().replace("HB 1\nFinal Passage\n", "", 1)
+        )
+        self.assertEqual(
+            len(parse_roll_call(text, "HB1", (2, 1, 1), "2876", "2876", True,
+                                "(S) PASSED Y2 N1 E1")),
+            4,
+        )
+
     def test_numeric_citation_ignores_completed_previous_page_vote(self):
         text = (
             "[[JOURNAL_ANCHOR:0833]]\nPage 0833\n" + self.sample("Adams, Brown")

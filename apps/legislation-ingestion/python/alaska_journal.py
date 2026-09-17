@@ -261,8 +261,10 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None, 
             # nearby motion descriptor. Bound semantic matching by normalized
             # text instead, while retaining enough raw input to cross the
             # preceding printed-page boundary when an action spans pages.
+            semantic_floor = (0 if ((target_anchor is not None and target_anchor.isdigit())
+                                    or cited_range) else search_start)
             context_start = (summaries[index - 1].end() if index else
-                             max(search_start, summary.start() - 12000))
+                             max(semantic_floor, summary.start() - 12000))
             candidate_context = re.sub(
                 r"\s+", " ", text[context_start:summary.end()]
             )[-1500:]
