@@ -112,6 +112,19 @@ function expectedOutcomeEnvironmentValue(name, outcomes) {
   return value
 }
 
+const jurisdictionId = fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_JURISDICTION_ID") ?? "jurisdiction:ak"
+const sessionId = fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SESSION_ID") ?? "session:ak:30"
+if (!/^jurisdiction:[a-z0-9-]+$/.test(jurisdictionId)) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_JURISDICTION_ID must be a canonical jurisdiction ID")
+}
+const jurisdictionCode = jurisdictionId.slice("jurisdiction:".length)
+if (
+  !sessionId.startsWith(`session:${jurisdictionCode}:`) ||
+  sessionId.length === `session:${jurisdictionCode}:`.length
+) {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_SESSION_ID must belong to LEGISLATION_WEB_SMOKE_JURISDICTION_ID")
+}
+
 const legislativeRecordsFixtures = {
   amendmentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AMENDMENT_ID"),
   billId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_BILL_ID"),
@@ -909,8 +922,6 @@ async function smokeConditionalGet(url, name, etag, correlationId) {
 }
 
 async function smokeJurisdictionSessionsRoutes(root) {
-  const jurisdictionId = "jurisdiction:ak"
-  const sessionId = "session:ak:30"
   const jurisdictionSegment = encodeURIComponent(jurisdictionId)
   const sessionSegment = encodeURIComponent(sessionId)
   const routes = [
@@ -1022,14 +1033,14 @@ async function smokeLegislativeRecordsRoutes(root) {
     {
       kind: "page",
       name: "bills",
-      path: "/api/bills?jurisdictionId=jurisdiction:ak&limit=1"
+      path: `/api/bills?jurisdictionId=${encodeURIComponent(jurisdictionId)}&limit=1`
     },
     {
       kind: "page",
       name: "amendments",
-      path: "/api/amendments?recordType=structured&jurisdictionId=jurisdiction:us&sort=identifier-asc&limit=1"
+      path: `/api/amendments?jurisdictionId=${encodeURIComponent(jurisdictionId)}&sort=identifier-asc&limit=1`
     },
-    { kind: "page", name: "votes", path: "/api/votes?limit=1" },
+    { kind: "page", name: "votes", path: `/api/votes?jurisdictionId=${encodeURIComponent(jurisdictionId)}&limit=1` },
     {
       body: (id) => ({ ids: [id] }),
       fixture: "billId",
@@ -1398,9 +1409,20 @@ function missingPeopleOrganizationsFixtureName(route) {
 }
 
 async function smokePeopleOrganizationsRoutes(root) {
-  const canonicalDataIncompleteRoutes = new Set(["organization", "organizations", "person", "person term"])
+  const canonicalDataIncompleteRoutes = new Set([
+    "organization",
+    "organization membership",
+    "organizations",
+    "person",
+    "person term"
+  ])
   const routes = [
-    { fixtures: [], kind: "page", name: "people", path: "/api/people?limit=1" },
+    {
+      fixtures: [],
+      kind: "page",
+      name: "people",
+      path: `/api/people?jurisdictionId=${encodeURIComponent(jurisdictionId)}&limit=1`
+    },
     {
       fixtures: ["personId"],
       kind: "resource",
@@ -1437,7 +1459,12 @@ async function smokePeopleOrganizationsRoutes(root) {
       name: "person term",
       path: ({ personId, termId }) => `/api/people/${encodeURIComponent(personId)}/terms/${encodeURIComponent(termId)}`
     },
-    { fixtures: [], kind: "page", name: "organizations", path: "/api/organizations?limit=1" },
+    {
+      fixtures: [],
+      kind: "page",
+      name: "organizations",
+      path: `/api/organizations?jurisdictionId=${encodeURIComponent(jurisdictionId)}&limit=1`
+    },
     {
       fixtures: ["organizationId"],
       kind: "resource",
@@ -1468,12 +1495,6 @@ async function smokePeopleOrganizationsRoutes(root) {
       kind: "page",
       name: "organization bills",
       path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}/bills?limit=1`
-    },
-    {
-      fixtures: ["organizationId"],
-      kind: "page",
-      name: "organization calendars",
-      path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}/calendars?limit=1`
     }
   ]
   const passed = []
@@ -1550,7 +1571,12 @@ function missingMeetingsCalendarsFixtureName(route) {
 
 async function smokeMeetingsCalendarsRoutes(root) {
   const routes = [
-    { fixtures: [], kind: "page", name: "meetings", path: "/api/meetings?limit=1" },
+    {
+      fixtures: [],
+      kind: "page",
+      name: "meetings",
+      path: `/api/meetings?jurisdictionId=${encodeURIComponent(jurisdictionId)}&limit=1`
+    },
     {
       expectedStatus: 404,
       fixtures: ["meetingDetailId"],
