@@ -66,10 +66,25 @@ And so the effective date clause was adopted.
             [("yes", "Adams"), ("yes", "Brown")],
         )
 
-    def test_rejects_missing_or_duplicate_source_anchor(self):
-        for text in [self.sample(), "[[JOURNAL_ANCHOR:AM1]]\n" + self.sample() * 2]:
+    def test_rejects_missing_or_ambiguous_source_anchor(self):
+        duplicate = (
+            "[[JOURNAL_ANCHOR:AM1]]\n" + self.sample()
+            + "[[JOURNAL_ANCHOR:AM1]]\n" + self.sample()
+        )
+        for text in [self.sample(), "[[JOURNAL_ANCHOR:AM1]]\n" + self.sample() * 2, duplicate]:
             with self.subTest(text=text), self.assertRaises(ValueError):
                 parse_roll_call(text, "HB1", (2, 1, 1), "AM1")
+
+    def test_accepts_one_matching_roll_call_across_repeated_source_anchor(self):
+        text = (
+            "[[JOURNAL_ANCHOR:AM11]]\nAmendment text without a roll call\n"
+            "[[JOURNAL_ANCHOR:AM11]]\n" + self.sample()
+        )
+        self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1), "AM11")), 4)
+
+    def test_accepts_bill_heading_immediately_before_printed_page_anchor(self):
+        text = "HB 1\n[[JOURNAL_ANCHOR:2901]]\n" + self.sample().replace("HB 1\n", "", 1)
+        self.assertEqual(len(parse_roll_call(text, "HB1", (2, 1, 1), "2901")), 4)
 
     def test_preserves_valid_named_anchors_in_journal_text(self):
         class Anchor:

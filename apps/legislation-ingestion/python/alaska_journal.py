@@ -35,36 +35,40 @@ def parse_roll_call(text, bill_identifier, expected_counts, target_anchor=None):
     if len(text) > 2 * 1024 * 1024:
         raise ValueError("journal_size_limit")
     expected_bill = re.sub(r"\s+", "", bill_identifier).upper()
-    search_start = 0
-    search_end = len(text)
+    search_ranges = [(0, len(text))]
     if target_anchor is not None:
         if not isinstance(target_anchor, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", target_anchor):
             raise ValueError("journal_anchor_invalid")
         anchors = list(ANCHOR.finditer(text))
         selected = [index for index, match in enumerate(anchors) if match.group(1).casefold() == target_anchor.casefold()]
-        if len(selected) != 1:
+        if not selected:
             raise ValueError("journal_anchor_missing_or_ambiguous")
-        selected_index = selected[0]
-        search_start = anchors[selected_index].end()
-        for later in anchors[selected_index + 1:]:
-            name = re.sub(r"\s+", "", later.group(1)).upper()
-            # Bill and printed-page anchors are references inside one journal action.
-            if name.isdigit() or BILL.fullmatch(name):
-                continue
-            search_end = later.start()
-            break
-    summaries = list(SUMMARY.finditer(text, search_start, search_end))
+        search_ranges = []
+        for selected_index in selected:
+            search_start = anchors[selected_index].end()
+            search_end = len(text)
+            for later in anchors[selected_index + 1:]:
+                name = re.sub(r"\s+", "", later.group(1)).upper()
+                # Bill and printed-page anchors are references inside one journal action.
+                if name.isdigit() or BILL.fullmatch(name):
+                    continue
+                search_end = later.start()
+                break
+            search_ranges.append((search_start, search_end))
     candidates = []
-    for index, summary in enumerate(summaries):
-        totals = tuple(int(value) for value in summary.groups())
-        if (totals[0], totals[1], totals[2] + totals[3]) != tuple(expected_counts):
-            continue
-        previous_end = summaries[index - 1].end() if index else 0
-        references = list(BILL.finditer(text[max(previous_end, summary.start() - 1500):summary.start()]))
-        if not references or "".join(references[-1].groups()) != expected_bill:
-            continue
-        end = summaries[index + 1].start() if index + 1 < len(summaries) else search_end
-        candidates.append((totals, text[summary.end():end]))
+    for search_start, search_end in search_ranges:
+        summaries = list(SUMMARY.finditer(text, search_start, search_end))
+        for index, summary in enumerate(summaries):
+            totals = tuple(int(value) for value in summary.groups())
+            if (totals[0], totals[1], totals[2] + totals[3]) != tuple(expected_counts):
+                continue
+            # Numeric page anchors can follow the bill heading they identify.
+            previous_end = summaries[index - 1].end() if index else max(0, search_start - 1500)
+            references = list(BILL.finditer(text[max(previous_end, summary.start() - 1500):summary.start()]))
+            if not references or "".join(references[-1].groups()) != expected_bill:
+                continue
+            end = summaries[index + 1].start() if index + 1 < len(summaries) else search_end
+            candidates.append((totals, text[summary.end():end]))
     if len(candidates) != 1:
         raise ValueError("journal_roll_call_missing_or_ambiguous")
     totals, body = candidates[0]

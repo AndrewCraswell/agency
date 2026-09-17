@@ -1,4 +1,4 @@
-export const approvedScraperBuildInputsSha256 = "52e131d0814a3ad7965a2ee0387f7da307313bdbfc717562c79ec4d0fa0efd02"
+export const approvedScraperBuildInputsSha256 = "77472ea67ca34927bbb8eb779066c7dff768e946e660565ad56b47c4d6ccfd06"
 export const legacyAlaskaEventBuildInputsSha256 = "8dd4689bcfe72cf8b1cee5372c1106bd9f077845bea3187074fe17cc833beaeb"
 
 export function requireApprovedAlaskaEventReceiptBuild(value: string) {
