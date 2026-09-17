@@ -66,6 +66,56 @@ describe("committee repository observation import", () => {
     await importCommitteeRepository(database, "ak", input, [], now, persist)
     expect(persist).toHaveBeenCalledOnce()
   })
+  it("links a complete current roster while holding ambiguous historical terms", () => {
+    const people = ["lower", "upper"].flatMap((chamber) =>
+      Array.from({ length: chamber === "lower" ? 120 : 50 }, (_, index) => ({
+        path: `data/nc/legislature/${chamber}-${index}.yml`,
+        content: JSON.stringify({
+          id: `ocd-person/${chamber}-${index}`,
+          name: `Person ${chamber} ${index}`,
+          roles:
+            chamber === "lower" && index === 0
+              ? [
+                  {
+                    type: chamber,
+                    district: "1",
+                    jurisdiction: peopleSourceProfiles.nc.jurisdiction,
+                    start_date: "2025-01-01"
+                  },
+                  {
+                    type: chamber,
+                    district: "1",
+                    jurisdiction: peopleSourceProfiles.nc.jurisdiction,
+                    start_date: "2025-01-01",
+                    end_date: "2025-01-01"
+                  }
+                ]
+              : [
+                  {
+                    type: chamber,
+                    district: String(index + 1),
+                    jurisdiction: peopleSourceProfiles.nc.jurisdiction
+                  }
+                ]
+        })
+      }))
+    )
+    const committee = {
+      path: "data/nc/committees/current.yml",
+      content: JSON.stringify({
+        id: "ocd-organization/current",
+        name: "Current",
+        classification: "committee",
+        chamber: "lower",
+        jurisdiction: peopleSourceProfiles.nc.jurisdiction,
+        members: [{ person_id: "ocd-person/lower-0", name: "Person lower 0", role: "member" }]
+      })
+    }
+    const result = prepareCommitteeRepositoryImport([...people, committee], [], now, "nc")
+    expect(result.plan.held).toEqual([])
+    expect(result.plan.eligible).toHaveLength(1)
+    expect(result.snapshot.memberships).toHaveLength(1)
+  })
   it("uses the guarded atomic writer and keeps the checkpoint incomplete", async () => {
     const persist = vi.fn<typeof replaceEntitySnapshot>().mockResolvedValue(undefined)
     const database = drizzle({ connection: "postgresql://unused", schema })

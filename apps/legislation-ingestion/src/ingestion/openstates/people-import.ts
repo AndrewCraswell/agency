@@ -107,6 +107,7 @@ export function preparePeopleRepositoryImport(
     return [{ file, person: person.data }]
   })
   let coverageIssues: string[]
+  let validatedCurrent: EntitySnapshot | null = null
   try {
     const current = validatePeopleRepositorySnapshot([...currentFiles], retrievedAt, state)
     coverageIssues = current.coverageIssues.map(
@@ -115,6 +116,7 @@ export function preparePeopleRepositoryImport(
     if (current.unresolved.length > 0) {
       coverageIssues.push("unresolved_committee_members")
     }
+    validatedCurrent = current.snapshot
   } catch {
     coverageIssues = ["current_snapshot_invalid"]
   }
@@ -128,6 +130,14 @@ export function preparePeopleRepositoryImport(
         )
       : { terms: [] }
   const peopleIds = new Set(plan.terms.map((term) => term.personId))
+  // A source-complete current directory can establish a current identity and
+  // current term even when that person's older role assertions are held for
+  // review. This keeps malformed history from suppressing an otherwise exact
+  // current committee relationship. A partial current directory cannot use
+  // this path, and held historical terms remain absent from the snapshot.
+  const currentOnlyPeopleIds = new Set(
+    (validatedCurrent?.people ?? []).map((person) => person.id).filter((id) => !peopleIds.has(id))
+  )
   const normalized = normalizeOpenStatesPeople(
     candidates.map(({ file, person }) => {
       return {
@@ -155,29 +165,47 @@ export function preparePeopleRepositoryImport(
     }),
     { jurisdictionCode: state, retrievedAt }
   )
-  const people = normalized.people
+  const historicalPeople = normalized.people
     .filter((person) => peopleIds.has(person.id))
     .map((person) => ({
       ...person,
       isActive: plan.terms.some((term) => term.personId === person.id && term.isActive === true)
     }))
-  const counts = { people: people.length, terms: plan.terms.length }
+  const currentPeople = (validatedCurrent?.people ?? []).filter((person) => currentOnlyPeopleIds.has(person.id))
+  const people = [...historicalPeople, ...currentPeople]
+  const currentTerms = (validatedCurrent?.terms ?? []).filter((term) => currentOnlyPeopleIds.has(term.personId))
+  const terms = [...plan.terms, ...currentTerms]
+  const counts = { people: people.length, terms: terms.length }
   if (people.length === 0) {
     return { status: "rejected" as const, counts, coverageIssues, quarantine, snapshot: null }
   }
   const snapshot: EntitySnapshot = {
     people,
-    terms: plan.terms,
+    terms,
     organizations: [],
     memberships: [],
-    personDetails: normalized.personDetails?.filter((detail) => peopleIds.has(detail.personId)),
-    personJurisdictions: normalized.personJurisdictions?.filter((jurisdiction) => peopleIds.has(jurisdiction.personId)),
-    personAliases: normalized.personAliases.filter((alias) => peopleIds.has(alias.personId)),
+    personDetails: [
+      ...(normalized.personDetails?.filter((detail) => peopleIds.has(detail.personId)) ?? []),
+      ...(validatedCurrent?.personDetails?.filter((detail) => currentOnlyPeopleIds.has(detail.personId)) ?? [])
+    ],
+    personJurisdictions: [
+      ...(normalized.personJurisdictions?.filter((jurisdiction) => peopleIds.has(jurisdiction.personId)) ?? []),
+      ...(validatedCurrent?.personJurisdictions?.filter((jurisdiction) =>
+        currentOnlyPeopleIds.has(jurisdiction.personId)
+      ) ?? [])
+    ],
+    personAliases: [
+      ...normalized.personAliases.filter((alias) => peopleIds.has(alias.personId)),
+      ...(validatedCurrent?.personAliases.filter((alias) => currentOnlyPeopleIds.has(alias.personId)) ?? [])
+    ],
     personAliasPersonIds: people.map((person) => person.id),
     personAliasSourceProvider: "openstates",
-    personExternalIdentifiers: normalized.personExternalIdentifiers?.filter((identifier) =>
-      peopleIds.has(identifier.personId)
-    )
+    personExternalIdentifiers: [
+      ...(normalized.personExternalIdentifiers?.filter((identifier) => peopleIds.has(identifier.personId)) ?? []),
+      ...(validatedCurrent?.personExternalIdentifiers?.filter((identifier) =>
+        currentOnlyPeopleIds.has(identifier.personId)
+      ) ?? [])
+    ]
   }
   return {
     status: quarantine.length > 0 || coverageIssues.length > 0 ? ("partial" as const) : ("validated" as const),

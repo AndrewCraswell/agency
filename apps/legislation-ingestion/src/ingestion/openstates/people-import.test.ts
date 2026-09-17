@@ -103,6 +103,48 @@ describe("people history import", () => {
     expect(result.snapshot?.memberships).toEqual([])
     expect(result.snapshot?.people.find((person) => person.sourceId === "ocd-person/retired")?.isActive).toBe(false)
   })
+  it("retains a validated current identity while holding its ambiguous history", () => {
+    const input = current.map((file, index) =>
+      index === 0
+        ? {
+            ...file,
+            content: JSON.stringify({
+              id: "ocd-person/lower-0",
+              name: "Person lower 0",
+              roles: [
+                {
+                  type: "lower",
+                  district: "1",
+                  jurisdiction: northCarolinaPeopleSource.jurisdiction,
+                  start_date: "2025-01-01"
+                },
+                {
+                  type: "lower",
+                  district: "1",
+                  jurisdiction: northCarolinaPeopleSource.jurisdiction,
+                  start_date: "2025-01-01",
+                  end_date: "2025-01-01"
+                }
+              ]
+            })
+          }
+        : file
+    )
+    const result = preparePeopleRepositoryImport(input, retired, now)
+    const person = result.snapshot?.people.find((value) => value.sourceId === "ocd-person/lower-0")
+    expect(result.status).toBe("partial")
+    expect(result.quarantine).toEqual([
+      expect.objectContaining({
+        path: "data/nc/legislature/lower-0.yml",
+        reasons: ["ambiguous_term_identity"]
+      })
+    ])
+    expect(person).toMatchObject({ isActive: true, name: "Person lower 0" })
+    expect(result.snapshot?.terms.filter((term) => term.personId === person?.id)).toEqual([
+      expect.objectContaining({ chamber: "lower", district: "1", isActive: true })
+    ])
+    expect(result.counts).toEqual({ people: 171, terms: 171 })
+  })
   it("persists only observed people from an incomplete roster without claiming completion", async () => {
     const persist = vi.fn<typeof replaceEntitySnapshot>()
     const database = drizzle("postgresql://localhost/not-used", { schema })
